@@ -29,6 +29,7 @@ driver_module("zxcrypt") {
   # static or already linked by the devhost.  We consider libc, libzircon, and
   # libdriver safe to depend on dynamically here.
   deps = [
+    "//src/devices/lib/driver",
     "//sdk/banjo/ddk.protocol.block.partition",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",
@@ -38,10 +39,10 @@ driver_module("zxcrypt") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-crypto-static",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxcrypt-dev",
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.block.volume",
     "//zircon/system/fidl/fuchsia-hardware-block-encrypted:c",
+    "//zircon/system/ulib/zxcrypt:zxcrypt-dev",
   ]
 
   # Make sure we don't accidentally pull in a couple of easily-added dynamic
@@ -58,7 +59,7 @@ driver_module("zxcrypt") {
     # needed by //zircon/public/lib/zxcrypt-dev for the symbol
     # |device_get_protocol|.
     #"//zircon/public/lib/fdio",
-    "//zircon/public/lib/zxcrypt-fdio",
+    "//zircon/system/ulib/zxcrypt:zxcrypt-fdio",
   ]
 }
 migrated_manifest("zxcrypt-manifest") {

@@ -228,7 +228,6 @@ aggregate_manifest("legacy-aux") {
     "zircon-crypto",
 #------------------
 #------------------
-    "zxcrypt-fdio",
 #------------------
   ]
   lib_variants = [

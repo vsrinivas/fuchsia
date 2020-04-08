@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("zxcrypt-dev") {
   static = true
   sdk = "source"
@@ -16,34 +28,32 @@ zx_library("zxcrypt-dev") {
 
   public_deps = [
     # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
-    "$zx/system/ulib/zircon-crypto:zircon-crypto-static.headers",
+    "//zircon/public/lib/zircon-crypto-static",
 
     # <zxcrypt/ddk-volume.h> has #include <ddk/device.h>.
-    "$zx/system/ulib/ddk:headers",
+    "//zircon/public/lib/ddk",
   ]
 
-  configs += [ "$zx_build/public/gn/config:integer-paranoia" ]
+  configs += [ "//build/config/fuchsia:integer-paranoia" ]
 
   # To minimize the set of libraries that we depend on that need to be loaded
   # from /boot/lib in early boot, we statically link most of our dependencies.
   deps = [
-    "$zx/system/banjo/ddk.protocol.block",
-    "$zx/system/banjo/ddk.protocol.block.volume",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/driver",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-crypto:zircon-crypto-static",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/boringssl",
+    "//zircon/public/lib/boringssl",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.block",
+    "//zircon/system/banjo/ddk.protocol.block.volume",
   ]
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 zx_library("zxcrypt-fdio") {
   shared = true
+
   # TODO(36548): turn to shared library after migration to GN build.
   sdk = "source"
   sdk_headers = [
@@ -56,28 +66,26 @@ zx_library("zxcrypt-fdio") {
   ]
   public_deps = [
     # <zxcrypt/fdio-volume.h> has #include <lib/fdio/cpp/caller.h>
+    "//zircon/public/lib/fdio-caller",
     # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
-    "$zx/system/ulib/fdio-caller:headers",
-    "$zx/system/ulib/zircon-crypto:headers",
+    "//zircon/public/lib/zircon-crypto",
   ]
-  configs += [ "$zx_build/public/gn/config:integer-paranoia" ]
+  configs += [ "//build/config/fuchsia:integer-paranoia" ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-hardware-block-encrypted:c",
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/kms-stateless",
-    "$zx/system/ulib/ramdevice-client:static",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-crypto",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/boringssl",
+    "//zircon/public/lib/boringssl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/kms-stateless",
+    "//zircon/public/lib/ramdevice-client-static",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/fidl/fuchsia-hardware-block-encrypted:c",
+    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
   ]
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

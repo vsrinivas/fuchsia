@@ -112,7 +112,6 @@ source_set("block-watcher") {
     "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxcrypt-fdio",
     "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-device:c",
@@ -121,6 +120,7 @@ source_set("block-watcher") {
     "//zircon/system/fidl/fuchsia-hardware-block-encrypted:c",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
     "//zircon/system/ulib/loader-service",
+    "//zircon/system/ulib/zxcrypt:zxcrypt-fdio",
   ]
 }
 
