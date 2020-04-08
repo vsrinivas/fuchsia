@@ -135,16 +135,6 @@ struct SocketAddress {
 
 [Discoverable]
 protocol Netstack {
-    /// Finds the port number from a given service name and protocol. [service] can be a
-    /// number like "42", or a service name like "http". If [protocol] is UNSPECIFIED,
-    /// the service is checked for TCP first, then UDP.
-    GetPortForService(string service, Protocol protocol) -> (uint16 port);
-
-    /// Finds the IP address for a given host name and port. This may issue network
-    /// requests via DNS to look up domain names. E.g.
-    /// GetAddress("example.com", 80) -> [{142.42.42.1}]
-    GetAddress(string address, uint16 port) -> (vector<SocketAddress> addresses, NetErr err);
-
     /// Returns the list of registered network interfaces.
     GetInterfaces() -> (vector<NetInterface> interfaces);
     GetInterfaces2() -> (vector<NetInterface2> interfaces);

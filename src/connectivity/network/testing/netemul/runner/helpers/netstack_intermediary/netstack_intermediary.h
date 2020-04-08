@@ -49,11 +49,6 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
   void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
 
   // The following methods are not used by Machina guests and are stubbed out.
-  void GetPortForService(std::string service, fuchsia::netstack::Protocol protocol,
-                         GetPortForServiceCallback callback) override {}
-
-  void GetAddress(std::string address, uint16_t port, GetAddressCallback callback) override {}
-
   void GetInterfaces(GetInterfacesCallback callback) override {}
   void GetInterfaces2(GetInterfaces2Callback callback) override {}
 

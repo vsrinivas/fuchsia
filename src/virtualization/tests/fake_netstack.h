@@ -77,11 +77,6 @@ class FakeNetstack : public fuchsia::netstack::Netstack {
     loop_.Shutdown();
   }
 
-  void GetPortForService(std::string service, fuchsia::netstack::Protocol protocol,
-                         GetPortForServiceCallback callback) override {}
-
-  void GetAddress(std::string address, uint16_t port, GetAddressCallback callback) override {}
-
   void GetInterfaces(GetInterfacesCallback callback) override {}
   void GetInterfaces2(GetInterfaces2Callback callback) override {}
 

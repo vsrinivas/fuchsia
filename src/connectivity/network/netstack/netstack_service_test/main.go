@@ -28,9 +28,7 @@ func main() {
 	a := &testApp{ctx: context.CreateFromStartupInfo()}
 
 	var listen bool
-	var getaddr string
 	flag.BoolVar(&listen, "listen", false, "Listen for notifications and print interfaces every time they change")
-	flag.StringVar(&getaddr, "getaddr", "", "Lookup the given address via DNS")
 	flag.Parse()
 
 	req, pxy, err := netstack.NewNetstackWithCtxInterfaceRequest()
@@ -41,9 +39,6 @@ func main() {
 	defer a.netstack.Close()
 	a.ctx.ConnectToEnvService(req)
 
-	if getaddr != "" {
-		a.getAddr(getaddr)
-	}
 	if listen {
 		a.listen()
 	}
@@ -52,20 +47,6 @@ func main() {
 func usage() {
 	fmt.Printf("Usage: %s [OPTIONS]\n", os.Args[0])
 	flag.PrintDefaults()
-}
-
-func (a *testApp) getAddr(name string) {
-	fmt.Printf("Looking up %v... ", name)
-	port, _ := a.netstack.GetPortForService(fidl.Background(), "http", netstack.ProtocolTcp)
-	resp, netErr, _ := a.netstack.GetAddress(fidl.Background(), name, port)
-	if netErr.Status != netstack.StatusOk {
-		fmt.Fprintf(os.Stderr, "failed: %v\n", netErr)
-	} else {
-		fmt.Printf("%v entries found\n", len(resp))
-		for _, addr := range resp {
-			fmt.Printf("%v\n", netAddrToString(addr.Addr))
-		}
-	}
 }
 
 func (a *testApp) listen() {

@@ -29,8 +29,6 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
-	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
-	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
 
 const zeroIpAddr = header.IPv4Any
@@ -138,38 +136,6 @@ func (ns *Netstack) getInterfaces2() []netstack.NetInterface2 {
 	})
 
 	return out
-}
-
-func (ni *netstackImpl) GetPortForService(_ fidl.Context, service string, protocol netstack.Protocol) (port uint16, err error) {
-	switch protocol {
-	case netstack.ProtocolUdp:
-		port, err = serviceLookup(service, udp.ProtocolNumber)
-	case netstack.ProtocolTcp:
-		port, err = serviceLookup(service, tcp.ProtocolNumber)
-	default:
-		port, err = serviceLookup(service, tcp.ProtocolNumber)
-		if err != nil {
-			port, err = serviceLookup(service, udp.ProtocolNumber)
-		}
-	}
-	return port, err
-}
-
-func (ni *netstackImpl) GetAddress(_ fidl.Context, name string, port uint16) ([]netstack.SocketAddress, netstack.NetErr, error) {
-	// TODO: This should handle IP address strings, empty strings, "localhost", etc. Pull the logic from
-	// fdio's getaddrinfo into here.
-	addrs, err := ni.ns.dnsClient.LookupIP(name)
-	if err != nil {
-		return nil, netstack.NetErr{Status: netstack.StatusDnsError, Message: err.Error()}, nil
-	}
-	out := make([]netstack.SocketAddress, 0, len(addrs))
-	for _, addr := range addrs {
-		out = append(out, netstack.SocketAddress{
-			Addr: fidlconv.ToNetIpAddress(addr),
-			Port: port,
-		})
-	}
-	return out, netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 
 // GetInterfaces2 returns a list of interfaces.
