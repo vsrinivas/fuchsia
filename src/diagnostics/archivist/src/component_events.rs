@@ -13,6 +13,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, NumericProperty},
+    fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     fuchsia_zircon as zx,
     futures::{channel::mpsc, stream::BoxStream, SinkExt, StreamExt, TryStreamExt},
     std::{collections::HashMap, path::PathBuf},
@@ -156,6 +157,7 @@ struct EventListenerServer {
     components_started: inspect::UintProperty,
     components_stopped: inspect::UintProperty,
     diagnostics_directories_seen: inspect::UintProperty,
+    component_log_node: BoundedListNode,
 }
 
 impl EventListenerServer {
@@ -163,12 +165,14 @@ impl EventListenerServer {
         let components_started = node.create_uint("components_started", 0);
         let components_stopped = node.create_uint("components_stopped", 0);
         let diagnostics_directories_seen = node.create_uint("diagnostics_directories_seen", 0);
+        let component_log_node = BoundedListNode::new(node.create_child("recent_events"), 50);
         Self {
             sender,
             _node: node,
             components_started,
             components_stopped,
             diagnostics_directories_seen,
+            component_log_node,
         }
     }
 
@@ -206,6 +210,17 @@ impl EventListenerServer {
         Ok(())
     }
 
+    fn log_inspect(&mut self, event_name: &str, component: &SourceIdentity) {
+        let realm_path: String = RealmPath(component.realm_path.clone().unwrap()).into();
+        let moniker =
+            vec![realm_path, component.component_name.as_ref().unwrap().clone()].join("/");
+        inspect_log!(self.component_log_node,
+            event: event_name,
+            component_id: component.instance_id.as_ref().unwrap().clone(),
+            moniker: moniker,
+        );
+    }
+
     async fn handle_on_start(&mut self, component: SourceIdentity) -> Result<(), Error> {
         if !(component.component_name.is_some()
             && component.instance_id.is_some()
@@ -214,6 +229,7 @@ impl EventListenerServer {
             return Ok(());
         }
         self.components_started.add(1);
+        self.log_inspect("START", &component);
         self.send_event(ComponentEvent::Start(ComponentEventData {
             component_name: component.component_name.unwrap(),
             component_id: component.instance_id.unwrap(),
@@ -231,6 +247,7 @@ impl EventListenerServer {
             return Ok(());
         }
         self.components_stopped.add(1);
+        self.log_inspect("STOP", &component);
         self.send_event(ComponentEvent::Stop(ComponentEventData {
             component_name: component.component_name.unwrap(),
             component_id: component.instance_id.unwrap(),
@@ -252,6 +269,7 @@ impl EventListenerServer {
             return Ok(());
         }
         self.diagnostics_directories_seen.add(1);
+        self.log_inspect("DIAGNOSTICS_DIR_READY", &component);
         let component_hierarchy_path = PathBuf::from(format!(
             "{}/{}/{}",
             component.realm_path.clone().unwrap().join("/"),
@@ -421,6 +439,26 @@ mod tests {
                 components_started: 1u64,
                 components_stopped: 1u64,
                 diagnostics_directories_seen: 1u64,
+                recent_events: {
+                    "0": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "START",
+                        component_id: "12345",
+                        moniker: "root/a/test.cmx"
+                    },
+                    "1": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "DIAGNOSTICS_DIR_READY",
+                        component_id: "12345",
+                        moniker: "root/a/test.cmx"
+                    },
+                    "2": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "STOP",
+                        component_id: "12345",
+                        moniker: "root/a/test.cmx"
+                    }
+                }
             }
         });
     }

@@ -618,6 +618,7 @@ fn populate_inspect_repo(
     let inspect_directory_proxy = inspect_reader_data.data_directory_proxy.unwrap();
     let mut relative_moniker = inspect_reader_data.realm_path;
     relative_moniker.push(inspect_reader_data.component_name.clone());
+
     state.lock().inspect_repository.write().add(
         inspect_reader_data.component_name,
         inspect_reader_data.component_id,
@@ -655,6 +656,7 @@ async fn archive_event(
 ) -> Result<(), Error> {
     let mut state = state.lock();
     let ArchivistState { writer, log_node, configuration, .. } = &mut *state;
+
     let writer = if let Some(w) = writer.as_mut() {
         w
     } else {
