@@ -10,10 +10,7 @@ declare_args() {
 }
 
 group("headers") {
-  public_configs = [
-    ":headers.config",
-    ":disable_warnings",
-  ]
+  public_configs = [ ":headers.config" ]
 }
 
 config("headers.config") {
