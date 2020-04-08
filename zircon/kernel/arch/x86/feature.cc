@@ -1011,6 +1011,7 @@ void x86_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate stat
       break;
     case cpu_id::ManufacturerInfo::INTEL:
       x86_intel_cpu_set_turbo(cpu, msr, state);
+      break;
     default:
       break;
   }
