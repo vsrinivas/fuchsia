@@ -53,7 +53,3 @@ rustc_fuzzer("parse_record_fuzzer") {
 fuzzers_package("diagnostic-stream-fuzzers") {
   rust_fuzzers = [ ":parse_record_fuzzer" ]
 }
-
-fidl("fuchsia.diagnostics.streaming") {
-  sources = [ "record.fidl" ]
-}
