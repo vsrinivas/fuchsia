@@ -96,4 +96,4 @@ fi
 # Flatten to the format iquery expects.
 flatten="$(echo "${find}" | tr '\n' ' ')"
 
-fx-command-exec shell iquery "${paths}" --cat "${format}" --recursive "${flatten}"
+fx-command-exec shell iquery "${paths}" --cat "${format}" --sort --recursive "${flatten}"
