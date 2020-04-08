@@ -125,11 +125,15 @@ Stream::TimelineFunctionSnapshot EffectsStage::ReferenceClockToFractionalFrames(
   auto snapshot = source_->ReferenceClockToFractionalFrames();
 
   // Update our timeline function to include the latency introduced by these effects.
+  //
+  // Our effects shift incoming audio into the future by "delay_frames".
+  // So input frame[N] corresponds to output frame[N + delay_frames].
   int64_t delay_frames = effects_processor_->delay_frames();
-  auto delay_frac_frames = FractionalFrames<int64_t>(-delay_frames);
-  auto delay_function = TimelineFunction(delay_frac_frames.raw_value(), 0, TimelineRate(1, 1));
-  snapshot.timeline_function =
-      TimelineFunction::Compose(delay_function, snapshot.timeline_function);
+  auto delay_frac_frames = FractionalFrames<int64_t>(delay_frames);
+
+  auto source_frac_frame_to_dest_frac_frame =
+      TimelineFunction(delay_frac_frames.raw_value(), 0, TimelineRate(1, 1));
+  snapshot.timeline_function = source_frac_frame_to_dest_frac_frame * snapshot.timeline_function;
 
   return snapshot;
 }
