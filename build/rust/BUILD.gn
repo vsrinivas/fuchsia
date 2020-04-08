@@ -38,7 +38,11 @@ toolchain("rustlang") {
 action("cargo_toml_gen") {
   # Nothing in-tree should depend on Cargo files.
   # TODO(bwb) remove base_packages visibility when auto-generation is disabled
-  visibility = [ "//:additional_base_packages", "//:additional_universe_packages" ]
+  visibility = [
+    "//:additional_base_packages",
+    "//:additional_cache_packages",
+    "//:additional_universe_packages",
+  ]
   script = "//scripts/gn_to_cargo.py"
   sources = []
   inputs = []
