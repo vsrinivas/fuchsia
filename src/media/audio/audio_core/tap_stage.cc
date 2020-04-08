@@ -22,9 +22,11 @@ std::optional<Stream::Buffer> TapStage::LockBuffer(zx::time ref_time, int64_t fr
   if (!input_buffer) {
     return std::nullopt;
   }
+  auto source_frac_frame_to_tap_frame = SourceFracFrameToTapFrame();
 
   uint8_t* input_ptr = reinterpret_cast<uint8_t*>(input_buffer->payload());
-  int64_t output_buffer_frame = input_buffer->start().Floor();
+  int64_t output_buffer_frame =
+      source_frac_frame_to_tap_frame.Apply(input_buffer->start().raw_value());
   uint32_t output_frames_outstanding = input_buffer->length().Floor();
 
   while (output_frames_outstanding > 0) {
@@ -48,6 +50,22 @@ std::optional<Stream::Buffer> TapStage::LockBuffer(zx::time ref_time, int64_t fr
 void TapStage::SetMinLeadTime(zx::duration min_lead_time) {
   Stream::SetMinLeadTime(min_lead_time);
   source_->SetMinLeadTime(min_lead_time);
+}
+
+const TimelineFunction& TapStage::SourceFracFrameToTapFrame() {
+  auto source_snapshot = source_->ReferenceClockToFractionalFrames();
+  auto tap_snapshot = tap_->ReferenceClockToFractionalFrames();
+  if (source_snapshot.generation != source_generation_ ||
+      tap_snapshot.generation != tap_generation_) {
+    auto source_frac_frame_to_tap_frac_frame =
+        tap_snapshot.timeline_function * source_snapshot.timeline_function.Inverse();
+    auto frac_frame_to_frame = TimelineRate(1, FractionalFrames<uint32_t>(1).raw_value());
+    source_frac_frame_to_tap_frame_ =
+        TimelineFunction(frac_frame_to_frame) * source_frac_frame_to_tap_frac_frame;
+    source_generation_ = source_snapshot.generation;
+    tap_generation_ = tap_snapshot.generation;
+  }
+  return source_frac_frame_to_tap_frame_;
 }
 
 }  // namespace media::audio

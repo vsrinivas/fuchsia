@@ -29,8 +29,15 @@ class TapStage : public Stream {
   void SetMinLeadTime(zx::duration min_lead_time) override;
 
  private:
+  const TimelineFunction& SourceFracFrameToTapFrame();
+
   std::shared_ptr<Stream> source_;
   std::shared_ptr<Stream> tap_;
+
+  // Track the mapping of source frames to tap frames.
+  TimelineFunction source_frac_frame_to_tap_frame_;
+  uint32_t source_generation_ = kInvalidGenerationId;
+  uint32_t tap_generation_ = kInvalidGenerationId;
 };
 
 }  // namespace media::audio

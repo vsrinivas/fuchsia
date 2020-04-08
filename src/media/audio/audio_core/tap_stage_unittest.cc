@@ -30,15 +30,25 @@ constexpr uint32_t kDefaultPacketFrames = 480;
 
 class TapStageTest : public testing::ThreadingModelFixture {
  protected:
+  TapStageTest() : TapStageTest(0) {}
+
+  // tap_frame = source_frame + tap_frame_offset.
+  //
+  // This is used to test that TapStage can correctly convert between arbitrary timelines.
+  TapStageTest(uint32_t tap_frame_offset) : tap_frame_offset_(tap_frame_offset) {}
+
   void SetUp() {
     testing::ThreadingModelFixture::SetUp();
-    auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-        TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                     zx::sec(1).to_nsecs())));
-    packet_queue_ = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+    TimelineRate rate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                      zx::sec(1).to_nsecs());
+    auto source_timeline_function =
+        fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(rate));
+    packet_queue_ = std::make_shared<PacketQueue>(kDefaultFormat, source_timeline_function);
     ASSERT_TRUE(packet_queue_);
 
-    auto endpoints = RingBuffer::AllocateSoftwareBuffer(kDefaultFormat, timeline_function,
+    auto tap_timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(
+        TimelineFunction(FractionalFrames<int64_t>(tap_frame_offset_).raw_value(), 0, rate));
+    auto endpoints = RingBuffer::AllocateSoftwareBuffer(kDefaultFormat, tap_timeline_function,
                                                         kRingBufferFrameCount);
     ring_buffer_ = std::move(endpoints.reader);
 
@@ -77,7 +87,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
     stream->UnlockBuffer(release);
   }
 
- private:
+  uint32_t tap_frame_offset_;
   testing::PacketFactory packet_factory_{dispatcher(), kDefaultFormat, 4 * PAGE_SIZE};
   std::shared_ptr<PacketQueue> packet_queue_;
   std::shared_ptr<RingBuffer> ring_buffer_;
@@ -178,6 +188,22 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
       EXPECT_THAT(arr, Each(FloatEq(1.0f)));
     }
   }
+}
+
+class TapStageFrameConversionTest : public TapStageTest {
+ protected:
+  TapStageFrameConversionTest() : TapStageTest(12345) {}
+};
+
+// Test that we can properly copy a packet when the source and tap streams are using different
+// TimelineFunctions.
+TEST_F(TapStageFrameConversionTest, CopySinglePacket) {
+  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
+
+  // We expect the tap and ring buffer to both be in sync for the first 480.
+  constexpr size_t frame_count = kDefaultPacketFrames;
+  CheckStream<frame_count>(&tap(), zx::msec(0), 0, 1.0, true);
+  CheckStream<frame_count>(&ring_buffer(), zx::msec(10), tap_frame_offset_, 1.0, true);
 }
 
 }  // namespace
