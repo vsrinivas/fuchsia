@@ -84,6 +84,8 @@ class H264MultiDecoder : public VideoDecoder {
   std::shared_ptr<ReferenceFrame> GetUnusedReferenceFrame();
   bool currently_decoding() { return currently_decoding_; }
 
+  void* SecondaryFirmwareVirtualAddressForTesting() { return secondary_firmware_->virt_base(); }
+
  private:
   enum class DecoderState {
     // The hardware's state doesn't reflect that of the H264MultiDecoder.
@@ -109,7 +111,7 @@ class H264MultiDecoder : public VideoDecoder {
   std::list<std::unique_ptr<media::DecoderBuffer>> decoder_buffer_list_;
   std::unique_ptr<media::DecoderBuffer> current_decoder_buffer_;
 
-  io_buffer_t secondary_firmware_;
+  std::optional<InternalBuffer> secondary_firmware_;
   std::optional<InternalBuffer> codec_data_;
   std::optional<InternalBuffer> aux_buf_;
   std::optional<InternalBuffer> lmem_;

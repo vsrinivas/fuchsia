@@ -124,6 +124,35 @@ class TestH264Multi {
     video->ClearDecoderInstance();
     video.reset();
   }
+
+  static void TestInitializeTwice() {
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+    TestFrameAllocator frame_allocator(video.get());
+
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
+
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      video->SetDefaultInstance(std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator),
+                                /*hevc=*/false);
+      frame_allocator.set_decoder(video->video_decoder());
+    }
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, 1024 * PAGE_SIZE,
+                                                   /*is_secure=*/false));
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+
+      EXPECT_EQ(ZX_OK, video->video_decoder()->Initialize());
+      auto* decoder = static_cast<H264MultiDecoder*>(video->video_decoder());
+      void* virt_base_1 = decoder->SecondaryFirmwareVirtualAddressForTesting();
+
+      decoder->SetSwappedOut();
+      EXPECT_EQ(ZX_OK, video->video_decoder()->InitializeHardware());
+      EXPECT_EQ(virt_base_1, decoder->SecondaryFirmwareVirtualAddressForTesting());
+    }
+  }
 };
 
 TEST(H264Multi, DecodeBear) {
@@ -135,3 +164,5 @@ TEST(H264Multi, Decode25fps) {
   TestH264Multi::DecodeSetStream("video_test_data/test-25fps.h264", test_25fps_h264_hashes,
                                  "/tmp/test25fpsmultih264.yuv");
 }
+
+TEST(H264Multi, InitializeTwice) { TestH264Multi::TestInitializeTwice(); }

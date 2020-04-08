@@ -227,6 +227,7 @@ H264MultiDecoder::~H264MultiDecoder() {
     owner_->core()->StopDecoding();
     owner_->core()->WaitForIdle();
   }
+  BarrierBeforeRelease();
 }
 
 zx_status_t H264MultiDecoder::Initialize() {
@@ -240,6 +241,8 @@ zx_status_t H264MultiDecoder::Initialize() {
 }
 
 zx_status_t H264MultiDecoder::LoadSecondaryFirmware(const uint8_t* data, uint32_t firmware_size) {
+  if (secondary_firmware_)
+    return ZX_OK;
   // For some reason, some portions of the firmware aren't loaded into the
   // hardware directly, but are kept in main memory.
   constexpr uint32_t kSecondaryFirmwareSize = 4 * 1024;
@@ -248,30 +251,31 @@ zx_status_t H264MultiDecoder::LoadSecondaryFirmware(const uint8_t* data, uint32_
   constexpr uint32_t kFirmwareSectionCount = 9;
   constexpr uint32_t kSecondaryFirmwareBufferSize = kSecondaryFirmwareSize * kFirmwareSectionCount;
   constexpr uint32_t kBufferAlignShift = 16;
-  {
-    zx_status_t status = io_buffer_init_aligned(&secondary_firmware_, owner_->bti()->get(),
-                                                kSecondaryFirmwareBufferSize, kBufferAlignShift,
-                                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    if (status != ZX_OK) {
-      DECODE_ERROR("Failed to make second firmware buffer: %d", status);
-      return status;
-    }
-    SetIoBufferName(&secondary_firmware_, "H264SecondaryFirmware");
-
-    auto addr = static_cast<uint8_t*>(io_buffer_virt(&secondary_firmware_));
-    // The secondary firmware is in a different order in the file than the main
-    // firmware expects it to have.
-    memcpy(addr + 0, data + 0x4000, kSecondaryFirmwareSize);                // header
-    memcpy(addr + 0x1000, data + 0x2000, kSecondaryFirmwareSize);           // data
-    memcpy(addr + 0x2000, data + 0x6000, kSecondaryFirmwareSize);           // mmc
-    memcpy(addr + 0x3000, data + 0x3000, kSecondaryFirmwareSize);           // list
-    memcpy(addr + 0x4000, data + 0x5000, kSecondaryFirmwareSize);           // slice
-    memcpy(addr + 0x5000, data, 0x2000);                                    // main
-    memcpy(addr + 0x5000 + 0x2000, data + 0x2000, kSecondaryFirmwareSize);  // data copy 2
-    memcpy(addr + 0x5000 + 0x3000, data + 0x5000, kSecondaryFirmwareSize);  // slice copy 2
-    ZX_DEBUG_ASSERT(0x5000 + 0x3000 + kSecondaryFirmwareSize == kSecondaryFirmwareBufferSize);
+  auto result = InternalBuffer::CreateAligned(
+      "H264MultiSecondaryFirmware", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
+      kSecondaryFirmwareBufferSize, 1 << kBufferAlignShift, /*is_secure*/ false,
+      /*is_writable=*/true, /*is_mapping_needed*/ true);
+  if (!result.is_ok()) {
+    DECODE_ERROR("Failed to make second firmware buffer: %d", result.error());
+    return result.error();
   }
-  io_buffer_cache_flush(&secondary_firmware_, 0, kSecondaryFirmwareBufferSize);
+
+  secondary_firmware_.emplace(result.take_value());
+
+  auto addr = static_cast<uint8_t*>(secondary_firmware_->virt_base());
+  // The secondary firmware is in a different order in the file than the main
+  // firmware expects it to have.
+  memcpy(addr + 0, data + 0x4000, kSecondaryFirmwareSize);                // header
+  memcpy(addr + 0x1000, data + 0x2000, kSecondaryFirmwareSize);           // data
+  memcpy(addr + 0x2000, data + 0x6000, kSecondaryFirmwareSize);           // mmc
+  memcpy(addr + 0x3000, data + 0x3000, kSecondaryFirmwareSize);           // list
+  memcpy(addr + 0x4000, data + 0x5000, kSecondaryFirmwareSize);           // slice
+  memcpy(addr + 0x5000, data, 0x2000);                                    // main
+  memcpy(addr + 0x5000 + 0x2000, data + 0x2000, kSecondaryFirmwareSize);  // data copy 2
+  memcpy(addr + 0x5000 + 0x3000, data + 0x5000, kSecondaryFirmwareSize);  // slice copy 2
+  ZX_DEBUG_ASSERT(0x5000 + 0x3000 + kSecondaryFirmwareSize == kSecondaryFirmwareBufferSize);
+  secondary_firmware_->CacheFlush(0, kSecondaryFirmwareBufferSize);
+  BarrierAfterFlush();
   return ZX_OK;
 }
 
@@ -370,11 +374,10 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
   status = LoadSecondaryFirmware(data, firmware_size);
   if (status != ZX_OK)
     return status;
-  BarrierAfterFlush();  // After secondary_firmware_ cache is flushed to RAM.
 
   ResetHardware();
   AvScratchG::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&secondary_firmware_)))
+      .FromValue(truncate_to_32(secondary_firmware_->phys_base()))
       .WriteTo(owner_->dosbus());
 
   PscaleCtrl::Get().FromValue(0).WriteTo(owner_->dosbus());
@@ -859,7 +862,10 @@ bool H264MultiDecoder::CanBeSwappedOut() const {
   return false;
 }
 
-void H264MultiDecoder::SetSwappedOut() { DLOG("Not implemented: %s\n", __func__); }
+void H264MultiDecoder::SetSwappedOut() {
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kInitialWaitingForInput);
+  state_ = DecoderState::kSwappedOut;
+}
 
 void H264MultiDecoder::SwappedIn() { DLOG("Not implemented: %s\n", __func__); }
 
