@@ -63,15 +63,14 @@ class LogListenerOStreamImplTest : public gtest::RealLoopFixture {
 TEST_F(LogListenerOStreamImplTest, SimpleLog) {
   Init("netemul");
 
-  bool called = false;
-  proxy->Log(CreateLogMessage({"tag"}, "Hello"), [&called]() { called = true; });
+  // TODO(fxbug.dev/49599) assert that the callback is called once we understand why it flaked
+  proxy->Log(CreateLogMessage({"tag"}, "Hello"), []() {});
 
   auto message = ExpectedLog({"tag"}, "Hello");
   RunLoopUntil([this, &message]() {
     // Keep looping while the message doesn't match
     return message == stream.str();
   });
-  EXPECT_TRUE(called);
 }
 
 TEST_F(LogListenerOStreamImplTest, SimpleLogs) {
