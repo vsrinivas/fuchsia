@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 # TODO(MA-488): Add ddk support.
 
 # This special config allows "common" to locate the library's headers.
@@ -21,7 +33,7 @@ config("library_headers_config") {
 source_set("common") {
   visibility = [ ":*" ]
   sources = [ "event_vthread.cc" ]
-  deps = [ "$zx/system/ulib/zircon" ]
+  public = [ "include/trace-vthread/event_vthread.h" ]
   public_configs = [ ":library_headers_config" ]
 }
 
@@ -35,14 +47,14 @@ zx_library("trace-vthread") {
   sources = []
   public_deps = [
     # <trace-vthread/internal/event_vthread.h> has #include <trace/event_args.h>.
-    "$zx/system/ulib/trace:headers",
+    "//zircon/public/lib/trace",
 
     # <trace-vthread/internal/event_vthread.h> has #include <trace-engine/instrumentation.h>.
-    "$zx/system/ulib/trace-engine:headers",
+    "//zircon/public/lib/trace-engine",
   ]
   deps = [
     ":common",
-    "$zx/system/ulib/trace",
+    "//zircon/public/lib/trace",
   ]
 }
 
@@ -59,13 +71,13 @@ zx_library("trace-vthread-with-static-engine") {
   sources = []
   public_deps = [
     # <trace-vthread/internal/event_vthread.h> has #include <trace/event_args.h>.
-    "$zx/system/ulib/trace:trace-with-static-engine.headers",
+    "//zircon/public/lib/trace-with-static-engine",
 
     # <trace-vthread/internal/event_vthread.h> has #include <trace-engine/instrumentation.h>.
-    "$zx/system/ulib/trace-engine:trace-engine-static.headers",
+    "//zircon/public/lib/trace-engine-static",
   ]
   deps = [
     ":common",
-    "$zx/system/ulib/trace:trace-with-static-engine",
+    "//zircon/public/lib/trace-with-static-engine",
   ]
 }

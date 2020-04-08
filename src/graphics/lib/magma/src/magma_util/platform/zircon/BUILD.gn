@@ -330,8 +330,8 @@ source_set("trace") {
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/async-cpp",
     "$zircon_build_root/public/lib/async-loop-cpp",
-    "$zircon_build_root/public/lib/trace-vthread-with-static-engine",
     "$zircon_build_root/public/lib/trace-with-static-engine",
+    "//zircon/system/ulib/trace-vthread:trace-vthread-with-static-engine",
     "..:trace_header",
   ]
 

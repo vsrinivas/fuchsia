@@ -441,7 +441,7 @@ template("escher_library") {
         "//zircon/public/lib/async-loop-cpp",
         "//zircon/public/lib/async-loop-default",
         "//zircon/public/lib/fit",
-        "//zircon/public/lib/trace-vthread",
+        "//zircon/system/ulib/trace-vthread",
       ]
       deps += [ "//zircon/public/lib/trace" ]
     }

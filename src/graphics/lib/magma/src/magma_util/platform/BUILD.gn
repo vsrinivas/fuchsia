@@ -422,8 +422,8 @@ source_set("trace_header") {
 
     if (magma_enable_tracing) {
       public_deps += [
-        "//zircon/public/lib/trace-vthread-with-static-engine",
         "//zircon/public/lib/trace-with-static-engine",
+        "//zircon/system/ulib/trace-vthread:trace-vthread-with-static-engine",
       ]
     }
   }
