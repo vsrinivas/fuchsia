@@ -343,7 +343,6 @@ void PortPacketTypeName(uint32_t type, std::ostream& os) {
   switch (type) {
     PortPacketTypeNameCase(ZX_PKT_TYPE_USER);
     PortPacketTypeNameCase(ZX_PKT_TYPE_SIGNAL_ONE);
-    PortPacketTypeNameCase(ZX_PKT_TYPE_SIGNAL_REP);
     PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_BELL);
     PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_MEM);
     PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_IO);

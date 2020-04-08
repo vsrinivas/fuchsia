@@ -1715,9 +1715,6 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
     AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_signal_t>>(
                  "signal", signal, ZxPacketSignal::GetClass()))
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_SIGNAL_ONE));
-    AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_signal_t>>(
-                 "signal", signal, ZxPacketSignal::GetClass()))
-        ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_SIGNAL_REP));
     AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_bell_t>>(
                  "guest_bell", guest_bell, ZxPacketGuestBell::GetClass()))
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_BELL));

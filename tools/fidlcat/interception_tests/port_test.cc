@@ -231,42 +231,6 @@ PORT_WAIT_DISPLAY_TEST(
      "      }\n")
         .c_str());
 
-void InitSignalRep(zx_port_packet_t* packet) {
-  packet->key = kKey;
-  packet->type = ZX_PKT_TYPE_SIGNAL_REP;
-  packet->status = ZX_OK;
-  packet->signal.trigger = __ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED;
-  packet->signal.observed = __ZX_OBJECT_READABLE | __ZX_OBJECT_WRITABLE;
-  packet->signal.count = kSignalCount;
-  packet->signal.timestamp = 0;
-  packet->signal.reserved1 = 0;
-}
-
-PORT_WAIT_DISPLAY_TEST(
-    ZxPortWaitSignalRep, ZX_OK, kHandle, ZX_TIME_INFINITE, InitSignalRep,
-    ("\n"
-     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-     "zx_port_wait("
-     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-     "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
-     "  -> \x1B[32mZX_OK\x1B[0m\n"
-     "      packet:\x1B[32mzx_port_packet_t\x1B[0m: {\n"
-     "        key:\x1B[32muint64\x1B[0m: \x1B[34m1234\x1B[0m\n"
-     "        type:\x1B[32mzx_port_packet_t::type\x1B[0m: \x1B[34mZX_PKT_TYPE_SIGNAL_REP\x1B[0m\n"
-     "        status:\x1B[32mstatus_t\x1B[0m: \x1B[32mZX_OK\x1B[0m\n"
-     "        signal:\x1B[32mzx_packet_signal_t\x1B[0m: {\n"
-     "          trigger:\x1B[32msignals\x1B[0m: \x1B[34m__ZX_OBJECT_READABLE | "
-     "__ZX_OBJECT_PEER_CLOSED\x1B[0m\n"
-     "          observed:\x1B[32msignals\x1B[0m: \x1B[34m__ZX_OBJECT_READABLE | "
-     "__ZX_OBJECT_WRITABLE\x1B[0m\n"
-     "          count:\x1B[32muint64\x1B[0m: \x1B[34m2\x1B[0m\n" +
-     ClockExpected(
-         0, "          timestamp:\x1B[32mtime\x1B[0m: \x1B[34m%c and 000000000 ns\x1B[0m\n") +
-     "          reserved1:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
-     "        }\n"
-     "      }\n")
-        .c_str());
-
 void InitGuestBell(zx_port_packet_t* packet) {
   constexpr uint64_t kAddr = 0x78654321;
   packet->key = kKey;
