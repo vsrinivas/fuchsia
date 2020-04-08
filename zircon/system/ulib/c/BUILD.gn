@@ -113,54 +113,12 @@ zx_library("c") {
             # Note: Most of zircon/device is excluded from SDKs.
             # TODO(FIDL-273,ZX-2503): remove this allowlist.
             "zircon/device/audio.h",
-
-            "../../vdso/alias_workarounds.fidl",
-            "../../vdso/bti.fidl",
-            "../../vdso/cache.fidl",
-            "../../vdso/channel.fidl",
-            "../../vdso/clock.fidl",
-            "../../vdso/cprng.fidl",
-            "../../vdso/debuglog.fidl",
-            "../../vdso/debug.fidl",
-            "../../vdso/eventpair.fidl",
-            "../../vdso/event.fidl",
-            "../../vdso/exception.fidl",
-            "../../vdso/fifo.fidl",
-            "../../vdso/framebuffer.fidl",
-            "../../vdso/futex.fidl",
-            "../../vdso/guest.fidl",
-            "../../vdso/handle.fidl",
-            "../../vdso/interrupt.fidl",
-            "../../vdso/iommu.fidl",
-            "../../vdso/ioports.fidl",
-            "../../vdso/job.fidl",
-            "../../vdso/ktrace.fidl",
-            "../../vdso/misc.fidl",
-            "../../vdso/mtrace.fidl",
-            "../../vdso/object.fidl",
-            "../../vdso/pager.fidl",
-            "../../vdso/pci.fidl",
-            "../../vdso/pc.fidl",
-            "../../vdso/pmt.fidl",
-            "../../vdso/port.fidl",
-            "../../vdso/process.fidl",
-            "../../vdso/profile.fidl",
-            "../../vdso/resource.fidl",
-            "../../vdso/rights.fidl",
-            "../../vdso/smc.fidl",
-            "../../vdso/socket.fidl",
-            "../../vdso/stream.fidl",
-            "../../vdso/syscall.fidl",
-            "../../vdso/system.fidl",
-            "../../vdso/task.fidl",
-            "../../vdso/thread.fidl",
-            "../../vdso/timer.fidl",
-            "../../vdso/vcpu.fidl",
-            "../../vdso/vmar.fidl",
-            "../../vdso/vmo.fidl",
-            "../../vdso/zx_common.fidl",
-            "../../vdso/zx_syscall.fidl",
           ]
+
+          foreach(fidl, all_syscall_fidl_files) {
+            headers += [ "../../vdso/" + fidl ]
+          }
+
           if (!exclude_testonly_syscalls) {
             headers += [ "zircon/testonly-syscalls.h" ]
           }
