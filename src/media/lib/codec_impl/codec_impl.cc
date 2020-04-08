@@ -920,7 +920,6 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       FailLocked("client QueueInputPacket() with packet_index !free");
       return;
     }
-    all_packets_[kInputPort][packet.header().packet_index()]->SetFree(false);
 
     if (stream_->input_end_of_stream()) {
       FailLocked("QueueInputPacket() after QueueInputEndOfStream() unexpeted");
@@ -946,6 +945,8 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       // ~lock
       return;
     }
+
+    all_packets_[kInputPort][packet.header().packet_index()]->SetFree(false);
 
     // Sending OnFreeInputPacket() will happen later instead, when the core
     // codec gives back the packet.
@@ -2225,6 +2226,7 @@ bool CodecImpl::CheckStreamLifetimeOrdinalLocked(uint64_t stream_lifetime_ordina
 
 bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
                                uint64_t stream_lifetime_ordinal) {
+  VLOGF("StartNewStream()");
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   ZX_DEBUG_ASSERT((stream_lifetime_ordinal % 2 == 1) && "new stream_lifetime_ordinal must be odd");
 
@@ -2382,6 +2384,7 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
 }
 
 void CodecImpl::EnsureStreamClosed(std::unique_lock<std::mutex>& lock) {
+  VLOGF("EnsureStreamClosed()");
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   // Stop the core codec, by using this thread to directly drive the core codec
   // from running to stopped (if not already stopped).  We do this first so the
@@ -2390,7 +2393,9 @@ void CodecImpl::EnsureStreamClosed(std::unique_lock<std::mutex>& lock) {
   if (is_core_codec_stream_started_) {
     {  // scope unlock
       ScopedUnlock unlock(lock);
+      VLOGF("CoreCodecStopStream()...");
       CoreCodecStopStream();
+      VLOGF("CoreCodecStopStream() done.");
     }
     is_core_codec_stream_started_ = false;
   }
@@ -2739,6 +2744,7 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
   VLOGF("CodecImpl::MidStreamOutputConstraintsChange - stream: %lu", stream_lifetime_ordinal);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
+    VLOGF("lock aquired 1");
     if (stream_lifetime_ordinal < stream_lifetime_ordinal_) {
       // ignore; The omx_meh_output_buffer_constraints_version_ordinal_ took
       // care of it.
@@ -2752,19 +2758,24 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
 
     // This is what starts the interval during which we'll ignore any
     // in-progress client output config until the client catches up.
+    VLOGF("StartIngoringClientOldOutputConfig()...");
     StartIgnoringClientOldOutputConfig(lock);
 
     {  // scope unlock
       ScopedUnlock unlock(lock);
+      VLOGF("CoreCodecMidStreamOutputBufferReConfigPrepare()...");
       CoreCodecMidStreamOutputBufferReConfigPrepare();
     }  // ~unlock
 
+    VLOGF("EnsureBuffersNotConfigured()...");
     EnsureBuffersNotConfigured(lock, kOutputPort);
 
+    VLOGF("GenerateAndSendNewOutputConstraints()...");
     GenerateAndSendNewOutputConstraints(lock, true);
 
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
+    VLOGF("RunAnySysmemCompletionsOrWait()...");
     while (!IsStoppingLocked() && !stream_->future_discarded() && !IsOutputConfiguredLocked()) {
       RunAnySysmemCompletionsOrWait(lock);
     }
@@ -2784,9 +2795,11 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
     }
 
     // For asserts.
+    VLOGF("ClearMidStreamOutputConstraintsChangeActive()...");
     stream_->ClearMidStreamOutputConstraintsChangeActive();
   }  // ~lock
 
+  VLOGF("CoreCodecMidStreamOutputBufferReConfigFinish()...");
   CoreCodecMidStreamOutputBufferReConfigFinish();
 
   VLOGF("Done with mid-stream format change.");
@@ -3261,6 +3274,19 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
     // packets until the client has moved on from this stream.
     LOG(ERROR, "onStreamFailed() - stream_lifetime_ordinal_: %lu error code: 0x%08x",
         stream_lifetime_ordinal_, error);
+
+    if (stream_->future_discarded()) {
+      // No reason to report a stream failure to the client for an obsolete stream.  The client has
+      // already moved on from the current stream anyway.  This path won't be taken if the client
+      // flushed the stream before moving on.  This permits core codecs to indicate
+      // onCoreCodecFailStream() on a stream being cancelled due to a newer stream, without that
+      // causing FailLocked() of the whole codec (important), and without sending an extraneous
+      // OnStreamFailed() (less important since the client is expected to ignore messages for an
+      // obsolete stream).  Ideally a core codec wouldn't trigger onCoreCodecFailStream() during
+      // CoreCodecStopStream(), but this path tolerates it.
+      return;
+    }
+
     if (!is_on_stream_failed_enabled_) {
       FailLocked(
           "onStreamFailed() with a client that didn't send "
@@ -3320,7 +3346,8 @@ void CodecImpl::onCoreCodecResetStreamAfterCurrentFrame() {
 }
 
 void CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(bool output_re_config_required) {
-  VLOGF("CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(): %d", output_re_config_required);
+  VLOGF("CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(): re-config: %d",
+        output_re_config_required);
   // For now, the core codec thread is the only thread this gets called from.
   ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread());
 

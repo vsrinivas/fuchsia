@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -25,22 +25,19 @@
 
 namespace {
 
-constexpr char kInputFilePath[] = "/pkg/data/test-25fps.vp9.ivf";
-constexpr int kInputFileFrameCount = 250;
+constexpr char kInputFilePath[] = "/pkg/data/bear.h264";
+constexpr int kInputFileFrameCount = 990;
 
-const char* kGoldenSha256 = "7af41ec1056227e4c83459240c89db07916d8b67d31d023260a0895bc1fc511f";
+const char* kGoldenSha256 = "0ff588a0cc86954a3c58a15445b57081e4c9adfd9f87b5b80d93f2c11c40889c";
 
 }  // namespace
 
-// Test vp9 decoder's ability to skip frames until keyframe when input starts at non-keyframe.  This
-// is especially relevant to any decoder that has an internal watchdog that might reset decoder
-// stream state at any arbitrary frame.
 int main(int argc, char* argv[]) {
   const UseVideoDecoderTestParams test_params{
-      .first_expected_output_frame_ordinal = 150,
-      .skip_frame_ordinal = 0,
+      .keep_stream_modulo = 4,
+      .loop_stream_count = 65,
   };
-  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_vp9_decoder,
+  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
                                 /*is_secure_output=*/false, /*is_secure_input=*/false,
                                 /*min_output_buffer_count=*/0, kGoldenSha256, &test_params);
 }

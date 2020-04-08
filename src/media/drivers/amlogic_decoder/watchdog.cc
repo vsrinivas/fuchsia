@@ -32,8 +32,8 @@ void Watchdog::Start() {
   // generate an interrupt on bad input data instead of getting wedged.  And/or when watchdog fires
   // read HevcAssistMbox0IrqReg to see if an interrupt is already pending that HandleInterrupt
   // doesn't know about yet (TBD whether reading that register works and is meaningful).
-  constexpr uint32_t kTimeoutMs = 4000;
-  timeout_time_ = zx::deadline_after(zx::msec(kTimeoutMs));
+  constexpr uint32_t kWatchdogTimeoutMs = 4000;
+  timeout_time_ = zx::deadline_after(zx::msec(kWatchdogTimeoutMs));
 
   timer_.set(timeout_time_, zx::duration());
   timer_running_ = true;

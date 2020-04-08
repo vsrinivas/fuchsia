@@ -54,6 +54,7 @@ zx_status_t InStream::ReadBytesShort(uint32_t max_bytes_to_read, uint32_t* bytes
   zx_status_t status =
       ReadBytesInternal(max_bytes_to_read, bytes_read_out, buffer_out, just_fail_deadline);
   if (status != ZX_OK) {
+    LOGF("ReadBytesInternal failed - status: %u", status);
     failure_seen_ = true;
     return status;
   }
@@ -107,3 +108,12 @@ void InStream::FencePostToFidlSerial() {
   ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
   FencePostSerial(fidl_dispatcher_);
 }
+
+zx_status_t InStream::ResetToStart(zx::time just_fail_deadline) {
+  ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
+  return ResetToStartInternal(just_fail_deadline);
+}
+
+zx_status_t InStream::ResetToStartInternal(zx::time just_fail_deadline) {
+  return ZX_ERR_NOT_SUPPORTED;
+};

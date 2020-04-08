@@ -109,8 +109,9 @@ int main(int argc, char* argv[]) {
 
   uint32_t frame_counter = 0;
   EmitFrame emit_frame = [&md5_ctx, &frame_counter](
-                             uint8_t* i420_base, uint32_t width, uint32_t height, uint32_t stride,
-                             bool has_timestamp_ish, uint64_t timestamp_ish) {
+                             uint64_t stream_lifetime_ordinal, uint8_t* i420_base, uint32_t width,
+                             uint32_t height, uint32_t stride, bool has_timestamp_ish,
+                             uint64_t timestamp_ish) {
     // The handling for odd height has _not_ successfully matched an MD5 from
     // the VP9 decoder conformance spreadsheet yet.
     //

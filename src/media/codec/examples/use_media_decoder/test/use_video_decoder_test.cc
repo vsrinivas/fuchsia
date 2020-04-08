@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fit/defer.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
@@ -23,6 +24,7 @@
 #include <map>
 #include <set>
 
+#include "../in_stream_buffer.h"
 #include "../in_stream_file.h"
 #include "../in_stream_peeker.h"
 #include "../input_copier.h"
@@ -35,6 +37,7 @@ namespace {
 // 8MiB max peek is essentially for h264 streams.  VP9 streams don't need to
 // scan for start codes so won't peek anywhere near this much.
 constexpr uint32_t kMaxPeekBytes = 8 * 1024 * 1024;
+constexpr uint64_t kMaxBufferBytes = 8 * 1024 * 1024;
 
 }  // namespace
 
@@ -43,6 +46,12 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
                            bool is_secure_input, uint32_t min_output_buffer_count,
                            std::string golden_sha256,
                            const UseVideoDecoderTestParams* test_params) {
+  const UseVideoDecoderTestParams default_test_params;
+  if (!test_params) {
+    test_params = &default_test_params;
+  }
+  test_params->Validate();
+
   syslog::LogSettings settings = {.fd = STDERR_FILENO, .severity = FX_LOG_INFO};
   zx_status_t status = syslog::SetSettings(settings, {"use_video_decoder_test"});
   ZX_ASSERT(status == ZX_OK);
@@ -56,10 +65,19 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
 
   printf("Decoding test file %s\n", input_file_path.c_str());
 
-  auto in_stream_file = std::make_unique<InStreamFile>(&fidl_loop, fidl_thread,
-                                                       component_context.get(), input_file_path);
+  std::unique_ptr<InStream> in_stream_so_far = std::make_unique<InStreamFile>(
+      &fidl_loop, fidl_thread, component_context.get(), input_file_path);
+  // default 1
+  const int64_t loop_stream_count = test_params->loop_stream_count;
+  if (loop_stream_count >= 2) {
+    std::unique_ptr<InStream> next_in_stream;
+    next_in_stream =
+        std::make_unique<InStreamBuffer>(&fidl_loop, fidl_thread, component_context.get(),
+                                         std::move(in_stream_so_far), kMaxBufferBytes);
+    in_stream_so_far = std::move(next_in_stream);
+  }
   auto in_stream_peeker = std::make_unique<InStreamPeeker>(
-      &fidl_loop, fidl_thread, component_context.get(), std::move(in_stream_file), kMaxPeekBytes);
+      &fidl_loop, fidl_thread, component_context.get(), std::move(in_stream_so_far), kMaxPeekBytes);
 
   std::vector<std::pair<bool, uint64_t>> timestamps;
   SHA256_CTX sha256_ctx;
@@ -67,18 +85,31 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
 
   uint32_t frame_index = 0;
   bool got_output_data = false;
-  EmitFrame emit_frame = [&sha256_ctx, &timestamps, &frame_index, &got_output_data](
-                             uint8_t* i420_data, uint32_t width, uint32_t height, uint32_t stride,
-                             bool has_timestamp_ish, uint64_t timestamp_ish) {
-    VLOGF("emit_frame frame_index: %u", frame_index);
+  // default 2
+  const uint64_t keep_stream_modulo = test_params->keep_stream_modulo;
+  EmitFrame emit_frame = [&sha256_ctx, &timestamps, &frame_index, &got_output_data,
+                          keep_stream_modulo](uint64_t stream_lifetime_ordinal, uint8_t* i420_data,
+                                              uint32_t width, uint32_t height, uint32_t stride,
+                                              bool has_timestamp_ish, uint64_t timestamp_ish) {
+    VLOGF("emit_frame stream_lifetime_ordinal: %" PRIu64
+          " frame_index: %u has_timestamp_ish: %d timestamp_ish: %" PRId64,
+          stream_lifetime_ordinal, frame_index, has_timestamp_ish, timestamp_ish);
+    ZX_DEBUG_ASSERT(stream_lifetime_ordinal % 2 == 1);
     ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
     ZX_ASSERT_MSG(width == stride, "stride != width not yet handled");
+    auto increment_frame_index = fit::defer([&frame_index] { frame_index++; });
+    // For streams where this isn't true, we don't flush the input EOS, so there's no guarantee
+    // how many output frames we'll get.
+    if (stream_lifetime_ordinal % keep_stream_modulo != 1) {
+      // ~increment_frame_index
+      return;
+    }
     timestamps.push_back({has_timestamp_ish, timestamp_ish});
     if (i420_data) {
       got_output_data = true;
       SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
     }
-    frame_index++;
+    // ~increment_frame_index
   };
 
   if (!decode_video_stream_test(&fidl_loop, fidl_thread, component_context.get(),
@@ -92,12 +123,9 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   const int frame_count = expected_frame_count != -1 ? expected_frame_count : timestamps.size();
   std::set<uint64_t> expected_timestamps;
 
-  int64_t first_expected_output_frame_ordinal = 0;
-  if (test_params && test_params->Get("first_expected_output_frame_ordinal",
-                                      &first_expected_output_frame_ordinal)) {
-    printf("first_expected_output_frame_ordinal: %" PRId64 "\n",
-           first_expected_output_frame_ordinal);
-  }
+  // default 0
+  const int64_t first_expected_output_frame_ordinal =
+      test_params->first_expected_output_frame_ordinal;
 
   for (int i = first_expected_output_frame_ordinal; i < frame_count; i++) {
     expected_timestamps.insert(i);

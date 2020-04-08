@@ -299,7 +299,7 @@ bool CodecClient::WaitForSysmemBuffersAllocated(
   // This is a little noisy, but it can be useful to see how many buffers are being used.  Make sure
   // it doesn't show up on stderr though.
   std::cout << "WaitForSysmemBuffersAllocated() done - is_output: " << is_output
-            << " buffer_count: " << result_buffer_collection_info.buffer_count;
+            << " buffer_count: " << result_buffer_collection_info.buffer_count << std::endl;
 
   *out_buffer_collection_info = std::move(result_buffer_collection_info);
   return true;
@@ -458,13 +458,26 @@ void CodecClient::OnFreeInputPacket(fuchsia::media::PacketHeader free_input_pack
 }
 
 std::unique_ptr<fuchsia::media::Packet> CodecClient::BlockingGetFreeInputPacket() {
+  // This should be significantly longer than kWatchdogTimeoutMs in amlogic_decoder watchdog.cc.
+  const uint32_t kBlockingGetFreeInputPacketTimeoutMs = 20000;
+  auto now = std::chrono::system_clock::now();
+  auto wait_until_time = now + std::chrono::milliseconds(kBlockingGetFreeInputPacketTimeoutMs);
   uint32_t free_packet_index;
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     while (input_free_packet_list_.empty()) {
       if (connection_lost_)
         return nullptr;
-      input_free_packet_list_not_empty_.wait(lock);
+      auto wait_until_result = input_free_packet_list_not_empty_.wait_until(lock, wait_until_time);
+      if (wait_until_result == std::cv_status::timeout) {
+        ZX_PANIC(
+            "BlockingGetFreeInputPacket() no packet available for too long - "
+            "kBlockingGetFreeInputPacketTimeoutMs: %u\n",
+            kBlockingGetFreeInputPacketTimeoutMs);
+        // not reached
+        return nullptr;
+      }
+      ZX_DEBUG_ASSERT(wait_until_result == std::cv_status::no_timeout);
     }
     free_packet_index = input_free_packet_list_.back();
     input_free_packet_list_.pop_back();

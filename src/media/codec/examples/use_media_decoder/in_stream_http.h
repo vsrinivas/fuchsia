@@ -14,7 +14,7 @@ class InStreamHttp : public InStream {
   InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread, sys::ComponentContext* component_context,
                std::string url);
 
-  ~InStreamHttp();
+  ~InStreamHttp() override;
 
  private:
   zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,

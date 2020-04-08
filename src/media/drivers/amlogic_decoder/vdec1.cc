@@ -55,6 +55,10 @@ zx_status_t Vdec1::LoadFirmware(const uint8_t* data, uint32_t size) {
 }
 
 void Vdec1::PowerOn() {
+  if (powered_on_) {
+    return;
+  }
+
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
     temp.set_reg_value(temp.reg_value() & ~0xc);
@@ -189,10 +193,12 @@ void Vdec1::StopDecoding() {
 
 void Vdec1::WaitForIdle() {
   auto timeout = std::chrono::milliseconds(100);
+  LOG(TRACE, "MdecPicDcStatus wait...");
   if (!WaitForRegister(timeout, [this] {
         return MdecPicDcStatus::Get().ReadFrom(mmio()->dosbus).reg_value() == 0;
       })) {
     // Forcibly shutoff video output hardware. Probably.
+    LOG(TRACE, "Forcibly MdecPicDcCtrl...");
     auto temp = MdecPicDcCtrl::Get().ReadFrom(mmio()->dosbus);
     temp.set_reg_value(1 | temp.reg_value());
     temp.WriteTo(mmio()->dosbus);
@@ -202,10 +208,12 @@ void Vdec1::WaitForIdle() {
       MdecPicDcStatus::Get().ReadFrom(mmio()->dosbus);
     }
   }
+  LOG(TRACE, "DblkStatus wait...");
   if (!WaitForRegister(timeout, [this] {
-        return DblkStatus::Get().ReadFrom(mmio()->dosbus).reg_value() == 0;
+        return !(DblkStatus::Get().ReadFrom(mmio()->dosbus).reg_value() & 1);
       })) {
     // Forcibly shutoff deblocking hardware.
+    LOG(TRACE, "Forcibly DblkCtrl...");
     DblkCtrl::Get().FromValue(3).WriteTo(mmio()->dosbus);
     DblkCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
     for (uint32_t i = 0; i < 3; i++) {
@@ -213,9 +221,12 @@ void Vdec1::WaitForIdle() {
     }
   }
 
-  if (!WaitForRegister(
-          timeout, [this] { return McStatus0::Get().ReadFrom(mmio()->dosbus).reg_value() == 0; })) {
+  LOG(TRACE, "McStatus0 wait...");
+  if (!WaitForRegister(timeout, [this] {
+        return !(McStatus0::Get().ReadFrom(mmio()->dosbus).reg_value() & 1);
+      })) {
     // Forcibly shutoff reference frame reading hardware.
+    LOG(TRACE, "Forcibly McCtrl1...");
     auto temp = McCtrl1::Get().ReadFrom(mmio()->dosbus);
     temp.set_reg_value(0x9 | temp.reg_value());
     temp.WriteTo(mmio()->dosbus);
@@ -225,9 +236,11 @@ void Vdec1::WaitForIdle() {
       McStatus0::Get().ReadFrom(mmio()->dosbus);
     }
   }
+  LOG(TRACE, "DcacDmaCtrl wait...");
   WaitForRegister(timeout, [this] {
     return !(DcacDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value() & 0x8000);
   });
+  LOG(TRACE, "DcacDmaCtrl wait done.");
 }
 
 void Vdec1::InitializeStreamInput(bool use_parser, uint32_t buffer_address, uint32_t buffer_size) {

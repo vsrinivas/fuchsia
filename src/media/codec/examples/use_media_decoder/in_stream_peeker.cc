@@ -144,6 +144,36 @@ zx_status_t InStreamPeeker::ReadBytesInternal(uint32_t max_bytes_to_read, uint32
   }
 }
 
+zx_status_t InStreamPeeker::ResetToStartInternal(zx::time just_fail_deadline) {
+  ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
+  ZX_DEBUG_ASSERT(!failure_seen_);
+  ZX_DEBUG_ASSERT(eos_position_known_ == in_stream_->eos_position_known());
+  ZX_DEBUG_ASSERT(!eos_position_known_ || eos_position_ == in_stream_->eos_position());
+
+  zx_status_t status = in_stream_->ResetToStart(just_fail_deadline);
+  if (status != ZX_OK) {
+    printf("InStreamPeeker::ResetToStartInternal() in_stream_->ResetToStart() failed status: %d\n",
+           status);
+    ZX_DEBUG_ASSERT(!failure_seen_);
+    failure_seen_ = true;
+    return status;
+  }
+
+  ZX_DEBUG_ASSERT(in_stream_->cursor_position() == 0);
+
+  write_offset_ = 0;
+  read_offset_ = 0;
+  valid_bytes_ = 0;
+  cursor_position_ = 0;
+  eos_position_known_ = false;
+  eos_position_ = 0;
+  ZX_DEBUG_ASSERT(!failure_seen_);
+
+  PropagateEosKnown();
+
+  return ZX_OK;
+}
+
 zx_status_t InStreamPeeker::ReadMoreIfPossible(uint32_t bytes_to_read_if_possible,
                                                zx::time just_fail_deadline) {
   ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);

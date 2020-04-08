@@ -37,7 +37,7 @@ class InStreamPeeker : public InStream {
   InStreamPeeker(async::Loop* fidl_loop, thrd_t fidl_thread,
                  sys::ComponentContext* component_context,
                  std::unique_ptr<InStream> in_stream_to_wrap, uint32_t max_peek_bytes);
-  ~InStreamPeeker();
+  ~InStreamPeeker() override;
 
   uint32_t max_peek_bytes();
 
@@ -73,6 +73,8 @@ class InStreamPeeker : public InStream {
   // peeked bytes can be short like usual.
   zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
                                 uint8_t* buffer_out, zx::time just_fail_deadline) override;
+
+  zx_status_t ResetToStartInternal(zx::time just_fail_deadline) override;
 
   zx_status_t ReadMoreIfPossible(uint32_t bytes_to_read_if_possible, zx::time just_fail_deadline);
 

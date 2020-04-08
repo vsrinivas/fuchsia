@@ -36,7 +36,7 @@ namespace {
 // circumstances it can be possible.
 constexpr bool kVerifySecureOutput = false;
 
-constexpr zx::duration kReadDeadlineDuration = zx::sec(30);
+constexpr zx::duration kInStreamDeadlineDuration = zx::sec(30);
 
 // This example only has one stream_lifetime_ordinal which is 1.
 //
@@ -128,24 +128,26 @@ enum class Format {
 // TODO(dustingreen): Determine for .mp4 or similar which don't have SPS / PPS
 // in band whether .mp4 provides ongoing OOB data, or just at the start, and
 // document in codec.fidl how that's to be handled.
-void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputCopier* tvp,
-                     const UseVideoDecoderTestParams* test_params) {
-  // We assign fake PTS values starting at 0 partly to verify that 0 is
-  // treated as a valid PTS.
-  uint64_t input_frame_pts_counter = 0;
+//
+// Returns how many input packets queued with a PTS.
+uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
+                         uint64_t stream_lifetime_ordinal, uint64_t input_pts_counter_start,
+                         InputCopier* tvp, const UseVideoDecoderTestParams* test_params) {
   // Raw .h264 has start code 00 00 01 or 00 00 00 01 before each NAL, and
   // the start codes don't alias in the middle of NALs, so we just scan
   // for NALs and send them in to the decoder.
-  auto queue_access_unit = [&codec_client, &input_frame_pts_counter, tvp](uint8_t* bytes,
-                                                                          size_t byte_count) {
+  uint64_t input_pts_counter = input_pts_counter_start;
+  auto queue_access_unit = [&codec_client, tvp, stream_lifetime_ordinal, &input_pts_counter](
+                               uint8_t* bytes, size_t byte_count) {
     size_t bytes_so_far = 0;
     // printf("queuing offset: %ld byte_count: %zu\n", bytes -
     // input_bytes.get(), byte_count);
     while (bytes_so_far != byte_count) {
       VLOGF("BlockingGetFreeInputPacket()...");
       std::unique_ptr<fuchsia::media::Packet> packet = codec_client->BlockingGetFreeInputPacket();
-      if (!packet)
+      if (!packet) {
         return false;
+      }
       VLOGF("BlockingGetFreeInputPacket() done");
 
       if (!packet->has_header()) {
@@ -162,14 +164,14 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
       uint32_t padding_length = tvp ? tvp->PaddingLength() : 0;
       size_t bytes_to_copy =
           std::min(byte_count - bytes_so_far, buffer.size_bytes() - padding_length);
-      packet->set_stream_lifetime_ordinal(kStreamLifetimeOrdinal);
+      packet->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
       packet->set_start_offset(0);
       packet->set_valid_length_bytes(bytes_to_copy);
 
       if (bytes_so_far == 0) {
         uint8_t nal_unit_type = GetNalUnitType(bytes);
         if (nal_unit_type == 1 || nal_unit_type == 5) {
-          packet->set_timestamp_ish(input_frame_pts_counter++);
+          packet->set_timestamp_ish(input_pts_counter++);
         }
       }
 
@@ -197,7 +199,7 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
     uint8_t* peek;
     VLOGF("PeekBytes()...");
     zx_status_t status = in_stream->PeekBytes(max_peek_bytes, &actual_peek_bytes, &peek,
-                                              zx::deadline_after(kReadDeadlineDuration));
+                                              zx::deadline_after(kInStreamDeadlineDuration));
     ZX_ASSERT(status == ZX_OK);
     VLOGF("PeekBytes() done");
     if (actual_peek_bytes == 0) {
@@ -237,8 +239,10 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
     }
     ZX_DEBUG_ASSERT(find_end_iter > nal_start_offset);
     size_t nal_length = find_end_iter - nal_start_offset;
-    if (!queue_access_unit(&peek[0], start_code_size_bytes + nal_length))
-      return;
+    if (!queue_access_unit(&peek[0], start_code_size_bytes + nal_length)) {
+      // only reached on error
+      break;
+    }
 
     // start code + NAL payload
     VLOGF("TossPeekedBytes()...");
@@ -246,26 +250,17 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
     VLOGF("TossPeekedBytes() done");
   }
 
-  // Send through QueueInputEndOfStream().
-
-  VLOGF("QueueInputEndOfStream()");
-  codec_client->QueueInputEndOfStream(kStreamLifetimeOrdinal);
-  // We flush and close to run the handling code server-side.  However, we don't
-  // yet verify that this successfully achieves what it says.
-  VLOGF("FlushEndOfStreamAndCloseStream()");
-  codec_client->FlushEndOfStreamAndCloseStream(kStreamLifetimeOrdinal);
-  // input thread done
+  return input_pts_counter - input_pts_counter_start;
 }
 
-void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputCopier* tvp,
-                    const UseVideoDecoderTestParams* test_params) {
-  int64_t skip_frame_ordinal = -1;
-  if (test_params && test_params->Get("skip_frame_ordinal", &skip_frame_ordinal)) {
-    printf("QueueVp9Frames sees skip_frame_ordinal: %" PRId64 "\n", skip_frame_ordinal);
-  }
-  int64_t input_frame_ordinal = 0;
-  auto queue_access_unit = [&codec_client, in_stream, &input_frame_ordinal, tvp,
-                            skip_frame_ordinal](size_t byte_count) {
+uint64_t QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
+                        uint64_t stream_lifetime_ordinal, uint64_t input_pts_counter_start,
+                        InputCopier* tvp, const UseVideoDecoderTestParams* test_params) {
+  // default -1
+  const int64_t skip_frame_ordinal = test_params->skip_frame_ordinal;
+  int64_t input_pts_counter = input_pts_counter_start;
+  auto queue_access_unit = [&codec_client, in_stream, stream_lifetime_ordinal, &input_pts_counter,
+                            tvp, skip_frame_ordinal](size_t byte_count) {
     std::unique_ptr<fuchsia::media::Packet> packet = codec_client->BlockingGetFreeInputPacket();
     if (!packet) {
       fprintf(stderr, "Returning because failed to get input packet\n");
@@ -281,7 +276,7 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
     auto do_not_return_early_interval = fit::defer([] {
       ZX_PANIC("don't return early until packet is set up and returned to codec_client\n");
     });
-    auto increment_frame_ordinal = fit::defer([&input_frame_ordinal] { input_frame_ordinal++; });
+    auto increment_input_pts_counter = fit::defer([&input_pts_counter] { input_pts_counter++; });
 
     ZX_ASSERT(packet->has_header());
     ZX_ASSERT(packet->header().has_packet_index());
@@ -289,11 +284,16 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
     ZX_ASSERT(packet->buffer_index() == buffer.buffer_index());
     // VP9 decoder doesn't yet support splitting access units into multiple
     // packets.
+    if (byte_count > buffer.size_bytes()) {
+      fprintf(stderr,
+              "buffer_count >= buffer.size_bytes() - byte_count: %lu buffer.size_bytes(): %lu\n",
+              byte_count, buffer.size_bytes());
+    }
     ZX_ASSERT(byte_count <= buffer.size_bytes());
 
     // Check that we don't waste contiguous space on non-secure VP9 input buffers.
     ZX_ASSERT(!buffer.is_physically_contiguous() || tvp);
-    packet->set_stream_lifetime_ordinal(kStreamLifetimeOrdinal);
+    packet->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
     packet->set_start_offset(0);
     packet->set_valid_length_bytes(byte_count);
 
@@ -301,7 +301,7 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
     // send through frame index in timestamp_ish field instead, for consistency
     // with .h264 files which don't have timestamps in them, and so tests can
     // assume frame index as timestamp_ish on output.
-    packet->set_timestamp_ish(input_frame_ordinal);
+    packet->set_timestamp_ish(input_pts_counter);
 
     packet->set_start_access_unit(true);
     packet->set_known_end_access_unit(true);
@@ -317,8 +317,9 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
       read_address = buffer.base();
     }
 
-    zx_status_t status = in_stream->ReadBytesComplete(byte_count, &actual_bytes_read, read_address,
-                                                      zx::deadline_after(kReadDeadlineDuration));
+    zx_status_t status =
+        in_stream->ReadBytesComplete(byte_count, &actual_bytes_read, read_address,
+                                     zx::deadline_after(kInStreamDeadlineDuration));
     ZX_ASSERT(status == ZX_OK);
     if (actual_bytes_read < byte_count) {
       Exit("Frame truncated.");
@@ -329,13 +330,13 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
     // Switch from not being able to return early to being able to return true early.
     /////////////////////////////////////////////////////////////////////////////////
     do_not_return_early_interval.cancel();
-    auto fake_on_free_input_packet = fit::defer([codec_client, &packet] {
+    auto do_not_queue_input_packet_after_all = fit::defer([codec_client, &packet] {
       codec_client->DoNotQueueInputPacketAfterAll(std::move(packet));
     });
 
-    if (input_frame_ordinal == skip_frame_ordinal) {
-      LOGF("skipping input frame: %" PRId64, input_frame_ordinal);
-      // ~fake_on_free_input_packet, ~increment_frame_ordinal
+    if (input_pts_counter == skip_frame_ordinal) {
+      LOGF("skipping input frame: %" PRId64, input_pts_counter);
+      // ~do_not_queue_input_packet_after_all, ~increment_input_pts_counter
       return true;
     }
 
@@ -346,17 +347,17 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
       ZX_ASSERT(result == TEEC_SUCCESS);
     }
 
-    fake_on_free_input_packet.cancel();
+    do_not_queue_input_packet_after_all.cancel();
     codec_client->QueueInputPacket(std::move(packet));
 
-    // ~increment_frame_ordinal
+    // ~increment_input_pts_counter
     return true;
   };
   IvfHeader header;
   uint32_t actual_bytes_read;
   zx_status_t status = in_stream->ReadBytesComplete(sizeof(header), &actual_bytes_read,
                                                     reinterpret_cast<uint8_t*>(&header),
-                                                    zx::deadline_after(kReadDeadlineDuration));
+                                                    zx::deadline_after(kInStreamDeadlineDuration));
   // This could fail if a remote-source stream breaks.
   ZX_ASSERT(status == ZX_OK);
   // This could fail if the input is too short.
@@ -370,18 +371,19 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
       uint32_t bytes_to_read = std::min(sizeof(toss_buffer), remaining_header_length);
       uint32_t actual_bytes_read;
       status = in_stream->ReadBytesComplete(bytes_to_read, &actual_bytes_read, &toss_buffer[0],
-                                            zx::deadline_after(kReadDeadlineDuration));
+                                            zx::deadline_after(kInStreamDeadlineDuration));
       ZX_ASSERT(status == ZX_OK);
       ZX_ASSERT(actual_bytes_read == bytes_to_read);
       remaining_header_length -= actual_bytes_read;
     }
   }
   ZX_DEBUG_ASSERT(!remaining_header_length);
+  uint32_t frame_index = 0;
   while (true) {
     IvfFrameHeader frame_header;
     status = in_stream->ReadBytesComplete(sizeof(frame_header), &actual_bytes_read,
                                           reinterpret_cast<uint8_t*>(&frame_header),
-                                          zx::deadline_after(kReadDeadlineDuration));
+                                          zx::deadline_after(kInStreamDeadlineDuration));
     ZX_ASSERT(status == ZX_OK);
     if (actual_bytes_read == 0) {
       // No more frames.  That's fine.
@@ -391,20 +393,26 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
       Exit("Frame header truncated.");
     }
     ZX_DEBUG_ASSERT(actual_bytes_read == sizeof(frame_header));
-    if (!queue_access_unit(frame_header.size_bytes))
-      return;
+    LOGF("input frame_index: %u input_pts_counter: %" PRIu64 " frame_header.size_bytes: %u",
+         frame_index, input_pts_counter, frame_header.size_bytes);
+    frame_index++;
+    if (!queue_access_unit(frame_header.size_bytes)) {
+      // can be fine in case of vp9 input fuzzing test
+      break;
+    }
   }
 
-  // Send through QueueInputEndOfStream().
-  codec_client->QueueInputEndOfStream(kStreamLifetimeOrdinal);
-  // We flush and close to run the handling code server-side.  However, we don't
-  // yet verify that this successfully achieves what it says.
-  codec_client->FlushEndOfStreamAndCloseStream(kStreamLifetimeOrdinal);
-  // input thread done
+  return input_pts_counter - input_pts_counter_start;
 }
 
 static void use_video_decoder(Format format, UseVideoDecoderParams params) {
   VLOGF("use_video_decoder()");
+
+  const UseVideoDecoderTestParams default_test_params;
+  if (!params.test_params) {
+    params.test_params = &default_test_params;
+  }
+  params.test_params->Validate();
 
   VLOGF("before CodecClient::CodecClient()...");
   CodecClient codec_client(params.fidl_loop, params.fidl_thread, std::move(params.sysmem));
@@ -477,14 +485,47 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
       [&codec_client, in_stream = params.in_stream, format, copier = params.input_copier,
        test_params = params.test_params]() {
         VLOGF("in_thread start");
-        switch (format) {
-          case Format::kH264:
-            QueueH264Frames(&codec_client, in_stream, copier, test_params);
-            break;
+        // default 1
+        const uint32_t loop_stream_count = test_params->loop_stream_count;
+        // default 2
+        const uint64_t keep_stream_modulo = test_params->keep_stream_modulo;
+        uint64_t stream_lifetime_ordinal = kStreamLifetimeOrdinal;
+        uint64_t input_frame_pts_counter = 0;
+        uint32_t frames_queued = 0;
+        for (uint32_t loop_ordinal = 0; loop_ordinal < loop_stream_count; loop_ordinal++) {
+          switch (format) {
+            case Format::kH264:
+              frames_queued = QueueH264Frames(&codec_client, in_stream, stream_lifetime_ordinal,
+                                              input_frame_pts_counter, copier, test_params);
+              break;
 
-          case Format::kVp9:
-            QueueVp9Frames(&codec_client, in_stream, copier, test_params);
-            break;
+            case Format::kVp9:
+              frames_queued = QueueVp9Frames(&codec_client, in_stream, stream_lifetime_ordinal,
+                                             input_frame_pts_counter, copier, test_params);
+              break;
+          }
+
+          // Send through QueueInputEndOfStream().
+          VLOGF("QueueInputEndOfStream()");
+          codec_client.QueueInputEndOfStream(stream_lifetime_ordinal);
+
+          if (stream_lifetime_ordinal % keep_stream_modulo == 1) {
+            // We flush and close to run the handling code server-side.  However, we don't
+            // yet verify that this successfully achieves what it says.
+            VLOGF("FlushEndOfStreamAndCloseStream()");
+            codec_client.FlushEndOfStreamAndCloseStream(stream_lifetime_ordinal);
+
+            // Stitch together the PTS values of the streams which we're keeping.
+            input_frame_pts_counter += frames_queued;
+          }
+
+          if (loop_ordinal + 1 != loop_stream_count) {
+            zx_status_t status =
+                in_stream->ResetToStart(zx::deadline_after(kInStreamDeadlineDuration));
+            ZX_ASSERT(status == ZX_OK);
+          }
+
+          stream_lifetime_ordinal += 2;
         }
         VLOGF("in_thread done");
       });
@@ -510,13 +551,20 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
       if (!output) {
         return;
       }
-      if (output->stream_lifetime_ordinal() != kStreamLifetimeOrdinal) {
+      if (output->stream_lifetime_ordinal() % 2 == 0) {
         Exit(
             "server emitted a stream_lifetime_ordinal that client didn't set "
             "on any input");
       }
       if (output->end_of_stream()) {
-        VLOGF("output end_of_stream() - done with output");
+        VLOGF("output end_of_stream()");
+        // default 1
+        const int64_t loop_stream_count = params.test_params->loop_stream_count;
+        const uint64_t max_stream_lifetime_ordinal = (loop_stream_count - 1) * 2 + 1;
+        if (output->stream_lifetime_ordinal() != max_stream_lifetime_ordinal) {
+          continue;
+        }
+        VLOGF("done with output");
         // Just "break;" would be more fragile under code modification.
         goto end_of_output;
       }
@@ -709,9 +757,9 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
                    fourcc_to_string(raw->fourcc).c_str());
           }
         }
-        params.emit_frame(i420_bytes.get(), raw->primary_display_width_pixels,
-                          raw->primary_display_height_pixels, i420_stride,
-                          packet.has_timestamp_ish(),
+        params.emit_frame(output->stream_lifetime_ordinal(), i420_bytes.get(),
+                          raw->primary_display_width_pixels, raw->primary_display_height_pixels,
+                          i420_stride, packet.has_timestamp_ish(),
                           packet.has_timestamp_ish() ? packet.timestamp_ish() : 0);
       }
 

@@ -10,6 +10,7 @@ source_set("use_media_decoder_source_set") {
   sources = [
     "cleartvp.cc",
     "in_stream.cc",
+    "in_stream_buffer.cc",
     "in_stream_file.cc",
     "in_stream_http.cc",
     "in_stream_peeker.cc",
@@ -88,6 +89,16 @@ test("use_h264_decoder_test") {
   output_name = "use_h264_decoder_test"
 
   sources = [ "test/use_h264_decoder_test.cc" ]
+
+  deps = [ ":use_media_decoder_source_set" ]
+}
+
+test("use_h264_decoder_stream_switching_test") {
+  testonly = true
+
+  output_name = "use_h264_decoder_stream_switching_test"
+
+  sources = [ "test/use_h264_decoder_stream_switching_test.cc" ]
 
   deps = [ ":use_media_decoder_source_set" ]
 }

@@ -20,6 +20,7 @@ group("tests") {
     "//src/media/codec/examples:h264_decoder_fuzzer_test",
     "//src/media/codec/examples:use_h264_decoder_secure_input_output_test",
     "//src/media/codec/examples:use_h264_decoder_secure_output_test",
+    "//src/media/codec/examples:use_h264_decoder_stream_switching_test",
     "//src/media/codec/examples:use_h264_decoder_test",
   ]
 }

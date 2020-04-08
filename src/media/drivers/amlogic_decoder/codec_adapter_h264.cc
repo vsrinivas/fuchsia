@@ -224,6 +224,7 @@ void CodecAdapterH264::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
 }
 
 void CodecAdapterH264::OnError() {
+  LOG(ERROR, "OnError()");
   OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
 }
 
@@ -318,8 +319,11 @@ void CodecAdapterH264::CoreCodecStopStream() {
   // preventing us from starting another wait.  Or if we didn't set
   // is_cancelling_input_processing_ = true soon enough, then this call does
   // make WaitForParsingCompleted() return faster.
+  LOG(TRACE, "TryStartCancelParsing()...");
   video_->parser()->TryStartCancelParsing();
+  LOG(TRACE, "TryStartCancelParsing() done.");
 
+  LOG(TRACE, "stopping input processing thread and recycling input packets...");
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     std::condition_variable stop_input_processing_condition;
@@ -345,10 +349,13 @@ void CodecAdapterH264::CoreCodecStopStream() {
     }
     ZX_DEBUG_ASSERT(!is_cancelling_input_processing_);
   }  // ~lock
+  LOG(TRACE, "stopping input processing thread and recycling input packets done.");
 
   // Stop processing queued frames.
   if (video_->core()) {
+    LOG(TRACE, "StopDecoding()...");
     video_->core()->StopDecoding();
+    LOG(TRACE, "WaitForIdle()...");
     video_->core()->WaitForIdle();
   }
 
@@ -360,7 +367,9 @@ void CodecAdapterH264::CoreCodecStopStream() {
   // AmlogicVideo to be more re-usable without the stuff in this method, then
   // DecoderCore, then VideoDecoder.
 
+  LOG(TRACE, "ClearDecoderInstance()...");
   video_->ClearDecoderInstance();
+  LOG(TRACE, "ClearDecoderInstance() done.");
 }
 
 void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
@@ -724,7 +733,7 @@ void CodecAdapterH264::CoreCodecSetBufferCollectionInfo(
   ZX_DEBUG_ASSERT(IsPortSecure(port) || !IsPortSecureRequired(port));
   ZX_DEBUG_ASSERT(!IsPortSecure(port) || IsPortSecurePermitted(port));
   // TODO(dustingreen): Remove after secure video decode works e2e.
-  LOG(INFO, "CodecAdapterH264::CoreCodecSetBufferCollectionInfo() - IsPortSecure(): %u port: %u",
+  LOG(TRACE, "CodecAdapterH264::CoreCodecSetBufferCollectionInfo() - IsPortSecure(): %u port: %u",
       IsPortSecure(port), port);
 }
 
@@ -895,13 +904,15 @@ void CodecAdapterH264::ProcessInput() {
     if (item.is_end_of_stream()) {
       video_->pts_manager()->SetEndOfStreamOffset(parsed_video_size_);
       if (!ParseVideoAnnexB(nullptr, &new_stream_h264[0], new_stream_h264_len)) {
-        DECODE_ERROR("!ParseVideoAnnexB(new_stream_h264)");
+        // This can happen when switching streams.
+        LOG(TRACE, "!ParseVideoAnnexB(new_stream_h264)");
         return;
       }
       auto bytes = std::make_unique<uint8_t[]>(kFlushThroughBytes);
       memset(bytes.get(), 0, kFlushThroughBytes);
       if (!ParseVideoAnnexB(nullptr, bytes.get(), kFlushThroughBytes)) {
-        DECODE_ERROR("!ParseVideoAnnexB(kFlushThroughBytes)");
+        // This can happen when switching streams.
+        LOG(TRACE, "!ParseVideoAnnexB(kFlushThroughBytes)");
         return;
       }
       continue;
@@ -1015,6 +1026,8 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
       // minimum the oob buffer needs to be large enough to contain both the
       // sps_count and pps_count fields, which is a min of 7 bytes.
       if (oob->size() < 7) {
+        LOG(ERROR, "oob->size() < 7");
+        ;
         OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
         return false;
       }
@@ -1026,11 +1039,14 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
       uint32_t offset = 6;
       for (uint32_t i = 0; i < sps_count; ++i) {
         if (offset + 2 > oob->size()) {
+          LOG(ERROR, "offset + 2 > oob->size()");
+          ;
           OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return false;
         }
         uint32_t sps_length = (*oob)[offset] * 256 + (*oob)[offset + 1];
         if (offset + 2 + sps_length > oob->size()) {
+          LOG(ERROR, "offset + 2 + sps_length > oob->size()");
           OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return false;
         }
@@ -1040,17 +1056,20 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
         offset += 2 + sps_length;
       }
       if (offset + 1 > oob->size()) {
+        LOG(ERROR, "offset + 1 > oob->size()");
         OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
         return false;
       }
       uint32_t pps_count = (*oob)[offset++];
       for (uint32_t i = 0; i < pps_count; ++i) {
         if (offset + 2 > oob->size()) {
+          LOG(ERROR, "offset + 2 > oob->size()");
           OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return false;
         }
         uint32_t pps_length = (*oob)[offset] * 256 + (*oob)[offset + 1];
         if (offset + 2 + pps_length > oob->size()) {
+          LOG(ERROR, "offset + 2 + pps_length > oob->size()");
           OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return false;
         }
@@ -1065,6 +1084,7 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
       return true;
     }
     default:
+      LOG(ERROR, "unexpected first oob byte");
       OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
       return false;
   }
@@ -1106,6 +1126,7 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
   uint32_t i = 0;
   while (i < length) {
     if (i + pseudo_nal_length_field_bytes_ > length) {
+      LOG(ERROR, "i + pseudo_nal_length_field_bytes_ > length");
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
@@ -1117,6 +1138,7 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
     }
     i += pseudo_nal_length_field_bytes_;
     if (i + pseudo_nal_length > length) {
+      LOG(ERROR, "i + pseudo_nal_length > length");
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
@@ -1134,6 +1156,7 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
   uint32_t o = 0;
   while (i < length) {
     if (i + pseudo_nal_length_field_bytes_ > length) {
+      LOG(ERROR, "i + pseudo_nal_length_field_bytes_ > length");
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
@@ -1143,6 +1166,7 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
     }
     i += pseudo_nal_length_field_bytes_;
     if (i + pseudo_nal_length > length) {
+      LOG(ERROR, "i + pseudo_nal_length > length");
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
@@ -1187,12 +1211,14 @@ bool CodecAdapterH264::ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t
     zx_paddr_t data_paddr = buffer->physical_base() + (data - buffer->base());
     status = video_->parser()->ParseVideoPhysical(data_paddr, length);
     if (status != ZX_OK) {
+      LOG(ERROR, "ParseVideoPhysical() failed - status: %d", status);
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
   } else {
     status = video_->parser()->ParseVideo(static_cast<void*>(const_cast<uint8_t*>(data)), length);
     if (status != ZX_OK) {
+      LOG(ERROR, "ParseVideo() failed - status: %d", status);
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
@@ -1224,11 +1250,21 @@ bool CodecAdapterH264::ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     is_cancelling = is_cancelling_input_processing_;
-  }
+  }  // ~lock
 
-  if (is_cancelling || ZX_OK != video_->parser()->WaitForParsingCompleted(ZX_SEC(10))) {
-    DLOG("is_cancelling: %u", is_cancelling);
+  if (is_cancelling || ZX_OK != (status = video_->parser()->WaitForParsingCompleted(ZX_SEC(10)))) {
+    DLOG("is_cancelling: %u status: %d", is_cancelling, status);
     video_->parser()->CancelParsing();
+    if (is_cancelling || status == ZX_ERR_CANCELED) {
+      LOG(TRACE, "Parsing was cancelled - is_cancelling: %d status: %d", is_cancelling, status);
+      // Don't fail the current stream in this case.  The current stream is already obsolete.  While
+      // CodecImpl will tolerate this without causing the codec to fail or an extraneous
+      // OnStreamFailed(), it's better for the core codec to not fail a stream that's being stopped
+      // via CoreCodecStopStream().
+      return false;
+    }
+    ZX_DEBUG_ASSERT(!is_cancelling && status != ZX_ERR_CANCELED);
+    LOG(ERROR, "WaitForParsingCompleted() failed - status: %d", status);
     OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
     return false;
   }
@@ -1327,6 +1363,7 @@ void CodecAdapterH264::OnCoreCodecFailStream(fuchsia::media::StreamError error) 
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = true;
   }
+  LOG(ERROR, "calling events_->onCoreCodecFailStream()");
   events_->onCoreCodecFailStream(error);
 }
 

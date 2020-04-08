@@ -83,8 +83,9 @@ int run_fuzzer_test_instance(std::string input_file_path, UseVideoDecoderFunctio
 
   uint32_t frame_index = 0;
   EmitFrame emit_frame = [&timestamps, &frame_index](
-                             uint8_t* i420_data, uint32_t width, uint32_t height, uint32_t stride,
-                             bool has_timestamp_ish, uint64_t timestamp_ish) {
+                             uint64_t stream_lifetime_ordinal, uint8_t* i420_data, uint32_t width,
+                             uint32_t height, uint32_t stride, bool has_timestamp_ish,
+                             uint64_t timestamp_ish) {
     VLOGF("emit_frame frame_index: %u", frame_index);
     ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
     ZX_ASSERT_MSG(width == stride, "stride != width not yet handled");

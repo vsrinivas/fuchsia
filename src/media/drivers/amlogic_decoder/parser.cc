@@ -303,10 +303,11 @@ zx_status_t Parser::WaitForParsingCompleted(zx_duration_t deadline) {
     std::lock_guard<std::mutex> lock(parser_running_lock_);
     ZX_DEBUG_ASSERT(parser_running_);
   }
-  zx_signals_t observed;
+  zx_signals_t observed = 0;
   zx_status_t status = parser_finished_event_.wait_one(
       ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, zx::deadline_after(zx::duration(deadline)), &observed);
   if (status != ZX_OK) {
+    LOG(ERROR, "parser_finished_event_.wait_one failed status: %d observed %x", status, observed);
     return status;
   }
   if (observed & ZX_USER_SIGNAL_1) {
@@ -317,6 +318,7 @@ zx_status_t Parser::WaitForParsingCompleted(zx_duration_t deadline) {
     //
     // The caller must still call CancelParsing(), as with any error returned
     // from this method.
+    LOG(TRACE, "observed & ZX_USER_SIGNAL_1");
     return ZX_ERR_CANCELED;
   }
 
@@ -340,7 +342,7 @@ void Parser::CancelParsing() {
   }
   assert(!owner_->is_parser_gated());
 
-  DECODE_ERROR("Parser cancelled");
+  LOG(TRACE, "Parser cancelled");
   parser_running_ = false;
 
   ParserFetchCmd::Get().FromValue(0).WriteTo(owner_->mmio()->parser);

@@ -84,6 +84,14 @@ class InStream {
                                 uint8_t* buffer_out,
                                 zx::time just_fail_deadline = zx::time::infinite());
 
+  // Normally a reset like this isn't necessarily optimal vs. just creating a new instance, but in
+  // tests we want the reset to be fast, so we allow instance reset.
+  //
+  // This either succeeds with ZX_OK and sets cursor_position() back to 0, or fails with an error.
+  // If the error is ZX_ERR_NOT_SUPPORTED, a sub-class doesn't support ResetToStart(), and any
+  // wrapper InStream wasn't able to avoid calling ResetToStart() on the sub-class.
+  zx_status_t ResetToStart(zx::time just_fail_deadline = zx::time::infinite());
+
  protected:
   InStream(async::Loop* fidl_loop, thrd_t fidl_thread, sys::ComponentContext* component_context);
 
@@ -96,10 +104,7 @@ class InStream {
   virtual zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
                                         uint8_t* buffer_out, zx::time just_fail_deadline) = 0;
 
-  zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
-                                uint8_t* buffer_out) {
-    return ReadBytesInternal(max_bytes_to_read, bytes_read_out, buffer_out, zx::time::infinite());
-  }
+  virtual zx_status_t ResetToStartInternal(zx::time just_fail_deadline);
 
   async::Loop* const fidl_loop_ = nullptr;
   async_dispatcher_t* const fidl_dispatcher_ = nullptr;

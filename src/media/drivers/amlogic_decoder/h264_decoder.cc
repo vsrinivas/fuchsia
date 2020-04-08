@@ -426,7 +426,7 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t cod
         &frame->buffer, owner_->bti()->get(),
         frames[i].codec_buffer_spec.data().vmo().vmo_handle().get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
-      DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d", status);
+      LOG(ERROR, "Failed to io_buffer_init_vmo() for frame - status: %d", status);
       OnFatalError();
       return;
     }
@@ -457,6 +457,7 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t cod
     auto uv_canvas = owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset, frame->stride,
                                              frame->coded_height / 2, 0, 0);
     if (!y_canvas || !uv_canvas) {
+      LOG(ERROR, "!y_canvas || !uv_canvas");
       OnFatalError();
       return;
     }
@@ -542,7 +543,7 @@ void H264Decoder::TryReturnFrames() {
 }
 
 zx_status_t H264Decoder::InitializeStream() {
-  LOG(INFO, "H264Decoder::InitializeStream()");
+  LOG(TRACE, "H264Decoder::InitializeStream()");
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   state_ = DecoderState::kWaitingForNewFrames;
   BarrierBeforeRelease();  // For reference_mv_buffer_
@@ -711,7 +712,7 @@ zx_status_t H264Decoder::InitializeStream() {
   // The "max" means the max the stream might require, so that's actually the min # of buffers we
   // need.  The +1 accounts for the decode-into buffer (AFAICT).  Reduce this number at your own
   // risk - YMMV.
-  LOG(INFO, "max_reference_size: %u max_dpb_size: %u min_buffer_count: %u", max_reference_size,
+  LOG(TRACE, "max_reference_size: %u max_dpb_size: %u min_buffer_count: %u", max_reference_size,
       max_dpb_size, min_buffer_count);
   uint32_t min_frame_count = min_buffer_count;
   // Also constrained by the maximum number of buffers this driver knows how to track for now, which
@@ -762,7 +763,7 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
     }
 
     client_->OnFrameReady(video_frames_[buffer_index].frame);
-    DLOG("Got buffer %d error %d error_count %d slice_type %d offset %x\n", buffer_index,
+    DLOG("Got buffer %d error %d error_count %d slice_type %d offset %x", buffer_index,
          pic_info.error(), error_count, slice_type, pic_info.stream_offset());
   }
   AvScratch0::Get().FromValue(0).WriteTo(owner_->dosbus());
@@ -815,6 +816,12 @@ void H264Decoder::HandleInterrupt() {
     case kCommandInitializeStream: {
       zx_status_t status = InitializeStream();
       if (status != ZX_OK) {
+        if (status == ZX_ERR_STOP) {
+          LOG(TRACE, "InitializeStream() detected EOS on output");
+          break;
+        }
+        ZX_DEBUG_ASSERT(status != ZX_ERR_STOP);
+        LOG(ERROR, "InitializeStream() failed - status: %d", status);
         OnFatalError();
       }
     } break;
@@ -834,6 +841,7 @@ void H264Decoder::HandleInterrupt() {
       // We need to reset the hardware here or for some malformed hardware streams (e.g.
       // bear_h264[638] = 44) the CPU will hang when trying to isolate VDEC1 power on shutdown.
       ResetHardware();
+      LOG(ERROR, "kCommandFatalError");
       OnFatalError();
       // Don't write to AvScratch0, so the decoder won't continue.
       break;

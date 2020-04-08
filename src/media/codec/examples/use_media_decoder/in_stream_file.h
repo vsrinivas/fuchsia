@@ -14,7 +14,7 @@ class InStreamFile : public InStream {
  public:
   explicit InStreamFile(async::Loop* fidl_loop, thrd_t fidl_thread,
                         sys::ComponentContext* component_context, std::string input_file_name);
-  ~InStreamFile();
+  ~InStreamFile() override;
 
  private:
   zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,

@@ -111,6 +111,11 @@ group("amlogic_hw_dependent_tests") {
     # but when decode HW is present we'll use that to decode.
     "//src/media/codec/examples:use_h264_decoder_test",
 
+    # Test amlogic-video h264 decode with stream switching.  Can also work in
+    # QEMU using SW decode, but when decode HW is present we'll use that to
+    # decode.
+    "//src/media/codec/examples:use_h264_decoder_stream_switching_test",
+
     # Test amlogic-video h264 decode without output buffers mapped for CPU
     # access.
     "//src/media/codec/examples:use_h264_decoder_secure_output_test",
