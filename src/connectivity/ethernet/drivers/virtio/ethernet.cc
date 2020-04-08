@@ -229,12 +229,13 @@ zx_status_t EthernetDevice::Init() {
     return status;
   }
   device_ = zxdev();
-  // Give the rx buffers to the host
-  rx_.Kick();
 
   // Woohoo! Driver should be ready.
   cleanup.cancel();
   DriverStatusOk();
+
+  // Give the rx buffers to the host
+  rx_.Kick();
   return ZX_OK;
 }
 
