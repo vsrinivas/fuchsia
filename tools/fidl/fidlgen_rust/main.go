@@ -20,6 +20,7 @@ type flagsDef struct {
 	jsonPath           *string
 	outputFilenamePath *string
 	rustfmtPath        *string
+	rustfmtConfigPath  *string
 }
 
 var flags = flagsDef{
@@ -29,6 +30,8 @@ var flags = flagsDef{
 		"the output path for the generated Rust implementation."),
 	rustfmtPath: flag.String("rustfmt", "",
 		"path to the rustfmt tool."),
+	rustfmtConfigPath: flag.String("rustfmt-config", "",
+		"path to rustfmt.toml."),
 }
 
 // valid returns true if the parsed flags are valid.
@@ -63,7 +66,8 @@ func main() {
 	}
 
 	generator := codegen.NewGenerator()
-	err = generator.GenerateFidl(root, *flags.outputFilenamePath, *flags.rustfmtPath)
+	err = generator.GenerateFidl(
+		root, *flags.outputFilenamePath, *flags.rustfmtPath, *flags.rustfmtConfigPath)
 	if err != nil {
 		log.Fatalf("Error running generator: %v", err)
 	}

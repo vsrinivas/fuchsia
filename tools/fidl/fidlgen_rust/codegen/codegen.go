@@ -43,7 +43,7 @@ func (gen *Generator) GenerateImpl(wr io.Writer, tree ir.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "GenerateSourceFile", tree)
 }
 
-func (gen *Generator) GenerateFidl(fidl types.Root, outputFilename string, rustfmtPath string) error {
+func (gen *Generator) GenerateFidl(fidl types.Root, outputFilename, rustfmtPath, rustfmtConfigPath string) error {
 	tree := ir.Compile(fidl)
 	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
 		return err
@@ -54,7 +54,11 @@ func (gen *Generator) GenerateFidl(fidl types.Root, outputFilename string, rustf
 		return err
 	}
 
-	generatedPipe, err := common.NewFormatter(rustfmtPath).FormatPipe(generated)
+	var args []string
+	if rustfmtConfigPath != "" {
+		args = append(args, "--config-path", rustfmtConfigPath)
+	}
+	generatedPipe, err := common.NewFormatter(rustfmtPath, args...).FormatPipe(generated)
 	if err != nil {
 		return err
 	}
