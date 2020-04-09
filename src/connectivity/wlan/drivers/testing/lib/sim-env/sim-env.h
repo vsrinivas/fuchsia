@@ -55,21 +55,22 @@ class Environment {
   ~Environment() = default;
 
   // Add a station into the environment.
-  void AddStation(StationIfc* sta) { stations_[sta] = new Location(0, 0); }
+  void AddStation(StationIfc* sta) { stations_.emplace(std::pair(sta, Location(0, 0))); }
 
   // Add a station into the environment at specific location.
-  void AddStation(StationIfc* sta, int32_t x, int32_t y) { stations_[sta] = new Location(x, y); }
+  void AddStation(StationIfc* sta, int32_t x, int32_t y) {
+    stations_.emplace(std::pair(sta, Location(x, y)));
+  }
 
   // Remove a station from the environment.
   void RemoveStation(StationIfc* sta) {
-    delete stations_[sta];
     stations_.erase(sta);
   }
 
   // Change the location of a station in the environment.
   void MoveStation(StationIfc* sta, int32_t x, int32_t y) {
-    delete stations_[sta];
-    stations_[sta] = new Location(x, y);
+    RemoveStation(sta);
+    stations_.emplace(std::pair(sta, Location(x, y)));
   }
 
   // Begin simulation. Function will return when there are no more events pending.
@@ -100,7 +101,7 @@ class Environment {
   };
 
   // All registered stations
-  std::map<StationIfc*, Location*> stations_;
+  std::map<StationIfc*, Location> stations_;
 
   // Current time
   zx::time time_;
