@@ -9,7 +9,7 @@
 #include <lib/acpi_tables.h>
 #include <trace.h>
 
-#include <fbl/span.h>
+#include <ktl/span.h>
 #include <lk/init.h>
 
 #define LOCAL_TRACE 0
@@ -27,7 +27,7 @@ ACPI_TABLE_DESC acpi_tables[kAcpiMaxInitTables];
 //
 // Return an error if the span is not large enough to contain the data.
 template <typename T>
-inline zx_status_t ReadStruct(fbl::Span<const uint8_t> data, T* out, size_t offset = 0) {
+inline zx_status_t ReadStruct(ktl::span<const uint8_t> data, T* out, size_t offset = 0) {
   // Ensure there is enough data for the header.
   if (data.size_bytes() < offset + sizeof(T)) {
     return ZX_ERR_INTERNAL;
@@ -50,8 +50,8 @@ inline zx_status_t ReadStruct(fbl::Span<const uint8_t> data, T* out, size_t offs
 //
 // Return an error if the span is not large enough to contain the data.
 template <typename T, typename F>
-inline zx_status_t ReadVariableLengthStruct(fbl::Span<const uint8_t> data, F T::*length_field,
-                                            T* out, fbl::Span<const uint8_t>* payload,
+inline zx_status_t ReadVariableLengthStruct(ktl::span<const uint8_t> data, F T::*length_field,
+                                            T* out, ktl::span<const uint8_t>* payload,
                                             size_t offset = 0) {
   // Read the struct data.
   zx_status_t status = ReadStruct(data, out, offset);
@@ -67,7 +67,7 @@ inline zx_status_t ReadVariableLengthStruct(fbl::Span<const uint8_t> data, F T::
   }
 
   // Create a span of the data.
-  *payload = fbl::Span<const uint8_t>(data.begin() + offset, out->*length_field);
+  *payload = data.subspan(offset, offset + length);
 
   return ZX_OK;
 }
@@ -81,7 +81,7 @@ inline zx_status_t ReadVariableLengthStruct(fbl::Span<const uint8_t> data, F T::
 // bytes. Return an error if the header isn't valid.
 template <typename T>
 inline zx_status_t ReadAcpiEntry(const ACPI_TABLE_HEADER* header, T* out,
-                                 fbl::Span<const uint8_t>* payload) {
+                                 ktl::span<const uint8_t>* payload) {
   // Read the length. Use "memcpy" to avoid unaligned reads.
   uint32_t length;
   memcpy(&length, &header->Length, sizeof(uint32_t));
@@ -103,7 +103,7 @@ inline zx_status_t ReadAcpiEntry(const ACPI_TABLE_HEADER* header, T* out,
   }
 
   // Read the result.
-  *payload = fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(header), length);
+  *payload = ktl::span<const uint8_t>(reinterpret_cast<const uint8_t*>(header), length);
   return ReadStruct(*payload, out);
 }
 
@@ -381,7 +381,7 @@ zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
 
   // Read the DBG2 header.
   ACPI_TABLE_DBG2 debug_table;
-  fbl::Span<const uint8_t> payload;
+  ktl::span<const uint8_t> payload;
   zx_status_t status = ReadAcpiEntry(table, &debug_table, &payload);
   if (status != ZX_OK) {
     TRACEF("acpi: Failed to read DBG2 ACPI header.\n");
@@ -396,7 +396,7 @@ zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
 
   // Read the first device payload.
   ACPI_DBG2_DEVICE device;
-  fbl::Span<const uint8_t> device_payload;
+  ktl::span<const uint8_t> device_payload;
   status = ReadVariableLengthStruct<ACPI_DBG2_DEVICE>(payload,
                                                       /*length_field=*/&ACPI_DBG2_DEVICE::Length,
                                                       /*out=*/&device,
