@@ -194,6 +194,7 @@ TEST(SimpleAudioTest, DdkLifeCycleTest) {
   EXPECT_FALSE(tester.IsRemoved());
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());
+  server->DdkRelease();
 }
 
 TEST(SimpleAudioTest, SetAndGetGain) {
@@ -215,6 +216,7 @@ TEST(SimpleAudioTest, SetAndGetGain) {
   audio_stream_cmd_get_gain_resp gain_state;
   channel_client->GetGain(&gain_state);
   ASSERT_EQ(gain_state.cur_gain, gain);
+  server->DdkRelease();
 }
 
 TEST(SimpleAudioTest, EnumerateMultipleRates) {
@@ -265,6 +267,7 @@ TEST(SimpleAudioTest, EnumerateMultipleRates) {
   }
   ASSERT_EQ(5, rates.size());
   ASSERT_EQ(rates, std::set<uint32_t>({48'000, 96'000, 192'000, 384'000, 768'000}));
+  server->DdkRelease();
 }
 
 TEST(SimpleAudioTest, GetIds) {
@@ -287,6 +290,7 @@ TEST(SimpleAudioTest, GetIds) {
   audio_stream_cmd_get_string_resp_t str = {};
   ASSERT_OK(channel_client->GetString(AUDIO_STREAM_STR_ID_MANUFACTURER, &str));
   ASSERT_BYTES_EQ(str.str, "Bike Sheds, Inc.", strlen("Bike Sheds, Inc.") + 1);
+  server->DdkRelease();
 }
 
 TEST(SimpleAudioTest, GetClockDomain) {
@@ -305,6 +309,7 @@ TEST(SimpleAudioTest, GetClockDomain) {
   audio_stream_cmd_get_clock_domain_resp_t resp = {};
   ASSERT_OK(channel_client->GetClockDomain(&resp));
   ASSERT_EQ(resp.clock_domain, 0);
+  server->DdkRelease();
 }
 
 TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
@@ -331,6 +336,7 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_EQ(resp.flags, AUDIO_PDNF_CAN_NOTIFY);
   channel_client2->GetPlugState(&resp, true);
   ASSERT_EQ(resp.flags, AUDIO_PDNF_CAN_NOTIFY);
+  server->DdkRelease();
 }
 
 TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
@@ -390,6 +396,7 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   result = -1;
   thrd_join(thread3, &result);
   ASSERT_EQ(result, 0);
+  server->DdkRelease();
 }
 
 TEST(SimpleAudioTest, RingBufferTests) {
@@ -428,6 +435,7 @@ TEST(SimpleAudioTest, RingBufferTests) {
     ASSERT_EQ(pos_notif.ring_buffer_pos, MockSimpleAudio::kTestPositionNotify);
   }
   ASSERT_OK(channel_client->StopRingBuffer());
+  server->DdkRelease();
 }
 
 }  // namespace audio

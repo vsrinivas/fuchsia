@@ -44,9 +44,6 @@ test("sa-unittest") {
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/audio-utils",
   ]
-
-  # TODO(47445): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("sa-unittest-package") {
