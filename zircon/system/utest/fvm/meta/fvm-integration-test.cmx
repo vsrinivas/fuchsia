@@ -1,0 +1,21 @@
+{
+    "program": {
+        "binary": "test/fvm-integration-test"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.exception.Handler",
+            "fuchsia.fshost.Filesystem",
+            "fuchsia.fshost.Registry",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

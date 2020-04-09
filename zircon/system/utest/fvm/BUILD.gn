@@ -15,21 +15,16 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
-test("fvm") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
+executable("fvm") {
+  sources = [ "fvm.cc" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+
+  if (configs + fdio_config - fdio_config != configs) {
+    configs -= fdio_config
   }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  sources = [
-    "fvm.cc",
-    "resize-tests.cc",
-  ]
   deps = [
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
@@ -73,22 +68,14 @@ test("fvm") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-test("fvm-integration") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+executable("fvm-integration") {
   sources = [ "resize-tests.cc" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+
+  if (configs + fdio_config - fdio_config != configs) {
+    configs -= fdio_config
+  }
 
   deps = [
     "//zircon/public/lib/devmgr-integration-test",
@@ -98,18 +85,25 @@ test("fvm-integration") {
   ]
 }
 
-migrated_manifest("fvm-integration-manifest") {
-  deps = [ ":fvm-integration" ]
+devmgr_manifest("devmgr-manifest") {
 }
 
-unittest_package("fvm-package") {
-  package_name = "fvm"
-  deps = [ ":fvm" ]
+test_package("fvm-tests") {
+  deps = [
+    ":devmgr-manifest",
+    ":fvm",
+    ":fvm-integration",
+  ]
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
 
   tests = [
     {
       name = "fvm"
       dest = "fvm-test"
+    },
+    {
+      name = "fvm-integration"
+      dest = "fvm-integration-test"
     },
   ]
 }

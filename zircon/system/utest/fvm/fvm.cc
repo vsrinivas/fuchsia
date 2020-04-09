@@ -103,6 +103,9 @@ class FvmTest : public zxtest::Test {
 
     ASSERT_OK(fdio_ns_bind(name_space, kTmpfsPath, memfs_root.release()));
     ASSERT_OK(fdio_ns_bind_fd(name_space, kTestDevPath, devmgr_.devfs_root().get()));
+
+    ASSERT_EQ(mkdir(kMountPath, 0666), 0);
+    mounting_options_.register_fs = false;
   }
 
   const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
@@ -140,6 +143,7 @@ class FvmTest : public zxtest::Test {
   devmgr_integration_test::IsolatedDevmgr devmgr_;
   memfs_filesystem_t* memfs_ = nullptr;
   ramdisk_client_t* ramdisk_ = nullptr;
+  mount_options_t mounting_options_ = default_mount_options;
   char ramdisk_path_[PATH_MAX] = {};
   char fvm_driver_path_[PATH_MAX] = {};
 };
@@ -1792,7 +1796,8 @@ TEST_F(FvmTest, TestPersistenceSimple) {
 }
 
 void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_path,
-                        disk_format_t disk_format, const query_request_t& query_request) {
+                        const mount_options_t* mounting_options, disk_format_t disk_format,
+                        const query_request_t& query_request) {
   // Format the VPart as |disk_format|.
   ASSERT_EQ(mkfs(partition_path, disk_format, launch_stdio_sync, &default_mkfs_options), ZX_OK);
 
@@ -1845,9 +1850,8 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
   // Try to mount the VPart. Since this mount call is supposed to fail, we wait for the spawned
   // fs process to finish and associated fidl channels to close before continuing to try and prevent
   // race conditions with the later mount call.
-  ASSERT_NE(
-      mount(vp_fd.release(), kMountPath, disk_format, &default_mount_options, launch_stdio_sync),
-      ZX_OK);
+  ASSERT_NE(mount(vp_fd.release(), kMountPath, disk_format, mounting_options, launch_stdio_sync),
+            ZX_OK);
 
   {
     vp_fd.reset(open_partition_with_devfs(devfs_root.get(), kTestUniqueGUID, kTestPartGUIDData, 0,
@@ -1899,9 +1903,8 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
   }
 
   // Try mount again.
-  ASSERT_EQ(
-      mount(vp_fd.release(), kMountPath, disk_format, &default_mount_options, launch_stdio_async),
-      ZX_OK);
+  ASSERT_EQ(mount(vp_fd.release(), kMountPath, disk_format, mounting_options, launch_stdio_async),
+            ZX_OK);
   ASSERT_EQ(umount(kMountPath), ZX_OK);
 
   vp_fd.reset(
@@ -1947,8 +1950,6 @@ TEST_F(FvmTest, TestCorruptMount) {
   ASSERT_TRUE(vp_fd);
   ASSERT_EQ(close(vp_fd.release()), 0);
 
-  ASSERT_EQ(mkdir(kMountPath, 0666), 0);
-
   char partition_path[PATH_MAX];
   snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block", fvm_path(), kTestPartName1);
 
@@ -1961,7 +1962,8 @@ TEST_F(FvmTest, TestCorruptMount) {
   query_request.vslice_start[3] = minfs::kFVMBlockDataStart / kMinfsBlocksPerSlice;
 
   // Run the test for Minfs.
-  CorruptMountHelper(devfs_root(), partition_path, DISK_FORMAT_MINFS, query_request);
+  CorruptMountHelper(devfs_root(), partition_path, &mounting_options_, DISK_FORMAT_MINFS,
+                     query_request);
 
   size_t kBlobfsBlocksPerSlice = kSliceSize / blobfs::kBlobfsBlockSize;
   query_request.count = 3;
@@ -1970,7 +1972,8 @@ TEST_F(FvmTest, TestCorruptMount) {
   query_request.vslice_start[2] = blobfs::kFVMDataStart / kBlobfsBlocksPerSlice;
 
   // Run the test for Blobfs.
-  CorruptMountHelper(devfs_root(), partition_path, DISK_FORMAT_BLOBFS, query_request);
+  CorruptMountHelper(devfs_root(), partition_path, &mounting_options_, DISK_FORMAT_BLOBFS,
+                     query_request);
 
   // Clean up
   ASSERT_EQ(rmdir(kMountPath), 0);
@@ -2157,10 +2160,9 @@ TEST_F(FvmTest, TestMounting) {
             ZX_OK);
 
   // Mount the VPart
-  ASSERT_EQ(mkdir(kMountPath, 0666), 0);
-  ASSERT_EQ(mount(vp_fd.release(), kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
-                  launch_stdio_async),
-            ZX_OK);
+  ASSERT_EQ(
+      mount(vp_fd.release(), kMountPath, DISK_FORMAT_MINFS, &mounting_options_, launch_stdio_async),
+      ZX_OK);
 
   // Verify that the mount was successful.
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
@@ -2223,13 +2225,12 @@ TEST_F(FvmTest, TestMkfs) {
 
   // Demonstrate that mounting as minfs will fail, but mounting as blobfs
   // is successful.
-  ASSERT_EQ(mkdir(kMountPath, 0666), 0);
-  ASSERT_NE(mount(vp_fd.release(), kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
-                  launch_stdio_sync),
-            ZX_OK);
+  ASSERT_NE(
+      mount(vp_fd.release(), kMountPath, DISK_FORMAT_MINFS, &mounting_options_, launch_stdio_sync),
+      ZX_OK);
   vp_fd.reset(open(partition_path, O_RDWR));
   ASSERT_TRUE(vp_fd);
-  ASSERT_EQ(mount(vp_fd.release(), kMountPath, DISK_FORMAT_BLOBFS, &default_mount_options,
+  ASSERT_EQ(mount(vp_fd.release(), kMountPath, DISK_FORMAT_BLOBFS, &mounting_options_,
                   launch_stdio_async),
             ZX_OK);
   ASSERT_EQ(umount(kMountPath), ZX_OK);
@@ -2241,9 +2242,9 @@ TEST_F(FvmTest, TestMkfs) {
   // Mount the VPart.
   vp_fd.reset(open(partition_path, O_RDWR));
   ASSERT_TRUE(vp_fd);
-  ASSERT_EQ(mount(vp_fd.release(), kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
-                  launch_stdio_async),
-            ZX_OK);
+  ASSERT_EQ(
+      mount(vp_fd.release(), kMountPath, DISK_FORMAT_MINFS, &mounting_options_, launch_stdio_async),
+      ZX_OK);
 
   // Verify that the mount was successful.
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));

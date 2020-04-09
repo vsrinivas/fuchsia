@@ -112,7 +112,7 @@ group("bringup") {
     "//zircon/system/utest/exit:exit-package",
     "//zircon/system/utest/fidl-utils:fidl-utils-package",
     "//zircon/system/utest/fpu:fpu-package",
-    "//zircon/system/utest/fvm:fvm-package",
+    "//zircon/system/utest/fvm:fvm-tests",
     "//zircon/system/utest/getentropy:getentropy-package",
     "//zircon/system/utest/handle-alias:handle-alias-package",
     "//zircon/system/utest/hid:hid-package",
