@@ -4,15 +4,35 @@
 
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
 if (host_toolchain == current_toolchain) {
   rustc_binary("fidldoc_bin") {
     name = "fidldoc"
     edition = "2018"
+    deps = [ ":rust_crates" ]
+  }
+
+  copy("fidldoc_copy_config") {
+    sources = [ "src/fidldoc.config.json" ]
+    outputs = [ "${host_tools_dir}/fidldoc.config.json" ]
+  }
+
+  rustc_test("fidldoc_bin_test") {
+    source_root = "src/main.rs"
+    deps = [
+      ":fidldoc_bin",
+      ":rust_crates",
+    ]
+    non_rust_deps = [ ":goldens" ]
+  }
+
+  group("rust_crates") {
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:clap",
+      "//third_party/rust_crates:glob",
       "//third_party/rust_crates:handlebars",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:log",
@@ -24,12 +44,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:structopt",
       "//third_party/rust_crates:tempfile",
     ]
-    with_unit_tests = true
-  }
-
-  copy("fidldoc_copy_config") {
-    sources = [ "src/fidldoc.config.json" ]
-    outputs = [ "${host_tools_dir}/fidldoc.config.json" ]
   }
 }
 
@@ -46,4 +60,32 @@ group("tests") {
   testonly = true
 
   deps = [ ":fidldoc_bin_test($host_toolchain)" ]
+}
+
+copy("copy_jsonir_goldens") {
+  sources =
+      rebase_path(read_file("//zircon/tools/fidl/goldens/jsonir_goldens.txt",
+                            "list lines"),
+                  ".",
+                  "//zircon/tools/fidl/goldens/")
+  outputs = [ "$root_out_dir/test_data/fidldoc/{{source_name_part}}.golden" ]
+}
+
+# Markdown goldens have the same filename as JSON IR goldens with a ".md" extension
+copy("copy_markdown_goldens") {
+  sources = []
+  foreach(jsonir,
+          read_file("//zircon/tools/fidl/goldens/jsonir_goldens.txt",
+                    "list lines")) {
+    sources +=
+        [ rebase_path(jsonir + ".md", ".", "src/templates/markdown/testdata/") ]
+  }
+  outputs = [ "$root_out_dir/test_data/fidldoc/{{source_name_part}}.md" ]
+}
+
+group("goldens") {
+  deps = [
+    ":copy_jsonir_goldens",
+    ":copy_markdown_goldens",
+  ]
 }
