@@ -24,7 +24,6 @@ struct ZSTDSeekableHeader {
 };
 
 constexpr size_t kZSTDSeekableHeaderSize = sizeof(ZSTDSeekableHeader);
-constexpr unsigned kZSTDSeekableMaxFrameSize = 128 * kBlobfsBlockSize;
 
 // Compressor implementation for the zstd seekable format library implemented in
 // //third_party/zstd/contrib/seekable_format. The library provides a convenient API for
@@ -88,11 +87,12 @@ class ZSTDSeekableDecompressor : public Decompressor, public SeekableDecompresso
                               const void* compressed_buf, size_t max_compressed_size,
                               size_t offset) final;
 
+ private:
   // Reads up to `kZSTDSeekableHeaderSize` bytes from the beginning of `buf` into `header`.
   // @param buf Pointer to buffer that is to contain <header><zstd seekable archive>.
   // @param buf_size Size of `buf` in bytes.
   // @param header Header struct in which to store values.
-  static zx_status_t ReadHeader(const void* buf, size_t buf_size, ZSTDSeekableHeader* header);
+  zx_status_t ReadHeader(const void* buf, size_t buf_size, ZSTDSeekableHeader* header);
 };
 
 }  // namespace blobfs

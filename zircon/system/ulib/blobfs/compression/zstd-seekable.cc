@@ -22,6 +22,7 @@
 namespace blobfs {
 
 constexpr int kSeekableCompressionLevel = 5;
+constexpr unsigned kSeekableMaxFrameSize = 128 * kBlobfsBlockSize;
 
 // TODO(49551): Consider disabling checksums if cryptographic verification suffices.
 constexpr int kSeekableChecksumFlag = 1;
@@ -53,7 +54,7 @@ zx_status_t ZSTDSeekableCompressor::Create(size_t input_size, void* compression_
       new ZSTDSeekableCompressor(std::move(stream), compression_buffer, compression_buffer_length));
 
   size_t r = ZSTD_seekable_initCStream(compressor->stream_, kSeekableCompressionLevel,
-                                       kSeekableChecksumFlag, kZSTDSeekableMaxFrameSize);
+                                       kSeekableChecksumFlag, kSeekableMaxFrameSize);
   if (ZSTD_isError(r)) {
     FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to initialize seekable cstream: %s\n",
                    ZSTD_getErrorName(r));
