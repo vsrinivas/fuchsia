@@ -31,7 +31,7 @@ class TakeScreenshotTest : public UnitTestFixture {
   TakeScreenshotTest() : executor_(dispatcher()) {}
 
  protected:
-  void SetUpScenicServer(std::unique_ptr<stubs::Scenic> server) {
+  void SetUpScenicServer(std::unique_ptr<stubs::ScenicBase> server) {
     scenic_server_ = std::move(server);
     if (scenic_server_) {
       InjectServiceProvider(scenic_server_.get());
@@ -52,7 +52,7 @@ class TakeScreenshotTest : public UnitTestFixture {
   bool did_timeout_ = false;
 
  private:
-  std::unique_ptr<stubs::Scenic> scenic_server_;
+  std::unique_ptr<stubs::ScenicBase> scenic_server_;
 };
 
 TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {

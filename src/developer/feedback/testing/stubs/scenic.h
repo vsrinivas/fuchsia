@@ -7,14 +7,11 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fidl/cpp/interface_request.h>
 
 #include <cstdint>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/developer/feedback/testing/stubs/fidl_server.h"
 
 namespace feedback {
 namespace stubs {
@@ -39,58 +36,40 @@ struct TakeScreenshotResponse {
       : screenshot(std::move(data)), success(success){};
 };
 
-class Scenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
- public:
-  ::fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler() {
-    return [this](::fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
-      total_num_bindings_++;
-      bindings_.AddBinding(this, std::move(request));
-    };
-  }
+using ScenicBase = MULTI_BINDING_STUB_FIDL_SERVER(fuchsia::ui::scenic, Scenic);
 
-  void CloseAllConnections() { bindings_.CloseAll(); }
+class Scenic : public ScenicBase {
+ public:
+  ~Scenic();
 
   // |fuchsia::ui::scenic::Scenic|.
   void TakeScreenshot(TakeScreenshotCallback callback) override;
-
-  // |fuchsia::ui::scenic::testing::Scenic_TestBase|
-  void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
-  }
-
-  uint64_t total_num_bindings() { return total_num_bindings_; }
-  size_t current_num_bindings() { return bindings_.size(); }
 
   //  injection and verification methods.
   void set_take_screenshot_responses(std::vector<TakeScreenshotResponse> responses) {
     take_screenshot_responses_ = std::move(responses);
   }
-  const std::vector<TakeScreenshotResponse>& take_screenshot_responses() const {
-    return take_screenshot_responses_;
-  }
 
  private:
-  ::fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
-  uint64_t total_num_bindings_ = 0;
   std::vector<TakeScreenshotResponse> take_screenshot_responses_;
 };
 
-class ScenicAlwaysReturnsFalse : public Scenic {
+class ScenicAlwaysReturnsFalse : public ScenicBase {
  public:
   // |fuchsia::ui::scenic::Scenic|.
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 };
 
-class ScenicClosesConnection : public Scenic {
+class ScenicClosesConnection : public ScenicBase {
  public:
   // |fuchsia::ui::scenic::Scenic|.
-  void TakeScreenshot(TakeScreenshotCallback callback) override;
+  STUB_METHOD_CLOSES_ALL_CONNECTIONS(TakeScreenshot, TakeScreenshotCallback);
 };
 
-class ScenicNeverReturns : public Scenic {
+class ScenicNeverReturns : public ScenicBase {
  public:
   // |fuchsia::ui::scenic::Scenic|.
-  void TakeScreenshot(TakeScreenshotCallback callback) override;
+  STUB_METHOD_DOES_NOT_RETURN(TakeScreenshot, TakeScreenshotCallback);
 };
 
 }  // namespace stubs

@@ -16,7 +16,7 @@
 namespace feedback {
 namespace stubs {
 
-using UtcProviderBase = STUB_FIDL_SERVER(fuchsia::time, Utc);
+using UtcProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::time, Utc);
 
 class UtcProvider : public UtcProviderBase {
  public:

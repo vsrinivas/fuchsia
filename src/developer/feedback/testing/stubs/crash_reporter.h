@@ -16,7 +16,7 @@
 namespace feedback {
 namespace stubs {
 
-using CrashReporterBase = STUB_FIDL_SERVER(fuchsia::feedback, CrashReporter);
+using CrashReporterBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, CrashReporter);
 
 class CrashReporter : public CrashReporterBase {
  public:

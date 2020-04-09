@@ -14,7 +14,7 @@
 namespace feedback {
 namespace stubs {
 
-using InspectArchiveBase = STUB_FIDL_SERVER(fuchsia::diagnostics, Archive);
+using InspectArchiveBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::diagnostics, Archive);
 
 class InspectArchive : public InspectArchiveBase {
  public:

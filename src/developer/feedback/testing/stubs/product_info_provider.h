@@ -13,7 +13,7 @@
 namespace feedback {
 namespace stubs {
 
-using ProductInfoProviderBase = STUB_FIDL_SERVER(fuchsia::hwinfo, Product);
+using ProductInfoProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::hwinfo, Product);
 
 // Stub fuchsia.hwinfo.Product service to return controlled response to GetInfo().
 class ProductInfoProvider : public ProductInfoProviderBase {

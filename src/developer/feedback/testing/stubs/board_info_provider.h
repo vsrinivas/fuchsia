@@ -13,7 +13,7 @@
 namespace feedback {
 namespace stubs {
 
-using BoardInfoProviderBase = STUB_FIDL_SERVER(fuchsia::hwinfo, Board);
+using BoardInfoProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::hwinfo, Board);
 
 class BoardInfoProvider : public BoardInfoProviderBase {
  public:

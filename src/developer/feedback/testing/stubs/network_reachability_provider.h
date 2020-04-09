@@ -13,7 +13,8 @@
 namespace feedback {
 namespace stubs {
 
-class NetworkReachabilityProvider : public STUB_FIDL_SERVER(fuchsia::net, Connectivity) {
+class NetworkReachabilityProvider
+    : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::net, Connectivity) {
  public:
   // |fuchsia::net::Connectivity|
   void TriggerOnNetworkReachable(bool reachable);

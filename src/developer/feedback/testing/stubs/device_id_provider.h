@@ -15,7 +15,7 @@
 namespace feedback {
 namespace stubs {
 
-using DeviceIdProviderBase = STUB_FIDL_SERVER(fuchsia::feedback, DeviceIdProvider);
+using DeviceIdProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, DeviceIdProvider);
 
 class DeviceIdProvider : public DeviceIdProviderBase {
  public:

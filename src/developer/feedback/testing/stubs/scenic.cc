@@ -76,6 +76,11 @@ ScreenshotData CreateNonBGRA8Screenshot() {
   return screenshot;
 }
 
+Scenic::~Scenic() {
+  FX_CHECK(take_screenshot_responses_.empty())
+      << "Scenic still has " << take_screenshot_responses_.size() << " screenshot responses";
+}
+
 void Scenic::TakeScreenshot(TakeScreenshotCallback callback) {
   FX_CHECK(!take_screenshot_responses_.empty())
       << "You need to set up Scenic::TakeScreenshot() responses before testing GetScreenshot() "
@@ -88,12 +93,6 @@ void Scenic::TakeScreenshot(TakeScreenshotCallback callback) {
 void ScenicAlwaysReturnsFalse::TakeScreenshot(TakeScreenshotCallback callback) {
   callback(CreateEmptyScreenshot(), false);
 }
-
-void ScenicClosesConnection::TakeScreenshot(TakeScreenshotCallback callback) {
-  CloseAllConnections();
-}
-
-void ScenicNeverReturns::TakeScreenshot(TakeScreenshotCallback callback) {}
 
 }  // namespace stubs
 }  // namespace feedback

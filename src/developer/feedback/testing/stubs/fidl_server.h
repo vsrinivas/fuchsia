@@ -17,8 +17,9 @@
 namespace feedback {
 namespace stubs {
 
+// A stub FidlServer that allows a single connection to bind.
 template <typename Interface, typename TestBase>
-class FidlServer : public TestBase {
+class SingleBindingFidlServer : public TestBase {
  public:
   ::fidl::InterfaceRequestHandler<Interface> GetHandler() {
     return [this](::fidl::InterfaceRequest<Interface> request) {
@@ -34,6 +35,7 @@ class FidlServer : public TestBase {
 
   bool IsBound() const { return binding_->is_bound(); }
 
+  // |TestBase|
   void NotImplemented_(const std::string& name) override {
     FXL_NOTIMPLEMENTED() << name << " is not implemented";
   }
@@ -45,15 +47,48 @@ class FidlServer : public TestBase {
   std::unique_ptr<::fidl::Binding<Interface>> binding_;
 };
 
+// A stub FidlServer that allows multiple connections to bind.
+template <typename Interface, typename TestBase>
+class MultiBindingFidlServer : public TestBase {
+ public:
+  ::fidl::InterfaceRequestHandler<Interface> GetHandler() {
+    return [this](::fidl::InterfaceRequest<Interface> request) {
+      bindings_.AddBinding(this, std::move(request));
+    };
+  }
+
+  void CloseAllConnections() { bindings_.CloseAll(); }
+
+  size_t NumConnections() { bindings_.size(); }
+
+  // |TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+  }
+
+ protected:
+  ::fidl::BindingSet<Interface>& bindings() { return bindings_; }
+
+ private:
+  ::fidl::BindingSet<Interface> bindings_;
+};
+
 }  // namespace stubs
 }  // namespace feedback
 
-#define STUB_FIDL_SERVER(_1, _2) feedback::stubs::FidlServer<_1::_2, _1::testing::_2##_TestBase>
+#define SINGLE_BINDING_STUB_FIDL_SERVER(_1, _2) \
+  feedback::stubs::SingleBindingFidlServer<_1::_2, _1::testing::_2##_TestBase>
+
+#define MULTI_BINDING_STUB_FIDL_SERVER(_1, _2) \
+  feedback::stubs::MultiBindingFidlServer<_1::_2, _1::testing::_2##_TestBase>
 
 #define STUB_METHOD_DOES_NOT_RETURN(METHOD, PARAM_TYPES...) \
   void METHOD(PARAM_TYPES) override {}
 
 #define STUB_METHOD_CLOSES_CONNECTION(METHOD, PARAM_TYPES...) \
   void METHOD(PARAM_TYPES) override { CloseConnection(); }
+
+#define STUB_METHOD_CLOSES_ALL_CONNECTIONS(METHOD, PARAM_TYPES...) \
+  void METHOD(PARAM_TYPES) override { CloseAllConnections(); }
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_FIDL_SERVER_H_

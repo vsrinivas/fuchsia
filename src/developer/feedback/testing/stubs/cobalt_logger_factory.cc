@@ -28,11 +28,6 @@ void CobaltLoggerFactoryBase::CloseLoggerConnection() {
   }
 }
 
-void CobaltLoggerFactoryBase::CloseAllConnections() {
-  CloseConnection();
-  CloseLoggerConnection();
-}
-
 void CobaltLoggerFactory::CreateLoggerFromProjectId(uint32_t project_id,
                                                     ::fidl::InterfaceRequest<Logger> logger,
                                                     CreateLoggerFromProjectIdCallback callback) {

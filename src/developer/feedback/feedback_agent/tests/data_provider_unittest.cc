@@ -160,7 +160,7 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
         std::make_unique<DataProvider>(dispatcher(), services(), cobalt_.get(), datastore_.get());
   }
 
-  void SetUpScenicServer(std::unique_ptr<stubs::Scenic> server) {
+  void SetUpScenicServer(std::unique_ptr<stubs::ScenicBase> server) {
     scenic_server_ = std::move(server);
     if (scenic_server_) {
       InjectServiceProvider(scenic_server_.get());
@@ -204,12 +204,6 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     ASSERT_TRUE(Unpack(attachment_bundle.value, unpacked_attachments));
   }
 
-  uint64_t total_num_scenic_bindings() { return scenic_server_->total_num_bindings(); }
-  size_t current_num_scenic_bindings() { return scenic_server_->current_num_bindings(); }
-  const std::vector<stubs::TakeScreenshotResponse>& get_scenic_responses() const {
-    return scenic_server_->take_screenshot_responses();
-  }
-
  private:
   DeviceIdProvider device_id_provider_;
   // The lifetime of |clock_| is managed by |cobalt_|.
@@ -221,7 +215,7 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<DataProvider> data_provider_;
 
  private:
-  std::unique_ptr<stubs::Scenic> scenic_server_;
+  std::unique_ptr<stubs::ScenicBase> scenic_server_;
 };
 
 TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
@@ -234,7 +228,6 @@ TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   SetUpDataProvider();
 
   GetScreenshotResponse feedback_response = GetScreenshot();
-  EXPECT_TRUE(get_scenic_responses().empty());
 
   ASSERT_NE(feedback_response.screenshot, nullptr);
   EXPECT_EQ(static_cast<size_t>(feedback_response.screenshot->dimensions_in_px.height),
@@ -268,7 +261,6 @@ TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningFailure) {
   SetUpDataProvider();
 
   GetScreenshotResponse feedback_response = GetScreenshot();
-  EXPECT_TRUE(get_scenic_responses().empty());
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
@@ -281,7 +273,6 @@ TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) 
   SetUpDataProvider();
 
   GetScreenshotResponse feedback_response = GetScreenshot();
-  EXPECT_TRUE(get_scenic_responses().empty());
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
@@ -310,7 +301,6 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
   }
   RunLoopUntilIdle();
   EXPECT_EQ(feedback_responses.size(), num_calls);
-  EXPECT_TRUE(get_scenic_responses().empty());
 
   // We cannot assume that the order of the DataProvider::GetScreenshot() calls match the order
   // of the Scenic::TakeScreenshot() callbacks because of the async message loop. Thus we need to
@@ -335,29 +325,6 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
     EXPECT_TRUE(response.screenshot->image.vmo.is_valid());
     EXPECT_GE(response.screenshot->image.size, 0u);
   }
-}
-
-TEST_F(DataProviderTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
-  // We use a stub that always returns false as we are not interested in the responses.
-  SetUpScenicServer(std::make_unique<stubs::ScenicAlwaysReturnsFalse>());
-  SetUpDataProvider();
-
-  const size_t num_calls = 5u;
-  std::vector<GetScreenshotResponse> feedback_responses;
-  for (size_t i = 0; i < num_calls; i++) {
-    data_provider_->GetScreenshot(ImageEncoding::PNG,
-                                  [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
-                                    feedback_responses.push_back({std::move(screenshot)});
-                                  });
-  }
-  RunLoopUntilIdle();
-  EXPECT_EQ(feedback_responses.size(), num_calls);
-
-  EXPECT_EQ(total_num_scenic_bindings(), num_calls);
-  // The unbinding is asynchronous so we need to run the loop until all the outstanding connections
-  // are actually close in the stub.
-  RunLoopUntilIdle();
-  EXPECT_EQ(current_num_scenic_bindings(), 0u);
 }
 
 TEST_F(DataProviderTest, GetData_SmokeTest) {

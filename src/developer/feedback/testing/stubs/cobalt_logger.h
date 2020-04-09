@@ -17,7 +17,7 @@ namespace feedback {
 namespace stubs {
 
 // Defines the interface all stub loggers must implement and provides common functionality.
-class CobaltLoggerBase : public STUB_FIDL_SERVER(fuchsia::cobalt, Logger) {
+class CobaltLoggerBase : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::cobalt, Logger) {
  public:
   virtual ~CobaltLoggerBase() = default;
 

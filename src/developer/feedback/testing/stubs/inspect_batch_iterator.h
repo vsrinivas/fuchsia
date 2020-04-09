@@ -16,7 +16,8 @@
 namespace feedback {
 namespace stubs {
 
-using InspectBatchIteratorBase = STUB_FIDL_SERVER(fuchsia::diagnostics, BatchIterator);
+using InspectBatchIteratorBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::diagnostics,
+                                                                 BatchIterator);
 
 class InspectBatchIterator : public InspectBatchIteratorBase {
  public:

@@ -119,7 +119,8 @@ class DataProviderNeverReturning : public DataProvider {
   void GetData(GetDataCallback callback) override;
 };
 
-class DataProviderBundleAttachment : public STUB_FIDL_SERVER(fuchsia::feedback, DataProvider) {
+class DataProviderBundleAttachment
+    : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, DataProvider) {
  public:
   DataProviderBundleAttachment(fuchsia::feedback::Attachment attachment_bundle)
       : attachment_bundle_(std::move(attachment_bundle)) {}

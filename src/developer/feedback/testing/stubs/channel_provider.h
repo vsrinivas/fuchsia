@@ -16,8 +16,7 @@
 namespace feedback {
 namespace stubs {
 
-using ChannelProviderBase = STUB_FIDL_SERVER(fuchsia::update::channel, Provider);
-
+using ChannelProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::update::channel, Provider);
 class ChannelProvider : public ChannelProviderBase {
  public:
   ChannelProvider(const std::string channel) : channel_(channel) {}

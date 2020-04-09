@@ -19,7 +19,8 @@ namespace feedback {
 namespace stubs {
 
 // Defines the interface all stub logger factories must implement and provides common functionality.
-class CobaltLoggerFactoryBase : public STUB_FIDL_SERVER(fuchsia::cobalt, LoggerFactory) {
+class CobaltLoggerFactoryBase
+    : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::cobalt, LoggerFactory) {
  public:
   CobaltLoggerFactoryBase(std::unique_ptr<CobaltLoggerBase> logger) : logger_(std::move(logger)) {}
   virtual ~CobaltLoggerFactoryBase() {}
@@ -40,7 +41,6 @@ class CobaltLoggerFactoryBase : public STUB_FIDL_SERVER(fuchsia::cobalt, LoggerF
   bool WasLogCobaltEventsCalled() const { return logger_->WasLogCobaltEventsCalled(); }
 
   void CloseLoggerConnection();
-  void CloseAllConnections();
 
  protected:
   std::unique_ptr<CobaltLoggerBase> logger_;

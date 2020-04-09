@@ -26,7 +26,7 @@ fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::s
                                             const zx::duration timestamp_offset = zx::duration(0),
                                             const std::vector<std::string>& tags = {});
 
-using LoggerBase = STUB_FIDL_SERVER(fuchsia::logger, Log);
+using LoggerBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::logger, Log);
 
 class Logger : public LoggerBase {
  public:
