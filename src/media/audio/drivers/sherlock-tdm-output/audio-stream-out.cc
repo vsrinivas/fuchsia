@@ -292,6 +292,7 @@ void SherlockAudioStreamOut::ProcessRingNotification() {
 
   resp.monotonic_time = zx::clock::get_monotonic().get();
   resp.ring_buffer_pos = aml_audio_->GetRingPosition();
+  ZX_ASSERT(resp.ring_buffer_pos < rb_size_);
   NotifyPosition(resp);
 }
 
@@ -362,7 +363,8 @@ zx_status_t SherlockAudioStreamOut::GetBuffer(const audio_proto::RingBufGetBuffe
 
   *out_num_rb_frames = rb_frames;
 
-  aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, rb_frames * frame_size_);
+  rb_size_ = rb_frames * frame_size_;
+  aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, rb_size_);
 
   return ZX_OK;
 }
