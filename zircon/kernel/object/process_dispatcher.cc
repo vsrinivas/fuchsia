@@ -536,14 +536,14 @@ HandleOwner ProcessDispatcher::RemoveHandleLocked(zx_handle_t handle_value) {
   return RemoveHandleLocked(handle);
 }
 
-zx_status_t ProcessDispatcher::RemoveHandles(const zx_handle_t* handles, size_t num_handles) {
+zx_status_t ProcessDispatcher::RemoveHandles(ktl::span<const zx_handle_t> handles) {
   zx_status_t status = ZX_OK;
   Guard<BrwLockPi, BrwLockPi::Writer> guard{handle_table_lock()};
 
-  for (size_t ix = 0; ix != num_handles; ++ix) {
-    if (handles[ix] == ZX_HANDLE_INVALID)
+  for (zx_handle_t handle_value : handles) {
+    if (handle_value == ZX_HANDLE_INVALID)
       continue;
-    auto handle = RemoveHandleLocked(handles[ix]);
+    auto handle = RemoveHandleLocked(handle_value);
     if (!handle)
       status = ZX_ERR_BAD_HANDLE;
   }

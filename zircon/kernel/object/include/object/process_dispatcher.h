@@ -22,6 +22,7 @@
 #include <kernel/thread.h>
 #include <ktl/array.h>
 #include <ktl/forward.h>
+#include <ktl/span.h>
 #include <object/dispatcher.h>
 #include <object/exceptionate.h>
 #include <object/futex_context.h>
@@ -113,7 +114,7 @@ class ProcessDispatcher final
 
   // Remove all of an array of |handles| from the process. Returns ZX_OK if all of the
   // handles were removed, and returns ZX_ERR_BAD_HANDLE if any were not.
-  zx_status_t RemoveHandles(const zx_handle_t* handles, size_t num_handles);
+  zx_status_t RemoveHandles(ktl::span<const zx_handle_t> handles);
 
   // Get the dispatcher corresponding to this handle value.
   template <typename T>

@@ -4,6 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_USER_HANDLES_H_
+#define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_USER_HANDLES_H_
+
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/types.h>
 
@@ -36,7 +39,7 @@ zx_status_t RemoveUserHandles(T user_handles, size_t num_handles, ProcessDispatc
       break;
     }
 
-    status = process->RemoveHandles(handles, chunk_size);
+    status = process->RemoveHandles(ktl::span(handles, chunk_size));
     offset += chunk_size;
   }
   return status;
@@ -51,3 +54,5 @@ zx_status_t get_handle_for_message_locked(ProcessDispatcher* process, const Disp
 zx_status_t get_handle_for_message_locked(ProcessDispatcher* process, const Dispatcher* channel,
                                           zx_handle_disposition_t* handle_disposition,
                                           Handle** raw_handle) TA_REQ(process->handle_table_lock());
+
+#endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_USER_HANDLES_H_
