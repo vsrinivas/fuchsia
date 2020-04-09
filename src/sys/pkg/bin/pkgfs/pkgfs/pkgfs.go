@@ -121,6 +121,8 @@ func loadStaticIndex(static *index.StaticIndex, blobfs *blobfs.Manager, root str
 }
 
 func (f *Filesystem) loadCacheIndex(root string) error {
+	log.Println("pkgfs: loading cache index")
+	start := time.Now()
 	indexFile, err := f.blobfs.Open(root)
 	if err != nil {
 		return fmt.Errorf("pkgfs: could not load cache index from blob %s: %s", root, err)
@@ -131,6 +133,8 @@ func (f *Filesystem) loadCacheIndex(root string) error {
 	if err != nil {
 		return fmt.Errorf("pkgfs: error parsing cache index: %v", err)
 	}
+
+	var foundCount int
 	for _, entry := range entries {
 		meta, err := f.blobfs.Open(entry.Merkle)
 		if err != nil {
@@ -147,7 +151,12 @@ func (f *Filesystem) loadCacheIndex(root string) error {
 			// Mark failed so we don't list the package in /pkgfs/needs/packages
 			f.index.InstallingFailedForPackage(entry.Merkle)
 		}
+		if _, found := f.index.GetRoot(entry.Merkle); found {
+			foundCount++
+		}
 	}
+	log.Printf("pkgfs: cache index loaded in %.3fs; found %d/%d packages",
+		time.Since(start).Seconds(), foundCount, len(entries))
 	return nil
 }
 
