@@ -21,7 +21,7 @@ use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, NoRouteError, SocketError};
 use crate::ip::forwarding::ForwardingTable;
 use crate::ip::{
-    gmp::mld::MldHandler,
+    gmp::mld::MldPacketHandler,
     path_mtu::PmtuHandler,
     socket::{
         BufferIpSocketContext, IpSock, IpSocket, IpSocketContext, SendError, UnroutableBehavior,
@@ -1022,7 +1022,7 @@ impl<
         C: Icmpv6Context
             + BufferIcmpContext<Ipv6, B>
             + PmtuHandler<Ipv6>
-            + MldHandler
+            + MldPacketHandler<(), <C as IpDeviceIdContext>::DeviceId>
             + NdpPacketHandler<<C as IpDeviceIdContext>::DeviceId>,
     > BufferIpTransportContext<Ipv6, B, C> for IcmpIpTransportContext
 {
@@ -2074,33 +2074,25 @@ mod tests {
     use std::num::NonZeroU16;
     use std::time::Duration;
 
-    use net_types::{
-        ip::{Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
-        LinkLocalAddr,
-    };
+    use net_types::ip::{Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, Serializer};
-    use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
-    use crate::context::{
-        testutil::{DummyContext, DummyInstant},
-        DualStateContext, FrameContext, TimerContext,
-    };
+    use crate::context::testutil::{DummyContext, DummyInstant};
     use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
-    use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldGroupState, MldReportDelay};
-    use crate::ip::gmp::MulticastGroupSet;
+    use crate::ip::gmp::mld::MldPacketHandler;
     use crate::ip::path_mtu::testutil::DummyPmtuState;
     use crate::ip::socket::testutil::{DummyIpSocket, DummyIpSocketContext};
     use crate::ip::{
         receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId, IpExt, IpPacketBuilder,
     };
     use crate::testutil::{
-        DummyEventDispatcher, DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt,
-        DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V4,
+        DUMMY_CONFIG_V6,
     };
     use crate::wire::icmp::{
-        IcmpEchoReply, IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode,
+        mld::MldPacket, IcmpEchoReply, IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode,
         Icmpv4TimestampRequest, MessageBody, NdpPacket,
     };
     use crate::wire::udp::UdpPacketBuilder;
@@ -2936,89 +2928,14 @@ mod tests {
         }
     }
 
-    impl
-        DualStateContext<
-            MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>,
-            FakeCryptoRng<XorShiftRng>,
-            DummyDeviceId,
-        > for Dummyv6Context
-    {
-        fn get_states_with(
-            &self,
-            _id0: DummyDeviceId,
-            _id1: (),
-        ) -> (&MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>, &FakeCryptoRng<XorShiftRng>)
-        {
-            unimplemented!()
-        }
-
-        fn get_states_mut_with(
+    impl MldPacketHandler<(), DummyDeviceId> for Dummyv6Context {
+        fn receive_mld_packet<B: ByteSlice>(
             &mut self,
-            _id0: DummyDeviceId,
-            _id1: (),
-        ) -> (
-            &mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>,
-            &mut FakeCryptoRng<XorShiftRng>,
-        ) {
-            unimplemented!()
-        }
-    }
-
-    impl MldContext for Dummyv6Context {
-        fn get_ipv6_link_local_addr(
-            &self,
             _device: DummyDeviceId,
-        ) -> Option<LinkLocalAddr<Ipv6Addr>> {
-            unimplemented!()
-        }
-    }
-
-    impl<B: BufferMut> FrameContext<B, MldFrameMetadata<DummyDeviceId>> for Dummyv6Context {
-        fn send_frame<S: Serializer<Buffer = B>>(
-            &mut self,
-            _metadata: MldFrameMetadata<DummyDeviceId>,
-            _frame: S,
-        ) -> Result<(), S> {
-            unimplemented!()
-        }
-    }
-
-    impl StateContext<MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>, DummyDeviceId>
-        for Dummyv6Context
-    {
-        fn get_state_with(
-            &self,
-            _id: DummyDeviceId,
-        ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>> {
-            unimplemented!()
-        }
-
-        fn get_state_mut_with(
-            &mut self,
-            _id: DummyDeviceId,
-        ) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>> {
-            unimplemented!()
-        }
-    }
-
-    impl TimerContext<MldReportDelay<DummyDeviceId>> for Dummyv6Context {
-        fn schedule_timer_instant(
-            &mut self,
-            _time: DummyInstant,
-            _id: MldReportDelay<DummyDeviceId>,
-        ) -> Option<DummyInstant> {
-            unimplemented!()
-        }
-
-        fn cancel_timer(&mut self, _id: MldReportDelay<DummyDeviceId>) -> Option<DummyInstant> {
-            unimplemented!()
-        }
-
-        fn cancel_timers_with<F: FnMut(&MldReportDelay<DummyDeviceId>) -> bool>(&mut self, _f: F) {
-            unimplemented!()
-        }
-
-        fn scheduled_instant(&self, _id: MldReportDelay<DummyDeviceId>) -> Option<DummyInstant> {
+            _src_ip: Ipv6Addr,
+            _dst_ip: SpecifiedAddr<Ipv6Addr>,
+            _packet: MldPacket<B>,
+        ) {
             unimplemented!()
         }
     }

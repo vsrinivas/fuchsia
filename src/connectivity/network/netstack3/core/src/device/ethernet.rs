@@ -22,7 +22,7 @@ use net_types::{
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
-use crate::context::{FrameContext, InstantContext, StateContext};
+use crate::context::{DualStateContext, FrameContext, InstantContext, StateContext, TimerHandler};
 use crate::device::arp::{
     self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpHardwareType, ArpState, ArpTimerId,
 };
@@ -30,9 +30,15 @@ use crate::device::link::LinkDevice;
 use crate::device::ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId};
 use crate::device::{
     AddressConfigurationType, AddressEntry, AddressError, AddressState, BufferIpDeviceContext,
-    DeviceIdContext, FrameDestination, IpDeviceContext, IpLinkDeviceState, RecvIpFrameMeta,
-    Tentative,
+    DeviceIdContext, FrameDestination, IpDeviceContext, RecvIpFrameMeta, Tentative,
 };
+use crate::ip::gmp::igmp::{
+    IgmpContext, IgmpGroupState, IgmpHandler, IgmpPacketMetadata, IgmpTimerId,
+};
+use crate::ip::gmp::mld::{
+    MldContext, MldFrameMetadata, MldGroupState, MldHandler, MldReportDelay,
+};
+use crate::ip::gmp::{GroupJoinResult, GroupLeaveResult, MulticastGroupSet};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck};
 #[cfg(test)]
@@ -67,7 +73,7 @@ create_protocol_enum!(
 
 /// A shorthand for `IpDeviceContext` with all of the appropriate type arguments
 /// fixed to their Ethernet values.
-pub(super) trait EthernetIpDeviceContext:
+pub(crate) trait EthernetIpDeviceContext:
     IpDeviceContext<
     EthernetLinkDevice,
     EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
@@ -110,6 +116,92 @@ impl<
 {
 }
 
+impl<C: EthernetIpDeviceContext>
+    DualStateContext<MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, C::Rng, C::DeviceId>
+    for C
+{
+    fn get_states_with(
+        &self,
+        device: C::DeviceId,
+        _id1: (),
+    ) -> (&MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, &C::Rng) {
+        let (state, rng) = self.get_states_with(device, ());
+        (&state.ip().ipv4_multicast_groups, rng)
+    }
+
+    fn get_states_mut_with(
+        &mut self,
+        device: C::DeviceId,
+        _id1: (),
+    ) -> (&mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, &mut C::Rng) {
+        let (state, rng) = self.get_states_mut_with(device, ());
+        (&mut state.ip_mut().ipv4_multicast_groups, rng)
+    }
+}
+
+impl<C: EthernetIpDeviceContext>
+    DualStateContext<MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, C::Rng, C::DeviceId>
+    for C
+{
+    fn get_states_with(
+        &self,
+        device: C::DeviceId,
+        _id1: (),
+    ) -> (&MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, &C::Rng) {
+        let (state, rng) = self.get_states_with(device, ());
+        (&state.ip().ipv6_multicast_groups, rng)
+    }
+
+    fn get_states_mut_with(
+        &mut self,
+        device: C::DeviceId,
+        _id1: (),
+    ) -> (&mut MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, &mut C::Rng) {
+        let (state, rng) = self.get_states_mut_with(device, ());
+        (&mut state.ip_mut().ipv6_multicast_groups, rng)
+    }
+}
+
+impl<C: EthernetIpDeviceContext> FrameContext<EmptyBuf, IgmpPacketMetadata<C::DeviceId>> for C {
+    fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
+        &mut self,
+        meta: IgmpPacketMetadata<C::DeviceId>,
+        body: S,
+    ) -> Result<(), S> {
+        send_ip_frame(self, meta.device, meta.dst_ip.into_specified(), body)
+    }
+}
+
+impl<C: EthernetIpDeviceContext> FrameContext<EmptyBuf, MldFrameMetadata<C::DeviceId>> for C {
+    fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
+        &mut self,
+        meta: MldFrameMetadata<C::DeviceId>,
+        body: S,
+    ) -> Result<(), S> {
+        send_ip_frame(self, meta.device, meta.dst_ip.into_specified(), body)
+    }
+}
+
+impl<C: EthernetIpDeviceContext> IgmpContext<EthernetLinkDevice> for C {
+    fn get_ip_addr_subnet(&self, device: C::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
+        get_ip_addr_subnet(self, device)
+    }
+
+    fn igmp_enabled(&self, device: C::DeviceId) -> bool {
+        self.get_state_with(device).ip().igmp_enabled
+    }
+}
+
+impl<C: EthernetIpDeviceContext> MldContext<EthernetLinkDevice> for C {
+    fn get_ipv6_link_local_addr(&self, device: C::DeviceId) -> Option<LinkLocalAddr<Ipv6Addr>> {
+        get_ipv6_link_local_addr(self, device)
+    }
+
+    fn mld_enabled(&self, device: C::DeviceId) -> bool {
+        self.get_state_with(device).ip().mld_enabled
+    }
+}
+
 /// Builder for [`EthernetDeviceState`].
 pub(crate) struct EthernetDeviceStateBuilder {
     mac: Mac,
@@ -129,15 +221,14 @@ impl EthernetDeviceStateBuilder {
         //  although we may at some point want to figure out how to configure
         //  devices which don't support IPv6, and allow smaller MTUs for those
         //  devices.
+        //
         //  A few questions:
         //  - How do we wire error information back up the call stack? Should
-        //  this just return a Result or something?
-
+        //    this just return a Result or something?
         Self { mac, mtu, ndp_configs: ndp::NdpConfigurations::default() }
     }
 
-    /// Update the NDP configurations that will be set on the ethernet
-    /// device.
+    /// Update the NDP configurations that will be set on the ethernet device.
     pub(crate) fn set_ndp_configs(&mut self, v: ndp::NdpConfigurations) {
         self.ndp_configs = v;
     }
@@ -158,7 +249,7 @@ impl EthernetDeviceStateBuilder {
 }
 
 /// The state associated with an Ethernet device.
-pub(super) struct EthernetDeviceState<I: Instant> {
+pub(crate) struct EthernetDeviceState<I: Instant> {
     /// Mac address of the device this state is for.
     mac: Mac,
 
@@ -262,9 +353,11 @@ impl EthernetIpExt for Ipv6 {
 ///
 /// `D` is the type of device ID that identifies different Ethernet devices.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub(super) enum EthernetTimerId<D> {
+pub(crate) enum EthernetTimerId<D> {
     Arp(ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>),
     Ndp(NdpTimerId<EthernetLinkDevice, D>),
+    Igmp(IgmpTimerId<EthernetLinkDevice, D>),
+    Mld(MldReportDelay<EthernetLinkDevice, D>),
 }
 
 impl<D> From<ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>> for EthernetTimerId<D> {
@@ -279,6 +372,18 @@ impl<D> From<NdpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
     }
 }
 
+impl<D> From<IgmpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
+    fn from(id: IgmpTimerId<EthernetLinkDevice, D>) -> EthernetTimerId<D> {
+        EthernetTimerId::Igmp(id)
+    }
+}
+
+impl<D> From<MldReportDelay<EthernetLinkDevice, D>> for EthernetTimerId<D> {
+    fn from(id: MldReportDelay<EthernetLinkDevice, D>) -> EthernetTimerId<D> {
+        EthernetTimerId::Mld(id)
+    }
+}
+
 /// Handle an Ethernet timer firing.
 pub(super) fn handle_timer<C: EthernetIpDeviceContext>(
     ctx: &mut C,
@@ -287,11 +392,14 @@ pub(super) fn handle_timer<C: EthernetIpDeviceContext>(
     match id {
         EthernetTimerId::Arp(id) => arp::handle_timer(ctx, id.into()),
         EthernetTimerId::Ndp(id) => <C as NdpHandler<EthernetLinkDevice>>::handle_timer(ctx, id),
+        EthernetTimerId::Igmp(id) => TimerHandler::handle_timer(ctx, id),
+        EthernetTimerId::Mld(id) => TimerHandler::handle_timer(ctx, id),
     }
 }
 
 // If we are provided with an impl of `TimerContext<EthernetTimerId<_>>`, then
-// we can in turn provide impls of `TimerContext` for ARP and NDP timers.
+// we can in turn provide impls of `TimerContext` for ARP, NDP, IGMP, and MLD
+// timers.
 impl_timer_context!(
     DeviceIdContext<EthernetLinkDevice>,
     EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
@@ -304,6 +412,20 @@ impl_timer_context!(
     EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     ArpTimerId<EthernetLinkDevice, Ipv4Addr, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     EthernetTimerId::Arp(id),
+    id
+);
+impl_timer_context!(
+    DeviceIdContext<EthernetLinkDevice>,
+    EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    IgmpTimerId<EthernetLinkDevice, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    EthernetTimerId::Igmp(id),
+    id
+);
+impl_timer_context!(
+    DeviceIdContext<EthernetLinkDevice>,
+    EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    MldReportDelay<EthernetLinkDevice, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    EthernetTimerId::Mld(id),
     id
 );
 
@@ -877,34 +999,28 @@ pub(super) fn join_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
-    let device_state = ctx.get_state_mut_with(device_id).ip_mut();
-
     #[ipv4addr]
-    let groups = &mut device_state.ipv4_multicast_groups;
+    let res = ctx.igmp_join_group(device_id, multicast_addr);
 
     #[ipv6addr]
-    let groups = &mut device_state.ipv6_multicast_groups;
+    let res = ctx.mld_join_group(device_id, multicast_addr);
 
-    let counter = groups.entry(multicast_addr).or_insert(0);
-    *counter += 1;
+    match res {
+        GroupJoinResult::Joined(()) => {
+            let mac = MulticastAddr::from(&multicast_addr);
 
-    if *counter == 1 {
-        let mac = MulticastAddr::from(&multicast_addr);
+            trace!(
+                "ethernet::join_ip_multicast: joining IP multicast {:?} and MAC multicast {:?}",
+                multicast_addr,
+                mac
+            );
 
-        trace!(
-            "ethernet::join_ip_multicast: joining IP multicast {:?} and MAC multicast {:?}",
+            join_link_multicast(ctx, device_id, mac);
+        }
+        GroupJoinResult::AlreadyMember => trace!(
+            "ethernet::join_ip_multicast: already joinined IP multicast {:?}",
             multicast_addr,
-            mac
-        );
-
-        // TODO(ghanan): Make `EventDispatcher` aware of this to maintain a single source of truth.
-        join_link_multicast(ctx, device_id, mac);
-    } else {
-        trace!(
-            "ethernet::join_ip_multicast: already joinined IP multicast {:?}, counter = {}",
-            multicast_addr,
-            *counter,
-        );
+        ),
     }
 }
 
@@ -929,40 +1045,32 @@ pub(super) fn leave_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
-    let device_state = ctx.get_state_mut_with(device_id).ip_mut();
-    let mac = MulticastAddr::from(&multicast_addr);
-
     #[ipv4addr]
-    let groups = &mut device_state.ipv4_multicast_groups;
+    let res = ctx.igmp_leave_group(device_id, multicast_addr);
 
     #[ipv6addr]
-    let groups = &mut device_state.ipv6_multicast_groups;
+    let res = ctx.mld_leave_group(device_id, multicast_addr);
 
-    // Will panic if `device_id` has not yet joined the multicast address.
-    let counter =
-        groups.get_mut(&multicast_addr).expect("cannot leave not-yet-joined multicast group");
+    match res {
+        GroupLeaveResult::Left(()) => {
+            let mac = MulticastAddr::from(&multicast_addr);
 
-    if *counter == 1 {
-        let mac = MulticastAddr::from(&multicast_addr);
+            trace!(
+                "ethernet::leave_ip_multicast: leaving IP multicast {} and MAC multicast {}",
+                multicast_addr,
+                mac
+            );
 
-        trace!(
-            "ethernet::leave_ip_multicast: leaving IP multicast {:?} and MAC multicast {:?}",
+            leave_link_multicast(ctx, device_id, mac);
+        }
+        GroupLeaveResult::StillMember => trace!(
+            "ethernet::leave_ip_multicast: not leaving IP multicast {} as there are still listeners for it",
             multicast_addr,
-            mac
-        );
-
-        groups.remove(&multicast_addr);
-
-        // TODO(ghanan): Make `EventDispatcher` aware of this to maintain a single source of truth.
-        leave_link_multicast(ctx, device_id, mac);
-    } else {
-        *counter -= 1;
-
-        trace!(
-            "ethernet::leave_ip_multicast: not leaving IP multicast {:?} as there are still listeners for it, counter = {}",
+        ),
+        GroupLeaveResult::NotMember => panic!(
+            "attempted to leave IP multicast group we were not a member of: {}",
             multicast_addr,
-            *counter,
-        );
+        ),
     }
 }
 
@@ -974,10 +1082,10 @@ pub(super) fn is_in_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     multicast_addr: MulticastAddr<A>,
 ) -> bool {
     #[ipv4addr]
-    return ctx.get_state_with(device_id).ip().ipv4_multicast_groups.contains_key(&multicast_addr);
+    return ctx.get_state_with(device_id).ip().ipv4_multicast_groups.contains(&multicast_addr);
 
     #[ipv6addr]
-    return ctx.get_state_with(device_id).ip().ipv6_multicast_groups.contains_key(&multicast_addr);
+    return ctx.get_state_with(device_id).ip().ipv6_multicast_groups.contains(&multicast_addr);
 }
 
 /// Get the MTU associated with this device.
@@ -1068,23 +1176,17 @@ pub(super) fn deinitialize<C: EthernetIpDeviceContext>(ctx: &mut C, device_id: C
     <C as NdpHandler<_>>::deinitialize(ctx, device_id);
 }
 
-impl<
-        Id,
-        C: InstantContext
-            + StateContext<
-                IpLinkDeviceState<
-                    <C as InstantContext>::Instant,
-                    EthernetDeviceState<<C as InstantContext>::Instant>,
-                >,
-                Id,
-            >,
-    > StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, Id> for C
+impl<C: EthernetIpDeviceContext> StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, C::DeviceId>
+    for C
 {
-    fn get_state_with(&self, id: Id) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
+    fn get_state_with(&self, id: C::DeviceId) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
         &self.get_state_with(id).link().ipv4_arp
     }
 
-    fn get_state_mut_with(&mut self, id: Id) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
+    fn get_state_mut_with(
+        &mut self,
+        id: C::DeviceId,
+    ) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
         &mut self.get_state_mut_with(id).link_mut().ipv4_arp
     }
 }
@@ -1150,29 +1252,17 @@ impl<C: EthernetIpDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C 
     }
 }
 
-impl<
-        Id,
-        C: InstantContext
-            + StateContext<
-                IpLinkDeviceState<
-                    <C as InstantContext>::Instant,
-                    EthernetDeviceState<<C as InstantContext>::Instant>,
-                >,
-                Id,
-            >,
-    > StateContext<NdpState<EthernetLinkDevice, <C as InstantContext>::Instant>, Id> for C
+impl<C: EthernetIpDeviceContext> StateContext<NdpState<EthernetLinkDevice, C::Instant>, C::DeviceId>
+    for C
 {
-    fn get_state_with(
-        &self,
-        id: Id,
-    ) -> &NdpState<EthernetLinkDevice, <C as InstantContext>::Instant> {
+    fn get_state_with(&self, id: C::DeviceId) -> &NdpState<EthernetLinkDevice, C::Instant> {
         &self.get_state_with(id).link().ndp
     }
 
     fn get_state_mut_with(
         &mut self,
-        id: Id,
-    ) -> &mut NdpState<EthernetLinkDevice, <C as InstantContext>::Instant> {
+        id: C::DeviceId,
+    ) -> &mut NdpState<EthernetLinkDevice, C::Instant> {
         &mut self.get_state_mut_with(id).link_mut().ndp
     }
 }
@@ -1430,7 +1520,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
 /// An implementation of the [`LinkDevice`] trait for Ethernet devices.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub(super) struct EthernetLinkDevice;
+pub(crate) struct EthernetLinkDevice;
 
 impl LinkDevice for EthernetLinkDevice {
     type Address = Mac;
@@ -1503,12 +1593,14 @@ fn mac_resolution_failed<C: EthernetIpDeviceContext>(
 mod tests {
     use packet::Buf;
     use rand::Rng;
+    use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
     use crate::context::testutil::DummyInstant;
     use crate::device::{
         arp::ArpHandler, is_routing_enabled, set_routing_enabled, DeviceId, EthernetDeviceId,
+        IpLinkDeviceState,
     };
     use crate::ip::{
         dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId, IpDeviceIdContext,
@@ -1517,7 +1609,8 @@ mod tests {
     use crate::testutil::{
         add_arp_or_ndp_table_entry, get_counter_val, new_rng,
         parse_icmp_packet_in_ip_packet_in_ethernet_frame, parse_ip_packet_in_ethernet_frame,
-        DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V4,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt,
+        DUMMY_CONFIG_V4,
     };
     use crate::wire::icmp::{IcmpDestUnreachable, IcmpIpExt};
     use crate::wire::testdata::{dns_request_v4, dns_request_v6};
@@ -1542,23 +1635,34 @@ mod tests {
     >;
 
     impl
-        StateContext<
+        DualStateContext<
             IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
+            FakeCryptoRng<XorShiftRng>,
             DummyDeviceId,
         > for DummyContext
     {
-        fn get_state_with(
+        fn get_states_with(
             &self,
-            _id: DummyDeviceId,
-        ) -> &IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>> {
-            &self.get_ref().state
+            _id0: DummyDeviceId,
+            _id1: (),
+        ) -> (
+            &IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
+            &FakeCryptoRng<XorShiftRng>,
+        ) {
+            let (state, rng) = self.get_states_with((), ());
+            (&state.state, rng)
         }
 
-        fn get_state_mut_with(
+        fn get_states_mut_with(
             &mut self,
-            _id: DummyDeviceId,
-        ) -> &mut IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>> {
-            &mut self.get_mut().state
+            _id0: DummyDeviceId,
+            _id1: (),
+        ) -> (
+            &mut IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
+            &mut FakeCryptoRng<XorShiftRng>,
+        ) {
+            let (state, rng) = self.get_states_mut_with((), ());
+            (&mut state.state, rng)
         }
     }
 
@@ -2166,7 +2270,7 @@ mod tests {
     /// This method should always panic as leaving an unjoined multicast group is a panic
     /// condition.
     #[ip_test]
-    #[should_panic(expected = "cannot leave not-yet-joined multicast group")]
+    #[should_panic(expected = "attempted to leave IP multicast group we were not a member of:")]
     fn test_ip_leave_unjoined_multicast<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();

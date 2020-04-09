@@ -6,10 +6,9 @@
 
 pub(crate) mod arp;
 pub(crate) mod ethernet;
-mod link;
+pub(crate) mod link;
 pub(crate) mod ndp;
 
-use alloc::collections::HashMap;
 use alloc::vec::Vec;
 use core::fmt::{self, Debug, Display, Formatter};
 use core::marker::PhantomData;
@@ -25,7 +24,7 @@ use zerocopy::ByteSlice;
 
 use crate::context::{
     CounterContext, DualStateContext, FrameContext, InstantContext, RecvFrameContext, RngContext,
-    StateContext, TimerContext,
+    TimerContext,
 };
 use crate::data_structures::{IdMap, IdMapCollectionKey};
 use crate::device::ethernet::{
@@ -33,17 +32,17 @@ use crate::device::ethernet::{
 };
 use crate::device::link::LinkDevice;
 use crate::device::ndp::{NdpHandler, NdpPacketHandler};
-use crate::ip::gmp::igmp::IgmpGroupState;
-use crate::ip::gmp::mld::MldGroupState;
+use crate::ip::gmp::igmp::{IgmpGroupState, IgmpPacketHandler};
+use crate::ip::gmp::mld::{MldGroupState, MldPacketHandler};
 use crate::ip::gmp::MulticastGroupSet;
 use crate::ip::socket::IpSockUpdate;
-use crate::wire::icmp::ndp::NdpPacket;
+use crate::wire::icmp::{mld::MldPacket, ndp::NdpPacket};
 use crate::{BufferDispatcher, Context, EventDispatcher, Instant, StackState};
 
 /// An execution context which provides a `DeviceId` type for various device
 /// layer internals to share.
 pub(crate) trait DeviceIdContext<D: LinkDevice> {
-    type DeviceId: Copy + Debug + Eq;
+    type DeviceId: Copy + Display + Debug + Eq + Send + Sync + 'static;
 }
 
 struct RecvIpFrameMeta<D, I: Ip> {
@@ -60,13 +59,14 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
 
 /// The context provided by the device layer to a particular IP device
 /// implementation.
-trait IpDeviceContext<D: LinkDevice, TimerId, State>:
+pub(crate) trait IpDeviceContext<D: LinkDevice, TimerId, State>:
     DeviceIdContext<D>
     + NdpHandler<D>
     + CounterContext
     + RngContext
-    + StateContext<
+    + DualStateContext<
         IpLinkDeviceState<<Self as InstantContext>::Instant, State>,
+        <Self as RngContext>::Rng,
         <Self as DeviceIdContext<D>>::DeviceId,
     > + TimerContext<TimerId>
     + FrameContext<EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
@@ -142,85 +142,27 @@ impl<B: BufferMut, D: BufferDispatcher<B>>
 }
 
 impl<D: EventDispatcher>
-    StateContext<IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>, EthernetDeviceId>
-    for Context<D>
-{
-    fn get_state_with(
-        &self,
-        id: EthernetDeviceId,
-    ) -> &IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>> {
-        self.state().device.ethernet.get(id.0).unwrap().device()
-    }
-
-    fn get_state_mut_with(
-        &mut self,
-        id: EthernetDeviceId,
-    ) -> &mut IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>> {
-        self.state_mut().device.ethernet.get_mut(id.0).unwrap().device_mut()
-    }
-}
-
-impl<D: EventDispatcher>
-    DualStateContext<MulticastGroupSet<Ipv4Addr, IgmpGroupState<D::Instant>>, D::Rng, DeviceId, ()>
-    for Context<D>
+    DualStateContext<
+        IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>,
+        D::Rng,
+        EthernetDeviceId,
+    > for Context<D>
 {
     fn get_states_with(
         &self,
-        device: DeviceId,
+        id0: EthernetDeviceId,
         _id1: (),
-    ) -> (&MulticastGroupSet<Ipv4Addr, IgmpGroupState<D::Instant>>, &D::Rng) {
-        match device.protocol {
-            DeviceProtocol::Ethernet => (
-                &self.state().device.ethernet.get(device.id()).unwrap().device.ip().igmp,
-                self.dispatcher().rng(),
-            ),
-        }
+    ) -> (&IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>, &D::Rng) {
+        (self.state().device.ethernet.get(id0.0).unwrap().device(), self.dispatcher().rng())
     }
 
     fn get_states_mut_with(
         &mut self,
-        device: DeviceId,
+        id0: EthernetDeviceId,
         _id1: (),
-    ) -> (&mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<D::Instant>>, &mut D::Rng) {
+    ) -> (&mut IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>, &mut D::Rng) {
         let (state, dispatcher) = self.state_and_dispatcher();
-        match device.protocol {
-            DeviceProtocol::Ethernet => (
-                &mut state.device.ethernet.get_mut(device.id()).unwrap().device.ip_mut().igmp,
-                dispatcher.rng_mut(),
-            ),
-        }
-    }
-}
-
-impl<D: EventDispatcher>
-    DualStateContext<MulticastGroupSet<Ipv6Addr, MldGroupState<D::Instant>>, D::Rng, DeviceId, ()>
-    for Context<D>
-{
-    fn get_states_with(
-        &self,
-        device: DeviceId,
-        _id1: (),
-    ) -> (&MulticastGroupSet<Ipv6Addr, MldGroupState<D::Instant>>, &D::Rng) {
-        match device.protocol {
-            DeviceProtocol::Ethernet => (
-                &self.state().device.ethernet.get(device.id()).unwrap().device.ip().mld,
-                self.dispatcher().rng(),
-            ),
-        }
-    }
-
-    fn get_states_mut_with(
-        &mut self,
-        device: DeviceId,
-        _id1: (),
-    ) -> (&mut MulticastGroupSet<Ipv6Addr, MldGroupState<D::Instant>>, &mut D::Rng) {
-        let (state, dispatcher) = self.state_and_dispatcher();
-        match device.protocol {
-            DeviceProtocol::Ethernet => (
-                &mut state.device.ethernet.get_mut(device.id()).unwrap().device.ip_mut().mld,
-                dispatcher.rng_mut(),
-            ),
-        }
+        (state.device.ethernet.get_mut(id0.0).unwrap().device_mut(), dispatcher.rng_mut())
     }
 }
 
@@ -242,6 +184,13 @@ impl Debug for EthernetDeviceId {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let device: DeviceId = self.clone().into();
         write!(f, "{:?}", device)
+    }
+}
+
+impl Display for EthernetDeviceId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let device: DeviceId = self.clone().into();
+        write!(f, "{}", device)
     }
 }
 
@@ -534,7 +483,7 @@ impl<D> DeviceState<D> {
 
 /// Generic IP-Device state.
 // TODO(ghanan): Split this up into IPv4 and IPv6 specific device states.
-struct IpDeviceState<I: Instant> {
+pub(crate) struct IpDeviceState<I: Instant> {
     /// Assigned IPv4 addresses.
     // TODO(ghanan): Use `AddrSubnet` instead of `AddressEntry` as IPv4 addresses do not
     //               need the extra fields in `AddressEntry`.
@@ -546,10 +495,24 @@ struct IpDeviceState<I: Instant> {
     ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr, I>>,
 
     /// IPv4 multicast groups this device has joined.
-    ipv4_multicast_groups: HashMap<MulticastAddr<Ipv4Addr>, usize>,
+    ipv4_multicast_groups: MulticastGroupSet<Ipv4Addr, IgmpGroupState<I>>,
+
+    /// Is IGMP enabled for this device?
+    ///
+    /// If `igmp_enabled` is false, multicast groups will still be added to
+    /// `ipv4_multicast_groups`, but we will not inform the network of our
+    /// membership in those groups using IGMP.
+    igmp_enabled: bool,
 
     /// IPv6 multicast groups this device has joined.
-    ipv6_multicast_groups: HashMap<MulticastAddr<Ipv6Addr>, usize>,
+    ipv6_multicast_groups: MulticastGroupSet<Ipv6Addr, MldGroupState<I>>,
+
+    /// Is MLD enabled for this device?
+    ///
+    /// If `mld_enabled` is false, multicast groups will still be added to
+    /// `ipv6_multicast_groups`, but we will not inform the network of our
+    /// membership in those groups using MLD.
+    mld_enabled: bool,
 
     /// Default hop limit for new IPv6 packets sent from this device.
     // TODO(ghanan): Once we separate out device-IP state from device-specific
@@ -577,12 +540,6 @@ struct IpDeviceState<I: Instant> {
     ///
     /// Default: `false`.
     route_ipv6: bool,
-
-    /// MLD State.
-    mld: MulticastGroupSet<Ipv6Addr, MldGroupState<I>>,
-
-    /// IGMP State.
-    igmp: MulticastGroupSet<Ipv4Addr, IgmpGroupState<I>>,
 }
 
 impl<I: Instant> Default for IpDeviceState<I> {
@@ -590,21 +547,21 @@ impl<I: Instant> Default for IpDeviceState<I> {
         IpDeviceState {
             ipv4_addr_sub: Vec::new(),
             ipv6_addr_sub: Vec::new(),
-            ipv4_multicast_groups: HashMap::new(),
-            ipv6_multicast_groups: HashMap::new(),
+            ipv4_multicast_groups: MulticastGroupSet::default(),
+            igmp_enabled: false,
+            ipv6_multicast_groups: MulticastGroupSet::default(),
+            mld_enabled: false,
             ipv6_hop_limit: ndp::HOP_LIMIT_DEFAULT,
             route_ipv4: false,
             route_ipv6: false,
-            mld: MulticastGroupSet::default(),
-            igmp: MulticastGroupSet::default(),
         }
     }
 }
 
 /// State for a link-device that is also an IP device.
 ///
-/// D is the link-specific state.
-struct IpLinkDeviceState<I: Instant, D> {
+/// `D` is the link-specific state.
+pub(crate) struct IpLinkDeviceState<I: Instant, D> {
     ip: IpDeviceState<I>,
     link: D,
 }
@@ -1563,6 +1520,7 @@ impl<T> Tentative<T> {
     }
 }
 
+/// This implementation of `NdpPacketHandler` is consumed by ICMPv6.
 impl<D: EventDispatcher> NdpPacketHandler<DeviceId> for Context<D> {
     fn receive_ndp_packet<B: ByteSlice>(
         &mut self,
@@ -1576,6 +1534,52 @@ impl<D: EventDispatcher> NdpPacketHandler<DeviceId> for Context<D> {
         match device.protocol {
             DeviceProtocol::Ethernet => {
                 crate::device::ndp::receive_ndp_packet(
+                    self,
+                    device.id.into(),
+                    src_ip,
+                    dst_ip,
+                    packet,
+                );
+            }
+        }
+    }
+}
+
+/// This implementation of `IgmpPacketHandler` is consumed by IPv4.
+impl<B: BufferMut, D: BufferDispatcher<B>> IgmpPacketHandler<(), DeviceId, B> for Context<D> {
+    fn receive_igmp_packet(
+        &mut self,
+        device: DeviceId,
+        src_ip: Ipv4Addr,
+        dst_ip: SpecifiedAddr<Ipv4Addr>,
+        buffer: B,
+    ) {
+        match device.protocol {
+            DeviceProtocol::Ethernet => {
+                IgmpPacketHandler::<EthernetLinkDevice, _, _>::receive_igmp_packet(
+                    self,
+                    device.id.into(),
+                    src_ip,
+                    dst_ip,
+                    buffer,
+                );
+            }
+        }
+    }
+}
+
+/// This implementation of `MldPacketHandler` is consumed by ICMPv6.
+impl<D: EventDispatcher> MldPacketHandler<(), DeviceId> for Context<D> {
+    fn receive_mld_packet<B: ByteSlice>(
+        &mut self,
+        device: DeviceId,
+        src_ip: Ipv6Addr,
+        dst_ip: SpecifiedAddr<Ipv6Addr>,
+        packet: MldPacket<B>,
+    ) {
+        match device.protocol {
+            DeviceProtocol::Ethernet => {
+                MldPacketHandler::<EthernetLinkDevice, _>::receive_mld_packet(
                     self,
                     device.id.into(),
                     src_ip,

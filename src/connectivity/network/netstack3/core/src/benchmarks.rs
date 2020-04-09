@@ -7,7 +7,7 @@
 //! This module contains end-to-end and other high-level benchmarks for the
 //! netstack.
 
-use std::time::{Duration, Instant};
+use core::time::Duration;
 
 use net_types::ip::Ipv4;
 use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
@@ -19,7 +19,7 @@ use crate::error::NoRouteError;
 use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
 use crate::ip::IpProto;
 use crate::testutil::benchmarks::{black_box, Bencher};
-use crate::testutil::{DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4};
+use crate::testutil::{DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::{
@@ -40,6 +40,7 @@ use crate::{EventDispatcher, IpLayerEventDispatcher, StackStateBuilder, TimerId}
 struct BenchmarkEventDispatcher {
     #[cfg(debug_assertions)]
     frames_sent: usize,
+    rng: FakeCryptoRng<XorShiftRng>,
 }
 
 impl<I: IcmpIpExt> UdpEventDispatcher<I> for BenchmarkEventDispatcher {}
@@ -80,21 +81,25 @@ impl<I: IcmpIpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for BenchmarkEv
 impl<B: BufferMut> IpLayerEventDispatcher<B> for BenchmarkEventDispatcher {}
 
 impl EventDispatcher for BenchmarkEventDispatcher {
-    type Instant = std::time::Instant;
+    type Instant = DummyInstant;
 
-    fn now(&self) -> Self::Instant {
+    fn now(&self) -> DummyInstant {
+        DummyInstant::default()
+    }
+
+    fn schedule_timeout(&mut self, _duration: Duration, _id: TimerId) -> Option<DummyInstant> {
         unimplemented!()
     }
 
-    fn schedule_timeout(&mut self, _duration: Duration, _id: TimerId) -> Option<Self::Instant> {
+    fn schedule_timeout_instant(
+        &mut self,
+        _time: DummyInstant,
+        _id: TimerId,
+    ) -> Option<DummyInstant> {
         unimplemented!()
     }
 
-    fn schedule_timeout_instant(&mut self, _time: Instant, _id: TimerId) -> Option<Self::Instant> {
-        unimplemented!()
-    }
-
-    fn cancel_timeout(&mut self, _id: TimerId) -> Option<Self::Instant> {
+    fn cancel_timeout(&mut self, _id: TimerId) -> Option<DummyInstant> {
         None
     }
 
@@ -102,18 +107,18 @@ impl EventDispatcher for BenchmarkEventDispatcher {
         unimplemented!()
     }
 
-    fn scheduled_instant(&self, _id: TimerId) -> Option<Self::Instant> {
+    fn scheduled_instant(&self, _id: TimerId) -> Option<DummyInstant> {
         unimplemented!()
     }
 
     type Rng = FakeCryptoRng<XorShiftRng>;
 
     fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
-        unimplemented!()
+        &self.rng
     }
 
     fn rng_mut(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
-        unimplemented!()
+        &mut self.rng
     }
 }
 

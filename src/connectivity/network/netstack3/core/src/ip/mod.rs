@@ -26,16 +26,15 @@ use core::num::NonZeroU8;
 
 use log::{debug, trace};
 use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
-use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, Witness};
-use packet::{Buf, BufferMut, Either, EmptyBuf, ParseMetadata, Serializer};
+use net_types::{MulticastAddr, SpecifiedAddr, Witness};
+use packet::{Buf, BufferMut, Either, ParseMetadata, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::context::{CounterContext, FrameContext, StateContext, TimerContext, TimerHandler};
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
-use crate::ip::gmp::igmp::{IgmpContext, IgmpPacketMetadata, IgmpTimerId};
-use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldReportDelay};
+use crate::ip::gmp::igmp::IgmpPacketHandler;
 use crate::ip::icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, BufferIcmpContext,
     BufferIcmpEventDispatcher, IcmpContext, IcmpEventDispatcher, IcmpIpExt, IcmpIpTransportContext,
@@ -506,20 +505,9 @@ pub(crate) enum IpLayerTimerId {
     /// A timer event for IPv6 packet reassembly timeouts.
     ReassemblyTimeoutv6(FragmentCacheKey<Ipv6Addr>),
     PmtuTimeout(IpVersion),
-    /// Timer for IGMP protocol
-    IgmpTimer(IgmpTimerId<DeviceId>),
-    MldTimer(MldReportDelay<DeviceId>),
 }
 
 impl IpLayerTimerId {
-    fn new_igmp_timer_id(id: IgmpTimerId<DeviceId>) -> TimerId {
-        TimerId(TimerIdInner::IpLayer(IpLayerTimerId::IgmpTimer(id)))
-    }
-
-    fn new_mld_timer_id(id: MldReportDelay<DeviceId>) -> TimerId {
-        TimerId(TimerIdInner::IpLayer(IpLayerTimerId::MldTimer(id)))
-    }
-
     #[specialize_ip_address]
     fn new_reassembly_timeout_timer_id<A: IpAddress>(key: FragmentCacheKey<A>) -> TimerId {
         #[ipv4addr]
@@ -546,58 +534,6 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLay
         IpLayerTimerId::PmtuTimeout(IpVersion::V6) => {
             ctx.handle_timer(PmtuTimerId::<Ipv6>::default())
         }
-        IpLayerTimerId::IgmpTimer(timer) => ctx.handle_timer(timer),
-        IpLayerTimerId::MldTimer(timer) => ctx.handle_timer(timer),
-    }
-}
-
-impl<D: EventDispatcher> TimerContext<IgmpTimerId<DeviceId>> for Context<D> {
-    fn schedule_timer_instant(
-        &mut self,
-        time: Self::Instant,
-        id: IgmpTimerId<DeviceId>,
-    ) -> Option<Self::Instant> {
-        self.dispatcher_mut().schedule_timeout_instant(time, IpLayerTimerId::new_igmp_timer_id(id))
-    }
-
-    fn cancel_timer(&mut self, id: IgmpTimerId<DeviceId>) -> Option<Self::Instant> {
-        self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_igmp_timer_id(id))
-    }
-
-    fn cancel_timers_with<F: FnMut(&IgmpTimerId<DeviceId>) -> bool>(&mut self, mut f: F) {
-        self.dispatcher_mut().cancel_timeouts_with(|id| match id {
-            TimerId(TimerIdInner::IpLayer(IpLayerTimerId::IgmpTimer(id))) => f(id),
-            _ => false,
-        })
-    }
-
-    fn scheduled_instant(&self, id: IgmpTimerId<DeviceId>) -> Option<Self::Instant> {
-        self.dispatcher().scheduled_instant(IpLayerTimerId::new_igmp_timer_id(id))
-    }
-}
-
-impl<D: EventDispatcher> TimerContext<MldReportDelay<DeviceId>> for Context<D> {
-    fn schedule_timer_instant(
-        &mut self,
-        time: Self::Instant,
-        id: MldReportDelay<DeviceId>,
-    ) -> Option<Self::Instant> {
-        self.dispatcher_mut().schedule_timeout_instant(time, IpLayerTimerId::new_mld_timer_id(id))
-    }
-
-    fn cancel_timer(&mut self, id: MldReportDelay<DeviceId>) -> Option<Self::Instant> {
-        self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_mld_timer_id(id))
-    }
-
-    fn cancel_timers_with<F: FnMut(&MldReportDelay<DeviceId>) -> bool>(&mut self, mut f: F) {
-        self.dispatcher_mut().cancel_timeouts_with(|id| match id {
-            TimerId(TimerIdInner::IpLayer(IpLayerTimerId::MldTimer(id))) => f(id),
-            _ => false,
-        })
-    }
-
-    fn scheduled_instant(&self, id: MldReportDelay<DeviceId>) -> Option<Self::Instant> {
-        self.dispatcher().scheduled_instant(IpLayerTimerId::new_mld_timer_id(id))
     }
 }
 
@@ -707,7 +643,7 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 IpProto::Icmp => <IcmpIpTransportContext as BufferIpTransportContext<Ipv4, _, _>>
                             ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),
                 IpProto::Igmp => {
-                    crate::ip::gmp::igmp::receive_igmp_packet(
+                    IgmpPacketHandler::<(), _, _>::receive_igmp_packet(
                         ctx,
                         device.expect("IGMP messages should come from a device"),
                         src_ip,
@@ -1781,38 +1717,6 @@ where
             .map_err(|ser| ser.into_inner().into_inner())
     } else {
         crate::device::send_ip_frame(ctx, device, next_hop, body).map_err(|ser| ser.into_inner())
-    }
-}
-
-impl<D: EventDispatcher> FrameContext<EmptyBuf, IgmpPacketMetadata<DeviceId>> for Context<D> {
-    fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
-        &mut self,
-        meta: IgmpPacketMetadata<DeviceId>,
-        body: S,
-    ) -> Result<(), S> {
-        crate::device::send_ip_frame(self, meta.device, meta.dst_ip.into_specified(), body)
-    }
-}
-
-impl<D: EventDispatcher> FrameContext<EmptyBuf, MldFrameMetadata<DeviceId>> for Context<D> {
-    fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
-        &mut self,
-        meta: MldFrameMetadata<DeviceId>,
-        body: S,
-    ) -> Result<(), S> {
-        crate::device::send_ip_frame(self, meta.device, meta.local_ip.into_specified(), body)
-    }
-}
-
-impl<D: EventDispatcher> IgmpContext for Context<D> {
-    fn get_ip_addr_subnet(&self, device: DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
-        crate::device::get_ip_addr_subnet(self, device)
-    }
-}
-
-impl<D: EventDispatcher> MldContext for Context<D> {
-    fn get_ipv6_link_local_addr(&self, device: DeviceId) -> Option<LinkLocalAddr<Ipv6Addr>> {
-        crate::device::get_ipv6_link_local_addr(self, device)
     }
 }
 

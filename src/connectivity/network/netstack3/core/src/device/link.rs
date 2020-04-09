@@ -72,3 +72,60 @@ pub(crate) trait LinkDevice: 'static + Copy + Clone {
     /// The type of address used to address link devices of this type.
     type Address: LinkAddress;
 }
+
+/// Utilities for testing link devices.
+#[cfg(test)]
+pub(crate) mod testutil {
+    use core::convert::TryInto;
+    use core::fmt::{self, Display, Formatter};
+
+    use super::*;
+    use crate::device::DeviceIdContext;
+
+    /// A dummy [`LinkDevice`].
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    pub(crate) enum DummyLinkDevice {}
+
+    const DUMMY_LINK_ADDRESS_LEN: usize = 1;
+
+    /// A dummy [`LinkAddress`].
+    ///
+    /// The value 0xFF is the broadcast address.
+    #[derive(FromBytes, AsBytes, Unaligned, Copy, Clone, Debug, Hash, PartialEq, Eq)]
+    #[repr(transparent)]
+    pub(crate) struct DummyLinkAddress([u8; DUMMY_LINK_ADDRESS_LEN]);
+
+    impl LinkAddress for DummyLinkAddress {
+        const BYTES_LENGTH: usize = DUMMY_LINK_ADDRESS_LEN;
+
+        fn bytes(&self) -> &[u8] {
+            &self.0[..]
+        }
+
+        fn from_bytes(bytes: &[u8]) -> DummyLinkAddress {
+            DummyLinkAddress(bytes.try_into().unwrap())
+        }
+    }
+
+    impl BroadcastLinkAddress for DummyLinkAddress {
+        const BROADCAST: DummyLinkAddress = DummyLinkAddress([0xFF]);
+    }
+
+    impl LinkDevice for DummyLinkDevice {
+        type Address = DummyLinkAddress;
+    }
+
+    /// A dummy ID identifying a [`DummyLinkDevice`].
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    pub(crate) struct DummyLinkDeviceId;
+
+    impl Display for DummyLinkDeviceId {
+        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+            write!(f, "{:?}", self)
+        }
+    }
+
+    impl<C> DeviceIdContext<DummyLinkDevice> for C {
+        type DeviceId = DummyLinkDeviceId;
+    }
+}

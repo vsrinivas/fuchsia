@@ -9,9 +9,10 @@
 
 use alloc::vec::Vec;
 use core::fmt::{Debug, Display};
+use core::marker::PhantomData;
 use core::time::Duration;
 
-use log::{debug, error};
+use log::{debug, error, trace};
 use net_types::ip::{AddrSubnet, Ipv4, Ipv4Addr};
 use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
@@ -19,10 +20,13 @@ use thiserror::Error;
 use zerocopy::ByteSlice;
 
 use crate::context::{FrameContext, InstantContext, RngStateContext, TimerContext, TimerHandler};
+use crate::device::link::LinkDevice;
+use crate::device::DeviceIdContext;
 use crate::ip::gmp::{
-    Action, Actions, GmpAction, GmpStateMachine, MulticastGroupSet, ProtocolSpecific,
+    Action, Actions, GmpAction, GmpStateMachine, GroupJoinResult, GroupLeaveResult,
+    MulticastGroupSet, ProtocolSpecific,
 };
-use crate::ip::{IpDeviceIdContext, IpProto, Ipv4Option};
+use crate::ip::{IpProto, Ipv4Option};
 use crate::wire::igmp::{
     messages::{IgmpLeaveGroup, IgmpMembershipReportV1, IgmpMembershipReportV2, IgmpPacket},
     IgmpMessage, IgmpPacketBuilder, MessageType,
@@ -48,65 +52,140 @@ impl<D> IgmpPacketMetadata<D> {
 }
 
 /// The execution context for the Internet Group Management Protocol (IGMP).
-pub(crate) trait IgmpContext:
-    IpDeviceIdContext
-    + TimerContext<IgmpTimerId<<Self as IpDeviceIdContext>::DeviceId>>
+pub(crate) trait IgmpContext<D: LinkDevice>:
+    DeviceIdContext<D>
+    + TimerContext<IgmpTimerId<D, <Self as DeviceIdContext<D>>::DeviceId>>
     + RngStateContext<
         MulticastGroupSet<Ipv4Addr, IgmpGroupState<<Self as InstantContext>::Instant>>,
-        <Self as IpDeviceIdContext>::DeviceId,
-    > + FrameContext<EmptyBuf, IgmpPacketMetadata<<Self as IpDeviceIdContext>::DeviceId>>
+        <Self as DeviceIdContext<D>>::DeviceId,
+    > + FrameContext<EmptyBuf, IgmpPacketMetadata<<Self as DeviceIdContext<D>>::DeviceId>>
 {
     /// Gets an IP address and subnet associated with this device.
     fn get_ip_addr_subnet(&self, device: Self::DeviceId) -> Option<AddrSubnet<Ipv4Addr>>;
+
+    /// Is IGMP enabled for `device`?
+    ///
+    /// If `igmp_enabled` returns false, then [`IgmpHandler::igmp_join_group`]
+    /// and [`IgmpHandler::igmp_leave_group`] will still join/leave multicast
+    /// groups locally, but no outbound IGMP traffic will be generated.
+    fn igmp_enabled(&self, device: Self::DeviceId) -> bool;
 }
 
-/// Receive an IGMP message in an IP packet.
-pub(crate) fn receive_igmp_packet<C: IgmpContext, B: BufferMut>(
-    ctx: &mut C,
-    device: C::DeviceId,
-    _src_ip: Ipv4Addr,
-    _dst_ip: SpecifiedAddr<Ipv4Addr>,
-    mut buffer: B,
-) {
-    let packet = match buffer.parse_with::<_, IgmpPacket<&[u8]>>(()) {
-        Ok(packet) => packet,
-        Err(_) => {
-            debug!("Cannot parse the incoming IGMP packet, dropping.");
-            return;
-        } // TODO: Do something else here?
-    };
+/// An implementation of the Internet Group Management Protocol, Version 2
+/// (IGMPv2).
+pub(crate) trait IgmpHandler<D: LinkDevice>: DeviceIdContext<D> {
+    /// Joins the given multicast group.
+    fn igmp_join_group(
+        &mut self,
+        device: Self::DeviceId,
+        group_addr: MulticastAddr<Ipv4Addr>,
+    ) -> GroupJoinResult<()>;
 
-    if let Err(e) = match packet {
-        IgmpPacket::MembershipQueryV2(msg) => {
-            let now = ctx.now();
-            handle_igmp_message(ctx, device, msg, |rng, IgmpGroupState(state), msg| {
-                state.query_received(rng, msg.max_response_time().into(), now)
-            })
-        }
-        IgmpPacket::MembershipReportV1(msg) => {
-            handle_igmp_message(ctx, device, msg, |_, IgmpGroupState(state), _| {
-                state.report_received()
-            })
-        }
-        IgmpPacket::MembershipReportV2(msg) => {
-            handle_igmp_message(ctx, device, msg, |_, IgmpGroupState(state), _| {
-                state.report_received()
-            })
-        }
-        IgmpPacket::LeaveGroup(_) => {
-            debug!("Hosts are not interested in Leave Group messages");
-            return;
-        }
-        _ => {
-            debug!("We do not support IGMPv3 yet");
-            return;
-        }
-    } {
-        error!("Error occurred when handling IGMPv2 message: {}", e);
+    /// Leaves the given multicast group.
+    ///
+    /// If the `device` is not already a member of the multicast group,
+    /// `igmp_leave_group` returns `Err(IgmpError::NotAMember)`.
+    fn igmp_leave_group(
+        &mut self,
+        device: Self::DeviceId,
+        group_addr: MulticastAddr<Ipv4Addr>,
+    ) -> GroupLeaveResult<()>;
+}
+
+impl<D: LinkDevice, C: IgmpContext<D>> IgmpHandler<D> for C {
+    fn igmp_join_group(
+        &mut self,
+        device: C::DeviceId,
+        group_addr: MulticastAddr<Ipv4Addr>,
+    ) -> GroupJoinResult<()> {
+        let now = self.now();
+        let (state, rng) = self.get_state_rng_with(device);
+        state
+            .join_group_gmp(group_addr, rng, now)
+            .map(|actions| run_actions(self, device, actions, group_addr))
+    }
+
+    fn igmp_leave_group(
+        &mut self,
+        device: C::DeviceId,
+        group_addr: MulticastAddr<Ipv4Addr>,
+    ) -> GroupLeaveResult<()> {
+        self.get_state_mut_with(device)
+            .leave_group_gmp(group_addr)
+            .map(|actions| run_actions(self, device, actions, group_addr))
     }
 }
 
-fn handle_igmp_message<C: IgmpContext, B: ByteSlice, M, F>(
+/// A handler for incoming IGMP packets.
+///
+/// This trait is designed to be implemented in two situations. First, just like
+/// [`IgmpHandler`], a blanket implementation is provided for all `C:
+/// IgmpContext`. This provides separate implementations for each link device
+/// protocol that supports IGMP.
+///
+///  Second, unlike `IgmpHandler`, a single impl is provided by the device layer
+/// itself, setting the `D` parameter to `()`. This is used by the `ip` module
+/// to dispatch inbound IGMP packets. This impl is responsible for dispatching
+/// to the appropriate link device-specific implementation.
+pub(crate) trait IgmpPacketHandler<D, DeviceId, B: BufferMut> {
+    /// Receive an IGMP message in an IP packet.
+    fn receive_igmp_packet(
+        &mut self,
+        device: DeviceId,
+        src_ip: Ipv4Addr,
+        dst_ip: SpecifiedAddr<Ipv4Addr>,
+        buffer: B,
+    );
+}
+
+impl<D: LinkDevice, C: IgmpContext<D>, B: BufferMut> IgmpPacketHandler<D, C::DeviceId, B> for C {
+    fn receive_igmp_packet(
+        &mut self,
+        device: C::DeviceId,
+        _src_ip: Ipv4Addr,
+        _dst_ip: SpecifiedAddr<Ipv4Addr>,
+        mut buffer: B,
+    ) {
+        let packet = match buffer.parse_with::<_, IgmpPacket<&[u8]>>(()) {
+            Ok(packet) => packet,
+            Err(_) => {
+                debug!("Cannot parse the incoming IGMP packet, dropping.");
+                return;
+            } // TODO: Do something else here?
+        };
+
+        if let Err(e) = match packet {
+            IgmpPacket::MembershipQueryV2(msg) => {
+                let now = self.now();
+                handle_igmp_message(self, device, msg, |rng, IgmpGroupState(state), msg| {
+                    state.query_received(rng, msg.max_response_time().into(), now)
+                })
+            }
+            IgmpPacket::MembershipReportV1(msg) => {
+                handle_igmp_message(self, device, msg, |_, IgmpGroupState(state), _| {
+                    state.report_received()
+                })
+            }
+            IgmpPacket::MembershipReportV2(msg) => {
+                handle_igmp_message(self, device, msg, |_, IgmpGroupState(state), _| {
+                    state.report_received()
+                })
+            }
+            IgmpPacket::LeaveGroup(_) => {
+                debug!("Hosts are not interested in Leave Group messages");
+                return;
+            }
+            _ => {
+                debug!("We do not support IGMPv3 yet");
+                return;
+            }
+        } {
+            error!("Error occurred when handling IGMPv2 message: {}", e);
+        }
+    }
+}
+
+fn handle_igmp_message<D: LinkDevice, C: IgmpContext<D>, B: ByteSlice, M, F>(
     ctx: &mut C,
     device: C::DeviceId,
     msg: IgmpMessage<B, M>,
@@ -160,26 +239,29 @@ pub(crate) enum IgmpError<D: Display + Debug + Send + Sync + 'static> {
 pub(crate) type IgmpResult<T, D> = Result<T, IgmpError<D>>;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub(crate) enum IgmpTimerId<D> {
+pub(crate) enum IgmpTimerId<D, DeviceId> {
     /// The timer used to switch a host from Delay Member state to Idle Member
     /// state.
-    ReportDelay { device: D, group_addr: MulticastAddr<Ipv4Addr> },
+    ReportDelay { device: DeviceId, group_addr: MulticastAddr<Ipv4Addr> },
     /// The timer used to determine whether there is a router speaking IGMPv1.
-    V1RouterPresent { device: D },
+    V1RouterPresent { device: DeviceId, _marker: PhantomData<D> },
 }
 
-impl<D> IgmpTimerId<D> {
-    fn new_report_delay(device: D, group_addr: MulticastAddr<Ipv4Addr>) -> IgmpTimerId<D> {
+impl<D, DeviceId> IgmpTimerId<D, DeviceId> {
+    fn new_report_delay(
+        device: DeviceId,
+        group_addr: MulticastAddr<Ipv4Addr>,
+    ) -> IgmpTimerId<D, DeviceId> {
         IgmpTimerId::ReportDelay { device, group_addr }
     }
 
-    fn new_v1_router_present(device: D) -> IgmpTimerId<D> {
-        IgmpTimerId::V1RouterPresent { device }
+    fn new_v1_router_present(device: DeviceId) -> IgmpTimerId<D, DeviceId> {
+        IgmpTimerId::V1RouterPresent { device, _marker: PhantomData }
     }
 }
 
-impl<C: IgmpContext> TimerHandler<IgmpTimerId<C::DeviceId>> for C {
-    fn handle_timer(&mut self, timer: IgmpTimerId<C::DeviceId>) {
+impl<D: LinkDevice, C: IgmpContext<D>> TimerHandler<IgmpTimerId<D, C::DeviceId>> for C {
+    fn handle_timer(&mut self, timer: IgmpTimerId<D, C::DeviceId>) {
         match timer {
             IgmpTimerId::ReportDelay { device, group_addr } => {
                 let actions = match self.get_state_mut_with(device).get_mut(&group_addr) {
@@ -191,7 +273,7 @@ impl<C: IgmpContext> TimerHandler<IgmpTimerId<C::DeviceId>> for C {
                 };
                 run_actions(self, device, actions, group_addr);
             }
-            IgmpTimerId::V1RouterPresent { device } => {
+            IgmpTimerId::V1RouterPresent { device, _marker } => {
                 for (_, IgmpGroupState(state)) in self.get_state_mut_with(device).iter_mut() {
                     state.v1_router_present_timer_expired();
                 }
@@ -200,7 +282,7 @@ impl<C: IgmpContext> TimerHandler<IgmpTimerId<C::DeviceId>> for C {
     }
 }
 
-fn send_igmp_message<C: IgmpContext, M>(
+fn send_igmp_message<D: LinkDevice, C: IgmpContext<D>, M>(
     ctx: &mut C,
     device: C::DeviceId,
     group_addr: MulticastAddr<Ipv4Addr>,
@@ -346,21 +428,25 @@ impl<I: Instant> GmpStateMachine<I, Igmpv2ProtocolSpecific> {
     }
 }
 
-fn run_actions<C: IgmpContext>(
+fn run_actions<D: LinkDevice, C: IgmpContext<D>>(
     ctx: &mut C,
     device: C::DeviceId,
     actions: Actions<Igmpv2ProtocolSpecific>,
     group_addr: MulticastAddr<Ipv4Addr>,
 ) {
-    for action in actions {
-        if let Err(err) = run_action(ctx, device, action, group_addr) {
-            error!("Error performing action on {} on device {}: {}", group_addr, device, err);
+    if ctx.igmp_enabled(device) {
+        for action in actions {
+            if let Err(err) = run_action(ctx, device, action, group_addr) {
+                error!("Error performing action on {} on device {}: {}", group_addr, device, err);
+            }
         }
+    } else {
+        trace!("skipping executing IGMP actions on device {}: IGMP disabled on device", device);
     }
 }
 
 /// Interpret the actions
-fn run_action<C: IgmpContext>(
+fn run_action<D: LinkDevice, C: IgmpContext<D>>(
     ctx: &mut C,
     device: C::DeviceId,
     action: Action<Igmpv2ProtocolSpecific>,
@@ -374,7 +460,7 @@ fn run_action<C: IgmpContext>(
             ctx.cancel_timer(IgmpTimerId::new_report_delay(device, group_addr));
         }
         Action::Generic(GmpAction::SendLeave) => {
-            send_igmp_message::<_, IgmpLeaveGroup>(
+            send_igmp_message::<_, _, IgmpLeaveGroup>(
                 ctx,
                 device,
                 group_addr,
@@ -384,7 +470,7 @@ fn run_action<C: IgmpContext>(
         }
         Action::Generic(GmpAction::SendReport(Igmpv2ProtocolSpecific { v1_router_present })) => {
             if v1_router_present {
-                send_igmp_message::<_, IgmpMembershipReportV1>(
+                send_igmp_message::<_, _, IgmpMembershipReportV1>(
                     ctx,
                     device,
                     group_addr,
@@ -392,7 +478,7 @@ fn run_action<C: IgmpContext>(
                     (),
                 )?;
             } else {
-                send_igmp_message::<_, IgmpMembershipReportV2>(
+                send_igmp_message::<_, _, IgmpMembershipReportV2>(
                     ctx,
                     device,
                     group_addr,
@@ -408,39 +494,6 @@ fn run_action<C: IgmpContext>(
     Ok(())
 }
 
-/// Make our host join a multicast group.
-// TODO(rheacock): remove `#[cfg(test)]` when this is used.
-#[cfg(test)]
-pub(crate) fn igmp_join_group<C: IgmpContext>(
-    ctx: &mut C,
-    device: C::DeviceId,
-    group_addr: MulticastAddr<Ipv4Addr>,
-) {
-    let now = ctx.now();
-    let (state, rng) = ctx.get_state_rng_with(device);
-    let actions = state.join_group_gmp(group_addr, rng, now);
-    run_actions(ctx, device, actions, group_addr);
-}
-
-/// Make our host leave the multicast group.
-///
-/// If our host is not already a member of the given address, this will result
-/// in the `IgmpError::NotAMember` error.
-// TODO(rheacock): remove `#[cfg(test)]` when this is used.
-#[cfg(test)]
-pub(crate) fn igmp_leave_group<C: IgmpContext>(
-    ctx: &mut C,
-    device: C::DeviceId,
-    group_addr: MulticastAddr<Ipv4Addr>,
-) -> IgmpResult<(), C::DeviceId> {
-    let actions = ctx
-        .get_state_mut_with(device)
-        .leave_group_gmp(group_addr)
-        .ok_or(IgmpError::NotAMember { addr: group_addr.get() })?;
-    run_actions(ctx, device, actions, group_addr);
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -453,8 +506,8 @@ mod tests {
 
     use crate::context::testutil::{DummyInstant, DummyTimerContextExt};
     use crate::context::DualStateContext;
+    use crate::device::link::testutil::{DummyLinkDevice, DummyLinkDeviceId};
     use crate::ip::gmp::{Action, GmpAction, MemberState};
-    use crate::ip::DummyDeviceId;
     use crate::testutil::{new_rng, FakeCryptoRng};
     use crate::wire::igmp::messages::IgmpMembershipQueryV2;
 
@@ -463,35 +516,36 @@ mod tests {
     /// [`IgmpContext::get_ip_addr_subnet`].
     struct DummyIgmpContext {
         groups: MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>,
+        igmp_enabled: bool,
         addr_subnet: Option<AddrSubnet<Ipv4Addr>>,
     }
 
     impl Default for DummyIgmpContext {
-        fn default() -> Self {
-            DummyIgmpContext { groups: MulticastGroupSet::default(), addr_subnet: None }
+        fn default() -> DummyIgmpContext {
+            DummyIgmpContext {
+                groups: MulticastGroupSet::default(),
+                igmp_enabled: true,
+                addr_subnet: None,
+            }
         }
     }
 
     type DummyContext = crate::context::testutil::DummyContext<
         DummyIgmpContext,
-        IgmpTimerId<DummyDeviceId>,
-        IgmpPacketMetadata<DummyDeviceId>,
+        IgmpTimerId<DummyLinkDevice, DummyLinkDeviceId>,
+        IgmpPacketMetadata<DummyLinkDeviceId>,
     >;
-
-    impl IpDeviceIdContext for DummyContext {
-        type DeviceId = DummyDeviceId;
-    }
 
     impl
         DualStateContext<
             MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>,
             FakeCryptoRng<XorShiftRng>,
-            DummyDeviceId,
+            DummyLinkDeviceId,
         > for DummyContext
     {
         fn get_states_with(
             &self,
-            _id0: DummyDeviceId,
+            _id0: DummyLinkDeviceId,
             _id1: (),
         ) -> (&MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>, &FakeCryptoRng<XorShiftRng>)
         {
@@ -501,7 +555,7 @@ mod tests {
 
         fn get_states_mut_with(
             &mut self,
-            _id0: DummyDeviceId,
+            _id0: DummyLinkDeviceId,
             _id1: (),
         ) -> (
             &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>,
@@ -512,9 +566,13 @@ mod tests {
         }
     }
 
-    impl IgmpContext for DummyContext {
-        fn get_ip_addr_subnet(&self, _device: Self::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
+    impl IgmpContext<DummyLinkDevice> for DummyContext {
+        fn get_ip_addr_subnet(&self, _device: DummyLinkDeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
             self.get_ref().addr_subnet
+        }
+
+        fn igmp_enabled(&self, _device: DummyLinkDeviceId) -> bool {
+            self.get_ref().igmp_enabled
         }
     }
 
@@ -575,35 +633,32 @@ mod tests {
         unsafe { SpecifiedAddr::new_unchecked(Ipv4Addr::new([192, 168, 0, 2])) };
     const ROUTER_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 1]);
     const OTHER_HOST_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 3]);
-    const GROUP_ADDR: Ipv4Addr = Ipv4Addr::new([224, 0, 0, 3]);
-    const GROUP_ADDR_2: Ipv4Addr = Ipv4Addr::new([224, 0, 0, 4]);
+    const GROUP_ADDR: MulticastAddr<Ipv4Addr> = Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS;
+    const GROUP_ADDR_2: MulticastAddr<Ipv4Addr> =
+        unsafe { MulticastAddr::new_unchecked(Ipv4Addr::new([224, 0, 0, 4])) };
 
-    fn receive_igmp_query<C: IgmpContext>(ctx: &mut C, device: C::DeviceId, resp_time: Duration) {
+    fn receive_igmp_query(ctx: &mut DummyContext, resp_time: Duration) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
-            GROUP_ADDR,
+            GROUP_ADDR.get(),
             resp_time.try_into().unwrap(),
         );
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        receive_igmp_packet(ctx, device, ROUTER_ADDR, MY_ADDR, buff);
+        ctx.receive_igmp_packet(DummyLinkDeviceId, ROUTER_ADDR, MY_ADDR, buff);
     }
 
-    fn receive_igmp_general_query<C: IgmpContext>(
-        ctx: &mut C,
-        device: C::DeviceId,
-        resp_time: Duration,
-    ) {
+    fn receive_igmp_general_query(ctx: &mut DummyContext, resp_time: Duration) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
             Ipv4Addr::new([0, 0, 0, 0]),
             resp_time.try_into().unwrap(),
         );
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        receive_igmp_packet(ctx, device, ROUTER_ADDR, MY_ADDR, buff);
+        ctx.receive_igmp_packet(DummyLinkDeviceId, ROUTER_ADDR, MY_ADDR, buff);
     }
 
-    fn receive_igmp_report<C: IgmpContext>(ctx: &mut C, device: C::DeviceId) {
-        let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipReportV2>::new(GROUP_ADDR);
+    fn receive_igmp_report(ctx: &mut DummyContext) {
+        let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipReportV2>::new(GROUP_ADDR.get());
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        receive_igmp_packet(ctx, device, OTHER_HOST_ADDR, MY_ADDR, buff);
+        ctx.receive_igmp_packet(DummyLinkDeviceId, OTHER_HOST_ADDR, MY_ADDR, buff);
     }
 
     fn setup_simple_test_environment() -> DummyContext {
@@ -623,9 +678,9 @@ mod tests {
     #[test]
     fn test_igmp_simple_integration() {
         let mut ctx = setup_simple_test_environment();
-        igmp_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
 
-        receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
+        receive_igmp_query(&mut ctx, Duration::from_secs(10));
         assert!(ctx.trigger_next_timer());
 
         // We should get two Igmpv2 reports - one for the unsolicited one for
@@ -637,20 +692,18 @@ mod tests {
     #[test]
     fn test_igmp_integration_fallback_from_idle() {
         let mut ctx = setup_simple_test_environment();
-        igmp_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.frames().len(), 1);
 
         assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 2);
 
-        receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
+        receive_igmp_query(&mut ctx, Duration::from_secs(10));
 
         // We have received a query, hence we are falling back to Delay Member
         // state.
-        let IgmpGroupState(group_state) = ctx
-            .get_state_with(DummyDeviceId)
-            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-            .unwrap();
+        let IgmpGroupState(group_state) =
+            ctx.get_state_with(DummyLinkDeviceId).get(&GROUP_ADDR).unwrap();
         match group_state.get_inner() {
             MemberState::Delaying(_) => {}
             _ => panic!("Wrong State!"),
@@ -665,18 +718,16 @@ mod tests {
     fn test_igmp_integration_igmpv1_router_present() {
         let mut ctx = setup_simple_test_environment();
 
-        igmp_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         let instant1 = ctx.timers()[0].0.clone();
 
-        receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(0));
+        receive_igmp_query(&mut ctx, Duration::from_secs(0));
         assert_eq!(ctx.frames().len(), 1);
 
         // Since we have heard from the v1 router, we should have set our flag.
-        let IgmpGroupState(group_state) = ctx
-            .get_state_with(DummyDeviceId)
-            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-            .unwrap();
+        let IgmpGroupState(group_state) =
+            ctx.get_state_with(DummyLinkDeviceId).get(&GROUP_ADDR).unwrap();
         match group_state.get_inner() {
             MemberState::Delaying(state) => {
                 assert!(state.get_protocol_specific().v1_router_present)
@@ -700,16 +751,14 @@ mod tests {
 
         assert!(ctx.trigger_next_timer());
         // After the second timer, we should reset our flag for v1 routers.
-        let IgmpGroupState(group_state) = ctx
-            .get_state_with(DummyDeviceId)
-            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-            .unwrap();
+        let IgmpGroupState(group_state) =
+            ctx.get_state_with(DummyLinkDeviceId).get(&GROUP_ADDR).unwrap();
         match group_state.get_inner() {
             MemberState::Idle(state) => assert!(!state.get_protocol_specific().v1_router_present),
             _ => panic!("Wrong State!"),
         }
 
-        receive_igmp_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
+        receive_igmp_query(&mut ctx, Duration::from_secs(10));
         assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 3);
         // Now we should get V2 report
@@ -723,7 +772,7 @@ mod tests {
     #[ignore]
     fn test_igmp_integration_delay_reset_timer() {
         let mut ctx = setup_simple_test_environment();
-        igmp_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         let instant1 = ctx.timers()[0].0.clone();
         let start = ctx.now();
@@ -731,7 +780,7 @@ mod tests {
         if duration.as_millis() < 100 {
             return;
         }
-        receive_igmp_query(&mut ctx, DummyDeviceId, duration);
+        receive_igmp_query(&mut ctx, duration);
         assert_eq!(ctx.frames().len(), 1);
         assert_eq!(ctx.timers().len(), 2);
         let instant2 = ctx.timers()[1].0.clone();
@@ -748,15 +797,14 @@ mod tests {
     #[test]
     fn test_igmp_integration_last_send_leave() {
         let mut ctx = setup_simple_test_environment();
-        igmp_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         // The initial unsolicited report
         assert_eq!(ctx.frames().len(), 1);
         assert!(ctx.trigger_next_timer());
         // The report after the delay
         assert_eq!(ctx.frames().len(), 2);
-        assert!(igmp_leave_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap())
-            .is_ok());
+        assert_eq!(ctx.igmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
         // our leave message
         assert_eq!(ctx.frames().len(), 3);
 
@@ -775,16 +823,15 @@ mod tests {
     #[test]
     fn test_igmp_integration_not_last_dont_send_leave() {
         let mut ctx = setup_simple_test_environment();
-        igmp_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
+        ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         assert_eq!(ctx.frames().len(), 1);
-        receive_igmp_report(&mut ctx, DummyDeviceId);
+        receive_igmp_report(&mut ctx);
         assert_eq!(ctx.timers().len(), 0);
         // The report should be discarded because we have received from someone
         // else.
         assert_eq!(ctx.frames().len(), 1);
-        assert!(igmp_leave_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap())
-            .is_ok());
+        assert_eq!(ctx.igmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
         // A leave message is not sent
         assert_eq!(ctx.frames().len(), 1);
         ensure_ttl_ihl_rtr(&ctx);
@@ -793,21 +840,91 @@ mod tests {
     #[test]
     fn test_receive_general_query() {
         let mut ctx = setup_simple_test_environment();
-        igmp_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
-        igmp_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR_2).unwrap());
+        ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR_2);
         assert_eq!(ctx.timers().len(), 2);
         // The initial unsolicited report
         assert_eq!(ctx.frames().len(), 2);
         assert!(ctx.trigger_next_timer());
         assert!(ctx.trigger_next_timer());
         assert_eq!(ctx.frames().len(), 4);
-        receive_igmp_general_query(&mut ctx, DummyDeviceId, Duration::from_secs(10));
+        receive_igmp_general_query(&mut ctx, Duration::from_secs(10));
         // Two new timers should be there.
         assert_eq!(ctx.timers().len(), 2);
         assert!(ctx.trigger_next_timer());
         assert!(ctx.trigger_next_timer());
         // Two new reports should be sent
         assert_eq!(ctx.frames().len(), 6);
+        ensure_ttl_ihl_rtr(&ctx);
+    }
+
+    #[test]
+    fn test_skip_igmp() {
+        // Test that we properly skip executing any `Actions` when IGMP is
+        // disabled for the device.
+
+        let mut ctx = DummyContext::default();
+        ctx.get_mut().igmp_enabled = false;
+
+        // Assert that no observable effects have taken place.
+        let assert_no_effect = |ctx: &DummyContext| {
+            assert!(ctx.timers().is_empty());
+            assert!(ctx.frames().is_empty());
+        };
+
+        assert_eq!(ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+        // We should have joined the group but not executed any `Actions`.
+        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+        assert_no_effect(&ctx);
+
+        receive_igmp_report(&mut ctx);
+        // We should have executed the transition but not executed any `Actions`.
+        assert_gmp_state!(ctx, &GROUP_ADDR, Idle);
+        assert_no_effect(&ctx);
+
+        receive_igmp_query(&mut ctx, Duration::from_secs(10));
+        // We should have executed the transition but not executed any `Actions`.
+        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+        assert_no_effect(&ctx);
+
+        assert_eq!(ctx.igmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+        // We should have left the group but not executed any `Actions`.
+        assert!(ctx.get_ref().groups.get(&GROUP_ADDR).is_none());
+        assert_no_effect(&ctx);
+    }
+
+    #[test]
+    fn test_igmp_integration_with_local_join_leave() {
+        // Simple IGMP integration test to check that when we call top-level
+        // multicast join and leave functions, IGMP is performed.
+
+        let mut ctx = setup_simple_test_environment();
+
+        assert_eq!(ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+        assert_eq!(ctx.frames().len(), 1);
+        assert_eq!(ctx.timers().len(), 1);
+        ensure_ttl_ihl_rtr(&ctx);
+
+        assert_eq!(
+            ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR),
+            GroupJoinResult::AlreadyMember
+        );
+        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+        assert_eq!(ctx.frames().len(), 1);
+        assert_eq!(ctx.timers().len(), 1);
+
+        assert_eq!(
+            ctx.igmp_leave_group(DummyLinkDeviceId, GROUP_ADDR),
+            GroupLeaveResult::StillMember
+        );
+        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+        assert_eq!(ctx.frames().len(), 1);
+        assert_eq!(ctx.timers().len(), 1);
+
+        assert_eq!(ctx.igmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+        assert_eq!(ctx.frames().len(), 2);
+        assert_eq!(ctx.timers().len(), 0);
         ensure_ttl_ihl_rtr(&ctx);
     }
 }

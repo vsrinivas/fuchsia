@@ -91,6 +91,12 @@ pub(crate) mod benchmarks {
 /// This is obviously insecure. Don't use it except in testing!
 pub(crate) struct FakeCryptoRng<R>(R);
 
+impl Default for FakeCryptoRng<XorShiftRng> {
+    fn default() -> FakeCryptoRng<XorShiftRng> {
+        FakeCryptoRng::new_xorshift(12957992561116578403)
+    }
+}
+
 impl FakeCryptoRng<XorShiftRng> {
     /// Creates a new [`FakeCryptoRng<XorShiftRng>`] from a seed.
     pub(crate) fn new_xorshift(seed: u64) -> FakeCryptoRng<XorShiftRng> {
@@ -711,8 +717,9 @@ impl DummyEventDispatcherBuilder {
         self.ndp_table_entries.push((device, ip, mac));
     }
 
-    /// Build a `Context` from the present configuration with a default dispatcher,
-    /// and stack state set to disable NDP's Duplicate Address Detection by default.
+    /// Build a `Context` from the present configuration with a default
+    /// dispatcher, and stack state set to disable NDP's Duplicate Address
+    /// Detection by default.
     pub(crate) fn build<D: EventDispatcher + Default>(self) -> Context<D> {
         self.build_with_modifications(|_| {})
     }

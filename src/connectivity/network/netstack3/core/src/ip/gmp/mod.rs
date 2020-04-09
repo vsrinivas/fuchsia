@@ -15,6 +15,25 @@
 //!
 //! [RFC 4606]: https://tools.ietf.org/html/rfc4604
 
+// This macro is used by tests in both the `igmp` and `mld` modules.
+
+/// Assert that the GMP state machine for `$group` is in the given state.
+///
+/// `$ctx` is a `context::testutil::DummyContext` whose state contains a
+/// `groups: MulticastGroupSet` field.
+#[cfg(test)]
+macro_rules! assert_gmp_state {
+    ($ctx:expr, $group:expr, Delaying) => {
+        assert_gmp_state!(@inner $ctx, $group, MemberState::Delaying(_));
+    };
+    ($ctx:expr, $group:expr, Idle) => {
+        assert_gmp_state!(@inner $ctx, $group, MemberState::Idle(_));
+    };
+    (@inner $ctx:expr, $group:expr, $pattern:pat) => {
+        assert!(matches!($ctx.get_ref().groups.get($group).unwrap().0.inner.as_ref().unwrap(), $pattern))
+    };
+}
+
 pub(crate) mod igmp;
 pub(crate) mod mld;
 
@@ -28,6 +47,61 @@ use net_types::MulticastAddr;
 use rand::Rng;
 
 use crate::Instant;
+
+/// The result of joining a multicast group.
+///
+/// `GroupJoinResult` is the result of joining a multicast group in a
+/// [`MulticastGroupSet`].
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+pub(crate) enum GroupJoinResult<T> {
+    /// We were not previously a member of the group, so we joined the
+    /// group.
+    Joined(T),
+    /// We were already a member of the group, so we incremented the group's
+    /// reference count.
+    AlreadyMember,
+}
+
+impl<T> GroupJoinResult<T> {
+    /// Maps a [`GroupJoinResult::Joined`] variant to another type.
+    ///
+    /// If `self` is [`GroupJoinResult::AlreadyMember`], it is left as-is.
+    pub(crate) fn map<U, F: FnOnce(T) -> U>(self, f: F) -> GroupJoinResult<U> {
+        match self {
+            GroupJoinResult::Joined(t) => GroupJoinResult::Joined(f(t)),
+            GroupJoinResult::AlreadyMember => GroupJoinResult::AlreadyMember,
+        }
+    }
+}
+
+/// The result of leaving a multicast group.
+///
+/// `GroupLeaveResult` is the result of leaving a multicast group in
+/// [`MulticastGroupSet`].
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+pub(crate) enum GroupLeaveResult<T> {
+    /// The reference count reached 0, so we left the group.
+    Left(T),
+    /// The reference count did not reach 0, so we are still a member of the
+    /// group.
+    StillMember,
+    /// We were not a member of the group.
+    NotMember,
+}
+
+impl<T> GroupLeaveResult<T> {
+    /// Maps a [`GroupLeaveResult::Left`] variant to another type.
+    ///
+    /// If `self` is [`GroupLeaveResult::StillMember`] or
+    /// [`GroupLeaveResult::NotMember`], it is left as-is.
+    pub(crate) fn map<U, F: FnOnce(T) -> U>(self, f: F) -> GroupLeaveResult<U> {
+        match self {
+            GroupLeaveResult::Left(t) => GroupLeaveResult::Left(f(t)),
+            GroupLeaveResult::StillMember => GroupLeaveResult::StillMember,
+            GroupLeaveResult::NotMember => GroupLeaveResult::NotMember,
+        }
+    }
+}
 
 /// A set of reference-counted multicast groups and associated data.
 ///
@@ -45,6 +119,24 @@ impl<A: IpAddress, T> Default for MulticastGroupSet<A, T> {
 }
 
 impl<A: IpAddress, T> MulticastGroupSet<A, T> {
+    fn join_group_with<O, F: FnOnce() -> (T, O)>(
+        &mut self,
+        group: MulticastAddr<A>,
+        f: F,
+    ) -> GroupJoinResult<O> {
+        match self.inner.entry(group) {
+            Entry::Occupied(mut entry) => {
+                entry.get_mut().0 += 1;
+                GroupJoinResult::AlreadyMember
+            }
+            Entry::Vacant(entry) => {
+                let (t, o) = f();
+                entry.insert((1, t));
+                GroupJoinResult::Joined(o)
+            }
+        }
+    }
+
     /// Joins a multicast group and initializes it with a GMP state machine.
     ///
     /// `join_group_gmp` joins the multicast group `group`. If the group was not
@@ -52,26 +144,35 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
     /// using [`GmpStateMachine::join_group`], it is inserted with a reference
     /// count of 1, and the list of actions returned by `join_group` is
     /// returned. Otherwise, if the group was already joined, its reference
-    /// count is incremented and [`Actions::nothing()`] is returned.
-    ///
-    /// [`Actions::nothing()`]: Actions::nothing
+    /// count is incremented.
     #[cfg_attr(not(test), allow(unused))] // TODO(joshlf): Remove once this is used.
     fn join_group_gmp<I: Instant, P: ProtocolSpecific + Default, R: Rng>(
         &mut self,
         group: MulticastAddr<A>,
         rng: &mut R,
         now: I,
-    ) -> Actions<P>
+    ) -> GroupJoinResult<Actions<P>>
     where
         T: From<GmpStateMachine<I, P>>,
         P::Config: Default,
     {
+        self.join_group_with(group, || {
+            let (state, actions) = GmpStateMachine::join_group(rng, now);
+            (T::from(state), actions)
+        })
+    }
+
+    fn leave_group(&mut self, group: MulticastAddr<A>) -> GroupLeaveResult<T> {
         match self.inner.entry(group) {
-            Entry::Occupied(_) => Actions::nothing(),
-            Entry::Vacant(entry) => {
-                let (state, actions) = GmpStateMachine::join_group(rng, now);
-                entry.insert((1, T::from(state)));
-                actions
+            Entry::Vacant(_) => GroupLeaveResult::NotMember,
+            Entry::Occupied(mut entry) => {
+                let (refcnt, _) = entry.get_mut();
+                *refcnt -= 1;
+                if *refcnt == 0 {
+                    GroupLeaveResult::Left(entry.remove().1)
+                } else {
+                    GroupLeaveResult::StillMember
+                }
             }
         }
     }
@@ -79,36 +180,27 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
     /// Leaves a multicast group.
     ///
     /// `leave_group_gmp` leaves the multicast group `group` by decrementing the
-    /// reference count on the group. If the reference count does not reach 0,
-    /// then `Some(Actions::nothing())` is returned. If the reference count
-    /// reaches 0, then the group is removed from the set and it is left using
-    /// [`GmpStateMachine::leave_group`] and the resulting actions are returned.
-    ///
-    /// If the group is not in the set, `leave_group_gmp` returns `None`.
+    /// reference count on the group. If the reference count reaches 0, the
+    /// group is left using [`GmpStateMachine::leave_group`] and the list of
+    /// actions returned by `leave_group` is returned.
     #[cfg_attr(not(test), allow(unused))] // TODO(joshlf): Remove once this is used.
     fn leave_group_gmp<I: Instant, P: ProtocolSpecific>(
         &mut self,
         group: MulticastAddr<A>,
-    ) -> Option<Actions<P>>
+    ) -> GroupLeaveResult<Actions<P>>
     where
         T: Into<GmpStateMachine<I, P>>,
     {
-        match self.inner.entry(group) {
-            Entry::Vacant(_) => None,
-            Entry::Occupied(mut entry) => {
-                let (refcnt, _) = entry.get_mut();
-                *refcnt -= 1;
-                if *refcnt == 0 {
-                    Some(entry.remove().1.into().leave_group())
-                } else {
-                    Some(Actions::nothing())
-                }
-            }
-        }
+        self.leave_group(group).map(|state| state.into().leave_group())
     }
 }
 
 impl<A: IpAddress, T> MulticastGroupSet<A, T> {
+    /// Does the set contain the given group?
+    pub(crate) fn contains(&self, group: &MulticastAddr<A>) -> bool {
+        self.inner.contains_key(group)
+    }
+
     #[cfg(test)]
     fn get(&self, group: &MulticastAddr<A>) -> Option<&T> {
         self.inner.get(group).map(|(_, t)| t)
@@ -674,6 +766,7 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
 mod test {
     use std::time::{Duration, Instant};
 
+    use net_types::ip::{Ipv4, Ipv4Addr};
     use never::Never;
 
     use super::*;
@@ -744,6 +837,53 @@ mod test {
                 false
             }
         })
+    }
+
+    #[test]
+    fn test_multicast_group_set() {
+        let mut set = MulticastGroupSet::<Ipv4Addr, ()>::default();
+        // Any multicast address will do.
+        let group = Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS;
+
+        // Test refcounts 1 and 2. The behavioral difference is that testing
+        // only with a refcount of 1 doesn't exercise the refcount incrementing
+        // functionality - it only exercises the functionality of initializing a
+        // new entry with a refcount of 1.
+        for refcount in 1..=2 {
+            assert!(!set.contains(&group));
+
+            // Join the group for the first time, initializing the refcount to
+            // 1.
+            assert_eq!(set.join_group_with(group, || ((), ())), GroupJoinResult::Joined(()));
+            assert!(set.contains(&group));
+            assert_eq!(set.inner.get(&group).unwrap().0, 1);
+
+            // Increase the refcount to `refcount`.
+            for i in 1..refcount {
+                // Since the refcount starts at 1, we're always already a
+                // member.
+                assert_eq!(set.join_group_with(group, || ((), ())), GroupJoinResult::AlreadyMember);
+                assert!(set.contains(&group));
+                assert_eq!(set.inner.get(&group).unwrap().0, i + 1);
+            }
+
+            // Decrement the refcount to 1.
+            for i in 1..refcount {
+                // Since we don't decrement the refcount past 1, we're always
+                // still a member.
+                assert_eq!(set.leave_group(group), GroupLeaveResult::StillMember);
+                assert!(set.contains(&group));
+                assert_eq!(set.inner.get(&group).unwrap().0, refcount - i);
+            }
+
+            assert_eq!(set.inner.get(&group).unwrap().0, 1);
+            // Leave the group when the refcount is 1.
+            assert_eq!(set.leave_group(group), GroupLeaveResult::Left(()));
+            assert!(!set.contains(&group));
+
+            // Try to leave a group we're not a member of.
+            assert_eq!(set.leave_group(group), GroupLeaveResult::NotMember);
+        }
     }
 
     #[test]
