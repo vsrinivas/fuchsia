@@ -24,6 +24,7 @@ group("bringup") {
     "//src/graphics/drivers/virtio:virtio-gpu-test-package",
     "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",
+    "//src/media/audio/drivers/sherlock-tdm-output/test:sherlock-audio-out-test-package",
     "//zircon/system/dev/audio/lib/simple-audio-stream/tests:sa-unittest-package",
     "//zircon/system/dev/lib/fake-bti/test:fake-bti-package",
     "//zircon/system/dev/lib/fake-mmio-reg/test:fake-mmio-reg-package",

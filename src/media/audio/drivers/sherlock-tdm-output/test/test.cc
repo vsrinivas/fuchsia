@@ -190,6 +190,7 @@ TEST(SherlockAudioStreamOutTest, LibraryShutdwonOnInitNormal) {
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());
   audio_enable_gpio.VerifyAndClear();
+  server->DdkRelease();
 }
 
 TEST(SherlockAudioStreamOutTest, LibraryShutdwonOnInitWithError) {
@@ -243,6 +244,7 @@ TEST(SherlockAudioStreamOutTest, LibraryShutdwonOnInitWithError) {
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());
   audio_enable_gpio.VerifyAndClear();
+  server->DdkRelease();
 }
 
 TEST(SherlockAudioStreamOutTest, ChangeRate96K) {
@@ -330,6 +332,7 @@ TEST(SherlockAudioStreamOutTest, ChangeRate96K) {
 
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());
+  server->DdkRelease();
 }
 
 }  // namespace sherlock
