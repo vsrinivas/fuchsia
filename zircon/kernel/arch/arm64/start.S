@@ -214,8 +214,8 @@ FUNCTION(_start)
 
     /* Invalidate TLB */
     tlbi    vmalle1is
-    isb
     dsb     sy
+    isb
 
     /* Initialize Memory Attribute Indirection Register */
     movlit  tmp, MMU_MAIR_VAL
