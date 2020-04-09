@@ -49,7 +49,6 @@ test("aml-axg-gpio-test") {
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -61,6 +60,7 @@ test("aml-axg-gpio-test") {
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
+    "//zircon/system/dev/lib/mock-mmio-reg",
   ]
 }
 

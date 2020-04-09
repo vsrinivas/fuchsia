@@ -44,12 +44,12 @@ test("syn-audio-in-test") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.shareddma",
     "//zircon/system/banjo/ddk.protocol.shareddma:ddk.protocol.shareddma_mock",
     "//zircon/system/dev/lib/as370",
+    "//zircon/system/dev/lib/mock-mmio-reg",
   ]
 }
 

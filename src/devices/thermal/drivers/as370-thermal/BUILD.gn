@@ -54,7 +54,6 @@ test("as370-thermal-test") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -65,6 +64,7 @@ test("as370-thermal-test") {
     "//zircon/system/banjo/ddk.protocol.power:ddk.protocol.power_mock",
     "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/dev/lib/mock-mmio-reg",
   ]
 }
 

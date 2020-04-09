@@ -45,7 +45,6 @@ test("dw-i2c-test") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -54,6 +53,7 @@ test("dw-i2c-test") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
+    "//zircon/system/dev/lib/mock-mmio-reg",
   ]
 }
 

@@ -1,5 +1,10 @@
 [
   {
+    "label": "//zircon/system/dev/lib/mock-mmio-reg:mock-mmio-reg",
+    "name": "mock-mmio-reg",
+    "sdk": false
+  },
+  {
     "label": "//zircon/system/ulib/zbi-bootfs:zbi-bootfs",
     "name": "zbi-bootfs",
     "sdk": false
