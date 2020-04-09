@@ -16,6 +16,7 @@ use {
         lock::Mutex as AsyncMutex,
         stream::StreamExt,
     },
+    http_uri_ext::HttpUriExt,
     hyper_rustls::HttpsConnector,
     std::sync::{Arc, Weak},
     tuf::{
@@ -124,7 +125,10 @@ where
                 Abortable::new(
                     AutoClient::from_updating_client_and_auto_url(
                         Arc::downgrade(&ret),
-                        format!("{}/auto", config.mirror_url()),
+                        http::Uri::extend_dir_with_path(config.mirror_url().to_owned(), "auto")
+                            // Guaranteed not to panic due to scheme invariant in MirrorConfig.
+                            .unwrap()
+                            .to_string(),
                         node,
                     )
                     .run(),

@@ -71,14 +71,10 @@ impl Repository {
             .mirrors()
             .get(0)
             .ok_or_else(|| format_err!("Repo config has no mirrors: {:?}", config))?;
-        let remote_url = mirror_config.mirror_url();
-        let remote = HttpRepositoryBuilder::new_with_uri(
-            remote_url.parse().map_err(|e| {
-                format_err!("Unable to parse url {:?}, received error {:?}", remote_url, e)
-            })?,
-            fuchsia_hyper::new_https_client(),
-        )
-        .build();
+        let remote_url = mirror_config.mirror_url().to_owned();
+        let remote =
+            HttpRepositoryBuilder::new_with_uri(remote_url, fuchsia_hyper::new_https_client())
+                .build();
 
         Self::new_from_local_and_remote(local, remote, config, mirror_config, node).await
     }

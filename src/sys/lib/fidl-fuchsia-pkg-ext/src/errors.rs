@@ -24,6 +24,12 @@ impl From<hex::FromHexError> for BlobIdParseError {
     }
 }
 
+#[derive(Error, Debug)]
+pub enum MirrorConfigBuilderError {
+    #[error("URLs must have schemes")]
+    UrlMissingScheme,
+}
+
 #[derive(Error, Debug, PartialEq)]
 pub enum RepositoryParseError {
     #[error("unsupported key type")]
@@ -49,4 +55,13 @@ pub enum RepositoryParseError {
 
     #[error("invalid root threshold: {}", _0)]
     InvalidRootThreshold(u32),
+
+    #[error("invalid uri")]
+    InvalidUri(),
+}
+
+impl From<http::uri::InvalidUri> for RepositoryParseError {
+    fn from(_err: http::uri::InvalidUri) -> Self {
+        RepositoryParseError::InvalidUri()
+    }
 }

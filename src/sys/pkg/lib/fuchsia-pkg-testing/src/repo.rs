@@ -230,7 +230,7 @@ impl Repository {
     pub fn make_repo_config(
         &self,
         url: RepoUrl,
-        mirror_url: String,
+        mirror_url: http::Uri,
         subscribe: bool,
     ) -> RepositoryConfig {
         let mut builder = RepositoryConfigBuilder::new(url);
@@ -239,7 +239,7 @@ impl Repository {
             builder = builder.add_root_key(key);
         }
 
-        let mut mirror = MirrorConfigBuilder::new(mirror_url).subscribe(subscribe);
+        let mut mirror = MirrorConfigBuilder::new(mirror_url).unwrap().subscribe(subscribe);
         if let Some(ref key) = self.encryption_key {
             mirror = mirror.blob_key(RepositoryBlobKey::Aes(key.as_bytes().to_vec()))
         }

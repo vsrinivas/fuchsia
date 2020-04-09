@@ -28,6 +28,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-url",
     "//src/lib/http-sse:http_sse",
+    "//src/lib/http-uri-ext",
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/inspect/rust/fuchsia-inspect-contrib",
     "//src/lib/syslog/rust:syslog",

@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::errors::RepositoryParseError,
+    crate::errors::{MirrorConfigBuilderError, RepositoryParseError},
     fidl_fuchsia_pkg as fidl, fuchsia_inspect as inspect,
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
+    http::Uri,
+    http_uri_ext::HttpUriExt,
     serde::{Deserialize, Serialize},
     std::convert::TryFrom,
     std::{fmt, mem},
@@ -28,10 +30,10 @@ pub enum RepositoryBlobKey {
 /// Convenience wrapper for the FIDL MirrorConfig type
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MirrorConfig {
-    mirror_url: String,
+    mirror_url: http::Uri,
     subscribe: bool,
     blob_key: Option<RepositoryBlobKey>,
-    blob_mirror_url: String,
+    blob_mirror_url: http::Uri,
 }
 
 pub struct MirrorConfigInspectState {
@@ -43,13 +45,16 @@ pub struct MirrorConfigInspectState {
 }
 
 impl MirrorConfig {
-    pub fn mirror_url(&self) -> &str {
+    // Guaranteed to always have a `scheme`.
+    pub fn mirror_url(&self) -> &http::Uri {
         &self.mirror_url
     }
     pub fn subscribe(&self) -> bool {
         self.subscribe
     }
-    pub fn blob_mirror_url(&self) -> &str {
+
+    // Guaranteed to always have a `scheme`.
+    pub fn blob_mirror_url(&self) -> &http::Uri {
         &self.blob_mirror_url
     }
     pub fn blob_key(&self) -> Option<&RepositoryBlobKey> {
@@ -76,7 +81,8 @@ impl serde::Serialize for MirrorConfig {
     {
         #[derive(Serialize)]
         pub struct SerMirrorConfig<'a> {
-            mirror_url: &'a str,
+            #[serde(with = "uri_serde")]
+            mirror_url: &'a http::Uri,
             subscribe: bool,
             #[serde(skip_serializing_if = "Option::is_none")]
             blob_key: Option<&'a RepositoryBlobKey>,
@@ -84,8 +90,14 @@ impl serde::Serialize for MirrorConfig {
             blob_mirror_url: Option<&'a str>,
         }
 
-        let blob_mirror_url =
-            normalize_blob_mirror_url(&self.mirror_url, self.blob_mirror_url.as_ref());
+        let blob_mirror_url = normalize_blob_mirror_url(&self.mirror_url, &self.blob_mirror_url);
+        let blob_mirror_string: String;
+        let blob_mirror_url = if let Some(blob_mirror_url) = blob_mirror_url {
+            blob_mirror_string = blob_mirror_url.to_string();
+            Some(blob_mirror_string.as_ref())
+        } else {
+            None
+        };
         SerMirrorConfig {
             mirror_url: &self.mirror_url,
             subscribe: self.subscribe,
@@ -104,16 +116,38 @@ impl<'de> serde::Deserialize<'de> for MirrorConfig {
     {
         #[derive(Deserialize)]
         pub struct DeMirrorConfig {
-            mirror_url: String,
+            #[serde(with = "uri_serde")]
+            mirror_url: http::Uri,
             subscribe: bool,
             blob_key: Option<RepositoryBlobKey>,
             blob_mirror_url: Option<String>,
         }
+
         let DeMirrorConfig { mirror_url, subscribe, blob_key, blob_mirror_url } =
             DeMirrorConfig::deserialize(deserializer)?;
 
-        let blob_mirror_url =
-            blob_mirror_url.unwrap_or_else(|| blob_mirror_url_from_mirror_url(&mirror_url));
+        if mirror_url.scheme_str().is_none() {
+            return Err(serde::de::Error::custom(format!(
+                "mirror_url must have scheme: {:?}",
+                mirror_url
+            )));
+        }
+
+        let blob_mirror_url = if let Some(blob_mirror_url) = blob_mirror_url {
+            blob_mirror_url.parse::<Uri>().map_err(|e| {
+                serde::de::Error::custom(format!("bad uri string: {:?}: {}", blob_mirror_url, e))
+            })?
+        } else {
+            blob_mirror_url_from_mirror_url(&mirror_url)
+        };
+
+        if blob_mirror_url.scheme_str().is_none() {
+            return Err(serde::de::Error::custom(format!(
+                "blob_mirror_url must have scheme: {:?}",
+                blob_mirror_url
+            )));
+        }
+
         Ok(Self { mirror_url, subscribe, blob_key, blob_mirror_url })
     }
 }
@@ -125,22 +159,34 @@ pub struct MirrorConfigBuilder {
 }
 
 impl MirrorConfigBuilder {
-    pub fn new(mirror_url: impl Into<String>) -> Self {
+    pub fn new(mirror_url: impl Into<http::Uri>) -> Result<Self, MirrorConfigBuilderError> {
         let mirror_url = mirror_url.into();
         let blob_mirror_url = blob_mirror_url_from_mirror_url(&mirror_url);
-        MirrorConfigBuilder {
+        Ok(MirrorConfigBuilder {
             config: MirrorConfig { mirror_url, subscribe: false, blob_key: None, blob_mirror_url },
-        }
+        })
     }
 
-    pub fn mirror_url(mut self, mirror_url: impl Into<String>) -> Self {
+    pub fn mirror_url(
+        mut self,
+        mirror_url: impl Into<http::Uri>,
+    ) -> Result<Self, MirrorConfigBuilderError> {
         self.config.mirror_url = mirror_url.into();
-        self
+        if self.config.mirror_url.scheme_str().is_none() {
+            return Err(MirrorConfigBuilderError::UrlMissingScheme);
+        }
+        Ok(self)
     }
 
-    pub fn blob_mirror_url(mut self, blob_mirror_url: impl Into<String>) -> Self {
+    pub fn blob_mirror_url(
+        mut self,
+        blob_mirror_url: impl Into<http::Uri>,
+    ) -> Result<Self, MirrorConfigBuilderError> {
         self.config.blob_mirror_url = blob_mirror_url.into();
-        self
+        if self.config.blob_mirror_url.scheme_str().is_none() {
+            return Err(MirrorConfigBuilderError::UrlMissingScheme);
+        }
+        Ok(self)
     }
 
     pub fn subscribe(mut self, subscribe: bool) -> Self {
@@ -167,9 +213,13 @@ impl From<MirrorConfigBuilder> for MirrorConfig {
 impl TryFrom<fidl::MirrorConfig> for MirrorConfig {
     type Error = RepositoryParseError;
     fn try_from(other: fidl::MirrorConfig) -> Result<Self, RepositoryParseError> {
-        let mirror_url = other.mirror_url.ok_or(RepositoryParseError::MirrorUrlMissing)?;
-        let blob_mirror_url =
-            other.blob_mirror_url.unwrap_or_else(|| blob_mirror_url_from_mirror_url(&mirror_url));
+        let mirror_url =
+            other.mirror_url.ok_or(RepositoryParseError::MirrorUrlMissing)?.parse::<Uri>()?;
+        let blob_mirror_url = match other.blob_mirror_url {
+            None => blob_mirror_url_from_mirror_url(&mirror_url),
+            Some(s) => s.parse()?,
+        };
+
         Ok(Self {
             mirror_url,
             subscribe: other.subscribe.ok_or(RepositoryParseError::SubscribeMissing)?,
@@ -181,9 +231,11 @@ impl TryFrom<fidl::MirrorConfig> for MirrorConfig {
 
 impl From<MirrorConfig> for fidl::MirrorConfig {
     fn from(config: MirrorConfig) -> Self {
-        let blob_mirror_url = normalize_blob_mirror_url(&config.mirror_url, config.blob_mirror_url);
+        let blob_mirror_url =
+            normalize_blob_mirror_url(&config.mirror_url, &config.blob_mirror_url)
+                .map(|url| url.to_string());
         Self {
-            mirror_url: Some(config.mirror_url),
+            mirror_url: Some(config.mirror_url.to_string()),
             subscribe: Some(config.subscribe),
             blob_key: config.blob_key.map(|k| k.into()),
             blob_mirror_url,
@@ -191,16 +243,20 @@ impl From<MirrorConfig> for fidl::MirrorConfig {
     }
 }
 
-fn blob_mirror_url_from_mirror_url(mirror_url: &str) -> String {
-    format!("{}/blobs", mirror_url)
+fn blob_mirror_url_from_mirror_url(mirror_url: &http::Uri) -> http::Uri {
+    // Safe to unwrap because mirror_url is guaranteed to be properly formed.
+    http::Uri::extend_dir_with_path(mirror_url.to_owned(), "blobs").unwrap()
 }
 
-fn is_default_blob_mirror_url(mirror_url: &str, blob_mirror_url: &str) -> bool {
-    blob_mirror_url.starts_with(mirror_url) && &blob_mirror_url[mirror_url.len()..] == "/blobs"
+fn is_default_blob_mirror_url(mirror_url: &http::Uri, blob_mirror_url: &http::Uri) -> bool {
+    blob_mirror_url == &blob_mirror_url_from_mirror_url(mirror_url)
 }
 
-fn normalize_blob_mirror_url<S: AsRef<str>>(mirror_url: &str, blob_mirror_url: S) -> Option<S> {
-    if is_default_blob_mirror_url(mirror_url, blob_mirror_url.as_ref()) {
+fn normalize_blob_mirror_url<'a>(
+    mirror_url: &http::Uri,
+    blob_mirror_url: &'a http::Uri,
+) -> Option<&'a http::Uri> {
+    if is_default_blob_mirror_url(mirror_url, blob_mirror_url) {
         None
     } else {
         Some(blob_mirror_url)
@@ -245,8 +301,8 @@ impl RepositoryConfig {
     }
 
     /// Remove the requested mirror by url, returning the removed mirror, if it existed.
-    pub fn remove_mirror(&mut self, mirror_url: &str) -> Option<MirrorConfig> {
-        if let Some(pos) = self.mirrors.iter().position(|m| m.mirror_url == mirror_url) {
+    pub fn remove_mirror(&mut self, mirror_url: &http::Uri) -> Option<MirrorConfig> {
+        if let Some(pos) = self.mirrors.iter().position(|m| &m.mirror_url == mirror_url) {
             Some(self.mirrors.remove(pos))
         } else {
             None
@@ -471,7 +527,6 @@ impl fmt::Debug for RepositoryBlobKey {
 #[cfg(test)]
 mod tests {
     use {super::*, proptest::prelude::*, serde_json::json, std::convert::TryInto};
-
     fn verify_json_serde<T>(expected_value: T, expected_json: serde_json::Value)
     where
         T: PartialEq + std::fmt::Debug,
@@ -586,41 +641,48 @@ mod tests {
     #[test]
     fn test_mirror_config_serde() {
         verify_json_serde(
-            MirrorConfigBuilder::new("http://example.com").build(),
+            MirrorConfigBuilder::new("http://example.com/".parse::<Uri>().unwrap())
+                .unwrap()
+                .build(),
             json!({
-                "mirror_url": "http://example.com",
+                "mirror_url": "http://example.com/",
                 "subscribe": false,
             }),
         );
 
         verify_json_serde(
-            MirrorConfigBuilder::new("http://example.com")
-                .blob_mirror_url("http://example.com/subdir")
+            MirrorConfigBuilder::new("http://example.com".parse::<Uri>().unwrap())
+                .unwrap()
+                .blob_mirror_url("http://example.com/subdir".parse::<Uri>().unwrap())
+                .unwrap()
                 .build(),
             json!({
-                "mirror_url": "http://example.com",
+                "mirror_url": "http://example.com/",
                 "blob_mirror_url": "http://example.com/subdir",
                 "subscribe": false,
             }),
         );
 
         verify_json_serde(
-            MirrorConfigBuilder::new("http://example.com")
-                .blob_mirror_url("http://example.com/blobs")
+            MirrorConfigBuilder::new("http://example.com".parse::<Uri>().unwrap())
+                .unwrap()
+                .blob_mirror_url("http://example.com/blobs".parse::<Uri>().unwrap())
+                .unwrap()
                 .build(),
             json!({
-                "mirror_url": "http://example.com",
+                "mirror_url": "http://example.com/",
                 "subscribe": false,
             }),
         );
 
         verify_json_serde(
-            MirrorConfigBuilder::new("http://example.com")
+            MirrorConfigBuilder::new("http://example.com".parse::<Uri>().unwrap())
+                .unwrap()
                 .blob_key(RepositoryBlobKey::Aes(vec![0, 1, 2, 3]))
                 .subscribe(true)
                 .build(),
             json!({
-                "mirror_url": "http://example.com",
+                "mirror_url": "http://example.com/",
                 "blob_key": {
                     "type": "aes",
                     "value": "00010203",
@@ -633,10 +695,10 @@ mod tests {
     #[test]
     fn test_mirror_config_into_fidl() {
         let config = MirrorConfig {
-            mirror_url: "http://example.com/tuf/repo".into(),
+            mirror_url: "http://example.com/tuf/repo".parse::<Uri>().unwrap(),
             subscribe: true,
             blob_key: Some(RepositoryBlobKey::Aes(vec![0xf1, 15, 16, 3])),
-            blob_mirror_url: "http://example.com/tuf/repo/subdir/blobs".into(),
+            blob_mirror_url: "http://example.com/tuf/repo/subdir/blobs".parse::<Uri>().unwrap(),
         };
         let as_fidl: fidl::MirrorConfig = config.into();
         assert_eq!(
@@ -653,10 +715,10 @@ mod tests {
     #[test]
     fn test_mirror_config_into_fidl_normalizes_blob_mirror_url() {
         let config = MirrorConfig {
-            mirror_url: "http://example.com/tuf/repo".into(),
+            mirror_url: "http://example.com/tuf/repo".parse::<Uri>().unwrap(),
             subscribe: false,
             blob_key: None,
-            blob_mirror_url: "http://example.com/tuf/repo/blobs".into(),
+            blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
         };
         let as_fidl: fidl::MirrorConfig = config.into();
         assert_eq!(
@@ -681,10 +743,10 @@ mod tests {
         assert_eq!(
             MirrorConfig::try_from(as_fidl),
             Ok(MirrorConfig {
-                mirror_url: "http://example.com/tuf/repo".into(),
+                mirror_url: "http://example.com/tuf/repo".parse::<Uri>().unwrap(),
                 subscribe: true,
                 blob_key: Some(RepositoryBlobKey::Aes(vec![0xf1, 15, 16, 3])),
-                blob_mirror_url: "http://example.com/tuf/repo/subdir/blobs".into(),
+                blob_mirror_url: "http://example.com/tuf/repo/subdir/blobs".parse::<Uri>().unwrap(),
             })
         );
     }
@@ -692,7 +754,7 @@ mod tests {
     #[test]
     fn test_mirror_config_from_fidl_populates_blob_mirror_url() {
         let as_fidl = fidl::MirrorConfig {
-            mirror_url: Some("http://example.com/tuf/repo".into()),
+            mirror_url: Some("http://example.com/tuf/repo/".into()),
             subscribe: Some(false),
             blob_key: None,
             blob_mirror_url: None,
@@ -700,87 +762,103 @@ mod tests {
         assert_eq!(
             MirrorConfig::try_from(as_fidl),
             Ok(MirrorConfig {
-                mirror_url: "http://example.com/tuf/repo".into(),
+                mirror_url: "http://example.com/tuf/repo/".parse::<Uri>().unwrap(),
                 subscribe: false,
                 blob_key: None,
-                blob_mirror_url: "http://example.com/tuf/repo/blobs".into(),
+                blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
             })
         );
     }
 
-    #[test]
-    fn test_mirror_config_into_from_fidl_roundtrip() {
-        let config = MirrorConfig {
-            mirror_url: "http://example.com/tuf/repo".into(),
-            subscribe: true,
-            blob_key: Some(RepositoryBlobKey::Aes(vec![0xf1, 15, 16, 3])),
-            blob_mirror_url: "http://example.com/tuf/repo/blobs".into(),
-        };
-        let as_fidl: fidl::MirrorConfig = config.clone().into();
-        assert_eq!(MirrorConfig::try_from(as_fidl).unwrap(), config);
+    prop_compose! {
+        fn valid_uri()(string in "http://[w+]{4}") -> http::Uri {
+            string.parse::<Uri>().unwrap()
+        }
     }
 
     proptest! {
         #[test]
-        fn blob_mirror_url_from_mirror_url_produces_default_blob_mirror_urls(mirror_url: String) {
+        fn blob_mirror_url_from_mirror_url_produces_default_blob_mirror_urls(mirror_url in valid_uri()) {
             let blob_mirror_url = blob_mirror_url_from_mirror_url(&mirror_url);
             prop_assert!(is_default_blob_mirror_url(&mirror_url, &blob_mirror_url));
         }
 
         #[test]
-        fn is_default_blob_mirror_url_does_not_panic(a: String, b: String) {
-            is_default_blob_mirror_url(&a, &b);
-            is_default_blob_mirror_url(&b, &a);
-        }
-
-        #[test]
-        fn normalize_blob_mirror_url_detects_default_blob_mirror_url(mirror_url: String) {
+        fn normalize_blob_mirror_url_detects_default_blob_mirror_url(mirror_url in valid_uri()) {
             let blob_mirror_url = blob_mirror_url_from_mirror_url(&mirror_url);
-            prop_assert_eq!(normalize_blob_mirror_url(&mirror_url, blob_mirror_url.as_str()), None);
+            prop_assert_eq!(normalize_blob_mirror_url(&mirror_url, &blob_mirror_url), None);
             // also, swapped parameters should never return None
-            prop_assert_ne!(normalize_blob_mirror_url(&blob_mirror_url, mirror_url), None);
+            prop_assert_ne!(normalize_blob_mirror_url(&blob_mirror_url, &mirror_url), None);
         }
     }
 
     #[test]
+    fn test_mirror_config_into_from_fidl_roundtrip() {
+        let config = MirrorConfig {
+            mirror_url: "http://example.com/tuf/repo/".parse::<Uri>().unwrap(),
+            subscribe: true,
+            blob_key: Some(RepositoryBlobKey::Aes(vec![0xf1, 15, 16, 3])),
+            blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
+        };
+        let as_fidl: fidl::MirrorConfig = config.clone().into();
+        assert_eq!(MirrorConfig::try_from(as_fidl).unwrap(), config);
+    }
+
+    #[test]
     fn test_mirror_config_builder() {
-        let builder = MirrorConfigBuilder::new("http://example.com");
+        let builder =
+            MirrorConfigBuilder::new("http://example.com/".parse::<Uri>().unwrap()).unwrap();
         assert_eq!(
             builder.clone().build(),
             MirrorConfig {
-                mirror_url: "http://example.com".into(),
+                mirror_url: "http://example.com/".parse::<Uri>().unwrap(),
                 subscribe: false,
                 blob_key: None,
-                blob_mirror_url: "http://example.com/blobs".into(),
+                blob_mirror_url: "http://example.com/blobs".parse::<Uri>().unwrap(),
             }
         );
         assert_eq!(
-            builder.clone().blob_mirror_url("http://example.com/a/b").build(),
+            builder
+                .clone()
+                .blob_mirror_url("http://example.com/a/b".parse::<Uri>().unwrap())
+                .unwrap()
+                .build(),
             MirrorConfig {
-                mirror_url: "http://example.com".into(),
+                mirror_url: "http://example.com/".parse::<Uri>().unwrap(),
                 subscribe: false,
                 blob_key: None,
-                blob_mirror_url: "http://example.com/a/b".into(),
+                blob_mirror_url: "http://example.com/a/b".parse::<Uri>().unwrap(),
             }
         );
         assert_eq!(
-            builder.clone().mirror_url("http://127.0.0.1").build(),
+            builder.clone().mirror_url("http://127.0.0.1".parse::<Uri>().unwrap()).unwrap().build(),
             MirrorConfig {
-                mirror_url: "http://127.0.0.1".into(),
+                mirror_url: "http://127.0.0.1".parse::<Uri>().unwrap(),
                 subscribe: false,
                 blob_key: None,
-                blob_mirror_url: "http://example.com/blobs".into(),
+                blob_mirror_url: "http://example.com/blobs".parse::<Uri>().unwrap(),
             }
         );
         assert_eq!(
             builder.subscribe(true).blob_key(RepositoryBlobKey::Aes(vec![0xf1, 15, 16, 3])).build(),
             MirrorConfig {
-                mirror_url: "http://example.com".into(),
+                mirror_url: "http://example.com".parse::<Uri>().unwrap(),
                 subscribe: true,
                 blob_key: Some(RepositoryBlobKey::Aes(vec![0xf1, 15, 16, 3])),
-                blob_mirror_url: "http://example.com/blobs".into(),
+                blob_mirror_url: "http://example.com/blobs".parse::<Uri>().unwrap(),
             }
         );
+    }
+
+    #[test]
+    fn test_mirror_config_bad_uri() {
+        let as_fidl = fidl::MirrorConfig {
+            mirror_url: None,
+            subscribe: Some(false),
+            blob_key: None,
+            blob_mirror_url: None,
+        };
+        assert_eq!(MirrorConfig::try_from(as_fidl), Err(RepositoryParseError::MirrorUrlMissing));
     }
 
     #[test]
@@ -791,10 +869,10 @@ mod tests {
             root_threshold: 2,
             root_keys: vec![RepositoryKey::Ed25519(vec![0xf1, 15, 16, 3])],
             mirrors: vec![MirrorConfig {
-                mirror_url: "http://example.com/tuf/repo".into(),
+                mirror_url: "http://example.com/tuf/repo".parse::<Uri>().unwrap(),
                 subscribe: true,
                 blob_key: Some(RepositoryBlobKey::Aes(vec![0xf1, 15, 16, 3])),
-                blob_mirror_url: "http://example.com/tuf/repo/blobs".into(),
+                blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
             }],
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
         };
@@ -827,7 +905,7 @@ mod tests {
             root_threshold: None,
             root_keys: Some(vec![fidl::RepositoryKeyConfig::Ed25519Key(vec![0xf1, 15, 16, 3])]),
             mirrors: Some(vec![fidl::MirrorConfig {
-                mirror_url: Some("http://example.com/tuf/repo".into()),
+                mirror_url: Some("http://example.com/tuf/repo/".into()),
                 subscribe: Some(true),
                 blob_key: Some(fidl::RepositoryBlobKey::AesKey(vec![0xf1, 15, 16, 3])),
                 blob_mirror_url: None,
@@ -842,10 +920,10 @@ mod tests {
                 root_threshold: 1,
                 root_keys: vec![RepositoryKey::Ed25519(vec![0xf1, 15, 16, 3]),],
                 mirrors: vec![MirrorConfig {
-                    mirror_url: "http://example.com/tuf/repo".into(),
+                    mirror_url: "http://example.com/tuf/repo/".parse::<Uri>().unwrap(),
                     subscribe: true,
                     blob_key: Some(RepositoryBlobKey::Aes(vec![0xf1, 15, 16, 3])),
-                    blob_mirror_url: "http://example.com/tuf/repo/blobs".into(),
+                    blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
                 },],
                 update_package_url: Some(
                     "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
@@ -862,7 +940,7 @@ mod tests {
             root_threshold: Some(2),
             root_keys: Some(vec![fidl::RepositoryKeyConfig::Ed25519Key(vec![0xf1, 15, 16, 3])]),
             mirrors: Some(vec![fidl::MirrorConfig {
-                mirror_url: Some("http://example.com/tuf/repo".into()),
+                mirror_url: Some("http://example.com/tuf/repo/".into()),
                 subscribe: Some(true),
                 blob_key: Some(fidl::RepositoryBlobKey::AesKey(vec![0xf1, 15, 16, 3])),
                 blob_mirror_url: None,
@@ -877,10 +955,10 @@ mod tests {
                 root_threshold: 2,
                 root_keys: vec![RepositoryKey::Ed25519(vec![0xf1, 15, 16, 3]),],
                 mirrors: vec![MirrorConfig {
-                    mirror_url: "http://example.com/tuf/repo".into(),
+                    mirror_url: "http://example.com/tuf/repo/".parse::<Uri>().unwrap(),
                     subscribe: true,
                     blob_key: Some(RepositoryBlobKey::Aes(vec![0xf1, 15, 16, 3])),
-                    blob_mirror_url: "http://example.com/tuf/repo/blobs".into(),
+                    blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
                 },],
                 update_package_url: Some(
                     "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
@@ -910,10 +988,10 @@ mod tests {
             root_threshold: 2,
             root_keys: vec![RepositoryKey::Ed25519(vec![0xf1, 15, 16, 3])],
             mirrors: vec![MirrorConfig {
-                mirror_url: "http://example.com/tuf/repo".into(),
+                mirror_url: "http://example.com/tuf/repo/".parse::<Uri>().unwrap(),
                 subscribe: true,
                 blob_key: Some(RepositoryBlobKey::Aes(vec![0xf1, 15, 16, 3])),
-                blob_mirror_url: "http://example.com/tuf/repo/blobs".into(),
+                blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
             }],
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
         };
@@ -988,5 +1066,27 @@ mod hex_serde {
         let value = String::deserialize(deserializer)?;
         hex::decode(value.as_bytes())
             .map_err(|e| serde::de::Error::custom(format!("bad hex value: {:?}: {}", value, e)))
+    }
+}
+
+mod uri_serde {
+    use {http::Uri, serde::Deserialize};
+
+    pub fn serialize<S>(uri: &http::Uri, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let s = uri.to_string();
+        serializer.serialize_str(&s)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<http::Uri, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        value
+            .parse::<Uri>()
+            .map_err(|e| serde::de::Error::custom(format!("bad uri value: {:?}: {}", value, e)))
     }
 }

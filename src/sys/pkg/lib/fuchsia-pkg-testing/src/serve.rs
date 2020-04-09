@@ -18,6 +18,7 @@ use {
         prelude::*,
         task::SpawnExt,
     },
+    http::Uri,
     http_sse::{Event, EventSender, SseResponseCreator},
     hyper::{header, service::service_fn, Body, Method, Request, Response, Server, StatusCode},
     std::{
@@ -220,13 +221,13 @@ impl ServedRepository {
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository.
     pub fn make_repo_config(&self, url: RepoUrl) -> RepositoryConfig {
-        self.repo.make_repo_config(url, self.local_url(), false)
+        self.repo.make_repo_config(url, self.local_url().parse::<Uri>().unwrap(), false)
     }
 
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository. Set subscribe on the mirror configs to true.
     pub fn make_repo_config_with_subscribe(&self, url: RepoUrl) -> RepositoryConfig {
-        self.repo.make_repo_config(url, self.local_url(), true)
+        self.repo.make_repo_config(url, self.local_url().parse::<Uri>().unwrap(), true)
     }
 
     /// Send an SSE event to all clients subscribed to /auto.

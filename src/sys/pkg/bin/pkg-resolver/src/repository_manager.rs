@@ -704,6 +704,7 @@ mod tests {
         fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey},
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_url::pkg_url::RepoUrl,
+        http::Uri,
         maplit::hashmap,
         std::{borrow::Borrow, fs::File, io::Write},
     };
@@ -1348,7 +1349,10 @@ mod tests {
     #[test]
     fn test_building_repo_manager_with_static_configs_populates_inspect() {
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
-        let mirror_config = MirrorConfigBuilder::new("fake-mirror.com").build();
+        let mirror_config =
+            MirrorConfigBuilder::new("http://fake-mirror.com".parse::<Uri>().unwrap())
+                .unwrap()
+                .build();
         let fuchsia_config = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
                 .add_root_key(RepositoryKey::Ed25519(vec![1]))
@@ -1455,7 +1459,10 @@ mod tests {
         );
 
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
-        let mirror_config = MirrorConfigBuilder::new("fake-mirror.com").build();
+        let mirror_config =
+            MirrorConfigBuilder::new("http://fake-mirror.com".parse::<Uri>().unwrap())
+                .unwrap()
+                .build();
         let config = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
                 .add_root_key(RepositoryKey::Ed25519(vec![0]))

@@ -22,6 +22,7 @@ use {
     },
     fuchsia_url::pkg_url::RepoUrl,
     futures::prelude::*,
+    http::Uri,
     parking_lot::Mutex,
     serde::Serialize,
     std::sync::Arc,
@@ -320,7 +321,11 @@ impl Iterator for SourceConfigGenerator {
                 .auto(true),
             RepositoryConfigBuilder::new(RepoUrl::parse(&repo_url).unwrap())
                 .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
-                .add_mirror(MirrorConfigBuilder::new(mirror_url).subscribe(true)),
+                .add_mirror(
+                    MirrorConfigBuilder::new(mirror_url.parse::<Uri>().unwrap())
+                        .unwrap()
+                        .subscribe(true),
+                ),
         ))
     }
 }
@@ -328,7 +333,11 @@ impl Iterator for SourceConfigGenerator {
 fn make_test_repo_config() -> RepositoryConfig {
     RepositoryConfigBuilder::new("fuchsia-pkg://test".parse().unwrap())
         .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
-        .add_mirror(MirrorConfigBuilder::new("http://example.com").subscribe(true))
+        .add_mirror(
+            MirrorConfigBuilder::new("http://example.com".parse::<Uri>().unwrap())
+                .unwrap()
+                .subscribe(true),
+        )
         .build()
 }
 
@@ -366,7 +375,9 @@ async fn test_add_repo() {
 
     let repo = RepositoryConfigBuilder::new("fuchsia-pkg://localhost".parse().unwrap())
         .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
-        .add_mirror(MirrorConfigBuilder::new("http://127.0.0.1:8083"))
+        .add_mirror(
+            MirrorConfigBuilder::new("http://127.0.0.1:8083".parse::<Uri>().unwrap()).unwrap(),
+        )
         .build();
 
     env.run_amberctl_add_repo_config(source).await;
@@ -386,7 +397,9 @@ async fn test_add_src_with_ipv4_id() {
 
     let repo = RepositoryConfigBuilder::new("fuchsia-pkg://http___10_0_0_1_8083".parse().unwrap())
         .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
-        .add_mirror(MirrorConfigBuilder::new("http://10.0.0.1:8083"))
+        .add_mirror(
+            MirrorConfigBuilder::new("http://10.0.0.1:8083".parse::<Uri>().unwrap()).unwrap(),
+        )
         .build();
 
     env.run_amberctl_add_src(source).await;
@@ -411,7 +424,9 @@ async fn test_add_src_with_ipv6_id() {
         "fuchsia-pkg://http____fe80__1122_3344__8083".parse().unwrap(),
     )
     .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
-    .add_mirror(MirrorConfigBuilder::new("http://[fe80::1122:3344]:8083"))
+    .add_mirror(
+        MirrorConfigBuilder::new("http://[fe80::1122:3344]:8083".parse::<Uri>().unwrap()).unwrap(),
+    )
     .build();
 
     env.run_amberctl_add_src(source).await;
@@ -461,7 +476,9 @@ async fn test_add_repo_retains_existing_state() {
         .build();
     let repo = RepositoryConfigBuilder::new("fuchsia-pkg://devhost".parse().unwrap())
         .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
-        .add_mirror(MirrorConfigBuilder::new("http://10.0.0.1:8083"))
+        .add_mirror(
+            MirrorConfigBuilder::new("http://10.0.0.1:8083".parse::<Uri>().unwrap()).unwrap(),
+        )
         .build();
     env.run_amberctl_add_repo_config(source).await;
 
@@ -497,7 +514,9 @@ async fn test_rm_src() {
         env.resolver_list_repos().await,
         vec![RepositoryConfigBuilder::new("fuchsia-pkg://b".parse().unwrap())
             .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_2).unwrap()))
-            .add_mirror(MirrorConfigBuilder::new("http://example.com/b"))
+            .add_mirror(
+                MirrorConfigBuilder::new("http://example.com/b".parse::<Uri>().unwrap()).unwrap()
+            )
             .build()]
     );
     // rm_src removes all rules, so no source remains enabled.
@@ -520,7 +539,7 @@ async fn test_enable_src() {
 
     let repo = RepositoryConfigBuilder::new("fuchsia-pkg://test".parse().unwrap())
         .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
-        .add_mirror(MirrorConfigBuilder::new("http://example.com"))
+        .add_mirror(MirrorConfigBuilder::new("http://example.com".parse::<Uri>().unwrap()).unwrap())
         .build();
 
     env.run_amberctl_add_src(source.into()).await;
@@ -607,11 +626,17 @@ async fn test_disable_src_disables_all_sources() {
         vec![
             RepositoryConfigBuilder::new("fuchsia-pkg://a".parse().unwrap())
                 .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
-                .add_mirror(MirrorConfigBuilder::new("http://example.com/a"))
+                .add_mirror(
+                    MirrorConfigBuilder::new("http://example.com/a".parse::<Uri>().unwrap())
+                        .unwrap()
+                )
                 .build(),
             RepositoryConfigBuilder::new("fuchsia-pkg://b".parse().unwrap())
                 .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_2).unwrap()))
-                .add_mirror(MirrorConfigBuilder::new("http://example.com/b"))
+                .add_mirror(
+                    MirrorConfigBuilder::new("http://example.com/b".parse::<Uri>().unwrap())
+                        .unwrap()
+                )
                 .build(),
         ]
     );

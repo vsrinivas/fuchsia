@@ -81,13 +81,17 @@ mod test_inspectable_repository_config {
         fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey},
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_url::pkg_url::RepoUrl,
+        http::Uri,
     };
 
     #[test]
     fn test_initialization() {
         let inspector = inspect::Inspector::new();
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
-        let mirror_config = MirrorConfigBuilder::new("fake-mirror.com").build();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com/").unwrap();
+        let mirror_config =
+            MirrorConfigBuilder::new("http://fake-mirror.com".parse::<Uri>().unwrap())
+                .unwrap()
+                .build();
         let config = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
                 .add_root_key(RepositoryKey::Ed25519(vec![0]))
@@ -127,7 +131,10 @@ mod test_inspectable_repository_config {
                 .add_root_key(RepositoryKey::Ed25519(vec![0]))
                 .build(),
         );
-        let mirror_config = MirrorConfigBuilder::new("fake-mirror").build();
+        let mirror_config =
+            MirrorConfigBuilder::new("http://fake-mirror.com".parse::<Uri>().unwrap())
+                .unwrap()
+                .build();
         let mut inspectable =
             InspectableRepositoryConfig::new(config, inspector.root(), "test-property");
 

@@ -26,6 +26,7 @@ use {
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     fuchsia_zircon::{self as zx, Status},
     futures::prelude::*,
+    http::Uri,
     parking_lot::Mutex,
     std::{
         convert::TryFrom,
@@ -541,7 +542,8 @@ fn make_test_repo_config() -> RepositoryConfig {
     RepositoryConfigBuilder::new(RepoUrl::new("example.com".to_string()).expect("valid url"))
         .add_root_key(RepositoryKey::Ed25519(vec![0u8]))
         .add_mirror(
-            MirrorConfigBuilder::new("example.org")
+            MirrorConfigBuilder::new("http://example.org".parse::<Uri>().unwrap())
+                .unwrap()
                 .blob_key(RepositoryBlobKey::Aes(vec![1u8]))
                 .build(),
         )
