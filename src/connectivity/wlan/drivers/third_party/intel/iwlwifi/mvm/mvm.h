@@ -37,6 +37,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
+#include <lib/async/task.h>
+#include <lib/async/time.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 
@@ -866,6 +868,7 @@ struct iwl_mvm {
   const struct iwl_fw* fw;
   const struct iwl_cfg* cfg;
   struct iwl_phy_db* phy_db;
+  async_dispatcher_t* dispatcher;
 
   /* for protecting access to iwl_mvm */
   mtx_t mutex;
@@ -954,7 +957,8 @@ struct iwl_mvm {
   enum iwl_mvm_scan_type hb_scan_type;
 
   enum iwl_mvm_sched_scan_pass_all_states sched_scan_pass_all;
-  struct delayed_work scan_timeout_dwork;
+  async_task_t scan_timeout_task;
+  zx_duration_t scan_timeout_delay;
 
   /* max number of simultaneous scans the FW supports */
   unsigned int max_scans;
@@ -1765,6 +1769,7 @@ ssize_t iwl_dbgfs_quota_status_read(struct file* file, char __user* user_buf, si
 #endif
 
 /* Scanning */
+void iwl_mvm_scan_timeout(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status);
 zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
                                    const wlan_hw_scan_config_t* scan_config);
 int iwl_mvm_scan_size(struct iwl_mvm* mvm);

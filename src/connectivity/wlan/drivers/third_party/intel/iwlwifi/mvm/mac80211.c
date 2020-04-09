@@ -1129,9 +1129,10 @@ void iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
     cancel_delayed_work_sync(&mvm->tx_latency_watchdog_wk);
 #endif  /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
     cancel_delayed_work_sync(&mvm->cs_tx_unblock_dwork);
-    cancel_delayed_work_sync(&mvm->scan_timeout_dwork);
     iwl_fw_free_dump_desc(&mvm->fwrt);
 #endif  // NEEDS_PORTING
+
+  async_cancel_task(mvm->dispatcher, &mvm->scan_timeout_task);
 
   mtx_lock(&mvm->mutex);
   __iwl_mvm_mac_stop(mvm);

@@ -777,7 +777,6 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     INIT_WORK(&mvm->d0i3_exit_work, iwl_mvm_d0i3_exit_work);
 #endif
     INIT_DELAYED_WORK(&mvm->tdls_cs.dwork, iwl_mvm_tdls_ch_switch_work);
-    INIT_DELAYED_WORK(&mvm->scan_timeout_dwork, iwl_mvm_scan_timeout_wk);
     INIT_WORK(&mvm->add_stream_wk, iwl_mvm_add_new_dqa_stream_wk);
 #endif  // NEEDS_PORTING
   list_initialize(&mvm->add_stream_txqs);
@@ -823,6 +822,11 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
   trans_cfg.op_mode = op_mode;
   trans_cfg.no_reclaim_cmds = no_reclaim_cmds;
   trans_cfg.n_no_reclaim_cmds = ARRAY_SIZE(no_reclaim_cmds);
+
+  mvm->dispatcher = async_loop_get_dispatcher(mvm->trans->loop);
+  mvm->scan_timeout_task.state = (async_state_t)ASYNC_STATE_INIT;
+  mvm->scan_timeout_task.handler = iwl_mvm_scan_timeout;
+  mvm->scan_timeout_delay = ZX_SEC(IWL_SCAN_TIMEOUT_SEC);
 
   if (mvm->trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
     rb_size_default = IWL_AMSDU_2K;
@@ -1022,6 +1026,7 @@ out_free:
   if (iwlmvm_mod_params.init_dbg) {
     return op_mode;
   }
+
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
   iwl_dnt_free(trans);
 #endif

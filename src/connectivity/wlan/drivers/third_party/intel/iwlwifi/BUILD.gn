@@ -62,6 +62,7 @@ source_set("core") {
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver",
+    "//zircon/public/lib/async",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/zircon-internal",
   ]
@@ -94,7 +95,6 @@ source_set("pcie") {
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/async",
   ]
 
   public_deps = [

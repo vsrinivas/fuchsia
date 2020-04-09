@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/default.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -197,31 +200,186 @@ TEST_F(MvmTest, scanLmacNormal) {
   EXPECT_EQ(0x56, preq[3]);
 }
 
-// This test focuses on testing the mvm state change for scan.
-TEST_F(MvmTest, RegScanStartPassive) {
+class ScanTest : public MvmTest {
+ public:
+  ScanTest() {
+    // Fake callback registered to capture scan completion responses.
+    ops.hw_scan_complete = [](void* ctx, const wlan_hw_scan_result_t* result) {
+      struct ScanResult* sr = (struct ScanResult*)ctx;
+      sr->sme_notified = true;
+      sr->success = (result->code == WLAN_HW_SCAN_SUCCESS ? true : false);
+    };
+
+    mvmvif_sta.mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mvmvif_sta.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    mvmvif_sta.ifc.ops = &ops;
+    mvmvif_sta.ifc.ctx = &scan_result;
+
+    // This can be moved out or overridden when we add other scan types.
+    scan_config.scan_type = WLAN_HW_SCAN_TYPE_PASSIVE;
+
+    // Create scan timeout async loop.
+    trans_ = sim_trans_.iwl_trans();
+    ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &trans_->loop));
+    ASSERT_OK(async_loop_start_thread(trans_->loop, "iwlwifi-mvm-test-worker", NULL));
+    mvm_->dispatcher = async_loop_get_dispatcher(trans_->loop);
+    mvm_->scan_timeout_task.handler = iwl_mvm_scan_timeout;
+    mvm_->scan_timeout_task.state = (async_state_t)ASYNC_STATE_INIT;
+    mvm_->scan_timeout_delay = ZX_SEC(10);
+
+    // Create fake FW scan response.
+    buildRxcb(&rxb, &scan_notif, sizeof(scan_notif));
+  }
+
+  ~ScanTest() {
+    async_loop_quit(trans_->loop);
+    async_loop_join_threads(trans_->loop);
+    free(trans_->loop);
+  }
+
+  struct iwl_trans* trans_;
+  wlanmac_ifc_protocol_ops_t ops;
+  struct iwl_mvm_vif mvmvif_sta;
+  wlan_hw_scan_config_t scan_config{.num_channels = 4, .channels = {7, 1, 40, 136}};
+  struct iwl_rx_cmd_buffer rxb;
+  struct iwl_periodic_scan_complete scan_notif {
+    .status = IWL_SCAN_OFFLOAD_COMPLETED,
+  };
+
+  // Structure to capture scan results.
+  struct ScanResult {
+    bool sme_notified;
+    bool success;
+  } scan_result;
+};
+
+// Tests scenario for a successful scan completion.
+TEST_F(ScanTest, RegPassiveScanSuccess) TA_NO_THREAD_SAFETY_ANALYSIS {
+  ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  ASSERT_EQ(nullptr, mvm_->scan_vif);
+  ASSERT_EQ(false, scan_result.sme_notified);
+  ASSERT_EQ(false, scan_result.success);
+
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
+
+  struct iwl_rx_packet* pkt =
+      (struct iwl_rx_packet*)((char*)io_buffer_virt(&rxb._io_buf) + rxb._offset);
+  struct iwl_periodic_scan_complete* scan_notif = (struct iwl_periodic_scan_complete*)pkt->data;
+  ASSERT_EQ(scan_notif->status, IWL_SCAN_OFFLOAD_COMPLETED);
+
+  // Call notify complete to simulate scan completion.
+  mtx_unlock(&mvm_->mutex);
+  iwl_mvm_rx_lmac_scan_complete_notif(mvm_, &rxb);
+  mtx_lock(&mvm_->mutex);
+
+  EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(true, scan_result.sme_notified);
+  EXPECT_EQ(true, scan_result.success);
+}
+
+// Tests scenario where the scan request aborted / failed.
+TEST_F(ScanTest, RegPassiveScanAborted) TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
 
-  struct iwl_mvm_vif mvmvif_sta = {
-      .mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans()),
-      .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
-  };
-  wlan_hw_scan_config_t scan_config = {
-      .scan_type = WLAN_HW_SCAN_TYPE_PASSIVE,
-      .num_channels = 4,
-      .channels =
-          {
-              7,
-              1,
-              40,
-              136,
-          },
-  };
-
-  EXPECT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
-
+  ASSERT_EQ(false, scan_result.sme_notified);
+  ASSERT_EQ(false, scan_result.success);
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
+
+  // Set scan status to ABORTED so simulate a scan abort.
+  struct iwl_rx_packet* pkt =
+      (struct iwl_rx_packet*)((char*)io_buffer_virt(&rxb._io_buf) + rxb._offset);
+  struct iwl_periodic_scan_complete* scan_notif = (struct iwl_periodic_scan_complete*)pkt->data;
+  scan_notif->status = IWL_SCAN_OFFLOAD_ABORTED;
+
+  // Call notify complete to simulate scan abort.
+  mtx_unlock(&mvm_->mutex);
+  iwl_mvm_rx_lmac_scan_complete_notif(mvm_, &rxb);
+  mtx_lock(&mvm_->mutex);
+
+  EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(true, scan_result.sme_notified);
+  EXPECT_EQ(false, scan_result.success);
+}
+
+// Tests condition where scan completion timeouts out due to no response from FW.
+TEST_F(ScanTest, RegPassiveScanTimeout) TA_NO_THREAD_SAFETY_ANALYSIS {
+  ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  ASSERT_EQ(nullptr, mvm_->scan_vif);
+  mvm_->scan_timeout_delay = ZX_MSEC(5);
+
+  ASSERT_EQ(false, scan_result.sme_notified);
+  ASSERT_EQ(false, scan_result.success);
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
+
+  // Do not call notify complete, and let the scan timeout timer expire.
+  // We need to unlock here to allow for the timeout callback to be able
+  // to acquire the lock.
+  mtx_unlock(&mvm_->mutex);
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  mtx_lock(&mvm_->mutex);
+
+  EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(true, scan_result.sme_notified);
+  EXPECT_EQ(false, scan_result.success);
+}
+
+// Tests condition where timer is shutdown and there is no response from FW.
+TEST_F(ScanTest, RegPassiveScanTimerShutdown) TA_NO_THREAD_SAFETY_ANALYSIS {
+  ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  ASSERT_EQ(nullptr, mvm_->scan_vif);
+  mvm_->scan_timeout_delay = ZX_MSEC(5);
+
+  ASSERT_EQ(false, scan_result.sme_notified);
+  ASSERT_EQ(false, scan_result.success);
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
+
+  // Immediately shutdown the scan timeout timer, faking an unintentional timer error.
+  async_loop_shutdown(trans_->loop);
+
+  // Do not call notify complete, and wait beyond timeout expiry.
+  mtx_unlock(&mvm_->mutex);
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  mtx_lock(&mvm_->mutex);
+
+  // Ensure the state is such that no FW response or timeout has happened.
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(false, scan_result.sme_notified);
+  EXPECT_EQ(false, scan_result.success);
+}
+
+// Tests condition where iwl_mvm_mac_stop() is invoked while timer is pending.
+TEST_F(ScanTest, RegPassiveScanTimerMvmStop) TA_NO_THREAD_SAFETY_ANALYSIS {
+  ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  ASSERT_EQ(nullptr, mvm_->scan_vif);
+
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
+
+  mtx_unlock(&mvm_->mutex);
+  iwl_mvm_mac_stop(mvm_);
+  mtx_lock(&mvm_->mutex);
+
+  // The expectation is that iwl_mvm_mac_stop() would have cancelled the timer and it should
+  // not be found now.
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, async_cancel_task(mvm_->dispatcher, &mvm_->scan_timeout_task));
+}
+
+// Tests condition where multiple calls to the scan API returns appropriate error.
+TEST_F(ScanTest, RegPassiveScanParallel) TA_NO_THREAD_SAFETY_ANALYSIS {
+  ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
 }
 
 }  // namespace
