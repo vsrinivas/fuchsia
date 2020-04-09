@@ -274,6 +274,16 @@ static void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, ui
   entry->value = value;
 }
 
+bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value) {
+  uint64_t check_value = cr0_value;
+  // From Volume 3, Section 26.3.1.1: PE and PG bits of CR0 are not checked when unrestricted
+  // guest is enabled. Set both here to avoid clashing with X86_MSR_IA32_VMX_CR0_FIXED1.
+  if (vmcs->Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2UnrestrictedGuest) {
+    check_value |= X86_CR0_PE | X86_CR0_PG;
+  }
+  return cr_is_invalid(check_value, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1);
+}
+
 static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
                              paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
                              VmxPage* host_msr_page, VmxPage* guest_msr_page) {
@@ -1047,14 +1057,4 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_io_t& io_state) {
   ASSERT(sizeof(vmx_state_.guest_state.rax) >= io_state.access_size);
   memcpy(&vmx_state_.guest_state.rax, io_state.data, io_state.access_size);
   return ZX_OK;
-}
-
-bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value) {
-  uint64_t check_value = cr0_value;
-  // From Volume 3, Section 26.3.1.1: PE and PG bits of CR0 are not checked when unrestricted
-  // guest is enabled. Set both here to avoid clashing with X86_MSR_IA32_VMX_CR0_FIXED1.
-  if (vmcs->Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2UnrestrictedGuest) {
-    check_value |= X86_CR0_PE | X86_CR0_PG;
-  }
-  return cr_is_invalid(check_value, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1);
 }
