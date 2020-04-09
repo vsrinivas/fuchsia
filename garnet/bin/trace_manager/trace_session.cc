@@ -19,7 +19,8 @@ namespace tracing {
 TraceSession::TraceSession(zx::socket destination, std::vector<std::string> categories,
                            size_t buffer_size_megabytes, provider::BufferingMode buffering_mode,
                            TraceProviderSpecMap&& provider_specs, zx::duration start_timeout,
-                           zx::duration stop_timeout, fit::closure abort_handler)
+                           zx::duration stop_timeout, fit::closure abort_handler,
+                           AlertCallback alert_callback)
     : destination_(std::move(destination)),
       categories_(std::move(categories)),
       buffer_size_megabytes_(buffer_size_megabytes),
@@ -28,6 +29,7 @@ TraceSession::TraceSession(zx::socket destination, std::vector<std::string> cate
       start_timeout_(start_timeout),
       stop_timeout_(stop_timeout),
       abort_handler_(std::move(abort_handler)),
+      alert_callback_(std::move(alert_callback)),
       weak_ptr_factory_(this) {}
 
 TraceSession::~TraceSession() {
@@ -71,6 +73,11 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
           [weak = weak_ptr_factory_.GetWeakPtr(), bundle]() {
             if (weak) {
               weak->OnProviderTerminated(bundle);
+            }
+          },
+          [weak = weak_ptr_factory_.GetWeakPtr()](const std::string& alert_name) {
+            if (weak && weak->alert_callback_) {
+              weak->alert_callback_(alert_name);
             }
           })) {
     tracees_.pop_back();

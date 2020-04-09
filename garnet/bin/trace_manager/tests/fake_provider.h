@@ -80,6 +80,8 @@ class FakeProvider : public provider::Provider {
   int stop_count() const { return stop_count_; }
   int terminate_count() const { return terminate_count_; }
 
+  void SendAlert(const char* alert_name);
+
  private:
   friend std::ostream& operator<<(std::ostream& out, FakeProvider::State state);
 

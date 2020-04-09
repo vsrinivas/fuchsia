@@ -165,6 +165,21 @@ void FakeProvider::AdvanceToState(State state) {
   state_ = state;
 }
 
+void FakeProvider::SendAlert(const char* alert_name) {
+  trace_provider_packet_t packet{};
+
+  size_t alert_name_length = strlen(alert_name);
+  if (alert_name_length > sizeof(packet.data16) + sizeof(packet.data32) + sizeof(packet.data64)) {
+    fprintf(stderr, "Session: Alert name too long: %s\n", alert_name);
+    return;
+  }
+
+  packet.request = TRACE_PROVIDER_ALERT;
+  memcpy(&packet.data16, alert_name, alert_name_length);
+  auto status = fifo_.write(sizeof(packet), &packet, 1, nullptr);
+  ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
+}
+
 bool FakeProvider::SendFifoPacket(const trace_provider_packet_t* packet) {
   zx_status_t status = fifo_.write(sizeof(*packet), packet, 1, nullptr);
   return status == ZX_OK || status == ZX_ERR_PEER_CLOSED;

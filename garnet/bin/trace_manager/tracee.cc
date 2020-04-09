@@ -74,12 +74,14 @@ bool Tracee::operator==(TraceProviderBundle* bundle) const { return bundle_ == b
 
 bool Tracee::Initialize(fidl::VectorPtr<std::string> categories, size_t buffer_size,
                         provider::BufferingMode buffering_mode, StartCallback start_callback,
-                        StopCallback stop_callback, TerminateCallback terminate_callback) {
+                        StopCallback stop_callback, TerminateCallback terminate_callback,
+                        AlertCallback alert_callback) {
   FXL_DCHECK(state_ == State::kReady);
   FXL_DCHECK(!buffer_vmo_);
   FXL_DCHECK(start_callback);
   FXL_DCHECK(stop_callback);
   FXL_DCHECK(terminate_callback);
+  FXL_DCHECK(alert_callback);
 
   zx::vmo buffer_vmo;
   zx_status_t status = zx::vmo::create(buffer_size, 0u, &buffer_vmo);
@@ -122,6 +124,7 @@ bool Tracee::Initialize(fidl::VectorPtr<std::string> categories, size_t buffer_s
   start_callback_ = std::move(start_callback);
   stop_callback_ = std::move(stop_callback);
   terminate_callback_ = std::move(terminate_callback);
+  alert_callback_ = std::move(alert_callback);
 
   wait_.set_object(fifo_.get());
   wait_.set_trigger(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED);
@@ -225,7 +228,7 @@ void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wai
   trace_provider_packet_t packet;
   auto status2 = zx_fifo_read(wait_.object(), sizeof(packet), &packet, 1u, nullptr);
   FXL_DCHECK(status2 == ZX_OK);
-  if (packet.data16 != 0) {
+  if (packet.data16 != 0 && packet.request != TRACE_PROVIDER_ALERT) {
     FXL_LOG(ERROR) << *bundle_ << ": Received bad packet, non-zero data16 field: " << packet.data16;
     Abort();
     return;
@@ -297,6 +300,18 @@ void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wai
         FXL_LOG(WARNING) << *bundle_ << ": Received TRACE_PROVIDER_STOPPED in state " << state_;
       }
       break;
+    case TRACE_PROVIDER_ALERT: {
+      auto p = reinterpret_cast<const char*>(&packet.data16);
+      size_t size = sizeof(packet.data16) + sizeof(packet.data32) + sizeof(packet.data64);
+      std::string alert_name;
+      alert_name.reserve(size);
+
+      for (size_t i = 0; i < size && *p != 0; ++i) {
+        alert_name.push_back(*p++);
+      }
+
+      alert_callback_(std::move(alert_name));
+    } break;
     default:
       FXL_LOG(ERROR) << *bundle_ << ": Received bad packet, unknown request: " << packet.request;
       Abort();

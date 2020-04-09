@@ -14,6 +14,7 @@
 #include <lib/zx/socket.h>
 
 #include <list>
+#include <queue>
 
 #include "garnet/bin/trace_manager/config.h"
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
@@ -45,6 +46,7 @@ class TraceManager : public controller::Controller, public provider::Registry {
   void StopTracing(controller::StopOptions options, StopTracingCallback cb) override;
   void GetProviders(GetProvidersCallback cb) override;
   void GetKnownCategories(GetKnownCategoriesCallback callback) override;
+  void WatchAlert(WatchAlertCallback cb) override;
 
   // |TraceRegistry| implementation.
   void RegisterProviderWorker(fidl::InterfaceHandle<provider::Provider> provider, uint64_t pid,
@@ -59,6 +61,8 @@ class TraceManager : public controller::Controller, public provider::Registry {
   controller::SessionState TranslateSessionState(TraceSession::State state);
   void LaunchConfiguredProviders();
 
+  void OnAlert(const std::string& alert_name);
+
   TraceManagerApp* const app_;
 
   // Non-owning copy of component context. |TraceManagerApp| has the owning
@@ -70,6 +74,8 @@ class TraceManager : public controller::Controller, public provider::Registry {
   uint32_t next_provider_id_ = 1u;
   fxl::RefPtr<TraceSession> session_;
   std::list<TraceProviderBundle> providers_;
+  std::queue<std::string> alerts_;
+  std::queue<WatchAlertCallback> watch_alert_callbacks_;
 
   TraceManager(const TraceManager&) = delete;
   TraceManager(TraceManager&&) = delete;

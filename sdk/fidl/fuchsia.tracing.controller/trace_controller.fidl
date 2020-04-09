@@ -21,6 +21,9 @@ const uint32 MAX_CATEGORY_NAME_LENGTH = 100;
 /// The maximum length of a category description.
 const uint32 MAX_CATEGORY_DESCRIPTION_LENGTH = 400;
 
+/// The maximum length of an alert name.
+const uint32 MAX_ALERT_NAME_LENGTH = 14;
+
 /// The state of the tracing session.
 /// A "session" is everything between `Initialize` and `Terminate`.
 enum SessionState {
@@ -101,6 +104,9 @@ protocol Controller {
 
     /// Event sent when the session state changes.
     -> OnSessionStateChange(SessionState state);
+
+    /// Returns the next alert when it arrives.
+    WatchAlert() -> (string:MAX_ALERT_NAME_LENGTH alert_name);
 };
 
 // This is a copy of provider.fidl:BufferingMode.

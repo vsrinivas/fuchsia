@@ -27,6 +27,8 @@ constexpr uint32_t kDefaultBufferSizeMegabytesHint = 4;
 constexpr uint32_t kDefaultStartTimeoutMilliseconds = 5000;
 constexpr controller::BufferingMode kDefaultBufferingMode = controller::BufferingMode::ONESHOT;
 
+constexpr size_t kMaxAlertQueueDepth = 16;
+
 uint32_t ConstrainBufferSize(uint32_t buffer_size_megabytes) {
   return std::min(std::max(buffer_size_megabytes, kMinBufferSizeMegabytes),
                   kMaxBufferSizeMegabytes);
@@ -130,7 +132,8 @@ void TraceManager::InitializeTracing(controller::TraceConfig config, zx::socket 
   session_ = fxl::MakeRefCounted<TraceSession>(
       std::move(output), std::move(categories), default_buffer_size_megabytes,
       provider_buffering_mode, std::move(provider_specs), zx::msec(start_timeout_milliseconds),
-      kStopTimeout, [this]() { session_ = nullptr; });
+      kStopTimeout, [this]() { session_ = nullptr; },
+      [this](const std::string& alert_name) { OnAlert(alert_name); });
 
   // The trace header is written now to ensure it appears first, and to avoid
   // timing issues if the trace is terminated early (and the session being
@@ -288,6 +291,16 @@ void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
   callback(std::move(known_categories));
 }
 
+void TraceManager::WatchAlert(WatchAlertCallback cb) {
+  FXL_VLOG(2) << "WatchAlert";
+  if (alerts_.empty()) {
+    watch_alert_callbacks_.push(std::move(cb));
+  } else {
+    cb(std::move(alerts_.front()));
+    alerts_.pop();
+  }
+}
+
 void TraceManager::RegisterProviderWorker(fidl::InterfaceHandle<provider::Provider> provider,
                                           uint64_t pid, fidl::StringPtr name) {
   FXL_VLOG(2) << "Registering provider {" << pid << ":" << name.value_or("") << "}";
@@ -374,6 +387,21 @@ void TraceManager::LaunchConfiguredProviders() {
     fidl::Clone(pair.second->arguments, &launch_info.arguments);
     launcher->CreateComponent(std::move(launch_info), nullptr);
   }
+}
+
+void TraceManager::OnAlert(const std::string& alert_name) {
+  if (watch_alert_callbacks_.empty()) {
+    if (alerts_.size() == kMaxAlertQueueDepth) {
+      // We're at our queue depth limit. Discard the oldest alert.
+      alerts_.pop();
+    }
+
+    alerts_.push(alert_name);
+    return;
+  }
+
+  watch_alert_callbacks_.front()(alert_name);
+  watch_alert_callbacks_.pop();
 }
 
 }  // namespace tracing

@@ -56,6 +56,8 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
     // |TraceManager::session_| == nullptr).
   };
 
+  using AlertCallback = fit::function<void(const std::string& alert_name)>;
+
   // Initializes a new session that streams results to |destination|.
   // Every provider active in this session is handed |categories| and a vmo of size
   // |buffer_size_megabytes| when started.
@@ -65,7 +67,8 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   explicit TraceSession(zx::socket destination, std::vector<std::string> categories,
                         size_t buffer_size_megabytes, provider::BufferingMode buffering_mode,
                         TraceProviderSpecMap&& provider_specs, zx::duration start_timeout,
-                        zx::duration stop_timeout, fit::closure abort_handler);
+                        zx::duration stop_timeout, fit::closure abort_handler,
+                        AlertCallback alert_callback);
 
   // Frees all allocated resources and closes the outgoing
   // connection.
@@ -185,6 +188,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   fit::closure terminate_callback_;
 
   fit::closure abort_handler_;
+  AlertCallback alert_callback_;
 
   // Force the clearing of provider trace buffers on the next start.
   // This is done when a provider stops with |write_results| set in

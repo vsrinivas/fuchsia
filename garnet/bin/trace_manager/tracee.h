@@ -51,6 +51,7 @@ class Tracee {
   using StartCallback = fit::closure;
   using StopCallback = fit::function<void(bool write_results)>;
   using TerminateCallback = fit::closure;
+  using AlertCallback = fit::function<void(const std::string& alert_name)>;
 
   // The size of the initialization record.
   static constexpr size_t kInitRecordSizeBytes = 16;
@@ -62,7 +63,8 @@ class Tracee {
 
   bool Initialize(fidl::VectorPtr<std::string> categories, size_t buffer_size,
                   provider::BufferingMode buffering_mode, StartCallback start_callback,
-                  StopCallback stop_callback, TerminateCallback terminate_callback);
+                  StopCallback stop_callback, TerminateCallback terminate_callback,
+                  AlertCallback alert_callback);
 
   void Terminate();
 
@@ -155,6 +157,7 @@ class Tracee {
   StartCallback start_callback_;
   StopCallback stop_callback_;
   TerminateCallback terminate_callback_;
+  AlertCallback alert_callback_;
 
   async_dispatcher_t* dispatcher_ = nullptr;
   async::WaitMethod<Tracee, &Tracee::OnHandleReady> wait_;
