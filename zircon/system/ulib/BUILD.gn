@@ -211,7 +211,6 @@ group("ulib") {
     "fs/metrics",
 #------------------
 #------------------
-    "fs/test/posix:posix_tests",
 #------------------
 #------------------
     "fs/test_support:fs_test_support",

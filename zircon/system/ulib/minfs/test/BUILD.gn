@@ -137,12 +137,12 @@ test("minfs-integration") {
     "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/minfs",
-    "//zircon/public/lib/posix_tests",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/fidl/fuchsia-minfs:llcpp",
     "//zircon/system/ulib/fs-test-utils",
+    "//zircon/system/ulib/fs/test/posix:posix_tests",
   ]
 }
 

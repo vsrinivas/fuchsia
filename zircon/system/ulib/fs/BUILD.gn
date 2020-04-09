@@ -111,7 +111,3 @@ zx_library("fs") {
     ]
   }
 }
-
-group("posix") {
-  deps = [ "posix:posix_tests" ]
-}
