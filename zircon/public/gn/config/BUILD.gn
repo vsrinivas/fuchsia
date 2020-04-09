@@ -720,6 +720,12 @@ config("auto_var_init") {
   }
 }
 
+config("tiny") {
+  cflags = [ "-mcmodel=tiny" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
 # TODO(42305): We will temporarily disable UBSan for a specified number of
 # instances where UBSan triggers runtime errors. This config will go away once
 # the asan-ubsan variant is in CI/CQ and we remove all instances of caught

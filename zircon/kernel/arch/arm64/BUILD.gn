@@ -16,7 +16,10 @@ if (current_toolchain == default_toolchain) {
       is_kernel = true
     }
     configs += standard_fuchsia_configs + [ ":physmem_config" ]
-    tags = [ "standalone" ]
+    tags = [
+      "standalone",
+      "strict-align",
+    ]
     exclude_variant_tags = [ "instrumented" ]
   }
 } else {
@@ -44,16 +47,25 @@ if (current_toolchain == default_toolchain) {
     include_dirs = [ "include" ]
   }
 
-  # This is used pervasively throughout the kernel on arm64.
-  config("kernel") {
+  # These set the ABI contract between C++ and assembly code.
+  # This is kept consistent between the kernel proper and phys
+  # so (pure PIC) code should be callable from the kernel proper.
+  config("abi") {
     # x15 is reserved so we can use it to point at the per-CPU structure.
     cflags = [ "-ffixed-x15" ]
 
     if (!is_gcc) {
-      cflags += [
-        # Use the right thread-pointer ABI for the kernel.
-        "-mtp=el1",
+      # Use the right thread-pointer ABI for the kernel.
+      cflags += [ "-mtp=el1" ]
+    }
+  }
 
+  # This is used pervasively throughout the kernel on arm64.
+  config("kernel") {
+    cflags = []
+
+    if (!is_gcc) {
+      cflags += [
         # Use shadow-call-stack rather than safe-stack for the kernel,
         # regardless of the compiler's default.
         "-fno-sanitize=safe-stack",

@@ -109,6 +109,7 @@ if (current_toolchain == default_toolchain) {
       ":scheduler",
       ":standalone",
       ":warnings",
+      "arch/$zircon_cpu:abi",
       "arch/$zircon_cpu:kernel",
 
       # include/lib/counters.h and kernel.ld depend on -fdata-sections.

@@ -6,8 +6,10 @@
 
 import("$zx/kernel/params.gni")
 
-# This is used pervasively throughout the kernel on x86.
-config("kernel") {
+# These set the ABI contract between C++ and assembly code.
+# This is kept consistent between the kernel proper and phys
+# so (pure PIC) code should be callable from the kernel proper.
+config("abi") {
   cflags = [
     "-mno-red-zone",
 
@@ -36,7 +38,10 @@ config("kernel") {
     # ABI for the kernel.
     cflags += [ "-mcmodel=kernel" ]
   }
+}
 
+# This is used pervasively throughout the kernel on x86.
+config("kernel") {
   defines = [
     "ARCH_X86",
 

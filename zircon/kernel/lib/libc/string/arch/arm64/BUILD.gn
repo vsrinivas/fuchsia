@@ -5,8 +5,9 @@
 # https://opensource.org/licenses/MIT
 
 source_set("arm64") {
-  if (toolchain.environment == "physmem") {
-    # The no-MMU environment can't handled unaligned accesses, which the
+  if (toolchain.tags + [ "strict-align" ] - [ "strict-align" ] !=
+      toolchain.tags) {
+    # This environment can't handled unaligned accesses, which the
     # optimized assembly routines do.
     sources = [
       "$zx/kernel/lib/libc/string/memcpy.c",

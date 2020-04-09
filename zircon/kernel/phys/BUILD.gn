@@ -1,0 +1,94 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/toolchain/environment.gni")
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+if (current_toolchain == default_toolchain) {
+  # Default toolchain (current_cpu == "") just defines the phys environment.
+  foreach(cpu, standard_fuchsia_cpus) {
+    kernel_cpu = cpu
+    if (kernel_cpu == "x64") {
+      kernel_cpu = "x86"
+    }
+
+    environment("kernel.phys") {
+      cpu = cpu  # Would be inherited, but this is more obvious.
+
+      globals = {
+        is_kernel = true
+      }
+
+      configs += standard_fuchsia_configs
+      configs += [
+        "$zx/kernel:standalone",
+        "$zx/kernel:warnings",
+        "$zx/kernel/arch/$kernel_cpu:abi",
+
+        # All physmem code is inherently sensitive and in a position for
+        # any bug to be unusually dangerous.  So compile with minimal
+        # undefined behavior checking in all builds, regardless of variant.
+        "$zx/public/gn/config/instrumentation:ubsan-trap",
+      ]
+
+      tags = [
+        "physmem",
+        "standalone",
+      ]
+      exclude_variant_tags = [ "instrumentation-runtime" ]
+
+      # Append the arch-specific lists.  The phys/phys.gni file in each
+      # arch subdirectory defines phys_* lists to append to the parameters.
+      import("$zx/kernel/arch/$kernel_cpu/phys/phys.gni")
+      configs += phys_configs
+      tags += phys_tags
+      exclude_variant_tags += phys_exclude_variant_tags
+    }
+  }
+} else if (toolchain.environment != "kernel.phys") {
+  # From another environment (e.g. user, kernel), the public targets
+  # redirect into the phys environment.
+  assert(current_cpu != "")
+
+  environment_redirect("tests") {
+    testonly = true
+    direct = true
+    environment_label = ":kernel.phys"
+    deps = [ "test" ]
+  }
+
+  foreach(target, []) {  # TODO: ["physboot"]
+    environment_redirect(target) {
+      environment_label = ":kernel.phys"
+      deps = [ ":$target_name" ]
+    }
+  }
+} else {
+  # All the code gets built here in the phys environment.
+
+  # This is used implicitly by phys_executable() targets.
+  source_set("phys_executable.deps") {
+    sources = [
+      "panic.cc",
+      "stack.cc",
+    ]
+    deps = [
+      ":main",
+      "$zx/kernel/arch/$zircon_cpu/phys",
+    ]
+  }
+
+  # Things in other directories include main.h by source-absolute path.
+  # But they put this in their deps to get its transitive deps.
+  source_set("main") {
+    sources = [ "main.h" ]
+    public_deps = [
+      # "main.h" has #include <lib/arch/ticks.h>.
+      "$zx/kernel/lib/arch",
+    ]
+  }
+}

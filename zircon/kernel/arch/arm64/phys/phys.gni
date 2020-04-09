@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# See $zx/kernel/phys/BUILD.gn:kernel.phys.
+
+phys_configs = [
+  # With the MMU and caches disabled, misaligned accesses always fault.
+  # Tell the compiler to emit only aligned accesses, assuming the code
+  # obeys the C++ alignment rules.  The toolchain.tags string can be
+  # matched to exclude assembly code that does unaligned accesses.
+  "$zx/kernel/arch/arm64/phys:strict-align",
+
+  # All phys executables should be small enough for the tiny code model.
+  "$zx/public/gn/config:tiny",
+]
+phys_tags = [
+  "strict-align",
+  "tiny",
+]
+
+phys_exclude_variant_tags = []

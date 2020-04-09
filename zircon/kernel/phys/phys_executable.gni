@@ -1,0 +1,150 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("$zx/public/gn/toolchain/c_utils.gni")
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+_is_phys = toolchain.environment == "kernel.phys"
+
+# Build an executable for the phys environment.
+#
+# This defines one public target whose output is the raw binary image.
+# The target is used like executable(), but deps on this target from
+# other environments transparently redirect to the phys environment, and
+# a custom linker script is always required.  There are also implicit
+# deps to supply the phys entry point code that calls the C++ PhysMain
+# via the "main.h" API.
+#
+# Parameters
+#
+#   * linker_sciprt
+#     - Required: Custom linker script.
+#     - Type: file
+#
+#   * output_extension
+#     - Optional: See executable(), but defaults to "bin".
+#     - Default: "bin"
+#
+#   * tags
+#     - Optional: Tags to put in the //:images metadata for the target.
+#     - Type: list(string)
+#     - Default: []
+#
+# See executable() for other parameters.
+#
+template("phys_executable") {
+  if (!_is_phys) {
+    environment_redirect(target_name) {
+      environment_label = "$zx/kernel/phys:kernel.phys"
+      deps = [ ":$target_name" ]
+    }
+    not_needed(invoker, "*")
+  } else {
+    image_target = target_name
+    executable_target = "_phys_executable.$target_name.executable"
+
+    # This is the actual linking target.  It creates an ELF file that acts
+    # as the debug file but is not used at runtime.
+    executable(executable_target) {
+      visibility = [ ":*" ]
+      deps = []
+      inputs = []
+      ldflags = []
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "linker_script",
+                               "metadata",
+                               "output_dir",
+                               "output_extension",
+                               "visibility",
+                               "tags",
+                             ])
+      deps += [ "$zx/kernel/phys:phys_executable.deps" ]
+      inputs += [ invoker.linker_script ]
+      ldflags +=
+          [ "-Wl,-T," + rebase_path(invoker.linker_script, root_build_dir) ]
+    }
+
+    # This is the main target of the template, a raw binary load image file.
+    image_binary(image_target) {
+      forward_variables_from(invoker,
+                             [
+                               "output_dir",
+                               "output_extension",
+                               "output_name",
+                               "testonly",
+                               "visibility",
+                             ])
+      if (defined(visibility)) {
+        # Make sure it's visible to the environment_redirect() target above.
+        visibility += [ ":$image_target" ]
+      }
+      deps = [ ":$executable_target" ]
+
+      # Make sure it's purely position-independent.
+      pure = true
+
+      # Use the same variant for the extraction that will have built the
+      # actual executable.
+      variant_target = {
+        match = "executable"
+        forward_variables_from(invoker, [ "output_name" ])
+      }
+
+      if (!defined(output_dir)) {
+        output_dir = target_out_dir
+      }
+      if (!defined(output_name)) {
+        output_name = target_name
+      }
+      if (!defined(output_extension)) {
+        output_extension = "bin"
+      }
+      output_path = "$target_out_dir/$output_name.$output_extension"
+
+      metadata = {
+        images = []
+
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+
+        # For the //:images build_api_module().
+        images += [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            name = target_name
+            forward_variables_from(invoker, [ "tags" ])
+            type = output_extension
+            path = rebase_path(output_path, root_build_dir)
+            cpu = current_cpu
+          },
+        ]
+      }
+    }
+  }
+}
+
+if (_is_phys) {
+  # Templates like phys_executable() use this in set_defaults().
+  #
+  # Type: list(config)
+  phys_default_configs = []
+  foreach(config, toolchain.configs) {
+    if (config == "$config") {
+      phys_default_configs += [ config ]
+    } else if (!defined(config.types) || config.types + [ "executable" ] -
+                                         [ "executable" ] != config.types) {
+      phys_default_configs += config.add
+      phys_default_configs -= config.remove
+    }
+  }
+
+  set_defaults("phys_executable") {
+    configs = phys_default_configs
+  }
+}

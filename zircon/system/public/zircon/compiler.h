@@ -5,6 +5,14 @@
 #ifndef SYSROOT_ZIRCON_COMPILER_H_
 #define SYSROOT_ZIRCON_COMPILER_H_
 
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
+
+#ifndef __has_cpp_attribute
+#define __has_cpp_attribute(x) 0
+#endif
+
 #ifndef __ASSEMBLER__
 
 #if !defined(__GNUC__) && !defined(__clang__)
@@ -55,14 +63,6 @@
 #define __THREAD_ANNOTATION(x)
 #endif  // _LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS
 #define __NO_SAFESTACK __attribute__((__no_sanitize__("safe-stack", "shadow-call-stack")))
-#endif
-
-#ifndef __has_feature
-#define __has_feature(x) 0
-#endif
-
-#ifndef __has_cpp_attribute
-#define __has_cpp_attribute(x) 0
 #endif
 
 #define __ALWAYS_INLINE __attribute__((__always_inline__))

@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+library("arch") {
+  kernel = true
+
+  # Not much is actually usable on host, but hwreg definitions and such are.
+  host = true
+
+  sources = []
+
+  # The per-CPU subdirectory is a separate library() target but it shares
+  # (and overrides) the <lib/arch/...> header name space and users of this
+  # library need never realize it's distinct.
+  public_deps = [ current_cpu ]
+}

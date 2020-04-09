@@ -1,0 +1,41 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("$zx/kernel/phys/phys_executable.gni")
+
+assert(toolchain.environment == "kernel.phys")
+
+# This is linked into the special-case phys_executable() tests that
+# are run directly as QEMU kernels.
+source_set("qemu-header") {
+  visibility = [ ":*" ]
+  sources = [ "qemu-header.S" ]
+}
+
+# Ideally we'd test all four combinations on arm64 and both combinations on
+# x86.  But the common library code is always compiled with shadow-call-stack
+# on arm64 so we can't disable the ABI support for it and with safe-stack on
+# x86 so we can't disable the ABI support for it there.  The start.S code only
+# enables extra stack support conditionally so as not to waste space, so there
+# isn't a good way to test non-default configurations.
+phys_executable("start-test") {
+  testonly = true
+  linker_script = "../phys.ld"
+  sources = [ "start-test.cc" ]
+  deps = [
+    ":qemu-header",
+    "$zx/kernel/lib/arch",
+  ]
+}
+
+group("test") {
+  testonly = true
+
+  # TODO(46879): Get it building for x86 too.
+  if (current_cpu == "arm64") {
+    deps = [ ":start-test" ]
+  }
+}

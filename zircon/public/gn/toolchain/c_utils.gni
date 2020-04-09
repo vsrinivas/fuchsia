@@ -241,6 +241,7 @@ template("image_binary") {
     image_deps += [ ":$check_target" ]
     toolchain_utils_action(check_target) {
       visibility = image_target_visibility
+      forward_variables_from(invoker, [ "testonly" ])
       deps = [ ":$rspfile_target" ]
       sources = [ rspfile ]
       outputs = [ "$target_out_dir/$image_target.pure-stamp" ]
