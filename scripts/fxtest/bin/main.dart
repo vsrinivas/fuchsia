@@ -77,7 +77,7 @@ Future<void> main(List<String> args) async {
       await cmdCli.run();
     }
   } on BuildException catch (err) {
-    stderr.write('${wrapWith("Error:", [red])} ${err.toString()}');
+    stderr.writeln('${wrapWith("Error:", [red])} ${err.toString()}');
     exitCode = err.exitCode;
   } on Exception catch (err) {
     if (err is OutputClosedException) {
