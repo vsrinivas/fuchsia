@@ -7,7 +7,6 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/tools/signal_generator/signal_generator.h"
 
 namespace {
@@ -165,8 +164,6 @@ void usage(const char* prog_name) {
 }
 
 int main(int argc, const char** argv) {
-  syslog::SetTags({"signal_generator"});
-
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   if (command_line.HasOption(kHelpSwitch) || command_line.HasOption(kHelp2Switch)) {

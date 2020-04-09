@@ -8,9 +8,11 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <iostream>
+
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/media/audio/lib/logging/cli.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 namespace {
@@ -21,13 +23,18 @@ namespace media::tools {
 
 class WavRecorder {
   static constexpr float kDefaultCaptureGainDb = 0.0f;
+
+  static constexpr float kDefaultFileDurationSecs = 2.0f;
+  static constexpr float kMaxFileDurationSecs = 86400.0f;
+
   static constexpr zx_duration_t kDefaultPacketDuration = ZX_MSEC(100);
   static constexpr float kMinPacketSizeMsec = 1.0f;  // minimum packet size 1 msec!
+  static constexpr float kMaxPacketSizeMsec = 500.0f;
 
  public:
   WavRecorder(fxl::CommandLine cmd_line, fit::closure quit_callback)
       : cmd_line_(std::move(cmd_line)), quit_callback_(std::move(quit_callback)) {
-    FX_DCHECK(quit_callback_);
+    CLI_CHECK(quit_callback_, "quit_callback cannot be null");
   }
 
   ~WavRecorder();
@@ -36,8 +43,8 @@ class WavRecorder {
  private:
   void Usage();
 
-  bool SetupPayloadBuffer();
-  zx_status_t EstablishReferenceClock();
+  void SetupPayloadBuffer();
+  void EstablishReferenceClock();
   void ReceiveClockAndContinue(zx::clock received_clock);
   void OnDefaultFormatFetched(fuchsia::media::StreamType type);
 
@@ -47,7 +54,7 @@ class WavRecorder {
   void DisplayPacket(fuchsia::media::StreamPacket pkt);
 
   void OnQuit();
-  void Shutdown();
+  bool Shutdown();
 
   fuchsia::media::AudioCapturerPtr audio_capturer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
@@ -74,12 +81,16 @@ class WavRecorder {
   bool pack_24bit_samples_ = false;
 
   fuchsia::media::AudioSampleFormat sample_format_;
-  float stream_gain_db_ = 0.0f;
+  float stream_gain_db_ = kDefaultCaptureGainDb;
   bool stream_mute_ = false;
   uint32_t channel_count_ = 0;
   uint32_t frames_per_second_ = 0;
   uint32_t bytes_per_frame_ = 0;
   zx_duration_t packet_duration_ = kDefaultPacketDuration;
+
+  bool file_duration_specifed_ = false;
+  zx::duration file_duration_;
+
   uint32_t frames_per_packet_ = 0;
   uint32_t packets_per_payload_buf_ = 0;
   uint32_t payload_buf_frame_offset_ = 0;

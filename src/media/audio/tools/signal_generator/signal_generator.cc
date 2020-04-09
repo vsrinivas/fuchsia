@@ -10,8 +10,8 @@
 
 #include <fbl/algorithm.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/clock/utils.h"
+#include "src/media/audio/lib/logging/cli.h"
 
 namespace media::tools {
 
@@ -49,16 +49,13 @@ std::string RefTimeMsStrFromZxTime(zx::time zx_time) {
 }
 
 MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_callback)) {
-  FX_DCHECK(quit_callback_);
+  CLI_CHECK(quit_callback_, "quit_callback must not be null");
 }
 
 // Prepare for playback, submit initial data, start the presentation timeline.
 void MediaApp::Run(sys::ComponentContext* app_context) {
   // Check the cmdline flags; exit if any are invalid or out-of-range.
-  if (!ParameterRangeChecks()) {
-    Shutdown();
-    return;
-  }
+  ParameterRangeChecks();
 
   // Calculate the frame size, number of packets, and shared-buffer size.
   SetupPayloadCoefficients();
@@ -70,78 +67,69 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
   AcquireAudioRenderer(app_context);
 
   // Set our render stream format, plus other settings as needed: gain, clock, continuity threshold
-  if (ConfigureAudioRenderer() != ZX_OK) {
-    Shutdown();
-    return;
-  }
+  ConfigureAudioRenderer();
 
   // If requested, configure a WavWriter that will concurrently write this signal to a WAV file.
-  if (!InitializeWavWriter()) {
-    Shutdown();
-    return;
-  }
+  InitializeWavWriter();
 
   // Create VmoMapper(s) that Create+Map a VMO. Send these down via AudioRenderer::AddPayloadBuffer.
-  if (CreateMemoryMapping() != ZX_OK) {
-    Shutdown();
-    return;
-  }
+  CreateMemoryMapping();
 
   // Retrieve the default reference clock for this renderer; once we receive it, start playback.
   GetClockAndStart();
 }
 
-bool MediaApp::ParameterRangeChecks() {
-  bool ret_val = true;
+void MediaApp::ParameterRangeChecks() {
+  bool success = true;
 
   if (num_channels_ < fuchsia::media::MIN_PCM_CHANNEL_COUNT) {
     std::cerr << "Number of channels must be at least " << fuchsia::media::MIN_PCM_CHANNEL_COUNT
               << std::endl;
-    ret_val = false;
+    success = false;
   }
   if (num_channels_ > fuchsia::media::MAX_PCM_CHANNEL_COUNT) {
     std::cerr << "Number of channels must be no greater than "
               << fuchsia::media::MAX_PCM_CHANNEL_COUNT << std::endl;
-    ret_val = false;
+    success = false;
   }
 
   if (frame_rate_ < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) {
     std::cerr << "Frame rate must be at least " << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND
               << std::endl;
-    ret_val = false;
+    success = false;
   }
   if (frame_rate_ > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND) {
     std::cerr << "Frame rate must be no greater than " << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND
               << std::endl;
-    ret_val = false;
+    success = false;
   }
 
   if (frequency_ < 0.0) {
     std::cerr << "Frequency cannot be negative" << std::endl;
-    ret_val = false;
+    success = false;
   }
 
   if (amplitude_ > 1.0) {
     std::cerr << "Amplitude must be no greater than 1.0" << std::endl;
-    ret_val = false;
+    success = false;
   }
   if (amplitude_ < -1.0) {
     std::cerr << "Amplitude must be no less than -1.0" << std::endl;
-    ret_val = false;
+    success = false;
   }
 
   if (duration_secs_ < 0.0) {
     std::cerr << "Duration cannot be negative" << std::endl;
-    ret_val = false;
+    success = false;
   }
 
   if (frames_per_payload_ > frame_rate_ / 2) {
     std::cerr << "Payload size must be 500 milliseconds or less" << std::endl;
-    ret_val = false;
+    success = false;
   }
   if (frames_per_payload_ < frame_rate_ / 1000) {
     std::cerr << "Payload size must be 1 millisecond or more" << std::endl;
-    ret_val = false;
+    success = false;
   }
 
   if (adjusting_clock_rate_) {
@@ -150,12 +138,12 @@ bool MediaApp::ParameterRangeChecks() {
     if (clock_rate_adjustment_ > ZX_CLOCK_UPDATE_MAX_RATE_ADJUST) {
       std::cerr << "Clock adjustment must be " << ZX_CLOCK_UPDATE_MAX_RATE_ADJUST
                 << " parts-per-million or less" << std::endl;
-      ret_val = false;
+      success = false;
     }
     if (clock_rate_adjustment_ < ZX_CLOCK_UPDATE_MIN_RATE_ADJUST) {
       std::cerr << "Clock rate adjustment must be " << ZX_CLOCK_UPDATE_MIN_RATE_ADJUST
                 << " parts-per-million or more" << std::endl;
-      ret_val = false;
+      success = false;
     }
   }
 
@@ -167,7 +155,7 @@ bool MediaApp::ParameterRangeChecks() {
   usage_volume_ = fbl::clamp<float>(usage_volume_, fuchsia::media::audio::MIN_VOLUME,
                                     fuchsia::media::audio::MAX_VOLUME);
 
-  return ret_val;
+  CLI_CHECK(success, "Exiting.");
 }
 
 // Based on the user-specified values for signal frequency and milliseconds per payload, calculate
@@ -217,7 +205,7 @@ void MediaApp::DisplayConfigurationSettings() {
                          [usage = usage_](auto usage_string_and_usage) {
                            return usage == usage_string_and_usage.second;
                          });
-  FX_DCHECK(it != kRenderUsageOptions.cend());
+  CLI_CHECK(it != kRenderUsageOptions.cend(), "no RenderUsage found");
   auto usage_str = it->first;
 
   printf("\nAudioRenderer configured for %d-channel %s at %u Hz with the %s usage.", num_channels_,
@@ -302,9 +290,8 @@ void MediaApp::SetAudioCoreSettings(sys::ComponentContext* app_context) {
       audio_core->BindUsageVolumeControl(std::move(usage), usage_volume_control_.NewRequest());
 
       usage_volume_control_.set_error_handler([this](zx_status_t status) {
-        std::cerr << "Client connection to fuchsia.media.audio.VolumeControl failed: " << status
-                  << std::endl;
-        Shutdown();
+        CLI_CHECK(Shutdown(),
+                  "Client connection to fuchsia.media.audio.VolumeControl failed: " << status);
       });
     }
 
@@ -323,12 +310,13 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
 
   SetAudioRendererEvents();
 
-  audio_renderer_->BindGainControl(gain_control_.NewRequest());
-  gain_control_.set_error_handler([this](zx_status_t status) {
-    std::cerr << "Client connection to fuchsia.media.audio.GainControl failed: " << status
-              << std::endl;
-    Shutdown();
-  });
+  if (set_stream_mute_ || set_stream_gain_ || ramp_stream_gain_) {
+    audio_renderer_->BindGainControl(gain_control_.NewRequest());
+    gain_control_.set_error_handler([this](zx_status_t status) {
+      CLI_CHECK(Shutdown(),
+                "Client connection to fuchsia.media.audio.GainControl failed: " << status);
+    });
+  }
 
   // ... now just let the instance of audio go out of scope.
   //
@@ -338,10 +326,9 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
 }
 
 // Set the AudioRenderer's audio format, plus other settings requested by command line
-zx_status_t MediaApp::ConfigureAudioRenderer() {
-  FX_DCHECK(audio_renderer_);
+void MediaApp::ConfigureAudioRenderer() {
+  CLI_CHECK(audio_renderer_, "audio_renderer must not be null");
 
-  zx_status_t status = ZX_OK;
   fuchsia::media::AudioStreamType format;
 
   format.sample_format = (use_int24_ ? fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
@@ -359,21 +346,16 @@ zx_status_t MediaApp::ConfigureAudioRenderer() {
       // In both Monotonic and Custom cases, we start with a clone of CLOCK_MONOTONIC.
       // Create, possibly rate-adjust, reduce rights, then send to SetRefClock().
       zx::clock custom_clock;
-      status = zx::clock::create(
+      auto status = zx::clock::create(
           ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START, nullptr,
           &custom_clock);
-      if (status != ZX_OK) {
-        std::cerr << "zx::clock::create failed: " << status << std::endl;
-        return status;
-      }
+      CLI_CHECK_OK(status, "zx::clock::create failed");
+
       if (clock_type_ == ClockType::Custom && adjusting_clock_rate_) {
         zx::clock::update_args args;
         args.reset().set_rate_adjust(clock_rate_adjustment_);
         status = custom_clock.update(args);
-        if (status != ZX_OK) {
-          std::cerr << "zx::clock::update failed: " << status << std::endl;
-          return status;
-        }
+        CLI_CHECK_OK(status, "zx::clock::update failed");
       }
 
       // The clock we send to AudioRenderer cannot have ZX_RIGHT_WRITE. Most clients would retain
@@ -383,10 +365,7 @@ zx_status_t MediaApp::ConfigureAudioRenderer() {
       // later), so we use 'replace' (not 'duplicate').
       auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
       status = custom_clock.replace(rights, &reference_clock_to_set);
-      if (status != ZX_OK) {
-        std::cerr << "zx::clock::duplicate failed: " << status << std::endl;
-        return status;
-      }
+      CLI_CHECK_OK(status, "zx::clock::duplicate failed");
     }
 
     audio_renderer_->SetReferenceClock(std::move(reference_clock_to_set));
@@ -420,31 +399,25 @@ zx_status_t MediaApp::ConfigureAudioRenderer() {
     gain_control_->SetGainWithRamp(ramp_target_gain_db_, ramp_duration_nsec_,
                                    fuchsia::media::audio::RampType::SCALE_LINEAR);
   }
-
-  return status;
 }
 
-bool MediaApp::InitializeWavWriter() {
+void MediaApp::InitializeWavWriter() {
   // 24-bit buffers use 32-bit samples (lowest byte zero), and when this particular utility saves
   // to .wav file, we save the entire 32 bits.
   if (save_to_file_) {
-    if (!wav_writer_.Initialize(file_name_.c_str(),
-                                use_int24_
-                                    ? fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
-                                    : (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
-                                                  : fuchsia::media::AudioSampleFormat::FLOAT),
-                                num_channels_, frame_rate_, sample_size_ * 8)) {
-      std::cerr << "WavWriter::Initialize() failed" << std::endl;
-      return false;
-    }
-    wav_writer_initialized_ = true;
+    wav_writer_initialized_ = wav_writer_.Initialize(
+        file_name_.c_str(),
+        use_int24_ ? fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
+                   : (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
+                                 : fuchsia::media::AudioSampleFormat::FLOAT),
+        num_channels_, frame_rate_, sample_size_ * 8);
+    CLI_CHECK(wav_writer_initialized_, "WavWriter::Initialize() failed");
   }
-  return true;
 }
 
 // Create a VMO and map memory for 1 sec of audio between them. Reduce rights and send handle to
 // AudioRenderer: this is our shared buffer.
-zx_status_t MediaApp::CreateMemoryMapping() {
+void MediaApp::CreateMemoryMapping() {
   for (size_t i = 0; i < num_payload_buffers_; ++i) {
     auto& payload_buffer = payload_buffers_.emplace_back();
     zx::vmo payload_vmo;
@@ -452,15 +425,10 @@ zx_status_t MediaApp::CreateMemoryMapping() {
         payload_mapping_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &payload_vmo,
         ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
-    if (status != ZX_OK) {
-      std::cerr << "VmoMapper:::CreateAndMap failed: " << status << std::endl;
-      return status;
-    }
+    CLI_CHECK(status == ZX_OK || Shutdown(), "VmoMapper:::CreateAndMap failed: " << status);
 
     audio_renderer_->AddPayloadBuffer(i, std::move(payload_vmo));
   }
-
-  return ZX_OK;
 }
 
 void MediaApp::GetClockAndStart() {
@@ -489,11 +457,8 @@ void MediaApp::Play() {
 
     zx::time ref_now;
     auto status = reference_clock_.read(ref_now.get_address());
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "zx::clock::read failed during Play()";
-      Shutdown();
-      return;
-    }
+    CLI_CHECK(status == ZX_OK || Shutdown(), "zx::clock::read failed during Play(): " << status);
+
     srand48(ref_now.get());
 
     reference_start_time_ = use_pts_ ? ref_now + kPlayStartupDelay + min_lead_time_ : kNoTimeStamp;
@@ -514,11 +479,8 @@ void MediaApp::Play() {
       if (verbose_) {
         zx::time ref_now;
         auto status = reference_clock_.read(ref_now.get_address());
-        if (status != ZX_OK) {
-          FX_PLOGS(ERROR, status) << "zx::clock::read failed during Play callback";
-          Shutdown();
-          return;
-        }
+        CLI_CHECK(status == ZX_OK || Shutdown(),
+                  "zx::clock::read failed during Play callback: " << status);
 
         auto actual_ref_str = RefTimeStrFromZxTime(zx::time{actual_ref_start});
         auto actual_media_str = RefTimeStrFromZxTime(zx::time{actual_media_start});
@@ -663,21 +625,18 @@ void MediaApp::SendPacket() {
   GenerateAudioForPacket(packet, num_packets_sent_);
 
   if (save_to_file_) {
-    if (!wav_writer_.Write(
-            reinterpret_cast<char*>(packet.vmo->start()) + packet.stream_packet.payload_offset,
-            packet.stream_packet.payload_size)) {
-      std::cerr << "WavWriter::Write() failed" << std::endl;
-    }
+    CLI_CHECK(wav_writer_.Write(reinterpret_cast<char*>(packet.vmo->start()) +
+                                    packet.stream_packet.payload_offset,
+                                packet.stream_packet.payload_size) ||
+                  Shutdown(),
+              "WavWriter::Write() failed");
   }
 
   if (verbose_) {
     zx::time ref_now;
     auto status = reference_clock_.read(ref_now.get_address());
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "zx::clock::read failed during SendPacket()";
-      Shutdown();
-      return;
-    }
+    CLI_CHECK((status == ZX_OK) || Shutdown(),
+              "zx::clock::read failed during SendPacket(): " << status);
 
     auto pts_str = RefTimeStrFromZxTime(zx::time{packet.stream_packet.pts});
     auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
@@ -700,11 +659,8 @@ void MediaApp::OnSendPacketComplete(uint64_t frames_completed) {
   if (verbose_) {
     zx::time ref_now;
     auto status = reference_clock_.read(ref_now.get_address());
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "zx::clock::read failed during OnSendPacketComplete()";
-      Shutdown();
-      return;
-    }
+    CLI_CHECK(status == ZX_OK || Shutdown(),
+              "zx::clock::read failed during OnSendPacketComplete(): " << status);
 
     auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
     auto mono_now_str = RefTimeMsStrFromZxTime(zx::clock::get_monotonic());
@@ -715,7 +671,8 @@ void MediaApp::OnSendPacketComplete(uint64_t frames_completed) {
   }
 
   ++num_packets_completed_;
-  FX_DCHECK(num_packets_completed_ <= num_packets_to_send_);
+  CLI_CHECK(num_packets_completed_ <= num_packets_to_send_,
+            "packets_completed cannot exceed packets_to_send");
 
   if (num_packets_sent_ < num_packets_to_send_) {
     SendPacket();
@@ -727,8 +684,7 @@ void MediaApp::OnSendPacketComplete(uint64_t frames_completed) {
 // Enable audio renderer callbacks
 void MediaApp::SetAudioRendererEvents() {
   audio_renderer_.set_error_handler([this](zx_status_t status) {
-    std::cerr << "Client connection to fuchsia.media.AudioRenderer failed: " << status << std::endl;
-    Shutdown();
+    CLI_CHECK(Shutdown(), "Client connection to fuchsia.media.AudioRenderer failed: " << status);
   });
 
   audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
@@ -742,27 +698,20 @@ void MediaApp::SetAudioRendererEvents() {
   audio_renderer_->EnableMinLeadTimeEvents(true);
 }
 
-// Disable audio renderer callbacks
-void MediaApp::ResetAudioRendererEvents() {
-  if (audio_renderer_.is_bound()) {
-    audio_renderer_->EnableMinLeadTimeEvents(false);
-    audio_renderer_.events().OnMinLeadTimeChanged = nullptr;
-    audio_renderer_.set_error_handler(nullptr);
-  }
-}
-
 // Unmap memory, quit message loop (FIDL interfaces auto-delete upon ~MediaApp).
-void MediaApp::Shutdown() {
-  ResetAudioRendererEvents();
+bool MediaApp::Shutdown() {
+  gain_control_.Unbind();
+  usage_volume_control_.Unbind();
+  audio_renderer_.Unbind();
 
   if (wav_writer_initialized_) {
-    if (!wav_writer_.Close()) {
-      std::cerr << "WavWriter::Close() failed" << std::endl;
-    }
+    CLI_CHECK(wav_writer_.Close(), "WavWriter::Close() failed");
   }
 
   payload_buffers_.clear();
   quit_callback_();
+
+  return false;
 }
 
 }  // namespace media::tools

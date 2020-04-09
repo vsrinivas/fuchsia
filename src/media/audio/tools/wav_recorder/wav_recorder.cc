@@ -30,9 +30,7 @@ constexpr char kCustomClockOption[] = "custom-clock";
 constexpr char kClockRateAdjustOption[] = "rate-adjust";
 constexpr char kClockRateAdjustDefault[] = "-75";
 constexpr char kPacketDurationOption[] = "packet-ms";
-constexpr char kRecordDurationOption[] = "duration";
-constexpr char kDurationDefaultSecs[] = "2.0";
-constexpr float kMaxDurationSecs = 86400.0f;
+constexpr char kFileDurationOption[] = "duration";
 constexpr char kVerboseOption[] = "v";
 constexpr char kShowUsageOption1[] = "help";
 constexpr char kShowUsageOption2[] = "?";
@@ -41,8 +39,6 @@ constexpr uint32_t kPayloadBufferId = 0;
 
 WavRecorder::~WavRecorder() {
   if (payload_buf_virt_ != nullptr) {
-    FX_DCHECK(payload_buf_size_ != 0);
-    FX_DCHECK(bytes_per_frame_ != 0);
     zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_), payload_buf_size_);
   }
 }
@@ -60,16 +56,21 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
   verbose_ = cmd_line_.HasOption(kVerboseOption);
   loopback_ = cmd_line_.HasOption(kLoopbackOption);
 
-  float duration = 0.0f;
   std::string opt;
-  if (cmd_line_.GetOptionValue(kRecordDurationOption, &opt)) {
-    if (opt == "")
-      opt = kDurationDefaultSecs;
+  if (cmd_line_.GetOptionValue(kFileDurationOption, &opt)) {
+    file_duration_specifed_ = true;
 
-    if (sscanf(opt.c_str(), "%f", &duration) != 1 || duration <= 0 || duration > kMaxDurationSecs) {
-      printf("Duration must be positive (max: %.1f)!\n", kMaxDurationSecs);
-      return;
+    float duration;
+    if (opt == "") {
+      duration = kDefaultFileDurationSecs;
+    } else {
+      CLI_CHECK(sscanf(opt.c_str(), "%f", &duration) == 1, "Duration must be numeric");
+      CLI_CHECK(duration >= 0, "Duration cannot be negative");
+      CLI_CHECK(duration <= kMaxFileDurationSecs, "Maximum duration is " << kMaxFileDurationSecs);
     }
+
+    printf("\nWe will record for %.3f seconds.", duration);
+    file_duration_ = zx::duration(duration * ZX_SEC(1));
   }
 
   if (cmd_line_.HasOption(kCustomClockOption) || cmd_line_.HasOption(kClockRateAdjustOption)) {
@@ -81,13 +82,13 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
         if (rate_adjust_str == "") {
           rate_adjust_str = kClockRateAdjustDefault;
         }
-        if (sscanf(rate_adjust_str.c_str(), "%i", &clock_rate_adjustment_) != 1 ||
-            clock_rate_adjustment_ > ZX_CLOCK_UPDATE_MAX_RATE_ADJUST ||
-            clock_rate_adjustment_ < ZX_CLOCK_UPDATE_MIN_RATE_ADJUST) {
-          printf("Clock rate adjustment must be an integer between %d and %d\n",
-                 ZX_CLOCK_UPDATE_MIN_RATE_ADJUST, ZX_CLOCK_UPDATE_MAX_RATE_ADJUST);
-          return;
-        }
+        CLI_CHECK(sscanf(rate_adjust_str.c_str(), "%i", &clock_rate_adjustment_) == 1,
+                  "Clock rate adjustment must be an integer");
+        CLI_CHECK(clock_rate_adjustment_ >= ZX_CLOCK_UPDATE_MIN_RATE_ADJUST &&
+                      clock_rate_adjustment_ <= ZX_CLOCK_UPDATE_MAX_RATE_ADJUST,
+                  "Clock rate adjustment must be between " << ZX_CLOCK_UPDATE_MIN_RATE_ADJUST
+                                                           << " and "
+                                                           << ZX_CLOCK_UPDATE_MAX_RATE_ADJUST);
       }
     }
   } else if (cmd_line_.HasOption(kMonotonicClockOption)) {
@@ -98,11 +99,7 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
     clock_type_ = ClockType::Default;
   }
 
-  if (pos_args.size() < 1) {
-    Usage();
-    return;
-  }
-
+  CLI_CHECK(pos_args.size() >= 1, "No filename specified");
   filename_ = pos_args[0].c_str();
 
   // Connect to the audio service and obtain AudioCapturer and Gain interfaces.
@@ -111,27 +108,17 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
   audio->CreateAudioCapturer(audio_capturer_.NewRequest(), loopback_);
   audio_capturer_->BindGainControl(gain_control_.NewRequest());
   audio_capturer_.set_error_handler([this](zx_status_t status) {
-    std::cerr << "Client connection to fuchsia.media.AudioCapturer failed: " << status << std::endl;
-    Shutdown();
+    CLI_CHECK(Shutdown(), "Client connection to fuchsia.media.AudioCapturer failed");
   });
   gain_control_.set_error_handler([this](zx_status_t status) {
-    std::cerr << "Client connection to fuchsia.media.GainControl failed: " << status << std::endl;
-    Shutdown();
+    CLI_CHECK(Shutdown(), "Client connection to fuchsia.media.GainControl failed");
   });
 
-  if (EstablishReferenceClock() != ZX_OK) {
-    return;
-  }
+  EstablishReferenceClock();
 
-  // TODO (b/148807692): produce a file with exactly the expected number of frames, or timeout.
-  if (duration > 0) {
-    zx::duration wait_time = zx::sec(duration);
-    async::PostDelayedTask(
-        async_get_default_dispatcher(), [this] { OnQuit(); }, wait_time);
-  } else {
-    // Quit if someone hits a key.
-    keystroke_waiter_.Wait([this](zx_status_t, uint32_t) { OnQuit(); }, STDIN_FILENO, POLLIN);
-  }
+  // Quit if someone hits a key.
+  keystroke_waiter_.Wait([this](zx_status_t, uint32_t) { OnQuit(); }, STDIN_FILENO, POLLIN);
+
   cleanup.cancel();
 }
 
@@ -181,73 +168,62 @@ void WavRecorder::Usage() {
   printf("\n    By default, capture audio using packets of 100.0 msec\n");
   printf("  --%s=<MSECS>\tSpecify the duration (in milliseconds) of each capture packet\n",
          kPacketDurationOption);
-  printf("\t\t\tMinimum packet duration is %.1f millisec\n", kMinPacketSizeMsec);
+  printf("\t\t\t(min %.1f, max %.1f)\n", kMinPacketSizeMsec, kMaxPacketSizeMsec);
 
   printf("\n    By default, capture until a key is pressed\n");
-  printf("  --%s[=<SECS>]\tSpecify a fixed duration rather than waiting for keystroke\n",
-         kRecordDurationOption);
-  printf("\t\t\t(min 0.0, max %.1f, default %s)\n", kMaxDurationSecs, kDurationDefaultSecs);
+  printf("  --%s[=<SECS>]\tStop recording after a fixed duration (or keystroke)\n",
+         kFileDurationOption);
+  printf("\t\t\t(min 0.0, max %.1f, default %.1f)\n", kMaxFileDurationSecs,
+         kDefaultFileDurationSecs);
 
   printf("\n  --%s\t\t\tDisplay per-packet information\n", kVerboseOption);
   printf("  --%s, --%s\t\tShow this message\n", kShowUsageOption1, kShowUsageOption2);
   printf("\n");
 }
 
-void WavRecorder::Shutdown() {
-  if (gain_control_.is_bound()) {
-    gain_control_.set_error_handler(nullptr);
-    gain_control_.Unbind();
-  }
-  if (audio_capturer_.is_bound()) {
-    audio_capturer_.set_error_handler(nullptr);
-    audio_capturer_.Unbind();
-  }
+bool WavRecorder::Shutdown() {
+  gain_control_.Unbind();
+  audio_capturer_.Unbind();
 
   if (clean_shutdown_) {
-    if (wav_writer_.Close()) {
-      printf("done.\n");
-    } else {
-      printf("file close failed.\n");
-    }
+    CLI_CHECK(wav_writer_.Close(), "file close failed.");
+    printf("done.\n");
   } else {
-    if (wav_writer_initialized_ && !wav_writer_.Delete()) {
-      printf("Could not delete WAV file.\n");
+    if (wav_writer_initialized_) {
+      CLI_CHECK(wav_writer_.Delete(), "Could not delete WAV file.");
     }
   }
 
   quit_callback_();
+  return false;
 }
 
-bool WavRecorder::SetupPayloadBuffer() {
+void WavRecorder::SetupPayloadBuffer() {
   frames_per_packet_ = (packet_duration_ * frames_per_second_) / ZX_SEC(1);
 
   packets_per_payload_buf_ = std::ceil(static_cast<float>(frames_per_second_) / frames_per_packet_);
   payload_buf_frames_ = frames_per_packet_ * packets_per_payload_buf_;
   payload_buf_size_ = payload_buf_frames_ * bytes_per_frame_;
+  CLI_CHECK(payload_buf_size_, "payload_buf_size must be non-zero");
 
   auto status = zx::vmo::create(payload_buf_size_, 0, &payload_buf_vmo_);
-  if (status != ZX_OK) {
-    std::cerr << "Failed to create " << payload_buf_size_ << "-byte payload buffer: " << status
-              << std::endl;
-    return false;
-  }
+  CLI_CHECK_OK(status, "Failed to create " << payload_buf_size_ << "-byte payload buffer");
 
   uintptr_t tmp;
   status =
       zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_, ZX_VM_PERM_READ, &tmp);
-  if (status != ZX_OK) {
-    std::cerr << "Failed to map " << payload_buf_size_ << "-byte payload buffer: " << status
-              << std::endl;
-    return false;
-  }
+  CLI_CHECK_OK(status, "Failed to map " << payload_buf_size_ << "-byte payload buffer");
   payload_buf_virt_ = reinterpret_cast<void*>(tmp);
-
-  return true;
 }
 
 void WavRecorder::SendCaptureJob() {
-  FX_DCHECK(payload_buf_frame_offset_ < payload_buf_frames_);
-  FX_DCHECK((payload_buf_frame_offset_ + frames_per_packet_) <= payload_buf_frames_);
+  CLI_CHECK(payload_buf_frame_offset_ < payload_buf_frames_,
+            "payload_buf_frame_offset:" << payload_buf_frame_offset_
+                                        << " must < payload_buf_frames:" << payload_buf_frames_);
+  CLI_CHECK((payload_buf_frame_offset_ + frames_per_packet_) <= payload_buf_frames_,
+            "payload_buf_frame_offset:" << payload_buf_frame_offset_
+                                        << " + frames_per_packet:" << frames_per_packet_
+                                        << " must <= payload_buf_frames:" << payload_buf_frames_);
 
   ++outstanding_capture_jobs_;
 
@@ -267,7 +243,7 @@ void WavRecorder::SendCaptureJob() {
 }
 
 // Set the ref clock if requested, then retrieve ref clock and continue when callback is received
-zx_status_t WavRecorder::EstablishReferenceClock() {
+void WavRecorder::EstablishReferenceClock() {
   if (clock_type_ != ClockType::Default) {
     // With any of these 3 options, we will first set a reference clock before we retrieve it
     zx::clock reference_clock_to_set;
@@ -281,20 +257,14 @@ zx_status_t WavRecorder::EstablishReferenceClock() {
       zx::clock custom_clock;
       auto status = zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr,
                                       &custom_clock);
-      if (status != ZX_OK) {
-        FX_PLOGS(ERROR, status) << "zx::clock::create failed";
-        return status;
-      }
+      CLI_CHECK_OK(status, "zx::clock::create failed");
       zx::clock::update_args args;
       args.reset().set_value(zx::clock::get_monotonic());
       if (clock_type_ == ClockType::Custom && adjusting_clock_rate_) {
         args.set_rate_adjust(clock_rate_adjustment_);
       }
       status = custom_clock.update(args);
-      if (status != ZX_OK) {
-        FX_PLOGS(ERROR, status) << "zx::clock::update failed";
-        return status;
-      }
+      CLI_CHECK_OK(status, "zx::clock::update failed");
 
       // The clock we send to AudioCapturer cannot have ZX_RIGHT_WRITE. Most clients would retain
       // their custom clocks for subsequent rate-adjustment, and thus would use 'duplicate' to
@@ -303,10 +273,7 @@ zx_status_t WavRecorder::EstablishReferenceClock() {
       // later), so we use 'replace' (not 'duplicate').
       auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
       status = custom_clock.replace(rights, &reference_clock_to_set);
-      if (status != ZX_OK) {
-        FX_PLOGS(ERROR, status) << "zx::clock::duplicate failed";
-        return status;
-      }
+      CLI_CHECK_OK(status, "zx::clock::duplicate failed");
     }
 
     audio_capturer_->SetReferenceClock(std::move(reference_clock_to_set));
@@ -315,8 +282,6 @@ zx_status_t WavRecorder::EstablishReferenceClock() {
   // we receive the reference clock later in ReceiveClockAndContinue
   audio_capturer_->GetReferenceClock(
       [this](zx::clock received_clock) { ReceiveClockAndContinue(std::move(received_clock)); });
-
-  return ZX_OK;
 }
 
 // Once we've received the reference clock, request the default format and continue
@@ -338,10 +303,7 @@ void WavRecorder::ReceiveClockAndContinue(zx::clock received_clock) {
 void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
-  if (!type.medium_specific.is_audio()) {
-    std::cerr << "Default format is not audio!" << std::endl;
-    return;
-  }
+  CLI_CHECK(type.medium_specific.is_audio(), "Default format is not audio!");
 
   const auto& fmt = type.medium_specific.audio();
 
@@ -371,17 +333,11 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   std::string opt;
   if (cmd_line_.GetOptionValue(kFrameRateOption, &opt)) {
     uint32_t rate;
-    if (sscanf(opt.c_str(), "%u", &rate) != 1) {
-      Usage();
-      return;
-    }
-
-    if ((rate < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
-        (rate > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
-      printf("Frame rate (%u) must be within range [%u, %u]\n", rate,
-             fuchsia::media::MIN_PCM_FRAMES_PER_SECOND, fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
-      return;
-    }
+    CLI_CHECK(sscanf(opt.c_str(), "%u", &rate) == 1, "Frame rate must be a positive integer");
+    CLI_CHECK(rate >= fuchsia::media::MIN_PCM_FRAMES_PER_SECOND &&
+                  rate <= fuchsia::media::MAX_PCM_FRAMES_PER_SECOND,
+              "Frame rate must be between " << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << " and "
+                                            << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
 
     if (frames_per_second_ != rate) {
       frames_per_second_ = rate;
@@ -395,15 +351,12 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     if (cmd_line_.GetOptionValue(kGainOption, &opt)) {
       if (opt == "") {
         printf("Setting gain to the default %.3f dB\n", stream_gain_db_);
-      } else if (sscanf(opt.c_str(), "%f", &stream_gain_db_) != 1) {
-        Usage();
-        return;
-      } else if ((stream_gain_db_ < fuchsia::media::audio::MUTED_GAIN_DB) ||
-                 (stream_gain_db_ > fuchsia::media::audio::MAX_GAIN_DB)) {
-        printf("Gain (%.3f dB) must be within range [%.1f, %.1f]\n", stream_gain_db_,
-               fuchsia::media::audio::MUTED_GAIN_DB, fuchsia::media::audio::MAX_GAIN_DB);
-
-        return;
+      } else {
+        CLI_CHECK(sscanf(opt.c_str(), "%f", &stream_gain_db_) == 1, "Gain must be numeric");
+        CLI_CHECK(stream_gain_db_ >= fuchsia::media::audio::MUTED_GAIN_DB &&
+                      stream_gain_db_ <= fuchsia::media::audio::MAX_GAIN_DB,
+                  "Gain must be between " << fuchsia::media::audio::MUTED_GAIN_DB << " and "
+                                          << fuchsia::media::audio::MAX_GAIN_DB);
       }
     }
     change_gain = true;
@@ -411,30 +364,21 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
 
   if (cmd_line_.HasOption(kMuteOption)) {
     stream_mute_ = true;
-    if (cmd_line_.GetOptionValue(kMuteOption, &opt)) {
+    if (cmd_line_.GetOptionValue(kMuteOption, &opt) && opt != "") {
       uint32_t mute_val;
-      if (sscanf(opt.c_str(), "%u", &mute_val) != 1) {
-        Usage();
-        return;
-      }
-      stream_mute_ = (mute_val > 0);
+      CLI_CHECK(sscanf(opt.c_str(), "%u", &mute_val) == 1, "Unable to read Mute value");
+      stream_mute_ = (mute_val != 0u);
     }
     set_mute = true;
   }
 
   if (cmd_line_.GetOptionValue(kChannelsOption, &opt)) {
     uint32_t count;
-    if (sscanf(opt.c_str(), "%u", &count) != 1) {
-      Usage();
-      return;
-    }
-
-    if ((count < fuchsia::media::MIN_PCM_CHANNEL_COUNT) ||
-        (count > fuchsia::media::MAX_PCM_CHANNEL_COUNT)) {
-      printf("Channel count (%u) must be within range [%u, %u]\n", count,
-             fuchsia::media::MIN_PCM_CHANNEL_COUNT, fuchsia::media::MAX_PCM_CHANNEL_COUNT);
-      return;
-    }
+    CLI_CHECK(sscanf(opt.c_str(), "%u", &count) == 1, "Channels must be a positive integer");
+    CLI_CHECK((count >= fuchsia::media::MIN_PCM_CHANNEL_COUNT) &&
+                  (count <= fuchsia::media::MAX_PCM_CHANNEL_COUNT),
+              "Channels must be between " << fuchsia::media::MIN_PCM_CHANNEL_COUNT << " and "
+                                          << fuchsia::media::MAX_PCM_CHANNEL_COUNT);
 
     if (channel_count_ != count) {
       channel_count_ = count;
@@ -455,14 +399,6 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     bits_per_sample = 24;
   }
 
-  // Write the inital WAV header
-  if (!wav_writer_.Initialize(filename_, sample_format_, channel_count_, frames_per_second_,
-                              bits_per_sample)) {
-    printf("Could not create the file '%s'\n", filename_);
-    return;
-  }
-  wav_writer_initialized_ = true;
-
   // If desired format differs from default capturer format, change formats now.
   if (change_format) {
     audio_capturer_->SetPcmStreamType(
@@ -480,31 +416,44 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   // Check whether the user wanted a specific duration for each capture packet.
   if (cmd_line_.GetOptionValue(kPacketDurationOption, &opt)) {
     double packet_size_msec;
-    if (sscanf(opt.c_str(), "%lf", &packet_size_msec) != 1) {
-      Usage();
-      return;
-    }
-    if (packet_size_msec < kMinPacketSizeMsec) {
-      printf("Packet size must be at least %.1f msec\n", kMinPacketSizeMsec);
-      return;
-    }
+    CLI_CHECK(sscanf(opt.c_str(), "%lf", &packet_size_msec) == 1, "Unable to read packet size");
+    CLI_CHECK(
+        packet_size_msec >= kMinPacketSizeMsec && packet_size_msec <= kMaxPacketSizeMsec,
+        "Packet size must be between " << kMinPacketSizeMsec << " and " << kMaxPacketSizeMsec);
     // Don't simply ZX_MSEC(packet_size_msec): that discards any fractional component
     packet_duration_ = packet_size_msec * ZX_MSEC(1);
   }
 
   // Create a shared payload buffer, map it, dup the handle and pass it to the capturer to fill.
-  if (!SetupPayloadBuffer()) {
-    return;
-  }
+  SetupPayloadBuffer();
 
   zx::vmo audio_capturer_vmo;
   auto status = payload_buf_vmo_.duplicate(
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &audio_capturer_vmo);
-  if (status != ZX_OK) {
-    std::cerr << "Failed to duplicate VMO handle: " << status << std::endl;
-    return;
-  }
+  CLI_CHECK_OK(status, "Failed to duplicate VMO handle");
+
   audio_capturer_->AddPayloadBuffer(kPayloadBufferId, std::move(audio_capturer_vmo));
+
+  if (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) {
+    CLI_CHECK(bits_per_sample == (pack_24bit_samples_ ? 24 : 32),
+              "Incorrect bits_per_sample value");
+
+    if (pack_24bit_samples_ == true) {
+      compress_32_24_buff_ = std::make_unique<uint8_t[]>(payload_buf_size_ * 3 / 4);
+    }
+  }
+
+  if (cmd_line_.HasOption(kAsyncModeOption)) {
+    CLI_CHECK(
+        payload_buf_frames_ && frames_per_packet_ && !(payload_buf_frames_ % frames_per_packet_),
+        "payload_buf_frames must be a multiple of frames_per_packet; both must be non-zero");
+  }
+
+  // Write the inital WAV header
+  CLI_CHECK(wav_writer_.Initialize(filename_, sample_format_, channel_count_, frames_per_second_,
+                                   bits_per_sample),
+            "Could not create the file '" << filename_ << "'");
+  wav_writer_initialized_ = true;
 
   // Will we operate in synchronous or asynchronous mode?  If synchronous, queue
   // all our capture buffers to get the ball rolling. If asynchronous, set an
@@ -514,20 +463,16 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
       SendCaptureJob();
     }
   } else {
-    FX_DCHECK(payload_buf_frames_);
-    FX_DCHECK(frames_per_packet_);
-    FX_DCHECK((payload_buf_frames_ % frames_per_packet_) == 0);
     audio_capturer_.events().OnPacketProduced = [this](fuchsia::media::StreamPacket pkt) {
       OnPacketProduced(pkt);
     };
     audio_capturer_->StartAsyncCapture(frames_per_packet_);
   }
 
-  if (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) {
-    FX_DCHECK(bits_per_sample == (pack_24bit_samples_ ? 24 : 32));
-    if (pack_24bit_samples_ == true) {
-      compress_32_24_buff_ = std::make_unique<uint8_t[]>(payload_buf_size_ * 3 / 4);
-    }
+  // TODO (b/148807692): produce a file with exactly the expected number of frames, or timeout.
+  if (file_duration_specifed_) {
+    async::PostDelayedTask(
+        async_get_default_dispatcher(), [this] { OnQuit(); }, file_duration_);
   }
 
   printf(
@@ -600,9 +545,7 @@ void WavRecorder::DisplayPacket(fuchsia::media::StreamPacket pkt) {
   zx_time_t ref_now;
   auto status = reference_clock_.read(&ref_now);
   auto mono_now = zx::clock::get_monotonic().get();
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "reference_clock_.read failed";
-  }
+  CLI_CHECK(status == ZX_OK || Shutdown(), "reference_clock_.read failed");
 
   char ref_now_str[kTimeStrLen], mono_now_str[kTimeStrLen];
   TimeToStr(ref_now, ref_now_str);
@@ -623,10 +566,13 @@ void WavRecorder::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
     --outstanding_capture_jobs_;
   }
 
-  FX_DCHECK((pkt.payload_offset + pkt.payload_size) <= (payload_buf_frames_ * bytes_per_frame_));
+  CLI_CHECK((pkt.payload_offset + pkt.payload_size) <= (payload_buf_frames_ * bytes_per_frame_) ||
+                Shutdown(),
+            "pkt.payload_offset:" << pkt.payload_offset
+                                  << " + pkt.payload_size:" << pkt.payload_size << " too large");
 
   if (pkt.payload_size) {
-    FX_DCHECK(payload_buf_virt_);
+    CLI_CHECK(payload_buf_virt_ || Shutdown(), "payload_buf_virt cannot be null");
 
     auto tgt = reinterpret_cast<uint8_t*>(payload_buf_virt_) + pkt.payload_offset;
 
@@ -650,9 +596,7 @@ void WavRecorder::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
 
     if (!wav_writer_.Write(reinterpret_cast<void* const>(tgt), write_size)) {
       printf("File write failed. Trying to save any already-written data.\n");
-      if (!wav_writer_.Close()) {
-        printf("File close failed as well.\n");
-      }
+      CLI_CHECK(wav_writer_.Close(), "File close failed as well.");
       Shutdown();
     }
   }
@@ -672,17 +616,19 @@ void WavRecorder::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
 
 // On receiving the key-press to quit, start the sequence of unwinding.
 void WavRecorder::OnQuit() {
-  printf("Shutting down...\n");
-  clean_shutdown_ = true;
+  if (!clean_shutdown_) {
+    clean_shutdown_ = true;
+    printf("Shutting down...\n");
 
-  // If async-mode, we can shutdown now (need not wait for packets to return).
-  if (audio_capturer_.events().OnPacketProduced != nullptr) {
-    audio_capturer_->StopAsyncCaptureNoReply();
-    Shutdown();
-  }
-  // If operating in sync-mode, wait for all packets to return, then Shutdown.
-  else {
-    audio_capturer_->DiscardAllPacketsNoReply();
+    // If async-mode, we can shutdown now (need not wait for packets to return).
+    if (audio_capturer_.events().OnPacketProduced != nullptr) {
+      audio_capturer_->StopAsyncCaptureNoReply();
+      Shutdown();
+    }
+    // If operating in sync-mode, wait for all packets to return, then Shutdown.
+    else {
+      audio_capturer_->DiscardAllPacketsNoReply();
+    }
   }
 }
 

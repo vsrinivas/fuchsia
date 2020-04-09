@@ -104,17 +104,16 @@ class MediaApp {
   void Run(sys::ComponentContext* app_context);
 
  private:
-  bool ParameterRangeChecks();
+  void ParameterRangeChecks();
   void SetupPayloadCoefficients();
   void DisplayConfigurationSettings();
 
   void SetAudioCoreSettings(sys::ComponentContext* app_context);
   void AcquireAudioRenderer(sys::ComponentContext* app_context);
   void SetAudioRendererEvents();
-  void ResetAudioRendererEvents();
-  zx_status_t ConfigureAudioRenderer();
-  bool InitializeWavWriter();
-  zx_status_t CreateMemoryMapping();
+  void ConfigureAudioRenderer();
+  void InitializeWavWriter();
+  void CreateMemoryMapping();
 
   void GetClockAndStart();
   void Play();
@@ -133,7 +132,7 @@ class MediaApp {
                                    uint64_t frames_since_start, OutputSignalType signal_type,
                                    uint32_t num_chans, double frames_per_period, double amp_scalar);
 
-  void Shutdown();
+  bool Shutdown();
   fit::closure quit_callback_;
 
   fuchsia::media::AudioRendererPtr audio_renderer_;
