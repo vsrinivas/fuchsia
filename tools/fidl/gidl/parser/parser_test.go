@@ -511,6 +511,47 @@ func TestParseDecodeFailureCase(t *testing.T) {
 	checkMatch(t, all, expectedAll, err)
 }
 
+func TestParseBenchmarkCase(t *testing.T) {
+	gidl := `
+	benchmark("OneStringOfMaxLengthFive-empty") {
+		value = OneStringOfMaxLengthFive {
+			first: "four",
+		},
+	}`
+	all, err := parse(gidl)
+	expectedAll := ir.All{
+		DecodeBenchmark: []ir.DecodeBenchmark{{
+			Name: "OneStringOfMaxLengthFive-empty",
+			Value: ir.Record{
+				Name: "OneStringOfMaxLengthFive",
+				Fields: []ir.Field{
+					{
+						Key: ir.FieldKey{
+							Name: "first",
+						},
+						Value: "four",
+					},
+				},
+			},
+		}},
+		EncodeBenchmark: []ir.EncodeBenchmark{{
+			Name: "OneStringOfMaxLengthFive-empty",
+			Value: ir.Record{
+				Name: "OneStringOfMaxLengthFive",
+				Fields: []ir.Field{
+					{
+						Key: ir.FieldKey{
+							Name: "first",
+						},
+						Value: "four",
+					},
+				},
+			},
+		}},
+	}
+	checkMatch(t, all, expectedAll, err)
+}
+
 func TestParseEncodeBenchmarkCase(t *testing.T) {
 	gidl := `
 	encode_benchmark("OneStringOfMaxLengthFive-empty") {
@@ -541,27 +582,25 @@ func TestParseEncodeBenchmarkCase(t *testing.T) {
 func TestParseDecodeBenchmarkCase(t *testing.T) {
 	gidl := `
 	decode_benchmark("OneStringOfMaxLengthFive-empty") {
-		type = TypeName,
-		bytes = [
-			16:raw(
-				1, 0, 0, 0, 0, 0, 0, 0, // length
-				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-				// one character missing
-			),
-		],
+		value = OneStringOfMaxLengthFive {
+			first: "four",
+		},
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
 		DecodeBenchmark: []ir.DecodeBenchmark{{
 			Name: "OneStringOfMaxLengthFive-empty",
-			Type: "TypeName",
-			Encodings: []ir.Encoding{{
-				WireFormat: ir.V1WireFormat,
-				Bytes: []byte{
-					1, 0, 0, 0, 0, 0, 0, 0, // length
-					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			Value: ir.Record{
+				Name: "OneStringOfMaxLengthFive",
+				Fields: []ir.Field{
+					{
+						Key: ir.FieldKey{
+							Name: "first",
+						},
+						Value: "four",
+					},
 				},
-			}},
+			},
 		}},
 	}
 	checkMatch(t, all, expectedAll, err)

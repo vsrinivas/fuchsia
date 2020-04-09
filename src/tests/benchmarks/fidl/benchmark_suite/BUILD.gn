@@ -2,9 +2,14 @@ import("//build/fidl/fidl.gni")
 import("//build/go/go_library.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
-benchmark_suite_gidl_files =
-    [ "//src/tests/benchmarks/fidl/benchmark_suite/inline.gidl" ]
-benchmark_suite_fidl_files = [ "inline.test.fidl" ]
+benchmark_suite_gidl_files = [
+  "//src/tests/benchmarks/fidl/benchmark_suite/inline.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/result.gidl",
+]
+benchmark_suite_fidl_files = [
+  "inline.test.fidl",
+  "result.test.fidl",
+]
 
 fidl("benchmark_suite_fidl") {
   testonly = true

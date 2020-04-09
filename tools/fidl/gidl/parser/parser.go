@@ -240,6 +240,26 @@ var sections = map[string]sectionMetadata{
 			all.DecodeFailure = append(all.DecodeFailure, result)
 		},
 	},
+	"benchmark": {
+		requiredKinds: map[bodyElement]bool{isValue: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
+		setter: func(name string, body body, all *ir.All) {
+			encodeBenchmark := ir.EncodeBenchmark{
+				Name:              name,
+				Value:             body.Value,
+				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
+			}
+			all.EncodeBenchmark = append(all.EncodeBenchmark, encodeBenchmark)
+			decodeBenchmark := ir.DecodeBenchmark{
+				Name:              name,
+				Value:             body.Value,
+				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
+			}
+			all.DecodeBenchmark = append(all.DecodeBenchmark, decodeBenchmark)
+		},
+	},
 	"encode_benchmark": {
 		requiredKinds: map[bodyElement]bool{isValue: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
@@ -254,13 +274,12 @@ var sections = map[string]sectionMetadata{
 		},
 	},
 	"decode_benchmark": {
-		requiredKinds: map[bodyElement]bool{isType: true, isBytes: true},
+		requiredKinds: map[bodyElement]bool{isValue: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.DecodeBenchmark{
 				Name:              name,
-				Encodings:         body.Encodings,
-				Type:              body.Type,
+				Value:             body.Value,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
 			}

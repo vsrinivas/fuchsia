@@ -42,7 +42,14 @@ func BenchmarkEncode{{ .Name }}(b *testing.B) {
 
 {{ range .DecodeBenchmarks }}
 func BenchmarkDecode{{ .Name }}(b *testing.B) {
-	data := {{ .Bytes }}
+	data := make([]byte, 65536)
+	{{ .ValueBuild }}
+	input := {{ .ValueVar }}
+	_, _, err := fidl.Marshal(&input, data, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+
 	var output {{ .ValueType }}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -86,7 +93,7 @@ type goEncodeBenchmark struct {
 }
 
 type goDecodeBenchmark struct {
-	Name, ValueType, Bytes string
+	Name, ValueBuild, ValueVar, ValueType, Bytes string
 }
 
 // GenerateBenchmarks generates Go benchmarks.
@@ -130,17 +137,20 @@ func goEncodeBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gi
 func goDecodeBenchmarks(gidlDecodeBenchmarks []gidlir.DecodeBenchmark, schema gidlmixer.Schema) ([]goDecodeBenchmark, error) {
 	var goDecodeBenchmarks []goDecodeBenchmark
 	for _, decodeBenchmark := range gidlDecodeBenchmarks {
-		_, err := schema.ExtractDeclarationByName(decodeBenchmark.Type)
+		decl, err := schema.ExtractDeclaration(decodeBenchmark.Value)
 		if err != nil {
 			return nil, fmt.Errorf("decode benchmark %s: %s", decodeBenchmark.Name, err)
 		}
-		for _, encoding := range decodeBenchmark.Encodings {
-			goDecodeBenchmarks = append(goDecodeBenchmarks, goDecodeBenchmark{
-				Name:      decodeBenchmark.Name,
-				Bytes:     bytesBuilder(encoding.Bytes),
-				ValueType: "benchmarkfidl." + decodeBenchmark.Type,
-			})
-		}
+		var valueBuilder goValueBuilder
+		gidlmixer.Visit(&valueBuilder, decodeBenchmark.Value, decl)
+		valueBuild := valueBuilder.String()
+		valueVar := valueBuilder.lastVar
+		goDecodeBenchmarks = append(goDecodeBenchmarks, goDecodeBenchmark{
+			Name:       decodeBenchmark.Name,
+			ValueBuild: valueBuild,
+			ValueVar:   valueVar,
+			ValueType:  "benchmarkfidl." + decodeBenchmark.Value.(gidlir.Record).Name,
+		})
 	}
 	return goDecodeBenchmarks, nil
 }

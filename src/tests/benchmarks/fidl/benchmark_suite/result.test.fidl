@@ -21,3 +21,7 @@ union ErrorSyntaxResult {
     1: ErrorSyntaxResponse response;
     2: uint32 err;
 };
+
+struct ErrorSyntaxResultStruct {
+    ErrorSyntaxResult result;
+};
