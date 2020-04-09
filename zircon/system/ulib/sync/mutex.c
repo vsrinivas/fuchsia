@@ -14,6 +14,10 @@
 // "Mutex, Take 2", with one modification: We use an atomic swap in
 // sync_mutex_unlock() rather than an atomic decrement.
 
+__NO_INLINE __NO_RETURN void PanicAttemptedToReenterMutex(void) {
+  __builtin_trap();
+}
+
 // On success, this will leave the mutex in the LOCKED_WITH_WAITERS state.
 static zx_status_t lock_slow_path(sync_mutex_t* mutex, zx_time_t deadline,
                                   zx_futex_storage_t owned_and_contested_val,
@@ -28,8 +32,39 @@ static zx_status_t lock_slow_path(sync_mutex_t* mutex, zx_time_t deadline,
         atomic_compare_exchange_strong(&mutex->futex, &old_state, contested_state)) {
       zx_status_t status = _zx_futex_wait(&mutex->futex, contested_state,
                                           libsync_mutex_make_owner_from_state(old_state), deadline);
-      if (status == ZX_ERR_TIMED_OUT)
-        return ZX_ERR_TIMED_OUT;
+
+      // There are only three different values that we expect to come back from
+      // a wait operation; OK, BAD_STATE, and TIMED_OUT.  OK and BAD_STATE imply
+      // that we need to attempt to acquire the mutex again.  TIMED_OUT means
+      // that we need to abort with a timeout error.  Anything else means that
+      // something went fatally wrong.  The most common of these things which
+      // can go wrong is that a user attempt to re-enter a mutex they already
+      // own and attempts to assign ownership of the futex to themselves.  This
+      // is not allowed and would cause INVALID_ARGS to be returned.
+      //
+      // If nothing is done about this situation, we would just end up spinning
+      // forever, either attempting to acquire a mutex we already own or
+      // attempting to wait on a bad mutex address, or something like that.
+      // Instead of allowing this to happen, terminate the process instead.
+      switch (status) {
+        case ZX_OK:
+        case ZX_ERR_BAD_STATE:
+          break;
+
+        case ZX_ERR_TIMED_OUT:
+          return ZX_ERR_TIMED_OUT;
+
+        default:
+          // Explicitly check for the re-entrance failure mode here.  If we see
+          // it, panic by calling a specific function instead of just performing
+          // the abort here.  This only reason to do this is to make it
+          // absolutely clear in crashlog backtraces that an attempt to re-enter
+          // the mutex cause the failure.
+          if (_zx_thread_self() == libsync_mutex_make_owner_from_state(old_state)) {
+            PanicAttemptedToReenterMutex();
+          }
+          __builtin_trap();
+      }
     }
 
     // Try again to claim the mutex.  On this try, we must set the mutex

@@ -33,7 +33,7 @@ static_assert((~CONTESTED_BIT & ZX_HANDLE_FIXED_BITS_MASK) != 0,
               "bits in zx_handle_t's");
 
 static inline zx_futex_storage_t libsync_mutex_locked_and_uncontested(void) {
-  return ((zx_futex_storage_t)zx_thread_self());
+  return ((zx_futex_storage_t)_zx_thread_self());
 }
 
 static inline bool libsync_mutex_is_contested(zx_futex_storage_t val) {

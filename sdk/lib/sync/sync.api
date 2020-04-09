@@ -2,6 +2,6 @@
   "pkg/sync/include/lib/sync/completion.h": "97343bc4d0cc5f6761572d89cd5a785c",
   "pkg/sync/include/lib/sync/condition.h": "36383c497c91e6ee1b9d04258609a65c",
   "pkg/sync/include/lib/sync/internal/condition-template.h": "23bc401516f442af746be2c0bcdf7aca",
-  "pkg/sync/include/lib/sync/internal/mutex-internal.h": "c1091f00925e00852c2a25130786bc15",
-  "pkg/sync/include/lib/sync/mutex.h": "dc0fdb2306c6e7268be159fe05170b8e"
+  "pkg/sync/include/lib/sync/internal/mutex-internal.h": "cb1547d638623f8e43ab7465c7d3675a",
+  "pkg/sync/include/lib/sync/mutex.h": "fa5a5b0798bc5600a6a6281574887b49"
 }

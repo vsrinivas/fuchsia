@@ -190,3 +190,13 @@ TEST(SyncMutex, TimeoutElapsed) {
   ASSERT_EQ(zx_handle_close(args.start_event), ZX_OK, "failed to close event");
   ASSERT_EQ(zx_handle_close(args.done_event), ZX_OK, "failed to close event");
 }
+
+TEST(SyncMutex, NoRecursion) {
+  // libsync mutexes are not recursive mutexes.  Attempting to re-enter an
+  // already held mutex should result in death.
+  ASSERT_DEATH([]() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    sync_mutex_t mutex;
+    sync_mutex_lock(&mutex);
+    sync_mutex_lock(&mutex);
+  });
+}
