@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/mdns_tests"
+        "binary": "test/mdns_test"
     },
     "sandbox": {
         "features": [

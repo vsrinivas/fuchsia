@@ -9,3 +9,8 @@ group("mdns") {
     "util",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "service:tests" ]
+}

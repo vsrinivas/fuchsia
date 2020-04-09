@@ -22,10 +22,10 @@ group("service") {
     ":mdns",
     ":mdns_config",
     ":mdns_fuzzers",
+    ":mdns_test",
     ":mdns_tests",
     ":packet_reader_fuzzer",
     ":source_set",
-    ":tests",
   ]
 }
 
@@ -117,9 +117,7 @@ source_set("source_set") {
   }
 }
 
-test("tests") {
-  output_name = "mdns_tests"
-
+test("mdns_test") {
   sources = [
     "test/agent_test.cc",
     "test/agent_test.h",
@@ -172,12 +170,22 @@ config_data("mdns_fuchsia_udp_config") {
   deps = [ "//build/validate:non_production_tag" ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":mdns_fuzzers",
+    ":mdns_netemul_tests",
+    ":mdns_netemul_v6_tests",
+    ":mdns_tests",
+  ]
+}
+
 test_package("mdns_tests") {
-  deps = [ ":tests" ]
+  deps = [ ":mdns_test" ]
 
   tests = [
     {
-      name = "mdns_tests"
+      name = "mdns_test"
       environments = basic_envs
     },
   ]

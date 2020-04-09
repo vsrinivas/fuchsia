@@ -25,13 +25,3 @@ group("utils") {
   testonly = true
   public_deps = [ "//src/connectivity/network/mdns/util:mdns-util" ]
 }
-
-group("tests") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/network/mdns/service:mdns_fuzzers",
-    "//src/connectivity/network/mdns/service:mdns_netemul_tests",
-    "//src/connectivity/network/mdns/service:mdns_netemul_v6_tests",
-    "//src/connectivity/network/mdns/service:mdns_tests",
-  ]
-}
