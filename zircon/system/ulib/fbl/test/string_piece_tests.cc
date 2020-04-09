@@ -104,26 +104,6 @@ TEST(StringPieceTest, CopyMoveAndAssignment) {
   }
 }
 
-TEST(StringPieceTest, Set) {
-  const char data[] = "abc";
-
-  fbl::StringPiece str;
-  EXPECT_NULL(str.data());
-  EXPECT_EQ(0u, str.length());
-
-  str.set(data);
-  EXPECT_EQ(data, str.data());
-  EXPECT_EQ(3u, str.length());
-
-  str.set(nullptr);
-  EXPECT_NULL(str.data());
-  EXPECT_EQ(0u, str.length());
-
-  str.set(data, 2);
-  EXPECT_EQ(data, str.data());
-  EXPECT_EQ(2u, str.length());
-}
-
 TEST(StringPieceTest, CompareTest) {
   const char data[] = "abc";
   fbl::StringPiece empty;

@@ -71,18 +71,9 @@ class __POINTER(char) StringPiece {
 
   template <typename T, typename = typename std::enable_if<is_string_like<T>::value>::type>
   constexpr StringPiece& operator=(const T& value) {
-    set(GetStringData(value), GetStringLength(value));
+    data_ = GetStringData(value);
+    length_ = GetStringLength(value);
     return *this;
-  }
-
-  void set(const char* data) {
-    data_ = data;
-    length_ = data != nullptr ? constexpr_strlen(data) : 0U;
-  }
-
-  void set(const char* data, size_t length) {
-    data_ = data;
-    length_ = length;
   }
 
  private:

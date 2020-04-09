@@ -62,7 +62,7 @@ zx_status_t TrimName(fbl::StringPiece name, fbl::StringPiece* name_out, bool* di
     return ZX_ERR_INVALID_ARGS;
   }
 
-  name_out->set(name.data(), len);
+  *name_out = fbl::StringPiece(name.data(), len);
   *dir_out = is_dir;
   return ZX_OK;
 }
@@ -600,17 +600,17 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out_vn, fbl::St
   zx_status_t r;
   while (!path.empty() && path[path.length() - 1] == '/') {
     // Discard extra trailing '/' characters.
-    path.set(path.data(), path.length() - 1);
+    path = fbl::StringPiece(path.data(), path.length() - 1);
   }
 
   for (;;) {
     while (!path.empty() && path[0] == '/') {
       // Discard extra leading '/' characters.
-      path.set(&path[1], path.length() - 1);
+      path = fbl::StringPiece(&path[1], path.length() - 1);
     }
     if (path.empty()) {
       // Convert empty initial path of final path segment to ".".
-      path.set(".", 1);
+      path = fbl::StringPiece(".", 1);
     }
 #ifdef __Fuchsia__
     if (vn->IsRemote()) {
@@ -639,7 +639,7 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out_vn, fbl::St
       return r;
     }
     // Traverse to the next segment.
-    path.set(next_path + 1, path.length() - (component.length() + 1));
+    path = fbl::StringPiece(next_path + 1, path.length() - (component.length() + 1));
   }
 }
 
