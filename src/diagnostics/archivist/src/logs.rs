@@ -5,8 +5,8 @@
 use anyhow::{Context as _, Error};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_logger::{
-    LogFilterOptions, LogListenerSafeMarker, LogMessage, LogRequest, LogRequestStream,
-    LogSinkRequest, LogSinkRequestStream,
+    LogFilterOptions, LogListenerSafeMarker, LogRequest, LogRequestStream, LogSinkRequest,
+    LogSinkRequestStream,
 };
 use fidl_fuchsia_sys_internal::{
     LogConnection, LogConnectionListenerRequest, LogConnectorProxy, SourceIdentity,
@@ -26,6 +26,7 @@ mod stats;
 
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 use listener::{pool::Pool, pretend_scary_listener_is_safe, Listener};
+use message::Message;
 use socket::LogMessageSocket;
 use stats::LogSource;
 
@@ -40,7 +41,7 @@ pub struct LogManager {
 
 struct ManagerInner {
     listeners: Pool,
-    log_msg_buffer: buffer::MemoryBoundedBuffer<LogMessage>,
+    log_msg_buffer: buffer::MemoryBoundedBuffer<Message>,
     stats: stats::LogManagerStats,
 }
 
@@ -65,17 +66,17 @@ impl LogManager {
         K: debuglog::DebugLog + Send + Sync + 'static,
     {
         let mut kernel_logger = debuglog::DebugLogBridge::create(klog_reader);
-        for (log_msg, size) in
+        for log_msg in
             kernel_logger.existing_logs().await.context("reading from kernel log iterator")?
         {
-            self.ingest_message(log_msg, size, LogSource::Kernel).await;
+            self.ingest_message(log_msg, LogSource::Kernel).await;
         }
 
         let manager = self.clone();
         fasync::spawn(async move {
-            let drain_result = kernel_logger.listen().try_for_each(|(log_msg, size)| {
-                manager.ingest_message(log_msg, size, LogSource::Kernel).map(Ok)
-            });
+            let drain_result = kernel_logger
+                .listen()
+                .try_for_each(|log_msg| manager.ingest_message(log_msg, LogSource::Kernel).map(Ok));
 
             if let Err(e) = drain_result.await {
                 eprintln!(
@@ -168,8 +169,8 @@ impl LogManager {
     async fn drain_messages(self, mut log_stream: LogMessageSocket) {
         while let Some(next) = log_stream.next().await {
             match next {
-                Ok((log_msg, size)) => {
-                    self.ingest_message(log_msg, size, stats::LogSource::LogSink).await;
+                Ok(log_msg) => {
+                    self.ingest_message(log_msg, stats::LogSource::LogSink).await;
                 }
                 Err(e) => {
                     eprintln!("log stream errored: {:?}", e);
@@ -246,12 +247,12 @@ impl LogManager {
     }
 
     /// Ingest an individual log message.
-    async fn ingest_message(&self, log_msg: LogMessage, size: usize, source: stats::LogSource) {
+    async fn ingest_message(&self, log_msg: Message, source: stats::LogSource) {
         let mut inner = self.inner.lock().await;
 
         inner.stats.record_log(&log_msg, source);
         inner.listeners.send(&log_msg).await;
-        inner.log_msg_buffer.push(log_msg, size);
+        inner.log_msg_buffer.push(log_msg);
     }
 }
 
@@ -262,7 +263,8 @@ mod tests {
         crate::logs::debuglog::tests::{TestDebugEntry, TestDebugLog},
         crate::logs::message::fx_log_packet_t,
         fidl_fuchsia_logger::{
-            LogFilterOptions, LogLevelFilter, LogMarker, LogProxy, LogSinkMarker, LogSinkProxy,
+            LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy, LogSinkMarker,
+            LogSinkProxy,
         },
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_zircon as zx,

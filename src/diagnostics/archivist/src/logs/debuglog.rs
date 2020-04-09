@@ -4,10 +4,10 @@
 
 // Read debug logs, convert them to LogMessages and serve them.
 
-use super::message::METADATA_SIZE;
+use super::message::{Message, METADATA_SIZE};
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
-use fidl_fuchsia_logger::{self, LogMessage};
+use fidl_fuchsia_logger::{self, LogLevelFilter};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::stream::{unfold, Stream, TryStreamExt};
@@ -56,16 +56,16 @@ impl<K: DebugLog> DebugLogBridge<K> {
         DebugLogBridge { debug_log, buf: Vec::with_capacity(zx::sys::ZX_LOG_RECORD_MAX) }
     }
 
-    async fn read_log(&mut self) -> Result<(LogMessage, usize), zx::Status> {
+    async fn read_log(&mut self) -> Result<Message, zx::Status> {
         loop {
             self.debug_log.read(&mut self.buf).await?;
-            if let Some((message, size)) = convert_debuglog_to_log_message(self.buf.as_slice()) {
-                return Ok((message, size));
+            if let Some(message) = convert_debuglog_to_log_message(self.buf.as_slice()) {
+                return Ok(message);
             }
         }
     }
 
-    pub async fn existing_logs<'a>(&'a mut self) -> Result<Vec<(LogMessage, usize)>, zx::Status> {
+    pub async fn existing_logs<'a>(&'a mut self) -> Result<Vec<Message>, zx::Status> {
         unfold(self, move |klogger| async move {
             match klogger.read_log().await {
                 Err(zx::Status::SHOULD_WAIT) => None,
@@ -76,7 +76,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
         .await
     }
 
-    pub fn listen(self) -> impl Stream<Item = Result<(LogMessage, usize), zx::Status>> {
+    pub fn listen(self) -> impl Stream<Item = Result<Message, zx::Status>> {
         unfold((true, self), move |(mut is_readable, mut klogger)| async move {
             loop {
                 if !is_readable {
@@ -99,7 +99,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
 
 /// Parses a raw debug log read from the kernel.  Returns the parsed message and
 /// its size in memory on success, and None if parsing fails.
-pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<(LogMessage, usize)> {
+pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
     if buf.len() < 32 {
         return None;
     }
@@ -108,28 +108,31 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<(LogMessage, usize)
         return None;
     }
 
-    let mut l = LogMessage {
-        time: LittleEndian::read_i64(&buf[8..16]),
-        pid: LittleEndian::read_u64(&buf[16..24]),
-        tid: LittleEndian::read_u64(&buf[24..32]),
-        severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
-        dropped_logs: 0,
-        tags: vec!["klog".to_string()],
-        msg: String::new(),
-    };
+    let time = zx::Time::from_nanos(LittleEndian::read_i64(&buf[8..16]));
+    let pid = LittleEndian::read_u64(&buf[16..24]);
+    let tid = LittleEndian::read_u64(&buf[24..32]);
 
-    l.msg = match String::from_utf8(buf[32..(32 + data_len)].to_vec()) {
+    let mut contents = match String::from_utf8(buf[32..(32 + data_len)].to_vec()) {
         Err(e) => {
             eprintln!("logger: invalid log record: {:?}", e);
             return None;
         }
         Ok(s) => s,
     };
-    if let Some(b'\n') = l.msg.bytes().last() {
-        l.msg.pop();
+    if let Some(b'\n') = contents.bytes().last() {
+        contents.pop();
     }
-    let size = METADATA_SIZE + 5/*tag*/ + l.msg.len() + 1;
-    Some((l, size))
+
+    Some(Message {
+        size: METADATA_SIZE + 5/*tag*/ + contents.len() + 1,
+        time,
+        pid,
+        tid,
+        severity: LogLevelFilter::Info as _,
+        dropped_logs: 0,
+        tags: vec![String::from("klog")],
+        contents,
+    })
 }
 
 #[cfg(test)]
@@ -235,54 +238,55 @@ pub mod tests {
     #[test]
     fn convert_debuglog_to_log_message_test() {
         let klog = TestDebugEntry::new("test log".as_bytes());
-        let (log_message, size) = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
+        let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            LogMessage {
+            Message {
+                size: METADATA_SIZE + 6 + "test log".len(),
                 pid: klog.pid,
                 tid: klog.tid,
-                time: klog.timestamp,
+                time: zx::Time::from_nanos(klog.timestamp),
                 severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
                 dropped_logs: 0,
                 tags: vec![String::from("klog")],
-                msg: String::from("test log"),
+                contents: String::from("test log"),
             }
         );
-        assert_eq!(size, METADATA_SIZE + 6 + "test log".len());
 
         // maximum allowed klog size
         let klog = TestDebugEntry::new(&vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]);
-        let (log_message, size) = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
+        let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            LogMessage {
+            Message {
+                size: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
                 pid: klog.pid,
                 tid: klog.tid,
-                time: klog.timestamp,
+                time: zx::Time::from_nanos(klog.timestamp),
                 severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
                 dropped_logs: 0,
                 tags: vec![String::from("klog")],
-                msg: String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]).unwrap(),
+                contents: String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32])
+                    .unwrap(),
             }
         );
-        assert_eq!(size, METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32);
 
         // empty message
         let klog = TestDebugEntry::new(&vec![]);
-        let (log_message, size) = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
+        let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            LogMessage {
+            Message {
+                size: METADATA_SIZE + 6,
                 pid: klog.pid,
                 tid: klog.tid,
-                time: klog.timestamp,
+                time: zx::Time::from_nanos(klog.timestamp),
                 severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
                 dropped_logs: 0,
                 tags: vec![String::from("klog")],
-                msg: String::from_utf8(vec![]).unwrap(),
+                contents: String::from_utf8(vec![]).unwrap(),
             }
         );
-        assert_eq!(size, METADATA_SIZE + 6);
 
         // truncated header
         let klog = vec![3u8; 4];
@@ -307,18 +311,16 @@ pub mod tests {
 
         assert_eq!(
             log_bridge.existing_logs().await.unwrap(),
-            vec![(
-                LogMessage {
-                    pid: klog.pid,
-                    tid: klog.tid,
-                    time: klog.timestamp,
-                    severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
-                    dropped_logs: 0,
-                    tags: vec![String::from("klog")],
-                    msg: String::from("test log"),
-                },
-                METADATA_SIZE + 6 + "test log".len()
-            )]
+            vec![Message {
+                size: METADATA_SIZE + 6 + "test log".len(),
+                pid: klog.pid,
+                tid: klog.tid,
+                time: zx::Time::from_nanos(klog.timestamp),
+                severity: LogLevelFilter::Info as _,
+                dropped_logs: 0,
+                tags: vec![String::from("klog")],
+                contents: String::from("test log"),
+            }]
         );
 
         // unprocessable logs should be skipped.
@@ -337,10 +339,10 @@ pub mod tests {
         debug_log.enqueue_read_entry(&TestDebugEntry::new("second test log".as_bytes()));
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream = Box::pin(log_bridge.listen());
-        let (log_message, _len) = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.msg, "test log");
-        let (log_message, _len) = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.msg, "second test log");
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(&log_message.contents, "test log");
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(&log_message.contents, "second test log");
 
         // unprocessable logs should be skipped.
         let debug_log = TestDebugLog::new();
@@ -348,7 +350,7 @@ pub mod tests {
         debug_log.enqueue_read_entry(&TestDebugEntry::new("test log".as_bytes()));
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream = Box::pin(log_bridge.listen());
-        let (log_message, _len) = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.msg, "test log");
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(&log_message.contents, "test log");
     }
 }

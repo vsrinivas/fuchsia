@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+use super::buffer::Accounted;
 use super::error::StreamError;
 use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_logger::LogMessage;
@@ -15,61 +16,126 @@ pub const MAX_DATAGRAM_LEN: usize = 2032;
 pub const MAX_TAGS: usize = 5;
 pub const MAX_TAG_LEN: usize = 64;
 
-pub(super) fn parse_log_message(bytes: &[u8]) -> Result<(LogMessage, usize), StreamError> {
-    if bytes.len() < MIN_PACKET_SIZE {
-        return Err(StreamError::ShortRead { len: bytes.len() });
+/// A type-safe(r) [`LogMessage`].
+///
+/// [`LogMessage`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogMessage
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Message {
+    /// Size this message took up on the wire.
+    pub size: usize,
+
+    /// Message severity reported by the writer.
+    pub severity: fx_log_severity_t,
+
+    /// Timestamp reported by the writer.
+    pub time: zx::Time,
+
+    /// Process koid as reported by the writer.
+    pub pid: zx::sys::zx_koid_t,
+
+    /// Thread koid as reported by the writer.
+    pub tid: zx::sys::zx_koid_t,
+
+    /// Number of logs the writer had to drop before writing this message.
+    pub dropped_logs: usize,
+
+    /// Tags annotating the context or semantics of this message.
+    pub tags: Vec<String>,
+
+    /// The message's string contents.
+    pub contents: String,
+}
+
+impl Accounted for Message {
+    fn bytes_used(&self) -> usize {
+        self.size
     }
+}
 
-    let terminator = bytes[bytes.len() - 1];
-    if terminator != 0 {
-        return Err(StreamError::NotNullTerminated { terminator });
-    }
-
-    let pid = LittleEndian::read_u64(&bytes[..8]);
-    let tid = LittleEndian::read_u64(&bytes[8..16]);
-    let time = LittleEndian::read_i64(&bytes[16..24]);
-    let severity = LittleEndian::read_i32(&bytes[24..28]);
-    let dropped_logs = LittleEndian::read_u32(&bytes[28..METADATA_SIZE]);
-
-    // start reading tags after the header
-    let mut cursor = METADATA_SIZE;
-    let mut tag_len = bytes[cursor] as usize;
-    let mut tags = Vec::new();
-    while tag_len != 0 {
-        if tags.len() == MAX_TAGS {
-            return Err(StreamError::TooManyTags);
+impl Message {
+    /// Parse the provided buffer as if it implements the [logger/syslog wire format].
+    ///
+    /// Note that this is distinct from the parsing we perform for the debuglog log, which aslo
+    /// takes a `&[u8]` and is why we don't implement this as `TryFrom`.
+    ///
+    /// [logger/syslog wire format]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/syslog/include/lib/syslog/wire_format.h
+    pub(super) fn from_logger(bytes: &[u8]) -> Result<Self, StreamError> {
+        if bytes.len() < MIN_PACKET_SIZE {
+            return Err(StreamError::ShortRead { len: bytes.len() });
         }
 
-        if tag_len > MAX_TAG_LEN - 1 {
-            return Err(StreamError::TagTooLong { index: tags.len(), len: tag_len });
+        let terminator = bytes[bytes.len() - 1];
+        if terminator != 0 {
+            return Err(StreamError::NotNullTerminated { terminator });
         }
 
-        if (cursor + tag_len + 1) > bytes.len() {
-            return Err(StreamError::OutOfBounds);
+        let pid = LittleEndian::read_u64(&bytes[..8]);
+        let tid = LittleEndian::read_u64(&bytes[8..16]);
+        let time = zx::Time::from_nanos(LittleEndian::read_i64(&bytes[16..24]));
+        let severity = LittleEndian::read_i32(&bytes[24..28]);
+        let dropped_logs = LittleEndian::read_u32(&bytes[28..METADATA_SIZE]) as usize;
+
+        // start reading tags after the header
+        let mut cursor = METADATA_SIZE;
+        let mut tag_len = bytes[cursor] as usize;
+        let mut tags = Vec::new();
+        while tag_len != 0 {
+            if tags.len() == MAX_TAGS {
+                return Err(StreamError::TooManyTags);
+            }
+
+            if tag_len > MAX_TAG_LEN - 1 {
+                return Err(StreamError::TagTooLong { index: tags.len(), len: tag_len });
+            }
+
+            if (cursor + tag_len + 1) > bytes.len() {
+                return Err(StreamError::OutOfBounds);
+            }
+
+            let tag_start = cursor + 1;
+            let tag_end = tag_start + tag_len;
+            let tag = str::from_utf8(&bytes[tag_start..tag_end])?;
+            tags.push(tag.to_owned());
+
+            cursor = tag_end;
+            tag_len = bytes[cursor] as usize;
         }
 
-        let tag_start = cursor + 1;
-        let tag_end = tag_start + tag_len;
-        let tag = str::from_utf8(&bytes[tag_start..tag_end])?;
-        tags.push(tag.to_owned());
+        let msg_start = cursor + 1;
+        let mut msg_end = cursor + 1;
+        while msg_end < bytes.len() {
+            if bytes[msg_end] == 0 {
+                let contents = str::from_utf8(&bytes[msg_start..msg_end])?.to_owned();
 
-        cursor = tag_end;
-        tag_len = bytes[cursor] as usize;
+                return Ok(Self {
+                    size: cursor + contents.len() + 1,
+                    tags,
+                    contents,
+                    pid,
+                    tid,
+                    time,
+                    severity,
+                    dropped_logs,
+                });
+            }
+            msg_end += 1;
+        }
+
+        Err(StreamError::OutOfBounds)
     }
 
-    let msg_start = cursor + 1;
-    let mut msg_end = cursor + 1;
-    while msg_end < bytes.len() {
-        if bytes[msg_end] == 0 {
-            let msg = str::from_utf8(&bytes[msg_start..msg_end])?.to_owned();
-            cursor += msg.len() + 1;
-
-            return Ok((LogMessage { pid, tid, time, severity, dropped_logs, tags, msg }, cursor));
+    /// Convert this `Message` to a FIDL representation suitable for sending to `LogListenerSafe`.
+    pub fn for_listener(&self) -> LogMessage {
+        LogMessage {
+            pid: self.pid,
+            tid: self.tid,
+            time: self.time.into_nanos(),
+            severity: self.severity,
+            dropped_logs: self.dropped_logs as _,
+            tags: self.tags.clone(),
+            msg: self.contents.clone(),
         }
-        msg_end += 1;
     }
-
-    Err(StreamError::OutOfBounds)
 }
 
 #[allow(non_camel_case_types)]
@@ -171,9 +237,9 @@ mod tests {
         let one_short = &packet.as_bytes()[..METADATA_SIZE];
         let two_short = &packet.as_bytes()[..METADATA_SIZE - 1];
 
-        assert_eq!(parse_log_message(one_short), Err(StreamError::ShortRead { len: 32 }));
+        assert_eq!(Message::from_logger(one_short), Err(StreamError::ShortRead { len: 32 }));
 
-        assert_eq!(parse_log_message(two_short), Err(StreamError::ShortRead { len: 31 }));
+        assert_eq!(Message::from_logger(two_short), Err(StreamError::ShortRead { len: 31 }));
     }
 
     #[test]
@@ -183,7 +249,7 @@ mod tests {
         packet.data[end] = 1;
 
         let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + end];
-        let parsed = parse_log_message(buffer);
+        let parsed = Message::from_logger(buffer);
 
         assert_eq!(parsed, Err(StreamError::NotNullTerminated { terminator: 1 }));
     }
@@ -197,7 +263,7 @@ mod tests {
         packet.data[end] = 0;
 
         let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + end]; // omit null-terminated
-        let parsed = parse_log_message(buffer);
+        let parsed = Message::from_logger(buffer);
 
         assert_eq!(parsed, Err(StreamError::OutOfBounds));
     }
@@ -221,19 +287,19 @@ mod tests {
         let data_size = b_start + b_count;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminate message
-        let (parsed, size) = parse_log_message(buffer).unwrap();
+        let parsed = Message::from_logger(buffer).unwrap();
 
-        assert_eq!(size, METADATA_SIZE + data_size);
         assert_eq!(
             parsed,
-            LogMessage {
+            Message {
+                size: METADATA_SIZE + data_size,
                 pid: packet.metadata.pid,
                 tid: packet.metadata.tid,
-                time: packet.metadata.time,
+                time: zx::Time::from_nanos(packet.metadata.time),
                 severity: packet.metadata.severity,
-                dropped_logs: packet.metadata.dropped_logs,
+                dropped_logs: packet.metadata.dropped_logs as usize,
                 tags: vec![String::from("AAAAAAAAAAA")],
-                msg: String::from("BBBBB"),
+                contents: String::from("BBBBB"),
             }
         );
     }
@@ -256,7 +322,7 @@ mod tests {
         packet.fill_data(b_start..b_end, 'B' as _);
 
         let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + b_end];
-        let parsed = parse_log_message(buffer);
+        let parsed = Message::from_logger(buffer);
 
         assert_eq!(parsed, Err(StreamError::OutOfBounds));
     }
@@ -286,19 +352,19 @@ mod tests {
         let data_size = c_start + c_count;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminated
-        let (parsed, size) = parse_log_message(buffer).unwrap();
+        let parsed = Message::from_logger(buffer).unwrap();
 
-        assert_eq!(size, METADATA_SIZE + data_size);
         assert_eq!(
             parsed,
-            LogMessage {
+            Message {
+                size: METADATA_SIZE + data_size,
                 pid: packet.metadata.pid,
                 tid: packet.metadata.tid,
-                time: packet.metadata.time,
+                time: zx::Time::from_nanos(packet.metadata.time),
                 severity: packet.metadata.severity,
-                dropped_logs: packet.metadata.dropped_logs,
+                dropped_logs: packet.metadata.dropped_logs as usize,
                 tags: vec![String::from("AAAAAAAAAAA"), String::from("BBBBB")],
-                msg: String::from("CCCCC"),
+                contents: String::from("CCCCC"),
             }
         );
     }
@@ -328,25 +394,23 @@ mod tests {
         let min_buffer = &packet.as_bytes()[..METADATA_SIZE + msg_end + 1]; // null-terminated
         let full_buffer = &packet.as_bytes()[..];
 
-        let (min_parsed, min_size) = parse_log_message(min_buffer).unwrap();
-        let (full_parsed, full_size) = parse_log_message(full_buffer).unwrap();
+        let min_parsed = Message::from_logger(min_buffer).unwrap();
+        let full_parsed = Message::from_logger(full_buffer).unwrap();
 
-        let expected_message = LogMessage {
+        let expected_message = Message {
+            size: METADATA_SIZE + msg_end,
             pid: packet.metadata.pid,
             tid: packet.metadata.tid,
-            time: packet.metadata.time,
+            time: zx::Time::from_nanos(packet.metadata.time),
             severity: packet.metadata.severity,
-            dropped_logs: packet.metadata.dropped_logs,
-            msg: String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap(),
+            dropped_logs: packet.metadata.dropped_logs as usize,
+            contents: String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap(),
             tags: (0..MAX_TAGS as _)
                 .map(|tag_num| {
                     String::from_utf8(vec![('A' as c_char + tag_num) as u8; tag_len]).unwrap()
                 })
                 .collect(),
         };
-
-        assert_eq!(min_size, METADATA_SIZE + msg_end);
-        assert_eq!(full_size, min_size);
 
         assert_eq!(min_parsed, expected_message);
         assert_eq!(full_parsed, expected_message);
@@ -371,28 +435,28 @@ mod tests {
 
         let buffer_missing_terminator = &packet.as_bytes()[..METADATA_SIZE + msg_start];
         assert_eq!(
-            parse_log_message(buffer_missing_terminator),
+            Message::from_logger(buffer_missing_terminator),
             Err(StreamError::OutOfBounds),
             "can't parse an empty message without a nul terminator"
         );
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + msg_start + 1]; // null-terminated
-        let (parsed, size) = parse_log_message(buffer).unwrap();
+        let parsed = Message::from_logger(buffer).unwrap();
 
-        assert_eq!(size, METADATA_SIZE + msg_start);
         assert_eq!(
             parsed,
-            LogMessage {
+            Message {
+                size: METADATA_SIZE + msg_start,
                 pid: packet.metadata.pid,
                 tid: packet.metadata.tid,
-                time: packet.metadata.time,
+                time: zx::Time::from_nanos(packet.metadata.time),
                 severity: packet.metadata.severity,
-                dropped_logs: packet.metadata.dropped_logs,
+                dropped_logs: packet.metadata.dropped_logs as usize,
                 tags: (0..MAX_TAGS as _)
                     .map(|tag_num| String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2])
                         .unwrap())
                     .collect(),
-                msg: String::new(),
+                contents: String::new(),
             }
         );
     }
@@ -406,19 +470,19 @@ mod tests {
         packet.data[3] = 0;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + 4]; // 0 tag size + 2 byte message + null
-        let (parsed, size) = parse_log_message(buffer).unwrap();
+        let parsed = Message::from_logger(buffer).unwrap();
 
-        assert_eq!(size, METADATA_SIZE + 3);
         assert_eq!(
             parsed,
-            LogMessage {
+            Message {
+                size: METADATA_SIZE + 3,
                 pid: packet.metadata.pid,
                 tid: packet.metadata.tid,
-                time: packet.metadata.time,
+                time: zx::Time::from_nanos(packet.metadata.time),
                 severity: packet.metadata.severity,
-                dropped_logs: packet.metadata.dropped_logs,
+                dropped_logs: packet.metadata.dropped_logs as usize,
                 tags: vec![],
-                msg: String::from("AA"),
+                contents: String::from("AA"),
             }
         );
     }

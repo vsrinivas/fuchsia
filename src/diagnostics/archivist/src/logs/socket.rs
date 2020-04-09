@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use super::error::StreamError;
-use super::message::{parse_log_message, MAX_DATAGRAM_LEN};
-use fidl_fuchsia_logger::LogMessage;
+use super::message::{Message, MAX_DATAGRAM_LEN};
 use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -24,7 +23,7 @@ pub struct LogMessageSocket {
 }
 
 impl LogMessageSocket {
-    /// Creates a new `LoggerStream` for given `socket`.
+    /// Creates a new `LogMessageSocket` from the given `socket`.
     pub fn new(socket: zx::Socket, source: SourceIdentity) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
@@ -35,23 +34,20 @@ impl LogMessageSocket {
 }
 
 impl Stream for LogMessageSocket {
-    /// It returns log message and the size of the packet received.
-    /// The size does not include the metadata size taken by
-    /// LogMessage data structure.
-    type Item = Result<(LogMessage, usize), StreamError>;
+    type Item = Result<Message, StreamError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let &mut Self { ref mut socket, ref mut buffer, .. } = &mut *self;
         let len = ready!(Pin::new(socket).poll_read(cx, buffer)?);
 
-        let parsed = if len > 0 { Some(parse_log_message(&buffer[..len])) } else { None };
+        let parsed = if len > 0 { Some(Message::from_logger(&buffer[..len])) } else { None };
         Poll::Ready(parsed)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::message::{fx_log_packet_t, METADATA_SIZE};
+    use super::super::message::{fx_log_packet_t, Message, METADATA_SIZE};
     use super::*;
 
     use fuchsia_async::DurationExt;
@@ -75,22 +71,22 @@ mod tests {
 
         let ls = LogMessageSocket::new(sout, SourceIdentity::empty()).unwrap();
         sin.write(packet.as_bytes()).unwrap();
-        let mut expected_p = LogMessage {
-            pid: packet.metadata.pid,
-            tid: packet.metadata.tid,
-            time: packet.metadata.time,
+        let mut expected_p = Message {
+            size: METADATA_SIZE + 6 /* tag */+ 6, /* msg */
+            pid: packet.metadata.pid as _,
+            tid: packet.metadata.tid as _,
+            time: zx::Time::from_nanos(packet.metadata.time),
             severity: packet.metadata.severity,
-            dropped_logs: packet.metadata.dropped_logs,
+            dropped_logs: packet.metadata.dropped_logs as usize,
             tags: Vec::with_capacity(1),
-            msg: String::from("BBBBB"),
+            contents: String::from("BBBBB"),
         };
         expected_p.tags.push(String::from("AAAAA"));
         let calltimes = Arc::new(AtomicUsize::new(0));
         let c = calltimes.clone();
         let f = ls
-            .map_ok(move |(msg, s)| {
+            .map_ok(move |msg| {
                 assert_eq!(msg, expected_p);
-                assert_eq!(s, METADATA_SIZE + 6 /* tag */+ 6 /* msg */);
                 c.fetch_add(1, Ordering::Relaxed);
             })
             .try_collect::<()>();

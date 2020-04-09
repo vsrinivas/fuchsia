@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+use super::{buffer::Accounted, message::Message};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeMarker, LogListenerSafeProxy, LogMessage,
@@ -51,10 +52,11 @@ impl Listener {
 
     /// Send all messages currently in the provided buffer to this listener. Attempts to batch up
     /// to the message size limit. Returns early if the listener appears to be unhealthy.
-    pub async fn backfill<'a>(&mut self, messages: impl Iterator<Item = &'a (LogMessage, usize)>) {
+    pub async fn backfill<'a>(&mut self, messages: impl Iterator<Item = &'a Message>) {
         let mut batch_size = 0;
         let mut filtered_batch = vec![];
-        for (msg, size) in messages {
+        for msg in messages {
+            let size = msg.bytes_used();
             if self.filter.should_send(msg) {
                 if batch_size + size > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
                     self.send_filtered_logs(&mut filtered_batch).await;
@@ -65,7 +67,7 @@ impl Listener {
                     batch_size = 0;
                 }
                 batch_size += size;
-                filtered_batch.push(msg.clone());
+                filtered_batch.push(msg.for_listener());
             }
         }
 
@@ -84,9 +86,10 @@ impl Listener {
     }
 
     /// Send a single log message if it should be sent according to this listener's filter settings.
-    pub async fn send_log(&mut self, mut log_message: LogMessage) {
+    pub async fn send_log(&mut self, log_message: Message) {
         if self.filter.should_send(&log_message) {
-            self.check_result(self.listener.log(&mut log_message).await);
+            let mut to_send = log_message.for_listener();
+            self.check_result(self.listener.log(&mut to_send).await);
         }
     }
 

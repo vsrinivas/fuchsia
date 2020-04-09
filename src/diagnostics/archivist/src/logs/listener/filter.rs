@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use super::ListenerError;
-use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
+use super::{super::message::Message, ListenerError};
+use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter};
 use std::collections::HashSet;
 
 /// Controls whether messages are seen by a given `Listener`. Created from
@@ -66,7 +66,7 @@ impl MessageFilter {
 
     /// This filter defaults to open, allowing messages through. If multiple portions of the filter
     /// are specified, they are additive, only allowing messages through that pass all criteria.
-    pub fn should_send(&self, log_message: &LogMessage) -> bool {
+    pub fn should_send(&self, log_message: &Message) -> bool {
         let reject_pid = self.pid.map(|p| p != log_message.pid).unwrap_or(false);
         let reject_tid = self.tid.map(|t| t != log_message.tid).unwrap_or(false);
         let reject_severity = self.min_severity.map(|m| m > log_message.severity).unwrap_or(false);

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_logger::{LogLevelFilter, LogMessage};
+use super::message::Message;
+use fidl_fuchsia_logger::LogLevelFilter;
 use fuchsia_inspect::{self as inspect, NumericProperty};
 
 /// Structure that holds stats for the log manager.
@@ -46,7 +47,7 @@ impl LogManagerStats {
     /// Record an incoming log from a given source.
     ///
     /// This method updates the counters based on the contents of the log message.
-    pub fn record_log(&self, msg: &LogMessage, source: LogSource) {
+    pub fn record_log(&self, msg: &Message, source: LogSource) {
         self.total_logs.add(1);
         match source {
             LogSource::Kernel => {
