@@ -66,42 +66,42 @@ class ErrorReporter {
     const size_t num_warnings_;
   };
 
-  // Used to create a std::unique_ptr<ReportedError> rather than
+  // Used to create a std::unique_ptr<Error> rather than
   // std::make_unique to avoid having to specify the Args... template parameters
-  // on ReportedError explicitly.
+  // on Error explicitly.
   template <typename... Args>
-  static std::unique_ptr<ReportedError<Args...>> MakeReportedError(
-      const Error<Args...>& err, const std::optional<SourceSpan>& span, Args... args) {
-    return std::make_unique<ReportedError<Args...>>(err, span, args...);
+  static std::unique_ptr<Error<Args...>> MakeError(
+      const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span, Args... args) {
+    return std::make_unique<Error<Args...>>(err, span, args...);
   }
   template <typename... Args>
-  static std::unique_ptr<ReportedError<Args...>> MakeReportedError(
-      const Error<Args...>& err, Args... args) {
-    return std::make_unique<ReportedError<Args...>>(err, std::nullopt, args...);
+  static std::unique_ptr<Error<Args...>> MakeError(
+      const ErrorDef<Args...>& err, Args... args) {
+    return std::make_unique<Error<Args...>>(err, std::nullopt, args...);
   }
 
-  void ReportError(std::unique_ptr<BaseReportedError> err);
+  void ReportError(std::unique_ptr<BaseError> err);
   template <typename... Args>
-  void ReportError(const Error<Args...> err, const Args&... args) {
+  void ReportError(const ErrorDef<Args...> err, const Args&... args) {
     ReportErrorWithSpan(std::nullopt, internal::FormatErr(err.msg, args...));
   }
   template <typename... Args>
-  void ReportError(const Error<Args...> err, const std::optional<SourceSpan>& span,
+  void ReportError(const ErrorDef<Args...> err, const std::optional<SourceSpan>& span,
                    const Args&... args) {
     ReportErrorWithSpan(span, internal::FormatErr(err.msg, args...));
   }
   template <typename ...Args>
-  void ReportError(const Error<Args...> err, const Token& token, const Args& ...args) {
+  void ReportError(const ErrorDef<Args...> err, const Token& token, const Args& ...args) {
     ReportErrorWithSpan(token.span(), internal::FormatErr(err.msg, args...));
   }
 
   template <typename... Args>
-  void ReportWarning(const Error<Args...> err, const std::optional<SourceSpan>& span,
+  void ReportWarning(const ErrorDef<Args...> err, const std::optional<SourceSpan>& span,
                      const Args& ...args) {
     ReportWarningWithSpan(span, internal::FormatErr(err.msg, args...));
   }
   template <typename... Args>
-  void ReportWarning(const Error<Args...> err, const Token& token, const Args& ...args) {
+  void ReportWarning(const ErrorDef<Args...> err, const Token& token, const Args& ...args) {
     ReportWarningWithSpan(token.span(), internal::FormatErr(err.msg, args...));
   }
 

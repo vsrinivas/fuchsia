@@ -89,33 +89,33 @@ std::string FormatErr(std::string_view msg, T t, Rest... rest) {
 
 }  // namespace internal
 
-struct BaseError {
-  constexpr BaseError(std::string_view msg) : msg(msg) {}
+struct BaseErrorDef {
+  constexpr BaseErrorDef(std::string_view msg) : msg(msg) {}
 
   std::string_view msg;
 };
 
-// The definition of an error. All instances of Error are in this header.
+// The definition of an error. All instances of ErrorDef are in errors.h.
 // Template args define format parameters in the error message.
 template <typename... Args>
-struct Error : BaseError {
-  constexpr Error(std::string_view msg) : BaseError(msg) {
+struct ErrorDef : BaseErrorDef {
+  constexpr ErrorDef(std::string_view msg) : BaseErrorDef(msg) {
     // This can't be a static assert because msg is not constexpr.
     assert(sizeof...(Args) == internal::count_format_args(msg) &&
            "number of format string parameters '{}' != number of template arguments");
   }
 };
 
-struct BaseReportedError {
-  BaseReportedError(const BaseError& err, const std::optional<SourceSpan>& span)
+struct BaseError {
+  BaseError(const BaseErrorDef& err, const std::optional<SourceSpan>& span)
     : err(err), span(span) {}
-  BaseReportedError(const BaseError& err, const Token& token)
+  BaseError(const BaseErrorDef& err, const Token& token)
     : err(err), span(token.span()) {}
-  virtual ~BaseReportedError() {}
+  virtual ~BaseError() {}
 
   virtual std::string Format() const = 0;
 
-  const BaseError& err;
+  const BaseErrorDef& err;
   std::optional<SourceSpan> span;
 };
 
@@ -123,9 +123,9 @@ struct BaseReportedError {
 // instance of. Holds values of format parameters as a tuple in order to defer
 // formatting/reporting and be able to pass around errors.
 template <typename... Args>
-struct ReportedError : BaseReportedError {
-  ReportedError(const Error<Args...>& err, std::optional<SourceSpan> span, Args... args)
-    : BaseReportedError(err, span), params(std::make_tuple(args...)) {}
+struct Error : BaseError {
+  Error(const ErrorDef<Args...>& err, std::optional<SourceSpan> span, Args... args)
+    : BaseError(err, span), params(std::make_tuple(args...)) {}
 
   template<std::size_t... Is>
   std::string CallFormatErr(std::index_sequence<Is...>) const {

@@ -10,11 +10,11 @@
 
 namespace {
 
-using fidl::BaseReportedError;
-using fidl::Error;
+using fidl::BaseError;
+using fidl::ErrorDef;
 using fidl::ErrorReporter;
 
-constexpr Error<std::string, std::string> ErrTest (
+constexpr ErrorDef<std::string, std::string> ErrTest (
   "This test error has one string param '{}' and another '{}'."
 );
 
@@ -32,11 +32,11 @@ bool ReportErrorFormatParams() {
   END_TEST;
 }
 
-bool MakeReportedErrorThenReportIt() {
+bool MakeErrorThenReportIt() {
   BEGIN_TEST;
   std::string param1("param1");
   std::string param2("param2");
-  std::unique_ptr<BaseReportedError> reported_err = ErrorReporter::MakeReportedError(
+  std::unique_ptr<BaseError> reported_err = ErrorReporter::MakeError(
       ErrTest, param1, param2);
   ErrorReporter error_reporter;
   error_reporter.ReportError(std::move(reported_err));
@@ -52,5 +52,5 @@ bool MakeReportedErrorThenReportIt() {
 
 BEGIN_TEST_CASE(report_error_tests)
 RUN_TEST(ReportErrorFormatParams)
-RUN_TEST(MakeReportedErrorThenReportIt)
+RUN_TEST(MakeErrorThenReportIt)
 END_TEST_CASE(report_error_tests)

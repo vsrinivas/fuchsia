@@ -142,7 +142,7 @@ void ErrorReporter::AddWarning(std::string formatted_message) {
   }
 }
 
-void ErrorReporter::ReportError(std::unique_ptr<BaseReportedError> err) {
+void ErrorReporter::ReportError(std::unique_ptr<BaseError> err) {
   assert(err && "should not report nullptr error");
   ReportErrorWithSpan(err->span, err->Format());
 }

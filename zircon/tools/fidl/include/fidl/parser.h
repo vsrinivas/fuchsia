@@ -148,7 +148,7 @@ class Parser {
   // become interesting to the AST.
   template <class Predicate>
   Token ConsumeToken(Predicate p, bool is_discarded = false) {
-    std::unique_ptr<BaseReportedError> error = p(Peek());
+    std::unique_ptr<BaseError> error = p(Peek());
     if (error) {
       Fail(std::move(error));
     }
@@ -164,7 +164,7 @@ class Parser {
   // See #OfKind, and #IdentifierOfSubkind for the two expected predicates.
   template <class Predicate>
   bool MaybeConsumeToken(Predicate p) {
-    std::unique_ptr<BaseReportedError> error = p(Peek());
+    std::unique_ptr<BaseError> error = p(Peek());
     if (error) {
       return false;
     }
@@ -175,9 +175,9 @@ class Parser {
   }
 
   static auto OfKind(Token::Kind expected_kind) {
-    return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<BaseReportedError> {
+    return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<BaseError> {
       if (actual.kind() != expected_kind) {
-        return ErrorReporter::MakeReportedError(
+        return ErrorReporter::MakeError(
             ErrUnexpectedTokenOfKind, actual,
             Token::KindAndSubkind(expected_kind, Token::Subkind::kNone));
       }
@@ -186,10 +186,10 @@ class Parser {
   }
 
   static auto IdentifierOfSubkind(Token::Subkind expected_subkind) {
-    return [expected_subkind](Token::KindAndSubkind actual) -> std::unique_ptr<BaseReportedError> {
+    return [expected_subkind](Token::KindAndSubkind actual) -> std::unique_ptr<BaseError> {
       auto expected = Token::KindAndSubkind(Token::Kind::kIdentifier, expected_subkind);
       if (actual.combined() != expected.combined()) {
-        return ErrorReporter::MakeReportedError(
+        return ErrorReporter::MakeError(
             ErrUnexpectedIdentifier, actual,
             Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::kNone));
       }
@@ -201,13 +201,13 @@ class Parser {
                            std::optional<types::HandleSubtype>* out_handle_subtype);
 
   decltype(nullptr) Fail();
-  decltype(nullptr) Fail(std::unique_ptr<BaseReportedError> err);
+  decltype(nullptr) Fail(std::unique_ptr<BaseError> err);
   template <typename ...Args>
-  decltype(nullptr) Fail(const Error<Args...> err, const Args& ...args);
+  decltype(nullptr) Fail(const ErrorDef<Args...> err, const Args& ...args);
   template <typename ...Args>
-  decltype(nullptr) Fail(const Error<Args...> err, Token token, const Args& ...args);
+  decltype(nullptr) Fail(const ErrorDef<Args...> err, Token token, const Args& ...args);
   template <typename ...Args>
-  decltype(nullptr) Fail(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args);
+  decltype(nullptr) Fail(const ErrorDef<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args);
 
   std::optional<types::Strictness> MaybeParseStrictness();
 

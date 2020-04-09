@@ -106,7 +106,7 @@ class Compiling {
 };
 
 template <typename T>
-std::unique_ptr<BaseReportedError> ValidateUnknownConstraints(
+std::unique_ptr<BaseError> ValidateUnknownConstraints(
     const Decl& decl, types::Strictness decl_strictness, const std::vector<const T*>* members) {
   if (!members)
     return nullptr;
@@ -129,11 +129,11 @@ std::unique_ptr<BaseReportedError> ValidateUnknownConstraints(
       continue;
 
     if (is_strict && !is_transitional) {
-      return ErrorReporter::MakeReportedError(ErrUnknownAttributeOnInvalidType, member->name);
+      return ErrorReporter::MakeError(ErrUnknownAttributeOnInvalidType, member->name);
     }
 
     if (found_member) {
-      return ErrorReporter::MakeReportedError(ErrUnknownAttributeOnMultipleMembers, member->name);
+      return ErrorReporter::MakeError(ErrUnknownAttributeOnMultipleMembers, member->name);
     }
 
     found_member = true;
@@ -323,7 +323,7 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
   return nullptr;
 }
 
-bool TypeTemplate::Fail(const Error<const TypeTemplate*> err,
+bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*> err,
                         const std::optional<SourceSpan>& span) const {
   error_reporter_->ReportError(err, span, this);
   return false;
@@ -1144,20 +1144,20 @@ std::string LibraryName(const Library* library, std::string_view separator) {
   return std::string();
 }
 
-bool Library::Fail(std::unique_ptr<BaseReportedError> err) {
+bool Library::Fail(std::unique_ptr<BaseError> err) {
   assert(err && "should not report nullptr error");
   error_reporter_->ReportError(std::move(err));
   return false;
 }
 
 template <typename... Args>
-bool Library::Fail(const Error<Args...> err, const Args&... args) {
+bool Library::Fail(const ErrorDef<Args...> err, const Args&... args) {
   error_reporter_->ReportError(err, args...);
   return false;
 }
 
 template <typename... Args>
-bool Library::Fail(const Error<Args...> err, const std::optional<SourceSpan>& span,
+bool Library::Fail(const ErrorDef<Args...> err, const std::optional<SourceSpan>& span,
                    const Args&... args) {
   error_reporter_->ReportError(err, span, args...);
   return false;
@@ -3273,9 +3273,9 @@ bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_ma
                 "Bits members must be an unsigned integral type!");
   // Each bits member must be a power of two.
   MemberType mask = 0u;
-  auto validator = [&mask](MemberType member, const raw::AttributeList*) -> std::unique_ptr<BaseReportedError> {
+  auto validator = [&mask](MemberType member, const raw::AttributeList*) -> std::unique_ptr<BaseError> {
     if (!IsPowerOfTwo(member)) {
-      return ErrorReporter::MakeReportedError(ErrBitsMemberMustBePowerOfTwo);
+      return ErrorReporter::MakeError(ErrBitsMemberMustBePowerOfTwo);
     }
     mask |= member;
     return nullptr;
@@ -3292,7 +3292,7 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
   static_assert(std::is_integral<MemberType>::value && !std::is_same<MemberType, bool>::value,
                 "Enum members must be an integral type!");
 
-  auto validator = [enum_decl](MemberType member, const raw::AttributeList* attributes) -> std::unique_ptr<BaseReportedError> {
+  auto validator = [enum_decl](MemberType member, const raw::AttributeList* attributes) -> std::unique_ptr<BaseError> {
     switch (enum_decl->strictness) {
       case types::Strictness::kFlexible:
         break;
@@ -3310,7 +3310,7 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
     if (attributes && attributes->HasAttribute("Unknown"))
       return nullptr;
 
-    return ErrorReporter::MakeReportedError(ErrFlexibleEnumMemberWithMaxValue,
+    return ErrorReporter::MakeError(ErrFlexibleEnumMemberWithMaxValue,
                                     std::to_string(kMax), std::to_string(kMax),
                                     std::to_string(kMax), std::to_string(kMax));
   };

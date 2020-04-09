@@ -501,7 +501,7 @@ class TypeTemplate {
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const = 0;
 
  protected:
-  bool Fail(const Error<const TypeTemplate*> err, const std::optional<SourceSpan>& span) const;
+  bool Fail(const ErrorDef<const TypeTemplate*> err, const std::optional<SourceSpan>& span) const;
 
   Typespace* typespace_;
 
@@ -691,17 +691,17 @@ class Library {
   const raw::AttributeList* attributes() const { return attributes_.get(); }
 
  private:
-  bool Fail(std::unique_ptr<BaseReportedError> err);
+  bool Fail(std::unique_ptr<BaseError> err);
   template <typename... Args>
-  bool Fail(const Error<Args...> err, const Args&... args);
+  bool Fail(const ErrorDef<Args...> err, const Args&... args);
   template <typename... Args>
-  bool Fail(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args&... args);
+  bool Fail(const ErrorDef<Args...> err, const std::optional<SourceSpan>& span, const Args&... args);
   template <typename... Args>
-  bool Fail(const Error<Args...> err, const Name& name, const Args&... args) {
+  bool Fail(const ErrorDef<Args...> err, const Name& name, const Args&... args) {
     return Fail(err, name.span(), args...);
   }
   template <typename... Args>
-  bool Fail(const Error<Args...> err, const Decl& decl, const Args&... args) {
+  bool Fail(const ErrorDef<Args...> err, const Decl& decl, const Args&... args) {
     return Fail(err, decl.name, args...);
   }
 
@@ -781,7 +781,7 @@ class Library {
   // Validates a single member of a bits or enum. On success, returns nullptr,
   // and on failure returns an error.
   template <typename MemberType>
-  using MemberValidator = fit::function<std::unique_ptr<BaseReportedError>(
+  using MemberValidator = fit::function<std::unique_ptr<BaseError>(
       const MemberType& member, const raw::AttributeList* attributes)>;
   template <typename DeclType, typename MemberType>
   bool ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator);
