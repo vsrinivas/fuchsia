@@ -1,0 +1,34 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+
+if (host_toolchain == current_toolchain) {
+  # Copies templates to the specified output directory and generates a file
+  # containing all copied paths.
+  copy("templates") {
+    # All template files available to fx create.
+    sources = [
+      "component-v2/BUILD.gn.tmpl-cpp",
+      "component-v2/BUILD.gn.tmpl-rust",
+      "component-v2/main.cc.tmpl-cpp",
+      "component-v2/meta/{{PROJECT_NAME}}.cml.tmpl",
+      "component-v2/meta/{{PROJECT_NAME}}_test.cml.tmpl-rust",
+      "component-v2/meta/{{PROJECT_NAME}}_unittests.cml.tmpl-cpp",
+      "component-v2/src/main.rs.tmpl-rust",
+      "component-v2/{{PROJECT_NAME}}.cc.tmpl-cpp",
+      "component-v2/{{PROJECT_NAME}}.h.tmpl-cpp",
+      "component-v2/{{PROJECT_NAME}}_test.cc.tmpl-cpp",
+    ]
+    outputs =
+        [ "${host_tools_dir}/create_templates/{{source_target_relative}}" ]
+
+    # Write out all the template paths to a single file as JSON.
+    # fx create will use the paths in this file as the available set of
+    # template files.
+    write_file("${host_tools_dir}/create_templates/templates.json",
+               sources,
+               "json")
+  }
+}

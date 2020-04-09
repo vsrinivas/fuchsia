@@ -20,31 +20,17 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:termion",
     ]
-    with_unit_tests = true
-  }
 
-  copy("copy_templates") {
-    sources = [
-      "templates/component-v2/BUILD.gn.tmpl-cpp",
-      "templates/component-v2/BUILD.gn.tmpl-rust",
-      "templates/component-v2/\$.cc.tmpl-cpp",
-      "templates/component-v2/\$.h.tmpl-cpp",
-      "templates/component-v2/\$_test.cc.tmpl-cpp",
-      "templates/component-v2/main.cc.tmpl-cpp",
-      "templates/component-v2/meta/\$.cml.tmpl",
-      "templates/component-v2/meta/\$_test.cml.tmpl-rust",
-      "templates/component-v2/meta/\$_unittests.cml.tmpl-cpp",
-      "templates/component-v2/src/main.rs.tmpl-rust",
-    ]
-    outputs =
-        [ "${host_tools_dir}/create_templates/{{source_target_relative}}" ]
+    test_deps = [ "//third_party/rust_crates:matches" ]
+
+    with_unit_tests = true
   }
 }
 
 install_host_tools("create") {
   deps = [
-    ":copy_templates($host_toolchain)",
     ":create_bin($host_toolchain)",
+    "templates($host_toolchain)",
   ]
 
   outputs = [ "create" ]

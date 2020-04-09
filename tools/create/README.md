@@ -10,7 +10,7 @@ usage details.
     * Name all template files with the `.tmpl` extension or `.tmpl-<lang>` for
       language-specific template files.
     * Use `$` in a file/directory name to substitute the user's `PROJECT_NAME`.
-3. Edit the `copy_templates` target in `//tools/create/BUILD.gn` to include all your new
+3. Edit the `templates` target in `//tools/create/templates/BUILD.gn` to include all your new
    template files.
 4. Add the project type to the help doc-string in `CreateArgs` in `//tools/create/src/main.rs`.
 
@@ -45,10 +45,9 @@ The available variable names are:
 * `PROJECT_PATH`: The path from the fuchsia root directory to the new project,
 * `PROJECT_TYPE`: The project-type as specified on the command line, e.g: 'component-v2'.
 
-Path names are treated differently. If a `$` character is encountered in a template path, it is
-substituted with the `PROJECT_NAME` variable expansion.
+Path names are also treated as template strings and can contain [handlebars] syntax.
 
-Eg. `component/meta/$.cml.tmpl` with `PROJECT_NAME="foo"` expands to `meta/foo.cml`.
+Eg. `component/meta/{{PROJECT_NAME}}.cml.tmpl` with `PROJECT_NAME="foo"` expands to `meta/foo.cml`.
 
 #### Adding a new variable
 
