@@ -311,12 +311,17 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                     // TODO(joshlf): Some of these allows would be more precise
                     // if they were added only to specific statements (probably
                     // just to the IPv4- or IPv6-specific statements).
-                    #[allow(clippy::needless_return, clippy::let_and_return, unused_variables)]
+                    //
+                    // TODO(https://github.com/rust-lang/rust/issues/70814):
+                    // Remove `allow(unused_braces)`.
+                    #[allow(clippy::needless_return, clippy::let_and_return, unused_variables, unused_braces)]
                     #trait_decl #ipv4_block
                 }
 
                 impl Ext for net_types::ip::#ipv6_type_ident {
-                    #[allow(clippy::needless_return, clippy::let_and_return, unused_variables)]
+                    // TODO(https://github.com/rust-lang/rust/issues/70814):
+                    // Remove `allow(unused_braces)`.
+                    #[allow(clippy::needless_return, clippy::let_and_return, unused_variables, unused_braces)]
                     #trait_decl #ipv6_block
                 }
 
