@@ -1461,7 +1461,10 @@ foreach(target, paver_targets) {
       args += [ "--additional_bootserver_arguments=${target.extra_bootserver_arguments}" ]
     }
 
-    args += [ "images.json" ]
+    args += [
+      "images.json",
+      "checkout_artifacts.json",
+    ]
 
     metadata = {
       # TODO(fxbug.dev/9708): include these in a build API module of archives instead.
@@ -2042,12 +2045,6 @@ group("archive-extras") {
         name = "buildargs"
         type = "gn"
         path = "args.gn"
-      },
-      {
-        archive = true
-        name = "jiri_snapshot"
-        path = rebase_path("//.jiri_root/update_history/latest", root_build_dir)
-        type = "xml"
       },
     ]
   }

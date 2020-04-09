@@ -193,6 +193,7 @@ build_api_module("api") {
   deps = [
     ":binaries",
     ":build_info",
+    ":checkout_artifacts",
     ":fuzzers",
     ":generated_sources",
     ":images",
@@ -267,6 +268,59 @@ build_api_module("build_info") {
     ]
   }
 }
+
+# Artifacts from the checkout. Though a priori unrelated to the build, they are
+# useful to track here.
+#
+# Type: list(scope)
+#
+#   name
+#     Required: The primary way that this file is known to consumers.
+#     The name should be unique among other entries.
+#     Type: string
+#
+#   path
+#     Required: Path to where the file is found, relative to $root_build_dir.
+#     Type: path relative to $root_build_dir
+#
+#   type
+#     Required: The file format (e.g., "txt" or "xml").
+#     Type: string
+#
+build_api_module("checkout_artifacts") {
+  testonly = true
+  data_keys = [ "checkout_artifacts" ]
+  deps = [ ":checkout_artifacts.metadata" ]
+}
+
+group("checkout_artifacts.metadata") {
+  testonly = true
+  visibility = [ ":checkout_artifacts" ]
+  metadata = {
+    checkout_artifacts = [
+      {
+        # TODO(fxbug.dev/43568): Remove `archive` field. This is a signal to
+        # include the this file in the archive.
+        archive = true
+        name = "jiri_snapshot"
+        path = rebase_path("//.jiri_root/update_history/latest", root_build_dir)
+        type = "xml"
+      },
+      {
+        name = "ssh_authorized_key"
+        path = rebase_path("//.ssh/authorized_keys", root_build_dir)
+        type = "txt"
+      },
+      {
+        name = "ssh_private_key"
+        path = rebase_path("//.ssh/pkey", root_build_dir)
+        type = "txt"
+      },
+    ]
+  }
+}
+
+
 
 # See //zircon:generated_sources for a description and schema definition.
 #
