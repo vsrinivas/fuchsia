@@ -182,11 +182,11 @@ TEST_F(AgentServicesTest, ValidAndSuccessfulMultipleEntries) {
   test_config.provide_agent_controller = true;
 
   test_config.service_to_agent_map = {
-      {"chromium.cast.ApplicationConfigManager",
-       "fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx"},
+      {"somenamespace.someappspace.SomeService",
+       "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"},
       {kTestServiceName, kTestAgentUrl},
-      {"fuchsia.feedback.DataProvider",
-       "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
+      {"fuchsia.anotherappspace.AnotherService",
+       "fuchsia-pkg://fuchsia.com/another_agent#meta/another_agent.cmx"},
   };
 
   EXPECT_EQ(ZX_OK, ExecuteConnectToAgentServiceTest(test_config));
@@ -202,11 +202,11 @@ TEST_F(AgentServicesTest, SpecificHandlerProvidedHasService) {
   test_config.provide_agent_controller = true;
 
   test_config.service_to_agent_map = {
-      {"chromium.cast.ApplicationConfigManager",
-       "fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx"},
+      {"somenamespace.someappspace.SomeService",
+       "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"},
       {kTestServiceName, kTestAgentUrl},
-      {"fuchsia.feedback.DataProvider",
-       "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
+      {"fuchsia.anotherappspace.AnotherService",
+       "fuchsia-pkg://fuchsia.com/another_agent#meta/another_agent.cmx"},
   };
 
   EXPECT_EQ(ZX_OK, ExecuteConnectToAgentServiceTest(test_config));
@@ -223,10 +223,10 @@ TEST_F(AgentServicesTest, SpecificHandlerProvidedHasServiceButNotInIndex) {
   test_config.provide_agent_controller = true;
 
   test_config.service_to_agent_map = {
-      {"chromium.cast.ApplicationConfigManager",
-       "fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx"},
-      {"fuchsia.feedback.DataProvider",
-       "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
+      {"somenamespace.someappspace.SomeService",
+       "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"},
+      {"fuchsia.anotherappspace.AnotherService",
+       "fuchsia-pkg://fuchsia.com/another_agent#meta/another_agent.cmx"},
   };
 
   EXPECT_EQ(ZX_OK, ExecuteConnectToAgentServiceTest(test_config));
@@ -243,9 +243,9 @@ TEST_F(AgentServicesTest, SpecificHandlerProvidedHasServiceButIndexHasDifferentH
   test_config.provide_agent_controller = true;
 
   test_config.service_to_agent_map = {
-      {kTestServiceName, "fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx"},
-      {"fuchsia.feedback.DataProvider",
-       "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
+      {kTestServiceName, "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"},
+      {"fuchsia.anotherappspace.AnotherService",
+       "fuchsia-pkg://fuchsia.com/another_agent#meta/another_agent.cmx"},
   };
 
   EXPECT_EQ(ZX_OK, ExecuteConnectToAgentServiceTest(test_config));
@@ -259,8 +259,8 @@ TEST_F(AgentServicesTest, NoServiceNameProvided) {
   test_config.provide_agent_controller = true;
 
   test_config.service_to_agent_map = {
-      {"fuchsia.feedback.DataProvider",
-       "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
+      {"fuchsia.anotherappspace.AnotherService",
+       "fuchsia-pkg://fuchsia.com/another_agent#meta/another_agent.cmx"},
   };
 
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, ExecuteConnectToAgentServiceTest(test_config));

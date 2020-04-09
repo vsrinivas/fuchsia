@@ -39,8 +39,8 @@
     ],
     "agent_service_index": [
       {
-        "service_name": "chromium.cast.ApplicationConfigManager",
-        "agent_url": "fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx"
+        "service_name": "somenamespace.someappspace.SomeService",
+        "agent_url": "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
       },
       {
         "service_name": "google.service.name",
