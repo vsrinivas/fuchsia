@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 
 #include <fbl/auto_lock.h>
+#include <ktl/span.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -140,18 +141,14 @@ static const char* ObjectTypeToString(zx_obj_type_t type) {
   }
 }
 
-// Returns the count of a process's handles. If |handle_type| is non-NULL,
-// it should point to |size| elements. For each handle, the corresponding
-// zx_obj_type_t-indexed element of |handle_type| is incremented.
-static uint32_t BuildHandleStats(const ProcessDispatcher& pd, uint32_t* handle_type, size_t size) {
+// Returns the count of a process's handles. For each handle, the corresponding
+// zx_obj_type_t-indexed element of |handle_types| is incremented.
+using HandleTypeCounts = ktl::span<uint32_t, ZX_OBJ_TYPE_UPPER_BOUND>;
+static uint32_t BuildHandleStats(const ProcessDispatcher& pd, HandleTypeCounts handle_types) {
   uint32_t total = 0;
   pd.ForEachHandle([&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
-    if (handle_type) {
-      uint32_t type = static_cast<uint32_t>(disp->get_type());
-      if (size > type) {
-        ++handle_type[type];
-      }
-    }
+    uint32_t type = static_cast<uint32_t>(disp->get_type());
+    ++handle_types[type];
     ++total;
     return ZX_OK;
   });
@@ -162,7 +159,7 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd, uint32_t* handle_t
 // buffer as strings.
 static void FormatHandleTypeCount(const ProcessDispatcher& pd, char* buf, size_t buf_len) {
   uint32_t types[ZX_OBJ_TYPE_UPPER_BOUND] = {0};
-  uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
+  uint32_t handle_count = BuildHandleStats(pd, types);
 
   snprintf(buf, buf_len, "%4u: %4u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u", handle_count,
            types[ZX_OBJ_TYPE_JOB], types[ZX_OBJ_TYPE_PROCESS], types[ZX_OBJ_TYPE_THREAD],
