@@ -179,8 +179,6 @@ impl Node for TemperatureHandler {
     }
 }
 
-const NUM_INSPECT_TEMPERATURE_SAMPLES: usize = 10;
-
 struct InspectData {
     temperature_readings: RefCell<BoundedListNode>,
     read_errors: inspect::UintProperty,
@@ -188,12 +186,15 @@ struct InspectData {
 }
 
 impl InspectData {
+    /// Number of inspect samples to store in the `temperature_readings` BoundedListNode.
+    const NUM_INSPECT_TEMPERATURE_SAMPLES: usize = 10;
+
     fn new(parent: &inspect::Node, name: String) -> Self {
         // Create a local root node and properties
         let root = parent.create_child(name);
         let temperature_readings = RefCell::new(BoundedListNode::new(
             root.create_child("temperature_readings"),
-            NUM_INSPECT_TEMPERATURE_SAMPLES,
+            Self::NUM_INSPECT_TEMPERATURE_SAMPLES,
         ));
         let read_errors = root.create_uint("read_temperature_error_count", 0);
         let last_read_error = root.create_string("last_read_error", "");

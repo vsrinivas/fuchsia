@@ -14,17 +14,18 @@ use async_trait::async_trait;
 use fidl_fuchsia_cobalt::HistogramBucket;
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
-use fuchsia_inspect::{self as inspect, ArrayProperty, Property};
-use fuchsia_syslog::fx_log_err;
+use fuchsia_inspect::{
+    self as inspect, ArrayProperty, HistogramProperty, LinearHistogramParams, Property,
+};
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use power_manager_metrics::power_manager_metrics as power_metrics_registry;
 use power_metrics_registry::ThermalLimitResultMetricDimensionResult as thermal_limit_result;
 use serde_derive::Deserialize;
 use serde_json as json;
-use std::cell::Cell;
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::cell::{Cell, RefCell, RefMut};
+use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
 /// Node: ThermalPolicy
@@ -424,6 +425,7 @@ impl ThermalPolicy {
             );
 
             self.thermal_metrics.borrow_mut().log_throttle_end_shutdown(timestamp);
+            self.inspect.throttle_history().mark_throttling_inactive(timestamp);
 
             // TODO(pshickel): We shouldn't ever get an error here. But we should probably have
             // some type of fallback or secondary mechanism of halting the system if it somehow
@@ -482,18 +484,20 @@ impl ThermalPolicy {
 
             if self.state.thermal_load.get().0 == 0 {
                 // We've just entered thermal limiting
+                fx_log_info!("Begin thermal mitigation");
                 self.thermal_metrics.borrow_mut().log_throttle_start(timestamp);
+                self.inspect.throttle_history().mark_throttling_active(timestamp);
                 self.state.throttle_end_deadline.set(None);
             } else if thermal_load.0 == 0 {
                 // We've just exited thermal limiting. Set the deadline time that we may consider
                 // the throttle event officially complete.
+                fx_log_info!("End thermal mitigation");
                 let throttle_end_deadline = timestamp
                     + Nanoseconds(self.config.policy_params.throttle_end_delay.into_nanos());
                 self.state.throttle_end_deadline.set(Some(throttle_end_deadline));
             }
 
             self.state.thermal_load.set(thermal_load);
-            self.inspect.thermal_load.set(thermal_load.0.into());
 
             // Record any errors here, but don't return early from the function in case we have a
             // pending throttle_end_deadline to deal with
@@ -515,9 +519,11 @@ impl ThermalPolicy {
             && timestamp >= self.state.throttle_end_deadline.get().unwrap()
         {
             self.state.throttle_end_deadline.set(None);
-            self.inspect.last_throttle_end_time.set(timestamp.0);
             self.thermal_metrics.borrow_mut().log_throttle_end_mitigated(timestamp);
+            self.inspect.throttle_history().mark_throttling_inactive(timestamp);
         }
+
+        self.inspect.throttle_history().record_thermal_load(thermal_load);
 
         return_val
     }
@@ -552,7 +558,7 @@ impl ThermalPolicy {
             "time_delta" => time_delta.0
         );
         let available_power = self.calculate_available_power(filtered_temperature, time_delta);
-        self.inspect.available_power.set(available_power.0);
+        self.inspect.throttle_history().record_available_power(available_power);
         fuchsia_trace::counter!(
             "power_manager",
             "ThermalPolicy available_power",
@@ -619,11 +625,15 @@ impl ThermalPolicy {
         // intended big.LITTLE scheduling and operation to better inform our decisions here. We may
         // find that we'll need to first query the nodes to learn how much power they intend to use
         // before making allocation decisions.
-        for node in &self.config.cpu_control_nodes {
+        for (i, node) in self.config.cpu_control_nodes.iter().enumerate() {
             if let MessageReturn::SetMaxPowerConsumption(power_used) = self
                 .send_message(&node, &Message::SetMaxPowerConsumption(total_available_power))
                 .await?
             {
+                self.inspect
+                    .throttle_history
+                    .borrow_mut()
+                    .record_cpu_power_consumption(i, power_used);
                 total_available_power = total_available_power - power_used;
             }
         }
@@ -660,13 +670,14 @@ struct InspectData {
     temperature_filtered: inspect::DoubleProperty,
     error_integral: inspect::DoubleProperty,
     state_initialized: inspect::UintProperty,
-    thermal_load: inspect::UintProperty,
-    available_power: inspect::DoubleProperty,
     max_time_delta: inspect::DoubleProperty,
-    last_throttle_end_time: inspect::IntProperty,
+    throttle_history: RefCell<InspectThrottleHistory>,
 }
 
 impl InspectData {
+    /// Rolling number of throttle events to store in `throttle_history`.
+    const NUM_THROTTLE_EVENTS: usize = 10;
+
     fn new(parent: &inspect::Node, name: String) -> Self {
         // Create a local root node and properties
         let root_node = parent.create_child(name);
@@ -678,10 +689,11 @@ impl InspectData {
         let temperature_filtered = state_node.create_double("temperature_filtered (C)", 0.0);
         let error_integral = state_node.create_double("error_integral", 0.0);
         let state_initialized = state_node.create_uint("state_initialized", 0);
-        let thermal_load = state_node.create_uint("thermal_load", 0);
-        let available_power = state_node.create_double("available_power (W)", 0.0);
-        let last_throttle_end_time = stats_node.create_int("last_throttle_end_time (ns)", 0);
         let max_time_delta = stats_node.create_double("max_time_delta (s)", 0.0);
+        let throttle_history = RefCell::new(InspectThrottleHistory::new(
+            root_node.create_child("throttle_history"),
+            Self::NUM_THROTTLE_EVENTS,
+        ));
 
         // Pass ownership of the new nodes to the root node, otherwise they'll be dropped
         root_node.record(state_node);
@@ -696,9 +708,7 @@ impl InspectData {
             temperature_filtered,
             error_integral,
             state_initialized,
-            thermal_load,
-            available_power,
-            last_throttle_end_time,
+            throttle_history,
         }
     }
 
@@ -722,6 +732,157 @@ impl InspectData {
         policy_params_node.record(thermal_range);
 
         self.root_node.record(policy_params_node);
+    }
+
+    /// A convenient wrapper to mutably borrow `throttle_history`.
+    fn throttle_history(&self) -> RefMut<'_, InspectThrottleHistory> {
+        self.throttle_history.borrow_mut()
+    }
+}
+
+/// Captures and retains data from previous throttling events in a rolling buffer.
+struct InspectThrottleHistory {
+    /// The Inspect node that will be used as the parent for throttle event child nodes.
+    root_node: inspect::Node,
+
+    /// A running count of the number of throttle events ever captured in `throttle_history_list`.
+    /// The count is always increasing, even when older throttle events are removed from the list.
+    entry_count: usize,
+
+    /// The maximum number of throttling events to keep in `throttle_history_list`.
+    capacity: usize,
+
+    /// State to track if throttling is currently active (used to ignore readings when throttling
+    /// isn't active).
+    throttling_active: bool,
+
+    /// List to store the throttle entries.
+    throttle_history_list: VecDeque<InspectThrottleHistoryEntry>,
+}
+
+impl InspectThrottleHistory {
+    fn new(root_node: inspect::Node, capacity: usize) -> Self {
+        Self {
+            entry_count: 0,
+            capacity,
+            throttling_active: false,
+            throttle_history_list: VecDeque::with_capacity(capacity),
+            root_node,
+        }
+    }
+
+    /// Mark the start of throttling.
+    fn mark_throttling_active(&mut self, timestamp: Nanoseconds) {
+        // Must have ended previous throttling
+        assert_eq!(self.throttling_active, false);
+
+        // Begin a new throttling entry
+        self.new_entry();
+
+        self.throttling_active = true;
+        self.throttle_history_list.back().unwrap().throttle_start_time.set(timestamp.0);
+    }
+
+    /// Mark the end of throttling.
+    fn mark_throttling_inactive(&mut self, timestamp: Nanoseconds) {
+        if self.throttling_active {
+            self.throttle_history_list.back().unwrap().throttle_end_time.set(timestamp.0);
+            self.throttling_active = false
+        }
+    }
+
+    /// Begin a new throttling entry. Removes the oldest entry once we've reached
+    /// InspectData::NUM_THROTTLE_EVENTS number of entries.
+    fn new_entry(&mut self) {
+        if self.throttle_history_list.len() >= self.capacity {
+            self.throttle_history_list.pop_front();
+        }
+
+        let node = self.root_node.create_child(&self.entry_count.to_string());
+        let entry = InspectThrottleHistoryEntry::new(node);
+        self.throttle_history_list.push_back(entry);
+        self.entry_count += 1;
+    }
+
+    /// Record the current thermal load. No-op unless throttling has been set active.
+    fn record_thermal_load(&self, thermal_load: ThermalLoad) {
+        if self.throttling_active {
+            self.throttle_history_list
+                .back()
+                .unwrap()
+                .thermal_load_hist
+                .insert(thermal_load.0.into());
+        }
+    }
+
+    /// Record the current available power. No-op unless throttling has been set active.
+    fn record_available_power(&self, available_power: Watts) {
+        if self.throttling_active {
+            self.throttle_history_list
+                .back()
+                .unwrap()
+                .available_power_hist
+                .insert(available_power.0);
+        }
+    }
+
+    /// Record the current CPU power consumption for a given CPU index. No-op unless throttling has
+    /// been set active.
+    fn record_cpu_power_consumption(&mut self, cpu_index: usize, power_used: Watts) {
+        if self.throttling_active {
+            self.throttle_history_list
+                .back_mut()
+                .unwrap()
+                .get_cpu_power_usage_property(cpu_index)
+                .insert(power_used.0);
+        }
+    }
+}
+
+/// Stores data for a single throttle event.
+struct InspectThrottleHistoryEntry {
+    _node: inspect::Node,
+    throttle_start_time: inspect::IntProperty,
+    throttle_end_time: inspect::IntProperty,
+    thermal_load_hist: inspect::UintLinearHistogramProperty,
+    available_power_hist: inspect::DoubleLinearHistogramProperty,
+    cpu_power_usage_node: inspect::Node,
+    cpu_power_usage: Vec<inspect::DoubleLinearHistogramProperty>,
+}
+
+impl InspectThrottleHistoryEntry {
+    /// Creates a new InspectThrottleHistoryEntry which creates new properties under `node`.
+    fn new(node: inspect::Node) -> Self {
+        Self {
+            throttle_start_time: node.create_int("throttle_start_time", 0),
+            throttle_end_time: node.create_int("throttle_end_time", 0),
+            thermal_load_hist: node.create_uint_linear_histogram(
+                "thermal_load_hist",
+                LinearHistogramParams { floor: 0, step_size: 1, buckets: 100 },
+            ),
+            available_power_hist: node.create_double_linear_histogram(
+                "available_power_hist",
+                LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
+            ),
+            cpu_power_usage_node: node.create_child("cpu_power_usage"),
+            cpu_power_usage: Vec::new(),
+            _node: node,
+        }
+    }
+
+    /// Gets the property to record CPU power usage for the given CPU index. These properties are
+    /// created dynamically because CPU domain count is not a fixed number.
+    fn get_cpu_power_usage_property(
+        &mut self,
+        index: usize,
+    ) -> &inspect::DoubleLinearHistogramProperty {
+        if self.cpu_power_usage.get(index).is_none() {
+            self.cpu_power_usage.push(self.cpu_power_usage_node.create_double_linear_histogram(
+                index.to_string(),
+                LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
+            ))
+        }
+        &self.cpu_power_usage[index]
     }
 }
 
@@ -1003,6 +1164,7 @@ pub mod tests {
                 ThermalPolicy: {
                     state: contains {},
                     stats: contains {},
+                    throttle_history: contains {},
                     policy_params: {
                         "thermal_limiting_range (C)": vec![
                                 policy_params.thermal_limiting_range[0].0,
@@ -1026,6 +1188,186 @@ pub mod tests {
                 }
             }
         );
+    }
+
+    /// Tests that throttle data is collected and stored properly in Inspect.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_throttle_history() {
+        // Set relevant policy parameters so we have deterministic power and thermal load
+        // calculations
+        let mut policy_params = default_policy_params();
+        policy_params.controller_params.sustainable_power = Watts(1.0);
+        policy_params.controller_params.proportional_gain = 0.0;
+        policy_params.controller_params.integral_gain = 0.0;
+        policy_params.thermal_limiting_range[0] = Celsius(80.0);
+        policy_params.thermal_limiting_range[1] = Celsius(100.0);
+        let idle_temperature = Celsius(50.0);
+        let throttle_temperature = Celsius(90.0);
+
+        // Calculate the values that we expect to be reported by the thermal policy based on the
+        // parameters chosen above
+        let thermal_load = ThermalPolicy::calculate_thermal_load(
+            throttle_temperature,
+            &policy_params.thermal_limiting_range,
+        );
+        let throttle_available_power = policy_params.controller_params.sustainable_power;
+        let throttle_available_power_cpu1 = throttle_available_power;
+        let throttle_cpu1_power_used = throttle_available_power_cpu1 - Watts(0.3); // arbitrary
+        let throttle_available_power_cpu2 =
+            throttle_available_power_cpu1 - throttle_cpu1_power_used;
+        let throttle_cpu2_power_used = throttle_available_power_cpu2;
+        let throttle_start_time = Nanoseconds(0);
+        let throttle_end_time = Nanoseconds(1000);
+
+        // Setup the ThermalPolicy node
+        let thermal_config = ThermalConfig {
+            temperature_node: create_dummy_node(),
+            cpu_control_nodes: vec![
+                create_mock_node(
+                    "Cpu1Node",
+                    vec![(
+                        msg_eq!(SetMaxPowerConsumption(throttle_available_power_cpu1)),
+                        msg_ok_return!(SetMaxPowerConsumption(throttle_cpu1_power_used)),
+                    )],
+                ),
+                create_mock_node(
+                    "Cpu2Node",
+                    vec![(
+                        msg_eq!(SetMaxPowerConsumption(throttle_available_power_cpu2)),
+                        msg_ok_return!(SetMaxPowerConsumption(throttle_cpu2_power_used)),
+                    )],
+                ),
+            ],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: create_dummy_node(),
+            policy_params,
+        };
+        let inspector = inspect::Inspector::new();
+        let node = ThermalPolicyBuilder::new(thermal_config)
+            .with_inspect_root(inspector.root())
+            .build()
+            .unwrap();
+
+        // Causes Inspect to receive throttle_start_time and one reading into thermal_load_hist
+        let _ = node.update_thermal_load(throttle_start_time, throttle_temperature).await;
+
+        // Causes Inspect to receive one reading into available_power_hist and one reading into both
+        // entries of cpu_power_usage
+        let _ = node.iterate_controller(throttle_temperature, Seconds(0.0)).await;
+
+        // Causes Inspect to receive throttle_end_time
+        let _ = node.update_thermal_load(throttle_end_time, idle_temperature).await;
+
+        // TODO(fxb/49483): The `assert_inspect_tree!` macro really needs better support for testing
+        // histogram correctness. Since that doesn't exist today, the only option is to recreate the
+        // histogram property in the format that assert_inspect_tree expects. This requires
+        // knowledge of the underlying Inspect histogram implementation, which is bad but it's our
+        // only option at this time.
+        fn create_hist_vec<T>(params: LinearHistogramParams<T>, data: Vec<T>) -> Vec<T>
+        where
+            T: std::convert::From<u32>
+                + std::ops::AddAssign
+                + std::ops::Sub<Output = T>
+                + std::ops::Div<Output = T>
+                + std::cmp::PartialOrd
+                + std::clone::Clone
+                + core::marker::Copy,
+        {
+            // The inspect histogram adds four extra buckets:
+            //  - [0]: floor
+            //  - [1]: step_size
+            //  - [2]: underflow bucket
+            //  - [-1]: overflow bucket
+            let mut hist_vec: Vec<T> = vec![T::from(0); params.buckets + 4];
+            hist_vec[0] = params.floor;
+            hist_vec[1] = params.step_size;
+
+            // Populate the histogram using the supplied data
+            for v in data.into_iter() {
+                // Index selection copied from the Inspect implementation:
+                // https://fuchsia.googlesource.com/fuchsia/+/ca376a675e18428aa31f2c2b78a4cfe2cf1c69a2/src/lib/inspect/rust/fuchsia-inspect/src/lib.rs#999
+                let index = {
+                    let mut current_floor = params.floor;
+                    let mut _idx = 2;
+                    while v >= current_floor && _idx < params.buckets - 1 {
+                        current_floor += params.step_size;
+                        _idx += 1;
+                    }
+                    _idx as usize
+                };
+                hist_vec[index] += T::from(1);
+            }
+            hist_vec
+        }
+
+        let expected_thermal_load_hist = create_hist_vec::<u64>(
+            LinearHistogramParams { floor: 0, step_size: 1, buckets: 100 },
+            vec![thermal_load.0.into()],
+        );
+
+        let expected_available_power_hist = create_hist_vec::<f64>(
+            LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
+            vec![throttle_available_power.0],
+        );
+
+        let expected_cpu_1_power_usage_hist = create_hist_vec::<f64>(
+            LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
+            vec![throttle_cpu1_power_used.0],
+        );
+
+        let expected_cpu_2_power_usage_hist = create_hist_vec::<f64>(
+            LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
+            vec![throttle_cpu2_power_used.0],
+        );
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                ThermalPolicy: contains {
+                    throttle_history: {
+                        "0": {
+                            throttle_start_time: throttle_start_time.0,
+                            throttle_end_time: throttle_end_time.0,
+                            thermal_load_hist: expected_thermal_load_hist,
+                            available_power_hist: expected_available_power_hist,
+                            cpu_power_usage: {
+                                "0": expected_cpu_1_power_usage_hist,
+                                "1": expected_cpu_2_power_usage_hist
+                            }
+                        },
+                    }
+                }
+            }
+        )
+    }
+
+    /// Verifies that InspectThrottleHistory correctly removes old entries without increasing the
+    /// size of the underlying vector.
+    #[test]
+    fn test_inspect_throttle_history_length() {
+        // Create a InspectThrottleHistory with capacity for only one throttling entry
+        let mut throttle_history = InspectThrottleHistory::new(
+            inspect::Inspector::new().root().create_child("test_node"),
+            1,
+        );
+
+        // Add a throttling entry
+        throttle_history.mark_throttling_active(Nanoseconds(0));
+        throttle_history.mark_throttling_inactive(Nanoseconds(0));
+
+        // Verify one entry and unchanged capacity
+        assert_eq!(throttle_history.throttle_history_list.len(), 1);
+        assert_eq!(throttle_history.throttle_history_list.capacity(), 1);
+        assert_eq!(throttle_history.entry_count, 1);
+
+        // Add one more throttling entry
+        throttle_history.mark_throttling_active(Nanoseconds(0));
+        throttle_history.mark_throttling_inactive(Nanoseconds(0));
+
+        // Verify still one entry and unchanged capacity
+        assert_eq!(throttle_history.throttle_history_list.len(), 1);
+        assert_eq!(throttle_history.throttle_history_list.capacity(), 1);
+        assert_eq!(throttle_history.entry_count, 2);
     }
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
