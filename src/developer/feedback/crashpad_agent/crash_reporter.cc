@@ -21,6 +21,8 @@
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/report_util.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/fidl/channel_provider_ptr.h"
+#include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -127,26 +129,35 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   }
   FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
 
+  auto channel_promise =
+      fidl::GetCurrentChannel(dispatcher_, services_, fit::Timeout(kCrashReportGenerationTimeout));
   auto data_promise = data_provider_ptr_.GetData(kCrashReportGenerationTimeout);
   auto device_id_promise = device_id_provider_ptr_.GetId(kCrashReportGenerationTimeout);
 
   auto promise =
-      ::fit::join_promises(std::move(data_promise), std::move(device_id_promise))
+      ::fit::join_promises(std::move(channel_promise), std::move(data_promise),
+                           std::move(device_id_promise))
           .then([this, report = std::move(report)](
-                    ::fit::result<std::tuple<::fit::result<Data>, ::fit::result<std::string>>>&
-                        results) mutable -> ::fit::result<void> {
+                    ::fit::result<std::tuple<::fit::result<std::string>, ::fit::result<Data>,
+                                             ::fit::result<std::string>>>& results) mutable
+                -> ::fit::result<void> {
             if (results.is_error()) {
               return ::fit::error();
             }
 
-            auto data_result = std::move(std::get<0>(results.value()));
-            auto device_id_result = std::move(std::get<1>(results.value()));
+            auto channel_result = std::move(std::get<0>(results.value()));
+            std::optional<std::string> channel = std::nullopt;
+            if (channel_result.is_ok()) {
+              channel = channel_result.take_value();
+            }
 
+            auto data_result = std::move(std::get<1>(results.value()));
             Data feedback_data;
             if (data_result.is_ok()) {
               feedback_data = data_result.take_value();
             }
 
+            auto device_id_result = std::move(std::get<2>(results.value()));
             std::optional<std::string> device_id = std::nullopt;
             if (device_id_result.is_ok()) {
               device_id = device_id_result.take_value();
@@ -159,7 +170,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
             std::optional<fuchsia::mem::Buffer> minidump;
             BuildAnnotationsAndAttachments(std::move(report), std::move(feedback_data),
                                            utc_provider_.CurrentTime(), device_id, build_version_,
-                                           &annotations, &attachments, &minidump);
+                                           channel, &annotations, &attachments, &minidump);
 
             if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
                              annotations)) {

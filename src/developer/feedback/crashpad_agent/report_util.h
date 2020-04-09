@@ -39,6 +39,7 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                     const std::optional<zx::time_utc>& current_time,
                                     const std::optional<std::string>& device_id,
                                     const std::string& build_version,
+                                    const std::optional<std::string>& channel,
                                     std::map<std::string, std::string>* annotations,
                                     std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                     std::optional<fuchsia::mem::Buffer>* minidump);

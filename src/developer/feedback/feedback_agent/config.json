@@ -5,7 +5,6 @@
         "build.latest-commit-date",
         "build.product",
         "build.version",
-        "channel",
         "device.board-name",
         "device.feedback-id",
         "device.uptime",
@@ -18,7 +17,8 @@
         "hardware.product.model",
         "hardware.product.name",
         "hardware.product.regulatory-domain",
-        "hardware.product.sku"
+        "hardware.product.sku",
+        "system.update-channel.current"
     ],
     "attachment_allowlist": [
         "build.snapshot.xml",

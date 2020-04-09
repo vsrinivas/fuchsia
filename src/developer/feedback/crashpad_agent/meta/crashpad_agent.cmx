@@ -18,7 +18,8 @@
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.settings.Privacy",
-            "fuchsia.time.Utc"
+            "fuchsia.time.Utc",
+            "fuchsia.update.channel.Provider"
         ]
     }
 }

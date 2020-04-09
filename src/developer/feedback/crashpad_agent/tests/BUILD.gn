@@ -29,6 +29,7 @@ group("tests") {
     "//src/developer/feedback/testing/fakes:fake-device-id-provider",
     "//src/developer/feedback/testing/fakes:fake_data_provider",
     "//src/diagnostics/archivist",
+    "//src/sys/pkg/bin/system-update-checker",
     "//src/sys/timekeeper",
   ]
 }
@@ -196,6 +197,7 @@ executable("crash_reporter_unittest") {
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/fakes:privacy_settings",
+    "//src/developer/feedback/testing/stubs:channel_provider",
     "//src/developer/feedback/testing/stubs:cobalt",
     "//src/developer/feedback/testing/stubs:data_provider",
     "//src/developer/feedback/testing/stubs:device_id_provider",

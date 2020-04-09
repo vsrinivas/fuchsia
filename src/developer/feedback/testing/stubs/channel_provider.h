@@ -16,7 +16,8 @@
 namespace feedback {
 namespace stubs {
 
-using ChannelProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::update::channel, Provider);
+using ChannelProviderBase = MULTI_BINDING_STUB_FIDL_SERVER(fuchsia::update::channel, Provider);
+
 class ChannelProvider : public ChannelProviderBase {
  public:
   ChannelProvider(const std::string channel) : channel_(channel) {}
@@ -36,7 +37,7 @@ class ChannelProviderReturnsEmptyChannel : public ChannelProviderBase {
 class ChannelProviderClosesConnection : public ChannelProviderBase {
  public:
   // |fuchsia::update::channel::Provider|.
-  STUB_METHOD_CLOSES_CONNECTION(GetCurrent, GetCurrentCallback);
+  STUB_METHOD_CLOSES_ALL_CONNECTIONS(GetCurrent, GetCurrentCallback);
 };
 
 class ChannelProviderNeverReturns : public ChannelProviderBase {

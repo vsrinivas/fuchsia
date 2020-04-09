@@ -241,13 +241,14 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
 
 TEST_F(DatastoreTest, GetAnnotations_Channel) {
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>("my-channel"));
-  SetUpDatastore({kAnnotationChannel}, kDefaultAttachmentsToAvoidSpuriousLogs);
+  SetUpDatastore({kAnnotationSystemUpdateChannelCurrent}, kDefaultAttachmentsToAvoidSpuriousLogs);
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationChannel, "my-channel"),
-                                        }));
+  EXPECT_THAT(annotations.take_value(),
+              ElementsAreArray({
+                  Pair(kAnnotationSystemUpdateChannelCurrent, "my-channel"),
+              }));
 
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
 }

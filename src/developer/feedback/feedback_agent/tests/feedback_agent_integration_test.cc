@@ -278,7 +278,6 @@ TEST_F(FeedbackAgentIntegrationTest, DataProvider_GetData_CheckKeys) {
                                       MatchesKey(kAnnotationBuildLatestCommitDate),
                                       MatchesKey(kAnnotationBuildProduct),
                                       MatchesKey(kAnnotationBuildVersion),
-                                      MatchesKey(kAnnotationChannel),
                                       MatchesKey(kAnnotationDeviceBoardName),
                                       MatchesKey(kAnnotationDeviceFeedbackId),
                                       MatchesKey(kAnnotationDeviceUptime),
@@ -292,6 +291,7 @@ TEST_F(FeedbackAgentIntegrationTest, DataProvider_GetData_CheckKeys) {
                                       MatchesKey(kAnnotationHardwareProductName),
                                       MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
                                       MatchesKey(kAnnotationHardwareProductSKU),
+                                      MatchesKey(kAnnotationSystemUpdateChannelCurrent),
                                   }));
 
   ASSERT_TRUE(data.has_attachment_bundle());

@@ -31,7 +31,6 @@ constexpr char kAnnotationBuildIsDebug[] = "build.is_debug";
 constexpr char kAnnotationBuildLatestCommitDate[] = "build.latest-commit-date";
 constexpr char kAnnotationBuildProduct[] = "build.product";
 constexpr char kAnnotationBuildVersion[] = "build.version";
-constexpr char kAnnotationChannel[] = "channel";
 constexpr char kAnnotationDeviceBoardName[] = "device.board-name";
 constexpr char kAnnotationDeviceFeedbackId[] = "device.feedback-id";
 constexpr char kAnnotationDeviceUptime[] = "device.uptime";
@@ -45,6 +44,7 @@ constexpr char kAnnotationHardwareProductModel[] = "hardware.product.model";
 constexpr char kAnnotationHardwareProductName[] = "hardware.product.name";
 constexpr char kAnnotationHardwareProductRegulatoryDomain[] = "hardware.product.regulatory-domain";
 constexpr char kAnnotationHardwareProductSKU[] = "hardware.product.sku";
+constexpr char kAnnotationSystemUpdateChannelCurrent[] = "system.update-channel.current";
 
 // Reserved namespaces for platform annotations. Components are not allowed to use these namespaces
 // when supplying extra annotations.

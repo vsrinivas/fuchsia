@@ -31,6 +31,7 @@
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/fakes/privacy_settings.h"
+#include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/stubs/data_provider.h"
 #include "src/developer/feedback/testing/stubs/device_id_provider.h"
@@ -85,7 +86,8 @@ constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
 constexpr char kCrashpadAttachmentsDir[] = "attachments";
 constexpr char kProgramName[] = "crashing_program";
 
-constexpr char kDefaultDeviceId[] = "device_id";
+constexpr char kDefaultChannel[] = "my-channel";
+constexpr char kDefaultDeviceId[] = "my-device-id";
 
 constexpr char kSingleAttachmentKey[] = "attachment.key";
 constexpr char kSingleAttachmentValue[] = "attachment.value";
@@ -162,6 +164,13 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
                    /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
                }},
         std::make_unique<StubCrashServer>(upload_attempt_results));
+  }
+
+  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProviderBase> server) {
+    channel_provider_server_ = std::move(server);
+    if (channel_provider_server_) {
+      InjectServiceProvider(channel_provider_server_.get());
+    }
   }
 
   void SetUpDataProviderServer(std::unique_ptr<stubs::DataProvider> server) {
@@ -241,9 +250,10 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
         {"ptype", testing::StartsWith("crashing_program")},
         {"osName", "Fuchsia"},
         {"osVersion", Not(IsEmpty())},
+        {"reportTimeMillis", Not(IsEmpty())},
         {"guid", kDefaultDeviceId},
         {"debug.guid.set", "true"},
-        {"reportTimeMillis", Not(IsEmpty())},
+        {"channel", kDefaultChannel},
         {"should_process", "false"},
     };
     if (data_provider_server_) {
@@ -439,6 +449,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
 
  private:
   // Stubs and fake servers.
+  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
   std::unique_ptr<stubs::DataProvider> data_provider_server_;
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_server_;
@@ -461,6 +472,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -473,6 +485,7 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
 
 TEST_F(CrashReporterTest, Check_UTCTimeIsNotReady) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({
@@ -494,6 +507,7 @@ TEST_F(CrashReporterTest, Check_UTCTimeIsNotReady) {
 
 TEST_F(CrashReporterTest, Check_guidNotSet) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProviderReturnsError>());
   SetUpUtcProviderServer({kExternalResponse});
@@ -510,8 +524,25 @@ TEST_F(CrashReporterTest, Check_guidNotSet) {
   EXPECT_EQ(crash_server_->latest_annotations().at("debug.guid.set"), "false");
 }
 
+TEST_F(CrashReporterTest, Check_UnknownChannel) {
+  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderClosesConnection>());
+  SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+  SetUpUtcProviderServer({kExternalResponse});
+
+  ASSERT_TRUE(FileOneCrashReport().is_ok());
+  CheckAttachmentsInDatabase();
+  CheckAttachmentsOnServer();
+
+  ASSERT_NE(crash_server_->latest_annotations().find("channel"),
+            crash_server_->latest_annotations().end());
+  EXPECT_EQ(crash_server_->latest_annotations().at("channel"), "<unknown>");
+}
+
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -535,6 +566,7 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -553,6 +585,7 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -573,6 +606,7 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
 
 TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -585,6 +619,7 @@ TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReportWithSignature) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -599,6 +634,7 @@ TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReportWithSignature) {
 
 TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -616,6 +652,7 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -630,6 +667,7 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
 
 TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -652,6 +690,7 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
 
 TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -681,6 +720,7 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
       std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
@@ -701,6 +741,7 @@ TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
       std::make_unique<StubCrashServer>(std::vector<bool>({})));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
@@ -719,6 +760,7 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
       std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
@@ -737,6 +779,7 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
 
 TEST_F(CrashReporterTest, Succeed_OnConcurrentReports) {
   SetUpCrashReporterDefaultConfig(std::vector<bool>(10, kUploadSuccessful));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -769,6 +812,7 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              }},
       std::make_unique<StubCrashServer>(std::vector<bool>({kUploadFailed})));
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -782,6 +826,7 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
                                 /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                                 /*url=*/nullptr,
                             }});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -791,6 +836,7 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAttachments) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsNoAttachment>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -803,6 +849,7 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAttachments) {
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsNoAnnotation>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -815,6 +862,7 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsNoData>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -827,6 +875,7 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
 
 TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
@@ -843,6 +892,7 @@ TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
 
 TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {
   SetUpCrashReporterDefaultConfig();
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
 
@@ -854,6 +904,7 @@ TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {
 
 TEST_F(CrashReporterTest, Check_InspectTreeAfterSuccessfulUpload) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProvider>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});

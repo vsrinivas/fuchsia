@@ -17,7 +17,7 @@ ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
 
 AnnotationKeys ChannelProvider::GetSupportedAnnotations() {
   return {
-      kAnnotationChannel,
+      kAnnotationSystemUpdateChannelCurrent,
   };
 }
 
@@ -28,10 +28,10 @@ AnnotationKeys ChannelProvider::GetSupportedAnnotations() {
                  timeout_,
                  /*action=*/[cobalt = cobalt_] { cobalt->LogOccurrence(TimedOutData::kChannel); }))
       .and_then([](const AnnotationValue& channel) -> ::fit::result<Annotations> {
-        return ::fit::ok(Annotations({{kAnnotationChannel, channel}}));
+        return ::fit::ok(Annotations({{kAnnotationSystemUpdateChannelCurrent, channel}}));
       })
       .or_else([] {
-        FX_LOGS(WARNING) << "Failed to build annotation " << kAnnotationChannel;
+        FX_LOGS(WARNING) << "Failed to build annotation " << kAnnotationSystemUpdateChannelCurrent;
         return ::fit::error();
       });
 }
