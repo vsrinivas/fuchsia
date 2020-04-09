@@ -25,11 +25,13 @@ List<TestCaseResults> cpuMetricsProcessor(
         'Trace duration (${duration.toMilliseconds()} millisecconds) is too short to provide CPU information');
     return [];
   }
-  final cpuPercentages = getArgsFromEvents<double>(
+  final cpuPercentages = getArgValuesFromEvents<double>(
       filterEventsTyped<CounterEvent>(getAllEvents(model),
           category: 'system_metrics', name: 'cpu_usage'),
       'average_cpu_percentage');
 
   _log.info('Average CPU Load: ${computeMean(cpuPercentages)}');
-  return [TestCaseResults('CPU Load', Unit.percent, cpuPercentages.toList())];
+  return [
+    TestCaseResults('CPU Load', Unit.percent, cpuPercentages.toList()),
+  ];
 }

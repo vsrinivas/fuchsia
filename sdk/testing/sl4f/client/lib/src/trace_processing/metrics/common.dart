@@ -25,8 +25,8 @@ TimeDelta getTotalTraceDuration(Model model) {
   if (allEvents.isEmpty) {
     return TimeDelta.zero();
   }
-  TimePoint traceStartTime = allEvents.map((e) => e.start).reduce(_min);
-  TimePoint traceEndTime = allEvents
+  final TimePoint traceStartTime = allEvents.map((e) => e.start).reduce(_min);
+  final TimePoint traceEndTime = allEvents
       .map((e) => e is DurationEvent
           ? e.start + e.duration
           : (e is AsyncEvent ? e.start + e.duration : e.start))
@@ -51,7 +51,7 @@ Iterable<T> filterEventsTyped<T extends Event>(Iterable<Event> events,
         (category == null || event.category == category) &&
         (name == null || event.name == name)));
 
-Iterable<T> getArgsFromEvents<T extends Object>(
+Iterable<T> getArgValuesFromEvents<T extends Object>(
     Iterable<Event> events, String argKey) {
   return events.map((e) {
     if (!(e.args.containsKey(argKey) && e.args[argKey] is T)) {

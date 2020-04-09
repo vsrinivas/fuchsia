@@ -43,14 +43,16 @@ List<TestCaseResults> memoryMetricsProcessor(
   }
   final allocatedMemoryEvents =
       filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'allocated');
-  final vmoMemoryValues = getArgsFromEvents<num>(allocatedMemoryEvents, 'vmo')
-      .map((v) => v.toDouble());
-  final mmuMemoryValues =
-      getArgsFromEvents<num>(allocatedMemoryEvents, 'mmu_overhead')
+  final vmoMemoryValues =
+      getArgValuesFromEvents<num>(allocatedMemoryEvents, 'vmo')
           .map((v) => v.toDouble());
-  final ipcMemoryValues = getArgsFromEvents<num>(allocatedMemoryEvents, 'ipc')
-      .map((v) => v.toDouble());
-  final freeMemoryValues = getArgsFromEvents<num>(
+  final mmuMemoryValues =
+      getArgValuesFromEvents<num>(allocatedMemoryEvents, 'mmu_overhead')
+          .map((v) => v.toDouble());
+  final ipcMemoryValues =
+      getArgValuesFromEvents<num>(allocatedMemoryEvents, 'ipc')
+          .map((v) => v.toDouble());
+  final freeMemoryValues = getArgValuesFromEvents<num>(
           filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'free'),
           'free')
       .map((v) => v.toDouble());

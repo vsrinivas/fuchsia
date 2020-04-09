@@ -468,18 +468,19 @@ void main(List<String> args) {
   });
 
   test('Custom registry', () async {
-    List<TestCaseResults> testProcessor(Model _model, MetricsSpec _spec) {
-      return [
-        TestCaseResults(
-          'test',
-          Unit.count,
-          [1234, 5678],
-        )
-      ];
-    }
+    List<TestCaseResults> testProcessor(Model _model, MetricsSpec _spec) => [
+          TestCaseResults(
+            'test',
+            Unit.count,
+            [
+              1234,
+              5678,
+            ],
+          ),
+        ];
 
-    Map<String, MetricsProcessor> emptyRegistry = {};
-    Map<String, MetricsProcessor> testRegistry = {
+    final Map<String, MetricsProcessor> emptyRegistry = {};
+    final Map<String, MetricsProcessor> testRegistry = {
       'test': testProcessor,
     };
     final model = Model();

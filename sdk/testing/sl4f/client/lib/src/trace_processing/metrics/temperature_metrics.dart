@@ -25,7 +25,7 @@ List<TestCaseResults> temperatureMetricsProcessor(
         'Trace duration (${duration.toMilliseconds()} millisecconds) is too short to provide temperature information');
     return [];
   }
-  final temperatureReadings = getArgsFromEvents<num>(
+  final temperatureReadings = getArgValuesFromEvents<num>(
           filterEventsTyped<CounterEvent>(getAllEvents(model),
               category: 'system_metrics', name: 'temperature'),
           'temperature')
@@ -35,6 +35,6 @@ List<TestCaseResults> temperatureMetricsProcessor(
       'Average temperature reading: ${computeMean(temperatureReadings)} degree Celsius');
   return [
     TestCaseResults(
-        'Device temperature', Unit.count, temperatureReadings.toList())
+        'Device temperature', Unit.count, temperatureReadings.toList()),
   ];
 }
