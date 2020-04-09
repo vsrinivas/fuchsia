@@ -64,7 +64,8 @@
         77.0,
         84.0
       ],
-      "thermal_shutdown_temperature": 95.0
+      "thermal_shutdown_temperature": 95.0,
+      "throttle_end_delay": 60.0
     }
   }
 ]

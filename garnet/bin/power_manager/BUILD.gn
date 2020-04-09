@@ -6,6 +6,18 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
+import("//third_party/cobalt/metrics_registry.gni")
+
+metrics_registry("power_manager_metrics") {
+  # ID of the 'power' project from the //third_party/cobalt_config/projects.yaml file
+  project_id = 3
+
+  # The namespace to use in the generated code
+  namespace = "power_manager_metrics"
+
+  # Generates a rust target called 'power_manager_metrics_rustlib'
+  generate_rust = true
+}
 
 rustc_binary("bin") {
   name = "power_manager"
@@ -13,9 +25,11 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":power_manager_metrics_rustlib",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl-rustc",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal-rustc",
     "//sdk/fidl/fuchsia.thermal:fuchsia.thermal-rustc",
+    "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -29,10 +43,12 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
     "//zircon/system/fidl/fuchsia-kernel:fuchsia-kernel-rustc",

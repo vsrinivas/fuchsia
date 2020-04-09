@@ -216,6 +216,9 @@
               "thermal_shutdown_temperature": {
                 "type": "number"
               },
+              "throttle_end_delay": {
+                "type": "number"
+              },
               "controller_params": {
                 "type": "object",
                 "properties": {

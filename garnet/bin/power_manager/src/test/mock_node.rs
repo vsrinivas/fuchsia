@@ -117,7 +117,7 @@ impl Drop for MockNode {
 pub fn create_mock_node(
     name: &'static str,
     mut msg_response_pairs: Vec<(MessageMatcher, Result<MessageReturn, PowerManagerError>)>,
-) -> Rc<impl Node> {
+) -> Rc<dyn Node> {
     // Reverse the vector so that `pop` gives us the elements in the same order they were specified
     msg_response_pairs.reverse();
 
@@ -128,10 +128,32 @@ pub fn create_mock_node(
     })
 }
 
+/// A mock node which responds to all messages with an error. Intended to be used as a "don't care"
+/// mock node. This is useful when a mock node is needed in order to construct the node under test
+/// and the messages/responses to/from the mock node are not important.
+struct DummyNode {}
+
+#[async_trait(?Send)]
+impl Node for DummyNode {
+    fn name(&self) -> &'static str {
+        "DummyNode"
+    }
+
+    async fn handle_message(&self, _msg: &Message) -> Result<MessageReturn, PowerManagerError> {
+        Err(PowerManagerError::Unsupported)
+    }
+}
+
+/// Creates a new DummyNode.
+pub fn create_dummy_node() -> Rc<dyn Node> {
+    Rc::new(DummyNode {})
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use fuchsia_async as fasync;
+    use matches::assert_matches;
 
     /// Tests that receiving an unexpected Message variant results in a panic.
     #[fasync::run_singlethreaded(test)]
@@ -214,5 +236,16 @@ mod tests {
             Ok(MessageReturn::GetNumCpus(4)) => {}
             e => panic!("Unexpected expression expanded from msg_ok_return!(): {:?}", e),
         }
+    }
+
+    /// Tests that a DummyNode responds to an arbitrary Message with
+    /// Err(PowerManagerError::Unsupported).
+    #[fasync::run_singlethreaded(test)]
+    async fn test_dummy_node() {
+        let node = create_dummy_node();
+        assert_matches!(
+            node.handle_message(&Message::SetPerformanceState(1)).await,
+            Err(PowerManagerError::Unsupported)
+        )
     }
 }

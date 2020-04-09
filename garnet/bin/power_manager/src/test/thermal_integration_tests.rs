@@ -424,6 +424,7 @@ fn default_policy_params() -> ThermalPolicyParams {
         },
         thermal_limiting_range: [Celsius(75.0), Celsius(85.0)],
         thermal_shutdown_temperature: Celsius(95.0),
+        throttle_end_delay: Seconds(0.0),
     }
 }
 

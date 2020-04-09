@@ -8,16 +8,22 @@ use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::thermal_limiter;
 use crate::types::{Celsius, Nanoseconds, Seconds, ThermalLoad, Watts};
+use crate::utils::{CobaltIntHistogram, CobaltIntHistogramConfig};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
+use fidl_fuchsia_cobalt::HistogramBucket;
 use fuchsia_async as fasync;
+use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_inspect::{self as inspect, ArrayProperty, Property};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
+use power_manager_metrics::power_manager_metrics as power_metrics_registry;
+use power_metrics_registry::ThermalLimitResultMetricDimensionResult as thermal_limit_result;
 use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::Cell;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -37,11 +43,12 @@ use std::rc::Rc;
 pub struct ThermalPolicyBuilder<'a> {
     config: ThermalConfig,
     inspect_root: Option<&'a inspect::Node>,
+    thermal_metrics: Option<CobaltMetrics>,
 }
 
 impl<'a> ThermalPolicyBuilder<'a> {
     pub fn new(config: ThermalConfig) -> Self {
-        Self { config, inspect_root: None }
+        Self { config, inspect_root: None, thermal_metrics: None }
     }
 
     pub fn new_from_json(json_data: json::Value, nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
@@ -62,6 +69,7 @@ impl<'a> ThermalPolicyBuilder<'a> {
             thermal_limiting_range: Vec<f64>,
             thermal_shutdown_temperature: f64,
             controller_params: ControllerConfig,
+            throttle_end_delay: f64,
         };
 
         #[derive(Deserialize)]
@@ -107,20 +115,28 @@ impl<'a> ThermalPolicyBuilder<'a> {
                     Celsius(data.config.thermal_limiting_range[1]),
                 ],
                 thermal_shutdown_temperature: Celsius(data.config.thermal_shutdown_temperature),
+                throttle_end_delay: Seconds(data.config.throttle_end_delay),
             },
         };
         Self::new(thermal_config)
     }
 
     #[cfg(test)]
-    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
+    fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
         self.inspect_root = Some(root);
         self
     }
 
+    #[cfg(test)]
+    fn with_thermal_metrics(mut self, thermal_metrics: CobaltMetrics) -> Self {
+        self.thermal_metrics = Some(thermal_metrics);
+        self
+    }
+
     pub fn build(self) -> Result<Rc<ThermalPolicy>, Error> {
-        // Optionally use the default inspect root node
+        // Create default values
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
+        let thermal_metrics = self.thermal_metrics.unwrap_or(CobaltMetrics::new());
 
         let node = Rc::new(ThermalPolicy {
             config: self.config,
@@ -131,8 +147,10 @@ impl<'a> ThermalPolicyBuilder<'a> {
                 error_integral: Cell::new(0.0),
                 state_initialized: Cell::new(false),
                 thermal_load: Cell::new(ThermalLoad(0)),
+                throttle_end_deadline: Cell::new(None),
             },
             inspect: InspectData::new(inspect_root, "ThermalPolicy".to_string()),
+            thermal_metrics: RefCell::new(thermal_metrics),
         });
 
         node.inspect.set_thermal_config(&node.config);
@@ -145,8 +163,11 @@ pub struct ThermalPolicy {
     config: ThermalConfig,
     state: ThermalState,
 
-    /// A struct for managing Component Inspection data
+    /// A struct for managing Component Inspection data.
     inspect: InspectData,
+
+    /// Metrics collection for thermals.
+    thermal_metrics: RefCell<CobaltMetrics>,
 }
 
 /// A struct to store all configurable aspects of the ThermalPolicy node
@@ -184,6 +205,9 @@ pub struct ThermalPolicyParams {
 
     /// If temperature reaches or exceeds this value, the policy will command a system shutdown
     pub thermal_shutdown_temperature: Celsius,
+
+    /// Time to wait after throttling ends to officially declare a throttle event complete.
+    pub throttle_end_delay: Seconds,
 }
 
 /// A struct to store the tunable thermal control loop parameters
@@ -234,6 +258,10 @@ struct ThermalState {
     /// A cached value in the range [0 - MAX_THERMAL_LOAD] which is defined as
     /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD).
     thermal_load: Cell<ThermalLoad>,
+
+    /// After we exit throttling, if `throttle_end_delay` is nonzero then this value will
+    /// indicate the time that we may officially consider a throttle event complete.
+    throttle_end_deadline: Cell<Option<Nanoseconds>>,
 }
 
 impl ThermalPolicy {
@@ -276,6 +304,7 @@ impl ThermalPolicy {
         fuchsia_trace::duration!("power_manager", "ThermalPolicy::iterate_thermal_control");
 
         let raw_temperature = self.get_temperature().await?;
+        self.thermal_metrics.borrow_mut().log_raw_temperature(raw_temperature);
 
         // Record the timestamp for this iteration now that we have all the data we need to proceed
         let timestamp = Nanoseconds(fasync::Time::now().into_nanos());
@@ -328,7 +357,7 @@ impl ThermalPolicy {
         );
 
         // If the new temperature is above the critical threshold then shutdown the system
-        let result = self.check_critical_temperature(filtered_temperature).await;
+        let result = self.check_critical_temperature(timestamp, filtered_temperature).await;
         log_if_err!(result, "Error checking critical temperature");
         fuchsia_trace::instant!(
             "power_manager",
@@ -373,7 +402,11 @@ impl ThermalPolicy {
     /// Compares the supplied temperature with the thermal config thermal shutdown temperature. If
     /// we've reached or exceeded the shutdown temperature, message the system power handler node
     /// to initiate a system shutdown.
-    async fn check_critical_temperature(&self, temperature: Celsius) -> Result<(), Error> {
+    async fn check_critical_temperature(
+        &self,
+        timestamp: Nanoseconds,
+        temperature: Celsius,
+    ) -> Result<(), Error> {
         fuchsia_trace::duration!(
             "power_manager",
             "ThermalPolicy::check_critical_temperature",
@@ -389,6 +422,9 @@ impl ThermalPolicy {
                 "temperature" => temperature.0,
                 "shutdown_temperature" => self.config.policy_params.thermal_shutdown_temperature.0
             );
+
+            self.thermal_metrics.borrow_mut().log_throttle_end_shutdown(timestamp);
+
             // TODO(pshickel): We shouldn't ever get an error here. But we should probably have
             // some type of fallback or secondary mechanism of halting the system if it somehow
             // does happen. This could have physical safety implications.
@@ -421,16 +457,20 @@ impl ThermalPolicy {
             "ThermalPolicy::update_thermal_load",
             "temperature" => temperature.0
         );
+
+        let mut return_val = Ok(());
         let thermal_load = Self::calculate_thermal_load(
             temperature,
             &self.config.policy_params.thermal_limiting_range,
         );
+
         fuchsia_trace::counter!(
             "power_manager",
             "ThermalPolicy thermal_load",
             0,
             "thermal_load" => thermal_load.0
         );
+
         if thermal_load != self.state.thermal_load.get() {
             fuchsia_trace::instant!(
                 "power_manager",
@@ -439,19 +479,47 @@ impl ThermalPolicy {
                 "old_load" => self.state.thermal_load.get().0,
                 "new_load" => thermal_load.0
             );
+
+            if self.state.thermal_load.get().0 == 0 {
+                // We've just entered thermal limiting
+                self.thermal_metrics.borrow_mut().log_throttle_start(timestamp);
+                self.state.throttle_end_deadline.set(None);
+            } else if thermal_load.0 == 0 {
+                // We've just exited thermal limiting. Set the deadline time that we may consider
+                // the throttle event officially complete.
+                let throttle_end_deadline = timestamp
+                    + Nanoseconds(self.config.policy_params.throttle_end_delay.into_nanos());
+                self.state.throttle_end_deadline.set(Some(throttle_end_deadline));
+            }
+
             self.state.thermal_load.set(thermal_load);
             self.inspect.thermal_load.set(thermal_load.0.into());
-            if thermal_load.0 == 0 {
-                self.inspect.last_throttle_end_time.set(timestamp.0);
-            }
-            self.send_message(
-                &self.config.thermal_limiter_node,
-                &Message::UpdateThermalLoad(thermal_load),
-            )
-            .await?;
+
+            // Record any errors here, but don't return early from the function in case we have a
+            // pending throttle_end_deadline to deal with
+            return_val = match self
+                .send_message(
+                    &self.config.thermal_limiter_node,
+                    &Message::UpdateThermalLoad(thermal_load),
+                )
+                .await
+            {
+                Ok(_) => Ok(()),
+                Err(e) => Err(Error::from(e)),
+            };
         }
 
-        Ok(())
+        // If a throttle end deadline time was set and the deadline has been passed, then declare
+        // the throttle event complete and clear the deadline
+        if self.state.throttle_end_deadline.get().is_some()
+            && timestamp >= self.state.throttle_end_deadline.get().unwrap()
+        {
+            self.state.throttle_end_deadline.set(None);
+            self.inspect.last_throttle_end_time.set(timestamp.0);
+            self.thermal_metrics.borrow_mut().log_throttle_end_mitigated(timestamp);
+        }
+
+        return_val
     }
 
     /// Calculates the thermal load which is a value in the range [0 - MAX_THERMAL_LOAD] defined as
@@ -507,7 +575,7 @@ impl ThermalPolicy {
         );
         let controller_params = &self.config.policy_params.controller_params;
         let temperature_error = controller_params.target_temperature.0 - temperature.0;
-        let error_integral = clamp(
+        let error_integral = num_traits::clamp(
             self.state.error_integral.get() + temperature_error * time_delta.0,
             controller_params.e_integral_min,
             controller_params.e_integral_max,
@@ -566,16 +634,6 @@ impl ThermalPolicy {
 
 fn low_pass_filter(y: f64, y_prev: f64, time_delta: f64, time_constant: f64) -> f64 {
     y_prev + (time_delta / time_constant) * (y - y_prev)
-}
-
-fn clamp<T: std::cmp::PartialOrd>(val: T, min: T, max: T) -> T {
-    if val < min {
-        min
-    } else if val > max {
-        max
-    } else {
-        val
-    }
 }
 
 #[async_trait(?Send)]
@@ -647,7 +705,6 @@ impl InspectData {
     fn set_thermal_config(&self, config: &ThermalConfig) {
         let policy_params_node = self.root_node.create_child("policy_params");
         let ctrl_params_node = policy_params_node.create_child("controller_params");
-
         let params = &config.policy_params.controller_params;
         ctrl_params_node.record_double("sample_interval (s)", params.sample_interval.0);
         ctrl_params_node.record_double("filter_time_constant (s)", params.filter_time_constant.0);
@@ -668,11 +725,122 @@ impl InspectData {
     }
 }
 
+/// Stores and dispatches Cobalt metric data.
+struct CobaltMetrics {
+    /// Sends Cobalt events to the Cobalt FIDL service.
+    cobalt_sender: CobaltSender,
+
+    /// Timestamp of the start of a throttling duration.
+    throttle_start_time: Option<Nanoseconds>,
+
+    /// Histogram of raw temperature readings.
+    temperature_histogram: CobaltIntHistogram,
+}
+
+impl CobaltMetrics {
+    /// Number of temperature readings before dispatching a Cobalt event.
+    const NUM_TEMPERATURE_READINGS: u32 = 100;
+
+    fn new() -> Self {
+        let (cobalt_sender, sender_future) = CobaltConnector::default()
+            .serve(ConnectionType::project_id(power_metrics_registry::PROJECT_ID));
+
+        // Spawn the future that handles sending data to Cobalt
+        fasync::spawn_local(sender_future);
+
+        Self::new_with_cobalt_sender(cobalt_sender)
+    }
+
+    /// Creates a new CobaltMetrics without connecting to the Cobalt FIDL service. Returns a channel
+    /// to receive the Cobalt events that would have otherwise been delivered to the Cobalt service.
+    fn new_with_cobalt_sender(cobalt_sender: CobaltSender) -> Self {
+        Self {
+            cobalt_sender,
+            throttle_start_time: None,
+            temperature_histogram: CobaltIntHistogram::new(CobaltIntHistogramConfig {
+                floor: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_FLOOR,
+                num_buckets: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_NUM_BUCKETS,
+                step_size: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_STEP_SIZE,
+            }),
+        }
+    }
+
+    /// Log the start of a thermal throttling duration. Must call `throttle_end` before calling this
+    /// function a second time.
+    fn log_throttle_start(&mut self, timestamp: Nanoseconds) {
+        assert!(
+            self.throttle_start_time.is_none(),
+            "throttle_start called before ending previous throttle"
+        );
+
+        self.throttle_start_time = Some(timestamp);
+    }
+
+    /// Log the end of a thermal throttling duration due to successful mitigation.
+    fn log_throttle_end_mitigated(&mut self, timestamp: Nanoseconds) {
+        self.log_throttle_end_with_result(thermal_limit_result::Mitigated, timestamp)
+    }
+
+    /// Log the end of a thermal throttling duration due to a shutdown.
+    fn log_throttle_end_shutdown(&mut self, timestamp: Nanoseconds) {
+        self.log_throttle_end_with_result(thermal_limit_result::Shutdown, timestamp)
+    }
+
+    /// Log the end of a thermal throttling duration with a specified reason.
+    fn log_throttle_end_with_result(
+        &mut self,
+        result: thermal_limit_result,
+        timestamp: Nanoseconds,
+    ) {
+        if self.throttle_start_time.is_some() {
+            let elapsed_time = timestamp - self.throttle_start_time.unwrap();
+            self.throttle_start_time = None;
+            self.dispatch_limiting_elapsed_time_metric(elapsed_time);
+        }
+
+        self.dispatch_limit_result_metric(result);
+    }
+
+    /// Log a raw temperature reading.
+    fn log_raw_temperature(&mut self, temperature: Celsius) {
+        self.temperature_histogram.add_data(temperature.0 as i64);
+        if self.temperature_histogram.count() == Self::NUM_TEMPERATURE_READINGS {
+            self.dispatch_temperature_metric(self.temperature_histogram.get_data());
+            self.temperature_histogram.clear();
+        }
+    }
+
+    /// Dispatch a Cobalt event for the thermal_limiting_elapsed_time metric.
+    fn dispatch_limiting_elapsed_time_metric(&mut self, elapsed_time: Nanoseconds) {
+        self.cobalt_sender.log_elapsed_time(
+            power_metrics_registry::THERMAL_LIMITING_ELAPSED_TIME_METRIC_ID,
+            (),
+            elapsed_time.0,
+        );
+    }
+
+    /// Dispatch a Cobalt event for the thermal_limit_result metric.
+    fn dispatch_limit_result_metric(&mut self, result: thermal_limit_result) {
+        self.cobalt_sender
+            .log_event(power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID, vec![result as u32]);
+    }
+
+    /// Dispatch a Cobalt event for the raw_temperature metric.
+    fn dispatch_temperature_metric(&mut self, histogram: Vec<HistogramBucket>) {
+        self.cobalt_sender.log_int_histogram(
+            power_metrics_registry::RAW_TEMPERATURE_METRIC_ID,
+            (),
+            histogram,
+        );
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::test::mock_node::{create_mock_node, MessageMatcher};
+    use crate::test::mock_node::{create_dummy_node, create_mock_node, MessageMatcher};
     use crate::{msg_eq, msg_ok_return};
+    use fidl_fuchsia_cobalt::{CobaltEvent, Event, EventPayload};
     use inspect::assert_inspect_tree;
 
     pub fn get_sample_interval(thermal_policy: &ThermalPolicy) -> Seconds {
@@ -693,6 +861,7 @@ pub mod tests {
             },
             thermal_limiting_range: [Celsius(75.0), Celsius(85.0)],
             thermal_shutdown_temperature: Celsius(95.0),
+            throttle_end_delay: Seconds(0.0),
         }
     }
 
@@ -868,6 +1037,7 @@ pub mod tests {
             "config": {
                 "thermal_limiting_range": [77.0, 84.0],
                 "thermal_shutdown_temperature": 95.0,
+                "throttle_end_delay": 0.0,
                 "controller_params": {
                     "sample_interval": 1.0,
                     "filter_time_constant": 5.0,
@@ -895,5 +1065,260 @@ pub mod tests {
         nodes.insert("sys_power".to_string(), create_mock_node("MockNode", vec![]));
         nodes.insert("limiter".to_string(), create_mock_node("MockNode", vec![]));
         let _ = ThermalPolicyBuilder::new_from_json(json_data, &nodes);
+    }
+
+    /// Tests that the ThermalPolicy reports the thermal_limiting_elapsed_time and
+    /// thermal_limit_result metrics after successful thermal mitigation.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cobalt_metrics_throttle_elapsed_time() {
+        // Specify the idle and throttle temperatures and throttle duration
+        let policy_params = default_policy_params();
+        let idle_temperature = policy_params.thermal_limiting_range[0] - Celsius(1.0);
+        let throttle_temperature = policy_params.thermal_limiting_range[0] + Celsius(1.0);
+        let throttle_duration = Nanoseconds(1e9 as i64); // 1s
+
+        // Setup the ThermalPolicy node
+        let thermal_config = ThermalConfig {
+            temperature_node: create_dummy_node(),
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: create_dummy_node(),
+            policy_params,
+        };
+
+        let (sender, mut receiver) = futures::channel::mpsc::channel(10);
+        let cobalt_metrics = CobaltMetrics::new_with_cobalt_sender(CobaltSender::new(sender));
+        let node = ThermalPolicyBuilder::new(thermal_config)
+            .with_thermal_metrics(cobalt_metrics)
+            .build()
+            .unwrap();
+
+        // Cause the thermal policy to begin thermal limiting
+        let _ = node.update_thermal_load(Nanoseconds(0), throttle_temperature).await;
+
+        // Cause the thermal policy to end thermal limiting
+        let _ = node.update_thermal_load(throttle_duration, idle_temperature).await;
+
+        // Verify the expected Cobalt event for the thermal_limiting_elapsed_time metric
+        assert_eq!(
+            receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: power_metrics_registry::THERMAL_LIMITING_ELAPSED_TIME_METRIC_ID,
+                event_codes: vec![],
+                component: None,
+                payload: EventPayload::ElapsedMicros(throttle_duration.0 as i64)
+            }
+        );
+
+        // Verify the expected Cobalt event for the thermal_limit_result metric
+        assert_eq!(
+            receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID,
+                event_codes: vec![thermal_limit_result::Mitigated as u32],
+                component: None,
+                payload: EventPayload::Event(Event),
+            }
+        );
+
+        // Verify there were no more dispatched Cobalt events
+        assert!(receiver.try_next().is_err());
+    }
+
+    /// Tests that the ThermalPolicy reports the thermal_limiting_elapsed_time and
+    /// thermal_limit_result metrics in the case of a thermal shutdown.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cobalt_metrics_thermal_shutdown() {
+        // Specify the thermal shutdown temperature
+        let policy_params = default_policy_params();
+        let shutdown_temperature = policy_params.thermal_shutdown_temperature + Celsius(1.0);
+
+        // Setup the ThermalPolicy node
+        let thermal_config = ThermalConfig {
+            temperature_node: create_dummy_node(),
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: create_dummy_node(),
+            policy_params,
+        };
+        let (sender, mut receiver) = futures::channel::mpsc::channel(10);
+        let cobalt_metrics = CobaltMetrics::new_with_cobalt_sender(CobaltSender::new(sender));
+        let node = ThermalPolicyBuilder::new(thermal_config)
+            .with_thermal_metrics(cobalt_metrics)
+            .build()
+            .unwrap();
+
+        // Cause the thermal policy to enter thermal shutdown
+        let _ = node.check_critical_temperature(Nanoseconds(0), shutdown_temperature).await;
+
+        // Verify the expected Cobalt event for the thermal_limit_result metric
+        assert_eq!(
+            receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID,
+                event_codes: vec![thermal_limit_result::Shutdown as u32],
+                component: None,
+                payload: EventPayload::Event(Event),
+            }
+        );
+
+        // Verify there were no more dispatched Cobalt events
+        assert!(receiver.try_next().is_err());
+    }
+
+    /// Tests that the ThermalPolicy reports the raw_temperature metric with the correct data and
+    /// after the expected number of temperature readings.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cobalt_metrics_raw_temperature() {
+        // The temperature that the mock TemperatureNode will respond with, and that the test will
+        // verify is received in the Cobalt histogram event
+        let test_temperature = Celsius(50.0);
+
+        // The number of temperature readings that the test will perform and are expected to be
+        // reported in the Cobalt histogram event
+        let num_temperature_readings = CobaltMetrics::NUM_TEMPERATURE_READINGS;
+
+        // Mock temperature node that responds to `num_temperature_readings` number of
+        // ReadTemperature messages with a `test_temperature` reading
+        let temperature_node = create_mock_node(
+            "TemperatureNode",
+            (0..num_temperature_readings)
+                .map(|_| {
+                    (msg_eq!(ReadTemperature), msg_ok_return!(ReadTemperature(test_temperature)))
+                })
+                .collect(),
+        );
+
+        // Setup the ThermalPolicy node
+        let policy_params = default_policy_params();
+        let thermal_config = ThermalConfig {
+            temperature_node,
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: create_dummy_node(),
+            policy_params,
+        };
+        let (sender, mut receiver) = futures::channel::mpsc::channel(10);
+        let cobalt_metrics = CobaltMetrics::new_with_cobalt_sender(CobaltSender::new(sender));
+        let node = ThermalPolicyBuilder::new(thermal_config)
+            .with_thermal_metrics(cobalt_metrics)
+            .build()
+            .unwrap();
+
+        // Iterate the controller for `num_temperature_readings` iterations to trigger a Cobalt
+        // metric event
+        for _ in 0..num_temperature_readings {
+            node.iterate_thermal_control().await.unwrap();
+        }
+
+        // Generate the expected raw_temperature Cobalt event
+        let mut expected_histogram = CobaltIntHistogram::new(CobaltIntHistogramConfig {
+            floor: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_FLOOR,
+            num_buckets: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_NUM_BUCKETS,
+            step_size: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_STEP_SIZE,
+        });
+        for _ in 0..num_temperature_readings {
+            expected_histogram.add_data(test_temperature.0 as i64);
+        }
+
+        let expected_cobalt_event = CobaltEvent {
+            metric_id: power_metrics_registry::RAW_TEMPERATURE_METRIC_ID,
+            event_codes: vec![],
+            component: None,
+            payload: EventPayload::IntHistogram(expected_histogram.get_data()),
+        };
+
+        // Verify that the expected Cobalt event was received, and there were no extra events
+        assert_eq!(receiver.try_next().unwrap().unwrap(), expected_cobalt_event);
+        assert!(receiver.try_next().is_err());
+    }
+
+    /// Tests that we can call `throttle_start` a second time if we first call `throttle_end`.
+    #[test]
+    fn test_cobalt_metrics_throttle_restart() {
+        let (sender, _) = futures::channel::mpsc::channel(10);
+        let mut cobalt_metrics = CobaltMetrics::new_with_cobalt_sender(CobaltSender::new(sender));
+        cobalt_metrics.log_throttle_start(Nanoseconds(0));
+        cobalt_metrics.log_throttle_end_mitigated(Nanoseconds(1000));
+        cobalt_metrics.log_throttle_start(Nanoseconds(2000));
+    }
+
+    /// Tests that calling CobaltMetrics `throttle_start` twice without first calling `throttle_end`
+    /// causes a panic.
+    #[test]
+    #[should_panic(expected = "throttle_start called before ending previous throttle")]
+    fn test_cobalt_metrics_double_start_panic() {
+        let (sender, _) = futures::channel::mpsc::channel(10);
+        let mut cobalt_metrics = CobaltMetrics::new_with_cobalt_sender(CobaltSender::new(sender));
+        cobalt_metrics.log_throttle_start(Nanoseconds(0));
+        cobalt_metrics.log_throttle_start(Nanoseconds(0));
+    }
+
+    /// Tests that Cobalt events are not dispatched until after a specified throttle end delay.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cobalt_metrics_throttle_deadline() {
+        // Set the test parameters
+        let mut policy_params = default_policy_params();
+        let throttle_end_delay = Seconds(60.0);
+        policy_params.throttle_end_delay = throttle_end_delay;
+        let idle_temperature = policy_params.thermal_limiting_range[0] - Celsius(1.0);
+        let throttle_temperature = policy_params.thermal_limiting_range[0] + Celsius(1.0);
+        let initial_throttle_duration = Nanoseconds(1e9 as i64); // 1s
+        let total_throttle_duration =
+            initial_throttle_duration + Nanoseconds(throttle_end_delay.into_nanos());
+
+        // Setup the ThermalPolicy node
+        let thermal_config = ThermalConfig {
+            temperature_node: create_dummy_node(),
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: create_dummy_node(),
+            policy_params,
+        };
+
+        let (sender, mut receiver) = futures::channel::mpsc::channel(10);
+        let cobalt_metrics = CobaltMetrics::new_with_cobalt_sender(CobaltSender::new(sender));
+        let node = ThermalPolicyBuilder::new(thermal_config)
+            .with_thermal_metrics(cobalt_metrics)
+            .build()
+            .unwrap();
+
+        // Cause the thermal policy to begin thermal limiting
+        let _ = node.update_thermal_load(Nanoseconds(0), throttle_temperature).await;
+
+        // Cause the thermal policy to end thermal limiting, but the deadline timer should still be
+        // active
+        let _ = node.update_thermal_load(initial_throttle_duration, idle_temperature).await;
+
+        // Verify there were no dispatched Cobalt events because the deadline timer is still running
+        assert!(receiver.try_next().is_err());
+
+        // Cause the deadline timer to expire
+        let _ = node.update_thermal_load(total_throttle_duration, idle_temperature).await;
+
+        // Verify the expected Cobalt event for the thermal_limiting_elapsed_time metric
+        assert_eq!(
+            receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: power_metrics_registry::THERMAL_LIMITING_ELAPSED_TIME_METRIC_ID,
+                event_codes: vec![],
+                component: None,
+                payload: EventPayload::ElapsedMicros(total_throttle_duration.0 as i64)
+            }
+        );
+
+        // Verify the expected Cobalt event for the thermal_limit_result metric
+        assert_eq!(
+            receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID,
+                event_codes: vec![thermal_limit_result::Mitigated as u32],
+                component: None,
+                payload: EventPayload::Event(Event),
+            }
+        );
+
+        // Verify there were no more dispatched Cobalt events
+        assert!(receiver.try_next().is_err());
     }
 }
