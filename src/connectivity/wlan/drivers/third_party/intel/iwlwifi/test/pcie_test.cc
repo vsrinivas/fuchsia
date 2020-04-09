@@ -302,6 +302,8 @@ TEST_F(PcieTest, RxInterrupts) {
   base_params_.num_of_queues = 31;
   base_params_.max_tfd_queue_size = 256;
   trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
+  // This need not be started, just created so that iwl_pcie_tx_free() has a target to cancel.
+  ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &trans_->loop));
   ASSERT_OK(iwl_pcie_tx_init(trans_));
 
   ASSERT_TRUE(io_buffer_is_valid(&trans_pcie_->ict_tbl));
@@ -341,6 +343,8 @@ TEST_F(PcieTest, RxInterrupts) {
   EXPECT_EQ(trans_pcie_->rxq->write_actual, 168);
 
   iwl_pcie_rx_free(trans_);
+  iwl_pcie_tx_free(trans_);
+  free(trans_->loop);
 }
 
 class TxTest : public PcieTest {
@@ -357,6 +361,7 @@ class TxTest : public PcieTest {
     async_loop_quit(trans_->loop);
     async_loop_join_threads(trans_->loop);
     iwl_pcie_tx_free(trans_);
+    free(trans_->loop);
   }
 };
 
@@ -765,6 +770,8 @@ class StuckTimerTest : public PcieTest {
     txq_.write_ptr = 0;
     txq_.read_ptr = 1;
   }
+
+  ~StuckTimerTest() { free(trans_->loop); }
 
   void WaitForWorkerThread() {
     async_loop_quit(trans_->loop);

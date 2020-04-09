@@ -154,9 +154,6 @@ executable("pcie_test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/lib/fake-bti",
   ]
-
-  # TODO(46745): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("phy-ctxt_test") {
