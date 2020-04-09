@@ -123,10 +123,10 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            "actual %s (%ld)\n",                                                    \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
       unittest_fails();                                                                            \
-      if (term)                                                                                    \
+      if (term) {                                                                                  \
         return false;                                                                              \
-      else                                                                                         \
-        all_ok = false;                                                                            \
+      }                                                                                            \
+      all_ok = false;                                                                              \
     }                                                                                              \
   } while (0)
 
@@ -140,10 +140,10 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            " to differ, but they are the same %ld\n",                              \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
       unittest_fails();                                                                            \
-      if (term)                                                                                    \
+      if (term) {                                                                                  \
         return false;                                                                              \
-      else                                                                                         \
-        all_ok = false;                                                                            \
+      }                                                                                            \
+      all_ok = false;                                                                              \
     }                                                                                              \
   } while (0)
 
@@ -157,10 +157,10 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            " less-than-or-equal-to actual %s (%ld)\n",                             \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
       unittest_fails();                                                                            \
-      if (term)                                                                                    \
+      if (term) {                                                                                  \
         return false;                                                                              \
-      else                                                                                         \
-        all_ok = false;                                                                            \
+      }                                                                                            \
+      all_ok = false;                                                                              \
     }                                                                                              \
   } while (0)
 
@@ -174,10 +174,10 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            " less-than actual %s (%ld)\n",                                         \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
       unittest_fails();                                                                            \
-      if (term)                                                                                    \
+      if (term) {                                                                                  \
         return false;                                                                              \
-      else                                                                                         \
-        all_ok = false;                                                                            \
+      }                                                                                            \
+      all_ok = false;                                                                              \
     }                                                                                              \
   } while (0)
 
@@ -191,10 +191,10 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            " greater-than-or-equal-to actual %s (%ld)\n",                          \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
       unittest_fails();                                                                            \
-      if (term)                                                                                    \
+      if (term) {                                                                                  \
         return false;                                                                              \
-      else                                                                                         \
-        all_ok = false;                                                                            \
+      }                                                                                            \
+      all_ok = false;                                                                              \
     }                                                                                              \
   } while (0)
 
@@ -208,10 +208,10 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            " greater-than actual %s (%ld)\n",                                      \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
       unittest_fails();                                                                            \
-      if (term)                                                                                    \
+      if (term) {                                                                                  \
         return false;                                                                              \
-      else                                                                                         \
-        all_ok = false;                                                                            \
+      }                                                                                            \
+      all_ok = false;                                                                              \
     }                                                                                              \
   } while (0)
 
@@ -219,40 +219,40 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
   if (!(actual)) {                                                                     \
     UNITTEST_FAIL_TRACEF("%s: %s is false\n", unittest_get_msg(__VA_ARGS__), #actual); \
     unittest_fails();                                                                  \
-    if (term)                                                                          \
+    if (term) {                                                                        \
       return false;                                                                    \
-    else                                                                               \
-      all_ok = false;                                                                  \
+    }                                                                                  \
+    all_ok = false;                                                                    \
   }
 
 #define UTCHECK_FALSE(actual, term, ...)                                              \
   if (actual) {                                                                       \
     UNITTEST_FAIL_TRACEF("%s: %s is true\n", unittest_get_msg(__VA_ARGS__), #actual); \
     unittest_fails();                                                                 \
-    if (term)                                                                         \
+    if (term) {                                                                       \
       return false;                                                                   \
-    else                                                                              \
-      all_ok = false;                                                                 \
+    }                                                                                 \
+    all_ok = false;                                                                   \
   }
 
 #define UTCHECK_NULL(actual, term, ...)                                                    \
   if (actual != NULL) {                                                                    \
     UNITTEST_FAIL_TRACEF("%s: %s is non-null!\n", unittest_get_msg(__VA_ARGS__), #actual); \
     unittest_fails();                                                                      \
-    if (term)                                                                              \
+    if (term) {                                                                            \
       return false;                                                                        \
-    else                                                                                   \
-      all_ok = false;                                                                      \
+    }                                                                                      \
+    all_ok = false;                                                                        \
   }
 
 #define UTCHECK_NONNULL(actual, term, ...)                                             \
   if (actual == NULL) {                                                                \
     UNITTEST_FAIL_TRACEF("%s: %s is null!\n", unittest_get_msg(__VA_ARGS__), #actual); \
     unittest_fails();                                                                  \
-    if (term)                                                                          \
+    if (term) {                                                                        \
       return false;                                                                    \
-    else                                                                               \
-      all_ok = false;                                                                  \
+    }                                                                                  \
+    all_ok = false;                                                                    \
   }
 
 #define UTCHECK_BYTES_EQ(expected, actual, length, term, ...)                              \
@@ -260,10 +260,10 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                              unittest_get_msg(__VA_ARGS__), __PRETTY_FUNCTION__, __LINE__, \
                              true)) {                                                      \
     unittest_fails();                                                                      \
-    if (term)                                                                              \
+    if (term) {                                                                            \
       return false;                                                                        \
-    else                                                                                   \
-      all_ok = false;                                                                      \
+    }                                                                                      \
+    all_ok = false;                                                                        \
   }
 
 #define UTCHECK_BYTES_NE(expected, actual, length, term, ...)                              \
@@ -271,10 +271,10 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                              unittest_get_msg(__VA_ARGS__), __PRETTY_FUNCTION__, __LINE__, \
                              false)) {                                                     \
     unittest_fails();                                                                      \
-    if (term)                                                                              \
+    if (term) {                                                                            \
       return false;                                                                        \
-    else                                                                                   \
-      all_ok = false;                                                                      \
+    }                                                                                      \
+    all_ok = false;                                                                        \
   }
 
 /* EXPECT_* macros check the supplied condition and will print a diagnostic
