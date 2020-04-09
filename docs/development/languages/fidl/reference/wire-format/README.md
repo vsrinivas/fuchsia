@@ -189,7 +189,7 @@ In this section, we illustrate the encodings for all FIDL objects.
 
 ## Primitives
 
-*   Value stored in [little-endian format][ftp-030].
+*   Value stored in [little-endian format][FTP-030].
 *   Packed with natural alignment.
     *   Each _m_-byte primitive is stored on an _m_-byte boundary.
 *   Not nullable.
@@ -260,6 +260,8 @@ Arrays are denoted:
 
 *   `array<T>:N`: where **T** can be any FIDL type
     (including an array) and **N** is the number of elements in the array.
+    Note: An array's size MUST be no more than 2<sup>32</sup>-1.
+    For additional details, see [FTP-059].
 
 ![drawing](arrays.png)
 
@@ -271,6 +273,8 @@ Arrays are denoted:
     for a maximum 40 element vector.
 *   Stored as a 16 byte record consisting of:
     *   `size`: 64-bit unsigned number of elements
+    Note: A vector's size MUST be no more than 2<sup>32</sup>-1.
+    For additional details, see [FTP-059].
     *   `data`: 64-bit presence indication or pointer to out-of-line element data
 *   When encoded for transfer, `data` indicates
     presence of content:
@@ -842,6 +846,7 @@ Read [The Lost Art of Structure Packing][lostart] for an in-depth treatise on th
 
 [channel call]: /docs/reference/syscalls/channel_call.md
 [channel write]: /docs/reference/syscalls/channel_write.md
-[ftp-030]: /docs/development/languages/fidl/reference/ftp/ftp-030.md
+[FTP-030]: /docs/development/languages/fidl/reference/ftp/ftp-030.md
+[FTP-059]: /docs/development/languages/fidl/reference/ftp/ftp-059.md
 [abi-compat]: /docs/development/languages/fidl/how-to/abi-compat.md
 [lostart]: http://www.catb.org/esr/structure-packing/

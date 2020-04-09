@@ -35,6 +35,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-028](ftp-028.md) | 2019-04-01 | 2019-12-12 | Handle Rights – The Right Stuff
 [FTP-054](ftp-054.md) | 2019-11-21 | 2019-12-12 | Parameter Attributes &mdash; A Chance to Write Self Documenting APIs
 [FTP-049](ftp-049.md) | 2019-11-20 | 2019-12-19 | FIDL Tuning Process Evolution
+[FTP-059](ftp-059.md) | 2020-03-16 | 2020-03-19 | Reserved Bits in Vector/String/Array Count Fields
 
 ## Rejected proposals
 
