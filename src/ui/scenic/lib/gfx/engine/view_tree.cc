@@ -11,6 +11,8 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
+
 
 namespace scenic_impl::gfx {
 
@@ -397,7 +399,7 @@ void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWea
                           fit::function<std::optional<glm::mat4>()> global_transform,
                           fit::function<void(ViewHolderPtr)> add_annotation_view_holder,
                           scheduling::SessionId session_id) {
-  const zx_koid_t koid = ExtractKoid(view_ref);
+  const zx_koid_t koid = utils::ExtractKoid(view_ref);
   FXL_DCHECK(IsValid(koid)) << "precondition";
   FXL_DCHECK(!IsTracked(koid)) << "precondition";
   FXL_DCHECK(may_receive_focus) << "precondition";           // Callback exists.
@@ -618,16 +620,6 @@ void ViewTree::RepairFocus() {
   }
 
   // Run state validity check at call site.
-}
-
-zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
-  zx_info_handle_basic_t info{};
-  if (view_ref.reference.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) !=
-      ZX_OK) {
-    return ZX_KOID_INVALID;  // no info
-  }
-
-  return info.koid;
 }
 
 }  // namespace scenic_impl::gfx

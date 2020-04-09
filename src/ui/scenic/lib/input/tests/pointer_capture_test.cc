@@ -12,6 +12,7 @@
 
 #include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/input/tests/util.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 // This tests the functionality of the pointer capture API.
 //
@@ -83,7 +84,7 @@ class PointerCaptureTest : public InputSystemTest {
     auto pair = scenic::ViewRefPair::New();
     ViewRef view_ref_clone;
     pair.view_ref.Clone(&view_ref_clone);
-    listener_wrapper->SetViewKoid(scenic_impl::gfx::ExtractKoid(pair.view_ref));
+    listener_wrapper->SetViewKoid(utils::ExtractKoid(pair.view_ref));
     scenic::View view(listener_wrapper->session(), std::move(view_token),
                       std::move(pair.control_ref), std::move(pair.view_ref), name);
     SetUpTestView(&view);

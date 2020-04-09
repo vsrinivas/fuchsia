@@ -19,6 +19,7 @@
 #include "src/ui/scenic/lib/gfx/engine/view_tree.h"
 #include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/input/tests/util.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace lib_ui_input_tests {
 namespace {
@@ -40,7 +41,6 @@ using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventType;
 using fuchsia::ui::views::ViewHolderToken;
 using fuchsia::ui::views::ViewToken;
-using scenic_impl::gfx::ExtractKoid;
 using scenic_impl::gfx::ViewTree;
 
 constexpr float kNdcEpsilon = std::numeric_limits<float>::epsilon();
@@ -130,7 +130,7 @@ class AccessibilityPointerEventsTest : public InputSystemTest {
   // test.
   SessionWrapper CreateClient(ViewToken view_token) {
     auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-    zx_koid_t koid = ExtractKoid(view_ref);
+    zx_koid_t koid = utils::ExtractKoid(view_ref);
     SessionWrapper session_wrapper(scenic());
     session_wrapper.SetViewKoid(koid);
     scenic::View view(session_wrapper.session(), std::move(view_token), std::move(control_ref),

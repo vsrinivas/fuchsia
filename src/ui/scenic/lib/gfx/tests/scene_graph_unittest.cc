@@ -8,6 +8,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -89,9 +90,9 @@ TEST_F(SceneGraphTest, RequestFocusChange) {
   sys::testing::ComponentContextProvider context_provider;
   SceneGraph scene_graph(context_provider.context());
   auto parent_view_pair = scenic::ViewRefPair::New();
-  const zx_koid_t parent_koid = ExtractKoid(parent_view_pair.view_ref);
+  const zx_koid_t parent_koid = utils::ExtractKoid(parent_view_pair.view_ref);
   auto child_view_pair = scenic::ViewRefPair::New();
-  const zx_koid_t child_koid = ExtractKoid(child_view_pair.view_ref);
+  const zx_koid_t child_koid = utils::ExtractKoid(child_view_pair.view_ref);
   {
     ViewTreeUpdates updates;
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
@@ -129,9 +130,9 @@ TEST_F(SceneGraphTest, RequestFocusChangeButMayNotReceiveFocus) {
   sys::testing::ComponentContextProvider context_provider;
   SceneGraph scene_graph(context_provider.context());
   auto parent_view_pair = scenic::ViewRefPair::New();
-  const zx_koid_t parent_koid = ExtractKoid(parent_view_pair.view_ref);
+  const zx_koid_t parent_koid = utils::ExtractKoid(parent_view_pair.view_ref);
   auto child_view_pair = scenic::ViewRefPair::New();
-  const zx_koid_t child_koid = ExtractKoid(child_view_pair.view_ref);
+  const zx_koid_t child_koid = utils::ExtractKoid(child_view_pair.view_ref);
   {
     ViewTreeUpdates updates;
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),

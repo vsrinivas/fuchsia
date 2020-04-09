@@ -18,6 +18,7 @@
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 // This test exercises the focus transfer functionality of fuchsia.ui.views.Focuser. In particular,
 // a request may be performed at various points along the resource lifecycle timeline of both
@@ -38,7 +39,6 @@ using fuchsia::ui::focus::FocusChainListener;
 using fuchsia::ui::focus::FocusChainListenerRegistry;
 using fuchsia::ui::focus::FocusChainListenerRegistryPtr;
 using fuchsia::ui::views::ViewRef;
-using scenic_impl::gfx::ExtractKoid;
 using scenic_impl::gfx::ViewTree;
 using scenic_impl::gfx::test::SessionWrapper;
 using ViewFocuserPtr = fuchsia::ui::views::FocuserPtr;
@@ -421,7 +421,7 @@ TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestConnected) {
 
   ASSERT_TRUE(LastFocusChain()->has_focus_chain());
   ASSERT_EQ(LastFocusChain()->focus_chain().size(), 2u);
-  EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), ExtractKoid(target));
+  EXPECT_EQ(utils::ExtractKoid(LastFocusChain()->focus_chain()[1]), utils::ExtractKoid(target));
 }
 
 TEST_F(FocusTransferTest, ViewFocuserDisconnectedWhenSessionDies) {

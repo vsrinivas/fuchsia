@@ -33,6 +33,7 @@ executable("unittests") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/input",
+    "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gtest",
   ]
 

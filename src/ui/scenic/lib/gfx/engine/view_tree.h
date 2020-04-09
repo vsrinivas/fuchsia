@@ -287,9 +287,6 @@ using ViewTreeUpdate =
                  ViewTreeMakeGlobalRoot, ViewTreeConnectToParent, ViewTreeDisconnectFromParent>;
 using ViewTreeUpdates = std::vector<ViewTreeUpdate>;
 
-// Handy ViewRef-specific utility.
-zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref);
-
 }  // namespace scenic_impl::gfx
 
 #endif  // SRC_UI_SCENIC_LIB_GFX_ENGINE_VIEW_TREE_H_

@@ -17,6 +17,7 @@
 #include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace lib_ui_input_tests {
 
@@ -124,7 +125,7 @@ SessionWrapper InputSystemTest::CreateClient(const std::string& name,
                                              fuchsia::ui::views::ViewToken view_token) {
   SessionWrapper session_wrapper(scenic());
   auto pair = scenic::ViewRefPair::New();
-  session_wrapper.SetViewKoid(scenic_impl::gfx::ExtractKoid(pair.view_ref));
+  session_wrapper.SetViewKoid(utils::ExtractKoid(pair.view_ref));
   scenic::View view(session_wrapper.session(), std::move(view_token), std::move(pair.control_ref),
                     std::move(pair.view_ref), name);
   SetUpTestView(&view);

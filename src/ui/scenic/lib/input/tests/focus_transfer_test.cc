@@ -62,7 +62,6 @@ using lib_ui_input_tests::PointerCommandGenerator;
 using lib_ui_input_tests::PointerMatches;
 using lib_ui_input_tests::ResourceGraph;
 using lib_ui_input_tests::SessionWrapper;
-using scenic_impl::gfx::ExtractKoid;
 using scenic_impl::gfx::ViewTree;
 
 // Class fixture for TEST _F. Sets up a 9x9 "display".

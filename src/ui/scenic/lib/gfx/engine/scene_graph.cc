@@ -14,6 +14,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -121,7 +122,7 @@ void SceneGraph::RegisterViewFocuser(SessionId session_id,
         bool is_honored = false;
         std::optional<zx_koid_t> requestor = this->view_tree().ConnectedViewRefKoidOf(session_id);
         if (requestor) {
-          auto status = this->RequestFocusChange(requestor.value(), ExtractKoid(view_ref));
+          auto status = this->RequestFocusChange(requestor.value(), utils::ExtractKoid(view_ref));
           if (status == ViewTree::FocusChangeStatus::kAccept) {
             is_honored = true;
           }

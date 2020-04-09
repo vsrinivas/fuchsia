@@ -13,15 +13,16 @@
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace lib_ui_gfx_engine_tests {
 
 using fuchsia::ui::focus::FocusChain;
 using fuchsia::ui::views::ViewRef;
 using scenic_impl::EventReporterWeakPtr;
-using scenic_impl::gfx::ExtractKoid;
 using scenic_impl::gfx::ViewHolderPtr;
 using scenic_impl::gfx::ViewTree;
+using utils::ExtractKoid;
 
 const scenic_impl::SessionId kOne = 1u, kTwo = 2u, kThree = 3u, kFour = 4u, kFive = 5u;
 

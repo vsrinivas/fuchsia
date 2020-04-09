@@ -9,6 +9,7 @@
 #include "src/ui/scenic/lib/gfx/engine/view_tree.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -106,7 +107,7 @@ void AnnotationManager::FulfillCreateRequests() {
     HandlerState& state = kv.second;
 
     for (auto& request : state.requests) {
-      zx_koid_t main_view_koid = ExtractKoid(request.main_view);
+      zx_koid_t main_view_koid = utils::ExtractKoid(request.main_view);
       zx_status_t status = scene_graph_->view_tree().AddAnnotationViewHolder(
           main_view_koid, std::move(request.annotation_view_holder));
 

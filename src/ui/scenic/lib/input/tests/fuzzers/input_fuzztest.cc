@@ -9,6 +9,7 @@
 #include <fuzzer/FuzzedDataProvider.h>
 
 #include "src/ui/scenic/lib/input/tests/util.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace lib_ui_input_tests {
 
@@ -73,7 +74,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
   // Create initial view.
   SessionWrapper client1(input_system_test.scenic());
   auto pair = scenic::ViewRefPair::New();
-  client1.SetViewKoid(scenic_impl::gfx::ExtractKoid(pair.view_ref));
+  client1.SetViewKoid(utils::ExtractKoid(pair.view_ref));
   scenic::View view(client1.session(), std::move(view_token1), std::move(pair.control_ref),
                     std::move(pair.view_ref), "client1");
   scenic::ViewHolder view_holder2(client1.session(), std::move(view_holder_token2), "view_holder2");

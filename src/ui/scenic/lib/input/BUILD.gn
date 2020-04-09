@@ -27,6 +27,7 @@ source_set("input") {
     "//src/ui/scenic/lib/gfx:ids",
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scheduling:id",
+    "//src/ui/scenic/lib/utils",
     "//zircon/public/lib/inspect",
     "//zircon/public/lib/trace",
   ]

@@ -18,6 +18,7 @@
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 // This test exercises the properties of a focus chain. The setup has multiple
 // Views arranged in a hierarchy, and also includes a FocusChainListener.  Each
@@ -37,9 +38,9 @@ using fuchsia::ui::focus::FocusChainListener;
 using fuchsia::ui::focus::FocusChainListenerRegistry;
 using fuchsia::ui::focus::FocusChainListenerRegistryPtr;
 using fuchsia::ui::views::ViewRef;
-using scenic_impl::gfx::ExtractKoid;
 using scenic_impl::gfx::ViewTree;
 using scenic_impl::gfx::test::SessionWrapper;
+using utils::ExtractKoid;
 using ViewFocuserPtr = fuchsia::ui::views::FocuserPtr;
 using ViewFocuserRequest = fidl::InterfaceRequest<fuchsia::ui::views::Focuser>;
 
