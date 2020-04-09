@@ -44,7 +44,10 @@ group("vulkaninfo") {
 }
 
 config("vulkan_hpp") {
-  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+  defines = [
+    "VULKAN_HPP_ASSERT(expr)=do {} while(0)",
+    "VULKAN_HPP_NO_EXCEPTIONS",
+  ]
 }
 
 sdk_atom("vulkan_layers") {
