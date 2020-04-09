@@ -38,6 +38,7 @@ zx_library("fidl_base") {
     "message_builder.cc",
     "transformer.cc",
     "txn_header.c",
+    "validate_string.cc",
     "validating.cc",
     "walker.cc",
   ]

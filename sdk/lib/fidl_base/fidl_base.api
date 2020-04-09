@@ -1,5 +1,5 @@
 {
-  "pkg/fidl_base/include/lib/fidl/coding.h": "8c70738d3de428143287daef3de916b6",
+  "pkg/fidl_base/include/lib/fidl/coding.h": "805aa6eb57f638bf17c80f66e7baf902",
   "pkg/fidl_base/include/lib/fidl/cpp/builder.h": "a6764a81d16ac6a9ec07239bd101bbce",
   "pkg/fidl_base/include/lib/fidl/cpp/message.h": "7605fc0e814960dcd9173ce40735a602",
   "pkg/fidl_base/include/lib/fidl/cpp/message_buffer.h": "567a46e1c6793e3c358dca1acf9791d3",

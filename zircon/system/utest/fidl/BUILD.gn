@@ -58,6 +58,7 @@ if (is_fuchsia) {
         configs -= fdio_config
       }
     }
+
     # Dependent manifests unfortunately cannot be marked as `testonly`.
     # TODO(44278): switch back to true.
     testonly = false
@@ -136,6 +137,7 @@ if (is_fuchsia) {
       "abi_tests.cc",
       "cpp_types_tests.cc",
       "fidl_align_tests.cc",
+      "validate_string_tests.cc",
     ]
     deps = [
       "//zircon/public/lib/fidl_base",

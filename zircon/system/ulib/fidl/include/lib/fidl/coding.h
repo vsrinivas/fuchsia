@@ -46,6 +46,16 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
 zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
                               const char** out_error_msg);
 
+// Validates a FIDL string, and verifies that it is a well-formed UTF-8 code
+// unit sequence. That is respect the UTF-8 encoding, and be formed solely of
+// unicode scalar value, i.e. any Unicode code point except high-surrogate
+// and low-surrogate code points.
+//
+// The |data| is not modified.
+//
+// See also http://www.unicode.org/versions/Unicode13.0.0/ch03.pdf#G7404
+zx_status_t fidl_validate_string(const char* data, uint64_t size);
+
 // Follow an object tree and copy the elements into the provided buffer, such that the
 // resulting buffer is ready for fidl_encode.
 //
