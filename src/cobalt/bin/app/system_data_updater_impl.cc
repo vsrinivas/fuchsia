@@ -68,6 +68,7 @@ void SystemDataUpdaterImpl::DeleteData(const std::string& suffix) {
 }
 
 void SystemDataUpdaterImpl::SetChannel(std::string current_channel, SetChannelCallback callback) {
+  FX_LOGS(INFO) << "Setting channel to `" << current_channel << "`";
   if (current_channel == "") {
     system_data_->SetChannel("<unknown>");
   } else {
