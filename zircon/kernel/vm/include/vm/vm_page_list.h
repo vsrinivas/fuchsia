@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_VM_PAGE_LIST_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_PAGE_LIST_H_
 
+#include <align.h>
 #include <err.h>
 #include <zircon/types.h>
 

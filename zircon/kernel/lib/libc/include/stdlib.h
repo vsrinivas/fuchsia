@@ -20,12 +20,6 @@ __BEGIN_CDECLS
 long strtol(const char *nptr, char **endptr, int base);
 unsigned long int strtoul(const char *nptr, char **endptr, int base);
 
-#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
-#define ROUNDDOWN(a, b) ((a) & ~((b)-1))
-
-#define ALIGN(a, b) ROUNDUP(a, b)
-#define IS_ALIGNED(a, b) (!(((uintptr_t)(a)) & (((uintptr_t)(b)) - 1)))
-
 void abort(void) __attribute__((noreturn));
 
 #define RAND_MAX (0x7fffffff)

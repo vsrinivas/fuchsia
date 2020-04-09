@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 #include "vm/vm_address_region.h"
 
+#include <align.h>
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>

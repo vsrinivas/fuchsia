@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 #include "arch/x86/mmu.h"
 
+#include <align.h>
 #include <assert.h>
 #include <err.h>
 #include <lib/counters.h>

@@ -8,6 +8,7 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_VM_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_H_
 
+#include <align.h>
 #include <arch.h>
 #include <assert.h>
 #include <stdint.h>

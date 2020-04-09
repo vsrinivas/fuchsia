@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 #include "vm/vm_page_list.h"
 
+#include <align.h>
 #include <err.h>
 #include <inttypes.h>
 #include <trace.h>

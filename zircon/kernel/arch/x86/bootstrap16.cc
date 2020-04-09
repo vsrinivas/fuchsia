@@ -6,6 +6,7 @@
 
 #include "arch/x86/bootstrap16.h"
 
+#include <align.h>
 #include <assert.h>
 #include <err.h>
 #include <lib/zircon-internal/thread_annotations.h>

@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_GPARENA_H_
 #define ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_GPARENA_H_
 
+#include <align.h>
 #include <fbl/auto_call.h>
 #include <fbl/confine_array_index.h>
 #include <kernel/mutex.h>

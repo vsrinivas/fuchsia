@@ -9,6 +9,7 @@
 #ifndef ZIRCON_KERNEL_PLATFORM_PC_INTERRUPT_MANAGER_H_
 #define ZIRCON_KERNEL_PLATFORM_PC_INTERRUPT_MANAGER_H_
 
+#include <align.h>
 #include <err.h>
 #include <pow2.h>
 

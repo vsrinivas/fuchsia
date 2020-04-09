@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <align.h>
 #include <fbl/alloc_checker.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/range_check.h>

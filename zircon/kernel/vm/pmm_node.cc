@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 #include "pmm_node.h"
 
+#include <align.h>
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <trace.h>

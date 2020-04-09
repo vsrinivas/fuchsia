@@ -7,6 +7,7 @@
 
 #include "debug.h"
 
+#include <align.h>
 #include <ctype.h>
 #include <platform.h>
 #include <stdio.h>

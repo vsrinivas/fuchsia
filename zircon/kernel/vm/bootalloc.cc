@@ -7,6 +7,7 @@
 
 #include "vm/bootalloc.h"
 
+#include <align.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>

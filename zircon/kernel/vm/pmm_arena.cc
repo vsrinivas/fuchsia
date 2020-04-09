@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 #include "pmm_arena.h"
 
+#include <align.h>
 #include <err.h>
 #include <inttypes.h>
 #include <string.h>

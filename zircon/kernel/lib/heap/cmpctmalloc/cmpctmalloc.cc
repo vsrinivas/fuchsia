@@ -9,6 +9,7 @@
 
 #include "cmpctmalloc.h"
 
+#include <align.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>

@@ -6,6 +6,7 @@
 
 #include "iommu_impl.h"
 
+#include <align.h>
 #include <err.h>
 #include <platform.h>
 #include <trace.h>

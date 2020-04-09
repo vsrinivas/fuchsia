@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 #include "vm/vm_object_physical.h"
 
+#include <align.h>
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>

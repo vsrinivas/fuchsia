@@ -14,6 +14,7 @@
  * @ingroup graphics
  */
 
+#include <align.h>
 #include <assert.h>
 #include <debug.h>
 #include <lib/cmdline.h>

@@ -6,6 +6,7 @@
 // https://opensource.org/licenses/MIT
 #include "vm/vm.h"
 
+#include <align.h>
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
