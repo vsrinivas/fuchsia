@@ -62,7 +62,7 @@ class _FpsResult {
 }
 
 /// Compute the flowed, attempted-duration-adjusted FPS for a Flutter
-/// application specified by [uiThread] and [gpuThread].
+/// application specified by [uiThread] and [rasterThread].
 ///
 /// "Flowed" means that we only count frames that reach a unique display level
 /// VSYNC.  This makes the FPS value we produce more representative of how
@@ -75,9 +75,9 @@ class _FpsResult {
 /// legitimately do not need to animate.  This is implemented by dividing by
 /// amount of time we spent with a frame request pending or in the full "vsync
 /// callback" -> "VSYNC" pipeline.
-_FpsResult _computeFps(Model model, Thread uiThread, Thread gpuThread) {
+_FpsResult _computeFps(Model model, Thread uiThread, Thread rasterThread) {
   final refreshRate = _computeDisplayRefreshRate(model);
-  final events = uiThread.events + gpuThread.events;
+  final events = uiThread.events + rasterThread.events;
 
   final List<_Group> groups = [];
   // An intermediate "curr" group that we use to compute [groups].
@@ -202,26 +202,26 @@ List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
     for (final uiThread in uiThreads) {
       final appName =
           flutterAppName ?? uiThread.name.split(RegExp(r'.ui$')).first;
-      // Note: Around March 2020, Flutter renamed the GPU thread the
-      // Rasterizer thread instead.  In the far out future it might make sense
-      // to only accept ".raster" here, but for now accept both names.
-      final gpuThreads = process.threads
+      // Note: Around March 2020, Flutter renamed the GPU thread the Raster
+      // thread instead.  In the far out future it might make sense to only
+      // accept ".raster" here, but for now accept both names.
+      final rasterThreads = process.threads
           .where((thread) =>
               thread.name.startsWith(appName) && thread.name.endsWith('.gpu'))
           .followedBy(process.threads.where((thread) =>
               thread.name.startsWith(appName) &&
               thread.name.endsWith('.raster')))
           .toList();
-      if (gpuThreads.isEmpty) {
-        print('Warning, found ui thread but no gpu thread for app $appName');
+      if (rasterThreads.isEmpty) {
+        print('Warning, found ui thread but no raster thread for app $appName');
         continue;
       }
-      if (gpuThreads.length > 1) {
-        print('Warning, found multiple (${gpuThreads.length}) gpu threads for'
-            'app $appName.  Continuing with the first one.');
+      if (rasterThreads.length > 1) {
+        print('Warning, found multiple (${rasterThreads.length}) raster threads'
+            ' for app $appName.  Continuing with the first one.');
       }
 
-      final gpuThread = gpuThreads.first;
+      final rasterThread = rasterThreads.first;
 
       double getDurationInMilliseconds(DurationEvent durationEvent) {
         return durationEvent.duration.toMillisecondsF();
@@ -229,7 +229,7 @@ List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
 
       results.add(_Results()
         ..appName = appName
-        ..fpsResult = _computeFps(model, uiThread, gpuThread)
+        ..fpsResult = _computeFps(model, uiThread, rasterThread)
         // TODO(48263): Only match "vsync callback".
         ..frameBuildTimes = filterEventsTyped<DurationEvent>(uiThread.events,
                 category: 'flutter', name: 'vsync callback')
@@ -238,7 +238,7 @@ List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
             .map(getDurationInMilliseconds)
             .toList()
         ..frameRasterizerTimes = filterEventsTyped<DurationEvent>(
-                gpuThread.events,
+                rasterThread.events,
                 category: 'flutter',
                 name: 'GPURasterizer::Draw')
             .map(getDurationInMilliseconds)
