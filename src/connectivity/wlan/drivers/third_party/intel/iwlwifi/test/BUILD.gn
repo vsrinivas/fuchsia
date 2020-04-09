@@ -190,9 +190,6 @@ executable("wlan-device_test") {
 
   defines = testing_defines
   deps = testing_deps
-
-  # TODO(46745): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("iwlwifi_test") {
