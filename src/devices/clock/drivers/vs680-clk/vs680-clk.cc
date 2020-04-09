@@ -174,11 +174,10 @@ zx_status_t Vs680Clk::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  std::unique_ptr<Vs680Clk> device(new Vs680Clk(
-      parent, *std::move(avio_mmio), *std::move(cpu_pll_mmio), *std::move(chip_ctrl_mmio)));
+  std::unique_ptr<Vs680Clk> device(new Vs680Clk(parent, *std::move(chip_ctrl_mmio),
+                                                *std::move(cpu_pll_mmio), *std::move(avio_mmio)));
 
-  status = device->DdkAdd("vs680-clk");
-  if (status != ZX_OK) {
+  if ((status = device->DdkAdd("vs680-clk")) != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAdd failed %d\n", __FILE__, status);
     return status;
   }
