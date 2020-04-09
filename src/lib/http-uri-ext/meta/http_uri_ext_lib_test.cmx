@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/http_uri_ext_lib_test"
+    }
+}
