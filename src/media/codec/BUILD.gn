@@ -32,6 +32,11 @@ group("tests") {
   ]
 }
 
+group("hw_dependent_tests") {
+  testonly = true
+  deps = [ "//src/media/codec/codecs:hw_dependent_tests" ]
+}
+
 group("services") {
   public_deps = [ "//src/media/codec/factory" ]
 }

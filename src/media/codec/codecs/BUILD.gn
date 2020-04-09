@@ -16,12 +16,29 @@ group("codecs") {
 group("tests") {
   testonly = true
   deps = [
+    ":hw_dependent_tests",
     "test",
+  ]
+}
+
+# We want these tests to run on various HW.  Each of these tests has
+# environments set appropriately to avoid running on HW where we don't expect
+# the test to be able to pass.
+group("hw_dependent_tests") {
+  testonly = true
+  deps = [
     "//src/media/codec/examples:h264_decoder_fuzzer_test",
     "//src/media/codec/examples:use_h264_decoder_secure_input_output_test",
     "//src/media/codec/examples:use_h264_decoder_secure_output_test",
     "//src/media/codec/examples:use_h264_decoder_stream_switching_test",
     "//src/media/codec/examples:use_h264_decoder_test",
+    "//src/media/codec/examples:use_vp9_decoder_24_output_frames_test",
+    "//src/media/codec/examples:use_vp9_decoder_secure_input_output_test",
+    "//src/media/codec/examples:use_vp9_decoder_secure_output_test",
+    "//src/media/codec/examples:use_vp9_decoder_skip_first_frame_test",
+    "//src/media/codec/examples:use_vp9_decoder_test",
+    "//src/media/codec/examples:vp9-decoder-conformance-test--bear-vp9",
+    "//src/media/codec/examples:vp9_decoder_fuzzer_test",
   ]
 }
 

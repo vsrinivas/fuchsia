@@ -33,6 +33,8 @@ package("use_media_decoder") {
   ]
 }
 
+# Test amlogic-video h264 decode.  Can also work in QEMU using SW decode, but
+# when decode HW is present we'll use that to decode.
 package("use_h264_decoder_test") {
   testonly = true
 
@@ -69,6 +71,8 @@ package("use_h264_decoder_test") {
   ]
 }
 
+# Test amlogic-video h264 decode with stream switching.  Can also work in QEMU
+# using SW decode, but when decode HW is present we'll use that to decode.
 package("use_h264_decoder_stream_switching_test") {
   testonly = true
 
@@ -154,10 +158,10 @@ package("use_h264_decoder_secure_input_output_test") {
 
   tests = [
     {
-      # Should pass when run on sherlock, but can fail due to occasional clearTVP issues.
-      # TODO(42991): Re-enable.
       name = "use_h264_decoder_secure_input_output_test"
 
+      # Without ClearTVP, can't pass anywhere at the moment.
+      # TODO(42991): Re-enable.
       disabled = true
     },
   ]
@@ -273,6 +277,7 @@ package("use_aac_decoder_test") {
   ]
 }
 
+# Test amlogic-video vp9 decode.
 package("use_vp9_decoder_test") {
   testonly = true
 
@@ -306,6 +311,8 @@ package("use_vp9_decoder_test") {
   ]
 }
 
+# Test amlogic-video vp9 decoder's ability to skip frames until keyframe when
+# input starts at non-keyframe.
 package("use_vp9_decoder_skip_first_frame_test") {
   testonly = true
 
@@ -340,6 +347,8 @@ package("use_vp9_decoder_skip_first_frame_test") {
   ]
 }
 
+# Test amlogic-video vp9 decode with max output frame count, on environments
+# that have enough contiguous SYSTEM_RAM configured for sysmem.
 package("use_vp9_decoder_24_output_frames_test") {
   testonly = true
 
@@ -428,10 +437,9 @@ package("use_vp9_decoder_secure_input_output_test") {
     {
       name = "use_vp9_decoder_secure_input_output_test"
 
-      environments = [
-        sherlock_env,
-        astro_env,
-      ]
+      # Without ClearTVP, can't pass anywhere at the moment.
+      # TODO(42991): Re-enable.
+      disabled = true
     },
   ]
 
@@ -524,6 +532,9 @@ _vp9_file_conformance_tests_group_deps = []
 
 # This target makes sure the vp9_decoder_conformance_test executable builds and
 # can verify an md5 hash of decompressed frames.
+#
+# Test amlogic-video vp9 decode.  This uses the same test executable as VP9
+# decode conformance tests.
 package_name = "vp9-decoder-conformance-test--bear-vp9"
 vp9_file_decoder_conformance_test(package_name) {
   ivf_file = "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf"
