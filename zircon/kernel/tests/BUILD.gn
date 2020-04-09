@@ -31,6 +31,7 @@ source_set("tests") {
     "printf_tests.cc",
     "resource_tests.cc",
     "sleep_tests.cc",
+    "span_tests.cc",
     "string_tests.cc",
     "string_view_tests.cc",
     "sync_ipi_tests.cc",
