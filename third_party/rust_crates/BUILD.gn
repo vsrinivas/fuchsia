@@ -153,11 +153,10 @@ if (is_fuchsia) {
     deps = [ ":getopts-v0_2_18" ]
   }
 }
-if (is_fuchsia) {
-  group("glob") {
-    deps = [ ":glob-v0_3_0" ]
-  }
+group("glob") {
+  deps = [ ":glob-v0_3_0" ]
 }
+
 if (!is_fuchsia) {
   group("handlebars") {
     deps = [ ":handlebars-v2_0_0-beta_2" ]
