@@ -1294,16 +1294,6 @@ group("record_filesystem_sizes") {
   deps = [ ":filesystem_sizes.json" ]
 }
 
-# These steps run through the build and symbol archiving logic to make sure they
-# work but does not produce populated archives.
-group("nil-archives") {
-  testonly = true
-  deps = [
-    ":archive-nil",
-    ":symbol-archive-nil",
-  ]
-}
-
 ###
 ### Paver and flash scripts, and archives using those images and zedboot's images.
 ###
@@ -1387,53 +1377,25 @@ paver_targets = [
       type = "sh"
     }
   },
+  {
+    name = "archive-tgz"
+    outputs = [ "$root_build_dir/build-archive.tgz" ]
+    switch = "--archive="
+    extra_bootserver_arguments = ""
+    deps = [
+      ":archive-extras",
+      ":flash_script",
+      ":ids.txt",
+      ":paver-script",
+      "zedboot",
+    ]
+    metadata = {
+      name = "archive"
+      path = "build-archive.tgz"
+      type = "tgz"
+    }
+  },
 ]
-
-foreach(format,
-        [
-          "tar",
-          "tgz",
-          "zip",
-          "nil",
-        ]) {
-  paver_targets += [
-    {
-      name = "archive-$format"
-      outputs = [ "$root_build_dir/build-archive.$format" ]
-      switch = "--archive="
-      extra_bootserver_arguments = ""
-      deps = [
-        ":archive-extras",
-        ":flash_script",
-        ":ids.txt",
-        ":paver-script",
-        "zedboot",
-      ]
-      metadata = {
-        name = "archive"
-        path = "build-archive.$format"
-        type = "$format"
-      }
-    },
-    {
-      name = "symbol-archive-$format"
-      outputs = [ "$root_build_dir/symbol-archive.$format" ]
-      switch = "--symbol-archive="
-      extra_bootserver_arguments = ""
-      deps = [
-        ":flash_script",
-        ":ids.txt",
-        ":paver-script",
-        "zedboot",
-      ]
-      metadata = {
-        name = "symbol-archive"
-        path = "symbol-archive.$format"
-        type = "$format"
-      }
-    },
-  ]
-}
 
 archive_deps = []
 foreach(target, paver_targets) {
@@ -1463,9 +1425,13 @@ foreach(target, paver_targets) {
 
     args += [ "images.json" ]
 
+    _metadata = target.metadata
     metadata = {
       # TODO(fxbug.dev/9708): include these in a build API module of archives instead.
-      images = [ target.metadata ]
+      images = [ _metadata ]
+      if (_metadata.type == "tgz") {
+        archives = images
+      }
     }
   }
   archive_deps += [ ":${target.name}" ]
@@ -2055,10 +2021,7 @@ group("archive-extras") {
 
 group("images") {
   testonly = true
-  deps = [
-    ":default-images",
-    ":nil-archives",
-  ]
+  deps = [ ":default-images" ]
 
   if (!bootfs_only) {
     deps += [ ":netboot" ]

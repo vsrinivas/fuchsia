@@ -4,6 +4,14 @@
 
 import("//build/compiled_action.gni")
 
+group("archives") {
+  testonly = true
+  deps = [
+    ":breakpad_symbols",
+    ":package_archive",
+  ]
+}
+
 # Generates breakpad symbol data for unstripped binaries.
 #
 # This symbol data is consumed by infrastructure tools and uploaded to Crash
@@ -48,6 +56,7 @@ action("prebuilt_ids.txt") {
     "ids.txt",
     "--input",
     rebase_path(prebuilt_build_ids),
+
     # We also include the new, canonical location of
     # //prebuilt/.build-id, where unpacked, prebuilt, .build-id directories
     # are being migrated to.
@@ -119,6 +128,16 @@ action("breakpad_symbols") {
     rebase_path(outputs[0], root_build_dir),
     rebase_path(sources[0], root_build_dir),
   ]
+
+  metadata = {
+    archives = [
+      {
+        name = "breakpad_symbols"
+        path = rebase_path(outputs[0], root_build_dir)
+        type = "tgz"
+      },
+    ]
+  }
 }
 
 # Generates an archive of package metadata.
@@ -151,4 +170,14 @@ compiled_action("package_archive") {
     rebase_path(pkg_archive),
   ]
   deps = [ "//build/images:updates" ]
+
+  metadata = {
+    archives = [
+      {
+        name = "packages"
+        path = rebase_path(outputs[0], root_build_dir)
+        type = "tgz"
+      },
+    ]
+  }
 }
