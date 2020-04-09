@@ -6,6 +6,7 @@
 
 #include "object/pinned_memory_token_dispatcher.h"
 
+#include <align.h>
 #include <assert.h>
 #include <err.h>
 #include <lib/counters.h>

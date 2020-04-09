@@ -6,6 +6,7 @@
 
 #include "device_context.h"
 
+#include <align.h>
 #include <trace.h>
 
 #include <new>

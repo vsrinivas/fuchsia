@@ -6,6 +6,7 @@
 
 #include "vm/pinned_vm_object.h"
 
+#include <align.h>
 #include <trace.h>
 
 #include <ktl/move.h>

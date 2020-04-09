@@ -20,10 +20,6 @@
 #include <arch/kernel_aspace.h>
 #include <vm/arch_vm_aspace.h>
 
-#define PAGE_ALIGN(x) ALIGN((x), PAGE_SIZE)
-#define ROUNDUP_PAGE_SIZE(x) ROUNDUP((x), PAGE_SIZE)
-#define IS_PAGE_ALIGNED(x) IS_ALIGNED((x), PAGE_SIZE)
-
 // kernel address space
 static_assert(KERNEL_ASPACE_BASE + (KERNEL_ASPACE_SIZE - 1) > KERNEL_ASPACE_BASE, "");
 

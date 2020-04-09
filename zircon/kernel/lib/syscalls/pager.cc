@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <align.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/move.h>
 #include <object/pager_dispatcher.h>

@@ -5,6 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <align.h>
 #include <arch.h>
 #include <debug.h>
 #include <err.h>

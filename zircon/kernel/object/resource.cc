@@ -6,6 +6,7 @@
 
 #include "object/resource.h"
 
+#include <align.h>
 #include <trace.h>
 #include <zircon/syscalls/resource.h>
 

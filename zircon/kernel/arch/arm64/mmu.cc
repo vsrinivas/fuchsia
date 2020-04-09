@@ -6,6 +6,7 @@
 // https://opensource.org/licenses/MIT
 #include "arch/arm64/mmu.h"
 
+#include <align.h>
 #include <assert.h>
 #include <bits.h>
 #include <debug.h>

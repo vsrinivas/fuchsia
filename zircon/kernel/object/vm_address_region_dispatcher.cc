@@ -6,6 +6,7 @@
 
 #include "object/vm_address_region_dispatcher.h"
 
+#include <align.h>
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>

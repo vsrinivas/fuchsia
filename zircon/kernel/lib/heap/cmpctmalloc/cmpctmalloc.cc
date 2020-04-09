@@ -20,7 +20,6 @@
 #include <zircon/assert.h>
 
 #include <fbl/algorithm.h>
-#include <vm/vm.h>
 
 // Malloc implementation tuned for space.
 //

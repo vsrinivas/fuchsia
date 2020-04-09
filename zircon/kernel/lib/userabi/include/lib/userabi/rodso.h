@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_USERABI_INCLUDE_LIB_USERABI_RODSO_H_
 #define ZIRCON_KERNEL_LIB_USERABI_INCLUDE_LIB_USERABI_RODSO_H_
 
+#include <align.h>
 #include <object/handle.h>
 #include <object/vm_object_dispatcher.h>
 

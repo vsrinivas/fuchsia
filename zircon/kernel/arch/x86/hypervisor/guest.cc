@@ -6,6 +6,7 @@
 
 #include <zircon/syscalls/hypervisor.h>
 
+#include <align.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 

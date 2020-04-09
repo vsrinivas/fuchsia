@@ -6,6 +6,7 @@
 
 #include "object/bus_transaction_initiator_dispatcher.h"
 
+#include <align.h>
 #include <err.h>
 #include <lib/counters.h>
 #include <zircon/rights.h>

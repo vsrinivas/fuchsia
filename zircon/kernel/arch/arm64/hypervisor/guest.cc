@@ -6,6 +6,7 @@
 
 #include <zircon/syscalls/hypervisor.h>
 
+#include <align.h>
 #include <arch/hypervisor.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <hypervisor/guest_physical_address_space.h>
