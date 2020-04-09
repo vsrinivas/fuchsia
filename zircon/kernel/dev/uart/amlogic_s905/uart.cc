@@ -102,8 +102,7 @@ static uint32_t s905_uart_irq = 0;
  * read from the Tx FIFO. So we can leave the interrupt unmasked.
  */
 static bool uart_tx_irq_enabled = false;
-static event_t uart_dputc_event =
-    EVENT_INITIAL_VALUE(uart_dputc_event, true, EVENT_FLAG_AUTOUNSIGNAL);
+static AutounsignalEvent uart_dputc_event{true};
 
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
@@ -135,7 +134,7 @@ static interrupt_eoi uart_irq(void* arg) {
     if (!(UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL))
     /* Signal any waiting Tx */
     {
-      event_signal(&uart_dputc_event, true);
+      uart_dputc_event.Signal();
     }
     spin_unlock(&uart_spinlock);
   }
@@ -240,7 +239,7 @@ static void s905_dputs(const char* str, size_t len, bool block, bool map_NL) {
     while (UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL) {
       spin_unlock_irqrestore(&uart_spinlock, state);
       if (block) {
-        event_wait(&uart_dputc_event);
+        uart_dputc_event.Wait();
       } else {
         arch_spinloop_pause();
       }

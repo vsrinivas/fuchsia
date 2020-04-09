@@ -107,9 +107,9 @@ void arm64_init_percpu_early(void) {
 
 void arch_mp_init_percpu(void) { interrupt_init_percpu(); }
 
-void arch_flush_state_and_halt(event_t* flush_done) {
+void arch_flush_state_and_halt(Event* flush_done) {
   DEBUG_ASSERT(arch_ints_disabled());
-  event_signal(flush_done, false);
+  flush_done->SignalNoResched();
   platform_halt_cpu();
   panic("control should never reach here\n");
 }

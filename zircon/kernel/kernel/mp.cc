@@ -224,7 +224,7 @@ static void mp_unplug_trampoline(void) {
   // here.
 
   Thread* ct = Thread::Current::Get();
-  auto unplug_done = reinterpret_cast<event_t*>(ct->arg_);
+  auto unplug_done = reinterpret_cast<Event*>(ct->arg_);
 
   sched_transition_off_cpu();
 
@@ -319,7 +319,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
   // immediately (or very soon, if for some reason there is another
   // HIGHEST_PRIORITY task scheduled in between when we resume the
   // thread and when the CPU is woken up).
-  event_t unplug_done = EVENT_INITIAL_VALUE(unplug_done, false, 0);
+  Event unplug_done;
   thread = Thread::CreateEtc(nullptr, "unplug_thread", nullptr, &unplug_done, HIGHEST_PRIORITY,
                              mp_unplug_trampoline);
   if (thread == nullptr) {
@@ -343,7 +343,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
 
   // Wait for the unplug thread to get scheduled on the target
   const bool interruptable = false;
-  status = event_wait_deadline(&unplug_done, deadline, interruptable);
+  status = unplug_done.WaitDeadline(deadline, interruptable);
   if (status != ZX_OK) {
     return status;
   }

@@ -78,8 +78,7 @@ static bool output_enabled = false;
 Cbuf console_input_buf;
 static uint32_t uart_fifo_depth;
 static bool uart_tx_irq_enabled = false;  // tx driven irq
-static event_t uart_dputc_event =
-    EVENT_INITIAL_VALUE(uart_dputc_event, true, EVENT_FLAG_AUTOUNSIGNAL);
+static AutounsignalEvent uart_dputc_event{true};
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
 // Read a single byte from the given UART register.
@@ -140,7 +139,7 @@ static interrupt_eoi uart_irq_handler(void* arg) {
       }
       case 0b0010:
         // transmitter is empty, signal any waiting senders
-        event_signal(&uart_dputc_event, true);
+        uart_dputc_event.Signal();
         // disable the tx irq
         uart_write(1, (1 << 0));  // just rx interrupt enable
         break;
@@ -639,7 +638,7 @@ static void platform_dputs(const char* str, size_t len, bool block, bool map_NL)
         uart_write(1, static_cast<uint8_t>((1 << 0) | ((uart_tx_irq_enabled ? 1 : 0)
                                                        << 1)));  // rx and tx interrupt enable
         spin_unlock_irqrestore(&uart_spinlock, state);
-        event_wait(&uart_dputc_event);
+        uart_dputc_event.Wait();
       } else {
         spin_unlock_irqrestore(&uart_spinlock, state);
         arch_spinloop_pause();

@@ -229,7 +229,7 @@ void PagerSource::OnPacketFreedLocked() {
   }
 }
 
-zx_status_t PagerSource::WaitOnEvent(event_t* event) {
+zx_status_t PagerSource::WaitOnEvent(Event* event) {
   ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PAGER);
-  return event_wait_deadline(event, ZX_TIME_INFINITE, true);
+  return event->Wait(Deadline::infinite());
 }

@@ -27,23 +27,19 @@
 #include "tests.h"
 
 static void timer_diag_cb(Timer* timer, zx_time_t now, void* arg) {
-  event_t* event = (event_t*)arg;
-  event_signal(event, true);
+  Event* event = (Event*)arg;
+  event->Signal();
 }
 
 static int timer_do_one_thread(void* arg) {
-  event_t event;
+  Event event;
   Timer timer;
-
-  event_init(&event, false, 0);
 
   const Deadline deadline = Deadline::no_slack(current_time() + ZX_MSEC(10));
   timer.Set(deadline, timer_diag_cb, &event);
-  event_wait(&event);
+  event.Wait();
 
   printf("got timer on cpu %u\n", arch_curr_cpu_num());
-
-  event_destroy(&event);
 
   return 0;
 }
@@ -171,21 +167,17 @@ static void timer_diag_coalescing_early(void) {
 }
 
 static void timer_far_deadline(void) {
-  event_t event;
+  Event event;
   Timer timer;
-
-  event_init(&event, false, 0);
 
   const Deadline deadline = Deadline::no_slack(ZX_TIME_INFINITE - 5);
   timer.Set(deadline, timer_diag_cb, &event);
-  zx_status_t st = event_wait_deadline(&event, current_time() + ZX_MSEC(100), false);
+  zx_status_t st = event.WaitDeadline(current_time() + ZX_MSEC(100), false);
   if (st != ZX_ERR_TIMED_OUT) {
     printf("error: unexpected timer fired!\n");
   } else {
     timer.Cancel();
   }
-
-  event_destroy(&event);
 }
 
 // Print timer diagnostics for manual review.

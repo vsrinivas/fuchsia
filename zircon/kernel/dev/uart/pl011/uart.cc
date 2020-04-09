@@ -56,8 +56,7 @@ static Cbuf uart_rx_buf;
  * xmitting.
  */
 static bool uart_tx_irq_enabled = false;
-static event_t uart_dputc_event =
-    EVENT_INITIAL_VALUE(uart_dputc_event, true, EVENT_FLAG_AUTOUNSIGNAL);
+static AutounsignalEvent uart_dputc_event{true};
 
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
@@ -88,7 +87,7 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
      * Signal any waiting Tx and mask Tx interrupts once we
      * wakeup any blocked threads
      */
-    event_signal(&uart_dputc_event, true);
+    uart_dputc_event.Signal();
     pl011_mask_tx();
   }
   spin_unlock(&uart_spinlock);
@@ -170,7 +169,7 @@ static void pl011_dputs(const char* str, size_t len, bool block, bool map_NL) {
         /* Unmask Tx interrupts before we block on the event */
         pl011_unmask_tx();
         spin_unlock_irqrestore(&uart_spinlock, state);
-        event_wait(&uart_dputc_event);
+        uart_dputc_event.Wait();
       } else {
         spin_unlock_irqrestore(&uart_spinlock, state);
         arch_spinloop_pause();

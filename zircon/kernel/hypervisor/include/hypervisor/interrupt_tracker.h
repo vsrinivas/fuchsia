@@ -165,7 +165,7 @@ class InterruptTracker {
   }
 
  private:
-  Event event_{EVENT_FLAG_AUTOUNSIGNAL};
+  AutounsignalEvent event_;
   DECLARE_SPINLOCK(InterruptTracker) lock_;
   InterruptBitmap<N> bitmap_ TA_GUARDED(lock_);
 };

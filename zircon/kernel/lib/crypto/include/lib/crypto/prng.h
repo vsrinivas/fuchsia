@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_PRNG_H_
 #define ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_PRNG_H_
 
+#include <lib/lazy_init/lazy_init.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -94,9 +95,11 @@ class PRNG {
   uint8_t key_[32] TA_GUARDED(spinlock_);
   uint128_t nonce_ TA_GUARDED(spinlock_);
 
-  // Events used to signal when calls to |Draw| may proceed, if
-  // |BecomeThreadSafe| has been called.
-  event_t ready_;
+  // Event used to signal when calls to |Draw| may proceed. This is initialized when
+  // |BecomeThreadSafe| is called.
+  lazy_init::LazyInit<Event> ready_;
+
+  bool is_thread_safe_ = false;
 
   // Number of bytes of entropy added so far.
   ktl::atomic<size_t> accumulated_;

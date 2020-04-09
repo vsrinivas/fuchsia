@@ -242,10 +242,10 @@ void PageSource::CompleteRequestLocked(PageRequest* req) {
   while (!req->overlap_.is_empty()) {
     auto waiter = req->overlap_.pop_front();
     waiter->offset_ = UINT64_MAX;
-    event_signal(&waiter->event_, true);
+    waiter->event_.Signal();
   }
   req->offset_ = UINT64_MAX;
-  event_signal(&req->event_, true);
+  req->event_.Signal();
 }
 
 void PageSource::CancelRequest(PageRequest* request) {
@@ -312,7 +312,8 @@ void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset) {
   len_ = 0;
   offset_ = offset;
   src_ = ktl::move(src);
-  event_ = EVENT_INITIAL_VALUE(event_, 0, EVENT_FLAG_AUTOUNSIGNAL);
+
+  event_.Unsignal();
 }
 
 zx_status_t PageRequest::Wait() {

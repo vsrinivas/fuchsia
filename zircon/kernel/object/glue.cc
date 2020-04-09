@@ -57,7 +57,7 @@ static ktl::array<fbl::RefPtr<EventDispatcher>, PressureLevel::kNumLevels> mem_p
 
 // Event used for communicating memory state between the mem_avail_state_updated_cb callback and the
 // oom thread.
-static Event mem_state_signal(EVENT_FLAG_AUTOUNSIGNAL);
+static AutounsignalEvent mem_state_signal;
 
 static ktl::atomic<PressureLevel> mem_event_idx = PressureLevel::kNormal;
 static PressureLevel prev_mem_event_idx = mem_event_idx;

@@ -61,8 +61,10 @@ struct percpu {
   int64_t* counters;
 
   // dpc context
+  // Whether the DPC system has been initialized for this cpu.
+  bool dpc_initialized;
   fbl::DoublyLinkedList<Dpc*> dpc_list;
-  event_t dpc_event;
+  Event dpc_event;
   // request the dpc thread to stop by setting to true; guarded by dpc_lock
   bool dpc_stop;
   // each cpu has a dedicated thread for processing dpcs

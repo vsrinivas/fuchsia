@@ -27,13 +27,13 @@ namespace {
 
 // Event to wake up the loop detector thread when a new edge is added to the
 // lock dependency graph.
-event_t graph_edge_event = EVENT_INITIAL_VALUE(graph_edge_event, false, EVENT_FLAG_AUTOUNSIGNAL);
+AutounsignalEvent graph_edge_event;
 
 // Loop detection thread. Traverses the lock dependency graph to find circular
 // lock dependencies.
 int LockDepThread(void* /*arg*/) {
   while (true) {
-    __UNUSED zx_status_t error = event_wait(&graph_edge_event);
+    __UNUSED zx_status_t error = graph_edge_event.Wait();
 
     // Add some hysteresis to avoid re-triggering the loop detector on
     // close successive updates to the graph and to give the inline
@@ -170,9 +170,9 @@ void SystemInitThreadLockState(ThreadLockState*) {}
 void SystemTriggerLoopDetection() {
   if (spin_lock_held(&ThreadLock::Get()->lock())) {
     AssertHeld<ThreadLock, IrqSave>(*ThreadLock::Get());
-    event_signal_thread_locked(&graph_edge_event);
+    graph_edge_event.SignalThreadLocked();
   } else {
-    event_signal(&graph_edge_event, /*reschedule=*/false);
+    graph_edge_event.SignalNoResched();
   }
 }
 

@@ -48,7 +48,7 @@ struct dlog {
 
   bool panic = false;
 
-  event_t event = EVENT_INITIAL_VALUE(this->event, 0, EVENT_FLAG_AUTOUNSIGNAL);
+  AutounsignalEvent event;
 
   DECLARE_LOCK(dlog, Mutex) readers_lock;
   struct list_node readers = LIST_INITIAL_VALUE(this->readers);
@@ -196,9 +196,9 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
     // if we happen to be called from within the global thread lock, use a
     // special version of event signal
     if (holding_thread_lock) {
-      event_signal_thread_locked(&log->event);
+      log->event.SignalThreadLocked();
     } else {
-      event_signal(&log->event, false);
+      log->event.SignalNoResched();
     }
   }();
 
@@ -301,7 +301,7 @@ static int debuglog_notifier(void* arg) {
     if (notifier_shutdown_requested.load()) {
       break;
     }
-    event_wait(&log->event);
+    log->event.Wait();
 
     // notify readers that new log items were posted
     {
@@ -342,11 +342,11 @@ void dlog_serial_write(const char* data, size_t len) {
 // debuglog writes and dump them to the kernel consoles
 // and kernel serial console.
 static void debuglog_dumper_notify(void* cookie) {
-  event_t* event = reinterpret_cast<event_t*>(cookie);
-  event_signal(event, false);
+  Event* event = reinterpret_cast<Event*>(cookie);
+  event->SignalNoResched();
 }
 
-static event_t dumper_event = EVENT_INITIAL_VALUE(dumper_event, 0, EVENT_FLAG_AUTOUNSIGNAL);
+static AutounsignalEvent dumper_event;
 
 static int debuglog_dumper(void* arg) {
   // assembly buffer with room for log text plus header text
@@ -362,7 +362,7 @@ static int debuglog_dumper(void* arg) {
 
   bool done = false;
   while (!done) {
-    event_wait(&dumper_event);
+    dumper_event.Wait();
 
     // If shutdown has been requested, this will be our last loop iteration.
     //
@@ -412,10 +412,10 @@ void dlog_bluescreen_init(void) {
 void dlog_force_panic(void) { dlog_bypass_ = true; }
 
 static zx_status_t dlog_shutdown_thread(Thread* thread, const char* name,
-                                        ktl::atomic<bool>* shutdown_requested, event_t* event,
+                                        ktl::atomic<bool>* shutdown_requested, Event* event,
                                         zx_time_t deadline) {
   shutdown_requested->store(true);
-  event_signal(event, false);
+  event->SignalNoResched();
   if (thread != nullptr) {
     zx_status_t status = thread->Join(nullptr, deadline);
     if (status != ZX_OK) {

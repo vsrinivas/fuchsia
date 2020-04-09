@@ -15,39 +15,37 @@
 static bool event_signal_result_before_wait_test() {
   BEGIN_TEST;
 
-  event_t event = EVENT_INITIAL_VALUE(event, false, 0);
+  Event event;
 
   zx_status_t signal_result = zx_status_t{42};
-  int wake_count = event_signal_etc(&event, true, signal_result);
+  int wake_count = event.Signal(signal_result);
 
   ASSERT_EQ(wake_count, 0, "");
 
-  zx_status_t wake_result = event_wait(&event);
+  zx_status_t wake_result = event.Wait();
 
   EXPECT_EQ(wake_result, signal_result, "");
-
-  event_destroy(&event);
 
   END_TEST;
 }
 
 struct event_waiter_args {
-  event_t* event;
+  Event* event;
   zx_status_t wake_result;
 };
 
 static int event_waiter_thread(void* arg) {
   event_waiter_args* event_args = reinterpret_cast<event_waiter_args*>(arg);
-  event_args->wake_result = event_wait(event_args->event);
+  event_args->wake_result = event_args->event->Wait();
   return 0;
 }
 
-// This tests that the result in an event_signal_etc call is propagated to the waiter
+// This tests that the result in an SignalEtc call is propagated to the waiter
 // when the waiter enters a blocking state before the event is signaled.
 static bool event_signal_result_after_wait_test() {
   BEGIN_TEST;
 
-  event_t event = EVENT_INITIAL_VALUE(event, false, 0);
+  Event event;
 
   zx_status_t signal_result = zx_status_t{42};
 
@@ -72,15 +70,13 @@ static bool event_signal_result_after_wait_test() {
     wait_duration *= 2;
   }
 
-  int wake_count = event_signal_etc(&event, true, signal_result);
+  int wake_count = event.Signal(signal_result);
   ASSERT_EQ(wake_count, 1, "expected to wake 1 thread once waiter has latched");
 
   int thread_retcode = 0;
   waiter->Join(&thread_retcode, ZX_TIME_INFINITE);
 
   ASSERT_EQ(thread_retcode, 0, "");
-
-  event_destroy(&event);
 
   EXPECT_EQ(args.wake_result, signal_result, "");
 

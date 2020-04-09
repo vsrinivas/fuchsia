@@ -62,7 +62,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, 
   const TimerSlack slack = up->GetTimerSlackPolicy();
   const Deadline slackDeadline(deadline, slack);
 
-  // event_wait() will return ZX_OK if already signaled,
+  // Event::Wait() will return ZX_OK if already signaled,
   // even if the deadline has passed.  It will return ZX_ERR_TIMED_OUT
   // after the deadline passes if the event has not been
   // signaled.
@@ -155,7 +155,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     return result;
   }
 
-  // event_wait() will return ZX_OK if already signaled,
+  // Event::Wait() will return ZX_OK if already signaled,
   // even if deadline has passed.  It will return ZX_ERR_TIMED_OUT
   // after the deadline passes if the event has not been
   // signaled.

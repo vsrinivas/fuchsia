@@ -71,8 +71,7 @@ static uint32_t uart_irq = 0;
 static Cbuf uart_rx_buf;
 
 static bool uart_tx_irq_enabled = false;
-static event_t uart_dputc_event =
-    EVENT_INITIAL_VALUE(uart_dputc_event, true, EVENT_FLAG_AUTOUNSIGNAL);
+static AutounsignalEvent uart_dputc_event{true};
 
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
@@ -93,7 +92,7 @@ static interrupt_eoi uart_irq_handler(void* arg) {
     spin_lock(&uart_spinlock);
     if (!(UARTREG(MX8_USR2) & UTS_TXFULL)) {
       // signal
-      event_signal(&uart_dputc_event, true);
+      uart_dputc_event.Signal();
     }
     spin_unlock(&uart_spinlock);
   }
@@ -144,7 +143,7 @@ static void imx_dputs(const char* str, size_t len, bool block, bool map_NL) {
     while ((UARTREG(MX8_UTS) & UTS_TXFULL)) {
       spin_unlock_irqrestore(&uart_spinlock, state);
       if (block) {
-        event_wait(&uart_dputc_event);
+        uart_dputc_event.Wait();
       } else {
         arch_spinloop_pause();
       }

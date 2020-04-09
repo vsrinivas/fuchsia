@@ -43,8 +43,8 @@ static void counter_task(void* raw_context) {
 }
 
 static int deadlock_test_thread(void* arg) {
-  event_t* gate = (event_t*)arg;
-  event_wait(gate);
+  Event* gate = (Event*)arg;
+  gate->Wait();
 
   int counter = 0;
   arch_disable_ints();
@@ -56,7 +56,7 @@ static int deadlock_test_thread(void* arg) {
 static void deadlock_test(void) {
   /* Test for a deadlock caused by multiple CPUs broadcasting concurrently */
 
-  event_t gate = EVENT_INITIAL_VALUE(gate, false, 0);
+  Event gate;
 
   Thread* threads[5] = {0};
   for (uint i = 0; i < fbl::count_of(threads); ++i) {
@@ -68,7 +68,7 @@ static void deadlock_test(void) {
     threads[i]->Resume();
   }
 
-  event_signal(&gate, true);
+  gate.Signal();
 
 cleanup:
   for (uint i = 0; i < fbl::count_of(threads); ++i) {
@@ -76,7 +76,6 @@ cleanup:
       threads[i]->Join(NULL, ZX_TIME_INFINITE);
     }
   }
-  event_destroy(&gate);
 }
 
 static bool sync_ipi_tests() {

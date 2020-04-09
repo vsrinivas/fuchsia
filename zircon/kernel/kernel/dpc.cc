@@ -39,7 +39,7 @@ zx_status_t Dpc::Queue(bool reschedule) {
 
   spin_unlock_irqrestore(&dpc_lock, state);
 
-  event_signal(&cpu->dpc_event, reschedule);
+  cpu->dpc_event.SignalEtc(reschedule);
 
   return ZX_OK;
 }
@@ -59,7 +59,7 @@ zx_status_t Dpc::QueueThreadLocked() {
 
   // put the dpc at the tail of the list and signal the worker
   cpu->dpc_list.push_back(this);
-  event_signal_thread_locked(&cpu->dpc_event);
+  cpu->dpc_event.SignalThreadLocked();
 
   spin_unlock(&dpc_lock);
 
@@ -90,7 +90,7 @@ zx_status_t DpcSystem::Shutdown(uint cpu_id, zx_time_t deadline) {
   spin_unlock_irqrestore(&dpc_lock, state);
 
   // Wake it.
-  event_signal(&percpu.dpc_event, false);
+  percpu.dpc_event.SignalNoResched();
 
   // Wait for it to terminate.
   return t->Join(nullptr, deadline);
@@ -118,9 +118,10 @@ void DpcSystem::ShutdownTransitionOffCpu(uint cpu_id) {
   dst_list.splice(back, src_list);
 
   // Reset the state so we can restart DPC processing if the CPU comes back online.
+  percpu.dpc_event.Unsignal();
   DEBUG_ASSERT(percpu.dpc_list.is_empty());
   percpu.dpc_stop = false;
-  event_destroy(&percpu.dpc_event);
+  percpu.dpc_initialized = false;
 
   spin_unlock_irqrestore(&dpc_lock, state);
 }
@@ -130,14 +131,14 @@ int DpcSystem::WorkerThread(void* arg) {
   arch_interrupt_save(&state, SPIN_LOCK_FLAG_INTERRUPTS);
 
   struct percpu* cpu = get_local_percpu();
-  event_t* event = &cpu->dpc_event;
+  Event* event = &cpu->dpc_event;
   fbl::DoublyLinkedList<Dpc*>& list = cpu->dpc_list;
 
   arch_interrupt_restore(state, SPIN_LOCK_FLAG_INTERRUPTS);
 
   for (;;) {
     // wait for a dpc to fire
-    __UNUSED zx_status_t err = event_wait(event);
+    __UNUSED zx_status_t err = event->Wait();
     DEBUG_ASSERT(err == ZX_OK);
 
     spin_lock_irqsave(&dpc_lock, state);
@@ -152,7 +153,7 @@ int DpcSystem::WorkerThread(void* arg) {
 
     // if the list is now empty, unsignal the event so we block until it is
     if (!dpc) {
-      event_unsignal(event);
+      event->Unsignal();
       spin_unlock_irqrestore(&dpc_lock, state);
       continue;
     }
@@ -174,11 +175,11 @@ void DpcSystem::InitForCpu() {
   uint cpu_num = arch_curr_cpu_num();
 
   // the cpu's dpc state was initialized on a previous hotplug event
-  if (event_initialized(&cpu->dpc_event)) {
+  if (cpu->dpc_initialized) {
     return;
   }
 
-  event_init(&cpu->dpc_event, false, 0);
+  cpu->dpc_initialized = true;
   cpu->dpc_stop = false;
 
   char name[10];

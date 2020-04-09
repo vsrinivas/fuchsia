@@ -49,7 +49,7 @@ class PagerSource : public PageSource,
   void SwapRequest(page_request_t* old, page_request_t* new_req) final;
   void OnClose() final;
   void OnDetach() final;
-  zx_status_t WaitOnEvent(event_t* event) final;
+  zx_status_t WaitOnEvent(Event* event) final;
 
   PagerDispatcher* const pager_;
   const fbl::RefPtr<PortDispatcher> port_;

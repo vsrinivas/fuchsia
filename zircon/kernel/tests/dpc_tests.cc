@@ -19,7 +19,7 @@
 
 struct event_signal_from_dpc_context {
   Dpc dpc;
-  event_t event;
+  Event event;
   ktl::atomic<uint> expected_cpu;
   ktl::atomic<bool> dpc_started;
 };
@@ -33,7 +33,7 @@ static void event_signal_from_dpc_check_cpu(Dpc* dpc) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(context->expected_cpu == arch_curr_cpu_num());
 
-  event_signal(&context->event, /*reschedule=*/false);
+  context->event.SignalNoResched();
 }
 
 static bool test_dpc_queue() {
@@ -47,7 +47,6 @@ static bool test_dpc_queue() {
 
   // Init all the DPCs and supporting context.
   for (int i = 0; i < kNumDPCs; i++) {
-    event_init(&(*context)[i].event, /*initial=*/false, /*flags=*/0);
     (*context)[i].dpc_started = false;
   }
 
@@ -68,10 +67,7 @@ static bool test_dpc_queue() {
     }
   }
   for (int i = 0; i < kNumDPCs; i++) {
-    event_wait(&(*context)[i].event);
-  }
-  for (int i = 0; i < kNumDPCs; i++) {
-    event_destroy(&(*context)[i].event);
+    (*context)[i].event.Wait();
   }
 
   END_TEST;
@@ -99,7 +95,7 @@ static bool test_dpc_requeue() {
 
   // There might still be one DPC queued up for execution.  Wait for it to "flush" the queue.
   Event event_flush;
-  Dpc dpc_flush([](Dpc* d){ d->arg<Event>()->Signal();}, &event_flush);
+  Dpc dpc_flush([](Dpc* d) { d->arg<Event>()->Signal(); }, &event_flush);
   dpc_flush.Queue(/* reschedule = */ true);
   event_flush.Wait(Deadline::no_slack(ZX_TIME_INFINITE));
 

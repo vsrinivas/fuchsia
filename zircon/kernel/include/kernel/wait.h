@@ -154,6 +154,11 @@ class WaitQueue : protected wait_queue_t {
     return wait_queue_block_etc(this, deadline, 0, ResourceOwnership::Normal);
   }
 
+  zx_status_t BlockEtc(const Deadline& deadline, uint signal_mask, ResourceOwnership reason)
+      TA_REQ(thread_lock) {
+    return wait_queue_block_etc(this, deadline, signal_mask, reason);
+  }
+
   zx_status_t BlockReadLock(const Deadline& deadline) TA_REQ(thread_lock) {
     return wait_queue_block_etc(this, deadline, 0, ResourceOwnership::Reader);
   }

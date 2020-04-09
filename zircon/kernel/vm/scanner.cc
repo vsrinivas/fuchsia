@@ -33,11 +33,11 @@ static constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
 ktl::atomic<uint32_t> scanner_operation = 0;
 
 // Event to signal the scanner thread to wake up and perform work.
-Event scanner_request_event{EVENT_FLAG_AUTOUNSIGNAL};
+AutounsignalEvent scanner_request_event;
 
 // Event that is signaled whenever the scanner is disabled. This is used to synchronize disable
 // requests with the scanner thread.
-Event scanner_disabled_event{0};
+Event scanner_disabled_event;
 DECLARE_SINGLETON_MUTEX(scanner_disabled_lock);
 uint32_t scanner_disable_count TA_GUARDED(scanner_disabled_lock::Get()) = 0;
 

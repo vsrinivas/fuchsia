@@ -18,7 +18,7 @@
 // Test that preempt_disable is set for timer callbacks and that, in this
 // context, preempt_pending will get set by some functions.
 static void timer_callback_func(Timer* timer, zx_time_t now, void* arg) {
-  event_t* event = (event_t*)arg;
+  Event* event = (Event*)arg;
 
   // Timer callbacks should be called in interrupt context with
   // preempt_disable set.
@@ -51,7 +51,7 @@ static void timer_callback_func(Timer* timer, zx_time_t now, void* arg) {
   // Restore value.
   thread->preempt_pending_ = old_preempt_pending;
 
-  event_signal(event, true);
+  event->Signal();
 }
 
 // Schedule a timer callback and wait for it to complete.  Most of the
@@ -59,14 +59,12 @@ static void timer_callback_func(Timer* timer, zx_time_t now, void* arg) {
 static bool test_in_timer_callback() {
   BEGIN_TEST;
 
-  event_t event;
-  event_init(&event, false, 0);
+  Event event;
 
   Timer timer;
   timer.Set(Deadline::no_slack(0), timer_callback_func, &event);
 
-  ASSERT_EQ(event_wait(&event), ZX_OK);
-  event_destroy(&event);
+  ASSERT_EQ(event.Wait(), ZX_OK);
 
   END_TEST;
 }

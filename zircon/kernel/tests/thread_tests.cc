@@ -114,7 +114,7 @@ static int mutex_inherit_test() {
   {  // Explicit scope to control when the destruction of |args| happens
     // working variables to pass the working thread
     struct args {
-      event_t test_blocker = EVENT_INITIAL_VALUE(test_blocker, false, 0);
+      Event test_blocker;
       Mutex test_mutex[inherit_test_mutex_count];
     } args;
 
@@ -139,7 +139,7 @@ static int mutex_inherit_test() {
         // wait on a event for a period of time, to try to have other grabber threads
         // need to tweak our priority in either one of the mutexes we hold or the
         // blocking event
-        event_wait_deadline(&args->test_blocker, current_time() + ZX_USEC(rand() % 10u), true);
+        args->test_blocker.WaitDeadline(current_time() + ZX_USEC(rand() % 10u), true);
 
         // release in reverse order
         for (int j = r - 1; j >= 0; j--) {
@@ -170,15 +170,15 @@ static int mutex_inherit_test() {
   return 0;
 }
 
-static event_t e;
-
 static int event_signaler(void* arg) {
+  Event* event = static_cast<Event*>(arg);
+
   printf("event signaler pausing\n");
   Thread::Current::SleepRelative(ZX_SEC(1));
 
   //  for (;;) {
   printf("signaling event\n");
-  event_signal(&e, true);
+  event->Signal();
   printf("done signaling event\n");
   Thread::Current::Yield();
   //  }
@@ -186,12 +186,18 @@ static int event_signaler(void* arg) {
   return 0;
 }
 
-static int event_waiter(void* arg) {
-  uintptr_t count = (uintptr_t)arg;
+struct WaiterArgs {
+  Event* event;
+  size_t count;
+};
 
-  while (count > 0) {
+static int event_waiter(void* arg) {
+  // Copy our arguments here so we can mutate the count.
+  WaiterArgs args = *static_cast<WaiterArgs*>(arg);
+
+  while (args.count > 0) {
     printf("thread %p: waiting on event...\n", Thread::Current::Get());
-    zx_status_t status = event_wait_deadline(&e, ZX_TIME_INFINITE, true);
+    zx_status_t status = args.event->WaitDeadline(ZX_TIME_INFINITE, true);
     if (status == ZX_ERR_INTERNAL_INTR_KILLED) {
       printf("thread %p: killed\n", Thread::Current::Get());
       return -1;
@@ -201,7 +207,7 @@ static int event_waiter(void* arg) {
     }
     printf("thread %p: done waiting on event\n", Thread::Current::Get());
     Thread::Current::Yield();
-    count--;
+    args.count--;
   }
 
   return 0;
@@ -210,55 +216,56 @@ static int event_waiter(void* arg) {
 static void event_test() {
   Thread* threads[5];
 
-  static event_t ievent = EVENT_INITIAL_VALUE(ievent, true, 0x1234);
-  printf("preinitialized event:\n");
-  hexdump(&ievent, sizeof(ievent));
-
   printf("event tests starting\n");
 
-  /* make sure signaling the event wakes up all the threads and stays signaled */
-  printf(
-      "creating event, waiting on it with 4 threads, signaling it and making sure all threads fall "
-      "through twice\n");
-  event_init(&e, false, 0);
-  threads[0] = Thread::Create("event signaler", &event_signaler, NULL, DEFAULT_PRIORITY);
-  threads[1] = Thread::Create("event waiter 0", &event_waiter, (void*)2, DEFAULT_PRIORITY);
-  threads[2] = Thread::Create("event waiter 1", &event_waiter, (void*)2, DEFAULT_PRIORITY);
-  threads[3] = Thread::Create("event waiter 2", &event_waiter, (void*)2, DEFAULT_PRIORITY);
-  threads[4] = Thread::Create("event waiter 3", &event_waiter, (void*)2, DEFAULT_PRIORITY);
+  {
+    /* make sure signaling the event wakes up all the threads and stays signaled */
+    printf(
+        "creating event, waiting on it with 4 threads, signaling it and making sure all threads "
+        "fall "
+        "through twice\n");
+    Event event;
+    WaiterArgs args{&event, 2};
+    threads[0] = Thread::Create("event signaler", &event_signaler, &event, DEFAULT_PRIORITY);
+    threads[1] = Thread::Create("event waiter 0", &event_waiter, &args, DEFAULT_PRIORITY);
+    threads[2] = Thread::Create("event waiter 1", &event_waiter, &args, DEFAULT_PRIORITY);
+    threads[3] = Thread::Create("event waiter 2", &event_waiter, &args, DEFAULT_PRIORITY);
+    threads[4] = Thread::Create("event waiter 3", &event_waiter, &args, DEFAULT_PRIORITY);
 
-  for (uint i = 0; i < fbl::count_of(threads); i++)
-    threads[i]->Resume();
+    for (uint i = 0; i < fbl::count_of(threads); i++)
+      threads[i]->Resume();
 
-  for (uint i = 0; i < fbl::count_of(threads); i++)
-    threads[i]->Join(NULL, ZX_TIME_INFINITE);
+    for (uint i = 0; i < fbl::count_of(threads); i++)
+      threads[i]->Join(NULL, ZX_TIME_INFINITE);
 
-  Thread::Current::SleepRelative(ZX_SEC(2));
-  printf("destroying event\n");
-  event_destroy(&e);
-
-  /* make sure signaling the event wakes up precisely one thread */
-  printf(
-      "creating event, waiting on it with 4 threads, signaling it and making sure only one thread "
-      "wakes up\n");
-  event_init(&e, false, EVENT_FLAG_AUTOUNSIGNAL);
-  threads[0] = Thread::Create("event signaler", &event_signaler, NULL, DEFAULT_PRIORITY);
-  threads[1] = Thread::Create("event waiter 0", &event_waiter, (void*)99, DEFAULT_PRIORITY);
-  threads[2] = Thread::Create("event waiter 1", &event_waiter, (void*)99, DEFAULT_PRIORITY);
-  threads[3] = Thread::Create("event waiter 2", &event_waiter, (void*)99, DEFAULT_PRIORITY);
-  threads[4] = Thread::Create("event waiter 3", &event_waiter, (void*)99, DEFAULT_PRIORITY);
-
-  for (uint i = 0; i < fbl::count_of(threads); i++)
-    threads[i]->Resume();
-
-  Thread::Current::SleepRelative(ZX_SEC(2));
-
-  for (uint i = 0; i < fbl::count_of(threads); i++) {
-    threads[i]->Kill();
-    threads[i]->Join(NULL, ZX_TIME_INFINITE);
+    Thread::Current::SleepRelative(ZX_SEC(2));
+    printf("destroying event by going out of scope\n");
   }
 
-  event_destroy(&e);
+  {
+    AutounsignalEvent event;
+    WaiterArgs args{&event, 99};
+    /* make sure signaling the event wakes up precisely one thread */
+    printf(
+        "creating event, waiting on it with 4 threads, signaling it and making sure only one "
+        "thread "
+        "wakes up\n");
+    threads[0] = Thread::Create("event signaler", &event_signaler, &event, DEFAULT_PRIORITY);
+    threads[1] = Thread::Create("event waiter 0", &event_waiter, &args, DEFAULT_PRIORITY);
+    threads[2] = Thread::Create("event waiter 1", &event_waiter, &args, DEFAULT_PRIORITY);
+    threads[3] = Thread::Create("event waiter 2", &event_waiter, &args, DEFAULT_PRIORITY);
+    threads[4] = Thread::Create("event waiter 3", &event_waiter, &args, DEFAULT_PRIORITY);
+
+    for (uint i = 0; i < fbl::count_of(threads); i++)
+      threads[i]->Resume();
+
+    Thread::Current::SleepRelative(ZX_SEC(2));
+
+    for (uint i = 0; i < fbl::count_of(threads); i++) {
+      threads[i]->Kill();
+      threads[i]->Join(NULL, ZX_TIME_INFINITE);
+    }
+  }
 
   printf("event tests done\n");
 }
@@ -271,8 +278,8 @@ static int quantum_tester(void* arg) {
   return 0;
 }
 
-static event_t context_switch_event;
-static event_t context_switch_done_event;
+static Event context_switch_event;
+static Event context_switch_done_event;
 
 static int context_switch_tester(void* arg) {
   int i;
@@ -280,7 +287,7 @@ static int context_switch_tester(void* arg) {
   const int iter = 100000;
   uintptr_t thread_count = (uintptr_t)arg;
 
-  event_wait(&context_switch_event);
+  context_switch_event.Wait();
 
   uint64_t count = arch_cycle_count();
   for (i = 0; i < iter; i++) {
@@ -292,35 +299,32 @@ static int context_switch_tester(void* arg) {
          " per yield per thread\n",
          total_count, iter, total_count / iter, total_count / iter / thread_count);
 
-  event_signal(&context_switch_done_event, true);
+  context_switch_done_event.Signal();
 
   return 0;
 }
 
 static void context_switch_test() {
-  event_init(&context_switch_event, false, 0);
-  event_init(&context_switch_done_event, false, 0);
-
   Thread::Create("context switch idle", &context_switch_tester, (void*)1, DEFAULT_PRIORITY)
       ->DetachAndResume();
   Thread::Current::SleepRelative(ZX_MSEC(100));
-  event_signal(&context_switch_event, true);
-  event_wait(&context_switch_done_event);
+  context_switch_event.Signal();
+  context_switch_done_event.Wait();
   Thread::Current::SleepRelative(ZX_MSEC(100));
 
-  event_unsignal(&context_switch_event);
-  event_unsignal(&context_switch_done_event);
+  context_switch_event.Unsignal();
+  context_switch_done_event.Unsignal();
   Thread::Create("context switch 2a", &context_switch_tester, (void*)2, DEFAULT_PRIORITY)
       ->DetachAndResume();
   Thread::Create("context switch 2b", &context_switch_tester, (void*)2, DEFAULT_PRIORITY)
       ->DetachAndResume();
   Thread::Current::SleepRelative(ZX_MSEC(100));
-  event_signal(&context_switch_event, true);
-  event_wait(&context_switch_done_event);
+  context_switch_event.Signal();
+  context_switch_done_event.Wait();
   Thread::Current::SleepRelative(ZX_MSEC(100));
 
-  event_unsignal(&context_switch_event);
-  event_unsignal(&context_switch_done_event);
+  context_switch_event.Unsignal();
+  context_switch_done_event.Unsignal();
   Thread::Create("context switch 4a", &context_switch_tester, (void*)4, DEFAULT_PRIORITY)
       ->DetachAndResume();
   Thread::Create("context switch 4b", &context_switch_tester, (void*)4, DEFAULT_PRIORITY)
@@ -330,8 +334,8 @@ static void context_switch_test() {
   Thread::Create("context switch 4d", &context_switch_tester, (void*)4, DEFAULT_PRIORITY)
       ->DetachAndResume();
   Thread::Current::SleepRelative(ZX_MSEC(100));
-  event_signal(&context_switch_event, true);
-  event_wait(&context_switch_done_event);
+  context_switch_event.Signal();
+  context_switch_done_event.Wait();
   Thread::Current::SleepRelative(ZX_MSEC(100));
 }
 
@@ -563,12 +567,12 @@ static int sleeper_kill_thread(void* arg) {
 }
 
 static int waiter_kill_thread_infinite_wait(void* arg) {
-  event_t* e = (event_t*)arg;
+  Event* e = (Event*)arg;
 
   Thread::Current::SleepRelative(ZX_MSEC(100));
 
   zx_time_t t = current_time();
-  zx_status_t err = event_wait_deadline(e, ZX_TIME_INFINITE, true);
+  zx_status_t err = e->WaitDeadline(ZX_TIME_INFINITE, true);
   zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
   TRACEF("event_wait_deadline returns %d after %" PRIi64 " msecs\n", err, duration);
 
@@ -576,12 +580,12 @@ static int waiter_kill_thread_infinite_wait(void* arg) {
 }
 
 static int waiter_kill_thread(void* arg) {
-  event_t* e = (event_t*)arg;
+  Event* e = (Event*)arg;
 
   Thread::Current::SleepRelative(ZX_MSEC(100));
 
   zx_time_t t = current_time();
-  zx_status_t err = event_wait_deadline(e, t + ZX_SEC(5), true);
+  zx_status_t err = e->WaitDeadline(t + ZX_SEC(5), true);
   zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
   TRACEF("event_wait_deadline with deadline returns %d after %" PRIi64 " msecs\n", err, duration);
 
@@ -610,41 +614,43 @@ static void kill_tests() {
   t->Resume();
   t->Join(NULL, ZX_TIME_INFINITE);
 
-  event_t e;
+  {
+    printf("starting waiter thread that waits forever, then killing it while it blocks.\n");
+    Event e;
+    t = Thread::Create("waiter", waiter_kill_thread_infinite_wait, &e, LOW_PRIORITY);
+    t->Resume();
+    Thread::Current::SleepRelative(ZX_MSEC(200));
+    t->Kill();
+    t->Join(NULL, ZX_TIME_INFINITE);
+  }
 
-  printf("starting waiter thread that waits forever, then killing it while it blocks.\n");
-  event_init(&e, false, 0);
-  t = Thread::Create("waiter", waiter_kill_thread_infinite_wait, &e, LOW_PRIORITY);
-  t->Resume();
-  Thread::Current::SleepRelative(ZX_MSEC(200));
-  t->Kill();
-  t->Join(NULL, ZX_TIME_INFINITE);
-  event_destroy(&e);
+  {
+    printf("starting waiter thread that waits forever, then killing it before it wakes up.\n");
+    Event e;
+    t = Thread::Create("waiter", waiter_kill_thread_infinite_wait, &e, LOW_PRIORITY);
+    t->Resume();
+    t->Kill();
+    t->Join(NULL, ZX_TIME_INFINITE);
+  }
 
-  printf("starting waiter thread that waits forever, then killing it before it wakes up.\n");
-  event_init(&e, false, 0);
-  t = Thread::Create("waiter", waiter_kill_thread_infinite_wait, &e, LOW_PRIORITY);
-  t->Resume();
-  t->Kill();
-  t->Join(NULL, ZX_TIME_INFINITE);
-  event_destroy(&e);
+  {
+    printf("starting waiter thread that waits some time, then killing it while it blocks.\n");
+    Event e;
+    t = Thread::Create("waiter", waiter_kill_thread, &e, LOW_PRIORITY);
+    t->Resume();
+    Thread::Current::SleepRelative(ZX_MSEC(200));
+    t->Kill();
+    t->Join(NULL, ZX_TIME_INFINITE);
+  }
 
-  printf("starting waiter thread that waits some time, then killing it while it blocks.\n");
-  event_init(&e, false, 0);
-  t = Thread::Create("waiter", waiter_kill_thread, &e, LOW_PRIORITY);
-  t->Resume();
-  Thread::Current::SleepRelative(ZX_MSEC(200));
-  t->Kill();
-  t->Join(NULL, ZX_TIME_INFINITE);
-  event_destroy(&e);
-
-  printf("starting waiter thread that waits some time, then killing it before it wakes up.\n");
-  event_init(&e, false, 0);
-  t = Thread::Create("waiter", waiter_kill_thread, &e, LOW_PRIORITY);
-  t->Resume();
-  t->Kill();
-  t->Join(NULL, ZX_TIME_INFINITE);
-  event_destroy(&e);
+  {
+    printf("starting waiter thread that waits some time, then killing it before it wakes up.\n");
+    Event e;
+    t = Thread::Create("waiter", waiter_kill_thread, &e, LOW_PRIORITY);
+    t->Resume();
+    t->Kill();
+    t->Join(NULL, ZX_TIME_INFINITE);
+  }
 }
 
 struct affinity_test_state {
@@ -756,8 +762,8 @@ static int prio_test_thread(void* arg) {
   Thread* volatile t = Thread::Current::Get();
   ASSERT(t->scheduler_state_.base_priority() == LOW_PRIORITY);
 
-  auto ev = (event_t*)arg;
-  event_signal(ev, false);
+  auto ev = (Event*)arg;
+  ev->SignalNoResched();
 
   // Busy loop until our priority changes.
   int count = 0;
@@ -768,7 +774,7 @@ static int prio_test_thread(void* arg) {
     ++count;
   }
 
-  event_signal(ev, false);
+  ev->SignalNoResched();
 
   // And then when it changes again.
   for (;;) {
@@ -806,8 +812,7 @@ __NO_INLINE static void priority_test() {
     return;
   }
 
-  event_t ev;
-  event_init(&ev, false, EVENT_FLAG_AUTOUNSIGNAL);
+  AutounsignalEvent ev;
 
   Thread* nt = Thread::Create("prio-test", prio_test_thread, &ev, LOW_PRIORITY);
 
@@ -824,11 +829,11 @@ __NO_INLINE static void priority_test() {
   nt->SetCpuAffinity(cpu_num_to_mask(other));
   nt->Resume();
 
-  zx_status_t status = event_wait_deadline(&ev, ZX_TIME_INFINITE, true);
+  zx_status_t status = ev.WaitDeadline(ZX_TIME_INFINITE, true);
   ASSERT(status == ZX_OK);
   nt->SetPriority(DEFAULT_PRIORITY);
 
-  status = event_wait_deadline(&ev, ZX_TIME_INFINITE, true);
+  status = ev.WaitDeadline(ZX_TIME_INFINITE, true);
   ASSERT(status == ZX_OK);
   nt->SetPriority(HIGH_PRIORITY);
 

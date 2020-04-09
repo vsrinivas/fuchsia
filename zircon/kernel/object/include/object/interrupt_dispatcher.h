@@ -55,7 +55,7 @@ class InterruptDispatcher
   virtual bool HasVcpu() const TA_REQ(spinlock_) { return false; }
 
   InterruptDispatcher();
-  void Signal() { event_signal_etc(&event_, true, ZX_OK); }
+  void Signal() { event_.Signal(); }
   zx_status_t set_flags(uint32_t flags);
   bool SendPacketLocked(zx_time_t timestamp) TA_REQ(spinlock_);
   bool HasPort() const TA_REQ(spinlock_) { return !!port_dispatcher_; }
@@ -76,7 +76,7 @@ class InterruptDispatcher
   DECLARE_SPINLOCK(InterruptDispatcher) spinlock_;
 
  private:
-  event_t event_;
+  AutounsignalEvent event_;
   // Interrupt Flags
   uint32_t flags_;
 

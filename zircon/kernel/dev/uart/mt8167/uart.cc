@@ -101,8 +101,7 @@ static uint32_t uart_irq = 0;
 static Cbuf uart_rx_buf;
 
 static bool uart_tx_irq_enabled = false;
-static event_t uart_dputc_event =
-    EVENT_INITIAL_VALUE(uart_dputc_event, true, EVENT_FLAG_AUTOUNSIGNAL);
+static AutounsignalEvent uart_dputc_event{true};
 
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
@@ -125,8 +124,8 @@ static interrupt_eoi uart_irq_handler(void* arg) {
     spin_lock(&uart_spinlock);
     // TODO(andresoportus): Revisit all UART drivers usage of events, from event.h:
     // 1. The reschedule flag is not supposed to be true in interrupt context.
-    // 2. FLAG_AUTOUNSIGNAL only wakes up one thread.
-    event_signal(&uart_dputc_event, true);
+    // 2. AutounsignalEvent only wakes up one thread per Signal() call.
+    uart_dputc_event.Signal();
     spin_unlock(&uart_spinlock);
   }
 
@@ -176,7 +175,7 @@ static void mt8167_dputs(const char* str, size_t len, bool block, bool map_NL) {
       spin_unlock_irqrestore(&uart_spinlock, state);
       if (block) {
         UARTREG(UART_IER) |= UART_IER_ETBEI;  // Enable TX interrupt.
-        event_wait(&uart_dputc_event);
+        uart_dputc_event.Wait();
       } else {
         arch_spinloop_pause();
       }

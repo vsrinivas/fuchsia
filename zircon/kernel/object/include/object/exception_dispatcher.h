@@ -129,7 +129,7 @@ class ExceptionDispatcher final
   const arch_exception_context_t* arch_context_ TA_GUARDED(get_lock());
 
   bool resume_on_close_ TA_GUARDED(get_lock()) = false;
-  Event response_event_;
+  AutounsignalEvent response_event_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EXCEPTION_DISPATCHER_H_

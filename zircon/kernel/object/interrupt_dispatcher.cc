@@ -13,9 +13,7 @@
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 
-InterruptDispatcher::InterruptDispatcher() : timestamp_(0), state_(InterruptState::IDLE) {
-  event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
-}
+InterruptDispatcher::InterruptDispatcher() : timestamp_(0), state_(InterruptState::IDLE) {}
 
 zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
   bool defer_unmask = false;
@@ -32,7 +30,7 @@ zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
           state_ = InterruptState::NEEDACK;
           *out_timestamp = timestamp_;
           timestamp_ = 0;
-          return event_unsignal(&event_);
+          return event_.Unsignal();
         case InterruptState::NEEDACK:
           if (flags_ & INTERRUPT_UNMASK_PREWAIT) {
             UnmaskInterrupt();
@@ -54,9 +52,9 @@ zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
 
     {
       ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::INTERRUPT);
-      zx_status_t status = event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
+      zx_status_t status = event_.Wait(Deadline::infinite());
       if (status != ZX_OK) {
-        // The event_wait call was interrupted and we need to retry
+        // The Event::Wait call was interrupted and we need to retry
         // but before we retry we will set the interrupt state
         // back to IDLE if we are still in the WAITING state
         Guard<SpinLock, IrqSave> guard{&spinlock_};

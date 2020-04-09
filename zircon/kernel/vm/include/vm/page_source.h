@@ -101,7 +101,7 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // After OnClose is called, no more calls will be made except for ::WaitOnEvent.
   virtual void OnClose() = 0;
 
-  virtual zx_status_t WaitOnEvent(event_t* event) = 0;
+  virtual zx_status_t WaitOnEvent(Event* event) = 0;
 
  private:
   fbl::Canary<fbl::magic("VMPS")> canary_;
@@ -157,7 +157,7 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   // The page source this request is currently associated with.
   fbl::RefPtr<PageSource> src_;
   // Event signaled when the request is fulfilled.
-  event_t event_;
+  AutounsignalEvent event_;
   // PageRequests are active if offset_ is not UINT64_MAX. In an inactive request, the
   // only other valid field is src_.
   uint64_t offset_ = UINT64_MAX;

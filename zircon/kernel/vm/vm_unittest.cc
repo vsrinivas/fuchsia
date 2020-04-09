@@ -1774,8 +1774,8 @@ static bool vmo_zero_scan_test() {
   END_TEST;
 }
 
-// Stubbed page source that is intended to be allowed to create a vmo that believes it is backed by a
-// user pager, but is incapable of actually providing pages.
+// Stubbed page source that is intended to be allowed to create a vmo that believes it is backed by
+// a user pager, but is incapable of actually providing pages.
 class StubPageSource : public PageSource {
  public:
   StubPageSource() {}
@@ -1786,7 +1786,7 @@ class StubPageSource : public PageSource {
   void SwapRequest(page_request_t* old, page_request_t* new_req) { panic("Not implemented\n"); }
   void OnDetach() {}
   void OnClose() {}
-  zx_status_t WaitOnEvent(event_t* event) { panic("Not implemented\n"); }
+  zx_status_t WaitOnEvent(Event* event) { panic("Not implemented\n"); }
 };
 
 static bool vmo_move_pages_on_access_test() {

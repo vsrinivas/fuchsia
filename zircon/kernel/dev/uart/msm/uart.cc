@@ -115,10 +115,8 @@ static uint32_t uart_irq = 0;
 static Cbuf uart_rx_buf;
 
 static bool uart_tx_irq_enabled = false;
-static event_t uart_dputc_event =
-    EVENT_INITIAL_VALUE(uart_dputc_event, true, EVENT_FLAG_AUTOUNSIGNAL);
-static event_t uart_txemt_event =
-    EVENT_INITIAL_VALUE(uart_txemt_event, true, EVENT_FLAG_AUTOUNSIGNAL);
+static AutounsignalEvent uart_dputc_event{true};
+static AutounsignalEvent uart_txemt_event{true};
 
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
@@ -193,7 +191,7 @@ static int msm_pgetc(void) {
 static interrupt_eoi uart_irq_handler(void* arg) {
   uint32_t misr = uart_read(UART_DM_MISR);
   if (misr & UART_IRQ_TX_READY) {
-    event_signal(&uart_txemt_event, false);
+    uart_txemt_event.SignalNoResched();
     uart_write(UART_DM_CR_CMD_RESET_TX_READY, UART_DM_CR);
   }
   if (misr & UART_IRQ_RXSTALE) {
@@ -284,9 +282,9 @@ static void msm_dputs(const char* str, size_t len, bool block, bool map_NL) {
     while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXRDY)) {
       spin_unlock_irqrestore(&uart_spinlock, state);
       if (block) {
-        event_wait(&uart_dputc_event);
+        uart_dputc_event.Wait();
       } else {
-        event_wait(&uart_txemt_event);
+        uart_txemt_event.Wait();
       }
       spin_lock_irqsave(&uart_spinlock, state);
     }

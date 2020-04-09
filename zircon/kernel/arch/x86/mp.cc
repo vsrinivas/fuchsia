@@ -496,12 +496,12 @@ zx_status_t arch_mp_cpu_hotplug(uint cpu_id) {
 }
 
 /* Used to suspend work on a CPU until it is further shutdown */
-void arch_flush_state_and_halt(event_t* flush_done) {
+void arch_flush_state_and_halt(Event* flush_done) {
   DEBUG_ASSERT(arch_ints_disabled());
 
   __asm__ volatile("wbinvd" : : : "memory");
 
-  event_signal(flush_done, false);
+  flush_done->SignalNoResched();
   while (1) {
     __asm__ volatile("cli; hlt" : : : "memory");
   }

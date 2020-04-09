@@ -49,8 +49,7 @@ ExceptionDispatcher::ExceptionDispatcher(fbl::RefPtr<ThreadDispatcher> thread,
     : thread_(ktl::move(thread)),
       exception_type_(exception_type),
       report_(report),
-      arch_context_(arch_context),
-      response_event_(EVENT_FLAG_AUTOUNSIGNAL) {
+      arch_context_(arch_context) {
   kcounter_add(dispatcher_exception_create_count, 1);
 }
 

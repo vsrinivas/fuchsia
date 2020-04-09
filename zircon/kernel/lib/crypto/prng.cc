@@ -43,7 +43,6 @@ PRNG::PRNG(const void* data, size_t size, NonThreadSafeTag tag) : nonce_(0), acc
 PRNG::~PRNG() {
   mandatory_memset(key_, 0, sizeof(key_));
   nonce_ = 0;
-  event_destroy(&ready_);
 }
 
 void PRNG::AddEntropy(const void* data, size_t size) {
@@ -72,7 +71,7 @@ void PRNG::AddEntropy(const void* data, size_t size) {
   // Increment how much entropy has been added, and signal if we have enough.
   size_t total_entropy = accumulated_.fetch_add(size) + size;
   if (is_thread_safe() && total_entropy >= kMinEntropy) {
-    event_signal(&ready_, true /* reschedule */);
+    ready_->Signal();
   }
 }
 
@@ -84,7 +83,7 @@ void PRNG::Draw(void* out, size_t size) {
   ASSERT(size <= kMaxDrawLen);
   // Wait if other threads should add entropy.
   if (is_thread_safe() && accumulated_.load() < kMinEntropy) {
-    event_wait(&ready_);
+    ready_->Wait();
   }
   // Save these on the stack, but guarantee we clean them up
   uint8_t key[sizeof(key_)];
@@ -135,13 +134,14 @@ uint64_t PRNG::RandInt(uint64_t exclusive_upper_bound) {
 // It is safe to call this function from PRNG's constructor provided
 // |ready_| and |accumulated_| initialized.
 void PRNG::BecomeThreadSafe() {
-  ASSERT(!event_initialized(&ready_));
-  event_init(&ready_, accumulated_.load() >= kMinEntropy, 0);
+  ASSERT(!is_thread_safe());
+  ready_.Initialize(accumulated_.load() >= kMinEntropy);
+  is_thread_safe_ = true;
 }
 
 bool PRNG::is_thread_safe() const {
-  // Safe to read event.magic; it is read-only in a threaded context
-  return event_initialized(&ready_);
+  // Safe to read |is_thread_safe_|; it is read-only in a threaded context.
+  return is_thread_safe_;
 }
 
 }  // namespace crypto
