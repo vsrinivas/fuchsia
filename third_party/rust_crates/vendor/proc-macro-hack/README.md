@@ -106,8 +106,8 @@ fn main() {
 
 ## Limitations
 
-- Only proc macros in expression position are supported. Proc macros in type
-  position ([#10]) or pattern position ([#20]) are not supported.
+- Only proc macros in expression position are supported. Proc macros in pattern
+  position ([#20]) are not supported.
 
 - By default, nested invocations are not supported i.e. the code emitted by a
   proc-macro-hack macro invocation cannot contain recursive calls to the same

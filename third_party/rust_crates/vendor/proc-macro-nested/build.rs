@@ -31,6 +31,9 @@ fn main() {
         content += &format!("({}) => {{ proc_macro_call_{}!() }};", bangs, i);
     }
     content += "
+            ($(!)+) => {
+                compile_error!(\"this macro does not support >64 nested macro invocations\")
+            };
         }
     ";
 

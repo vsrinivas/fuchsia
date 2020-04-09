@@ -343,12 +343,12 @@ if (is_fuchsia) {
   }
 }
 group("proc-macro-hack") {
-  deps = [ ":proc-macro-hack-v0_5_11($host_toolchain)" ]
+  deps = [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
 }
 
 if (is_fuchsia) {
   group("proc-macro-nested") {
-    deps = [ ":proc-macro-nested-v0_1_2" ]
+    deps = [ ":proc-macro-nested-v0_1_4" ]
   }
 }
 if (!is_fuchsia) {
@@ -2758,7 +2758,7 @@ rust_proc_macro("futures-macro-v0_3_4") {
   ]
 
   deps = []
-  deps += [ ":proc-macro-hack-v0_5_11($host_toolchain)" ]
+  deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
   deps += [ ":proc-macro2-v1_0_9" ]
   deps += [ ":quote-v1_0_2" ]
   deps += [ ":syn-v1_0_11" ]
@@ -2888,8 +2888,8 @@ rust_library("futures-util-v0_3_4") {
   deps += [ ":futures-task-v0_3_4" ]
   deps += [ ":memchr-v2_3_3" ]
   deps += [ ":pin-utils-v0_1_0-alpha_4" ]
-  deps += [ ":proc-macro-hack-v0_5_11($host_toolchain)" ]
-  deps += [ ":proc-macro-nested-v0_1_2" ]
+  deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
+  deps += [ ":proc-macro-nested-v0_1_4" ]
   deps += [ ":slab-v0_4_2" ]
   deps += [ ":tokio-io-v0_1_11" ]
 
@@ -3418,7 +3418,7 @@ rust_library("indoc-v0_3_3") {
 
   deps = []
   deps += [ ":indoc-impl-v0_3_3($host_toolchain)" ]
-  deps += [ ":proc-macro-hack-v0_5_11($host_toolchain)" ]
+  deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
 
   rustenv = []
 
@@ -3440,7 +3440,7 @@ rust_proc_macro("indoc-impl-v0_3_3") {
   ]
 
   deps = []
-  deps += [ ":proc-macro-hack-v0_5_11($host_toolchain)" ]
+  deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
   deps += [ ":proc-macro2-v0_4_27" ]
   deps += [ ":quote-v0_6_11" ]
   deps += [ ":syn-v0_15_26" ]
@@ -4784,7 +4784,7 @@ rust_library("paste-v0_1_5") {
 
   deps = []
   deps += [ ":paste-impl-v0_1_5($host_toolchain)" ]
-  deps += [ ":proc-macro-hack-v0_5_11($host_toolchain)" ]
+  deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
 
   rustenv = []
 
@@ -4806,7 +4806,7 @@ rust_proc_macro("paste-impl-v0_1_5") {
   ]
 
   deps = []
-  deps += [ ":proc-macro-hack-v0_5_11($host_toolchain)" ]
+  deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
   deps += [ ":proc-macro2-v0_4_27" ]
   deps += [ ":quote-v0_6_11" ]
   deps += [ ":syn-v0_15_26" ]
@@ -5219,34 +5219,31 @@ rust_library("prettytable-rs-v0_8_0") {
   ]
 }
 
-rust_proc_macro("proc-macro-hack-v0_5_11") {
+rust_proc_macro("proc-macro-hack-v0_5_15") {
   crate_name = "proc_macro_hack"
   crate_root = "//third_party/rust_crates/vendor/proc-macro-hack/src/lib.rs"
-  output_name = "proc_macro_hack-4b2722fab7447ac4"
+  output_name = "proc_macro_hack-a1810dc6d464784e"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v1_0_9" ]
-  deps += [ ":quote-v1_0_2" ]
-  deps += [ ":syn-v1_0_11" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=4b2722fab7447ac4",
-    "-Cextra-filename=4b2722fab7447ac4",
+    "-Cmetadata=a1810dc6d464784e",
+    "-Cextra-filename=a1810dc6d464784e",
   ]
 }
 
-rust_library("proc-macro-nested-v0_1_2") {
+rust_library("proc-macro-nested-v0_1_4") {
   crate_name = "proc_macro_nested"
   crate_root = "//third_party/rust_crates/vendor/proc-macro-nested/src/lib.rs"
-  output_name = "proc_macro_nested-111b0b57f5dc6f66"
+  output_name = "proc_macro_nested-e7df40e354462005"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -5259,8 +5256,8 @@ rust_library("proc-macro-nested-v0_1_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=111b0b57f5dc6f66",
-    "-Cextra-filename=111b0b57f5dc6f66",
+    "-Cmetadata=e7df40e354462005",
+    "-Cextra-filename=e7df40e354462005",
   ]
 }
 

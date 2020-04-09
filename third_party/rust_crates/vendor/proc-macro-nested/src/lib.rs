@@ -11,20 +11,20 @@
 //! your declaration crate and update the `#[proc_macro_hack]` re-export as
 //! follows.
 //!
-//! ```rust
+//! ```
 //! // Before
 //! # const IGNORE: &str = stringify! {
 //! #[proc_macro_hack]
 //! pub use demo_hack_impl::add_one;
-//! # }
+//! # };
 //! ```
 //!
-//! ```rust
+//! ```
 //! // After
 //! # const IGNORE: &str = stringify! {
 //! #[proc_macro_hack(support_nested)]
 //! pub use demo_hack_impl::add_one;
-//! # }
+//! # };
 //! ```
 //!
 //! No change is required within your definition crate, only to the re-export in
@@ -58,6 +58,9 @@ macro_rules! dispatch {
         $crate::dispatch!(($($first)* $($rest)*) $($bang)*)
     };
     ((! $($rest:tt)*) $($bang:tt)*) => {
+        $crate::dispatch!(($($rest)*) $($bang)* !)
+    };
+    ((!= $($rest:tt)*) $($bang:tt)*) => {
         $crate::dispatch!(($($rest)*) $($bang)* !)
     };
     (($first:tt $($rest:tt)*) $($bang:tt)*) => {

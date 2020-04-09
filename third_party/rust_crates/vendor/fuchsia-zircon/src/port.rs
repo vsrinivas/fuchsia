@@ -76,6 +76,8 @@ impl Packet {
             PacketContents::User(UserPacket(self.0.union))
         } else if self.0.packet_type == sys::zx_packet_type_t::ZX_PKT_TYPE_SIGNAL_ONE {
             PacketContents::SignalOne(SignalPacket(unsafe { mem::transmute_copy(&self.0.union) }))
+        } else if self.0.packet_type == sys::zx_packet_type_t::ZX_PKT_TYPE_SIGNAL_REP {
+            PacketContents::SignalRep(SignalPacket(unsafe { mem::transmute_copy(&self.0.union) }))
         } else {
             panic!("unexpected packet type");
         }

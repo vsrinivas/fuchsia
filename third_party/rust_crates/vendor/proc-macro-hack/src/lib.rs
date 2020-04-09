@@ -104,8 +104,8 @@
 //!
 //! # Limitations
 //!
-//! - Only proc macros in expression position are supported. Proc macros in type
-//!   position ([#10]) or pattern position ([#20]) are not supported.
+//! - Only proc macros in expression position are supported. Proc macros in
+//!   pattern position ([#20]) are not supported.
 //!
 //! - By default, nested invocations are not supported i.e. the code emitted by
 //!   a proc-macro-hack macro invocation cannot contain recursive calls to the
@@ -123,19 +123,24 @@
 //! [`proc-macro-nested`]: https://docs.rs/proc-macro-nested
 
 #![recursion_limit = "512"]
-#![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
-#![cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+#![allow(clippy::needless_doctest_main, clippy::toplevel_ref_arg)]
 
 extern crate proc_macro;
 
-use proc_macro2::{Span, TokenStream, TokenTree};
-use quote::{format_ident, quote, ToTokens};
-use std::fmt::Write;
-use syn::ext::IdentExt;
-use syn::parse::{Parse, ParseStream, Result};
-use syn::{braced, bracketed, parenthesized, parse_macro_input, token, Ident, LitInt, Token};
+#[macro_use]
+mod quote;
 
-type Visibility = Option<Token![pub]>;
+mod error;
+mod parse;
+
+use crate::error::{compile_error, Error};
+use crate::parse::*;
+use proc_macro::{token_stream, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
+use std::fmt::Write;
+use std::iter::Peekable;
+
+type Iter<'a> = &'a mut Peekable<token_stream::IntoIter>;
+type Visibility = Option<Span>;
 
 enum Input {
     Export(Export),
@@ -162,122 +167,61 @@ struct Macro {
     export_as: Ident,
 }
 
-impl Parse for Input {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let ahead = input.fork();
-        parse_attributes(&ahead)?;
-        ahead.parse::<Visibility>()?;
-
-        if ahead.peek(Token![use]) {
-            input.parse().map(Input::Export)
-        } else if ahead.peek(Token![fn]) {
-            input.parse().map(Input::Define)
-        } else {
-            Err(input.error("unexpected input to #[proc_macro_hack]"))
-        }
-    }
-}
-
-impl Parse for Export {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let attrs = input.call(parse_attributes)?;
-        let vis: Visibility = input.parse()?;
-        input.parse::<Token![use]>()?;
-        input.parse::<Option<Token![::]>>()?;
-        let from: Ident = input.parse()?;
-        input.parse::<Token![::]>()?;
-
-        let mut macros = Vec::new();
-        if input.peek(token::Brace) {
-            let content;
-            braced!(content in input);
-            loop {
-                macros.push(content.parse()?);
-                if content.is_empty() {
-                    break;
-                }
-                content.parse::<Token![,]>()?;
-                if content.is_empty() {
-                    break;
-                }
-            }
-        } else {
-            macros.push(input.parse()?);
-        }
-
-        input.parse::<Token![;]>()?;
-        Ok(Export {
-            attrs,
-            vis,
-            from,
-            macros,
-        })
-    }
-}
-
-impl Parse for Define {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let attrs = input.call(parse_attributes)?;
-        let vis: Visibility = input.parse()?;
-        if vis.is_none() {
-            return Err(input.error("functions tagged with `#[proc_macro_hack]` must be `pub`"));
-        }
-
-        input.parse::<Token![fn]>()?;
-        let name: Ident = input.parse()?;
-        let body: TokenStream = input.parse()?;
-        Ok(Define { attrs, name, body })
-    }
-}
-
-impl Parse for Macro {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let name: Ident = input.parse()?;
-        let renamed: Option<Token![as]> = input.parse()?;
-        let export_as = if renamed.is_some() {
-            input.parse()?
-        } else {
-            name.clone()
-        };
-        Ok(Macro { name, export_as })
-    }
-}
-
-fn parse_attributes(input: ParseStream) -> Result<TokenStream> {
-    let mut attrs = TokenStream::new();
-    while input.peek(Token![#]) {
-        let pound: Token![#] = input.parse()?;
-        pound.to_tokens(&mut attrs);
-        let content;
-        let bracket_token = bracketed!(content in input);
-        let content: TokenStream = content.parse()?;
-        bracket_token.surround(&mut attrs, |tokens| content.to_tokens(tokens));
-    }
-    Ok(attrs)
-}
-
 #[proc_macro_attribute]
-pub fn proc_macro_hack(
-    args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    proc_macro::TokenStream::from(match parse_macro_input!(input) {
+pub fn proc_macro_hack(args: TokenStream, input: TokenStream) -> TokenStream {
+    let ref mut args = args.into_iter().peekable();
+    let ref mut input = input.into_iter().peekable();
+    expand_proc_macro_hack(args, input).unwrap_or_else(compile_error)
+}
+
+fn expand_proc_macro_hack(args: Iter, input: Iter) -> Result<TokenStream, Error> {
+    match parse_input(input)? {
         Input::Export(export) => {
-            let args = parse_macro_input!(args as ExportArgs);
-            expand_export(export, args)
+            let args = parse_export_args(args)?;
+            Ok(expand_export(export, args))
         }
         Input::Define(define) => {
-            parse_macro_input!(args as DefineArgs);
-            expand_define(define)
+            parse_define_args(args)?;
+            Ok(expand_define(define))
         }
-    })
+    }
 }
 
-mod kw {
-    syn::custom_keyword!(derive);
-    syn::custom_keyword!(fake_call_site);
-    syn::custom_keyword!(internal_macro_calls);
-    syn::custom_keyword!(support_nested);
+#[doc(hidden)]
+#[proc_macro_derive(ProcMacroHack)]
+pub fn enum_hack(input: TokenStream) -> TokenStream {
+    let ref mut input = input.into_iter().peekable();
+    parse_enum_hack(input).unwrap_or_else(compile_error)
+}
+
+struct FakeCallSite {
+    derive: Ident,
+    rest: TokenStream,
+}
+
+#[doc(hidden)]
+#[proc_macro_attribute]
+pub fn fake_call_site(args: TokenStream, input: TokenStream) -> TokenStream {
+    let ref mut args = args.into_iter().peekable();
+    let ref mut input = input.into_iter().peekable();
+    expand_fake_call_site(args, input).unwrap_or_else(compile_error)
+}
+
+fn expand_fake_call_site(args: Iter, input: Iter) -> Result<TokenStream, Error> {
+    let span = match args.next() {
+        Some(token) => token.span(),
+        None => return Ok(input.collect()),
+    };
+
+    let input = parse_fake_call_site(input)?;
+    let mut derive = input.derive;
+    derive.set_span(span);
+    let rest = input.rest;
+
+    Ok(quote! {
+        #[derive(#derive)]
+        #rest
+    })
 }
 
 struct ExportArgs {
@@ -286,151 +230,25 @@ struct ExportArgs {
     fake_call_site: bool,
 }
 
-impl Parse for ExportArgs {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let mut args = ExportArgs {
-            support_nested: false,
-            internal_macro_calls: 0,
-            fake_call_site: false,
-        };
-
-        while !input.is_empty() {
-            let ahead = input.lookahead1();
-            if ahead.peek(kw::support_nested) {
-                input.parse::<kw::support_nested>()?;
-                args.support_nested = true;
-            } else if ahead.peek(kw::internal_macro_calls) {
-                input.parse::<kw::internal_macro_calls>()?;
-                input.parse::<Token![=]>()?;
-                let calls = input.parse::<LitInt>()?.base10_parse()?;
-                args.internal_macro_calls = calls;
-            } else if ahead.peek(kw::fake_call_site) {
-                input.parse::<kw::fake_call_site>()?;
-                args.fake_call_site = true;
-            } else {
-                return Err(ahead.error());
-            }
-            if input.is_empty() {
-                break;
-            }
-            input.parse::<Token![,]>()?;
-        }
-
-        Ok(args)
-    }
-}
-
-struct DefineArgs;
-
-impl Parse for DefineArgs {
-    fn parse(_input: ParseStream) -> Result<Self> {
-        Ok(DefineArgs)
-    }
-}
-
-struct EnumHack {
-    token_stream: TokenStream,
-}
-
-impl Parse for EnumHack {
-    fn parse(input: ParseStream) -> Result<Self> {
-        input.parse::<Token![enum]>()?;
-        input.parse::<Ident>()?;
-
-        let braces;
-        braced!(braces in input);
-        braces.parse::<Ident>()?;
-        braces.parse::<Token![=]>()?;
-
-        let parens;
-        parenthesized!(parens in braces);
-        parens.parse::<Ident>()?;
-        parens.parse::<Token![!]>()?;
-
-        let inner;
-        braced!(inner in parens);
-        let token_stream: TokenStream = inner.parse()?;
-
-        parens.parse::<Token![,]>()?;
-        parens.parse::<TokenTree>()?;
-        braces.parse::<Token![.]>()?;
-        braces.parse::<TokenTree>()?;
-        braces.parse::<Token![,]>()?;
-
-        Ok(EnumHack { token_stream })
-    }
-}
-
-#[doc(hidden)]
-#[proc_macro_derive(ProcMacroHack)]
-pub fn enum_hack(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let inner = parse_macro_input!(input as EnumHack);
-    proc_macro::TokenStream::from(inner.token_stream)
-}
-
-struct FakeCallSite {
-    derive: Ident,
-    rest: TokenStream,
-}
-
-impl Parse for FakeCallSite {
-    fn parse(input: ParseStream) -> Result<Self> {
-        input.parse::<Token![#]>()?;
-        let attr;
-        bracketed!(attr in input);
-        attr.parse::<kw::derive>()?;
-        let path;
-        parenthesized!(path in attr);
-        Ok(FakeCallSite {
-            derive: path.parse()?,
-            rest: input.parse()?,
-        })
-    }
-}
-
-#[doc(hidden)]
-#[proc_macro_attribute]
-pub fn fake_call_site(
-    args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    let args = TokenStream::from(args);
-    let span = match args.into_iter().next() {
-        Some(token) => token.span(),
-        None => return input,
-    };
-
-    let input = parse_macro_input!(input as FakeCallSite);
-    let mut derive = input.derive;
-    derive.set_span(span);
-    let rest = input.rest;
-
-    let expanded = quote! {
-        #[derive(#derive)]
-        #rest
-    };
-
-    proc_macro::TokenStream::from(expanded)
-}
-
 fn expand_export(export: Export, args: ExportArgs) -> TokenStream {
     let dummy = dummy_name_for_export(&export);
 
     let attrs = export.attrs;
-    let vis = export.vis;
+    let ref vis = export.vis.map(|span| Ident::new("pub", span));
     let macro_export = match vis {
         Some(_) => quote!(#[macro_export]),
         None => quote!(),
     };
-    let crate_prefix = vis.map(|_| quote!($crate::));
+    let crate_prefix = vis.as_ref().map(|_| quote!($crate::));
     let enum_variant = if args.support_nested {
         if args.internal_macro_calls == 0 {
-            quote!(Nested)
+            Ident::new("Nested", Span::call_site())
         } else {
-            format_ident!("Nested{}", args.internal_macro_calls).to_token_stream()
+            let name = format!("Nested{}", args.internal_macro_calls);
+            Ident::new(&name, Span::call_site())
         }
     } else {
-        quote!(Value)
+        Ident::new("Value", Span::call_site())
     };
 
     let from = export.from;
@@ -452,9 +270,11 @@ fn expand_export(export: Export, args: ExportArgs) -> TokenStream {
             };
 
             let proc_macro_call = if args.support_nested {
-                let extra_bangs = (0..args.internal_macro_calls).map(|_| quote!(!));
+                let extra_bangs = (0..args.internal_macro_calls)
+                    .map(|_| TokenTree::Punct(Punct::new('!', Spacing::Alone)))
+                    .collect::<TokenStream>();
                 quote! {
-                    #crate_prefix #dispatch! { ($($proc_macro)*) #(#extra_bangs)* }
+                    #crate_prefix #dispatch! { ($($proc_macro)*) #extra_bangs }
                 }
             } else {
                 quote! {
@@ -500,6 +320,7 @@ fn expand_export(export: Export, args: ExportArgs) -> TokenStream {
                 macro_rules! #export_as {
                     ($($proc_macro:tt)*) => {{
                         #do_derive
+                        #[allow(dead_code)]
                         enum ProcMacroHack {
                             #enum_variant = (stringify! { $($proc_macro)* }, 0).1,
                         }
@@ -533,6 +354,8 @@ fn expand_define(define: Define) -> TokenStream {
             let mut iter = input.into_iter();
             iter.next().unwrap(); // `enum`
             iter.next().unwrap(); // `ProcMacroHack`
+            iter.next().unwrap(); // `#`
+            iter.next().unwrap(); // `[allow(dead_code)]`
 
             let mut braces = match iter.next().unwrap() {
                 #dummy::TokenTree::Group(group) => group.stream().into_iter(),
@@ -624,26 +447,44 @@ fn expand_define(define: Define) -> TokenStream {
 }
 
 fn actual_proc_macro_name(conceptual: &Ident) -> Ident {
-    format_ident!("proc_macro_hack_{}", conceptual)
+    Ident::new(
+        &format!("proc_macro_hack_{}", conceptual),
+        conceptual.span(),
+    )
 }
 
 fn dispatch_macro_name(conceptual: &Ident) -> Ident {
-    format_ident!("proc_macro_call_{}", conceptual)
+    Ident::new(
+        &format!("proc_macro_call_{}", conceptual),
+        conceptual.span(),
+    )
 }
 
 fn call_site_macro_name(conceptual: &Ident) -> Ident {
-    format_ident!("proc_macro_fake_call_site_{}", conceptual)
+    Ident::new(
+        &format!("proc_macro_fake_call_site_{}", conceptual),
+        conceptual.span(),
+    )
 }
 
 fn dummy_name_for_export(export: &Export) -> String {
     let mut dummy = String::new();
-    let from = export.from.unraw().to_string();
+    let from = unraw(&export.from).to_string();
     write!(dummy, "_{}{}", from.len(), from).unwrap();
     for m in &export.macros {
-        let name = m.name.unraw().to_string();
+        let name = unraw(&m.name).to_string();
         write!(dummy, "_{}{}", name.len(), name).unwrap();
     }
     dummy
+}
+
+fn unraw(ident: &Ident) -> Ident {
+    let string = ident.to_string();
+    if string.starts_with("r#") {
+        Ident::new(&string[2..], ident.span())
+    } else {
+        ident.clone()
+    }
 }
 
 fn wrap_in_enum_hack(dummy: String, inner: TokenStream) -> TokenStream {
