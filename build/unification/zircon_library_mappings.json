@@ -1,10 +1,5 @@
 [
   {
-    "label": "//zircon/system/dev/lib/fake-bti:fake-bti",
-    "name": "fake-bti",
-    "sdk": false
-  },
-  {
     "label": "//zircon/system/ulib/zbi-bootfs:zbi-bootfs",
     "name": "zbi-bootfs",
     "sdk": false
