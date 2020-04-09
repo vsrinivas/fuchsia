@@ -32,6 +32,7 @@ const std::array<uint32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kRefe
 // Because of translation between our power-of-two-sized buffers and our nominal
 // sample rate, the above array contains __proxies__ of the desired frequencies,
 // but not the actual frequency values themselves.
+//
 // The below is an actual representation of the standard set of audio
 // frequencies for fidelity testing -- reverse-calculated from the above values.
 const std::array<uint32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kRefFreqsTranslated = {
@@ -55,8 +56,8 @@ const uint32_t FrequencySet::kReferenceFreq = kReferenceFreqs[kRefFreqIdx];
 constexpr uint32_t FrequencySet::kNumSummaryIdxs;
 const std::array<uint32_t, FrequencySet::kNumSummaryIdxs> FrequencySet::kSummaryIdxs = {
     6,   //  kReferenceFreqs[6] == 53, which translates => 40 Hz
-    20,  //  => 1000 Hz
-    31   //  => 12000 Hz
+    20,  //  1353, translates => 1000 Hz
+    31   //  16381 => 12000 Hz
 };
 
 }  // namespace media::audio::test

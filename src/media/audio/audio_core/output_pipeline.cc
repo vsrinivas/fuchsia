@@ -105,7 +105,7 @@ std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
 
   mix_stages_.emplace_back(stage, UsagesFromRenderUsages(spec.input_streams));
   for (const auto& input : spec.inputs) {
-    // Create a new timeline function to represend the ref_clock_to_frac_frame mapping for this
+    // Create a new timeline function to represent the ref_clock_to_frac_frame mapping for this
     // input.
     auto frac_fps = FractionalFrames<int64_t>(input.output_rate).raw_value();
     auto function = fbl::MakeRefCounted<VersionedTimelineFunction>(

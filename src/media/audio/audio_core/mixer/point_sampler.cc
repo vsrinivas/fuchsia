@@ -24,8 +24,8 @@ class PointSamplerImpl : public PointSampler {
            uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) override;
 
  private:
-  static constexpr uint32_t kPositiveFilterWidth = 0;
-  static constexpr uint32_t kNegativeFilterWidth = FRAC_ONE - 1;
+  static constexpr uint32_t kPositiveFilterWidth = FRAC_HALF;
+  static constexpr uint32_t kNegativeFilterWidth = FRAC_HALF - 1;
 
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
   static inline bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
@@ -44,8 +44,8 @@ class NxNPointSamplerImpl : public PointSampler {
            uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) override;
 
  private:
-  static constexpr uint32_t kPositiveFilterWidth = 0;
-  static constexpr uint32_t kNegativeFilterWidth = FRAC_ONE - 1;
+  static constexpr uint32_t kPositiveFilterWidth = FRAC_HALF;
+  static constexpr uint32_t kNegativeFilterWidth = FRAC_HALF - 1;
 
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
   static inline bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,

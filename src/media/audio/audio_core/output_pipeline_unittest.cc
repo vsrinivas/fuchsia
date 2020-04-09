@@ -345,10 +345,17 @@ TEST_F(OutputPipelineTest, SetEffectConfig) {
   CheckBuffer(buf->payload(), expected_sample, 96);
 }
 
+// This test makes assumptions about the mixer's lead-time, so we explicitly specify the
+// SampleAndHold resampler. Because we compare actual duration to expected duration down to the
+// nanosec, the amount of delay in our test effects is carefully chosen and may be brittle.
 TEST_F(OutputPipelineTest, ReportMinLeadTime) {
+  constexpr int64_t kMixLeadTimeFrames = 1;
+  constexpr int64_t kEffects1LeadTimeFrames = 300;
+  constexpr int64_t kEffects2LeadTimeFrames = 900;
+
   auto test_effects = testing::TestEffectsModule::Open();
-  test_effects.AddEffect("effect_with_delay_300").WithSignalLatencyFrames(300);
-  test_effects.AddEffect("effect_with_delay_1000").WithSignalLatencyFrames(1000);
+  test_effects.AddEffect("effect_with_delay_300").WithSignalLatencyFrames(kEffects1LeadTimeFrames);
+  test_effects.AddEffect("effect_with_delay_900").WithSignalLatencyFrames(kEffects2LeadTimeFrames);
   PipelineConfig::MixGroup root{
       .name = "linearize",
       .input_streams =
@@ -372,7 +379,7 @@ TEST_F(OutputPipelineTest, ReportMinLeadTime) {
                                  .effect_config = "",
                              },
                          },
-                     .output_rate = 48000,
+                     .output_rate = kDefaultFormat.frames_per_second(),
                  },
                  {
                      .name = "communications",
@@ -384,17 +391,18 @@ TEST_F(OutputPipelineTest, ReportMinLeadTime) {
                          {
                              {
                                  .lib_name = "test_effects.so",
-                                 .effect_name = "effect_with_delay_1000",
+                                 .effect_name = "effect_with_delay_900",
                                  .effect_config = "",
                              },
                          },
-                     .output_rate = 48000,
+                     .output_rate = kDefaultFormat.frames_per_second(),
                  }},
-      .output_rate = 48000,
+      .output_rate = kDefaultFormat.frames_per_second(),
   };
   auto pipeline_config = PipelineConfig(root);
-  auto pipeline = std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat.channels(), 128,
-                                                   kDefaultTransform);
+  auto pipeline =
+      std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat.channels(), 128,
+                                       kDefaultTransform, Mixer::Resampler::SampleAndHold);
 
   // Add 2 streams, one with a MEDIA usage and one with COMMUNICATION usage. These should receive
   // different lead times since they have different effects (with different latencies) applied.
@@ -404,18 +412,22 @@ TEST_F(OutputPipelineTest, ReportMinLeadTime) {
   pipeline->AddInput(communications_stream,
                      StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION));
 
-  // The pipeline itself requires no lead time.
+  // The pipeline itself (the root, after any MixStages or EffectsStages) requires no lead time.
   EXPECT_EQ(zx::duration(0), pipeline->GetMinLeadTime());
 
-  // MEDIA streams require 300 frames of lead time since they run through an effect that introduces
-  // 300 frames of delay.
-  const auto default_lead_time = zx::duration(kDefaultFormat.frames_per_ns().Inverse().Scale(300));
+  // MEDIA streams require 302 frames of lead time. They run through an effect that introduces 300
+  // frames of delay; also SampleAndHold resamplers in the 'default' and 'linearize' MixStages each
+  // add 1 frame of lead time.
+  const auto default_lead_time = zx::duration(kDefaultFormat.frames_per_ns().Inverse().Scale(
+      kMixLeadTimeFrames + kEffects1LeadTimeFrames + kMixLeadTimeFrames));
   EXPECT_EQ(default_lead_time, default_stream->GetMinLeadTime());
 
-  // COMMUNICATION streams require 1000 frames of lead time since they run through an effect that
-  // introduces 1000 frames of delay.
-  const auto communications_lead_time =
-      zx::duration(zx::sec(1000).to_nsecs() / kDefaultFormat.frames_per_second());
+  // COMMUNICATION streams require 902 frames of lead time. They run through an effect that
+  // introduces 900 frames of delay; also SampleAndHold resamplers in the 'default' and 'linearize'
+  // MixStages each add 1 frame of lead time.
+  const auto communications_lead_time = zx::duration(
+      zx::sec(kMixLeadTimeFrames + kEffects2LeadTimeFrames + kMixLeadTimeFrames).to_nsecs() /
+      kDefaultFormat.frames_per_second());
   EXPECT_EQ(communications_lead_time, communications_stream->GetMinLeadTime());
 }
 

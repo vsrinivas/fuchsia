@@ -129,7 +129,7 @@ TEST(Resampling, Position_Fractional_Point) {
   int16_t source[] = {1, 0xC, 0x7B, 0x4D2, 0x3039};
   // Mix will accumulate source[1:2,2:3] into accum[1,2]
   float accum[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000, -0x05BA0000};
-  float expect[] = {-0x00002000, -0x0000B000, -0x0006F000, -0x00929000, -0x05BA0000};
+  float expect[] = {-0x00002000, 0x00064000, 0x003E8000, -0x00929000, -0x05BA0000};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
@@ -143,10 +143,10 @@ TEST(Resampling, Position_Fractional_Point) {
 
   //
   // Check: Destination demand exceeds source supply
-  // Source (offset 2.5 of 4) has 1.5. Destination (offset 1 of 4) wants 3.
-  frac_src_offset = 5 << (kPtsFractionalBits - 1);
+  // Source (offset 2.49 of 4) has 2. Destination (offset 1 of 4) wants 3.
+  frac_src_offset = (5 << (kPtsFractionalBits - 1)) - 1;
   dest_offset = 1;
-  // Mix will move source[2:3,3:4] to accum[1,2]
+  // Mix will move source[2,3] to accum[1,2]
   float expect2[] = {-0x00002000, 0x0007B000, 0x004D2000, -0x00929000, -0x05BA0000};
   NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
 
@@ -155,7 +155,7 @@ TEST(Resampling, Position_Fractional_Point) {
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(3u, dest_offset);
-  EXPECT_EQ(9 << (kPtsFractionalBits - 1), frac_src_offset);
+  EXPECT_EQ((9 << (kPtsFractionalBits - 1)) - 1, frac_src_offset);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect2));
 }
 
@@ -656,13 +656,13 @@ TEST(Resampling, FilterWidth_Point) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
 
-  EXPECT_EQ(mixer->pos_filter_width().raw_value(), 0u);
-  EXPECT_EQ(mixer->neg_filter_width().raw_value(), Mixer::FRAC_ONE - 1);
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), Mixer::FRAC_HALF);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), Mixer::FRAC_HALF - 1);
 
   mixer->Reset();
 
-  EXPECT_EQ(mixer->pos_filter_width().raw_value(), 0u);
-  EXPECT_EQ(mixer->neg_filter_width().raw_value(), Mixer::FRAC_ONE - 1);
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), Mixer::FRAC_HALF);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), Mixer::FRAC_HALF - 1);
 }
 
 // Verify LinearSampler filter widths.

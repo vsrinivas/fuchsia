@@ -19,6 +19,7 @@ namespace media::audio {
 class Mixer {
  public:
   static constexpr uint32_t FRAC_ONE = 1u << kPtsFractionalBits;
+  static constexpr uint32_t FRAC_HALF = FRAC_ONE >> 1;
   static constexpr uint32_t FRAC_MASK = FRAC_ONE - 1u;
 
   // Bookkeeping
