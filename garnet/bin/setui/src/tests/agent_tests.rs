@@ -12,6 +12,7 @@ use crate::switchboard::switchboard_impl::SwitchboardImpl;
 use crate::EnvironmentBuilder;
 use anyhow::{format_err, Error};
 use core::fmt::{Debug, Formatter};
+use fuchsia_inspect::component;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::StreamExt;
@@ -155,7 +156,9 @@ async fn test_environment_startup() {
 async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let messenger_factory = create_registry_hub();
-    let switchboard_client = SwitchboardImpl::create(messenger_factory).await.unwrap();
+    let inspect_node = component::inspector().root().create_child("switchboard");
+    let switchboard_client =
+        SwitchboardImpl::create(messenger_factory, inspect_node).await.unwrap();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
 
@@ -204,7 +207,9 @@ async fn test_sequential() {
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let messenger_factory = create_registry_hub();
-    let switchboard_client = SwitchboardImpl::create(messenger_factory).await.unwrap();
+    let inspect_node = component::inspector().root().create_child("switchboard");
+    let switchboard_client =
+        SwitchboardImpl::create(messenger_factory, inspect_node).await.unwrap();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
@@ -250,7 +255,9 @@ async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
 
     let messenger_factory = create_registry_hub();
-    let switchboard_client = SwitchboardImpl::create(messenger_factory).await.unwrap();
+    let inspect_node = component::inspector().root().create_child("switchboard");
+    let switchboard_client =
+        SwitchboardImpl::create(messenger_factory, inspect_node).await.unwrap();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
@@ -304,7 +311,9 @@ async fn test_available_components() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
 
     let messenger_factory = create_registry_hub();
-    let switchboard_client = SwitchboardImpl::create(messenger_factory).await.unwrap();
+    let inspect_node = component::inspector().root().create_child("switchboard");
+    let switchboard_client =
+        SwitchboardImpl::create(messenger_factory, inspect_node).await.unwrap();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();

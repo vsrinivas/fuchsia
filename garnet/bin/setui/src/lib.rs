@@ -302,9 +302,11 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
-    let switchboard_client = SwitchboardImpl::create(registry_messenger_factory.clone())
-        .await
-        .expect("could not create switchboard");
+    let inspect_node = component::inspector().root().create_child("switchboard");
+    let switchboard_client =
+        SwitchboardImpl::create(registry_messenger_factory.clone(), inspect_node)
+            .await
+            .expect("could not create switchboard");
 
     let mut agent_authority = AuthorityImpl::new();
 

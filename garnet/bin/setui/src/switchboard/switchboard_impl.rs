@@ -7,6 +7,7 @@ use crate::internal::core::{
 };
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::switchboard::base::*;
+use crate::switchboard::clock;
 
 use anyhow::{format_err, Error};
 
@@ -17,7 +18,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use fuchsia_async as fasync;
-use fuchsia_inspect::{self as inspect, component};
+use fuchsia_inspect as inspect;
 use futures::stream::StreamExt;
 use std::collections::VecDeque;
 
@@ -118,17 +119,18 @@ pub struct SwitchboardImpl {
     registry_messenger_client: RegistryMessengerClient,
     /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
     last_requests: VecDeque<RequestInfo>,
-    /// Inspect node to write last requests to.
-    last_requests_node: fuchsia_inspect::Node,
-    /// Time the switchboard was created, used for inspect timestamps.
-    creation_time: SystemTime,
+    /// Inspect node to record last requests to.
+    inspect_node: fuchsia_inspect::Node,
 }
 
 impl SwitchboardImpl {
     /// Creates a new SwitchboardImpl, which will return the instance along with
     /// a sender to provide events in response to the actions sent.
+    ///
+    /// Requests will be recorded to the given inspect node.
     pub async fn create(
         registry_messenger_factory: RegistryMessengerFactory,
+        inspect_node: inspect::Node,
     ) -> Result<SwitchboardClient, Error> {
         let (cancel_listen_tx, mut cancel_listen_rx) =
             futures::channel::mpsc::unbounded::<ListenSessionInfo>();
@@ -142,7 +144,6 @@ impl SwitchboardImpl {
 
         let (registry_messenger_client, mut receptor) = messenger_result.unwrap();
 
-        let inspector = component::inspector();
         let switchboard = Arc::new(Mutex::new(Self {
             next_session_id: 0,
             next_action_id: 0,
@@ -150,8 +151,7 @@ impl SwitchboardImpl {
             listeners: HashMap::new(),
             registry_messenger_client: registry_messenger_client,
             last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
-            last_requests_node: inspector.root().create_child("last_requests"),
-            creation_time: SystemTime::now(),
+            inspect_node: inspect_node,
         }));
 
         {
@@ -236,11 +236,12 @@ impl SwitchboardImpl {
             Some(req) => req.count + 1,
             None => 0,
         };
-        let timestamp = match self.creation_time.elapsed() {
+        let timestamp = match clock::now().duration_since(SystemTime::UNIX_EPOCH) {
             Ok(elapsed) => elapsed.as_millis(),
             Err(_) => 0,
         };
-        let node = self.last_requests_node.create_child(format!("{:020}", count));
+        // std::u64::MAX maxes out at 20 digits.
+        let node = self.inspect_node.create_child(format!("{:020}", count));
         let setting_property = node.create_string("setting_type", format!("{:?}", setting_type));
         let request_property = node.create_string("request", format!("{:?}", request));
         let timestamp = node.create_string("timestamp", timestamp.to_string());
@@ -346,6 +347,8 @@ mod tests {
     };
     use crate::message::base::Audience;
     use crate::message::receptor::Receptor;
+    use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
+    use fuchsia_inspect::{assert_inspect_tree, component};
 
     async fn retrieve_and_verify_action(
         receptor: &mut Receptor<Payload, Address>,
@@ -374,7 +377,9 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_client_access() {
         let messenger_factory = create_registry_hub();
-        let switchboard_client = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
+        let inspect_node = component::inspector().root().create_child("switchboard");
+        let switchboard_client =
+            SwitchboardImpl::create(messenger_factory.clone(), inspect_node).await.unwrap();
 
         // Match holds the return value in a temporary location, preventing
         // resources from going out of scope and being freed.
@@ -394,12 +399,14 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
         let messenger_factory = create_registry_hub();
-        let switchboard_client = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
-        // Create registry endpoint
+        let inspect_node = component::inspector().root().create_child("switchboard");
+        let switchboard_client =
+            SwitchboardImpl::create(messenger_factory.clone(), inspect_node).await.unwrap();
+        // Create registry endpoint.
         let (_, mut receptor) =
             messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
 
-        // Send request
+        // Send request.
         let result = switchboard_client.request(SettingType::Unknown, SettingRequest::Get).await;
         assert!(result.is_ok());
         let response_rx = result.unwrap();
@@ -422,10 +429,12 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_listen() {
         let messenger_factory = create_registry_hub();
-        let switchboard_client = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
+        let inspect_node = component::inspector().root().create_child("switchboard");
+        let switchboard_client =
+            SwitchboardImpl::create(messenger_factory.clone(), inspect_node).await.unwrap();
         let setting_type = SettingType::Unknown;
 
-        // Create registry endpoint
+        // Create registry endpoint.
         let (_, mut receptor) =
             messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
 
@@ -460,10 +469,12 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
         let messenger_factory = create_registry_hub();
-        let switchboard_client = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
+        let inspect_node = component::inspector().root().create_child("switchboard");
+        let switchboard_client =
+            SwitchboardImpl::create(messenger_factory.clone(), inspect_node).await.unwrap();
         let setting_type = SettingType::Unknown;
 
-        // Create registry endpoint
+        // Create registry endpoint.
         let (messenger, mut receptor) =
             messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
 
@@ -483,7 +494,7 @@ mod tests {
             retrieve_and_verify_action(&mut receptor, setting_type, SettingActionData::Listen(1))
                 .await;
 
-        // Register second listener and verify count
+        // Register second listener and verify count.
         let (notify_tx2, mut notify_rx2) = futures::channel::mpsc::unbounded::<SettingType>();
         let result_2 = switchboard_client
             .listen(
@@ -515,5 +526,50 @@ mod tests {
             let notification = notify_rx2.next().await.unwrap();
             assert_eq!(notification, setting_type);
         }
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_inspect() {
+        clock::mock::set(SystemTime::UNIX_EPOCH);
+
+        let inspector = inspect::Inspector::new();
+        let messenger_factory = create_registry_hub();
+        let inspect_node = inspector.root().create_child("switchboard");
+        let switchboard_client =
+            SwitchboardImpl::create(messenger_factory.clone(), inspect_node).await.unwrap();
+
+        // Send a few requests to make sure they get written to inspect properly.
+        switchboard_client
+            .request(SettingType::Display, SettingRequest::SetAutoBrightness(false))
+            .await
+            .ok();
+
+        switchboard_client
+            .request(
+                SettingType::Intl,
+                SettingRequest::SetIntlInfo(IntlInfo {
+                    locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
+                    temperature_unit: Some(TemperatureUnit::Celsius),
+                    time_zone_id: Some("UTC".to_string()),
+                    hour_cycle: None,
+                }),
+            )
+            .await
+            .ok();
+
+        assert_inspect_tree!(inspector, root: {
+            switchboard: {
+                "00000000000000000000": {
+                    setting_type: "Display",
+                    request: "SetAutoBrightness(false)",
+                    timestamp: "0",
+                },
+                "00000000000000000001": {
+                    setting_type: "Intl",
+                    request: "SetIntlInfo(IntlInfo { locales: Some([LocaleId { id: \"en-US\" }]), temperature_unit: Some(Celsius), time_zone_id: Some(\"UTC\"), hour_cycle: None })",
+                    timestamp: "0",
+                }
+            }
+        });
     }
 }
