@@ -178,7 +178,7 @@ class Parser {
     return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<BaseReportedError> {
       if (actual.kind() != expected_kind) {
         return ErrorReporter::MakeReportedError(
-            &ErrUnexpectedTokenOfKind, actual,
+            ErrUnexpectedTokenOfKind, actual,
             Token::KindAndSubkind(expected_kind, Token::Subkind::kNone));
       }
       return nullptr;
@@ -190,7 +190,7 @@ class Parser {
       auto expected = Token::KindAndSubkind(Token::Kind::kIdentifier, expected_subkind);
       if (actual.combined() != expected.combined()) {
         return ErrorReporter::MakeReportedError(
-            &ErrUnexpectedIdentifier, actual,
+            ErrUnexpectedIdentifier, actual,
             Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::kNone));
       }
       return nullptr;

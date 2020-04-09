@@ -778,8 +778,8 @@ class Library {
   bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type);
   bool ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type);
 
-  // Validates a single member of a bits or enum. On failure,
-  // returns false and places an error message in the out parameter.
+  // Validates a single member of a bits or enum. On success, returns nullptr,
+  // and on failure returns an error.
   template <typename MemberType>
   using MemberValidator = fit::function<std::unique_ptr<BaseReportedError>(
       const MemberType& member, const raw::AttributeList* attributes)>;

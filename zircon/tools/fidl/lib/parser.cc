@@ -112,6 +112,7 @@ bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
 decltype(nullptr) Parser::Fail() { return Fail(ErrUnexpectedToken); }
 
 decltype(nullptr) Parser::Fail(std::unique_ptr<BaseReportedError> err) {
+  assert(err && "should not report nullptr error");
   if (Ok()) {
     err->span = last_token_.span();
     error_reporter_->ReportError(std::move(err));
@@ -133,7 +134,8 @@ decltype(nullptr) Parser::Fail(const Error<Args...> err, Token token, const Args
 }
 
 template <typename ...Args>
-decltype(nullptr) Parser::Fail(const Error<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args) {
+decltype(nullptr) Parser::Fail(
+    const Error<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args) {
   if (Ok()) {
     error_reporter_->ReportError(err, span, args...);
   }

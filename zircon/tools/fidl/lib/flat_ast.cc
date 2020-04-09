@@ -129,11 +129,11 @@ std::unique_ptr<BaseReportedError> ValidateUnknownConstraints(
       continue;
 
     if (is_strict && !is_transitional) {
-      return ErrorReporter::MakeReportedError(&ErrUnknownAttributeOnInvalidType, member->name);
+      return ErrorReporter::MakeReportedError(ErrUnknownAttributeOnInvalidType, member->name);
     }
 
     if (found_member) {
-      return ErrorReporter::MakeReportedError(&ErrUnknownAttributeOnMultipleMembers, member->name);
+      return ErrorReporter::MakeReportedError(ErrUnknownAttributeOnMultipleMembers, member->name);
     }
 
     found_member = true;
@@ -732,8 +732,7 @@ bool SimpleLayoutConstraint(ErrorReporter* error_reporter, const raw::Attribute&
   for (const auto& member : struct_decl->members) {
     if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld),
                   error_reporter)) {
-      error_reporter->ReportError(ErrStructMemberMustBeSimple, member.name,
-                                  std::string(member.name.data()));
+      error_reporter->ReportError(ErrStructMemberMustBeSimple, member.name, member.name.data());
       ok = false;
     }
   }
@@ -1146,6 +1145,7 @@ std::string LibraryName(const Library* library, std::string_view separator) {
 }
 
 bool Library::Fail(std::unique_ptr<BaseReportedError> err) {
+  assert(err && "should not report nullptr error");
   error_reporter_->ReportError(std::move(err));
   return false;
 }
@@ -2848,10 +2848,10 @@ bool Library::CompileBits(Bits* bits_declaration) {
   {
     // In the line below, `nullptr` needs an explicit cast to the pointer type due to
     // C++ template mechanics.
-    std::unique_ptr<BaseReportedError> error = ValidateUnknownConstraints<const Bits::Member>(
+    auto err = ValidateUnknownConstraints<const Bits::Member>(
         *bits_declaration, bits_declaration->strictness, nullptr);
-    if (error) {
-      return Fail(std::move(error));
+    if (err) {
+      return Fail(std::move(err));
     }
   }
 
@@ -3104,10 +3104,10 @@ bool Library::CompileUnion(Union* union_declaration) {
         used_members.push_back(member.maybe_used.get());
     }
 
-    std::unique_ptr<BaseReportedError> error = ValidateUnknownConstraints(
+    auto err = ValidateUnknownConstraints(
         *union_declaration, union_declaration->strictness, &used_members);
-    if (error) {
-      return Fail(std::move(error));
+    if (err) {
+      return Fail(std::move(err));
     }
   }
 
@@ -3246,10 +3246,10 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
                      decl->name);
     }
 
-    std::unique_ptr<BaseReportedError> error = validator(value, member.attributes.get());
-    if (error) {
-      error->span = member.name;
-      success = Fail(std::move(error));
+    auto err = validator(value, member.attributes.get());
+    if (err) {
+      err->span = member.name;
+      success = Fail(std::move(err));
     }
   }
 
@@ -3275,7 +3275,7 @@ bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_ma
   MemberType mask = 0u;
   auto validator = [&mask](MemberType member, const raw::AttributeList*) -> std::unique_ptr<BaseReportedError> {
     if (!IsPowerOfTwo(member)) {
-      return ErrorReporter::MakeReportedError(&ErrBitsMemberMustBePowerOfTwo);
+      return ErrorReporter::MakeReportedError(ErrBitsMemberMustBePowerOfTwo);
     }
     mask |= member;
     return nullptr;
@@ -3310,7 +3310,7 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
     if (attributes && attributes->HasAttribute("Unknown"))
       return nullptr;
 
-    return ErrorReporter::MakeReportedError(&ErrFlexibleEnumMemberWithMaxValue,
+    return ErrorReporter::MakeReportedError(ErrFlexibleEnumMemberWithMaxValue,
                                     std::to_string(kMax), std::to_string(kMax),
                                     std::to_string(kMax), std::to_string(kMax));
   };
@@ -3325,10 +3325,9 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
       members.push_back(&member);
     }
 
-    std::unique_ptr<BaseReportedError> error =
-        ValidateUnknownConstraints(*enum_decl, enum_decl->strictness, &members);
-    if (error) {
-      return Fail(std::move(error));
+    auto err = ValidateUnknownConstraints(*enum_decl, enum_decl->strictness, &members);
+    if (err) {
+      return Fail(std::move(err));
     }
   }
 

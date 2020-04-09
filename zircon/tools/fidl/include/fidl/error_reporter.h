@@ -71,12 +71,12 @@ class ErrorReporter {
   // on ReportedError explicitly.
   template <typename... Args>
   static std::unique_ptr<ReportedError<Args...>> MakeReportedError(
-      const Error<Args...>* err, const std::optional<SourceSpan>& span, Args... args) {
+      const Error<Args...>& err, const std::optional<SourceSpan>& span, Args... args) {
     return std::make_unique<ReportedError<Args...>>(err, span, args...);
   }
   template <typename... Args>
   static std::unique_ptr<ReportedError<Args...>> MakeReportedError(
-      const Error<Args...>* err, Args... args) {
+      const Error<Args...>& err, Args... args) {
     return std::make_unique<ReportedError<Args...>>(err, std::nullopt, args...);
   }
 
@@ -95,12 +95,6 @@ class ErrorReporter {
     ReportErrorWithSpan(token.span(), internal::FormatErr(err.msg, args...));
   }
 
-  void ReportErrorWithSpan(const std::optional<SourceSpan>& span, std::string_view message) {
-    size_t squiggle_size = span ? span.value().data().size() : 0;
-    auto error = Format("error", span, message, squiggle_size);
-    AddError(std::move(error));
-  }
-
   template <typename... Args>
   void ReportWarning(const Error<Args...> err, const std::optional<SourceSpan>& span,
                      const Args& ...args) {
@@ -111,11 +105,6 @@ class ErrorReporter {
     ReportWarningWithSpan(token.span(), internal::FormatErr(err.msg, args...));
   }
 
-  void ReportWarningWithSpan(const std::optional<SourceSpan>& span, std::string_view message) {
-    size_t squiggle_size = span ? span.value().data().size() : 0;
-    auto warning = Format("warning", span, message, squiggle_size);
-    AddWarning(std::move(warning));
-  }
   void ReportWarningWithSquiggle(const SourceSpan& span, std::string_view message);
 
   void PrintReports();
@@ -128,6 +117,8 @@ class ErrorReporter {
   void set_warnings_as_errors(bool value) { warnings_as_errors_ = value; }
 
  private:
+  void ReportErrorWithSpan(const std::optional<SourceSpan>& span, std::string_view message);
+  void ReportWarningWithSpan(const std::optional<SourceSpan>& span, std::string_view message);
   void AddError(std::string formatted_message);
   void AddWarning(std::string formatted_message);
 

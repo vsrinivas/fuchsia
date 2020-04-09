@@ -77,6 +77,8 @@ namespace internal {
 
 std::string Display(const std::string& s) { return s; }
 
+std::string Display(std::string_view s) { return std::string(s); }
+
 // {'A', 'B', 'C'} -> "A, B, C"
 std::string Display(const std::set<std::string>& s) {
   std::stringstream ss;
@@ -140,14 +142,29 @@ void ErrorReporter::AddWarning(std::string formatted_message) {
   }
 }
 
+void ErrorReporter::ReportError(std::unique_ptr<BaseReportedError> err) {
+  assert(err && "should not report nullptr error");
+  ReportErrorWithSpan(err->span, err->Format());
+}
+
 // Record an error with the span, message, source line, position indicator,
 // and, if span is not nullopt, tildes under the token reported.
 //
 //     filename:line:col: error: message
 //     sourceline
 //        ^~~~
-void ErrorReporter::ReportError(std::unique_ptr<BaseReportedError> err) {
-  ReportErrorWithSpan(err->span, err->Format());
+void ErrorReporter::ReportErrorWithSpan(
+  const std::optional<SourceSpan>& span, std::string_view message) {
+  size_t squiggle_size = span ? span.value().data().size() : 0;
+  auto error = Format("error", span, message, squiggle_size);
+  AddError(std::move(error));
+}
+
+void ErrorReporter::ReportWarningWithSpan(
+  const std::optional<SourceSpan>& span, std::string_view message) {
+  size_t squiggle_size = span ? span.value().data().size() : 0;
+  auto warning = Format("warning", span, message, squiggle_size);
+  AddWarning(std::move(warning));
 }
 
 // Records a warning with the span, message, source line,

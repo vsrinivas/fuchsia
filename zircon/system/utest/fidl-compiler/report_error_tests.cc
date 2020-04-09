@@ -37,7 +37,7 @@ bool MakeReportedErrorThenReportIt() {
   std::string param1("param1");
   std::string param2("param2");
   std::unique_ptr<BaseReportedError> reported_err = ErrorReporter::MakeReportedError(
-      &ErrTest, param1, param2);
+      ErrTest, param1, param2);
   ErrorReporter error_reporter;
   error_reporter.ReportError(std::move(reported_err));
 

@@ -12,7 +12,7 @@ namespace fidl {
 // ---------------------------------------------------------------------------
 // Lexer
 // ---------------------------------------------------------------------------
-constexpr Error<std::string> ErrInvalidCharacter(
+constexpr Error<std::string_view> ErrInvalidCharacter(
     "invalid character '{}'");
 
 // ---------------------------------------------------------------------------
@@ -215,7 +215,7 @@ constexpr Error<raw::Attribute, std::string> ErrAttributeConstraintNotSatisfied(
     "declaration did not satisfy constraint of attribute '{}' with value '{}'");
 constexpr Error<flat::Name> ErrUnionCannotBeSimple(
     "union '{}' is not allowed to be simple");
-constexpr Error<std::string> ErrStructMemberMustBeSimple(
+constexpr Error<std::string_view> ErrStructMemberMustBeSimple(
     "member '{}' is not simple");
 constexpr Error<uint32_t, uint32_t> ErrTooManyBytes(
     "too large: only {} bytes allowed, but {} bytes found");
