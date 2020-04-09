@@ -24,10 +24,23 @@ the dashboard:
 * masters: The term "master" is an outdated term from when Buildbot
   was used by Chrome infrastructure.  The convention now is to use the
   name of the bucket containing the builder for this parameter.
+  Despite the name of the field, this field contains a single string.
+
+  Examples: `fuchsia.ci`, `fuchsia.global.ci`
+
+  These names appear as headings in the "Bot" dropdown menu on
+  https://chromeperf.appspot.com/report.
 
 * bots: The term "bot" is an outdated term from when Buildbot was used
   by Chrome infrastructure.  The convention now is to use the name of
-  the builder for this parameter.
+  the builder for this parameter.  Despite the name of the field, this
+  field contains a single string.
+
+  Examples: `peridot-x64-perf-dawson_canyon` (old name, which is to be
+  dropped), `fuchsia-x64-nuc` (replacement name)
+
+  These names appear as selectable entries in the "Bot" dropdown menu
+  on https://chromeperf.appspot.com/report.
 
 * logUrls: This parameter is taken from the `--log-url` argument.
 
