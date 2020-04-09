@@ -458,30 +458,103 @@ fx build host-tools/gidl
 
 | Name                     | Test Command                                | Directories Covered                                                     |
 |--------------------------|---------------------------------------------|-------------------------------------------------------------------------|
-| gidl parser              | fx run-host-tests gidl_parser_test          | tools/fidl/gidl/parser                                                  |
-| fidlgen type definitions | fx run-host-tests fidlgen_types_test        | garnet/go/src/fidl/compiler/backend/types                               |
-| fidlgen hlcpp            | fx run-host-tests fidlgen_hlcpp_test        | garnet/go/src/fidl/compiler/hlcpp_backend                               |
-| fidlgen llcpp            | fx run-host-tests fidlgen_llcpp_test        | garnet/go/src/fidl/compiler/llcpp_backend                               |
-| fidlgen golang           | fx run-host-tests fidlgen_golang_test       | garnet/go/src/fidl/compiler/backend/golang                              |
-| fidlgen rust             | fx text fidlgen_rust_test                   | tools/fidl/fidlgen_rust                                                 |
-| fidlgen syzkaller        | fx run-host-tests fidlgen_syzkaller_test    | garnet/go/src/fidl/compiler/backend/syzkaller                           |
-| fidlgen dart             | fx run-host-tests fidlgen_dart_backend_test | topaz/bin/fidlgen_dart                                                  |
-| fidl c runtime host test | fx run-host-tests fidl-test                 | zircon/system/ulib/fidl                                                 |
-| c++ host unittests       | fx run-host-tests fidl_cpp_host_unittests   | sdk/lib/fidl                                                            |
-| c++ bindings tests       | fx test fidl_tests                          | sdk/lib/fidl                                                            |
-| llcpp bindings tests     | fx test fidl_llcpp_types_test               | garnet/go/src/fidl/compiler/llcpp_backend                               |
-| go bindings tests        | fx test go_fidl_tests                       | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
-| dart bindings tests      | fx test fidl_bindings_test                  | topaz/public/dart/fidl                                                  |
-| rust bindings            | fx test rust_fidl_tests                     | src/lib/fidl/rust/fidl                                                  |
+| gidl parser              | `fx run-host-tests gidl_parser_test`          | tools/fidl/gidl/parser                                                  |
+| fidlgen type definitions | `fx run-host-tests fidlgen_types_test`        | garnet/go/src/fidl/compiler/backend/types                               |
+| fidlgen hlcpp            | `fx run-host-tests fidlgen_hlcpp_test`        | garnet/go/src/fidl/compiler/hlcpp_backend                               |
+| fidlgen llcpp            | `fx run-host-tests fidlgen_llcpp_test`        | garnet/go/src/fidl/compiler/llcpp_backend                               |
+| fidlgen golang           | `fx run-host-tests fidlgen_golang_test`       | garnet/go/src/fidl/compiler/backend/golang                              |
+| fidlgen rust             | `fx text fidlgen_rust_test`                  | tools/fidl/fidlgen_rust                                                 |
+| fidlgen syzkaller        | `fx run-host-tests fidlgen_syzkaller_test`    | garnet/go/src/fidl/compiler/backend/syzkaller                           |
+| fidlgen dart             | `fx run-host-tests fidlgen_dart_backend_test` | topaz/bin/fidlgen_dart                                                  |
+| fidl c runtime host test | `fx run-host-tests fidl-test`                 | zircon/system/ulib/fidl                                                 |
+| c++ host unittests       | `fx run-host-tests fidl_cpp_host_unittests`   | sdk/lib/fidl                                                            |
+| c++ bindings tests       | `fx test fidl_tests`                          | sdk/lib/fidl                                                            |
+| llcpp bindings tests     | `fx test fidl_llcpp_types_test`               | garnet/go/src/fidl/compiler/llcpp_backend                               |
+| go bindings tests        | `fx test go_fidl_tests`                       | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
+| dart bindings tests      | `fx test fidl_bindings_test`                  | topaz/public/dart/fidl                                                  |
+| rust bindings            | `fx test rust_fidl_tests`                     | src/lib/fidl/rust/fidl                                                  |
 
-The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:zircon
+The following requires: `fx set bringup.x64 --with-base //garnet/packages/tests:zircon`
 
 | Name                      | Test Command                                                                                                  | Directories Covered     |
 |---------------------------|---------------------------------------------------------------------------------------------------------------|-------------------------|
-| fidlc host test           | $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug  | zircon/system/host/fidl |
-| fidl c runtime test       | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test                                             | zircon/system/ulib/fidl |
-| fidl c runtime test       | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test                                      | zircon/system/ulib/fidl |
-| fidl c-llcpp interop test | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-llcpp-interop-test                               | zircon/system/ulib/fidl |
+| fidlc host test           | `$FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug`  | zircon/system/host/fidl |
+| fidl c runtime test       | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test`                                             | zircon/system/ulib/fidl |
+| fidl c runtime test       | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test`                                      | zircon/system/ulib/fidl |
+| fidl c-llcpp interop test | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-llcpp-interop-test`                               | zircon/system/ulib/fidl |
+
+### All Benchmarks
+
+Benchmarks can either be run directly or through one of two test runners:
+fuchsia_benchmarks (old), SL4F (new).
+
+Benchmarks on chromeperf are currently generated through the fuchsia_benchmarks
+runner but are transitioning to SL4F.
+During this transition, benchmarks should be integrated in both systems.
+
+#### Directly running benchmarks
+
+Ensure that the benchmarks are included in your build:
+
+```
+fx set --with=//src/tests/benchmarks
+```
+
+You will need to `fx build` and restart `qemu` for the packages to be
+available.
+
+Available benchmarks:
+
+| Name | Benchmark Command | Notes | 
+|-|-|-|
+| fidl go benchmarks |  `fx shell /pkgfs/packages/go_fidl_benchmarks/0/bin/app` | |
+| fidl rust benchmarks | `fx shell /bin/rust_fidl_benchmarks /tmp/myresultsfile` | Results can be viewed with `fx shell cat /tmp/myresultsfile/` |
+| fidl llcpp benchmarks |  `fx shell /bin/llcpp-fidl-benchmark` | |
+
+#### Running with fuchsia_benchmarks
+
+Ensure that the benchmarks are included in your build:
+
+```
+fx set --with=/src/tests/benchmarks
+```
+
+You will need to `fx build` and restart `qemu` for the packages to be
+available.
+
+First, a directory needs to be created for the test results:
+
+```
+fx shell mkdir /tmp/results
+```
+
+Then you can run the benchmarks:
+
+```
+fx shell /bin/fuchsia_benchmarks /tmp/results
+```
+
+In addition to FIDL benchmarks, many other fuchsia benchmarks will run.
+
+#### Running with SL4F (new runner)
+
+SL4F requires the `terminal.x64` product. Use `fx set` to switch products:
+
+```
+fx set terminal.x64
+```
+
+To run all FIDL tests, use:
+
+```
+fx run-e2e-tests fidl_microbenchmarks_test
+```
+
+To test a specific binding, add the `-n [binding]` flag. For example:
+
+```
+fx run-e2e-test fidl_microbenchmarks_test -- -n "rust_fidl_microbenchmarks"
+```
 
 ### All Regen Commands
 
