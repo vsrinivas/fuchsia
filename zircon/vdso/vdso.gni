@@ -52,6 +52,5 @@ all_syscall_fidl_files = [
   "vcpu.fidl",
   "vmar.fidl",
   "vmo.fidl",
-  "zx_common.fidl",
-  "zx_syscall.fidl",
+  "zx.fidl",
 ]

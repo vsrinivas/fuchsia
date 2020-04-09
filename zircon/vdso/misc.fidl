@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zx;
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
 
 // TODO(scottmg): These syscalls don't match the general naming convention of
 // zx_something_name(), they're just zx_name(), so NoProtocolPrefix tells the
@@ -21,7 +22,7 @@ protocol misc {
 
     /// Read the number of high-precision timer ticks in a second.
     [const,
-    vdsocall]
+     vdsocall]
     ticks_per_second() -> (ticks ticks);
 
     /// Convert a time relative to now to an absolute deadline.
