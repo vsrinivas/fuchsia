@@ -240,6 +240,7 @@ static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev,
                                       struct iwl_trans** out_iwl_trans) {
   const struct iwl_cfg* cfg = &iwl7265_2ac_cfg;
   struct iwl_trans* iwl_trans = iwl_trans_transport_sim_alloc(cfg, fw);
+  iwl_trans->to_load_firmware = false;
   zx_status_t status;
 
   if (!iwl_trans) {
@@ -304,6 +305,11 @@ namespace testing {
 zx_status_t TransportSim::Init() {
   return transport_sim_bind(this, fake_ddk::kFakeParent, &iwl_trans_);
 }
+
+void TransportSim::Release() {
+  transport_sim_release(iwl_trans_);
+}
+
 
 }  // namespace testing
 }  // namespace wlan

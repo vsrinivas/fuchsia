@@ -22,12 +22,12 @@ namespace testing {
 class TransportSim : public SimMvm {
  public:
   explicit TransportSim(::wlan::simulation::Environment* env) : SimMvm(env), iwl_trans_(nullptr) {}
-  ~TransportSim() {
-    free(iwl_trans_);
-  }
+  ~TransportSim() { Release(); }
 
   // This function must be called before starting using other functions.
   zx_status_t Init();
+
+  void Release();
 
   // Note that the user cannot take the ownership of trans. This class still holds it.
   struct iwl_trans* iwl_trans() {

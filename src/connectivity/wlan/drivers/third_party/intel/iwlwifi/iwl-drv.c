@@ -1861,7 +1861,9 @@ err:
 }
 
 void iwl_drv_stop(struct iwl_drv* drv) {
-  sync_completion_wait(&drv->request_firmware_complete, ZX_SEC(5));
+  if (drv->trans->to_load_firmware) {
+    sync_completion_wait(&drv->request_firmware_complete, ZX_SEC(5));
+  }
 
   _iwl_op_mode_stop(drv);
 

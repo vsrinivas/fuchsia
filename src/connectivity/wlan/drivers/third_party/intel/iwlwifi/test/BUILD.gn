@@ -94,9 +94,6 @@ executable("mac80211_test") {
 
   defines = testing_defines
   deps = testing_deps
-
-  # TODO(46745): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("mac-ctxt_test") {
@@ -107,9 +104,6 @@ executable("mac-ctxt_test") {
 
   defines = testing_defines
   deps = testing_deps
-
-  # TODO(46745): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 # Test code for MVM features.
@@ -144,9 +138,6 @@ executable("nvm_test") {
 
   defines = testing_defines
   deps = testing_deps
-
-  # TODO(46745): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("pcie_test") {
@@ -179,9 +170,6 @@ executable("phy-ctxt_test") {
 
   defines = testing_defines
   deps = testing_deps
-
-  # TODO(46745): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("utils_test") {
