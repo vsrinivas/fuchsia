@@ -89,6 +89,38 @@ TEST(Reader, VisitHierarchy) {
   EXPECT_EQ(1u, paths.size());
 }
 
+TEST(Reader, VisitHierarchyWithTombstones) {
+  Inspector inspector;
+  ASSERT_TRUE(bool(inspector));
+
+  // root:
+  //   test:
+  //     test2
+  auto child = inspector.GetRoot().CreateChild("test");
+  auto child2 = child.CreateChild("test2");
+  auto _prop = child2.CreateString("val", "test");
+  // Delete node
+  child2 = inspect::Node();
+
+  auto result = inspect::ReadFromVmo(inspector.DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+  hierarchy.Sort();
+
+  std::vector<std::vector<std::string>> paths;
+  hierarchy.Visit([&](const std::vector<std::string>& path, Hierarchy* current) {
+    paths.push_back(path);
+    EXPECT_NE(nullptr, current);
+    return true;
+  });
+
+  std::vector<std::vector<std::string>> expected;
+  expected.emplace_back(std::vector<std::string>{"root"});
+  expected.emplace_back(std::vector<std::string>{"root", "test"});
+  EXPECT_EQ(expected, paths);
+}
+
+
 TEST(Reader, BucketComparison) {
   inspect::UintArrayValue::HistogramBucket a(0, 2, 6);
   inspect::UintArrayValue::HistogramBucket b(0, 2, 6);

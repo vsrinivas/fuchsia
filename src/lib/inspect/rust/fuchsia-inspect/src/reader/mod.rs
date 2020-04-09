@@ -175,6 +175,7 @@ struct ScanResult<'a> {
 }
 
 /// A scanned node in the Inspect VMO tree.
+#[derive(Debug)]
 struct ScannedNode {
     /// The node hierarchy with properties and children nodes filled.
     partial_hierarchy: PartialNodeHierarchy,
@@ -184,6 +185,9 @@ struct ScannedNode {
 
     /// The index of the parent node of this node.
     parent_index: u32,
+
+    /// True only if this node was intialized. Uninitialized nodes will be ignored.
+    initialized: bool,
 }
 
 impl ScannedNode {
@@ -192,6 +196,7 @@ impl ScannedNode {
             partial_hierarchy: PartialNodeHierarchy::empty(),
             child_nodes_count: 0,
             parent_index: 0,
+            initialized: false,
         }
     }
 
@@ -199,12 +204,18 @@ impl ScannedNode {
     fn initialize(&mut self, name: String, parent_index: u32) {
         self.partial_hierarchy.name = name;
         self.parent_index = parent_index;
+        self.initialized = true;
     }
 
     /// A scanned node is considered complete if the number of children in the
     /// hierarchy is the same as the number of children counted while scanning.
     fn is_complete(&self) -> bool {
         self.partial_hierarchy.children.len() == self.child_nodes_count
+    }
+
+    /// A scanned node is considered initialized if a NodeValue was parsed for it.
+    fn is_initialized(&self) -> bool {
+        self.initialized
     }
 }
 
@@ -217,7 +228,7 @@ macro_rules! get_or_create_scanned_node {
 impl<'a> ScanResult<'a> {
     fn new(snapshot: &'a Snapshot) -> Self {
         let mut root_node = ScannedNode::new();
-        root_node.partial_hierarchy.name = "root".to_string();
+        root_node.initialize("root".to_string(), 0);
         let parsed_nodes = btreemap!(
             0 => root_node,
         );
@@ -234,6 +245,10 @@ impl<'a> ScanResult<'a> {
 
         // Split the parsed_nodes into complete nodes and pending nodes.
         for (index, scanned_node) in self.parsed_nodes.into_iter() {
+            if !scanned_node.is_initialized() {
+                // Skip all nodes that were not initialized.
+                continue;
+            }
             if scanned_node.is_complete() {
                 if index == 0 {
                     return Ok(scanned_node.partial_hierarchy);
@@ -493,6 +508,76 @@ mod tests {
                 "property-bool": false,
             }
         })
+    }
+
+    #[test]
+    fn tombstone_reads() {
+        let inspector = Inspector::new();
+        let node1 = inspector.root().create_child("child1");
+        let node2 = node1.create_child("child2");
+        let node3 = node2.create_child("child3");
+        let prop1 = node1.create_string("val", "test");
+        let prop2 = node2.create_string("val", "test");
+        let prop3 = node3.create_string("val", "test");
+
+        assert_inspect_tree!(inspector,
+            root: {
+                child1: {
+                    val: "test",
+                    child2: {
+                        val: "test",
+                        child3: {
+                            val: "test",
+                        }
+                    }
+                }
+            }
+        );
+
+        std::mem::drop(node3);
+        assert_inspect_tree!(inspector,
+            root: {
+                child1: {
+                    val: "test",
+                    child2: {
+                        val: "test",
+                    }
+                }
+            }
+        );
+
+        std::mem::drop(node2);
+        assert_inspect_tree!(inspector,
+            root: {
+                child1: {
+                    val: "test",
+                }
+            }
+        );
+
+        std::mem::drop(node1);
+        assert_inspect_tree!(inspector,
+            root: {
+            }
+        );
+
+        std::mem::drop(prop3);
+        assert_inspect_tree!(inspector,
+            root: {
+            }
+        );
+
+        std::mem::drop(prop2);
+        assert_inspect_tree!(inspector,
+            root: {
+            }
+        );
+
+        std::mem::drop(prop1);
+        assert_inspect_tree!(inspector,
+            root: {
+            }
+        );
     }
 
     #[test]
