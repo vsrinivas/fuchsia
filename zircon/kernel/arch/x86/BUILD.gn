@@ -38,6 +38,29 @@ config("abi") {
     # ABI for the kernel.
     cflags += [ "-mcmodel=kernel" ]
   }
+
+  # This is not part of the ABI contract per se, but it's part of the
+  # "expected resilience of generated code" contract that should be uniform
+  # across all the privileged code.
+  configs = [ ":retpoline" ]
+}
+
+config("retpoline") {
+  visibility = [ ":*" ]
+  if (is_gcc) {
+    cflags = [
+      "-mindirect-branch=thunk-inline",
+      "-mindirect-branch-register",
+    ]
+  } else {
+    cflags = [ "-mretpoline" ]
+    if (toolchain.environment == "kernel") {
+      # The kernel proper uses its own optimized thunks, but phys and
+      # multiboot can just use the compiler's safe default thunks.
+      cflags += [ "-mretpoline-external-thunk" ]
+    }
+  }
+  defines = [ "KERNEL_RETPOLINE=1" ]
 }
 
 # This is used pervasively throughout the kernel on x86.
