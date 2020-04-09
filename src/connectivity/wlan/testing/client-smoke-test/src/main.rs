@@ -81,7 +81,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         test_results.interface_status = true;
 
         for iface in wlan_iface_ids {
-            let sme_proxy = wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface).await?;
+            let sme_proxy = wlan_service_util::client::get_sme_proxy(&wlan_svc, iface).await?;
             let status_response = match sme_proxy.status().await {
                 Ok(status) => status,
                 Err(e) => {
@@ -100,7 +100,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         for (iface_id, wlan_iface) in test_results.iface_objects.iter_mut() {
             // first check if we can get scan results
             fx_log_info!("iface {}: scanning", iface_id);
-            let scan_result = wlan_service_util::perform_scan(&wlan_iface.sme_proxy).await;
+            let scan_result = wlan_service_util::client::scan(&wlan_iface.sme_proxy).await;
             match scan_result {
                 Ok(results) => {
                     wlan_iface.scan_success = true;
@@ -121,7 +121,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 &wlan_iface.initial_status,
             ) {
                 fx_log_info!("connecting");
-                let connect_result = wlan_service_util::connect_to_network(
+                let connect_result = wlan_service_util::client::connect(
                     &wlan_iface.sme_proxy,
                     opt.target_ssid.as_bytes().to_vec(),
                     opt.target_pwd.as_bytes().to_vec(),
@@ -192,7 +192,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             // after testing, check if we need to disconnect
             if requires_disconnect {
                 fx_log_info!("disconnecting");
-                match wlan_service_util::disconnect_from_network(&wlan_iface.sme_proxy).await {
+                match wlan_service_util::client::disconnect(&wlan_iface.sme_proxy).await {
                     Err(e) => {
                         fx_log_warn!("error disconnecting: {}", e);
                         wlan_iface.disconnect_success = false

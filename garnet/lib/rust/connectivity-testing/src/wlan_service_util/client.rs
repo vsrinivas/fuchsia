@@ -12,8 +12,6 @@ use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::stream::TryStreamExt;
 
-use fidl_fuchsia_wlan_device_service::{self as wlan_service};
-
 type WlanService = DeviceServiceProxy;
 
 const SCAN_TIMEOUT_SECONDS: u8 = 20;
@@ -23,30 +21,7 @@ const SCAN_TIMEOUT_SECONDS: u8 = 20;
 const WLAN_PASSWORD_MAX_LEN: usize = 63;
 const WLAN_PSK_HEX_STRING_LEN: usize = 64;
 
-// Helper methods for calling wlan_service fidl methods
-pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, Error> {
-    let response = wlan_svc.list_ifaces().await.context("Error getting iface list")?;
-    let mut wlan_iface_ids = Vec::new();
-    for iface in response.ifaces {
-        wlan_iface_ids.push(iface.iface_id);
-    }
-    Ok(wlan_iface_ids)
-}
-
-/// Returns the list of Phy IDs for this system.
-///
-/// # Arguments
-/// * `wlan_svc`: a DeviceServiceProxy
-pub async fn get_phy_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, Error> {
-    let response = wlan_svc.list_phys().await.context("Error getting phy list")?;
-    let mut wlan_phy_ids = Vec::new();
-    for phy_info in response.phys {
-        wlan_phy_ids.push(phy_info.phy_id);
-    }
-    Ok(wlan_phy_ids)
-}
-
-pub async fn get_iface_sme_proxy(
+pub async fn get_sme_proxy(
     wlan_svc: &WlanService,
     iface_id: u16,
 ) -> Result<fidl_sme::ClientSmeProxy, Error> {
@@ -62,11 +37,9 @@ pub async fn get_iface_sme_proxy(
     }
 }
 
-pub async fn get_first_client_sme(
-    wlan_svc: &WlanService,
-) -> Result<fidl_sme::ClientSmeProxy, Error> {
+pub async fn get_first_sme(wlan_svc: &WlanService) -> Result<fidl_sme::ClientSmeProxy, Error> {
     let wlan_iface_ids =
-        get_iface_list(wlan_svc).await.context("Connect: failed to get wlan iface list")?;
+        super::get_iface_list(wlan_svc).await.context("Connect: failed to get wlan iface list")?;
 
     if wlan_iface_ids.len() == 0 {
         return Err(format_err!("No wlan interface found"));
@@ -83,13 +56,13 @@ pub async fn get_first_client_sme(
         }
         let resp = resp.unwrap();
         if resp.role == MacRole::Client {
-            return get_iface_sme_proxy(&wlan_svc, resp.id).await;
+            return get_sme_proxy(&wlan_svc, resp.id).await;
         }
     }
     Err(format_err!("No client interface found"))
 }
 
-pub async fn connect_to_network(
+pub async fn connect(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
     target_ssid: Vec<u8>,
     target_pwd: Vec<u8>,
@@ -184,9 +157,7 @@ async fn handle_connect_transaction(
     Ok(result_code)
 }
 
-pub async fn disconnect_from_network(
-    iface_sme_proxy: &fidl_sme::ClientSmeProxy,
-) -> Result<(), Error> {
+pub async fn disconnect(iface_sme_proxy: &fidl_sme::ClientSmeProxy) -> Result<(), Error> {
     iface_sme_proxy.disconnect().await.context("failed to trigger disconnect")?;
 
     // check the status and ensure we are not connected to or connecting to anything
@@ -201,9 +172,9 @@ pub async fn disconnect_from_network(
     Ok(())
 }
 
-pub async fn disconnect_all_clients(wlan_svc: &WlanService) -> Result<(), Error> {
+pub async fn disconnect_all(wlan_svc: &WlanService) -> Result<(), Error> {
     let wlan_iface_ids =
-        get_iface_list(wlan_svc).await.context("Connect: failed to get wlan iface list")?;
+        super::get_iface_list(wlan_svc).await.context("Connect: failed to get wlan iface list")?;
 
     let mut error_msg = format!("");
     for iface_id in wlan_iface_ids {
@@ -211,22 +182,22 @@ pub async fn disconnect_all_clients(wlan_svc: &WlanService) -> Result<(), Error>
 
         if status != zx::sys::ZX_OK {
             error_msg = format!("{}failed querying iface {}: {}\n", error_msg, iface_id, status);
-            fx_log_err!("disconnect_all_clients: query err on iface {}: {}", iface_id, status);
+            fx_log_err!("disconnect_all: query err on iface {}: {}", iface_id, status);
             continue;
         }
         if resp.is_none() {
             error_msg = format!("{}no query response on iface {}\n", error_msg, iface_id);
-            fx_log_err!("disconnect_all_clients: iface query empty on iface {}", iface_id);
+            fx_log_err!("disconnect_all: iface query empty on iface {}", iface_id);
             continue;
         }
         let resp = resp.unwrap();
         if resp.role == MacRole::Client {
-            let sme_proxy = get_iface_sme_proxy(&wlan_svc, iface_id)
+            let sme_proxy = get_sme_proxy(&wlan_svc, iface_id)
                 .await
                 .context("Disconnect all: failed to get iface sme proxy")?;
-            if let Err(e) = disconnect_from_network(&sme_proxy).await {
+            if let Err(e) = disconnect(&sme_proxy).await {
                 error_msg = format!("{}Error disconnecting iface {}: {}\n", error_msg, iface_id, e);
-                fx_log_err!("disconnect_all_clients: disconnect err on iface {}: {}", iface_id, e);
+                fx_log_err!("disconnect_all: disconnect err on iface {}: {}", iface_id, e);
             }
         }
     }
@@ -237,7 +208,7 @@ pub async fn disconnect_all_clients(wlan_svc: &WlanService) -> Result<(), Error>
     }
 }
 
-pub async fn perform_scan(
+pub async fn scan(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
 ) -> Result<Vec<fidl_sme::BssInfo>, Error> {
     let scan_transaction = start_scan_transaction(&iface_sme_proxy)?;
@@ -293,34 +264,16 @@ fn credential_from_bytes(pwd: Vec<u8>) -> Result<fidl_sme::Credential, Error> {
     }
 }
 
-pub async fn get_wlan_mac_addr(
-    wlan_svc: &DeviceServiceProxy,
-    iface_id: u16,
-) -> Result<[u8; 6], Error> {
-    let (_status, resp) = wlan_svc.query_iface(iface_id).await?;
-    Ok(resp.ok_or(format_err!("No valid iface response"))?.mac_addr)
-}
-
-pub async fn destroy_iface(wlan_svc: &DeviceServiceProxy, iface_id: u16) -> Result<(), Error> {
-    let mut req = wlan_service::DestroyIfaceRequest { iface_id };
-
-    let response = wlan_svc.destroy_iface(&mut req).await.context("Error destroying iface")?;
-    match zx::Status::ok(response) {
-        Ok(()) => fx_log_info!("Destroyed iface {:?}", iface_id),
-        Err(s) => return Err(format_err!("Error destroying iface: {:?}", s)),
-    };
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        crate::wlan_service_util::*,
         fidl::endpoints::RequestStream,
         fidl_fuchsia_wlan_device_service::{
             self as wlan_service, DeviceServiceMarker, DeviceServiceProxy, DeviceServiceRequest,
             DeviceServiceRequestStream, IfaceListItem, ListIfacesResponse, ListPhysResponse,
-            PhyListItem, QueryIfaceResponse,
+            PhyListItem,
         },
         fidl_fuchsia_wlan_sme::{
             BssInfo, ClientSmeMarker, ClientSmeRequest, ClientSmeRequestStream, ConnectResultCode,
@@ -445,11 +398,9 @@ mod tests {
         }
     }
 
-    fn test_get_first_client_sme(
-        iface_list: &[MacRole],
-    ) -> Result<fidl_sme::ClientSmeProxy, Error> {
+    fn test_get_first_sme(iface_list: &[MacRole]) -> Result<fidl_sme::ClientSmeProxy, Error> {
         let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
-        let fut = get_first_client_sme(&proxy);
+        let fut = get_first_sme(&proxy);
         pin_mut!(fut);
 
         let ifaces =
@@ -461,7 +412,8 @@ mod tests {
         for mac_role in iface_list {
             // iface query response
             assert!(exec.run_until_stalled(&mut fut).is_pending());
-            respond_to_query_iface_request(
+
+            crate::wlan_service_util::tests::respond_to_query_iface_request(
                 &mut exec,
                 &mut req_stream,
                 *mac_role,
@@ -479,9 +431,9 @@ mod tests {
         exec.run_singlethreaded(&mut fut)
     }
 
-    fn test_disconnect_all_clients(iface_list: &[(MacRole, StatusResponse)]) -> Result<(), Error> {
+    fn test_disconnect_all(iface_list: &[(MacRole, StatusResponse)]) -> Result<(), Error> {
         let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
-        let fut = disconnect_all_clients(&proxy);
+        let fut = disconnect_all(&proxy);
         pin_mut!(fut);
 
         let ifaces =
@@ -493,7 +445,7 @@ mod tests {
         for (mac_role, status) in iface_list {
             // iface query response
             assert!(exec.run_until_stalled(&mut fut).is_pending());
-            respond_to_query_iface_request(
+            crate::wlan_service_util::tests::respond_to_query_iface_request(
                 &mut exec,
                 &mut req_stream,
                 *mac_role,
@@ -531,59 +483,59 @@ mod tests {
     #[test]
     fn check_get_client_sme_success() {
         let iface_list: Vec<MacRole> = vec![MacRole::Ap, MacRole::Client];
-        test_get_first_client_sme(&iface_list).expect("expect success but failed");
+        test_get_first_sme(&iface_list).expect("expect success but failed");
     }
 
     // iface list is empty. Test should fail
     #[test]
     fn check_get_client_sme_no_devices() {
         let iface_list: Vec<MacRole> = Vec::new();
-        test_get_first_client_sme(&iface_list).expect_err("expect fail but succeeded");
+        test_get_first_sme(&iface_list).expect_err("expect fail but succeeded");
     }
 
     // iface list does not contain a client. Test should fail
     #[test]
     fn check_get_client_sme_no_clients() {
         let iface_list: Vec<MacRole> = vec![MacRole::Ap, MacRole::Ap];
-        test_get_first_client_sme(&iface_list).expect_err("expect fail but succeeded");
+        test_get_first_sme(&iface_list).expect_err("expect fail but succeeded");
     }
 
-    // test disconnect_all_clients with a Client and an AP. Test should pass
+    // test disconnect_all with a Client and an AP. Test should pass
     // as AP IF will be ignored and Client IF delete should succeed.
     #[test]
-    fn check_disconnect_all_clients_client_and_ap_success() {
+    fn check_disconnect_all_client_and_ap_success() {
         let iface_list: Vec<(MacRole, StatusResponse)> =
             vec![(MacRole::Ap, StatusResponse::Empty), (MacRole::Client, StatusResponse::Empty)];
-        test_disconnect_all_clients(&iface_list).expect("Expect success but failed")
+        test_disconnect_all(&iface_list).expect("Expect success but failed")
     }
 
-    // test disconnect_all_clients with 2 Clients. Test should pass as both the
+    // test disconnect_all with 2 Clients. Test should pass as both the
     // IFs are clients and both deletes should succeed.
     #[test]
-    fn check_disconnect_all_clients_all_clients_success() {
+    fn check_disconnect_all_all_clients_success() {
         let iface_list: Vec<(MacRole, StatusResponse)> = vec![
             (MacRole::Client, StatusResponse::Empty),
             (MacRole::Client, StatusResponse::Empty),
         ];
-        test_disconnect_all_clients(&iface_list).expect("Expect success but failed");
+        test_disconnect_all(&iface_list).expect("Expect success but failed");
     }
 
-    // test disconnect_all_clients with 2 Clients, one disconnect failure
+    // test disconnect_all with 2 Clients, one disconnect failure
     #[test]
-    fn check_disconnect_all_clients_all_clients_fail() {
+    fn check_disconnect_all_all_clients_fail() {
         let iface_list: Vec<(MacRole, StatusResponse)> = vec![
             (MacRole::Ap, StatusResponse::Connected),
             (MacRole::Client, StatusResponse::Connected),
         ];
-        test_disconnect_all_clients(&iface_list).expect_err("Expect fail but succeeded");
+        test_disconnect_all(&iface_list).expect_err("Expect fail but succeeded");
     }
 
-    // test disconnect_all_clients with no Clients
+    // test disconnect_all with no Clients
     #[test]
-    fn check_disconnect_all_clients_no_clients_success() {
+    fn check_disconnect_all_no_clients_success() {
         let iface_list: Vec<(MacRole, StatusResponse)> =
             vec![(MacRole::Ap, StatusResponse::Empty), (MacRole::Ap, StatusResponse::Empty)];
-        test_disconnect_all_clients(&iface_list).expect("Expect success but failed");
+        test_disconnect_all(&iface_list).expect("Expect success but failed");
     }
 
     #[test]
@@ -767,7 +719,7 @@ mod tests {
         let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 
-        let fut = get_iface_sme_proxy(&wlan_service, 1);
+        let fut = get_sme_proxy(&wlan_service, 1);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -801,7 +753,7 @@ mod tests {
         let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 
-        let fut = get_iface_sme_proxy(&wlan_service, 1);
+        let fut = get_sme_proxy(&wlan_service, 1);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -817,31 +769,31 @@ mod tests {
     }
 
     #[test]
-    fn connect_to_network_success_returns_true() {
+    fn connect_success_returns_true() {
         let connect_result = test_connect("TestAp", "", "TestAp", ConnectResultCode::Success);
         assert!(connect_result);
     }
 
     #[test]
-    fn connect_to_network_failed_returns_false() {
+    fn connect_failed_returns_false() {
         let connect_result = test_connect("TestAp", "", "", ConnectResultCode::Failed);
         assert!(!connect_result);
     }
 
     #[test]
-    fn connect_to_network_canceled_returns_false() {
+    fn connect_canceled_returns_false() {
         let connect_result = test_connect("TestAp", "", "", ConnectResultCode::Canceled);
         assert!(!connect_result);
     }
 
     #[test]
-    fn connect_to_network_bad_credentials_returns_false() {
+    fn connect_bad_credentials_returns_false() {
         let connect_result = test_connect("TestAp", "", "", ConnectResultCode::BadCredentials);
         assert!(!connect_result);
     }
 
     #[test]
-    fn connect_to_network_different_ssid_returns_false() {
+    fn connect_different_ssid_returns_false() {
         let connect_result = test_connect("TestAp1", "", "TestAp2", ConnectResultCode::Success);
         assert!(!connect_result);
     }
@@ -859,7 +811,7 @@ mod tests {
         let target_ssid = ssid.as_bytes();
         let target_password = password.as_bytes();
 
-        let fut = connect_to_network(&client_sme, target_ssid.to_vec(), target_password.to_vec());
+        let fut = connect(&client_sme, target_ssid.to_vec(), target_password.to_vec());
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -899,7 +851,7 @@ mod tests {
     }
 
     #[test]
-    fn connect_to_network_properly_passes_network_info_with_password() {
+    fn connect_properly_passes_network_info_with_password() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
@@ -907,7 +859,7 @@ mod tests {
         let target_ssid = "TestAp".as_bytes();
         let target_password = "password".as_bytes();
 
-        let fut = connect_to_network(&client_sme, target_ssid.to_vec(), target_password.to_vec());
+        let fut = connect(&client_sme, target_ssid.to_vec(), target_password.to_vec());
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -921,7 +873,7 @@ mod tests {
     }
 
     #[test]
-    fn connect_to_network_properly_passes_network_info_open() {
+    fn connect_properly_passes_network_info_open() {
         let mut exec = Executor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
@@ -929,7 +881,7 @@ mod tests {
         let target_ssid = "TestAp".as_bytes();
         let target_password = "".as_bytes();
 
-        let fut = connect_to_network(&client_sme, target_ssid.to_vec(), target_password.to_vec());
+        let fut = connect(&client_sme, target_ssid.to_vec(), target_password.to_vec());
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -1042,7 +994,7 @@ mod tests {
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
 
-        let fut = disconnect_from_network(&client_sme);
+        let fut = disconnect(&client_sme);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -1120,7 +1072,7 @@ mod tests {
     #[test]
     fn scan_success_returns_empty_results() {
         let scan_results_for_response = Vec::new();
-        let scan_results = test_perform_scan(scan_results_for_response);
+        let scan_results = test_scan(scan_results_for_response);
 
         assert_eq!(scan_results, Vec::new());
     }
@@ -1155,7 +1107,7 @@ mod tests {
         expected_response.push(entry1_copy);
         expected_response.push(entry2_copy);
 
-        let scan_results = test_perform_scan(scan_results_for_response);
+        let scan_results = test_scan(scan_results_for_response);
 
         assert_eq!(scan_results, expected_response);
     }
@@ -1163,15 +1115,15 @@ mod tests {
     #[test]
     fn scan_error_correctly_handled() {
         // need to expect an error
-        assert!(test_perform_scan_error().is_err())
+        assert!(test_scan_error().is_err())
     }
 
-    fn test_perform_scan(mut scan_results: Vec<fidl_sme::BssInfo>) -> Vec<fidl_sme::BssInfo> {
+    fn test_scan(mut scan_results: Vec<fidl_sme::BssInfo>) -> Vec<fidl_sme::BssInfo> {
         let mut exec = Executor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
 
-        let fut = perform_scan(&client_sme);
+        let fut = scan(&client_sme);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -1209,12 +1161,12 @@ mod tests {
         transaction.send_on_finished().expect("failed to send OnFinished to ScanTransaction");
     }
 
-    fn test_perform_scan_error() -> Result<(), Error> {
+    fn test_scan_error() -> Result<(), Error> {
         let mut exec = Executor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
 
-        let fut = perform_scan(&client_sme);
+        let fut = scan(&client_sme);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -1276,84 +1228,6 @@ mod tests {
             },
             unsupported => panic!("unsupported credential type: {:?}", unsupported),
         }
-    }
-
-    fn respond_to_query_iface_request(
-        exec: &mut Executor,
-        req_stream: &mut DeviceServiceRequestStream,
-        role: fidl_fuchsia_wlan_device::MacRole,
-        fake_mac_addr: Option<[u8; 6]>,
-    ) {
-        use fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK};
-
-        let req = exec.run_until_stalled(&mut req_stream.next());
-        let responder = assert_variant !(
-            req,
-            Poll::Ready(Some(Ok(DeviceServiceRequest::QueryIface{iface_id : _, responder})))
-            => responder);
-        if let Some(mac) = fake_mac_addr {
-            let mut response = fake_iface_query_response(mac, role);
-            responder
-                .send(ZX_OK, Some(&mut response))
-                .expect("sending fake response with mac address");
-        } else {
-            responder.send(ZX_ERR_NOT_FOUND, None).expect("sending fake response with none")
-        }
-    }
-
-    fn fake_iface_query_response(
-        mac_addr: [u8; 6],
-        role: fidl_fuchsia_wlan_device::MacRole,
-    ) -> QueryIfaceResponse {
-        QueryIfaceResponse { role, id: 0, phy_id: 0, phy_assigned_id: 0, mac_addr }
-    }
-
-    #[test]
-    fn test_get_wlan_mac_addr_ok() {
-        let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
-        let mac_addr_fut = get_wlan_mac_addr(&proxy, 0);
-        pin_mut!(mac_addr_fut);
-
-        assert_variant!(exec.run_until_stalled(&mut mac_addr_fut), Poll::Pending);
-
-        respond_to_query_iface_request(
-            &mut exec,
-            &mut req_stream,
-            MacRole::Client,
-            Some([1, 2, 3, 4, 5, 6]),
-        );
-
-        let mac_addr = exec.run_singlethreaded(&mut mac_addr_fut).expect("should get a mac addr");
-        assert_eq!(mac_addr, [1, 2, 3, 4, 5, 6]);
-    }
-
-    #[test]
-    fn test_get_wlan_mac_addr_not_found() {
-        let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
-        let mac_addr_fut = get_wlan_mac_addr(&proxy, 0);
-        pin_mut!(mac_addr_fut);
-
-        assert_variant!(exec.run_until_stalled(&mut mac_addr_fut), Poll::Pending);
-
-        respond_to_query_iface_request(&mut exec, &mut req_stream, MacRole::Client, None);
-
-        let err = exec.run_singlethreaded(&mut mac_addr_fut).expect_err("should be an error");
-        assert_eq!("No valid iface response", format!("{}", err));
-    }
-
-    #[test]
-    fn test_get_wlan_mac_addr_service_interrupted() {
-        let (mut exec, proxy, req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
-        let mac_addr_fut = get_wlan_mac_addr(&proxy, 0);
-        pin_mut!(mac_addr_fut);
-
-        assert_variant!(exec.run_until_stalled(&mut mac_addr_fut), Poll::Pending);
-
-        // Simulate service not being available by closing the channel
-        std::mem::drop(req_stream);
-
-        let err = exec.run_singlethreaded(&mut mac_addr_fut).expect_err("should be an error");
-        assert!(format!("{}", err).contains("PEER_CLOSED"));
     }
 
     fn send_destroy_iface_response(

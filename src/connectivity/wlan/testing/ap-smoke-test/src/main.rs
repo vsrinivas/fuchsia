@@ -6,7 +6,6 @@ mod opts;
 
 use crate::opts::Opt;
 use anyhow::{format_err, Context as _, Error};
-use connectivity_testing::wlan_ap_service_util;
 use connectivity_testing::wlan_service_util;
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
@@ -81,7 +80,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 };
 
                 if query_iface_response.role == fidl_fuchsia_wlan_device::MacRole::Client {
-                    match wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface).await {
+                    match wlan_service_util::client::get_sme_proxy(&wlan_svc, iface).await {
                         Ok(client_sme_proxy) => {
                             match client_sme_proxy.status().await {
                                 Ok(_status) => {
@@ -105,7 +104,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 }
 
                 if query_iface_response.role == fidl_fuchsia_wlan_device::MacRole::Ap {
-                    match wlan_ap_service_util::get_iface_ap_sme_proxy(&wlan_svc, iface).await {
+                    match wlan_service_util::ap::get_sme_proxy(&wlan_svc, iface).await {
                         Ok(ap_sme_proxy) => {
                             let mut wlan_ap_iface = WlanApIface::new(ap_sme_proxy);
                             wlan_ap_iface.ap_interface_status = true;
@@ -127,7 +126,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         // Go over all APs, create a network, have every client scan, connect and disconnect.
         // When done, stop the AP.
         for (ap_iface_id, wlan_ap_iface) in test_results.iface_ap_objects.iter_mut() {
-            let start_ap_result_code = wlan_ap_service_util::start_ap(
+            let start_ap_result_code = wlan_service_util::ap::start(
                 &wlan_ap_iface.sme_proxy,
                 target_ssid.to_vec(),
                 target_pwd.to_vec(),
@@ -164,7 +163,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 let mut wlan_client_results = WlanClientResultsPerAP::new();
 
                 let scan_results_return =
-                    wlan_service_util::perform_scan(&wlan_client_iface.sme_proxy).await;
+                    wlan_service_util::client::scan(&wlan_client_iface.sme_proxy).await;
 
                 let scan_results = match scan_results_return {
                     Ok(scan_results) => scan_results,
@@ -181,7 +180,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
                 // Connect to network, if found in scan results
                 if wlan_client_results.found_ap_in_scan == true {
-                    let connect_result = wlan_service_util::connect_to_network(
+                    let connect_result = wlan_service_util::client::connect(
                         &wlan_client_iface.sme_proxy,
                         target_ssid.to_vec(),
                         target_pwd.to_vec(),
@@ -198,8 +197,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
                 // If connected, disconnect
                 if wlan_client_results.connection_success == true {
-                    match wlan_service_util::disconnect_from_network(&wlan_client_iface.sme_proxy)
-                        .await
+                    match wlan_service_util::client::disconnect(&wlan_client_iface.sme_proxy).await
                     {
                         Err(_) => wlan_client_results.disconnect_success = false,
                         _ => wlan_client_results.disconnect_success = true,
@@ -224,7 +222,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
             if wlan_ap_iface.ap_start_success == true {
                 // Stop AP
-                let stop_ap_result = wlan_ap_service_util::stop_ap(&wlan_ap_iface.sme_proxy).await;
+                let stop_ap_result = wlan_service_util::ap::stop(&wlan_ap_iface.sme_proxy).await;
 
                 if stop_ap_result.is_ok() {
                     wlan_ap_iface.ap_stop_success = true;

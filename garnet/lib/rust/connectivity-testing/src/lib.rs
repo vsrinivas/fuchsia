@@ -7,7 +7,6 @@
 /// one or more support files, with the helper methods and their unit tests.
 pub mod http_service_util;
 pub mod net_stack_util;
-pub mod wlan_ap_service_util;
 pub mod wlan_service_util;
 
 #[cfg(test)]

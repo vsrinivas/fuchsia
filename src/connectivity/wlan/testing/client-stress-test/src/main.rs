@@ -81,7 +81,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         };
 
         for iface in wlan_iface_ids {
-            let sme_proxy = wlan_service_util::get_iface_sme_proxy(&wlan_svc, iface).await?;
+            let sme_proxy = wlan_service_util::client::get_sme_proxy(&wlan_svc, iface).await?;
             match sme_proxy.status().await {
                 Ok(status) => status,
                 Err(_) => continue,
@@ -99,7 +99,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             for i in 0..opt.repetitions {
                 if opt.scan_test_enabled {
                     let start = Instant::now();
-                    let result = wlan_service_util::perform_scan(&wlaniface.sme_proxy).await;
+                    let result = wlan_service_util::client::scan(&wlaniface.sme_proxy).await;
                     match result {
                         Ok(_ess_info) => {
                             total_scan_time_ms +=
@@ -113,7 +113,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
                 if opt.connect_test_enabled {
                     let start = Instant::now();
-                    let result = wlan_service_util::connect_to_network(
+                    let result = wlan_service_util::client::connect(
                         &wlaniface.sme_proxy,
                         opt.target_ssid.as_bytes().to_vec(),
                         opt.target_pwd.as_bytes().to_vec(),
@@ -132,8 +132,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
                 if opt.disconnect_test_enabled {
                     let start = Instant::now();
-                    let result =
-                        wlan_service_util::disconnect_from_network(&wlaniface.sme_proxy).await;
+                    let result = wlan_service_util::client::disconnect(&wlaniface.sme_proxy).await;
                     match result {
                         Ok(()) => {
                             total_disconnect_time_ms +=

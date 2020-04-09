@@ -56,12 +56,12 @@ impl WlanFacade {
 
     pub async fn scan(&self) -> Result<Vec<String>, Error> {
         // get the first client interface
-        let sme_proxy = wlan_service_util::get_first_client_sme(&self.wlan_svc)
+        let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
             .context("Scan: failed to get client iface sme proxy")?;
 
         // start the scan
-        let results = wlan_service_util::perform_scan(&sme_proxy).await.context("Scan failed")?;
+        let results = wlan_service_util::client::scan(&sme_proxy).await.context("Scan failed")?;
 
         // send the ssids back to the test
         let mut ssids = Vec::new();
@@ -74,11 +74,11 @@ impl WlanFacade {
 
     pub async fn connect(&self, target_ssid: Vec<u8>, target_pwd: Vec<u8>) -> Result<bool, Error> {
         // get the first client interface
-        let sme_proxy = wlan_service_util::get_first_client_sme(&self.wlan_svc)
+        let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
             .context("Connect: failed to get client iface sme proxy")?;
 
-        wlan_service_util::connect_to_network(&sme_proxy, target_ssid, target_pwd).await
+        wlan_service_util::client::connect(&sme_proxy, target_ssid, target_pwd).await
     }
 
     /// Destroys a WLAN interface by input interface ID.
@@ -92,14 +92,14 @@ impl WlanFacade {
     }
 
     pub async fn disconnect(&self) -> Result<(), Error> {
-        wlan_service_util::disconnect_all_clients(&self.wlan_svc)
+        wlan_service_util::client::disconnect_all(&self.wlan_svc)
             .await
             .context("Disconnect: Failed to disconnect ifaces")
     }
 
     pub async fn status(&self) -> Result<ClientStateSummary, Error> {
         // get the first client interface
-        let sme_proxy = wlan_service_util::get_first_client_sme(&self.wlan_svc)
+        let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
             .context("Status: failed to get iface sme proxy")?;
 

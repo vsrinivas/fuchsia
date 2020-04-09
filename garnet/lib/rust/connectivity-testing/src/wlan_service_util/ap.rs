@@ -11,7 +11,7 @@ use fuchsia_zircon as zx;
 
 type WlanService = DeviceServiceProxy;
 
-pub async fn get_iface_ap_sme_proxy(
+pub async fn get_sme_proxy(
     wlan_svc: &WlanService,
     iface_id: u16,
 ) -> Result<fidl_sme::ApSmeProxy, Error> {
@@ -27,7 +27,7 @@ pub async fn get_iface_ap_sme_proxy(
     }
 }
 
-pub async fn stop_ap(iface_sme_proxy: &fidl_sme::ApSmeProxy) -> Result<(), Error> {
+pub async fn stop(iface_sme_proxy: &fidl_sme::ApSmeProxy) -> Result<(), Error> {
     let stop_ap_result_code = iface_sme_proxy.stop().await;
 
     match stop_ap_result_code {
@@ -36,7 +36,7 @@ pub async fn stop_ap(iface_sme_proxy: &fidl_sme::ApSmeProxy) -> Result<(), Error
     }
 }
 
-pub async fn start_ap(
+pub async fn start(
     iface_sme_proxy: &fidl_sme::ApSmeProxy,
     target_ssid: Vec<u8>,
     target_pwd: Vec<u8>,
@@ -136,7 +136,7 @@ mod tests {
             },
         };
 
-        let fut = start_ap(&ap_sme, target_ssid, target_password, channel);
+        let fut = start(&ap_sme, target_ssid, target_password, channel);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
