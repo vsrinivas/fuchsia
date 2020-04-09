@@ -107,7 +107,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.hermetic-compute-module-test",
 #------------------
 #------------------
-    ":test.sys.linenoise-test-test",
 #------------------
 #------------------
     ":test.sys.noop-test",
@@ -278,7 +277,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.hermetic-compute-module-test",
 #------------------
 #------------------
-    ":test.sys.linenoise-test-test",
 #------------------
 #------------------
     ":test.sys.noop-test",
@@ -1979,7 +1977,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
 #------------------
 #------------------
-    #":test.sys.linenoise-test-test",
+    "//zircon/third_party/ulib/linenoise/test:linenoise-test-manifest",
 #------------------
 #------------------
 #------------------
@@ -2489,7 +2487,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
 #------------------
 #------------------
-    #":test.sys.linenoise-test-test",
+    "//zircon/third_party/ulib/linenoise/test:linenoise-test-manifest",
 #------------------
 #------------------
 #------------------
