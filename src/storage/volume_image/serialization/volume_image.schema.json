@@ -1,0 +1,22 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Image Configuration Serialized Format",
+    "description": "Configuration for processing a volume image.",
+    "definitions": {
+        "volume_image": {
+            "properties": {
+                "volume": {
+                    "$ref": "volume_descriptor.schema.json#definitions/volume_descriptor"
+                },
+                "address": {
+                    "$ref": "address_descriptor.schema.json#definitions/address_descriptor"
+                }
+            },
+            "required": [
+                "volume",
+                "address"
+            ]
+        }
+    },
+    "$ref": "#/definitions/volume_image"
+}

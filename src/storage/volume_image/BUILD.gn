@@ -78,6 +78,11 @@ unittest_package("storage-volume-image-tests") {
               "//src/storage/volume_image/serialization/address_descriptor.schema.json")
       dest = "schema/address_descriptor.schema.json"
     },
+    {
+      path = rebase_path(
+              "//src/storage/volume_image/serialization/volume_image.schema.json")
+      dest = "schema/volume_image.schema.json"
+    },
   ]
 }
 

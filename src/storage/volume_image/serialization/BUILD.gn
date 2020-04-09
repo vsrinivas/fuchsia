@@ -14,6 +14,7 @@ copy("schema_json") {
   sources = [
     "address_descriptor.schema.json",
     "volume_descriptor.schema.json",
+    "volume_image.schema.json",
   ]
   outputs = [ "$root_out_dir/schema/{{source_file_part}}" ]
 }

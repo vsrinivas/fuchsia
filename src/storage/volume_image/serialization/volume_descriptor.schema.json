@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Volume Descriptor Serialized Format",
-    "description": "Configuration for processing a volume image.",
+    "description": "Configuration for processing a volume image's volume descriptor.",
     "definitions": {
         "guid": {
             "type": "string",
