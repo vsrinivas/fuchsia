@@ -157,18 +157,16 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   const auto param = GetParam();
 
   WriteRebootLogContents(param.input_reboot_log);
-  SetUpCrashReporterServer(std::make_unique<stubs::CrashReporter>());
+  SetUpCrashReporterServer(
+      std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
+          .crash_signature = param.output_crash_signature,
+          .reboot_log = param.input_reboot_log,
+          .uptime = param.output_uptime,
+      }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-
-  // TODO(49481): Stop casting once we set expectations for the crash reporter in the constructor.
-  stubs::CrashReporter* crash_reporter =
-      static_cast<stubs::CrashReporter*>(crash_reporter_server_.get());
 
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
-  EXPECT_STREQ(crash_reporter->crash_signature().c_str(), param.output_crash_signature.c_str());
-  EXPECT_STREQ(crash_reporter->reboot_log().c_str(), param.input_reboot_log.c_str());
-  EXPECT_EQ(crash_reporter->uptime(), param.output_uptime);
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(param.output_cobalt_event_code)));
 }

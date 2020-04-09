@@ -11,10 +11,37 @@
 #include <optional>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace stubs {
+namespace {
+
+std::string ToString(const std::optional<zx::duration>& uptime) {
+  if (!uptime.has_value()) {
+    return "none";
+  }
+
+  return fxl::StringPrintf("%lu nanoseconds", uptime.value().to_nsecs());
+}
+
+std::string ErrorMessage(const std::string& name, const std::string& received,
+                         const std::string& expected) {
+  return fxl::StringPrintf("Error with %s\nReceived: %s\n, Expected: %s", name.c_str(),
+                           received.c_str(), expected.c_str());
+}
+
+}  // namespace
+
+CrashReporter::~CrashReporter() {
+  FX_CHECK(expectations_.crash_signature == crash_signature_)
+      << ErrorMessage("crash signature", crash_signature_, expectations_.crash_signature);
+  FX_CHECK(expectations_.reboot_log == reboot_log_)
+      << ErrorMessage("reboot log", reboot_log_, expectations_.reboot_log);
+  FX_CHECK(expectations_.uptime == uptime_)
+      << ErrorMessage("uptime", ToString(uptime_), ToString(expectations_.uptime));
+}
 
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   FX_CHECK(report.has_specific_report());

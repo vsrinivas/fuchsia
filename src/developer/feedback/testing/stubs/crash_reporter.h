@@ -20,14 +20,22 @@ using CrashReporterBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, Cra
 
 class CrashReporter : public CrashReporterBase {
  public:
+  struct Expectations {
+    std::string crash_signature;
+    std::string reboot_log;
+    std::optional<zx::duration> uptime;
+  };
+
+  CrashReporter(Expectations expectations) : expectations_(expectations) {}
+
+  ~CrashReporter();
+
   // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 
-  const std::string& crash_signature() { return crash_signature_; };
-  const std::string& reboot_log() { return reboot_log_; };
-  const std::optional<zx::duration>& uptime() { return uptime_; };
-
  private:
+  const Expectations expectations_;
+
   std::string crash_signature_;
   std::string reboot_log_;
   std::optional<zx::duration> uptime_;
