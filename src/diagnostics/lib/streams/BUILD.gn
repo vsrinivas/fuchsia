@@ -1,0 +1,51 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("streams") {
+  testonly = true
+  deps = [ ":streams-encoder" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":streams-cpp-tests" ]
+}
+
+source_set("streams-encoder") {
+  sources = [
+    "encode.cc",
+    "encode.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = []
+}
+
+executable("streams-encoder-test") {
+  testonly = true
+  sources = [ "streams_encoder_unittest.cc" ]
+  deps = [
+    ":streams-encoder",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+test_package("streams-cpp-tests") {
+  tests = [
+    {
+      name = "streams-encoder-test"
+      environments = basic_envs
+    },
+  ]
+
+  deps = [ ":streams-encoder-test" ]
+}
