@@ -4,6 +4,8 @@
 
 #include "entry_view.h"
 
+#include <vector>
+
 #include <zxtest/zxtest.h>
 
 namespace fs {
@@ -42,7 +44,7 @@ using EntryViewTest = EntryViewFixture;
 TEST_F(EntryViewTest, CreateJournalEntryView) { JournalEntryView view(make_view(3)); }
 
 TEST_F(EntryViewTest, SetHeaderFromOperation) {
-  fbl::Vector<storage::BufferedOperation> operations = {
+  std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
@@ -63,7 +65,7 @@ TEST_F(EntryViewTest, SetHeaderFromOperation) {
 }
 
 TEST_F(EntryViewTest, SetHeaderFromMultipleOperations) {
-  fbl::Vector<storage::BufferedOperation> operations = {
+  std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
@@ -93,7 +95,7 @@ TEST_F(EntryViewTest, SetHeaderFromMultipleOperations) {
 }
 
 TEST_F(EntryViewTest, SameJournalEntryGeneratesSameChecksum) {
-  fbl::Vector<storage::BufferedOperation> operations = {
+  std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
@@ -113,7 +115,7 @@ TEST_F(EntryViewTest, SameJournalEntryGeneratesSameChecksum) {
 }
 
 TEST_F(EntryViewTest, DifferentTargetBlockGeneratesDifferentChecksum) {
-  fbl::Vector<storage::BufferedOperation> operations = {
+  std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
@@ -136,7 +138,7 @@ TEST_F(EntryViewTest, DifferentTargetBlockGeneratesDifferentChecksum) {
 }
 
 TEST_F(EntryViewTest, DifferentSequenceNumberGeneratesDifferentChecksum) {
-  fbl::Vector<storage::BufferedOperation> operations = {
+  std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
@@ -157,7 +159,7 @@ TEST_F(EntryViewTest, DifferentSequenceNumberGeneratesDifferentChecksum) {
 }
 
 TEST_F(EntryViewTest, ChecksumDoesNotIncludeCommit) {
-  fbl::Vector<storage::BufferedOperation> operations = {
+  std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
@@ -187,8 +189,8 @@ class EscapedEntryFixture : public EntryViewFixture {
  public:
   const uint64_t kTarget = 1234;
 
-  fbl::Vector<storage::BufferedOperation> operations() const {
-    fbl::Vector<storage::BufferedOperation> operations = {
+  std::vector<storage::BufferedOperation> operations() const {
+    std::vector<storage::BufferedOperation> operations = {
         {
             .vmoid = 0,
             {

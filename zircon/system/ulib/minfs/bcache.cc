@@ -70,10 +70,10 @@ zx_status_t Bcache::BlockDetachVmo(storage::Vmoid vmoid) {
   return device()->BlockDetachVmo(std::move(vmoid));
 }
 
-int Bcache::Sync() {
-  fs::WriteTxn sync_txn(this);
-  sync_txn.EnqueueFlush();
-  return sync_txn.Transact();
+zx_status_t Bcache::Sync() {
+  block_fifo_request_t request = {};
+  request.opcode = BLOCKIO_FLUSH;
+  return device_->FifoTransaction(&request, 1);
 }
 
 zx_status_t FdToBlockDevice(fbl::unique_fd& fd, std::unique_ptr<block_client::BlockDevice>* out) {

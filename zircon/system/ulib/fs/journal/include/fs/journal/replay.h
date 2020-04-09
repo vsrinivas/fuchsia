@@ -7,7 +7,6 @@
 
 #include <zircon/types.h>
 
-#include <fbl/vector.h>
 #include <fs/journal/superblock.h>
 #include <fs/transaction/block_transaction.h>
 #include <storage/buffer/vmo_buffer.h>
@@ -22,7 +21,7 @@ namespace fs {
 // This function is invoked by |ReplayJournal|. Refer to that function for the common case
 // of replaying a journal on boot.
 zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffer* journal_buffer,
-                                fbl::Vector<storage::BufferedOperation>* operations,
+                                std::vector<storage::BufferedOperation>* operations,
                                 uint64_t* out_sequence_number, uint64_t* out_start);
 
 // Replays the entries in the journal, first parsing them, and later writing them
@@ -34,7 +33,8 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
 // be used on journal initialization.
 zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
                           storage::VmoidRegistry* registry, uint64_t journal_start,
-                          uint64_t journal_length, JournalSuperblock* out_journal_superblock);
+                          uint64_t journal_length, uint32_t block_size,
+                          JournalSuperblock* out_journal_superblock);
 
 }  // namespace fs
 

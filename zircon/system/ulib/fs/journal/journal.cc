@@ -25,7 +25,7 @@ zx_status_t CheckAllWriteOperations(const fbl::Vector<storage::UnbufferedOperati
   return ZX_OK;
 }
 
-zx_status_t CheckAllTrimOperations(const fbl::Vector<storage::BufferedOperation>& operations) {
+zx_status_t CheckAllTrimOperations(const std::vector<storage::BufferedOperation>& operations) {
   for (const auto& operation : operations) {
     if (operation.op.type != storage::OperationType::kTrim) {
       return ZX_ERR_WRONG_TYPE;
@@ -82,7 +82,7 @@ Journal::Promise Journal::WriteData(fbl::Vector<storage::UnbufferedOperation> op
   }
 
   // Once we have that space, copy the operations into the buffer.
-  fbl::Vector<storage::BufferedOperation> buffered_operations;
+  std::vector<storage::BufferedOperation> buffered_operations;
   status = reservation.CopyRequests(operations, 0, &buffered_operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to copy operations into writeback buffer: %s\n",
@@ -131,7 +131,7 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation
   }
 
   // Once we have that space, copy the operations into the journal buffer.
-  fbl::Vector<storage::BufferedOperation> buffered_operations;
+  std::vector<storage::BufferedOperation> buffered_operations;
   status = reservation.CopyRequests(operations, kJournalEntryHeaderBlocks, &buffered_operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to copy operations into journal buffer: %s\n",
@@ -153,7 +153,7 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation
   return barrier_.wrap(std::move(ordered_promise));
 }
 
-Journal::Promise Journal::TrimData(fbl::Vector<storage::BufferedOperation> operations) {
+Journal::Promise Journal::TrimData(std::vector<storage::BufferedOperation> operations) {
   zx_status_t status = CheckAllTrimOperations(operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Not all operations to TrimData are trims\n");

@@ -81,8 +81,7 @@ void FreeSlices(const Superblock* info, block_client::BlockDevice* device) {
 
 // Checks all slices against the block device. May shrink the partition.
 zx_status_t CheckSlices(const Superblock* info, size_t blocks_per_slice,
-                        block_client::BlockDevice* device,
-                        bool repair_slices) {
+                        block_client::BlockDevice* device, bool repair_slices) {
   fuchsia_hardware_block_volume_VolumeInfo fvm_info;
   zx_status_t status = device->VolumeQuery(&fvm_info);
   if (status != ZX_OK) {
@@ -576,6 +575,8 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
         .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
         .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
   }
+#else
+  bc_->RunRequests(transaction->TakeOperations());
 #endif
 }
 
@@ -1081,7 +1082,7 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
   const blk_t ino_start_block = offsets.InoStartBlock();
 #endif
 
-  fs::BufferedOperationsBuilder builder(bc.get());
+  fs::BufferedOperationsBuilder builder;
 
   // Block Bitmap allocator initialization.
   AllocatorFvmMetadata block_allocator_fvm = AllocatorFvmMetadata(
@@ -1116,9 +1117,8 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
 
   std::unique_ptr<InodeManager> inodes;
 #ifdef __Fuchsia__
-  status =
-      InodeManager::Create(bc->device(), sb.get(), &builder, std::move(inode_allocator_meta),
-                           ino_start_block, info.inode_count, &inodes);
+  status = InodeManager::Create(bc->device(), sb.get(), &builder, std::move(inode_allocator_meta),
+                                ino_start_block, info.inode_count, &inodes);
 #else
   status = InodeManager::Create(bc.get(), sb.get(), &builder, std::move(inode_allocator_meta),
                                 ino_start_block, info.inode_count, &inodes);
@@ -1280,7 +1280,8 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
 zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperblock* out) {
   FS_TRACE_INFO("minfs: Replaying journal\n");
 
-  zx_status_t status = fs::ReplayJournal(bc, bc, JournalStartBlock(info), JournalBlocks(info), out);
+  zx_status_t status =
+      fs::ReplayJournal(bc, bc, JournalStartBlock(info), JournalBlocks(info), kMinfsBlockSize, out);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: Failed to replay journal\n");
     return status;
@@ -1365,37 +1366,33 @@ zx_status_t ReadWriteDataHelper(uint32_t opcode, fs::TransactionHandler* transac
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx::vmo vmo;
-  storage::Vmoid returned_vmoid;
-  zx_status_t status = CreateAndRegisterVmo(device, &vmo, 1, &returned_vmoid);
+  storage::VmoBuffer buffer;
+  zx_status_t status = buffer.Initialize(device, 1, kMinfsBlockSize, "read-write-data-helper");
   if (status != ZX_OK) {
     return status;
   }
-  storage::OwnedVmoid vmoid(std::move(returned_vmoid), device);
 
   if (opcode == BLOCKIO_WRITE) {
     // Prepare fifo transaction for write.
-    status = vmo.write(data, 0, bytes);
+    status = buffer.vmo().write(data, 0, bytes);
     if (status != ZX_OK) {
       return status;
     }
   }
-  block_fifo_request_t request;
 
-  const uint32_t kDiskBlocksPerFsBlock = kMinfsBlockSize / transaction_handler->DeviceBlockSize();
-  request.opcode = opcode;
-  request.vmoid = vmoid.get();
-  request.length = kDiskBlocksPerFsBlock;
-  request.vmo_offset = 0;
-  request.dev_offset = block_num * kDiskBlocksPerFsBlock;
-
-  status = transaction_handler->Transaction(&request, 1);
+  status = transaction_handler->RunOperation(
+      storage::Operation{.type = opcode == BLOCKIO_READ ? storage::OperationType::kRead
+                                                        : storage::OperationType::kWrite,
+                         .vmo_offset = 0,
+                         .dev_offset = block_num,
+                         .length = 1},
+      &buffer);
   if (status != ZX_OK) {
     return status;
   }
 
   if (opcode == BLOCKIO_READ) {
-    status = vmo.read(data, 0, bytes);
+    status = buffer.vmo().read(data, 0, bytes);
     if (status != ZX_OK) {
       return status;
     }

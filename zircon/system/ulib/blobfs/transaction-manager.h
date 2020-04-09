@@ -28,7 +28,7 @@ enum class EnqueueType {
 };
 
 // An interface which controls access to the underlying storage.
-class TransactionManager : public fs::TransactionHandler, public SpaceManager {
+class TransactionManager : public fs::LegacyTransactionHandler, public SpaceManager {
  public:
   virtual ~TransactionManager() = default;
   virtual BlobfsMetrics* Metrics() = 0;

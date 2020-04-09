@@ -155,18 +155,23 @@ zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32
     }
   }
 
-  fs::ReadTxn read_transaction(fs_->bc_.get());
+  fs::BufferedOperationsBuilder builder;
 
   for (uint32_t i = 0; i < count; i++) {
     ValidateVmoSize(vmo_indirect_->vmo().get(), offset + i);
     blk_t ibno;
     if ((ibno = iarray[i]) != 0) {
       fs_->ValidateBno(ibno);
-      read_transaction.Enqueue(vmoid_indirect_.get(), offset + i, ibno + fs_->Info().dat_block, 1);
+      fs::internal::BorrowedBuffer buffer(vmoid_indirect_.get());
+      builder.Add(storage::Operation{.type = storage::OperationType::kRead,
+                                     .vmo_offset = offset + i,
+                                     .dev_offset = ibno + fs_->Info().dat_block,
+                                     .length = 1},
+                  &buffer);
     }
   }
 
-  return read_transaction.Transact();
+  return fs_->GetMutableBcache()->RunRequests(builder.TakeOperations());
 }
 
 zx_status_t VnodeMinfs::LoadIndirectWithinDoublyIndirect(uint32_t dindex) {
@@ -239,7 +244,7 @@ zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
     vmo_.reset();
     return status;
   }
-  fs::ReadTxn read_transaction(fs_->bc_.get());
+  fs::BufferedOperationsBuilder builder;
   uint32_t dnum_count = 0;
   uint32_t inum_count = 0;
   uint32_t dinum_count = 0;
@@ -254,7 +259,12 @@ zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
     if ((bno = inode_.dnum[d]) != 0) {
       fs_->ValidateBno(bno);
       dnum_count++;
-      read_transaction.Enqueue(vmoid_.get(), d, bno + fs_->Info().dat_block, 1);
+      fs::internal::BorrowedBuffer buffer(vmoid_.get());
+      builder.Add(storage::Operation{.type = storage::OperationType::kRead,
+                                     .vmo_offset = d,
+                                     .dev_offset = bno + fs_->Info().dat_block,
+                                     .length = 1},
+                  &buffer);
     }
   }
 
@@ -278,7 +288,12 @@ zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
         if ((bno = ientry[j]) != 0) {
           fs_->ValidateBno(bno);
           uint32_t n = kMinfsDirect + i * kMinfsDirectPerIndirect + j;
-          read_transaction.Enqueue(vmoid_.get(), n, bno + fs_->Info().dat_block, 1);
+          fs::internal::BorrowedBuffer buffer(vmoid_.get());
+          builder.Add(storage::Operation{.type = storage::OperationType::kRead,
+                                         .vmo_offset = n,
+                                         .dev_offset = bno + fs_->Info().dat_block,
+                                         .length = 1},
+                      &buffer);
         }
       }
     }
@@ -320,7 +335,12 @@ zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
               fs_->ValidateBno(bno);
               uint32_t n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect +
                            j * kMinfsDirectPerIndirect + k;
-              read_transaction.Enqueue(vmoid_.get(), n, bno + fs_->Info().dat_block, 1);
+              fs::internal::BorrowedBuffer buffer(vmoid_.get());
+              builder.Add(storage::Operation{.type = storage::OperationType::kRead,
+                                             .vmo_offset = n,
+                                             .dev_offset = bno + fs_->Info().dat_block,
+                                             .length = 1},
+                          &buffer);
             }
           }
         }
@@ -328,7 +348,7 @@ zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
     }
   }
 
-  status = read_transaction.Transact();
+  status = fs_->GetMutableBcache()->RunRequests(builder.TakeOperations());
   ValidateVmoTail(GetSize());
   return status;
 }
@@ -795,7 +815,7 @@ VnodeMinfs::~VnodeMinfs() {
     request_count++;
   }
   if (request_count) {
-    fs_->bc_->Transaction(&request[0], request_count);
+    fs_->bc_->GetDevice()->FifoTransaction(&request[0], request_count);
   }
 #endif
 }

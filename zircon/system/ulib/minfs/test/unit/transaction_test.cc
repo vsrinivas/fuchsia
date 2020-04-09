@@ -27,8 +27,6 @@ class MockTransactionHandler : public fs::TransactionHandler {
   MockTransactionHandler() = default;
 
   // fs::TransactionHandler Interface.
-  uint32_t FsBlockSize() const { return kMinfsBlockSize; }
-
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
   zx_status_t RunOperation(const storage::Operation& operation,
@@ -36,11 +34,7 @@ class MockTransactionHandler : public fs::TransactionHandler {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uint32_t DeviceBlockSize() const final { return kMinfsBlockSize; }
-
   block_client::BlockDevice* GetDevice() final { return nullptr; }
-
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final { return ZX_OK; }
 };
 
 // Fake Storage class to be used in Transaction tests.
@@ -118,7 +112,7 @@ class FakeBlockDevice : public block_client::BlockDevice {
 // Mock Minfs class to be used in Transaction tests.
 class FakeMinfs : public TransactionalFs {
  public:
-  FakeMinfs() : builder_(&handler_) {
+  FakeMinfs() {
     info_.inode_count = kTotalElements;
   }
 

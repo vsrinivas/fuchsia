@@ -21,7 +21,7 @@ namespace {
 
 constexpr uint64_t kBlockCount = 1 << 15;
 
-class FakeTransactionHandler : public fs::TransactionHandler {
+class FakeTransactionHandler : public fs::LegacyTransactionHandler {
  public:
   explicit FakeTransactionHandler(std::unique_ptr<storage::ArrayBuffer> fake_device)
       : fake_device_(std::move(fake_device)) {}

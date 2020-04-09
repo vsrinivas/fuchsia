@@ -8,7 +8,6 @@
 #include <zircon/types.h>
 
 #include <fbl/macros.h>
-#include <fbl/vector.h>
 #include <fs/journal/format.h>
 #include <fs/journal/header_view.h>
 #include <fs/journal/superblock.h>
@@ -31,7 +30,7 @@ class JournalEntryView {
   //
   // Asserts that |operations| is exactly the size of the journal entry.
   JournalEntryView(storage::BlockBufferView view,
-                   const fbl::Vector<storage::BufferedOperation>& operations,
+                   const std::vector<storage::BufferedOperation>& operations,
                    uint64_t sequence_number);
 
   const JournalHeaderView& header() const { return header_; }
@@ -55,7 +54,7 @@ class JournalEntryView {
   // that matches |kJournalEntryMagic|.
   //
   // Asserts that |operations| is exactly the size of the journal entry.
-  void Encode(const fbl::Vector<storage::BufferedOperation>& operations, uint64_t sequence_number);
+  void Encode(const std::vector<storage::BufferedOperation>& operations, uint64_t sequence_number);
 
   JournalCommitBlock* footer() {
     return reinterpret_cast<JournalCommitBlock*>(

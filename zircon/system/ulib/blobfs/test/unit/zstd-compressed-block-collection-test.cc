@@ -116,7 +116,7 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
   Blobfs* Filesystem() { return fs_.get(); }
   SpaceManager* SpaceManager() { return fs_.get(); }
   NodeFinder* NodeFinder() { return fs_->GetNodeFinder(); }
-  fs::TransactionHandler* TransactionHandler() { return fs_.get(); }
+  fs::LegacyTransactionHandler* TransactionHandler() { return fs_.get(); }
   storage::VmoidRegistry* VmoidRegistry() { return fs_.get(); }
 
   std::unique_ptr<Blobfs> fs_;

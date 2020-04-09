@@ -136,7 +136,7 @@ zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
   zx_status_t status;
   if (apply_journal) {
     status = fs::ReplayJournal(blobfs_.get(), blobfs_.get(), JournalStartBlock(blobfs_->info_),
-                               JournalBlocks(blobfs_->info_), nullptr);
+                               JournalBlocks(blobfs_->info_), kBlobfsBlockSize, nullptr);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("blobfs: Unable to apply journal contents: %d\n", status);
       return status;

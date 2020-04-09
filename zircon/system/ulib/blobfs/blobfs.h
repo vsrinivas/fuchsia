@@ -180,7 +180,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // inode was allocated in the inode table, write the deleted inode out to
   // disk.
   void FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations,
-                 fbl::Vector<storage::BufferedOperation>* trim_data);
+                 std::vector<storage::BufferedOperation>* trim_data);
 
   // Writes node data to the inode table and updates disk.
   void PersistNode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations);
@@ -232,7 +232,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
   void FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations,
-                  fbl::Vector<storage::BufferedOperation>* trim_data);
+                  std::vector<storage::BufferedOperation>* trim_data);
 
   // Free a single node. Doesn't attempt to parse the type / traverse nodes;
   // this function just deletes a single node.
@@ -253,7 +253,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   // Adds a trim operation to |trim_data|.
   void DeleteExtent(uint64_t start_block, uint64_t num_blocks,
-                    fbl::Vector<storage::BufferedOperation>* trim_data);
+                    std::vector<storage::BufferedOperation>* trim_data);
 
   // Creates an unique identifier for this instance. This is to be called only during
   // "construction".

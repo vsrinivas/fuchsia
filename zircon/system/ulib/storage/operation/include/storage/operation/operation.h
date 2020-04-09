@@ -28,16 +28,16 @@ struct Operation {
   uint64_t length = 0;
 };
 
-// An operation paired with a source vmoid.
+// An operation paired with a source vmoid or a pointer to the data for host side code.
 //
 // This vmoid is a token that represents a buffer that is attached to the
 // underlying storage device.
-//
-// Even though a vmoid is a Fuchsia concept, nothing in this file prevents host
-// side code to include this code... it should just ignore the vmoid value and
-// look for the data somewhere else.
 struct BufferedOperation {
+#ifdef __Fuchsia__
   vmoid_t vmoid;
+#else
+  void* data;
+#endif
   Operation op;
 };
 

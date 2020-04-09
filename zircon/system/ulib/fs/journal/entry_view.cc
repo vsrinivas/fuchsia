@@ -4,7 +4,10 @@
 
 #include "entry_view.h"
 
+#include <vector>
+
 #include <lib/cksum.h>
+#include <storage/operation/operation.h>
 #include <zircon/types.h>
 
 #include <fbl/vector.h>
@@ -16,7 +19,7 @@ JournalEntryView::JournalEntryView(storage::BlockBufferView view)
       header_(fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(view_.Data(0)), view_.BlockSize())) {}
 
 JournalEntryView::JournalEntryView(storage::BlockBufferView view,
-                                   const fbl::Vector<storage::BufferedOperation>& operations,
+                                   const std::vector<storage::BufferedOperation>& operations,
                                    uint64_t sequence_number)
     : view_(std::move(view)),
       header_(fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(view_.Data(0)), view_.BlockSize()),
@@ -24,7 +27,7 @@ JournalEntryView::JournalEntryView(storage::BlockBufferView view,
   Encode(operations, sequence_number);
 }
 
-void JournalEntryView::Encode(const fbl::Vector<storage::BufferedOperation>& operations,
+void JournalEntryView::Encode(const std::vector<storage::BufferedOperation>& operations,
                               uint64_t sequence_number) {
   ZX_DEBUG_ASSERT(header_.PayloadBlocks() < kMaxBlockDescriptors);
   uint32_t block_index = 0;

@@ -8,6 +8,7 @@
 #include <zircon/assert.h>
 
 #include <memory>
+#include <vector>
 
 #include <storage/operation/unbuffered_operations_builder.h>
 #include <zxtest/zxtest.h>
@@ -176,7 +177,7 @@ void ReserveAndCopyRequests(const std::unique_ptr<RingBuffer>& buffer,
                             RingBufferRequests* out) {
   RingBufferReservation reservation;
   ASSERT_OK(buffer->Reserve(BlockCount(requests), &reservation));
-  fbl::Vector<storage::BufferedOperation> buffer_request;
+  std::vector<storage::BufferedOperation> buffer_request;
   ASSERT_OK(reservation.CopyRequests(requests, 0, &buffer_request));
   *out = RingBufferRequests(std::move(buffer_request), std::move(reservation));
 }
@@ -584,7 +585,7 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
   operations[0].op.dev_offset = 0;
   operations[0].op.length = 2;
   builder.Add(operations[0]);
-  fbl::Vector<storage::BufferedOperation> buffer_operation;
+  std::vector<storage::BufferedOperation> buffer_operation;
   ASSERT_OK(reservations[0].CopyRequests(builder.TakeOperations(), 0, &buffer_operation));
 
   // "C"
@@ -657,7 +658,7 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
   operation.op.dev_offset = 1;
   operation.op.length = 1;
   builder.Add(operation);
-  fbl::Vector<storage::BufferedOperation> buffer_operation;
+  std::vector<storage::BufferedOperation> buffer_operation;
   ASSERT_OK(reservation.CopyRequests(builder.TakeOperations(), 1, &buffer_operation));
   ASSERT_EQ(1, buffer_operation.size());
   ASSERT_EQ(1, buffer_operation[0].op.vmo_offset);

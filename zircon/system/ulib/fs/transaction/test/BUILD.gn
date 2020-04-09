@@ -41,8 +41,6 @@ test("fs-transaction") {
       "writeback_test.cc",
     ]
     deps += [ "//zircon/public/lib/fake-device" ]
-  } else {
-    sources = [ "buffered_operations_builder_host_test.cc" ]
   }
 
   # TODO(47873): Fix the leaks and remove this.

@@ -23,7 +23,7 @@ const uint32_t kBlockSize = 8192;
 constexpr char kLabel[] = "test-vmo";
 
 TEST(BufferedOperationsBuilderTest, NoRequest) {
-  BufferedOperationsBuilder builder(nullptr);
+  BufferedOperationsBuilder builder;
 
   auto requests = builder.TakeOperations();
   EXPECT_TRUE(requests.empty());
@@ -48,7 +48,7 @@ class MockVmoidRegistry : public VmoidRegistry {
 };
 
 TEST(BufferedOperationsBuilderTest, OneRequest) {
-  BufferedOperationsBuilder builder(nullptr);
+  BufferedOperationsBuilder builder;
 
   MockVmoidRegistry registry;
   VmoBuffer buffer;
@@ -71,7 +71,7 @@ TEST(BufferedOperationsBuilderTest, OneRequest) {
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestDifferentVmo) {
-  BufferedOperationsBuilder builder(nullptr);
+  BufferedOperationsBuilder builder;
 
   MockVmoidRegistry registry_1;
   VmoBuffer buffer_1;
@@ -107,7 +107,7 @@ TEST(BufferedOperationsBuilderTest, TwoRequestDifferentVmo) {
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestMergeOperations) {
-  BufferedOperationsBuilder builder(nullptr);
+  BufferedOperationsBuilder builder;
 
   MockVmoidRegistry registry;
   VmoBuffer buffer;
@@ -134,7 +134,7 @@ TEST(BufferedOperationsBuilderTest, TwoRequestMergeOperations) {
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestDifferentType) {
-  BufferedOperationsBuilder builder(nullptr);
+  BufferedOperationsBuilder builder;
 
   MockVmoidRegistry registry;
   VmoBuffer buffer;
@@ -167,7 +167,7 @@ TEST(BufferedOperationsBuilderTest, TwoRequestDifferentType) {
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestVmoGap) {
-  BufferedOperationsBuilder builder(nullptr);
+  BufferedOperationsBuilder builder;
 
   MockVmoidRegistry registry;
   VmoBuffer buffer;
@@ -199,7 +199,7 @@ TEST(BufferedOperationsBuilderTest, TwoRequestVmoGap) {
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestDeviceGap) {
-  BufferedOperationsBuilder builder(nullptr);
+  BufferedOperationsBuilder builder;
 
   MockVmoidRegistry registry;
   VmoBuffer buffer;
@@ -231,7 +231,7 @@ TEST(BufferedOperationsBuilderTest, TwoRequestDeviceGap) {
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestReplaceOperation) {
-  BufferedOperationsBuilder builder(nullptr);
+  BufferedOperationsBuilder builder;
 
   MockVmoidRegistry registry;
   VmoBuffer buffer;
@@ -257,7 +257,7 @@ TEST(BufferedOperationsBuilderTest, TwoRequestReplaceOperation) {
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestDifferentDeviceOffset) {
-  BufferedOperationsBuilder builder(nullptr);
+  BufferedOperationsBuilder builder;
 
   MockVmoidRegistry registry;
   VmoBuffer buffer;
@@ -289,7 +289,7 @@ TEST(BufferedOperationsBuilderTest, TwoRequestDifferentDeviceOffset) {
 }
 
 TEST(BufferedOperationsBuilderTest, TwoRequestDifferentVmoOffset) {
-  BufferedOperationsBuilder builder(nullptr);
+  BufferedOperationsBuilder builder;
 
   MockVmoidRegistry registry;
   VmoBuffer buffer;

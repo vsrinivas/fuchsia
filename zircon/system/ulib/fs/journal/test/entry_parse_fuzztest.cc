@@ -21,7 +21,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
     return 0;
   }
   // Fuzz `ParseJournalEntries`.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number;
   uint64_t start;
   ParseJournalEntries(&info, &journal_buffer, &operations, &sequence_number, &start);

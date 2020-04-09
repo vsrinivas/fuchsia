@@ -82,7 +82,7 @@ void CreateAllocator(std::unique_ptr<Allocator>* out) {
   // Give it 1 more than total_elements since element 0 will be unavailable.
   std::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements + 1));
   std::unique_ptr<Allocator> allocator;
-  fs::BufferedOperationsBuilder builder(nullptr);
+  fs::BufferedOperationsBuilder builder;
   ASSERT_OK(Allocator::Create(&builder, std::move(storage), &allocator));
 
   // Allocate the '0' index (the Allocator assumes that this is reserved).

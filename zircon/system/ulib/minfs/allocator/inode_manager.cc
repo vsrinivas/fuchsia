@@ -14,29 +14,6 @@
 
 namespace minfs {
 
-namespace {
-
-// Trivial BlockBuffer that doesn't own the underlying buffer.
-// TODO(47947): Remove this.
-class UnownedBuffer : public storage::BlockBuffer {
- public:
-  UnownedBuffer(vmoid_t vmoid) : vmoid_(vmoid) {}
-  ~UnownedBuffer() {}
-
-  // BlockBuffer interface:
-  size_t capacity() const final { return 0; }
-  uint32_t BlockSize() const final { return 0; }
-  vmoid_t vmoid() const final { return vmoid_; }
-  zx_handle_t Vmo() const final { return ZX_HANDLE_INVALID; }
-  void* Data(size_t index) final { return nullptr; }
-  const void* Data(size_t index) const final { return nullptr; }
-
- private:
-  vmoid_t vmoid_;
-};
-
-}  // namespace
-
 InodeManager::InodeManager(blk_t start_block) : start_block_(start_block) {}
 
 zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockManager* sb,
@@ -78,7 +55,7 @@ zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockMa
       .length = inoblks,
   };
 
-  UnownedBuffer buffer(id);
+  fs::internal::BorrowedBuffer buffer(id);
   builder->Add(operation, &buffer);
 
   *out = std::move(mgr);

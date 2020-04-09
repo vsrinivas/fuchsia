@@ -17,7 +17,7 @@ namespace minfs {
 #ifdef __Fuchsia__
 using WriteData = zx_handle_t;
 #else
-using WriteData = const void*;
+using WriteData = void*;
 #endif
 
 // Represents an interface which can be used to store pending work to be written to disk at a later

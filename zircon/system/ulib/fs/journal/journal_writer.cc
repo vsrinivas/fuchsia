@@ -104,10 +104,10 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work
 }
 
 fit::result<void, zx_status_t> JournalWriter::TrimData(
-      fbl::Vector<storage::BufferedOperation> operations) {
+    std::vector<storage::BufferedOperation> operations) {
   FS_TRACE_DEBUG("TrimData: trimming %zu blocks\n", BlockCount(operations));
 
-  zx_status_t status = FlushRequests(transaction_handler_, operations);
+  zx_status_t status = transaction_handler_->RunRequests(operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("TrimData: Failed to trim requests: %s\n", zx_status_get_string(status));
     return fit::error(status);
@@ -119,7 +119,7 @@ zx_status_t JournalWriter::WriteOperationToJournal(const storage::BlockBufferVie
   const uint64_t total_block_count = view.length();
   const uint64_t max_reservation_size = EntriesLength();
   uint64_t written_block_count = 0;
-  fbl::Vector<storage::BufferedOperation> journal_operations;
+  std::vector<storage::BufferedOperation> journal_operations;
   storage::BufferedOperation operation;
   operation.vmoid = view.vmoid();
   operation.op.type = storage::OperationType::kWrite;
@@ -256,7 +256,7 @@ zx_status_t JournalWriter::WriteInfoBlock() {
 
   ZX_DEBUG_ASSERT(next_entry_start_block_ < EntriesLength());
   journal_superblock_.Update(next_entry_start_block_, next_sequence_number_);
-  fbl::Vector<storage::BufferedOperation> journal_operations;
+  std::vector<storage::BufferedOperation> journal_operations;
   storage::BufferedOperation operation;
   operation.vmoid = journal_superblock_.buffer().vmoid();
   operation.op.type = storage::OperationType::kWrite;
@@ -276,13 +276,13 @@ zx_status_t JournalWriter::WriteInfoBlock() {
 }
 
 zx_status_t JournalWriter::WriteOperations(
-    const fbl::Vector<storage::BufferedOperation>& operations) {
+    const std::vector<storage::BufferedOperation>& operations) {
   if (!IsWritebackEnabled()) {
     FS_TRACE_ERROR("WriteOperations: Not issuing writeback because writeback is disabled\n");
     return ZX_ERR_IO_REFUSED;
   }
 
-  zx_status_t status = FlushRequests(transaction_handler_, operations);
+  zx_status_t status = transaction_handler_->RunRequests(operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("WriteOperations: Failed to write requests: %s. Filesystem now read-only.\n",
                    zx_status_get_string(status));

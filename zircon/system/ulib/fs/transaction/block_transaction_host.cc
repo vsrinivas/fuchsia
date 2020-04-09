@@ -5,13 +5,19 @@
 #include <zircon/assert.h>
 
 #include <fs/transaction/block_transaction.h>
+#include <fs/transaction/buffered_operations_builder.h>
 
 namespace fs {
 
 zx_status_t TransactionHandler::RunRequests(
     const std::vector<storage::BufferedOperation>& operations) {
-  // The actual operations are performed while building the requests.
-  ZX_DEBUG_ASSERT(operations.empty());
+  for (const storage::BufferedOperation& operation : operations) {
+    internal::BorrowedBuffer buffer(operation.data);
+    zx_status_t status = RunOperation(operation.op, &buffer);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
   return ZX_OK;
 }
 

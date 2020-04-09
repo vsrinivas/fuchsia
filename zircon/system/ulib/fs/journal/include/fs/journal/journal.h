@@ -102,7 +102,7 @@ class Journal final : public fit::executor {
   //
   // Requests to TrimData are ordered with respect to WriteMetadata by the invocation
   // of the respective method, not by the completion of the returned promise.
-  Promise TrimData(fbl::Vector<storage::BufferedOperation> operations);
+  Promise TrimData(std::vector<storage::BufferedOperation> operations);
 
   // Returns a promise which identifies that all previous promises returned from the journal
   // have completed (succeeded, failed, or abandoned).

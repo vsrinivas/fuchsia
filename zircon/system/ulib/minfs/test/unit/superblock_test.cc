@@ -34,22 +34,17 @@ class MockTransactionHandler : public fs::TransactionHandler {
   MockTransactionHandler& operator=(MockTransactionHandler&&) = delete;
 
   // fs::TransactionHandler Interface.
-  uint32_t FsBlockSize() const final { return kMinfsBlockSize; }
-
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
   zx_status_t RunOperation(const storage::Operation& operation,
                            storage::BlockBuffer* buffer) final {
-    return ZX_ERR_NOT_SUPPORTED;
+    return RunRequests({storage::BufferedOperation{
+          .vmoid = buffer->vmoid(),
+          .op = operation
+        }});
   }
-
-  uint32_t DeviceBlockSize() const final { return kMinfsBlockSize; }
 
   block_client::BlockDevice* GetDevice() final { return device_; }
-
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
-    return device_->FifoTransaction(requests, count);
-  }
 
  private:
   block_client::BlockDevice* device_;
@@ -89,18 +84,16 @@ void FillSuperblockFields(Superblock* info) {
 void FillWriteRequest(MockTransactionHandler* transaction_handler, uint32_t first_block_location,
                       uint32_t second_block_location, vmoid_t vmoid,
                       block_fifo_request_t* out_requests) {
-  const uint32_t disk_blocks_per_fs_block =
-      kMinfsBlockSize / transaction_handler->DeviceBlockSize();
   out_requests[0].opcode = BLOCKIO_WRITE;
   out_requests[0].vmoid = vmoid;
-  out_requests[0].length = disk_blocks_per_fs_block;
+  out_requests[0].length = 1;
   out_requests[0].vmo_offset = 0;
-  out_requests[0].dev_offset = first_block_location * disk_blocks_per_fs_block;
+  out_requests[0].dev_offset = first_block_location;
   out_requests[1].opcode = BLOCKIO_WRITE;
   out_requests[1].vmoid = vmoid;
-  out_requests[1].length = disk_blocks_per_fs_block;
-  out_requests[1].vmo_offset = disk_blocks_per_fs_block;
-  out_requests[1].dev_offset = second_block_location * disk_blocks_per_fs_block;
+  out_requests[1].length = 1;
+  out_requests[1].vmo_offset = 1;
+  out_requests[1].dev_offset = second_block_location;
 }
 
 // Tests the alloc_*_counts bitmap reconstruction.

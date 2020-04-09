@@ -139,7 +139,7 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
   //
   // This allows us to exercise the integration of the "journal writeback" and the on
   // reboot "journal replay".
-  void Replay(fbl::Vector<storage::BufferedOperation>* operations, uint64_t* sequence_number);
+  void Replay(std::vector<storage::BufferedOperation>* operations, uint64_t* sequence_number);
 
   JournalBuffers memory_buffers_;
   JournalBuffers disk_buffers_;
@@ -149,7 +149,7 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
 void MockVmoidRegistry::VerifyReplay(
     const std::vector<storage::UnbufferedOperation>& expected_operations,
     uint64_t expected_sequence_number) {
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   ASSERT_NO_FAILURES(Replay(&operations, &sequence_number));
   EXPECT_EQ(expected_sequence_number, sequence_number);
@@ -211,7 +211,7 @@ void MockVmoidRegistry::CreateDiskVmos() {
   CopyBytes(memory_buffers_.info_vmo, disk_buffers_.info_vmo, 0, size);
 }
 
-void MockVmoidRegistry::Replay(fbl::Vector<storage::BufferedOperation>* operations,
+void MockVmoidRegistry::Replay(std::vector<storage::BufferedOperation>* operations,
                                uint64_t* sequence_number) {
   zx::vmo info_vmo;
   ASSERT_OK(disk_buffers_.info_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &info_vmo));
@@ -246,7 +246,7 @@ void MockVmoidRegistry::Replay(fbl::Vector<storage::BufferedOperation>* operatio
 class MockTransactionHandler final : public fs::TransactionHandler {
  public:
   using TransactionCallback =
-      fit::function<zx_status_t(const block_fifo_request_t* requests, size_t count)>;
+      fit::function<zx_status_t(const std::vector<storage::BufferedOperation>& requests)>;
 
   MockTransactionHandler(MockVmoidRegistry* registry, TransactionCallback* callbacks = nullptr,
                          size_t transactions_expected = 0)
@@ -255,10 +255,6 @@ class MockTransactionHandler final : public fs::TransactionHandler {
   ~MockTransactionHandler() { EXPECT_EQ(transactions_expected_, transactions_seen_); }
 
   // TransactionHandler interface:
-
-  uint32_t FsBlockSize() const final { return kBlockSize; }
-
-  uint32_t DeviceBlockSize() const final { return kBlockSize; }
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
@@ -269,7 +265,7 @@ class MockTransactionHandler final : public fs::TransactionHandler {
 
   block_client::BlockDevice* GetDevice() final { return nullptr; }
 
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& requests) final {
     EXPECT_LT(transactions_seen_, transactions_expected_);
     if (transactions_seen_ == transactions_expected_) {
       return ZX_ERR_BAD_STATE;
@@ -277,15 +273,14 @@ class MockTransactionHandler final : public fs::TransactionHandler {
 
     // Transfer all bytes from the in-memory representation of data to
     // the "on-disk" representation of data.
-    for (size_t request_index = 0; request_index < count; request_index++) {
-      const auto request = requests[request_index];
-      if (request.opcode & BLOCKIO_WRITE) {
+    for (const storage::BufferedOperation& request : requests) {
+      if (request.op.type == storage::OperationType::kWrite) {
         CopyBytes(registry_->GetVmo(request.vmoid, BufferType::kMemoryBuffer),
                   registry_->GetVmo(request.vmoid, BufferType::kDiskBuffer),
-                  request.vmo_offset * kBlockSize, request.length * kBlockSize);
+                  request.op.vmo_offset * kBlockSize, request.op.length * kBlockSize);
       }
     }
-    return callbacks_[transactions_seen_++](requests, count);
+    return callbacks_[transactions_seen_++](requests);
   }
 
  private:
@@ -352,13 +347,13 @@ void CheckInfoBlock(const zx::vmo& info, uint64_t start, uint64_t sequence_numbe
 }
 
 // Convenience function which verifies the fields of a write request.
-void CheckWriteRequest(const block_fifo_request_t& request, vmoid_t vmoid, uint64_t vmo_offset,
-                       uint64_t dev_offset, uint64_t length) {
+void CheckWriteRequest(const storage::BufferedOperation& request, vmoid_t vmoid,
+                       uint64_t vmo_offset, uint64_t dev_offset, uint64_t length) {
   EXPECT_EQ(vmoid, request.vmoid);
-  EXPECT_EQ(BLOCKIO_WRITE, request.opcode);
-  EXPECT_EQ(vmo_offset, request.vmo_offset);
-  EXPECT_EQ(dev_offset, request.dev_offset);
-  EXPECT_EQ(length, request.length);
+  EXPECT_EQ(storage::OperationType::kWrite, request.op.type);
+  EXPECT_EQ(vmo_offset, request.op.vmo_offset);
+  EXPECT_EQ(dev_offset, request.op.dev_offset);
+  EXPECT_EQ(length, request.op.length);
 }
 
 // A convenience verification class which holds:
@@ -411,27 +406,27 @@ class JournalRequestVerifier {
   // Verifies that |operation| matches |requests|, and exists within the
   // data writeback buffer at |DataOffset()|.
   void VerifyDataWrite(const storage::UnbufferedOperation& operation,
-                       const block_fifo_request_t requests[], size_t count) const;
+                       const std::vector<storage::BufferedOperation>& requests) const;
 
   // Verifies that |operation| matches |requests|, exists within the journal
   // buffer at |JournalOffset()|, and targets the on-device journal.
   void VerifyJournalWrite(const storage::UnbufferedOperation& operation,
-                          const block_fifo_request_t requests[], size_t count) const;
+                          const std::vector<storage::BufferedOperation>& requests) const;
 
   // Verifies that |operation| matches |requests|, exists within the journal
   // buffer at |JournalOffset() + kJournalEntryHeaderBlocks|, and targets the final on-disk
   // location (not the journal).
   void VerifyMetadataWrite(const storage::UnbufferedOperation& operation,
-                           const block_fifo_request_t requests[], size_t count) const;
+                           const std::vector<storage::BufferedOperation>& requests) const;
 
   // Verifies that the info block is targeted by |requests|, with |sequence_number|, and
   // a start block at |JournalOffset()|.
-  void VerifyInfoBlockWrite(uint64_t sequence_number, const block_fifo_request_t requests[],
-                            size_t count) const;
+  void VerifyInfoBlockWrite(uint64_t sequence_number,
+                            const std::vector<storage::BufferedOperation>& requests) const;
 
  private:
-  void VerifyJournalRequest(uint64_t entry_length, const block_fifo_request_t requests[],
-                            size_t count) const;
+  void VerifyJournalRequest(uint64_t entry_length,
+                            const std::vector<storage::BufferedOperation>& requests) const;
   uint64_t EntryStart() const { return journal_start_block_ + kJournalMetadataBlocks; }
 
   // VMO of the journal info block.
@@ -448,11 +443,11 @@ class JournalRequestVerifier {
   uint64_t data_offset_ = 0;
 };
 
-void JournalRequestVerifier::VerifyDataWrite(const storage::UnbufferedOperation& operation,
-                                             const block_fifo_request_t requests[],
-                                             size_t count) const {
-  EXPECT_GE(count, 1, "Not enough operations");
-  EXPECT_LE(count, 2, "Too many operations");
+void JournalRequestVerifier::VerifyDataWrite(
+    const storage::UnbufferedOperation& operation,
+    const std::vector<storage::BufferedOperation>& requests) const {
+  EXPECT_GE(requests.size(), 1, "Not enough operations");
+  EXPECT_LE(requests.size(), 2, "Too many operations");
 
   uint64_t total_length = operation.op.length;
   uint64_t pre_wrap_length = std::min(kWritebackLength - DataOffset(), total_length);
@@ -463,7 +458,7 @@ void JournalRequestVerifier::VerifyDataWrite(const storage::UnbufferedOperation&
                                        /* dev_offset= */ operation.op.dev_offset,
                                        /* length= */ pre_wrap_length));
   if (post_wrap_length > 0) {
-    EXPECT_EQ(2, count);
+    EXPECT_EQ(2, requests.size());
     ASSERT_NO_FAILURES(
         CheckWriteRequest(requests[1], kWritebackVmoid,
                           /* vmo_offset= */ 0,
@@ -479,7 +474,7 @@ void JournalRequestVerifier::VerifyDataWrite(const storage::UnbufferedOperation&
                                                  /* length= */ pre_wrap_length,
                                                  EscapedBlocks::kIgnored));
   if (post_wrap_length > 0) {
-    EXPECT_EQ(2, count);
+    EXPECT_EQ(2, requests.size());
     ASSERT_NO_FAILURES(
         CheckCircularBufferContents(*data_writeback_, kWritebackLength,
                                     /* data_writeback_offset= */ 0,
@@ -489,51 +484,50 @@ void JournalRequestVerifier::VerifyDataWrite(const storage::UnbufferedOperation&
   }
 }
 
-void JournalRequestVerifier::VerifyJournalRequest(uint64_t entry_length,
-                                                  const block_fifo_request_t requests[],
-                                                  size_t count) const {
+void JournalRequestVerifier::VerifyJournalRequest(
+    uint64_t entry_length, const std::vector<storage::BufferedOperation>& requests) const {
   // Verify the operation is from the metadata buffer, targeting the journal.
-  EXPECT_GE(count, 1, "Not enough operations");
+  EXPECT_GE(requests.size(), 1, "Not enough operations");
 
   uint64_t journal_offset = JournalOffset();
 
   // Validate that all operations target the expected location within the on-disk journal.
   uint64_t blocks_written = 0;
-  for (size_t i = 0; i < count; i++) {
+  for (const storage::BufferedOperation& request : requests) {
     // Requests may be split to wrap around the in-memory or on-disk buffer.
     const uint64_t journal_dev_capacity = kJournalLength - journal_offset;
-    const uint64_t journal_vmo_capacity = kJournalLength - requests[i].vmo_offset;
-    EXPECT_LE(requests[i].length, journal_dev_capacity);
-    EXPECT_LE(requests[i].length, journal_vmo_capacity);
+    const uint64_t journal_vmo_capacity = kJournalLength - request.op.vmo_offset;
+    EXPECT_LE(request.op.length, journal_dev_capacity);
+    EXPECT_LE(request.op.length, journal_vmo_capacity);
 
-    EXPECT_EQ(kJournalVmoid, requests[i].vmoid);
-    EXPECT_EQ(BLOCKIO_WRITE, requests[i].opcode);
-    EXPECT_EQ(EntryStart() + journal_offset, requests[i].dev_offset);
+    EXPECT_EQ(kJournalVmoid, request.vmoid);
+    EXPECT_EQ(storage::OperationType::kWrite, request.op.type);
+    EXPECT_EQ(EntryStart() + journal_offset, request.op.dev_offset);
 
-    blocks_written += requests[i].length;
-    journal_offset = (journal_offset + requests[i].length) % kJournalLength;
+    blocks_written += request.op.length;
+    journal_offset = (journal_offset + request.op.length) % kJournalLength;
   }
   EXPECT_EQ(entry_length, blocks_written);
 }
 
-void JournalRequestVerifier::VerifyJournalWrite(const storage::UnbufferedOperation& operation,
-                                                const block_fifo_request_t requests[],
-                                                size_t count) const {
+void JournalRequestVerifier::VerifyJournalWrite(
+    const storage::UnbufferedOperation& operation,
+    const std::vector<storage::BufferedOperation>& requests) const {
   uint64_t entry_length = operation.op.length + kEntryMetadataBlocks;
 
-  ASSERT_NO_FAILURES(VerifyJournalRequest(entry_length, requests, count));
+  ASSERT_NO_FAILURES(VerifyJournalRequest(entry_length, requests));
 
   // Validate that all operations exist within the journal buffer.
   uint64_t buffer_offset = operation.op.vmo_offset;
-  for (size_t i = 0; i < count; i++) {
-    uint64_t vmo_offset = requests[i].vmo_offset;
-    uint64_t length = requests[i].length;
+  for (size_t i = 0; i < requests.size(); ++i) {
+    uint64_t vmo_offset = requests[i].op.vmo_offset;
+    uint64_t length = requests[i].op.length;
     if (i == 0) {
       // Skip over header block.
       vmo_offset++;
       length--;
     }
-    if (i == count - 1) {
+    if (i == requests.size() - 1) {
       // Drop commit block.
       length--;
     }
@@ -548,41 +542,40 @@ void JournalRequestVerifier::VerifyJournalWrite(const storage::UnbufferedOperati
   }
 }
 
-void JournalRequestVerifier::VerifyMetadataWrite(const storage::UnbufferedOperation& operation,
-                                                 const block_fifo_request_t requests[],
-                                                 size_t count) const {
+void JournalRequestVerifier::VerifyMetadataWrite(
+    const storage::UnbufferedOperation& operation,
+    const std::vector<storage::BufferedOperation>& requests) const {
   // Verify the operation is from the metadata buffer, targeting the final location on disk.
-  EXPECT_GE(count, 1, "Not enough operations");
+  EXPECT_GE(requests.size(), 1, "Not enough operations");
 
   uint64_t blocks_written = 0;
-  for (size_t i = 0; i < count; i++) {
+  for (const storage::BufferedOperation& request : requests) {
     // We only care about wraparound from the in-memory buffer here; any wraparound from the
     // on-disk journal is not relevant to the metadata writeback.
-    const uint64_t journal_vmo_capacity = kJournalLength - requests[i].vmo_offset;
-    EXPECT_LE(requests[i].length, journal_vmo_capacity);
+    const uint64_t journal_vmo_capacity = kJournalLength - request.op.vmo_offset;
+    EXPECT_LE(request.op.length, journal_vmo_capacity);
 
-    EXPECT_EQ(kJournalVmoid, requests[i].vmoid);
-    EXPECT_EQ(BLOCKIO_WRITE, requests[i].opcode);
-    EXPECT_EQ(operation.op.dev_offset + blocks_written, requests[i].dev_offset);
+    EXPECT_EQ(kJournalVmoid, request.vmoid);
+    EXPECT_EQ(storage::OperationType::kWrite, request.op.type);
+    EXPECT_EQ(operation.op.dev_offset + blocks_written, request.op.dev_offset);
 
     const uint64_t buffer_offset = operation.op.vmo_offset + blocks_written;
     ASSERT_NO_FAILURES(CheckCircularBufferContents(*journal_, kJournalLength,
-                                                   /* journal_offset= */ requests[i].vmo_offset,
+                                                   /* journal_offset= */ request.op.vmo_offset,
                                                    /* buffer= */ *operation.vmo,
                                                    /* buffer_offset= */ buffer_offset,
-                                                   /* length= */ requests[i].length,
+                                                   /* length= */ request.op.length,
                                                    EscapedBlocks::kIgnored));
 
-    blocks_written += requests[i].length;
+    blocks_written += request.op.length;
   }
   EXPECT_EQ(operation.op.length, blocks_written);
 }
 
-void JournalRequestVerifier::VerifyInfoBlockWrite(uint64_t sequence_number,
-                                                  const block_fifo_request_t requests[],
-                                                  size_t count) const {
+void JournalRequestVerifier::VerifyInfoBlockWrite(
+    uint64_t sequence_number, const std::vector<storage::BufferedOperation>& requests) const {
   // Verify that the operation is the info block, with a new start block.
-  EXPECT_EQ(1, count);
+  EXPECT_EQ(1, requests.size());
   ASSERT_NO_FAILURES(CheckWriteRequest(requests[0],
                                        /* vmoid= */ kInfoVmoid,
                                        /* vmo_offset= */ 0,
@@ -658,8 +651,8 @@ TEST_F(JournalTest, WriteDataObserveTransaction) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), 0);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyDataWrite(operation, requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyDataWrite(operation, requests);
         return ZX_OK;
       },
   };
@@ -697,24 +690,24 @@ TEST_F(JournalTest, WriteMetadataObserveTransactions) {
                                   registry()->writeback(), kJournalStartBlock);
 
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operation, requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operation, requests);
 
         // Verify that if we were to reboot now the operation would be replayed.
         uint64_t sequence_number = 1;
         registry()->VerifyReplay({operation}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operation, requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operation, requests);
         verifier.ExtendJournalOffset(operation.op.length + kEntryMetadataBlocks);
         uint64_t sequence_number = 1;
         registry()->VerifyReplay({operation}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       }};
@@ -760,28 +753,28 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         registry()->VerifyReplay(operations, 2);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 2;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, 2);
         return ZX_OK;
       },
@@ -808,14 +801,14 @@ TEST_F(JournalTest, TrimDataObserveTransaction) {
   };
 
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        if (count != 1) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        if (requests.size() != 1) {
           ADD_FAILURE("Unexpected count");
           return ZX_ERR_OUT_OF_RANGE;
         }
-        EXPECT_EQ(BLOCKIO_TRIM, requests[0].opcode);
-        EXPECT_EQ(20, requests[0].dev_offset);
-        EXPECT_EQ(5, requests[0].length);
+        EXPECT_EQ(storage::OperationType::kTrim, requests[0].op.type);
+        EXPECT_EQ(20, requests[0].op.dev_offset);
+        EXPECT_EQ(5, requests[0].op.length);
         return ZX_OK;
       },
   };
@@ -868,29 +861,29 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         uint64_t sequence_number = 2;
         registry()->VerifyReplay(operations, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 2;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
@@ -946,37 +939,37 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
   uint64_t sequence_number = 0;
   MockTransactionHandler::TransactionCallback callbacks[] = {
       // Operation 0 written.
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         sequence_number++;
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         registry()->VerifyReplay({operations[0]}, sequence_number);
         return ZX_OK;
       },
       // Operation 1 written. This prompts the info block to be updated.
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[1], requests);
         sequence_number++;
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
       },
       // Info block written on journal termination.
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
@@ -1029,27 +1022,27 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
         // Before we update the info block, check that a power failure would result in
@@ -1061,9 +1054,9 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
         registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 2;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
 
         // After we update the info block, check that a power failure would result in
         // no operations being replayed - this equivalent to the "clean shutdown" case,
@@ -1116,27 +1109,27 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
         // Before we update the info block, check that a power failure would result in
@@ -1148,9 +1141,9 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
         registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 2;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
 
         // After we update the info block, check that a power failure would result in
         // no operations being replayed - this equivalent to the "clean shutdown" case,
@@ -1204,27 +1197,27 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
         // Before we update the info block, check that a power failure would result in
@@ -1236,9 +1229,9 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
         registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 2;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
 
         // After we update the info block, check that a power failure would result in
         // no operations being replayed - this equivalent to the "clean shutdown" case,
@@ -1293,25 +1286,25 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
@@ -1331,14 +1324,14 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
   ASSERT_OK(journal_buffer->Reserve(block_count0, &reservation0));
 
   // Actually write operations[0] before operations[1].
-  fbl::Vector<storage::BufferedOperation> buffered_operations0;
+  std::vector<storage::BufferedOperation> buffered_operations0;
   ASSERT_OK(
       reservation0.CopyRequests({operations[0]}, kJournalEntryHeaderBlocks, &buffered_operations0));
   auto result = writer.WriteMetadata(
       internal::JournalWorkItem(std::move(reservation0), std::move(buffered_operations0)));
   ASSERT_TRUE(result.is_ok());
 
-  fbl::Vector<storage::BufferedOperation> buffered_operations1;
+  std::vector<storage::BufferedOperation> buffered_operations1;
   ASSERT_OK(
       reservation1.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations1));
   result = writer.WriteMetadata(
@@ -1393,47 +1386,47 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // Operation 1: [ _, _, H, 1, C, _, _, _, _, _ ] (In-memory)
         // Operation 1: [ 1, C, _, _, _, _, _, _, _, H ] (On-disk)
         //
         // This operation writes "H", then "1, C".
-        EXPECT_EQ(2, count);
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+        EXPECT_EQ(2, requests.size());
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // Operation 2: [ 1, C, _, _, _, _, _, _, _, H ] (In-memory)
         // Operation 2: [ _, _, H, 1, C, _, _, _, _, _ ] (On-disk)
         //
         // This operation writes "H", then "1, C".
-        EXPECT_EQ(2, count);
-        verifier.VerifyJournalWrite(operations[2], requests, count);
+        EXPECT_EQ(2, requests.size());
+        verifier.VerifyJournalWrite(operations[2], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        verifier.VerifyMetadataWrite(operations[2], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        verifier.VerifyMetadataWrite(operations[2], requests);
         verifier.ExtendJournalOffset(operations[2].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
@@ -1445,7 +1438,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
 
   // Issue the first operation, so the next operation will wrap around.
   storage::BlockingRingBufferReservation reservation;
-  fbl::Vector<storage::BufferedOperation> buffered_operations;
+  std::vector<storage::BufferedOperation> buffered_operations;
   uint64_t block_count = operations[0].op.length + kEntryMetadataBlocks;
   ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
   ASSERT_OK(
@@ -1466,14 +1459,14 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
   // Actually write operations[1] before operations[2].
   //
   // This means that on-disk, operations[1] wraps around the journal.
-  fbl::Vector<storage::BufferedOperation> buffered_operations1;
+  std::vector<storage::BufferedOperation> buffered_operations1;
   ASSERT_OK(
       reservation1.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations1));
   result = writer.WriteMetadata(
       internal::JournalWorkItem(std::move(reservation1), std::move(buffered_operations1)));
   ASSERT_TRUE(result.is_ok());
 
-  fbl::Vector<storage::BufferedOperation> buffered_operations2;
+  std::vector<storage::BufferedOperation> buffered_operations2;
   ASSERT_OK(
       reservation2.CopyRequests({operations[2]}, kJournalEntryHeaderBlocks, &buffered_operations2));
   result = writer.WriteMetadata(
@@ -1517,30 +1510,30 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // "H", then "1, 2, 3", then "4, C".
-        EXPECT_EQ(3, count);
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+        EXPECT_EQ(3, requests.size());
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // "1, 2, 3, 4" are contiguous in the in-memory buffer.
-        EXPECT_EQ(1, count);
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+        EXPECT_EQ(1, requests.size());
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
@@ -1552,7 +1545,7 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
 
   // Issue the first operation, so the next operation will wrap around.
   storage::BlockingRingBufferReservation reservation;
-  fbl::Vector<storage::BufferedOperation> buffered_operations;
+  std::vector<storage::BufferedOperation> buffered_operations;
   uint64_t block_count = operations[0].op.length + kEntryMetadataBlocks;
   ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
   ASSERT_OK(
@@ -1604,25 +1597,25 @@ TEST_F(JournalTest, WriteSameBlockMetadataThenDataRevokesBlock) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // This info block is written before a data operation to intentionally avoid
         // replaying the metadata operation on reboot.
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyDataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyDataWrite(operations[1], requests);
         return ZX_OK;
       },
   };
@@ -1668,24 +1661,24 @@ TEST_F(JournalTest, WriteDifferentBlockMetadataThenDataDoesNotRevoke) {
                                   registry()->writeback(), kJournalStartBlock);
   uint64_t sequence_number = 0;
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // Since the metadata and data regions do not overlap, we're fine letting the
         // metadata operation replay: it won't overwrite our data operation.
         registry()->VerifyReplay({operations[0]}, ++sequence_number);
-        verifier.VerifyDataWrite(operations[1], requests, count);
+        verifier.VerifyDataWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
@@ -1735,27 +1728,27 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
         // Before we update the info block, check that a power failure would result in
@@ -1767,9 +1760,9 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
         registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 2;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
 
         // After we update the info block, check that a power failure would result in
         // no operations being replayed - this equivalent to the "clean shutdown" case,
@@ -1824,27 +1817,27 @@ TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 2;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         return ZX_OK;
       },
   };
@@ -1889,14 +1882,14 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), 0);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         verifier.SetDataOffset(operations[0].op.length);
-        verifier.VerifyDataWrite(operations[1], requests, count);
+        verifier.VerifyDataWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         verifier.SetDataOffset(0);
-        verifier.VerifyDataWrite(operations[0], requests, count);
+        verifier.VerifyDataWrite(operations[0], requests);
         return ZX_OK;
       },
   };
@@ -1959,31 +1952,31 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
                                   registry()->writeback(), 0);
   MockTransactionHandler::TransactionCallback callbacks[] = {
       // Operation[0]: Data.
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyDataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyDataWrite(operations[0], requests);
         verifier.ExtendDataOffset(operations[0].op.length);
         return ZX_OK;
       },
       // Operation[1]: Metadata (journal, then metadata).
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[1], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[1], requests);
         verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       // Operation[2]: Data.
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyDataWrite(operations[2], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyDataWrite(operations[2], requests);
         verifier.ExtendDataOffset(operations[2].op.length);
         return ZX_OK;
       },
       // Final operation: Updating the info block on journal teardown.
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       }};
@@ -2037,18 +2030,18 @@ TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         EXPECT_FALSE(op0_completed);
         EXPECT_FALSE(op1_written);
-        verifier.VerifyDataWrite(operations[0], requests, count);
+        verifier.VerifyDataWrite(operations[0], requests);
         verifier.ExtendDataOffset(operations[0].op.length);
         op0_completed = true;
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         EXPECT_TRUE(op0_completed);
         EXPECT_TRUE(op1_written);
-        verifier.VerifyDataWrite(operations[1], requests, count);
+        verifier.VerifyDataWrite(operations[1], requests);
         verifier.ExtendDataOffset(operations[1].op.length);
         return ZX_OK;
       },
@@ -2098,11 +2091,11 @@ TEST_F(JournalTest, SyncAfterWritingDataWaitsForData) {
   std::atomic<bool> data_written = false;
   std::atomic<bool> sync_called = false;
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // While writing the data, we expect the sync callback to be waiting.
         EXPECT_FALSE(data_written);
         EXPECT_FALSE(sync_called);
-        verifier.VerifyDataWrite(operation, requests, count);
+        verifier.VerifyDataWrite(operation, requests);
         data_written = true;
         return ZX_OK;
       },
@@ -2147,20 +2140,20 @@ TEST_F(JournalTest, SyncAfterWritingMetadataWaitsForMetadata) {
   std::atomic<bool> metadata_written = false;
   std::atomic<bool> sync_called = false;
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operation, requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operation, requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operation, requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operation, requests);
         verifier.ExtendJournalOffset(operation.op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         EXPECT_FALSE(metadata_written);
         EXPECT_FALSE(sync_called);
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         metadata_written = true;
         return ZX_OK;
@@ -2273,14 +2266,14 @@ TEST_F(JournalTest, InactiveJournalTreatsMetdataLikeData) {
                                   registry()->writeback(), 0);
   MockTransactionHandler::TransactionCallback callbacks[] = {
       // Data is still treated like data.
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyDataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyDataWrite(operations[0], requests);
         verifier.ExtendDataOffset(operations[0].op.length);
         return ZX_OK;
       },
       // Metadata is also treated like data.
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyDataWrite(operations[1], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyDataWrite(operations[1], requests);
         verifier.ExtendDataOffset(operations[1].op.length);
         return ZX_OK;
       },
@@ -2323,8 +2316,8 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), 0);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyDataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyDataWrite(operations[0], requests);
         verifier.ExtendDataOffset(operations[0].op.length);
         // Validate the request, but cause it to fail.
         return ZX_ERR_IO;
@@ -2374,8 +2367,8 @@ TEST_F(JournalTest, DataWriteFailureStillLetsSyncComplete) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), 0);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyDataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyDataWrite(operations[0], requests);
         verifier.ExtendDataOffset(operations[0].op.length);
         // Validate the request, but cause it to fail.
         return ZX_ERR_IO;
@@ -2434,8 +2427,8 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_ERR_IO;
       },
   };
@@ -2499,12 +2492,12 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_ERR_IO;
       },
@@ -2571,19 +2564,19 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
   JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
                                   registry()->writeback(), kJournalStartBlock);
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyJournalWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[0], requests);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operations[0], requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[0], requests);
         verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         // At this point, the metadata operation will succeed.
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         // This will fail the sync, but not the write request.
         return ZX_ERR_IO;
       }};
@@ -2673,9 +2666,9 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
                                   registry()->writeback(), kJournalStartBlock);
 
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // Verify the operation is first issued to the on-disk journal.
-        verifier.VerifyJournalWrite(operation, requests, count);
+        verifier.VerifyJournalWrite(operation, requests);
 
         // Verify that the payload is escaped in the journal.
         std::array<char, kBlockSize> buffer = {};
@@ -2690,8 +2683,8 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
         registry()->VerifyReplay({operation}, sequence_number);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        verifier.VerifyMetadataWrite(operation, requests, count);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operation, requests);
 
         // Verify that the payload is NOT escaped when writing to the final location.
         std::array<char, kBlockSize> buffer = {};
@@ -2704,9 +2697,9 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
         verifier.ExtendJournalOffset(operation.op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         uint64_t sequence_number = 1;
-        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       }};

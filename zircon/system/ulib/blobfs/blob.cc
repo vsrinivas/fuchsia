@@ -870,7 +870,7 @@ zx_status_t Blob::Purge() {
     // A readable blob should only be purged if it has been unlinked.
     ZX_ASSERT(DeletionQueued());
     storage::UnbufferedOperationsBuilder operations;
-    fbl::Vector<storage::BufferedOperation> trim_data;
+    std::vector<storage::BufferedOperation> trim_data;
     blobfs_->FreeInode(GetMapIndex(), &operations, &trim_data);
 
     auto task = fs::wrap_reference(blobfs_->journal()->WriteMetadata(operations.TakeOperations()),

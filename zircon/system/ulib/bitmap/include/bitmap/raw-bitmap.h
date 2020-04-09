@@ -154,10 +154,11 @@ class RawBitmapGeneric final : public RawBitmapBase {
     return ZX_OK;
   }
 
-  // This function allows access to underlying data, but is dangerous: It
+  // These functions allow access to underlying data, but is dangerous: It
   // leaks the pointer to bits_. Reset and the bitmap destructor should not
   // be called on the bitmap while the pointer returned from data() is alive.
   const Storage* StorageUnsafe() const { return &bits_; }
+  Storage* StorageUnsafe() { return &bits_; }
 
  private:
   // The storage backing this bitmap.

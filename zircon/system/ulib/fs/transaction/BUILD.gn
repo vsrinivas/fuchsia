@@ -43,7 +43,7 @@ zx_library("transaction") {
     sources = [
       "block_transaction.cc",
       "block_transaction_host.cc",
-      "buffered_operations_builder_host.cc",
+      "buffered_operations_builder.cc",
     ]
 
     deps = [

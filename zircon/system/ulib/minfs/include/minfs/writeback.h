@@ -93,7 +93,10 @@ class Transaction final : public PendingWork {
   }
 
   std::vector<fbl::RefPtr<VnodeMinfs>> RemovePinnedVnodes();
-
+#else
+  std::vector<storage::BufferedOperation> TakeOperations() {
+    return builder_.TakeOperations();
+  }
 #endif
 
  private:
@@ -103,7 +106,6 @@ class Transaction final : public PendingWork {
   storage::UnbufferedOperationsBuilder data_operations_;
   std::vector<fbl::RefPtr<VnodeMinfs>> pinned_vnodes_;
 #else
-  fs::WriteTxn transaction_;
   fs::BufferedOperationsBuilder builder_;
 #endif
 

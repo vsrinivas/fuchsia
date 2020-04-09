@@ -75,7 +75,7 @@ using ParseJournalTest = ParseJournalTestFixture;
 
 TEST_F(ParseJournalTest, BadJournalChecksumExpectError) {
   // Don't bother setting the checksum on the info block.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   EXPECT_EQ(ZX_ERR_IO, ParseJournalEntries(info_block(), journal_buffer(), &operations,
@@ -87,7 +87,7 @@ TEST_F(ParseJournalTest, BadJournalStartExpectError) {
   uint64_t start = journal_buffer()->capacity();
   info_block()->Update(start, 0);
 
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY,
@@ -98,7 +98,7 @@ TEST_F(ParseJournalTest, BadJournalStartExpectError) {
 TEST_F(ParseJournalTest, EmptyJournalNoOperations) {
   info_block()->Update(0, 0);
 
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -110,7 +110,7 @@ TEST_F(ParseJournalTest, EmptyJournalNoOperations) {
 
 TEST_F(ParseJournalTest, EmptyJournalNonzeroSequenceNumber) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -121,7 +121,7 @@ TEST_F(ParseJournalTest, EmptyJournalNonzeroSequenceNumber) {
 }
 
 void AddOperation(uint64_t dev_offset, uint64_t length,
-                  fbl::Vector<storage::BufferedOperation>* operations) {
+                  std::vector<storage::BufferedOperation>* operations) {
   storage::BufferedOperation operation;
   operation.op.type = storage::OperationType::kWrite;
   operation.op.dev_offset = dev_offset;
@@ -140,14 +140,14 @@ void CheckWriteOperation(const storage::BufferedOperation& operation, uint64_t v
 
 TEST_F(ParseJournalTest, OneEntryOneOperation) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
 
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
   JournalEntryView entry_view(storage::BlockBufferView(journal_buffer(), 0, kEntryLength), ops,
                               kGoldenSequenceNumber);
 
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -161,7 +161,7 @@ TEST_F(ParseJournalTest, OneEntryOneOperation) {
 
 TEST_F(ParseJournalTest, OneEntryOneOperationFullJournal) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   const uint64_t kDevOffset = 10;  // Arbitrary
   const uint64_t kLength = kJournalLength - kEntryMetadataBlocks;
   AddOperation(kDevOffset, kLength, &ops);
@@ -171,7 +171,7 @@ TEST_F(ParseJournalTest, OneEntryOneOperationFullJournal) {
   JournalEntryView entry_view(storage::BlockBufferView(journal_buffer(), 0, kEntryLength), ops,
                               kGoldenSequenceNumber);
 
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -194,7 +194,7 @@ TEST_F(ParseJournalTest, OneEntryOneOperationWrapsAroundJournal) {
   // Resulting in two writeback operations:
   //   [ _, _, _, _, _, _, _, _, _, _, 1 ], and
   //   [ 2, 3, 4, _, _, _, _, _, _, _, _ ]
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   uint64_t dev_offset = 10;
   const uint64_t kOperationLength = 4;
   AddOperation(dev_offset, kOperationLength, &ops);
@@ -203,7 +203,7 @@ TEST_F(ParseJournalTest, OneEntryOneOperationWrapsAroundJournal) {
   JournalEntryView entry_view(storage::BlockBufferView(journal_buffer(), vmo_offset, kEntryLength),
                               ops, kGoldenSequenceNumber);
 
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -225,7 +225,7 @@ TEST_F(ParseJournalTest, OneEntryOneOperationWrapsAroundJournal) {
 
 TEST_F(ParseJournalTest, OneEntryManyOperations) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 3, &ops);
   AddOperation(/* dev_offset= */ 20, /* length= */ 2, &ops);
   AddOperation(/* dev_offset= */ 30, /* length= */ 1, &ops);
@@ -234,7 +234,7 @@ TEST_F(ParseJournalTest, OneEntryManyOperations) {
   JournalEntryView entry_view(storage::BlockBufferView(journal_buffer(), 0, kEntryLength), ops,
                               kGoldenSequenceNumber);
 
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -252,20 +252,20 @@ TEST_F(ParseJournalTest, OneEntryManyOperations) {
 
 TEST_F(ParseJournalTest, MultipleEntriesDifferentDevOffsetCausesTwoEntriesParsed) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
   const uint64_t kEntryLengthA = 1 + kEntryMetadataBlocks;
   JournalEntryView entry_view_a(storage::BlockBufferView(journal_buffer(), 0, kEntryLengthA), ops,
                                 kGoldenSequenceNumber);
 
-  ops.reset();
+  ops.clear();
   AddOperation(/* dev_offset= */ 20, /* length= */ 3, &ops);
   const uint64_t kEntryLengthB = 3 + kEntryMetadataBlocks;
   JournalEntryView entry_view_b(
       storage::BlockBufferView(journal_buffer(), kEntryLengthA, kEntryLengthB), ops,
       kGoldenSequenceNumber + 1);
 
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -281,20 +281,20 @@ TEST_F(ParseJournalTest, MultipleEntriesDifferentDevOffsetCausesTwoEntriesParsed
 
 TEST_F(ParseJournalTest, MultipleEntriesSameDevOffsetCausesOneEntryParsed) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
   const uint64_t kEntryLengthA = 1 + kEntryMetadataBlocks;
   JournalEntryView entry_view_a(storage::BlockBufferView(journal_buffer(), 0, kEntryLengthA), ops,
                                 kGoldenSequenceNumber);
 
-  ops.reset();
+  ops.clear();
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
   const uint64_t kEntryLengthB = 1 + kEntryMetadataBlocks;
   JournalEntryView entry_view_b(
       storage::BlockBufferView(journal_buffer(), kEntryLengthA, kEntryLengthB), ops,
       kGoldenSequenceNumber + 1);
 
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -313,13 +313,13 @@ TEST_F(ParseJournalTest, MultipleEntriesSameDevOffsetCausesOneEntryParsed) {
 // is not incremented), and validates that the bad entry is ignored.
 TEST_F(ParseJournalTest, MultipleEntriesWithSameSequenceNumberOnlyKeepsFirst) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
   const uint64_t kEntryLengthA = 1 + kEntryMetadataBlocks;
   JournalEntryView entry_view_a(storage::BlockBufferView(journal_buffer(), 0, kEntryLengthA), ops,
                                 kGoldenSequenceNumber);
 
-  ops.reset();
+  ops.clear();
   AddOperation(/* dev_offset= */ 20, /* length= */ 3, &ops);
   const uint64_t kEntryLengthB = 3 + kEntryMetadataBlocks;
   JournalEntryView entry_view_b(
@@ -327,7 +327,7 @@ TEST_F(ParseJournalTest, MultipleEntriesWithSameSequenceNumberOnlyKeepsFirst) {
       kGoldenSequenceNumber);
 
   // Writing entries with the same sequence number only parses the first.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -340,7 +340,7 @@ TEST_F(ParseJournalTest, MultipleEntriesWithSameSequenceNumberOnlyKeepsFirst) {
 
 TEST_F(ParseJournalTest, EscapedEntry) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
 
@@ -359,7 +359,7 @@ TEST_F(ParseJournalTest, EscapedEntry) {
   EXPECT_EQ(0, ptr[0]);
   EXPECT_EQ(0xDEADBEEF, ptr[1]);
 
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -376,7 +376,7 @@ TEST_F(ParseJournalTest, EscapedEntry) {
 }
 
 TEST_F(ParseJournalTest, TooOldDropped) {
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
 
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
@@ -387,7 +387,7 @@ TEST_F(ParseJournalTest, TooOldDropped) {
   info_block()->Update(0, kGoldenSequenceNumber + 1);
 
   // Observe that the new sequence_number is parsed, but the entry is dropped.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -398,7 +398,7 @@ TEST_F(ParseJournalTest, TooOldDropped) {
 }
 
 TEST_F(ParseJournalTest, NewerThanExpectedDropped) {
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
 
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
@@ -410,7 +410,7 @@ TEST_F(ParseJournalTest, NewerThanExpectedDropped) {
   info_block()->Update(0, kUpdatedSequenceNumber);
 
   // Observe that the entry's sequence_number is parsed as too new, and dropped.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -422,7 +422,7 @@ TEST_F(ParseJournalTest, NewerThanExpectedDropped) {
 
 TEST_F(ParseJournalTest, EntryMultipleTimes) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
 
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
@@ -430,7 +430,7 @@ TEST_F(ParseJournalTest, EntryMultipleTimes) {
                               kGoldenSequenceNumber);
 
   // Observe that we can replay journal entries with this setup.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -440,7 +440,7 @@ TEST_F(ParseJournalTest, EntryMultipleTimes) {
   EXPECT_EQ(kEntryLength, next_entry_start);
   uint64_t vmo_offset = kJournalEntryHeaderBlocks;
   ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
-  operations.reset();
+  operations.clear();
 
   // We can replay the same entries multiple times.
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -453,7 +453,7 @@ TEST_F(ParseJournalTest, EntryMultipleTimes) {
 
 TEST_F(ParseJournalTest, EntryModifiedHeaderDropped) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
 
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
@@ -467,7 +467,7 @@ TEST_F(ParseJournalTest, EntryModifiedHeaderDropped) {
   raw_block.SetTargetBlock(16, ~(raw_block.TargetBlock(16)));
 
   // As a result, there are no entries identified as replayable.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -479,7 +479,7 @@ TEST_F(ParseJournalTest, EntryModifiedHeaderDropped) {
 
 TEST_F(ParseJournalTest, EntryModifiedEntryDropped) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
 
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
@@ -492,7 +492,7 @@ TEST_F(ParseJournalTest, EntryModifiedEntryDropped) {
   raw_bytes[0] = static_cast<uint8_t>(~raw_bytes[0]);
 
   // As a result, there are no entries identified as replayable.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -504,7 +504,7 @@ TEST_F(ParseJournalTest, EntryModifiedEntryDropped) {
 
 TEST_F(ParseJournalTest, EntryModifiedCommitDropped) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
 
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
@@ -517,7 +517,7 @@ TEST_F(ParseJournalTest, EntryModifiedCommitDropped) {
   raw_commit->prefix.sequence_number++;
 
   // As a result, there are no entries identified as replayable.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -529,7 +529,7 @@ TEST_F(ParseJournalTest, EntryModifiedCommitDropped) {
 
 TEST_F(ParseJournalTest, EntryModifiedAfterCommitStillKept) {
   info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
+  std::vector<storage::BufferedOperation> ops;
   AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
 
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
@@ -545,7 +545,7 @@ TEST_F(ParseJournalTest, EntryModifiedAfterCommitStillKept) {
   raw_bytes[index] = static_cast<uint8_t>(~raw_bytes[index]);
 
   // The current implementation of journaling is not checksumming the commit block.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -561,13 +561,13 @@ TEST_F(ParseJournalTest, DetectsCorruptJournalIfOldEntryHasBadChecksumButGoodLen
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
   // Place two entries into the journal.
   {
-    fbl::Vector<storage::BufferedOperation> ops;
+    std::vector<storage::BufferedOperation> ops;
     AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
     JournalEntryView entry_view(storage::BlockBufferView(journal_buffer(), 0, kEntryLength), ops,
                                 kGoldenSequenceNumber);
   }
   {
-    fbl::Vector<storage::BufferedOperation> ops;
+    std::vector<storage::BufferedOperation> ops;
     AddOperation(/* dev_offset= */ 20, /* length= */ 1, &ops);
     JournalEntryView entry_view(
         storage::BlockBufferView(journal_buffer(), kEntryLength, kEntryLength), ops,
@@ -583,7 +583,7 @@ TEST_F(ParseJournalTest, DetectsCorruptJournalIfOldEntryHasBadChecksumButGoodLen
   // As a result, there are no entries identified as replayable, and
   // (because the second entry was valid, but the first entry wasn't) the journal
   // is identified as corrupt.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY,
@@ -596,13 +596,13 @@ TEST_F(ParseJournalTest, DoesntDetectCorruptJournalIfOldEntryHasBadChecksumAndBa
   const uint64_t kEntryLength = 1 + kEntryMetadataBlocks;
   // Place two entries into the journal.
   {
-    fbl::Vector<storage::BufferedOperation> ops;
+    std::vector<storage::BufferedOperation> ops;
     AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
     JournalEntryView entry_view(storage::BlockBufferView(journal_buffer(), 0, kEntryLength), ops,
                                 kGoldenSequenceNumber);
   }
   {
-    fbl::Vector<storage::BufferedOperation> ops;
+    std::vector<storage::BufferedOperation> ops;
     AddOperation(/* dev_offset= */ 20, /* length= */ 1, &ops);
     JournalEntryView entry_view(
         storage::BlockBufferView(journal_buffer(), kEntryLength, kEntryLength), ops,
@@ -617,7 +617,7 @@ TEST_F(ParseJournalTest, DoesntDetectCorruptJournalIfOldEntryHasBadChecksumAndBa
   auto raw_block = static_cast<JournalHeaderBlock*>(buffer_view.Data(0));
   raw_block->payload_blocks = ~(raw_block->payload_blocks);
 
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   EXPECT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
@@ -629,17 +629,13 @@ TEST_F(ParseJournalTest, DoesntDetectCorruptJournalIfOldEntryHasBadChecksumAndBa
 class MockTransactionHandler final : public fs::TransactionHandler {
  public:
   using TransactionCallback =
-      fit::function<zx_status_t(const block_fifo_request_t* requests, size_t count)>;
+      fit::function<zx_status_t(const std::vector<storage::BufferedOperation>& requests)>;
 
   MockTransactionHandler() = default;
   MockTransactionHandler(TransactionCallback* callbacks, size_t transactions_expected)
       : callbacks_(callbacks), transactions_expected_(transactions_expected) {}
 
   ~MockTransactionHandler() { EXPECT_EQ(transactions_expected_, transactions_seen_); }
-
-  uint32_t FsBlockSize() const final { return kBlockSize; }
-
-  uint32_t DeviceBlockSize() const final { return kBlockSize; }
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
@@ -650,12 +646,12 @@ class MockTransactionHandler final : public fs::TransactionHandler {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override {
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& requests) override {
     EXPECT_LT(transactions_seen_, transactions_expected_);
     if (transactions_seen_ == transactions_expected_) {
       return ZX_ERR_BAD_STATE;
     }
-    return callbacks_[transactions_seen_++](requests, count);
+    return callbacks_[transactions_seen_++](requests);
   }
 
  private:
@@ -671,25 +667,25 @@ class ReplayJournalTest : public ParseJournalTestFixture {
   static constexpr uint64_t kJournalEntryStart = kJournalAreaStart + kJournalMetadataBlocks;
   static constexpr uint64_t kJournalEntryLength = kJournalLength;
 
-  void ValidInfoReadRequest(const block_fifo_request_t& request) const {
-    EXPECT_EQ(BLOCKIO_READ, request.opcode);
-    EXPECT_EQ(0, request.vmo_offset);
-    EXPECT_EQ(kJournalAreaStart, request.dev_offset);
-    EXPECT_EQ(kJournalMetadataBlocks, request.length);
+  void ValidInfoReadRequest(const storage::BufferedOperation& request) const {
+    EXPECT_EQ(storage::OperationType::kRead, request.op.type);
+    EXPECT_EQ(0, request.op.vmo_offset);
+    EXPECT_EQ(kJournalAreaStart, request.op.dev_offset);
+    EXPECT_EQ(kJournalMetadataBlocks, request.op.length);
   }
 
-  void ValidInfoWriteRequest(const block_fifo_request_t& request) const {
-    EXPECT_EQ(BLOCKIO_WRITE, request.opcode);
-    EXPECT_EQ(0, request.vmo_offset);
-    EXPECT_EQ(kJournalAreaStart, request.dev_offset);
-    EXPECT_EQ(kJournalMetadataBlocks, request.length);
+  void ValidInfoWriteRequest(const storage::BufferedOperation& request) const {
+    EXPECT_EQ(storage::OperationType::kWrite, request.op.type);
+    EXPECT_EQ(0, request.op.vmo_offset);
+    EXPECT_EQ(kJournalAreaStart, request.op.dev_offset);
+    EXPECT_EQ(kJournalMetadataBlocks, request.op.length);
   }
 
-  void ValidEntriesReadRequest(const block_fifo_request_t& request) const {
-    EXPECT_EQ(BLOCKIO_READ, request.opcode);
-    EXPECT_EQ(0, request.vmo_offset);
-    EXPECT_EQ(kJournalEntryStart, request.dev_offset);
-    EXPECT_EQ(kJournalEntryLength, request.length);
+  void ValidEntriesReadRequest(const storage::BufferedOperation& request) const {
+    EXPECT_EQ(storage::OperationType::kRead, request.op.type);
+    EXPECT_EQ(0, request.op.vmo_offset);
+    EXPECT_EQ(kJournalEntryStart, request.op.dev_offset);
+    EXPECT_EQ(kJournalEntryLength, request.op.length);
   }
 
   // Take the contents of the pre-registered journal superblock and transfer
@@ -712,31 +708,31 @@ class ReplayJournalTest : public ParseJournalTestFixture {
 
 TEST_F(ReplayJournalTest, BadJournalSuperblockFails) {
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // Return OK, but don't provide any values. This should fail during replay.
-        EXPECT_LE(1, count);
-        EXPECT_EQ(BLOCKIO_READ, requests[0].opcode);
+        EXPECT_LE(1, requests.size());
+        EXPECT_EQ(storage::OperationType::kRead, requests[0].op.type);
         return ZX_OK;
       },
   };
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
   ASSERT_EQ(ZX_ERR_IO, ReplayJournal(&transaction_handler, registry(), kJournalAreaStart,
-                                     kJournalAreaLength, &superblock));
+                                     kJournalAreaLength, kBlockSize, &superblock));
 }
 
 TEST_F(ReplayJournalTest, CannotReadJournalFails) {
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_LE(1, count);
-        EXPECT_EQ(BLOCKIO_READ, requests[0].opcode);
+     [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_LE(1, requests.size());
+        EXPECT_EQ(storage::OperationType::kRead, requests[0].op.type);
         return ZX_ERR_IO;
       },
   };
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
   ASSERT_EQ(ZX_ERR_IO, ReplayJournal(&transaction_handler, registry(), kJournalAreaStart,
-                                     kJournalAreaLength, &superblock));
+                                     kJournalAreaLength, kBlockSize, &superblock));
 }
 
 TEST_F(ReplayJournalTest, EmptyJournalDoesNothing) {
@@ -746,9 +742,9 @@ TEST_F(ReplayJournalTest, EmptyJournalDoesNothing) {
   info_block()->Update(kStart, kSequenceNumber);
 
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // First request: Reading from the journal.
-        EXPECT_EQ(2, count);
+        EXPECT_EQ(2, requests.size());
         ValidInfoReadRequest(requests[0]);
         ValidEntriesReadRequest(requests[1]);
 
@@ -760,7 +756,7 @@ TEST_F(ReplayJournalTest, EmptyJournalDoesNothing) {
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
   ASSERT_OK(ReplayJournal(&transaction_handler, registry(), kJournalAreaStart, kJournalAreaLength,
-                          &superblock));
+                          kBlockSize, &superblock));
   EXPECT_EQ(kStart, superblock.start());
   EXPECT_EQ(kSequenceNumber, superblock.sequence_number());
 }
@@ -772,7 +768,7 @@ TEST_F(ReplayJournalTest, OneEntry) {
   info_block()->Update(kStart, kSequenceNumber);
 
   // Fill the pre-registered journal buffer with one entry.
-  fbl::Vector<storage::BufferedOperation> operations = {
+  std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
@@ -788,10 +784,10 @@ TEST_F(ReplayJournalTest, OneEntry) {
                               operations, kSequenceNumber);
 
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // First request: Reading from the journal.
         // Transfer the pre-seeded info block.
-        EXPECT_EQ(2, count);
+        EXPECT_EQ(2, requests.size());
         ValidInfoReadRequest(requests[0]);
         ValidEntriesReadRequest(requests[1]);
 
@@ -800,18 +796,18 @@ TEST_F(ReplayJournalTest, OneEntry) {
         TransferEntryTo(requests[1].vmoid, kStart, entry_size);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // Observe that the replay code replays the provided operation.
-        EXPECT_EQ(1, count);
-        EXPECT_EQ(BLOCKIO_WRITE, requests[0].opcode);
-        EXPECT_EQ(kJournalEntryHeaderBlocks, requests[0].vmo_offset);
-        EXPECT_EQ(operations[0].op.dev_offset, requests[0].dev_offset);
-        EXPECT_EQ(operations[0].op.length, requests[0].length);
+        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
+        EXPECT_EQ(kJournalEntryHeaderBlocks, requests[0].op.vmo_offset);
+        EXPECT_EQ(operations[0].op.dev_offset, requests[0].op.dev_offset);
+        EXPECT_EQ(operations[0].op.length, requests[0].op.length);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // Observe that the replay code updates the journal superblock.
-        EXPECT_EQ(1, count);
+        EXPECT_EQ(1, requests.size());
         ValidInfoWriteRequest(requests[0]);
         return ZX_OK;
       }};
@@ -819,7 +815,7 @@ TEST_F(ReplayJournalTest, OneEntry) {
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
   ASSERT_OK(ReplayJournal(&transaction_handler, registry(), kJournalAreaStart, kJournalAreaLength,
-                          &superblock));
+                          kBlockSize, &superblock));
   EXPECT_EQ(kStart + entry_size, superblock.start());
   // The sequence_number should have advanced to avoid replaying the old entry.
   EXPECT_EQ(kSequenceNumber + 1, superblock.sequence_number());
@@ -832,7 +828,7 @@ TEST_F(ReplayJournalTest, CannotWriteParsedEntriesFails) {
   info_block()->Update(kStart, kSequenceNumber);
 
   // Fill the pre-registered journal buffer with one entry.
-  fbl::Vector<storage::BufferedOperation> operations = {
+  std::vector<storage::BufferedOperation> operations = {
       {
           .vmoid = 0,
           {
@@ -848,10 +844,10 @@ TEST_F(ReplayJournalTest, CannotWriteParsedEntriesFails) {
                               operations, kSequenceNumber);
 
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // First request: Reading from the journal.
         // Transfer the pre-seeded info block.
-        EXPECT_EQ(2, count);
+        EXPECT_EQ(2, requests.size());
         ValidInfoReadRequest(requests[0]);
         ValidEntriesReadRequest(requests[1]);
 
@@ -860,17 +856,17 @@ TEST_F(ReplayJournalTest, CannotWriteParsedEntriesFails) {
         TransferEntryTo(requests[1].vmoid, kStart, entry_size);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
+      [&](const std::vector<storage::BufferedOperation>& requests) {
         // Observe that the replay code replays the provided operation, but return
         // an error instead.
-        EXPECT_EQ(1, count);
-        EXPECT_EQ(BLOCKIO_WRITE, requests[0].opcode);
+        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
         return ZX_ERR_IO;
       }};
   MockTransactionHandler transaction_handler(callbacks, std::size(callbacks));
   JournalSuperblock superblock;
   ASSERT_EQ(ZX_ERR_IO, ReplayJournal(&transaction_handler, registry(), kJournalAreaStart,
-                                     kJournalAreaLength, &superblock));
+                                     kJournalAreaLength, kBlockSize, &superblock));
 }
 
 }  // namespace

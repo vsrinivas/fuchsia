@@ -19,7 +19,7 @@
 namespace disk_inspector {
 
 // Vmo-based implementation of TransactionHandler for use with disk-inspect application.
-class InspectorTransactionHandler : public fs::TransactionHandler, public storage::VmoidRegistry {
+class InspectorTransactionHandler : public fs::LegacyTransactionHandler, public storage::VmoidRegistry {
  public:
   static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device, uint32_t block_size,
                             std::unique_ptr<InspectorTransactionHandler>* out);

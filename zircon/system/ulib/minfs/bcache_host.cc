@@ -29,7 +29,8 @@ zx_status_t Bcache::RunOperation(const storage::Operation& operation,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  void* data = buffer->Data(operation.vmo_offset);
+  // TODO(fxb/47947): Clean up this hack.
+  void* data = static_cast<uint8_t*>(buffer->Data(0)) + operation.vmo_offset * kMinfsBlockSize;
   ssize_t result;
   if (operation.type == storage::OperationType::kRead) {
     result = pread(fd_.get(), data, operation.length * kMinfsBlockSize,
@@ -80,10 +81,9 @@ zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
   return ZX_OK;
 }
 
-int Bcache::Sync() {
-  fs::WriteTxn sync_txn(this);
-  sync_txn.EnqueueFlush();
-  return sync_txn.Transact();
+zx_status_t Bcache::Sync() {
+  // No-op.
+  return ZX_OK;
 }
 
 // Static.

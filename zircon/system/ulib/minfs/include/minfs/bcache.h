@@ -57,21 +57,15 @@ class Bcache : public fs::TransactionHandler, public storage::VmoidRegistry {
   ////////////////
   // fs::TransactionHandler interface.
 
-  uint32_t FsBlockSize() const final { return kMinfsBlockSize; }
-
   uint64_t BlockNumberToDevice(uint64_t block_num) const final {
-    return block_num * kMinfsBlockSize / DeviceBlockSize();
+    return block_num * kMinfsBlockSize / info_.block_size;
   }
 
   zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
 
-  uint32_t DeviceBlockSize() const final;
-
   block_client::BlockDevice* GetDevice() final { return device_.get(); }
 
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
-    return device_->FifoTransaction(requests, count);
-  }
+  uint32_t DeviceBlockSize() const;
 
   // Raw block read functions.
   // These do not track blocks (or attempt to access the block cache)
@@ -99,7 +93,7 @@ class Bcache : public fs::TransactionHandler, public storage::VmoidRegistry {
   block_client::BlockDevice* device() { return device_.get(); }
   const block_client::BlockDevice* device() const { return device_.get(); }
 
-  int Sync();
+  zx_status_t Sync();
 
  private:
   Bcache(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks);
@@ -125,8 +119,6 @@ class Bcache : public fs::TransactionHandler {
 
   ////////////////
   // fs::TransactionHandler interface.
-
-  uint32_t FsBlockSize() const final { return kMinfsBlockSize; }
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 

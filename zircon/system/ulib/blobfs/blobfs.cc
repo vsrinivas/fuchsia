@@ -187,7 +187,7 @@ zx_status_t Blobfs::CreateWithWriteCompressionAlgorithm(
     FS_TRACE_INFO("blobfs: Replaying journal\n");
     JournalSuperblock journal_superblock;
     status = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                               JournalBlocks(fs->info_), &journal_superblock);
+                               JournalBlocks(fs->info_), kBlobfsBlockSize, &journal_superblock);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("blobfs: Failed to replay journal\n");
       return status;
@@ -323,7 +323,7 @@ void Blobfs::PersistBlocks(const ReservedExtent& reserved_extent,
 
 // Frees blocks from reserved and allocated maps, updates disk in the latter case.
 void Blobfs::FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations,
-                        fbl::Vector<storage::BufferedOperation>* trim_data) {
+                        std::vector<storage::BufferedOperation>* trim_data) {
   size_t start = extent.Start();
   size_t num_blocks = extent.Length();
   size_t end = start + num_blocks;
@@ -347,7 +347,7 @@ void Blobfs::FreeNode(uint32_t node_index, storage::UnbufferedOperationsBuilder*
 }
 
 void Blobfs::FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations,
-                       fbl::Vector<storage::BufferedOperation>* trim_data) {
+                       std::vector<storage::BufferedOperation>* trim_data) {
   TRACE_DURATION("blobfs", "Blobfs::FreeInode", "node_index", node_index);
   Inode* mapped_inode = GetNode(node_index);
   ZX_DEBUG_ASSERT(operations != nullptr);
@@ -441,7 +441,7 @@ void Blobfs::WriteInfo(storage::UnbufferedOperationsBuilder* operations) {
 }
 
 void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
-                          fbl::Vector<storage::BufferedOperation>* trim_data) {
+                          std::vector<storage::BufferedOperation>* trim_data) {
   if (block_info_.flags & fuchsia_hardware_block_FLAG_TRIM_SUPPORT) {
     TRACE_DURATION("blobfs", "Blobfs::DeleteExtent", "num_blocks", num_blocks, "start_block",
                    start_block);

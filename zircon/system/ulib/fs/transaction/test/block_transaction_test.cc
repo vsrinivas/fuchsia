@@ -50,10 +50,6 @@ class MockTransactionHandler : public fs::TransactionHandler {
 
   const std::vector<block_fifo_request_t>& GetRequests() const { return device_.requests(); }
 
-  uint32_t FsBlockSize() const final { return DeviceBlockSize() * kBlockRatio; }
-
-  uint32_t DeviceBlockSize() const final { return kBlockSize ; }
-
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num * kBlockRatio; }
 
   zx_status_t RunOperation(const Operation& operation, BlockBuffer* buffer) final {
@@ -61,10 +57,6 @@ class MockTransactionHandler : public fs::TransactionHandler {
   }
 
   block_client::BlockDevice* GetDevice() final { return &device_; }
-
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
 
  private:
   MockBlockDevice device_;

@@ -14,7 +14,7 @@ namespace {
 // Number of device blocks per operation block.
 constexpr uint32_t kDiskBlockRatio = 2;
 
-class MockTransactionHandler : public TransactionHandler {
+class MockTransactionHandler : public LegacyTransactionHandler {
  public:
   using TransactionCallback =
       fit::function<zx_status_t(const block_fifo_request_t* requests, size_t count)>;

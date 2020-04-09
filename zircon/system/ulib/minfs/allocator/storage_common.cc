@@ -12,34 +12,9 @@
 
 namespace minfs {
 
-namespace {
-
-blk_t BitmapBlocksForSizeImpl(size_t size) {
+static blk_t BitmapBlocksForSizeImpl(size_t size) {
   return (static_cast<blk_t>(size) + kMinfsBlockBits - 1) / kMinfsBlockBits;
 }
-
-// TODO(46781): This should not be needed after making PersistRange receive a
-// buffer instead of an ambiguous WriteData.
-class UnownedBuffer : public storage::BlockBuffer {
- public:
-  UnownedBuffer(const void* data) : data_(reinterpret_cast<const char*>(data)) {}
-  ~UnownedBuffer() {}
-
-  // BlockBuffer interface:
-  size_t capacity() const final { return 0; }
-  uint32_t BlockSize() const final { return 0; }
-  vmoid_t vmoid() const final { return 0; }
-  zx_handle_t Vmo() const final { return ZX_HANDLE_INVALID; }
-  void* Data(size_t index) final {
-    return const_cast<void*>(const_cast<const UnownedBuffer*>(this)->Data(index));
-  }
-  const void* Data(size_t index) const final { return data_ + index * kMinfsBlockSize; }
-
- private:
-  const char* data_;
-};
-
-}  // namespace
 
 uint32_t AllocatorStorage::PoolBlocks() const { return BitmapBlocksForSizeImpl(PoolTotal()); }
 
@@ -75,7 +50,7 @@ void PersistentStorage::PersistRange(PendingWork* transaction, WriteData data, s
   zx::unowned_vmo vmo(data);
   UnownedVmoBuffer buffer(vmo);
 #else
-  UnownedBuffer buffer(data);
+  fs::internal::BorrowedBuffer buffer(data);
 #endif
   transaction->EnqueueMetadata(operation, &buffer);
 }

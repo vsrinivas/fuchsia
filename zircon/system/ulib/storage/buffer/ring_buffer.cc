@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <utility>
+#include <vector>
 
 #include <fbl/auto_lock.h>
 #include <fs/trace.h>
@@ -138,9 +139,9 @@ void RingBufferReservation::Reset() {
 
 zx_status_t RingBufferReservation::CopyRequests(
     const fbl::Vector<storage::UnbufferedOperation>& in_operations, size_t offset,
-    fbl::Vector<storage::BufferedOperation>* out) {
+    std::vector<storage::BufferedOperation>* out) {
   ZX_DEBUG_ASSERT_MSG(Reserved(), "Copying to invalid reservation");
-  fbl::Vector<storage::BufferedOperation> out_operations;
+  std::vector<storage::BufferedOperation> out_operations;
   out_operations.reserve(in_operations.size());
 
   ZX_DEBUG_ASSERT_MSG(offset + BlockCount(in_operations) <= length(),
@@ -251,7 +252,7 @@ zx_status_t RingBuffer::Create(VmoidRegistry* vmoid_registry, size_t blocks, uin
   return ZX_OK;
 }
 
-RingBufferRequests::RingBufferRequests(fbl::Vector<storage::BufferedOperation> requests,
+RingBufferRequests::RingBufferRequests(std::vector<storage::BufferedOperation> requests,
                                        RingBufferReservation reservation)
     : requests_(std::move(requests)), reservation_(std::move(reservation)) {}
 

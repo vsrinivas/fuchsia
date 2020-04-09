@@ -29,11 +29,11 @@ namespace internal {
 // This struct is used for both journaled metadata and unjournaled data.
 struct JournalWorkItem {
   JournalWorkItem(storage::BlockingRingBufferReservation reservation,
-                  fbl::Vector<storage::BufferedOperation> operations)
+                  std::vector<storage::BufferedOperation> operations)
       : reservation(std::move(reservation)), operations(std::move(operations)) {}
 
   storage::BlockingRingBufferReservation reservation;
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
 };
 
 // The back-end of the journal. This class implements all the blocking operations which transmit
@@ -67,7 +67,7 @@ class JournalWriter {
   fit::result<void, zx_status_t> WriteMetadata(JournalWorkItem work);
 
   // Trims |operations| immediately.
-  fit::result<void, zx_status_t> TrimData(fbl::Vector<storage::BufferedOperation> operations);
+  fit::result<void, zx_status_t> TrimData(std::vector<storage::BufferedOperation> operations);
 
   // Synchronizes the most up-to-date info block back to disk.
   //
@@ -131,7 +131,7 @@ class JournalWriter {
   // If any operations fail, this method will return the resulting error from the underlying
   // block device. Afterwards, however, this function will exclusively return |ZX_ERR_IO_REFUSED|
   // to prevent "partial operations" from being written to the underlying device.
-  zx_status_t WriteOperations(const fbl::Vector<storage::BufferedOperation>& operations);
+  zx_status_t WriteOperations(const std::vector<storage::BufferedOperation>& operations);
 
   fs::TransactionHandler* transaction_handler_ = nullptr;
   JournalSuperblock journal_superblock_;

@@ -47,21 +47,14 @@ class TransactionHandler {
  public:
   virtual ~TransactionHandler() {}
 
-  // Acquire the block size of the mounted filesystem.
-  // It is assumed that all inputs to the TransactionHandler
-  // interface are in |FsBlockSize()|-sized blocks.
-  // TODO(rvargas): Remove this method.
-  virtual uint32_t FsBlockSize() const = 0;
-
   // Translates a filesystem-level block number to a block-device-level block number.
   virtual uint64_t BlockNumberToDevice(uint64_t block_num) const = 0;
 
   // Runs the provided operation against the backing block device. |buffer| provides access to the
-  // memory buffer that is referenced by |operation|.
-  // The values inside |operation| are expected to be filesystem-level block numbers.
-  // This method blocks until the operation completes, so it is suitable for host-based reads and
-  // writes and for simple Fuchsia-based reads. Regular Fuchsia IO is expected to be issued against
-  // the FIFO exposed through GetDevice().
+  // memory buffer that is referenced by |operation|.  The values inside |operation| are expected to
+  // be filesystem-level block numbers.  This method blocks until the operation completes, so it is
+  // suitable for host-based reads and writes and for simple Fuchsia-based reads. Regular Fuchsia IO
+  // is expected to be issued using the RunRequests method.
   virtual zx_status_t RunOperation(const storage::Operation& operation,
                                    storage::BlockBuffer* buffer) = 0;
 
@@ -71,29 +64,34 @@ class TransactionHandler {
   // the requests to the underlying BlockDevice so it is expected that this interface will be
   // upgraded to be fully asynchronous at some point.
   // The caller should use a BufferedOperationsBuilder to construct the request.
-  // Note that the host-side implementation of this method does nothing, as each operation
-  // will be issued by the BufferedOperationsBuilder.
   virtual zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations);
 
 #ifdef __Fuchsia__
-  // Acquires the block size of the underlying device.
-  // TODO(rvargas): Remove this method.
-  virtual uint32_t DeviceBlockSize() const = 0;
-
   // Returns the backing block device that is associated with this TransactionHandler.
   virtual block_client::BlockDevice* GetDevice() = 0;
+#endif
+};
+
+// TODO(fxb/49392): remove this class.
+class LegacyTransactionHandler : public TransactionHandler {
+ public:
+  // Acquire the block size of the mounted filesystem.
+  // It is assumed that all inputs to the TransactionHandler
+  // interface are in |FsBlockSize()|-sized blocks.
+  virtual uint32_t FsBlockSize() const = 0;
+
+#ifdef __Fuchsia__
+  // Acquires the block size of the underlying device.
+  virtual uint32_t DeviceBlockSize() const = 0;
 
   // Issues a group of requests to the underlying device and waits
   // for them to complete.
-  // TODO(rvargas): Remove this method.
   virtual zx_status_t Transaction(block_fifo_request_t* requests, size_t count) = 0;
 #else
   // Reads block |bno| from the device into the buffer provided by |data|.
-  // TODO(rvargas): Remove this method.
   virtual zx_status_t Readblk(uint32_t bno, void* data) = 0;
 
   // Writes block |bno| from the buffer provided by |data| to the device.
-  // TODO(rvargas): Remove this method.
   virtual zx_status_t Writeblk(uint32_t bno, const void* data) = 0;
 #endif
 };
@@ -103,7 +101,7 @@ class TransactionHandler {
 class BlockTxn {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlockTxn);
-  explicit BlockTxn(TransactionHandler* handler);
+  explicit BlockTxn(LegacyTransactionHandler* handler);
   ~BlockTxn();
 
   // Identify that an operation should be committed to disk
@@ -115,7 +113,7 @@ class BlockTxn {
   zx_status_t Transact();
 
  private:
-  TransactionHandler* handler_;
+  LegacyTransactionHandler* handler_;
   fbl::Vector<block_fifo_request_t> requests_;
 };
 
@@ -126,7 +124,7 @@ class BlockTxn {
 class BlockTxn {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlockTxn);
-  explicit BlockTxn(TransactionHandler* handler);
+  explicit BlockTxn(LegacyTransactionHandler* handler);
   ~BlockTxn();
 
   // Identify that an operation should be committed to disk
@@ -138,7 +136,7 @@ class BlockTxn {
   zx_status_t Transact();
 
  private:
-  TransactionHandler* handler_;
+  LegacyTransactionHandler* handler_;
 };
 
 #endif
@@ -150,7 +148,7 @@ template <typename IdType, uint32_t operation>
 class TypedTxn {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(TypedTxn);
-  explicit TypedTxn(TransactionHandler* handler) : txn_(handler) {}
+  explicit TypedTxn(LegacyTransactionHandler* handler) : txn_(handler) {}
 
   inline void Enqueue(IdType id, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks) {
     txn_.EnqueueOperation(operation, id, vmo_offset, dev_offset, nblocks);

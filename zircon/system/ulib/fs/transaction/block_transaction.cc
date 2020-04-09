@@ -14,7 +14,7 @@
 
 namespace fs {
 
-BlockTxn::BlockTxn(TransactionHandler* handler) : handler_(handler) {}
+BlockTxn::BlockTxn(LegacyTransactionHandler* handler) : handler_(handler) {}
 
 BlockTxn::~BlockTxn() { Transact(); }
 

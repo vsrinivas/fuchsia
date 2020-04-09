@@ -18,6 +18,8 @@
 #include <minfs/fsck.h>
 #ifdef __Fuchsia__
 #include <storage/buffer/owned_vmoid.h>
+#else
+#include <storage/buffer/array_buffer.h>
 #endif
 
 #include "lib/fit/string_view.h"
@@ -343,8 +345,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
     eno++;
   }
   if (inode->link_count == 0 && inode->dirent_count != 0) {
-    FS_TRACE_ERROR("check: dirent_count (%u) for unlinked directory != 0\n",
-                   inode->dirent_count);
+    FS_TRACE_ERROR("check: dirent_count (%u) for unlinked directory != 0\n", inode->dirent_count);
     conforming_ = false;
   }
   if (dirent_count != inode->dirent_count) {
@@ -673,8 +674,8 @@ zx_status_t MinfsChecker::CheckForUnusedInodes() const {
   // to kMinfsMagicPurged. Prior to this, the inodes were left intact.
   if (missing > 0 || (bad_magic > 0 && fs_->Info().oldest_revision >= 1)) {
     if (bad_magic > 0) {
-      FS_TRACE_ERROR("check: %u free inode%s with bad magic values\n",
-                     bad_magic, bad_magic > 1 ? "s" : "");
+      FS_TRACE_ERROR("check: %u free inode%s with bad magic values\n", bad_magic,
+                     bad_magic > 1 ? "s" : "");
     }
     if (missing > 0) {
       FS_TRACE_ERROR("check: %u allocated inode%s not in use\n", missing, missing > 1 ? "s" : "");
@@ -682,8 +683,8 @@ zx_status_t MinfsChecker::CheckForUnusedInodes() const {
     return ZX_ERR_BAD_STATE;
   }
   if (bad_magic > 0) {
-    FS_TRACE_WARN("check: %u free inode%s with bad magic values\n",
-                  bad_magic, bad_magic > 1 ? "s" : "");
+    FS_TRACE_WARN("check: %u free inode%s with bad magic values\n", bad_magic,
+                  bad_magic > 1 ? "s" : "");
   }
   return ZX_OK;
 }
@@ -829,51 +830,30 @@ zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transacti
                                                Superblock* info) {
 #endif
 #ifdef __Fuchsia__
-  zx::vmo vmo;
-  storage::OwnedVmoid vmoid;
-  const size_t kVmoBlocks = 1;
-  zx_status_t status = CreateAndRegisterVmo(device, &vmo, kVmoBlocks, &vmoid.GetReference(device));
+  storage::VmoBuffer buffer;
+  zx_status_t status =
+      buffer.Initialize(transaction_handler->GetDevice(), 1, kMinfsBlockSize, "fsck-super-block");
   if (status != ZX_OK) {
     return status;
   }
-  // Prepare fifo transaction for write.
-  status = vmo.write(info, 0, sizeof(*info));
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  block_fifo_request_t request[2];
-
-  const uint32_t disk_blocks_per_fs_block =
-      kMinfsBlockSize / transaction_handler->DeviceBlockSize();
-  request[0].opcode = BLOCKIO_WRITE;
-  request[0].vmoid = vmoid.get();
-  request[0].length = disk_blocks_per_fs_block;
-  request[0].vmo_offset = 0;
-  request[0].dev_offset = kSuperblockStart * disk_blocks_per_fs_block;
-
-  request[1].opcode = BLOCKIO_WRITE;
-  request[1].vmoid = vmoid.get();
-  request[1].length = disk_blocks_per_fs_block;
-  request[1].vmo_offset = 0;
-  if ((info->flags & kMinfsFlagFVM) == 0) {
-    request[1].dev_offset = kNonFvmSuperblockBackup * disk_blocks_per_fs_block;
-  } else {
-    request[1].dev_offset = kFvmSuperblockBackup * disk_blocks_per_fs_block;
-  }
-  return device->FifoTransaction(request, 2);
 #else
-  zx_status_t status = transaction_handler->Writeblk(kSuperblockStart, info);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if ((info->flags & kMinfsFlagFVM) == 0) {
-    status = transaction_handler->Writeblk(kNonFvmSuperblockBackup, info);
-  } else {
-    status = transaction_handler->Writeblk(kFvmSuperblockBackup, info);
-  }
-  return status;
+  storage::ArrayBuffer buffer(1, kMinfsBlockSize);
 #endif
+  memcpy(buffer.Data(0), info, sizeof(*info));
+  fs::BufferedOperationsBuilder builder;
+  builder
+      .Add(storage::Operation{.type = storage::OperationType::kWrite,
+                              .vmo_offset = 0,
+                              .dev_offset = kSuperblockStart,
+                              .length = 1},
+           &buffer)
+      .Add(storage::Operation{.type = storage::OperationType::kWrite,
+                              .vmo_offset = 0,
+                              .dev_offset = (info->flags & kMinfsFlagFVM ? kFvmSuperblockBackup
+                                                                         : kNonFvmSuperblockBackup),
+                              .length = 1},
+           &buffer);
+  return transaction_handler->RunRequests(builder.TakeOperations());
 }
 
 // Reads backup superblock from correct location depending on whether filesystem has FVM support.
@@ -1012,19 +992,24 @@ zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler, 
   if (status != ZX_OK) {
     return status;
   }
-  fs::ReadTxn read_transaction(transaction_handler);
+
 #ifdef __Fuchsia__
   storage::OwnedVmoid map_vmoid;
-  status = device->BlockAttachVmo(bitmap.StorageUnsafe()->GetVmo(),
-                                  &map_vmoid.GetReference(device));
+  status =
+      device->BlockAttachVmo(bitmap.StorageUnsafe()->GetVmo(), &map_vmoid.GetReference(device));
   if (status != ZX_OK) {
     return status;
   }
-  read_transaction.Enqueue(map_vmoid.get(), 0, start_block, num_blocks);
+  fs::internal::BorrowedBuffer buffer(map_vmoid.get());
 #else
-  read_transaction.Enqueue(bitmap.StorageUnsafe()->GetData(), 0, start_block, num_blocks);
+  fs::internal::BorrowedBuffer buffer(bitmap.StorageUnsafe()->GetData());
 #endif
-  status = read_transaction.Transact();
+  status =
+      transaction_handler->RunOperation(storage::Operation{.type = storage::OperationType::kRead,
+                                                           .vmo_offset = 0,
+                                                           .dev_offset = start_block,
+                                                           .length = num_blocks},
+                                        &buffer);
   if (status != ZX_OK) {
     return status;
   }

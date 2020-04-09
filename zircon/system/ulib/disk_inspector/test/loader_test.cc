@@ -22,8 +22,6 @@ class MockTransactionHandler : public fs::TransactionHandler {
   MockTransactionHandler& operator=(MockTransactionHandler&&) = default;
 
   // TransactionHandler interface:
-  uint32_t FsBlockSize() const final { return mock_device_->BlockSize(); }
-
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
   zx_status_t RunOperation(const storage::Operation& operation,
@@ -44,13 +42,7 @@ class MockTransactionHandler : public fs::TransactionHandler {
     return ZX_OK;
   }
 
-  uint32_t DeviceBlockSize() const final { return mock_device_->BlockSize(); }
-
   block_client::BlockDevice* GetDevice() final { return nullptr; }
-
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
 
   void ValidateOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) {
     ASSERT_NOT_NULL(mock_device_);

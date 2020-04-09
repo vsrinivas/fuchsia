@@ -10,7 +10,7 @@
 #include <fs/journal/format.h>
 #include <fs/journal/replay.h>
 #include <fs/journal/superblock.h>
-#include <fs/transaction/writeback.h>
+#include <fs/transaction/buffered_operations_builder.h>
 #include <storage/operation/operation.h>
 
 #include "entry_view.h"
@@ -128,7 +128,7 @@ void ParseBlocks(const storage::VmoBuffer& journal_buffer, const JournalEntryVie
 }  // namespace
 
 zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffer* journal_buffer,
-                                fbl::Vector<storage::BufferedOperation>* operations,
+                                std::vector<storage::BufferedOperation>* operations,
                                 uint64_t* out_sequence_number, uint64_t* out_start) {
   // Validate |info| before using it.
   zx_status_t status = info->Validate();
@@ -200,7 +200,8 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
 
 zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
                           storage::VmoidRegistry* registry, uint64_t journal_start,
-                          uint64_t journal_length, JournalSuperblock* out_journal_superblock) {
+                          uint64_t journal_length, uint32_t block_size,
+                          JournalSuperblock* out_journal_superblock) {
   const uint64_t journal_entry_start = journal_start + kJournalMetadataBlocks;
   const uint64_t journal_entry_blocks = journal_length - kJournalMetadataBlocks;
   FS_TRACE_DEBUG("replay: Initializing journal superblock\n");
@@ -208,7 +209,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
   // Initialize and read the journal superblock and journal buffer.
   auto journal_superblock_buffer = std::make_unique<storage::VmoBuffer>();
   zx_status_t status = journal_superblock_buffer->Initialize(
-      registry, kJournalMetadataBlocks, transaction_handler->FsBlockSize(), "journal-superblock");
+      registry, kJournalMetadataBlocks, block_size, "journal-superblock");
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot initialize journal info block: %d\n", status);
     return status;
@@ -217,17 +218,26 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
   FS_TRACE_INFO("replay: Initializing journal buffer (%zu blocks)\n", journal_entry_blocks);
   storage::VmoBuffer journal_buffer;
   status = journal_buffer.Initialize(registry, journal_entry_blocks,
-                                     transaction_handler->FsBlockSize(), "journal-buffer");
+                                     block_size, "journal-buffer");
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot initialize journal buffer: %d\n", status);
     return status;
   }
 
   FS_TRACE_DEBUG("replay: Reading from storage\n");
-  fs::ReadTxn transaction(transaction_handler);
-  transaction.Enqueue(journal_superblock_buffer->vmoid(), 0, journal_start, kJournalMetadataBlocks);
-  transaction.Enqueue(journal_buffer.vmoid(), 0, journal_entry_start, journal_entry_blocks);
-  status = transaction.Transact();
+  fs::BufferedOperationsBuilder builder;
+  builder
+      .Add(storage::Operation{
+              .type = storage::OperationType::kRead,
+              .vmo_offset = 0,
+              .dev_offset = journal_start,
+              .length = kJournalMetadataBlocks}, journal_superblock_buffer.get())
+      .Add(storage::Operation{
+              .type = storage::OperationType::kRead,
+              .vmo_offset = 0,
+              .dev_offset = journal_entry_start,
+              .length = journal_entry_blocks}, &journal_buffer);
+  status = transaction_handler->RunRequests(builder.TakeOperations());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Cannot load journal: %d\n", status);
     return status;
@@ -241,7 +251,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
   // are tightly coupled, so although we will replay a multi-entry journal, it is unlikely the
   // disk will end up in that state. However, this use case is supported by this replay code
   // regardless.
-  fbl::Vector<storage::BufferedOperation> operations;
+  std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
   FS_TRACE_DEBUG("replay: Parsing journal entries\n");
@@ -263,13 +273,13 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
                     op.op.dev_offset, op.op.vmo_offset, op.op.length);
     }
 
-    status = FlushRequests(transaction_handler, operations);
+    status = transaction_handler->RunRequests(operations);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("journal: Cannot replay entries: %d\n", status);
       return status;
     }
 
-    operations.reset();
+    operations.clear();
     FS_TRACE_INFO("replay: New start: %zu, sequence_number: %zu\n", next_entry_start,
                   sequence_number);
     storage::BufferedOperation operation;
@@ -279,7 +289,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
     operation.op.dev_offset = journal_start;
     operation.op.length = kJournalMetadataBlocks;
     operations.push_back(std::move(operation));
-    status = FlushRequests(transaction_handler, operations);
+    status = transaction_handler->RunRequests(operations);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("journal: Cannot update journal superblock: %d\n", status);
       return status;

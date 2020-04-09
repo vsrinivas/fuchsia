@@ -123,13 +123,12 @@ class PendingDeallocations : public PendingChange {
 // The Allocator class is used to abstract away the mechanism by which minfs
 // allocates objects internally.
 //
-// This class is thread-safe. However, it is worth pointing out a peculiarity
-// regarding |WriteTxn|: This class enqueues operations to a caller-supplied
-// WriteTxn as they are necessary, but the source of these enqueued buffers may
-// change immediately after |Enqueue()| completes. If a caller delays writeback,
-// it is their responsibility to ensure no concurrent mutable methods of
-// Allocator are accessed while Transacting the |WriteTxn|, as these methods
-// may put the buffer-to-be-written in an inconsistent state.
+// This class is thread-safe. However, it is worth pointing out a peculiarity regarding queued
+// operations: This class enqueues operations to a caller-supplied BufferedOperationsBuilder as they
+// are necessary, but the source of these enqueued buffers may change later. If a caller delays
+// writeback, it is their responsibility to ensure no concurrent mutable methods of Allocator are
+// accessed while issuing the requests, as these methods may put the buffer-to-be-written in an
+// inconsistent state.
 class Allocator {
  public:
   virtual ~Allocator();
@@ -198,7 +197,7 @@ class Allocator {
   zx_status_t GrowMapLocked(size_t new_size, size_t* old_size) FS_TA_REQUIRES(lock_);
 
   // Acquire direct access to the underlying map storage.
-  WriteData GetMapDataLocked() const FS_TA_REQUIRES(lock_);
+  WriteData GetMapDataLocked() FS_TA_REQUIRES(lock_);
 
   // Find and return a free element. This should only be called when reserved_ > 0, ensuring that at
   // least one free element must exist. This currently assumes that first_free_ is accurately set.

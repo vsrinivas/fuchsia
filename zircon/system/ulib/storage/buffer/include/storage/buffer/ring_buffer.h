@@ -9,6 +9,8 @@
 #error Fuchsia-only Header
 #endif
 
+#include <vector>
+
 #include <fbl/mutex.h>
 #include <storage/buffer/block_buffer_view.h>
 #include <storage/buffer/vmo_buffer.h>
@@ -134,7 +136,7 @@ class RingBufferReservation {
   //  - offset + BlockCount(in_requests) <= length()
   // - |Reserved()| must be true.
   zx_status_t CopyRequests(const fbl::Vector<storage::UnbufferedOperation>& requests, size_t offset,
-                           fbl::Vector<storage::BufferedOperation>* out);
+                           std::vector<storage::BufferedOperation>* out);
 
   BlockBufferView buffer_view() { return view_; }
 
@@ -211,7 +213,7 @@ class RingBuffer {
 class RingBufferRequests {
  public:
   RingBufferRequests() = default;
-  RingBufferRequests(fbl::Vector<storage::BufferedOperation> requests,
+  RingBufferRequests(std::vector<storage::BufferedOperation> requests,
                      RingBufferReservation reservation);
   RingBufferRequests(const RingBufferRequests&) = delete;
   RingBufferRequests& operator=(const RingBufferRequests&) = delete;
@@ -219,11 +221,11 @@ class RingBufferRequests {
   RingBufferRequests& operator=(RingBufferRequests&& other) = default;
   ~RingBufferRequests() = default;
 
-  const fbl::Vector<storage::BufferedOperation>& Operations() const { return requests_; }
+  const std::vector<storage::BufferedOperation>& Operations() const { return requests_; }
   RingBufferReservation* Reservation() { return &reservation_; }
 
  private:
-  fbl::Vector<storage::BufferedOperation> requests_;
+  std::vector<storage::BufferedOperation> requests_;
   RingBufferReservation reservation_;
 };
 

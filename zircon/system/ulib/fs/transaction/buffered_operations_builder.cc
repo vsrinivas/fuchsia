@@ -6,14 +6,17 @@
 
 namespace fs {
 
-BufferedOperationsBuilder::BufferedOperationsBuilder(TransactionHandler* device) {}
-
-void BufferedOperationsBuilder::Add(const storage::Operation& new_operation,
-                                    storage::BlockBuffer* buffer) {
+BufferedOperationsBuilder& BufferedOperationsBuilder::Add(const storage::Operation& new_operation,
+                                                          storage::BlockBuffer* buffer) {
   // TODO(rvargas): consider unifying the logic with UnbuffeerdOperationsBuilder.
   for (auto& old_operation : operations_) {
     storage::Operation& operation = old_operation.op;
-    if (old_operation.vmoid != buffer->vmoid() || operation.type != new_operation.type) {
+    if (operation.type != new_operation.type ||
+#ifdef __Fuchsia__
+        old_operation.vmoid != buffer->vmoid()) {
+#else
+        old_operation.data != buffer->Data(0)) {
+#endif
       continue;
     }
 
@@ -23,21 +26,26 @@ void BufferedOperationsBuilder::Add(const storage::Operation& new_operation,
       if (operation.length <= new_operation.length) {
         operation.length = new_operation.length;
       }
-      return;
+      return *this;
     }
     if ((operation.vmo_offset + operation.length == new_operation.vmo_offset) &&
         (operation.dev_offset + operation.length == new_operation.dev_offset)) {
       // Combine with the previous request, if immediately following.
       operation.length += new_operation.length;
-      return;
+      return *this;
     }
   }
 
   storage::BufferedOperation buffered_operation;
   buffered_operation.op = new_operation;
+#ifdef __Fuchsia__
   buffered_operation.vmoid = buffer->vmoid();
+#else
+  buffered_operation.data = buffer->Data(0);
+#endif
 
   operations_.push_back(buffered_operation);
+  return *this;
 }
 
 std::vector<storage::BufferedOperation> BufferedOperationsBuilder::TakeOperations() {

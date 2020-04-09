@@ -9,7 +9,7 @@
 
 namespace fs {
 
-zx_status_t FlushRequests(TransactionHandler* transaction_handler,
+zx_status_t FlushRequests(LegacyTransactionHandler* transaction_handler,
                           const fbl::Vector<storage::BufferedOperation>& operations) {
   if (operations.is_empty()) {
     return ZX_OK;

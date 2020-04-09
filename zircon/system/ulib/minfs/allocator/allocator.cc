@@ -65,7 +65,7 @@ size_t Allocator::GetAvailableLocked() const {
   return storage_->PoolAvailable() - total_reserved;
 }
 
-WriteData Allocator::GetMapDataLocked() const { return map_.StorageUnsafe()->GetVmo().get(); }
+WriteData Allocator::GetMapDataLocked() { return map_.StorageUnsafe()->GetVmo().get(); }
 
 fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {
   AutoLock lock(&lock_);

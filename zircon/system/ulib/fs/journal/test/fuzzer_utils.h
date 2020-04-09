@@ -75,12 +75,12 @@ class FuzzedTransactionHandler final : public fs::TransactionHandler {
   void SetJournalStart(uint64_t journal_start) { journal_start_ = journal_start; }
 
   // TransactionHandler interface
-  uint32_t FsBlockSize() const final { return block_size_; }
-  uint32_t DeviceBlockSize() const final { return block_size_; }
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
   block_client::BlockDevice* GetDevice() final { return nullptr; }
   zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final;
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& requests) final;
+
+  uint32_t block_size() const { return block_size_; }
 
  private:
   FuzzerUtils* fuzz_utils_ = nullptr;
@@ -95,7 +95,7 @@ class FuzzerUtils final {
   ~FuzzerUtils() = default;
 
   // Returns the block size. Guaranteed to be a power of 2 between 512 and 32k.
-  uint32_t block_size() const { return handler_.FsBlockSize(); }
+  uint32_t block_size() const { return handler_.block_size(); }
 
   FuzzedDataProvider* data_provider() { return &input_; }
   FuzzedVmoidRegistry* registry() { return &registry_; }

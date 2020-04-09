@@ -15,35 +15,10 @@
 
 namespace minfs {
 
-namespace {
-
-// Trivial BlockBuffer that doesn't own the underlying buffer.
-// TODO(47947): Remove this.
-class UnownedBuffer : public storage::BlockBuffer {
- public:
-  UnownedBuffer(const void* data) : data_(reinterpret_cast<const char*>(data)) {}
-  ~UnownedBuffer() {}
-
-  // BlockBuffer interface:
-  size_t capacity() const final { return 0; }
-  uint32_t BlockSize() const final { return 0; }
-  vmoid_t vmoid() const final { return 0; }
-  zx_handle_t Vmo() const final { return ZX_HANDLE_INVALID; }
-  void* Data(size_t index) final {
-    return const_cast<void*>(const_cast<const UnownedBuffer*>(this)->Data(index));
-  }
-  const void* Data(size_t index) const final { return data_ + index * kMinfsBlockSize; }
-
- private:
-  const char* data_;
-};
-
-}  // namespace
-
 Allocator::~Allocator() {}
 
 zx_status_t Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
-  UnownedBuffer buffer(GetMapDataLocked());
+  fs::internal::BorrowedBuffer buffer(GetMapDataLocked());
   storage_->Load(builder, &buffer);
   return ZX_OK;
 }
@@ -53,6 +28,6 @@ size_t Allocator::GetAvailableLocked() const {
   return storage_->PoolAvailable() - reserved_;
 }
 
-WriteData Allocator::GetMapDataLocked() const { return map_.StorageUnsafe()->GetData(); }
+WriteData Allocator::GetMapDataLocked() { return map_.StorageUnsafe()->GetData(); }
 
 }  // namespace minfs

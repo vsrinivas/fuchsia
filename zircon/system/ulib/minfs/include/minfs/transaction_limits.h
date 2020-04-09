@@ -41,7 +41,7 @@ class TransactionLimits {
   blk_t GetMaximumDataBlocks() const { return max_data_blocks_; }
 
   // Returns the maximum number of data blocks that can be included in a journal entry,
-  // i.e. the total number of blocks that can be held in a WriteTxn enqueued to the journal.
+  // i.e. the total number of blocks that can be held in a transaction enqueued to the journal.
   blk_t GetMaximumEntryDataBlocks() const { return max_entry_data_blocks_; }
 
   // Returns the total number of blocks required for the maximum size journal entry.

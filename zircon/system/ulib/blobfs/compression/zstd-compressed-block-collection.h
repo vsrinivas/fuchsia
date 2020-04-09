@@ -65,7 +65,8 @@ class ZSTDCompressedBlockCollectionImpl : public ZSTDCompressedBlockCollection {
   // above assumptions hold.
   ZSTDCompressedBlockCollectionImpl(storage::OwnedVmoid* vmoid, uint32_t num_vmo_blocks,
                                     SpaceManager* space_manager,
-                                    fs::TransactionHandler* txn_handler, NodeFinder* node_finder,
+                                    fs::LegacyTransactionHandler* txn_handler,
+                                    NodeFinder* node_finder,
                                     uint32_t node_index, uint32_t num_merkle_blocks);
 
   // ZSTDCompressedBlockCollection implementation. Reads are copied to the beginning of the VMO
@@ -76,7 +77,7 @@ class ZSTDCompressedBlockCollectionImpl : public ZSTDCompressedBlockCollection {
   storage::OwnedVmoid* vmoid_;
   uint32_t num_vmo_blocks_;
   SpaceManager* space_manager_;
-  fs::TransactionHandler* txn_handler_;
+  fs::LegacyTransactionHandler* txn_handler_;
   NodeFinder* node_finder_;
   uint32_t node_index_;
   uint32_t num_merkle_blocks_;

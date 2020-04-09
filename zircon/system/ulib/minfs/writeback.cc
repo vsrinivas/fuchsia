@@ -57,16 +57,12 @@ zx_status_t Transaction::Create(TransactionalFs* minfs, size_t reserve_inodes,
   return ZX_OK;
 }
 
-Transaction::Transaction(TransactionalFs* minfs)
-    :
+Transaction::Transaction(TransactionalFs* minfs) :
 #ifdef __Fuchsia__
-      lock_(minfs->GetLock()),
-#else
-      transaction_(minfs->GetMutableBcache()),
-      builder_(minfs->GetMutableBcache()),
+    lock_(minfs->GetLock()),
 #endif
-      inode_reservation_(&minfs->GetInodeAllocator()),
-      block_reservation_(&minfs->GetBlockAllocator())
+    inode_reservation_(&minfs->GetInodeAllocator()),
+    block_reservation_(&minfs->GetBlockAllocator())
 {
 }
 

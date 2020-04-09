@@ -30,7 +30,7 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
 class MockTransactionHandler final : public fs::TransactionHandler {
  public:
   using TransactionCallback =
-      fit::function<zx_status_t(const block_fifo_request_t* requests, size_t count)>;
+      fit::function<zx_status_t(const std::vector<storage::BufferedOperation>& requests)>;
 
   MockTransactionHandler() = default;
 
@@ -42,8 +42,6 @@ class MockTransactionHandler final : public fs::TransactionHandler {
     transactions_seen_ = 0;
   }
 
-  uint32_t FsBlockSize() const final { return kJournalBlockSize; }
-
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
   zx_status_t RunOperation(const storage::Operation& operation,
@@ -51,13 +49,11 @@ class MockTransactionHandler final : public fs::TransactionHandler {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uint32_t DeviceBlockSize() const final { return kJournalBlockSize; }
-
   block_client::BlockDevice* GetDevice() final { return nullptr; }
 
-  zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override {
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& requests) override {
     EXPECT_LT(transactions_seen_, transactions_expected_);
-    return callbacks_[transactions_seen_++](requests, count);
+    return callbacks_[transactions_seen_++](requests);
   }
 
  private:
@@ -113,11 +109,11 @@ TEST_F(DataStreamerTest, StreamSmallOperationScheduledToWriteback) {
   ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
   storage::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        EXPECT_EQ(BLOCKIO_WRITE, requests[0].opcode);
-        EXPECT_EQ(kDevOffset, requests[0].dev_offset);
-        EXPECT_EQ(kOperationLength, requests[0].length);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
+        EXPECT_EQ(kDevOffset, requests[0].op.dev_offset);
+        EXPECT_EQ(kOperationLength, requests[0].op.length);
         return ZX_OK;
       },
   };
@@ -145,18 +141,18 @@ TEST_F(DataStreamerTest, StreamOperationAsLargeAsWritebackIsChunked) {
   ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
   storage::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        EXPECT_EQ(BLOCKIO_WRITE, requests[0].opcode);
-        EXPECT_EQ(kDevOffset, requests[0].dev_offset);
-        EXPECT_EQ(kMaxChunk, requests[0].length);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
+        EXPECT_EQ(kDevOffset, requests[0].op.dev_offset);
+        EXPECT_EQ(kMaxChunk, requests[0].op.length);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        EXPECT_EQ(BLOCKIO_WRITE, requests[0].opcode);
-        EXPECT_EQ(kDevOffset + kMaxChunk, requests[0].dev_offset);
-        EXPECT_EQ(kOperationLength - kMaxChunk, requests[0].length);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
+        EXPECT_EQ(kDevOffset + kMaxChunk, requests[0].op.dev_offset);
+        EXPECT_EQ(kOperationLength - kMaxChunk, requests[0].op.length);
         return ZX_OK;
       },
 
@@ -185,21 +181,21 @@ TEST_F(DataStreamerTest, StreamOperationLargerThanWritebackIsChunkedAndNonBlocki
   ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
   storage::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        EXPECT_EQ(BLOCKIO_WRITE, requests[0].opcode);
-        EXPECT_EQ(kDevOffset, requests[0].dev_offset);
-        EXPECT_EQ(kMaxChunk, requests[0].length);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
+        EXPECT_EQ(kDevOffset, requests[0].op.dev_offset);
+        EXPECT_EQ(kMaxChunk, requests[0].op.length);
         return ZX_OK;
       },
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(2, count);
-        EXPECT_EQ(BLOCKIO_WRITE, requests[0].opcode);
-        EXPECT_EQ(kDevOffset + kMaxChunk, requests[0].dev_offset);
-        EXPECT_EQ(kWritebackLength - kMaxChunk, requests[0].length);
-        EXPECT_EQ(BLOCKIO_WRITE, requests[1].opcode);
-        EXPECT_EQ(kDevOffset + kOperationLength - 1, requests[1].dev_offset);
-        EXPECT_EQ(1, requests[1].length);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(2, requests.size());
+        EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
+        EXPECT_EQ(kDevOffset + kMaxChunk, requests[0].op.dev_offset);
+        EXPECT_EQ(kWritebackLength - kMaxChunk, requests[0].op.length);
+        EXPECT_EQ(storage::OperationType::kWrite, requests[1].op.type);
+        EXPECT_EQ(kDevOffset + kOperationLength - 1, requests[1].op.dev_offset);
+        EXPECT_EQ(1, requests[1].op.length);
         return ZX_OK;
       },
 
@@ -229,11 +225,11 @@ TEST_F(DataStreamerTest, StreamManySmallOperationsAreMerged) {
   ASSERT_OK(zx::vmo::create((kOperationLength * kOperationCount) * kBlockSize, 0, &vmo));
   storage::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) {
-        EXPECT_EQ(1, count);
-        EXPECT_EQ(BLOCKIO_WRITE, requests[0].opcode);
-        EXPECT_EQ(kDevOffset, requests[0].dev_offset);
-        EXPECT_EQ(kOperationCount * kOperationLength, requests[0].length);
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        EXPECT_EQ(1, requests.size());
+        EXPECT_EQ(storage::OperationType::kWrite, requests[0].op.type);
+        EXPECT_EQ(kDevOffset, requests[0].op.dev_offset);
+        EXPECT_EQ(kOperationCount * kOperationLength, requests[0].op.length);
         return ZX_OK;
       },
   };
@@ -264,7 +260,7 @@ TEST_F(DataStreamerTest, StreamFailedOperationFailsFlush) {
   ASSERT_OK(zx::vmo::create(kOperationLength * kBlockSize, 0, &vmo));
   storage::UnbufferedOperationsBuilder builder;
   MockTransactionHandler::TransactionCallback callbacks[] = {
-      [&](const block_fifo_request_t* requests, size_t count) { return ZX_ERR_INTERNAL; },
+      [&](const std::vector<storage::BufferedOperation>& requests) { return ZX_ERR_INTERNAL; },
   };
   handler().SetTransactionCallbacks(callbacks, std::size(callbacks));
   bool failed_promise_observed = false;

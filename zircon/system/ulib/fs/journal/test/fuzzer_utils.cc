@@ -59,21 +59,22 @@ zx_status_t FuzzedTransactionHandler::RunOperation(const Operation& operation,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t FuzzedTransactionHandler::Transaction(block_fifo_request_t* requests, size_t count) {
+zx_status_t FuzzedTransactionHandler::RunRequests(
+    const std::vector<storage::BufferedOperation>& requests) {
   if (fuzz_utils_->data_provider()->remaining_bytes() == 0) {
     return ZX_ERR_IO;
   }
-  for (size_t i = 0; i < count; ++i) {
-    const zx::vmo& vmo = fuzz_utils_->registry()->GetVmo(requests[i].vmoid);
-    if (requests[i].opcode == BLOCKIO_READ && requests[i].vmo_offset == 0 &&
-        requests[i].dev_offset == journal_start_ && requests[i].length == kJournalMetadataBlocks) {
+  for (const storage::BufferedOperation& request : requests) {
+    const zx::vmo& vmo = fuzz_utils_->registry()->GetVmo(request.vmoid);
+    if (request.op.type == storage::OperationType::kRead && request.op.vmo_offset == 0 &&
+        request.op.dev_offset == journal_start_ && request.op.length == kJournalMetadataBlocks) {
       size_t info_len = sizeof(JournalInfo) * 2;
       auto info_bytes = fuzz_utils_->data_provider()->ConsumeBytes<uint8_t>(info_len);
       vmo.write(&info_bytes[0], 0, info_bytes.size());
     } else {
-      size_t data_len = requests[i].length * block_size_;
+      size_t data_len = request.op.length * block_size_;
       auto data_bytes = fuzz_utils_->data_provider()->ConsumeBytes<uint8_t>(data_len);
-      vmo.write(&data_bytes[0], requests[i].vmo_offset, data_bytes.size());
+      vmo.write(&data_bytes[0], request.op.vmo_offset, data_bytes.size());
     }
   }
   return ZX_OK;
