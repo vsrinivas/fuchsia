@@ -911,6 +911,9 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
+  if (Thread::Current::Get() != thread_) {
+    return ZX_ERR_BAD_STATE;
+  }
   zx_status_t status;
   do {
     AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
@@ -1008,6 +1011,9 @@ static void register_copy(Out* out, const In& in) {
 }
 
 zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) const {
+  if (Thread::Current::Get() != thread_) {
+    return ZX_ERR_BAD_STATE;
+  }
   register_copy(vcpu_state, vmx_state_.guest_state);
   AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
   vcpu_state->rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
@@ -1016,6 +1022,9 @@ zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) const {
 }
 
 zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& vcpu_state) {
+  if (Thread::Current::Get() != thread_) {
+    return ZX_ERR_BAD_STATE;
+  }
   register_copy(&vmx_state_.guest_state, vcpu_state);
   AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
   vmcs.Write(VmcsFieldXX::GUEST_RSP, vcpu_state.rsp);
@@ -1028,6 +1037,9 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& vcpu_state) {
 }
 
 zx_status_t Vcpu::WriteState(const zx_vcpu_io_t& io_state) {
+  if (Thread::Current::Get() != thread_) {
+    return ZX_ERR_BAD_STATE;
+  }
   if ((io_state.access_size != 1) && (io_state.access_size != 2) && (io_state.access_size != 4)) {
     return ZX_ERR_INVALID_ARGS;
   }

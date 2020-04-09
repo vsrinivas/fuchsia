@@ -243,6 +243,9 @@ Vcpu::~Vcpu() {
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
+  if (Thread::Current::Get() != thread_) {
+    return ZX_ERR_BAD_STATE;
+  }
   const ArchVmAspace& aspace = *guest_->AddressSpace()->arch_aspace();
   zx_paddr_t vttbr = arm64_vttbr(aspace.arch_asid(), aspace.arch_table_phys());
   GuestState* guest_state = &el2_state_->guest_state;
@@ -289,6 +292,9 @@ void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
 }
 
 zx_status_t Vcpu::ReadState(zx_vcpu_state_t* state) const {
+  if (Thread::Current::Get() != thread_) {
+    return ZX_ERR_BAD_STATE;
+  }
   ASSERT(sizeof(state->x) >= sizeof(el2_state_->guest_state.x));
   memcpy(state->x, el2_state_->guest_state.x, sizeof(el2_state_->guest_state.x));
   state->sp = el2_state_->guest_state.system_state.sp_el1;
@@ -297,6 +303,9 @@ zx_status_t Vcpu::ReadState(zx_vcpu_state_t* state) const {
 }
 
 zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& state) {
+  if (Thread::Current::Get() != thread_) {
+    return ZX_ERR_BAD_STATE;
+  }
   ASSERT(sizeof(el2_state_->guest_state.x) >= sizeof(state.x));
   memcpy(el2_state_->guest_state.x, state.x, sizeof(state.x));
   el2_state_->guest_state.system_state.sp_el1 = state.sp;

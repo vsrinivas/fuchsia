@@ -27,6 +27,9 @@ paused.
 
 *kind* must be **ZX_VCPU_STATE**.
 
+`zx_vcpu_read_state()` must be called on the same thread *handle* was created
+on.
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
@@ -35,8 +38,8 @@ paused.
 
 ## RETURN VALUE
 
-`zx_vcpu_read_state()` returns **ZX_OK** on success. On failure, an error value is
-returned.
+`zx_vcpu_read_state()` returns **ZX_OK** on success. On failure, an error value
+is returned.
 
 ## ERRORS
 
