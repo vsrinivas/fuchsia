@@ -28,26 +28,35 @@ class IwlPhyDbTest : public ::zxtest::Test {
  public:
   IwlPhyDbTest() {}
   ~IwlPhyDbTest() {}
+
+  struct iwl_phy_db* phy_db() { return phy_db_; }
+
+  void SetUp() override {
+    phy_db_ = iwl_phy_db_init(nullptr);
+  }
+
+  void TearDown() override {
+    iwl_phy_db_free(phy_db_);
+  }
+
+ private:
+  struct iwl_phy_db* phy_db_;
 };
 
 // Expect the iwl_phy_db_send_all_channel_groups() returns ZX_OK right after init before there is
 // no data set yet. This is a regression test to catch a bug involving underflow on the channel
 // argument to iwl_phy_db_send_all_channel_groups().
 TEST_F(IwlPhyDbTest, TestSendAllChannelGroupsAfterInit) {
-  struct iwl_phy_db* phy_db = iwl_phy_db_init(nullptr);
-  EXPECT_NE(nullptr, phy_db);
+  EXPECT_NE(nullptr, phy_db());
 
-  EXPECT_EQ(ZX_OK, iwl_phy_db_send_all_channel_groups(phy_db, IWL_PHY_DB_CALIB_CHG_PAPD, -1));
-  EXPECT_EQ(ZX_OK, iwl_phy_db_send_all_channel_groups(phy_db, IWL_PHY_DB_CALIB_CHG_TXP, -1));
-
-  iwl_phy_db_free(phy_db);
+  EXPECT_EQ(ZX_OK, iwl_phy_db_send_all_channel_groups(phy_db(), IWL_PHY_DB_CALIB_CHG_PAPD, -1));
+  EXPECT_EQ(ZX_OK, iwl_phy_db_send_all_channel_groups(phy_db(), IWL_PHY_DB_CALIB_CHG_TXP, -1));
 }
 
 // Test setting the IWL_PHY_DB_CFG section
 TEST_F(IwlPhyDbTest, SetSectionCfg) {
-  struct iwl_phy_db* phy_db = iwl_phy_db_init(nullptr);
-  EXPECT_EQ(nullptr, phy_db->calib_ch_group_papd);
-  EXPECT_EQ(-1, phy_db->n_group_papd);
+  EXPECT_EQ(nullptr, phy_db()->calib_ch_group_papd);
+  EXPECT_EQ(-1, phy_db()->n_group_papd);
 
   // A packet to set the cfg db.
   const size_t chg_id_size = 7;  // Just an arbitrary value.
@@ -71,9 +80,9 @@ TEST_F(IwlPhyDbTest, SetSectionCfg) {
   struct iwl_rx_packet* pkt_p = reinterpret_cast<struct iwl_rx_packet*>(&pkt);
 
   // Expect success
-  EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db, pkt_p));
+  EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db(), pkt_p));
 
-  struct iwl_phy_db_entry* entry = iwl_phy_db_get_section(phy_db, IWL_PHY_DB_CFG, 0);
+  struct iwl_phy_db_entry* entry = iwl_phy_db_get_section(phy_db(), IWL_PHY_DB_CFG, 0);
   EXPECT_NE(nullptr, entry);
   EXPECT_EQ(chg_id_size, entry->size);
   EXPECT_NE(nullptr, entry->data);
@@ -81,9 +90,8 @@ TEST_F(IwlPhyDbTest, SetSectionCfg) {
 
 // Test setting the IWL_PHY_DB_CALIB_CHG_PAPD section
 TEST_F(IwlPhyDbTest, SetSectionPapd) {
-  struct iwl_phy_db* phy_db = iwl_phy_db_init(nullptr);
-  EXPECT_EQ(nullptr, phy_db->calib_ch_group_papd);
-  EXPECT_EQ(-1, phy_db->n_group_papd);
+  EXPECT_EQ(nullptr, phy_db()->calib_ch_group_papd);
+  EXPECT_EQ(-1, phy_db()->n_group_papd);
 
   // A packet to set the calib db with chg_id 0x0102.
   const size_t chg_id_size = sizeof(__le16);  // chg_id
@@ -110,11 +118,11 @@ TEST_F(IwlPhyDbTest, SetSectionPapd) {
   struct iwl_rx_packet* pkt_p = reinterpret_cast<struct iwl_rx_packet*>(&pkt);
 
   // Expect success
-  EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db, pkt_p));
-  EXPECT_NE(nullptr, phy_db->calib_ch_group_papd);
-  EXPECT_EQ(0x0103, phy_db->n_group_papd);
+  EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db(), pkt_p));
+  EXPECT_NE(nullptr, phy_db()->calib_ch_group_papd);
+  EXPECT_EQ(0x0103, phy_db()->n_group_papd);
   struct iwl_phy_db_entry* entry =
-      iwl_phy_db_get_section(phy_db, IWL_PHY_DB_CALIB_CHG_PAPD, 0x0102);
+      iwl_phy_db_get_section(phy_db(), IWL_PHY_DB_CALIB_CHG_PAPD, 0x0102);
   EXPECT_NE(nullptr, entry);
   EXPECT_EQ(chg_id_size, entry->size);
   EXPECT_EQ(0x02, entry->data[0]);
@@ -122,31 +130,28 @@ TEST_F(IwlPhyDbTest, SetSectionPapd) {
 
   // Set with a larger chg_id 0x01ff. Expect it is rejected.
   pkt.phy_db_notif.data[0] = 0xff;  // data[1] is still 0x01.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_phy_db_set_section(phy_db, pkt_p));
-  EXPECT_EQ(0x0103, phy_db->n_group_papd);  // Expect unchanged.
-  entry = iwl_phy_db_get_section(phy_db, IWL_PHY_DB_CALIB_CHG_PAPD, 0x0102);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_phy_db_set_section(phy_db(), pkt_p));
+  EXPECT_EQ(0x0103, phy_db()->n_group_papd);  // Expect unchanged.
+  entry = iwl_phy_db_get_section(phy_db(), IWL_PHY_DB_CALIB_CHG_PAPD, 0x0102);
   EXPECT_EQ(chg_id_size, entry->size);
   EXPECT_EQ(0x02, entry->data[0]);
   EXPECT_EQ(0x01, entry->data[1]);
 
   // Set with a smaller chg_id 0x0101. Expect success.
   pkt.phy_db_notif.data[0] = 0x01;
-  EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db, pkt_p));
-  EXPECT_EQ(0x0103, phy_db->n_group_papd);  // Expect unchanged.
-  entry = iwl_phy_db_get_section(phy_db, IWL_PHY_DB_CALIB_CHG_PAPD, 0x0101);
+  EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db(), pkt_p));
+  EXPECT_EQ(0x0103, phy_db()->n_group_papd);  // Expect unchanged.
+  entry = iwl_phy_db_get_section(phy_db(), IWL_PHY_DB_CALIB_CHG_PAPD, 0x0101);
   EXPECT_NE(nullptr, entry);
   EXPECT_EQ(chg_id_size, entry->size);
   EXPECT_EQ(0x01, entry->data[0]);
   EXPECT_EQ(0x01, entry->data[1]);
-
-  iwl_phy_db_free(phy_db);
 }
 
 // Similar to SetSectionCalib above, but check different fields.
 TEST_F(IwlPhyDbTest, SetSectionTxp) {
-  struct iwl_phy_db* phy_db = iwl_phy_db_init(nullptr);
-  EXPECT_EQ(nullptr, phy_db->calib_ch_group_txp);
-  EXPECT_EQ(-1, phy_db->n_group_txp);
+  EXPECT_EQ(nullptr, phy_db()->calib_ch_group_txp);
+  EXPECT_EQ(-1, phy_db()->n_group_txp);
 
   // A packet to set the calib db with chg_id 0x0102.
   const size_t chg_id_size = sizeof(__le16);  // chg_id
@@ -170,10 +175,11 @@ TEST_F(IwlPhyDbTest, SetSectionTxp) {
   struct iwl_rx_packet* pkt_p = reinterpret_cast<struct iwl_rx_packet*>(&pkt);
 
   // Expect success
-  EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db, pkt_p));
-  EXPECT_NE(nullptr, phy_db->calib_ch_group_txp);
-  EXPECT_EQ(0x0205, phy_db->n_group_txp);
-  struct iwl_phy_db_entry* entry = iwl_phy_db_get_section(phy_db, IWL_PHY_DB_CALIB_CHG_TXP, 0x0204);
+  EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db(), pkt_p));
+  EXPECT_NE(nullptr, phy_db()->calib_ch_group_txp);
+  EXPECT_EQ(0x0205, phy_db()->n_group_txp);
+  struct iwl_phy_db_entry* entry = iwl_phy_db_get_section(
+      phy_db(), IWL_PHY_DB_CALIB_CHG_TXP, 0x0204);
   EXPECT_NE(nullptr, entry);
   EXPECT_EQ(chg_id_size, entry->size);
   EXPECT_EQ(0x04, entry->data[0]);
@@ -181,24 +187,22 @@ TEST_F(IwlPhyDbTest, SetSectionTxp) {
 
   // Set with a larger chg_id 0x02ff. Expect it is rejected.
   pkt.phy_db_notif.data[0] = 0xff;  // data[1] is still 0x01.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_phy_db_set_section(phy_db, pkt_p));
-  EXPECT_EQ(0x0205, phy_db->n_group_txp);  // Expect unchanged.
-  entry = iwl_phy_db_get_section(phy_db, IWL_PHY_DB_CALIB_CHG_TXP, 0x0204);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_phy_db_set_section(phy_db(), pkt_p));
+  EXPECT_EQ(0x0205, phy_db()->n_group_txp);  // Expect unchanged.
+  entry = iwl_phy_db_get_section(phy_db(), IWL_PHY_DB_CALIB_CHG_TXP, 0x0204);
   EXPECT_EQ(chg_id_size, entry->size);
   EXPECT_EQ(0x04, entry->data[0]);
   EXPECT_EQ(0x02, entry->data[1]);
 
   // Set with a smaller chg_id 0x0201. Expect success.
   pkt.phy_db_notif.data[0] = 0x01;
-  EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db, pkt_p));
-  EXPECT_EQ(0x0205, phy_db->n_group_txp);  // Expect unchanged.
-  entry = iwl_phy_db_get_section(phy_db, IWL_PHY_DB_CALIB_CHG_TXP, 0x0201);
+  EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db(), pkt_p));
+  EXPECT_EQ(0x0205, phy_db()->n_group_txp);  // Expect unchanged.
+  entry = iwl_phy_db_get_section(phy_db(), IWL_PHY_DB_CALIB_CHG_TXP, 0x0201);
   EXPECT_NE(nullptr, entry);
   EXPECT_EQ(chg_id_size, entry->size);
   EXPECT_EQ(0x01, entry->data[0]);
   EXPECT_EQ(0x02, entry->data[1]);
-
-  iwl_phy_db_free(phy_db);
 }
 
 }  // namespace
