@@ -438,6 +438,12 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
         'Warning, dropped $droppedNestedAsyncEventCounter nested async events');
   }
 
+  if (!(rootObject.containsKey('systemTraceEvents') &&
+      rootObject['systemTraceEvents'] is Map<String, dynamic>)) {
+    throw FormatException(
+        'Expected $rootObject to have field "systemTraceEvents" of type '
+        'Map<String, dynamic>');
+  }
   final systemTraceEvents = rootObject['systemTraceEvents'];
 
   if (!(systemTraceEvents.containsKey('type') &&
@@ -450,6 +456,12 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
         'Expected $systemTraceEvents to have field "type" equal to value "fuchsia"');
   }
 
+  if (!(systemTraceEvents.containsKey('events') &&
+      systemTraceEvents['events'] is List<dynamic>)) {
+    throw FormatException(
+        'Expected $systemTraceEvents to have field "events" of type '
+        'List<dynamic>');
+  }
   final systemTraceEventsEvents = systemTraceEvents['events'];
 
   final Map<int, String> pidToName = {};
