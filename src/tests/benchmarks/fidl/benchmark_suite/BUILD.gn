@@ -3,10 +3,12 @@ import("//build/go/go_library.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 benchmark_suite_gidl_files = [
+  "//src/tests/benchmarks/fidl/benchmark_suite/byte_array.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/inline.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/result.gidl",
 ]
 benchmark_suite_fidl_files = [
+  "byte_array.test.fidl",
   "inline.test.fidl",
   "result.test.fidl",
 ]

@@ -7,6 +7,7 @@ package golang
 import (
 	"fmt"
 	"io"
+	"strings"
 	"text/template"
 
 	fidlir "fidl/compiler/backend/types"
@@ -70,13 +71,13 @@ type Benchmark struct {
 var Benchmarks = []Benchmark{
 {{ range .EncodeBenchmarks }}
 	{
-		Label: "Encode/{{ .Name }}",
+		Label: "Encode/{{ .ChromeperfPath }}",
 		BenchFunc: BenchmarkEncode{{ .Name }},
 	},
 {{ end }}
 {{ range .DecodeBenchmarks }}
 	{
-		Label: "Decode/{{ .Name }}",
+		Label: "Decode/{{ .ChromeperfPath }}",
 		BenchFunc: BenchmarkDecode{{ .Name }},
 	},
 {{ end }}
@@ -89,11 +90,11 @@ type benchmarkTmplInput struct {
 }
 
 type goEncodeBenchmark struct {
-	Name, ValueBuild, ValueVar string
+	Name, ChromeperfPath, ValueBuild, ValueVar string
 }
 
 type goDecodeBenchmark struct {
-	Name, ValueBuild, ValueVar, ValueType, Bytes string
+	Name, ChromeperfPath, ValueBuild, ValueVar, ValueType, Bytes string
 }
 
 // GenerateBenchmarks generates Go benchmarks.
@@ -126,9 +127,10 @@ func goEncodeBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gi
 		valueBuild := valueBuilder.String()
 		valueVar := valueBuilder.lastVar
 		goEncodeBenchmarks = append(goEncodeBenchmarks, goEncodeBenchmark{
-			Name:       encodeBenchmark.Name,
-			ValueBuild: valueBuild,
-			ValueVar:   valueVar,
+			Name:           goBenchmarkName(encodeBenchmark.Name),
+			ChromeperfPath: encodeBenchmark.Name,
+			ValueBuild:     valueBuild,
+			ValueVar:       valueVar,
 		})
 	}
 	return goEncodeBenchmarks, nil
@@ -146,11 +148,16 @@ func goDecodeBenchmarks(gidlDecodeBenchmarks []gidlir.DecodeBenchmark, schema gi
 		valueBuild := valueBuilder.String()
 		valueVar := valueBuilder.lastVar
 		goDecodeBenchmarks = append(goDecodeBenchmarks, goDecodeBenchmark{
-			Name:       decodeBenchmark.Name,
-			ValueBuild: valueBuild,
-			ValueVar:   valueVar,
-			ValueType:  "benchmarkfidl." + decodeBenchmark.Value.(gidlir.Record).Name,
+			Name:           goBenchmarkName(decodeBenchmark.Name),
+			ChromeperfPath: decodeBenchmark.Name,
+			ValueBuild:     valueBuild,
+			ValueVar:       valueVar,
+			ValueType:      "benchmarkfidl." + decodeBenchmark.Value.(gidlir.Record).Name,
 		})
 	}
 	return goDecodeBenchmarks, nil
+}
+
+func goBenchmarkName(gidlName string) string {
+	return strings.ReplaceAll(gidlName, "/", "_")
 }
