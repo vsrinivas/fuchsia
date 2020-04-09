@@ -207,7 +207,7 @@ static fdio_t* fdio_event_create(zx::event handle, eventfd_t initial_value, int 
 
 __EXPORT
 int eventfd(unsigned int initval, int flags) {
-  if (flags & ~(EFD_NONBLOCK | EFD_SEMAPHORE)) {
+  if (flags & ~(EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE)) {
     return ERRNO(EINVAL);
   }
 
@@ -220,6 +220,10 @@ int eventfd(unsigned int initval, int flags) {
   fdio_t* io = nullptr;
   if ((io = fdio_event_create(std::move(event), initval, flags)) == nullptr) {
     return ERROR(ZX_ERR_NO_MEMORY);
+  }
+
+  if (flags & EFD_CLOEXEC) {
+    *fdio_get_ioflag(io) |= IOFLAG_CLOEXEC;
   }
 
   if (flags & EFD_NONBLOCK) {

@@ -183,7 +183,7 @@ int timerfd_create(int clockid, int flags) {
       return ERRNO(EINVAL);
   }
 
-  if (flags & ~TFD_NONBLOCK) {
+  if (flags & ~(TFD_CLOEXEC | TFD_NONBLOCK)) {
     // TODO: Implement TFD_TIMER_ABSTIME.
     return ERRNO(EINVAL);
   }
@@ -197,6 +197,10 @@ int timerfd_create(int clockid, int flags) {
   fdio_t* io = nullptr;
   if ((io = fdio_timer_create(std::move(timer))) == nullptr) {
     return ERROR(ZX_ERR_NO_MEMORY);
+  }
+
+  if (flags & TFD_CLOEXEC) {
+    *fdio_get_ioflag(io) |= IOFLAG_CLOEXEC;
   }
 
   if (flags & TFD_NONBLOCK) {

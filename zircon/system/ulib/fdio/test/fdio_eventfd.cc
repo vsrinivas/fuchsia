@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <limits.h>
 #include <sys/eventfd.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <limits.h>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
@@ -70,6 +70,17 @@ TEST(EventFDTest, InitialValue) {
   eventfd_t value = 5464;
   EXPECT_EQ(0, eventfd_read(fd.get(), &value));
   EXPECT_EQ(343, value);
+}
+
+TEST(EventFDTest, Cloexec) {
+  fbl::unique_fd fd(eventfd(0, EFD_CLOEXEC));
+  EXPECT_TRUE(fd.is_valid());
+
+  int flags = fcntl(fd.get(), F_GETFL);
+  EXPECT_FALSE(flags & FD_CLOEXEC);
+
+  flags = fcntl(fd.get(), F_GETFD);
+  EXPECT_TRUE(flags & FD_CLOEXEC);
 }
 
 TEST(EventFDTest, NonBlock) {
