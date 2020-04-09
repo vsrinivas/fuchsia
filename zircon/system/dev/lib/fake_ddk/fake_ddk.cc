@@ -246,10 +246,7 @@ zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent, device
 
 __EXPORT
 zx_status_t device_remove(zx_device_t* device) {
-  if (!fake_ddk::Bind::Instance()) {
-    return ZX_OK;
-  }
-  return fake_ddk::Bind::Instance()->DeviceRemove(device);
+  return device_remove_deprecated(device);
 }
 
 __EXPORT

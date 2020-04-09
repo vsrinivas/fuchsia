@@ -82,53 +82,73 @@ class Bind {
 
   zx::channel& FidlClient() { return fidl_.local(); }
 
-  // Internal fake implementation of ddk functionality.
+ protected:
+  // Internal fake implementations of DDK functionality.
+  //
+  // The Fake DDK provides default implementations for all of these methods,
+  // but they are exposed here to allow tests to override particular function
+  // calls in the DDK.
+  //
+  // For example, calls to the global function "device_add_from_driver"
+  // are sent to the active Bind instance's "DeviceAdd" method. A test
+  // is able to override the DeviceAdd method call to provide
+  // additional/different behaviour for the call.
+
   virtual zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                                 zx_device_t** out);
-
-  // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceRemove(zx_device_t* device);
-
-  // Internal fake implementation of ddk functionality.
   virtual void DeviceAsyncRemove(zx_device_t* device);
-
-  // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceAddMetadata(zx_device_t* dev, uint32_t type, const void* data,
                                         size_t length);
-
-  // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
                                         size_t* actual);
-
-  // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t* out_size);
-
-  // Internal fake implementation of ddk functionality.
   virtual void DeviceMakeVisible(zx_device_t* dev);
-
-  // Internal fake implementation of ddk functionaility.
   virtual void DeviceSuspendComplete(zx_device_t* device, zx_status_t status, uint8_t out_state);
-
-  // Internal fake implementation of ddk functionaility.
   virtual void DeviceResumeComplete(zx_device_t* device, zx_status_t status,
                                     uint8_t out_power_state, uint32_t out_perf_state);
-
-  // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
                                         void* protocol);
-  // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceOpenProtocolSessionMultibindable(const zx_device_t* dev,
                                                              uint32_t proto_id, void* protocol);
-
-  // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceRebind(zx_device_t* device);
-
-  // Internal fake implementation of ddk functionality.
   virtual const char* DeviceGetName(zx_device_t* device);
-
-  // Internal fake implementation of ddk functionality.
   virtual zx_off_t DeviceGetSize(zx_device_t* device);
 
+  // Allow the DDK entry points to access the above class members.
+  //
+  // We use the syntax "zx_status_t (::foo)()" to avoid clang from
+  // misparsing as "foo" as a member function of "zx_status_t"; i.e.,
+  // "(zx_status_t::foo)()".
+  friend zx_status_t(::device_add_from_driver)(zx_driver_t* drv, zx_device_t* parent,
+                                               device_add_args_t* args, zx_device_t** out);
+
+  friend zx_status_t(::device_remove_deprecated)(zx_device_t* device);
+  friend void(::device_async_remove)(zx_device_t* device);
+  friend void(::device_unbind_reply)(zx_device_t* device);
+  friend void(::device_suspend_reply)(zx_device_t* dev, zx_status_t status, uint8_t out_state);
+
+  friend void(::device_resume_reply)(zx_device_t* dev, zx_status_t status, uint8_t out_power_state,
+                                     uint32_t out_perf_state);
+  friend zx_status_t(::device_add_metadata)(zx_device_t* device, uint32_t type, const void* data,
+                                            size_t length);
+  friend void(::device_make_visible)(zx_device_t* device, const device_make_visible_args_t* args);
+  friend zx_status_t(::device_get_protocol)(const zx_device_t* device, uint32_t proto_id,
+                                            void* protocol);
+  friend zx_status_t(::device_open_protocol_session_multibindable)(const zx_device_t* dev,
+                                                                   uint32_t proto_id,
+                                                                   void* protocol);
+  friend const char*(::device_get_name)(zx_device_t* device);
+  friend zx_off_t(::device_get_size)(zx_device_t* device);
+  friend zx_status_t(::device_get_metadata)(zx_device_t* device, uint32_t type, void* buf,
+                                            size_t buflen, size_t* actual);
+  friend zx_status_t(::device_get_metadata_size)(zx_device_t* device, uint32_t type,
+                                                 size_t* out_size);
+  friend zx_status_t(::device_rebind)(zx_device_t* device);
+
+
+  // These fields should be private, but are currently referenced extensively
+  // by tests inheriting from us.
  protected:
   static Bind* instance_;
 
