@@ -11,6 +11,7 @@ generated_source = "$target_gen_dir/conformance_suite_generated_test.cc"
 
 gidl("conformance_suite") {
   testonly = true
+  type = "conformance"
   language = "transformer"
   inputs = conformance_suite_gidl_files
   fidl = conformance_suite_fidl_target

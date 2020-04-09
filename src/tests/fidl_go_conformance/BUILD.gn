@@ -15,6 +15,7 @@ generated_source = "$generated_dir/conformance_test.go"
 
 gidl("conformance_suite") {
   testonly = true
+  type = "conformance"
   language = "go"
   inputs = conformance_suite_gidl_files
   fidl = conformance_suite_fidl_target

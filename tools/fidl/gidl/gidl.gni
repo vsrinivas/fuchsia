@@ -5,17 +5,33 @@
 import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
 
+# Declares a GIDL library.
+#
+# This target generates binding specific tests or benchmarks from GIDL inputs.
+#
+# Parameters
+#
+#    type (required)
+#      String indicating the type of generation. Currently "conformance" or "benchmark".
+#
+#    language (required)
+#      String indicating the binding name.
+#
+#    inputs (required)
+#      List of input GIDL files
+#
+#    fidl (required)
+#      Name of the FIDL GN target that defines types used in the GIDL files.
+#
+#    output (required)
+#      Path of the output file to generate
+
 template("gidl") {
   assert(defined(invoker.language))
   assert(defined(invoker.output))
+  assert(defined(invoker.type))
   assert(defined(invoker.fidl))
   assert(defined(invoker.inputs))
-
-  # TODO(fxb/49261) Remove this default generator type.
-  generator_type = "conformance"
-  if (defined(invoker.type)) {
-    generator_type = invoker.type
-  }
 
   fidl_target =
       get_label_info(invoker.fidl, "label_no_toolchain") + "($fidl_toolchain)"
@@ -26,7 +42,7 @@ template("gidl") {
     tool = "//tools/fidl/gidl:gidl"
     args = [
              "-type",
-             generator_type,
+             invoker.type,
              "-language",
              invoker.language,
              "-json",
@@ -86,7 +102,6 @@ template("gidl_source_set") {
 
 template("gidl_cpp") {
   gidl_source_set(target_name) {
-    type = "conformance"
     language = "cpp"
     forward_variables_from(invoker, "*")
   }
@@ -94,7 +109,6 @@ template("gidl_cpp") {
 
 template("gidl_llcpp") {
   gidl_source_set(target_name) {
-    type = "conformance"
     language = "llcpp"
     bindings_suffix = "_llcpp"
     forward_variables_from(invoker, "*")

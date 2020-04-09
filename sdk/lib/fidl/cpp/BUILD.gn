@@ -162,6 +162,7 @@ fidl("fidl_test") {
 
 gidl_cpp("conformance_test_sources") {
   testonly = true
+  type = "conformance"
   inputs = conformance_suite_gidl_files
   fidl = conformance_suite_fidl_target
   deps = [

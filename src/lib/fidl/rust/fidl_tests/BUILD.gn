@@ -18,6 +18,7 @@ rustc_test("fidl_external_tests") {
 conformance_test_source = "$target_gen_dir/src/lib.rs"
 
 gidl("generate_conformance_test") {
+  type = "conformance"
   language = "rust"
   inputs = conformance_suite_gidl_files
   fidl = conformance_suite_fidl_target
