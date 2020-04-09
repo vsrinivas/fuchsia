@@ -11,6 +11,7 @@ import("//build/config/fuchsia/zircon.gni")
 group("tools") {
   deps = [
     "//zircon/third_party/uapp/mkfs-msdosfs($host_toolchain)",
+    "//zircon/tools/blobfs($host_toolchain)",
     "//zircon/tools/fvm($host_toolchain)",
   ]
 }
