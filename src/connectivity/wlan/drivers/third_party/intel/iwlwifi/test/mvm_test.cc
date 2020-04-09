@@ -24,9 +24,19 @@ class MvmTest : public SingleApTest {
  public:
   MvmTest() TA_NO_THREAD_SAFETY_ANALYSIS {
     mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
+    mvm_->mvmvif[0] = mvmvif_;
+    mvmvif_->ifc.ops = reinterpret_cast<wlanmac_ifc_protocol_ops_t*>(
+        calloc(1, sizeof(wlanmac_ifc_protocol_ops_t)));
+
     mtx_lock(&mvm_->mutex);
   }
-  ~MvmTest() TA_NO_THREAD_SAFETY_ANALYSIS { mtx_unlock(&mvm_->mutex); }
+
+  ~MvmTest() TA_NO_THREAD_SAFETY_ANALYSIS {
+    free(mvmvif_->ifc.ops);
+    free(mvmvif_);
+    mtx_unlock(&mvm_->mutex);
+  }
 
  protected:
   void buildRxcb(struct iwl_rx_cmd_buffer* rxcb, void* pkt_data, size_t pkt_len) {
@@ -48,25 +58,20 @@ class MvmTest : public SingleApTest {
   }
 
   // This function is kind of dirty. It hijacks the wlanmac_ifc_protocol_t.recv() so that we can
-  // save the rx_info passed to MLME.
+  // save the rx_info passed to MLME.  See TearDown() for cleanup logic related to this function.
   void MockRecv(wlan_rx_info_t* rx_info) {
     // TODO(43218): replace rxq->napi with interface instance so that we can map to mvmvif.
-    struct iwl_mvm_vif* mvmvif =
-        reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
-    mvm_->mvmvif[0] = mvmvif;
-    wlanmac_ifc_protocol_ops_t* ops = reinterpret_cast<wlanmac_ifc_protocol_ops_t*>(
-        calloc(1, sizeof(wlanmac_ifc_protocol_ops_t)));
-    mvmvif->ifc.ops = ops;
-    mvmvif->ifc.ctx = rx_info;  // 'ctx' was used as 'wlanmac_ifc_protocol_t*', but we override it
-                                // with 'wlan_rx_info_t*'.
-    ops->recv = [](void* ctx, uint32_t flags, const void* data_buffer, size_t data_size,
-                   const wlan_rx_info_t* info) {
+    mvmvif_->ifc.ctx = rx_info;  // 'ctx' was used as 'wlanmac_ifc_protocol_t*', but we override it
+                                 // with 'wlan_rx_info_t*'.
+    mvmvif_->ifc.ops->recv = [](void* ctx, uint32_t flags, const void* data_buffer,
+                                size_t data_size, const wlan_rx_info_t* info) {
       wlan_rx_info_t* rx_info = reinterpret_cast<wlan_rx_info_t*>(ctx);
       *rx_info = *info;
     };
   }
 
   struct iwl_mvm* mvm_;
+  struct iwl_mvm_vif* mvmvif_;
 };
 
 TEST_F(MvmTest, GetMvm) { EXPECT_NE(mvm_, nullptr); }
