@@ -191,6 +191,7 @@ build_api_module("api") {
   testonly = true
   data_keys = [ "build_api_modules" ]
   deps = [
+    ":archives",
     ":binaries",
     ":build_info",
     ":checkout_artifacts",
@@ -203,6 +204,35 @@ build_api_module("api") {
     ":tool_paths",
     ":zbi_tests",
     ":zircon",
+  ]
+}
+
+# This describes all the archives the build can produce.
+#
+# TODO(fxbug.dev/43568): Delete me ASAP. Archives are targets that necessarily
+# depend on 'everything'; targets like this should be migrated away from.
+#
+# Type: list(scope)
+#
+#   name
+#     Required: The primary way that this archive is known to consumers.
+#     The tuple of ($name, $type) should be unique.
+#     Type: string
+#
+#   path
+#     Required: Path to where the archive is found, relative to $root_build_dir.
+#     Type: path relative to $root_build_dir
+#
+#   type
+#     Required: "zip" or "tgz".
+#     Type: string
+#
+build_api_module("archives") {
+  testonly = true
+  data_keys = [ "archives" ]
+  deps = [
+    "//build/gn:archives",
+    "//build/images:archives",
   ]
 }
 
@@ -319,8 +349,6 @@ group("checkout_artifacts.metadata") {
     ]
   }
 }
-
-
 
 # See //zircon:generated_sources for a description and schema definition.
 #

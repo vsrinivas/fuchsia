@@ -1389,13 +1389,13 @@ paver_targets = [
   },
 ]
 
-foreach(format,
-        [
-          "tar",
-          "tgz",
-          "zip",
-          "nil",
-        ]) {
+archive_formats = [
+  "tar",
+  "tgz",
+  "zip",
+  "nil",
+]
+foreach(format, archive_formats) {
   paver_targets += [
     {
       name = "archive-$format"
@@ -1466,9 +1466,14 @@ foreach(target, paver_targets) {
       "checkout_artifacts.json",
     ]
 
+    _metadata = target.metadata
     metadata = {
       # TODO(fxbug.dev/9708): include these in a build API module of archives instead.
-      images = [ target.metadata ]
+      images = [ _metadata ]
+      if (archive_formats + [ _metadata.type ] - [ _metadata.type ] !=
+          archive_formats) {
+        archives = images
+      }
     }
   }
   archive_deps += [ ":${target.name}" ]
