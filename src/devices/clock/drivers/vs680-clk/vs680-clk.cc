@@ -294,7 +294,7 @@ zx_status_t Vs680Clk::ClockImplQuerySupportedRate(uint32_t id, uint64_t hz, uint
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (hz > kPllConfigs[id].max_freq_hz) {
-    return kPllConfigs[id].max_freq_hz;
+    hz = kPllConfigs[id].max_freq_hz;
   }
 
   const PllParameters params = GetPllParameters(hz);

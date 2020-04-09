@@ -146,7 +146,8 @@ TEST_F(Vs680ClkTest, QuerySupportedRate) {
   EXPECT_OK(dut_.ClockImplQuerySupportedRate(vs680::kSysPll0, 1'200'000'000, &hz));
   EXPECT_EQ(hz, 1'200'000'000);
 
-  EXPECT_NOT_OK(dut_.ClockImplQuerySupportedRate(vs680::kSysPll0, 1'300'000'000, &hz));
+  EXPECT_OK(dut_.ClockImplQuerySupportedRate(vs680::kSysPll0, 1'300'000'000, &hz));
+  EXPECT_EQ(hz, 1'200'000'000);
 
   EXPECT_OK(dut_.ClockImplQuerySupportedRate(vs680::kVPll0, 196'608'000, &hz));
   EXPECT_EQ(hz, 196'607'999);
