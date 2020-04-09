@@ -4,9 +4,9 @@
 
 use {
     crate::trie::*,
-    anyhow::Error,
+    anyhow::{format_err, Error},
     core::marker::PhantomData,
-    fidl_fuchsia_diagnostics::{Selector, StringSelector},
+    fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::bounds::Bounded,
     regex::RegexSet,
@@ -471,30 +471,45 @@ impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
     type Error = anyhow::Error;
 
     fn try_from(selectors: &Vec<Arc<Selector>>) -> Result<Self, Error> {
-        let node_path_regexes = selectors
+        let (node_path_regexes, property_regexes): (Vec<_>, Vec<_>) = selectors
             .iter()
-            .map(|selector| match &selector.tree_selector.node_path {
-                Some(node_path) => selectors::convert_path_selector_to_regex(
-                    node_path,
-                    selector.tree_selector.target_properties.is_none(),
-                ),
-                None => unreachable!("Selectors are required to specify a node path."),
+            .map(|selector| {
+                selectors::validate_selector(selector)?;
+
+                // Unwrapping is safe here since we validate the selector above.
+                match selector.tree_selector.as_ref().unwrap() {
+                    TreeSelector::SubtreeSelector(subtree_selector) => {
+                        Ok((
+                            selectors::convert_path_selector_to_regex(
+                                &subtree_selector.node_path,
+                                /*is_subtree_selector=*/ true,
+                            )?,
+                            selectors::convert_property_selector_to_regex(
+                                &StringSelector::StringPattern("*".to_string()),
+                            )?,
+                        ))
+                    }
+                    TreeSelector::PropertySelector(property_selector) => {
+                        Ok((
+                            selectors::convert_path_selector_to_regex(
+                                &property_selector.node_path,
+                                /*is_subtree_selector=*/ false,
+                            )?,
+                            selectors::convert_property_selector_to_regex(
+                                &property_selector.target_properties,
+                            )?,
+                        ))
+                    }
+                    _ => Err(format_err!(
+                        "TreeSelector only supports property and subtree selection."
+                    )),
+                }
             })
-            .collect::<Result<Vec<String>, Error>>()?;
+            .collect::<Result<Vec<(String, String)>, Error>>()?
+            .into_iter()
+            .unzip();
 
         let node_path_regex_set = RegexSet::new(&node_path_regexes)?;
-
-        let property_regexes = selectors
-            .iter()
-            .map(|selector| match &selector.tree_selector.target_properties {
-                Some(target_property) => {
-                    selectors::convert_property_selector_to_regex(target_property)
-                }
-                None => selectors::convert_property_selector_to_regex(
-                    &StringSelector::StringPattern("*".to_string()),
-                ),
-            })
-            .collect::<Result<Vec<String>, Error>>()?;
 
         Ok(InspectHierarchyMatcher {
             component_node_selector: node_path_regex_set,

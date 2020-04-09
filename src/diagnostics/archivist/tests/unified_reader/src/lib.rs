@@ -5,7 +5,7 @@ use {
     anyhow::{bail, format_err, Context, Error},
     difference::assert_diff,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_diagnostics::{ArchiveMarker, SelectorArgument},
+    fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, SelectorArgument},
     fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client::{launch, launcher},
@@ -101,7 +101,7 @@ async fn retrieve_and_validate_results(
     golden_file: &PathBuf,
     expected_results_count: usize,
 ) {
-    let archive_accessor = archivist.connect_to_service::<ArchiveMarker>().unwrap();
+    let archive_accessor = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
 
     loop {
         let (batch_consumer, batch_server) = create_proxy().unwrap();
@@ -110,15 +110,19 @@ async fn retrieve_and_validate_results(
         stream_parameters.stream_mode = Some(fidl_fuchsia_diagnostics::StreamMode::Snapshot);
         stream_parameters.data_type = Some(fidl_fuchsia_diagnostics::DataType::Inspect);
         stream_parameters.format = Some(fidl_fuchsia_diagnostics::Format::Json);
-        stream_parameters.selectors = Some(
-            custom_selectors
-                .iter()
-                .map(|s| SelectorArgument::RawSelector(s.to_string()))
-                .collect::<Vec<fidl_fuchsia_diagnostics::SelectorArgument>>(),
-        );
+        stream_parameters.client_selector_configuration = if custom_selectors.is_empty() {
+            Some(fidl_fuchsia_diagnostics::ClientSelectorConfiguration::SelectAll(true))
+        } else {
+            Some(fidl_fuchsia_diagnostics::ClientSelectorConfiguration::Selectors(
+                custom_selectors
+                    .iter()
+                    .map(|s| SelectorArgument::RawSelector(s.to_string()))
+                    .collect::<Vec<fidl_fuchsia_diagnostics::SelectorArgument>>(),
+            ))
+        };
 
         archive_accessor
-            .stream_diagnostics(batch_server, stream_parameters)
+            .stream_diagnostics(stream_parameters, batch_server)
             .context("get BatchIterator")
             .unwrap();
 

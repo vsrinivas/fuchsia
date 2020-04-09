@@ -4,7 +4,10 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_diagnostics::{self, ComponentSelector, Selector, StringSelector, TreeSelector},
+    fidl_fuchsia_diagnostics::{
+        self, ComponentSelector, PropertySelector, Selector, StringSelector, SubtreeSelector,
+        TreeSelector,
+    },
     lazy_static::lazy_static,
     regex::{Regex, RegexSet},
     regex_syntax,
@@ -118,39 +121,40 @@ fn validate_path_selection_vector(
 ///    3) Require that the target_properties field, if it is present,
 ///       is valid per Selectors::validate_string_pattern specification.
 fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
-    match &tree_selector.node_path {
-        Some(node_path) => {
-            if node_path.is_empty() {
-                return Err(format_err!("Tree selectors must have non-empty node_path vector."));
+    match tree_selector {
+        TreeSelector::SubtreeSelector(subtree_selector) => {
+            if subtree_selector.node_path.is_empty() {
+                return Err(format_err!("Subtree selectors must have non-empty node_path vector."));
             }
-            validate_path_selection_vector(node_path)?;
+            validate_path_selection_vector(&subtree_selector.node_path)?;
         }
-
-        None => {
-            return Err(format_err!(
-                "Missing node_path selectors are not valid syntax. You must provide a matcher
- describing the path from a hierarchies *root* to the node(s) of interest."
-            ));
-        }
-    }
-
-    if let Some(target_properties) = &tree_selector.target_properties {
-        match target_properties {
-            StringSelector::StringPattern(pattern) => match validate_string_pattern(pattern) {
-                Ok(_) => {}
-                Err(e) => {
-                    return Err(e);
-                }
-            },
-            StringSelector::ExactMatch(_) => {
-                // TODO(4601): What do we need to validate for exact match strings?
-            }
-            _ => {
+        TreeSelector::PropertySelector(property_selector) => {
+            if property_selector.node_path.is_empty() {
                 return Err(format_err!(
-                    "target_properties must be either string patterns or exact matches."
-                ))
+                    "Property selectors must have non-empty node_path vector."
+                ));
+            }
+
+            validate_path_selection_vector(&property_selector.node_path)?;
+
+            match &property_selector.target_properties {
+                StringSelector::StringPattern(pattern) => match validate_string_pattern(pattern) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        return Err(e);
+                    }
+                },
+                StringSelector::ExactMatch(_) => {
+                    // TODO(4601): What do we need to validate for exact match strings?
+                }
+                _ => {
+                    return Err(format_err!(
+                        "target_properties must be either string patterns or exact matches."
+                    ))
+                }
             }
         }
+        _ => return Err(format_err!("TreeSelector only supports property and subtree selection.")),
     }
 
     Ok(())
@@ -177,9 +181,14 @@ fn validate_component_selector(component_selector: &ComponentSelector) -> Result
 }
 
 pub fn validate_selector(selector: &Selector) -> Result<(), Error> {
-    validate_component_selector(&selector.component_selector)?;
-    validate_tree_selector(&selector.tree_selector)?;
-    Ok(())
+    match (&selector.component_selector, &selector.tree_selector) {
+        (Some(component_selector), Some(tree_selector)) => {
+            validate_component_selector(component_selector)?;
+            validate_tree_selector(tree_selector)?;
+            Ok(())
+        }
+        _ => Err(format_err!("Selectors require a component and tree selector.")),
+    }
 }
 
 /// Parse a string into a FIDL StringSelector structure.
@@ -280,22 +289,35 @@ fn parse_tree_selector(
     unparsed_node_path: &String,
     unparsed_property_selector: Option<&String>,
 ) -> Result<TreeSelector, Error> {
-    let mut tree_selector: TreeSelector = TreeSelector::empty();
-
-    if unparsed_node_path.is_empty() {
-        tree_selector.node_path = None;
+    let node_path_option = if unparsed_node_path.is_empty() {
+        None
     } else {
-        tree_selector.node_path = Some(
+        Some(
             tokenize_string(unparsed_node_path, PATH_NODE_DELIMITER)?
                 .iter()
                 .map(|node_string| convert_string_to_string_selector(node_string))
                 .collect::<Result<Vec<StringSelector>, Error>>()?,
-        );
-    }
+        )
+    };
 
-    tree_selector.target_properties = match unparsed_property_selector {
+    let property_option = match unparsed_property_selector {
         Some(unparsed_string) => Some(convert_string_to_string_selector(unparsed_string)?),
         None => None,
+    };
+
+    let tree_selector = match (node_path_option, property_option) {
+        (Some(node_path), Some(property)) => TreeSelector::PropertySelector(PropertySelector {
+            node_path: node_path,
+            target_properties: property,
+        }),
+        (Some(node_path), None) => {
+            TreeSelector::SubtreeSelector(SubtreeSelector { node_path: node_path })
+        }
+        _ => {
+            return Err(format_err!(
+                "The provided selector is neither a subtree selector nor a property selector.",
+            ))
+        }
     };
 
     validate_tree_selector(&tree_selector)?;
@@ -309,12 +331,15 @@ pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, Error> {
 
     match selector_sections.as_slice() {
         [component_selector, inspect_node_selector, property_selector] => Ok(Selector {
-            component_selector: parse_component_selector(component_selector)?,
-            tree_selector: parse_tree_selector(inspect_node_selector, Some(property_selector))?,
+            component_selector: Some(parse_component_selector(component_selector)?),
+            tree_selector: Some(parse_tree_selector(
+                inspect_node_selector,
+                Some(property_selector),
+            )?),
         }),
         [component_selector, inspect_node_selector] => Ok(Selector {
-            component_selector: parse_component_selector(component_selector)?,
-            tree_selector: parse_tree_selector(inspect_node_selector, None)?,
+            component_selector: Some(parse_component_selector(component_selector)?),
+            tree_selector: Some(parse_tree_selector(inspect_node_selector, None)?),
         }),
         _ => Err(format_err!(
             "Selector format requires at least 2 subselectors delimited by a `:`.",
@@ -543,7 +568,8 @@ pub fn match_component_moniker_against_selector(
         ));
     }
 
-    let component_selector = &selector.component_selector;
+    // Unwrap is safe because the validator ensures there is a component selector.
+    let component_selector = selector.component_selector.as_ref().unwrap();
 
     let moniker_selector: &Vec<StringSelector> = match &component_selector.moniker_segments {
         Some(path_vec) => &path_vec,
@@ -743,11 +769,25 @@ mod tests {
         {
             let tree_selector =
                 parse_tree_selector(&test_node_path, test_target_property.as_ref()).unwrap();
-            assert_eq!(tree_selector.target_properties, parsed_property);
-            match tree_selector.node_path.as_ref().unwrap().as_slice() {
-                [first, second] => {
-                    assert_eq!(*first, first_path_node);
-                    assert_eq!(*second, second_path_node);
+            match tree_selector {
+                TreeSelector::SubtreeSelector(tree_selector) => {
+                    match tree_selector.node_path.as_slice() {
+                        [first, second] => {
+                            assert_eq!(*first, first_path_node);
+                            assert_eq!(*second, second_path_node);
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                TreeSelector::PropertySelector(tree_selector) => {
+                    assert_eq!(tree_selector.target_properties, parsed_property.unwrap());
+                    match tree_selector.node_path.as_slice() {
+                        [first, second] => {
+                            assert_eq!(*first, first_path_node);
+                            assert_eq!(*second, second_path_node);
+                        }
+                        _ => unreachable!(),
+                    }
                 }
                 _ => unreachable!(),
             }
@@ -855,14 +895,24 @@ mod tests {
             sanitized_node_path.push('/');
 
             let parsed_selector = parse_selector(selector).unwrap();
-            let tree_selector = parsed_selector.tree_selector;
-            let node_path = tree_selector.node_path.unwrap();
-            let is_subtree_selector = tree_selector.target_properties.is_none();
-            let selector_regex = Regex::new(
-                &convert_path_selector_to_regex(&node_path, is_subtree_selector).unwrap(),
-            )
-            .unwrap();
-            assert!(selector_regex.is_match(&sanitized_node_path));
+            let tree_selector = parsed_selector.tree_selector.unwrap();
+            match tree_selector {
+                TreeSelector::SubtreeSelector(tree_selector) => {
+                    let node_path = tree_selector.node_path;
+                    let selector_regex =
+                        Regex::new(&convert_path_selector_to_regex(&node_path, true).unwrap())
+                            .unwrap();
+                    assert!(selector_regex.is_match(&sanitized_node_path));
+                }
+                TreeSelector::PropertySelector(tree_selector) => {
+                    let node_path = tree_selector.node_path;
+                    let selector_regex =
+                        Regex::new(&convert_path_selector_to_regex(&node_path, false).unwrap())
+                            .unwrap();
+                    assert!(selector_regex.is_match(&sanitized_node_path));
+                }
+                _ => unreachable!(),
+            }
         }
     }
 
@@ -890,14 +940,24 @@ mod tests {
             sanitized_node_path.push('/');
 
             let parsed_selector = parse_selector(selector).unwrap();
-            let tree_selector = parsed_selector.tree_selector;
-            let node_path = tree_selector.node_path.unwrap();
-            let is_subtree_selector = tree_selector.target_properties.is_none();
-            let selector_regex = Regex::new(
-                &convert_path_selector_to_regex(&node_path, is_subtree_selector).unwrap(),
-            )
-            .unwrap();
-            assert!(!selector_regex.is_match(&sanitized_node_path));
+            let tree_selector = parsed_selector.tree_selector.unwrap();
+            match tree_selector {
+                TreeSelector::SubtreeSelector(tree_selector) => {
+                    let node_path = tree_selector.node_path;
+                    let selector_regex =
+                        Regex::new(&convert_path_selector_to_regex(&node_path, true).unwrap())
+                            .unwrap();
+                    assert!(!selector_regex.is_match(&sanitized_node_path));
+                }
+                TreeSelector::PropertySelector(tree_selector) => {
+                    let node_path = tree_selector.node_path;
+                    let selector_regex =
+                        Regex::new(&convert_path_selector_to_regex(&node_path, false).unwrap())
+                            .unwrap();
+                    assert!(!selector_regex.is_match(&sanitized_node_path));
+                }
+                _ => unreachable!(),
+            }
         }
     }
 
@@ -913,12 +973,23 @@ mod tests {
         ];
         for (selector, string_to_match) in test_cases {
             let parsed_selector = parse_selector(selector).unwrap();
-            let tree_selector = parsed_selector.tree_selector;
-            let property_selector = tree_selector.target_properties.unwrap();
-            let selector_regex =
-                Regex::new(&convert_property_selector_to_regex(&property_selector).unwrap())
+            let tree_selector = parsed_selector.tree_selector.unwrap();
+            match tree_selector {
+                TreeSelector::SubtreeSelector(_) => {
+                    unreachable!("Subtree selectors don't test property selection.")
+                }
+                TreeSelector::PropertySelector(tree_selector) => {
+                    let property_selector = tree_selector.target_properties;
+                    let selector_regex = Regex::new(
+                        &convert_property_selector_to_regex(&property_selector).unwrap(),
+                    )
                     .unwrap();
-            assert!(selector_regex.is_match(&sanitize_string_for_selectors(string_to_match)));
+                    assert!(
+                        selector_regex.is_match(&sanitize_string_for_selectors(string_to_match))
+                    );
+                }
+                _ => unreachable!(),
+            }
         }
     }
 
@@ -933,12 +1004,23 @@ mod tests {
         ];
         for (selector, string_to_match) in test_cases {
             let parsed_selector = parse_selector(selector).unwrap();
-            let tree_selector = parsed_selector.tree_selector;
-            let target_properties = tree_selector.target_properties.unwrap();
-            let selector_regex =
-                Regex::new(&convert_property_selector_to_regex(&target_properties).unwrap())
+            let tree_selector = parsed_selector.tree_selector.unwrap();
+            match tree_selector {
+                TreeSelector::SubtreeSelector(_) => {
+                    unreachable!("Subtree selectors don't test property selection.")
+                }
+                TreeSelector::PropertySelector(tree_selector) => {
+                    let target_properties = tree_selector.target_properties;
+                    let selector_regex = Regex::new(
+                        &convert_property_selector_to_regex(&target_properties).unwrap(),
+                    )
                     .unwrap();
-            assert!(!selector_regex.is_match(&sanitize_string_for_selectors(string_to_match)));
+                    assert!(
+                        !selector_regex.is_match(&sanitize_string_for_selectors(string_to_match))
+                    );
+                }
+                _ => unreachable!(),
+            }
         }
     }
 
@@ -986,16 +1068,12 @@ mod tests {
         ];
 
         fn create_tree_selector(node_path: &Vec<&str>, property: &str) -> TreeSelector {
-            let mut tree_selector = TreeSelector::empty();
-            tree_selector.node_path = Some(
-                node_path
-                    .iter()
-                    .map(|path_node_str| StringSelector::StringPattern(path_node_str.to_string()))
-                    .collect::<Vec<StringSelector>>(),
-            );
-            tree_selector.target_properties =
-                Some(StringSelector::StringPattern(property.to_string()));
-            tree_selector
+            let node_path = node_path
+                .iter()
+                .map(|path_node_str| StringSelector::StringPattern(path_node_str.to_string()))
+                .collect::<Vec<StringSelector>>();
+            let target_properties = StringSelector::StringPattern(property.to_string());
+            TreeSelector::PropertySelector(PropertySelector { node_path, target_properties })
         }
 
         for (node_path, property) in SHARED_PASSING_TEST_CASES.iter() {

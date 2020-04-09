@@ -478,15 +478,15 @@ impl InspectDataRepository {
 /// reading requests for a single client.
 ///
 /// configured_selectors: are the selectors provided by the client which define
-///                       what inspect data is returned by read requests. An empty
-///                       vector implies that all available data should be returned.
+///                       what inspect data is returned by read requests. A none type
+///                       implies that all available data should be returned.
 ///
 /// inspect_repo: the InspectDataRepository which holds the access-points for all relevant
 ///               inspect data.
 #[derive(Clone)]
 pub struct ReaderServer {
     pub inspect_repo: Arc<RwLock<InspectDataRepository>>,
-    pub configured_selectors: Vec<Arc<fidl_fuchsia_diagnostics::Selector>>,
+    pub configured_selectors: Option<Vec<Arc<fidl_fuchsia_diagnostics::Selector>>>,
 }
 
 fn convert_snapshot_to_node_hierarchy(snapshot: ReadSnapshot) -> Result<NodeHierarchy, Error> {
@@ -500,14 +500,13 @@ fn convert_snapshot_to_node_hierarchy(snapshot: ReadSnapshot) -> Result<NodeHier
 impl ReaderServer {
     pub fn new(
         inspect_repo: Arc<RwLock<InspectDataRepository>>,
-        configured_selectors: Vec<fidl_fuchsia_diagnostics::Selector>,
+        configured_selectors: Option<Vec<fidl_fuchsia_diagnostics::Selector>>,
     ) -> Self {
         ReaderServer {
             inspect_repo,
-            configured_selectors: configured_selectors
-                .into_iter()
-                .map(|selector| Arc::new(selector))
-                .collect(),
+            configured_selectors: configured_selectors.map(|selectors| {
+                selectors.into_iter().map(|selector| Arc::new(selector)).collect()
+            }),
         }
     }
 
@@ -629,7 +628,7 @@ hierarchy: {:?}",
     // TODO(4601): Error entries should still be included, but with a custom hierarchy
     //             that makes it clear to clients that snapshotting failed.
     pub fn filter_snapshots(
-        configured_selectors: &Vec<Arc<Selector>>,
+        configured_selectors: &Option<Vec<Arc<Selector>>>,
         pumped_inspect_data_results: Vec<Result<PopulatedInspectDataContainer, Error>>,
     ) -> Vec<HierarchyData> {
         // In case we encounter multiple PopulatedDataContainers with the same moniker we don't
@@ -654,14 +653,18 @@ hierarchy: {:?}",
                         .collect::<Vec<String>>()
                         .join("/");
 
-                    if !configured_selectors.is_empty() {
+                    // We know that if configured_selectors is some, there is atleast one entry
+                    // since the server validates the stream parameters and an empty
+                    // configured_selectors vector is an error.
+                    if configured_selectors.is_some() {
                         let configured_matchers = client_selector_matches
                             .entry(sanitized_moniker.clone())
                             .or_insert_with(|| {
                                 let matching_selectors =
                                     selectors::match_component_moniker_against_selectors(
                                         &relative_moniker,
-                                        configured_selectors,
+                                        // Safe unwrap since we verify it is Some above.
+                                        configured_selectors.as_ref().unwrap(),
                                     )
                                     .unwrap_or_else(|err| {
                                         eprintln!(
@@ -670,6 +673,7 @@ hierarchy: {:?}",
                                     );
                                         Vec::new()
                                     });
+
                                 match (&matching_selectors).try_into() {
                                     Ok(hierarchy_matcher) => Some(hierarchy_matcher),
                                     Err(e) => {
@@ -1206,7 +1210,7 @@ mod tests {
             .add(filename_string.clone(), component_id.clone(), absolute_moniker, out_dir_proxy)
             .unwrap();
 
-        let reader_server = ReaderServer::new(inspect_repo.clone(), Vec::new());
+        let reader_server = ReaderServer::new(inspect_repo.clone(), None);
 
         let result_string = read_snapshot(reader_server.clone()).await;
 

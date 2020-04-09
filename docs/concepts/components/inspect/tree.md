@@ -176,7 +176,7 @@ TODO(47865): Update details when done.
 #### Reading Inspect from the Archivist
 
 The Archivist (and observer) host
-[`fuchsia.diagnostics.Archive`][archive], which provides the `ReadInspect`
+[`fuchsia.diagnostics.ArchiveAccessor`][archive], which provides the `ReadInspect`
 method to obtain Inspect data from running components.
 
 [archive]: /sdk/fidl/fuchsia.diagnostics/reader.fidl

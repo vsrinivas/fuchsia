@@ -61,7 +61,7 @@ class CodelabTest : public sys::testing::TestWithEnvironment {
 
   // [START get_inspect]
   std::string GetInspectJson() {
-    fuchsia::diagnostics::ArchivePtr archive;
+    fuchsia::diagnostics::ArchiveAccessorPtr archive;
     real_services()->Connect(archive.NewRequest());
 
     while (true) {
@@ -72,13 +72,17 @@ class CodelabTest : public sys::testing::TestWithEnvironment {
       stream_parameters.set_data_type(fuchsia::diagnostics::DataType::INSPECT);
       stream_parameters.set_stream_mode(fuchsia::diagnostics::StreamMode::SNAPSHOT);
       stream_parameters.set_format(fuchsia::diagnostics::Format::JSON);
+
       {
         std::vector<fuchsia::diagnostics::SelectorArgument> args;
         args.emplace_back();
         args[0].set_raw_selector("sys/inspect_cpp_codelab_part_5.cmx:root");
-        stream_parameters.set_selectors(std::move(args));
+
+        fuchsia::diagnostics::ClientSelectorConfiguration client_selector_config;
+        client_selector_config.set_selectors(std::move(args));
+        stream_parameters.set_client_selector_configuration(std::move(client_selector_config));
       }
-      archive->StreamDiagnostics(iterator.NewRequest(), std::move(stream_parameters));
+      archive->StreamDiagnostics(std::move(stream_parameters), iterator.NewRequest());
 
       bool done = false;
       iterator->GetNext([&](auto result) {

@@ -13,7 +13,7 @@
             "fuchsia.bluetooth.le.Central",
             "fuchsia.bluetooth.le.Peripheral",
             "fuchsia.device.NameProvider",
-            "fuchsia.diagnostics.Archive",
+            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.factory.CastCredentialsFactoryStoreProvider",
             "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.factory.PlayReadyFactoryStoreProvider",

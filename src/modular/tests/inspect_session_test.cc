@@ -60,7 +60,7 @@ class InspectSessionTest : public modular_testing::TestHarnessFixture {
   }
 
   fit::result<inspect::contrib::DiagnosticsData> GetInspect() {
-    auto archive = real_services()->Connect<fuchsia::diagnostics::Archive>();
+    auto archive = real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>();
 
     inspect::contrib::ArchiveReader reader(std::move(archive), {kSessionmgrSelector});
     fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;

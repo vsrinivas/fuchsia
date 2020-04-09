@@ -84,7 +84,9 @@ void Inspect::StreamInspectSnapshot() {
   stream_parameters.set_data_type(fuchsia::diagnostics::DataType::INSPECT);
   stream_parameters.set_stream_mode(fuchsia::diagnostics::StreamMode::SNAPSHOT);
   stream_parameters.set_format(fuchsia::diagnostics::Format::JSON);
-  archive_->StreamDiagnostics(snapshot_iterator_.NewRequest(), std::move(stream_parameters));
+  stream_parameters.set_client_selector_configuration(
+      fuchsia::diagnostics::ClientSelectorConfiguration::WithSelectAll(true));
+  archive_->StreamDiagnostics(std::move(stream_parameters), snapshot_iterator_.NewRequest());
   AppendNextInspectBatch();
 }
 

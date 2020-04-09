@@ -14,7 +14,7 @@
 namespace feedback {
 namespace stubs {
 
-using InspectArchiveBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::diagnostics, Archive);
+using InspectArchiveBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::diagnostics, ArchiveAccessor);
 
 class InspectArchive : public InspectArchiveBase {
  public:
@@ -23,8 +23,9 @@ class InspectArchive : public InspectArchiveBase {
       : batch_iterator_(std::move(batch_iterator)) {}
 
   // |fuchsia::diagnostics::Archive|
-  void StreamDiagnostics(::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
-                         fuchsia::diagnostics::StreamParameters stream_parameters) override;
+  void StreamDiagnostics(
+      fuchsia::diagnostics::StreamParameters stream_parameters,
+      ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) override;
 
  private:
   std::unique_ptr<InspectBatchIteratorBase> batch_iterator_;
@@ -33,17 +34,17 @@ class InspectArchive : public InspectArchiveBase {
 
 class InspectArchiveClosesArchiveConnection : public InspectArchiveBase {
  public:
-  // |fuchsia::diagnostics::Archive|
-  STUB_METHOD_CLOSES_CONNECTION(StreamDiagnostics,
-                                ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator>,
-                                fuchsia::diagnostics::StreamParameters);
+  // |fuchsia::diagnostics::ArchiveAccessor|
+  STUB_METHOD_CLOSES_CONNECTION(StreamDiagnostics, fuchsia::diagnostics::StreamParameters,
+                                ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator>);
 };
 
 class InspectArchiveClosesIteratorConnection : public InspectArchiveBase {
  public:
   // |fuchsia::diagnostics::Archive|
-  void StreamDiagnostics(::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
-                         fuchsia::diagnostics::StreamParameters stream_parameters) override;
+  void StreamDiagnostics(
+      fuchsia::diagnostics::StreamParameters stream_parameters,
+      ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) override;
 };
 
 }  // namespace stubs

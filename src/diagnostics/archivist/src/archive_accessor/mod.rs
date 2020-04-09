@@ -4,11 +4,11 @@
 
 use {
     crate::inspect::{self, InspectDataRepository},
-    anyhow::Error,
+    anyhow::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_diagnostics::{
-        AccessorError, ArchiveRequest, ArchiveRequestStream, BatchIteratorMarker, DataType,
-        Selector, SelectorArgument,
+        ArchiveAccessorRequest, ArchiveAccessorRequestStream, BatchIteratorMarker,
+        ClientSelectorConfiguration, DataType, Selector, SelectorArgument,
     },
     fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
     futures::{TryFutureExt, TryStreamExt},
@@ -28,22 +28,21 @@ pub struct ArchiveAccessor {
 
 fn validate_and_parse_selectors(
     selector_args: Vec<SelectorArgument>,
-) -> Result<Vec<Selector>, AccessorError> {
+) -> Result<Vec<Selector>, Error> {
+    if selector_args.is_empty() {
+        return Err(format_err!("Empty selectors are a misconfiguration."));
+    }
     selector_args
         .into_iter()
         .map(|selector_arg| match selector_arg {
             SelectorArgument::StructuredSelector(x) => match selectors::validate_selector(&x) {
                 Ok(_) => Ok(x),
-                Err(e) => {
-                    eprintln!("Error validating selector for archive accessor: {}", e);
-                    Err(AccessorError::InvalidSelector)
-                }
+                Err(e) => Err(format_err!("Error validating selector for archive accessor: {}", e)),
             },
             SelectorArgument::RawSelector(x) => selectors::parse_selector(&x).map_err(|e| {
-                eprintln!("Error parsing component selector string for archive accessor: {}", e);
-                AccessorError::InvalidSelector
+                format_err!("Error parsing component selector string for archive accessor: {}", e)
             }),
-            _ => Err(AccessorError::InvalidSelector),
+            _ => Err(format_err!("Unrecognozed SelectorArgument type")),
         })
         .collect()
 }
@@ -61,8 +60,12 @@ impl ArchiveAccessor {
         result_stream: ServerEnd<BatchIteratorMarker>,
         stream_parameters: fidl_fuchsia_diagnostics::StreamParameters,
     ) -> Result<(), Error> {
-        match (stream_parameters.stream_mode, stream_parameters.format) {
-            (None, _) | (_, None) => {
+        match (
+            stream_parameters.stream_mode,
+            stream_parameters.format,
+            stream_parameters.client_selector_configuration,
+        ) {
+            (None, _, _) | (_, None, _) | (_, _, None) => {
                 eprintln!("Client was missing required stream parameters.");
 
                 result_stream.close_with_epitaph(zx_status::Status::INVALID_ARGS).unwrap_or_else(
@@ -70,52 +73,72 @@ impl ArchiveAccessor {
                 );
                 Ok(())
             }
-            (Some(stream_mode), Some(format)) => {
-                let validated_selector_result = stream_parameters
-                    .selectors
-                    .map(|selector_args: Vec<SelectorArgument>| {
-                        validate_and_parse_selectors(selector_args)
-                    })
-                    .transpose();
+            (Some(stream_mode), Some(format), Some(selector_config)) => match selector_config {
+                ClientSelectorConfiguration::Selectors(selectors) => {
+                    match validate_and_parse_selectors(selectors) {
+                        Ok(selectors) => {
+                            let inspect_reader_server = inspect::ReaderServer::new(
+                                self.inspect_repo.clone(),
+                                Some(selectors),
+                            );
 
-                match validated_selector_result {
-                    Ok(selector_opt) => {
-                        let inspect_reader_server = inspect::ReaderServer::new(
-                            self.inspect_repo.clone(),
-                            selector_opt.unwrap_or(Vec::new()),
-                        );
+                            inspect_reader_server
+                                .stream_inspect(stream_mode, format, result_stream)
+                                .unwrap_or_else(|_| {
+                                    eprintln!("Inspect Reader session crashed.");
+                                });
+                            Ok(())
+                        }
+                        Err(e) => {
+                            eprintln!(
+                                "Client provided invalid selectors to diagnostics stream: {:?}",
+                                e
+                            );
 
-                        inspect_reader_server
-                            .stream_inspect(stream_mode, format, result_stream)
-                            .unwrap_or_else(|_| {
-                                eprintln!("Inspect Reader session crashed.");
-                            });
-                        Ok(())
-                    }
-                    Err(_) => {
-                        eprintln!("Client provided invalid selectors to diagnostics stream.");
+                            result_stream
+                                .close_with_epitaph(zx_status::Status::WRONG_TYPE)
+                                .unwrap_or_else(|e| {
+                                    eprintln!("Unable to write epitaph to result stream: {:?}", e)
+                                });
 
-                        result_stream
-                            .close_with_epitaph(zx_status::Status::WRONG_TYPE)
-                            .unwrap_or_else(|e| {
-                                eprintln!("Unable to write epitaph to result stream: {:?}", e)
-                            });
-
-                        Ok(())
+                            Ok(())
+                        }
                     }
                 }
-            }
+                ClientSelectorConfiguration::SelectAll(_) => {
+                    let inspect_reader_server =
+                        inspect::ReaderServer::new(self.inspect_repo.clone(), None);
+
+                    inspect_reader_server
+                        .stream_inspect(stream_mode, format, result_stream)
+                        .unwrap_or_else(|_| {
+                            eprintln!("Inspect Reader session crashed.");
+                        });
+                    Ok(())
+                }
+                _ => {
+                    eprintln!("Unable to process requested selector configuration.");
+
+                    result_stream
+                        .close_with_epitaph(zx_status::Status::INVALID_ARGS)
+                        .unwrap_or_else(|e| {
+                            eprintln!("Unable to write epitaph to result stream: {:?}", e)
+                        });
+
+                    Ok(())
+                }
+            },
         }
     }
 
     /// Spawn an instance `fidl_fuchsia_diagnostics/Archive` that allows clients to open
     /// reader session to diagnostics data.
-    pub fn spawn_archive_accessor_server(self, mut stream: ArchiveRequestStream) {
+    pub fn spawn_archive_accessor_server(self, mut stream: ArchiveAccessorRequestStream) {
         fasync::spawn(
             async move {
                 while let Some(req) = stream.try_next().await? {
                     match req {
-                        ArchiveRequest::StreamDiagnostics {
+                        ArchiveAccessorRequest::StreamDiagnostics {
                             result_stream,
                             stream_parameters,
                             control_handle: _,

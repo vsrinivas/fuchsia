@@ -152,7 +152,7 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
     async::Executor executor(dispatcher());
 
     inspect::contrib::ArchiveReader reader(
-        environment_services_->Connect<fuchsia::diagnostics::Archive>(),
+        environment_services_->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
         {"inspect_test_app_environment/inspect_test_app.cmx:root"});
 
     bool done = false;

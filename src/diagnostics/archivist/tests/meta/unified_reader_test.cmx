@@ -10,7 +10,7 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.diagnostics.Archive",
+            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Environment",

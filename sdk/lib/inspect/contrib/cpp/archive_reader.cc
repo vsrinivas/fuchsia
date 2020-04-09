@@ -122,7 +122,7 @@ const rapidjson::Value& DiagnosticsData::GetByPath(const std::vector<std::string
   return *cur;
 }
 
-ArchiveReader::ArchiveReader(fuchsia::diagnostics::ArchivePtr archive,
+ArchiveReader::ArchiveReader(fuchsia::diagnostics::ArchiveAccessorPtr archive,
                              std::vector<std::string> selectors)
 
     : archive_(std::move(archive)),
@@ -145,12 +145,17 @@ fit::promise<std::vector<DiagnosticsData>, std::string> ArchiveReader::GetInspec
            params.set_stream_mode(fuchsia::diagnostics::StreamMode::SNAPSHOT);
            params.set_format(fuchsia::diagnostics::Format::JSON);
 
+           fuchsia::diagnostics::ClientSelectorConfiguration client_selector_config;
            if (!selector_args.empty()) {
-             params.set_selectors(std::move(selector_args));
+             client_selector_config.set_selectors(std::move(selector_args));
+           } else {
+             client_selector_config.set_select_all(true);
            }
 
+           params.set_client_selector_configuration(std::move(client_selector_config));
+
            fuchsia::diagnostics::BatchIteratorPtr iterator;
-           archive_->StreamDiagnostics(iterator.NewRequest(), std::move(params));
+           archive_->StreamDiagnostics(std::move(params), iterator.NewRequest());
            return ReadBatches(std::move(iterator));
          })
       .wrap_with(scope_);

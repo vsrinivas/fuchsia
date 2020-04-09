@@ -14,24 +14,12 @@ const uint16 MAXIMUM_RAW_SELECTOR_LENGTH = 1024;
 /// VMOs and there is a limit of 64 handles per fidl message.
 const uint16 MAXIMUM_ENTRIES_PER_BATCH = 64;
 
-/// Enum describing the potential failure states of configuring diagnostics streams.
-enum AccessorError {
-    // A provided selector argument failed to verify/parse.
-    // Existing examples:
-    //    * Use of an escape character, without a following character to escape.
-    INVALID_SELECTOR = 1;
-};
-
 /// Enum describing the potential failure states of the streaming protocol when serving results
 /// to the client over the result iterator.
 enum ReaderError {
     // An IO error suggests that parsing of data hierarchy VMOs or writing of formatted data to
     // sockets has failed.
     IO = 1;
-
-    // A client error suggesting that the client failed to keep up with the buffered stream and
-    // has lost data, causing the channel to close,
-    BACKLOG_BUFFER_EXCEEDED = 2;
 };
 
 /// Argument used for Archive selectors, can be either the pre-parsed
@@ -82,6 +70,17 @@ enum DataType : uint8 {
     INSPECT = 1;
 };
 
+flexible union ClientSelectorConfiguration {
+    /// A vector of [fuchsia.diagnostics/SelectorArgument] which
+    /// provide additional filters to scope data streams with. An empty vector is considered
+    /// a misconfiguration and will result in an epitaph signaling incorrect parameters.
+    1: vector<SelectorArgument>:MAX selectors;
+
+    /// select_all must be true if set, and specifies that the client wants to retrieve
+    /// all data that their connection is able to expose.
+    2: bool select_all;
+};
+
 /// Parameters needed to configure a stream of diagnostics information.
 table StreamParameters {
     /// A [fuchsia.diagnostics/DataType] that specifies the diagnostics data type
@@ -99,15 +98,16 @@ table StreamParameters {
     /// NOTE: REQUIRED
     3: Format format;
 
-    /// A vector of [fuchsia.diagnostics/SelectorArgument] which
-    /// provide additional filters to scope data streams with. If the argument is not provided,
-    /// or the vector is empty, all available results are returned.
-    4: vector<SelectorArgument>:MAX selectors;
+    /// Configuration specifying what results the client wants returned from their
+    /// connection. The client can request a specific subset of data using a vector
+    /// of provided selectors, or can specify that they want all available data.
+    /// NOTE: REQUIRED
+    4: ClientSelectorConfiguration client_selector_configuration;
 };
 
 /// Outer protocol for interacting with the different diagnostics data sources.
 [Discoverable]
-protocol Archive {
+protocol ArchiveAccessor {
     /// Creates an iterator over diagnostics data on the system.
     ///   * The iterator may be finite by streaming in SNAPSHOT mode, serving only the
     ///     current state of diagnostics data on the system.
@@ -125,7 +125,7 @@ protocol Archive {
     ///
     /// + request `stream_parameters` is a [fuchsia.diagnostics/StreamParameter] which
     ///   specifies how to configure the stream.
-    StreamDiagnostics(request<BatchIterator> result_stream, StreamParameters stream_parameters);
+    StreamDiagnostics(StreamParameters stream_parameters, request<BatchIterator> result_stream);
 };
 
 /// Conceptually, a directory iterator, where each element in the iterator is a single
@@ -136,7 +136,10 @@ protocol BatchIterator {
     /// which spawned this BatchIterator.
     ///
     /// An empty vector implies that the data hierarchy has been fully iterated, and subsequent
-    /// GetNext calls will return no data.
+    /// GetNext calls will always return the empty vector.
+    ///
+    /// When the BatchIterator is serving results via subscription model, calls to GetNext will
+    /// hang until there is new data available, it will not return an empty vector.
     ///
     /// - returns a vector of FormattedContent structs. Clients connected to a
     ///   Batch are expected to call GetNext() until an empty vector

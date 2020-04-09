@@ -1406,7 +1406,7 @@ Look at how the integration test is setup:
        "facets": {
            "fuchsia.test": {
                "injected-services": {
-                   "fuchsia.diagnostics.Archive":
+                   "fuchsia.diagnostics.ArchiveAccessor":
                        "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
                }
            }
@@ -1429,7 +1429,7 @@ Look at how the integration test is setup:
 
   - *Injected services*:
     The `fuchsia.test` facet includes configuration for tests.
-    In this file, the `fuchsia.diagnostics.Archive` service is injected
+    In this file, the `fuchsia.diagnostics.ArchiveAccessor` service is injected
     and points to a component called `observer.cmx`. The observer collects
     information from all components in your test environment and provides
     a reading interface. You can use this information to look at your
@@ -1483,7 +1483,7 @@ Look at how the integration test is setup:
       FizzBuzz component. This feature tests that the Inspect output is as expected in case it fails
       to connect to FizzBuzz as in Part 2.
 
-3. Add the following method to your test fixture to read from the Archive service:
+3. Add the following method to your test fixture to read from the ArchiveAccessor service:
 
    * {C++}
 

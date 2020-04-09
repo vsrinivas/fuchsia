@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_diagnostics::{
-        ArchiveMarker, BatchIteratorMarker, DataType, Format, FormattedContent, SelectorArgument,
-        StreamMode, StreamParameters,
+        ArchiveAccessorMarker, BatchIteratorMarker, ClientSelectorConfiguration, DataType, Format,
+        FormattedContent, SelectorArgument, StreamMode, StreamParameters,
     },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client,
@@ -149,7 +149,7 @@ impl InspectDataFetcher {
 
     async fn get_inspect_data(self) -> Result<Vec<serde_json::Value>, Error> {
         let archive =
-            client::connect_to_service::<ArchiveMarker>().context("connect to archive")?;
+            client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?;
 
         let mut retry = 0;
 
@@ -161,19 +161,23 @@ impl InspectDataFetcher {
             let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
                 .context("failed to create iterator proxy")?;
 
-            let selectors = self
-                .selectors
-                .iter()
-                .map(|selector| SelectorArgument::RawSelector(selector.clone()))
-                .collect();
             let mut stream_parameters = StreamParameters::empty();
             stream_parameters.stream_mode = Some(StreamMode::Snapshot);
             stream_parameters.data_type = Some(DataType::Inspect);
             stream_parameters.format = Some(Format::Json);
-            stream_parameters.selectors = Some(selectors);
+            stream_parameters.client_selector_configuration = if self.selectors.is_empty() {
+                Some(ClientSelectorConfiguration::SelectAll(true))
+            } else {
+                Some(ClientSelectorConfiguration::Selectors(
+                    self.selectors
+                        .iter()
+                        .map(|selector| SelectorArgument::RawSelector(selector.clone()))
+                        .collect(),
+                ))
+            };
 
             archive
-                .stream_diagnostics(server_end, stream_parameters)
+                .stream_diagnostics(stream_parameters, server_end)
                 .context("get BatchIterator")
                 .unwrap();
 

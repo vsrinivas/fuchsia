@@ -74,8 +74,9 @@ constexpr char cmx1_selector[] = "test/archive_reader_test_app.cmx:root";
 constexpr char cmx2_selector[] = "test/archive_reader_test_app_2.cmx:root";
 
 TEST_F(ArchiveReaderTest, ReadHierarchy) {
-  inspect::contrib::ArchiveReader reader(real_services()->Connect<fuchsia::diagnostics::Archive>(),
-                                         {cmx1_selector, cmx2_selector});
+  inspect::contrib::ArchiveReader reader(
+      real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
+      {cmx1_selector, cmx2_selector});
 
   ResultType result;
   executor_.schedule_task(reader

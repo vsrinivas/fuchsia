@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_diagnostics::ArchiveMarker,
+    fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client::{launcher, AppBuilder},
     fuchsia_zircon::DurationNum,
@@ -79,7 +79,7 @@ async fn data_stats() -> Result<(), Error> {
         .add_dir_to_namespace("/data/archive".into(), File::open(archive_path)?)?
         .add_dir_to_namespace("/test_data".into(), File::open(test_data_path)?)?
         .spawn(&launcher)?;
-    let archive_accessor = archivist.connect_to_service::<ArchiveMarker>().unwrap();
+    let archive_accessor = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
 
     let retrieve_first_real_result = || {
         async move {
@@ -91,10 +91,11 @@ async fn data_stats() -> Result<(), Error> {
                     Some(fidl_fuchsia_diagnostics::StreamMode::Snapshot);
                 stream_parameters.data_type = Some(fidl_fuchsia_diagnostics::DataType::Inspect);
                 stream_parameters.format = Some(fidl_fuchsia_diagnostics::Format::Json);
-                stream_parameters.selectors = None;
+                stream_parameters.client_selector_configuration =
+                    Some(fidl_fuchsia_diagnostics::ClientSelectorConfiguration::SelectAll(true));
 
                 archive_accessor
-                    .stream_diagnostics(batch_server, stream_parameters)
+                    .stream_diagnostics(stream_parameters, batch_server)
                     .context("get BatchIterator")
                     .unwrap();
 

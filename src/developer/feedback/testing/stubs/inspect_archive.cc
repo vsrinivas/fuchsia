@@ -8,15 +8,15 @@ namespace feedback {
 namespace stubs {
 
 void InspectArchive::StreamDiagnostics(
-    ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
-    fuchsia::diagnostics::StreamParameters stream_parameters) {
+    fuchsia::diagnostics::StreamParameters stream_parameters,
+    ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) {
   batch_iterator_binding_ = std::make_unique<::fidl::Binding<fuchsia::diagnostics::BatchIterator>>(
       batch_iterator_.get(), std::move(request));
 }
 
 void InspectArchiveClosesIteratorConnection::StreamDiagnostics(
-    ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
-    fuchsia::diagnostics::StreamParameters stream_parameters) {
+    fuchsia::diagnostics::StreamParameters stream_parameters,
+    ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) {
   request.Close(ZX_ERR_PEER_CLOSED);
 }
 

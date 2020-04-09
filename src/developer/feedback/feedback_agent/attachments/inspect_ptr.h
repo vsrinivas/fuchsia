@@ -28,7 +28,7 @@ namespace feedback {
                                                    std::shared_ptr<sys::ServiceDirectory> services,
                                                    fit::Timeout timeout);
 
-// Wraps around fuchsia::diagnostics::ArchivePtr, fuchsia::diagnostics::ReaderPtr and
+// Wraps around fuchsia::diagnostics::ArchiveAccessorPtr, fuchsia::diagnostics::ReaderPtr and
 // fuchsia::diagnostics::BatchIteratorPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
 //
@@ -44,7 +44,7 @@ class Inspect {
   void StreamInspectSnapshot();
   void AppendNextInspectBatch();
 
-  fidl::OneShotPtr<fuchsia::diagnostics::Archive> archive_;
+  fidl::OneShotPtr<fuchsia::diagnostics::ArchiveAccessor> archive_;
   fuchsia::diagnostics::BatchIteratorPtr snapshot_iterator_;
 
   // Accumulated Inspect data. Each element corresponds to one valid Inspect "block" in JSON format.

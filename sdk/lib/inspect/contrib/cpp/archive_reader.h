@@ -56,17 +56,18 @@ class ArchiveReader {
   // selectors: The selectors for data to be returned by this call. Empty means to return all data.
   //
   // Note: This constructor asserts that archive is bound.
-  ArchiveReader(fuchsia::diagnostics::ArchivePtr archive, std::vector<std::string> selectors);
+  ArchiveReader(fuchsia::diagnostics::ArchiveAccessorPtr archive,
+                std::vector<std::string> selectors);
 
   // Get a snapshot of the Inspect data at the current point in time.
   //
-  // Returns an error if the ArchivePtr is not bound.
+  // Returns an error if the ArchiveAccessorPtr is not bound.
   fit::promise<std::vector<DiagnosticsData>, std::string> GetInspectSnapshot();
 
   // Gets a snapshot of the Inspect data at the point in time in which all listed component
   // names are present.
   //
-  // Returns an error if the ArchivePtr is not bound.
+  // Returns an error if the ArchiveAccessorPtr is not bound.
   fit::promise<std::vector<DiagnosticsData>, std::string> SnapshotInspectUntilPresent(
       std::vector<std::string> component_names);
 
@@ -76,7 +77,7 @@ class ArchiveReader {
       std::vector<std::string> component_names);
 
   // The pointer to the archive this object is connected to.
-  fuchsia::diagnostics::ArchivePtr archive_;
+  fuchsia::diagnostics::ArchiveAccessorPtr archive_;
 
   // The executor on which promise continuations run.
   async::Executor executor_;

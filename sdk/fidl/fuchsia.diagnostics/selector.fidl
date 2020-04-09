@@ -5,17 +5,17 @@ library fuchsia.diagnostics;
 
 //  The size bound of 100 is a reasonably low limit chosen based on observed
 //  strings used as identifiers.
-const uint16 MAXIMUM_STRING_SELECTOR_LENGTH = 100;
+const uint16 MAX_STRING_SELECTOR_LENGTH = 100;
 
 //  The size bound of 25 is a reasonably low limit chosen based on observed
 //  component hierarchy depths, and awareness of maximum zircon message sizes.
-const uint16 MAXIMUM_MONIKER_SEGMENTS = 25;
+const uint16 MAX_MONIKER_SEGMENTS = 25;
 
 //  The size bound of 100 is a reasonably low limit chosen based on observed Inspect
 //  hierarchy use cases.
-const uint16 MAXIMUM_DATA_HIERARCHY_DEPTH = 100;
+const uint16 MAX_DATA_HIERARCHY_DEPTH = 100;
 
-/// StringSelector is an xunion defining different ways to describe a pattern to match
+/// StringSelector is an union defining different ways to describe a pattern to match
 /// strings against.
 flexible union StringSelector {
     ///   This is a provided string that defines a pattern to
@@ -33,16 +33,21 @@ flexible union StringSelector {
     ///   eg: a*b will match any string that starts with a and ends with b.
     ///   eg: a*b*c will match any string that starts with a and ends with c, with `b`
     ///       in the middle.
-    1: string:MAXIMUM_STRING_SELECTOR_LENGTH string_pattern;
+    1: string:MAX_STRING_SELECTOR_LENGTH string_pattern;
 
     ///  This is a provided string that defines an exact string to match against. No
     ///  characters are treated as special, or carry special syntax.
-    2: string:MAXIMUM_STRING_SELECTOR_LENGTH exact_match;
+    2: string:MAX_STRING_SELECTOR_LENGTH exact_match;
 };
 
-/// ComponentSelector encodes path to a component that is being selected for.
-/// The `component_moniker` specifies a pattern of component relative monikers which
+/// Specifies a pattern of component relative monikers which
 /// identify components being selected for.
+///
+/// Component selectors support wildcarding, which will glob a single "level" of a
+/// component moniker. eg:
+///    hub/*/echo.cmx
+/// will match all echo.cmx instances running only in realms directly under hub, but none
+/// nested further.
 table ComponentSelector {
     /// Vector encoding the a pattern for monikers of components being selected for.
     /// These monikers are child-monikers relative to a "root" hierarchy that the archivist
@@ -51,44 +56,84 @@ table ComponentSelector {
     /// There must be at least one StringSelector provided, which
     /// specifies the component names that are matched by
     /// the current selector.
-    /// TODO(4601): Investigate options for introduction of recursive wildcards.
-    ///
-    1: vector<StringSelector>:MAXIMUM_MONIKER_SEGMENTS moniker_segments;
+    1: vector<StringSelector>:MAX_MONIKER_SEGMENTS moniker_segments;
 };
 
-/// TreeSelector represents a selection request on a nested structure where each
-/// nested node has properties that can be retrieved. The node_path specifies which
-/// nodes we search through, and the target_properties specify which properties to
-/// look for on the matched nodes.
-///
-/// Given that a Tree Selector has two sections, <object node selector>:<property selector>,
-/// in the absence of an optional property_selector, we return the subtree of all nodes specified
-/// by the object node selector.
-table TreeSelector {
+/// A selector defining a set of nodes to match, for which the entire subtree including
+/// those nodes are selected.
+struct SubtreeSelector {
     /// A vector of StringSelectors which serve as a pattern matcher
-    ///   for paths through a hierarchy of named nodes.
+    ///   for paths through a hierarchy of named nodes. Each entry in the vector
+    ///   is a selector for a single named node in a data hierarchy. The vector
+    ///   of selectors for named nodes, then, defines a selector on paths through the
+    ///   data hierarchy.
     ///
-    /// This field is required.
+    /// Node paths support wildcarding, which will glob a single level of a
+    /// node hierarchy. eg:
+    ///    root/a/b/*/d
+    /// will match all nodes named d which are below some child of node b.
+    ///    root/a/b/c*
+    /// will match all nodes below b which start with the character "c".
+    vector<StringSelector>:MAX_DATA_HIERARCHY_DEPTH node_path;
+};
+
+/// A selector defining a set of nodes to match, and on those matched nodes a set of named
+/// propperties to match.
+struct PropertySelector {
+    /// A vector of StringSelectors which serve as a pattern matcher
+    ///   for paths through a hierarchy of named nodes. Each entry in the vector
+    ///   is a selector for a single named node in a data hierarchy. The vector
+    ///   of selectors for named nodes, then, defines a selector on paths through the
+    ///   data hierarchy.
     ///
-    1: vector<StringSelector>:MAXIMUM_DATA_HIERARCHY_DEPTH node_path;
+    /// Node paths support wildcarding, which will glob a single level of a
+    /// node hierarchy. eg:
+    ///    root/a/b/*/d
+    /// will match all nodes named d which are below some child of node b.
+    ///    root/a/b/c*
+    /// will match all nodes below b which start with the character "c".
+    vector<StringSelector>:MAX_DATA_HIERARCHY_DEPTH node_path;
 
     /// A StringSelector which serves as a pattern matcher for
     ///   string-named properties on a node in a data hierarchy.
     ///
-    /// This field is optional. Without a property selector, the TreeSelector
-    /// will select the entire subtree of all nodes selected by the node_path.
-    2: StringSelector target_properties;
+    /// target_properties supports wildcarding, which will match against all properties
+    /// on any node matched by node_path.
+    StringSelector target_properties;
+};
+
+/// TreeSelector represents a selection request on a hierarchy of named nodes, with
+/// named properties on those nodes.
+flexible union TreeSelector {
+    /// A selector defining a set of nodes to match, for which the entire subtree including
+    /// those nodes are selected.
+    1: SubtreeSelector subtree_selector;
+
+    /// A selector defining a set of nodes to match, and on those matched nodes a set of named
+    /// propperties to match.
+    2: PropertySelector property_selector;
 };
 
 /// Structured selector containing all required information for pattern-matching onto
 /// string-named properties owned by nodes in a data hierarchy, where data hierarchies belong
 /// to specific components.
-struct Selector {
+///
+/// These selectors are represented in text form as three segments, colon delimited,
+/// specifying:
+///         <component_moniker>:<node_selector>:<property_selector>
+/// Examples:
+///    Property selection:
+///         realm1/realm2/echo.cmx:root/active_users:user_count
+///
+///    Subtree selection:
+///         realm1/realm2/echo.cmx:root/active_users
+table Selector {
     /// The selector defining a pattern of component monikers to match
     /// against.
-    ComponentSelector component_selector;
+    1: ComponentSelector component_selector;
+
     /// The selector defining data hierarchy properties to match against
     /// within the data hierarchies owned by components matched by
     /// `component_selector`.
-    TreeSelector tree_selector;
+    2: TreeSelector tree_selector;
 };
