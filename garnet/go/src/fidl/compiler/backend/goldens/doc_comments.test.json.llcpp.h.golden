@@ -3,7 +3,6 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,10 +12,11 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -36,9 +36,8 @@ enum class MyEnum : uint32_t {
   BAR = 2u,
 };
 
-
 class MyBits final {
-public:
+ public:
   constexpr MyBits() : value_(0u) {}
   explicit constexpr MyBits(uint32_t value) : value_(value) {}
   const static MyBits MY_FIRST_BIT;
@@ -46,9 +45,15 @@ public:
   const static MyBits mask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
-  constexpr inline bool operator==(const MyBits& other) const { return value_ == other.value_; }
-  constexpr inline bool operator!=(const MyBits& other) const { return value_ != other.value_; }
+  explicit constexpr inline operator bool() const {
+    return static_cast<bool>(value_);
+  }
+  constexpr inline bool operator==(const MyBits& other) const {
+    return value_ == other.value_;
+  }
+  constexpr inline bool operator!=(const MyBits& other) const {
+    return value_ != other.value_;
+  }
   constexpr inline MyBits operator~() const;
   constexpr inline MyBits operator|(const MyBits& other) const;
   constexpr inline MyBits operator&(const MyBits& other) const;
@@ -57,30 +62,37 @@ public:
   constexpr inline void operator&=(const MyBits& other);
   constexpr inline void operator^=(const MyBits& other);
 
-private:
+ private:
   uint32_t value_;
 };
-constexpr const ::llcpp::test::name::MyBits MyBits::MY_FIRST_BIT = ::llcpp::test::name::MyBits(1u);
-constexpr const ::llcpp::test::name::MyBits MyBits::MY_OTHER_BIT = ::llcpp::test::name::MyBits(2u);
-constexpr const ::llcpp::test::name::MyBits MyBits::mask = ::llcpp::test::name::MyBits(3u);
+constexpr const ::llcpp::test::name::MyBits MyBits::MY_FIRST_BIT =
+    ::llcpp::test::name::MyBits(1u);
+constexpr const ::llcpp::test::name::MyBits MyBits::MY_OTHER_BIT =
+    ::llcpp::test::name::MyBits(2u);
+constexpr const ::llcpp::test::name::MyBits MyBits::mask =
+    ::llcpp::test::name::MyBits(3u);
 
 constexpr inline ::llcpp::test::name::MyBits MyBits::operator~() const {
-  return ::llcpp::test::name::MyBits(static_cast<uint32_t>(~this->value_ & mask.value_));
+  return ::llcpp::test::name::MyBits(
+      static_cast<uint32_t>(~this->value_ & mask.value_));
 }
 
 constexpr inline ::llcpp::test::name::MyBits MyBits::operator|(
     const ::llcpp::test::name::MyBits& other) const {
-  return ::llcpp::test::name::MyBits(static_cast<uint32_t>(this->value_ | other.value_));
+  return ::llcpp::test::name::MyBits(
+      static_cast<uint32_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::llcpp::test::name::MyBits MyBits::operator&(
     const ::llcpp::test::name::MyBits& other) const {
-  return ::llcpp::test::name::MyBits(static_cast<uint32_t>(this->value_ & other.value_));
+  return ::llcpp::test::name::MyBits(
+      static_cast<uint32_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::llcpp::test::name::MyBits MyBits::operator^(
     const ::llcpp::test::name::MyBits& other) const {
-  return ::llcpp::test::name::MyBits(static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::llcpp::test::name::MyBits(
+      static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyBits::operator|=(
@@ -98,22 +110,19 @@ constexpr inline void MyBits::operator^=(
   this->value_ ^= other.value_;
 }
 
-
 extern "C" const fidl_type_t v1_test_name_UnionTable;
 
 // union comment #1
 //
 // union comment #3
 class Union {
-  public:
+ public:
   Union() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   Union(Union&&) = default;
   Union& operator=(Union&&) = default;
 
-  ~Union() {
-    reset_ptr(nullptr);
-  }
+  ~Union() { reset_ptr(nullptr); }
 
   enum class Tag : fidl_xunion_tag_t {
     kField = 1,  // 0x1
@@ -156,8 +165,7 @@ class Union {
   static constexpr const fidl_type_t* Type = &v1_test_name_UnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 8;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
  private:
@@ -169,11 +177,12 @@ class Union {
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 1: {
-      ::fidl::tracking_ptr<int32_t> to_destroy =
-        static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
-      break;
-    }
+      case 1: {
+        ::fidl::tracking_ptr<int32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<int32_t>>(
+                std::move(envelope_.data));
+        break;
+      }
     }
 
     envelope_.data = std::move(new_ptr);
@@ -191,7 +200,7 @@ extern "C" const fidl_type_t v1_test_name_TableTable;
 //
 // table comment #3
 class Table final {
-public:
+ public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
@@ -218,24 +227,23 @@ public:
   static constexpr const fidl_type_t* Type = &v1_test_name_TableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
 
   class Builder;
   class UnownedBuilder;
 
   class Frame final {
-  public:
+   public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the tracking_ptr is
-    // assigned before a move or copy, then it will reference the old invalid object. Because this
-    // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
-    // safely.
+    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
+    // tracking_ptr is assigned before a move or copy, then it will reference
+    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
 
-  private:
+   private:
     Frame(Frame&&) noexcept = default;
     Frame& operator=(Frame&&) noexcept = default;
     ::fidl::Envelope<int32_t> Field_;
@@ -246,7 +254,8 @@ public:
   };
 
  private:
-  Table(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
+  Table(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
 };
@@ -260,7 +269,8 @@ class Table::Builder final {
  public:
   ~Builder() = default;
   Builder() = delete;
-  Builder(::fidl::tracking_ptr<Table::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
+  Builder(::fidl::tracking_ptr<Table::Frame>&& frame_ptr)
+      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
 
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -281,19 +291,17 @@ class Table::Builder final {
     return std::move(*this);
   }
 
-  Table build() {
-    return Table(max_ordinal_, std::move(frame_ptr_));
-  }
+  Table build() { return Table(max_ordinal_, std::move(frame_ptr_)); }
 
-  private:
+ private:
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Table::Frame> frame_ptr_;
 };
 
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
-// data.
+// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
+// working with unowned data.
 class Table::UnownedBuilder final {
-public:
+ public:
   ~UnownedBuilder() = default;
   UnownedBuilder() noexcept = default;
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
@@ -311,11 +319,9 @@ public:
     return std::move(*this);
   }
 
-  Table build() {
-    return Table(max_ordinal_, ::fidl::unowned_ptr(&frame_));
-  }
+  Table build() { return Table(max_ordinal_, ::fidl::unowned_ptr(&frame_)); }
 
-private:
+ private:
   uint64_t max_ordinal_ = 0;
   Table::Frame frame_;
 };
@@ -329,8 +335,7 @@ struct Struct {
   static constexpr const fidl_type_t* Type = &v1_test_name_StructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
   // struct member comment #1
@@ -348,8 +353,8 @@ extern "C" const fidl_type_t v1_test_name_InterfaceOnEventEventTable;
 // interface comment #3
 class Interface final {
   Interface() = delete;
- public:
 
+ public:
   using MethodRequest = ::fidl::AnyZeroArgMessage;
 
   using OnEventResponse = ::fidl::AnyZeroArgMessage;
@@ -368,17 +373,19 @@ class Interface final {
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
+
    private:
     class Method_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
       Method_Impl(::zx::unowned_channel _client_end);
       ~Method_Impl() = default;
       Method_Impl(Method_Impl&& other) = default;
       Method_Impl& operator=(Method_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
 
    public:
@@ -389,17 +396,19 @@ class Interface final {
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
+
    private:
     class Method_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
       Method_Impl(::zx::unowned_channel _client_end);
       ~Method_Impl() = default;
       Method_Impl(Method_Impl&& other) = default;
       Method_Impl& operator=(Method_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
 
    public:
@@ -421,49 +430,55 @@ class Interface final {
     // method comment #1
     //
     // method comment #3
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::Method Method();
 
-
     // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
+    // Blocks to consume exactly one message from the channel, then call the
+    // corresponding handler defined in |EventHandlers|. The return status of
+    // the handler function is folded with any transport-level errors and
+    // returned.
     zx_status_t HandleEvents(EventHandlers handlers);
+
    private:
     ::zx::channel channel_;
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
   class Call final {
     Call() = delete;
-   public:
 
+   public:
     // method comment #1
     //
     // method comment #3
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     static ResultOf::Method Method(::zx::unowned_channel _client_end);
 
-
     // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
-    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
+    // Blocks to consume exactly one message from the channel, then call the
+    // corresponding handler defined in |EventHandlers|. The return status of
+    // the handler function is folded with any transport-level errors and
+    // returned.
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end,
+                                    EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  // Additionally, requests must be already laid-out according to the FIDL
+  // wire-format.
   class InPlace final {
     InPlace() = delete;
-   public:
 
+   public:
     // method comment #1
     //
     // method comment #3
-    static ::fidl::internal::StatusAndError Method(::zx::unowned_channel _client_end);
-
+    static ::fidl::internal::StatusAndError Method(
+        ::zx::unowned_channel _client_end);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -477,24 +492,28 @@ class Interface final {
     using MethodCompleter = ::fidl::Completer<>;
 
     virtual void Method(MethodCompleter::Sync _completer) = 0;
-
   };
 
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg,
+                          ::fidl::Transaction* txn);
 
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Dispatches the incoming message to one of the handlers functions in the
+  // interface. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg,
+                       ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
+  // with |fidl::Bind| to reduce template expansion. Do not call this method
+  // manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
+                                 ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
@@ -503,13 +522,16 @@ class Interface final {
   // event comment #3
   static zx_status_t SendOnEventEvent(::zx::unowned_channel _chan);
 
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  // Helper functions to fill in the transaction header in a
+  // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
+
    public:
-    static void MethodRequest(const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg);
-    static void OnEventResponse(const ::fidl::DecodedMessage<Interface::OnEventResponse>& _msg);
+    static void MethodRequest(
+        const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg);
+    static void OnEventResponse(
+        const ::fidl::DecodedMessage<Interface::OnEventResponse>& _msg);
   };
 };
 
@@ -518,29 +540,32 @@ class Interface final {
 // service comment #3
 class Service final {
   Service() = default;
+
  public:
   static constexpr char Name[] = "test.name.Service";
 
   // Client interface for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;
+
    public:
-    ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
-    : dir_(std::move(dir)), connect_func_(connect_func) {}
-  
-    // Connects to the member protocol "interface". Returns a |fidl::ClientChannel| on
-    // success, which can be used with |fidl::BindSyncClient| to create a synchronous
-    // client.
+    ServiceClient(::zx::channel dir,
+                  ::fidl::internal::ConnectMemberFunc connect_func)
+        : dir_(std::move(dir)), connect_func_(connect_func) {}
+
+    // Connects to the member protocol "interface". Returns a
+    // |fidl::ClientChannel| on success, which can be used with
+    // |fidl::BindSyncClient| to create a synchronous client.
     //
     // # Errors
     //
     // On failure, returns a fit::error with zx_status_t != ZX_OK.
-    // Failures can occur if channel creation failed, or if there was an issue making
-    // a |fuchsia.io.Directory::Open| call.
+    // Failures can occur if channel creation failed, or if there was an issue
+    // making a |fuchsia.io.Directory::Open| call.
     //
-    // Since the call to |Open| is asynchronous, an error sent by the remote end will not
-    // result in a failure of this method. Any errors sent by the remote will appear on
-    // the |ClientChannel| returned from this method.
+    // Since the call to |Open| is asynchronous, an error sent by the remote end
+    // will not result in a failure of this method. Any errors sent by the
+    // remote will appear on the |ClientChannel| returned from this method.
     ::fidl::result<::fidl::ClientChannel<Interface>> connect_interface() {
       ::zx::channel local, remote;
       zx_status_t result = ::zx::channel::create(0, &local, &remote);
@@ -548,7 +573,8 @@ class Service final {
         return ::fit::error(result);
       }
       result =
-          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("interface"), std::move(remote));
+          connect_func_(::zx::unowned_channel(dir_),
+                        ::fidl::StringView("interface"), std::move(remote));
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
@@ -563,17 +589,19 @@ class Service final {
   // Facilitates member protocol registration for servers.
   class Handler final {
    public:
-    // Constructs a FIDL Service-typed handler. Does not take ownership of |service_handler|.
+    // Constructs a FIDL Service-typed handler. Does not take ownership of
+    // |service_handler|.
     explicit Handler(::llcpp::fidl::ServiceHandlerInterface* service_handler)
         : service_handler_(service_handler) {}
-    
-    // Adds member "interface" to the service instance. |handler| will be invoked on connection
-    // attempts.
+
+    // Adds member "interface" to the service instance. |handler| will be
+    // invoked on connection attempts.
     //
     // # Errors
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-    zx_status_t add_interface(::llcpp::fidl::ServiceHandlerInterface::MemberHandler handler) {
+    zx_status_t add_interface(
+        ::llcpp::fidl::ServiceHandlerInterface::MemberHandler handler) {
       return service_handler_->AddMember("interface", std::move(handler));
     }
 
@@ -605,7 +633,8 @@ template <>
 struct IsFidlType<::llcpp::test::name::Struct> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::Struct>);
 static_assert(offsetof(::llcpp::test::name::Struct, Field) == 0);
-static_assert(sizeof(::llcpp::test::name::Struct) == ::llcpp::test::name::Struct::PrimarySize);
+static_assert(sizeof(::llcpp::test::name::Struct) ==
+              ::llcpp::test::name::Struct::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::test::name::MyBits> : public std::true_type {};

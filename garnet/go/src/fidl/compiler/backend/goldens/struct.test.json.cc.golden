@@ -22,11 +22,9 @@ void Simple::Decode(::fidl::Decoder* _decoder, Simple* value, size_t _offset) {
 
 zx_status_t Simple::Clone(Simple* _result) const {
   zx_status_t _status = ::fidl::Clone(f1, &_result->f1);
-  if (_status != ZX_OK)
-    return _status;
+  if (_status != ZX_OK) return _status;
   _status = ::fidl::Clone(f2, &_result->f2);
-  if (_status != ZX_OK)
-    return _status;
+  if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
 extern "C" const fidl_type_t v1_fidl_test_json_BasicStructTable;
@@ -37,21 +35,19 @@ void BasicStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &y, _offset + 8);
 }
 
-void BasicStruct::Decode(::fidl::Decoder* _decoder, BasicStruct* value, size_t _offset) {
+void BasicStruct::Decode(::fidl::Decoder* _decoder, BasicStruct* value,
+                         size_t _offset) {
   ::fidl::Decode(_decoder, &value->x, _offset + 0);
   ::fidl::Decode(_decoder, &value->y, _offset + 8);
 }
 
 zx_status_t BasicStruct::Clone(BasicStruct* _result) const {
   zx_status_t _status = ::fidl::Clone(x, &_result->x);
-  if (_status != ZX_OK)
-    return _status;
+  if (_status != ZX_OK) return _status;
   _status = ::fidl::Clone(y, &_result->y);
-  if (_status != ZX_OK)
-    return _status;
+  if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
 }  // namespace json
 }  // namespace test
 }  // namespace fidl
-

@@ -3,7 +3,6 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,10 +12,11 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 
@@ -35,7 +35,7 @@ class EmptyTable;
 extern "C" const fidl_type_t v1_fidl_test_json_SimpleTableTable;
 
 class SimpleTable final {
-public:
+ public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
@@ -68,27 +68,27 @@ public:
   SimpleTable(SimpleTable&& other) noexcept = default;
   SimpleTable& operator=(SimpleTable&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_SimpleTableTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_fidl_test_json_SimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 48;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 48;
   static constexpr bool HasPointer = true;
 
   class Builder;
   class UnownedBuilder;
 
   class Frame final {
-  public:
+   public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the tracking_ptr is
-    // assigned before a move or copy, then it will reference the old invalid object. Because this
-    // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
-    // safely.
+    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
+    // tracking_ptr is assigned before a move or copy, then it will reference
+    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
 
-  private:
+   private:
     Frame(Frame&&) noexcept = default;
     Frame& operator=(Frame&&) noexcept = default;
     ::fidl::Envelope<int64_t> x_;
@@ -103,21 +103,23 @@ public:
   };
 
  private:
-  SimpleTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
+  SimpleTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
 };
 
 // SimpleTable::Builder builds SimpleTable.
 // Usage:
-// SimpleTable val = SimpleTable::Builder(std::make_unique<SimpleTable::Frame>())
-// .set_x(ptr)
+// SimpleTable val =
+// SimpleTable::Builder(std::make_unique<SimpleTable::Frame>()) .set_x(ptr)
 // .build();
 class SimpleTable::Builder final {
  public:
   ~Builder() = default;
   Builder() = delete;
-  Builder(::fidl::tracking_ptr<SimpleTable::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
+  Builder(::fidl::tracking_ptr<SimpleTable::Frame>&& frame_ptr)
+      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
 
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -149,15 +151,15 @@ class SimpleTable::Builder final {
     return SimpleTable(max_ordinal_, std::move(frame_ptr_));
   }
 
-  private:
+ private:
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<SimpleTable::Frame> frame_ptr_;
 };
 
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
-// data.
+// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
+// working with unowned data.
 class SimpleTable::UnownedBuilder final {
-public:
+ public:
   ~UnownedBuilder() = default;
   UnownedBuilder() noexcept = default;
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
@@ -185,7 +187,7 @@ public:
     return SimpleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
-private:
+ private:
   uint64_t max_ordinal_ = 0;
   SimpleTable::Frame frame_;
 };
@@ -193,7 +195,7 @@ private:
 extern "C" const fidl_type_t v1_fidl_test_json_ReverseOrdinalTableTable;
 
 class ReverseOrdinalTable final {
-public:
+ public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
@@ -236,29 +238,30 @@ public:
   ReverseOrdinalTable() = default;
   ~ReverseOrdinalTable() = default;
   ReverseOrdinalTable(ReverseOrdinalTable&& other) noexcept = default;
-  ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other) noexcept = default;
+  ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other) noexcept =
+      default;
 
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ReverseOrdinalTableTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_fidl_test_json_ReverseOrdinalTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 72;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 72;
   static constexpr bool HasPointer = true;
 
   class Builder;
   class UnownedBuilder;
 
   class Frame final {
-  public:
+   public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the tracking_ptr is
-    // assigned before a move or copy, then it will reference the old invalid object. Because this
-    // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
-    // safely.
+    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
+    // tracking_ptr is assigned before a move or copy, then it will reference
+    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
 
-  private:
+   private:
     Frame(Frame&&) noexcept = default;
     Frame& operator=(Frame&&) noexcept = default;
     ::fidl::Envelope<int64_t> z_;
@@ -271,21 +274,25 @@ public:
   };
 
  private:
-  ReverseOrdinalTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
+  ReverseOrdinalTable(uint64_t max_ordinal,
+                      ::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
 };
 
 // ReverseOrdinalTable::Builder builds ReverseOrdinalTable.
 // Usage:
-// ReverseOrdinalTable val = ReverseOrdinalTable::Builder(std::make_unique<ReverseOrdinalTable::Frame>())
+// ReverseOrdinalTable val =
+// ReverseOrdinalTable::Builder(std::make_unique<ReverseOrdinalTable::Frame>())
 // .set_z(ptr)
 // .build();
 class ReverseOrdinalTable::Builder final {
  public:
   ~Builder() = default;
   Builder() = delete;
-  Builder(::fidl::tracking_ptr<ReverseOrdinalTable::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
+  Builder(::fidl::tracking_ptr<ReverseOrdinalTable::Frame>&& frame_ptr)
+      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
 
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -327,15 +334,15 @@ class ReverseOrdinalTable::Builder final {
     return ReverseOrdinalTable(max_ordinal_, std::move(frame_ptr_));
   }
 
-  private:
+ private:
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<ReverseOrdinalTable::Frame> frame_ptr_;
 };
 
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
-// data.
+// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
+// working with unowned data.
 class ReverseOrdinalTable::UnownedBuilder final {
-public:
+ public:
   ~UnownedBuilder() = default;
   UnownedBuilder() noexcept = default;
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
@@ -372,7 +379,7 @@ public:
     return ReverseOrdinalTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
-private:
+ private:
   uint64_t max_ordinal_ = 0;
   ReverseOrdinalTable::Frame frame_;
 };
@@ -380,7 +387,7 @@ private:
 extern "C" const fidl_type_t v1_fidl_test_json_OlderSimpleTableTable;
 
 class OlderSimpleTable final {
-public:
+ public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
@@ -401,27 +408,27 @@ public:
   OlderSimpleTable(OlderSimpleTable&& other) noexcept = default;
   OlderSimpleTable& operator=(OlderSimpleTable&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_OlderSimpleTableTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_fidl_test_json_OlderSimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
 
   class Builder;
   class UnownedBuilder;
 
   class Frame final {
-  public:
+   public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the tracking_ptr is
-    // assigned before a move or copy, then it will reference the old invalid object. Because this
-    // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
-    // safely.
+    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
+    // tracking_ptr is assigned before a move or copy, then it will reference
+    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
 
-  private:
+   private:
     Frame(Frame&&) noexcept = default;
     Frame& operator=(Frame&&) noexcept = default;
     ::fidl::Envelope<int64_t> x_;
@@ -432,21 +439,25 @@ public:
   };
 
  private:
-  OlderSimpleTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
+  OlderSimpleTable(uint64_t max_ordinal,
+                   ::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
 };
 
 // OlderSimpleTable::Builder builds OlderSimpleTable.
 // Usage:
-// OlderSimpleTable val = OlderSimpleTable::Builder(std::make_unique<OlderSimpleTable::Frame>())
+// OlderSimpleTable val =
+// OlderSimpleTable::Builder(std::make_unique<OlderSimpleTable::Frame>())
 // .set_x(ptr)
 // .build();
 class OlderSimpleTable::Builder final {
  public:
   ~Builder() = default;
   Builder() = delete;
-  Builder(::fidl::tracking_ptr<OlderSimpleTable::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
+  Builder(::fidl::tracking_ptr<OlderSimpleTable::Frame>&& frame_ptr)
+      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
 
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -468,15 +479,15 @@ class OlderSimpleTable::Builder final {
     return OlderSimpleTable(max_ordinal_, std::move(frame_ptr_));
   }
 
-  private:
+ private:
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<OlderSimpleTable::Frame> frame_ptr_;
 };
 
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
-// data.
+// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
+// working with unowned data.
 class OlderSimpleTable::UnownedBuilder final {
-public:
+ public:
   ~UnownedBuilder() = default;
   UnownedBuilder() noexcept = default;
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
@@ -495,7 +506,7 @@ public:
     return OlderSimpleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
-private:
+ private:
   uint64_t max_ordinal_ = 0;
   OlderSimpleTable::Frame frame_;
 };
@@ -503,7 +514,7 @@ private:
 extern "C" const fidl_type_t v1_fidl_test_json_NewerSimpleTableTable;
 
 class NewerSimpleTable final {
-public:
+ public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
@@ -548,27 +559,27 @@ public:
   NewerSimpleTable(NewerSimpleTable&& other) noexcept = default;
   NewerSimpleTable& operator=(NewerSimpleTable&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_NewerSimpleTableTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_fidl_test_json_NewerSimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 72;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 72;
   static constexpr bool HasPointer = true;
 
   class Builder;
   class UnownedBuilder;
 
   class Frame final {
-  public:
+   public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the tracking_ptr is
-    // assigned before a move or copy, then it will reference the old invalid object. Because this
-    // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
-    // safely.
+    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
+    // tracking_ptr is assigned before a move or copy, then it will reference
+    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
 
-  private:
+   private:
     Frame(Frame&&) noexcept = default;
     Frame& operator=(Frame&&) noexcept = default;
     ::fidl::Envelope<int64_t> x_;
@@ -584,21 +595,25 @@ public:
   };
 
  private:
-  NewerSimpleTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
+  NewerSimpleTable(uint64_t max_ordinal,
+                   ::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
 };
 
 // NewerSimpleTable::Builder builds NewerSimpleTable.
 // Usage:
-// NewerSimpleTable val = NewerSimpleTable::Builder(std::make_unique<NewerSimpleTable::Frame>())
+// NewerSimpleTable val =
+// NewerSimpleTable::Builder(std::make_unique<NewerSimpleTable::Frame>())
 // .set_x(ptr)
 // .build();
 class NewerSimpleTable::Builder final {
  public:
   ~Builder() = default;
   Builder() = delete;
-  Builder(::fidl::tracking_ptr<NewerSimpleTable::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
+  Builder(::fidl::tracking_ptr<NewerSimpleTable::Frame>&& frame_ptr)
+      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
 
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -640,15 +655,15 @@ class NewerSimpleTable::Builder final {
     return NewerSimpleTable(max_ordinal_, std::move(frame_ptr_));
   }
 
-  private:
+ private:
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<NewerSimpleTable::Frame> frame_ptr_;
 };
 
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
-// data.
+// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
+// working with unowned data.
 class NewerSimpleTable::UnownedBuilder final {
-public:
+ public:
   ~UnownedBuilder() = default;
   UnownedBuilder() noexcept = default;
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
@@ -685,7 +700,7 @@ public:
     return NewerSimpleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
-private:
+ private:
   uint64_t max_ordinal_ = 0;
   NewerSimpleTable::Frame frame_;
 };
@@ -693,7 +708,7 @@ private:
 extern "C" const fidl_type_t v1_fidl_test_json_EmptyTableTable;
 
 class EmptyTable final {
-public:
+ public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
@@ -705,24 +720,23 @@ public:
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_EmptyTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
 
   class Builder;
   class UnownedBuilder;
 
   class Frame final {
-  public:
+   public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the tracking_ptr is
-    // assigned before a move or copy, then it will reference the old invalid object. Because this
-    // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
-    // safely.
+    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
+    // tracking_ptr is assigned before a move or copy, then it will reference
+    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
 
-  private:
+   private:
     Frame(Frame&&) noexcept = default;
     Frame& operator=(Frame&&) noexcept = default;
 
@@ -732,7 +746,8 @@ public:
   };
 
  private:
-  EmptyTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
+  EmptyTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
 };
@@ -746,7 +761,8 @@ class EmptyTable::Builder final {
  public:
   ~Builder() = default;
   Builder() = delete;
-  Builder(::fidl::tracking_ptr<EmptyTable::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
+  Builder(::fidl::tracking_ptr<EmptyTable::Frame>&& frame_ptr)
+      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
 
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -754,31 +770,26 @@ class EmptyTable::Builder final {
   Builder(const Builder& other) = delete;
   Builder& operator=(const Builder& other) = delete;
 
-  EmptyTable build() {
-    return EmptyTable(max_ordinal_, std::move(frame_ptr_));
-  }
+  EmptyTable build() { return EmptyTable(max_ordinal_, std::move(frame_ptr_)); }
 
-  private:
+ private:
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<EmptyTable::Frame> frame_ptr_;
 };
 
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
-// data.
+// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
+// working with unowned data.
 class EmptyTable::UnownedBuilder final {
-public:
+ public:
   ~UnownedBuilder() = default;
   UnownedBuilder() noexcept = default;
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
   UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
 
-  EmptyTable build() {
-    return EmptyTable(max_ordinal_, nullptr);
-  }
+  EmptyTable build() { return EmptyTable(max_ordinal_, nullptr); }
 
-private:
+ private:
   uint64_t max_ordinal_ = 0;
-  
 };
 
 }  // namespace json
@@ -789,23 +800,32 @@ private:
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::SimpleTable> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::SimpleTable>);
+struct IsFidlType<::llcpp::fidl::test::json::SimpleTable>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::json::SimpleTable>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::ReverseOrdinalTable> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::ReverseOrdinalTable>);
+struct IsFidlType<::llcpp::fidl::test::json::ReverseOrdinalTable>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::json::ReverseOrdinalTable>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::OlderSimpleTable> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::OlderSimpleTable>);
+struct IsFidlType<::llcpp::fidl::test::json::OlderSimpleTable>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::json::OlderSimpleTable>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::NewerSimpleTable> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::NewerSimpleTable>);
+struct IsFidlType<::llcpp::fidl::test::json::NewerSimpleTable>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::json::NewerSimpleTable>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::EmptyTable> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::json::EmptyTable>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::EmptyTable>);
 
 }  // namespace fidl

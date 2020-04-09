@@ -16,7 +16,8 @@ extern "C" const fidl_type_t v1_fidl_test_json_ParentFirstRequestTable;
 
 Parent::~Parent() = default;
 
-const fidl_type_t* Parent_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* Parent_RequestDecoder::GetType(uint64_t ordinal,
+                                                  bool* out_needs_response) {
   switch (ordinal) {
     case internal::kParent_First_Ordinal:
     case internal::kParent_First_GenOrdinal:
@@ -57,35 +58,33 @@ zx_status_t Parent_Proxy::Dispatch_(::fidl::Message message) {
   return status;
 }
 
-
 void Parent_Proxy::First(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kParent_First_GenOrdinal);
-  controller_->Send(&v1_fidl_test_json_ParentFirstRequestTable, Parent_RequestEncoder::First(&_encoder, &request), nullptr);
+  controller_->Send(&v1_fidl_test_json_ParentFirstRequestTable,
+                    Parent_RequestEncoder::First(&_encoder, &request), nullptr);
 }
 
-Parent_Stub::Parent_Stub(Parent_clazz* impl) : impl_(impl) {
-  (void)impl_;
-}
+Parent_Stub::Parent_Stub(Parent_clazz* impl) : impl_(impl) { (void)impl_; }
 
 Parent_Stub::~Parent_Stub() = default;
 
-namespace {
+namespace {}  // namespace
 
-}  // namespace
-
-zx_status_t Parent_Stub::Dispatch_(
-    ::fidl::Message message,
-    ::fidl::internal::PendingResponse response) {
+zx_status_t Parent_Stub::Dispatch_(::fidl::Message message,
+                                   ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = Parent_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  const fidl_type_t* request_type =
+      Parent_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (request_type == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
@@ -98,10 +97,10 @@ zx_status_t Parent_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case internal::kParent_First_Ordinal:
-    case internal::kParent_First_GenOrdinal:
-    {
+    case internal::kParent_First_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16);
+      auto arg0 =
+          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16);
       impl_->First(std::move(arg0));
       break;
     }
@@ -120,10 +119,11 @@ Parent_SyncProxy::~Parent_SyncProxy() = default;
 
 zx_status_t Parent_SyncProxy::First(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kParent_First_GenOrdinal);
-  return proxy_.Send(&v1_fidl_test_json_ParentFirstRequestTable, Parent_RequestEncoder::First(&_encoder, &request));
+  return proxy_.Send(&v1_fidl_test_json_ParentFirstRequestTable,
+                     Parent_RequestEncoder::First(&_encoder, &request));
 }
 
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 namespace {
@@ -136,7 +136,8 @@ extern "C" const fidl_type_t v1_fidl_test_json_ChildSecondRequestTable;
 
 Child::~Child() = default;
 
-const fidl_type_t* Child_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* Child_RequestDecoder::GetType(uint64_t ordinal,
+                                                 bool* out_needs_response) {
   switch (ordinal) {
     case internal::kChild_First_Ordinal:
     case internal::kChild_First_GenOrdinal:
@@ -181,39 +182,38 @@ zx_status_t Child_Proxy::Dispatch_(::fidl::Message message) {
   return status;
 }
 
-
 void Child_Proxy::First(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_First_GenOrdinal);
-  controller_->Send(&v1_fidl_test_json_ChildFirstRequestTable, Child_RequestEncoder::First(&_encoder, &request), nullptr);
+  controller_->Send(&v1_fidl_test_json_ChildFirstRequestTable,
+                    Child_RequestEncoder::First(&_encoder, &request), nullptr);
 }
 void Child_Proxy::Second(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_Second_GenOrdinal);
-  controller_->Send(&v1_fidl_test_json_ChildSecondRequestTable, Child_RequestEncoder::Second(&_encoder, &request), nullptr);
+  controller_->Send(&v1_fidl_test_json_ChildSecondRequestTable,
+                    Child_RequestEncoder::Second(&_encoder, &request), nullptr);
 }
 
-Child_Stub::Child_Stub(Child_clazz* impl) : impl_(impl) {
-  (void)impl_;
-}
+Child_Stub::Child_Stub(Child_clazz* impl) : impl_(impl) { (void)impl_; }
 
 Child_Stub::~Child_Stub() = default;
 
-namespace {
+namespace {}  // namespace
 
-}  // namespace
-
-zx_status_t Child_Stub::Dispatch_(
-    ::fidl::Message message,
-    ::fidl::internal::PendingResponse response) {
+zx_status_t Child_Stub::Dispatch_(::fidl::Message message,
+                                  ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = Child_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  const fidl_type_t* request_type =
+      Child_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (request_type == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
@@ -226,18 +226,18 @@ zx_status_t Child_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case internal::kChild_First_Ordinal:
-    case internal::kChild_First_GenOrdinal:
-    {
+    case internal::kChild_First_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16);
+      auto arg0 =
+          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16);
       impl_->First(std::move(arg0));
       break;
     }
     case internal::kChild_Second_Ordinal:
-    case internal::kChild_Second_GenOrdinal:
-    {
+    case internal::kChild_Second_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16);
+      auto arg0 =
+          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16);
       impl_->Second(std::move(arg0));
       break;
     }
@@ -256,17 +256,18 @@ Child_SyncProxy::~Child_SyncProxy() = default;
 
 zx_status_t Child_SyncProxy::First(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_First_GenOrdinal);
-  return proxy_.Send(&v1_fidl_test_json_ChildFirstRequestTable, Child_RequestEncoder::First(&_encoder, &request));
+  return proxy_.Send(&v1_fidl_test_json_ChildFirstRequestTable,
+                     Child_RequestEncoder::First(&_encoder, &request));
 }
 
 zx_status_t Child_SyncProxy::Second(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_Second_GenOrdinal);
-  return proxy_.Send(&v1_fidl_test_json_ChildSecondRequestTable, Child_RequestEncoder::Second(&_encoder, &request));
+  return proxy_.Send(&v1_fidl_test_json_ChildSecondRequestTable,
+                     Child_RequestEncoder::Second(&_encoder, &request));
 }
 
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 
 }  // namespace json
 }  // namespace test
 }  // namespace fidl
-

@@ -57,6 +57,10 @@ func GetGolden(basePath, filename string) []byte {
 
 // AssertCodegenCmp assert that the actual codegen matches the expected codegen.
 func AssertCodegenCmp(t *testing.T, expected, actual []byte) {
+	if len(actual) == 0 && len(expected) != 0 {
+		t.Fatalf("generated code was unexpectedly empty")
+	}
+
 	var (
 		splitExpected = strings.Split(strings.TrimSpace(string(expected)), "\n")
 		splitActual   = strings.Split(strings.TrimSpace(string(actual)), "\n")

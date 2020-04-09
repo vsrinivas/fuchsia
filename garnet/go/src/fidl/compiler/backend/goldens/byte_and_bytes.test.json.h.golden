@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace example {
 
 class ByteAndBytes;
@@ -12,19 +11,22 @@ class ByteAndBytes;
 class ByteAndBytes final {
  public:
   static const fidl_type_t* FidlType;
-  
+
   uint8_t single_byte{};
-  
+
   ::std::vector<uint8_t> many_bytes{};
-  
+
   ::std::vector<uint8_t> only_one_k_bytes{};
-  
+
   ::fidl::VectorPtr<uint8_t> opt_only_one_k_bytes{};
 
-  static inline ::std::unique_ptr<ByteAndBytes> New() { return ::std::make_unique<ByteAndBytes>(); }
+  static inline ::std::unique_ptr<ByteAndBytes> New() {
+    return ::std::make_unique<ByteAndBytes>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, ByteAndBytes* value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, ByteAndBytes* value,
+                     size_t _offset);
   zx_status_t Clone(ByteAndBytes* result) const;
 };
 
@@ -46,9 +48,10 @@ inline zx_status_t Clone(const ::example::ByteAndBytes& value,
   return ::example::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::example::ByteAndBytes> {
-  bool operator()(const ::example::ByteAndBytes& _lhs, const ::example::ByteAndBytes& _rhs) const {
+  bool operator()(const ::example::ByteAndBytes& _lhs,
+                  const ::example::ByteAndBytes& _rhs) const {
     if (!::fidl::Equals(_lhs.single_byte, _rhs.single_byte)) {
       return false;
     }
@@ -63,4 +66,5 @@ struct Equality<::example::ByteAndBytes> {
     }
     return true;
   }
-};}  // namespace fidl
+};
+}  // namespace fidl

@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace test {
 namespace name {
 
@@ -14,7 +13,7 @@ class HandlesInTypes;
 
 class UnionWithHandle final {
  public:
- static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlType;
 
   UnionWithHandle();
   ~UnionWithHandle();
@@ -22,34 +21,34 @@ class UnionWithHandle final {
   UnionWithHandle(UnionWithHandle&&);
   UnionWithHandle& operator=(UnionWithHandle&&);
 
-  
   static UnionWithHandle WithH(::zx::vmo&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-  kUnknown = 0,
+    kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
-  
+
     kH = 1,  // 0x1
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<UnionWithHandle> New() { return ::std::make_unique<UnionWithHandle>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, UnionWithHandle* value, size_t offset);
-  zx_status_t Clone(UnionWithHandle* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
+  static inline ::std::unique_ptr<UnionWithHandle> New() {
+    return ::std::make_unique<UnionWithHandle>();
   }
 
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, UnionWithHandle* value,
+                     size_t offset);
+  zx_status_t Clone(UnionWithHandle* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
   bool is_h() const { return tag_ == Tag::kH; }
-  
+
   ::zx::vmo& h() {
     EnsureStorageInitialized(Tag::kH);
     return h_;
   }
-  
+
   const ::zx::vmo& h() const {
     ZX_ASSERT(is_h());
     return h_;
@@ -57,21 +56,17 @@ class UnionWithHandle final {
   UnionWithHandle& set_h(::zx::vmo value);
 
   Tag Which() const {
-    
     switch (tag_) {
       case Tag::kH:
         return Tag(tag_);
       default:
         return Tag::kUnknown;
     }
-    
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
 
   const std::vector<uint8_t>* UnknownData() const {
     if (Which() != Tag::kUnknown) {
@@ -106,15 +101,13 @@ class TableWithHandle final {
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
-  
+
   const ::zx::vmo& h() const {
     ZX_ASSERT(has_h_);
     return h_value_.value;
   }
-  bool has_h() const {
-    return has_h_;
-  }
-  
+  bool has_h() const { return has_h_; }
+
   ::zx::vmo* mutable_h() {
     if (!has_h_) {
       has_h_ = true;
@@ -144,10 +137,13 @@ class TableWithHandle final {
   ~TableWithHandle();
   TableWithHandle& operator=(TableWithHandle&& other);
 
-  static inline ::std::unique_ptr<TableWithHandle> New() { return ::std::make_unique<TableWithHandle>(); }
+  static inline ::std::unique_ptr<TableWithHandle> New() {
+    return ::std::make_unique<TableWithHandle>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, TableWithHandle* _value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, TableWithHandle* _value,
+                     size_t _offset);
   zx_status_t Clone(TableWithHandle* _result) const;
 
  private:
@@ -175,23 +171,26 @@ using TableWithHandlePtr = ::std::unique_ptr<TableWithHandle>;
 class HandlesInTypes final {
  public:
   static const fidl_type_t* FidlType;
-  
+
   ::zx::vmo normal_handle{};
-  
+
   ::std::vector<::zx::vmo> handle_in_vec{};
-  
+
   ::std::array<::zx::vmo, 5> handle_in_array{};
-  
+
   ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array{};
-  
+
   TableWithHandle table_with_handle{};
-  
+
   UnionWithHandle union_with_handle{};
 
-  static inline ::std::unique_ptr<HandlesInTypes> New() { return ::std::make_unique<HandlesInTypes>(); }
+  static inline ::std::unique_ptr<HandlesInTypes> New() {
+    return ::std::make_unique<HandlesInTypes>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, HandlesInTypes* value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, HandlesInTypes* value,
+                     size_t _offset);
   zx_status_t Clone(HandlesInTypes* result) const;
 };
 
@@ -216,14 +215,18 @@ template <>
 struct CodingTraits<std::unique_ptr<::test::name::UnionWithHandle>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder, std::unique_ptr<::test::name::UnionWithHandle>* value, size_t offset) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::name::UnionWithHandle>* value,
+                     size_t offset) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* decoder, std::unique_ptr<::test::name::UnionWithHandle>* value, size_t offset) {
+  static void Decode(Decoder* decoder,
+                     std::unique_ptr<::test::name::UnionWithHandle>* value,
+                     size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -241,22 +244,24 @@ inline zx_status_t Clone(const ::test::name::UnionWithHandle& value,
   return ::test::name::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::test::name::UnionWithHandle> {
-  bool operator()(const ::test::name::UnionWithHandle& _lhs, const ::test::name::UnionWithHandle& _rhs) const {
+  bool operator()(const ::test::name::UnionWithHandle& _lhs,
+                  const ::test::name::UnionWithHandle& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::name::UnionWithHandle::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::name::UnionWithHandle::Tag::Invalid):
         return true;
       case ::test::name::UnionWithHandle::Tag::kH:
         return ::fidl::Equals(_lhs.h_, _rhs.h_);
       default:
         return *_lhs.UnknownData() == *_rhs.UnknownData();
-      }
     }
+  }
 };
 template <>
 struct CodingTraits<::test::name::TableWithHandle>
@@ -266,15 +271,16 @@ inline zx_status_t Clone(const ::test::name::TableWithHandle& _value,
                          ::test::name::TableWithHandle* result) {
   return _value.Clone(result);
 }
-template<>
+template <>
 struct Equality<::test::name::TableWithHandle> {
-  bool operator()(const ::test::name::TableWithHandle& _lhs, const ::test::name::TableWithHandle& _rhs) const {
+  bool operator()(const ::test::name::TableWithHandle& _lhs,
+                  const ::test::name::TableWithHandle& _rhs) const {
     if (_lhs.has_h()) {
       if (!_rhs.has_h()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.h(), _rhs.h())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_h()) {
       return false;
@@ -291,9 +297,10 @@ inline zx_status_t Clone(const ::test::name::HandlesInTypes& value,
   return ::test::name::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::test::name::HandlesInTypes> {
-  bool operator()(const ::test::name::HandlesInTypes& _lhs, const ::test::name::HandlesInTypes& _rhs) const {
+  bool operator()(const ::test::name::HandlesInTypes& _lhs,
+                  const ::test::name::HandlesInTypes& _rhs) const {
     if (!::fidl::Equals(_lhs.normal_handle, _rhs.normal_handle)) {
       return false;
     }
@@ -303,7 +310,8 @@ struct Equality<::test::name::HandlesInTypes> {
     if (!::fidl::Equals(_lhs.handle_in_array, _rhs.handle_in_array)) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.handle_in_mixed_vec_array, _rhs.handle_in_mixed_vec_array)) {
+    if (!::fidl::Equals(_lhs.handle_in_mixed_vec_array,
+                        _rhs.handle_in_mixed_vec_array)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.table_with_handle, _rhs.table_with_handle)) {
@@ -314,4 +322,5 @@ struct Equality<::test::name::HandlesInTypes> {
     }
     return true;
   }
-};}  // namespace fidl
+};
+}  // namespace fidl

@@ -8,13 +8,10 @@ namespace example {
 namespace testing {
 
 class ExampleProtocol_TestBase : public ExampleProtocol {
-  public:
-  virtual ~ExampleProtocol_TestBase() { }
+ public:
+  virtual ~ExampleProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void Method(::exampleusing::Empty arg) override {
-    NotImplemented_("Method");
-  }
-
+  void Method(::exampleusing::Empty arg) override { NotImplemented_("Method"); }
 };
 }  // namespace testing
 }  // namespace example

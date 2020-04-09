@@ -2,12 +2,10 @@
 
 #pragma once
 
-
 namespace fidl {
 namespace test {
 namespace json {
-namespace testing {
-}  // namespace testing
+namespace testing {}  // namespace testing
 }  // namespace json
 }  // namespace test
 }  // namespace fidl

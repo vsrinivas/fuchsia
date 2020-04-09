@@ -10,10 +10,7 @@ namespace json {
 extern "C" const fidl_type_t v1_fidl_test_json_SimpleTableTable;
 const fidl_type_t* SimpleTable::FidlType = &v1_fidl_test_json_SimpleTableTable;
 
-SimpleTable::SimpleTable() :
-  has_x_(false),
-  has_y_(false) {
-}
+SimpleTable::SimpleTable() : has_x_(false), has_y_(false) {}
 
 SimpleTable::SimpleTable(SimpleTable&& other) {
   has_x_ = other.has_x_;
@@ -78,33 +75,36 @@ void SimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        _encoder,
-        &x_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder, &x_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+        FIDL_ALLOC_PRESENT;
   }
   if (has_y_) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        _encoder,
-        &y_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder, &y_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+        FIDL_ALLOC_PRESENT;
   }
 }
 
-void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value, size_t _offset) {
+void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value,
+                         size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
@@ -119,7 +119,8 @@ void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value, size_t 
     uint64_t presence;
     ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_x(), _decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_x(),
+                     _decoder->GetOffset(presence));
     } else {
       _value->clear_x();
     }
@@ -131,7 +132,8 @@ void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value, size_t 
     uint64_t presence;
     ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_y(), _decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_y(),
+                     _decoder->GetOffset(presence));
     } else {
       _value->clear_y();
     }
@@ -153,28 +155,24 @@ done_5:
 zx_status_t SimpleTable::Clone(SimpleTable* result) const {
   if (has_x_) {
     zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
-    if (_status != ZX_OK)
-      return _status;
+    if (_status != ZX_OK) return _status;
   } else {
     result->clear_x();
   }
   if (has_y_) {
     zx_status_t _status = ::fidl::Clone(y_value_.value, result->mutable_y());
-    if (_status != ZX_OK)
-      return _status;
+    if (_status != ZX_OK) return _status;
   } else {
     result->clear_y();
   }
   return ZX_OK;
 }
 extern "C" const fidl_type_t v1_fidl_test_json_ReverseOrdinalTableTable;
-const fidl_type_t* ReverseOrdinalTable::FidlType = &v1_fidl_test_json_ReverseOrdinalTableTable;
+const fidl_type_t* ReverseOrdinalTable::FidlType =
+    &v1_fidl_test_json_ReverseOrdinalTableTable;
 
-ReverseOrdinalTable::ReverseOrdinalTable() :
-  has_z_(false),
-  has_y_(false),
-  has_x_(false) {
-}
+ReverseOrdinalTable::ReverseOrdinalTable()
+    : has_z_(false), has_y_(false), has_x_(false) {}
 
 ReverseOrdinalTable::ReverseOrdinalTable(ReverseOrdinalTable&& other) {
   has_z_ = other.has_z_;
@@ -203,7 +201,8 @@ ReverseOrdinalTable::~ReverseOrdinalTable() {
   }
 }
 
-ReverseOrdinalTable& ReverseOrdinalTable::operator=(ReverseOrdinalTable&& other) {
+ReverseOrdinalTable& ReverseOrdinalTable::operator=(
+    ReverseOrdinalTable&& other) {
   if (other.has_z_) {
     if (has_z_) {
       z_value_.value = std::move(other.z_value_.value);
@@ -259,47 +258,51 @@ void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        _encoder,
-        &z_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder, &z_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+        FIDL_ALLOC_PRESENT;
   }
   if (has_y_) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        _encoder,
-        &y_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder, &y_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (2 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+        FIDL_ALLOC_PRESENT;
   }
   if (has_x_) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        _encoder,
-        &x_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder, &x_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (3 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+        FIDL_ALLOC_PRESENT;
   }
 }
 
-void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value, size_t _offset) {
+void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder,
+                                 ReverseOrdinalTable* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
@@ -314,7 +317,8 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable*
     uint64_t presence;
     ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_z(), _decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_z(),
+                     _decoder->GetOffset(presence));
     } else {
       _value->clear_z();
     }
@@ -326,7 +330,8 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable*
     uint64_t presence;
     ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_y(), _decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_y(),
+                     _decoder->GetOffset(presence));
     } else {
       _value->clear_y();
     }
@@ -338,7 +343,8 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable*
     uint64_t presence;
     ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_x(), _decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_x(),
+                     _decoder->GetOffset(presence));
     } else {
       _value->clear_x();
     }
@@ -362,33 +368,29 @@ done_3:
 zx_status_t ReverseOrdinalTable::Clone(ReverseOrdinalTable* result) const {
   if (has_z_) {
     zx_status_t _status = ::fidl::Clone(z_value_.value, result->mutable_z());
-    if (_status != ZX_OK)
-      return _status;
+    if (_status != ZX_OK) return _status;
   } else {
     result->clear_z();
   }
   if (has_y_) {
     zx_status_t _status = ::fidl::Clone(y_value_.value, result->mutable_y());
-    if (_status != ZX_OK)
-      return _status;
+    if (_status != ZX_OK) return _status;
   } else {
     result->clear_y();
   }
   if (has_x_) {
     zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
-    if (_status != ZX_OK)
-      return _status;
+    if (_status != ZX_OK) return _status;
   } else {
     result->clear_x();
   }
   return ZX_OK;
 }
 extern "C" const fidl_type_t v1_fidl_test_json_OlderSimpleTableTable;
-const fidl_type_t* OlderSimpleTable::FidlType = &v1_fidl_test_json_OlderSimpleTableTable;
+const fidl_type_t* OlderSimpleTable::FidlType =
+    &v1_fidl_test_json_OlderSimpleTableTable;
 
-OlderSimpleTable::OlderSimpleTable() :
-  has_x_(false) {
-}
+OlderSimpleTable::OlderSimpleTable() : has_x_(false) {}
 
 OlderSimpleTable::OlderSimpleTable(OlderSimpleTable&& other) {
   has_x_ = other.has_x_;
@@ -433,19 +435,21 @@ void OlderSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        _encoder,
-        &x_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder, &x_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+        FIDL_ALLOC_PRESENT;
   }
 }
 
-void OlderSimpleTable::Decode(::fidl::Decoder* _decoder, OlderSimpleTable* _value, size_t _offset) {
+void OlderSimpleTable::Decode(::fidl::Decoder* _decoder,
+                              OlderSimpleTable* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
@@ -460,7 +464,8 @@ void OlderSimpleTable::Decode(::fidl::Decoder* _decoder, OlderSimpleTable* _valu
     uint64_t presence;
     ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_x(), _decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_x(),
+                     _decoder->GetOffset(presence));
     } else {
       _value->clear_x();
     }
@@ -480,21 +485,18 @@ done_1:
 zx_status_t OlderSimpleTable::Clone(OlderSimpleTable* result) const {
   if (has_x_) {
     zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
-    if (_status != ZX_OK)
-      return _status;
+    if (_status != ZX_OK) return _status;
   } else {
     result->clear_x();
   }
   return ZX_OK;
 }
 extern "C" const fidl_type_t v1_fidl_test_json_NewerSimpleTableTable;
-const fidl_type_t* NewerSimpleTable::FidlType = &v1_fidl_test_json_NewerSimpleTableTable;
+const fidl_type_t* NewerSimpleTable::FidlType =
+    &v1_fidl_test_json_NewerSimpleTableTable;
 
-NewerSimpleTable::NewerSimpleTable() :
-  has_x_(false),
-  has_y_(false),
-  has_z_(false) {
-}
+NewerSimpleTable::NewerSimpleTable()
+    : has_x_(false), has_y_(false), has_z_(false) {}
 
 NewerSimpleTable::NewerSimpleTable(NewerSimpleTable&& other) {
   has_x_ = other.has_x_;
@@ -579,47 +581,51 @@ void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        _encoder,
-        &x_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder, &x_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+        FIDL_ALLOC_PRESENT;
   }
   if (has_y_) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        _encoder,
-        &y_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder, &y_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+        FIDL_ALLOC_PRESENT;
   }
   if (has_z_) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        _encoder,
-        &z_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder, &z_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (6 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+        FIDL_ALLOC_PRESENT;
   }
 }
 
-void NewerSimpleTable::Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _value, size_t _offset) {
+void NewerSimpleTable::Decode(::fidl::Decoder* _decoder,
+                              NewerSimpleTable* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
@@ -634,7 +640,8 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _valu
     uint64_t presence;
     ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_x(), _decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_x(),
+                     _decoder->GetOffset(presence));
     } else {
       _value->clear_x();
     }
@@ -646,7 +653,8 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _valu
     uint64_t presence;
     ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_y(), _decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_y(),
+                     _decoder->GetOffset(presence));
     } else {
       _value->clear_y();
     }
@@ -658,7 +666,8 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _valu
     uint64_t presence;
     ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_z(), _decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_z(),
+                     _decoder->GetOffset(presence));
     } else {
       _value->clear_z();
     }
@@ -682,22 +691,19 @@ done_6:
 zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
   if (has_x_) {
     zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
-    if (_status != ZX_OK)
-      return _status;
+    if (_status != ZX_OK) return _status;
   } else {
     result->clear_x();
   }
   if (has_y_) {
     zx_status_t _status = ::fidl::Clone(y_value_.value, result->mutable_y());
-    if (_status != ZX_OK)
-      return _status;
+    if (_status != ZX_OK) return _status;
   } else {
     result->clear_y();
   }
   if (has_z_) {
     zx_status_t _status = ::fidl::Clone(z_value_.value, result->mutable_z());
-    if (_status != ZX_OK)
-      return _status;
+    if (_status != ZX_OK) return _status;
   } else {
     result->clear_z();
   }
@@ -706,22 +712,15 @@ zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
 extern "C" const fidl_type_t v1_fidl_test_json_EmptyTableTable;
 const fidl_type_t* EmptyTable::FidlType = &v1_fidl_test_json_EmptyTableTable;
 
-EmptyTable::EmptyTable() {
-}
+EmptyTable::EmptyTable() {}
 
-EmptyTable::EmptyTable(EmptyTable&& other) {
-}
+EmptyTable::EmptyTable(EmptyTable&& other) {}
 
-EmptyTable::~EmptyTable() {
-}
+EmptyTable::~EmptyTable() {}
 
-EmptyTable& EmptyTable::operator=(EmptyTable&& other) {
-  return *this;
-}
+EmptyTable& EmptyTable::operator=(EmptyTable&& other) { return *this; }
 
-bool EmptyTable::IsEmpty() const {
-  return true;
-}
+bool EmptyTable::IsEmpty() const { return true; }
 
 void EmptyTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   size_t max_ordinal = 0;
@@ -729,7 +728,8 @@ void EmptyTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (max_ordinal == 0) return;
 }
 
-void EmptyTable::Decode(::fidl::Decoder* _decoder, EmptyTable* _value, size_t _offset) {
+void EmptyTable::Decode(::fidl::Decoder* _decoder, EmptyTable* _value,
+                        size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
@@ -747,10 +747,7 @@ clear_all:
   return;
 }
 
-zx_status_t EmptyTable::Clone(EmptyTable* result) const {
-  return ZX_OK;
-}
+zx_status_t EmptyTable::Clone(EmptyTable* result) const { return ZX_OK; }
 }  // namespace json
 }  // namespace test
 }  // namespace fidl
-

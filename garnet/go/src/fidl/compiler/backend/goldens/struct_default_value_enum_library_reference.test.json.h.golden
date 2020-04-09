@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "lib/fidl/cpp/internal/header.h"
-
 #include <dependent/cpp/fidl.h>
+
+#include "lib/fidl/cpp/internal/header.h"
 
 namespace example {
 
@@ -13,10 +13,12 @@ class Foo;
 class Foo final {
  public:
   static const fidl_type_t* FidlType;
-  
+
   ::dependent::MyEnum field = ::dependent::MyEnum::A;
 
-  static inline ::std::unique_ptr<Foo> New() { return ::std::make_unique<Foo>(); }
+  static inline ::std::unique_ptr<Foo> New() {
+    return ::std::make_unique<Foo>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, Foo* value, size_t _offset);
@@ -36,17 +38,18 @@ template <>
 struct CodingTraits<::example::Foo>
     : public EncodableCodingTraits<::example::Foo, 4> {};
 
-inline zx_status_t Clone(const ::example::Foo& value,
-                         ::example::Foo* result) {
+inline zx_status_t Clone(const ::example::Foo& value, ::example::Foo* result) {
   return ::example::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::example::Foo> {
-  bool operator()(const ::example::Foo& _lhs, const ::example::Foo& _rhs) const {
+  bool operator()(const ::example::Foo& _lhs,
+                  const ::example::Foo& _rhs) const {
     if (!::fidl::Equals(_lhs.field, _rhs.field)) {
       return false;
     }
     return true;
   }
-};}  // namespace fidl
+};
+}  // namespace fidl

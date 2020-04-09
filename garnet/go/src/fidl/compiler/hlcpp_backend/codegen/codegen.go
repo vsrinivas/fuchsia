@@ -53,8 +53,26 @@ func (gen *FidlGenerator) GenerateTestBase(wr io.Writer, tree cpp.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "TestBase", tree)
 }
 
+func (gen *FidlGenerator) generateFile(filepath, clangFormatPath string, generate func(w io.Writer) error) error {
+	file, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+
+	formatterPipe, err := cpp.NewClangFormatter(clangFormatPath).FormatPipe(file)
+	if err != nil {
+		return err
+	}
+
+	if err := generate(formatterPipe); err != nil {
+		return err
+	}
+
+	return formatterPipe.Close()
+}
+
 // GenerateFidl generates all files required for the C++ bindings.
-func (gen *FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
+func (gen *FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config, clangFormatPath string) error {
 	tree := cpp.CompileHL(fidl)
 
 	relStem, err := filepath.Rel(config.IncludeBase, config.OutputBase)
@@ -71,36 +89,21 @@ func (gen *FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) er
 		return err
 	}
 
-	headerFile, err := os.Create(headerPath)
-	if err != nil {
-		return err
-	}
-	defer headerFile.Close()
-
-	if err := gen.GenerateHeader(headerFile, tree); err != nil {
-		return err
-	}
-
-	sourceFile, err := os.Create(sourcePath)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	if err := gen.GenerateSource(sourceFile, tree); err != nil {
-		return err
-	}
-
-	testBaseFile, err := os.Create(testBasePath)
-	if err != nil {
-		return err
-	}
-	defer testBaseFile.Close()
-
-	err = gen.GenerateTestBase(testBaseFile, tree)
+	err = gen.generateFile(headerPath, clangFormatPath, func(w io.Writer) error {
+		return gen.GenerateHeader(w, tree)
+	})
 	if err != nil {
 		return err
 	}
 
-	return nil
+	err = gen.generateFile(sourcePath, clangFormatPath, func(w io.Writer) error {
+		return gen.GenerateSource(w, tree)
+	})
+	if err != nil {
+		return err
+	}
+
+	return gen.generateFile(testBasePath, clangFormatPath, func(w io.Writer) error {
+		return gen.GenerateTestBase(w, tree)
+	})
 }

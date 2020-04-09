@@ -2,12 +2,10 @@
 
 #pragma once
 
-
 namespace test {
 namespace fidl {
 namespace unionsandwich {
-namespace testing {
-}  // namespace testing
+namespace testing {}  // namespace testing
 }  // namespace unionsandwich
 }  // namespace fidl
 }  // namespace test

@@ -2,14 +2,13 @@
 
 #pragma once
 
-
 namespace test {
 namespace name {
 namespace testing {
 
 class Parent_TestBase : public Parent {
-  public:
-  virtual ~Parent_TestBase() { }
+ public:
+  virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void GetChild(GetChildCallback callback) override {
     NotImplemented_("GetChild");
@@ -23,14 +22,12 @@ class Parent_TestBase : public Parent {
   void TakeChildRequest(::fidl::InterfaceRequest<Child> r) override {
     NotImplemented_("TakeChildRequest");
   }
-
 };
 
 class Child_TestBase : public Child {
-  public:
-  virtual ~Child_TestBase() { }
+ public:
+  virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-
 };
 }  // namespace testing
 }  // namespace name

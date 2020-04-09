@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace test {
 namespace name {
 
@@ -29,8 +28,8 @@ constexpr uint64_t kParent_TakeChild_GenOrdinal = 0x6a9827d18871f87dlu;
 constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x5ec3867a00000000lu;
 constexpr uint64_t kParent_TakeChildRequest_GenOrdinal = 0x6c4a70e2a2126637lu;
 
-}  // namespace
-#endif // __Fuchsia__
+}  // namespace internal
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
 class Child;
@@ -42,10 +41,8 @@ class Child_Sync;
 using ChildSyncPtr = ::fidl::SynchronousInterfacePtr<Child>;
 class Child_SyncProxy;
 using ChildHandle = ::fidl::InterfaceHandle<Child>;
-namespace internal {
-
-}  // namespace
-#endif // __Fuchsia__
+namespace internal {}  // namespace internal
+#endif                 // __Fuchsia__
 #ifdef __Fuchsia__
 
 class Parent {
@@ -57,15 +54,15 @@ class Parent {
   virtual ~Parent();
   using GetChildCallback =
       fit::function<void(::fidl::InterfaceHandle<class Child>)>;
-      
+
   virtual void GetChild(GetChildCallback callback) = 0;
   using GetChildRequestCallback =
       fit::function<void(::fidl::InterfaceRequest<Child>)>;
-      
+
   virtual void GetChildRequest(GetChildRequestCallback callback) = 0;
-      
+
   virtual void TakeChild(::fidl::InterfaceHandle<class Child> c) = 0;
-      
+
   virtual void TakeChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
 };
 
@@ -79,12 +76,14 @@ class Parent_RequestEncoder {
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
-  static ::fidl::Message TakeChild(::fidl::Encoder* _encoder, ::fidl::InterfaceHandle<class Child>* c) {
+  static ::fidl::Message TakeChild(::fidl::Encoder* _encoder,
+                                   ::fidl::InterfaceHandle<class Child>* c) {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, c, 16);
     return _encoder->GetMessage();
   }
-  static ::fidl::Message TakeChildRequest(::fidl::Encoder* _encoder, ::fidl::InterfaceRequest<Child>* r) {
+  static ::fidl::Message TakeChildRequest(::fidl::Encoder* _encoder,
+                                          ::fidl::InterfaceRequest<Child>* r) {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, r, 16);
     return _encoder->GetMessage();
@@ -98,7 +97,8 @@ class Parent_RequestDecoder {
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
   zx_status_t Decode_(::fidl::Message request) {
     bool needs_response;
-    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -111,28 +111,26 @@ class Parent_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kParent_GetChild_Ordinal:
-      case internal::kParent_GetChild_GenOrdinal:
-      {
+      case internal::kParent_GetChild_GenOrdinal: {
         GetChild();
         break;
       }
       case internal::kParent_GetChildRequest_Ordinal:
-      case internal::kParent_GetChildRequest_GenOrdinal:
-      {
+      case internal::kParent_GetChildRequest_GenOrdinal: {
         GetChildRequest();
         break;
       }
       case internal::kParent_TakeChild_Ordinal:
-      case internal::kParent_TakeChild_GenOrdinal:
-      {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(&request_decoder, 16);
+      case internal::kParent_TakeChild_GenOrdinal: {
+        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
+            &request_decoder, 16);
         TakeChild(std::move(arg0));
         break;
       }
       case internal::kParent_TakeChildRequest_Ordinal:
-      case internal::kParent_TakeChildRequest_GenOrdinal:
-      {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(&request_decoder, 16);
+      case internal::kParent_TakeChildRequest_GenOrdinal: {
+        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(
+            &request_decoder, 16);
         TakeChildRequest(std::move(arg0));
         break;
       }
@@ -151,12 +149,14 @@ class Parent_RequestDecoder {
 
 class Parent_ResponseEncoder {
  public:
-  static ::fidl::Message GetChild(::fidl::Encoder* _encoder, ::fidl::InterfaceHandle<class Child>* c) {
+  static ::fidl::Message GetChild(::fidl::Encoder* _encoder,
+                                  ::fidl::InterfaceHandle<class Child>* c) {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, c, 16);
     return _encoder->GetMessage();
   }
-  static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder, ::fidl::InterfaceRequest<Child>* r) {
+  static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder,
+                                         ::fidl::InterfaceRequest<Child>* r) {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, r, 16);
     return _encoder->GetMessage();
@@ -182,16 +182,16 @@ class Parent_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::kParent_GetChild_Ordinal:
-      case internal::kParent_GetChild_GenOrdinal:
-      {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(&response_decoder, 16);
+      case internal::kParent_GetChild_GenOrdinal: {
+        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
+            &response_decoder, 16);
         GetChild(std::move(arg0));
         break;
       }
       case internal::kParent_GetChildRequest_Ordinal:
-      case internal::kParent_GetChildRequest_GenOrdinal:
-      {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(&response_decoder, 16);
+      case internal::kParent_GetChildRequest_GenOrdinal: {
+        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(
+            &response_decoder, 16);
         GetChildRequest(std::move(arg0));
         break;
       }
@@ -215,7 +215,8 @@ class Parent_Sync {
   using Proxy_ = Parent_SyncProxy;
   virtual ~Parent_Sync();
   virtual zx_status_t GetChild(::fidl::InterfaceHandle<class Child>* out_c) = 0;
-  virtual zx_status_t GetChildRequest(::fidl::InterfaceRequest<Child>* out_r) = 0;
+  virtual zx_status_t GetChildRequest(
+      ::fidl::InterfaceRequest<Child>* out_r) = 0;
   virtual zx_status_t TakeChild(::fidl::InterfaceHandle<class Child> c) = 0;
   virtual zx_status_t TakeChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
 };
@@ -238,7 +239,8 @@ class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Parent_Stub final : public ::fidl::internal::Stub, public Parent_EventSender {
+class Parent_Stub final : public ::fidl::internal::Stub,
+                          public Parent_EventSender {
  public:
   typedef class ::test::name::Parent Parent_clazz;
   explicit Parent_Stub(Parent_clazz* impl);
@@ -260,11 +262,11 @@ class Parent_SyncProxy : public Parent_Sync {
   zx_status_t TakeChild(::fidl::InterfaceHandle<class Child> c) override;
   zx_status_t TakeChildRequest(::fidl::InterfaceRequest<Child> r) override;
 
-  private:
+ private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Parent>;
 };
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
 class Child {
@@ -287,7 +289,8 @@ class Child_RequestDecoder {
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
   zx_status_t Decode_(::fidl::Message request) {
     bool needs_response;
-    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -363,7 +366,8 @@ class Child_Proxy final : public ::fidl::internal::Proxy, public Child {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Child_Stub final : public ::fidl::internal::Stub, public Child_EventSender {
+class Child_Stub final : public ::fidl::internal::Stub,
+                         public Child_EventSender {
  public:
   typedef class ::test::name::Child Child_clazz;
   explicit Child_Stub(Child_clazz* impl);
@@ -381,12 +385,11 @@ class Child_SyncProxy : public Child_Sync {
   explicit Child_SyncProxy(::zx::channel channel);
   ~Child_SyncProxy() override;
 
-  private:
+ private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Child>;
 };
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 }  // namespace name
 }  // namespace test
-namespace fidl {
-}  // namespace fidl
+namespace fidl {}  // namespace fidl

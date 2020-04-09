@@ -4,13 +4,11 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace test {
 namespace name {
 
-
 enum class EnumType : int32_t {
-  
+
   VALUE = 1u,
 };
 
@@ -20,9 +18,8 @@ inline zx_status_t Clone(::test::name::EnumType value,
   return ZX_OK;
 }
 
-
 enum class BitsType : int32_t {
-  
+
   VALUE = 1u,
 };
 
@@ -31,7 +28,6 @@ inline zx_status_t Clone(::test::name::BitsType value,
   *result = value;
   return ZX_OK;
 }
-
 
 extern const char USERNAME[];
 
@@ -68,11 +64,13 @@ template <>
 struct CodingTraits<::test::name::EnumType> {
   static constexpr size_t inline_size_old = sizeof(::test::name::EnumType);
   static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::EnumType);
-  static void Encode(Encoder* encoder, ::test::name::EnumType* value, size_t offset) {
+  static void Encode(Encoder* encoder, ::test::name::EnumType* value,
+                     size_t offset) {
     int32_t underlying = static_cast<int32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::name::EnumType* value, size_t offset) {
+  static void Decode(Decoder* decoder, ::test::name::EnumType* value,
+                     size_t offset) {
     int32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::name::EnumType>(underlying);
@@ -83,23 +81,25 @@ inline zx_status_t Clone(::test::name::EnumType value,
                          ::test::name::EnumType* result) {
   return ::test::name::Clone(value, result);
 }
-template<>
+template <>
 struct Equality<::test::name::EnumType> {
-  bool operator()(const ::test::name::EnumType& _lhs, const ::test::name::EnumType& _rhs) const {
+  bool operator()(const ::test::name::EnumType& _lhs,
+                  const ::test::name::EnumType& _rhs) const {
     return _lhs == _rhs;
   }
 };
-
 
 template <>
 struct CodingTraits<::test::name::BitsType> {
   static constexpr size_t inline_size_old = sizeof(::test::name::BitsType);
   static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::BitsType);
-  static void Encode(Encoder* encoder, ::test::name::BitsType* value, size_t offset) {
+  static void Encode(Encoder* encoder, ::test::name::BitsType* value,
+                     size_t offset) {
     int32_t underlying = static_cast<int32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::name::BitsType* value, size_t offset) {
+  static void Decode(Decoder* decoder, ::test::name::BitsType* value,
+                     size_t offset) {
     int32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::name::BitsType>(underlying);
@@ -110,9 +110,10 @@ inline zx_status_t Clone(::test::name::BitsType value,
                          ::test::name::BitsType* result) {
   return ::test::name::Clone(value, result);
 }
-template<>
+template <>
 struct Equality<::test::name::BitsType> {
-  bool operator()(const ::test::name::BitsType& _lhs, const ::test::name::BitsType& _rhs) const {
+  bool operator()(const ::test::name::BitsType& _lhs,
+                  const ::test::name::BitsType& _rhs) const {
     return _lhs == _rhs;
   }
 };

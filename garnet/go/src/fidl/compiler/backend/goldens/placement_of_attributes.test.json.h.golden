@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "lib/fidl/cpp/internal/header.h"
-
 #include <exampleusing/cpp/fidl.h>
+
+#include "lib/fidl/cpp/internal/header.h"
 
 namespace example {
 
@@ -23,15 +23,15 @@ namespace internal {
 constexpr uint64_t kExampleProtocol_Method_Ordinal = 0x42fd6a1b00000000lu;
 constexpr uint64_t kExampleProtocol_Method_GenOrdinal = 0x1b489f95492fd90elu;
 
-}  // namespace
-#endif // __Fuchsia__
+}  // namespace internal
+#endif  // __Fuchsia__
 class ExampleXUnion;
 class ExampleUnion;
 class ExampleTable;
 class ExampleStruct;
 
 enum class ExampleEnum : uint32_t {
-  
+
   MEMBER = 1u,
 };
 
@@ -41,9 +41,8 @@ inline zx_status_t Clone(::example::ExampleEnum value,
   return ZX_OK;
 }
 
-
 enum class ExampleBits : uint32_t {
-  
+
   MEMBER = 1u,
 };
 
@@ -56,44 +55,45 @@ inline zx_status_t Clone(::example::ExampleBits value,
 }
 
 constexpr inline ::example::ExampleBits operator|(::example::ExampleBits _lhs,
-                                                         ::example::ExampleBits _rhs) {
-  return static_cast<::example::ExampleBits>(
-    static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
+                                                  ::example::ExampleBits _rhs) {
+  return static_cast<::example::ExampleBits>(static_cast<uint32_t>(_lhs) |
+                                             static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::example::ExampleBits& operator|=(::example::ExampleBits& _lhs,
-                                                           ::example::ExampleBits _rhs) {
+constexpr inline ::example::ExampleBits& operator|=(
+    ::example::ExampleBits& _lhs, ::example::ExampleBits _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
 constexpr inline ::example::ExampleBits operator&(::example::ExampleBits _lhs,
-                                                         ::example::ExampleBits _rhs) {
-  return static_cast<::example::ExampleBits>(
-    static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
+                                                  ::example::ExampleBits _rhs) {
+  return static_cast<::example::ExampleBits>(static_cast<uint32_t>(_lhs) &
+                                             static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::example::ExampleBits& operator&=(::example::ExampleBits& _lhs,
-                                                           ::example::ExampleBits _rhs) {
+constexpr inline ::example::ExampleBits& operator&=(
+    ::example::ExampleBits& _lhs, ::example::ExampleBits _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
 constexpr inline ::example::ExampleBits operator^(::example::ExampleBits _lhs,
-                                                         ::example::ExampleBits _rhs) {
-  return static_cast<::example::ExampleBits>(
-    static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
+                                                  ::example::ExampleBits _rhs) {
+  return static_cast<::example::ExampleBits>(static_cast<uint32_t>(_lhs) ^
+                                             static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::example::ExampleBits& operator^=(::example::ExampleBits& _lhs,
-                                                           ::example::ExampleBits _rhs) {
+constexpr inline ::example::ExampleBits& operator^=(
+    ::example::ExampleBits& _lhs, ::example::ExampleBits _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline ::example::ExampleBits operator~(::example::ExampleBits _value) {
+constexpr inline ::example::ExampleBits operator~(
+    ::example::ExampleBits _value) {
   return static_cast<::example::ExampleBits>(
-    ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(ExampleBitsMask));
+      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(ExampleBitsMask));
 }
 
 #ifdef __Fuchsia__
@@ -105,13 +105,14 @@ class ExampleProtocol {
   using EventSender_ = ExampleProtocol_EventSender;
   using Sync_ = ExampleProtocol_Sync;
   virtual ~ExampleProtocol();
-      
+
   virtual void Method(::exampleusing::Empty arg) = 0;
 };
 
 class ExampleProtocol_RequestEncoder {
  public:
-  static ::fidl::Message Method(::fidl::Encoder* _encoder, ::exampleusing::Empty* arg) {
+  static ::fidl::Message Method(::fidl::Encoder* _encoder,
+                                ::exampleusing::Empty* arg) {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, arg, 16);
     return _encoder->GetMessage();
@@ -125,7 +126,8 @@ class ExampleProtocol_RequestDecoder {
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
   zx_status_t Decode_(::fidl::Message request) {
     bool needs_response;
-    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -138,9 +140,9 @@ class ExampleProtocol_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kExampleProtocol_Method_Ordinal:
-      case internal::kExampleProtocol_Method_GenOrdinal:
-      {
-        auto arg0 = ::fidl::DecodeAs<::exampleusing::Empty>(&request_decoder, 16);
+      case internal::kExampleProtocol_Method_GenOrdinal: {
+        auto arg0 =
+            ::fidl::DecodeAs<::exampleusing::Empty>(&request_decoder, 16);
         Method(std::move(arg0));
         break;
       }
@@ -196,7 +198,8 @@ class ExampleProtocol_Sync {
   virtual zx_status_t Method(::exampleusing::Empty arg) = 0;
 };
 
-class ExampleProtocol_Proxy final : public ::fidl::internal::Proxy, public ExampleProtocol {
+class ExampleProtocol_Proxy final : public ::fidl::internal::Proxy,
+                                    public ExampleProtocol {
  public:
   explicit ExampleProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~ExampleProtocol_Proxy() override;
@@ -211,7 +214,8 @@ class ExampleProtocol_Proxy final : public ::fidl::internal::Proxy, public Examp
   ::fidl::internal::ProxyController* controller_;
 };
 
-class ExampleProtocol_Stub final : public ::fidl::internal::Stub, public ExampleProtocol_EventSender {
+class ExampleProtocol_Stub final : public ::fidl::internal::Stub,
+                                   public ExampleProtocol_EventSender {
  public:
   typedef class ::example::ExampleProtocol ExampleProtocol_clazz;
   explicit ExampleProtocol_Stub(ExampleProtocol_clazz* impl);
@@ -230,15 +234,15 @@ class ExampleProtocol_SyncProxy : public ExampleProtocol_Sync {
   ~ExampleProtocol_SyncProxy() override;
   zx_status_t Method(::exampleusing::Empty arg) override;
 
-  private:
+ private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<ExampleProtocol>;
 };
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 
 class ExampleXUnion final {
  public:
- static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlType;
 
   ExampleXUnion();
   ~ExampleXUnion();
@@ -246,34 +250,34 @@ class ExampleXUnion final {
   ExampleXUnion(ExampleXUnion&&);
   ExampleXUnion& operator=(ExampleXUnion&&);
 
-  
   static ExampleXUnion WithVariant(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-  kUnknown = 0,
+    kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
-  
+
     kVariant = 1,  // 0x1
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<ExampleXUnion> New() { return ::std::make_unique<ExampleXUnion>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, ExampleXUnion* value, size_t offset);
-  zx_status_t Clone(ExampleXUnion* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
+  static inline ::std::unique_ptr<ExampleXUnion> New() {
+    return ::std::make_unique<ExampleXUnion>();
   }
 
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, ExampleXUnion* value,
+                     size_t offset);
+  zx_status_t Clone(ExampleXUnion* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
   bool is_variant() const { return tag_ == Tag::kVariant; }
-  
+
   uint32_t& variant() {
     EnsureStorageInitialized(Tag::kVariant);
     return variant_;
   }
-  
+
   const uint32_t& variant() const {
     ZX_ASSERT(is_variant());
     return variant_;
@@ -281,21 +285,17 @@ class ExampleXUnion final {
   ExampleXUnion& set_variant(uint32_t value);
 
   Tag Which() const {
-    
     switch (tag_) {
       case Tag::kVariant:
         return Tag(tag_);
       default:
         return Tag::kUnknown;
     }
-    
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
 
   const std::vector<uint8_t>* UnknownData() const {
     if (Which() != Tag::kUnknown) {
@@ -327,7 +327,7 @@ using ExampleXUnionPtr = ::std::unique_ptr<ExampleXUnion>;
 
 class ExampleUnion final {
  public:
- static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlType;
 
   ExampleUnion();
   ~ExampleUnion();
@@ -335,53 +335,45 @@ class ExampleUnion final {
   ExampleUnion(ExampleUnion&&);
   ExampleUnion& operator=(ExampleUnion&&);
 
-  
   static ExampleUnion WithVariant(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-  
+
     kVariant = 1,  // 0x1
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<ExampleUnion> New() { return ::std::make_unique<ExampleUnion>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, ExampleUnion* value, size_t offset);
-  zx_status_t Clone(ExampleUnion* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
+  static inline ::std::unique_ptr<ExampleUnion> New() {
+    return ::std::make_unique<ExampleUnion>();
   }
 
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, ExampleUnion* value,
+                     size_t offset);
+  zx_status_t Clone(ExampleUnion* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
   bool is_variant() const { return tag_ == Tag::kVariant; }
-  
+
   uint32_t& variant() {
     EnsureStorageInitialized(Tag::kVariant);
     return variant_;
   }
-  
+
   const uint32_t& variant() const {
     ZX_ASSERT(is_variant());
     return variant_;
   }
   ExampleUnion& set_variant(uint32_t value);
 
-  Tag Which() const {
-    
-    return Tag(tag_);
-    
-  }
+  Tag Which() const { return Tag(tag_); }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const {
-    return nullptr;
-  }
+  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::example::ExampleUnion>;
 
@@ -407,15 +399,13 @@ class ExampleTable final {
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
-  
+
   const uint32_t& member() const {
     ZX_ASSERT(has_member_);
     return member_value_.value;
   }
-  bool has_member() const {
-    return has_member_;
-  }
-  
+  bool has_member() const { return has_member_; }
+
   uint32_t* mutable_member() {
     if (!has_member_) {
       has_member_ = true;
@@ -445,10 +435,13 @@ class ExampleTable final {
   ~ExampleTable();
   ExampleTable& operator=(ExampleTable&& other);
 
-  static inline ::std::unique_ptr<ExampleTable> New() { return ::std::make_unique<ExampleTable>(); }
+  static inline ::std::unique_ptr<ExampleTable> New() {
+    return ::std::make_unique<ExampleTable>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, ExampleTable* _value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, ExampleTable* _value,
+                     size_t _offset);
   zx_status_t Clone(ExampleTable* _result) const;
 
  private:
@@ -476,13 +469,16 @@ using ExampleTablePtr = ::std::unique_ptr<ExampleTable>;
 class ExampleStruct final {
  public:
   static const fidl_type_t* FidlType;
-  
+
   uint32_t member{};
 
-  static inline ::std::unique_ptr<ExampleStruct> New() { return ::std::make_unique<ExampleStruct>(); }
+  static inline ::std::unique_ptr<ExampleStruct> New() {
+    return ::std::make_unique<ExampleStruct>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, ExampleStruct* value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, ExampleStruct* value,
+                     size_t _offset);
   zx_status_t Clone(ExampleStruct* result) const;
 };
 
@@ -508,14 +504,18 @@ template <>
 struct CodingTraits<std::unique_ptr<::example::ExampleXUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder, std::unique_ptr<::example::ExampleXUnion>* value, size_t offset) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::example::ExampleXUnion>* value,
+                     size_t offset) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* decoder, std::unique_ptr<::example::ExampleXUnion>* value, size_t offset) {
+  static void Decode(Decoder* decoder,
+                     std::unique_ptr<::example::ExampleXUnion>* value,
+                     size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -533,22 +533,24 @@ inline zx_status_t Clone(const ::example::ExampleXUnion& value,
   return ::example::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::example::ExampleXUnion> {
-  bool operator()(const ::example::ExampleXUnion& _lhs, const ::example::ExampleXUnion& _rhs) const {
+  bool operator()(const ::example::ExampleXUnion& _lhs,
+                  const ::example::ExampleXUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::example::ExampleXUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::example::ExampleXUnion::Tag::Invalid):
         return true;
       case ::example::ExampleXUnion::Tag::kVariant:
         return ::fidl::Equals(_lhs.variant_, _rhs.variant_);
       default:
         return *_lhs.UnknownData() == *_rhs.UnknownData();
-      }
     }
+  }
 };
 template <>
 struct IsFidlXUnion<::example::ExampleUnion> : public std::true_type {};
@@ -561,14 +563,18 @@ template <>
 struct CodingTraits<std::unique_ptr<::example::ExampleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder, std::unique_ptr<::example::ExampleUnion>* value, size_t offset) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::example::ExampleUnion>* value,
+                     size_t offset) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* decoder, std::unique_ptr<::example::ExampleUnion>* value, size_t offset) {
+  static void Decode(Decoder* decoder,
+                     std::unique_ptr<::example::ExampleUnion>* value,
+                     size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -586,23 +592,25 @@ inline zx_status_t Clone(const ::example::ExampleUnion& value,
   return ::example::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::example::ExampleUnion> {
-  bool operator()(const ::example::ExampleUnion& _lhs, const ::example::ExampleUnion& _rhs) const {
+  bool operator()(const ::example::ExampleUnion& _lhs,
+                  const ::example::ExampleUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::example::ExampleUnion::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::example::ExampleUnion::Tag::Invalid):
         return true;
       case ::example::ExampleUnion::Tag::kVariant:
         return ::fidl::Equals(_lhs.variant_, _rhs.variant_);
-      
+
       default:
         return false;
-      }
     }
+  }
 };
 template <>
 struct CodingTraits<::example::ExampleTable>
@@ -612,15 +620,16 @@ inline zx_status_t Clone(const ::example::ExampleTable& _value,
                          ::example::ExampleTable* result) {
   return _value.Clone(result);
 }
-template<>
+template <>
 struct Equality<::example::ExampleTable> {
-  bool operator()(const ::example::ExampleTable& _lhs, const ::example::ExampleTable& _rhs) const {
+  bool operator()(const ::example::ExampleTable& _lhs,
+                  const ::example::ExampleTable& _rhs) const {
     if (_lhs.has_member()) {
       if (!_rhs.has_member()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.member(), _rhs.member())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_member()) {
       return false;
@@ -637,9 +646,10 @@ inline zx_status_t Clone(const ::example::ExampleStruct& value,
   return ::example::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::example::ExampleStruct> {
-  bool operator()(const ::example::ExampleStruct& _lhs, const ::example::ExampleStruct& _rhs) const {
+  bool operator()(const ::example::ExampleStruct& _lhs,
+                  const ::example::ExampleStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.member, _rhs.member)) {
       return false;
     }
@@ -650,11 +660,13 @@ template <>
 struct CodingTraits<::example::ExampleEnum> {
   static constexpr size_t inline_size_old = sizeof(::example::ExampleEnum);
   static constexpr size_t inline_size_v1_no_ee = sizeof(::example::ExampleEnum);
-  static void Encode(Encoder* encoder, ::example::ExampleEnum* value, size_t offset) {
+  static void Encode(Encoder* encoder, ::example::ExampleEnum* value,
+                     size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::example::ExampleEnum* value, size_t offset) {
+  static void Decode(Decoder* decoder, ::example::ExampleEnum* value,
+                     size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::example::ExampleEnum>(underlying);
@@ -665,23 +677,25 @@ inline zx_status_t Clone(::example::ExampleEnum value,
                          ::example::ExampleEnum* result) {
   return ::example::Clone(value, result);
 }
-template<>
+template <>
 struct Equality<::example::ExampleEnum> {
-  bool operator()(const ::example::ExampleEnum& _lhs, const ::example::ExampleEnum& _rhs) const {
+  bool operator()(const ::example::ExampleEnum& _lhs,
+                  const ::example::ExampleEnum& _rhs) const {
     return _lhs == _rhs;
   }
 };
-
 
 template <>
 struct CodingTraits<::example::ExampleBits> {
   static constexpr size_t inline_size_old = sizeof(::example::ExampleBits);
   static constexpr size_t inline_size_v1_no_ee = sizeof(::example::ExampleBits);
-  static void Encode(Encoder* encoder, ::example::ExampleBits* value, size_t offset) {
+  static void Encode(Encoder* encoder, ::example::ExampleBits* value,
+                     size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::example::ExampleBits* value, size_t offset) {
+  static void Decode(Decoder* decoder, ::example::ExampleBits* value,
+                     size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::example::ExampleBits>(underlying);
@@ -693,11 +707,13 @@ inline zx_status_t Clone(::example::ExampleBits value,
   return ::example::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::example::ExampleBits> {
-  bool operator()(const ::example::ExampleBits& _lhs, const ::example::ExampleBits& _rhs) const {
+  bool operator()(const ::example::ExampleBits& _lhs,
+                  const ::example::ExampleBits& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
-};}  // namespace fidl
+};
+}  // namespace fidl

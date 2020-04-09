@@ -2,10 +2,8 @@
 
 #pragma once
 
-
 namespace test {
 namespace name {
-namespace testing {
-}  // namespace testing
+namespace testing {}  // namespace testing
 }  // namespace name
 }  // namespace test

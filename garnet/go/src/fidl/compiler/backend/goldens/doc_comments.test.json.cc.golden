@@ -11,9 +11,7 @@ const fidl_type_t* Union::FidlType = &v1_test_name_UnionTable;
 
 Union::Union() {}
 
-Union::~Union() {
-  Destroy();
-}
+Union::~Union() { Destroy(); }
 
 Union::Union(Union&& other) : tag_(other.tag_) {
   switch (tag_) {
@@ -46,7 +44,6 @@ Union Union::WithField(int32_t&& val) {
   return result;
 }
 
-
 void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
@@ -55,12 +52,13 @@ void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (tag_) {
     case Tag::kField: {
-      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
+      envelope_offset = encoder->Alloc(
+          ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &Field_, envelope_offset);
       break;
     }
     default:
-       break;
+      break;
   }
 
   fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
@@ -69,7 +67,8 @@ void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
   if (envelope_offset) {
     xunion->tag = tag_;
     xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
-    xunion->envelope.num_handles = encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.num_handles =
+        encoder->CurrentHandleCount() - handles_before;
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -78,12 +77,12 @@ void Union::Decode(::fidl::Decoder* decoder, Union* value, size_t offset) {
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    value->EnsureStorageInitialized(
+        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
     return;
   }
 
   value->EnsureStorageInitialized(xunion->tag);
-
 
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
@@ -92,7 +91,6 @@ void Union::Decode(::fidl::Decoder* decoder, Union* value, size_t offset) {
       ::fidl::Decode(decoder, &value->Field_, envelope_offset);
       break;
   }
-
 }
 
 zx_status_t Union::Clone(Union* result) const {
@@ -116,10 +114,9 @@ void Union::Destroy() {
   switch (tag_) {
     case Tag::kField:
       break;
-  
+
     default:
       break;
-  
   }
   tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
 }
@@ -142,9 +139,7 @@ void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 extern "C" const fidl_type_t v1_test_name_TableTable;
 const fidl_type_t* Table::FidlType = &v1_test_name_TableTable;
 
-Table::Table() :
-  has_Field_(false) {
-}
+Table::Table() : has_Field_(false) {}
 
 Table::Table(Table&& other) {
   has_Field_ = other.has_Field_;
@@ -189,15 +184,16 @@ void Table::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        _encoder,
-        &Field_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder)));
+        _encoder, &Field_value_.value,
+        _encoder->Alloc(
+            ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+        FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -216,7 +212,8 @@ void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
     uint64_t presence;
     ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(_decoder, _value->mutable_Field(), _decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_Field(),
+                     _decoder->GetOffset(presence));
     } else {
       _value->clear_Field();
     }
@@ -235,9 +232,9 @@ done_1:
 
 zx_status_t Table::Clone(Table* result) const {
   if (has_Field_) {
-    zx_status_t _status = ::fidl::Clone(Field_value_.value, result->mutable_Field());
-    if (_status != ZX_OK)
-      return _status;
+    zx_status_t _status =
+        ::fidl::Clone(Field_value_.value, result->mutable_Field());
+    if (_status != ZX_OK) return _status;
   } else {
     result->clear_Field();
   }
@@ -256,8 +253,7 @@ void Struct::Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset) {
 
 zx_status_t Struct::Clone(Struct* _result) const {
   zx_status_t _status = ::fidl::Clone(Field, &_result->Field);
-  if (_status != ZX_OK)
-    return _status;
+  if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
 #ifdef __Fuchsia__
@@ -271,7 +267,8 @@ extern "C" const fidl_type_t v1_test_name_InterfaceOnEventEventTable;
 
 Interface::~Interface() = default;
 
-const fidl_type_t* Interface_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* Interface_RequestDecoder::GetType(uint64_t ordinal,
+                                                     bool* out_needs_response) {
   switch (ordinal) {
     case internal::kInterface_Method_Ordinal:
     case internal::kInterface_Method_GenOrdinal:
@@ -308,16 +305,17 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     case internal::kInterface_OnEvent_Ordinal:
-    case internal::kInterface_OnEvent_GenOrdinal:
-    {
+    case internal::kInterface_OnEvent_GenOrdinal: {
       if (!OnEvent) {
         status = ZX_OK;
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(&v1_test_name_InterfaceOnEventEventTable, &error_msg);
+      status =
+          message.Decode(&v1_test_name_InterfaceOnEventEventTable, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &v1_test_name_InterfaceOnEventEventTable, error_msg);
+        FIDL_REPORT_DECODING_ERROR(
+            message, &v1_test_name_InterfaceOnEventEventTable, error_msg);
         break;
       }
       OnEvent();
@@ -331,10 +329,10 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
   return status;
 }
 
-
 void Interface_Proxy::Method() {
   ::fidl::Encoder _encoder(internal::kInterface_Method_GenOrdinal);
-  controller_->Send(&v1_test_name_InterfaceMethodRequestTable, Interface_RequestEncoder::Method(&_encoder), nullptr);
+  controller_->Send(&v1_test_name_InterfaceMethodRequestTable,
+                    Interface_RequestEncoder::Method(&_encoder), nullptr);
 }
 
 Interface_Stub::Interface_Stub(Interface_clazz* impl) : impl_(impl) {
@@ -343,23 +341,23 @@ Interface_Stub::Interface_Stub(Interface_clazz* impl) : impl_(impl) {
 
 Interface_Stub::~Interface_Stub() = default;
 
-namespace {
-
-}  // namespace
+namespace {}  // namespace
 
 zx_status_t Interface_Stub::Dispatch_(
-    ::fidl::Message message,
-    ::fidl::internal::PendingResponse response) {
+    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = Interface_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  const fidl_type_t* request_type =
+      Interface_RequestDecoder::GetType(message.ordinal(), &needs_response);
   if (request_type == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (response.needs_response() != needs_response) {
     if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
     } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
     }
     return ZX_ERR_INVALID_ARGS;
   }
@@ -372,8 +370,7 @@ zx_status_t Interface_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case internal::kInterface_Method_Ordinal:
-    case internal::kInterface_Method_GenOrdinal:
-    {
+    case internal::kInterface_Method_GenOrdinal: {
       impl_->Method();
       break;
     }
@@ -386,7 +383,8 @@ zx_status_t Interface_Stub::Dispatch_(
 }
 void Interface_Stub::OnEvent() {
   ::fidl::Encoder _encoder(internal::kInterface_OnEvent_GenOrdinal);
-  sender_()->Send(&v1_test_name_InterfaceOnEventEventTable, Interface_ResponseEncoder::OnEvent(&_encoder));
+  sender_()->Send(&v1_test_name_InterfaceOnEventEventTable,
+                  Interface_ResponseEncoder::OnEvent(&_encoder));
 }
 
 Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)
@@ -396,11 +394,11 @@ Interface_SyncProxy::~Interface_SyncProxy() = default;
 
 zx_status_t Interface_SyncProxy::Method() {
   ::fidl::Encoder _encoder(internal::kInterface_Method_GenOrdinal);
-  return proxy_.Send(&v1_test_name_InterfaceMethodRequestTable, Interface_RequestEncoder::Method(&_encoder));
+  return proxy_.Send(&v1_test_name_InterfaceMethodRequestTable,
+                     Interface_RequestEncoder::Method(&_encoder));
 }
 
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 
 }  // namespace name
 }  // namespace test
-

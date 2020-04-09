@@ -4,8 +4,5 @@
 
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace test {
-namespace name {
-
-}  // namespace name
+namespace name {}  // namespace name
 }  // namespace test
-

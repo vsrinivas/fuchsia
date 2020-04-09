@@ -5,6 +5,5 @@
 #include <someotherlibrary/cpp/fidl.h>
 
 namespace example {
-namespace testing {
-}  // namespace testing
+namespace testing {}  // namespace testing
 }  // namespace example

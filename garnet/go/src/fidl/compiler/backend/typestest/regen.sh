@@ -96,7 +96,8 @@ for src_path in `find "${FIDLC_IR_DIR}" -name '*.test.json.golden'`; do
     ${FIDLGEN_HLCPP} \
         -json "${GOLDENS_DIR}/${json_name}" \
         -output-base "${GOLDENS_DIR}/${json_name}" \
-        -include-base "${GOLDENS_DIR}"
+        -include-base "${GOLDENS_DIR}" \
+        -clang-format-path "${PREBUILT_CLANG_DIR}/bin/clang-format"
     mv "${GOLDENS_DIR}/${cpp_header_name}" "${GOLDENS_DIR}/${cpp_header_name}.golden"
     mv "${GOLDENS_DIR}/${cpp_source_name}" "${GOLDENS_DIR}/${cpp_source_name}.golden"
     mv "${GOLDENS_DIR}/${cpp_test_header_name}" "${GOLDENS_DIR}/${cpp_test_header_name}.golden"
@@ -106,7 +107,8 @@ for src_path in `find "${FIDLC_IR_DIR}" -name '*.test.json.golden'`; do
         -json "${GOLDENS_DIR}/${json_name}" \
         -header "${GOLDENS_DIR}/${llcpp_header_name}" \
         -source "${GOLDENS_DIR}/${llcpp_source_name}" \
-        -include-base "${GOLDENS_DIR}"
+        -include-base "${GOLDENS_DIR}" \
+        -clang-format-path "${PREBUILT_CLANG_DIR}/bin/clang-format"
     mv "${GOLDENS_DIR}/${llcpp_header_name}" "${GOLDENS_DIR}/${llcpp_header_name}.golden"
     mv "${GOLDENS_DIR}/${llcpp_source_name}" "${GOLDENS_DIR}/${llcpp_source_name}.golden"
 
@@ -122,7 +124,8 @@ for src_path in `find "${FIDLC_IR_DIR}" -name '*.test.json.golden'`; do
         ${FIDLGEN_LIBFUZZER} \
             -json "${GOLDENS_DIR}/${json_name}" \
             -output-base "${GOLDENS_DIR}/${json_name}" \
-            -include-base "${GOLDENS_DIR}"
+            -include-base "${GOLDENS_DIR}" \
+            -clang-format-path "${PREBUILT_CLANG_DIR}/bin/clang-format"
         mv "${GOLDENS_DIR}/${cpp_header_name}" "${GOLDENS_DIR}/${libfuzzer_header_name}.golden"
         mv "${GOLDENS_DIR}/${cpp_source_name}" "${GOLDENS_DIR}/${libfuzzer_source_name}.golden"
     else

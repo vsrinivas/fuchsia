@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace fidl {
 namespace test {
 namespace json {
@@ -26,8 +25,8 @@ namespace internal {
 constexpr uint64_t kExample_foo_Ordinal = 0x51a3dcd800000000lu;
 constexpr uint64_t kExample_foo_GenOrdinal = 0xbaf4e613e45f29blu;
 
-}  // namespace
-#endif // __Fuchsia__
+}  // namespace internal
+#endif  // __Fuchsia__
 
 class Example_foo_Response final {
  public:
@@ -38,17 +37,17 @@ class Example_foo_Response final {
   explicit Example_foo_Response(std::tuple<int64_t> _value_tuple) {
     std::tie(y) = std::move(_value_tuple);
   }
-  operator std::tuple<int64_t>() && {
-    return std::make_tuple(std::move(y)
-    );
-  }
-  
+  operator std::tuple<int64_t>() && { return std::make_tuple(std::move(y)); }
+
   int64_t y{};
 
-  static inline ::std::unique_ptr<Example_foo_Response> New() { return ::std::make_unique<Example_foo_Response>(); }
+  static inline ::std::unique_ptr<Example_foo_Response> New() {
+    return ::std::make_unique<Example_foo_Response>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, Example_foo_Response* value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, Example_foo_Response* value,
+                     size_t _offset);
   zx_status_t Clone(Example_foo_Response* result) const;
 };
 
@@ -61,7 +60,7 @@ using Example_foo_ResponsePtr = ::std::unique_ptr<Example_foo_Response>;
 
 class Example_foo_Result final {
  public:
- static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlType;
 
   Example_foo_Result();
   ~Example_foo_Result();
@@ -69,34 +68,34 @@ class Example_foo_Result final {
   Example_foo_Result(Example_foo_Result&&);
   Example_foo_Result& operator=(Example_foo_Result&&);
 
-  
   static Example_foo_Result WithResponse(class Example_foo_Response&&);
   static Example_foo_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-  
+
     kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
+    kErr = 2,       // 0x2
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<Example_foo_Result> New() { return ::std::make_unique<Example_foo_Result>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, Example_foo_Result* value, size_t offset);
-  zx_status_t Clone(Example_foo_Result* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
+  static inline ::std::unique_ptr<Example_foo_Result> New() {
+    return ::std::make_unique<Example_foo_Result>();
   }
 
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, Example_foo_Result* value,
+                     size_t offset);
+  zx_status_t Clone(Example_foo_Result* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
   bool is_response() const { return tag_ == Tag::kResponse; }
-  
+
   class Example_foo_Response& response() {
     EnsureStorageInitialized(Tag::kResponse);
     return response_;
   }
-  
+
   const class Example_foo_Response& response() const {
     ZX_ASSERT(is_response());
     return response_;
@@ -104,33 +103,25 @@ class Example_foo_Result final {
   Example_foo_Result& set_response(class Example_foo_Response value);
 
   bool is_err() const { return tag_ == Tag::kErr; }
-  
+
   uint32_t& err() {
     EnsureStorageInitialized(Tag::kErr);
     return err_;
   }
-  
+
   const uint32_t& err() const {
     ZX_ASSERT(is_err());
     return err_;
   }
   Example_foo_Result& set_err(uint32_t value);
 
-  Tag Which() const {
-    
-    return Tag(tag_);
-    
-  }
+  Tag Which() const { return Tag(tag_); }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const {
-    return nullptr;
-  }
+  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::fidl::test::json::Example_foo_Result>;
   Example_foo_Result(fit::result<int64_t, uint32_t>&& result) {
@@ -142,9 +133,9 @@ class Example_foo_Result final {
     }
   }
   Example_foo_Result(fit::ok_result<int64_t>&& result)
-    : Example_foo_Result(fit::result<int64_t, uint32_t>(std::move(result))) { }
+      : Example_foo_Result(fit::result<int64_t, uint32_t>(std::move(result))) {}
   Example_foo_Result(fit::error_result<uint32_t>&& result)
-    : Example_foo_Result(fit::result<int64_t, uint32_t>(std::move(result))) { }
+      : Example_foo_Result(fit::result<int64_t, uint32_t>(std::move(result))) {}
   operator fit::result<int64_t, uint32_t>() && {
     if (is_err()) {
       return fit::error(err());
@@ -179,9 +170,8 @@ class Example {
   using EventSender_ = Example_EventSender;
   using Sync_ = Example_Sync;
   virtual ~Example();
-  using fooCallback =
-      fit::function<void(Example_foo_Result)>;
-      
+  using fooCallback = fit::function<void(Example_foo_Result)>;
+
   virtual void foo(::std::string s, fooCallback callback) = 0;
 };
 
@@ -201,7 +191,8 @@ class Example_RequestDecoder {
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
   zx_status_t Decode_(::fidl::Message request) {
     bool needs_response;
-    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -214,8 +205,7 @@ class Example_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kExample_foo_Ordinal:
-      case internal::kExample_foo_GenOrdinal:
-      {
+      case internal::kExample_foo_GenOrdinal: {
         auto arg0 = ::fidl::DecodeAs<::std::string>(&request_decoder, 16);
         foo(std::move(arg0));
         break;
@@ -232,7 +222,8 @@ class Example_RequestDecoder {
 
 class Example_ResponseEncoder {
  public:
-  static ::fidl::Message foo(::fidl::Encoder* _encoder, Example_foo_Result* result) {
+  static ::fidl::Message foo(::fidl::Encoder* _encoder,
+                             Example_foo_Result* result) {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
     return _encoder->GetMessage();
@@ -258,8 +249,7 @@ class Example_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::kExample_foo_Ordinal:
-      case internal::kExample_foo_GenOrdinal:
-      {
+      case internal::kExample_foo_GenOrdinal: {
         auto arg0 = ::fidl::DecodeAs<Example_foo_Result>(&response_decoder, 16);
         foo(std::move(arg0));
         break;
@@ -300,7 +290,8 @@ class Example_Proxy final : public ::fidl::internal::Proxy, public Example {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Example_Stub final : public ::fidl::internal::Stub, public Example_EventSender {
+class Example_Stub final : public ::fidl::internal::Stub,
+                           public Example_EventSender {
  public:
   typedef class ::fidl::test::json::Example Example_clazz;
   explicit Example_Stub(Example_clazz* impl);
@@ -319,11 +310,11 @@ class Example_SyncProxy : public Example_Sync {
   ~Example_SyncProxy() override;
   zx_status_t foo(::std::string s, Example_foo_Result* out_result) override;
 
-  private:
+ private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Example>;
 };
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 }  // namespace json
 }  // namespace test
 }  // namespace fidl
@@ -331,16 +322,18 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::fidl::test::json::Example_foo_Response>
-    : public EncodableCodingTraits<::fidl::test::json::Example_foo_Response, 8> {};
+    : public EncodableCodingTraits<::fidl::test::json::Example_foo_Response,
+                                   8> {};
 
 inline zx_status_t Clone(const ::fidl::test::json::Example_foo_Response& value,
                          ::fidl::test::json::Example_foo_Response* result) {
   return ::fidl::test::json::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::fidl::test::json::Example_foo_Response> {
-  bool operator()(const ::fidl::test::json::Example_foo_Response& _lhs, const ::fidl::test::json::Example_foo_Response& _rhs) const {
+  bool operator()(const ::fidl::test::json::Example_foo_Response& _lhs,
+                  const ::fidl::test::json::Example_foo_Response& _rhs) const {
     if (!::fidl::Equals(_lhs.y, _rhs.y)) {
       return false;
     }
@@ -348,24 +341,32 @@ struct Equality<::fidl::test::json::Example_foo_Response> {
   }
 };
 template <>
-struct IsFidlXUnion<::fidl::test::json::Example_foo_Result> : public std::true_type {};
+struct IsFidlXUnion<::fidl::test::json::Example_foo_Result>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<::fidl::test::json::Example_foo_Result>
-    : public EncodableCodingTraits<::fidl::test::json::Example_foo_Result, 24> {};
+    : public EncodableCodingTraits<::fidl::test::json::Example_foo_Result, 24> {
+};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::json::Example_foo_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder, std::unique_ptr<::fidl::test::json::Example_foo_Result>* value, size_t offset) {
+  static void Encode(
+      Encoder* encoder,
+      std::unique_ptr<::fidl::test::json::Example_foo_Result>* value,
+      size_t offset) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* decoder, std::unique_ptr<::fidl::test::json::Example_foo_Result>* value, size_t offset) {
+  static void Decode(
+      Decoder* decoder,
+      std::unique_ptr<::fidl::test::json::Example_foo_Result>* value,
+      size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -374,7 +375,8 @@ struct CodingTraits<std::unique_ptr<::fidl::test::json::Example_foo_Result>> {
 
     value->reset(new ::fidl::test::json::Example_foo_Result);
 
-    ::fidl::test::json::Example_foo_Result::Decode(decoder, value->get(), offset);
+    ::fidl::test::json::Example_foo_Result::Decode(decoder, value->get(),
+                                                   offset);
   }
 };
 
@@ -383,23 +385,26 @@ inline zx_status_t Clone(const ::fidl::test::json::Example_foo_Result& value,
   return ::fidl::test::json::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::fidl::test::json::Example_foo_Result> {
-  bool operator()(const ::fidl::test::json::Example_foo_Result& _lhs, const ::fidl::test::json::Example_foo_Result& _rhs) const {
+  bool operator()(const ::fidl::test::json::Example_foo_Result& _lhs,
+                  const ::fidl::test::json::Example_foo_Result& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::fidl::test::json::Example_foo_Result::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::json::Example_foo_Result::Tag::Invalid):
         return true;
       case ::fidl::test::json::Example_foo_Result::Tag::kResponse:
         return ::fidl::Equals(_lhs.response_, _rhs.response_);
       case ::fidl::test::json::Example_foo_Result::Tag::kErr:
         return ::fidl::Equals(_lhs.err_, _rhs.err_);
-      
+
       default:
         return false;
-      }
     }
-};}  // namespace fidl
+  }
+};
+}  // namespace fidl

@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace test {
 namespace name {
 
@@ -21,10 +20,11 @@ class SecondProtocol_SyncProxy;
 using SecondProtocolHandle = ::fidl::InterfaceHandle<SecondProtocol>;
 namespace internal {
 constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal = 0xd09c00f00000000lu;
-constexpr uint64_t kSecondProtocol_MethodOnSecond_GenOrdinal = 0x5785f9c1f2aece21lu;
+constexpr uint64_t kSecondProtocol_MethodOnSecond_GenOrdinal =
+    0x5785f9c1f2aece21lu;
 
-}  // namespace
-#endif // __Fuchsia__
+}  // namespace internal
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
 class FirstProtocol;
@@ -38,19 +38,20 @@ class FirstProtocol_SyncProxy;
 using FirstProtocolHandle = ::fidl::InterfaceHandle<FirstProtocol>;
 namespace internal {
 constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x2838a83100000000lu;
-constexpr uint64_t kFirstProtocol_MethodOnFirst_GenOrdinal = 0x580cbd0d43ccbe3blu;
+constexpr uint64_t kFirstProtocol_MethodOnFirst_GenOrdinal =
+    0x580cbd0d43ccbe3blu;
 
-}  // namespace
-#endif // __Fuchsia__
+}  // namespace internal
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 class SingleMemberService;
-#endif // __Fuchsia
+#endif  // __Fuchsia
 #ifdef __Fuchsia__
 class MultiHomogeneousMemberService;
-#endif // __Fuchsia
+#endif  // __Fuchsia
 #ifdef __Fuchsia__
 class MultiHeterogeneousMemberService;
-#endif // __Fuchsia
+#endif  // __Fuchsia
 #ifdef __Fuchsia__
 
 class SecondProtocol {
@@ -60,7 +61,7 @@ class SecondProtocol {
   using EventSender_ = SecondProtocol_EventSender;
   using Sync_ = SecondProtocol_Sync;
   virtual ~SecondProtocol();
-      
+
   virtual void MethodOnSecond() = 0;
 };
 
@@ -79,7 +80,8 @@ class SecondProtocol_RequestDecoder {
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
   zx_status_t Decode_(::fidl::Message request) {
     bool needs_response;
-    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -92,8 +94,7 @@ class SecondProtocol_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kSecondProtocol_MethodOnSecond_Ordinal:
-      case internal::kSecondProtocol_MethodOnSecond_GenOrdinal:
-      {
+      case internal::kSecondProtocol_MethodOnSecond_GenOrdinal: {
         MethodOnSecond();
         break;
       }
@@ -149,7 +150,8 @@ class SecondProtocol_Sync {
   virtual zx_status_t MethodOnSecond() = 0;
 };
 
-class SecondProtocol_Proxy final : public ::fidl::internal::Proxy, public SecondProtocol {
+class SecondProtocol_Proxy final : public ::fidl::internal::Proxy,
+                                   public SecondProtocol {
  public:
   explicit SecondProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~SecondProtocol_Proxy() override;
@@ -164,7 +166,8 @@ class SecondProtocol_Proxy final : public ::fidl::internal::Proxy, public Second
   ::fidl::internal::ProxyController* controller_;
 };
 
-class SecondProtocol_Stub final : public ::fidl::internal::Stub, public SecondProtocol_EventSender {
+class SecondProtocol_Stub final : public ::fidl::internal::Stub,
+                                  public SecondProtocol_EventSender {
  public:
   typedef class ::test::name::SecondProtocol SecondProtocol_clazz;
   explicit SecondProtocol_Stub(SecondProtocol_clazz* impl);
@@ -183,11 +186,11 @@ class SecondProtocol_SyncProxy : public SecondProtocol_Sync {
   ~SecondProtocol_SyncProxy() override;
   zx_status_t MethodOnSecond() override;
 
-  private:
+ private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<SecondProtocol>;
 };
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
 class FirstProtocol {
@@ -197,7 +200,7 @@ class FirstProtocol {
   using EventSender_ = FirstProtocol_EventSender;
   using Sync_ = FirstProtocol_Sync;
   virtual ~FirstProtocol();
-      
+
   virtual void MethodOnFirst() = 0;
 };
 
@@ -216,7 +219,8 @@ class FirstProtocol_RequestDecoder {
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
   zx_status_t Decode_(::fidl::Message request) {
     bool needs_response;
-    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -229,8 +233,7 @@ class FirstProtocol_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kFirstProtocol_MethodOnFirst_Ordinal:
-      case internal::kFirstProtocol_MethodOnFirst_GenOrdinal:
-      {
+      case internal::kFirstProtocol_MethodOnFirst_GenOrdinal: {
         MethodOnFirst();
         break;
       }
@@ -286,7 +289,8 @@ class FirstProtocol_Sync {
   virtual zx_status_t MethodOnFirst() = 0;
 };
 
-class FirstProtocol_Proxy final : public ::fidl::internal::Proxy, public FirstProtocol {
+class FirstProtocol_Proxy final : public ::fidl::internal::Proxy,
+                                  public FirstProtocol {
  public:
   explicit FirstProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~FirstProtocol_Proxy() override;
@@ -301,7 +305,8 @@ class FirstProtocol_Proxy final : public ::fidl::internal::Proxy, public FirstPr
   ::fidl::internal::ProxyController* controller_;
 };
 
-class FirstProtocol_Stub final : public ::fidl::internal::Stub, public FirstProtocol_EventSender {
+class FirstProtocol_Stub final : public ::fidl::internal::Stub,
+                                 public FirstProtocol_EventSender {
  public:
   typedef class ::test::name::FirstProtocol FirstProtocol_clazz;
   explicit FirstProtocol_Stub(FirstProtocol_clazz* impl);
@@ -320,11 +325,11 @@ class FirstProtocol_SyncProxy : public FirstProtocol_Sync {
   ~FirstProtocol_SyncProxy() override;
   zx_status_t MethodOnFirst() override;
 
-  private:
+ private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<FirstProtocol>;
 };
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
 class SingleMemberService final {
@@ -333,13 +338,16 @@ class SingleMemberService final {
 
   static constexpr char Name[] = "test.name.SingleMemberService";
 
-  explicit SingleMemberService(std::unique_ptr<::fidl::ServiceConnector> service)
+  explicit SingleMemberService(
+      std::unique_ptr<::fidl::ServiceConnector> service)
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
-  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "single_member".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the
+  /// member protocol "single_member".
   ::fidl::MemberConnector<FirstProtocol> single_member() const {
-    return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "single_member");
+    return ::fidl::MemberConnector<FirstProtocol>(service_.get(),
+                                                  "single_member");
   }
 
  private:
@@ -351,20 +359,21 @@ class SingleMemberService::Handler final {
  public:
   /// Constructs a new |Handler|. Does not take ownership of |service|.
   explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  /// Adds member "single_member" to the service instance. |handler| is invoked when a connection
-  /// is made to the member protocol.
+  /// Adds member "single_member" to the service instance. |handler| is invoked
+  /// when a connection is made to the member protocol.
   ///
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_single_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
+  zx_status_t add_single_member(
+      ::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
     return service_->AddMember("single_member", std::move(handler));
   }
 
  private:
   ::fidl::ServiceHandlerBase* const service_;
 };
-#endif // __Fuchsia
+#endif  // __Fuchsia
 #ifdef __Fuchsia__
 
 class MultiHomogeneousMemberService final {
@@ -373,17 +382,22 @@ class MultiHomogeneousMemberService final {
 
   static constexpr char Name[] = "test.name.MultiHomogeneousMemberService";
 
-  explicit MultiHomogeneousMemberService(std::unique_ptr<::fidl::ServiceConnector> service)
+  explicit MultiHomogeneousMemberService(
+      std::unique_ptr<::fidl::ServiceConnector> service)
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
-  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "first_member".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the
+  /// member protocol "first_member".
   ::fidl::MemberConnector<FirstProtocol> first_member() const {
-    return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "first_member");
+    return ::fidl::MemberConnector<FirstProtocol>(service_.get(),
+                                                  "first_member");
   }
-  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "second_member".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the
+  /// member protocol "second_member".
   ::fidl::MemberConnector<FirstProtocol> second_member() const {
-    return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "second_member");
+    return ::fidl::MemberConnector<FirstProtocol>(service_.get(),
+                                                  "second_member");
   }
 
  private:
@@ -395,29 +409,31 @@ class MultiHomogeneousMemberService::Handler final {
  public:
   /// Constructs a new |Handler|. Does not take ownership of |service|.
   explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  /// Adds member "first_member" to the service instance. |handler| is invoked when a connection
-  /// is made to the member protocol.
+  /// Adds member "first_member" to the service instance. |handler| is invoked
+  /// when a connection is made to the member protocol.
   ///
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_first_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
+  zx_status_t add_first_member(
+      ::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
     return service_->AddMember("first_member", std::move(handler));
   }
-  /// Adds member "second_member" to the service instance. |handler| is invoked when a connection
-  /// is made to the member protocol.
+  /// Adds member "second_member" to the service instance. |handler| is invoked
+  /// when a connection is made to the member protocol.
   ///
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_second_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
+  zx_status_t add_second_member(
+      ::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
     return service_->AddMember("second_member", std::move(handler));
   }
 
  private:
   ::fidl::ServiceHandlerBase* const service_;
 };
-#endif // __Fuchsia
+#endif  // __Fuchsia
 #ifdef __Fuchsia__
 
 class MultiHeterogeneousMemberService final {
@@ -426,17 +442,22 @@ class MultiHeterogeneousMemberService final {
 
   static constexpr char Name[] = "test.name.MultiHeterogeneousMemberService";
 
-  explicit MultiHeterogeneousMemberService(std::unique_ptr<::fidl::ServiceConnector> service)
+  explicit MultiHeterogeneousMemberService(
+      std::unique_ptr<::fidl::ServiceConnector> service)
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
-  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "first_member".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the
+  /// member protocol "first_member".
   ::fidl::MemberConnector<FirstProtocol> first_member() const {
-    return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "first_member");
+    return ::fidl::MemberConnector<FirstProtocol>(service_.get(),
+                                                  "first_member");
   }
-  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "second_member".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the
+  /// member protocol "second_member".
   ::fidl::MemberConnector<SecondProtocol> second_member() const {
-    return ::fidl::MemberConnector<SecondProtocol>(service_.get(), "second_member");
+    return ::fidl::MemberConnector<SecondProtocol>(service_.get(),
+                                                   "second_member");
   }
 
  private:
@@ -448,30 +469,31 @@ class MultiHeterogeneousMemberService::Handler final {
  public:
   /// Constructs a new |Handler|. Does not take ownership of |service|.
   explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  /// Adds member "first_member" to the service instance. |handler| is invoked when a connection
-  /// is made to the member protocol.
+  /// Adds member "first_member" to the service instance. |handler| is invoked
+  /// when a connection is made to the member protocol.
   ///
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_first_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
+  zx_status_t add_first_member(
+      ::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
     return service_->AddMember("first_member", std::move(handler));
   }
-  /// Adds member "second_member" to the service instance. |handler| is invoked when a connection
-  /// is made to the member protocol.
+  /// Adds member "second_member" to the service instance. |handler| is invoked
+  /// when a connection is made to the member protocol.
   ///
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_second_member(::fidl::InterfaceRequestHandler<SecondProtocol> handler) {
+  zx_status_t add_second_member(
+      ::fidl::InterfaceRequestHandler<SecondProtocol> handler) {
     return service_->AddMember("second_member", std::move(handler));
   }
 
  private:
   ::fidl::ServiceHandlerBase* const service_;
 };
-#endif // __Fuchsia
+#endif  // __Fuchsia
 }  // namespace name
 }  // namespace test
-namespace fidl {
-}  // namespace fidl
+namespace fidl {}  // namespace fidl

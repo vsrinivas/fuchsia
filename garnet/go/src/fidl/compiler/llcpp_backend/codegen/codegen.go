@@ -91,7 +91,7 @@ func NewGenerator() *Generator {
 	}
 }
 
-func generateFile(filename string, contentGenerator func(wr io.Writer) error) error {
+func generateFile(filename, clangFormatPath string, contentGenerator func(wr io.Writer) error) error {
 	if err := os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
 		return err
 	}
@@ -100,13 +100,17 @@ func generateFile(filename string, contentGenerator func(wr io.Writer) error) er
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	if err := contentGenerator(file); err != nil {
+	generatedPipe, err := cpp.NewClangFormatter(clangFormatPath).FormatPipe(file)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	if err := contentGenerator(generatedPipe); err != nil {
+		return err
+	}
+
+	return generatedPipe.Close()
 }
 
 func (gen *Generator) generateHeader(wr io.Writer, tree cpp.Root) error {
@@ -119,16 +123,16 @@ func (gen *Generator) generateSource(wr io.Writer, tree cpp.Root) error {
 
 // GenerateHeader generates the LLCPP bindings header, and writes it into
 // the target filename.
-func (gen *Generator) GenerateHeader(tree cpp.Root, filename string) error {
-	return generateFile(filename, func(wr io.Writer) error {
+func (gen *Generator) GenerateHeader(tree cpp.Root, filename, clangFormatPath string) error {
+	return generateFile(filename, clangFormatPath, func(wr io.Writer) error {
 		return gen.generateHeader(wr, tree)
 	})
 }
 
 // GenerateSource generates the LLCPP bindings header, and writes it into
 // the target filename.
-func (gen *Generator) GenerateSource(tree cpp.Root, filename string) error {
-	return generateFile(filename, func(wr io.Writer) error {
+func (gen *Generator) GenerateSource(tree cpp.Root, filename, clangFormatPath string) error {
+	return generateFile(filename, clangFormatPath, func(wr io.Writer) error {
 		return gen.generateSource(wr, tree)
 	})
 }

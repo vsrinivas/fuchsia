@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace fidl {
 namespace test {
 namespace json {
@@ -23,17 +22,21 @@ using ProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<Protocol>;
 class Protocol_SyncProxy;
 using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
 namespace internal {
-constexpr uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal = 0x1143e3c200000000lu;
-constexpr uint64_t kProtocol_RequestStrictResponseFlexible_GenOrdinal = 0x72b1a46e5e2af282lu;
-constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal = 0x3136aeff00000000lu;
-constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_GenOrdinal = 0x42a34ad5c4a1d952lu;
+constexpr uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal =
+    0x1143e3c200000000lu;
+constexpr uint64_t kProtocol_RequestStrictResponseFlexible_GenOrdinal =
+    0x72b1a46e5e2af282lu;
+constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal =
+    0x3136aeff00000000lu;
+constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_GenOrdinal =
+    0x42a34ad5c4a1d952lu;
 
-}  // namespace
-#endif // __Fuchsia__
+}  // namespace internal
+#endif  // __Fuchsia__
 
 class StrictFoo final {
  public:
- static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlType;
 
   StrictFoo();
   ~StrictFoo();
@@ -41,34 +44,33 @@ class StrictFoo final {
   StrictFoo(StrictFoo&&);
   StrictFoo& operator=(StrictFoo&&);
 
-  
   static StrictFoo WithS(::std::string&&);
   static StrictFoo WithI(int32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-  
+
     kS = 1,  // 0x1
     kI = 2,  // 0x2
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<StrictFoo> New() { return ::std::make_unique<StrictFoo>(); }
+  static inline ::std::unique_ptr<StrictFoo> New() {
+    return ::std::make_unique<StrictFoo>();
+  }
 
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, StrictFoo* value, size_t offset);
   zx_status_t Clone(StrictFoo* result) const;
 
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
-  }
+  bool has_invalid_tag() const { return tag_ == Invalid; }
 
   bool is_s() const { return tag_ == Tag::kS; }
-  
+
   ::std::string& s() {
     EnsureStorageInitialized(Tag::kS);
     return s_;
   }
-  
+
   const ::std::string& s() const {
     ZX_ASSERT(is_s());
     return s_;
@@ -76,33 +78,25 @@ class StrictFoo final {
   StrictFoo& set_s(::std::string value);
 
   bool is_i() const { return tag_ == Tag::kI; }
-  
+
   int32_t& i() {
     EnsureStorageInitialized(Tag::kI);
     return i_;
   }
-  
+
   const int32_t& i() const {
     ZX_ASSERT(is_i());
     return i_;
   }
   StrictFoo& set_i(int32_t value);
 
-  Tag Which() const {
-    
-    return Tag(tag_);
-    
-  }
+  Tag Which() const { return Tag(tag_); }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const {
-    return nullptr;
-  }
+  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::fidl::test::json::StrictFoo>;
 
@@ -126,7 +120,7 @@ using StrictFooPtr = ::std::unique_ptr<StrictFoo>;
 
 class FlexibleFoo final {
  public:
- static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlType;
 
   FlexibleFoo();
   ~FlexibleFoo();
@@ -134,36 +128,36 @@ class FlexibleFoo final {
   FlexibleFoo(FlexibleFoo&&);
   FlexibleFoo& operator=(FlexibleFoo&&);
 
-  
   static FlexibleFoo WithS(::std::string&&);
   static FlexibleFoo WithI(int32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-  kUnknown = 0,
+    kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
-  
+
     kS = 1,  // 0x1
     kI = 2,  // 0x2
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<FlexibleFoo> New() { return ::std::make_unique<FlexibleFoo>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, FlexibleFoo* value, size_t offset);
-  zx_status_t Clone(FlexibleFoo* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
+  static inline ::std::unique_ptr<FlexibleFoo> New() {
+    return ::std::make_unique<FlexibleFoo>();
   }
 
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, FlexibleFoo* value,
+                     size_t offset);
+  zx_status_t Clone(FlexibleFoo* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
   bool is_s() const { return tag_ == Tag::kS; }
-  
+
   ::std::string& s() {
     EnsureStorageInitialized(Tag::kS);
     return s_;
   }
-  
+
   const ::std::string& s() const {
     ZX_ASSERT(is_s());
     return s_;
@@ -171,12 +165,12 @@ class FlexibleFoo final {
   FlexibleFoo& set_s(::std::string value);
 
   bool is_i() const { return tag_ == Tag::kI; }
-  
+
   int32_t& i() {
     EnsureStorageInitialized(Tag::kI);
     return i_;
   }
-  
+
   const int32_t& i() const {
     ZX_ASSERT(is_i());
     return i_;
@@ -184,7 +178,6 @@ class FlexibleFoo final {
   FlexibleFoo& set_i(int32_t value);
 
   Tag Which() const {
-    
     switch (tag_) {
       case Tag::kS:
       case Tag::kI:
@@ -192,14 +185,11 @@ class FlexibleFoo final {
       default:
         return Tag::kUnknown;
     }
-    
   }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
 
   const std::vector<uint8_t>* UnknownData() const {
     if (Which() != Tag::kUnknown) {
@@ -240,22 +230,25 @@ class Protocol {
   virtual ~Protocol();
   using RequestStrictResponseFlexibleCallback =
       fit::function<void(FlexibleFoo)>;
-      
-  virtual void RequestStrictResponseFlexible(StrictFoo s, RequestStrictResponseFlexibleCallback callback) = 0;
-  using RequestFlexibleResponseStrictCallback =
-      fit::function<void(StrictFoo)>;
-      
-  virtual void RequestFlexibleResponseStrict(FlexibleFoo s, RequestFlexibleResponseStrictCallback callback) = 0;
+
+  virtual void RequestStrictResponseFlexible(
+      StrictFoo s, RequestStrictResponseFlexibleCallback callback) = 0;
+  using RequestFlexibleResponseStrictCallback = fit::function<void(StrictFoo)>;
+
+  virtual void RequestFlexibleResponseStrict(
+      FlexibleFoo s, RequestFlexibleResponseStrictCallback callback) = 0;
 };
 
 class Protocol_RequestEncoder {
  public:
-  static ::fidl::Message RequestStrictResponseFlexible(::fidl::Encoder* _encoder, StrictFoo* s) {
+  static ::fidl::Message RequestStrictResponseFlexible(
+      ::fidl::Encoder* _encoder, StrictFoo* s) {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
     return _encoder->GetMessage();
   }
-  static ::fidl::Message RequestFlexibleResponseStrict(::fidl::Encoder* _encoder, FlexibleFoo* s) {
+  static ::fidl::Message RequestFlexibleResponseStrict(
+      ::fidl::Encoder* _encoder, FlexibleFoo* s) {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
     return _encoder->GetMessage();
@@ -269,7 +262,8 @@ class Protocol_RequestDecoder {
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
   zx_status_t Decode_(::fidl::Message request) {
     bool needs_response;
-    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -282,15 +276,13 @@ class Protocol_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
-      case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal:
-      {
+      case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
         auto arg0 = ::fidl::DecodeAs<StrictFoo>(&request_decoder, 16);
         RequestStrictResponseFlexible(std::move(arg0));
         break;
       }
       case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
-      case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal:
-      {
+      case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
         auto arg0 = ::fidl::DecodeAs<FlexibleFoo>(&request_decoder, 16);
         RequestFlexibleResponseStrict(std::move(arg0));
         break;
@@ -308,12 +300,14 @@ class Protocol_RequestDecoder {
 
 class Protocol_ResponseEncoder {
  public:
-  static ::fidl::Message RequestStrictResponseFlexible(::fidl::Encoder* _encoder, FlexibleFoo* f) {
+  static ::fidl::Message RequestStrictResponseFlexible(
+      ::fidl::Encoder* _encoder, FlexibleFoo* f) {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, f, 16);
     return _encoder->GetMessage();
   }
-  static ::fidl::Message RequestFlexibleResponseStrict(::fidl::Encoder* _encoder, StrictFoo* f) {
+  static ::fidl::Message RequestFlexibleResponseStrict(
+      ::fidl::Encoder* _encoder, StrictFoo* f) {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, f, 16);
     return _encoder->GetMessage();
@@ -339,15 +333,13 @@ class Protocol_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
-      case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal:
-      {
+      case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
         auto arg0 = ::fidl::DecodeAs<FlexibleFoo>(&response_decoder, 16);
         RequestStrictResponseFlexible(std::move(arg0));
         break;
       }
       case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
-      case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal:
-      {
+      case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
         auto arg0 = ::fidl::DecodeAs<StrictFoo>(&response_decoder, 16);
         RequestFlexibleResponseStrict(std::move(arg0));
         break;
@@ -371,8 +363,10 @@ class Protocol_Sync {
  public:
   using Proxy_ = Protocol_SyncProxy;
   virtual ~Protocol_Sync();
-  virtual zx_status_t RequestStrictResponseFlexible(StrictFoo s, FlexibleFoo* out_f) = 0;
-  virtual zx_status_t RequestFlexibleResponseStrict(FlexibleFoo s, StrictFoo* out_f) = 0;
+  virtual zx_status_t RequestStrictResponseFlexible(StrictFoo s,
+                                                    FlexibleFoo* out_f) = 0;
+  virtual zx_status_t RequestFlexibleResponseStrict(FlexibleFoo s,
+                                                    StrictFoo* out_f) = 0;
 };
 
 class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
@@ -381,8 +375,10 @@ class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
   ~Protocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::Message message) override;
-  void RequestStrictResponseFlexible(StrictFoo s, RequestStrictResponseFlexibleCallback callback) override;
-  void RequestFlexibleResponseStrict(FlexibleFoo s, RequestFlexibleResponseStrictCallback callback) override;
+  void RequestStrictResponseFlexible(
+      StrictFoo s, RequestStrictResponseFlexibleCallback callback) override;
+  void RequestFlexibleResponseStrict(
+      FlexibleFoo s, RequestFlexibleResponseStrictCallback callback) override;
 
  private:
   Protocol_Proxy(const Protocol_Proxy&) = delete;
@@ -391,7 +387,8 @@ class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Protocol_Stub final : public ::fidl::internal::Stub, public Protocol_EventSender {
+class Protocol_Stub final : public ::fidl::internal::Stub,
+                            public Protocol_EventSender {
  public:
   typedef class ::fidl::test::json::Protocol Protocol_clazz;
   explicit Protocol_Stub(Protocol_clazz* impl);
@@ -408,14 +405,16 @@ class Protocol_SyncProxy : public Protocol_Sync {
  public:
   explicit Protocol_SyncProxy(::zx::channel channel);
   ~Protocol_SyncProxy() override;
-  zx_status_t RequestStrictResponseFlexible(StrictFoo s, FlexibleFoo* out_f) override;
-  zx_status_t RequestFlexibleResponseStrict(FlexibleFoo s, StrictFoo* out_f) override;
+  zx_status_t RequestStrictResponseFlexible(StrictFoo s,
+                                            FlexibleFoo* out_f) override;
+  zx_status_t RequestFlexibleResponseStrict(FlexibleFoo s,
+                                            StrictFoo* out_f) override;
 
-  private:
+ private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Protocol>;
 };
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 }  // namespace json
 }  // namespace test
 }  // namespace fidl
@@ -432,14 +431,18 @@ template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::json::StrictFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder, std::unique_ptr<::fidl::test::json::StrictFoo>* value, size_t offset) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::fidl::test::json::StrictFoo>* value,
+                     size_t offset) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* decoder, std::unique_ptr<::fidl::test::json::StrictFoo>* value, size_t offset) {
+  static void Decode(Decoder* decoder,
+                     std::unique_ptr<::fidl::test::json::StrictFoo>* value,
+                     size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -457,25 +460,27 @@ inline zx_status_t Clone(const ::fidl::test::json::StrictFoo& value,
   return ::fidl::test::json::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::fidl::test::json::StrictFoo> {
-  bool operator()(const ::fidl::test::json::StrictFoo& _lhs, const ::fidl::test::json::StrictFoo& _rhs) const {
+  bool operator()(const ::fidl::test::json::StrictFoo& _lhs,
+                  const ::fidl::test::json::StrictFoo& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::fidl::test::json::StrictFoo::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::json::StrictFoo::Tag::Invalid):
         return true;
       case ::fidl::test::json::StrictFoo::Tag::kS:
         return ::fidl::Equals(_lhs.s_, _rhs.s_);
       case ::fidl::test::json::StrictFoo::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
-      
+
       default:
         return false;
-      }
     }
+  }
 };
 template <>
 struct IsFidlXUnion<::fidl::test::json::FlexibleFoo> : public std::true_type {};
@@ -488,14 +493,18 @@ template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::json::FlexibleFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder, std::unique_ptr<::fidl::test::json::FlexibleFoo>* value, size_t offset) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::fidl::test::json::FlexibleFoo>* value,
+                     size_t offset) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* decoder, std::unique_ptr<::fidl::test::json::FlexibleFoo>* value, size_t offset) {
+  static void Decode(Decoder* decoder,
+                     std::unique_ptr<::fidl::test::json::FlexibleFoo>* value,
+                     size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -513,15 +522,17 @@ inline zx_status_t Clone(const ::fidl::test::json::FlexibleFoo& value,
   return ::fidl::test::json::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::fidl::test::json::FlexibleFoo> {
-  bool operator()(const ::fidl::test::json::FlexibleFoo& _lhs, const ::fidl::test::json::FlexibleFoo& _rhs) const {
+  bool operator()(const ::fidl::test::json::FlexibleFoo& _lhs,
+                  const ::fidl::test::json::FlexibleFoo& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::fidl::test::json::FlexibleFoo::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::json::FlexibleFoo::Tag::Invalid):
         return true;
       case ::fidl::test::json::FlexibleFoo::Tag::kS:
         return ::fidl::Equals(_lhs.s_, _rhs.s_);
@@ -529,6 +540,7 @@ struct Equality<::fidl::test::json::FlexibleFoo> {
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
       default:
         return *_lhs.UnknownData() == *_rhs.UnknownData();
-      }
     }
-};}  // namespace fidl
+  }
+};
+}  // namespace fidl

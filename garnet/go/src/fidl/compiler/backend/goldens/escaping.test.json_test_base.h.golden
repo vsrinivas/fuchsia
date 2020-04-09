@@ -2,8 +2,6 @@
 
 #pragma once
 
-
 namespace escapeme {
-namespace testing {
-}  // namespace testing
+namespace testing {}  // namespace testing
 }  // namespace escapeme

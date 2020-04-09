@@ -2,19 +2,15 @@
 
 #pragma once
 
-
 namespace test {
 namespace name {
 namespace testing {
 
 class Interface_TestBase : public Interface {
-  public:
-  virtual ~Interface_TestBase() { }
+ public:
+  virtual ~Interface_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void Method() override {
-    NotImplemented_("Method");
-  }
-
+  void Method() override { NotImplemented_("Method"); }
 };
 }  // namespace testing
 }  // namespace name

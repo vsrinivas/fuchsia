@@ -3,7 +3,6 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,14 +12,14 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
-#include <zircon/fidl.h>
-
 #include <middle/llcpp/fidl.h>
+#include <zircon/fidl.h>
 
 namespace llcpp {
 
@@ -34,8 +33,7 @@ struct Baz {
   static constexpr const fidl_type_t* Type = &v1_top_BazTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
   ::llcpp::middle::Bar g = {};

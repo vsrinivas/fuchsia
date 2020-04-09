@@ -3,7 +3,6 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,10 +12,11 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 
@@ -29,12 +29,9 @@ enum class EnumType : int32_t {
   VALUE = 1u,
 };
 
-
 enum class BitsType : int32_t {
   VALUE = 1u,
 };
-
-
 
 extern const char USERNAME[];
 
@@ -68,6 +65,4 @@ constexpr uint16_t ANSWER = 42u;
 }  // namespace test
 }  // namespace llcpp
 
-namespace fidl {
-
-}  // namespace fidl
+namespace fidl {}  // namespace fidl

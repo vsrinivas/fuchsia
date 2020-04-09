@@ -3,7 +3,6 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,10 +12,11 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
 #include <zircon/fidl.h>
@@ -33,15 +33,13 @@ struct HandlesInTypes;
 extern "C" const fidl_type_t v1_test_name_UnionWithHandleTable;
 
 class UnionWithHandle {
-  public:
+ public:
   UnionWithHandle() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   UnionWithHandle(UnionWithHandle&&) = default;
   UnionWithHandle& operator=(UnionWithHandle&&) = default;
 
-  ~UnionWithHandle() {
-    reset_ptr(nullptr);
-  }
+  ~UnionWithHandle() { reset_ptr(nullptr); }
 
   enum class Tag : fidl_xunion_tag_t {
     kH = 1,  // 0x1
@@ -80,8 +78,7 @@ class UnionWithHandle {
   static constexpr const fidl_type_t* Type = &v1_test_name_UnionWithHandleTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 8;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
  private:
@@ -93,11 +90,12 @@ class UnionWithHandle {
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 1: {
-      ::fidl::tracking_ptr<::zx::vmo> to_destroy =
-        static_cast<::fidl::tracking_ptr<::zx::vmo>>(std::move(envelope_.data));
-      break;
-    }
+      case 1: {
+        ::fidl::tracking_ptr<::zx::vmo> to_destroy =
+            static_cast<::fidl::tracking_ptr<::zx::vmo>>(
+                std::move(envelope_.data));
+        break;
+      }
     }
 
     envelope_.data = std::move(new_ptr);
@@ -112,7 +110,7 @@ class UnionWithHandle {
 extern "C" const fidl_type_t v1_test_name_TableWithHandleTable;
 
 class TableWithHandle final {
-public:
+ public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
@@ -136,24 +134,23 @@ public:
   static constexpr const fidl_type_t* Type = &v1_test_name_TableWithHandleTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
 
   class Builder;
   class UnownedBuilder;
 
   class Frame final {
-  public:
+   public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the tracking_ptr is
-    // assigned before a move or copy, then it will reference the old invalid object. Because this
-    // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
-    // safely.
+    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
+    // tracking_ptr is assigned before a move or copy, then it will reference
+    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
 
-  private:
+   private:
     Frame(Frame&&) noexcept = default;
     Frame& operator=(Frame&&) noexcept = default;
     ::fidl::Envelope<::zx::vmo> h_;
@@ -164,21 +161,24 @@ public:
   };
 
  private:
-  TableWithHandle(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
+  TableWithHandle(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
 };
 
 // TableWithHandle::Builder builds TableWithHandle.
 // Usage:
-// TableWithHandle val = TableWithHandle::Builder(std::make_unique<TableWithHandle::Frame>())
+// TableWithHandle val =
+// TableWithHandle::Builder(std::make_unique<TableWithHandle::Frame>())
 // .set_h(ptr)
 // .build();
 class TableWithHandle::Builder final {
  public:
   ~Builder() = default;
   Builder() = delete;
-  Builder(::fidl::tracking_ptr<TableWithHandle::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
+  Builder(::fidl::tracking_ptr<TableWithHandle::Frame>&& frame_ptr)
+      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
 
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -200,15 +200,15 @@ class TableWithHandle::Builder final {
     return TableWithHandle(max_ordinal_, std::move(frame_ptr_));
   }
 
-  private:
+ private:
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<TableWithHandle::Frame> frame_ptr_;
 };
 
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
-// data.
+// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
+// working with unowned data.
 class TableWithHandle::UnownedBuilder final {
-public:
+ public:
   ~UnownedBuilder() = default;
   UnownedBuilder() noexcept = default;
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
@@ -227,7 +227,7 @@ public:
     return TableWithHandle(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
-private:
+ private:
   uint64_t max_ordinal_ = 0;
   TableWithHandle::Frame frame_;
 };
@@ -238,8 +238,7 @@ struct HandlesInTypes {
   static constexpr const fidl_type_t* Type = &v1_test_name_HandlesInTypesTable;
   static constexpr uint32_t MaxNumHandles = 4294967295;
   static constexpr uint32_t PrimarySize = 104;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
   ::zx::vmo normal_handle = {};
@@ -248,7 +247,8 @@ struct HandlesInTypes {
 
   ::fidl::Array<::zx::vmo, 5> handle_in_array = {};
 
-  ::fidl::VectorView<::fidl::Array<::zx::vmo, 5>> handle_in_mixed_vec_array = {};
+  ::fidl::VectorView<::fidl::Array<::zx::vmo, 5>> handle_in_mixed_vec_array =
+      {};
 
   ::llcpp::test::name::TableWithHandle table_with_handle = {};
 
@@ -262,22 +262,32 @@ struct HandlesInTypes {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::UnionWithHandle> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::UnionWithHandle>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::UnionWithHandle>);
 
 template <>
-struct IsFidlType<::llcpp::test::name::TableWithHandle> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::TableWithHandle>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::TableWithHandle>);
 
 template <>
-struct IsFidlType<::llcpp::test::name::HandlesInTypes> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::HandlesInTypes> : public std::true_type {
+};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::HandlesInTypes>);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes, normal_handle) == 0);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes, handle_in_vec) == 8);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes, handle_in_array) == 24);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes, handle_in_mixed_vec_array) == 48);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes, table_with_handle) == 64);
-static_assert(offsetof(::llcpp::test::name::HandlesInTypes, union_with_handle) == 80);
-static_assert(sizeof(::llcpp::test::name::HandlesInTypes) == ::llcpp::test::name::HandlesInTypes::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::HandlesInTypes, normal_handle) ==
+              0);
+static_assert(offsetof(::llcpp::test::name::HandlesInTypes, handle_in_vec) ==
+              8);
+static_assert(offsetof(::llcpp::test::name::HandlesInTypes, handle_in_array) ==
+              24);
+static_assert(offsetof(::llcpp::test::name::HandlesInTypes,
+                       handle_in_mixed_vec_array) == 48);
+static_assert(offsetof(::llcpp::test::name::HandlesInTypes,
+                       table_with_handle) == 64);
+static_assert(offsetof(::llcpp::test::name::HandlesInTypes,
+                       union_with_handle) == 80);
+static_assert(sizeof(::llcpp::test::name::HandlesInTypes) ==
+              ::llcpp::test::name::HandlesInTypes::PrimarySize);
 
 }  // namespace fidl

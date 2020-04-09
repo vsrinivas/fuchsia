@@ -5,9 +5,6 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace fidl {
 namespace test {
-namespace json {
-
-}  // namespace json
+namespace json {}  // namespace json
 }  // namespace test
 }  // namespace fidl
-

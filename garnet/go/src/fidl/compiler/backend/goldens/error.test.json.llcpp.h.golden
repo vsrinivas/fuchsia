@@ -3,7 +3,6 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,10 +12,11 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -34,43 +34,47 @@ class Example;
 extern "C" const fidl_type_t v1_fidl_test_json_Example_foo_ResultTable;
 
 class Example_foo_Result {
-  public:
+ public:
   Example_foo_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   Example_foo_Result(Example_foo_Result&&) = default;
   Example_foo_Result& operator=(Example_foo_Result&&) = default;
 
-  ~Example_foo_Result() {
-    reset_ptr(nullptr);
-  }
+  ~Example_foo_Result() { reset_ptr(nullptr); }
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
+    kErr = 2,       // 0x2
   };
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  static Example_foo_Result WithResponse(::fidl::tracking_ptr<::llcpp::fidl::test::json::Example_foo_Response>&& val) {
+  static Example_foo_Result WithResponse(
+      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Example_foo_Response>&&
+          val) {
     Example_foo_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  void set_response(::fidl::tracking_ptr<::llcpp::fidl::test::json::Example_foo_Response>&& elem) {
+  void set_response(
+      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Example_foo_Response>&&
+          elem) {
     ordinal_ = Ordinal::kResponse;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::fidl::test::json::Example_foo_Response& mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::fidl::test::json::Example_foo_Response*>(envelope_.data.get());
+    return *static_cast<::llcpp::fidl::test::json::Example_foo_Response*>(
+        envelope_.data.get());
   }
   const ::llcpp::fidl::test::json::Example_foo_Response& response() const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::fidl::test::json::Example_foo_Response*>(envelope_.data.get());
+    return *static_cast<::llcpp::fidl::test::json::Example_foo_Response*>(
+        envelope_.data.get());
   }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
@@ -99,33 +103,36 @@ class Example_foo_Result {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_Example_foo_ResultTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_fidl_test_json_Example_foo_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 8;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
     kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
+    kErr = 2,       // 0x2
   };
 
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 1: {
-      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Example_foo_Response> to_destroy =
-        static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Example_foo_Response>>(std::move(envelope_.data));
-      break;
-    }
-    case 2: {
-      ::fidl::tracking_ptr<uint32_t> to_destroy =
-        static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
-      break;
-    }
+      case 1: {
+        ::fidl::tracking_ptr<::llcpp::fidl::test::json::Example_foo_Response>
+            to_destroy = static_cast<::fidl::tracking_ptr<
+                ::llcpp::fidl::test::json::Example_foo_Response>>(
+                std::move(envelope_.data));
+        break;
+      }
+      case 2: {
+        ::fidl::tracking_ptr<uint32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<uint32_t>>(
+                std::move(envelope_.data));
+        break;
+      }
     }
 
     envelope_.data = std::move(new_ptr);
@@ -140,11 +147,11 @@ class Example_foo_Result {
 extern "C" const fidl_type_t v1_fidl_test_json_Example_foo_ResponseTable;
 
 struct Example_foo_Response {
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_Example_foo_ResponseTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_fidl_test_json_Example_foo_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
   int64_t y = {};
@@ -155,14 +162,15 @@ extern "C" const fidl_type_t v1_fidl_test_json_ExamplefooResponseTable;
 
 class Example final {
   Example() = delete;
- public:
 
+ public:
   struct fooResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::Example_foo_Result result;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ExamplefooResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_fidl_test_json_ExamplefooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -177,7 +185,8 @@ class Example final {
     fidl_message_header_t _hdr;
     ::fidl::StringView s;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ExamplefooRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_fidl_test_json_ExamplefooRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -191,22 +200,24 @@ class Example final {
     using ResponseType = fooResponse;
   };
 
-
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
+
    private:
     template <typename ResponseType>
-    class foo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class foo_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
       foo_Impl(::zx::unowned_channel _client_end, ::fidl::StringView s);
       ~foo_Impl() = default;
       foo_Impl(foo_Impl&& other) = default;
       foo_Impl& operator=(foo_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
@@ -221,18 +232,23 @@ class Example final {
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
+
    private:
     template <typename ResponseType>
-    class foo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class foo_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      foo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
+      foo_Impl(::zx::unowned_channel _client_end,
+               ::fidl::BytePart _request_buffer, ::fidl::StringView s,
+               ::fidl::BytePart _response_buffer);
       ~foo_Impl() = default;
       foo_Impl(foo_Impl&& other) = default;
       foo_Impl& operator=(foo_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
@@ -255,37 +271,50 @@ class Example final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Allocates 48 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 48 bytes of response buffer on the stack. Request is
+    // heap-allocated.
     ResultOf::foo foo(::fidl::StringView s);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::foo foo(::fidl::BytePart _request_buffer, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::foo foo(::fidl::BytePart _request_buffer,
+                             ::fidl::StringView s,
+                             ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
   class Call final {
     Call() = delete;
+
    public:
+    // Allocates 48 bytes of response buffer on the stack. Request is
+    // heap-allocated.
+    static ResultOf::foo foo(::zx::unowned_channel _client_end,
+                             ::fidl::StringView s);
 
-    // Allocates 48 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::foo foo(::zx::unowned_channel _client_end, ::fidl::StringView s);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::foo foo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
-
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::foo foo(::zx::unowned_channel _client_end,
+                                    ::fidl::BytePart _request_buffer,
+                                    ::fidl::StringView s,
+                                    ::fidl::BytePart _response_buffer);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  // Additionally, requests must be already laid-out according to the FIDL
+  // wire-format.
   class InPlace final {
     InPlace() = delete;
+
    public:
-
-    static ::fidl::DecodeResult<fooResponse> foo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<fooRequest> params, ::fidl::BytePart response_buffer);
-
+    static ::fidl::DecodeResult<fooResponse> foo(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<fooRequest> params,
+        ::fidl::BytePart response_buffer);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -301,7 +330,8 @@ class Example final {
       void Reply(::llcpp::fidl::test::json::Example_foo_Result result);
       void ReplySuccess(int64_t y);
       void ReplyError(uint32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fidl::test::json::Example_foo_Result result);
+      void Reply(::fidl::BytePart _buffer,
+                 ::llcpp::fidl::test::json::Example_foo_Result result);
       void ReplySuccess(::fidl::BytePart _buffer, int64_t y);
       void Reply(::fidl::DecodedMessage<fooResponse> params);
 
@@ -312,34 +342,41 @@ class Example final {
     using fooCompleter = ::fidl::Completer<fooCompleterBase>;
 
     virtual void foo(::fidl::StringView s, fooCompleter::Sync _completer) = 0;
-
   };
 
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg,
+                          ::fidl::Transaction* txn);
 
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Dispatches the incoming message to one of the handlers functions in the
+  // interface. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg,
+                       ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
+  // with |fidl::Bind| to reduce template expansion. Do not call this method
+  // manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
+                                 ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  // Helper functions to fill in the transaction header in a
+  // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
+
    public:
-    static void fooRequest(const ::fidl::DecodedMessage<Example::fooRequest>& _msg);
-    static void fooResponse(const ::fidl::DecodedMessage<Example::fooResponse>& _msg);
+    static void fooRequest(
+        const ::fidl::DecodedMessage<Example::fooRequest>& _msg);
+    static void fooResponse(
+        const ::fidl::DecodedMessage<Example::fooResponse>& _msg);
   };
 };
 
@@ -351,29 +388,41 @@ class Example final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Example_foo_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Example_foo_Response>);
-static_assert(offsetof(::llcpp::fidl::test::json::Example_foo_Response, y) == 0);
-static_assert(sizeof(::llcpp::fidl::test::json::Example_foo_Response) == ::llcpp::fidl::test::json::Example_foo_Response::PrimarySize);
+struct IsFidlType<::llcpp::fidl::test::json::Example_foo_Response>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::json::Example_foo_Response>);
+static_assert(offsetof(::llcpp::fidl::test::json::Example_foo_Response, y) ==
+              0);
+static_assert(sizeof(::llcpp::fidl::test::json::Example_foo_Response) ==
+              ::llcpp::fidl::test::json::Example_foo_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Example_foo_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Example_foo_Result>);
+struct IsFidlType<::llcpp::fidl::test::json::Example_foo_Result>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::json::Example_foo_Result>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Example::fooRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::json::Example::fooRequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Example::fooRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Example::fooRequest)
-    == ::llcpp::fidl::test::json::Example::fooRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Example::fooRequest, s) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::json::Example::fooRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::json::Example::fooRequest) ==
+              ::llcpp::fidl::test::json::Example::fooRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::json::Example::fooRequest, s) ==
+              16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Example::fooResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::json::Example::fooResponse>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Example::fooResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Example::fooResponse)
-    == ::llcpp::fidl::test::json::Example::fooResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Example::fooResponse, result) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::json::Example::fooResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::json::Example::fooResponse) ==
+              ::llcpp::fidl::test::json::Example::fooResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::json::Example::fooResponse,
+                       result) == 16);
 
 }  // namespace fidl

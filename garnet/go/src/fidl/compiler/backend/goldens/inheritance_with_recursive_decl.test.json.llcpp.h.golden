@@ -3,7 +3,6 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,10 +12,11 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -35,14 +35,15 @@ extern "C" const fidl_type_t v1_fidl_test_json_ParentFirstResponseTable;
 
 class Parent final {
   Parent() = delete;
- public:
 
+ public:
   struct FirstRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel request;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ParentFirstRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_fidl_test_json_ParentFirstRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -55,21 +56,22 @@ class Parent final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
 
-
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
+
    private:
     class First_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
       First_Impl(::zx::unowned_channel _client_end, ::zx::channel request);
       ~First_Impl() = default;
       First_Impl(First_Impl&& other) = default;
       First_Impl& operator=(First_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
 
    public:
@@ -80,17 +82,20 @@ class Parent final {
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
+
    private:
     class First_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
-      First_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel request);
+      First_Impl(::zx::unowned_channel _client_end,
+                 ::fidl::BytePart _request_buffer, ::zx::channel request);
       ~First_Impl() = default;
       First_Impl(First_Impl&& other) = default;
       First_Impl& operator=(First_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
 
    public:
@@ -109,37 +114,47 @@ class Parent final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::First First(::zx::channel request);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::First First(::fidl::BytePart _request_buffer, ::zx::channel request);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::First First(::fidl::BytePart _request_buffer,
+                                 ::zx::channel request);
 
    private:
     ::zx::channel channel_;
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
   class Call final {
     Call() = delete;
+
    public:
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::First First(::zx::unowned_channel _client_end,
+                                 ::zx::channel request);
 
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::First First(::zx::unowned_channel _client_end, ::zx::channel request);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::First First(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel request);
-
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::First First(::zx::unowned_channel _client_end,
+                                        ::fidl::BytePart _request_buffer,
+                                        ::zx::channel request);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  // Additionally, requests must be already laid-out according to the FIDL
+  // wire-format.
   class InPlace final {
     InPlace() = delete;
+
    public:
-
-    static ::fidl::internal::StatusAndError First(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<FirstRequest> params);
-
+    static ::fidl::internal::StatusAndError First(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<FirstRequest> params);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -152,34 +167,41 @@ class Parent final {
 
     using FirstCompleter = ::fidl::Completer<>;
 
-    virtual void First(::zx::channel request, FirstCompleter::Sync _completer) = 0;
-
+    virtual void First(::zx::channel request,
+                       FirstCompleter::Sync _completer) = 0;
   };
 
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg,
+                          ::fidl::Transaction* txn);
 
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Dispatches the incoming message to one of the handlers functions in the
+  // interface. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg,
+                       ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
+  // with |fidl::Bind| to reduce template expansion. Do not call this method
+  // manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
+                                 ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  // Helper functions to fill in the transaction header in a
+  // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
+
    public:
-    static void FirstRequest(const ::fidl::DecodedMessage<Parent::FirstRequest>& _msg);
+    static void FirstRequest(
+        const ::fidl::DecodedMessage<Parent::FirstRequest>& _msg);
   };
 };
 
@@ -190,14 +212,15 @@ extern "C" const fidl_type_t v1_fidl_test_json_ChildSecondResponseTable;
 
 class Child final {
   Child() = delete;
- public:
 
+ public:
   struct FirstRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::channel request;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ChildFirstRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_fidl_test_json_ChildFirstRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -215,7 +238,8 @@ class Child final {
     fidl_message_header_t _hdr;
     ::zx::channel request;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ChildSecondRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_fidl_test_json_ChildSecondRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -228,32 +252,34 @@ class Child final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
 
-
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
+
    private:
     class First_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
       First_Impl(::zx::unowned_channel _client_end, ::zx::channel request);
       ~First_Impl() = default;
       First_Impl(First_Impl&& other) = default;
       First_Impl& operator=(First_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
     class Second_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
       Second_Impl(::zx::unowned_channel _client_end, ::zx::channel request);
       ~Second_Impl() = default;
       Second_Impl(Second_Impl&& other) = default;
       Second_Impl& operator=(Second_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
 
    public:
@@ -265,28 +291,33 @@ class Child final {
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
+
    private:
     class First_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
-      First_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel request);
+      First_Impl(::zx::unowned_channel _client_end,
+                 ::fidl::BytePart _request_buffer, ::zx::channel request);
       ~First_Impl() = default;
       First_Impl(First_Impl&& other) = default;
       First_Impl& operator=(First_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
     class Second_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
-      Second_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel request);
+      Second_Impl(::zx::unowned_channel _client_end,
+                  ::fidl::BytePart _request_buffer, ::zx::channel request);
       ~Second_Impl() = default;
       Second_Impl(Second_Impl&& other) = default;
       Second_Impl& operator=(Second_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
 
    public:
@@ -306,51 +337,71 @@ class Child final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::First First(::zx::channel request);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::First First(::fidl::BytePart _request_buffer, ::zx::channel request);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::First First(::fidl::BytePart _request_buffer,
+                                 ::zx::channel request);
 
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::Second Second(::zx::channel request);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Second Second(::fidl::BytePart _request_buffer, ::zx::channel request);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::Second Second(::fidl::BytePart _request_buffer,
+                                   ::zx::channel request);
 
    private:
     ::zx::channel channel_;
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
   class Call final {
     Call() = delete;
+
    public:
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::First First(::zx::unowned_channel _client_end,
+                                 ::zx::channel request);
 
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::First First(::zx::unowned_channel _client_end, ::zx::channel request);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::First First(::zx::unowned_channel _client_end,
+                                        ::fidl::BytePart _request_buffer,
+                                        ::zx::channel request);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::First First(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel request);
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::Second Second(::zx::unowned_channel _client_end,
+                                   ::zx::channel request);
 
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Second Second(::zx::unowned_channel _client_end, ::zx::channel request);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Second Second(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel request);
-
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::Second Second(::zx::unowned_channel _client_end,
+                                          ::fidl::BytePart _request_buffer,
+                                          ::zx::channel request);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  // Additionally, requests must be already laid-out according to the FIDL
+  // wire-format.
   class InPlace final {
     InPlace() = delete;
+
    public:
+    static ::fidl::internal::StatusAndError First(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<FirstRequest> params);
 
-    static ::fidl::internal::StatusAndError First(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<FirstRequest> params);
-
-    static ::fidl::internal::StatusAndError Second(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SecondRequest> params);
-
+    static ::fidl::internal::StatusAndError Second(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<SecondRequest> params);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -363,39 +414,48 @@ class Child final {
 
     using FirstCompleter = ::fidl::Completer<>;
 
-    virtual void First(::zx::channel request, FirstCompleter::Sync _completer) = 0;
+    virtual void First(::zx::channel request,
+                       FirstCompleter::Sync _completer) = 0;
 
     using SecondCompleter = ::fidl::Completer<>;
 
-    virtual void Second(::zx::channel request, SecondCompleter::Sync _completer) = 0;
-
+    virtual void Second(::zx::channel request,
+                        SecondCompleter::Sync _completer) = 0;
   };
 
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg,
+                          ::fidl::Transaction* txn);
 
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Dispatches the incoming message to one of the handlers functions in the
+  // interface. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg,
+                       ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
+  // with |fidl::Bind| to reduce template expansion. Do not call this method
+  // manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
+                                 ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  // Helper functions to fill in the transaction header in a
+  // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
+
    public:
-    static void FirstRequest(const ::fidl::DecodedMessage<Child::FirstRequest>& _msg);
-    static void SecondRequest(const ::fidl::DecodedMessage<Child::SecondRequest>& _msg);
+    static void FirstRequest(
+        const ::fidl::DecodedMessage<Child::FirstRequest>& _msg);
+    static void SecondRequest(
+        const ::fidl::DecodedMessage<Child::SecondRequest>& _msg);
   };
 };
 
@@ -407,27 +467,36 @@ class Child final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Parent::FirstRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::json::Parent::FirstRequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Parent::FirstRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Parent::FirstRequest)
-    == ::llcpp::fidl::test::json::Parent::FirstRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Parent::FirstRequest, request) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::json::Parent::FirstRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::json::Parent::FirstRequest) ==
+              ::llcpp::fidl::test::json::Parent::FirstRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::json::Parent::FirstRequest,
+                       request) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Child::FirstRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::json::Child::FirstRequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Child::FirstRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Child::FirstRequest)
-    == ::llcpp::fidl::test::json::Child::FirstRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Child::FirstRequest, request) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::json::Child::FirstRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::json::Child::FirstRequest) ==
+              ::llcpp::fidl::test::json::Child::FirstRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::json::Child::FirstRequest,
+                       request) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Child::SecondRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::json::Child::SecondRequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Child::SecondRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Child::SecondRequest)
-    == ::llcpp::fidl::test::json::Child::SecondRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Child::SecondRequest, request) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::json::Child::SecondRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::json::Child::SecondRequest) ==
+              ::llcpp::fidl::test::json::Child::SecondRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::json::Child::SecondRequest,
+                       request) == 16);
 
 }  // namespace fidl

@@ -46,6 +46,24 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
+type closeableBytesBuffer struct {
+	bytes.Buffer
+}
+
+func (bb *closeableBytesBuffer) Close() error {
+	return nil
+}
+
+var testPath = func() string {
+	testPath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Dir(testPath)
+}()
+
+var clangFormatPath = filepath.Join(testPath, "test_data", "fidlgen", "clang-format")
+
 func TestCodegenHeader(t *testing.T) {
 	for _, filename := range typestest.AllExamples(basePath) {
 		path := filepath.Join(basePath, example(filename).goldenHeader())
@@ -59,10 +77,15 @@ func TestCodegenHeader(t *testing.T) {
 			prepareTree(fidl.Name, &tree)
 			header := typestest.GetGolden(basePath, example(filename).goldenHeader())
 
-			buf := new(bytes.Buffer)
-			if err := NewFidlGenerator().GenerateHeader(buf, tree); err != nil {
+			buf := new(closeableBytesBuffer)
+			formatterPipe, err := cpp.NewClangFormatter(clangFormatPath).FormatPipe(buf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := NewFidlGenerator().GenerateHeader(formatterPipe, tree); err != nil {
 				t.Fatalf("unexpected error while generating header: %s", err)
 			}
+			formatterPipe.Close()
 
 			typestest.AssertCodegenCmp(t, header, buf.Bytes())
 		})
@@ -82,10 +105,15 @@ func TestCodegenSource(t *testing.T) {
 			prepareTree(fidl.Name, &tree)
 			source := typestest.GetGolden(basePath, example(filename).goldenSource())
 
-			buf := new(bytes.Buffer)
-			if err := NewFidlGenerator().GenerateSource(buf, tree); err != nil {
+			buf := new(closeableBytesBuffer)
+			formatterPipe, err := cpp.NewClangFormatter(clangFormatPath).FormatPipe(buf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := NewFidlGenerator().GenerateSource(formatterPipe, tree); err != nil {
 				t.Fatalf("unexpected error while generating source: %s", err)
 			}
+			formatterPipe.Close()
 
 			typestest.AssertCodegenCmp(t, source, buf.Bytes())
 		})

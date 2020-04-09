@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace test {
 namespace name {
 
@@ -31,20 +30,20 @@ constexpr uint64_t kInterface_Method_GenOrdinal = 0x60e700e002995ef8lu;
 constexpr uint64_t kInterface_OnEvent_Ordinal = 0x136d200d00000000lu;
 constexpr uint64_t kInterface_OnEvent_GenOrdinal = 0x914c226136244edlu;
 
-}  // namespace
-#endif // __Fuchsia__
+}  // namespace internal
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 class Service;
-#endif // __Fuchsia
+#endif  // __Fuchsia
 
 /// enum comment #1.
 ///
 /// enum comment #2.
 enum class MyEnum : uint32_t {
-  
+
   /// enum Member comment 1.
   FOO = 1u,
-  
+
   BAR = 2u,
 };
 
@@ -54,17 +53,16 @@ inline zx_status_t Clone(::test::name::MyEnum value,
   return ZX_OK;
 }
 
-
 /// bits comment #1
 ///
 /// bits comment #2
 enum class MyBits : uint32_t {
-  
+
   /// bits member comment #1
   ///
   /// bits member comment #3
   MY_FIRST_BIT = 1u,
-  
+
   MY_OTHER_BIT = 2u,
 };
 
@@ -77,53 +75,52 @@ inline zx_status_t Clone(::test::name::MyBits value,
 }
 
 constexpr inline ::test::name::MyBits operator|(::test::name::MyBits _lhs,
-                                                         ::test::name::MyBits _rhs) {
-  return static_cast<::test::name::MyBits>(
-    static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
+                                                ::test::name::MyBits _rhs) {
+  return static_cast<::test::name::MyBits>(static_cast<uint32_t>(_lhs) |
+                                           static_cast<uint32_t>(_rhs));
 }
 
 constexpr inline ::test::name::MyBits& operator|=(::test::name::MyBits& _lhs,
-                                                           ::test::name::MyBits _rhs) {
+                                                  ::test::name::MyBits _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
 constexpr inline ::test::name::MyBits operator&(::test::name::MyBits _lhs,
-                                                         ::test::name::MyBits _rhs) {
-  return static_cast<::test::name::MyBits>(
-    static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
+                                                ::test::name::MyBits _rhs) {
+  return static_cast<::test::name::MyBits>(static_cast<uint32_t>(_lhs) &
+                                           static_cast<uint32_t>(_rhs));
 }
 
 constexpr inline ::test::name::MyBits& operator&=(::test::name::MyBits& _lhs,
-                                                           ::test::name::MyBits _rhs) {
+                                                  ::test::name::MyBits _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
 constexpr inline ::test::name::MyBits operator^(::test::name::MyBits _lhs,
-                                                         ::test::name::MyBits _rhs) {
-  return static_cast<::test::name::MyBits>(
-    static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
+                                                ::test::name::MyBits _rhs) {
+  return static_cast<::test::name::MyBits>(static_cast<uint32_t>(_lhs) ^
+                                           static_cast<uint32_t>(_rhs));
 }
 
 constexpr inline ::test::name::MyBits& operator^=(::test::name::MyBits& _lhs,
-                                                           ::test::name::MyBits _rhs) {
+                                                  ::test::name::MyBits _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
 constexpr inline ::test::name::MyBits operator~(::test::name::MyBits _value) {
-  return static_cast<::test::name::MyBits>(
-    ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(MyBitsMask));
+  return static_cast<::test::name::MyBits>(~static_cast<uint32_t>(_value) &
+                                           static_cast<uint32_t>(MyBitsMask));
 }
-
 
 /// union comment #1
 ///
 /// union comment #3
 class Union final {
  public:
- static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlType;
 
   Union();
   ~Union();
@@ -131,27 +128,26 @@ class Union final {
   Union(Union&&);
   Union& operator=(Union&&);
 
-  
   static Union WithField(int32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-  
+
     kField = 1,  // 0x1
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<Union> New() { return ::std::make_unique<Union>(); }
+  static inline ::std::unique_ptr<Union> New() {
+    return ::std::make_unique<Union>();
+  }
 
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, Union* value, size_t offset);
   zx_status_t Clone(Union* result) const;
 
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
-  }
+  bool has_invalid_tag() const { return tag_ == Invalid; }
 
   bool is_Field() const { return tag_ == Tag::kField; }
-  
+
   /// union member comment #1
   ///
   /// union member comment #3
@@ -159,7 +155,7 @@ class Union final {
     EnsureStorageInitialized(Tag::kField);
     return Field_;
   }
-  
+
   /// union member comment #1
   ///
   /// union member comment #3
@@ -169,21 +165,13 @@ class Union final {
   }
   Union& set_Field(int32_t value);
 
-  Tag Which() const {
-    
-    return Tag(tag_);
-    
-  }
+  Tag Which() const { return Tag(tag_); }
 
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  const std::vector<uint8_t>* UnknownData() const {
-    return nullptr;
-  }
+  const std::vector<uint8_t>* UnknownData() const { return nullptr; }
 
   friend ::fidl::Equality<::test::name::Union>;
 
@@ -212,7 +200,7 @@ class Table final {
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
-  
+
   /// table field comment #1
   ///
   /// table field comment #3
@@ -220,10 +208,8 @@ class Table final {
     ZX_ASSERT(has_Field_);
     return Field_value_.value;
   }
-  bool has_Field() const {
-    return has_Field_;
-  }
-  
+  bool has_Field() const { return has_Field_; }
+
   /// table field comment #1
   ///
   /// table field comment #3
@@ -256,7 +242,9 @@ class Table final {
   ~Table();
   Table& operator=(Table&& other);
 
-  static inline ::std::unique_ptr<Table> New() { return ::std::make_unique<Table>(); }
+  static inline ::std::unique_ptr<Table> New() {
+    return ::std::make_unique<Table>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset);
@@ -290,13 +278,15 @@ using TablePtr = ::std::unique_ptr<Table>;
 class Struct final {
  public:
   static const fidl_type_t* FidlType;
-  
+
   /// struct member comment #1
   ///
   /// struct member comment #3
   int32_t Field{};
 
-  static inline ::std::unique_ptr<Struct> New() { return ::std::make_unique<Struct>(); }
+  static inline ::std::unique_ptr<Struct> New() {
+    return ::std::make_unique<Struct>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset);
@@ -321,13 +311,12 @@ class Interface {
   using EventSender_ = Interface_EventSender;
   using Sync_ = Interface_Sync;
   virtual ~Interface();
-      
-      /// method comment #1
-      ///
-      /// method comment #3
+
+  /// method comment #1
+  ///
+  /// method comment #3
   virtual void Method() = 0;
-  using OnEventCallback =
-      fit::function<void()>;
+  using OnEventCallback = fit::function<void()>;
 };
 
 class Interface_RequestEncoder {
@@ -345,7 +334,8 @@ class Interface_RequestDecoder {
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
   zx_status_t Decode_(::fidl::Message request) {
     bool needs_response;
-    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -358,8 +348,7 @@ class Interface_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kInterface_Method_Ordinal:
-      case internal::kInterface_Method_GenOrdinal:
-      {
+      case internal::kInterface_Method_GenOrdinal: {
         Method();
         break;
       }
@@ -400,8 +389,7 @@ class Interface_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::kInterface_OnEvent_Ordinal:
-      case internal::kInterface_OnEvent_GenOrdinal:
-      {
+      case internal::kInterface_OnEvent_GenOrdinal: {
         OnEvent();
         break;
       }
@@ -443,7 +431,8 @@ class Interface_Proxy final : public ::fidl::internal::Proxy, public Interface {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Interface_Stub final : public ::fidl::internal::Stub, public Interface_EventSender {
+class Interface_Stub final : public ::fidl::internal::Stub,
+                             public Interface_EventSender {
  public:
   typedef class ::test::name::Interface Interface_clazz;
   explicit Interface_Stub(Interface_clazz* impl);
@@ -463,11 +452,11 @@ class Interface_SyncProxy : public Interface_Sync {
   ~Interface_SyncProxy() override;
   zx_status_t Method() override;
 
-  private:
+ private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Interface>;
 };
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
 /// service comment #1
@@ -483,7 +472,8 @@ class Service final {
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
-  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "interface".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the
+  /// member protocol "interface".
   ::fidl::MemberConnector<Interface> interface() const {
     return ::fidl::MemberConnector<Interface>(service_.get(), "interface");
   }
@@ -497,20 +487,21 @@ class Service::Handler final {
  public:
   /// Constructs a new |Handler|. Does not take ownership of |service|.
   explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  /// Adds member "interface" to the service instance. |handler| is invoked when a connection
-  /// is made to the member protocol.
+  /// Adds member "interface" to the service instance. |handler| is invoked when
+  /// a connection is made to the member protocol.
   ///
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_interface(::fidl::InterfaceRequestHandler<Interface> handler) {
+  zx_status_t add_interface(
+      ::fidl::InterfaceRequestHandler<Interface> handler) {
     return service_->AddMember("interface", std::move(handler));
   }
 
  private:
   ::fidl::ServiceHandlerBase* const service_;
 };
-#endif // __Fuchsia
+#endif  // __Fuchsia
 
 /// const comment #1
 ///
@@ -531,14 +522,18 @@ template <>
 struct CodingTraits<std::unique_ptr<::test::name::Union>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
 
-  static void Encode(Encoder* encoder, std::unique_ptr<::test::name::Union>* value, size_t offset) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::name::Union>* value,
+                     size_t offset) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
     }
   }
 
-  static void Decode(Decoder* decoder, std::unique_ptr<::test::name::Union>* value, size_t offset) {
+  static void Decode(Decoder* decoder,
+                     std::unique_ptr<::test::name::Union>* value,
+                     size_t offset) {
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
@@ -556,9 +551,10 @@ inline zx_status_t Clone(const ::test::name::Union& value,
   return ::test::name::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::test::name::Union> {
-  bool operator()(const ::test::name::Union& _lhs, const ::test::name::Union& _rhs) const {
+  bool operator()(const ::test::name::Union& _lhs,
+                  const ::test::name::Union& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -568,11 +564,11 @@ struct Equality<::test::name::Union> {
         return true;
       case ::test::name::Union::Tag::kField:
         return ::fidl::Equals(_lhs.Field_, _rhs.Field_);
-      
+
       default:
         return false;
-      }
     }
+  }
 };
 template <>
 struct CodingTraits<::test::name::Table>
@@ -582,15 +578,16 @@ inline zx_status_t Clone(const ::test::name::Table& _value,
                          ::test::name::Table* result) {
   return _value.Clone(result);
 }
-template<>
+template <>
 struct Equality<::test::name::Table> {
-  bool operator()(const ::test::name::Table& _lhs, const ::test::name::Table& _rhs) const {
+  bool operator()(const ::test::name::Table& _lhs,
+                  const ::test::name::Table& _rhs) const {
     if (_lhs.has_Field()) {
       if (!_rhs.has_Field()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.Field(), _rhs.Field())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_Field()) {
       return false;
@@ -607,9 +604,10 @@ inline zx_status_t Clone(const ::test::name::Struct& value,
   return ::test::name::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::test::name::Struct> {
-  bool operator()(const ::test::name::Struct& _lhs, const ::test::name::Struct& _rhs) const {
+  bool operator()(const ::test::name::Struct& _lhs,
+                  const ::test::name::Struct& _rhs) const {
     if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
       return false;
     }
@@ -620,11 +618,13 @@ template <>
 struct CodingTraits<::test::name::MyEnum> {
   static constexpr size_t inline_size_old = sizeof(::test::name::MyEnum);
   static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::MyEnum);
-  static void Encode(Encoder* encoder, ::test::name::MyEnum* value, size_t offset) {
+  static void Encode(Encoder* encoder, ::test::name::MyEnum* value,
+                     size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::name::MyEnum* value, size_t offset) {
+  static void Decode(Decoder* decoder, ::test::name::MyEnum* value,
+                     size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::name::MyEnum>(underlying);
@@ -635,23 +635,25 @@ inline zx_status_t Clone(::test::name::MyEnum value,
                          ::test::name::MyEnum* result) {
   return ::test::name::Clone(value, result);
 }
-template<>
+template <>
 struct Equality<::test::name::MyEnum> {
-  bool operator()(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) const {
+  bool operator()(const ::test::name::MyEnum& _lhs,
+                  const ::test::name::MyEnum& _rhs) const {
     return _lhs == _rhs;
   }
 };
-
 
 template <>
 struct CodingTraits<::test::name::MyBits> {
   static constexpr size_t inline_size_old = sizeof(::test::name::MyBits);
   static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::MyBits);
-  static void Encode(Encoder* encoder, ::test::name::MyBits* value, size_t offset) {
+  static void Encode(Encoder* encoder, ::test::name::MyBits* value,
+                     size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::name::MyBits* value, size_t offset) {
+  static void Decode(Decoder* decoder, ::test::name::MyBits* value,
+                     size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::name::MyBits>(underlying);
@@ -663,11 +665,13 @@ inline zx_status_t Clone(::test::name::MyBits value,
   return ::test::name::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::test::name::MyBits> {
-  bool operator()(const ::test::name::MyBits& _lhs, const ::test::name::MyBits& _rhs) const {
+  bool operator()(const ::test::name::MyBits& _lhs,
+                  const ::test::name::MyBits& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
-};}  // namespace fidl
+};
+}  // namespace fidl

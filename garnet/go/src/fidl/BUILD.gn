@@ -91,22 +91,37 @@ go_test("fidlgen_hlcpp_test") {
   gopackages = [ "fidl/compiler/hlcpp_backend/codegen" ]
 
   deps = [ ":fidlgen_test_lib" ]
+  non_go_deps = [ ":clang_format_copy_group" ]
 }
 
 go_test("fidlgen_llcpp_test") {
   gopackages = [ "fidl/compiler/llcpp_backend/codegen" ]
 
   deps = [ ":fidlgen_test_lib" ]
-}
-
-go_test("fidlgen_go_test") {
-  gopackages = [ "fidl/compiler/go_backend/codegen" ]
-
-  deps = [ ":fidlgen_test_lib" ]
+  non_go_deps = [ ":clang_format_copy_group" ]
 }
 
 go_test("fidlgen_libfuzzer_test") {
   gopackages = [ "fidl/compiler/libfuzzer_backend/codegen" ]
+
+  deps = [ ":fidlgen_test_lib" ]
+  non_go_deps = [ ":clang_format_copy_group" ]
+}
+
+group("clang_format_copy_group") {
+  deps = [ ":copy_clang_format" ]
+  metadata = {
+    test_runtime_deps = [ "$root_out_dir/test_data/fidlgen/clang-format" ]
+  }
+}
+
+copy("copy_clang_format") {
+  sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
+  outputs = [ "$root_out_dir/test_data/fidlgen/clang-format" ]
+}
+
+go_test("fidlgen_go_test") {
+  gopackages = [ "fidl/compiler/go_backend/codegen" ]
 
   deps = [ ":fidlgen_test_lib" ]
 }

@@ -16,7 +16,6 @@ template("fidl_cpp_codegen") {
   if (defined(invoker.sources)) {
     not_needed(invoker, [ "sources" ])
   }
-
   if (defined(invoker.public_deps)) {
     not_needed(invoker, [ "public_deps" ])
   }
@@ -66,9 +65,7 @@ template("fidl_cpp_codegen") {
 
     tool = invoker.fidlgen_tool
 
-    inputs = [
-      json_representation,
-    ]
+    inputs = [ json_representation ]
 
     outputs = [
       "$file_stem.h",
@@ -82,11 +79,12 @@ template("fidl_cpp_codegen") {
       rebase_path(file_stem, root_build_dir),
       "--include-base",
       rebase_path(fidl_target_gen_dir, root_build_dir),
+      "--clang-format-path",
+      rebase_path(
+          "//prebuilt/third_party/clang/$host_platform/bin/clang-format"),
     ]
 
-    deps = [
-      ":$fidl_target_name($fidl_toolchain)",
-    ]
+    deps = [ ":$fidl_target_name($fidl_toolchain)" ]
   }
 }
 
@@ -95,7 +93,6 @@ template("fidl_llcpp_codegen") {
   if (defined(invoker.sources)) {
     not_needed(invoker, [ "sources" ])
   }
-
   if (defined(invoker.public_deps)) {
     not_needed(invoker, [ "public_deps" ])
   }
@@ -127,9 +124,7 @@ template("fidl_llcpp_codegen") {
 
     tool = "//garnet/go/src/fidl:fidlgen_llcpp"
 
-    inputs = [
-      json_representation,
-    ]
+    inputs = [ json_representation ]
 
     outputs = [
       "$file_stem.h",
@@ -145,11 +140,12 @@ template("fidl_llcpp_codegen") {
       rebase_path("$file_stem.cc", root_build_dir),
       "--include-base",
       rebase_path(fidl_target_gen_dir, root_build_dir),
+      "--clang-format-path",
+      rebase_path(
+          "//prebuilt/third_party/clang/$host_platform/bin/clang-format"),
     ]
 
-    deps = [
-      ":$fidl_target_name($fidl_toolchain)",
-    ]
+    deps = [ ":$fidl_target_name($fidl_toolchain)" ]
   }
 }
 
@@ -186,13 +182,9 @@ template("fidl_cpp_library") {
                            ])
 
     if (defined(invoker.header_only) && invoker.header_only) {
-      sources = [
-        "$file_stem.h",
-      ]
+      sources = [ "$file_stem.h" ]
     } else if (defined(invoker.source_only) && invoker.source_only) {
-      sources = [
-        "$file_stem.cc",
-      ]
+      sources = [ "$file_stem.cc" ]
     } else {
       sources = [
         "$file_stem.cc",

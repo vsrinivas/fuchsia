@@ -3,7 +3,6 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,10 +12,11 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 
@@ -35,8 +35,7 @@ struct Simple {
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_SimpleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
   uint8_t f1 = {};
@@ -47,11 +46,11 @@ struct Simple {
 extern "C" const fidl_type_t v1_fidl_test_json_BasicStructTable;
 
 struct BasicStruct {
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_BasicStructTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_fidl_test_json_BasicStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
   uint32_t x = {};
@@ -71,13 +70,17 @@ struct IsFidlType<::llcpp::fidl::test::json::Simple> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::Simple>);
 static_assert(offsetof(::llcpp::fidl::test::json::Simple, f1) == 0);
 static_assert(offsetof(::llcpp::fidl::test::json::Simple, f2) == 1);
-static_assert(sizeof(::llcpp::fidl::test::json::Simple) == ::llcpp::fidl::test::json::Simple::PrimarySize);
+static_assert(sizeof(::llcpp::fidl::test::json::Simple) ==
+              ::llcpp::fidl::test::json::Simple::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::BasicStruct> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::BasicStruct>);
+struct IsFidlType<::llcpp::fidl::test::json::BasicStruct>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::json::BasicStruct>);
 static_assert(offsetof(::llcpp::fidl::test::json::BasicStruct, x) == 0);
 static_assert(offsetof(::llcpp::fidl::test::json::BasicStruct, y) == 8);
-static_assert(sizeof(::llcpp::fidl::test::json::BasicStruct) == ::llcpp::fidl::test::json::BasicStruct::PrimarySize);
+static_assert(sizeof(::llcpp::fidl::test::json::BasicStruct) ==
+              ::llcpp::fidl::test::json::BasicStruct::PrimarySize);
 
 }  // namespace fidl

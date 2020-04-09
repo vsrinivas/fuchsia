@@ -2,8 +2,8 @@
 
 #pragma once
 
+#include <exampleusing/llcpp/fidl.h>
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,15 +13,14 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
-
-#include <exampleusing/llcpp/fidl.h>
 
 namespace llcpp {
 
@@ -36,18 +35,23 @@ enum class ExampleEnum : uint32_t {
   MEMBER = 1u,
 };
 
-
 class ExampleBits final {
-public:
+ public:
   constexpr ExampleBits() : value_(0u) {}
   explicit constexpr ExampleBits(uint32_t value) : value_(value) {}
   const static ExampleBits MEMBER;
   const static ExampleBits mask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
-  constexpr inline bool operator==(const ExampleBits& other) const { return value_ == other.value_; }
-  constexpr inline bool operator!=(const ExampleBits& other) const { return value_ != other.value_; }
+  explicit constexpr inline operator bool() const {
+    return static_cast<bool>(value_);
+  }
+  constexpr inline bool operator==(const ExampleBits& other) const {
+    return value_ == other.value_;
+  }
+  constexpr inline bool operator!=(const ExampleBits& other) const {
+    return value_ != other.value_;
+  }
   constexpr inline ExampleBits operator~() const;
   constexpr inline ExampleBits operator|(const ExampleBits& other) const;
   constexpr inline ExampleBits operator&(const ExampleBits& other) const;
@@ -56,29 +60,35 @@ public:
   constexpr inline void operator&=(const ExampleBits& other);
   constexpr inline void operator^=(const ExampleBits& other);
 
-private:
+ private:
   uint32_t value_;
 };
-constexpr const ::llcpp::example::ExampleBits ExampleBits::MEMBER = ::llcpp::example::ExampleBits(1u);
-constexpr const ::llcpp::example::ExampleBits ExampleBits::mask = ::llcpp::example::ExampleBits(1u);
+constexpr const ::llcpp::example::ExampleBits ExampleBits::MEMBER =
+    ::llcpp::example::ExampleBits(1u);
+constexpr const ::llcpp::example::ExampleBits ExampleBits::mask =
+    ::llcpp::example::ExampleBits(1u);
 
 constexpr inline ::llcpp::example::ExampleBits ExampleBits::operator~() const {
-  return ::llcpp::example::ExampleBits(static_cast<uint32_t>(~this->value_ & mask.value_));
+  return ::llcpp::example::ExampleBits(
+      static_cast<uint32_t>(~this->value_ & mask.value_));
 }
 
 constexpr inline ::llcpp::example::ExampleBits ExampleBits::operator|(
     const ::llcpp::example::ExampleBits& other) const {
-  return ::llcpp::example::ExampleBits(static_cast<uint32_t>(this->value_ | other.value_));
+  return ::llcpp::example::ExampleBits(
+      static_cast<uint32_t>(this->value_ | other.value_));
 }
 
 constexpr inline ::llcpp::example::ExampleBits ExampleBits::operator&(
     const ::llcpp::example::ExampleBits& other) const {
-  return ::llcpp::example::ExampleBits(static_cast<uint32_t>(this->value_ & other.value_));
+  return ::llcpp::example::ExampleBits(
+      static_cast<uint32_t>(this->value_ & other.value_));
 }
 
 constexpr inline ::llcpp::example::ExampleBits ExampleBits::operator^(
     const ::llcpp::example::ExampleBits& other) const {
-  return ::llcpp::example::ExampleBits(static_cast<uint32_t>(this->value_ ^ other.value_));
+  return ::llcpp::example::ExampleBits(
+      static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void ExampleBits::operator|=(
@@ -96,19 +106,16 @@ constexpr inline void ExampleBits::operator^=(
   this->value_ ^= other.value_;
 }
 
-
 extern "C" const fidl_type_t v1_example_ExampleXUnionTable;
 
 class ExampleXUnion {
-  public:
+ public:
   ExampleXUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   ExampleXUnion(ExampleXUnion&&) = default;
   ExampleXUnion& operator=(ExampleXUnion&&) = default;
 
-  ~ExampleXUnion() {
-    reset_ptr(nullptr);
-  }
+  ~ExampleXUnion() { reset_ptr(nullptr); }
 
   enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
@@ -147,8 +154,7 @@ class ExampleXUnion {
   static constexpr const fidl_type_t* Type = &v1_example_ExampleXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 8;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
  private:
@@ -160,11 +166,12 @@ class ExampleXUnion {
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 1: {
-      ::fidl::tracking_ptr<uint32_t> to_destroy =
-        static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
-      break;
-    }
+      case 1: {
+        ::fidl::tracking_ptr<uint32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<uint32_t>>(
+                std::move(envelope_.data));
+        break;
+      }
     }
 
     envelope_.data = std::move(new_ptr);
@@ -179,15 +186,13 @@ class ExampleXUnion {
 extern "C" const fidl_type_t v1_example_ExampleUnionTable;
 
 class ExampleUnion {
-  public:
+ public:
   ExampleUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   ExampleUnion(ExampleUnion&&) = default;
   ExampleUnion& operator=(ExampleUnion&&) = default;
 
-  ~ExampleUnion() {
-    reset_ptr(nullptr);
-  }
+  ~ExampleUnion() { reset_ptr(nullptr); }
 
   enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
@@ -224,8 +229,7 @@ class ExampleUnion {
   static constexpr const fidl_type_t* Type = &v1_example_ExampleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 8;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
  private:
@@ -237,11 +241,12 @@ class ExampleUnion {
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 1: {
-      ::fidl::tracking_ptr<uint32_t> to_destroy =
-        static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
-      break;
-    }
+      case 1: {
+        ::fidl::tracking_ptr<uint32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<uint32_t>>(
+                std::move(envelope_.data));
+        break;
+      }
     }
 
     envelope_.data = std::move(new_ptr);
@@ -256,7 +261,7 @@ class ExampleUnion {
 extern "C" const fidl_type_t v1_example_ExampleTableTable;
 
 class ExampleTable final {
-public:
+ public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
@@ -280,24 +285,23 @@ public:
   static constexpr const fidl_type_t* Type = &v1_example_ExampleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
 
   class Builder;
   class UnownedBuilder;
 
   class Frame final {
-  public:
+   public:
     Frame() = default;
-    // In its intended usage, Frame will be referenced by a tracking_ptr. If the tracking_ptr is
-    // assigned before a move or copy, then it will reference the old invalid object. Because this
-    // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
-    // safely.
+    // In its intended usage, Frame will be referenced by a tracking_ptr. If the
+    // tracking_ptr is assigned before a move or copy, then it will reference
+    // the old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
     Frame(const Frame&) = delete;
     Frame& operator=(const Frame&) = delete;
 
-  private:
+   private:
     Frame(Frame&&) noexcept = default;
     Frame& operator=(Frame&&) noexcept = default;
     ::fidl::Envelope<uint32_t> member_;
@@ -308,21 +312,24 @@ public:
   };
 
  private:
-  ExampleTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
+  ExampleTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr)
+      : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
 };
 
 // ExampleTable::Builder builds ExampleTable.
 // Usage:
-// ExampleTable val = ExampleTable::Builder(std::make_unique<ExampleTable::Frame>())
+// ExampleTable val =
+// ExampleTable::Builder(std::make_unique<ExampleTable::Frame>())
 // .set_member(ptr)
 // .build();
 class ExampleTable::Builder final {
  public:
   ~Builder() = default;
   Builder() = delete;
-  Builder(::fidl::tracking_ptr<ExampleTable::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
+  Builder(::fidl::tracking_ptr<ExampleTable::Frame>&& frame_ptr)
+      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
 
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -344,15 +351,15 @@ class ExampleTable::Builder final {
     return ExampleTable(max_ordinal_, std::move(frame_ptr_));
   }
 
-  private:
+ private:
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<ExampleTable::Frame> frame_ptr_;
 };
 
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
-// data.
+// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
+// working with unowned data.
 class ExampleTable::UnownedBuilder final {
-public:
+ public:
   ~UnownedBuilder() = default;
   UnownedBuilder() noexcept = default;
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
@@ -371,7 +378,7 @@ public:
     return ExampleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
   }
 
-private:
+ private:
   uint64_t max_ordinal_ = 0;
   ExampleTable::Frame frame_;
 };
@@ -381,14 +388,15 @@ extern "C" const fidl_type_t v1_example_ExampleProtocolMethodResponseTable;
 
 class ExampleProtocol final {
   ExampleProtocol() = delete;
- public:
 
+ public:
   struct MethodRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::exampleusing::Empty arg;
 
-    static constexpr const fidl_type_t* Type = &v1_example_ExampleProtocolMethodRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_example_ExampleProtocolMethodRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -401,21 +409,23 @@ class ExampleProtocol final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
 
-
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
+
    private:
     class Method_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
-      Method_Impl(::zx::unowned_channel _client_end, ::llcpp::exampleusing::Empty arg);
+      Method_Impl(::zx::unowned_channel _client_end,
+                  ::llcpp::exampleusing::Empty arg);
       ~Method_Impl() = default;
       Method_Impl(Method_Impl&& other) = default;
       Method_Impl& operator=(Method_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
 
    public:
@@ -426,17 +436,21 @@ class ExampleProtocol final {
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
+
    private:
     class Method_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
-      Method_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::exampleusing::Empty arg);
+      Method_Impl(::zx::unowned_channel _client_end,
+                  ::fidl::BytePart _request_buffer,
+                  ::llcpp::exampleusing::Empty arg);
       ~Method_Impl() = default;
       Method_Impl(Method_Impl&& other) = default;
       Method_Impl& operator=(Method_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
 
    public:
@@ -455,37 +469,47 @@ class ExampleProtocol final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::Method Method(::llcpp::exampleusing::Empty arg);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Method Method(::fidl::BytePart _request_buffer, ::llcpp::exampleusing::Empty arg);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::Method Method(::fidl::BytePart _request_buffer,
+                                   ::llcpp::exampleusing::Empty arg);
 
    private:
     ::zx::channel channel_;
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
   class Call final {
     Call() = delete;
+
    public:
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::Method Method(::zx::unowned_channel _client_end,
+                                   ::llcpp::exampleusing::Empty arg);
 
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Method Method(::zx::unowned_channel _client_end, ::llcpp::exampleusing::Empty arg);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Method Method(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::exampleusing::Empty arg);
-
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::Method Method(::zx::unowned_channel _client_end,
+                                          ::fidl::BytePart _request_buffer,
+                                          ::llcpp::exampleusing::Empty arg);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  // Additionally, requests must be already laid-out according to the FIDL
+  // wire-format.
   class InPlace final {
     InPlace() = delete;
+
    public:
-
-    static ::fidl::internal::StatusAndError Method(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodRequest> params);
-
+    static ::fidl::internal::StatusAndError Method(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<MethodRequest> params);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -498,34 +522,41 @@ class ExampleProtocol final {
 
     using MethodCompleter = ::fidl::Completer<>;
 
-    virtual void Method(::llcpp::exampleusing::Empty arg, MethodCompleter::Sync _completer) = 0;
-
+    virtual void Method(::llcpp::exampleusing::Empty arg,
+                        MethodCompleter::Sync _completer) = 0;
   };
 
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg,
+                          ::fidl::Transaction* txn);
 
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Dispatches the incoming message to one of the handlers functions in the
+  // interface. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg,
+                       ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
+  // with |fidl::Bind| to reduce template expansion. Do not call this method
+  // manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
+                                 ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  // Helper functions to fill in the transaction header in a
+  // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
+
    public:
-    static void MethodRequest(const ::fidl::DecodedMessage<ExampleProtocol::MethodRequest>& _msg);
+    static void MethodRequest(
+        const ::fidl::DecodedMessage<ExampleProtocol::MethodRequest>& _msg);
   };
 };
 
@@ -535,8 +566,7 @@ struct ExampleStruct {
   static constexpr const fidl_type_t* Type = &v1_example_ExampleStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
   uint32_t member = {};
@@ -550,12 +580,15 @@ constexpr uint32_t EXAMPLE_CONST = 0u;
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::example::ExampleProtocol::MethodRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::example::ExampleProtocol::MethodRequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::example::ExampleProtocol::MethodRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::example::ExampleProtocol::MethodRequest)
-    == ::llcpp::example::ExampleProtocol::MethodRequest::PrimarySize);
-static_assert(offsetof(::llcpp::example::ExampleProtocol::MethodRequest, arg) == 16);
+struct IsFidlMessage<::llcpp::example::ExampleProtocol::MethodRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::example::ExampleProtocol::MethodRequest) ==
+              ::llcpp::example::ExampleProtocol::MethodRequest::PrimarySize);
+static_assert(offsetof(::llcpp::example::ExampleProtocol::MethodRequest, arg) ==
+              16);
 
 template <>
 struct IsFidlType<::llcpp::example::ExampleXUnion> : public std::true_type {};
@@ -573,7 +606,8 @@ template <>
 struct IsFidlType<::llcpp::example::ExampleStruct> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::example::ExampleStruct>);
 static_assert(offsetof(::llcpp::example::ExampleStruct, member) == 0);
-static_assert(sizeof(::llcpp::example::ExampleStruct) == ::llcpp::example::ExampleStruct::PrimarySize);
+static_assert(sizeof(::llcpp::example::ExampleStruct) ==
+              ::llcpp::example::ExampleStruct::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::example::ExampleBits> : public std::true_type {};

@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace escapeme {
 
 class DocCommentWithQuotes;
@@ -13,13 +12,16 @@ class DocCommentWithQuotes;
 class DocCommentWithQuotes final {
  public:
   static const fidl_type_t* FidlType;
-  
+
   uint8_t __reserved = 0u;
 
-  static inline ::std::unique_ptr<DocCommentWithQuotes> New() { return ::std::make_unique<DocCommentWithQuotes>(); }
+  static inline ::std::unique_ptr<DocCommentWithQuotes> New() {
+    return ::std::make_unique<DocCommentWithQuotes>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, DocCommentWithQuotes* value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, DocCommentWithQuotes* value,
+                     size_t _offset);
   zx_status_t Clone(DocCommentWithQuotes* result) const;
 };
 
@@ -41,12 +43,14 @@ inline zx_status_t Clone(const ::escapeme::DocCommentWithQuotes& value,
   return ::escapeme::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::escapeme::DocCommentWithQuotes> {
-  bool operator()(const ::escapeme::DocCommentWithQuotes& _lhs, const ::escapeme::DocCommentWithQuotes& _rhs) const {
+  bool operator()(const ::escapeme::DocCommentWithQuotes& _lhs,
+                  const ::escapeme::DocCommentWithQuotes& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }
     return true;
   }
-};}  // namespace fidl
+};
+}  // namespace fidl

@@ -30,6 +30,14 @@ var (
 	rustfmtConfigPath = filepath.Join(testPath, "test_data", "fidlgen_rust", "rustfmt.toml")
 )
 
+type closeableBytesBuffer struct {
+	bytes.Buffer
+}
+
+func (bb *closeableBytesBuffer) Close() error {
+	return nil
+}
+
 func TestCodegen(t *testing.T) {
 	for _, filename := range typestest.AllExamples(basePath) {
 		t.Run(filename, func(t *testing.T) {
@@ -37,7 +45,7 @@ func TestCodegen(t *testing.T) {
 			tree := ir.Compile(fidl)
 			implDotRs := typestest.GetGolden(basePath, fmt.Sprintf("%s.rs.golden", filename))
 
-			actualImplDotRs := new(bytes.Buffer)
+			actualImplDotRs := new(closeableBytesBuffer)
 			formatter := common.NewFormatter(rustfmtPath, "--config-path", rustfmtConfigPath)
 			actualFormattedImplDotRs, err := formatter.FormatPipe(actualImplDotRs)
 			if err != nil {

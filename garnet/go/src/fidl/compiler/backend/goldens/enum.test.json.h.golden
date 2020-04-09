@@ -4,15 +4,13 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace test {
 namespace name {
 
-
 enum class MyStrictEnum : uint32_t {
-  
+
   FOO = 1u,
-  
+
   BAR = 2u,
 };
 
@@ -29,12 +27,15 @@ namespace fidl {
 template <>
 struct CodingTraits<::test::name::MyStrictEnum> {
   static constexpr size_t inline_size_old = sizeof(::test::name::MyStrictEnum);
-  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::MyStrictEnum);
-  static void Encode(Encoder* encoder, ::test::name::MyStrictEnum* value, size_t offset) {
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::test::name::MyStrictEnum);
+  static void Encode(Encoder* encoder, ::test::name::MyStrictEnum* value,
+                     size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::name::MyStrictEnum* value, size_t offset) {
+  static void Decode(Decoder* decoder, ::test::name::MyStrictEnum* value,
+                     size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
     *value = static_cast<::test::name::MyStrictEnum>(underlying);
@@ -45,9 +46,10 @@ inline zx_status_t Clone(::test::name::MyStrictEnum value,
                          ::test::name::MyStrictEnum* result) {
   return ::test::name::Clone(value, result);
 }
-template<>
+template <>
 struct Equality<::test::name::MyStrictEnum> {
-  bool operator()(const ::test::name::MyStrictEnum& _lhs, const ::test::name::MyStrictEnum& _rhs) const {
+  bool operator()(const ::test::name::MyStrictEnum& _lhs,
+                  const ::test::name::MyStrictEnum& _rhs) const {
     return _lhs == _rhs;
   }
 };

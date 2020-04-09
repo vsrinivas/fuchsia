@@ -2,35 +2,33 @@
 
 #pragma once
 
-
 namespace test {
 namespace name {
 namespace testing {
 
 class ChannelProtocol_TestBase : public ChannelProtocol {
-  public:
-  virtual ~ChannelProtocol_TestBase() { }
+ public:
+  virtual ~ChannelProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void MethodA(int64_t a, int64_t b) override {
-    NotImplemented_("MethodA");
-  }
+  void MethodA(int64_t a, int64_t b) override { NotImplemented_("MethodA"); }
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override {
     NotImplemented_("MethodB");
   }
   void MutateSocket(::zx::socket a, MutateSocketCallback callback) override {
     NotImplemented_("MutateSocket");
   }
-
 };
 
-class WithAndWithoutRequestResponse_TestBase : public WithAndWithoutRequestResponse {
-  public:
-  virtual ~WithAndWithoutRequestResponse_TestBase() { }
+class WithAndWithoutRequestResponse_TestBase
+    : public WithAndWithoutRequestResponse {
+ public:
+  virtual ~WithAndWithoutRequestResponse_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void NoRequestNoResponse() override {
     NotImplemented_("NoRequestNoResponse");
   }
-  void NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) override {
+  void NoRequestEmptyResponse(
+      NoRequestEmptyResponseCallback callback) override {
     NotImplemented_("NoRequestEmptyResponse");
   }
   void NoRequestWithResponse(NoRequestWithResponseCallback callback) override {
@@ -39,18 +37,19 @@ class WithAndWithoutRequestResponse_TestBase : public WithAndWithoutRequestRespo
   void WithRequestNoResponse(::std::string arg) override {
     NotImplemented_("WithRequestNoResponse");
   }
-  void WithRequestEmptyResponse(::std::string arg, WithRequestEmptyResponseCallback callback) override {
+  void WithRequestEmptyResponse(
+      ::std::string arg, WithRequestEmptyResponseCallback callback) override {
     NotImplemented_("WithRequestEmptyResponse");
   }
-  void WithRequestWithResponse(::std::string arg, WithRequestWithResponseCallback callback) override {
+  void WithRequestWithResponse(
+      ::std::string arg, WithRequestWithResponseCallback callback) override {
     NotImplemented_("WithRequestWithResponse");
   }
-
 };
 
 class WithErrorSyntax_TestBase : public WithErrorSyntax {
-  public:
-  virtual ~WithErrorSyntax_TestBase() { }
+ public:
+  virtual ~WithErrorSyntax_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void ResponseAsStruct(ResponseAsStructCallback callback) override {
     NotImplemented_("ResponseAsStruct");
@@ -61,7 +60,6 @@ class WithErrorSyntax_TestBase : public WithErrorSyntax {
   void ErrorAsEnum(ErrorAsEnumCallback callback) override {
     NotImplemented_("ErrorAsEnum");
   }
-
 };
 }  // namespace testing
 }  // namespace name

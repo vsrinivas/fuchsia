@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace fidl {
 namespace test {
 namespace json {
@@ -15,12 +14,14 @@ class BasicStruct;
 class Simple final {
  public:
   static const fidl_type_t* FidlType;
-  
+
   uint8_t f1{};
-  
+
   bool f2{};
 
-  static inline ::std::unique_ptr<Simple> New() { return ::std::make_unique<Simple>(); }
+  static inline ::std::unique_ptr<Simple> New() {
+    return ::std::make_unique<Simple>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, Simple* value, size_t _offset);
@@ -37,15 +38,18 @@ using SimplePtr = ::std::unique_ptr<Simple>;
 class BasicStruct final {
  public:
   static const fidl_type_t* FidlType;
-  
+
   uint32_t x{};
-  
+
   ::std::string y{};
 
-  static inline ::std::unique_ptr<BasicStruct> New() { return ::std::make_unique<BasicStruct>(); }
+  static inline ::std::unique_ptr<BasicStruct> New() {
+    return ::std::make_unique<BasicStruct>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, BasicStruct* value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, BasicStruct* value,
+                     size_t _offset);
   zx_status_t Clone(BasicStruct* result) const;
 };
 
@@ -69,9 +73,10 @@ inline zx_status_t Clone(const ::fidl::test::json::Simple& value,
   return ::fidl::test::json::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::fidl::test::json::Simple> {
-  bool operator()(const ::fidl::test::json::Simple& _lhs, const ::fidl::test::json::Simple& _rhs) const {
+  bool operator()(const ::fidl::test::json::Simple& _lhs,
+                  const ::fidl::test::json::Simple& _rhs) const {
     if (!::fidl::Equals(_lhs.f1, _rhs.f1)) {
       return false;
     }
@@ -90,9 +95,10 @@ inline zx_status_t Clone(const ::fidl::test::json::BasicStruct& value,
   return ::fidl::test::json::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::fidl::test::json::BasicStruct> {
-  bool operator()(const ::fidl::test::json::BasicStruct& _lhs, const ::fidl::test::json::BasicStruct& _rhs) const {
+  bool operator()(const ::fidl::test::json::BasicStruct& _lhs,
+                  const ::fidl::test::json::BasicStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.x, _rhs.x)) {
       return false;
     }
@@ -101,4 +107,5 @@ struct Equality<::fidl::test::json::BasicStruct> {
     }
     return true;
   }
-};}  // namespace fidl
+};
+}  // namespace fidl

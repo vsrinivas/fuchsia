@@ -18,10 +18,11 @@ import (
 )
 
 type flagsDef struct {
-	jsonPath    *string
-	header      *string
-	source      *string
-	includeBase *string
+	jsonPath        *string
+	header          *string
+	source          *string
+	includeBase     *string
+	clangFormatPath *string
 }
 
 var flags = flagsDef{
@@ -34,6 +35,8 @@ var flags = flagsDef{
 	includeBase: flag.String("include-base", "",
 		"[optional] the directory relative to which includes will be computed. "+
 			"If omitted, assumes #include <fidl/library/name/llcpp/fidl.h>"),
+	clangFormatPath: flag.String("clang-format-path", "",
+		"path to the clang-format tool."),
 }
 
 // valid returns true if the parsed flags are valid.
@@ -97,10 +100,10 @@ func main() {
 	tree.PrimaryHeader = primaryHeader
 
 	generator := codegen.NewGenerator()
-	if err := generator.GenerateHeader(tree, headerPath); err != nil {
+	if err := generator.GenerateHeader(tree, headerPath, *flags.clangFormatPath); err != nil {
 		log.Fatalf("Error running header generator: %v", err)
 	}
-	if err := generator.GenerateSource(tree, sourcePath); err != nil {
+	if err := generator.GenerateSource(tree, sourcePath, *flags.clangFormatPath); err != nil {
 		log.Fatalf("Error running source generator: %v", err)
 	}
 }

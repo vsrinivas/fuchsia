@@ -60,7 +60,7 @@ func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree cpp.Root) error {
 }
 
 // GenerateFidl generates all files required for the C++ libfuzzer code.
-func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
+func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config, clangFormatPath string) error {
 	tree := cpp.CompileHL(fidl)
 	prepareTree(fidl.Name, &tree)
 
@@ -76,9 +76,14 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 	if err != nil {
 		return err
 	}
-	defer headerFile.Close()
 
-	if err := gen.GenerateHeader(headerFile, tree); err != nil {
+	headerFormatterPipe, err := cpp.NewClangFormatter(clangFormatPath).FormatPipe(headerFile)
+	if err != nil {
+		return err
+	}
+	defer headerFormatterPipe.Close()
+
+	if err := gen.GenerateHeader(headerFormatterPipe, tree); err != nil {
 		return err
 	}
 
@@ -87,7 +92,12 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
+
+	sourceFormatterPipe, err := cpp.NewClangFormatter(clangFormatPath).FormatPipe(sourceFile)
+	if err != nil {
+		return err
+	}
+	defer sourceFormatterPipe.Close()
 
 	if len(fidl.Interfaces) > 0 {
 		mthdCount := 0
@@ -98,7 +108,7 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 			return fmt.Errorf("No non-empty interfaces in FIDL library: %s", string(fidl.Name))
 		}
 
-		if err := gen.GenerateSource(sourceFile, tree); err != nil {
+		if err := gen.GenerateSource(sourceFormatterPipe, tree); err != nil {
 			return err
 		}
 	}

@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace fidl {
 namespace test {
 namespace json {
@@ -27,18 +26,21 @@ constexpr uint64_t kEmptyProtocol_Send_GenOrdinal = 0x7a2963cbd88da03lu;
 constexpr uint64_t kEmptyProtocol_Receive_Ordinal = 0x172c2b6f00000000lu;
 constexpr uint64_t kEmptyProtocol_Receive_GenOrdinal = 0x63ba2e5c5fdb4895lu;
 constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal = 0x7b7cca3c00000000lu;
-constexpr uint64_t kEmptyProtocol_SendAndReceive_GenOrdinal = 0x1e59efe8b1bbd615lu;
+constexpr uint64_t kEmptyProtocol_SendAndReceive_GenOrdinal =
+    0x1e59efe8b1bbd615lu;
 
-}  // namespace
-#endif // __Fuchsia__
+}  // namespace internal
+#endif  // __Fuchsia__
 
 class Empty final {
  public:
   static const fidl_type_t* FidlType;
-  
+
   uint8_t __reserved = 0u;
 
-  static inline ::std::unique_ptr<Empty> New() { return ::std::make_unique<Empty>(); }
+  static inline ::std::unique_ptr<Empty> New() {
+    return ::std::make_unique<Empty>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset);
@@ -60,13 +62,11 @@ class EmptyProtocol {
   using EventSender_ = EmptyProtocol_EventSender;
   using Sync_ = EmptyProtocol_Sync;
   virtual ~EmptyProtocol();
-      
+
   virtual void Send(Empty e) = 0;
-  using ReceiveCallback =
-      fit::function<void(Empty)>;
-  using SendAndReceiveCallback =
-      fit::function<void(Empty)>;
-      
+  using ReceiveCallback = fit::function<void(Empty)>;
+  using SendAndReceiveCallback = fit::function<void(Empty)>;
+
   virtual void SendAndReceive(Empty e, SendAndReceiveCallback callback) = 0;
 };
 
@@ -91,7 +91,8 @@ class EmptyProtocol_RequestDecoder {
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
   zx_status_t Decode_(::fidl::Message request) {
     bool needs_response;
-    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -104,15 +105,13 @@ class EmptyProtocol_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kEmptyProtocol_Send_Ordinal:
-      case internal::kEmptyProtocol_Send_GenOrdinal:
-      {
+      case internal::kEmptyProtocol_Send_GenOrdinal: {
         auto arg0 = ::fidl::DecodeAs<Empty>(&request_decoder, 16);
         Send(std::move(arg0));
         break;
       }
       case internal::kEmptyProtocol_SendAndReceive_Ordinal:
-      case internal::kEmptyProtocol_SendAndReceive_GenOrdinal:
-      {
+      case internal::kEmptyProtocol_SendAndReceive_GenOrdinal: {
         auto arg0 = ::fidl::DecodeAs<Empty>(&request_decoder, 16);
         SendAndReceive(std::move(arg0));
         break;
@@ -161,15 +160,13 @@ class EmptyProtocol_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::kEmptyProtocol_Receive_Ordinal:
-      case internal::kEmptyProtocol_Receive_GenOrdinal:
-      {
+      case internal::kEmptyProtocol_Receive_GenOrdinal: {
         auto arg0 = ::fidl::DecodeAs<Empty>(&response_decoder, 16);
         Receive(std::move(arg0));
         break;
       }
       case internal::kEmptyProtocol_SendAndReceive_Ordinal:
-      case internal::kEmptyProtocol_SendAndReceive_GenOrdinal:
-      {
+      case internal::kEmptyProtocol_SendAndReceive_GenOrdinal: {
         auto arg0 = ::fidl::DecodeAs<Empty>(&response_decoder, 16);
         SendAndReceive(std::move(arg0));
         break;
@@ -198,7 +195,8 @@ class EmptyProtocol_Sync {
   virtual zx_status_t SendAndReceive(Empty e, Empty* out_e) = 0;
 };
 
-class EmptyProtocol_Proxy final : public ::fidl::internal::Proxy, public EmptyProtocol {
+class EmptyProtocol_Proxy final : public ::fidl::internal::Proxy,
+                                  public EmptyProtocol {
  public:
   explicit EmptyProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~EmptyProtocol_Proxy() override;
@@ -215,7 +213,8 @@ class EmptyProtocol_Proxy final : public ::fidl::internal::Proxy, public EmptyPr
   ::fidl::internal::ProxyController* controller_;
 };
 
-class EmptyProtocol_Stub final : public ::fidl::internal::Stub, public EmptyProtocol_EventSender {
+class EmptyProtocol_Stub final : public ::fidl::internal::Stub,
+                                 public EmptyProtocol_EventSender {
  public:
   typedef class ::fidl::test::json::EmptyProtocol EmptyProtocol_clazz;
   explicit EmptyProtocol_Stub(EmptyProtocol_clazz* impl);
@@ -236,11 +235,11 @@ class EmptyProtocol_SyncProxy : public EmptyProtocol_Sync {
   zx_status_t Send(Empty e) override;
   zx_status_t SendAndReceive(Empty e, Empty* out_e) override;
 
-  private:
+ private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<EmptyProtocol>;
 };
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 }  // namespace json
 }  // namespace test
 }  // namespace fidl
@@ -255,12 +254,14 @@ inline zx_status_t Clone(const ::fidl::test::json::Empty& value,
   return ::fidl::test::json::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::fidl::test::json::Empty> {
-  bool operator()(const ::fidl::test::json::Empty& _lhs, const ::fidl::test::json::Empty& _rhs) const {
+  bool operator()(const ::fidl::test::json::Empty& _lhs,
+                  const ::fidl::test::json::Empty& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }
     return true;
   }
-};}  // namespace fidl
+};
+}  // namespace fidl

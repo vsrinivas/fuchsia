@@ -3,7 +3,6 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,10 +12,11 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
@@ -39,55 +39,69 @@ enum class ErrorEnun : uint32_t {
   ERR_BAR = 2u,
 };
 
-
 class WithErrorSyntax_ErrorAsEnum_Result;
 class WithErrorSyntax;
 
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
 class WithErrorSyntax_ResponseAsStruct_Result {
-  public:
-  WithErrorSyntax_ResponseAsStruct_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+ public:
+  WithErrorSyntax_ResponseAsStruct_Result()
+      : ordinal_(Ordinal::Invalid), envelope_{} {}
 
-  WithErrorSyntax_ResponseAsStruct_Result(WithErrorSyntax_ResponseAsStruct_Result&&) = default;
-  WithErrorSyntax_ResponseAsStruct_Result& operator=(WithErrorSyntax_ResponseAsStruct_Result&&) = default;
+  WithErrorSyntax_ResponseAsStruct_Result(
+      WithErrorSyntax_ResponseAsStruct_Result&&) = default;
+  WithErrorSyntax_ResponseAsStruct_Result& operator=(
+      WithErrorSyntax_ResponseAsStruct_Result&&) = default;
 
-  ~WithErrorSyntax_ResponseAsStruct_Result() {
-    reset_ptr(nullptr);
-  }
+  ~WithErrorSyntax_ResponseAsStruct_Result() { reset_ptr(nullptr); }
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
+    kErr = 2,       // 0x2
   };
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>&& val) {
+  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
+      ::fidl::tracking_ptr<
+          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>&&
+          val) {
     WithErrorSyntax_ResponseAsStruct_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  void set_response(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>&& elem) {
+  void set_response(
+      ::fidl::tracking_ptr<
+          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>&&
+          elem) {
     ordinal_ = Ordinal::kResponse;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response& mutable_response() {
+  ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response&
+  mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(envelope_.data.get());
+    return *static_cast<
+        ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(
+        envelope_.data.get());
   }
-  const ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response& response() const {
+  const ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response&
+  response() const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(envelope_.data.get());
+    return *static_cast<
+        ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(
+        envelope_.data.get());
   }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  static WithErrorSyntax_ResponseAsStruct_Result WithErr(::fidl::tracking_ptr<uint32_t>&& val) {
+  static WithErrorSyntax_ResponseAsStruct_Result WithErr(
+      ::fidl::tracking_ptr<uint32_t>&& val) {
     WithErrorSyntax_ResponseAsStruct_Result result;
     result.set_err(std::move(val));
     return result;
@@ -111,33 +125,38 @@ class WithErrorSyntax_ResponseAsStruct_Result {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
     kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
+    kErr = 2,       // 0x2
   };
 
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 1: {
-      ::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response> to_destroy =
-        static_cast<::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>>(std::move(envelope_.data));
-      break;
-    }
-    case 2: {
-      ::fidl::tracking_ptr<uint32_t> to_destroy =
-        static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
-      break;
-    }
+      case 1: {
+        ::fidl::tracking_ptr<
+            ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>
+            to_destroy = static_cast<::fidl::tracking_ptr<
+                ::llcpp::test::name::
+                    WithErrorSyntax_ResponseAsStruct_Response>>(
+                std::move(envelope_.data));
+        break;
+      }
+      case 2: {
+        ::fidl::tracking_ptr<uint32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<uint32_t>>(
+                std::move(envelope_.data));
+        break;
+      }
     }
 
     envelope_.data = std::move(new_ptr);
@@ -149,51 +168,66 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
 class WithErrorSyntax_ErrorAsPrimitive_Result {
-  public:
-  WithErrorSyntax_ErrorAsPrimitive_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+ public:
+  WithErrorSyntax_ErrorAsPrimitive_Result()
+      : ordinal_(Ordinal::Invalid), envelope_{} {}
 
-  WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&&) = default;
-  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(WithErrorSyntax_ErrorAsPrimitive_Result&&) = default;
+  WithErrorSyntax_ErrorAsPrimitive_Result(
+      WithErrorSyntax_ErrorAsPrimitive_Result&&) = default;
+  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(
+      WithErrorSyntax_ErrorAsPrimitive_Result&&) = default;
 
-  ~WithErrorSyntax_ErrorAsPrimitive_Result() {
-    reset_ptr(nullptr);
-  }
+  ~WithErrorSyntax_ErrorAsPrimitive_Result() { reset_ptr(nullptr); }
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
+    kErr = 2,       // 0x2
   };
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>&& val) {
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
+      ::fidl::tracking_ptr<
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>&&
+          val) {
     WithErrorSyntax_ErrorAsPrimitive_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  void set_response(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>&& elem) {
+  void set_response(
+      ::fidl::tracking_ptr<
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>&&
+          elem) {
     ordinal_ = Ordinal::kResponse;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response() {
+  ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&
+  mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(envelope_.data.get());
+    return *static_cast<
+        ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(
+        envelope_.data.get());
   }
-  const ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& response() const {
+  const ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&
+  response() const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(envelope_.data.get());
+    return *static_cast<
+        ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(
+        envelope_.data.get());
   }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(::fidl::tracking_ptr<uint32_t>&& val) {
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(
+      ::fidl::tracking_ptr<uint32_t>&& val) {
     WithErrorSyntax_ErrorAsPrimitive_Result result;
     result.set_err(std::move(val));
     return result;
@@ -217,33 +251,38 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 8;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
     kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
+    kErr = 2,       // 0x2
   };
 
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 1: {
-      ::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> to_destroy =
-        static_cast<::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>>(std::move(envelope_.data));
-      break;
-    }
-    case 2: {
-      ::fidl::tracking_ptr<uint32_t> to_destroy =
-        static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
-      break;
-    }
+      case 1: {
+        ::fidl::tracking_ptr<
+            ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
+            to_destroy = static_cast<::fidl::tracking_ptr<
+                ::llcpp::test::name::
+                    WithErrorSyntax_ErrorAsPrimitive_Response>>(
+                std::move(envelope_.data));
+        break;
+      }
+      case 2: {
+        ::fidl::tracking_ptr<uint32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<uint32_t>>(
+                std::move(envelope_.data));
+        break;
+      }
     }
 
     envelope_.data = std::move(new_ptr);
@@ -255,51 +294,64 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
 class WithErrorSyntax_ErrorAsEnum_Result {
-  public:
-  WithErrorSyntax_ErrorAsEnum_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+ public:
+  WithErrorSyntax_ErrorAsEnum_Result()
+      : ordinal_(Ordinal::Invalid), envelope_{} {}
 
-  WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&&) = default;
-  WithErrorSyntax_ErrorAsEnum_Result& operator=(WithErrorSyntax_ErrorAsEnum_Result&&) = default;
+  WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&&) =
+      default;
+  WithErrorSyntax_ErrorAsEnum_Result& operator=(
+      WithErrorSyntax_ErrorAsEnum_Result&&) = default;
 
-  ~WithErrorSyntax_ErrorAsEnum_Result() {
-    reset_ptr(nullptr);
-  }
+  ~WithErrorSyntax_ErrorAsEnum_Result() { reset_ptr(nullptr); }
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
+    kErr = 2,       // 0x2
   };
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>&& val) {
+  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
+      ::fidl::tracking_ptr<
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>&& val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  void set_response(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>&& elem) {
+  void set_response(
+      ::fidl::tracking_ptr<
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>&& elem) {
     ordinal_ = Ordinal::kResponse;
     reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
-  ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& mutable_response() {
+  ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response&
+  mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(envelope_.data.get());
+    return *static_cast<
+        ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(
+        envelope_.data.get());
   }
-  const ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& response() const {
+  const ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& response()
+      const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(envelope_.data.get());
+    return *static_cast<
+        ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(
+        envelope_.data.get());
   }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  static WithErrorSyntax_ErrorAsEnum_Result WithErr(::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun>&& val) {
+  static WithErrorSyntax_ErrorAsEnum_Result WithErr(
+      ::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun>&& val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
     result.set_err(std::move(val));
     return result;
@@ -323,33 +375,37 @@ class WithErrorSyntax_ErrorAsEnum_Result {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 8;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
     kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
+    kErr = 2,       // 0x2
   };
 
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 1: {
-      ::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response> to_destroy =
-        static_cast<::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>>(std::move(envelope_.data));
-      break;
-    }
-    case 2: {
-      ::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun> to_destroy =
-        static_cast<::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun>>(std::move(envelope_.data));
-      break;
-    }
+      case 1: {
+        ::fidl::tracking_ptr<
+            ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>
+            to_destroy = static_cast<::fidl::tracking_ptr<
+                ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>>(
+                std::move(envelope_.data));
+        break;
+      }
+      case 2: {
+        ::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun> to_destroy =
+            static_cast<::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun>>(
+                std::move(envelope_.data));
+        break;
+      }
     }
 
     envelope_.data = std::move(new_ptr);
@@ -361,14 +417,15 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
 struct WithErrorSyntax_ResponseAsStruct_Response {
-  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
   int64_t a = {};
@@ -378,27 +435,29 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
   int64_t c = {};
 };
 
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
 struct WithErrorSyntax_ErrorAsPrimitive_Response {
-  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
 struct WithErrorSyntax_ErrorAsEnum_Response {
-  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
 
   uint8_t __reserved = {};
@@ -410,20 +469,23 @@ extern "C" const fidl_type_t v1_test_name_ChannelProtocolEventARequestTable;
 extern "C" const fidl_type_t v1_test_name_ChannelProtocolEventAEventTable;
 extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodBRequestTable;
 extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodBResponseTable;
-extern "C" const fidl_type_t v1_test_name_ChannelProtocolMutateSocketRequestTable;
-extern "C" const fidl_type_t v1_test_name_ChannelProtocolMutateSocketResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_ChannelProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_ChannelProtocolMutateSocketResponseTable;
 
 class ChannelProtocol final {
   ChannelProtocol() = delete;
- public:
 
+ public:
   struct MethodARequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int64_t a;
     int64_t b;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolMethodARequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_ChannelProtocolMethodARequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -442,7 +504,8 @@ class ChannelProtocol final {
     int64_t a;
     int64_t b;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolEventAEventTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_ChannelProtocolEventAEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -457,7 +520,8 @@ class ChannelProtocol final {
     fidl_message_header_t _hdr;
     int64_t result;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolMethodBResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_ChannelProtocolMethodBResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -473,7 +537,8 @@ class ChannelProtocol final {
     int64_t a;
     int64_t b;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolMethodBRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_ChannelProtocolMethodBRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -492,7 +557,8 @@ class ChannelProtocol final {
     fidl_message_header_t _hdr;
     ::zx::socket b;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolMutateSocketResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_ChannelProtocolMutateSocketResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -507,7 +573,8 @@ class ChannelProtocol final {
     fidl_message_header_t _hdr;
     ::zx::socket a;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolMutateSocketRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_ChannelProtocolMutateSocketRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -521,7 +588,6 @@ class ChannelProtocol final {
     using ResponseType = MutateSocketResponse;
   };
 
-
   struct EventHandlers {
     fit::callback<zx_status_t(int64_t a, int64_t b)> event_a;
 
@@ -533,45 +599,51 @@ class ChannelProtocol final {
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
+
    private:
     class MethodA_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
       MethodA_Impl(::zx::unowned_channel _client_end, int64_t a, int64_t b);
       ~MethodA_Impl() = default;
       MethodA_Impl(MethodA_Impl&& other) = default;
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
     template <typename ResponseType>
-    class MethodB_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class MethodB_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
       MethodB_Impl(::zx::unowned_channel _client_end, int64_t a, int64_t b);
       ~MethodB_Impl() = default;
       MethodB_Impl(MethodB_Impl&& other) = default;
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class MutateSocket_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class MutateSocket_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
       MutateSocket_Impl(::zx::unowned_channel _client_end, ::zx::socket a);
       ~MutateSocket_Impl() = default;
       MutateSocket_Impl(MutateSocket_Impl&& other) = default;
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
@@ -588,45 +660,56 @@ class ChannelProtocol final {
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
+
    private:
     class MethodA_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
-      MethodA_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+      MethodA_Impl(::zx::unowned_channel _client_end,
+                   ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
       ~MethodA_Impl() = default;
       MethodA_Impl(MethodA_Impl&& other) = default;
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
     template <typename ResponseType>
-    class MethodB_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class MethodB_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      MethodB_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+      MethodB_Impl(::zx::unowned_channel _client_end,
+                   ::fidl::BytePart _request_buffer, int64_t a, int64_t b,
+                   ::fidl::BytePart _response_buffer);
       ~MethodB_Impl() = default;
       MethodB_Impl(MethodB_Impl&& other) = default;
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class MutateSocket_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class MutateSocket_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      MutateSocket_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
+      MutateSocket_Impl(::zx::unowned_channel _client_end,
+                        ::fidl::BytePart _request_buffer, ::zx::socket a,
+                        ::fidl::BytePart _response_buffer);
       ~MutateSocket_Impl() = default;
       MutateSocket_Impl(MutateSocket_Impl&& other) = default;
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
@@ -651,75 +734,115 @@ class ChannelProtocol final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::MethodA MethodA(int64_t a, int64_t b);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::MethodA MethodA(::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::MethodA MethodA(::fidl::BytePart _request_buffer,
+                                     int64_t a, int64_t b);
 
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::MethodB MethodB(int64_t a, int64_t b);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::MethodB MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::MethodB MethodB(::fidl::BytePart _request_buffer,
+                                     int64_t a, int64_t b,
+                                     ::fidl::BytePart _response_buffer);
 
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::MutateSocket MutateSocket(::zx::socket a);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::MutateSocket MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::MutateSocket MutateSocket(
+        ::fidl::BytePart _request_buffer, ::zx::socket a,
+        ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
+    // Blocks to consume exactly one message from the channel, then call the
+    // corresponding handler defined in |EventHandlers|. The return status of
+    // the handler function is folded with any transport-level errors and
+    // returned.
     zx_status_t HandleEvents(EventHandlers handlers);
+
    private:
     ::zx::channel channel_;
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
   class Call final {
     Call() = delete;
+
    public:
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::MethodA MethodA(::zx::unowned_channel _client_end,
+                                     int64_t a, int64_t b);
 
-    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::MethodA MethodA(::zx::unowned_channel _client_end, int64_t a, int64_t b);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::MethodA MethodA(::zx::unowned_channel _client_end,
+                                            ::fidl::BytePart _request_buffer,
+                                            int64_t a, int64_t b);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::MethodA MethodA(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::MethodB MethodB(::zx::unowned_channel _client_end,
+                                     int64_t a, int64_t b);
 
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::MethodB MethodB(::zx::unowned_channel _client_end, int64_t a, int64_t b);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::MethodB MethodB(::zx::unowned_channel _client_end,
+                                            ::fidl::BytePart _request_buffer,
+                                            int64_t a, int64_t b,
+                                            ::fidl::BytePart _response_buffer);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::MethodB MethodB(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::MutateSocket MutateSocket(
+        ::zx::unowned_channel _client_end, ::zx::socket a);
 
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::MutateSocket MutateSocket(::zx::unowned_channel _client_end, ::zx::socket a);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::MutateSocket MutateSocket(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::MutateSocket MutateSocket(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::zx::socket a, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
-    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
+    // Blocks to consume exactly one message from the channel, then call the
+    // corresponding handler defined in |EventHandlers|. The return status of
+    // the handler function is folded with any transport-level errors and
+    // returned.
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end,
+                                    EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  // Additionally, requests must be already laid-out according to the FIDL
+  // wire-format.
   class InPlace final {
     InPlace() = delete;
+
    public:
+    static ::fidl::internal::StatusAndError MethodA(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<MethodARequest> params);
 
-    static ::fidl::internal::StatusAndError MethodA(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<MethodBRequest> params,
+        ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<MethodBResponse> MethodB(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
-
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<MutateSocketRequest> params,
+        ::fidl::BytePart response_buffer);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -732,7 +855,8 @@ class ChannelProtocol final {
 
     using MethodACompleter = ::fidl::Completer<>;
 
-    virtual void MethodA(int64_t a, int64_t b, MethodACompleter::Sync _completer) = 0;
+    virtual void MethodA(int64_t a, int64_t b,
+                         MethodACompleter::Sync _completer) = 0;
 
     class MethodBCompleterBase : public _Base {
      public:
@@ -746,7 +870,8 @@ class ChannelProtocol final {
 
     using MethodBCompleter = ::fidl::Completer<MethodBCompleterBase>;
 
-    virtual void MethodB(int64_t a, int64_t b, MethodBCompleter::Sync _completer) = 0;
+    virtual void MethodB(int64_t a, int64_t b,
+                         MethodBCompleter::Sync _completer) = 0;
 
     class MutateSocketCompleterBase : public _Base {
      public:
@@ -760,71 +885,106 @@ class ChannelProtocol final {
 
     using MutateSocketCompleter = ::fidl::Completer<MutateSocketCompleterBase>;
 
-    virtual void MutateSocket(::zx::socket a, MutateSocketCompleter::Sync _completer) = 0;
-
+    virtual void MutateSocket(::zx::socket a,
+                              MutateSocketCompleter::Sync _completer) = 0;
   };
 
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg,
+                          ::fidl::Transaction* txn);
 
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Dispatches the incoming message to one of the handlers functions in the
+  // interface. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg,
+                       ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
+  // with |fidl::Bind| to reduce template expansion. Do not call this method
+  // manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
+                                 ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, int64_t a, int64_t b);
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, int64_t a,
+                                     int64_t b);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int64_t a, int64_t b);
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan,
+                                     ::fidl::BytePart _buffer, int64_t a,
+                                     int64_t b);
 
   // Messages are encoded in-place.
-  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<EventAResponse> params);
+  static zx_status_t SendEventAEvent(
+      ::zx::unowned_channel _chan,
+      ::fidl::DecodedMessage<EventAResponse> params);
 
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  // Helper functions to fill in the transaction header in a
+  // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
+
    public:
-    static void MethodARequest(const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg);
-    static void EventAResponse(const ::fidl::DecodedMessage<ChannelProtocol::EventAResponse>& _msg);
-    static void MethodBRequest(const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg);
-    static void MethodBResponse(const ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>& _msg);
-    static void MutateSocketRequest(const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>& _msg);
-    static void MutateSocketResponse(const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>& _msg);
+    static void MethodARequest(
+        const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg);
+    static void EventAResponse(
+        const ::fidl::DecodedMessage<ChannelProtocol::EventAResponse>& _msg);
+    static void MethodBRequest(
+        const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg);
+    static void MethodBResponse(
+        const ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>& _msg);
+    static void MutateSocketRequest(
+        const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>&
+            _msg);
+    static void MutateSocketResponse(
+        const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>&
+            _msg);
   };
 };
 
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 class WithAndWithoutRequestResponse final {
   WithAndWithoutRequestResponse() = delete;
- public:
 
+ public:
   using NoRequestNoResponseRequest = ::fidl::AnyZeroArgMessage;
 
   using NoRequestEmptyResponseResponse = ::fidl::AnyZeroArgMessage;
@@ -835,7 +995,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -852,7 +1013,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -871,7 +1033,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -889,7 +1052,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -904,7 +1068,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -924,7 +1089,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -948,88 +1114,113 @@ class WithAndWithoutRequestResponse final {
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
+
    private:
-    class NoRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
+    class NoRequestNoResponse_Impl final
+        : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
       NoRequestNoResponse_Impl(::zx::unowned_channel _client_end);
       ~NoRequestNoResponse_Impl() = default;
       NoRequestNoResponse_Impl(NoRequestNoResponse_Impl&& other) = default;
-      NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) = default;
-      using Super::status;
+      NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) =
+          default;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
     template <typename ResponseType>
-    class NoRequestEmptyResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class NoRequestEmptyResponse_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
       NoRequestEmptyResponse_Impl(::zx::unowned_channel _client_end);
       ~NoRequestEmptyResponse_Impl() = default;
-      NoRequestEmptyResponse_Impl(NoRequestEmptyResponse_Impl&& other) = default;
-      NoRequestEmptyResponse_Impl& operator=(NoRequestEmptyResponse_Impl&& other) = default;
-      using Super::status;
+      NoRequestEmptyResponse_Impl(NoRequestEmptyResponse_Impl&& other) =
+          default;
+      NoRequestEmptyResponse_Impl& operator=(
+          NoRequestEmptyResponse_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class NoRequestWithResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class NoRequestWithResponse_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
       NoRequestWithResponse_Impl(::zx::unowned_channel _client_end);
       ~NoRequestWithResponse_Impl() = default;
       NoRequestWithResponse_Impl(NoRequestWithResponse_Impl&& other) = default;
-      NoRequestWithResponse_Impl& operator=(NoRequestWithResponse_Impl&& other) = default;
-      using Super::status;
+      NoRequestWithResponse_Impl& operator=(
+          NoRequestWithResponse_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
-    class WithRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
+    class WithRequestNoResponse_Impl final
+        : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
-      WithRequestNoResponse_Impl(::zx::unowned_channel _client_end, ::fidl::StringView arg);
+      WithRequestNoResponse_Impl(::zx::unowned_channel _client_end,
+                                 ::fidl::StringView arg);
       ~WithRequestNoResponse_Impl() = default;
       WithRequestNoResponse_Impl(WithRequestNoResponse_Impl&& other) = default;
-      WithRequestNoResponse_Impl& operator=(WithRequestNoResponse_Impl&& other) = default;
-      using Super::status;
+      WithRequestNoResponse_Impl& operator=(
+          WithRequestNoResponse_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
     template <typename ResponseType>
-    class WithRequestEmptyResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class WithRequestEmptyResponse_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
-      WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end, ::fidl::StringView arg);
+      WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end,
+                                    ::fidl::StringView arg);
       ~WithRequestEmptyResponse_Impl() = default;
-      WithRequestEmptyResponse_Impl(WithRequestEmptyResponse_Impl&& other) = default;
-      WithRequestEmptyResponse_Impl& operator=(WithRequestEmptyResponse_Impl&& other) = default;
-      using Super::status;
+      WithRequestEmptyResponse_Impl(WithRequestEmptyResponse_Impl&& other) =
+          default;
+      WithRequestEmptyResponse_Impl& operator=(
+          WithRequestEmptyResponse_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class WithRequestWithResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class WithRequestWithResponse_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
-      WithRequestWithResponse_Impl(::zx::unowned_channel _client_end, ::fidl::StringView arg);
+      WithRequestWithResponse_Impl(::zx::unowned_channel _client_end,
+                                   ::fidl::StringView arg);
       ~WithRequestWithResponse_Impl() = default;
-      WithRequestWithResponse_Impl(WithRequestWithResponse_Impl&& other) = default;
-      WithRequestWithResponse_Impl& operator=(WithRequestWithResponse_Impl&& other) = default;
-      using Super::status;
+      WithRequestWithResponse_Impl(WithRequestWithResponse_Impl&& other) =
+          default;
+      WithRequestWithResponse_Impl& operator=(
+          WithRequestWithResponse_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
@@ -1038,99 +1229,135 @@ class WithAndWithoutRequestResponse final {
 
    public:
     using NoRequestNoResponse = NoRequestNoResponse_Impl;
-    using NoRequestEmptyResponse = NoRequestEmptyResponse_Impl<NoRequestEmptyResponseResponse>;
-    using NoRequestWithResponse = NoRequestWithResponse_Impl<NoRequestWithResponseResponse>;
+    using NoRequestEmptyResponse =
+        NoRequestEmptyResponse_Impl<NoRequestEmptyResponseResponse>;
+    using NoRequestWithResponse =
+        NoRequestWithResponse_Impl<NoRequestWithResponseResponse>;
     using WithRequestNoResponse = WithRequestNoResponse_Impl;
-    using WithRequestEmptyResponse = WithRequestEmptyResponse_Impl<WithRequestEmptyResponseResponse>;
-    using WithRequestWithResponse = WithRequestWithResponse_Impl<WithRequestWithResponseResponse>;
+    using WithRequestEmptyResponse =
+        WithRequestEmptyResponse_Impl<WithRequestEmptyResponseResponse>;
+    using WithRequestWithResponse =
+        WithRequestWithResponse_Impl<WithRequestWithResponseResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
+
    private:
-    class NoRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
+    class NoRequestNoResponse_Impl final
+        : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
       NoRequestNoResponse_Impl(::zx::unowned_channel _client_end);
       ~NoRequestNoResponse_Impl() = default;
       NoRequestNoResponse_Impl(NoRequestNoResponse_Impl&& other) = default;
-      NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) = default;
-      using Super::status;
+      NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) =
+          default;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
     template <typename ResponseType>
-    class NoRequestEmptyResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class NoRequestEmptyResponse_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      NoRequestEmptyResponse_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      NoRequestEmptyResponse_Impl(::zx::unowned_channel _client_end,
+                                  ::fidl::BytePart _response_buffer);
       ~NoRequestEmptyResponse_Impl() = default;
-      NoRequestEmptyResponse_Impl(NoRequestEmptyResponse_Impl&& other) = default;
-      NoRequestEmptyResponse_Impl& operator=(NoRequestEmptyResponse_Impl&& other) = default;
-      using Super::status;
+      NoRequestEmptyResponse_Impl(NoRequestEmptyResponse_Impl&& other) =
+          default;
+      NoRequestEmptyResponse_Impl& operator=(
+          NoRequestEmptyResponse_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class NoRequestWithResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class NoRequestWithResponse_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      NoRequestWithResponse_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      NoRequestWithResponse_Impl(::zx::unowned_channel _client_end,
+                                 ::fidl::BytePart _response_buffer);
       ~NoRequestWithResponse_Impl() = default;
       NoRequestWithResponse_Impl(NoRequestWithResponse_Impl&& other) = default;
-      NoRequestWithResponse_Impl& operator=(NoRequestWithResponse_Impl&& other) = default;
-      using Super::status;
+      NoRequestWithResponse_Impl& operator=(
+          NoRequestWithResponse_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
-    class WithRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
+    class WithRequestNoResponse_Impl final
+        : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
+
      public:
-      WithRequestNoResponse_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+      WithRequestNoResponse_Impl(::zx::unowned_channel _client_end,
+                                 ::fidl::BytePart _request_buffer,
+                                 ::fidl::StringView arg);
       ~WithRequestNoResponse_Impl() = default;
       WithRequestNoResponse_Impl(WithRequestNoResponse_Impl&& other) = default;
-      WithRequestNoResponse_Impl& operator=(WithRequestNoResponse_Impl&& other) = default;
-      using Super::status;
+      WithRequestNoResponse_Impl& operator=(
+          WithRequestNoResponse_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
     };
     template <typename ResponseType>
-    class WithRequestEmptyResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class WithRequestEmptyResponse_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+      WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end,
+                                    ::fidl::BytePart _request_buffer,
+                                    ::fidl::StringView arg,
+                                    ::fidl::BytePart _response_buffer);
       ~WithRequestEmptyResponse_Impl() = default;
-      WithRequestEmptyResponse_Impl(WithRequestEmptyResponse_Impl&& other) = default;
-      WithRequestEmptyResponse_Impl& operator=(WithRequestEmptyResponse_Impl&& other) = default;
-      using Super::status;
+      WithRequestEmptyResponse_Impl(WithRequestEmptyResponse_Impl&& other) =
+          default;
+      WithRequestEmptyResponse_Impl& operator=(
+          WithRequestEmptyResponse_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class WithRequestWithResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class WithRequestWithResponse_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      WithRequestWithResponse_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+      WithRequestWithResponse_Impl(::zx::unowned_channel _client_end,
+                                   ::fidl::BytePart _request_buffer,
+                                   ::fidl::StringView arg,
+                                   ::fidl::BytePart _response_buffer);
       ~WithRequestWithResponse_Impl() = default;
-      WithRequestWithResponse_Impl(WithRequestWithResponse_Impl&& other) = default;
-      WithRequestWithResponse_Impl& operator=(WithRequestWithResponse_Impl&& other) = default;
-      using Super::status;
+      WithRequestWithResponse_Impl(WithRequestWithResponse_Impl&& other) =
+          default;
+      WithRequestWithResponse_Impl& operator=(
+          WithRequestWithResponse_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
@@ -1139,11 +1366,15 @@ class WithAndWithoutRequestResponse final {
 
    public:
     using NoRequestNoResponse = NoRequestNoResponse_Impl;
-    using NoRequestEmptyResponse = NoRequestEmptyResponse_Impl<NoRequestEmptyResponseResponse>;
-    using NoRequestWithResponse = NoRequestWithResponse_Impl<NoRequestWithResponseResponse>;
+    using NoRequestEmptyResponse =
+        NoRequestEmptyResponse_Impl<NoRequestEmptyResponseResponse>;
+    using NoRequestWithResponse =
+        NoRequestWithResponse_Impl<NoRequestWithResponseResponse>;
     using WithRequestNoResponse = WithRequestNoResponse_Impl;
-    using WithRequestEmptyResponse = WithRequestEmptyResponse_Impl<WithRequestEmptyResponseResponse>;
-    using WithRequestWithResponse = WithRequestWithResponse_Impl<WithRequestWithResponseResponse>;
+    using WithRequestEmptyResponse =
+        WithRequestEmptyResponse_Impl<WithRequestEmptyResponseResponse>;
+    using WithRequestWithResponse =
+        WithRequestWithResponse_Impl<WithRequestWithResponseResponse>;
   };
 
   class SyncClient final {
@@ -1158,109 +1389,163 @@ class WithAndWithoutRequestResponse final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::NoRequestNoResponse NoRequestNoResponse();
 
-
-    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse();
 
-
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    // Allocates 16 bytes of request buffer on the stack. Response is
+    // heap-allocated.
     ResultOf::NoRequestWithResponse NoRequestWithResponse();
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(
+        ::fidl::BytePart _response_buffer);
 
     // Request is heap-allocated.
-    ResultOf::WithRequestNoResponse WithRequestNoResponse(::fidl::StringView arg);
+    ResultOf::WithRequestNoResponse WithRequestNoResponse(
+        ::fidl::StringView arg);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(
+        ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
 
-    // Allocates 16 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(::fidl::StringView arg);
+    // Allocates 16 bytes of response buffer on the stack. Request is
+    // heap-allocated.
+    ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
+        ::fidl::StringView arg);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
+        ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+        ::fidl::BytePart _response_buffer);
 
     // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::WithRequestWithResponse WithRequestWithResponse(::fidl::StringView arg);
+    ResultOf::WithRequestWithResponse WithRequestWithResponse(
+        ::fidl::StringView arg);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(
+        ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+        ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
+    // Blocks to consume exactly one message from the channel, then call the
+    // corresponding handler defined in |EventHandlers|. The return status of
+    // the handler function is folded with any transport-level errors and
+    // returned.
     zx_status_t HandleEvents(EventHandlers handlers);
+
    private:
     ::zx::channel channel_;
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
   class Call final {
     Call() = delete;
+
    public:
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::NoRequestNoResponse NoRequestNoResponse(
+        ::zx::unowned_channel _client_end);
 
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::NoRequestNoResponse NoRequestNoResponse(::zx::unowned_channel _client_end);
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse(
+        ::zx::unowned_channel _client_end);
 
+    // Allocates 16 bytes of request buffer on the stack. Response is
+    // heap-allocated.
+    static ResultOf::NoRequestWithResponse NoRequestWithResponse(
+        ::zx::unowned_channel _client_end);
 
-    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse(::zx::unowned_channel _client_end);
-
-
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::NoRequestWithResponse NoRequestWithResponse(::zx::unowned_channel _client_end);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Request is heap-allocated.
-    static ResultOf::WithRequestNoResponse WithRequestNoResponse(::zx::unowned_channel _client_end, ::fidl::StringView arg);
+    static ResultOf::WithRequestNoResponse WithRequestNoResponse(
+        ::zx::unowned_channel _client_end, ::fidl::StringView arg);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::fidl::StringView arg);
 
-    // Allocates 16 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(::zx::unowned_channel _client_end, ::fidl::StringView arg);
+    // Allocates 16 bytes of response buffer on the stack. Request is
+    // heap-allocated.
+    static ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
+        ::zx::unowned_channel _client_end, ::fidl::StringView arg);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
 
     // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::WithRequestWithResponse WithRequestWithResponse(::zx::unowned_channel _client_end, ::fidl::StringView arg);
+    static ResultOf::WithRequestWithResponse WithRequestWithResponse(
+        ::zx::unowned_channel _client_end, ::fidl::StringView arg);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+        ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
-    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
+    // Blocks to consume exactly one message from the channel, then call the
+    // corresponding handler defined in |EventHandlers|. The return status of
+    // the handler function is folded with any transport-level errors and
+    // returned.
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end,
+                                    EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  // Additionally, requests must be already laid-out according to the FIDL
+  // wire-format.
   class InPlace final {
     InPlace() = delete;
+
    public:
+    static ::fidl::internal::StatusAndError NoRequestNoResponse(
+        ::zx::unowned_channel _client_end);
 
-    static ::fidl::internal::StatusAndError NoRequestNoResponse(::zx::unowned_channel _client_end);
+    static ::fidl::DecodeResult<NoRequestEmptyResponseResponse>
+    NoRequestEmptyResponse(::zx::unowned_channel _client_end,
+                           ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<NoRequestEmptyResponseResponse> NoRequestEmptyResponse(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<NoRequestWithResponseResponse>
+    NoRequestWithResponse(::zx::unowned_channel _client_end,
+                          ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::internal::StatusAndError WithRequestNoResponse(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<WithRequestNoResponseRequest> params);
 
-    static ::fidl::internal::StatusAndError WithRequestNoResponse(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestNoResponseRequest> params);
+    static ::fidl::DecodeResult<WithRequestEmptyResponseResponse>
+    WithRequestEmptyResponse(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params,
+        ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<WithRequestEmptyResponseResponse> WithRequestEmptyResponse(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<WithRequestWithResponseResponse> WithRequestWithResponse(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer);
-
+    static ::fidl::DecodeResult<WithRequestWithResponseResponse>
+    WithRequestWithResponse(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<WithRequestWithResponseRequest> params,
+        ::fidl::BytePart response_buffer);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -1273,7 +1558,8 @@ class WithAndWithoutRequestResponse final {
 
     using NoRequestNoResponseCompleter = ::fidl::Completer<>;
 
-    virtual void NoRequestNoResponse(NoRequestNoResponseCompleter::Sync _completer) = 0;
+    virtual void NoRequestNoResponse(
+        NoRequestNoResponseCompleter::Sync _completer) = 0;
 
     class NoRequestEmptyResponseCompleterBase : public _Base {
      public:
@@ -1283,9 +1569,11 @@ class WithAndWithoutRequestResponse final {
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using NoRequestEmptyResponseCompleter = ::fidl::Completer<NoRequestEmptyResponseCompleterBase>;
+    using NoRequestEmptyResponseCompleter =
+        ::fidl::Completer<NoRequestEmptyResponseCompleterBase>;
 
-    virtual void NoRequestEmptyResponse(NoRequestEmptyResponseCompleter::Sync _completer) = 0;
+    virtual void NoRequestEmptyResponse(
+        NoRequestEmptyResponseCompleter::Sync _completer) = 0;
 
     class NoRequestWithResponseCompleterBase : public _Base {
      public:
@@ -1297,13 +1585,17 @@ class WithAndWithoutRequestResponse final {
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using NoRequestWithResponseCompleter = ::fidl::Completer<NoRequestWithResponseCompleterBase>;
+    using NoRequestWithResponseCompleter =
+        ::fidl::Completer<NoRequestWithResponseCompleterBase>;
 
-    virtual void NoRequestWithResponse(NoRequestWithResponseCompleter::Sync _completer) = 0;
+    virtual void NoRequestWithResponse(
+        NoRequestWithResponseCompleter::Sync _completer) = 0;
 
     using WithRequestNoResponseCompleter = ::fidl::Completer<>;
 
-    virtual void WithRequestNoResponse(::fidl::StringView arg, WithRequestNoResponseCompleter::Sync _completer) = 0;
+    virtual void WithRequestNoResponse(
+        ::fidl::StringView arg,
+        WithRequestNoResponseCompleter::Sync _completer) = 0;
 
     class WithRequestEmptyResponseCompleterBase : public _Base {
      public:
@@ -1313,91 +1605,146 @@ class WithAndWithoutRequestResponse final {
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using WithRequestEmptyResponseCompleter = ::fidl::Completer<WithRequestEmptyResponseCompleterBase>;
+    using WithRequestEmptyResponseCompleter =
+        ::fidl::Completer<WithRequestEmptyResponseCompleterBase>;
 
-    virtual void WithRequestEmptyResponse(::fidl::StringView arg, WithRequestEmptyResponseCompleter::Sync _completer) = 0;
+    virtual void WithRequestEmptyResponse(
+        ::fidl::StringView arg,
+        WithRequestEmptyResponseCompleter::Sync _completer) = 0;
 
     class WithRequestWithResponseCompleterBase : public _Base {
      public:
       void Reply(::fidl::StringView ret);
       void Reply(::fidl::BytePart _buffer, ::fidl::StringView ret);
-      void Reply(::fidl::DecodedMessage<WithRequestWithResponseResponse> params);
+      void Reply(
+          ::fidl::DecodedMessage<WithRequestWithResponseResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using WithRequestWithResponseCompleter = ::fidl::Completer<WithRequestWithResponseCompleterBase>;
+    using WithRequestWithResponseCompleter =
+        ::fidl::Completer<WithRequestWithResponseCompleterBase>;
 
-    virtual void WithRequestWithResponse(::fidl::StringView arg, WithRequestWithResponseCompleter::Sync _completer) = 0;
-
+    virtual void WithRequestWithResponse(
+        ::fidl::StringView arg,
+        WithRequestWithResponseCompleter::Sync _completer) = 0;
   };
 
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg,
+                          ::fidl::Transaction* txn);
 
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Dispatches the incoming message to one of the handlers functions in the
+  // interface. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg,
+                       ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
+  // with |fidl::Bind| to reduce template expansion. Do not call this method
+  // manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
+                                 ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
   static zx_status_t SendOnEmptyResponseEvent(::zx::unowned_channel _chan);
 
-  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan, ::fidl::StringView ret);
+  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan,
+                                             ::fidl::StringView ret);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::fidl::StringView ret);
+  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan,
+                                             ::fidl::BytePart _buffer,
+                                             ::fidl::StringView ret);
 
   // Messages are encoded in-place.
-  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnWithResponseResponse> params);
+  static zx_status_t SendOnWithResponseEvent(
+      ::zx::unowned_channel _chan,
+      ::fidl::DecodedMessage<OnWithResponseResponse> params);
 
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  // Helper functions to fill in the transaction header in a
+  // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
+
    public:
-    static void NoRequestNoResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg);
-    static void NoRequestEmptyResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>& _msg);
-    static void NoRequestEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>& _msg);
-    static void NoRequestWithResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg);
-    static void NoRequestWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestWithResponseResponse>& _msg);
-    static void WithRequestNoResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg);
-    static void WithRequestEmptyResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest>& _msg);
-    static void WithRequestEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>& _msg);
-    static void WithRequestWithResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestWithResponseRequest>& _msg);
-    static void WithRequestWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestWithResponseResponse>& _msg);
-    static void OnEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg);
-    static void OnWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg);
+    static void NoRequestNoResponseRequest(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg);
+    static void NoRequestEmptyResponseRequest(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>&
+            _msg);
+    static void NoRequestEmptyResponseResponse(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>&
+            _msg);
+    static void NoRequestWithResponseRequest(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg);
+    static void NoRequestWithResponseResponse(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::NoRequestWithResponseResponse>&
+            _msg);
+    static void WithRequestNoResponseRequest(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg);
+    static void WithRequestEmptyResponseRequest(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest>&
+            _msg);
+    static void WithRequestEmptyResponseResponse(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>&
+            _msg);
+    static void WithRequestWithResponseRequest(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::WithRequestWithResponseRequest>&
+            _msg);
+    static void WithRequestWithResponseResponse(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::WithRequestWithResponseResponse>&
+            _msg);
+    static void OnEmptyResponseResponse(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg);
+    static void OnWithResponseResponse(
+        const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg);
   };
 };
 
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable;
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntaxResponseAsStructRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable;
+extern "C" const fidl_type_t
+    v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 class WithErrorSyntax final {
   WithErrorSyntax() = delete;
- public:
 
+ public:
   struct ResponseAsStructResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 24;
@@ -1414,7 +1761,8 @@ class WithErrorSyntax final {
     fidl_message_header_t _hdr;
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -1431,7 +1779,8 @@ class WithErrorSyntax final {
     fidl_message_header_t _hdr;
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result;
 
-    static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -1443,54 +1792,60 @@ class WithErrorSyntax final {
   };
   using ErrorAsEnumRequest = ::fidl::AnyZeroArgMessage;
 
-
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
+
    private:
     template <typename ResponseType>
-    class ResponseAsStruct_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class ResponseAsStruct_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
       ResponseAsStruct_Impl(::zx::unowned_channel _client_end);
       ~ResponseAsStruct_Impl() = default;
       ResponseAsStruct_Impl(ResponseAsStruct_Impl&& other) = default;
       ResponseAsStruct_Impl& operator=(ResponseAsStruct_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class ErrorAsPrimitive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class ErrorAsPrimitive_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
       ErrorAsPrimitive_Impl(::zx::unowned_channel _client_end);
       ~ErrorAsPrimitive_Impl() = default;
       ErrorAsPrimitive_Impl(ErrorAsPrimitive_Impl&& other) = default;
       ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class ErrorAsEnum_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class ErrorAsEnum_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
       ErrorAsEnum_Impl(::zx::unowned_channel _client_end);
       ~ErrorAsEnum_Impl() = default;
       ErrorAsEnum_Impl(ErrorAsEnum_Impl&& other) = default;
       ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
@@ -1507,50 +1862,60 @@ class WithErrorSyntax final {
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
+
    private:
     template <typename ResponseType>
-    class ResponseAsStruct_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class ResponseAsStruct_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      ResponseAsStruct_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ResponseAsStruct_Impl(::zx::unowned_channel _client_end,
+                            ::fidl::BytePart _response_buffer);
       ~ResponseAsStruct_Impl() = default;
       ResponseAsStruct_Impl(ResponseAsStruct_Impl&& other) = default;
       ResponseAsStruct_Impl& operator=(ResponseAsStruct_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class ErrorAsPrimitive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class ErrorAsPrimitive_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      ErrorAsPrimitive_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ErrorAsPrimitive_Impl(::zx::unowned_channel _client_end,
+                            ::fidl::BytePart _response_buffer);
       ~ErrorAsPrimitive_Impl() = default;
       ErrorAsPrimitive_Impl(ErrorAsPrimitive_Impl&& other) = default;
       ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class ErrorAsEnum_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class ErrorAsEnum_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      ErrorAsEnum_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ErrorAsEnum_Impl(::zx::unowned_channel _client_end,
+                       ::fidl::BytePart _response_buffer);
       ~ErrorAsEnum_Impl() = default;
       ErrorAsEnum_Impl(ErrorAsEnum_Impl&& other) = default;
       ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
-      using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
@@ -1575,65 +1940,87 @@ class WithErrorSyntax final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::ResponseAsStruct ResponseAsStruct();
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ResponseAsStruct ResponseAsStruct(::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::ResponseAsStruct ResponseAsStruct(
+        ::fidl::BytePart _response_buffer);
 
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::ErrorAsPrimitive ErrorAsPrimitive();
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(
+        ::fidl::BytePart _response_buffer);
 
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     ResultOf::ErrorAsEnum ErrorAsEnum();
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
     UnownedResultOf::ErrorAsEnum ErrorAsEnum(::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
   class Call final {
     Call() = delete;
+
    public:
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::ResponseAsStruct ResponseAsStruct(
+        ::zx::unowned_channel _client_end);
 
-    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ResponseAsStruct ResponseAsStruct(::zx::unowned_channel _client_end);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::ResponseAsStruct ResponseAsStruct(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ResponseAsStruct ResponseAsStruct(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(
+        ::zx::unowned_channel _client_end);
 
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(::zx::unowned_channel _client_end);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation
+    // necessary.
     static ResultOf::ErrorAsEnum ErrorAsEnum(::zx::unowned_channel _client_end);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ErrorAsEnum ErrorAsEnum(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::ErrorAsEnum ErrorAsEnum(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  // Additionally, requests must be already laid-out according to the FIDL
+  // wire-format.
   class InPlace final {
     InPlace() = delete;
+
    public:
+    static ::fidl::DecodeResult<ResponseAsStructResponse> ResponseAsStruct(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ResponseAsStructResponse> ResponseAsStruct(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
+    static ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(
+        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -1646,27 +2033,36 @@ class WithErrorSyntax final {
 
     class ResponseAsStructCompleterBase : public _Base {
      public:
-      void Reply(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
+      void Reply(
+          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
       void ReplySuccess(int64_t a, int64_t b, int64_t c);
       void ReplyError(uint32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, int64_t a, int64_t b, int64_t c);
+      void Reply(
+          ::fidl::BytePart _buffer,
+          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, int64_t a, int64_t b,
+                        int64_t c);
       void Reply(::fidl::DecodedMessage<ResponseAsStructResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using ResponseAsStructCompleter = ::fidl::Completer<ResponseAsStructCompleterBase>;
+    using ResponseAsStructCompleter =
+        ::fidl::Completer<ResponseAsStructCompleterBase>;
 
-    virtual void ResponseAsStruct(ResponseAsStructCompleter::Sync _completer) = 0;
+    virtual void ResponseAsStruct(
+        ResponseAsStructCompleter::Sync _completer) = 0;
 
     class ErrorAsPrimitiveCompleterBase : public _Base {
      public:
-      void Reply(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
+      void Reply(
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
       void ReplySuccess();
       void ReplyError(uint32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
+      void Reply(
+          ::fidl::BytePart _buffer,
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params);
 
@@ -1674,16 +2070,21 @@ class WithErrorSyntax final {
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using ErrorAsPrimitiveCompleter = ::fidl::Completer<ErrorAsPrimitiveCompleterBase>;
+    using ErrorAsPrimitiveCompleter =
+        ::fidl::Completer<ErrorAsPrimitiveCompleterBase>;
 
-    virtual void ErrorAsPrimitive(ErrorAsPrimitiveCompleter::Sync _completer) = 0;
+    virtual void ErrorAsPrimitive(
+        ErrorAsPrimitiveCompleter::Sync _completer) = 0;
 
     class ErrorAsEnumCompleterBase : public _Base {
      public:
-      void Reply(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
+      void Reply(
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
       void ReplySuccess();
       void ReplyError(ErrorEnun error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
+      void Reply(
+          ::fidl::BytePart _buffer,
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
       void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ErrorAsEnumResponse> params);
 
@@ -1694,38 +2095,55 @@ class WithErrorSyntax final {
     using ErrorAsEnumCompleter = ::fidl::Completer<ErrorAsEnumCompleterBase>;
 
     virtual void ErrorAsEnum(ErrorAsEnumCompleter::Sync _completer) = 0;
-
   };
 
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg,
+                          ::fidl::Transaction* txn);
 
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Dispatches the incoming message to one of the handlers functions in the
+  // interface. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg,
+                       ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
+  // with |fidl::Bind| to reduce template expansion. Do not call this method
+  // manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
+                                 ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  // Helper functions to fill in the transaction header in a
+  // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
+
    public:
-    static void ResponseAsStructRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructRequest>& _msg);
-    static void ResponseAsStructResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructResponse>& _msg);
-    static void ErrorAsPrimitiveRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>& _msg);
-    static void ErrorAsPrimitiveResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>& _msg);
-    static void ErrorAsEnumRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg);
-    static void ErrorAsEnumResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>& _msg);
+    static void ResponseAsStructRequest(
+        const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructRequest>&
+            _msg);
+    static void ResponseAsStructResponse(
+        const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructResponse>&
+            _msg);
+    static void ErrorAsPrimitiveRequest(
+        const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>&
+            _msg);
+    static void ErrorAsPrimitiveResponse(
+        const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>&
+            _msg);
+    static void ErrorAsEnumRequest(
+        const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>&
+            _msg);
+    static void ErrorAsEnumResponse(
+        const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>&
+            _msg);
   };
 };
 
@@ -1736,158 +2154,286 @@ class WithErrorSyntax final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>);
-static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response, a) == 0);
-static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response, b) == 8);
-static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response, c) == 16);
-static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response) == ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response::PrimarySize);
+struct IsFidlType<
+    ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>);
+static_assert(
+    offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response,
+             a) == 0);
+static_assert(
+    offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response,
+             b) == 8);
+static_assert(
+    offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response,
+             c) == 16);
+static_assert(
+    sizeof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response) ==
+    ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response::
+        PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result>);
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result>);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>);
-static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response, __reserved) == 0);
-static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response) == ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response::PrimarySize);
+struct IsFidlType<
+    ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>);
+static_assert(
+    offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response,
+             __reserved) == 0);
+static_assert(
+    sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response) ==
+    ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response::
+        PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>);
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>);
-static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response, __reserved) == 0);
-static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response) == ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response::PrimarySize);
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>);
+static_assert(
+    offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response,
+             __reserved) == 0);
+static_assert(
+    sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response) ==
+    ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodARequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodARequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodARequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::ChannelProtocol::MethodARequest)
-    == ::llcpp::test::name::ChannelProtocol::MethodARequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodARequest, a) == 16);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodARequest, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodARequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::ChannelProtocol::MethodARequest) ==
+    ::llcpp::test::name::ChannelProtocol::MethodARequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodARequest,
+                       a) == 16);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodARequest,
+                       b) == 24);
 
 template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::EventAResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::EventAResponse>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::EventAResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::ChannelProtocol::EventAResponse)
-    == ::llcpp::test::name::ChannelProtocol::EventAResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::EventAResponse, a) == 16);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::EventAResponse, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::EventAResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::ChannelProtocol::EventAResponse) ==
+    ::llcpp::test::name::ChannelProtocol::EventAResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::EventAResponse,
+                       a) == 16);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::EventAResponse,
+                       b) == 24);
 
 template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodBRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodBRequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodBRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::ChannelProtocol::MethodBRequest)
-    == ::llcpp::test::name::ChannelProtocol::MethodBRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBRequest, a) == 16);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBRequest, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodBRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::ChannelProtocol::MethodBRequest) ==
+    ::llcpp::test::name::ChannelProtocol::MethodBRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBRequest,
+                       a) == 16);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBRequest,
+                       b) == 24);
 
 template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodBResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodBResponse>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodBResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::ChannelProtocol::MethodBResponse)
-    == ::llcpp::test::name::ChannelProtocol::MethodBResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBResponse, result) == 16);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodBResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::ChannelProtocol::MethodBResponse) ==
+    ::llcpp::test::name::ChannelProtocol::MethodBResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBResponse,
+                       result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::MutateSocketRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::MutateSocketRequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MutateSocketRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::ChannelProtocol::MutateSocketRequest)
-    == ::llcpp::test::name::ChannelProtocol::MutateSocketRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MutateSocketRequest, a) == 16);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MutateSocketRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::ChannelProtocol::MutateSocketRequest) ==
+    ::llcpp::test::name::ChannelProtocol::MutateSocketRequest::PrimarySize);
+static_assert(
+    offsetof(::llcpp::test::name::ChannelProtocol::MutateSocketRequest, a) ==
+    16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::ChannelProtocol::MutateSocketResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::MutateSocketResponse>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MutateSocketResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::ChannelProtocol::MutateSocketResponse)
-    == ::llcpp::test::name::ChannelProtocol::MutateSocketResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MutateSocketResponse, b) == 16);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MutateSocketResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::ChannelProtocol::MutateSocketResponse) ==
+    ::llcpp::test::name::ChannelProtocol::MutateSocketResponse::PrimarySize);
+static_assert(
+    offsetof(::llcpp::test::name::ChannelProtocol::MutateSocketResponse, b) ==
+    16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
+                      NoRequestWithResponseResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse)
-    == ::llcpp::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse, ret) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
+                         NoRequestWithResponseResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                         NoRequestWithResponseResponse) ==
+              ::llcpp::test::name::WithAndWithoutRequestResponse::
+                  NoRequestWithResponseResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                           NoRequestWithResponseResponse,
+                       ret) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
+                      WithRequestNoResponseRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest)
-    == ::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest, arg) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
+                         WithRequestNoResponseRequest> : public std::true_type {
+};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                         WithRequestNoResponseRequest) ==
+              ::llcpp::test::name::WithAndWithoutRequestResponse::
+                  WithRequestNoResponseRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                           WithRequestNoResponseRequest,
+                       arg) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
+                      WithRequestEmptyResponseRequest> : public std::true_type {
+};
 template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest)
-    == ::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest, arg) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
+                         WithRequestEmptyResponseRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                         WithRequestEmptyResponseRequest) ==
+              ::llcpp::test::name::WithAndWithoutRequestResponse::
+                  WithRequestEmptyResponseRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                           WithRequestEmptyResponseRequest,
+                       arg) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
+                      WithRequestWithResponseRequest> : public std::true_type {
+};
 template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest)
-    == ::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest, arg) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
+                         WithRequestWithResponseRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                         WithRequestWithResponseRequest) ==
+              ::llcpp::test::name::WithAndWithoutRequestResponse::
+                  WithRequestWithResponseRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                           WithRequestWithResponseRequest,
+                       arg) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::
+                      WithRequestWithResponseResponse> : public std::true_type {
+};
 template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse)
-    == ::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse, ret) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::
+                         WithRequestWithResponseResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                         WithRequestWithResponseResponse) ==
+              ::llcpp::test::name::WithAndWithoutRequestResponse::
+                  WithRequestWithResponseResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                           WithRequestWithResponseResponse,
+                       ret) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse> : public std::true_type {};
+struct IsFidlType<
+    ::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse)
-    == ::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse, ret) == 16);
+struct IsFidlMessage<
+    ::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                         OnWithResponseResponse) ==
+              ::llcpp::test::name::WithAndWithoutRequestResponse::
+                  OnWithResponseResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
+                           OnWithResponseResponse,
+                       ret) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>);
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse> : public std::true_type {};
+struct IsFidlType<
+    ::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse)
-    == ::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse, result) == 16);
+struct IsFidlMessage<
+    ::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse) ==
+    ::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse::
+        PrimarySize);
+static_assert(
+    offsetof(::llcpp::test::name::WithErrorSyntax::ResponseAsStructResponse,
+             result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse> : public std::true_type {};
+struct IsFidlType<
+    ::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse)
-    == ::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse, result) == 16);
+struct IsFidlMessage<
+    ::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse) ==
+    ::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse::
+        PrimarySize);
+static_assert(
+    offsetof(::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse,
+             result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse)
-    == ::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse::PrimarySize);
-static_assert(offsetof(::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse, result) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse) ==
+    ::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse::PrimarySize);
+static_assert(
+    offsetof(::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse,
+             result) == 16);
 
 }  // namespace fidl

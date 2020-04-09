@@ -53,7 +53,6 @@ func (gen *Generator) GenerateFidl(fidl types.Root, outputFilename string, rustf
 	if err != nil {
 		return err
 	}
-	defer generated.Close()
 
 	generatedPipe, err := common.NewFormatter(rustfmtPath).FormatPipe(generated)
 	if err != nil {

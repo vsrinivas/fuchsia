@@ -9,13 +9,10 @@ namespace top {
 namespace testing {
 
 class Top_TestBase : public Top {
-  public:
-  virtual ~Top_TestBase() { }
+ public:
+  virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void GetFoo(GetFooCallback callback) override {
-    NotImplemented_("GetFoo");
-  }
-
+  void GetFoo(GetFooCallback callback) override { NotImplemented_("GetFoo"); }
 };
 }  // namespace testing
 }  // namespace top

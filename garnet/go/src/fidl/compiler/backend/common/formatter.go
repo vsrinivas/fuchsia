@@ -34,7 +34,10 @@ func NewFormatter(path string, args ...string) Formatter {
 }
 
 // FormatPipe formats an output stream.
-func (f Formatter) FormatPipe(out io.Writer) (io.WriteCloser, error) {
+//
+// When the returned WriteCloser is closed, 'out' will also be closed.
+// This allows the caller to close the writer in a single location and received all relevant errors.
+func (f Formatter) FormatPipe(out io.WriteCloser) (io.WriteCloser, error) {
 	if f.path == "" {
 		return unformattedStream{normalOut: out}, nil
 	}
@@ -43,7 +46,7 @@ func (f Formatter) FormatPipe(out io.Writer) (io.WriteCloser, error) {
 	cmd.Stdout = out
 	errBuf := new(bytes.Buffer)
 	cmd.Stderr = errBuf
-	inPipe, err := cmd.StdinPipe()
+	in, err := cmd.StdinPipe()
 	if err != nil {
 		cancel()
 		return nil, err
@@ -55,7 +58,8 @@ func (f Formatter) FormatPipe(out io.Writer) (io.WriteCloser, error) {
 	return formattedStream{
 		cmd:    cmd,
 		cancel: cancel,
-		inPipe: inPipe,
+		in:     in,
+		out:    out,
 		errBuf: errBuf,
 	}, nil
 }
@@ -67,7 +71,8 @@ type unformattedStream struct {
 type formattedStream struct {
 	cmd    *exec.Cmd
 	cancel context.CancelFunc
-	inPipe io.WriteCloser
+	in     io.WriteCloser
+	out    io.WriteCloser
 	errBuf *bytes.Buffer
 }
 
@@ -81,7 +86,7 @@ func (s unformattedStream) Write(p []byte) (int, error) {
 }
 
 func (s formattedStream) Write(p []byte) (int, error) {
-	return s.inPipe.Write(p)
+	return s.in.Write(p)
 }
 
 func (s unformattedStream) Close() error {
@@ -92,7 +97,7 @@ func (s unformattedStream) Close() error {
 
 func (s formattedStream) Close() error {
 	defer s.cancel()
-	if err := s.inPipe.Close(); err != nil {
+	if err := s.in.Close(); err != nil {
 		return err
 	}
 	if err := s.cmd.Wait(); err != nil {
@@ -101,5 +106,5 @@ func (s formattedStream) Close() error {
 		}
 		return err
 	}
-	return nil
+	return s.out.Close()
 }

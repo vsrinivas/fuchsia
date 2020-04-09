@@ -23,6 +23,8 @@ var includeBase = flag.String("include-base", "",
 	"the directory to which C and C++ includes should be relative.")
 var generatorsUnused = flag.String("generators", "",
 	"unused")
+var clangFormatPath = flag.String("clang-format-path", "",
+	"path to the clang-format tool.")
 
 func flagsValid() bool {
 	return *jsonPath != "" && *outputBase != "" && *includeBase != ""
@@ -44,7 +46,7 @@ func main() {
 		OutputBase:  *outputBase,
 		IncludeBase: *includeBase,
 	}
-	if err := codegen.NewFidlGenerator().GenerateFidl(fidl, &config); err != nil {
+	if err := codegen.NewFidlGenerator().GenerateFidl(fidl, &config, *clangFormatPath); err != nil {
 		log.Fatalf("Error running generator: %v", err)
 	}
 }

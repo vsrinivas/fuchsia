@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "lib/fidl/cpp/internal/header.h"
-
 #include <middle/cpp/fidl.h>
+
+#include "lib/fidl/cpp/internal/header.h"
 
 namespace top {
 
@@ -13,18 +13,19 @@ class Baz;
 class Baz final {
  public:
   static const fidl_type_t* FidlType;
-  
+
   ::middle::Bar g{};
 
-  static inline ::std::unique_ptr<Baz> New() { return ::std::make_unique<Baz>(); }
+  static inline ::std::unique_ptr<Baz> New() {
+    return ::std::make_unique<Baz>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, Baz* value, size_t _offset);
   zx_status_t Clone(Baz* result) const;
 };
 
-inline zx_status_t Clone(const ::top::Baz& _value,
-                         ::top::Baz* _result) {
+inline zx_status_t Clone(const ::top::Baz& _value, ::top::Baz* _result) {
   return _value.Clone(_result);
 }
 
@@ -33,15 +34,14 @@ using BazPtr = ::std::unique_ptr<Baz>;
 namespace fidl {
 
 template <>
-struct CodingTraits<::top::Baz>
-    : public EncodableCodingTraits<::top::Baz, 4> {};
+struct CodingTraits<::top::Baz> : public EncodableCodingTraits<::top::Baz, 4> {
+};
 
-inline zx_status_t Clone(const ::top::Baz& value,
-                         ::top::Baz* result) {
+inline zx_status_t Clone(const ::top::Baz& value, ::top::Baz* result) {
   return ::top::Clone(value, result);
 }
 
-template<>
+template <>
 struct Equality<::top::Baz> {
   bool operator()(const ::top::Baz& _lhs, const ::top::Baz& _rhs) const {
     if (!::fidl::Equals(_lhs.g, _rhs.g)) {
@@ -49,4 +49,5 @@ struct Equality<::top::Baz> {
     }
     return true;
   }
-};}  // namespace fidl
+};
+}  // namespace fidl

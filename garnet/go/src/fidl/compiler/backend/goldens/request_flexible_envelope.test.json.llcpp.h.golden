@@ -3,7 +3,6 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -13,10 +12,11 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -34,15 +34,13 @@ class Protocol;
 extern "C" const fidl_type_t v1_fidl_test_json_StrictFooTable;
 
 class StrictFoo {
-  public:
+ public:
   StrictFoo() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   StrictFoo(StrictFoo&&) = default;
   StrictFoo& operator=(StrictFoo&&) = default;
 
-  ~StrictFoo() {
-    reset_ptr(nullptr);
-  }
+  ~StrictFoo() { reset_ptr(nullptr); }
 
   enum class Tag : fidl_xunion_tag_t {
     kS = 1,  // 0x1
@@ -102,8 +100,7 @@ class StrictFoo {
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_StrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
  private:
@@ -116,16 +113,18 @@ class StrictFoo {
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 1: {
-      ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
-        static_cast<::fidl::tracking_ptr<::fidl::StringView>>(std::move(envelope_.data));
-      break;
-    }
-    case 2: {
-      ::fidl::tracking_ptr<int32_t> to_destroy =
-        static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
-      break;
-    }
+      case 1: {
+        ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl::StringView>>(
+                std::move(envelope_.data));
+        break;
+      }
+      case 2: {
+        ::fidl::tracking_ptr<int32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<int32_t>>(
+                std::move(envelope_.data));
+        break;
+      }
     }
 
     envelope_.data = std::move(new_ptr);
@@ -140,15 +139,13 @@ class StrictFoo {
 extern "C" const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
 
 class FlexibleFoo {
-  public:
+ public:
   FlexibleFoo() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   FlexibleFoo(FlexibleFoo&&) = default;
   FlexibleFoo& operator=(FlexibleFoo&&) = default;
 
-  ~FlexibleFoo() {
-    reset_ptr(nullptr);
-  }
+  ~FlexibleFoo() { reset_ptr(nullptr); }
 
   enum class Tag : fidl_xunion_tag_t {
     kS = 1,  // 0x1
@@ -207,11 +204,11 @@ class FlexibleFoo {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_FlexibleFooTable;
+  static constexpr const fidl_type_t* Type =
+      &v1_fidl_test_json_FlexibleFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
  private:
@@ -224,16 +221,18 @@ class FlexibleFoo {
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 1: {
-      ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
-        static_cast<::fidl::tracking_ptr<::fidl::StringView>>(std::move(envelope_.data));
-      break;
-    }
-    case 2: {
-      ::fidl::tracking_ptr<int32_t> to_destroy =
-        static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
-      break;
-    }
+      case 1: {
+        ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
+            static_cast<::fidl::tracking_ptr<::fidl::StringView>>(
+                std::move(envelope_.data));
+        break;
+      }
+      case 2: {
+        ::fidl::tracking_ptr<int32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<int32_t>>(
+                std::move(envelope_.data));
+        break;
+      }
     }
 
     envelope_.data = std::move(new_ptr);
@@ -245,21 +244,26 @@ class FlexibleFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
-extern "C" const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+extern "C" const fidl_type_t
+    v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+extern "C" const fidl_type_t
+    v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+extern "C" const fidl_type_t
+    v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+extern "C" const fidl_type_t
+    v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 class Protocol final {
   Protocol() = delete;
- public:
 
+ public:
   struct RequestStrictResponseFlexibleResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::FlexibleFoo f;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -274,7 +278,8 @@ class Protocol final {
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::StrictFoo s;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -293,7 +298,8 @@ class Protocol final {
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::StrictFoo f;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -308,7 +314,8 @@ class Protocol final {
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::json::FlexibleFoo s;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+    static constexpr const fidl_type_t* Type =
+        &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -322,38 +329,50 @@ class Protocol final {
     using ResponseType = RequestFlexibleResponseStrictResponse;
   };
 
-
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
+
    private:
     template <typename ResponseType>
-    class RequestStrictResponseFlexible_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class RequestStrictResponseFlexible_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
-      RequestStrictResponseFlexible_Impl(::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::StrictFoo s);
+      RequestStrictResponseFlexible_Impl(
+          ::zx::unowned_channel _client_end,
+          ::llcpp::fidl::test::json::StrictFoo s);
       ~RequestStrictResponseFlexible_Impl() = default;
-      RequestStrictResponseFlexible_Impl(RequestStrictResponseFlexible_Impl&& other) = default;
-      RequestStrictResponseFlexible_Impl& operator=(RequestStrictResponseFlexible_Impl&& other) = default;
-      using Super::status;
+      RequestStrictResponseFlexible_Impl(
+          RequestStrictResponseFlexible_Impl&& other) = default;
+      RequestStrictResponseFlexible_Impl& operator=(
+          RequestStrictResponseFlexible_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class RequestFlexibleResponseStrict_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class RequestFlexibleResponseStrict_Impl final
+        : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+
      public:
-      RequestFlexibleResponseStrict_Impl(::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::FlexibleFoo s);
+      RequestFlexibleResponseStrict_Impl(
+          ::zx::unowned_channel _client_end,
+          ::llcpp::fidl::test::json::FlexibleFoo s);
       ~RequestFlexibleResponseStrict_Impl() = default;
-      RequestFlexibleResponseStrict_Impl(RequestFlexibleResponseStrict_Impl&& other) = default;
-      RequestFlexibleResponseStrict_Impl& operator=(RequestFlexibleResponseStrict_Impl&& other) = default;
-      using Super::status;
+      RequestFlexibleResponseStrict_Impl(
+          RequestFlexibleResponseStrict_Impl&& other) = default;
+      RequestFlexibleResponseStrict_Impl& operator=(
+          RequestFlexibleResponseStrict_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
@@ -361,42 +380,59 @@ class Protocol final {
     };
 
    public:
-    using RequestStrictResponseFlexible = RequestStrictResponseFlexible_Impl<RequestStrictResponseFlexibleResponse>;
-    using RequestFlexibleResponseStrict = RequestFlexibleResponseStrict_Impl<RequestFlexibleResponseStrictResponse>;
+    using RequestStrictResponseFlexible = RequestStrictResponseFlexible_Impl<
+        RequestStrictResponseFlexibleResponse>;
+    using RequestFlexibleResponseStrict = RequestFlexibleResponseStrict_Impl<
+        RequestFlexibleResponseStrictResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
+
    private:
     template <typename ResponseType>
-    class RequestStrictResponseFlexible_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class RequestStrictResponseFlexible_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      RequestStrictResponseFlexible_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::StrictFoo s, ::fidl::BytePart _response_buffer);
+      RequestStrictResponseFlexible_Impl(::zx::unowned_channel _client_end,
+                                         ::fidl::BytePart _request_buffer,
+                                         ::llcpp::fidl::test::json::StrictFoo s,
+                                         ::fidl::BytePart _response_buffer);
       ~RequestStrictResponseFlexible_Impl() = default;
-      RequestStrictResponseFlexible_Impl(RequestStrictResponseFlexible_Impl&& other) = default;
-      RequestStrictResponseFlexible_Impl& operator=(RequestStrictResponseFlexible_Impl&& other) = default;
-      using Super::status;
+      RequestStrictResponseFlexible_Impl(
+          RequestStrictResponseFlexible_Impl&& other) = default;
+      RequestStrictResponseFlexible_Impl& operator=(
+          RequestStrictResponseFlexible_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
       using Super::operator*;
     };
     template <typename ResponseType>
-    class RequestFlexibleResponseStrict_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class RequestFlexibleResponseStrict_Impl final
+        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+
      public:
-      RequestFlexibleResponseStrict_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::FlexibleFoo s, ::fidl::BytePart _response_buffer);
+      RequestFlexibleResponseStrict_Impl(
+          ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
+          ::llcpp::fidl::test::json::FlexibleFoo s,
+          ::fidl::BytePart _response_buffer);
       ~RequestFlexibleResponseStrict_Impl() = default;
-      RequestFlexibleResponseStrict_Impl(RequestFlexibleResponseStrict_Impl&& other) = default;
-      RequestFlexibleResponseStrict_Impl& operator=(RequestFlexibleResponseStrict_Impl&& other) = default;
-      using Super::status;
+      RequestFlexibleResponseStrict_Impl(
+          RequestFlexibleResponseStrict_Impl&& other) = default;
+      RequestFlexibleResponseStrict_Impl& operator=(
+          RequestFlexibleResponseStrict_Impl&& other) = default;
       using Super::error;
       using Super::ok;
+      using Super::status;
       using Super::Unwrap;
       using Super::value;
       using Super::operator->;
@@ -404,8 +440,10 @@ class Protocol final {
     };
 
    public:
-    using RequestStrictResponseFlexible = RequestStrictResponseFlexible_Impl<RequestStrictResponseFlexibleResponse>;
-    using RequestFlexibleResponseStrict = RequestFlexibleResponseStrict_Impl<RequestFlexibleResponseStrictResponse>;
+    using RequestStrictResponseFlexible = RequestStrictResponseFlexible_Impl<
+        RequestStrictResponseFlexibleResponse>;
+    using RequestFlexibleResponseStrict = RequestFlexibleResponseStrict_Impl<
+        RequestFlexibleResponseStrictResponse>;
   };
 
   class SyncClient final {
@@ -421,50 +459,82 @@ class Protocol final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible(::llcpp::fidl::test::json::StrictFoo s);
+    ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible(
+        ::llcpp::fidl::test::json::StrictFoo s);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible(::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::StrictFoo s, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::RequestStrictResponseFlexible
+    RequestStrictResponseFlexible(::fidl::BytePart _request_buffer,
+                                  ::llcpp::fidl::test::json::StrictFoo s,
+                                  ::fidl::BytePart _response_buffer);
 
     // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict(::llcpp::fidl::test::json::FlexibleFoo s);
+    ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict(
+        ::llcpp::fidl::test::json::FlexibleFoo s);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict(::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::FlexibleFoo s, ::fidl::BytePart _response_buffer);
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::RequestFlexibleResponseStrict
+    RequestFlexibleResponseStrict(::fidl::BytePart _request_buffer,
+                                  ::llcpp::fidl::test::json::FlexibleFoo s,
+                                  ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
   };
 
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding
+  // setting up a client.
   class Call final {
     Call() = delete;
+
    public:
+    // Request is heap-allocated. Response is heap-allocated.
+    static ResultOf::RequestStrictResponseFlexible
+    RequestStrictResponseFlexible(::zx::unowned_channel _client_end,
+                                  ::llcpp::fidl::test::json::StrictFoo s);
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::RequestStrictResponseFlexible
+    RequestStrictResponseFlexible(::zx::unowned_channel _client_end,
+                                  ::fidl::BytePart _request_buffer,
+                                  ::llcpp::fidl::test::json::StrictFoo s,
+                                  ::fidl::BytePart _response_buffer);
 
     // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible(::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::StrictFoo s);
+    static ResultOf::RequestFlexibleResponseStrict
+    RequestFlexibleResponseStrict(::zx::unowned_channel _client_end,
+                                  ::llcpp::fidl::test::json::FlexibleFoo s);
 
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::StrictFoo s, ::fidl::BytePart _response_buffer);
-
-    // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict(::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::FlexibleFoo s);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::FlexibleFoo s, ::fidl::BytePart _response_buffer);
-
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::RequestFlexibleResponseStrict
+    RequestFlexibleResponseStrict(::zx::unowned_channel _client_end,
+                                  ::fidl::BytePart _request_buffer,
+                                  ::llcpp::fidl::test::json::FlexibleFoo s,
+                                  ::fidl::BytePart _response_buffer);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  // Additionally, requests must be already laid-out according to the FIDL
+  // wire-format.
   class InPlace final {
     InPlace() = delete;
+
    public:
+    static ::fidl::DecodeResult<RequestStrictResponseFlexibleResponse>
+    RequestStrictResponseFlexible(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<RequestStrictResponseFlexibleRequest> params,
+        ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<RequestStrictResponseFlexibleResponse> RequestStrictResponseFlexible(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RequestStrictResponseFlexibleRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<RequestFlexibleResponseStrictResponse> RequestFlexibleResponseStrict(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RequestFlexibleResponseStrictRequest> params, ::fidl::BytePart response_buffer);
-
+    static ::fidl::DecodeResult<RequestFlexibleResponseStrictResponse>
+    RequestFlexibleResponseStrict(
+        ::zx::unowned_channel _client_end,
+        ::fidl::DecodedMessage<RequestFlexibleResponseStrictRequest> params,
+        ::fidl::BytePart response_buffer);
   };
 
   // Pure-virtual interface to be implemented by a server.
@@ -478,60 +548,83 @@ class Protocol final {
     class RequestStrictResponseFlexibleCompleterBase : public _Base {
      public:
       void Reply(::llcpp::fidl::test::json::FlexibleFoo f);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fidl::test::json::FlexibleFoo f);
-      void Reply(::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse> params);
+      void Reply(::fidl::BytePart _buffer,
+                 ::llcpp::fidl::test::json::FlexibleFoo f);
+      void Reply(
+          ::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using RequestStrictResponseFlexibleCompleter = ::fidl::Completer<RequestStrictResponseFlexibleCompleterBase>;
+    using RequestStrictResponseFlexibleCompleter =
+        ::fidl::Completer<RequestStrictResponseFlexibleCompleterBase>;
 
-    virtual void RequestStrictResponseFlexible(::llcpp::fidl::test::json::StrictFoo s, RequestStrictResponseFlexibleCompleter::Sync _completer) = 0;
+    virtual void RequestStrictResponseFlexible(
+        ::llcpp::fidl::test::json::StrictFoo s,
+        RequestStrictResponseFlexibleCompleter::Sync _completer) = 0;
 
     class RequestFlexibleResponseStrictCompleterBase : public _Base {
      public:
       void Reply(::llcpp::fidl::test::json::StrictFoo f);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fidl::test::json::StrictFoo f);
-      void Reply(::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse> params);
+      void Reply(::fidl::BytePart _buffer,
+                 ::llcpp::fidl::test::json::StrictFoo f);
+      void Reply(
+          ::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using RequestFlexibleResponseStrictCompleter = ::fidl::Completer<RequestFlexibleResponseStrictCompleterBase>;
+    using RequestFlexibleResponseStrictCompleter =
+        ::fidl::Completer<RequestFlexibleResponseStrictCompleterBase>;
 
-    virtual void RequestFlexibleResponseStrict(::llcpp::fidl::test::json::FlexibleFoo s, RequestFlexibleResponseStrictCompleter::Sync _completer) = 0;
-
+    virtual void RequestFlexibleResponseStrict(
+        ::llcpp::fidl::test::json::FlexibleFoo s,
+        RequestFlexibleResponseStrictCompleter::Sync _completer) = 0;
   };
 
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg,
+                          ::fidl::Transaction* txn);
 
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+  // Dispatches the incoming message to one of the handlers functions in the
+  // interface. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg,
+                       ::fidl::Transaction* txn);
 
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used
+  // with |fidl::Bind| to reduce template expansion. Do not call this method
+  // manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg,
+                                 ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  // Helper functions to fill in the transaction header in a
+  // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
+
    public:
-    static void RequestStrictResponseFlexibleRequest(const ::fidl::DecodedMessage<Protocol::RequestStrictResponseFlexibleRequest>& _msg);
-    static void RequestStrictResponseFlexibleResponse(const ::fidl::DecodedMessage<Protocol::RequestStrictResponseFlexibleResponse>& _msg);
-    static void RequestFlexibleResponseStrictRequest(const ::fidl::DecodedMessage<Protocol::RequestFlexibleResponseStrictRequest>& _msg);
-    static void RequestFlexibleResponseStrictResponse(const ::fidl::DecodedMessage<Protocol::RequestFlexibleResponseStrictResponse>& _msg);
+    static void RequestStrictResponseFlexibleRequest(
+        const ::fidl::DecodedMessage<
+            Protocol::RequestStrictResponseFlexibleRequest>& _msg);
+    static void RequestStrictResponseFlexibleResponse(
+        const ::fidl::DecodedMessage<
+            Protocol::RequestStrictResponseFlexibleResponse>& _msg);
+    static void RequestFlexibleResponseStrictRequest(
+        const ::fidl::DecodedMessage<
+            Protocol::RequestFlexibleResponseStrictRequest>& _msg);
+    static void RequestFlexibleResponseStrictResponse(
+        const ::fidl::DecodedMessage<
+            Protocol::RequestFlexibleResponseStrictResponse>& _msg);
   };
 };
 
@@ -543,43 +636,78 @@ class Protocol final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::StrictFoo> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::json::StrictFoo>
+    : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::StrictFoo>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::FlexibleFoo> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::FlexibleFoo>);
+struct IsFidlType<::llcpp::fidl::test::json::FlexibleFoo>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::json::FlexibleFoo>);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleRequest> : public std::true_type {};
+struct IsFidlType<
+    ::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleRequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleRequest)
-    == ::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleRequest, s) == 16);
+struct IsFidlMessage<
+    ::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::json::Protocol::
+                         RequestStrictResponseFlexibleRequest) ==
+              ::llcpp::fidl::test::json::Protocol::
+                  RequestStrictResponseFlexibleRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::json::Protocol::
+                           RequestStrictResponseFlexibleRequest,
+                       s) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleResponse> : public std::true_type {};
+struct IsFidlType<
+    ::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleResponse>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleResponse)
-    == ::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleResponse, f) == 16);
+struct IsFidlMessage<
+    ::llcpp::fidl::test::json::Protocol::RequestStrictResponseFlexibleResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::json::Protocol::
+                         RequestStrictResponseFlexibleResponse) ==
+              ::llcpp::fidl::test::json::Protocol::
+                  RequestStrictResponseFlexibleResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::json::Protocol::
+                           RequestStrictResponseFlexibleResponse,
+                       f) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictRequest> : public std::true_type {};
+struct IsFidlType<
+    ::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictRequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictRequest)
-    == ::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictRequest, s) == 16);
+struct IsFidlMessage<
+    ::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::json::Protocol::
+                         RequestFlexibleResponseStrictRequest) ==
+              ::llcpp::fidl::test::json::Protocol::
+                  RequestFlexibleResponseStrictRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::json::Protocol::
+                           RequestFlexibleResponseStrictRequest,
+                       s) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictResponse> : public std::true_type {};
+struct IsFidlType<
+    ::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictResponse>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictResponse)
-    == ::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictResponse, f) == 16);
+struct IsFidlMessage<
+    ::llcpp::fidl::test::json::Protocol::RequestFlexibleResponseStrictResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::json::Protocol::
+                         RequestFlexibleResponseStrictResponse) ==
+              ::llcpp::fidl::test::json::Protocol::
+                  RequestFlexibleResponseStrictResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::json::Protocol::
+                           RequestFlexibleResponseStrictResponse,
+                       f) == 16);
 
 }  // namespace fidl

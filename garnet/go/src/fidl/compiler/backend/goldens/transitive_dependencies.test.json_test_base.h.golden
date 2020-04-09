@@ -5,6 +5,5 @@
 #include <middle/cpp/fidl.h>
 
 namespace top {
-namespace testing {
-}  // namespace testing
+namespace testing {}  // namespace testing
 }  // namespace top

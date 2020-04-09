@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
-
 namespace fidl {
 namespace test {
 namespace json {
@@ -20,15 +19,13 @@ class SimpleTable final {
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
-  
+
   const int64_t& x() const {
     ZX_ASSERT(has_x_);
     return x_value_.value;
   }
-  bool has_x() const {
-    return has_x_;
-  }
-  
+  bool has_x() const { return has_x_; }
+
   int64_t* mutable_x() {
     if (!has_x_) {
       has_x_ = true;
@@ -52,15 +49,13 @@ class SimpleTable final {
     has_x_ = false;
     Destruct(&x_value_.value);
   }
-  
+
   const int64_t& y() const {
     ZX_ASSERT(has_y_);
     return y_value_.value;
   }
-  bool has_y() const {
-    return has_y_;
-  }
-  
+  bool has_y() const { return has_y_; }
+
   int64_t* mutable_y() {
     if (!has_y_) {
       has_y_ = true;
@@ -90,10 +85,13 @@ class SimpleTable final {
   ~SimpleTable();
   SimpleTable& operator=(SimpleTable&& other);
 
-  static inline ::std::unique_ptr<SimpleTable> New() { return ::std::make_unique<SimpleTable>(); }
+  static inline ::std::unique_ptr<SimpleTable> New() {
+    return ::std::make_unique<SimpleTable>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, SimpleTable* _value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, SimpleTable* _value,
+                     size_t _offset);
   zx_status_t Clone(SimpleTable* _result) const;
 
  private:
@@ -131,15 +129,13 @@ class ReverseOrdinalTable final {
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
-  
+
   const int64_t& z() const {
     ZX_ASSERT(has_z_);
     return z_value_.value;
   }
-  bool has_z() const {
-    return has_z_;
-  }
-  
+  bool has_z() const { return has_z_; }
+
   int64_t* mutable_z() {
     if (!has_z_) {
       has_z_ = true;
@@ -163,15 +159,13 @@ class ReverseOrdinalTable final {
     has_z_ = false;
     Destruct(&z_value_.value);
   }
-  
+
   const int64_t& y() const {
     ZX_ASSERT(has_y_);
     return y_value_.value;
   }
-  bool has_y() const {
-    return has_y_;
-  }
-  
+  bool has_y() const { return has_y_; }
+
   int64_t* mutable_y() {
     if (!has_y_) {
       has_y_ = true;
@@ -195,15 +189,13 @@ class ReverseOrdinalTable final {
     has_y_ = false;
     Destruct(&y_value_.value);
   }
-  
+
   const int64_t& x() const {
     ZX_ASSERT(has_x_);
     return x_value_.value;
   }
-  bool has_x() const {
-    return has_x_;
-  }
-  
+  bool has_x() const { return has_x_; }
+
   int64_t* mutable_x() {
     if (!has_x_) {
       has_x_ = true;
@@ -233,10 +225,13 @@ class ReverseOrdinalTable final {
   ~ReverseOrdinalTable();
   ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other);
 
-  static inline ::std::unique_ptr<ReverseOrdinalTable> New() { return ::std::make_unique<ReverseOrdinalTable>(); }
+  static inline ::std::unique_ptr<ReverseOrdinalTable> New() {
+    return ::std::make_unique<ReverseOrdinalTable>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value,
+                     size_t _offset);
   zx_status_t Clone(ReverseOrdinalTable* _result) const;
 
  private:
@@ -282,15 +277,13 @@ class OlderSimpleTable final {
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
-  
+
   const int64_t& x() const {
     ZX_ASSERT(has_x_);
     return x_value_.value;
   }
-  bool has_x() const {
-    return has_x_;
-  }
-  
+  bool has_x() const { return has_x_; }
+
   int64_t* mutable_x() {
     if (!has_x_) {
       has_x_ = true;
@@ -320,10 +313,13 @@ class OlderSimpleTable final {
   ~OlderSimpleTable();
   OlderSimpleTable& operator=(OlderSimpleTable&& other);
 
-  static inline ::std::unique_ptr<OlderSimpleTable> New() { return ::std::make_unique<OlderSimpleTable>(); }
+  static inline ::std::unique_ptr<OlderSimpleTable> New() {
+    return ::std::make_unique<OlderSimpleTable>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, OlderSimpleTable* _value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, OlderSimpleTable* _value,
+                     size_t _offset);
   zx_status_t Clone(OlderSimpleTable* _result) const;
 
  private:
@@ -353,15 +349,13 @@ class NewerSimpleTable final {
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
-  
+
   const int64_t& x() const {
     ZX_ASSERT(has_x_);
     return x_value_.value;
   }
-  bool has_x() const {
-    return has_x_;
-  }
-  
+  bool has_x() const { return has_x_; }
+
   int64_t* mutable_x() {
     if (!has_x_) {
       has_x_ = true;
@@ -385,15 +379,13 @@ class NewerSimpleTable final {
     has_x_ = false;
     Destruct(&x_value_.value);
   }
-  
+
   const int64_t& y() const {
     ZX_ASSERT(has_y_);
     return y_value_.value;
   }
-  bool has_y() const {
-    return has_y_;
-  }
-  
+  bool has_y() const { return has_y_; }
+
   int64_t* mutable_y() {
     if (!has_y_) {
       has_y_ = true;
@@ -417,15 +409,13 @@ class NewerSimpleTable final {
     has_y_ = false;
     Destruct(&y_value_.value);
   }
-  
+
   const int64_t& z() const {
     ZX_ASSERT(has_z_);
     return z_value_.value;
   }
-  bool has_z() const {
-    return has_z_;
-  }
-  
+  bool has_z() const { return has_z_; }
+
   int64_t* mutable_z() {
     if (!has_z_) {
       has_z_ = true;
@@ -455,10 +445,13 @@ class NewerSimpleTable final {
   ~NewerSimpleTable();
   NewerSimpleTable& operator=(NewerSimpleTable&& other);
 
-  static inline ::std::unique_ptr<NewerSimpleTable> New() { return ::std::make_unique<NewerSimpleTable>(); }
+  static inline ::std::unique_ptr<NewerSimpleTable> New() {
+    return ::std::make_unique<NewerSimpleTable>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _value,
+                     size_t _offset);
   zx_status_t Clone(NewerSimpleTable* _result) const;
 
  private:
@@ -510,10 +503,13 @@ class EmptyTable final {
   ~EmptyTable();
   EmptyTable& operator=(EmptyTable&& other);
 
-  static inline ::std::unique_ptr<EmptyTable> New() { return ::std::make_unique<EmptyTable>(); }
+  static inline ::std::unique_ptr<EmptyTable> New() {
+    return ::std::make_unique<EmptyTable>();
+  }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, EmptyTable* _value, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, EmptyTable* _value,
+                     size_t _offset);
   zx_status_t Clone(EmptyTable* _result) const;
 
  private:
@@ -542,25 +538,26 @@ inline zx_status_t Clone(const ::fidl::test::json::SimpleTable& _value,
                          ::fidl::test::json::SimpleTable* result) {
   return _value.Clone(result);
 }
-template<>
+template <>
 struct Equality<::fidl::test::json::SimpleTable> {
-  bool operator()(const ::fidl::test::json::SimpleTable& _lhs, const ::fidl::test::json::SimpleTable& _rhs) const {
+  bool operator()(const ::fidl::test::json::SimpleTable& _lhs,
+                  const ::fidl::test::json::SimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_x()) {
       return false;
     }
     if (_lhs.has_y()) {
       if (!_rhs.has_y()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_y()) {
       return false;
@@ -570,41 +567,43 @@ struct Equality<::fidl::test::json::SimpleTable> {
 };
 template <>
 struct CodingTraits<::fidl::test::json::ReverseOrdinalTable>
-    : public EncodableCodingTraits<::fidl::test::json::ReverseOrdinalTable, 16> {};
+    : public EncodableCodingTraits<::fidl::test::json::ReverseOrdinalTable,
+                                   16> {};
 
 inline zx_status_t Clone(const ::fidl::test::json::ReverseOrdinalTable& _value,
                          ::fidl::test::json::ReverseOrdinalTable* result) {
   return _value.Clone(result);
 }
-template<>
+template <>
 struct Equality<::fidl::test::json::ReverseOrdinalTable> {
-  bool operator()(const ::fidl::test::json::ReverseOrdinalTable& _lhs, const ::fidl::test::json::ReverseOrdinalTable& _rhs) const {
+  bool operator()(const ::fidl::test::json::ReverseOrdinalTable& _lhs,
+                  const ::fidl::test::json::ReverseOrdinalTable& _rhs) const {
     if (_lhs.has_z()) {
       if (!_rhs.has_z()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.z(), _rhs.z())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_z()) {
       return false;
     }
     if (_lhs.has_y()) {
       if (!_rhs.has_y()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_y()) {
       return false;
     }
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_x()) {
       return false;
@@ -620,15 +619,16 @@ inline zx_status_t Clone(const ::fidl::test::json::OlderSimpleTable& _value,
                          ::fidl::test::json::OlderSimpleTable* result) {
   return _value.Clone(result);
 }
-template<>
+template <>
 struct Equality<::fidl::test::json::OlderSimpleTable> {
-  bool operator()(const ::fidl::test::json::OlderSimpleTable& _lhs, const ::fidl::test::json::OlderSimpleTable& _rhs) const {
+  bool operator()(const ::fidl::test::json::OlderSimpleTable& _lhs,
+                  const ::fidl::test::json::OlderSimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_x()) {
       return false;
@@ -644,35 +644,36 @@ inline zx_status_t Clone(const ::fidl::test::json::NewerSimpleTable& _value,
                          ::fidl::test::json::NewerSimpleTable* result) {
   return _value.Clone(result);
 }
-template<>
+template <>
 struct Equality<::fidl::test::json::NewerSimpleTable> {
-  bool operator()(const ::fidl::test::json::NewerSimpleTable& _lhs, const ::fidl::test::json::NewerSimpleTable& _rhs) const {
+  bool operator()(const ::fidl::test::json::NewerSimpleTable& _lhs,
+                  const ::fidl::test::json::NewerSimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_x()) {
       return false;
     }
     if (_lhs.has_y()) {
       if (!_rhs.has_y()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_y()) {
       return false;
     }
     if (_lhs.has_z()) {
       if (!_rhs.has_z()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.z(), _rhs.z())) {
-	return false;
+        return false;
       }
     } else if (_rhs.has_z()) {
       return false;
@@ -688,9 +689,11 @@ inline zx_status_t Clone(const ::fidl::test::json::EmptyTable& _value,
                          ::fidl::test::json::EmptyTable* result) {
   return _value.Clone(result);
 }
-template<>
+template <>
 struct Equality<::fidl::test::json::EmptyTable> {
-  bool operator()(const ::fidl::test::json::EmptyTable& _lhs, const ::fidl::test::json::EmptyTable& _rhs) const {
+  bool operator()(const ::fidl::test::json::EmptyTable& _lhs,
+                  const ::fidl::test::json::EmptyTable& _rhs) const {
     return true;
   }
-};}  // namespace fidl
+};
+}  // namespace fidl
