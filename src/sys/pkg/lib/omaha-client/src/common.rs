@@ -878,15 +878,18 @@ mod tests {
     }
 
     #[test]
-    fn test_update_check_schedule_debug() {
+    fn test_update_check_schedule_debug_with_defaults() {
         assert_eq!(
             "UpdateCheckSchedule { \
-             last_update_time: \"1970-01-01T00:00:00+00:00\", \
-             next_update_time: \"1970-01-01T00:00:00+00:00\" \
-             }",
+                last_update_time: \"1970-01-01T00:00:00+00:00\", \
+                next_update_time: \"1970-01-01T00:00:00+00:00\" \
+                }",
             format!("{:?}", UpdateCheckSchedule::default())
         );
+    }
 
+    #[test]
+    fn test_update_check_schedule_debug_with_values() {
         assert_eq!(
             "UpdateCheckSchedule { \
              last_update_time: \"1970-01-02T03:46:40+00:00\", \
@@ -912,6 +915,7 @@ mod tests {
             UpdateCheckSchedule {
                 last_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
                 next_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(200000),
+                ..Default::default()
             }
         );
     }
@@ -924,7 +928,7 @@ mod tests {
                 .build(),
             UpdateCheckSchedule {
                 last_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
-                next_update_time: SystemTime::UNIX_EPOCH,
+                ..Default::default()
             }
         );
 
@@ -933,20 +937,28 @@ mod tests {
                 .next_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
                 .build(),
             UpdateCheckSchedule {
-                last_update_time: SystemTime::UNIX_EPOCH,
                 next_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
+                ..Default::default()
             }
         );
     }
 
     #[test]
-    fn test_update_check_schedule_builder_defaults() {
+    fn test_update_check_schedule_default_impl() {
         assert_eq!(
-            UpdateCheckSchedule::builder().build(),
+            UpdateCheckSchedule { ..Default::default() },
             UpdateCheckSchedule {
                 last_update_time: SystemTime::UNIX_EPOCH,
                 next_update_time: SystemTime::UNIX_EPOCH,
             }
+        );
+    }
+
+    #[test]
+    fn test_update_check_schedule_builder_defaults_are_same_as_default_impl() {
+        assert_eq!(
+            UpdateCheckSchedule::builder().build(),
+            UpdateCheckSchedule { ..Default::default() }
         );
     }
 }
