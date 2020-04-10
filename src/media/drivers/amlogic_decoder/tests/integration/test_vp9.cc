@@ -636,7 +636,7 @@ class TestVP9 {
     }
     EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(aml_data.data(), aml_data.size()));
     EXPECT_EQ(std::future_status::ready,
-              first_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
+              first_wait_valid.get_future().wait_for(std::chrono::seconds(10)));
     // The decoder should now be hung without having gotten through all the input so we should
     // cancel parsing before teardown.
     video->parser()->CancelParsing();
