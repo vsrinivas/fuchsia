@@ -50,7 +50,7 @@ func (e *Endpoint) IsEnabled() bool {
 // DeliverNetworkPacket implements stack.NetworkDispatcher.
 func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	if atomic.LoadUint32(&e.enabled) == 1 {
-		pkt := pkt
+		pkt := pkt.Clone()
 		hdr := pkt.Header
 		if hdr.UsedLength() == 0 {
 			hdr = buffer.NewPrependableFromView(pkt.Data.First())
@@ -79,16 +79,16 @@ func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.Ne
 }
 
 // WritePackets implements stack.LinkEndpoint.
-func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []stack.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	if atomic.LoadUint32(&e.enabled) == 0 {
 		return e.LinkEndpoint.WritePackets(r, gso, pkts, protocol)
 	}
-	filtered := make([]stack.PacketBuffer, 0, len(pkts))
-	for _, pkt := range pkts {
+	var filtered stack.PacketBufferList
+	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
 		if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) != Pass {
 			continue
 		}
-		filtered = append(filtered, pkt)
+		filtered.PushBack(pkt)
 	}
 	return e.LinkEndpoint.WritePackets(r, gso, filtered, protocol)
 }

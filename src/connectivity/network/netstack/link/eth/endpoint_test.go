@@ -20,6 +20,7 @@ import (
 	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -43,14 +44,6 @@ func (ch *dispatcherChan) DeliverNetworkPacket(_ stack.LinkEndpoint, srcLinkAddr
 		Protocol:    protocol,
 		Pkt:         pkt,
 	}
-}
-
-func vectorizedViewComparer(x, y buffer.VectorisedView) bool {
-	return bytes.Equal(x.ToView(), y.ToView())
-}
-
-func prependableComparer(x, y buffer.Prependable) bool {
-	return bytes.Equal(x.View(), y.View())
 }
 
 func fifoReadsTransformer(in eth.FifoStats) []uint64 {
@@ -106,6 +99,16 @@ func checkTXDone(txFifo zx.Handle) error {
 
 func TestEndpoint(t *testing.T) {
 	const maxDepth = eth.FifoMaxSize / uint(unsafe.Sizeof(eth.FifoEntry{}))
+
+	packetBufferCmpOptions := []cmp.Option{
+		cmpopts.IgnoreTypes(stack.PacketBufferEntry{}),
+		cmp.Comparer(func(x, y buffer.Prependable) bool {
+			return bytes.Equal(x.View(), y.View())
+		}),
+		cmp.Comparer(func(x, y buffer.VectorisedView) bool {
+			return bytes.Equal(x.ToView(), y.ToView())
+		}),
+	}
 
 	for i := 0; i < bits.Len(maxDepth); i++ {
 		depth := uint32(1 << i)
@@ -219,11 +222,11 @@ func TestEndpoint(t *testing.T) {
 						}
 
 						writeSize := depth + excess
-						pkts := make([]stack.PacketBuffer, writeSize)
-						for i := range pkts {
-							pkts[i] = stack.PacketBuffer{
+						var pkts stack.PacketBufferList
+						for i := uint32(0); i < writeSize; i++ {
+							pkts.PushBack(&stack.PacketBuffer{
 								Header: buffer.NewPrependable(int(endpoint.MaxHeaderLength())),
-							}
+							})
 						}
 
 						// Simulate zero-sized incoming packets; zero-sized packets will increment fifo stats
@@ -276,8 +279,8 @@ func TestEndpoint(t *testing.T) {
 						if err != nil {
 							t.Fatal(err)
 						}
-						if got, want := count, len(pkts); got != want {
-							t.Fatalf("got WritePackets(_) = %d, nil, want %d, nil", got, want)
+						if got := uint32(count); got != writeSize {
+							t.Fatalf("got WritePackets(_) = %d, nil, want %d, nil", got, writeSize)
 						}
 
 						if err := cycleTX(deviceTxFifo, writeSize, device.iob, nil); err != nil {
@@ -345,7 +348,7 @@ func TestEndpoint(t *testing.T) {
 							Pkt: stack.PacketBuffer{
 								Data: buffer.View(b[header.EthernetMinimumSize:]).ToVectorisedView(),
 							},
-						}, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer)); diff != "" {
+						}, packetBufferCmpOptions...); diff != "" {
 							t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 						}
 					}); err != nil {
@@ -430,7 +433,7 @@ func TestEndpoint(t *testing.T) {
 							Pkt: stack.PacketBuffer{
 								Data: buffer.View(payload[:extra]).ToVectorisedView(),
 							},
-						}, args, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer)); diff != "" {
+						}, args, packetBufferCmpOptions...); diff != "" {
 							t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 						}
 					}

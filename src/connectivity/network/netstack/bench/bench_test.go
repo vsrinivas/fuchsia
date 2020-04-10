@@ -39,8 +39,8 @@ func (*nullEndpoint) LinkAddress() tcpip.LinkAddress {
 func (*nullEndpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
 	return nil
 }
-func (*nullEndpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []stack.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
-	return len(pkts), nil
+func (*nullEndpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+	return pkts.Len(), nil
 }
 func (*nullEndpoint) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
 	return nil

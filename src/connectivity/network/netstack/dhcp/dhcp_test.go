@@ -1239,7 +1239,7 @@ func TestTwoServers(t *testing.T) {
 	if err = ep.Bind(tcpip.FullAddress{Port: ServerPort}); err != nil {
 		t.Fatalf("dhcp: server bind: %s", err)
 	}
-	if err = ep.SetSockOpt(tcpip.BroadcastOption(1)); err != nil {
+	if err = ep.SetSockOptBool(tcpip.BroadcastOption, true); err != nil {
 		t.Fatalf("dhcp: setsockopt: %s", err)
 	}
 

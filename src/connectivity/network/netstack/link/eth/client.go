@@ -370,8 +370,10 @@ func (c *Client) LinkAddress() tcpip.LinkAddress {
 	return tcpip.LinkAddress(c.Info.Mac.Octets[:])
 }
 
-func (c *Client) write(pkts []stack.PacketBuffer) (int, *tcpip.Error) {
-	for i := 0; i < len(pkts); {
+func (c *Client) write(pkts stack.PacketBufferList) (int, *tcpip.Error) {
+	i := 0
+
+	for pkt := pkts.Front(); pkt != nil; {
 		c.tx.mu.Lock()
 		for {
 			if c.tx.mu.detached {
@@ -391,41 +393,20 @@ func (c *Client) write(pkts []stack.PacketBuffer) (int, *tcpip.Error) {
 		// Queue as many remaining packets as possible; if we run out of space, we'll return to the
 		// waiting state in the outer loop.
 		for {
-			pkt := pkts[i]
-			i++
-
 			// This is being reused, reset its length to get an appropriately sized buffer.
 			entry := c.tx.mu.entries.getReadied()
 			entry.SetLength(bufferSize)
 			b := c.iob.BufferFromEntry(*entry)
 			used := copy(b, pkt.Header.View())
-			offset := pkt.DataOffset
-			size := pkt.DataSize
-			// Some code paths do not set DataSize; a value of zero means "use all the data provided".
-			if size == 0 {
-				size = pkt.Data.Size()
-			}
 			for _, v := range pkt.Data.Views() {
-				if size == 0 {
-					break
-				}
-				if offset > len(v) {
-					offset -= len(v)
-					continue
-				} else {
-					v = v[offset:]
-					offset = 0
-				}
-				if len(v) > size {
-					v = v[:size]
-				}
-				size -= len(v)
 				used += copy(b[used:], v)
 			}
 			*entry = c.iob.entry(b[:used])
 			c.tx.mu.entries.incrementQueued(1)
 
-			if i == len(pkts) || !c.tx.mu.entries.haveReadied() {
+			i++
+			pkt = pkt.Next()
+			if pkt == nil || !c.tx.mu.entries.haveReadied() {
 				break
 			}
 		}
@@ -433,22 +414,26 @@ func (c *Client) write(pkts []stack.PacketBuffer) (int, *tcpip.Error) {
 		c.tx.cond.Broadcast()
 	}
 
-	return len(pkts), nil
+	return i, nil
 }
 
 func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
-	_, err := c.write([]stack.PacketBuffer{pkt})
+	var pkts stack.PacketBufferList
+	pkts.PushBack(&pkt)
+	_, err := c.write(pkts)
 	return err
 }
 
-func (c *Client) WritePackets(_ *stack.Route, _ *stack.GSO, pkts []stack.PacketBuffer, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (c *Client) WritePackets(_ *stack.Route, _ *stack.GSO, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	return c.write(pkts)
 }
 
 func (c *Client) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
-	_, err := c.write([]stack.PacketBuffer{{
+	var pkts stack.PacketBufferList
+	pkts.PushBack(&stack.PacketBuffer{
 		Data: vv,
-	}})
+	})
+	_, err := c.write(pkts)
 	return err
 }
 

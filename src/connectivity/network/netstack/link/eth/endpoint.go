@@ -46,11 +46,10 @@ func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.Ne
 	return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
 }
 
-func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []stack.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	fields := e.makeEthernetFields(r, protocol)
-	for i := range pkts {
-		// Index into the slice to allow `Prepend` to mutate its receiver.
-		header.Ethernet(pkts[i].Header.Prepend(header.EthernetMinimumSize)).Encode(&fields)
+	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
+		header.Ethernet(pkt.Header.Prepend(header.EthernetMinimumSize)).Encode(&fields)
 	}
 	return e.LinkEndpoint.WritePackets(r, gso, pkts, protocol)
 }

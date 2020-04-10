@@ -125,6 +125,8 @@ func TestEndpoint_Wait(t *testing.T) {
 	}
 }
 
+var _ stack.NetworkDispatcher = (*testNetworkDispatcher)(nil)
+
 type testNetworkDispatcher struct {
 	pkt   stack.PacketBuffer
 	count int
@@ -135,31 +137,125 @@ func (t *testNetworkDispatcher) DeliverNetworkPacket(_ stack.LinkEndpoint, _, _ 
 	t.pkt = pkt
 }
 
-type singlePacketEndpoint struct {
+type channelEndpoint struct {
 	stack.LinkEndpoint
 	linkAddr tcpip.LinkAddress
-	pkt      stack.PacketBuffer
-	full     bool
+	c        chan stack.PacketBuffer
 }
 
-func (e *singlePacketEndpoint) LinkAddress() tcpip.LinkAddress {
+func (e *channelEndpoint) LinkAddress() tcpip.LinkAddress {
 	return e.linkAddr
 }
 
-func (e *singlePacketEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
-	if e.full {
+func (e *channelEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+	select {
+	case e.c <- packetbuffer.OutboundToInbound(pkt):
+	default:
 		return tcpip.ErrWouldBlock
 	}
 
-	e.pkt = packetbuffer.OutboundToInbound(pkt)
-	e.full = true
 	return nil
 }
 
-func newSinglePacketEndpoint(linkAddr tcpip.LinkAddress) *singlePacketEndpoint {
-	return &singlePacketEndpoint{
+func (e *channelEndpoint) WritePackets(_ *stack.Route, _ *stack.GSO, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+	i := 0
+	for pkt := pkts.Front(); pkt != nil; i, pkt = i+1, pkt.Next() {
+		select {
+		case e.c <- packetbuffer.OutboundToInbound(*pkt):
+		default:
+			return i, tcpip.ErrWouldBlock
+		}
+	}
+
+	return i, nil
+}
+
+func (e *channelEndpoint) getPacket() (stack.PacketBuffer, bool) {
+	select {
+	case pkt := <-e.c:
+		return pkt, true
+	default:
+		return stack.PacketBuffer{}, false
+	}
+}
+
+func makeChannelEndpoint(linkAddr tcpip.LinkAddress, size int) channelEndpoint {
+	return channelEndpoint{
 		LinkEndpoint: loopback.New(),
 		linkAddr:     linkAddr,
+		c:            make(chan stack.PacketBuffer, size),
+	}
+}
+
+// TestBridgeWritePackets tests that writing to a bridge writes the packets to
+// all bridged endpoints.
+func TestBridgeWritePackets(t *testing.T) {
+	data := [][]byte{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}}
+
+	ep1 := makeChannelEndpoint(linkAddr1, len(data))
+	ep2 := makeChannelEndpoint(linkAddr2, len(data))
+
+	bep1 := bridge.NewEndpoint(&ep1)
+	bep2 := bridge.NewEndpoint(&ep2)
+
+	bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
+
+	t.Run("WritePacket", func(t *testing.T) {
+		// The bridge and channel endpoints do not care about the route, GSO
+		// or network protocol number when writing packets.
+		err := bridgeEP.WritePacket(nil /* route */, nil /* gso */, 0 /* protocol */, stack.PacketBuffer{
+			Data: buffer.View(data[0]).ToVectorisedView(),
+		})
+		if err != nil {
+			t.Errorf("bridgeEP.WritePacket(nil, nil, 0, _): %s", err)
+		}
+
+		if pkt, hasPkt := ep1.getPacket(); !hasPkt {
+			t.Error("expected a packet on ep1")
+		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+			t.Errorf("got ep1 data = %x, want = %x", got, data[0])
+		}
+
+		if pkt, hasPkt := ep2.getPacket(); !hasPkt {
+			t.Error("expected a packet on ep2")
+		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
+			t.Errorf("got ep2 data = %x, want = %x", got, data[0])
+		}
+	})
+
+	for i := 1; i <= len(data); i++ {
+		t.Run(fmt.Sprintf("WritePackets(N=%d)", i), func(t *testing.T) {
+			var pkts stack.PacketBufferList
+			for j := 0; j < i; j++ {
+				pkts.PushBack(&stack.PacketBuffer{
+					Data: buffer.View(data[j]).ToVectorisedView(),
+				})
+			}
+
+			// The bridge and channel endpoints do not care about the route, GSO
+			// or network protocol number when writing packets.
+			n, err := bridgeEP.WritePackets(nil /* route */, nil /* gso */, pkts, 0 /* protocol */)
+			if err != nil {
+				t.Errorf("bridgeEP.WritePackets(nil, nil, _, 0): %s", err)
+			}
+			if n != i {
+				t.Errorf("got bridgeEP.WritePackets(nil, nil, _, 0) = %d, want = %d", n, i)
+			}
+
+			for j := 0; j < i; j++ {
+				if pkt, hasPkt := ep1.getPacket(); !hasPkt {
+					t.Errorf("(j=%d) expected a packet on ep1", j)
+				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[j]) {
+					t.Errorf("(j=%d) got ep1 data = %x, want = %x", j, got, data[j])
+				}
+
+				if pkt, hasPkt := ep2.getPacket(); !hasPkt {
+					t.Errorf("(j=%d) expected a packet on ep2", j)
+				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[j]) {
+					t.Errorf("(j=%d) got ep2 data = %x, want = %x", j, got, data[j])
+				}
+			}
+		})
 	}
 }
 
@@ -218,11 +314,11 @@ func TestBridgeRouting(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ep1 := newSinglePacketEndpoint(linkAddr1)
-			ep2 := newSinglePacketEndpoint(linkAddr2)
+			ep1 := makeChannelEndpoint(linkAddr1, 1)
+			ep2 := makeChannelEndpoint(linkAddr2, 1)
 
-			bep1 := bridge.NewEndpoint(ep1)
-			bep2 := bridge.NewEndpoint(ep2)
+			bep1 := bridge.NewEndpoint(&ep1)
+			bep2 := bridge.NewEndpoint(&ep2)
 
 			var nd1, nd2, ndb testNetworkDispatcher
 
@@ -233,12 +329,16 @@ func TestBridgeRouting(t *testing.T) {
 			bridgeEP.Attach(&ndb)
 
 			bridgeEP.DeliverNetworkPacket(bridgeEP, linkAddr3, test.dstAddr, 0, pkt)
+
+			pkt, hasPkt := ep1.getPacket()
 			if test.ep1ShouldGetPacket {
-				if got := ep1.pkt.Data.ToView(); !bytes.Equal(got, data) {
+				if !hasPkt {
+					t.Error("expected a packet on ep1")
+				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data) {
 					t.Errorf("got ep1 data = %x, want = %x", got, data)
 				}
-			} else if ep1.full {
-				t.Errorf("ep1 unexpectedly got a frame")
+			} else if hasPkt {
+				t.Errorf("ep1 unexpectedly got a packet = %+v", pkt)
 			}
 
 			if test.nd1ShouldGetPacket {
@@ -252,12 +352,15 @@ func TestBridgeRouting(t *testing.T) {
 				t.Errorf("got nd1.count = %d, want = 0", nd1.count)
 			}
 
+			pkt, hasPkt = ep2.getPacket()
 			if test.ep2ShouldGetPacket {
-				if got := ep2.pkt.Data.ToView(); !bytes.Equal(got, data) {
+				if !hasPkt {
+					t.Error("expected a packet on ep2")
+				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data) {
 					t.Errorf("got ep2 data = %x, want = %x", got, data)
 				}
-			} else if ep2.full {
-				t.Errorf("ep2 unexpectedly got a frame")
+			} else if hasPkt {
+				t.Errorf("ep2 unexpectedly got a packet = %+v", pkt)
 			}
 
 			if test.nd2ShouldGetPacket {
@@ -557,7 +660,7 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.Netw
 	return nil
 }
 
-func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []stack.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	panic("not implemented")
 }
 

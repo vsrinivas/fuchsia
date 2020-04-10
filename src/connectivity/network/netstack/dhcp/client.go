@@ -457,8 +457,8 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 		return Config{}, fmt.Errorf("SetSockOpt(BindToDeviceOption(%d)): %s", info.NICID, err)
 	}
 	if writeOpts.To.Addr == header.IPv4Broadcast {
-		if err := sendEP.SetSockOpt(tcpip.BroadcastOption(1)); err != nil {
-			return Config{}, fmt.Errorf("SetSockOpt(BroadcastOption(1)): %s", err)
+		if err := sendEP.SetSockOptBool(tcpip.BroadcastOption, true); err != nil {
+			return Config{}, fmt.Errorf("SetSockOptBool(BroadcastOption, true): %s", err)
 		}
 	}
 	if err := ep.Bind(bindAddress); err != nil {

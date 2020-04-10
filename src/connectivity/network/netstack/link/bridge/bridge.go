@@ -189,8 +189,14 @@ func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.N
 
 // WritePackets returns the number of packets in hdrs that were successfully
 // written to all links.
-func (ep *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []stack.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
-	n := len(pkts)
+func (ep *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+	if len(ep.links) == 0 {
+		return 0, nil
+	}
+
+	// Set the initial value to the maximum positive value for an unsized integer
+	// (all bits set to 1 excluding the most significant bit).
+	n := int(^uint(0) >> 1)
 	for _, l := range ep.links {
 		i, err := l.WritePackets(r, gso, pkts, protocol)
 		if err != nil {
@@ -268,7 +274,7 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	// WritePacket treats Header and Data as disjoint buffers;
 	// DeliverNetworkPacket expects Data to contain the full packet, including
 	// any Header bytes if they are present.
-	outPkt := pkt
+	outPkt := pkt.Clone()
 	header := outPkt.Data.First()
 	outPkt.Data.RemoveFirst()
 	outPkt.Header = buffer.NewPrependable(int(ep.MaxHeaderLength()) + len(header))
