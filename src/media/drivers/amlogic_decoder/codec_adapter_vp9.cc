@@ -1216,8 +1216,8 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       vaddr_size = split_data.size();
     }
 
-    // For now, we only have known frame header offsets for non-DRM streams.  In future we intend to
-    // have header offsets regardless of DRM or not.
+    // For now, we only have known frame sizes for non-DRM streams.  In future we intend to have
+    // known frame sizes regardless of DRM or not.
     ZX_DEBUG_ASSERT(!IsPortSecure(kInputPort) == !new_queued_frame_sizes.empty());
     if (!has_input_keyframe_ && !new_queued_frame_sizes.empty()) {
       // for now
@@ -1229,80 +1229,37 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
           OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_DATA_PARSING);
           return;
         }
-        // Yes, we could make a bit-shifter class, but ... not really parsing that much here...
-        uint8_t byte_0_shifter = *vp9_frame_header;
-        uint8_t frame_marker = byte_0_shifter >> 6;
-        byte_0_shifter <<= 2;
-        if (frame_marker != kVp9FrameMarker) {
-          LOG(ERROR, "frame marker not 2");
-          OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_DATA_PARSING);
+        auto is_key_frame_result = IsVp9KeyFrame(*vp9_frame_header);
+        if (!is_key_frame_result.is_ok()) {
+          OnCoreCodecFailStream(is_key_frame_result.error());
           return;
         }
-        uint8_t profile_low_bit = byte_0_shifter >> 7;
-        byte_0_shifter <<= 1;
-        uint8_t profile_high_bit = byte_0_shifter >> 7;
-        byte_0_shifter <<= 1;
-        uint8_t profile = (profile_high_bit << 1) | profile_low_bit;
-        if (profile == 3) {
-          uint8_t reserved_zero = byte_0_shifter >> 7;
-          byte_0_shifter <<= 1;
-          if (reserved_zero != 0) {
-            LOG(ERROR, "reserved_zero not zero");
-            OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_DATA_PARSING);
-            return;
+        bool skip_frame = !is_key_frame_result.value();
+        if (skip_frame) {
+          // Skip the first frame.
+          uint32_t amlv_frame_size = new_queued_frame_sizes.front();
+          ZX_DEBUG_ASSERT(vaddr_size >= amlv_frame_size);
+          ZX_DEBUG_ASSERT(after_repack_len >= amlv_frame_size);
+          vaddr_base += amlv_frame_size;
+          vaddr_size -= amlv_frame_size;
+          after_repack_len -= amlv_frame_size;
+          if (paddr_size) {
+            // This will become important later when we have both vaddr_base and paddr_base with
+            // valid data, with paddr_base protected and vaddr_base clear.
+            ZX_DEBUG_ASSERT(paddr_size >= amlv_frame_size);
+            paddr_base += amlv_frame_size;
+            paddr_size -= amlv_frame_size;
           }
+          new_queued_frame_sizes.erase(new_queued_frame_sizes.begin());
+          // next frame of superframe, if any
+          continue;
         }
-
-        uint8_t show_existing_frame = byte_0_shifter >> 7;
-        byte_0_shifter <<= 1;
-        if (show_existing_frame) {
-          // without having seen a keyframe, a show_existing_frame isn't going to find the frame it
-          // wants to show.
-          ZX_DEBUG_ASSERT(!has_input_keyframe_);
-          LOG(TRACE, "show_existing_frame && !has_input_keyframe_");
-          goto skipFrame;
-        }
-        ZX_DEBUG_ASSERT(!show_existing_frame);
-
-        {  // scope frame_type so goto skipFrame above won't complain despite lack of use of
-           // frame_type in skipFrame.
-          uint8_t frame_type = byte_0_shifter >> 7;
-          byte_0_shifter <<= 1;
-          if (frame_type != kVp9FrameTypeKeyFrame) {
-            // without having seen a keyframe, a non-keyframe isn't going to be able to decode
-            // properly, so skip.
-            ZX_DEBUG_ASSERT(!has_input_keyframe_);
-            LOG(TRACE, "frame_type != kVp9FrameTypeKeyFrame && !has_input_keyframe_");
-            goto skipFrame;
-          }
-          ZX_DEBUG_ASSERT(frame_type == kVp9FrameTypeKeyFrame);
-        }
-
         // We didn't find any reason to skip the (now) first frame which is a keyframe, so note we
         // have a keyframe and break out of "!new_queued_frame_sizes.empty()" loop so it can be
         // submitted to HW along with any subsequent frames of its superframe.
         ZX_DEBUG_ASSERT(!new_queued_frame_sizes.empty());
         has_input_keyframe_ = true;
         break;
-
-      skipFrame:;
-        // Skip the first frame.
-        uint32_t amlv_frame_size = new_queued_frame_sizes.front();
-        ZX_DEBUG_ASSERT(vaddr_size >= amlv_frame_size);
-        ZX_DEBUG_ASSERT(after_repack_len >= amlv_frame_size);
-        vaddr_base += amlv_frame_size;
-        vaddr_size -= amlv_frame_size;
-        after_repack_len -= amlv_frame_size;
-        if (paddr_size) {
-          // This will become important later when we have both vaddr_base and paddr_base with valid
-          // data, with paddr_base protected and vaddr_base clear.
-          ZX_DEBUG_ASSERT(paddr_size >= amlv_frame_size);
-          paddr_base += amlv_frame_size;
-          paddr_size -= amlv_frame_size;
-        }
-        new_queued_frame_sizes.erase(new_queued_frame_sizes.begin());
-        // next frame of superframe, if any
-        continue;
       }
       if (new_queued_frame_sizes.empty()) {
         // The vaddr_size can still be non-zero here, due to superframe header bytes, which is fine.

@@ -4,12 +4,13 @@
 
 #include "vp9_utils.h"
 
-#include "macros.h"
 #include <byteswap.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
 #include <ddk/debug.h>
+
+#include "macros.h"
 
 std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data, uint32_t frame_size) {
   std::vector<uint32_t> frame_sizes;
@@ -77,7 +78,8 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size, std::vector<uint8
   for (auto& size : frame_sizes) {
     total_frame_bytes += size;
   }
-  ZX_DEBUG_ASSERT_MSG(total_frame_bytes <= frame_size, "total_frame_bytes: 0x%x frame_size: 0x%x", total_frame_bytes, frame_size);
+  ZX_DEBUG_ASSERT_MSG(total_frame_bytes <= frame_size, "total_frame_bytes: 0x%x frame_size: 0x%x",
+                      total_frame_bytes, frame_size);
   uint32_t output_offset = output_vector->size();
   // This can be called multiple times on the same output_vector overall, but
   // should be amortized O(1), since resizing larger inserts elements at the end
@@ -121,4 +123,50 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size, std::vector<uint8
   } else {
     ZX_DEBUG_ASSERT(output - output_vector->data() == static_cast<int64_t>(output_vector->size()));
   }
+}
+
+fit::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_header_byte_0) {
+  // We could make a bit-shifter class, but ... not really parsing that much here...
+  uint8_t byte_0_shifter = frame_header_byte_0;
+  uint8_t frame_marker = byte_0_shifter >> 6;
+  byte_0_shifter <<= 2;
+  if (frame_marker != kVp9FrameMarker) {
+    LOG(ERROR, "frame marker not 2");
+    return fit::error(fuchsia::media::StreamError::DECODER_DATA_PARSING);
+  }
+  uint8_t profile_low_bit = byte_0_shifter >> 7;
+  byte_0_shifter <<= 1;
+  uint8_t profile_high_bit = byte_0_shifter >> 7;
+  byte_0_shifter <<= 1;
+  uint8_t profile = (profile_high_bit << 1) | profile_low_bit;
+  if (profile == 3) {
+    uint8_t reserved_zero = byte_0_shifter >> 7;
+    byte_0_shifter <<= 1;
+    if (reserved_zero != 0) {
+      LOG(ERROR, "reserved_zero not zero");
+      return fit::error(fuchsia::media::StreamError::DECODER_DATA_PARSING);
+    }
+  }
+
+  uint8_t show_existing_frame = byte_0_shifter >> 7;
+  byte_0_shifter <<= 1;
+  if (show_existing_frame) {
+    // without having seen a keyframe, a show_existing_frame isn't going to find the frame it
+    // wants to show.
+    LOG(TRACE, "show_existing_frame");
+    return fit::ok(false);
+  }
+  ZX_DEBUG_ASSERT(!show_existing_frame);
+
+  uint8_t frame_type = byte_0_shifter >> 7;
+  byte_0_shifter <<= 1;
+  if (frame_type != kVp9FrameTypeKeyFrame) {
+    // without having seen a keyframe, a non-keyframe isn't going to be able to decode
+    // properly, so skip.
+    LOG(TRACE, "frame_type != kVp9FrameTypeKeyFrame");
+    return fit::ok(false);
+  }
+  ZX_DEBUG_ASSERT(frame_type == kVp9FrameTypeKeyFrame);
+
+  return fit::ok(true);
 }

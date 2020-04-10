@@ -5,6 +5,9 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VP9_UTILS_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VP9_UTILS_H_
 
+#include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/fit/result.h>
+
 #include <cstdint>
 #include <vector>
 
@@ -17,6 +20,8 @@ std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data, uint32_t fra
 void SplitSuperframe(const uint8_t* data, uint32_t frame_size, std::vector<uint8_t>* output_vector,
                      std::vector<uint32_t>* superframe_byte_sizes = nullptr,
                      bool like_secmem = false);
+
+fit::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_header_byte_0);
 
 const uint32_t kVp9AmlvHeaderSize = 16;
 const uint32_t kVp9FrameMarker = 2;
