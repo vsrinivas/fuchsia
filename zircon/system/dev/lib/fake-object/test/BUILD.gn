@@ -25,10 +25,10 @@ test("fake-object") {
   }
   sources = [ "fake-object-test.cc" ]
   deps = [
-    "//zircon/public/lib/fake-object",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/fake-object",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
