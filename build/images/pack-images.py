@@ -43,7 +43,6 @@ set -x
     return script
 
 
-# Produces a gzip compressed tarball archive.
 class TarArchiver(object):
     """Public interface needs to match {Nil,Zip}Archiver."""
 
@@ -55,7 +54,6 @@ class TarArchiver(object):
             mode += ':gz'
 
         self._archive = tarfile.open(outfile, mode, dereference=True)
-
     def __enter__(self):
         return self
 
@@ -85,64 +83,7 @@ class TarArchiver(object):
         self._archive.addfile(info, StringIO.StringIO(contents))
 
 
-# Produces a deflated zip archive.
-class ZipArchiver(object):
-    """Public interface needs to match {Tar,Nil}Archiver."""
-
-    def __init__(self, outfile):
-        self._archive = zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED)
-        self._archive.comment = 'Fuchsia build archive'
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, unused_type, unused_value, unused_traceback):
-        self._archive.close()
-
-    def add_path(self, path, name, unused_executable):
-        self._archive.write(path, name)
-
-    def add_contents(self, contents, name, unused_executable):
-        self._archive.writestr(name, contents)
-
-
-# Does not produce an archive but validates that all input paths are valid.
-class NilArchiver(object):
-    """ Public interface needs to match {Tar,Nil}Archive."""
-
-    def __init__(self, outfile):
-        self._outfile = outfile
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, unused_type, unused_value, unused_traceback):
-        with open(self._outfile, 'w') as f:
-            pass
-
-    def add_path(self, path, name, executable):
-        # Check that the source path exists.
-        assert os.path.exists(path), (
-            "missing input file %s for %s" % (path, name))
-
-    def add_contents(self, contents, name, executable):
-        pass
-
-
-def format_archiver(outfile, format):
-    if format == 'tar':
-        return TarArchiver(outfile, compress=False)
-    if format == 'tgz':
-        return TarArchiver(outfile, compress=True)
-    return {
-        'zip': ZipArchiver,
-        'nil': NilArchiver
-    }[format](outfile)
-
-
-def write_archive(
-        outfile, format, images, board_name, additional_bootserver_arguments):
+def write_archive(outfile, compress, images, board_name, additional_bootserver_arguments):
     # Synthesize a sanitized form of the input.
     path_images = []
     for image in images:
@@ -200,47 +141,11 @@ def write_archive(
     def is_executable(image):
         return image['type'] == 'sh' or image['type'].startswith('exe')
 
-    with format_archiver(outfile, format) as archiver:
+    with TarArchiver(outfile, compress=compress) as archiver:
         for path, image in path_images:
             archiver.add_path(path, image['path'], is_executable(image))
         for contents, image in content_images:
             archiver.add_contents(contents, image['path'], is_executable(image))
-
-
-def write_symbol_archive(outfile, format, ids_file, files_read):
-    files_read.add(ids_file)
-    with open(ids_file, 'r') as f:
-        ids = [line.split() for line in f]
-    out_ids = ''
-    with format_archiver(outfile, format) as archiver:
-        for id in ids:
-            if len(id) != 2:
-                continue
-            build_id, path = id
-            file = os.path.relpath(path)
-            files_read.add(file)
-            name = os.path.relpath(file, '../..')
-            archiver.add_path(file, name, False)
-            out_ids += '%s %s\n' % (build_id, name)
-        archiver.add_contents(out_ids, 'ids.txt', False)
-
-
-def archive_format(args, outfile):
-    if args.format:
-        return args.format
-    if outfile.endswith('.zip'):
-        return 'zip'
-    if outfile.endswith('.tar'):
-        return 'tar'
-    if outfile.endswith('.tgz') or outfile.endswith('.tar.gz'):
-        return 'tgz'
-    if outfile.endswith('.nil'):
-        return 'nil'
-    sys.stderr.write(
-        '''\
-Cannot guess archive format from file name %r; use --format.
-''' % outfile)
-    sys.exit(1)
 
 
 def main():
@@ -265,10 +170,8 @@ def main():
     parser.add_argument(
         '--archive', metavar='FILE', help='Write archive to FILE')
     parser.add_argument(
-        '--symbol-archive', metavar='FILE', help='Write symbol archive to FILE')
-    parser.add_argument(
         '--format',
-        choices=['tar', 'tgz', 'zip', 'nil'],
+        choices=['tar', 'tgz'],
         help='Archive format (default: from FILE suffix)')
     parser.add_argument('--board_name', help='Board name images were built for')
     parser.add_argument(
@@ -317,19 +220,10 @@ def main():
             image for image in images if image.get('archive', False)
         ]
         files_read |= set(image['path'] for image in archive_images)
+        compress = outfile.endswith('.tgz') or outfile.endswith('.tar.gz')
         write_archive(
-            outfile, archive_format(args, outfile), archive_images,
-            args.board_name, ' '.join(args.additional_bootserver_arguments))
-
-    if args.symbol_archive:
-        outfile = args.symbol_archive
-        [ids_file] = [
-            image['path']
-            for image in images
-            if image['name'] == 'build-id' and image['type'] == 'txt'
-        ]
-        write_symbol_archive(
-            outfile, archive_format(args, outfile), ids_file, files_read)
+            outfile, compress, archive_images, args.board_name,
+            ' '.join(args.additional_bootserver_arguments))
 
     if outfile and args.depfile:
         with open(args.depfile, 'w') as depfile:
