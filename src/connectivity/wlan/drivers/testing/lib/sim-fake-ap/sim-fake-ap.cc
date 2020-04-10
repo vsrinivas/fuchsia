@@ -28,8 +28,8 @@ void FakeAp::SetChannel(const wlan_channel_t& channel) {
     if (cover.get() == 0) {
       cs_count = 1;
     } else {
-      cs_count =
-          cover / beacon_state_.beacon_interval + (cover % beacon_state_.beacon_interval ? 1 : 0);
+      cs_count = cover / beacon_state_.beacon_frame_.interval_ +
+                 (cover % beacon_state_.beacon_frame_.interval_ ? 1 : 0);
     }
 
     if (beacon_state_.is_switching_channel) {
@@ -91,10 +91,10 @@ bool FakeAp::CanReceiveChannel(const wlan_channel_t& channel) {
 void FakeAp::ScheduleNextBeacon() {
   auto beacon_handler = new std::function<void()>;
   *beacon_handler = std::bind(&FakeAp::HandleBeaconNotification, this);
-  environment_->ScheduleNotification(this, beacon_state_.beacon_interval,
+  environment_->ScheduleNotification(this, beacon_state_.beacon_frame_.interval_,
                                      static_cast<void*>(beacon_handler),
                                      &beacon_state_.beacon_notification_id);
-  beacon_state_.next_beacon_time = environment_->GetTime() + beacon_state_.beacon_interval;
+  beacon_state_.next_beacon_time = environment_->GetTime() + beacon_state_.beacon_frame_.interval_;
 }
 
 void FakeAp::EnableBeacon(zx::duration beacon_period) {
@@ -108,12 +108,16 @@ void FakeAp::EnableBeacon(zx::duration beacon_period) {
   environment_->Tx(&beacon_state_.beacon_frame_, tx_info_, this);
 
   beacon_state_.is_beaconing = true;
-  beacon_state_.beacon_interval = beacon_period;
+  beacon_state_.beacon_frame_.interval_ = beacon_period;
 
   ScheduleNextBeacon();
 }
 
 void FakeAp::DisableBeacon() {
+  // If it is not beaconing, do nothing.
+  if (!beacon_state_.is_beaconing)
+    return;
+
   // If we stop beaconing when channel is switching, we cancel the channel switch event and directly
   // set channel to new channel.
   if (beacon_state_.is_switching_channel) {

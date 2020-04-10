@@ -528,7 +528,6 @@ void SimFirmware::AssocScanDone() {
   // band, but since wlanstack makes its own decision, we won't bother to model that here for now.
   ScanResult& ap = assoc_state_.scan_results.front();
 
-  assoc_opts->channel = ap.channel;
   assoc_opts->bssid = ap.bssid;
   assoc_state_.ifidx = scan_state_.ifidx;
 
@@ -543,9 +542,9 @@ void SimFirmware::AssocScanDone() {
   common::MacAddr srcAddr(mac_addr_);
   common::MacAddr bssid(assoc_state_.opts->bssid);
 
-  uint16_t chanspec = channel_to_chanspec(&d11_inf_, &assoc_state_.opts->channel);
+  uint16_t chanspec = channel_to_chanspec(&d11_inf_, &ap.channel);
   SetIFChanspec(assoc_state_.ifidx, chanspec);
-  hw_.SetChannel(assoc_state_.opts->channel);
+  hw_.SetChannel(ap.channel);
   hw_.EnableRx();
 
   AuthStart();
@@ -702,7 +701,7 @@ int16_t SimFirmware::GetIfidxByMac(const common::MacAddr& addr) {
   return -1;
 }
 
-// Get the index of the SoftAP IF
+// Get the index of IF
 int16_t SimFirmware::GetIfidx(bool is_ap) {
   for (uint8_t i = 0; i < kMaxIfSupported; i++) {
     if (iface_tbl_[i].allocated && (is_ap == iface_tbl_[i].ap_mode)) {
@@ -710,6 +709,21 @@ int16_t SimFirmware::GetIfidx(bool is_ap) {
     }
   }
   return -1;
+}
+
+// Get channel of IF
+wlan_channel_t SimFirmware::GetIfChannel(bool is_ap) {
+  wlan_channel_t channel;
+
+  // Get chanspec
+  int16_t ifidx = GetIfidx(false);
+  ZX_ASSERT_MSG(ifidx != -1, "No client found!\n");
+  uint16_t chanspec = iface_tbl_[ifidx].chanspec;
+  ZX_ASSERT_MSG(chanspec != 0, "No chanspec assigned to client.\n");
+
+  // convert to channel
+  chanspec_to_channel(&d11_inf_, chanspec, &channel);
+  return channel;
 }
 
 // This routine for now only handles Disassoc Request meant for the SoftAP IF.
@@ -1449,20 +1463,85 @@ void SimFirmware::HandleBeaconTimeout() {
   AssocClearContext();
 }
 
+void SimFirmware::ConductChannelSwitch(wlan_channel_t& dst_channel, uint8_t mode) {
+  // Change fw and hw channel
+  uint16_t chanspec;
+  int16_t ifidx = GetIfidx(false);
+  ZX_ASSERT_MSG(ifidx != -1, "No client found!\n");
+
+  hw_.SetChannel(dst_channel);
+  chanspec = channel_to_chanspec(&d11_inf_, &dst_channel);
+  SetIFChanspec((uint16_t)ifidx, chanspec);
+
+  // Send up CSA event to driver
+  auto buf = std::make_unique<std::vector<uint8_t>>(sizeof(uint8_t));
+  *(buf->data()) = mode;
+  SendEventToDriver(sizeof(uint8_t), std::move(buf), BRCMF_E_CSA_COMPLETE_IND,
+                    BRCMF_E_STATUS_SUCCESS, (uint16_t)ifidx);
+
+  // Clear state
+  channel_switch_state_.state = ChannelSwitchState::HOME;
+}
+
 void SimFirmware::RxBeacon(const wlan_channel_t& channel, const simulation::SimBeaconFrame* frame) {
-  // if we're associated with this AP, start/restart the beacon watchdog
+  if (scan_state_.state == ScanState::SCANNING && !scan_state_.opts->is_active) {
+    ScanResult scan_result = {.channel = channel, .ssid = frame->ssid_, .bssid = frame->bssid_};
+
+    scan_result.bss_capability.set_val(frame->capability_info_.val());
+    scan_state_.opts->on_result_fn(scan_result);
+    // TODO(fxb/49350): Channel switch during scanning need to be supported.
+  }
+
   if (assoc_state_.state == AssocState::ASSOCIATED && frame->bssid_ == assoc_state_.opts->bssid) {
+    // if we're associated with this AP, start/restart the beacon watchdog
     RestartBeaconWatchdog();
+
+    auto ie = frame->FindIE(simulation::InformationElement::IE_TYPE_CSA);
+    if (ie) {
+      // If CSA IE exist.
+      auto csa_ie = static_cast<simulation::CSAInformationElement*>(ie.get());
+
+      // Get current chanspec of client ifidx and convert to channel.
+      wlan_channel_t channel = GetIfChannel(false);
+
+      zx::duration SwitchDelay = frame->interval_ * (int64_t)csa_ie->channel_switch_count_;
+
+      if (channel_switch_state_.state == ChannelSwitchState::HOME) {
+        // If the destination channel is the same as current channel, just ignore it.
+        if (csa_ie->new_channel_number_ == channel.primary) {
+          return;
+        }
+
+        channel.primary = csa_ie->new_channel_number_;
+        channel_switch_state_.new_channel = csa_ie->new_channel_number_;
+
+        channel_switch_state_.state = ChannelSwitchState::SWITCHING;
+      } else {
+        ZX_ASSERT(channel_switch_state_.state == ChannelSwitchState::SWITCHING);
+        if (csa_ie->new_channel_number_ == channel_switch_state_.new_channel) {
+          return;
+        }
+
+        // If the new channel is different from the previous dst channel, cancel callback.
+        hw_.CancelCallback(channel_switch_state_.switch_timer_id);
+
+        // If it's the same as current channel for this client before switching, just simply cancel
+        // the switch event and clear state.
+        if (csa_ie->new_channel_number_ == channel.primary) {
+          channel_switch_state_.state = ChannelSwitchState::HOME;
+          return;
+        }
+
+        // Schedule a new event when dst channel change.
+        channel.primary = csa_ie->new_channel_number_;
+      }
+
+      auto callback = new std::function<void()>;
+      *callback = std::bind(&SimFirmware::ConductChannelSwitch, this, channel,
+                            csa_ie->channel_switch_mode_);
+      hw_.RequestCallback(callback, SwitchDelay, &channel_switch_state_.switch_timer_id);
+    }
   }
-
-  if (scan_state_.state != ScanState::SCANNING || scan_state_.opts->is_active) {
-    return;
-  }
-
-  ScanResult scan_result = {.channel = channel, .ssid = frame->ssid_, .bssid = frame->bssid_};
-
-  scan_result.bss_capability.set_val(frame->capability_info_.val());
-  scan_state_.opts->on_result_fn(scan_result);
 }
 
 void SimFirmware::RxProbeResp(const wlan_channel_t& channel,

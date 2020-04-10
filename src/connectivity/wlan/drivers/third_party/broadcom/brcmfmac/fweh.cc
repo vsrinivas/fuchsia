@@ -147,8 +147,7 @@ void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* 
 
   if (ifevent->action == BRCMF_E_IF_ADD) {
     BRCMF_DBG(EVENT, "adding %s (%pM)\n", emsg->ifname, emsg->addr);
-    err = brcmf_add_if(drvr, ifevent->bsscfgidx, ifevent->ifidx, emsg->ifname,
-                       emsg->addr, &ifp);
+    err = brcmf_add_if(drvr, ifevent->bsscfgidx, ifevent->ifidx, emsg->ifname, emsg->addr, &ifp);
     if (err != ZX_OK) {
       return;
     }

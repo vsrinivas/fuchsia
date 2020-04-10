@@ -135,8 +135,6 @@ class FakeAp : public StationIfc {
     // This is the channel AP about to change to
     wlan_channel_t channel_after_CSA;
 
-    zx::duration beacon_interval;
-
     // Unique value that is associated with the next beacon event
     uint64_t beacon_notification_id;
     // Unique value that is associated with the upcoming channel switch event

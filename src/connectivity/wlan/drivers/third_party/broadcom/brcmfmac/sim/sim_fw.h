@@ -98,7 +98,6 @@ class SimFirmware {
   };
 
   struct AssocOpts {
-    wlan_channel_t channel;
     common::MacAddr bssid;
   };
 
@@ -143,9 +142,19 @@ class SimFirmware {
     } state = NOT_AUTHENTICATED;
 
     uint16_t auth_type;
-
     uint64_t auth_timer_id;
     enum simulation::SimSecProtoType sec_type = simulation::SEC_PROTO_TYPE_OPEN;
+  };
+
+  struct ChannelSwitchState {
+    enum {
+      HOME,
+      // SWITCHING means the event for conducting channel switch has already been set.
+      SWITCHING
+    } state = HOME;
+
+    uint8_t new_channel;
+    uint64_t switch_timer_id;
   };
 
   struct PacketBuf {
@@ -289,6 +298,8 @@ class SimFirmware {
   void RxProbeResp(const wlan_channel_t& channel, const simulation::SimProbeRespFrame* frame,
                    double signal_strength);
   void RxAuthResp(const simulation::SimAuthFrame* frame);
+  // Handler for channel switch.
+  void ConductChannelSwitch(wlan_channel_t& dst_channel, uint8_t mode);
 
   // Allocate a buffer for an event (brcmf_event)
   std::unique_ptr<std::vector<uint8_t>> CreateEventBuffer(size_t requested_size,
@@ -304,9 +315,13 @@ class SimFirmware {
   // Get the idx of the SoftAP IF based on Mac address
   int16_t GetIfidxByMac(const common::MacAddr& addr);
 
-  // Get the idx of the SoftAP IF, the parameter indicates whether we need to find softAP ifidx or
-  // client ifidx.
+  // Get the idx of IF, the parameter indicates whether we need to find softAP ifidx or client
+  // ifidx.
   int16_t GetIfidx(bool is_ap);
+
+  // Get the channel of IF the parameter indicates whether we need to find softAP ifidx or client
+  // ifidx.
+  wlan_channel_t GetIfChannel(bool is_ap);
 
   zx_status_t SetIFChanspec(uint16_t ifidx, uint16_t chanspec);
   // This is the simulator object that represents the interface between the driver and the
@@ -334,6 +349,7 @@ class SimFirmware {
   ScanState scan_state_;
   AssocState assoc_state_;
   AuthState auth_state_;
+  ChannelSwitchState channel_switch_state_;
   bool default_passive_scan_ = true;
   uint32_t default_passive_time_ = -1;  // In ms. -1 indicates value has not been set.
   int32_t power_mode_ = -1;             // -1 indicates value has not been set.

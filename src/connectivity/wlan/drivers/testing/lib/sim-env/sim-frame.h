@@ -120,6 +120,7 @@ class SimBeaconFrame : public SimManagementFrame {
 
   wlan_ssid_t ssid_;
   common::MacAddr bssid_;
+  zx::duration interval_;
   wlan::CapabilityInfo capability_info_;
 };
 
