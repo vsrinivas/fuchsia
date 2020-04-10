@@ -24,8 +24,9 @@ declare_args() {
   # Sets the default LTO type for rustc bulids.
   rust_lto = ""
 
-  # Sets the panic type for Rust on fuchsia.
+  # DEPRECATED: Sets the panic type for Rust on fuchsia.
   # Valid values are "unwind" and "abort".
+  # This arg will be removed soon, and we will always use "abort".
   rust_panic = "abort"
 
   # Sets the fuchsia toolchain target triple suffix (after arch)

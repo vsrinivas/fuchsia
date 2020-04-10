@@ -445,6 +445,13 @@ config("no-shadow-call-stack") {
 config("rust_panic_cfg") {
   rustflags = [ "--cfg=rust_panic=\"${rust_panic}\"" ]
 }
+if (is_fuchsia && rust_panic != "abort") {
+  print("")
+  print("WARNING: Setting rust_panic is DEPRECATED and will be removed soon.")
+  print("If you need this for some reason, please report it.")
+  print("See fxbug.dev/49860 for more info.")
+  print("")
+}
 
 config("werror") {
   if (!use_ccache) {
