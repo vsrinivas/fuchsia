@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "inferior-control.h"
+
 #include <elf.h>
 #include <inttypes.h>
 #include <link.h>
@@ -9,10 +11,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <fbl/algorithm.h>
-#include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -21,8 +19,11 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
 
+#include <fbl/algorithm.h>
+#include <test-utils/test-utils.h>
+#include <unittest/unittest.h>
+
 #include "inferior.h"
-#include "inferior-control.h"
 #include "utils.h"
 
 void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t* regs) {
@@ -148,8 +149,7 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t 
   // N.B. We assume threads aren't being created as we're running.
   // This is just a testcase so we can assume that. A real debugger
   // would not have this assumption.
-  zx_koid_t* thread_koids =
-      reinterpret_cast<zx_koid_t*>(tu_malloc(max_threads * sizeof(zx_koid_t)));
+  zx_koid_t* thread_koids = reinterpret_cast<zx_koid_t*>(malloc(max_threads * sizeof(zx_koid_t)));
   size_t num_threads = tu_process_get_threads(inferior, thread_koids, max_threads);
   // For now require |max_threads| to be big enough.
   if (num_threads > max_threads)
@@ -157,9 +157,8 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t 
 
   tu_object_wait_async(inferior, port, ZX_PROCESS_TERMINATED);
 
-  inferior_data_t* data = reinterpret_cast<inferior_data_t*>(tu_malloc(sizeof(*data)));
-  data->threads =
-      reinterpret_cast<thread_data_t*>(tu_calloc(max_threads, sizeof(data->threads[0])));
+  inferior_data_t* data = reinterpret_cast<inferior_data_t*>(malloc(sizeof(*data)));
+  data->threads = reinterpret_cast<thread_data_t*>(calloc(max_threads, sizeof(data->threads[0])));
   data->inferior = inferior;
   data->port = port;
   data->exception_channel = tu_create_exception_channel(inferior, ZX_EXCEPTION_CHANNEL_DEBUGGER);
@@ -408,7 +407,7 @@ static int wait_inferior_thread_func(void* arg) {
 
 thrd_t start_wait_inf_thread(inferior_data_t* inferior_data,
                              wait_inferior_exception_handler_t* handler, void* handler_arg) {
-  wait_inferior_args_t* args = reinterpret_cast<wait_inferior_args_t*>(tu_calloc(1, sizeof(*args)));
+  wait_inferior_args_t* args = reinterpret_cast<wait_inferior_args_t*>(calloc(1, sizeof(*args)));
 
   // The proc handle is loaned to the thread.
   // The caller of this function owns and must close it.

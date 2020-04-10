@@ -2,19 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
-#include <atomic>
-#include <inttypes.h>
-#include <link.h>
-#include <stdlib.h>
-#include <string.h>
+#include "debugger.h"
 
+#include <assert.h>
+#include <inttypes.h>
 #include <lib/backtrace-request/backtrace-request.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/thread.h>
-#include <pretty/hexdump.h>
-#include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <link.h>
+#include <stdlib.h>
+#include <string.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -24,10 +21,15 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
+#include <atomic>
+
+#include <pretty/hexdump.h>
+#include <test-utils/test-utils.h>
+#include <unittest/unittest.h>
+
 #include "crash-and-recover.h"
-#include "debugger.h"
-#include "inferior.h"
 #include "inferior-control.h"
+#include "inferior.h"
 #include "utils.h"
 
 namespace {
@@ -197,7 +199,7 @@ bool DebuggerThreadListTest() {
   // various aspects of ZX_INFO_PROCESS_THREADS.
   uint32_t buf_size = 100 * sizeof(zx_koid_t);
   size_t num_threads;
-  zx_koid_t* threads = static_cast<zx_koid_t*>(tu_malloc(buf_size));
+  zx_koid_t* threads = static_cast<zx_koid_t*>(malloc(buf_size));
   zx_status_t status =
       zx_object_get_info(inferior, ZX_INFO_PROCESS_THREADS, threads, buf_size, &num_threads, NULL);
   ASSERT_EQ(status, ZX_OK);

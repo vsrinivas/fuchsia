@@ -33,45 +33,6 @@
 
 namespace fprocess = ::llcpp::fuchsia::process;
 
-void* tu_malloc(size_t size) {
-  void* result = malloc(size);
-  if (result == NULL) {
-    // TODO(dje): printf may try to malloc too ...
-    unittest_printf_critical("out of memory trying to malloc(%zu)\n", size);
-    exit(TU_FAIL_ERRCODE);
-  }
-  return result;
-}
-
-void* tu_calloc(size_t nmemb, size_t size) {
-  void* result = calloc(nmemb, size);
-  if (result == NULL) {
-    // TODO(dje): printf may try to malloc too ...
-    unittest_printf_critical("out of memory trying to calloc(%zu, %zu)\n", nmemb, size);
-    exit(TU_FAIL_ERRCODE);
-  }
-  return result;
-}
-
-char* tu_strdup(const char* s) {
-  size_t len = strlen(s) + 1;
-  char* r = static_cast<char*>(tu_malloc(len));
-  strcpy(r, s);
-  return r;
-}
-
-char* tu_asprintf(const char* fmt, ...) {
-  va_list args;
-  char* result;
-  va_start(args, fmt);
-  if (vasprintf(&result, fmt, args) < 0) {
-    unittest_printf_critical("out of memory trying to asprintf(%s)\n", fmt);
-    exit(TU_FAIL_ERRCODE);
-  }
-  va_end(args);
-  return result;
-}
-
 void tu_fatal(const char* what, zx_status_t status) {
   const char* reason = zx_status_get_string(status);
   unittest_printf_critical("\nFATAL: %s failed, rc %d (%s)\n", what, status, reason);
