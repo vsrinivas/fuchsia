@@ -28,134 +28,83 @@ func bytesBuilder(bytes []byte) string {
 	return builder.String()
 }
 
-type goValueBuilder struct {
-	strings.Builder
-	varidx int
-
-	lastVar string
-}
-
-func (b *goValueBuilder) newVar() string {
-	b.varidx++
-	return fmt.Sprintf("v%d", b.varidx)
-}
-
-func (b *goValueBuilder) OnBool(value bool) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf(
-		"%s := %t\n", newVar, value))
-	b.lastVar = newVar
-}
-
-func (b *goValueBuilder) OnInt64(value int64, typ fidlir.PrimitiveSubtype) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf(
-		"var %s %s = %d\n", newVar, typ, value))
-	b.lastVar = newVar
-}
-
-func (b *goValueBuilder) OnUint64(value uint64, typ fidlir.PrimitiveSubtype) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf(
-		"var %s %s = %d\n", newVar, typ, value))
-	b.lastVar = newVar
-}
-
-func (b *goValueBuilder) OnFloat64(value float64, typ fidlir.PrimitiveSubtype) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf(
-		"var %s %s = %g\n", newVar, typ, value))
-	b.lastVar = newVar
-}
-
-func (b *goValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf(
-		"%s := %s\n", newVar, strconv.Quote(value)))
-	if decl.IsNullable() {
-		pointee := newVar
-		newVar = b.newVar()
-		b.Builder.WriteString(fmt.Sprintf("%s := &%s\n", newVar, pointee))
+func visit(value interface{}, decl gidlmixer.Declaration) string {
+	switch value := value.(type) {
+	case bool, int64, uint64, float64:
+		switch decl := decl.(type) {
+		case gidlmixer.PrimitiveDeclaration:
+			return fmt.Sprintf("%#v", value)
+		case *gidlmixer.BitsDecl, *gidlmixer.EnumDecl:
+			return fmt.Sprintf("%s(%d)", typeLiteral(decl), value)
+		}
+	case string:
+		if decl.IsNullable() {
+			// Taking an address of a string literal is not allowed, so instead
+			// we create a slice and get the address of its first element.
+			return fmt.Sprintf("&[]string{%q}[0]", value)
+		}
+		return strconv.Quote(value)
+	case gidlir.Record:
+		if decl, ok := decl.(gidlmixer.RecordDeclaration); ok {
+			return onRecord(value, decl)
+		}
+	case []interface{}:
+		if decl, ok := decl.(gidlmixer.ListDeclaration); ok {
+			return onList(value, decl)
+		}
+	case nil:
+		if !decl.IsNullable() {
+			panic(fmt.Sprintf("got nil for non-nullable type: %T", decl))
+		}
+		return "nil"
 	}
-	b.lastVar = newVar
+	panic(fmt.Sprintf("not implemented: %T", value))
 }
 
-func (b *goValueBuilder) OnBits(value interface{}, decl *gidlmixer.BitsDecl) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf(
-		"%s := %s(%d)\n", newVar, typeLiteral(decl), value))
-	b.lastVar = newVar
-}
-
-func (b *goValueBuilder) OnEnum(value interface{}, decl *gidlmixer.EnumDecl) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf(
-		"%s := %s(%d)\n", newVar, typeLiteral(decl), value))
-	b.lastVar = newVar
-}
-
-func (b *goValueBuilder) OnStruct(value gidlir.Record, decl *gidlmixer.StructDecl) {
-	b.onRecord(value, decl)
-}
-
-func (b *goValueBuilder) onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) {
-	containerVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s := %s{}\n", containerVar, typeLiteral(decl)))
+func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
+	var fields []string
+	if decl, ok := decl.(*gidlmixer.UnionDecl); ok && len(value.Fields) >= 1 {
+		parts := strings.Split(string(decl.Name), "/")
+		unqualifiedName := fidlcommon.ToLowerCamelCase(parts[len(parts)-1])
+		fullName := identifierName(decl.Name)
+		fieldName := fidlcommon.ToUpperCamelCase(value.Fields[0].Key.Name)
+		fields = append(fields,
+			fmt.Sprintf("I_%sTag: %s%s", unqualifiedName, fullName, fieldName))
+	}
+	_, isTable := decl.(*gidlmixer.TableDecl)
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
+		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
-		gidlmixer.Visit(b, field.Value, fieldDecl)
-		fieldVar := b.lastVar
-
-		switch decl.(type) {
-		case *gidlmixer.StructDecl:
-			b.Builder.WriteString(fmt.Sprintf(
-				"%s.%s = %s\n", containerVar, fidlcommon.ToUpperCamelCase(field.Key.Name), fieldVar))
-		default:
-			b.Builder.WriteString(fmt.Sprintf(
-				"%s.Set%s(%s)\n", containerVar, fidlcommon.ToUpperCamelCase(field.Key.Name), fieldVar))
+		fields = append(fields,
+			fmt.Sprintf("%s: %s", fieldName, visit(field.Value, fieldDecl)))
+		if isTable && field.Value != nil {
+			fields = append(fields, fmt.Sprintf("%sPresent: true", fieldName))
 		}
 	}
-	b.lastVar = containerVar
-}
-
-func (b *goValueBuilder) OnTable(value gidlir.Record, decl *gidlmixer.TableDecl) {
-	b.onRecord(value, decl)
-}
-
-func (b *goValueBuilder) OnUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) {
-	b.onRecord(value, decl)
-}
-
-func (b *goValueBuilder) onList(value []interface{}, decl gidlmixer.ListDeclaration) {
-	var argStr string
-	elemDecl := decl.Elem()
-	for _, item := range value {
-		gidlmixer.Visit(b, item, elemDecl)
-		argStr += b.lastVar + ", "
+	if len(fields) == 0 {
+		return fmt.Sprintf("%s{}", typeLiteral(decl))
 	}
-	sliceVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s := %s{%s}\n", sliceVar, typeLiteral(decl), argStr))
-	b.lastVar = sliceVar
+	// Insert newlines so that gofmt can produce good results.
+	return fmt.Sprintf("%s{\n%s,\n}", typeLiteral(decl), strings.Join(fields, ",\n"))
 }
 
-func (b *goValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
-	b.onList(value, decl)
-}
-
-func (b *goValueBuilder) OnVector(value []interface{}, decl *gidlmixer.VectorDecl) {
-	b.onList(value, decl)
-}
-
-func (b *goValueBuilder) OnNull(decl gidlmixer.Declaration) {
-	newVar := b.newVar()
-	b.WriteString(fmt.Sprintf("var %s %s = nil\n", newVar, typeName(decl)))
-	b.lastVar = newVar
+func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
+	elemDecl := decl.Elem()
+	var elements []string
+	for _, item := range value {
+		elements = append(elements, visit(item, elemDecl))
+	}
+	if len(elements) == 0 {
+		return fmt.Sprintf("%s{}", typeLiteral(decl))
+	}
+	// Insert newlines so that gofmt can produce good results.
+	return fmt.Sprintf("%s{\n%s,\n}", typeLiteral(decl), strings.Join(elements, ",\n"))
 }
 
 func typeName(decl gidlmixer.Declaration) string {

@@ -31,11 +31,10 @@ import (
 func TestAllEncodeSuccessCases(t *testing.T) {
 {{ range .EncodeSuccessCases }}
 	{
-		{{ .ValueBuild }}
 		encodeSuccessCase{
 			name: {{ .Name }},
 			context: {{ .Context }},
-			input: &{{ .ValueVar }},
+			input: &{{ .Value }},
 			bytes: {{ .Bytes }},
 		}.check(t)
 	}
@@ -47,11 +46,10 @@ func TestAllEncodeSuccessCases(t *testing.T) {
 func TestAllDecodeSuccessCases(t *testing.T) {
 {{ range .DecodeSuccessCases }}
 	{
-		{{ .ValueBuild }}
 		decodeSuccessCase{
 			name: {{ .Name }},
 			context: {{ .Context }},
-			input: &{{ .ValueVar }},
+			input: &{{ .Value }},
 			bytes: {{ .Bytes }},
 		}.check(t)
 	}
@@ -63,11 +61,10 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 func TestAllEncodeFailureCases(t *testing.T) {
 {{ range .EncodeFailureCases }}
 	{
-		{{ .ValueBuild }}
 		encodeFailureCase{
 			name: {{ .Name }},
 			context: {{ .Context }},
-			input: &{{ .ValueVar }},
+			input: &{{ .Value }},
 			code: {{ .ErrorCode }},
 		}.check(t)
 	}
@@ -100,15 +97,15 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, Context, ValueBuild, ValueVar, Bytes string
+	Name, Context, Value, Bytes string
 }
 
 type decodeSuccessCase struct {
-	Name, Context, ValueBuild, ValueVar, Bytes string
+	Name, Context, Value, Bytes string
 }
 
 type encodeFailureCase struct {
-	Name, Context, ValueBuild, ValueVar, ErrorCode string
+	Name, Context, Value, ErrorCode string
 }
 
 type decodeFailureCase struct {
@@ -162,24 +159,19 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
-
 		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
 			continue
 		}
-		var valueBuilder goValueBuilder
-		gidlmixer.Visit(&valueBuilder, encodeSuccess.Value, decl)
-		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
+		value := visit(encodeSuccess.Value, decl)
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-				Name:       testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				Context:    marshalerContext(encoding.WireFormat),
-				ValueBuild: valueBuild,
-				ValueVar:   valueVar,
-				Bytes:      bytesBuilder(encoding.Bytes),
+				Name:    testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				Context: marshalerContext(encoding.WireFormat),
+				Value:   value,
+				Bytes:   bytesBuilder(encoding.Bytes),
 			})
 		}
 	}
@@ -193,24 +185,19 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
-
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
-		var valueBuilder goValueBuilder
-		gidlmixer.Visit(&valueBuilder, decodeSuccess.Value, decl)
-		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
+		value := visit(decodeSuccess.Value, decl)
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				Context:    marshalerContext(encoding.WireFormat),
-				ValueBuild: valueBuild,
-				ValueVar:   valueVar,
-				Bytes:      bytesBuilder(encoding.Bytes),
+				Name:    testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				Context: marshalerContext(encoding.WireFormat),
+				Value:   value,
+				Bytes:   bytesBuilder(encoding.Bytes),
 			})
 		}
 	}
@@ -231,21 +218,16 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
-
-		var valueBuilder goValueBuilder
-		gidlmixer.Visit(&valueBuilder, encodeFailure.Value, decl)
-		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
+		value := visit(encodeFailure.Value, decl)
 		for _, wireFormat := range encodeFailure.WireFormats {
 			if !wireFormatSupported(wireFormat) {
 				continue
 			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-				Name:       testCaseName(encodeFailure.Name, wireFormat),
-				Context:    marshalerContext(wireFormat),
-				ValueBuild: valueBuild,
-				ValueVar:   valueVar,
-				ErrorCode:  code,
+				Name:      testCaseName(encodeFailure.Name, wireFormat),
+				Context:   marshalerContext(wireFormat),
+				Value:     value,
+				ErrorCode: code,
 			})
 		}
 	}
@@ -255,7 +237,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmixer.Schema) ([]decodeFailureCase, error) {
 	var decodeFailureCases []decodeFailureCase
 	for _, decodeFailure := range gidlDecodeFailures {
-		_, err := schema.ExtractDeclarationByName(decodeFailure.Type)
+		decl, err := schema.ExtractDeclarationByName(decodeFailure.Type)
 		if err != nil {
 			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
 		}
@@ -263,8 +245,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 		if err != nil {
 			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
 		}
-
-		valueType := "conformance." + decodeFailure.Type
+		valueType := identifierName(decl.Name)
 		for _, encoding := range decodeFailure.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue

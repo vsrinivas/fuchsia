@@ -29,8 +29,7 @@ import (
 {{ range .EncodeBenchmarks }}
 func BenchmarkEncode{{ .Name }}(b *testing.B) {
 	data := make([]byte, 65536)
-	{{ .ValueBuild }}
-	input := {{ .ValueVar }}
+	input := {{ .Value }}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _, err := fidl.Marshal(&input, data, nil)
@@ -44,8 +43,7 @@ func BenchmarkEncode{{ .Name }}(b *testing.B) {
 {{ range .DecodeBenchmarks }}
 func BenchmarkDecode{{ .Name }}(b *testing.B) {
 	data := make([]byte, 65536)
-	{{ .ValueBuild }}
-	input := {{ .ValueVar }}
+	input := {{ .Value }}
 	_, _, err := fidl.Marshal(&input, data, nil)
 	if err != nil {
 		b.Fatal(err)
@@ -90,11 +88,11 @@ type benchmarkTmplInput struct {
 }
 
 type goEncodeBenchmark struct {
-	Name, ChromeperfPath, ValueBuild, ValueVar string
+	Name, ChromeperfPath, Value string
 }
 
 type goDecodeBenchmark struct {
-	Name, ChromeperfPath, ValueBuild, ValueVar, ValueType, Bytes string
+	Name, ChromeperfPath, Value, ValueType string
 }
 
 // GenerateBenchmarks generates Go benchmarks.
@@ -122,15 +120,11 @@ func goEncodeBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gi
 		if err != nil {
 			return nil, fmt.Errorf("encode benchmark %s: %s", encodeBenchmark.Name, err)
 		}
-		var valueBuilder goValueBuilder
-		gidlmixer.Visit(&valueBuilder, encodeBenchmark.Value, decl)
-		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
+		value := visit(encodeBenchmark.Value, decl)
 		goEncodeBenchmarks = append(goEncodeBenchmarks, goEncodeBenchmark{
 			Name:           goBenchmarkName(encodeBenchmark.Name),
 			ChromeperfPath: encodeBenchmark.Name,
-			ValueBuild:     valueBuild,
-			ValueVar:       valueVar,
+			Value:          value,
 		})
 	}
 	return goEncodeBenchmarks, nil
@@ -143,16 +137,12 @@ func goDecodeBenchmarks(gidlDecodeBenchmarks []gidlir.DecodeBenchmark, schema gi
 		if err != nil {
 			return nil, fmt.Errorf("decode benchmark %s: %s", decodeBenchmark.Name, err)
 		}
-		var valueBuilder goValueBuilder
-		gidlmixer.Visit(&valueBuilder, decodeBenchmark.Value, decl)
-		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
+		value := visit(decodeBenchmark.Value, decl)
 		goDecodeBenchmarks = append(goDecodeBenchmarks, goDecodeBenchmark{
 			Name:           goBenchmarkName(decodeBenchmark.Name),
 			ChromeperfPath: decodeBenchmark.Name,
-			ValueBuild:     valueBuild,
-			ValueVar:       valueVar,
-			ValueType:      "benchmarkfidl." + decodeBenchmark.Value.(gidlir.Record).Name,
+			Value:          value,
+			ValueType:      identifierName(decl.Name),
 		})
 	}
 	return goDecodeBenchmarks, nil
