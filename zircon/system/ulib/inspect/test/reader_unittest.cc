@@ -98,6 +98,7 @@ TEST(Reader, VisitHierarchyWithTombstones) {
   //     test2
   auto child = inspector.GetRoot().CreateChild("test");
   auto child2 = child.CreateChild("test2");
+  auto child3 = child2.CreateChild("test3");
   auto _prop = child2.CreateString("val", "test");
   // Delete node
   child2 = inspect::Node();
@@ -119,7 +120,6 @@ TEST(Reader, VisitHierarchyWithTombstones) {
   expected.emplace_back(std::vector<std::string>{"root", "test"});
   EXPECT_EQ(expected, paths);
 }
-
 
 TEST(Reader, BucketComparison) {
   inspect::UintArrayValue::HistogramBucket a(0, 2, 6);

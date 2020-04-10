@@ -243,10 +243,13 @@ impl<'a> ScanResult<'a> {
         // complete.
         let mut pending_nodes = BTreeMap::<u32, ScannedNode>::new();
 
+        let mut uninitialized_nodes = std::collections::BTreeSet::new();
+
         // Split the parsed_nodes into complete nodes and pending nodes.
         for (index, scanned_node) in self.parsed_nodes.into_iter() {
             if !scanned_node.is_initialized() {
                 // Skip all nodes that were not initialized.
+                uninitialized_nodes.insert(index);
                 continue;
             }
             if scanned_node.is_complete() {
@@ -264,6 +267,11 @@ impl<'a> ScanResult<'a> {
         // until the root is found (parent index = 0).
         while complete_nodes.len() > 0 {
             let scanned_node = complete_nodes.pop().unwrap();
+            if uninitialized_nodes.contains(&scanned_node.parent_index) {
+                // Skip children of initialized nodes. These nodes were implicitly unlinked due to
+                // tombstoning.
+                continue;
+            }
             {
                 // Add the current node to the parent hierarchy.
                 let parent_node = pending_nodes
@@ -546,6 +554,30 @@ mod tests {
             }
         );
 
+        std::mem::drop(node2);
+        assert_inspect_tree!(inspector,
+            root: {
+                child1: {
+                    val: "test",
+                }
+            }
+        );
+
+        // Recreate the nodes. Ensure that the old properties are not picked up.
+        let node2 = node1.create_child("child2");
+        let _node3 = node2.create_child("child3");
+        assert_inspect_tree!(inspector,
+            root: {
+                child1: {
+                    val: "test",
+                    child2: {
+                        child3: {}
+                    }
+                }
+            }
+        );
+
+        // Delete out of order, leaving 3 dangling.
         std::mem::drop(node2);
         assert_inspect_tree!(inspector,
             root: {
