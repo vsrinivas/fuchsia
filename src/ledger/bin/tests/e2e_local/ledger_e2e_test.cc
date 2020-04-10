@@ -91,6 +91,7 @@ class LedgerEndToEndTest : public ledger::RealLoopFixture {
  protected:
   void Init(std::vector<std::string> additional_args) {
     platform_ = ledger::MakePlatform();
+    tmp_location_ = platform_->file_system()->CreateScopedTmpLocation();
 
     fidl::InterfaceHandle<fuchsia::io::Directory> child_directory;
     fuchsia::sys::LaunchInfo launch_info;
@@ -137,6 +138,7 @@ class LedgerEndToEndTest : public ledger::RealLoopFixture {
 
  protected:
   std::unique_ptr<ledger::Platform> platform_;
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location_;
   ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
   fidl::SynchronousInterfacePtr<ledger_internal::LedgerController> controller_;
@@ -145,10 +147,8 @@ class LedgerEndToEndTest : public ledger::RealLoopFixture {
 TEST_F(LedgerEndToEndTest, PutAndGet) {
   Init({});
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
-      platform_->file_system()->CreateScopedTmpLocation();
   ledger_repository_factory_->GetRepository(
-      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
+      ledger::CloneChannelFromFileDescriptor(tmp_location_->path().root_fd()), nullptr, "",
       ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
@@ -187,10 +187,8 @@ TEST_F(LedgerEndToEndTest, Terminate) {
 TEST_F(LedgerEndToEndTest, ClearPage) {
   Init({});
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
-      platform_->file_system()->CreateScopedTmpLocation();
   ledger_repository_factory_->GetRepository(
-      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
+      ledger::CloneChannelFromFileDescriptor(tmp_location_->path().root_fd()), nullptr, "",
       ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
@@ -217,7 +215,7 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
     std::string page_dir_name = absl::WebSafeBase64Escape(convert::ExtendedStringView(page_id.id));
     ledger::DetachedPath page_path;
     ASSERT_TRUE(
-        FindPathToDir(platform_->file_system(), tmp_location->path(), page_dir_name, &page_path))
+        FindPathToDir(platform_->file_system(), tmp_location_->path(), page_dir_name, &page_path))
         << "Failed to find page's directory. Expected to find directory named "
            "`base64(page_id)`: "
         << page_dir_name;
@@ -235,7 +233,7 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
   for (const ledger::DetachedPath& path : page_paths) {
     RunLoopUntil([&] { return !platform_->file_system()->IsDirectory(path); });
     EXPECT_FALSE(platform_->file_system()->IsDirectory(
-        ledger::DetachedPath(tmp_location->path().root_fd(), path.path())));
+        ledger::DetachedPath(tmp_location_->path().root_fd(), path.path())));
   }
 
   ledger_.Unbind();
@@ -254,9 +252,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
-  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
-      platform_->file_system()->CreateScopedTmpLocation();
-  const ledger::DetachedPath content_path(tmp_location->path().root_fd(),
+  const ledger::DetachedPath content_path(tmp_location_->path().root_fd(),
                                           convert::ToString(ledger::kSerializationVersion));
   const ledger::DetachedPath deletion_sentinel_path = content_path.SubPath("sentinel");
   ASSERT_TRUE(platform_->file_system()->CreateDirectory(content_path));
@@ -277,7 +273,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
         cloud_provider.get(), cloud_provider_ptr.NewRequest());
     ledger_internal::LedgerRepositoryPtr ledger_repository;
     ledger_repository_factory_->GetRepository(
-        ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+        ledger::CloneChannelFromFileDescriptor(tmp_location_->path().root_fd()),
         std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
     RunLoopUntil([&] { return device_set_watcher_set; });
@@ -296,7 +292,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   ledger_repository_factory_->GetRepository(
-      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+      ledger::CloneChannelFromFileDescriptor(tmp_location_->path().root_fd()),
       std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
@@ -314,7 +310,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   // Make sure all the contents are deleted. Only the staging directory should be present.
   std::vector<std::string> directory_entries;
   EXPECT_TRUE(
-      platform_->file_system()->GetDirectoryContents(tmp_location->path(), &directory_entries));
+      platform_->file_system()->GetDirectoryContents(tmp_location_->path(), &directory_entries));
   EXPECT_THAT(directory_entries, ElementsAre("staging"));
 
   // Verify that the Ledger app didn't crash.
@@ -332,9 +328,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
-      platform_->file_system()->CreateScopedTmpLocation();
-  ledger::DetachedPath tmp_location_path = tmp_location->path();
+  ledger::DetachedPath tmp_location_path = tmp_location_->path();
   ledger::DetachedPath content_path =
       tmp_location_path.SubPath(convert::ToString(ledger::kSerializationVersion));
   ledger::DetachedPath deletion_path = content_path.SubPath("sentinel");
@@ -379,8 +373,6 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   Init({});
   bool ledger_app_shut_down = false;
   RegisterShutdownCallback([&ledger_app_shut_down] { ledger_app_shut_down = true; });
-  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
-      platform_->file_system()->CreateScopedTmpLocation();
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
@@ -388,7 +380,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
-      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+      ledger::CloneChannelFromFileDescriptor(tmp_location_->path().root_fd()),
       std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
@@ -426,8 +418,6 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   bool ledger_app_shut_down = false;
   RegisterShutdownCallback([&ledger_app_shut_down] { ledger_app_shut_down = true; });
   ledger::Status status;
-  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
-      platform_->file_system()->CreateScopedTmpLocation();
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
@@ -435,7 +425,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
-      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+      ledger::CloneChannelFromFileDescriptor(tmp_location_->path().root_fd()),
       std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
