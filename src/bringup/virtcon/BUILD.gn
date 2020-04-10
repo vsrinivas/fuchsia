@@ -21,6 +21,7 @@ group("common") {
   visibility = [ ":*" ]
 
   public_deps = [
+    "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/bringup/virtcon/port",
     "//src/storage/deprecated-fs-fidl-handler",
@@ -36,7 +37,6 @@ group("common") {
     "//zircon/public/lib/gfx-font-data",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-input:c",

@@ -20,6 +20,7 @@ driver_module("hikey-display") {
     "hi3660-dsi.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/banjo/ddk.protocol.dsiimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -32,7 +33,6 @@ driver_module("hikey-display") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
@@ -54,6 +54,7 @@ test("hikey-display-test") {
     "hikey-display-test.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/banjo/ddk.protocol.dsiimpl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -69,7 +70,6 @@ test("hikey-display-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",

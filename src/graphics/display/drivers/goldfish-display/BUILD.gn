@@ -25,6 +25,7 @@ source_set("common") {
   defines = [ "_ALL_SOURCE" ]
   sources = []
   public_deps = [
+    "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/banjo/ddk.protocol.goldfish.control",
     "//sdk/banjo/ddk.protocol.goldfish.pipe",
     "//zircon/public/lib/ddk",
@@ -33,7 +34,6 @@ source_set("common") {
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]

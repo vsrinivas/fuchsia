@@ -34,6 +34,7 @@ source_set("common") {
   sources = []
   public_deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/banjo/ddk.protocol.dsiimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -43,7 +44,6 @@ source_set("common") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.power",
