@@ -238,7 +238,7 @@ impl<E> SaeCommitted<E> {
         sink: &mut SaeUpdateSink,
         commit_msg: &CommitMsg,
     ) -> Result<FrameResult<(Commit<E>, Kck, Key)>, RejectReason> {
-        let scalar = self.commit.scalar.to_vec();
+        let scalar = self.commit.scalar.to_left_padded_vec(self.config.fcg.scalar_size()?);
         let element = self.config.fcg.element_to_octets(&self.commit.element)?;
         if &commit_msg.scalar[..] == &scalar[..] && &commit_msg.element[..] == &element[..] {
             // This is a reflection attack.
