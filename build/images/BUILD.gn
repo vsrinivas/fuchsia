@@ -1336,9 +1336,13 @@ paver_targets = [
       deps += [ ":netboot" ]
     }
     metadata = {
-      name = "netboot"
-      path = "netboot.sh"
-      type = "sh"
+      images = [
+        {
+          name = "netboot"
+          path = "netboot.sh"
+          type = "sh"
+        },
+      ]
     }
   },
   {
@@ -1354,9 +1358,13 @@ paver_targets = [
     }
     extra_bootserver_arguments = "--allow-zedboot-version-mismatch"
     metadata = {
-      name = "pave-zedboot"
-      path = "pave-zedboot.sh"
-      type = "sh"
+      images = [
+        {
+          name = "pave-zedboot"
+          path = "pave-zedboot.sh"
+          type = "sh"
+        },
+      ]
     }
   },
   {
@@ -1372,9 +1380,13 @@ paver_targets = [
     }
     extra_bootserver_arguments = ""
     metadata = {
-      name = "pave"
-      path = "pave.sh"
-      type = "sh"
+      images = [
+        {
+          name = "pave"
+          path = "pave.sh"
+          type = "sh"
+        },
+      ]
     }
   },
 ]
@@ -1398,9 +1410,13 @@ foreach(format, archive_formats) {
         "zedboot",
       ]
       metadata = {
-        name = "archive"
-        path = "build-archive.$format"
-        type = "$format"
+        archives = [
+          {
+            name = "archive"
+            path = "build-archive.$format"
+            type = "$format"
+          },
+        ]
       }
     },
   ]
@@ -1437,13 +1453,7 @@ foreach(target, paver_targets) {
       "checkout_artifacts.json",
     ]
 
-    _metadata = target.metadata
-    metadata = {
-      images = [ _metadata ]
-      if ( _metadata.type == "tgz" || _metadata.type == "tar" ) {
-        archives = images
-      }
-    }
+    metadata = target.metadata
   }
   archive_deps += [ ":${target.name}" ]
 }
@@ -2026,7 +2036,10 @@ group("archive-extras") {
 
 group("images") {
   testonly = true
-  deps = [ ":default-images" ]
+  deps = [
+    ":archive-extras",
+    ":default-images",
+  ]
 
   if (!bootfs_only) {
     deps += [ ":netboot" ]
