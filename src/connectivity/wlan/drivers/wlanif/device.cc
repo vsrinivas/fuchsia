@@ -75,7 +75,10 @@ static wlanif_impl_ifc_protocol_ops_t wlanif_impl_ifc_ops = {
                     const wlanif_stop_confirm_t* resp) { DEV(cookie)->StopConf(resp); },
     .eapol_conf = [](void* cookie,
                      const wlanif_eapol_confirm_t* resp) { DEV(cookie)->EapolConf(resp); },
-
+    .on_channel_switch =
+        [](void* cookie, const wlanif_channel_switch_info_t* ind) {
+          DEV(cookie)->OnChannelSwitched(ind);
+        },
     // MLME extension operations
     .signal_report =
         [](void* cookie, const wlanif_signal_report_indication_t* ind) {
@@ -884,7 +887,7 @@ void Device::EapolConf(const wlanif_eapol_confirm_t* resp) {
   binding_.events().EapolConf(std::move(fidl_resp));
 }
 
-void Device::OnChannelSwitched(wlanif_channel_switch_info_t* info) {
+void Device::OnChannelSwitched(const wlanif_channel_switch_info_t* info) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!binding_.is_bound()) {
     return;

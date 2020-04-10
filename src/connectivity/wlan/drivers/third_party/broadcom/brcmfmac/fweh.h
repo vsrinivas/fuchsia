@@ -101,6 +101,7 @@ struct brcmf_cfg80211_info;
   BRCMF_ENUM_DEF(DCS_REQUEST, 73)                    \
   BRCMF_ENUM_DEF(FIFO_CREDIT_MAP, 74)                \
   BRCMF_ENUM_DEF(ACTION_FRAME_RX, 75)                \
+  BRCMF_ENUM_DEF(CSA_COMPLETE_IND, 80)               \
   BRCMF_ENUM_DEF(TDLS_PEER_EVENT, 92)                \
   BRCMF_ENUM_DEF(BCMC_CREDIT_SUPPORT, 127)
 
@@ -269,7 +270,7 @@ struct brcmf_event {
  * @status: status information.
  * @reason: reason code.
  * @auth_type: authentication type.
- * @datalen: lenght of event data buffer.
+ * @datalen: length of event data buffer.
  * @addr: ether address.
  * @ifname: interface name.
  * @ifidx: interface index.

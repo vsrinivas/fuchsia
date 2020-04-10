@@ -531,6 +531,7 @@ protocol WlanifImplIfc {
     StartConf(WlanifStartConfirm resp) -> ();
     StopConf(WlanifStopConfirm resp) -> ();
     EapolConf(WlanifEapolConfirm resp) -> ();
+    OnChannelSwitch(WlanifChannelSwitchInfo ind) -> ();
 
     // MLME extensions
     SignalReport(WlanifSignalReportIndication ind) -> ();

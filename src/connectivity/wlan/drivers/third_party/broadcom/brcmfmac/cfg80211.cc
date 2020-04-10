@@ -4078,6 +4078,49 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
   return ZX_ERR_INVALID_ARGS;
 }
 
+static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
+                                               const struct brcmf_event_msg* e, void* data) {
+  uint16_t chanspec;
+  wlan_channel_t chan;
+  wlanif_channel_switch_info_t info;
+  zx_status_t err = ZX_OK;
+  struct brcmf_cfg80211_info* cfg = nullptr;
+  struct net_device* ndev = nullptr;
+  struct wireless_dev* wdev = nullptr;
+
+  ZX_ASSERT(ifp);
+  cfg = ifp->drvr->config;
+  ndev = ifp->ndev;
+  wdev = ndev_to_wdev(ndev);
+
+  // Check whether it's AP iface.
+  if (wdev->iftype == WLAN_INFO_MAC_ROLE_AP) {
+    BRCMF_ERR("Shouldn't receive CSA event in AP role.\n");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Status should be connected.
+  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+    BRCMF_ERR("CSA on %s. Not associated.\n", ndev->name);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Get channel information from firmware.
+  err = brcmf_fil_iovar_data_get(ifp, "chanspec", &chanspec, sizeof(uint16_t), nullptr);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Fail to get chanspec from firmware, reason: %s\n", zx_status_get_string(err));
+    return err;
+  }
+
+  chanspec_to_channel(&cfg->d11inf, chanspec, &chan);
+  info.new_channel = chan.primary;
+
+  // Trigger channel switch in wlanif.
+  wlanif_impl_ifc_on_channel_switch(&ndev->if_proto, &info);
+
+  return ZX_OK;
+}
+
 static void brcmf_init_conf(struct brcmf_cfg80211_conf* conf) {
   conf->frag_threshold = (uint32_t)-1;
   conf->rts_threshold = (uint32_t)-1;
@@ -4099,6 +4142,7 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_PFN_NET_FOUND, brcmf_notify_sched_scan_results);
   brcmf_fweh_register(cfg->pub, BRCMF_E_IF, brcmf_notify_vif_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_PSK_SUP, brcmf_notify_connect_status);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_CSA_COMPLETE_IND, brcmf_notify_channel_switch);
 }
 
 static void brcmf_deinit_priv_mem(struct brcmf_cfg80211_info* cfg) {
