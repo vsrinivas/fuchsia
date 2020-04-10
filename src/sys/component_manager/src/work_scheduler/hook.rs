@@ -14,7 +14,7 @@ use {
             WorkScheduler, WORK_SCHEDULER_CAPABILITY_PATH, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
         },
     },
-    anyhow::{ Error},
+    anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,

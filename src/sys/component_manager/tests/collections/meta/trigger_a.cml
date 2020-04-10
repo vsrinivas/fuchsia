@@ -1,20 +1,21 @@
 // Integration test component that runs a Trigger service. When triggered, the
 // component echoes a string using the Echo service and prints it.
 {
-    "program": {
-        "binary": "bin/trigger",
-        "args": [ "Triggered", "a" ],
+    program: {
+        binary: "bin/trigger",
+        args: [
+            "Triggered",
+            "a",
+        ],
     },
-    "use": [
-        { "runner": "elf" },
-        {
-            "protocol": "/svc/fidl.examples.routing.echo.Echo",
-        },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fidl.test.components.Trigger",
-            "from": "self",
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "self",
         },
     ],
 }

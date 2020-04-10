@@ -1,21 +1,22 @@
 {
-
-    "program": {
-        "binary": "bin/realm_offered_reporter"
+    program: {
+        binary: "bin/realm_offered_reporter",
     },
-    "use": [
-      {
-          "protocol": [
-              "/svc/fuchsia.sys2.BlockingEventSource",
-              "/svc/fidl.examples.routing.echo.Echo"
-          ],
-          "from": "framework"
-      },
-      // Offered by the parent realm "nested"
-      {
-        "protocol": "/svc/fidl.test.components.Trigger",
-      },
-      { "event": "started_nested", "from": "realm" },
-      { "runner": "elf" },
-    ]
+    use: [
+        {
+            protocol: [
+                "/svc/fidl.examples.routing.echo.Echo",
+                "/svc/fuchsia.sys2.BlockingEventSource",
+            ],
+            from: "framework",
+        },
+
+        // Offered by the parent realm "nested"
+        { protocol: "/svc/fidl.test.components.Trigger" },
+        {
+            from: "realm",
+            event: "started_nested",
+        },
+        { runner: "elf" },
+    ],
 }

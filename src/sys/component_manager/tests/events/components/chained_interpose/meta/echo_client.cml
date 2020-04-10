@@ -1,14 +1,10 @@
 {
-    "program": {
-        "binary": "bin/chained_interpose_echo_client",
+    program: {
+        binary: "bin/chained_interpose_echo_client",
     },
-    "use": [
-        { "runner": "elf" },
-        {
-            "protocol": "/svc/fidl.examples.routing.echo.Echo",
-        },
-        {
-            "protocol": "/svc/fuchsia.test.echofactory.EchoFactory",
-        }
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
+        { protocol: "/svc/fuchsia.test.echofactory.EchoFactory" },
     ],
 }

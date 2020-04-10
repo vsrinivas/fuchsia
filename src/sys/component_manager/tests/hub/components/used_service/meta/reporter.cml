@@ -1,22 +1,25 @@
 {
-    "program": {
-        "binary": "bin/used_service_reporter",
+    program: {
+        binary: "bin/used_service_reporter",
     },
-    "use": [
-        { "runner": "elf" },
+    use: [
+        { runner: "elf" },
         {
-            "directory": "/hub", "from": "framework", "rights": ["r*"]
+            directory: "/hub",
+            from: "framework",
+            rights: [ "r*" ],
         },
+        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
         {
-            "protocol": "/svc/fidl.examples.routing.echo.Echo",
-        },
-        {
-            "protocol": [
-                "/svc/fuchsia.test.hub.HubReport",
+            protocol: [
                 "/svc/fuchsia.sys2.BlockingEventSource",
+                "/svc/fuchsia.test.hub.HubReport",
             ],
-            "from": "framework"
+            from: "framework",
         },
-        { "event": "capability_routed", "from": "framework" },
+        {
+            from: "framework",
+            event: "capability_routed",
+        },
     ],
 }

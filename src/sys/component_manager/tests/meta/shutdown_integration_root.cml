@@ -4,31 +4,27 @@
 
 // Realm for the shutdown integration test, it requests the SystemController protocol
 {
-    "offer": [
+    children: [
+        {
+            name: "power_switch",
+            url: "fuchsia-pkg://fuchsia.com/shutdown_integration_test#meta/system_controller_consumer.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#power_switch",
-            ]
+            runner: "elf",
+            from: "realm",
+            to: [ "#power_switch" ],
         },
         {
-            "protocol": [
-                "/svc/fuchsia.sys2.SystemController",
+            protocol: [
                 "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.sys2.SystemController",
             ],
-            "from": "realm",
-            "to": [ "#power_switch" ]
+            from: "realm",
+            to: [ "#power_switch" ],
         },
     ],
-
-    "children": [
-        {
-            "name": "power_switch",
-            "url": "fuchsia-pkg://fuchsia.com/shutdown_integration_test#meta/system_controller_consumer.cm",
-            "startup": "eager",
-        },
-    ],
-
 }

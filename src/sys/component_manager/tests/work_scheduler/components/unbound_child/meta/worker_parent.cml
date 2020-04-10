@@ -1,35 +1,35 @@
 {
-    "offer": [
+    children: [
+        {
+            name: "worker_sibling",
+            url: "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/unbound_child_worker_sibling.cm",
+            startup: "eager",
+        },
+        {
+            name: "worker_child",
+            url: "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/unbound_child_worker_child.cm",
+            startup: "lazy",
+        },
+    ],
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#worker_sibling",
+            runner: "elf",
+            from: "realm",
+            to: [
                 "#worker_child",
-            ]
+                "#worker_sibling",
+            ],
         },
         {
-            "protocol": "/svc/fuchsia.sys2.WorkScheduler",
-             "from": "#worker_child",
-             "to": [ "#worker_sibling" ],
+            protocol: "/svc/fuchsia.sys2.WorkScheduler",
+            from: "#worker_child",
+            to: [ "#worker_sibling" ],
         },
         {
-            "protocol": "/svc/fuchsia.sys2.WorkSchedulerControl",
-            "from": "realm",
-            "to": [ "#worker_sibling" ],
-        }
+            protocol: "/svc/fuchsia.sys2.WorkSchedulerControl",
+            from: "realm",
+            to: [ "#worker_sibling" ],
+        },
     ],
-    "children": [
-      {
-        "name": "worker_sibling",
-        "url": "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/unbound_child_worker_sibling.cm",
-        "startup": "eager",
-      },
-      {
-        "name": "worker_child",
-        "url": "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/unbound_child_worker_child.cm",
-        "startup": "lazy",
-      }
-    ]
 }

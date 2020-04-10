@@ -1,38 +1,38 @@
 // Passes a read only storage capability to a child, this is invalid and so should not be mapped
 // into the child process as it is expecting read write.
 {
-  "children": [
-    {
-      "name": "use_storage",
-      "url": "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_storage.cm",
-      "startup": "eager",
-    },
-    {
-      "name": "expose_dir_rights",
-      "url": "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
-    },
-  ],
-  "storage": [
-    {
-      "name": "mystorage",
-      "from": "#expose_dir_rights",
-      "path": "/read_write",
-    }
-  ],
-  "offer": [
-    // Offer the ELF runner to children.
-    {
-      "runner": "elf",
-      "from": "realm",
-      "to": [
-        "#use_storage",
-        "#expose_dir_rights",
-      ]
-    },
-    {
-      "storage": "data",
-      "from": "#mystorage",
-      "to": ["#use_storage"],
-    },
-  ]
+    children: [
+        {
+            name: "use_storage",
+            url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_storage.cm",
+            startup: "eager",
+        },
+        {
+            name: "expose_dir_rights",
+            url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
+        },
+    ],
+    offer: [
+        // Offer the ELF runner to children.
+        {
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#expose_dir_rights",
+                "#use_storage",
+            ],
+        },
+        {
+            storage: "data",
+            from: "#mystorage",
+            to: [ "#use_storage" ],
+        },
+    ],
+    storage: [
+        {
+            name: "mystorage",
+            from: "#expose_dir_rights",
+            path: "/read_write",
+        },
+    ],
 }

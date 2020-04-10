@@ -1,40 +1,47 @@
 {
-    "program": {
-        "binary": "bin/dynamic_child_reporter"
+    program: {
+        binary: "bin/dynamic_child_reporter",
     },
-    "use": [
-        { "runner": "elf" },
+    collections: [
         {
-            "protocol": [
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "/svc/fuchsia.sys2.BlockingEventSource",
                 "/svc/fuchsia.sys2.Realm",
                 "/svc/fuchsia.test.hub.HubReport",
-                "/svc/fuchsia.sys2.BlockingEventSource",
             ],
-            "from": "framework"
+            from: "framework",
         },
         {
-            "directory": "/hub",
-            "from": "framework",
-            "rights": ["r*"],
+            directory: "/hub",
+            from: "framework",
+            rights: [ "r*" ],
         },
-        { "event": "stopped", "from": "framework" },
-        { "event": "marked_for_destruction", "from": "framework" },
-        { "event": "destroyed", "from": "framework" },
-    ],
-    "collections": [
         {
-            "name": "coll",
-            "durability": "transient",
+            from: "framework",
+            event: "stopped",
+        },
+        {
+            from: "framework",
+            event: "marked_for_destruction",
+        },
+        {
+            from: "framework",
+            event: "destroyed",
         },
     ],
-    "offer": [
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#coll",
-            ]
+            runner: "elf",
+            from: "realm",
+            to: [ "#coll" ],
         },
-    ]
+    ],
 }

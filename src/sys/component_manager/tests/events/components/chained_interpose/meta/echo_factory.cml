@@ -1,14 +1,14 @@
 {
-    "program": {
-        "binary": "bin/chained_interpose_echo_factory",
+    program: {
+        binary: "bin/chained_interpose_echo_factory",
     },
-    "use": [
-        { "runner": "elf" }
+    use: [
+        { runner: "elf" },
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fuchsia.test.echofactory.EchoFactory",
-            "from": "self",
-        }
-    ]
+            protocol: "/svc/fuchsia.test.echofactory.EchoFactory",
+            from: "self",
+        },
+    ],
 }

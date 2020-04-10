@@ -1,50 +1,49 @@
 // Realm for integration test that creates and binds to component instances in a collection.
 {
-    "program": {
-        "binary": "bin/collection_realm",
+    program: {
+        binary: "bin/collection_realm",
     },
-    "use": [
-        { "runner": "elf" },
+    children: [
         {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-        },
-        {
-            "protocol": "/svc/fuchsia.sys2.Realm",
-            "from": "framework",
+            name: "echo_server",
+            url: "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/echo_server.cm",
         },
     ],
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+
     // Route Echo service from server to collection.
-    "offer": [
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#echo_server",
+            runner: "elf",
+            from: "realm",
+            to: [
                 "#coll",
-            ]
+                "#echo_server",
+            ],
         },
         {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-            "from": "realm",
-            "to": [ "#coll" ]
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+            to: [ "#coll" ],
         },
         {
-            "protocol": "/svc/fidl.examples.routing.echo.Echo",
-            "from": "#echo_server",
-            "to": [ "#coll" ]
-        },
-    ],
-    "children": [
-        {
-            "name": "echo_server",
-            "url": "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/echo_server.cm",
-        },
-    ],
-    "collections": [
-        {
-            "name": "coll",
-            "durability": "transient",
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+            to: [ "#coll" ],
         },
     ],
 }

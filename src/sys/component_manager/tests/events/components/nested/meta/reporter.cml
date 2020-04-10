@@ -1,46 +1,48 @@
 {
-
-    "program": {
-        "binary": "bin/nested_reporter"
+    program: {
+        binary: "bin/nested_reporter",
     },
-    "use": [
-      { "runner": "elf" },
-      {
-          "protocol": [
-              "/svc/fuchsia.sys2.BlockingEventSource",
-              "/svc/fidl.examples.routing.echo.Echo"
-          ],
-          "from": "framework"
-      },
-      {"event": "started", "from": "framework" }
-    ],
-    "children": [
+    children: [
         {
-            "name": "child_a",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
-            "startup": "eager",
+            name: "child_a",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
+            startup: "eager",
         },
         {
-            "name": "child_b",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
-            "startup": "eager",
+            name: "child_b",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
+            startup: "eager",
         },
         {
-            "name": "child_c",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
-            "startup": "eager",
+            name: "child_c",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
+            startup: "eager",
         },
     ],
-    "offer": [
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "/svc/fidl.examples.routing.echo.Echo",
+                "/svc/fuchsia.sys2.BlockingEventSource",
+            ],
+            from: "framework",
+        },
+        {
+            from: "framework",
+            event: "started",
+        },
+    ],
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
+            runner: "elf",
+            from: "realm",
+            to: [
                 "#child_a",
                 "#child_b",
                 "#child_c",
-            ]
+            ],
         },
-    ]
+    ],
 }

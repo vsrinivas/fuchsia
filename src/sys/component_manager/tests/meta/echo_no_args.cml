@@ -1,8 +1,8 @@
 {
-    "program": {
-        "binary": "bin/echo_args",
+    program: {
+        binary: "bin/echo_args",
     },
-    "use": [
-        { "runner": "elf" }
+    use: [
+        { runner: "elf" },
     ],
 }

@@ -1,16 +1,16 @@
 // Integration test component that runs a Trigger service. When triggered, the
 // component is started but takes no action.
 {
-    "program": {
-        "binary": "bin/trigger",
+    program: {
+        binary: "bin/trigger",
     },
-    "use": [
-        { "runner": "elf" }
+    use: [
+        { runner: "elf" },
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fidl.test.components.Trigger",
-            "from": "self",
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "self",
         },
     ],
 }

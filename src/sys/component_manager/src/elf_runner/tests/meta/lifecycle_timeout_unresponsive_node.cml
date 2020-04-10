@@ -1,14 +1,10 @@
 {
-    "program": {
-        "binary": "bin/unresponsive_component",
-        "lifecycle": {
-            "stop_event": "notify",
-        }
+    program: {
+        binary: "bin/unresponsive_component",
+        lifecycle: { stop_event: "notify" },
     },
-    "use": [
-        { "runner": "elf" },
-        {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-        },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
     ],
 }

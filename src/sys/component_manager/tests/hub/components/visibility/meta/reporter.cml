@@ -1,33 +1,31 @@
 {
-    "program": {
-        "binary": "bin/visibility_reporter"
+    program: {
+        binary: "bin/visibility_reporter",
     },
-    "use": [
-        { "runner": "elf" },
+    children: [
         {
-            "protocol": "/svc/fuchsia.test.hub.HubReport",
-            "from": "framework"
-        },
-        {
-            "directory": "/hub",
-            "from": "framework",
-            "rights": ["r*"],
+            name: "child",
+            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/child.cm",
         },
     ],
-    "children": [
+    use: [
+        { runner: "elf" },
         {
-            "name": "child",
-            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/child.cm",
-        }
+            protocol: "/svc/fuchsia.test.hub.HubReport",
+            from: "framework",
+        },
+        {
+            directory: "/hub",
+            from: "framework",
+            rights: [ "r*" ],
+        },
     ],
-    "offer": [
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#child",
-            ]
+            runner: "elf",
+            from: "realm",
+            to: [ "#child" ],
         },
-    ]
+    ],
 }

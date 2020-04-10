@@ -1,27 +1,34 @@
 {
-    "program": {
-        "binary": "bin/advanced_routing_reporter",
-        "args": ["Hippos", "rule!"],
+    program: {
+        binary: "bin/advanced_routing_reporter",
+        args: [
+            "Hippos",
+            "rule!",
+        ],
     },
-    "use": [
-        { "runner": "elf" },
+    use: [
+        { runner: "elf" },
         {
-           "directory": "/hub", "from": "realm", "as": "/parent_hub", "rights": ["r*"]
+            directory: "/hub",
+            from: "realm",
+            as: "/parent_hub",
+            rights: [ "r*" ],
         },
         {
-            "directory": "/hub/exec", "from": "framework", "as": "/hub", "rights":["r*"]
+            directory: "/hub/exec",
+            from: "framework",
+            as: "/hub",
+            rights: [ "r*" ],
         },
         {
-            "directory": "/sibling_hub", "from": "realm", "rights":["r*"]
+            directory: "/sibling_hub",
+            from: "realm",
+            rights: [ "r*" ],
         },
+        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
         {
-            "protocol": "/svc/fidl.examples.routing.echo.Echo",
-        },
-        {
-            "protocol": [
-                "/svc/fuchsia.test.hub.HubReport",
-            ],
-            "from": "framework"
+            protocol: [ "/svc/fuchsia.test.hub.HubReport" ],
+            from: "framework",
         },
     ],
 }

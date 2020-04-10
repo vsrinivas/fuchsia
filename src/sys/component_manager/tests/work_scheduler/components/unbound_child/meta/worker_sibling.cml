@@ -1,16 +1,16 @@
 {
-    "program": {
-        "binary": "bin/unbound_child_worker_sibling",
+    program: {
+        binary: "bin/unbound_child_worker_sibling",
     },
-    "use": [
-        { "runner": "elf" },
+    use: [
+        { runner: "elf" },
         {
-            "protocol": "/svc/fuchsia.sys2.WorkScheduler",
-             "from": "realm",
+            protocol: "/svc/fuchsia.sys2.WorkScheduler",
+            from: "realm",
         },
         {
-            "protocol": "/svc/fuchsia.sys2.WorkSchedulerControl",
-             "from": "realm",
+            protocol: "/svc/fuchsia.sys2.WorkSchedulerControl",
+            from: "realm",
         },
     ],
 }

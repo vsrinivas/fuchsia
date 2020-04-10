@@ -1,35 +1,35 @@
 // Integration test realm that hosts a trigger component.
 {
-    // Expose Trigger service from child.
-    "expose": [
+    children: [
         {
-            "protocol": "/svc/fidl.test.components.Trigger",
-            "from": "#trigger",
+            name: "trigger",
+            url: "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_a.cm",
         },
     ],
+
     // Route Echo service to child.
-    "offer": [
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#trigger",
-            ]
+            runner: "elf",
+            from: "realm",
+            to: [ "#trigger" ],
         },
         {
-            "protocol": [
-                "/svc/fuchsia.logger.LogSink",
+            protocol: [
                 "/svc/fidl.examples.routing.echo.Echo",
+                "/svc/fuchsia.logger.LogSink",
             ],
-            "from": "realm",
-            "to": [ "#trigger" ]
+            from: "realm",
+            to: [ "#trigger" ],
         },
     ],
-    "children": [
+
+    // Expose Trigger service from child.
+    expose: [
         {
-            "name": "trigger",
-            "url": "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_a.cm",
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "#trigger",
         },
     ],
 }

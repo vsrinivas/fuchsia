@@ -1,42 +1,45 @@
 {
-    "storage": [
+    children: [
         {
-            "name": "mystorage",
-            "from": "#memfs",
-            "path": "/memfs",
+            name: "memfs",
+            url: "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/memfs.cm",
+            startup: "eager",
+        },
+        {
+            name: "storage_user",
+            url: "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_user.cm",
+            startup: "eager",
         },
     ],
-    "offer": [
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
+            runner: "elf",
+            from: "realm",
+            to: [
                 "#memfs",
                 "#storage_user",
-            ]
+            ],
         },
         {
-            "storage": "data",
-            "from": "#mystorage",
-            "to": [ "#storage_user" ]
+            storage: "data",
+            from: "#mystorage",
+            to: [ "#storage_user" ],
         },
         {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-            "from": "realm",
-            "to": [ "#storage_user", "#memfs" ]
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+            to: [
+                "#memfs",
+                "#storage_user",
+            ],
         },
     ],
-    "children": [
+    storage: [
         {
-            "name": "memfs",
-            "url": "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/memfs.cm",
-            "startup": "eager"
-        },
-        {
-            "name": "storage_user",
-            "url": "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_user.cm",
-            "startup": "eager"
+            name: "mystorage",
+            from: "#memfs",
+            path: "/memfs",
         },
     ],
 }

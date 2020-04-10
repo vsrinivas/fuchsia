@@ -1,17 +1,17 @@
 {
-    "program": {
-        "binary": "bin/storage_user",
+    program: {
+        binary: "bin/storage_user",
     },
-    "use": [
-        { "runner": "elf" },
-        { "storage": "data" },
-        { "protocol": "/svc/fuchsia.logger.LogSink" },
+    use: [
+        { runner: "elf" },
+        { storage: "data" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
     ],
-    "expose": [
+    expose: [
         {
-            "directory": "/data",
-            "from": "self",
-            "rights": ["rw*"],
-        }
+            directory: "/data",
+            from: "self",
+            rights: [ "rw*" ],
+        },
     ],
 }

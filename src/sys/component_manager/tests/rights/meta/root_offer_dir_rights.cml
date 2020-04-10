@@ -2,61 +2,63 @@
 // correctly working and that rights that are filtered are correctly being opened with lower
 // privileges in the use_dir_rights child.
 {
-  "children": [
-    {
-      "name": "use_dir_rights",
-      "url": "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_dir_rights.cm",
-      "startup": "eager",
-    },
-    {
-      "name": "expose_dir_rights",
-      "url": "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
-    },
-  ],
-  "offer": [
-    // Offer the ELF runner to children.
-    {
-      "runner": "elf",
-      "from": "realm",
-      "to": [
-        "#use_dir_rights",
-        "#expose_dir_rights",
-      ]
-    },
-    {
-      "directory": "/read_only",
-      "from": "#expose_dir_rights",
-      "to": ["#use_dir_rights"],
-    },
-    {
-      "directory": "/read_write",
-      "from": "#expose_dir_rights",
-      "to": ["#use_dir_rights"],
-    },
-    {
-      "directory": "/read_write",
-      "from": "#expose_dir_rights",
-      "to": ["#use_dir_rights"],
-      "as": "/read_write_dup",
-    },
-    // This just re-declares the rights which is optional but valid.
-    {
-      "directory": "/read_exec",
-      "from": "#expose_dir_rights",
-      "to": ["#use_dir_rights"],
-      "rights": ["rx*"],
-    },
-    {
-      "directory": "/read_admin",
-      "from": "#expose_dir_rights",
-      "to": ["#use_dir_rights"],
-    },
-    // This permission is scoped from rw to r when offered to the child.
-    {
-      "directory": "/read_only_after_scoped",
-      "from": "#expose_dir_rights",
-      "to": ["#use_dir_rights"],
-      "rights": ["r*"],
-    },
-  ]
+    children: [
+        {
+            name: "use_dir_rights",
+            url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_dir_rights.cm",
+            startup: "eager",
+        },
+        {
+            name: "expose_dir_rights",
+            url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
+        },
+    ],
+    offer: [
+        // Offer the ELF runner to children.
+        {
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#expose_dir_rights",
+                "#use_dir_rights",
+            ],
+        },
+        {
+            directory: "/read_only",
+            from: "#expose_dir_rights",
+            to: [ "#use_dir_rights" ],
+        },
+        {
+            directory: "/read_write",
+            from: "#expose_dir_rights",
+            to: [ "#use_dir_rights" ],
+        },
+        {
+            directory: "/read_write",
+            from: "#expose_dir_rights",
+            as: "/read_write_dup",
+            to: [ "#use_dir_rights" ],
+        },
+
+        // This just re-declares the rights which is optional but valid.
+        {
+            directory: "/read_exec",
+            from: "#expose_dir_rights",
+            to: [ "#use_dir_rights" ],
+            rights: [ "rx*" ],
+        },
+        {
+            directory: "/read_admin",
+            from: "#expose_dir_rights",
+            to: [ "#use_dir_rights" ],
+        },
+
+        // This permission is scoped from rw to r when offered to the child.
+        {
+            directory: "/read_only_after_scoped",
+            from: "#expose_dir_rights",
+            to: [ "#use_dir_rights" ],
+            rights: [ "r*" ],
+        },
+    ],
 }

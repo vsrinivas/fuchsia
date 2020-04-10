@@ -1,9 +1,9 @@
 {
-  "program": {
-    "binary": "bin/use_storage",
-  },
-  "use": [
-    { "runner": "elf" },
-    { "storage": "data" },
-  ]
+    program: {
+        binary: "bin/use_storage",
+    },
+    use: [
+        { runner: "elf" },
+        { storage: "data" },
+    ],
 }

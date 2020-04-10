@@ -1,30 +1,31 @@
 {
-    // Route EchoFactory service from server to client.
-    "offer": [
+    children: [
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-              "#echo_factory",
-              "#echo_client"
-            ]
+            name: "echo_factory",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/chained_interpose_echo_factory.cm",
+            startup: "eager",
         },
         {
-            "protocol": "/svc/fuchsia.test.echofactory.EchoFactory",
-            "from": "#echo_factory",
-            "to": [ "#echo_client" ]
+            name: "echo_client",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/chained_interpose_echo_client.cm",
+            startup: "eager",
         },
     ],
-    "children": [
+
+    // Route EchoFactory service from server to client.
+    offer: [
         {
-            "name": "echo_factory",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/chained_interpose_echo_factory.cm",
-            "startup": "eager",
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#echo_client",
+                "#echo_factory",
+            ],
         },
         {
-            "name": "echo_client",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/chained_interpose_echo_client.cm",
-            "startup": "eager",
+            protocol: "/svc/fuchsia.test.echofactory.EchoFactory",
+            from: "#echo_factory",
+            to: [ "#echo_client" ],
         },
     ],
 }

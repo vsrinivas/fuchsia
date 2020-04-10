@@ -1,14 +1,10 @@
 {
-    "program": {
-        "binary": "bin/scoped_echo_client",
+    program: {
+        binary: "bin/scoped_echo_client",
     },
-    "use": [
-        { "runner": "elf" },
-        {
-            "protocol": "/svc/fidl.examples.routing.echo.Echo",
-        },
-        {
-            "protocol": "/svc/fidl.test.components.Trigger",
-        }
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
+        { protocol: "/svc/fidl.test.components.Trigger" },
     ],
 }

@@ -1,19 +1,20 @@
 {
-    // Route Echo service from server to client.
-    "offer": [
-        // Offer the ELF runner to children.
+    // The nested realm that will bootstrap what we want to test.
+    children: [
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [ "#nested_realm" ]
+            name: "nested_realm",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/realm_offered_nested.cm",
+            startup: "eager",
         },
     ],
-    // The nested realm that will bootstrap what we want to test.
-    "children": [
+
+    // Route Echo service from server to client.
+    offer: [
+        // Offer the ELF runner to children.
         {
-            "name": "nested_realm",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/realm_offered_nested.cm",
-            "startup": "eager",
-        }
+            runner: "elf",
+            from: "realm",
+            to: [ "#nested_realm" ],
+        },
     ],
 }

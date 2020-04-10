@@ -1,58 +1,60 @@
 {
-    "program": {
-        "binary": "bin/storage_realm_coll"
+    program: {
+        binary: "bin/storage_realm_coll",
     },
-    "storage": [
+    children: [
         {
-            "name": "mystorage",
-            "from": "#memfs",
-            "path": "/memfs",
+            name: "memfs",
+            url: "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/memfs.cm",
+            startup: "eager",
         },
     ],
-    "use": [
-        { "runner": "elf" },
+    collections: [
         {
-            "protocol": "/svc/fuchsia.sys2.Realm",
-            "from": "framework"
-        },
-        {
-            "protocol": "/svc/fidl.test.components.Trigger",
-            "from": "framework"
+            name: "coll",
+            durability: "transient",
         },
     ],
-    "offer": [
+    use: [
+        { runner: "elf" },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+        {
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "framework",
+        },
+    ],
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#memfs",
+            runner: "elf",
+            from: "realm",
+            to: [
                 "#coll",
-            ]
+                "#memfs",
+            ],
         },
         {
-            "storage": "data",
-            "from": "#mystorage",
-            "to": [ "#coll" ]
+            storage: "data",
+            from: "#mystorage",
+            to: [ "#coll" ],
         },
         {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-            "from": "realm",
-            "to": [ "#coll", "#memfs" ]
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+            to: [
+                "#coll",
+                "#memfs",
+            ],
         },
     ],
-    "children": [
+    storage: [
         {
-            "name": "memfs",
-            "url": "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/memfs.cm",
-            "startup": "eager"
-        }
-    ],
-    "collections": [
-        {
-            "name": "coll",
-            "durability": "transient",
+            name: "mystorage",
+            from: "#memfs",
+            path: "/memfs",
         },
     ],
 }
-

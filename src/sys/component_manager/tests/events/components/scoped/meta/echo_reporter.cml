@@ -1,45 +1,49 @@
 {
-    "program": {
-        "binary": "bin/scoped_echo_reporter",
+    program: {
+        binary: "bin/scoped_echo_reporter",
     },
-    "use": [
-      { "runner": "elf" },
-      {
-        "protocol": [ "/svc/fuchsia.sys2.BlockingEventSource" ],
-        "from": "framework"
-      },
-      {
-          "protocol": "/svc/fidl.examples.routing.echo.Echo",
-          "from": "framework",
-      },
-      { "event": "capability_routed", "from": "framework" },
-      { "event": "started", "from": "framework" },
+    children: [
+        {
+            name: "echo_server",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_server.cm",
+            startup: "lazy",
+        },
     ],
-    "offer": [
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [ "/svc/fuchsia.sys2.BlockingEventSource" ],
+            from: "framework",
+        },
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "framework",
+        },
+        {
+            from: "framework",
+            event: "capability_routed",
+        },
+        {
+            from: "framework",
+            event: "started",
+        },
+    ],
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#echo_server",
-            ]
+            runner: "elf",
+            from: "realm",
+            to: [ "#echo_server" ],
         },
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fidl.test.components.Trigger",
-            "from": "self",
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "self",
         },
         {
-            "protocol": "/svc/fidl.examples.routing.echo.Echo",
-            "from": "#echo_server",
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
         },
     ],
-    "children": [
-      {
-        "name": "echo_server",
-        "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_server.cm",
-        "startup": "lazy",
-      }
-    ]
 }

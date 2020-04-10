@@ -2,35 +2,36 @@
 // client. We don't use the routing examples's echo_realm.cml because we need the component URLs
 // to refer to the test package.
 {
-    // Route Echo service from server to client.
-    "offer": [
-        // Offer the ELF runner to children.
-        {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#echo_server",
-                "#reporter",
-            ]
-        },
-        {
-            "protocol": "/svc/fidl.examples.routing.echo.Echo",
-            "from": "#echo_server",
-            "to": [ "#reporter" ]
-        },
-    ],
     // Two children: a server and client. "hub_client" has "eager" startup so it
     // will be started along with the realm.
-    "children": [
+    children: [
         {
-            "name": "echo_server",
-            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm",
-            "startup": "eager",
+            name: "echo_server",
+            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm",
+            startup: "eager",
         },
         {
-            "name": "reporter",
-            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/used_service_reporter.cm",
-            "startup": "eager",
+            name: "reporter",
+            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/used_service_reporter.cm",
+            startup: "eager",
+        },
+    ],
+
+    // Route Echo service from server to client.
+    offer: [
+        // Offer the ELF runner to children.
+        {
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#echo_server",
+                "#reporter",
+            ],
+        },
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+            to: [ "#reporter" ],
         },
     ],
 }

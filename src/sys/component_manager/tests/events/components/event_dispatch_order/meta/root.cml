@@ -1,24 +1,22 @@
 {
-    "program": {
-        "binary": "bin/stub_component"
+    program: {
+        binary: "bin/stub_component",
     },
-    "use": [
-      { "runner": "elf" },
-    ],
-    "offer": [
+    children: [
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#child",
-            ]
+            name: "child",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
+            startup: "eager",
         },
     ],
-    "children": [
+    use: [
+        { runner: "elf" },
+    ],
+    offer: [
         {
-            "name": "child",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm",
-            "startup": "eager",
+            runner: "elf",
+            from: "realm",
+            to: [ "#child" ],
         },
     ],
 }

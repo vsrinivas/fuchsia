@@ -1,40 +1,43 @@
 // Integration test realm that hosts two trigger components.
 {
-    "program": {
-        "binary": "bin/trigger",
+    program: {
+        binary: "bin/trigger",
     },
-    "use": [
-        { "runner": "elf" },
-    ],
-    // Expose my Trigger service so the integration test can invoke it.
-    "expose": [
+
+    // Two children, started together with the realm.
+    children: [
         {
-            "protocol": "/svc/fidl.test.components.Trigger",
-            "from": "self",
+            name: "trigger_a",
+            url: "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger.cm",
+            startup: "eager",
+        },
+        {
+            name: "trigger_b",
+            url: "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger.cm",
+            startup: "eager",
         },
     ],
+    use: [
+        { runner: "elf" },
+    ],
+
     // Offer the ELF runner to children.
-    "offer": [
+    offer: [
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
+            runner: "elf",
+            from: "realm",
+            to: [
                 "#trigger_a",
                 "#trigger_b",
-            ]
+            ],
         },
     ],
-    // Two children, started together with the realm.
-    "children": [
+
+    // Expose my Trigger service so the integration test can invoke it.
+    expose: [
         {
-            "name": "trigger_a",
-            "url": "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger.cm",
-            "startup": "eager",
-        },
-        {
-            "name": "trigger_b",
-            "url": "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger.cm",
-            "startup": "eager",
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "self",
         },
     ],
 }

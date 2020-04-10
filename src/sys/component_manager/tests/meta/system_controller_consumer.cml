@@ -1,19 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 {
-    "program": {
-        "binary": "bin/system_controller_client",
+    program: {
+        binary: "bin/system_controller_client",
     },
-
-    "use": [
-        { "runner": "elf" },
+    use: [
+        { runner: "elf" },
         {
-            "protocol": [
-                "/svc/fuchsia.sys2.SystemController",
+            protocol: [
                 "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.sys2.SystemController",
             ],
         },
-    ]
+    ],
 }

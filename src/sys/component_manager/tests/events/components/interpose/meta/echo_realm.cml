@@ -1,33 +1,34 @@
 // Example realm that provisions an Echo client and service and eagerly runs the client.
 {
-    // Route Echo service from server to client.
-    "offer": [
-        // Offer the ELF runner to children.
-        {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#echo_server",
-                "#echo_looper",
-            ]
-        },
-        {
-            "protocol": "/svc/fidl.examples.routing.echo.Echo",
-            "from": "#echo_server",
-            "to": [ "#echo_looper" ]
-        },
-    ],
     // Two children: a server and client. "echo_client" has "eager" startup so it
     // will be started along with the realm.
-    "children": [
+    children: [
         {
-            "name": "echo_server",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_server.cm",
+            name: "echo_server",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_server.cm",
         },
         {
-            "name": "echo_looper",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/interpose_echo_looper.cm",
-            "startup": "eager",
+            name: "echo_looper",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/interpose_echo_looper.cm",
+            startup: "eager",
+        },
+    ],
+
+    // Route Echo service from server to client.
+    offer: [
+        // Offer the ELF runner to children.
+        {
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#echo_looper",
+                "#echo_server",
+            ],
+        },
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+            to: [ "#echo_looper" ],
         },
     ],
 }

@@ -1,32 +1,28 @@
 // Realm for integration test that creates and binds to component instances in a collection.
 {
-    "program": {
-        "binary": "bin/collection_realm",
+    program: {
+        binary: "bin/collection_realm",
     },
-    "use": [
-        { "runner": "elf" },
+    collections: [
         {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-        },
-        {
-            "protocol": "/svc/fuchsia.sys2.Realm",
-            "from": "framework",
+            name: "coll",
+            durability: "transient",
         },
     ],
-    "collections": [
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
         {
-            "name": "coll",
-            "durability": "transient",
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
         },
     ],
-    "offer": [
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#coll",
-            ]
+            runner: "elf",
+            from: "realm",
+            to: [ "#coll" ],
         },
-    ]
+    ],
 }

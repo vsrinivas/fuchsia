@@ -1,38 +1,39 @@
 {
-    "program": {
-        "binary": "bin/capability_ready_root"
+    program: {
+        binary: "bin/capability_ready_root",
     },
-    "use": [
-      { "runner": "elf" },
-      {
-        "protocol": [
-          "/svc/fidl.examples.routing.echo.Echo",
-          "/svc/fuchsia.sys2.BlockingEventSource",
-        ],
-        "from": "framework",
-      },
-      {
-        "event": "capability_ready",
-        "filter": {
-          "path": [ "/foo", "/bar/baz" ],
-        },
-        "from": "framework",
-      },
-    ],
-    "offer": [
+    children: [
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#child",
-            ]
+            name: "child",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm",
+            startup: "eager",
         },
     ],
-    "children": [
+    use: [
+        { runner: "elf" },
         {
-            "name": "child",
-            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm",
-            "startup": "eager",
+            protocol: [
+                "/svc/fidl.examples.routing.echo.Echo",
+                "/svc/fuchsia.sys2.BlockingEventSource",
+            ],
+            from: "framework",
+        },
+        {
+            from: "framework",
+            event: "capability_ready",
+            filter: {
+                path: [
+                    "/bar/baz",
+                    "/foo",
+                ],
+            },
+        },
+    ],
+    offer: [
+        {
+            runner: "elf",
+            from: "realm",
+            to: [ "#child" ],
         },
     ],
 }

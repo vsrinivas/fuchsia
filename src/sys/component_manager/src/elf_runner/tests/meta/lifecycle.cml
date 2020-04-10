@@ -1,52 +1,51 @@
 {
-    "program": {
-        "binary": "bin/rust_test_adapter",
-        "args": [ "/pkg/test/lifecycle_integration_test" ],
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: [ "/pkg/test/lifecycle_integration_test" ],
     },
-    "use": [
+    collections: [
         {
-            "runner": "elf",
+            name: "test-collection",
+            durability: "transient",
         },
+    ],
+    use: [
+        { runner: "elf" },
         {
-            "protocol": [
-                "/svc/fuchsia.sys2.Realm",
+            protocol: [
                 "/svc/fuchsia.sys2.BlockingEventSource",
+                "/svc/fuchsia.sys2.Realm",
             ],
-            "from": "framework",
+            from: "framework",
         },
         {
-            "protocol": [
-                "/svc/fuchsia.process.Launcher",
+            protocol: [
                 "/svc/fuchsia.cobalt.LoggerFactory",
                 "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
             ],
         },
-        { "event": "stopped", "from": "framework" }
-    ],
-    "expose": [
         {
-            "protocol": "/svc/fuchsia.test.Suite",
-            "from": "self",
+            from: "framework",
+            event: "stopped",
         },
     ],
-    "offer": [
+    offer: [
         {
-            "runner": "elf",
-            "from": "realm",
+            runner: "elf",
+            from: "realm",
             to: [ "#test-collection" ],
         },
         {
-            "protocol": [
-                "/svc/fuchsia.logger.LogSink",
-            ],
-            "from": "self",
-            "to": [ "#test-collection" ],
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            from: "self",
+            to: [ "#test-collection" ],
         },
     ],
-    "collections": [
+    expose: [
         {
-            "name": "test-collection",
-            "durability": "transient",
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
         },
     ],
 }
