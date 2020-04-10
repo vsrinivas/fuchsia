@@ -16,6 +16,7 @@ executable("vkext") {
     "../vkreadback:vkreadback_src",
     "//src/graphics/lib/magma/src/magma_util/platform:logger_impl",
     "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
+    "//src/graphics/tests/common",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",
