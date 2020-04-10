@@ -4,7 +4,7 @@
 
 use {
     fuchsia_async as fasync,
-    fuchsia_component::client::create_scoped_dynamic_instance,
+    fuchsia_component::client::ScopedInstance,
     fuchsia_syslog::{self as fxlog},
     test_utils_lib::events::{Destroyed, Event, EventMatcher, EventSource, Ordering, Stopped},
 };
@@ -23,7 +23,7 @@ async fn test_stop_timeouts() {
     // What is going on here? A scoped dynamic instance is created and then
     // dropped. When a the instance is dropped it stops the instance.
     let child_name = {
-        create_scoped_dynamic_instance(
+        ScopedInstance::new(
             collection_name.clone(),
             String::from(concat!(
                 "fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test",

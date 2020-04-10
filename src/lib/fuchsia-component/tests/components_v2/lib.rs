@@ -2,14 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Error, fuchsia_async as fasync, test_utils_lib::test_utils};
-
-// TODO: Once (blocking) events are available, this test can become a pure CFv2 test.
+use {
+    anyhow::Error,
+    fuchsia_async as fasync, fuchsia_syslog as syslog,
+    log::*,
+    test_utils_lib::{
+        events::{EventMatcher, Ordering, Stopped},
+        test_utils::BlackBoxTest,
+    },
+};
 
 #[fasync::run_singlethreaded(test)]
-async fn test() -> Result<(), Error> {
-    test_utils::launch_component_and_expect_output(
-        "fuchsia-pkg://fuchsia.com/fuchsia-component-tests#meta/realm.cm",
-        "Done\n".to_string(),
-    ).await
+async fn scoped_instances() -> Result<(), Error> {
+    syslog::init_with_tags(&["fuchsia_component_v2_test"]).expect("could not initialize logging");
+    let test =
+        BlackBoxTest::default("fuchsia-pkg://fuchsia.com/fuchsia-component-tests#meta/realm.cm")
+            .await?;
+
+    let event_source = test.connect_to_event_source().await?;
+    let event =
+        EventMatcher::new().expect_type::<Stopped>().expect_moniker("./coll:auto-*".to_string());
+    let expected_events: Vec<_> = (0..3).map(|_| event.clone()).collect();
+    let expectation = event_source.expect_events(Ordering::Unordered, expected_events).await?;
+
+    event_source.start_component_tree().await?;
+    info!("Waiting for scoped instances to be destroyed");
+    expectation.await?;
+    Ok(())
 }

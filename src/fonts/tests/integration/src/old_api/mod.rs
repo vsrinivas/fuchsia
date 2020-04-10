@@ -6,7 +6,7 @@ use {
     crate::{FONTS_MEDIUM_CM, FONTS_SMALL_CM},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_fonts as fonts, fuchsia_async as fasync,
-    fuchsia_component::client::{create_scoped_dynamic_instance, ScopedInstance},
+    fuchsia_component::client::ScopedInstance,
     fuchsia_zircon as zx,
     fuchsia_zircon::AsHandleRef,
 };
@@ -74,9 +74,8 @@ async fn get_font_info_basic(
 // TODO: Instead of configuring fonts through a different manifest and command-line arguments,
 // offer a service or directory with the right fonts to the new component instance. This will
 // require support to dynamically offer a capability to a component.
-async fn start_provider(fonts_cm: &str) -> Result<(ScopedInstance, fonts::ProviderProxy), Error>
-{
-    let app = create_scoped_dynamic_instance("coll".to_string(), fonts_cm.to_string())
+async fn start_provider(fonts_cm: &str) -> Result<(ScopedInstance, fonts::ProviderProxy), Error> {
+    let app = ScopedInstance::new("coll".to_string(), fonts_cm.to_string())
         .await
         .context("Failed to create dynamic component")?;
     let font_provider = app

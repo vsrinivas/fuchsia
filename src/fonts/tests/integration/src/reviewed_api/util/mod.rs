@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 pub use {
-    crate::{FONTS_ALIASED_CM},
+    crate::FONTS_ALIASED_CM,
     anyhow::{Context as _, Error},
     fidl_fuchsia_fonts as fonts,
     fidl_fuchsia_fonts_ext::DecodableExt,
     fidl_fuchsia_intl as intl, fuchsia_async as fasync,
-    fuchsia_component::client::{create_scoped_dynamic_instance, ScopedInstance},
+    fuchsia_component::client::ScopedInstance,
     fuchsia_zircon as zx,
     fuchsia_zircon::AsHandleRef,
 };
@@ -33,7 +33,7 @@ macro_rules! assert_buf_eq {
 pub async fn start_provider(
     fonts_cm: &str,
 ) -> Result<(ScopedInstance, fonts::ProviderProxy), Error> {
-    let app = create_scoped_dynamic_instance("coll".to_string(), fonts_cm.to_string())
+    let app = ScopedInstance::new("coll".to_string(), fonts_cm.to_string())
         .await
         .context("Failed to create dynamic component")?;
     let font_provider = app

@@ -9,7 +9,7 @@ pub use {
     fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
     fidl_fuchsia_intl::LocaleId,
     fuchsia_async as fasync,
-    fuchsia_component::client::{create_scoped_dynamic_instance, ScopedInstance},
+    fuchsia_component::client::ScopedInstance,
     lazy_static::lazy_static,
 };
 
@@ -19,7 +19,7 @@ pub use {
 pub async fn start_provider(
     fonts_cm: &str,
 ) -> Result<(ScopedInstance, fonts_exp::ProviderProxy), Error> {
-    let app = create_scoped_dynamic_instance("coll".to_string(), fonts_cm.to_string())
+    let app = ScopedInstance::new("coll".to_string(), fonts_cm.to_string())
         .await
         .context("Failed to create dynamic component")?;
     let font_provider = app

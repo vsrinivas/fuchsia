@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::{connect_to_service, create_scoped_dynamic_instance},
+    fuchsia_component::client::{connect_to_service, ScopedInstance},
     test_utils_lib::events::{Destroyed, Event, EventSource, Started},
 };
 
@@ -19,8 +19,7 @@ async fn main() -> Result<(), Error> {
     let url =
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm".to_string();
     for _ in 1..=3 {
-        let scoped_instance =
-            create_scoped_dynamic_instance("coll".to_string(), url.clone()).await?;
+        let scoped_instance = ScopedInstance::new("coll".to_string(), url.clone()).await?;
         instances.push(scoped_instance);
     }
 
