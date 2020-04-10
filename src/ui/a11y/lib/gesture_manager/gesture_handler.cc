@@ -6,6 +6,7 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/any_recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/directional_swipe_recognizers.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
 
@@ -113,6 +114,40 @@ bool GestureHandler::BindOneFingerDragAction(OnGestureCallback on_start,
                   {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
       } /* drag completion callback */);
   add_recognizer_callback_(gesture_recognizers_[kOneFingerDrag].get());
+
+  return true;
+}
+
+bool GestureHandler::BindUpSwipeAction(OnGestureCallback callback) {
+  if (gesture_recognizers_.find(kUpSwipe) != gesture_recognizers_.end()) {
+    FX_LOGS(ERROR) << "Action already exists for Up Swipe gesture.";
+    return false;
+  }
+
+  gesture_handlers_[kUpSwipe].on_complete = std::move(callback);
+  gesture_recognizers_[kUpSwipe] =
+      std::make_unique<UpSwipeGestureRecognizer>([this](GestureContext context) {
+        OnGesture(kUpSwipe, GestureEvent::kComplete,
+                  {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
+      });
+  add_recognizer_callback_(gesture_recognizers_[kUpSwipe].get());
+
+  return true;
+}
+
+bool GestureHandler::BindDownSwipeAction(OnGestureCallback callback) {
+  if (gesture_recognizers_.find(kDownSwipe) != gesture_recognizers_.end()) {
+    FX_LOGS(ERROR) << "Action already exists for Down Swipe gesture.";
+    return false;
+  }
+
+  gesture_handlers_[kDownSwipe].on_complete = std::move(callback);
+  gesture_recognizers_[kDownSwipe] =
+      std::make_unique<DownSwipeGestureRecognizer>([this](GestureContext context) {
+        OnGesture(kDownSwipe, GestureEvent::kComplete,
+                  {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
+      });
+  add_recognizer_callback_(gesture_recognizers_[kDownSwipe].get());
 
   return true;
 }

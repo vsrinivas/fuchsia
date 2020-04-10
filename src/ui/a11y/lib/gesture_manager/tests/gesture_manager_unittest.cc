@@ -12,8 +12,9 @@
 #include <vector>
 
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
+#include "src/ui/a11y/lib/testing/input.h"
 
-namespace a11y {
+namespace accessibility_test {
 namespace {
 
 constexpr uint32_t kDefaultKoid = 100;
@@ -29,15 +30,53 @@ class GestureManagerTest : public gtest::TestLoopFixture {
  public:
   GestureManagerTest() { SetUp(); }
   void SetUp() override;
+  ~GestureManagerTest() override = default;
 
-  GestureManager gesture_manager_;
-  GestureHandler* gesture_handler_;
+  a11y::GestureManager gesture_manager_;
+  a11y::GestureHandler* gesture_handler_;
   fuchsia::ui::input::accessibility::PointerEventListenerPtr listener_;
+  bool up_swipe_detected_ = false;
+  bool down_swipe_detected_ = false;
+  bool single_tap_detected_ = false;
+  bool double_tap_detected_ = false;
+  zx_koid_t actual_viewref_koid_ = 0;
+  fuchsia::math::PointF actual_point_ = {.x = 0, .y = 0};
+  uint32_t actual_device_id_ = 0;
+  uint32_t actual_pointer_id_ = 1000;
 };
 
 void GestureManagerTest::SetUp() {
   listener_.Bind(gesture_manager_.binding().NewBinding());
   gesture_handler_ = gesture_manager_.gesture_handler();
+
+  auto up_swipe_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    up_swipe_detected_ = true;
+  };
+
+  auto down_swipe_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    down_swipe_detected_ = true;
+  };
+
+  auto single_tap_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    single_tap_detected_ = true;
+  };
+  auto double_tap_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    double_tap_detected_ = true;
+  };
+
+  // Bind Gestures - Gesture with higher priority should be added first.
+  gesture_handler_->BindUpSwipeAction(std::move(up_swipe_callback));
+  gesture_handler_->BindDownSwipeAction(std::move(down_swipe_callback));
+  gesture_handler_->BindOneFingerDoubleTapAction(std::move(double_tap_callback));
+  gesture_handler_->BindOneFingerSingleTapAction(std::move(single_tap_callback));
 }
 
 // Returns a default Accessibility Pointer Event.
@@ -81,90 +120,55 @@ void ExecuteOneFingerTapAction(
   }
 }
 
+void SendPointerEvents(fuchsia::ui::input::accessibility::PointerEventListenerPtr* listener,
+                       const std::vector<PointerParams>& events) {
+  for (const auto& event : events) {
+    auto pointer_event = ToPointerEvent(event, 0 /*event time (unused)*/);
+    pointer_event.set_device_id(kDefaultDeviceId);
+    pointer_event.set_pointer_id(kDefaultPointerId);
+    pointer_event.set_viewref_koid(kDefaultKoid);
+    pointer_event.set_local_point(kLocalPoint);
+    (*listener)->OnEvent(std::move(pointer_event));
+  }
+}  // namespace
+
 TEST_F(GestureManagerTest, CallsActionOnSingleTap) {
-  // Registers the callback (in a real use case, an Screen Reader action for example), that will be
-  // invoked once a gesture is detected.
-  zx_koid_t actual_viewref_koid = 0;
-  fuchsia::math::PointF actual_point = {.x = 0, .y = 0};
-  bool single_tap_detected = false;
-  bool double_tap_detected = false;
-  auto single_tap_callback = [&actual_viewref_koid, &actual_point, &single_tap_detected](
-                                 zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid = viewref_koid;
-    actual_point = point;
-    single_tap_detected = true;
-  };
-  auto double_tap_callback = [&actual_viewref_koid, &actual_point, &double_tap_detected](
-                                 zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid = viewref_koid;
-    actual_point = point;
-    double_tap_detected = true;
-  };
-
-  // Bind Gestures - Gesture with higher priority should be added first.
-  gesture_handler_->BindOneFingerDoubleTapAction(std::move(double_tap_callback));
-  gesture_handler_->BindOneFingerSingleTapAction(std::move(single_tap_callback));
-
-  uint32_t actual_device_id = 0, actual_pointer_id = 1000;
   fuchsia::ui::input::accessibility::EventHandling actual_handled =
       fuchsia::ui::input::accessibility::EventHandling::REJECTED;
 
-  auto listener_callback = [&actual_device_id, &actual_pointer_id, &actual_handled](
+  auto listener_callback = [this, &actual_handled](
                                uint32_t device_id, uint32_t pointer_id,
                                fuchsia::ui::input::accessibility::EventHandling handled) {
-    actual_device_id = device_id;
-    actual_pointer_id = pointer_id;
+    actual_device_id_ = device_id;
+    actual_pointer_id_ = pointer_id;
     actual_handled = handled;
   };
   listener_.events().OnStreamHandled = std::move(listener_callback);
   ExecuteOneFingerTapAction(&listener_);
   RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
 
-  EXPECT_EQ(actual_viewref_koid, kDefaultKoid);
-  EXPECT_EQ(actual_point.x, kLocalPoint.x);
-  EXPECT_EQ(actual_point.y, kLocalPoint.y);
+  EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
+  EXPECT_EQ(actual_point_.x, kLocalPoint.x);
+  EXPECT_EQ(actual_point_.y, kLocalPoint.y);
 
-  EXPECT_EQ(actual_device_id, kDefaultDeviceId);
-  EXPECT_EQ(actual_pointer_id, kDefaultPointerId);
+  EXPECT_EQ(actual_device_id_, kDefaultDeviceId);
+  EXPECT_EQ(actual_pointer_id_, kDefaultPointerId);
   EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
-  EXPECT_TRUE(single_tap_detected);
-  EXPECT_FALSE(double_tap_detected);
+  EXPECT_TRUE(single_tap_detected_);
+  EXPECT_FALSE(double_tap_detected_);
+  EXPECT_FALSE(up_swipe_detected_);
+  EXPECT_FALSE(down_swipe_detected_);
 }
 
 TEST_F(GestureManagerTest, CallsActionOnDoubleTap) {
-  // Registers the callback (in a real use case, an Screen Reader action for example), that will be
-  // invoked once a gesture is detected.
-  auto* gesture_handler = gesture_manager_.gesture_handler();
-  zx_koid_t actual_viewref_koid = 0;
-  fuchsia::math::PointF actual_point = {.x = 0, .y = 0};
-  bool single_tap_detected = false;
-  bool double_tap_detected = false;
-  auto single_tap_callback = [&actual_viewref_koid, &actual_point, &single_tap_detected](
-                                 zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid = viewref_koid;
-    actual_point = point;
-    single_tap_detected = true;
-  };
-  auto double_tap_callback = [&actual_viewref_koid, &actual_point, &double_tap_detected](
-                                 zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid = viewref_koid;
-    actual_point = point;
-    double_tap_detected = true;
-  };
-
-  // Bind Gestures - Gesture with higher priority should be added first.
-  gesture_handler->BindOneFingerDoubleTapAction(std::move(double_tap_callback));
-  gesture_handler->BindOneFingerSingleTapAction(std::move(single_tap_callback));
-
-  uint32_t actual_device_id = 0, actual_pointer_id = 1000;
   fuchsia::ui::input::accessibility::EventHandling actual_handled =
       fuchsia::ui::input::accessibility::EventHandling::REJECTED;
 
-  auto listener_callback = [&actual_device_id, &actual_pointer_id, &actual_handled](
+  auto listener_callback = [this, &actual_handled](
                                uint32_t device_id, uint32_t pointer_id,
                                fuchsia::ui::input::accessibility::EventHandling handled) {
-    actual_device_id = device_id;
-    actual_pointer_id = pointer_id;
+    actual_device_id_ = device_id;
+    actual_pointer_id_ = pointer_id;
     actual_handled = handled;
   };
   listener_.events().OnStreamHandled = std::move(listener_callback);
@@ -173,51 +177,99 @@ TEST_F(GestureManagerTest, CallsActionOnDoubleTap) {
   ExecuteOneFingerTapAction(&listener_);
   RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
 
-  EXPECT_EQ(actual_viewref_koid, kDefaultKoid);
-  EXPECT_EQ(actual_point.x, kLocalPoint.x);
-  EXPECT_EQ(actual_point.y, kLocalPoint.y);
+  EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
+  EXPECT_EQ(actual_point_.x, kLocalPoint.x);
+  EXPECT_EQ(actual_point_.y, kLocalPoint.y);
 
-  EXPECT_EQ(actual_device_id, kDefaultDeviceId);
-  EXPECT_EQ(actual_pointer_id, kDefaultPointerId);
+  EXPECT_EQ(actual_device_id_, kDefaultDeviceId);
+  EXPECT_EQ(actual_pointer_id_, kDefaultPointerId);
   EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
-  EXPECT_TRUE(double_tap_detected);
-  EXPECT_FALSE(single_tap_detected);
+  EXPECT_TRUE(double_tap_detected_);
+  EXPECT_FALSE(single_tap_detected_);
+  EXPECT_FALSE(up_swipe_detected_);
+  EXPECT_FALSE(down_swipe_detected_);
 }
 
-TEST_F(GestureManagerTest, NoGestureDetected) {
-  // Registers the callback (in a real use case, an Screen Reader action for example), that will be
-  // invoked once a gesture is detected.
-  auto* gesture_handler = gesture_manager_.gesture_handler();
-  zx_koid_t actual_viewref_koid = 0;
-  fuchsia::math::PointF actual_point = {.x = 0, .y = 0};
-  bool single_tap_detected = false;
-  bool double_tap_detected = false;
-  auto single_tap_callback = [&actual_viewref_koid, &actual_point, &single_tap_detected](
-                                 zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid = viewref_koid;
-    actual_point = point;
-    single_tap_detected = true;
-  };
-  auto double_tap_callback = [&actual_viewref_koid, &actual_point, &double_tap_detected](
-                                 zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid = viewref_koid;
-    actual_point = point;
-    double_tap_detected = true;
-  };
-
-  // Bind Gestures - Gesture with higher priority should be added first.
-  gesture_handler->BindOneFingerDoubleTapAction(std::move(double_tap_callback));
-  gesture_handler->BindOneFingerSingleTapAction(std::move(single_tap_callback));
-
-  uint32_t actual_device_id = 0, actual_pointer_id = 1000;
+TEST_F(GestureManagerTest, CallsActionOnUpSwipe) {
   fuchsia::ui::input::accessibility::EventHandling actual_handled =
       fuchsia::ui::input::accessibility::EventHandling::REJECTED;
 
-  auto listener_callback = [&actual_device_id, &actual_pointer_id, &actual_handled](
+  auto listener_callback = [this, &actual_handled](
                                uint32_t device_id, uint32_t pointer_id,
                                fuchsia::ui::input::accessibility::EventHandling handled) {
-    actual_device_id = device_id;
-    actual_pointer_id = pointer_id;
+    actual_device_id_ = device_id;
+    actual_pointer_id_ = pointer_id;
+    actual_handled = handled;
+  };
+  listener_.events().OnStreamHandled = std::move(listener_callback);
+  // Perform Up Swipe.
+  glm::vec2 first_update_ndc_position = {0, -.7f};
+  SendPointerEvents(
+      &listener_, DownEvents(kDefaultPointerId, {}) + MoveEvents(1, {}, first_update_ndc_position));
+  SendPointerEvents(&listener_, MoveEvents(kDefaultPointerId, first_update_ndc_position,
+                                           first_update_ndc_position, 1) +
+                                    UpEvents(kDefaultPointerId, first_update_ndc_position));
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
+  EXPECT_EQ(actual_point_.x, kLocalPoint.x);
+  EXPECT_EQ(actual_point_.y, kLocalPoint.y);
+
+  EXPECT_EQ(actual_device_id_, kDefaultDeviceId);
+  EXPECT_EQ(actual_pointer_id_, kDefaultPointerId);
+  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  EXPECT_FALSE(single_tap_detected_);
+  EXPECT_FALSE(double_tap_detected_);
+  EXPECT_TRUE(up_swipe_detected_);
+  EXPECT_FALSE(down_swipe_detected_);
+}
+
+TEST_F(GestureManagerTest, CallsActionOnDownSwipe) {
+  fuchsia::ui::input::accessibility::EventHandling actual_handled =
+      fuchsia::ui::input::accessibility::EventHandling::REJECTED;
+
+  auto listener_callback = [this, &actual_handled](
+                               uint32_t device_id, uint32_t pointer_id,
+                               fuchsia::ui::input::accessibility::EventHandling handled) {
+    actual_device_id_ = device_id;
+    actual_pointer_id_ = pointer_id;
+    actual_handled = handled;
+  };
+  listener_.events().OnStreamHandled = std::move(listener_callback);
+
+  glm::vec2 first_update_ndc_position = {0, -.7f};
+
+  // Perform Down Swipe.
+  SendPointerEvents(
+      &listener_, DownEvents(kDefaultPointerId, {}) + MoveEvents(1, {}, first_update_ndc_position));
+  SendPointerEvents(&listener_, MoveEvents(kDefaultPointerId, first_update_ndc_position,
+                                           first_update_ndc_position, 1) +
+                                    UpEvents(kDefaultPointerId, first_update_ndc_position));
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
+  EXPECT_EQ(actual_point_.x, kLocalPoint.x);
+  EXPECT_EQ(actual_point_.y, kLocalPoint.y);
+
+  EXPECT_EQ(actual_device_id_, kDefaultDeviceId);
+  EXPECT_EQ(actual_pointer_id_, kDefaultPointerId);
+  EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
+  EXPECT_FALSE(single_tap_detected_);
+  EXPECT_FALSE(double_tap_detected_);
+  EXPECT_TRUE(up_swipe_detected_);
+  EXPECT_FALSE(down_swipe_detected_);
+}
+
+TEST_F(GestureManagerTest, NoGestureDetected) {
+  fuchsia::ui::input::accessibility::EventHandling actual_handled =
+      fuchsia::ui::input::accessibility::EventHandling::REJECTED;
+
+  auto listener_callback = [this, &actual_handled](
+                               uint32_t device_id, uint32_t pointer_id,
+                               fuchsia::ui::input::accessibility::EventHandling handled) {
+    actual_device_id_ = device_id;
+    actual_pointer_id_ = pointer_id;
     actual_handled = handled;
   };
   listener_.events().OnStreamHandled = std::move(listener_callback);
@@ -228,34 +280,21 @@ TEST_F(GestureManagerTest, NoGestureDetected) {
   RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
 
   EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::REJECTED);
-  EXPECT_FALSE(double_tap_detected);
-  EXPECT_FALSE(single_tap_detected);
+  EXPECT_FALSE(double_tap_detected_);
+  EXPECT_FALSE(single_tap_detected_);
+  EXPECT_FALSE(up_swipe_detected_);
+  EXPECT_FALSE(down_swipe_detected_);
 }
 
 TEST_F(GestureManagerTest, BindGestureMultipleTimes) {
-  // Registers the callback (in a real use case, an Screen Reader action for example), that will be
-  // invoked once a gesture is detected.
-  auto* gesture_handler = gesture_manager_.gesture_handler();
-  zx_koid_t actual_viewref_koid = 0;
-  fuchsia::math::PointF actual_point = {.x = 0, .y = 0};
-  bool double_tap_detected = false;
-  auto double_tap_callback_1 = [&actual_viewref_koid, &actual_point, &double_tap_detected](
-                                   zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid = viewref_koid;
-    actual_point = point;
-    double_tap_detected = true;
+  auto double_tap_callback = [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+    actual_viewref_koid_ = viewref_koid;
+    actual_point_ = point;
+    double_tap_detected_ = true;
   };
-  auto double_tap_callback_2 = [&actual_viewref_koid, &actual_point, &double_tap_detected](
-                                   zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-    actual_viewref_koid = viewref_koid;
-    actual_point = point;
-    double_tap_detected = true;
-  };
-
-  EXPECT_TRUE(gesture_handler->BindOneFingerDoubleTapAction(std::move(double_tap_callback_1)));
   // Calling Bind again should fail since the gesture is already binded.
-  EXPECT_FALSE(gesture_handler->BindOneFingerDoubleTapAction(std::move(double_tap_callback_2)));
+  EXPECT_FALSE(gesture_handler_->BindOneFingerDoubleTapAction(std::move(double_tap_callback)));
 }
 
 }  // namespace
-}  // namespace a11y
+}  // namespace accessibility_test

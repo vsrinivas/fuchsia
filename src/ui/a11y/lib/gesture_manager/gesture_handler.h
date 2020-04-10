@@ -26,7 +26,14 @@ class GestureHandler {
   using AddRecognizerToArenaCallback = fit::function<void(GestureRecognizer*)>;
 
   // The high-level gestures identified by this class.
-  enum GestureType { kUnknown, kOneFingerSingleTap, kOneFingerDoubleTap, kOneFingerDrag };
+  enum GestureType {
+    kUnknown,
+    kOneFingerSingleTap,
+    kOneFingerDoubleTap,
+    kOneFingerDrag,
+    kUpSwipe,
+    kDownSwipe,
+  };
 
   // Some gestures need additional information about what was touched and where it was touched on
   // the screen. Callers of OnGesture() may provide this information.
@@ -57,6 +64,12 @@ class GestureHandler {
   // They are called when the drag starts, updates and completes, respectively.
   bool BindOneFingerDragAction(OnGestureCallback on_start, OnGestureCallback on_update,
                                OnGestureCallback on_complete);
+
+  // Binds the action defined in |callback| with the gesture |kUpSwipe|.
+  bool BindUpSwipeAction(OnGestureCallback callback);
+
+  // Binds the action defined in |callback| with the gesture |kDownSwipe|.
+  bool BindDownSwipeAction(OnGestureCallback callback);
 
   // Binds a recognizer that consumes everything.
   void ConsumeAll();
