@@ -30,7 +30,6 @@ driver_module("sdmmc") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/dev-operation",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/pretty",
@@ -40,6 +39,7 @@ driver_module("sdmmc") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/dev-operation",
   ]
 }
 
@@ -63,7 +63,6 @@ test("sdmmc-test") {
     "//sdk/fidl/fuchsia.hardware.sdio:llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/dev-operation",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/pretty",
@@ -74,6 +73,7 @@ test("sdmmc-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/dev-operation",
     "//zircon/system/dev/lib/fake_ddk",
   ]
 }

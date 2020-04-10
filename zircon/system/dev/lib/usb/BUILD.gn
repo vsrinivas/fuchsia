@@ -32,8 +32,8 @@ zx_library("usb") {
     "//zircon/public/lib/ddk",
 
     # <usb/request-cpp.h> has  #include <lib/operation/operation.h>.
-    "//zircon/public/lib/dev-operation",
     "//zircon/public/lib/fit",
+    "//zircon/system/dev/lib/dev-operation",
   ]
   deps = [
     "//zircon/public/lib/ddk",
