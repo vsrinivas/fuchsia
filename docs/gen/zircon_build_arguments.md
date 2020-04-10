@@ -3,17 +3,12 @@
 ## All builds
 
 ### asan_default_options
-Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
-options (before the `ASAN_OPTIONS` environment variable is read at
-runtime).  This can be set as a build argument to affect most "asan"
-variants in $variants (which see), or overridden in $toolchain_args in
-one of those variants.  Note that setting this nonempty may conflict
-with programs that define their own `__asan_default_options` C
-function.
+TODO(45047): Temporary until all lsan bugs are filed and marked with
+deps += [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `"detect_leaks=0"`
 
-From //public/gn/config/instrumentation/BUILD.gn:15
+From //public/gn/config/instrumentation/BUILD.gn:19
 
 ### assert_level
 Controls which asserts are enabled.
