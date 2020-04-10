@@ -16,7 +16,12 @@ _environment_service_account =
 #   release_builder
 #   - Required: Builder from which build artifacts will be downloaded. This has
 #     the the form of `project/bucket/builder id`, like
-#     `fuchsia/ci/fuchsia-x64-release`.
+#     `fuchsia/ci/fuchsia-x64-release`. Conflicts with `release_build_id`.
+#   - Type: string
+#
+#   release_build_id
+#   - Required: Build ID from which build artifacts will be downloaded. This has
+#     the the form of `1234...`. Conflicts with `release_builder`.
 #   - Type: string
 #
 #   ota_to_recovery
@@ -51,8 +56,11 @@ _environment_service_account =
 #   - Type: integer string
 template("system_test_upgrade_suite") {
   assert(is_linux || is_mac, "system_tests are for linux/mac only")
-  assert(defined(invoker.release_builder),
-         "release_builder must be defined for $target_name")
+  assert(defined(invoker.release_builder) || defined(invoker.release_build_id),
+         "release_builder or release_build_id must be defined for $target_name")
+  assert(
+      !(defined(invoker.release_builder) && defined(invoker.release_build_id)),
+      "release_builder and release_build_id are mutually exclusive for $target_name")
   assert(defined(invoker.environments),
          "environments must be defined for $target_name")
 
@@ -69,11 +77,21 @@ template("system_test_upgrade_suite") {
     _deps += [ ":${_spec_target_name}" ]
 
     _command = []
-    _command = [
-      rebase_path(_test_binary, root_build_dir),
-      "-downgrade-builder-name",
-      invoker.release_builder,
-    ]
+    _command = [ rebase_path(_test_binary, root_build_dir) ]
+
+    if (defined(invoker.release_builder)) {
+      _command += [
+        "-downgrade-builder-name",
+        invoker.release_builder,
+      ]
+    }
+
+    if (defined(invoker.release_build_id)) {
+      _command += [
+        "-downgrade-build-id",
+        invoker.release_build_id,
+      ]
+    }
 
     _service_account = _environment_service_account
     if (defined(invoker.service_account)) {
