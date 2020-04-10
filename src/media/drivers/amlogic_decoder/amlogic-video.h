@@ -184,6 +184,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void InitializeInterrupts();
   void SwapOutCurrentInstance() __TA_REQUIRES(video_decoder_lock_);
   void SwapInCurrentInstance() __TA_REQUIRES(video_decoder_lock_);
+  // Signals the current decoder that there's an error and tells it to power off.
+  void PowerOffForError() __TA_REQUIRES(video_decoder_lock_);
 
   zx_device_t* parent_ = nullptr;
   pdev_protocol_t pdev_{};

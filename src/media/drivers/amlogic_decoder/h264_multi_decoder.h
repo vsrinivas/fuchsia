@@ -105,6 +105,8 @@ class H264MultiDecoder : public VideoDecoder {
   void PumpDecoder();
   void InitializeRefPics(const std::vector<std::shared_ptr<media::H264Picture>>& ref_pic_list,
                          uint32_t reg_offset);
+  // Try to pump the decoder, rescheduling it if it isn't currently scheduled in.
+  void PumpOrReschedule();
 
   bool fatal_error_ = false;
   std::unique_ptr<media::H264Decoder> media_decoder_;

@@ -81,7 +81,8 @@ class TestH264Multi {
           }
         }
         if (!is_bear || (frame_count < 4)) {
-          // Later frames of bear.h264 seem to gradually be getting corrupted, so don't check them for now.
+          // Later frames of bear.h264 seem to gradually be getting corrupted, so don't check them
+          // for now.
           // TODO(fxb/13483): Test later frames once they're fixed.
           uint8_t md[SHA256_DIGEST_LENGTH];
           HashFrame(frame.get(), md);
@@ -152,6 +153,123 @@ class TestH264Multi {
       EXPECT_EQ(ZX_OK, video->video_decoder()->InitializeHardware());
       EXPECT_EQ(virt_base_1, decoder->SecondaryFirmwareVirtualAddressForTesting());
     }
+    video.reset();
+  }
+
+  static void DecodeMultiInstance() {
+    fxl::LogSettings settings;
+    settings.min_log_level = -10;
+    fxl::SetLogSettings(settings);
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
+    std::vector<std::unique_ptr<TestFrameAllocator>> clients;
+    std::vector<H264MultiDecoder*> decoder_ptrs;
+
+    for (uint32_t i = 0; i < 2; i++) {
+      auto client = std::make_unique<TestFrameAllocator>(video.get());
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      auto decoder = std::make_unique<H264MultiDecoder>(video.get(), client.get());
+      decoder_ptrs.push_back(decoder.get());
+      client->set_decoder(decoder.get());
+      clients.push_back(std::move(client));
+      EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
+      auto decoder_instance =
+          std::make_unique<DecoderInstance>(std::move(decoder), video->vdec1_core());
+      StreamBuffer* buffer = decoder_instance->stream_buffer();
+      video->AddNewDecoderInstance(std::move(decoder_instance));
+      EXPECT_EQ(ZX_OK, video->AllocateStreamBuffer(buffer, PAGE_SIZE * 1024, /*use_parser=*/false,
+                                                   /*is_secure=*/false));
+    }
+
+    struct ClientData {
+      uint32_t frame_count{};
+      uint32_t expected_frame_count{};
+      std::promise<void> wait_valid;
+      uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH];
+    };
+
+    uint32_t last_client_index = UINT32_MAX;
+    uint32_t context_switch_count = 0;
+
+    std::vector<ClientData> client_data(2);
+    for (uint32_t i = 0; i < 2; i++) {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      clients[i]->SetFrameReadyNotifier([&video, client_ptr = clients[i].get(), i,
+                                         client_data_ptr = &client_data[i], &last_client_index,
+                                         &context_switch_count](std::shared_ptr<VideoFrame> frame) {
+        client_data_ptr->frame_count++;
+        DLOG("Got frame %d client %d\n", client_data_ptr->frame_count, i);
+        EXPECT_EQ(320u, frame->coded_width);
+        EXPECT_EQ(320u, frame->display_width);
+#if DUMP_VIDEO_TO_FILE
+        DumpVideoFrameToFile(frame.get(), filename);
+#endif
+
+        if (i == 0) {
+          // Later frames of bear.h264 seem to gradually be getting corrupted, so don't check them
+          // for now.
+          // TODO(fxb/13483): Test later frames once they're fixed.
+          uint8_t md[SHA256_DIGEST_LENGTH];
+          HashFrame(frame.get(), md);
+          EXPECT_EQ(0, memcmp(md, client_data_ptr->input_hashes[client_data_ptr->frame_count - 1],
+                              sizeof(md)))
+              << "Incorrect hash for frame " << client_data_ptr->frame_count << ": "
+              << StringifyHash(md);
+        }
+        video->AssertVideoDecoderLockHeld();
+        video->video_decoder()->ReturnFrame(frame);
+
+        if (last_client_index != i) {
+          context_switch_count++;
+        }
+        last_client_index = i;
+
+        if (client_data_ptr->frame_count == client_data_ptr->expected_frame_count) {
+          client_data_ptr->wait_valid.set_value();
+        }
+      });
+    }
+
+    // Put test-25fps before bear.h264 because it's much longer and has a larger DPB so it takes
+    // longer to start outputting frames. This way there will be more alternation between them if
+    // everything works properly.
+    std::vector<const char*> input_files{"video_test_data/test-25fps.h264",
+                                         "video_test_data/bear.h264"};
+    client_data[0].expected_frame_count = 240;
+    client_data[0].input_hashes = test_25fps_h264_hashes;
+    client_data[1].expected_frame_count = 26;
+    client_data[1].input_hashes = bear_h264_hashes;
+    for (uint32_t i = 0; i < input_files.size(); ++i) {
+      auto input_h264 = TestSupport::LoadFirmwareFile(input_files[i]);
+      ASSERT_NE(nullptr, input_h264);
+      auto nal_units = SplitNalUnits(input_h264->ptr, input_h264->size);
+      for (auto& nal_unit : nal_units) {
+        std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+        decoder_ptrs[i]->ProcessNalUnit(std::move(nal_unit));
+      }
+    }
+
+    EXPECT_EQ(std::future_status::ready,
+              client_data[0].wait_valid.get_future().wait_for(std::chrono::seconds(10)));
+    EXPECT_EQ(std::future_status::ready,
+              client_data[1].wait_valid.get_future().wait_for(std::chrono::seconds(10)));
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      auto multi_decoder = static_cast<H264MultiDecoder*>(video->video_decoder());
+      multi_decoder->DumpStatus();
+    }
+
+    // A mostly-arbitrary number to ensure we don't just decode all of one video then all of
+    // another.
+    EXPECT_LE(5u, context_switch_count);
+
+    for (auto& decoder : decoder_ptrs) {
+      video->RemoveDecoder(decoder);
+    }
+    video.reset();
   }
 };
 
@@ -166,3 +284,5 @@ TEST(H264Multi, Decode25fps) {
 }
 
 TEST(H264Multi, InitializeTwice) { TestH264Multi::TestInitializeTwice(); }
+
+TEST(H264Multi, DecodeMultiInstance) { TestH264Multi::DecodeMultiInstance(); }

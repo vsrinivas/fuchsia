@@ -295,7 +295,7 @@ zx_status_t HevcDec::InitializeInputContext(InputContext* context, bool is_secur
   return ZX_OK;
 }
 
-void HevcDec::SaveInputContext(InputContext* context) {
+zx_status_t HevcDec::SaveInputContext(InputContext* context) {
   HevcStreamSwapAddr::Get()
       .FromValue(truncate_to_32(context->buffer->phys_base()))
       .WriteTo(mmio()->dosbus);
@@ -303,14 +303,17 @@ void HevcDec::SaveInputContext(InputContext* context) {
   bool finished = SpinWaitForRegister(std::chrono::milliseconds(100), [this]() {
     return !HevcStreamSwapCtrl::Get().ReadFrom(mmio()->dosbus).in_progress();
   });
-  // TODO: return error on failure.
-  ZX_ASSERT(finished);
+  if (!finished) {
+    DECODE_ERROR("Timed out in HevcDec::SaveInputContext");
+    return ZX_ERR_TIMED_OUT;
+  }
   HevcStreamSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
   context->processed_video = HevcShiftByteCount::Get().ReadFrom(mmio()->dosbus).reg_value();
+  return ZX_OK;
 }
 
-void HevcDec::RestoreInputContext(InputContext* context) {
+zx_status_t HevcDec::RestoreInputContext(InputContext* context) {
   // Stream fetching enabled needs to be set before the rest of the state is
   // restored, or else the parser's state becomes incorrect and decoding fails.
   HevcStreamControl::Get()
@@ -326,7 +329,10 @@ void HevcDec::RestoreInputContext(InputContext* context) {
   bool finished = SpinWaitForRegister(std::chrono::milliseconds(100), [this]() {
     return !HevcStreamSwapCtrl::Get().ReadFrom(mmio()->dosbus).in_progress();
   });
-  // TODO: return error on failure.
-  ZX_ASSERT(finished);
+  if (!finished) {
+    DECODE_ERROR("Timed out in HevcDec::RestoreInputContext");
+    return ZX_ERR_TIMED_OUT;
+  }
   HevcStreamSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
+  return ZX_OK;
 }

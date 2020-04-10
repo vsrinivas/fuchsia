@@ -42,7 +42,9 @@ zx_status_t Vdec1::LoadFirmware(const uint8_t* data, uint32_t size) {
   if (!WaitForRegister(std::chrono::milliseconds(100), [this] {
         return (ImemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value() & 0x8000) == 0;
       })) {
-    DECODE_ERROR("Failed to load microcode.");
+    DECODE_ERROR("Failed to load microcode, ImemDmaCtrl %d, ImemDmaAdr 0x%x",
+                 ImemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value(),
+                 ImemDmaAdr::Get().ReadFrom(mmio()->dosbus).reg_value());
 
     BarrierBeforeRelease();
     io_buffer_release(&firmware_buffer);
@@ -117,6 +119,12 @@ void Vdec1::PowerOn() {
   DmcReqCtrl::Get().ReadFrom(mmio()->dmc).set_vdec(true).WriteTo(mmio()->dmc);
 
   MdecPicDcCtrl::Get().ReadFrom(mmio()->dosbus).set_bit31(false).WriteTo(mmio()->dosbus);
+
+  // Reset all the hardware again. Doing it at this time doesn't match the linux driver, but instead
+  // matches the hardware documentation. If we don't do this, restoring the input context or loading
+  // the firmware can hang.
+  DosSwReset0::Get().FromValue(0xfffffffc).WriteTo(mmio()->dosbus);
+  DosSwReset0::Get().FromValue(0).WriteTo(mmio()->dosbus);
   powered_on_ = true;
 }
 
@@ -132,11 +140,7 @@ void Vdec1::PowerOff() {
     temp.WriteTo(mmio()->aobus);
   }
   DosMemPdVdec::Get().FromValue(~0u).WriteTo(mmio()->dosbus);
-  HhiVdecClkCntl::Get()
-      .ReadFrom(mmio()->hiubus)
-      .set_vdec_en(false)
-      .set_vdec_sel(3)
-      .WriteTo(mmio()->hiubus);
+  HhiVdecClkCntl::Get().ReadFrom(mmio()->hiubus).set_vdec_en(false).WriteTo(mmio()->hiubus);
 
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
@@ -152,7 +156,7 @@ void Vdec1::StartDecoding() {
     DosSwReset0::Get().ReadFrom(mmio()->dosbus);
   }
 
-  DosSwReset0::Get().FromValue((1 << 12) | (1 << 11)).WriteTo(mmio()->dosbus);
+  DosSwReset0::Get().FromValue(0).set_vdec_ccpu(1).set_vdec_mcpu(1).WriteTo(mmio()->dosbus);
   DosSwReset0::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
   // Delay to ensure previous writes have executed.
@@ -247,7 +251,7 @@ void Vdec1::InitializeStreamInput(bool use_parser, uint32_t buffer_address, uint
   VldMemVififoControl::Get().FromValue(0).WriteTo(mmio()->dosbus);
   VldMemVififoWrapCount::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
-  DosSwReset0::Get().FromValue(1 << 4).WriteTo(mmio()->dosbus);
+  DosSwReset0::Get().FromValue(0).set_vdec_vld_part(1).WriteTo(mmio()->dosbus);
   DosSwReset0::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
   Reset0Register::Get().ReadFrom(mmio()->reset);
@@ -322,7 +326,7 @@ zx_status_t Vdec1::InitializeInputContext(InputContext* context, bool is_secure)
   return ZX_OK;
 }
 
-void Vdec1::SaveInputContext(InputContext* context) {
+zx_status_t Vdec1::SaveInputContext(InputContext* context) {
   // No idea what this does.
   VldMemVififoControl::Get().FromValue(1 << 15).WriteTo(mmio()->dosbus);
   VldMemSwapAddr::Get()
@@ -332,13 +336,25 @@ void Vdec1::SaveInputContext(InputContext* context) {
   bool finished = SpinWaitForRegister(std::chrono::milliseconds(100), [this]() {
     return !VldMemSwapCtrl::Get().ReadFrom(mmio()->dosbus).in_progress();
   });
-  // TODO: return error on failure.
-  ZX_ASSERT(finished);
+  if (!finished) {
+    DECODE_ERROR("Timed out in VDec1::SaveInputContext");
+    return ZX_ERR_TIMED_OUT;
+  }
   VldMemSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
+  return ZX_OK;
 }
 
-void Vdec1::RestoreInputContext(InputContext* context) {
+zx_status_t Vdec1::RestoreInputContext(InputContext* context) {
   VldMemVififoControl::Get().FromValue(0).WriteTo(mmio()->dosbus);
+
+  // Reset the input hardware.
+  DosSwReset0::Get().FromValue(0).set_vdec_vld(1).set_vdec_vld_part(1).set_vdec_vififo(1).WriteTo(
+      mmio()->dosbus);
+  DosSwReset0::Get().FromValue(0).WriteTo(mmio()->dosbus);
+
+  // Dummy read to give time for the hardware to reset.
+  Reset0Register::Get().ReadFrom(mmio()->reset);
+  PowerCtlVld::Get().FromValue(1 << 4).WriteTo(mmio()->dosbus);
   VldMemSwapAddr::Get()
       .FromValue(truncate_to_32(context->buffer->phys_base()))
       .WriteTo(mmio()->dosbus);
@@ -346,12 +362,15 @@ void Vdec1::RestoreInputContext(InputContext* context) {
   bool finished = SpinWaitForRegister(std::chrono::milliseconds(100), [this]() {
     return !VldMemSwapCtrl::Get().ReadFrom(mmio()->dosbus).in_progress();
   });
-  // TODO: return error on failure.
-  ZX_ASSERT(finished);
+  if (!finished) {
+    DECODE_ERROR("Timed out in VDec1::RestoreInputContext");
+    return ZX_ERR_TIMED_OUT;
+  }
   VldMemSwapCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
   auto fifo_control =
       VldMemVififoControl::Get().FromValue(0).set_upper(0x11).set_fill_on_level(true);
   // Expect input to be in normal byte order.
   fifo_control.set_endianness(7);
   fifo_control.WriteTo(mmio()->dosbus);
+  return ZX_OK;
 }

@@ -351,6 +351,7 @@ void H264MultiDecoder::ResetHardware() {
 
 zx_status_t H264MultiDecoder::InitializeHardware() {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kSwappedOut);
+  ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   if (is_secure()) {
     DECODE_ERROR("is_secure() == true not yet supported by H264MultiDecoder");
     return ZX_ERR_NOT_SUPPORTED;
@@ -462,7 +463,7 @@ void H264MultiDecoder::StartFrameDecode() {
 
   // For now, just use the decode size from InitializeHardware.
   if (state_ == DecoderState::kInitialWaitingForInput) {
-  // TODO(fxb/13483): Use real value.
+    // TODO(fxb/13483): Use real value.
     constexpr uint32_t kBytesToDecode = 100000;
     ViffBitCnt::Get().FromValue(kBytesToDecode * 8).WriteTo(owner_->dosbus());
     owner_->core()->StartDecoding();
@@ -472,6 +473,8 @@ void H264MultiDecoder::StartFrameDecode() {
 }
 
 void H264MultiDecoder::ConfigureDpb() {
+  ZX_DEBUG_ASSERT(currently_decoding_);
+  ZX_DEBUG_ASSERT(!video_frames_.empty());
   seq_info2_ = AvScratch1::Get().ReadFrom(owner_->dosbus()).reg_value();
   for (auto& frame : video_frames_) {
     AncNCanvasAddr::Get(frame->index)
@@ -559,6 +562,7 @@ void H264MultiDecoder::InitializeRefPics(
 }
 
 void H264MultiDecoder::HandleSliceHeadDone() {
+  ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   // Setup reference frames and output buffers before decoding.
   HardwareRenderParams params;
   params.ReadFromLmem(&*lmem_);
@@ -717,10 +721,15 @@ void H264MultiDecoder::HandlePicDataDone() {
   owner_->core()->StopDecoding();
 
   currently_decoding_ = false;
-  PumpDecoder();
+
+  owner_->TryToReschedule();
+  if (state_ == DecoderState::kInitialWaitingForInput) {
+    PumpDecoder();
+  }
 }
 
 void H264MultiDecoder::HandleInterrupt() {
+  ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   // Clear interrupt
   VdecAssistMbox1ClrReg::Get().FromValue(1).WriteTo(owner_->dosbus());
   uint32_t decode_status = DpbStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value();
@@ -745,14 +754,24 @@ void H264MultiDecoder::HandleInterrupt() {
   }
 }
 
+void H264MultiDecoder::PumpOrReschedule() {
+  if (state_ == DecoderState::kSwappedOut) {
+    owner_->TryToReschedule();
+    // TryToReschedule will pump the decoder (using SwappedIn) once the decoder is finally
+    // rescheduled.
+  } else {
+    PumpDecoder();
+  }
+}
+
 void H264MultiDecoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
   DLOG("H264MultiDecoder::ReturnFrame %d", frame->index);
   video_frames_[frame->index]->in_use = false;
   waiting_for_surfaces_ = false;
-  PumpDecoder();
+  PumpOrReschedule();
 }
 
-void H264MultiDecoder::CallErrorHandler() { DLOG("Not implemented: %s\n", __func__); }
+void H264MultiDecoder::CallErrorHandler() { OnFatalError(); }
 
 void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t coded_width,
                                          uint32_t coded_height, uint32_t stride) {
@@ -827,7 +846,7 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
                            create_result.take_value()}));
   }
   waiting_for_surfaces_ = false;
-  PumpDecoder();
+  PumpOrReschedule();
 }
 
 void H264MultiDecoder::SubmitFrameMetadata(ReferenceFrame* reference_frame,
@@ -839,13 +858,19 @@ void H264MultiDecoder::SubmitFrameMetadata(ReferenceFrame* reference_frame,
   next_max_reference_size_ = sps->max_num_ref_frames + kReferenceBufMargin;
 }
 
-void H264MultiDecoder::SubmitSliceData(SliceData data) { slice_data_list_.push_back(data); }
+void H264MultiDecoder::SubmitSliceData(SliceData data) {
+  // Only queue up data in a list instead of starting the decode in hardware. We could try to submit
+  // it now, but that makes it more difficult to swap out if we only receive data for a partial
+  // frame from the client and would want to try to swap out between slices.
+  slice_data_list_.push_back(data);
+}
 
 void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame) {
   frames_to_output_.push_back(reference_frame->index);
 }
 
 void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length) {
+  ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   zx_status_t status = owner_->ProcessVideoNoParser(data, length);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to write video");
@@ -853,21 +878,31 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length) 
   }
 }
 bool H264MultiDecoder::CanBeSwappedIn() {
-  DLOG("Not implemented: %s\n", __func__);
-  return true;
+  if (fatal_error_)
+    return false;
+  if (waiting_for_surfaces_)
+    return false;
+  // If there aren't any free output frames the decoder will be swapped in, hit kRanOutOfSurfaces,
+  // then be swapped out (if necessary). Similarly, if there isn't enough data for a complete frame
+  // it will be swapped in, will put what data exists in the stream buffer, then hit
+  // kRanOutOfStreamData before trying to decode any of it.
+  // TODO(fxb/13483): Wait for all requirements before swapping in the hardware to avoid unnecessary
+  // changes.
+  return (decoder_buffer_list_.size() > 0) || current_decoder_buffer_;
 }
 
 bool H264MultiDecoder::CanBeSwappedOut() const {
-  DLOG("Not implemented: %s\n", __func__);
-  return false;
+  return state_ == DecoderState::kInitialWaitingForInput ||
+         state_ == DecoderState::kStoppedWaitingForInput;
 }
 
 void H264MultiDecoder::SetSwappedOut() {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kInitialWaitingForInput);
+  ZX_DEBUG_ASSERT(CanBeSwappedOut());
   state_ = DecoderState::kSwappedOut;
 }
 
-void H264MultiDecoder::SwappedIn() { DLOG("Not implemented: %s\n", __func__); }
+void H264MultiDecoder::SwappedIn() { PumpDecoder(); }
 
 void H264MultiDecoder::OnFatalError() {
   if (!fatal_error_) {
@@ -879,13 +914,13 @@ void H264MultiDecoder::OnFatalError() {
 void H264MultiDecoder::ProcessNalUnit(std::vector<uint8_t> data) {
   DLOG("H264MultiDecoder::ProcessNalUnit input data %p size %zu", data.data(), data.size());
   decoder_buffer_list_.push_back(std::make_unique<media::DecoderBuffer>(std::move(data)));
-  PumpDecoder();
+  PumpOrReschedule();
 }
 
 void H264MultiDecoder::PumpDecoder() {
-  if (waiting_for_surfaces_ || currently_decoding_)
-    return;
   while (true) {
+    if (waiting_for_surfaces_ || currently_decoding_ || (state_ == DecoderState::kSwappedOut))
+      return;
     auto res = media_decoder_->Decode();
     DLOG("H264MultiDecoder::PumpDecoder Got result of %d\n", static_cast<int>(res));
     if (res == media::AcceleratedVideoDecoder::kConfigChange) {
@@ -914,10 +949,15 @@ void H264MultiDecoder::PumpDecoder() {
                                 coded_height, stride, display_width_, display_height_, has_sar,
                                 sar_width, sar_height);
       video_frames_.clear();
+      // Decoding can continue until the decoder next tries to allocate a surface, which will fail
+      // because video_frames_ is empty.
     } else if (res == media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
       current_decoder_buffer_.reset();
-      if (decoder_buffer_list_.size() == 0)
+      if (decoder_buffer_list_.size() == 0) {
+        DLOG("Not decoding because decoder ran out of inputs, state %d", static_cast<int>(state_));
+        owner_->TryToReschedule();
         return;
+      }
       current_decoder_buffer_ = std::move(decoder_buffer_list_.front());
       decoder_buffer_list_.pop_front();
       media_decoder_->SetStream(0, *current_decoder_buffer_);
@@ -929,11 +969,14 @@ void H264MultiDecoder::PumpDecoder() {
         SubmitDataToHardware(current_decoder_buffer_->data(), current_decoder_buffer_->data_size());
     } else if (res == media::AcceleratedVideoDecoder::kRanOutOfSurfaces) {
       waiting_for_surfaces_ = true;
+      owner_->TryToReschedule();
       return;
     } else if (res == media::AcceleratedVideoDecoder::kDecodeError) {
-      client_->OnError();
+      OnFatalError();
+      owner_->TryToReschedule();
       return;
     } else if (res == media::AcceleratedVideoDecoder::kTryAgain) {
+      owner_->TryToReschedule();
       return;
     }
   }

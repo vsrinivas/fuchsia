@@ -35,8 +35,8 @@ class Vdec1 : public DecoderCore {
   uint32_t GetStreamInputOffset() override;
   uint32_t GetReadOffset() override;
   [[nodiscard]] zx_status_t InitializeInputContext(InputContext* context, bool is_secure) override;
-  void SaveInputContext(InputContext* context) override;
-  void RestoreInputContext(InputContext* context) override;
+  zx_status_t SaveInputContext(InputContext* context) override;
+  zx_status_t RestoreInputContext(InputContext* context) override;
 
  private:
   MmioRegisters* mmio() const { return owner_->mmio(); }

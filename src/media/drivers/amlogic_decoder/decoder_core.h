@@ -83,8 +83,12 @@ class DecoderCore {
   [[nodiscard]] virtual zx_status_t InitializeInputContext(InputContext* context, bool is_secure) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  virtual void SaveInputContext(InputContext* context) {}
-  virtual void RestoreInputContext(InputContext* context) {}
+  [[nodiscard]] virtual zx_status_t SaveInputContext(InputContext* context) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  [[nodiscard]] virtual zx_status_t RestoreInputContext(InputContext* context) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DECODER_CORE_H_

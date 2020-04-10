@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MACROS_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MACROS_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MACROS_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MACROS_H_
+
+#include <zircon/syscalls.h>
 
 #include <chrono>
 #include <thread>
@@ -65,4 +67,6 @@ __WARN_UNUSED_RESULT bool SpinWaitForRegister(DurationType timeout, T condition)
   return true;
 }
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MACROS_H_
+inline void DebugWrite(const char* log) { zx_debug_write(log, strlen(log)); }
+
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MACROS_H_

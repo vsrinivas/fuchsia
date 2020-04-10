@@ -499,6 +499,9 @@ DEFINE_REGISTER(HevcDcacDmaCtrl, DosRegisterIo, 0x3e12);
 
 DEFINE_REGISTER(AoRtiGenPwrSleep0, AoRegisterIo, 0x3a);
 DEFINE_REGISTER(AoRtiGenPwrIso0, AoRegisterIo, 0x3b);
+REGISTER_NAME(AoRtiGenPwrAck0, AoRegisterIo, 0x3c)
+  DEF_BIT(1, dos_vdec1);
+};
 
 REGISTER_NAME(HhiGclkMpeg0, HiuRegisterIo, 0x50)
   DEF_BIT(1, dos);

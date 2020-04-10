@@ -435,7 +435,10 @@ void AmlogicVideo::SwapOutCurrentInstance() {
   }
   video_decoder_->SetSwappedOut();
   if (current_instance_->input_context()) {
-    core_->SaveInputContext(current_instance_->input_context());
+    if (core_->SaveInputContext(current_instance_->input_context()) != ZX_OK) {
+      video_decoder_->CallErrorHandler();
+      // Continue trying to swap out.
+    }
   }
   core_->StopDecoding();
   core_->WaitForIdle();
@@ -479,6 +482,20 @@ void AmlogicVideo::TryToReschedule() {
   SwapInCurrentInstance();
 }
 
+void AmlogicVideo::PowerOffForError() {
+  ZX_DEBUG_ASSERT(core_);
+  core_->PowerOff();
+  core_ = nullptr;
+  swapped_out_instances_.push_back(std::move(current_instance_));
+  VideoDecoder* video_decoder = video_decoder_;
+  video_decoder_ = nullptr;
+  stream_buffer_ = nullptr;
+  video_decoder->CallErrorHandler();
+  // CallErrorHandler should have marked the decoder as having a fatal error
+  // so it will never be rescheduled.
+  TryToReschedule();
+}
+
 void AmlogicVideo::SwapInCurrentInstance() {
   TRACE_DURATION("media", "AmlogicVideo::SwapInCurrentInstance", "current_instance_",
                  current_instance_.get());
@@ -489,22 +506,6 @@ void AmlogicVideo::SwapInCurrentInstance() {
   DLOG("Swapping in %p", video_decoder_);
   stream_buffer_ = current_instance_->stream_buffer();
   core()->PowerOn();
-  zx_status_t status = video_decoder_->InitializeHardware();
-  if (status != ZX_OK) {
-    // Probably failed to load the right firmware.
-    DECODE_ERROR("Failed to initialize hardware: %d", status);
-    core_->PowerOff();
-    core_ = nullptr;
-    swapped_out_instances_.push_back(std::move(current_instance_));
-    VideoDecoder* video_decoder = video_decoder_;
-    video_decoder_ = nullptr;
-    stream_buffer_ = nullptr;
-    video_decoder->CallErrorHandler();
-    // CallErrorHandler should have marked the decoder as having a fatal error
-    // so it will never be rescheduled.
-    TryToReschedule();
-    return;
-  }
   if (!current_instance_->input_context()) {
     InitializeStreamInput(false);
     core_->InitializeDirectInput();
@@ -516,7 +517,20 @@ void AmlogicVideo::SwapInCurrentInstance() {
     core_->UpdateWritePointer(stream_buffer_->buffer().phys_base() + stream_buffer_->data_size() +
                               stream_buffer_->padding_size());
   } else {
-    core_->RestoreInputContext(current_instance_->input_context());
+    if (core_->RestoreInputContext(current_instance_->input_context()) != ZX_OK) {
+      PowerOffForError();
+      return;
+    }
+  }
+  // Do InitializeHardware after setting up the input context, since for H264Multi the vififo can
+  // start reading as soon as PowerCtlVld is set up (inside InitializeHardware), and we don't want
+  // it to read incorrect data as we gradually set it up later.
+  zx_status_t status = video_decoder_->InitializeHardware();
+  if (status != ZX_OK) {
+    // Probably failed to load the right firmware.
+    DECODE_ERROR("Failed to initialize hardware: %d", status);
+    PowerOffForError();
+    return;
   }
   video_decoder_->SwappedIn();
 }
