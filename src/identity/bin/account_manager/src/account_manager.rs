@@ -411,9 +411,9 @@ mod tests {
     lazy_static! {
         /// Configuration for a set of fake auth providers used for testing.
         /// This can be populated later if needed.
-        static ref AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {vec![]};
+        static ref AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = vec![];
 
-        static ref AUTH_MECHANISM_IDS: Vec<String> = {vec![]};
+        static ref AUTH_MECHANISM_IDS: Vec<String> = vec![];
 
         static ref TEST_SCENARIO: Scenario =
             Scenario { include_test: false, threat_scenario: ThreatScenario::BasicAttacker };

@@ -326,6 +326,9 @@
 #![warn(missing_debug_implementations)]
 #![warn(rust_2018_idioms)]
 #![warn(clippy::all)]
+// TODO(fxbug.dev/49842): Remove
+#![allow(elided_lifetimes_in_paths)]
+#![allow(unused_mut)]
 
 mod eui;
 mod primitives;

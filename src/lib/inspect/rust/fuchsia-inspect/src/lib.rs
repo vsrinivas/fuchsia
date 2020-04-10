@@ -545,35 +545,35 @@ impl Node {
         self.recorded_values.record(property);
     }
 
-    /// Add a lazy node property to this node:
-    /// - create_lazy_node: adds a lazy child to this node. This node will be
-    ///   populated by the given callback on demand.
-    /// - create_lazy_values: adds a lazy child to this node. The lazy node
-    ///   children and properties are added to this node on demand. Name is only
-    ///   used in the event that a reader does not obtain the values.
+    // Add a lazy node property to this node:
+    // - create_lazy_node: adds a lazy child to this node. This node will be
+    //   populated by the given callback on demand.
+    // - create_lazy_values: adds a lazy child to this node. The lazy node
+    //   children and properties are added to this node on demand. Name is only
+    //   used in the event that a reader does not obtain the values.
     create_lazy_property_fn!(child, Child);
     create_lazy_property_fn!(values, Inline);
 
-    /// Add a numeric property to this node: create_int, create_double,
-    /// create_uint.
+    // Add a numeric property to this node: create_int, create_double,
+    // create_uint.
     create_numeric_property_fn!(int, Int, i64);
     create_numeric_property_fn!(uint, Uint, u64);
     create_numeric_property_fn!(double, Double, f64);
 
-    /// Add an array property to this node: create_int_array, create_double_array,
-    /// create_uint_array.
+    // Add an array property to this node: create_int_array, create_double_array,
+    // create_uint_array.
     create_array_property_fn!(int, Int, i64);
     create_array_property_fn!(uint, Uint, u64);
     create_array_property_fn!(double, Double, f64);
 
-    /// Add a linear histogram property to this node: create_int_linear_histogram,
-    /// create_uint_linear_histogram, create_double_linear_histogram.
+    // Add a linear histogram property to this node: create_int_linear_histogram,
+    // create_uint_linear_histogram, create_double_linear_histogram.
     create_linear_histogram_property_fn!(int, Int, i64);
     create_linear_histogram_property_fn!(uint, Uint, u64);
     create_linear_histogram_property_fn!(double, Double, f64);
 
-    /// Add an exponential histogram property to this node: create_int_exponential_histogram,
-    /// create_uint_exponential_histogram, create_double_exponential_histogram.
+    // Add an exponential histogram property to this node: create_int_exponential_histogram,
+    // create_uint_exponential_histogram, create_double_exponential_histogram.
     create_exponential_histogram_property_fn!(int, Int, i64);
     create_exponential_histogram_property_fn!(uint, Uint, u64);
     create_exponential_histogram_property_fn!(double, Double, f64);

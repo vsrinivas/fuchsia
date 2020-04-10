@@ -34,7 +34,7 @@ impl RootRealmStopNotifier {
     }
 
     pub async fn wait_for_root_realm_stop(&self) {
-        let rx = { self.rx.lock().await.take() };
+        let rx = self.rx.lock().await.take();
         if let Some(rx) = rx {
             rx.await.expect("Failed to wait for root instance to be stopped");
         }
@@ -45,7 +45,7 @@ impl RootRealmStopNotifier {
 impl Hook for RootRealmStopNotifier {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if event.target_moniker.is_root() {
-            let tx = { self.tx.lock().await.take() };
+            let tx = self.tx.lock().await.take();
             if let Some(tx) = tx {
                 tx.send(()).expect("Could not notify on Stopped of root realm");
             }

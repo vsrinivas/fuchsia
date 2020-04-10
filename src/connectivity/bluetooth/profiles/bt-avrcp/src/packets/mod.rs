@@ -451,6 +451,8 @@ impl VendorCommand for RawVendorDependentPacket {
     }
 }
 
+// TODO: Remove once slice_fill feature stabilizes.
+// https://github.com/rust-lang/rust/issues/70758
 trait FillExt<T> {
     fn fill(&mut self, v: T);
 }

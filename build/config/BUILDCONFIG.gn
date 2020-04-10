@@ -188,6 +188,7 @@ default_common_binary_configs = [
   "//build/config:rust_no_features",
   "//build/config:rust_target",
   "//build/config:rust_2018_idioms",
+  "//build/config:werror",
 ]
 
 if (is_debug) {
@@ -205,15 +206,10 @@ if (is_fuchsia) {
     "//build/config/fuchsia:thread_safety_annotations",
     "//build/config:rust_panic_abort",
 
-    # TODO(44795): Change to using //build/config:werror here.
-    "//build/config/fuchsia:werror",
-
     # TODO(mcgrathr): Perhaps restrict this to only affected code.
     # For now, safest to do it everywhere.
     "//build/config/fuchsia:zircon_asserts",
   ]
-} else {
-  default_common_binary_configs += [ "//build/config:werror" ]
 }
 
 if (is_mac) {

@@ -35,7 +35,7 @@ impl PeerId {
 
 impl fmt::Display for PeerId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        /// Zero-Pad the output string to be 16 characters to maintain formatting consistency.
+        // Zero-Pad the output string to be 16 characters to maintain formatting consistency.
         write!(f, "{:016x}", self.0)
     }
 }
@@ -67,7 +67,7 @@ pub struct HostId(pub u64);
 
 impl fmt::Display for HostId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        /// Zero-Pad the output string to be 16 characters to maintain formatting consistency.
+        // Zero-Pad the output string to be 16 characters to maintain formatting consistency.
         write!(f, "{:016x}", self.0)
     }
 }

@@ -165,7 +165,7 @@ impl Raster {
     /// ```
     pub fn translate(&mut self, translation: Point<i32>) {
         let translation =
-            { Point::new(self.translation.x + translation.x, self.translation.y + translation.y) };
+            Point::new(self.translation.x + translation.x, self.translation.y + translation.y);
         self.set_translation(translation);
     }
 

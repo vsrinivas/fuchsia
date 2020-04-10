@@ -197,7 +197,7 @@ pub mod test_check_for_system_update_impl {
         "1111111111111111111111111111111111111111111111111111111111111111";
 
     lazy_static! {
-        static ref UPDATE_PACKAGE_MERKLE: Hash = { [0x22; 32].into() };
+        static ref UPDATE_PACKAGE_MERKLE: Hash = [0x22; 32].into();
     }
 
     struct FakeFileSystem {

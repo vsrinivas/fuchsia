@@ -222,9 +222,12 @@ fn process_write_definitions(
     }
 
     TokenStream::from(quote! {
+        // Blanket allow to catch unused variable/mut/imports lints.
+        // TODO(fxbug.dev/49853): Remove this.
+        #[allow(unused)]
         {
             || -> Result<(_, usize), Error> {
-                #[allow(unused)]
+                #[allow(unused_imports)]
                 use {
                     wlan_common::{
                         appendable::Appendable,

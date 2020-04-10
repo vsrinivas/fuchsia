@@ -95,12 +95,7 @@ template("rustc_library") {
       if (defined(invoker.name)) {
         name = invoker.name + "_lib_test"
       }
-      forward_variables_from(invoker,
-                             "*",
-                             [
-                               "name",
-                               "configs",
-                             ])
+      forward_variables_from(invoker, "*", [ "name" ])
     }
   }
 

@@ -50,7 +50,7 @@ mod tests {
     use lazy_static::lazy_static;
 
     lazy_static! {
-        static ref PAIRING_CODE: Vec<u8> = { b"ABC1234".to_vec() };
+        static ref PAIRING_CODE: Vec<u8> = b"ABC1234".to_vec();
     }
 
     #[fasync::run_singlethreaded(test)]

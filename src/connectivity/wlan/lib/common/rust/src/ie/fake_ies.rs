@@ -12,7 +12,7 @@ pub fn fake_ht_cap_chanwidth(chanwidth: ChanWidthSet) -> HtCapabilities {
 
 pub fn fake_ht_op_sec_offset(secondary_offset: SecChanOffset) -> HtOperation {
     let mut ht_op = fake_ht_operation();
-    let mut ht_op_info_head = { ht_op.ht_op_info_head };
+    let mut ht_op_info_head = ht_op.ht_op_info_head;
     ht_op_info_head.set_secondary_chan_offset(secondary_offset);
     ht_op.ht_op_info_head = ht_op_info_head;
     ht_op

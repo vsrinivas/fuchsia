@@ -87,7 +87,7 @@ mod tests {
     use {super::*, lazy_static::lazy_static, serde_json::json, std::fs, tempfile::TempDir};
 
     lazy_static! {
-        static ref EXAMPLE_UPDATE_HASH: Hash = { [0x22; 32].into() };
+        static ref EXAMPLE_UPDATE_HASH: Hash = [0x22; 32].into();
     }
 
     #[test]

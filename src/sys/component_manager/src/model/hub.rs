@@ -184,7 +184,7 @@ impl Hub {
         // Add a 'url' file.
         instance.add_node(
             "url",
-            { read_only_static(component_url.clone().into_bytes()) },
+            read_only_static(component_url.clone().into_bytes()),
             &abs_moniker,
         )?;
 
@@ -194,12 +194,12 @@ impl Hub {
         let id =
             if let Some(child_moniker) = abs_moniker.leaf() { child_moniker.instance() } else { 0 };
         let component_type = if id > 0 { "dynamic" } else { "static" };
-        instance.add_node("id", { read_only_static(id.to_string().into_bytes()) }, &abs_moniker)?;
+        instance.add_node("id", read_only_static(id.to_string().into_bytes()), &abs_moniker)?;
 
         // Add a 'component_type' file.
         instance.add_node(
             "component_type",
-            { read_only_static(component_type.to_string().into_bytes()) },
+            read_only_static(component_type.to_string().into_bytes()),
             &abs_moniker,
         )?;
 
@@ -255,7 +255,7 @@ impl Hub {
     ) -> Result<(), ModelError> {
         execution_directory.add_node(
             "resolved_url",
-            { read_only_static(resolved_url.into_bytes()) },
+            read_only_static(resolved_url.into_bytes()),
             &abs_moniker,
         )?;
         Ok(())
