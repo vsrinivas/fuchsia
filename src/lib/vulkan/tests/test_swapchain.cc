@@ -439,6 +439,17 @@ TEST_P(SwapchainTest, CreateForRgbaStorage) {
   test.CreateSwapchain(1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_STORAGE_BIT);
 }
 
+TEST_P(SwapchainTest, CreateForSrgb) {
+  const bool protected_memory = GetParam();
+  TestSwapchain test(protected_memory);
+  if (protected_memory && !test.protected_memory_is_supported_) {
+    GTEST_SKIP();
+  }
+  ASSERT_TRUE(test.init_);
+
+  test.CreateSwapchain(1, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+}
+
 INSTANTIATE_TEST_SUITE_P(SwapchainTestSuite, SwapchainTest, ::testing::Bool());
 
 class SwapchainFidlTest : public ::testing::TestWithParam<bool /* protected_memory */> {};

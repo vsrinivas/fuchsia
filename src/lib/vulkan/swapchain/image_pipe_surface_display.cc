@@ -152,9 +152,11 @@ void ImagePipeSurfaceDisplay::ControllerOnDisplaysChanged(
     switch (pixel_format[i]) {
       case ZX_PIXEL_FORMAT_RGB_x888:
         formats.push_back({VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
+        formats.push_back({VK_FORMAT_B8G8R8A8_SRGB, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
         break;
       case ZX_PIXEL_FORMAT_BGR_888x:
         formats.push_back({VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
+        formats.push_back({VK_FORMAT_R8G8B8A8_SRGB, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
         break;
       default:
         // Ignore unknown formats.
@@ -229,9 +231,11 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
   // stored at the lowest address and the rightmost component at the highest address.
   switch (format) {
     case VK_FORMAT_B8G8R8A8_UNORM:
+    case VK_FORMAT_B8G8R8A8_SRGB:
       image_config.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
       break;
     case VK_FORMAT_R8G8B8A8_UNORM:
+    case VK_FORMAT_R8G8B8A8_SRGB:
       image_config.pixel_format = ZX_PIXEL_FORMAT_BGR_888x;
       break;
     default:
