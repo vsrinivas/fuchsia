@@ -309,7 +309,7 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
       // queues currently owned by this thread.
       __UNUSED int orig_new_prio = new_prio;
       for (const auto& owq : t->owned_wait_queues_) {
-        int queue_prio = wait_queue_blocked_priority(&owq);
+        int queue_prio = owq.BlockedPriority();
 
         // If our bookkeeping is accurate, it should be impossible for
         // our original new priority to be greater than the priority of
@@ -336,15 +336,15 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
     // our inherited priority.  Update it, and check to see if that resulted
     // in a change of the maximum waiter priority of the wait queue blocking
     // this thread (if any).  If not, then we are done.
-    const wait_queue_t* bwq = t->blocking_wait_queue_;
+    const WaitQueue* bwq = t->blocking_wait_queue_;
     int old_effec_prio = t->scheduler_state_.effective_priority();
     int old_inherited_prio = t->scheduler_state_.inherited_priority();
-    int old_queue_prio = bwq ? wait_queue_blocked_priority(bwq) : -1;
+    int old_queue_prio = bwq ? bwq->BlockedPriority() : -1;
     int new_queue_prio;
 
     sched_inherit_priority(t, new_prio, &local_resched, accum_cpu_mask);
 
-    new_queue_prio = bwq ? wait_queue_blocked_priority(bwq) : -1;
+    new_queue_prio = bwq ? bwq->BlockedPriority() : -1;
 
     // If the effective priority of this thread has gone up or down, record
     // it in the kernel counters as a PI promotion or demotion.
@@ -367,7 +367,7 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
     // blocking wait queue in a meaningful way.  If this wait_queue is an
     // OwnedWait queue, and it currently has an owner, then continue to
     // propagate the change.  Otherwise, we are done.
-    if ((bwq != nullptr) && (bwq->magic == OwnedWaitQueue::MAGIC)) {
+    if ((bwq != nullptr) && (bwq->magic_ == OwnedWaitQueue::kOwnedMagic)) {
       t = static_cast<const OwnedWaitQueue*>(bwq)->owner();
       if (t != nullptr) {
         old_prio = old_queue_prio;
@@ -386,7 +386,7 @@ bool OwnedWaitQueue::WaitersPriorityChanged(int old_prio) {
     return false;
   }
 
-  int new_prio = wait_queue_blocked_priority(this);
+  int new_prio = BlockedPriority();
   if (old_prio == new_prio) {
     return false;
   }
@@ -399,7 +399,7 @@ bool OwnedWaitQueue::WaitersPriorityChanged(int old_prio) {
 
 bool OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
                                        cpu_mask_t* out_accum_cpu_mask) {
-  int new_prio = wait_queue_blocked_priority(this);
+  int new_prio = BlockedPriority();
   bool local_resched = false;
   cpu_mask_t accum_cpu_mask = 0;
 
@@ -462,7 +462,7 @@ bool OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
 
 bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_owner,
                                          Hook on_thread_wake_hook) {
-  DEBUG_ASSERT(magic == MAGIC);
+  DEBUG_ASSERT(magic_ == kOwnedMagic);
   DEBUG_ASSERT(out_new_owner != nullptr);
 
   // Note: This methods relies on the wait queue to be kept sorted in the
@@ -529,14 +529,14 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
                                                 ResourceOwnership resource_ownership) {
   Thread* current_thread = Thread::Current::Get();
 
-  DEBUG_ASSERT(magic == MAGIC);
+  DEBUG_ASSERT(magic_ == kOwnedMagic);
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
   // Remember what the maximum effective priority of the wait queue was before
   // we add current_thread to it.
-  int old_queue_prio = wait_queue_blocked_priority(this);
+  int old_queue_prio = BlockedPriority();
 
   // Perform the first half of the block_etc operation.  If this fails, then
   // the state of the actual wait queue is unchanged and we can just get out
@@ -581,10 +581,10 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
 }
 
 bool OwnedWaitQueue::WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook) {
-  DEBUG_ASSERT(magic == MAGIC);
+  DEBUG_ASSERT(magic_ == kOwnedMagic);
 
   Thread* new_owner;
-  int old_queue_prio = wait_queue_blocked_priority(this);
+  int old_queue_prio = BlockedPriority();
   bool local_resched = WakeThreadsInternal(wake_count, &new_owner, on_thread_wake_hook);
 
   if (UpdateBookkeeping(new_owner, old_queue_prio)) {
@@ -597,9 +597,9 @@ bool OwnedWaitQueue::WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook) 
 bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue_target,
                                     uint32_t requeue_count, Thread* requeue_owner,
                                     Hook on_thread_wake_hook, Hook on_thread_requeue_hook) {
-  DEBUG_ASSERT(magic == MAGIC);
+  DEBUG_ASSERT(magic_ == kOwnedMagic);
   DEBUG_ASSERT(requeue_target != nullptr);
-  DEBUG_ASSERT(requeue_target->magic == MAGIC);
+  DEBUG_ASSERT(requeue_target->magic_ == kOwnedMagic);
 
   // If the potential new owner of the requeue wait queue is already dead,
   // then it cannot become the owner of the requeue wait queue.
@@ -617,8 +617,8 @@ bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
 
   // Remember what our queue priorities had been.  We will need this when it
   // comes time to update the PI chains.
-  int old_wake_prio = wait_queue_blocked_priority(this);
-  int old_requeue_prio = wait_queue_blocked_priority(requeue_target);
+  int old_wake_prio = BlockedPriority();
+  int old_requeue_prio = requeue_target->BlockedPriority();
 
   Thread* new_wake_owner;
   bool local_resched = WakeThreadsInternal(wake_count, &new_wake_owner, on_thread_wake_hook);

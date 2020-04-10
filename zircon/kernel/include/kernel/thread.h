@@ -119,7 +119,7 @@ static inline void dump_thread_user_tid_during_panic(uint64_t tid,
 struct Thread {
   // TODO(kulakowski) Are these needed?
   // Default constructor/destructor declared to be not-inline in order to
-  // avoid circular include dependencies involving thread, wait_queue, and
+  // avoid circular include dependencies involving Thread, WaitQueue, and
   // OwnedWaitQueue.
   Thread();
   ~Thread();
@@ -398,7 +398,7 @@ struct Thread {
   SchedulerState scheduler_state_;
 
   // if blocked, a pointer to the wait queue
-  struct wait_queue* blocking_wait_queue_ TA_GUARDED(thread_lock) = nullptr;
+  WaitQueue* blocking_wait_queue_ TA_GUARDED(thread_lock) = nullptr;
 
   // a list of the wait queues currently owned by this thread.
   fbl::DoublyLinkedList<OwnedWaitQueue*> owned_wait_queues_ TA_GUARDED(thread_lock);
@@ -436,7 +436,7 @@ struct Thread {
 
   // return code
   int retcode_;
-  struct wait_queue retcode_wait_queue_;
+  WaitQueue retcode_wait_queue_;
 
   // disable_counts_ contains two fields:
   //

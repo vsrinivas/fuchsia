@@ -21,26 +21,6 @@
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
 
-__BEGIN_CDECLS
-
-// wait queue stuff
-#define WAIT_QUEUE_MAGIC (0x77616974)  // 'wait'
-
-typedef struct wait_queue {
-  // Note: Wait queues come in 2 flavors (traditional and owned) which are
-  // distinguished using the magic number.  The point here is that, unlike
-  // most other magic numbers in the system, the wait_queue_t serves a
-  // functional purpose beyond checking for corruption debug builds.
-  int magic;
-  int count;
-  struct list_node heads;
-} wait_queue_t;
-
-#define WAIT_QUEUE_INITIAL_VALUE_MAGIC(q, _magic) \
-  { .magic = (_magic), .count = 0, .heads = LIST_INITIAL_VALUE((q).heads), }
-
-#define WAIT_QUEUE_INITIAL_VALUE(q) WAIT_QUEUE_INITIAL_VALUE_MAGIC(q, WAIT_QUEUE_MAGIC)
-
 // When blocking this enum indicates the kind of resource ownership that is being waited for
 // that is causing the block.
 enum class ResourceOwnership {
@@ -56,144 +36,105 @@ enum class ResourceOwnership {
 // the priority change should be propagated down the PI chain (if any) or not.
 enum class PropagatePI : bool { No = false, Yes };
 
-// wait queue primitive
 // NOTE: must be inside critical section when using these
-void wait_queue_init(wait_queue_t* wait);
-
-void wait_queue_destroy(wait_queue_t*);
-
-// block on a wait queue.
-// return status is whatever the caller of wait_queue_wake_*() specifies.
-// a deadline other than ZX_TIME_INFINITE will abort at the specified time
-// and return ZX_ERR_TIMED_OUT. a deadline in the past will immediately return.
-
-zx_status_t wait_queue_block(wait_queue_t*, zx_time_t deadline) TA_REQ(thread_lock);
-
-// block on a wait queue, ignoring existing signals in |signal_mask|.
-// return status is whatever the caller of wait_queue_wake_*() specifies or
-// ZX_ERR_TIMED_OUT if the deadline has elapsed or is in the past.
-// will never timeout when called with a deadline of ZX_TIME_INFINITE.
-zx_status_t wait_queue_block_etc(wait_queue_t*, const Deadline& deadline, uint signal_mask,
-                                 ResourceOwnership reason) TA_REQ(thread_lock);
-
-// returns the highest priority of all the blocked threads on this wait queue.
-// returns -1 if no threads are blocked.
-
-int wait_queue_blocked_priority(const wait_queue_t*) TA_REQ(thread_lock);
-
-// returns the current highest priority blocked thread on this wait queue, or
-// null if no threads are blocked.
-Thread* wait_queue_peek(wait_queue_t*) TA_REQ(thread_lock);
-
-// release one or more threads from the wait queue.
-// reschedule = should the system reschedule if any is released.
-// wait_queue_error = what wait_queue_block() should return for the blocking thread.
-
-int wait_queue_wake_one(wait_queue_t*, bool reschedule, zx_status_t wait_queue_error)
-    TA_REQ(thread_lock);
-
-int wait_queue_wake_all(wait_queue_t*, bool reschedule, zx_status_t wait_queue_error)
-    TA_REQ(thread_lock);
-
-// Dequeue the first waiting thread, and set its blocking status, then return a
-// pointer to the thread which was dequeued.  Do not actually schedule the
-// thread to run.
-Thread* wait_queue_dequeue_one(wait_queue_t* wait, zx_status_t wait_queue_error)
-    TA_REQ(thread_lock);
-
-// Dequeue the specified thread and set its blocked_status.  Do not actually
-// schedule the thread to run.
-void wait_queue_dequeue_thread(wait_queue_t* wait, Thread* t, zx_status_t wait_queue_error)
-    TA_REQ(thread_lock);
-
-// Move the specified thread from the source wait queue to the dest wait queue.
-void wait_queue_move_thread(wait_queue_t* source, wait_queue_t* dest, Thread* t)
-    TA_REQ(thread_lock);
-
-// is the wait queue currently empty
-bool wait_queue_is_empty(const wait_queue_t*) TA_REQ(thread_lock);
-
-// remove a specific thread out of a wait queue it's blocked on
-zx_status_t wait_queue_unblock_thread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock);
-
-// A thread's priority has changed.  Update the wait queue bookkeeping to
-// properly reflect this change.
-//
-// If |propagate| is PropagatePI::Yes, call into the wait queue code to
-// propagate the priority change down the PI chain (if any).  Then returns true
-// if the change of priority has affected the priority of another thread due to
-// priority inheritance, or false otherwise.
-//
-// If |propagate| is PropagatePI::No, do not attempt to propagate the PI change.
-// This is the mode used by OwnedWaitQueue during a batch update of a PI chain.
-bool wait_queue_priority_changed(Thread* t, int old_prio, PropagatePI propagate)
-    TA_REQ(thread_lock);
-
-// validate that the queue of a given wait queue is valid
-void wait_queue_validate_queue(wait_queue_t* wait) TA_REQ(thread_lock);
-
-__END_CDECLS
-
-#ifdef __cplusplus
-
-class WaitQueue : protected wait_queue_t {
+class WaitQueue {
+  // TODO(kulakowski) Currently, all of this is public, until Thread is completely migrated off
+  // list_nodes, which force it to be standard layout.
  public:
-  constexpr WaitQueue() : WaitQueue(WAIT_QUEUE_MAGIC) {}
-  ~WaitQueue() { wait_queue_destroy(this); }
+  constexpr WaitQueue() : WaitQueue(kMagic) {}
+  ~WaitQueue();
 
   WaitQueue(WaitQueue&) = delete;
   WaitQueue(WaitQueue&&) = delete;
   WaitQueue& operator=(WaitQueue&) = delete;
   WaitQueue& operator=(WaitQueue&&) = delete;
 
-  static zx_status_t UnblockThread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-    return wait_queue_unblock_thread(t, wait_queue_error);
-  }
+  // Remove a specific thread out of a wait queue it's blocked on.
+  static zx_status_t UnblockThread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
+  // Block on a wait queue.
+  // The returned status is whatever the caller of WaitQueue::Wake_*() specifies.
+  // A deadline other than Deadline::infinite() will abort at the specified time
+  // and return ZX_ERR_TIMED_OUT. A deadline in the past will immediately return.
   zx_status_t Block(const Deadline& deadline) TA_REQ(thread_lock) {
-    return wait_queue_block_etc(this, deadline, 0, ResourceOwnership::Normal);
+    return BlockEtc(deadline, 0, ResourceOwnership::Normal);
   }
 
-  zx_status_t BlockEtc(const Deadline& deadline, uint signal_mask, ResourceOwnership reason)
-      TA_REQ(thread_lock) {
-    return wait_queue_block_etc(this, deadline, signal_mask, reason);
+  // Block on a wait queue with a zx_time_t-typed deadline.
+  zx_status_t Block(zx_time_t deadline) TA_REQ(thread_lock) {
+    return BlockEtc(Deadline::no_slack(deadline), 0, ResourceOwnership::Normal);
   }
+
+  // Block on a wait queue, ignoring existing signals in |signal_mask|.
+  // The returned status is whatever the caller of WaitQueue::Wake_*() specifies, or
+  // ZX_ERR_TIMED_OUT if the deadline has elapsed or is in the past.
+  // This will never timeout when called with a deadline of Deadline::infinite().
+  zx_status_t BlockEtc(const Deadline& deadline, uint signal_mask, ResourceOwnership reason)
+      TA_REQ(thread_lock);
 
   zx_status_t BlockReadLock(const Deadline& deadline) TA_REQ(thread_lock) {
-    return wait_queue_block_etc(this, deadline, 0, ResourceOwnership::Reader);
+    return BlockEtc(deadline, 0, ResourceOwnership::Reader);
   }
 
-  Thread* Peek() TA_REQ(thread_lock) { return wait_queue_peek(this); }
+  // Returns the current highest priority blocked thread on this wait queue, or
+  // nullptr if no threads are blocked.
+  Thread* Peek() TA_REQ(thread_lock);
 
-  int WakeOne(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-    return wait_queue_wake_one(this, reschedule, wait_queue_error);
-  }
+  // Release one or more threads from the wait queue.
+  // reschedule = should the system reschedule if any is released.
+  // wait_queue_error = what WaitQueue::Block() should return for the blocking thread.
+  int WakeOne(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
-  int WakeAll(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-    return wait_queue_wake_all(this, reschedule, wait_queue_error);
-  }
+  int WakeAll(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
-  bool IsEmpty() const TA_REQ(thread_lock) { return (this->count == 0); }
+  // Whether the wait queue is currently empty.
+  bool IsEmpty() const TA_REQ(thread_lock);
 
-  uint32_t Count() const TA_REQ(thread_lock) { return this->count; }
+  uint32_t Count() const TA_REQ(thread_lock) { return count_; }
 
-  Thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-    return wait_queue_dequeue_one(this, wait_queue_error);
-  }
+  // Dequeue the first waiting thread, and set its blocking status, then return a
+  // pointer to the thread which was dequeued.  Do not actually schedule the
+  // thread to run.
+  Thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
-  void DequeueThread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-    wait_queue_dequeue_thread(this, t, wait_queue_error);
-  }
+  // Dequeue the specified thread and set its blocked_status.  Do not actually
+  // schedule the thread to run.
+  void DequeueThread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
- protected:
-  explicit constexpr WaitQueue(int magic)
-      : wait_queue_t(WAIT_QUEUE_INITIAL_VALUE_MAGIC(*this, magic)) {}
+  explicit constexpr WaitQueue(uint32_t magic)
+      : magic_(magic), count_(0), heads_(LIST_INITIAL_VALUE(this->heads_)) {}
 
-  static void MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) TA_REQ(thread_lock) {
-    return wait_queue_move_thread(source, dest, t);
-  }
+  // Move the specified thread from the source wait queue to the dest wait queue.
+  static void MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) TA_REQ(thread_lock);
+
+  // Returns the highest priority of all the blocked threads on this WaitQueue.
+  // Returns -1 if no threads are blocked.
+  int BlockedPriority() const TA_REQ(thread_lock);
+
+  // A thread's priority has changed.  Update the wait queue bookkeeping to
+  // properly reflect this change.
+  //
+  // If |propagate| is PropagatePI::Yes, call into the wait queue code to
+  // propagate the priority change down the PI chain (if any).  Then returns true
+  // if the change of priority has affected the priority of another thread due to
+  // priority inheritance, or false otherwise.
+  //
+  // If |propagate| is PropagatePI::No, do not attempt to propagate the PI change.
+  // This is the mode used by OwnedWaitQueue during a batch update of a PI chain.
+  static bool PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) TA_REQ(thread_lock);
+
+  // Validate that the queue of a given WaitQueue is valid.
+  void ValidateQueue() TA_REQ(thread_lock);
+
+  // Note: Wait queues come in 2 flavors (traditional and owned) which are
+  // distinguished using the magic number.  The point here is that, unlike
+  // most other magic numbers in the system, the wait_queue_t serves a
+  // functional purpose beyond checking for corruption debug builds.
+  static constexpr uint32_t kMagic = fbl::magic("wait");
+  uint32_t magic_;
+
+  int count_;
+  struct list_node heads_;
 };
-
-#endif  // __cplusplus
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_H_

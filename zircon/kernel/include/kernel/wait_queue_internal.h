@@ -17,20 +17,20 @@
 
 namespace internal {
 
-void wait_queue_insert(wait_queue_t* wait, Thread* t) TA_REQ(thread_lock);
+void wait_queue_insert(WaitQueue* wait, Thread* t) TA_REQ(thread_lock);
 void wait_queue_remove_head(Thread* t) TA_REQ(thread_lock);
 void wait_queue_remove_thread(Thread* t) TA_REQ(thread_lock);
 void wait_queue_timeout_handler(Timer* timer, zx_time_t now, void* arg);
 
-// Used by wait_queue_t and OwnedWaitQueue to manage changes to the maximum
+// Used by WaitQueue and OwnedWaitQueue to manage changes to the maximum
 // priority of a wait queue due to external effects (thread priority change,
 // thread timeout, thread killed).  Do not call this function from an external
 // site.
-bool wait_queue_waiters_priority_changed(wait_queue_t* wq, int old_prio) TA_REQ(thread_lock);
+bool wait_queue_waiters_priority_changed(WaitQueue* wq, int old_prio) TA_REQ(thread_lock);
 
 // Remove a thread from a wait queue, maintain the wait queue's internal count,
 // and update the wait_queue specific bookkeeping in the thread in the process.
-inline void wait_queue_dequeue_thread_internal(wait_queue_t* wait, Thread* t,
+inline void wait_queue_dequeue_thread_internal(WaitQueue* wait, Thread* t,
                                                zx_status_t wait_queue_error) TA_REQ(thread_lock) {
   DEBUG_ASSERT(t != nullptr);
   DEBUG_ASSERT(list_in_list(&t->queue_node_));
@@ -38,7 +38,7 @@ inline void wait_queue_dequeue_thread_internal(wait_queue_t* wait, Thread* t,
   DEBUG_ASSERT(t->blocking_wait_queue_ == wait);
 
   wait_queue_remove_thread(t);
-  wait->count--;
+  wait->count_--;
   t->blocked_status_ = wait_queue_error;
   t->blocking_wait_queue_ = NULL;
 }
@@ -46,7 +46,7 @@ inline void wait_queue_dequeue_thread_internal(wait_queue_t* wait, Thread* t,
 // Notes for wait_queue_block_etc_(pre|post).
 //
 // Currently, there are two variants of wait_queues in Zircon.  The standard
-// wait_queue_t/WaitQueue (used for most tasks) and the specialized
+// WaitQueue (used for most tasks) and the specialized
 // OwnedWaitQueues (used for mutexes/futexes/brwlocks, and anything else which
 // needs to have a concept of priority inheritance).
 //
@@ -62,7 +62,7 @@ inline void wait_queue_dequeue_thread_internal(wait_queue_t* wait, Thread* t,
 // up-to the point of arming the timer and blocking, the second (post) finishes
 // the job.
 //
-// The traditional wait_queue_t/WaitQueue implementation of
+// The traditional WaitQueue implementation of
 // wait_queue_block_etc just calls these two functions back to back, relying on
 // the inlining to generate the original function.  The OwnedWaitQueue
 // implementation does the same, but injects its bookkeeping at the appropriate
@@ -73,7 +73,7 @@ inline void wait_queue_dequeue_thread_internal(wait_queue_t* wait, Thread* t,
 // wait_queue_block_etc/wait_queue_block (or the WaitQueue wrappers of the
 // same), or OwnedWaitQueue::BlockAndAssignOwner instead.
 //
-inline zx_status_t wait_queue_block_etc_pre(wait_queue_t* wait, const Deadline& deadline,
+inline zx_status_t wait_queue_block_etc_pre(WaitQueue* wait, const Deadline& deadline,
                                             uint signal_mask, ResourceOwnership reason)
     TA_REQ(thread_lock) {
   Thread* current_thread = Thread::Current::Get();
@@ -91,7 +91,7 @@ inline zx_status_t wait_queue_block_etc_pre(wait_queue_t* wait, const Deadline& 
   }
 
   wait_queue_insert(wait, current_thread);
-  wait->count++;
+  wait->count_++;
   current_thread->state_ =
       (reason == ResourceOwnership::Normal) ? THREAD_BLOCKED : THREAD_BLOCKED_READ_LOCK;
   current_thread->blocking_wait_queue_ = wait;
@@ -100,7 +100,7 @@ inline zx_status_t wait_queue_block_etc_pre(wait_queue_t* wait, const Deadline& 
   return ZX_OK;
 }
 
-inline zx_status_t wait_queue_block_etc_post(wait_queue_t* wait, const Deadline& deadline)
+inline zx_status_t wait_queue_block_etc_post(WaitQueue* wait, const Deadline& deadline)
     TA_REQ(thread_lock) {
   Thread* current_thread = Thread::Current::Get();
   Timer timer;

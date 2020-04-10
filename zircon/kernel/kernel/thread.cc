@@ -137,7 +137,6 @@ void init_thread_struct(Thread* t, const char* name) {
 
   t->magic_ = THREAD_MAGIC;
   strlcpy(t->name_, name, sizeof(t->name_));
-  wait_queue_init(&t->retcode_wait_queue_);
   init_thread_lock_state(t);
 }
 
@@ -207,7 +206,6 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
   t->interruptable_ = false;
 
   t->retcode_ = 0;
-  wait_queue_init(&t->retcode_wait_queue_);
 
   sched_init_thread(t, priority);
 
@@ -355,7 +353,7 @@ zx_status_t Thread::Suspend() {
     case THREAD_BLOCKED_READ_LOCK:
       // thread is blocked on something and marked interruptable
       if (interruptable_) {
-        wait_queue_unblock_thread(this, ZX_ERR_INTERNAL_INTR_RETRY);
+        WaitQueue::UnblockThread(this, ZX_ERR_INTERNAL_INTR_RETRY);
       }
       break;
     case THREAD_SLEEPING:
@@ -402,7 +400,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
 
     // wait for the thread to die
     if (state_ != THREAD_DEATH) {
-      zx_status_t status = wait_queue_block(&retcode_wait_queue_, deadline);
+      zx_status_t status = retcode_wait_queue_.Block(deadline);
       if (status != ZX_OK) {
         return status;
       }
@@ -439,7 +437,7 @@ zx_status_t Thread::Detach() {
 
   // if another thread is blocked inside Join() on this thread,
   // wake them up with a specific return code
-  wait_queue_wake_all(&retcode_wait_queue_, false, ZX_ERR_BAD_STATE);
+  retcode_wait_queue_.WakeAll(false, ZX_ERR_BAD_STATE);
 
   // if it's already dead, then just do what join would have and exit
   if (state_ == THREAD_DEATH) {
@@ -504,7 +502,7 @@ __NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
     }
   } else {
     // signal if anyone is waiting
-    wait_queue_wake_all(&current_thread->retcode_wait_queue_, false, 0);
+    current_thread->retcode_wait_queue_.WakeAll(false, ZX_OK);
   }
 
   // reschedule
@@ -608,7 +606,7 @@ void Thread::Kill() {
     case THREAD_BLOCKED_READ_LOCK:
       // thread is blocked on something and marked interruptable
       if (interruptable_) {
-        wait_queue_unblock_thread(this, ZX_ERR_INTERNAL_INTR_KILLED);
+        WaitQueue::UnblockThread(this, ZX_ERR_INTERNAL_INTR_KILLED);
       }
       break;
     case THREAD_SLEEPING:

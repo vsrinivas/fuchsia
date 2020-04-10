@@ -20,7 +20,7 @@ namespace internal {
 // we don't want to drag all of wait_queue_internal.h into this header file, but
 // we need to be friends with this internal function, so we just fwd decl it
 // here instead..
-bool wait_queue_waiters_priority_changed(wait_queue_t* wq, int old_prio) TA_REQ(thread_lock);
+bool wait_queue_waiters_priority_changed(WaitQueue* wq, int old_prio) TA_REQ(thread_lock);
 
 }  // namespace internal
 
@@ -101,8 +101,8 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
     void* ctx_;
   };
 
-  static constexpr int MAGIC = fbl::magic("ownq");
-  constexpr OwnedWaitQueue() : WaitQueue(MAGIC) {}
+  static constexpr uint32_t kOwnedMagic = fbl::magic("ownq");
+  constexpr OwnedWaitQueue() : WaitQueue(kOwnedMagic) {}
   ~OwnedWaitQueue();
 
   // No copy or move is permitted.
@@ -130,7 +130,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   //
   // Returns true if a local reschedule is required, or false otherwise.
   bool AssignOwner(Thread* new_owner) TA_REQ(thread_lock) __WARN_UNUSED_RESULT {
-    DEBUG_ASSERT(magic == MAGIC);
+    DEBUG_ASSERT(magic_ == kOwnedMagic);
 
     // If the new owner is the same as the old owner, then we have nothing
     // special to do here.  Just short-circuit.
@@ -138,7 +138,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
       return false;
     }
 
-    return UpdateBookkeeping(new_owner, wait_queue_blocked_priority(this));
+    return UpdateBookkeeping(new_owner, BlockedPriority());
   }
 
   // Block the current thread on this wait queue, and re-assign ownership to
@@ -186,7 +186,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
  private:
   // Give permission to the wait_queue_t thunk to call the
   // WaitersPriorityChanged method (below).
-  friend bool internal::wait_queue_waiters_priority_changed(wait_queue_t* wq, int old_prio);
+  friend bool internal::wait_queue_waiters_priority_changed(WaitQueue* wq, int old_prio);
 
   // A internal helper function which enumerates the wait_queue_t's
   // queue-of-queues structure in a fashion which allows us to remove the
@@ -259,7 +259,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
     Thread* last_queue_head = nullptr;
     Thread* queue_head;
 
-    list_for_every_entry (&this->heads, queue_head, Thread, wait_queue_heads_node_) {
+    list_for_every_entry (&this->heads_, queue_head, Thread, wait_queue_heads_node_) {
       if ((last_queue_head != nullptr) && !consider_queue(last_queue_head)) {
         return;
       }

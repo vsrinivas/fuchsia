@@ -1504,7 +1504,7 @@ void Scheduler::UpdateWeightCommon(Thread* thread, int original_priority_, Sched
       state->discipline_ = SchedDiscipline::Fair;
       state->fair_.weight = weight;
       if (thread->blocking_wait_queue_) {
-        wait_queue_priority_changed(thread, original_priority_, propagate);
+        WaitQueue::PriorityChanged(thread, original_priority_, propagate);
       }
       break;
 
@@ -1592,7 +1592,7 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority_,
       state->discipline_ = SchedDiscipline::Deadline;
       state->deadline_ = params;
       if (thread->blocking_wait_queue_) {
-        wait_queue_priority_changed(thread, original_priority_, propagate);
+        WaitQueue::PriorityChanged(thread, original_priority_, propagate);
       }
       break;
 
