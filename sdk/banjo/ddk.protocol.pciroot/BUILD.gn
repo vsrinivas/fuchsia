@@ -6,5 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("ddk.protocol.pciroot") {
   sources = [ "pciroot.banjo" ]
-  deps = [ "//zircon/system/banjo/zircon.hw.pci" ]
+  deps = [ "//sdk/banjo/zircon.hw.pci" ]
 }
