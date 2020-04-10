@@ -39,6 +39,7 @@ zx_library("zxcrypt-dev") {
   # To minimize the set of libraries that we depend on that need to be loaded
   # from /boot/lib in early boot, we statically link most of our dependencies.
   deps = [
+    "//sdk/banjo/ddk.protocol.block.volume",
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
@@ -46,7 +47,6 @@ zx_library("zxcrypt-dev") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/banjo/ddk.protocol.block.volume",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
@@ -67,6 +67,7 @@ zx_library("zxcrypt-fdio") {
   public_deps = [
     # <zxcrypt/fdio-volume.h> has #include <lib/fdio/cpp/caller.h>
     "//zircon/public/lib/fdio-caller",
+
     # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
     "//zircon/public/lib/zircon-crypto",
   ]
