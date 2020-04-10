@@ -177,7 +177,6 @@ aggregate_manifest("legacy-aux") {
     "fake-object",
 #------------------
 #------------------
-    "fake-resource",
 #------------------
 #------------------
     "fdio",
