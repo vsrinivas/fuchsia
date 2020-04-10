@@ -7,18 +7,18 @@ import("//build/go/go_library.gni")
 import("//build/host.gni")
 
 go_library("lib") {
-  name = "hlcpp-measure-tape"
+  name = "measure-tape"
 
   deps = [ "//garnet/go/src/fidl:fidl_lib" ]
 }
 
-go_binary("hlcpp-measure-tape") {
-  gopackage = "hlcpp-measure-tape"
+go_binary("measure-tape") {
+  gopackage = "measure-tape"
 
   deps = [ ":lib" ]
 }
 
 install_host_tools("host") {
-  deps = [ ":hlcpp-measure-tape" ]
-  outputs = [ "hlcpp-measure-tape" ]
+  deps = [ ":measure-tape" ]
+  outputs = [ "measure-tape" ]
 }

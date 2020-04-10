@@ -34,7 +34,7 @@ const topOfFile = `// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // found in the LICENSE file.
 
 // File is automatically generated; do not modify.
-// See tools/fidl/hlcpp-measure-tape/README.md
+// See tools/fidl/measure-tape/README.md
 
 #include <lib/ui/scenic/cpp/commands_sizing.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>

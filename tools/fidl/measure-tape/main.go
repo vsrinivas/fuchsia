@@ -16,7 +16,7 @@ import (
 
 	fidlir "fidl/compiler/backend/types"
 
-	"hlcpp-measure-tape/measurer"
+	"measure-tape/measurer"
 )
 
 type paths []string

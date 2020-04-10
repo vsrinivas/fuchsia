@@ -1,8 +1,8 @@
-# hlcpp-measure-tape
+# measure-tape
 
 > Note: As of right now, this tool is specifically designed for use by Scenic.
 
-`hlcpp-measure-tape` is a code generator creating a function meant to measure
+`measure-tape` is a code generator creating a function meant to measure
 the size of a specific target type, both in terms of bytes and handles. We
 call this function a "measuring tape".
 
@@ -11,12 +11,12 @@ bindings only.
 
 ## Build and Run
 
-    fx set core.x64 --with //tools/fidl/hlcpp-measure-tape:host
+    fx set core.x64 --with //tools/fidl/measure-tape:host
     fx build
 
 Then
 
-    ./out/default/host_x64/hlcpp-measure-tape \
+    ./out/default/host_x64/measure-tape \
         --json out/default/fidling/gen/sdk/fidl/fuchsia.images/fuchsia.images.fidl.json \
         --json out/default/fidling/gen/sdk/fidl/fuchsia.ui.gfx/fuchsia.ui.gfx.fidl.json \
         --json out/default/fidling/gen/sdk/fidl/fuchsia.ui.input/fuchsia.ui.input.fidl.json \
