@@ -9,6 +9,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+#include <lib/fdio/io.h>
 
 #include <limits>
 #include <utility>
@@ -240,8 +241,18 @@ int main(int argc, char** argv) {
   }
 
   printf("Running.  Press any key to exit\n");
-  char junk;
-  ::read(STDIN_FILENO, &junk, sizeof(junk));
+
+  uint32_t event = 0;
+  bool state = false;
+  printf("-");
+  while (::fdio_wait_fd(STDIN_FILENO, FDIO_EVT_READABLE, &event, ZX_MSEC(500)) ==
+         ZX_ERR_TIMED_OUT) {
+    if ((state = !state)) {
+      printf("\b-");
+    } else {
+      printf("\b|");
+    }
+  }
 
   printf("Shutting down...\n");
   threads.clear();
