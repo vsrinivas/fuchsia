@@ -62,6 +62,7 @@ test("usb-wrapper-test") {
   output_name = "usb-wrapper-test"
   sources = [ "usb-wrapper-test.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.composite",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -70,7 +71,6 @@ test("usb-wrapper-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/dev/lib/fake-bti",
     "//zircon/system/dev/lib/usb",
   ]
@@ -88,10 +88,10 @@ test("usb-desc-lib-test") {
   output_name = "usb-desc-lib-test"
   sources = [ "usb-desc-lib-test.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.composite",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/dev/lib/usb",
   ]
 }

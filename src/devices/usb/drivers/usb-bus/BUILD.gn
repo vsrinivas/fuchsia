@@ -25,10 +25,10 @@ source_set("common") {
   defines = [ "_ALL_SOURCE" ]
   sources = [ "usb-device.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/banjo/ddk.protocol.usb.hub",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/ulib/utf_conversion",
   ]
   public_deps = [

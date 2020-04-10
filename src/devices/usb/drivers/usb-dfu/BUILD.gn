@@ -13,6 +13,7 @@ driver_module("usb-dfu") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-dfu.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/fidl/fuchsia.hardware.usb.fwloader:fuchsia.hardware.usb.fwloader_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -22,7 +23,6 @@ driver_module("usb-dfu") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
     "//zircon/system/fidl/fuchsia-mem:c",

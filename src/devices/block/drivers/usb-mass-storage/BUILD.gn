@@ -24,6 +24,7 @@ source_set("block") {
   visibility = [ ":*" ]
   sources = [ "block.cc" ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.usb.composite",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -34,7 +35,6 @@ source_set("block") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]

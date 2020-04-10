@@ -26,7 +26,7 @@ zx_library("usb") {
     "usb.c",
   ]
   public_deps = [
-    "//zircon/system/banjo/ddk.protocol.usb.composite",
+    "//sdk/banjo/ddk.protocol.usb.composite",
 
     # <ddk/usb/usb.h> has #include <ddk/protocol/usb.h>.
     "//zircon/public/lib/ddk",
@@ -36,10 +36,10 @@ zx_library("usb") {
     "//zircon/system/dev/lib/dev-operation",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.composite",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
   ]
 }
