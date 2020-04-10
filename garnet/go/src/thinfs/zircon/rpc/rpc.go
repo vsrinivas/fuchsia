@@ -17,6 +17,7 @@ import (
 	"thinfs/fs"
 
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 	"syscall/zx/io"
 	"syscall/zx/mem"
@@ -33,6 +34,7 @@ type ThinVFS struct {
 	dirs             map[fidl.BindingKey]*directoryWrapper
 	FileService      io.FileService
 	fs               fs.FileSystem
+	dispatcher       *dispatch.Dispatcher
 }
 
 type VFSQueryInfo struct {
@@ -44,9 +46,14 @@ type VFSQueryInfo struct {
 
 // NewServer creates a new ThinVFS server. Serve must be called to begin servicing the filesystem.
 func NewServer(filesys fs.FileSystem, h zx.Handle) (*ThinVFS, error) {
+	d, err := dispatch.NewDispatcher()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dispatcher for ThinVFS: %w", err)
+	}
 	vfs := &ThinVFS{
-		dirs: make(map[fidl.BindingKey]*directoryWrapper),
-		fs:   filesys,
+		dirs:       make(map[fidl.BindingKey]*directoryWrapper),
+		fs:         filesys,
+		dispatcher: d,
 	}
 	ireq := io.NodeWithCtxInterfaceRequest(fidl.InterfaceRequest{Channel: zx.Channel(h)})
 	if _, err := vfs.addDirectory(filesys.RootDirectory(), ireq); err != nil {
@@ -63,7 +70,7 @@ func NewServer(filesys fs.FileSystem, h zx.Handle) (*ThinVFS, error) {
 
 // Serve begins dispatching fidl requests. Serve blocks, so callers will normally want to run it in a new goroutine.
 func (vfs *ThinVFS) Serve() {
-	fidl.Serve()
+	vfs.dispatcher.Serve()
 }
 
 func (vfs *ThinVFS) addDirectory(dir fs.Directory, node io.NodeWithCtxInterfaceRequest) (fidl.BindingKey, error) {
@@ -71,9 +78,10 @@ func (vfs *ThinVFS) addDirectory(dir fs.Directory, node io.NodeWithCtxInterfaceR
 
 	vfs.Lock()
 	defer vfs.Unlock()
-	tok, err := d.vfs.DirectoryService.AddWithCtx(
-		d,
+	tok, err := d.vfs.DirectoryService.BindingSet.AddToDispatcher(
+		&io.DirectoryWithCtxStub{Impl: d},
 		(fidl.InterfaceRequest(node)).Channel,
+		vfs.dispatcher,
 		func(err error) {
 			vfs.Lock()
 			defer vfs.Unlock()
@@ -93,9 +101,10 @@ func (vfs *ThinVFS) addFile(file fs.File, node io.NodeWithCtxInterfaceRequest) (
 
 	vfs.Lock()
 	defer vfs.Unlock()
-	tok, err := vfs.FileService.AddWithCtx(
-		f,
+	tok, err := vfs.FileService.BindingSet.AddToDispatcher(
+		&io.FileWithCtxStub{Impl: f},
 		(fidl.InterfaceRequest(node)).Channel,
+		vfs.dispatcher,
 		nil,
 	)
 	if err != nil {
