@@ -1294,6 +1294,16 @@ group("record_filesystem_sizes") {
   deps = [ ":filesystem_sizes.json" ]
 }
 
+# These steps run through the build and symbol archiving logic to make sure they
+# work but does not produce populated archives.
+group("nil-archives") {
+  testonly = true
+  deps = [
+    ":archive-nil",
+    ":symbol-archive-nil",
+  ]
+}
+
 ###
 ### Paver and flash scripts, and archives using those images and zedboot's images.
 ###
@@ -1382,6 +1392,8 @@ paver_targets = [
 archive_formats = [
   "tar",
   "tgz",
+  "zip",
+  "nil",
 ]
 foreach(format, archive_formats) {
   paver_targets += [
@@ -1400,6 +1412,23 @@ foreach(format, archive_formats) {
       metadata = {
         name = "archive"
         path = "build-archive.$format"
+        type = "$format"
+      }
+    },
+    {
+      name = "symbol-archive-$format"
+      outputs = [ "$root_build_dir/symbol-archive.$format" ]
+      switch = "--symbol-archive="
+      extra_bootserver_arguments = ""
+      deps = [
+        ":flash_script",
+        ":ids.txt",
+        ":paver-script",
+        "zedboot",
+      ]
+      metadata = {
+        name = "symbol-archive"
+        path = "symbol-archive.$format"
         type = "$format"
       }
     },
@@ -1439,8 +1468,10 @@ foreach(target, paver_targets) {
 
     _metadata = target.metadata
     metadata = {
+      # TODO(fxbug.dev/9708): include these in a build API module of archives instead.
       images = [ _metadata ]
-      if ( _metadata.type == "tgz" || _metadata.type == "tar" ) {
+      if (archive_formats + [ _metadata.type ] - [ _metadata.type ] !=
+          archive_formats) {
         archives = images
       }
     }
@@ -2026,7 +2057,10 @@ group("archive-extras") {
 
 group("images") {
   testonly = true
-  deps = [ ":default-images" ]
+  deps = [
+    ":default-images",
+    ":nil-archives",
+  ]
 
   if (!bootfs_only) {
     deps += [ ":netboot" ]
