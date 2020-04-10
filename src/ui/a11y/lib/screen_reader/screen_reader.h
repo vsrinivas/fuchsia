@@ -33,7 +33,7 @@ class ScreenReader {
   // screen reader. A11y App is responsible for creating these pointers along
   // with Screen Reader object.
   ScreenReader(std::unique_ptr<ScreenReaderContext> context,
-               a11y::ViewManager* semantics_manager_impl, a11y::TtsManager* tts_manager);
+               a11y::SemanticsSource* semantics_source, a11y::TtsManager* tts_manager);
   ~ScreenReader() = default;
 
   void BindGestures(a11y::GestureHandler* gesture_handler);

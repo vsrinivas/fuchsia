@@ -90,4 +90,11 @@ void ViewWrapper::DrawHighlight() {
 
 void ViewWrapper::HideHighlights() { annotation_view_->DetachViewContents(); }
 
+std::unique_ptr<ViewWrapper> ViewWrapperFactory::CreateViewWrapper(
+    fuchsia::ui::views::ViewRef view_ref, std::unique_ptr<SemanticTreeService> tree_service_ptr,
+    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
+  return std::make_unique<ViewWrapper>(std::move(view_ref), std::move(tree_service_ptr),
+                                       std::move(semantic_tree_request));
+}
+
 }  // namespace a11y

@@ -25,21 +25,19 @@ void SwipeAction::Run(ActionData process_data) {
     return;
   }
 
-  // Get a semantic tree which is in focus.
-  const auto tree_weak_ptr = GetTreePointer(action_context_, a11y_focus.value().view_ref_koid);
-  if (!tree_weak_ptr) {
-    return;
-  }
+  FX_DCHECK(action_context_->semantics_source);
 
   // Get the new node base on ActionType.
 
   const fuchsia::accessibility::semantics::Node* new_node;
   switch (action_type_) {
     case kNextAction:
-      new_node = tree_weak_ptr->GetNextNode(a11y_focus.value().node_id);
+      new_node = action_context_->semantics_source->GetNextNode(a11y_focus.value().view_ref_koid,
+                                                                a11y_focus.value().node_id);
       break;
     case kPreviousAction:
-      new_node = tree_weak_ptr->GetPreviousNode(a11y_focus.value().node_id);
+      new_node = action_context_->semantics_source->GetPreviousNode(
+          a11y_focus.value().view_ref_koid, a11y_focus.value().node_id);
       break;
     default:
       new_node = nullptr;

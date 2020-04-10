@@ -67,18 +67,17 @@ TEST_F(WebSemanticsTest, StaticSemantics) {
 
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] {
-        auto tree = view_manager()->GetTreeByKoid(view_ref_koid);
-        auto node = tree->GetNode(0);
+        auto node = view_manager()->GetSemanticNode(view_ref_koid, 0u);
         return node != nullptr && node->has_attributes() && node->attributes().has_label();
       },
       kTimeout))
       << "No root node found.";
 
-  auto tree = view_manager()->GetTreeByKoid(view_ref_koid);
-  auto node = tree->GetNode(0);
+  auto node = view_manager()->GetSemanticNode(view_ref_koid, 0u);
 
+  ASSERT_TRUE(node);
   ASSERT_TRUE(node->has_attributes());
-  ASSERT_TRUE(node->attributes().has_label()) << "Missing label: " << tree->ToString();
+  ASSERT_TRUE(node->attributes().has_label());
   EXPECT_EQ(node->attributes().label(), "Say something. Anything.");
 
   // TODO: more assertions

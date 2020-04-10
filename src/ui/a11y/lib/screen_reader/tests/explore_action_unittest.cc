@@ -32,11 +32,13 @@ static const int kLocalCoordForTesting = 10;
 class ExploreActionTest : public gtest::TestLoopFixture {
  public:
   ExploreActionTest()
-      : view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+      : context_provider_(),
+        view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                      std::make_unique<a11y::ViewWrapperFactory>(),
                       context_provider_.context()->outgoing()->debug_dir()),
         tts_manager_(context_provider_.context()),
         semantic_provider_(&view_manager_) {
-    action_context_.view_manager = &view_manager_;
+    action_context_.semantics_source = &view_manager_;
     view_manager_.SetSemanticsEnabled(true);
 
     tts_manager_.OpenEngine(action_context_.tts_engine_ptr.NewRequest(),

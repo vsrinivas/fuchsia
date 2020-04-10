@@ -29,9 +29,10 @@ class DefaultActionTest : public gtest::TestLoopFixture {
  public:
   DefaultActionTest()
       : view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                      std::make_unique<a11y::ViewWrapperFactory>(),
                       context_provider_.context()->outgoing()->debug_dir()),
         semantic_provider_(&view_manager_) {
-    action_context_.view_manager = &view_manager_;
+    action_context_.semantics_source = &view_manager_;
     a11y_focus_manager_ = std::make_unique<MockA11yFocusManager>();
     a11y_focus_manager_ptr_ = a11y_focus_manager_.get();
     screen_reader_context_ =

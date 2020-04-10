@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/views/cpp/fidl.h>
 
+#include <map>
 #include <optional>
 
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
@@ -28,8 +29,58 @@ class MockSemanticsSource : public a11y::SemanticsSource {
   // |SemanticsSource|
   std::optional<fuchsia::ui::views::ViewRef> ViewRefClone(zx_koid_t view_ref_koid) override;
 
+  // Creates a semantic node that can be retrieved using |GetSemanticNode()|.
+  void CreateSemanticNode(zx_koid_t koid, fuchsia::accessibility::semantics::Node node);
+
+  // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetSemanticNode(zx_koid_t koid,
+                                                                 uint32_t node_id) const override;
+
+  // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetNextNode(zx_koid_t koid,
+                                                             uint32_t node_id) const override;
+
+  // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetPreviousNode(zx_koid_t koid,
+                                                                 uint32_t node_id) const override;
+
+  // Sets result of hit test on view corresponding to |koid|.
+  void SetHitTestResult(zx_koid_t koid, fuchsia::accessibility::semantics::Hit hit_test_result);
+
+  // |SemanticsSource|
+  void ExecuteHitTesting(
+      zx_koid_t koid, fuchsia::math::PointF local_point,
+      fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) override;
+
+  // Sets the result of an action in view corresponding to |koid|.
+  void SetActionResult(zx_koid_t koid, bool action_result);
+
+  // |SemanticsSource|
+  void PerformAccessibilityAction(
+      zx_koid_t koid, uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+      fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
+          callback) override;
+
+  // Returns list of actions requested on view corresponding to |koid|, in the order they were
+  // requested.
+  const std::vector<std::pair<uint32_t, fuchsia::accessibility::semantics::Action>>&
+  GetRequestedActionsForView(zx_koid_t koid);
+
  private:
   fuchsia::ui::views::ViewRef view_ref_;
+
+  // Map of koid to hit test result for corresponding view.
+  std::map<zx_koid_t, fuchsia::accessibility::semantics::Hit> hit_test_results_;
+
+  // Map of koid to (node_id, node) map for each view.
+  std::map<zx_koid_t, std::map<uint32_t, fuchsia::accessibility::semantics::Node>> nodes_;
+
+  // Map of koid to actions requested in corresponding view (in order requests were received).
+  std::map<zx_koid_t, std::vector<std::pair<uint32_t, fuchsia::accessibility::semantics::Action>>>
+      requested_actions_;
+
+  // Map of koid to return value for actions requested in corresponding view.
+  std::map<zx_koid_t, bool> action_results_;
 };
 
 }  // namespace accessibility_test

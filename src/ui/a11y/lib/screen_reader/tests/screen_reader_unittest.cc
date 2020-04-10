@@ -67,8 +67,11 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   ScreenReaderTest()
       : factory_(std::make_unique<MockSemanticTreeServiceFactory>()),
         factory_ptr_(factory_.get()),
+        context_provider_(),
         tts_manager_(context_provider_.context()),
-        view_manager_(std::move(factory_), context_provider_.context()->outgoing()->debug_dir()),
+        view_manager_(std::move(factory_),
+                      std::make_unique<a11y::ViewWrapperFactory>(),
+                      context_provider_.context()->outgoing()->debug_dir()),
         a11y_focus_manager_(std::make_unique<MockA11yFocusManager>()),
         a11y_focus_manager_ptr_(a11y_focus_manager_.get()),
         context_(std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager_))),

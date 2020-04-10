@@ -44,6 +44,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
         mock_setui_(&context_provider_),
         mock_focus_chain_(&context_provider_),
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                      std::make_unique<a11y::ViewWrapperFactory>(),
                       context_->outgoing()->debug_dir()),
         tts_manager_(context_),
         color_transform_manager_(context_),
@@ -145,13 +146,14 @@ TEST_F(AppUnitTest, UpdateNodeToSemanticsManager) {
   RunLoopUntilIdle();
 
   // Check that the node is in the semantic tree
-  auto tree = view_manager_.GetTreeByKoid(a11y::GetKoid(view_ref_));
-  ASSERT_EQ(tree->GetNode(0)->attributes().label(), "Label A");
+  auto created_node = view_manager_.GetSemanticNode(a11y::GetKoid(view_ref_), 0u);
+  EXPECT_TRUE(created_node);
+  EXPECT_EQ(created_node->attributes().label(), "Label A");
 
   // Check that the committed node is present in the logs
   vfs::PseudoDir* debug_dir = context_->outgoing()->debug_dir();
   vfs::internal::Node* test_node;
-  ASSERT_EQ(ZX_OK, debug_dir->Lookup(std::to_string(a11y::GetKoid(view_ref_)), &test_node));
+  EXPECT_EQ(ZX_OK, debug_dir->Lookup(std::to_string(a11y::GetKoid(view_ref_)), &test_node));
 }
 
 // This test makes sure that services implemented by the Tts manager are
@@ -160,7 +162,7 @@ TEST_F(AppUnitTest, OffersTtsManagerServices) {
   fuchsia::accessibility::tts::TtsManagerPtr tts_manager;
   context_provider_.ConnectToPublicService(tts_manager.NewRequest());
   RunLoopUntilIdle();
-  ASSERT_TRUE(tts_manager.is_bound());
+  EXPECT_TRUE(tts_manager.is_bound());
 }
 
 TEST_F(AppUnitTest, NoListenerInitially) {

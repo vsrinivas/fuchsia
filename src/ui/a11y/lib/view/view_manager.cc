@@ -5,6 +5,7 @@
 #include "src/ui/a11y/lib/view/view_manager.h"
 
 #include <lib/async/default.h>
+#include <lib/fit/bridge.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -24,8 +25,11 @@ std::unique_ptr<SemanticTreeService> SemanticTreeServiceFactory::NewService(
 }
 
 ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
+                         std::unique_ptr<ViewWrapperFactory> view_wrapper_factory,
                          vfs::PseudoDir* debug_dir)
-    : factory_(std::move(factory)), debug_dir_(debug_dir) {}
+    : factory_(std::move(factory)),
+      view_wrapper_factory_(std::move(view_wrapper_factory)),
+      debug_dir_(debug_dir) {}
 
 ViewManager::~ViewManager() {
   for (auto& iterator : wait_map_) {
@@ -70,8 +74,8 @@ void ViewManager::RegisterViewForSemantics(
       this, view_ref.reference.get(), ZX_EVENTPAIR_PEER_CLOSED);
   FX_CHECK(wait_ptr->Begin(async_get_default_dispatcher()) == ZX_OK);
   wait_map_[koid] = std::move(wait_ptr);
-  view_wrapper_map_[koid] = std::make_unique<ViewWrapper>(std::move(view_ref), std::move(service),
-                                                          std::move(semantic_tree_request));
+  view_wrapper_map_[koid] = view_wrapper_factory_->CreateViewWrapper(
+      std::move(view_ref), std::move(service), std::move(semantic_tree_request));
 }
 
 const fxl::WeakPtr<::a11y::SemanticTree> ViewManager::GetTreeByKoid(const zx_koid_t koid) const {
@@ -105,6 +109,70 @@ std::optional<fuchsia::ui::views::ViewRef> ViewManager::ViewRefClone(zx_koid_t v
     return it->second->ViewRefClone();
   }
   return std::nullopt;
+}
+
+const fuchsia::accessibility::semantics::Node* ViewManager::GetSemanticNode(
+    zx_koid_t koid, uint32_t node_id) const {
+  auto tree_weak_ptr = GetTreeByKoid(koid);
+
+  if (!tree_weak_ptr) {
+    FX_LOGS(ERROR) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
+    return nullptr;
+  }
+
+  return tree_weak_ptr->GetNode(node_id);
+}
+
+const fuchsia::accessibility::semantics::Node* ViewManager::GetNextNode(zx_koid_t koid,
+                                                                        uint32_t node_id) const {
+  auto tree_weak_ptr = GetTreeByKoid(koid);
+
+  if (!tree_weak_ptr) {
+    FX_LOGS(ERROR) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
+    return nullptr;
+  }
+
+  return tree_weak_ptr->GetNextNode(node_id);
+}
+
+const fuchsia::accessibility::semantics::Node* ViewManager::GetPreviousNode(
+    zx_koid_t koid, uint32_t node_id) const {
+  auto tree_weak_ptr = GetTreeByKoid(koid);
+
+  if (!tree_weak_ptr) {
+    FX_LOGS(ERROR) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
+    return nullptr;
+  }
+
+  return tree_weak_ptr->GetPreviousNode(node_id);
+}
+
+void ViewManager::ExecuteHitTesting(
+    zx_koid_t koid, fuchsia::math::PointF local_point,
+    fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
+  auto tree_weak_ptr = GetTreeByKoid(koid);
+
+  if (!tree_weak_ptr) {
+    FX_LOGS(ERROR) << "ViewManager::ExecuteHitTesting: No semantic tree found for koid: " << koid;
+    return;
+  }
+
+  tree_weak_ptr->PerformHitTesting(local_point, std::move(callback));
+}
+
+void ViewManager::PerformAccessibilityAction(
+    zx_koid_t koid, uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+    fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
+        callback) {
+  auto tree_weak_ptr = GetTreeByKoid(koid);
+
+  if (!tree_weak_ptr) {
+    FX_LOGS(ERROR) << "ViewManager::PerformAccessibilityAction: No semantic tree found for koid: "
+                   << koid;
+    return;
+  }
+
+  tree_weak_ptr->PerformAccessibilityAction(node_id, action, std::move(callback));
 }
 
 }  // namespace a11y

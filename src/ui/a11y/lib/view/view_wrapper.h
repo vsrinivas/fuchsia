@@ -37,19 +37,19 @@ class ViewWrapper {
       sys::ComponentContext* context = nullptr,
       std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory = nullptr);
 
-  ~ViewWrapper();
+  virtual ~ViewWrapper();
 
   // Turn on semantic updates for this view.
-  void EnableSemanticUpdates(bool enabled);
+  virtual void EnableSemanticUpdates(bool enabled);
 
   // Returns a weak pointer to the Semantic Tree. Caller must always check if the pointer is valid
   // before accessing, as the pointer may be invalidated. The pointer may become invalidated if the
   // semantic provider disconnects or if an error occurred. This is not thread safe. This pointer
   // may only be used in the same thread as this service is running.
-  fxl::WeakPtr<::a11y::SemanticTree> GetTree();
+  virtual fxl::WeakPtr<::a11y::SemanticTree> GetTree();
 
   // Returns a clone of the ViewRef owned by this object.
-  fuchsia::ui::views::ViewRef ViewRefClone() const;
+  virtual fuchsia::ui::views::ViewRef ViewRefClone() const;
 
   // Highlights node with id |node_id|.
   void HighlightNode(uint32_t node_id);
@@ -77,6 +77,17 @@ class ViewWrapper {
 
   // View used to draw annotations over semantic view.
   std::unique_ptr<AnnotationViewInterface> annotation_view_;
+};
+
+class ViewWrapperFactory {
+ public:
+  ViewWrapperFactory() = default;
+  virtual ~ViewWrapperFactory() = default;
+
+  virtual std::unique_ptr<ViewWrapper> CreateViewWrapper(
+      fuchsia::ui::views::ViewRef view_ref, std::unique_ptr<SemanticTreeService> tree_service_ptr,
+      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
+          semantic_tree_request);
 };
 
 }  // namespace a11y

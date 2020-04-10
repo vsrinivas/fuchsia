@@ -38,6 +38,7 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                     public SemanticsSource {
  public:
   explicit ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
+                       std::unique_ptr<ViewWrapperFactory> view_wrapper_factory,
                        vfs::PseudoDir* debug_dir);
   ~ViewManager() override;
 
@@ -46,15 +47,37 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // closed, which deletes all the semantic tree data.
   void SetSemanticsEnabled(bool enabled);
 
-  // Returns a weak pointer to the Semantic Tree owned by the service with
-  // |koid| if it exists, nullptr otherwise. Caller must always check if the
-  // pointer is valid before accessing, as the pointer may be invalidated. The
-  // pointer may become invalidated if the semantic provider disconnects or if
-  // an error occurred. This is not thread safe. This pointer may only be used
-  // in the same thread as this service is running.
-  const fxl::WeakPtr<::a11y::SemanticTree> GetTreeByKoid(const zx_koid_t koid) const;
+  // |SemanticsSource|
+  bool ViewHasSemantics(zx_koid_t view_ref_koid) override;
+
+  // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetSemanticNode(zx_koid_t koid,
+                                                                 uint32_t node_id) const override;
+
+  // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetNextNode(zx_koid_t koid,
+                                                             uint32_t node_id) const override;
+
+  // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetPreviousNode(zx_koid_t koid,
+                                                                 uint32_t node_id) const override;
+
+  // |SemanticsSource|
+  void ExecuteHitTesting(
+      zx_koid_t koid, fuchsia::math::PointF local_point,
+      fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) override;
+
+  // |SemanticsSource|
+  void PerformAccessibilityAction(
+      zx_koid_t koid, uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+      fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
+          callback) override;
 
  private:
+  // Helper function to retrieve the semantic tree corresponding to |koid|.
+  // Returns nullptr if no such tree is found.
+  const fxl::WeakPtr<::a11y::SemanticTree> GetTreeByKoid(const zx_koid_t koid) const;
+
   // |fuchsia::accessibility::semantics::ViewManager|:
   void RegisterViewForSemantics(
       fuchsia::ui::views::ViewRef view_ref,
@@ -66,9 +89,6 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // responsible for closing the channel and cleaning up the associated SemanticTree.
   void ViewSignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                          const zx_packet_signal* signal);
-
-  // |SemanticsSource|
-  bool ViewHasSemantics(zx_koid_t view_ref_koid) override;
 
   // |SemanticsSource|
   std::optional<fuchsia::ui::views::ViewRef> ViewRefClone(zx_koid_t view_ref_koid) override;
@@ -83,6 +103,8 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   bool semantics_enabled_ = false;
 
   std::unique_ptr<SemanticTreeServiceFactory> factory_;
+
+  std::unique_ptr<ViewWrapperFactory> view_wrapper_factory_;
 
   vfs::PseudoDir* const debug_dir_;
 };

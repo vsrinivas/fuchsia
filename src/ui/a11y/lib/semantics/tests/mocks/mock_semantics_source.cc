@@ -24,4 +24,99 @@ std::optional<fuchsia::ui::views::ViewRef> MockSemanticsSource::ViewRefClone(
   return a11y::Clone(view_ref_);
 }
 
+void MockSemanticsSource::CreateSemanticNode(zx_koid_t koid,
+                                             fuchsia::accessibility::semantics::Node node) {
+  nodes_[koid][node.node_id()] = std::move(node);
+}
+
+const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetSemanticNode(
+    zx_koid_t koid, uint32_t node_id) const {
+  if (nodes_.find(koid) == nodes_.end()) {
+    return nullptr;
+  }
+
+  auto& nodes_for_view = nodes_.at(koid);
+
+  if (nodes_for_view.find(node_id) == nodes_for_view.end()) {
+    return nullptr;
+  }
+
+  return &(nodes_for_view.at(node_id));
+}
+
+const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetNextNode(
+    zx_koid_t koid, uint32_t node_id) const {
+  if (nodes_.find(koid) == nodes_.end()) {
+    return nullptr;
+  }
+
+  const auto& nodes = nodes_.at(koid);
+
+  std::map<uint32_t, fuchsia::accessibility::semantics::Node>::const_iterator it =
+      nodes.find(node_id);
+
+  if (it == nodes.end()) {
+    return nullptr;
+  }
+
+  if (++it != nodes.end()) {
+    return &(it->second);
+  }
+
+  return nullptr;
+}
+
+const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetPreviousNode(
+    zx_koid_t koid, uint32_t node_id) const {
+  if (nodes_.find(koid) == nodes_.end()) {
+    return nullptr;
+  }
+
+  const auto& nodes = nodes_.at(koid);
+
+  std::map<uint32_t, fuchsia::accessibility::semantics::Node>::const_iterator it =
+      nodes.find(node_id);
+
+  if (it == nodes.end()) {
+    return nullptr;
+  }
+
+  if (it != nodes.begin()) {
+    return &(std::prev(it)->second);
+  }
+
+  return nullptr;
+}
+
+void MockSemanticsSource::SetHitTestResult(zx_koid_t koid,
+                                           fuchsia::accessibility::semantics::Hit hit_test_result) {
+  hit_test_results_[koid] = std::move(hit_test_result);
+}
+
+void MockSemanticsSource::ExecuteHitTesting(
+    zx_koid_t koid, fuchsia::math::PointF local_point,
+    fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
+  // NOTE: We don't need to check if we have specified a hit test result for the given koid. If we
+  // haven't, operator[] will default construct an empty hit test result, which is the desired
+  // behavior in this case.
+  callback(std::move(hit_test_results_[koid]));
+  hit_test_results_.erase(koid);
+}
+
+void MockSemanticsSource::SetActionResult(zx_koid_t koid, bool action_result) {
+  action_results_[koid] = action_result;
+}
+
+void MockSemanticsSource::PerformAccessibilityAction(
+    zx_koid_t koid, uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+    fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
+        callback) {
+  requested_actions_[koid].emplace_back(node_id, action);
+}
+
+const std::vector<std::pair<uint32_t, fuchsia::accessibility::semantics::Action>>&
+MockSemanticsSource::GetRequestedActionsForView(zx_koid_t koid) {
+  return requested_actions_[koid];
+}
+
 }  // namespace accessibility_test

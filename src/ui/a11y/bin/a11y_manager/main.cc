@@ -17,6 +17,7 @@ int main(int argc, const char** argv) {
 
   auto context = sys::ComponentContext::Create();
   a11y::ViewManager view_manager(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                                 std::make_unique<a11y::ViewWrapperFactory>(),
                                  context->outgoing()->debug_dir());
   a11y::TtsManager tts_manager(context.get());
   a11y::ColorTransformManager color_transform_manager(context.get());

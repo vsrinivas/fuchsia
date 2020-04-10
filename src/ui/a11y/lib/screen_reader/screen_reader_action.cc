@@ -22,23 +22,13 @@ ScreenReaderAction::ScreenReaderAction(ActionContext* context,
 
 ScreenReaderAction::~ScreenReaderAction() = default;
 
-fxl::WeakPtr<::a11y::SemanticTree> ScreenReaderAction::GetTreePointer(ActionContext* context,
-                                                                      zx_koid_t koid) {
-  FXL_DCHECK(context);
-
-  return context->view_manager->GetTreeByKoid(koid);
-}
-
 void ScreenReaderAction::ExecuteHitTesting(
     ActionContext* context, ActionData process_data,
     fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
-  FXL_DCHECK(context);
-  const auto tree_weak_ptr = GetTreePointer(context, process_data.current_view_koid);
-  if (!tree_weak_ptr) {
-    return;
-  }
-
-  tree_weak_ptr->PerformHitTesting(process_data.local_point, std::move(callback));
+  FX_DCHECK(context);
+  FX_DCHECK(context->semantics_source);
+  context->semantics_source->ExecuteHitTesting(process_data.current_view_koid,
+                                               process_data.local_point, std::move(callback));
 }
 
 fit::promise<> ScreenReaderAction::SetA11yFocusPromise(const uint32_t node_id,
@@ -72,13 +62,7 @@ fit::promise<> ScreenReaderAction::EnqueueUtterancePromise(Utterance utterance) 
 fit::promise<Utterance> ScreenReaderAction::BuildUtteranceFromNodePromise(zx_koid_t view_koid,
                                                                           uint32_t node_id) {
   return fit::make_promise([this, node_id, view_koid]() mutable -> fit::result<Utterance> {
-    const auto tree_weak_ptr = GetTreePointer(action_context_, view_koid);
-    if (!tree_weak_ptr) {
-      FX_LOGS(INFO) << "The semantic tree of the View with View Ref Koid = " << view_koid
-                    << " is no longer valid.";
-      return fit::error();
-    }
-    const auto* node = tree_weak_ptr->GetNode(node_id);
+    const auto* node = action_context_->semantics_source->GetSemanticNode(view_koid, node_id);
     if (!node) {
       FX_LOGS(INFO) << "ScreenReaderAction: No node found for node id:" << node_id;
       return fit::error();

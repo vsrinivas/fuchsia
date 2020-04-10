@@ -65,10 +65,11 @@ class SwipeActionTest : public gtest::TestLoopFixture {
   SwipeActionTest()
       : factory_(std::make_unique<MockSemanticTreeServiceFactory>()),
         factory_ptr_(factory_.get()),
-        view_manager_(std::move(factory_), context_provider_.context()->outgoing()->debug_dir()),
+        view_manager_(std::move(factory_), std::make_unique<a11y::ViewWrapperFactory>(),
+                      context_provider_.context()->outgoing()->debug_dir()),
         tts_manager_(context_provider_.context()),
         semantic_provider_(&view_manager_) {
-    action_context_.view_manager = &view_manager_;
+    action_context_.semantics_source = &view_manager_;
     tts_manager_.OpenEngine(action_context_.tts_engine_ptr.NewRequest(),
                             [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
                               EXPECT_TRUE(result.is_response());
@@ -160,7 +161,6 @@ TEST_F(SwipeActionTest, NextNodeNotFound) {
 
   EXPECT_TRUE(factory_ptr_->semantic_tree()->IsGetNextNodeCalled());
   EXPECT_EQ(kRootNodeId, factory_ptr_->semantic_tree()->NextNodeCalledOnId());
-  EXPECT_FALSE(factory_ptr_->semantic_tree()->IsGetPreviousNodeCalled());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
 }
@@ -186,7 +186,6 @@ TEST_F(SwipeActionTest, PreviousNodeNotFound) {
 
   EXPECT_TRUE(factory_ptr_->semantic_tree()->IsGetPreviousNodeCalled());
   EXPECT_EQ(kRootNodeId, factory_ptr_->semantic_tree()->PreviousNodeCalledOnId());
-  EXPECT_FALSE(factory_ptr_->semantic_tree()->IsGetNextNodeCalled());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
 }

@@ -17,10 +17,10 @@ constexpr char kDefaultActionLabel[] = "Default Action";
 }  // namespace
 
 ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
-                           a11y::ViewManager* view_manager, a11y::TtsManager* tts_manager)
+                           a11y::SemanticsSource* semantics_source, a11y::TtsManager* tts_manager)
     : context_(std::move(context)), tts_manager_(tts_manager) {
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
-  action_context_->view_manager = view_manager;
+  action_context_->semantics_source = semantics_source;
 
   InitializeServicesAndAction();
 }

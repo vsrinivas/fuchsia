@@ -20,13 +20,10 @@ void DefaultAction::Run(ActionData process_data) {
     return;
   }
 
-  const auto tree_weak_ptr = GetTreePointer(action_context_, a11y_focus.value().view_ref_koid);
-  if (!tree_weak_ptr) {
-    return;
-  }
   // Call OnAccessibilityActionRequested.
-  tree_weak_ptr->PerformAccessibilityAction(
-      a11y_focus.value().node_id, fuchsia::accessibility::semantics::Action::DEFAULT,
+  action_context_->semantics_source->PerformAccessibilityAction(
+      process_data.current_view_koid, a11y_focus.value().node_id,
+      fuchsia::accessibility::semantics::Action::DEFAULT,
       [](bool result) { FX_LOGS(INFO) << "Default Action completed with status:" << result; });
 }
 

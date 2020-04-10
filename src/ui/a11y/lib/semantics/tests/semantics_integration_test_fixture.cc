@@ -89,6 +89,7 @@ SemanticsIntegrationTest::SemanticsIntegrationTest(const std::string& environmen
     : environment_label_(environment_label),
       component_context_(sys::ComponentContext::Create()),
       view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                    std::make_unique<a11y::ViewWrapperFactory>(),
                     component_context_->outgoing()->debug_dir()),
       scenic_(component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>()) {
   scenic_.set_error_handler([](zx_status_t status) {

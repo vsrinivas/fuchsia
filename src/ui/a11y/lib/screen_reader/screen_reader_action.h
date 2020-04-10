@@ -7,8 +7,10 @@
 
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
+#include <lib/fit/promise.h>
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
+#include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace a11y {
@@ -32,7 +34,7 @@ class ScreenReaderAction {
   // Struct to hold pointers to various services, which will be required to
   // complete an action.
   struct ActionContext {
-    a11y::ViewManager* view_manager;
+    a11y::SemanticsSource* semantics_source;
     fuchsia::accessibility::tts::EnginePtr tts_engine_ptr;
   };
 
@@ -44,9 +46,6 @@ class ScreenReaderAction {
   virtual void Run(ActionData process_data) = 0;
 
  protected:
-  // Helper function to get the tree pointer based on ActionContext and view koid.
-  fxl::WeakPtr<::a11y::SemanticTree> GetTreePointer(ActionContext* context, zx_koid_t koid);
-
   // Helper function to call hit testing based on ActionContext and ActionData.
   void ExecuteHitTesting(
       ActionContext* context, ActionData process_data,
