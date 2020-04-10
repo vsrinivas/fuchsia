@@ -121,7 +121,11 @@ func TestSubprocessTester(t *testing.T) {
 
 type fakeDataSinkCopier struct{}
 
-func (*fakeDataSinkCopier) Copy(remoteDir, localDir string) (runtests.DataSinkMap, error) {
+func (*fakeDataSinkCopier) GetReference() (runtests.DataSinkReference, error) {
+	return runtests.DataSinkReference{}, nil
+}
+
+func (*fakeDataSinkCopier) Copy(sinks []runtests.DataSinkReference, localDir string) (runtests.DataSinkMap, error) {
 	return runtests.DataSinkMap{}, nil
 }
 

@@ -61,7 +61,8 @@ type sshRunner interface {
 
 // For testability
 type dataSinkCopier interface {
-	Copy(remoteDir, localDir string) (runtests.DataSinkMap, error)
+	GetReference() (runtests.DataSinkReference, error)
+	Copy(sinks []runtests.DataSinkReference, localDir string) (runtests.DataSinkMap, error)
 	Close() error
 }
 
@@ -83,7 +84,7 @@ func newSubprocessTester(dir string, env []string, perTestTimeout time.Duration)
 	}
 }
 
-func (t *subprocessTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkMap, error) {
+func (t *subprocessTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
 	command := test.Command
 	if len(test.Command) == 0 {
 		if test.Path == "" {
@@ -101,6 +102,10 @@ func (t *subprocessTester) Test(ctx context.Context, test build.Test, stdout io.
 		return nil, &timeoutError{t.perTestTimeout}
 	}
 	return nil, err
+}
+
+func (t *subprocessTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkReference) error {
+	return nil
 }
 
 func (t *subprocessTester) Close() error {
@@ -135,7 +140,7 @@ func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputD
 		return nil, fmt.Errorf("failed to establish an SSH connection: %v", err)
 	}
 	r := runner.NewSSHRunner(client, config)
-	copier, err := runtests.NewDataSinkCopier(client)
+	copier, err := runtests.NewDataSinkCopier(client, dataOutputDir)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +164,7 @@ func (t *fuchsiaSSHTester) reconnectIfNecessary(ctx context.Context) error {
 		if err := t.copier.Close(); err != nil {
 			logger.Errorf(ctx, "failed to close data sink copier: %v", err)
 		}
-		t.copier, err = runtests.NewDataSinkCopier(t.client)
+		t.copier, err = runtests.NewDataSinkCopier(t.client, dataOutputDir)
 		if err != nil {
 			return fmt.Errorf("failed to create new data sink copier: %w", err)
 		}
@@ -180,7 +185,7 @@ func (t *fuchsiaSSHTester) isTimeoutError(test build.Test, err error) bool {
 }
 
 // Test runs a test over SSH.
-func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkMap, error) {
+func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
 	setCommand(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
 	var testErr error
 	const maxReconnectAttempts = 2
@@ -211,23 +216,37 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.
 		testErr = &timeoutError{t.perTestTimeout}
 	}
 
-	var copyErr error
-	var sinks runtests.DataSinkMap
+	var sinkErr error
+	var sinks runtests.DataSinkReference
 	if t.useRuntests {
 		startTime := time.Now()
-		if sinks, copyErr = t.copier.Copy(dataOutputDir, t.localOutputDir); copyErr != nil {
-			logger.Errorf(ctx, "failed to copy data sinks off target for test %q: %v", test.Name, copyErr)
+		if sinks, sinkErr = t.copier.GetReference(); sinkErr != nil {
+			logger.Errorf(ctx, "failed to determine data sinks for test %q: %v", test.Name, sinkErr)
 		}
-		copyDuration := time.Now().Sub(startTime)
-		if len(sinks) > 0 {
-			logger.Debugf(ctx, "copied data sinks (%v)", copyDuration)
+		duration := time.Now().Sub(startTime)
+		if sinks.Size() > 0 {
+			logger.Debugf(ctx, "%d data sinks found in %v", sinks.Size(), duration)
 		}
 	}
 
 	if testErr == nil {
-		return sinks, copyErr
+		return sinks, sinkErr
 	}
 	return sinks, testErr
+}
+
+func (t *fuchsiaSSHTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkReference) error {
+	startTime := time.Now()
+	sinkMap, err := t.copier.Copy(sinks, t.localOutputDir)
+	if err != nil {
+		return fmt.Errorf("failed to copy data sinks off target: %v", err)
+	}
+	copyDuration := time.Now().Sub(startTime)
+	numSinks := runtests.DataSinkReference(sinkMap).Size()
+	if numSinks > 0 {
+		logger.Debugf(ctx, "copied %d data sinks in %v", numSinks, copyDuration)
+	}
+	return nil
 }
 
 // Close terminates the underlying SSH connection. The object is no longer

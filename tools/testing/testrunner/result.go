@@ -23,7 +23,7 @@ type TestResult struct {
 	Result runtests.TestResult
 
 	// DataSinks gives the data sinks attached to a test.
-	DataSinks runtests.DataSinkMap
+	DataSinks runtests.DataSinkReference
 
 	Stdout    []byte
 	Stderr    []byte

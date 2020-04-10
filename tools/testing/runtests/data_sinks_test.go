@@ -51,12 +51,16 @@ func TestCopyDataSinks(t *testing.T) {
 	}
 
 	viewer := fakeViewer{s: summary, copiedFiles: map[string]string{}}
-	copier := DataSinkCopier{viewer}
-	dataSinks, err := copier.Copy("REMOTE_DIR", "LOCAL_DIR")
+	copier := DataSinkCopier{viewer: viewer, remoteDir: "REMOTE_DIR"}
+	dataSinks, err := copier.GetReference()
+	if err != nil {
+		t.Fatalf("failed to get data sinks: %s", err)
+	} else if !reflect.DeepEqual(DataSinkMap(dataSinks), expectedSinks) {
+		t.Errorf("got data sinks %v, expected %v", dataSinks, expectedSinks)
+	}
+	_, err = copier.Copy([]DataSinkReference{dataSinks}, "LOCAL_DIR")
 	if err != nil {
 		t.Fatalf("failed to copy data sinks: %s", err)
-	} else if !reflect.DeepEqual(dataSinks, expectedSinks) {
-		t.Errorf("got data sinks %v, expected %v", dataSinks, expectedSinks)
 	}
 
 	for _, sink := range dataSinks["sink"] {

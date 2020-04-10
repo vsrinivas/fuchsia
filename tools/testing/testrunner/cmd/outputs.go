@@ -51,7 +51,7 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 		Result:         result.Result,
 		StartTime:      result.StartTime,
 		DurationMillis: duration.Milliseconds(),
-		DataSinks:      result.DataSinks,
+		DataSinks:      runtests.DataSinkMap(result.DataSinks),
 	})
 
 	desc := fmt.Sprintf("%s (%v)", result.Name, duration)

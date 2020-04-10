@@ -29,7 +29,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 			Result:    runtests.TestFailure,
 			StartTime: start,
 			EndTime:   start.Add(5 * time.Millisecond),
-			DataSinks: runtests.DataSinkMap{
+			DataSinks: runtests.DataSinkReference{
 				"sinks": []runtests.DataSink{
 					{
 						Name: "SINK_A1",
@@ -49,7 +49,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 			Result:    runtests.TestSuccess,
 			StartTime: start,
 			EndTime:   start.Add(10 * time.Millisecond),
-			DataSinks: runtests.DataSinkMap{
+			DataSinks: runtests.DataSinkReference{
 				"sinks": []runtests.DataSink{
 					{
 						Name: "SINK_B",

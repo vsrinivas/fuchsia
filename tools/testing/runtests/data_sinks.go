@@ -18,26 +18,44 @@ import (
 
 // DataSinkCopier copies data sinks from a remote host after a runtests invocation.
 type DataSinkCopier struct {
-	viewer remoteViewer
+	viewer    remoteViewer
+	remoteDir string
 }
 
 // NewDataSinkCopier constructs a copier using the specified ssh client.
-func NewDataSinkCopier(client *ssh.Client) (*DataSinkCopier, error) {
+func NewDataSinkCopier(client *ssh.Client, remoteDir string) (*DataSinkCopier, error) {
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
 		return nil, err
 	}
 	viewer := &sftpViewer{sftpClient}
-	return &DataSinkCopier{viewer: viewer}, nil
+	return &DataSinkCopier{viewer: viewer, remoteDir: remoteDir}, nil
 }
 
 // Copy copies data sinks using the copier's remote viewer.
-func (c DataSinkCopier) Copy(remoteDir, localDir string) (DataSinkMap, error) {
-	return copyDataSinks(c.viewer, remoteDir, localDir)
+func (c DataSinkCopier) Copy(references []DataSinkReference, localDir string) (DataSinkMap, error) {
+	return copyDataSinks(c.viewer, references, c.remoteDir, localDir)
+}
+
+// GetReference returns a reference to the remote data sinks.
+func (c DataSinkCopier) GetReference() (DataSinkReference, error) {
+	return getDataSinkReference(c.viewer, c.remoteDir)
 }
 
 func (c DataSinkCopier) Close() error {
 	return c.viewer.close()
+}
+
+// DataSinkReference holds information about data sinks on the target.
+type DataSinkReference DataSinkMap
+
+// Size returns the number of sinks held by the reference.
+func (d DataSinkReference) Size() int {
+	numSinks := 0
+	for _, files := range d {
+		numSinks += len(files)
+	}
+	return numSinks
 }
 
 // remoteView provides an interface for fetching a summary.json and copying
@@ -90,34 +108,48 @@ func (v sftpViewer) close() error {
 	return v.client.Close()
 }
 
-// CopyDataSinks retrieves the summary.json produced by runtests (assuming only
-// a single test was run) and copies the data sinks specified in the summary
-// from the remoteOutputDir on the target to the localOutputDir on the host. It
-// modifies the output data sinks in-place, referencing the local paths of the
-// copied files.
-func copyDataSinks(viewer remoteViewer, remoteOutputDir, localOutputDir string) (DataSinkMap, error) {
+// GetDataSinkReference retrieves the summary.json produced by runtests (assuming only
+// a single test was run) and gets the data sinks specified in the summary.
+func getDataSinkReference(viewer remoteViewer, remoteOutputDir string) (DataSinkReference, error) {
 	summaryPath := path.Join(remoteOutputDir, TestSummaryFilename)
 	summary, err := viewer.summary(summaryPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read test summary from %q: %w", summaryPath, err)
 	}
 
-	sinks := DataSinkMap{}
+	sinks := DataSinkReference{}
 	for _, details := range summary.Tests {
 		for name, files := range details.DataSinks {
-			var outputFiles []DataSink
+			sinks[name] = files
+		}
+	}
+	return sinks, nil
+}
+
+// CopyDataSinks copies the data sinks specified in references from the
+// remoteOutputDir on the target to the localOutputDir on the host.
+// It returns a DataSinkMap of the copied files, removing duplicates across
+// the references.
+func copyDataSinks(viewer remoteViewer, references []DataSinkReference, remoteOutputDir, localOutputDir string) (DataSinkMap, error) {
+	sinks := DataSinkMap{}
+	copied := make(map[string]bool)
+	for _, ref := range references {
+		for name, files := range ref {
+			if _, ok := sinks[name]; !ok {
+				sinks[name] = []DataSink{}
+			}
 			for _, file := range files {
+				if _, ok := copied[file.File]; ok {
+					continue
+				}
 				src := path.Join(remoteOutputDir, file.File)
 				dest := filepath.Join(localOutputDir, file.File)
-				if err = viewer.copyFile(src, dest); err != nil {
+				if err := viewer.copyFile(src, dest); err != nil {
 					return nil, fmt.Errorf("failed to copy data sink %q: %w", file.File, err)
 				}
-				outputFiles = append(outputFiles, DataSink{
-					Name: file.Name,
-					File: file.File,
-				})
+				copied[file.File] = true
+				sinks[name] = append(sinks[name], file)
 			}
-			sinks[name] = outputFiles
 		}
 	}
 	return sinks, nil

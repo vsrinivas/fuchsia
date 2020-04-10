@@ -136,8 +136,9 @@ func loadTests(path string) ([]build.Test, error) {
 }
 
 type tester interface {
-	Test(context.Context, build.Test, io.Writer, io.Writer) (runtests.DataSinkMap, error)
+	Test(context.Context, build.Test, io.Writer, io.Writer) (runtests.DataSinkReference, error)
 	Close() error
+	CopySinks(context.Context, []runtests.DataSinkReference) error
 }
 
 func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, nodename, sshKeyFile string) error {
@@ -194,6 +195,7 @@ func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, node
 }
 
 func runTests(ctx context.Context, tests []build.Test, t tester, outputs *testOutputs) error {
+	var sinks []runtests.DataSinkReference
 	for _, test := range tests {
 		result, err := runTest(ctx, test, t)
 		if errors.Is(err, sshutil.ConnectionError) {
@@ -202,8 +204,9 @@ func runTests(ctx context.Context, tests []build.Test, t tester, outputs *testOu
 		if err := outputs.record(*result); err != nil {
 			return err
 		}
+		sinks = append(sinks, result.DataSinks)
 	}
-	return nil
+	return t.CopySinks(ctx, sinks)
 }
 
 func runTest(ctx context.Context, test build.Test, t tester) (*testrunner.TestResult, error) {
