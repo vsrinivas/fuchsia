@@ -14,7 +14,7 @@ use std::convert::TryFrom;
 use syn::spanned::Spanned;
 use syn::{parse_macro_input, DeriveInput, Error};
 
-struct InspectField {
+struct UnitField {
     /// Name of the original and the inspect data field.
     name: syn::Ident,
 
@@ -23,52 +23,52 @@ struct InspectField {
     type_path: syn::TypePath,
 }
 
-impl InspectField {
+impl UnitField {
     /// Get a string literal containing the name of the field.
     fn literal(&self) -> syn::LitStr {
         syn::LitStr::new(self.name.to_string().as_ref(), self.name.span())
     }
 
-    /// Convenience method to get the fully qualified path to the inspect trait.
-    fn inspect_path(&self) -> proc_macro2::TokenStream {
+    /// Convenience method to get the fully qualified path to the Unit trait.
+    fn unit_path(&self) -> proc_macro2::TokenStream {
         let type_path = &self.type_path;
-        quote! { <#type_path as ::fuchsia_inspect_derive::Inspect> }
+        quote! { <#type_path as ::fuchsia_inspect_derive::Unit> }
     }
 
     /// Creates a single field declaration for the inspect data struct declaration.
     fn struct_decl(&self) -> proc_macro2::TokenStream {
         let name = &self.name;
         let span = self.type_path.span();
-        let inspect = self.inspect_path();
-        quote_spanned! { span=> #name: #inspect::Data }
+        let unit = self.unit_path();
+        quote_spanned! { span=> #name: #unit::Data }
     }
 
     /// Creates a single field assignment for the inspect data struct initialization.
     ///
-    /// Note that the local variable `inspect_derive_node` must be defined.
+    /// Note that the local variable `_inspect_node` must be defined.
     fn create_struct_expr(&self) -> proc_macro2::TokenStream {
         let literal = self.literal();
         let name = &self.name;
-        let inspect = self.inspect_path();
-        quote! { #name: #inspect::inspect_create(&self.#name, &inspect_derive_node, #literal) }
+        let unit = self.unit_path();
+        quote! { #name: #unit::inspect_create(&self.#name, &_inspect_node, #literal) }
     }
 
     /// Creates a single field update assignment statement.
     fn update_stmt(&self) -> proc_macro2::TokenStream {
         let name = &self.name;
-        let inspect = self.inspect_path();
-        quote! {#inspect::inspect_update(&self.#name, &mut data.#name)}
+        let unit = self.unit_path();
+        quote! {#unit::inspect_update(&self.#name, &mut data.#name)}
     }
 }
 
 /// Parse a syn::Field into an inspect field. Returns an error if the field is not named.
-impl TryFrom<&syn::Field> for InspectField {
+impl TryFrom<&syn::Field> for UnitField {
     type Error = Error;
 
-    fn try_from(f: &syn::Field) -> Result<InspectField, Error> {
+    fn try_from(f: &syn::Field) -> Result<UnitField, Error> {
         let name = f.ident.as_ref().expect("internal error: expected named field").clone();
         let type_path = to_type_path(&f.ty)?;
-        Ok(InspectField { name, type_path })
+        Ok(UnitField { name, type_path })
     }
 }
 
@@ -142,7 +142,7 @@ fn check_container_attrs(d: &syn::DeriveInput) -> Result<(), Error> {
 }
 
 /// The `Inspect` derive macro.
-#[proc_macro_derive(Inspect, attributes(inspect))]
+#[proc_macro_derive(Unit, attributes(inspect))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     match derive_inner(ast) {
@@ -160,30 +160,30 @@ fn derive_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Error> {
             fields: syn::Fields::Named(syn::FieldsNamed { ref named, .. }),
             ..
         }) => Ok(named),
-        _ => Err(Error::new_spanned(&ast, "can only derive inspect on named structs")),
+        _ => Err(Error::new_spanned(&ast, "can only derive Unit on named structs")),
     }?;
-    let mut inspect_fields = Vec::new();
+    let mut unit_fields = Vec::new();
     for field in fields {
         let args = get_field_attrs(field)?;
         if args.skip {
             continue;
         }
-        let data_field = InspectField::try_from(field)?;
-        inspect_fields.push(data_field);
+        let data_field = UnitField::try_from(field)?;
+        unit_fields.push(data_field);
     }
 
-    let inspect_data_ident = format_ident!("{}InspectData", name);
-    let struct_decls = inspect_fields.iter().map(|f| f.struct_decl());
-    let create_struct_exprs = inspect_fields.iter().map(|f| f.create_struct_expr());
-    let update_stmts = inspect_fields.iter().map(|f| f.update_stmt());
+    let inspect_data_ident = format_ident!("_{}InspectData", name);
+    let struct_decls = unit_fields.iter().map(|f| f.struct_decl());
+    let create_struct_exprs = unit_fields.iter().map(|f| f.create_struct_expr());
+    let update_stmts = unit_fields.iter().map(|f| f.update_stmt());
 
     Ok(quote! {
         struct #inspect_data_ident {
             #(#struct_decls,)*
-            inspect_derive_node: ::fuchsia_inspect::Node,
+            _inspect_node: ::fuchsia_inspect::Node,
         }
 
-        impl fuchsia_inspect_derive::Inspect for #name {
+        impl fuchsia_inspect_derive::Unit for #name {
 
             type Data = #inspect_data_ident;
 
@@ -192,10 +192,10 @@ fn derive_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Error> {
                 parent: &::fuchsia_inspect::Node,
                 name: T
             ) -> Self::Data {
-                let inspect_derive_node = parent.create_child(name);
+                let _inspect_node = parent.create_child(name);
                 #inspect_data_ident {
                     #(#create_struct_exprs,)*
-                    inspect_derive_node,
+                    _inspect_node,
                 }
             }
 

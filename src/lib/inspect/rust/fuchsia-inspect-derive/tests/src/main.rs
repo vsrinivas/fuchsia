@@ -5,12 +5,12 @@
 #![cfg(test)]
 
 use fuchsia_inspect::{assert_inspect_tree, Inspector};
-use fuchsia_inspect_derive::Inspect;
+use fuchsia_inspect_derive::Unit;
 use serde::Serialize;
 
 // TODO(49049): Add negative tests when compile failure tests are possible.
 
-#[derive(Inspect, Serialize)]
+#[derive(Unit, Serialize)]
 struct Yak {
     name: String,
     age: i64,
@@ -20,7 +20,7 @@ struct Yak {
     yakling: Yakling,
 }
 
-#[derive(Inspect, Serialize)]
+#[derive(Unit, Serialize)]
 #[serde(rename = "YakLing")] // Unrelated container attributes allowed
 struct Yakling {
     #[serde(rename = "Name")] // Unrelated field attributes allowed
@@ -28,7 +28,7 @@ struct Yakling {
     age: u8,
 }
 
-#[derive(Inspect, Default)]
+#[derive(Unit, Default)]
 struct BasicTypes {
     t_u8: u8,
     t_u16: u16,
@@ -39,6 +39,7 @@ struct BasicTypes {
     t_i16: i16,
     t_i32: i32,
     t_i64: i64,
+    t_isize: isize,
     t_f32: f32,
     t_f64: f64,
     t_bool: bool,
@@ -51,12 +52,12 @@ fn primitive() {
     let inspector = Inspector::new();
     let root = inspector.root();
     let mut num = 127i8;
-    let mut num_inspect = num.inspect_create(&root, "num");
+    let mut num_data = num.inspect_create(&root, "num");
     assert_inspect_tree!(inspector, root: { num: 127i64 });
     num = -128;
-    num.inspect_update(&mut num_inspect);
+    num.inspect_update(&mut num_data);
     assert_inspect_tree!(inspector, root: { num: -128i64 });
-    std::mem::drop(num_inspect);
+    std::mem::drop(num_data);
     assert_inspect_tree!(inspector, root: {});
 }
 
@@ -65,17 +66,17 @@ fn flat() {
     let inspector = Inspector::new();
     let root = inspector.root();
     let mut yakling = Yakling { name: "Lil Sebastian".to_string(), age: 5 };
-    let mut yakling_inspect = yakling.inspect_create(&root, "yak");
+    let mut yakling_data = yakling.inspect_create(&root, "yak");
     assert_inspect_tree!(inspector, root: {
         yak: { name: "Lil Sebastian", age: 5u64 }
     });
     yakling.name = "Sebastian".to_string();
     yakling.age = 10;
-    yakling.inspect_update(&mut yakling_inspect);
+    yakling.inspect_update(&mut yakling_data);
     assert_inspect_tree!(inspector, root: {
         yak: { name: "Sebastian", age: 10u64 }
     });
-    std::mem::drop(yakling_inspect);
+    std::mem::drop(yakling_data);
     assert_inspect_tree!(inspector, root: {});
 }
 
@@ -89,7 +90,7 @@ fn nested() {
         credit_card_no: "12345678".to_string(),
         yakling: Yakling { name: "Lil Sebastian".to_string(), age: 2 },
     };
-    let mut yak_inspect = yak.inspect_create(&root, "my_yak");
+    let mut yak_data = yak.inspect_create(&root, "my_yak");
     assert_inspect_tree!(inspector, root: {
         my_yak: {
             name: "Big Sebastian",
@@ -103,7 +104,7 @@ fn nested() {
     yak.yakling.age += 1; // Happy bday, Lil Sebastian
     yak.name = "Big Sebastian Sr.".to_string();
     yak.credit_card_no = "1234".to_string();
-    yak.inspect_update(&mut yak_inspect);
+    yak.inspect_update(&mut yak_data);
     assert_inspect_tree!(inspector, root: {
         my_yak: {
             name: "Big Sebastian Sr.",
@@ -114,7 +115,7 @@ fn nested() {
             },
         }
     });
-    std::mem::drop(yak_inspect);
+    std::mem::drop(yak_data);
     assert_inspect_tree!(inspector, root: {});
 }
 
@@ -123,7 +124,7 @@ fn basic_types() {
     let inspector = Inspector::new();
     let root = inspector.root();
     let mut basic = BasicTypes::default();
-    let mut basic_inspect = basic.inspect_create(&root, "basic");
+    let mut basic_data = basic.inspect_create(&root, "basic");
     assert_inspect_tree!(inspector, root: {
         basic: {
             t_u8: 0u64,
@@ -135,6 +136,7 @@ fn basic_types() {
             t_i16: 0i64,
             t_i32: 0i64,
             t_i64: 0i64,
+            t_isize: 0i64,
             t_f32: 0f64,
             t_f64: 0f64,
             t_bool: false,
@@ -146,7 +148,7 @@ fn basic_types() {
     basic.t_bool = true;
     basic.t_f32 = 1.0;
     basic.t_vec_u8 = vec![0x13, 0x37];
-    basic.inspect_update(&mut basic_inspect);
+    basic.inspect_update(&mut basic_data);
     assert_inspect_tree!(inspector, root: {
         basic: {
             t_u8: 0u64,
@@ -158,6 +160,7 @@ fn basic_types() {
             t_i16: 0i64,
             t_i32: 0i64,
             t_i64: 0i64,
+            t_isize: 0i64,
             t_f32: 1f64,
             t_f64: 0f64,
             t_bool: true,
@@ -165,6 +168,6 @@ fn basic_types() {
             t_vec_u8: vec![0x13u8, 0x37u8],
         }
     });
-    std::mem::drop(basic_inspect);
+    std::mem::drop(basic_data);
     assert_inspect_tree!(inspector, root: {});
 }
