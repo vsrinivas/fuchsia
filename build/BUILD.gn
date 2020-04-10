@@ -309,7 +309,6 @@ group("deprecated_package_underscore") {
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//garnet/tests/benchmarks:garnet_benchmarks",
     "//garnet/tests/fdio_spawn:fdio_spawn_tests",
-    "//garnet/tests/zircon/bringup:bringup_bootfs_test",
     "//garnet/tests/zircon:zircon_fuzzers_pkg",
     "//garnet/tests/zircon:zircon_tests",
     "//sdk/lib/fidl/cpp/fuzzing:fidl_cpp_fuzzing_tests",
