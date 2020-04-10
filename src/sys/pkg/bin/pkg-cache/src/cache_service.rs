@@ -25,37 +25,46 @@ use {
 pub async fn serve(
     pkgfs_versions: pkgfs::versions::Client,
     static_packages: Arc<StaticPackages>,
-    mut stream: PackageCacheRequestStream,
+    stream: PackageCacheRequestStream,
 ) -> Result<(), Error> {
-    while let Some(event) = stream.try_next().await? {
-        match event {
-            PackageCacheRequest::Get { meta_far_blob, selectors, needed_blobs, dir, responder } => {
-                let meta_far_blob: BlobInfo = meta_far_blob.into();
-                trace::duration_begin!("app", "cache_get",
+    stream
+        .map_err(anyhow::Error::new)
+        .try_for_each_concurrent(None, |event| async {
+            match event {
+                PackageCacheRequest::Get {
+                    meta_far_blob,
+                    selectors,
+                    needed_blobs,
+                    dir,
+                    responder,
+                } => {
+                    let meta_far_blob: BlobInfo = meta_far_blob.into();
+                    trace::duration_begin!("app", "cache_get",
                     "meta_far_blob_id" => meta_far_blob.blob_id.to_string().as_str());
-                let status =
-                    get(&pkgfs_versions, meta_far_blob, selectors, needed_blobs, dir).await;
-                trace::duration_end!("app", "cache_get",
+                    let status =
+                        get(&pkgfs_versions, meta_far_blob, selectors, needed_blobs, dir).await;
+                    trace::duration_end!("app", "cache_get",
                     "status" => Status::from(status).to_string().as_str());
-                responder.send(Status::from(status).into_raw())?;
-            }
-            PackageCacheRequest::Open { meta_far_blob_id, selectors, dir, responder } => {
-                let meta_far_blob_id: BlobId = meta_far_blob_id.into();
-                trace::duration_begin!("app", "cache_open",
+                    responder.send(Status::from(status).into_raw())?;
+                }
+                PackageCacheRequest::Open { meta_far_blob_id, selectors, dir, responder } => {
+                    let meta_far_blob_id: BlobId = meta_far_blob_id.into();
+                    trace::duration_begin!("app", "cache_open",
                     "meta_far_blob_id" => meta_far_blob_id.to_string().as_str());
-                let status = open(&pkgfs_versions, meta_far_blob_id, selectors, dir).await;
-                trace::duration_end!("app", "cache_open",
+                    let status = open(&pkgfs_versions, meta_far_blob_id, selectors, dir).await;
+                    trace::duration_end!("app", "cache_open",
                     "status" => Status::from(status).to_string().as_str());
-                responder.send(Status::from(status).into_raw())?;
+                    responder.send(Status::from(status).into_raw())?;
+                }
+                PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
+                    let stream = iterator.into_stream()?;
+                    base_package_index(Arc::clone(&static_packages), stream).await;
+                }
             }
-            PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
-                let stream = iterator.into_stream()?;
-                base_package_index(Arc::clone(&static_packages), stream).await;
-            }
-        }
-    }
 
-    Ok(())
+            Ok(())
+        })
+        .await
 }
 
 /// Fetch a package, and optionally mount it.

@@ -11,6 +11,7 @@ use {
     fuchsia_merkle::Hash,
     fuchsia_pkg::MetaContents,
     fuchsia_syslog::fx_log_err,
+    futures::{stream::FuturesUnordered, TryStreamExt},
     pkgfs::{system::Client as SystemImage, versions::Client as Versions},
     std::{
         collections::HashSet,
@@ -92,10 +93,17 @@ impl BlobLocation {
         )?;
 
         let versions = versions()?;
+
+        let mut futures = std::iter::once(&system_image_hash)
+            .chain(static_packages.hashes())
+            .map(|p| Self::package_blobs(&versions, p))
+            .collect::<FuturesUnordered<_>>();
+
         let mut ret = HashSet::new();
-        for p in std::iter::once(&system_image_hash).chain(static_packages.hashes()) {
-            ret.extend(Self::package_blobs(&versions, p).await?);
+        while let Some(p) = futures.try_next().await? {
+            ret.extend(p);
         }
+
         Ok(ret)
     }
 
