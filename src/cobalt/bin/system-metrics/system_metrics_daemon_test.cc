@@ -8,7 +8,6 @@
 #include <fuchsia/cobalt/cpp/fidl_test_base.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
