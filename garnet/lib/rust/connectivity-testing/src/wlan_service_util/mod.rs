@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    fidl_fuchsia_wlan_device::MacRole,
     fidl_fuchsia_wlan_device_service::{DestroyIfaceRequest, DeviceServiceProxy},
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx,
@@ -18,6 +19,35 @@ pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, E
     Ok(ifaces.into_iter().map(|i| i.iface_id).collect())
 }
 
+/// Returns the first iface id with the requested role
+///
+/// # Arguments: 2
+/// * `wlan_svc`: a DeviceServiceProxy
+/// * 'role' : requested MacRole (client or ap)
+pub async fn get_first_iface(wlan_svc: &DeviceServiceProxy, role: MacRole) -> Result<u16, Error> {
+    let wlan_iface_ids =
+        get_iface_list(wlan_svc).await.context("Connect: failed to get wlan iface list")?;
+
+    if wlan_iface_ids.len() == 0 {
+        return Err(format_err!("No wlan interface found"));
+    }
+    fx_log_info!("Found {} wlan iface entries", wlan_iface_ids.len());
+    for iface_id in wlan_iface_ids {
+        let (status, resp) = wlan_svc.query_iface(iface_id).await.context("querying iface info")?;
+
+        if status != zx::sys::ZX_OK {
+            return Err(format_err!("query_iface {} failed: {}", iface_id, status));
+        }
+        if resp.is_none() {
+            return Err(format_err!("invalid response"));
+        }
+        let resp = resp.unwrap();
+        if resp.role == role {
+            return Ok(iface_id);
+        }
+    }
+    Err(format_err!("interface with role {:?} not found", role))
+}
 /// Returns the list of Phy IDs for this system.
 ///
 /// # Arguments
@@ -49,8 +79,8 @@ mod tests {
         super::*,
         fidl_fuchsia_wlan_device::MacRole,
         fidl_fuchsia_wlan_device_service::{
-            DeviceServiceMarker, DeviceServiceRequest, DeviceServiceRequestStream,
-            QueryIfaceResponse,
+            DeviceServiceMarker, DeviceServiceRequest, DeviceServiceRequestStream, IfaceListItem,
+            ListIfacesResponse, QueryIfaceResponse,
         },
         fuchsia_async::Executor,
         futures::{task::Poll, StreamExt},
@@ -63,6 +93,21 @@ mod tests {
         role: fidl_fuchsia_wlan_device::MacRole,
     ) -> QueryIfaceResponse {
         QueryIfaceResponse { role, id: 0, phy_id: 0, phy_assigned_id: 0, mac_addr }
+    }
+
+    pub fn respond_to_query_iface_list_request(
+        exec: &mut Executor,
+        req_stream: &mut DeviceServiceRequestStream,
+        iface_list_vec: Vec<IfaceListItem>,
+    ) {
+        let req = exec.run_until_stalled(&mut req_stream.next());
+        let responder = assert_variant !(
+            req,
+            Poll::Ready(Some(Ok(DeviceServiceRequest::ListIfaces{responder})))
+            => responder);
+        responder
+            .send(&mut ListIfacesResponse { ifaces: iface_list_vec })
+            .expect("fake query iface list response: send failed")
     }
 
     pub fn respond_to_query_iface_request(

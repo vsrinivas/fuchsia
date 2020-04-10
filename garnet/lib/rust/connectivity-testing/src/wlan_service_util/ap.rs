@@ -5,6 +5,7 @@
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
+use fidl_fuchsia_wlan_device::MacRole;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_zircon as zx;
@@ -25,6 +26,12 @@ pub async fn get_sme_proxy(
     } else {
         Err(format_err!("Invalid interface id {}", iface_id))
     }
+}
+
+pub async fn get_first_sme(wlan_svc: &WlanService) -> Result<fidl_sme::ApSmeProxy, Error> {
+    let iface_id =
+        super::get_first_iface(wlan_svc, MacRole::Ap).await.context("failed to get iface")?;
+    get_sme_proxy(&wlan_svc, iface_id).await
 }
 
 pub async fn stop(iface_sme_proxy: &fidl_sme::ApSmeProxy) -> Result<(), Error> {
@@ -66,6 +73,9 @@ pub async fn start(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_wlan_device_service::{
+        DeviceServiceMarker, DeviceServiceRequest, DeviceServiceRequestStream, IfaceListItem,
+    };
     use fidl_fuchsia_wlan_sme::ApSmeMarker;
     use fidl_fuchsia_wlan_sme::StartApResultCode;
     use fidl_fuchsia_wlan_sme::{ApSmeRequest, ApSmeRequestStream};
@@ -73,6 +83,7 @@ mod tests {
     use futures::stream::{StreamExt, StreamFuture};
     use futures::task::Poll;
     use pin_utils::pin_mut;
+    use wlan_common::assert_variant;
 
     #[test]
     fn start_ap_success_returns_true() {
@@ -191,5 +202,77 @@ mod tests {
             req.expect("did not expect the ApSmeRequestStream to end")
                 .expect("error polling ap sme request stream")
         })
+    }
+
+    fn respond_to_get_ap_sme_request(
+        exec: &mut fasync::Executor,
+        req_stream: &mut DeviceServiceRequestStream,
+        status: zx::Status,
+    ) {
+        let req = exec.run_until_stalled(&mut req_stream.next());
+
+        let responder = assert_variant !(
+            req,
+            Poll::Ready(Some(Ok(DeviceServiceRequest::GetApSme{ responder, ..})))
+            => responder);
+
+        // now send the response back
+        responder.send(status.into_raw()).expect("fake sme proxy response: send failed")
+    }
+
+    fn test_get_first_sme(iface_list: &[MacRole]) -> Result<fidl_sme::ApSmeProxy, Error> {
+        let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
+        let fut = get_first_sme(&proxy);
+        pin_mut!(fut);
+
+        let ifaces =
+            (0..iface_list.len() as u16).map(|iface_id| IfaceListItem { iface_id }).collect();
+
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        crate::wlan_service_util::tests::respond_to_query_iface_list_request(
+            &mut exec,
+            &mut req_stream,
+            ifaces,
+        );
+
+        for mac_role in iface_list {
+            // iface query response
+            assert!(exec.run_until_stalled(&mut fut).is_pending());
+            crate::wlan_service_util::tests::respond_to_query_iface_request(
+                &mut exec,
+                &mut req_stream,
+                *mac_role,
+                Some([1, 2, 3, 4, 5, 6]),
+            );
+
+            if *mac_role == MacRole::Ap {
+                // ap sme proxy
+                assert!(exec.run_until_stalled(&mut fut).is_pending());
+                respond_to_get_ap_sme_request(&mut exec, &mut req_stream, zx::Status::OK);
+                break;
+            }
+        }
+
+        exec.run_singlethreaded(&mut fut)
+    }
+    // iface list contains an AP and a client. Test should pass
+    #[test]
+    fn check_get_ap_sme_success() {
+        let iface_list: Vec<MacRole> = vec![MacRole::Client, MacRole::Ap];
+        test_get_first_sme(&iface_list).expect("expect success but failed");
+    }
+
+    // iface list is empty. Test should fail
+    #[test]
+    fn check_get_ap_sme_no_devices() {
+        let iface_list: Vec<MacRole> = Vec::new();
+        test_get_first_sme(&iface_list).expect_err("expect fail but succeeded");
+    }
+
+    // iface list does not contain an ap. Test should fail
+    #[test]
+    fn check_get_ap_sme_no_aps() {
+        let iface_list: Vec<MacRole> = vec![MacRole::Client, MacRole::Client];
+        test_get_first_sme(&iface_list).expect_err("expect fail but succeeded");
     }
 }

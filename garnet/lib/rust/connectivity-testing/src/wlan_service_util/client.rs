@@ -8,7 +8,7 @@ use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_device::MacRole;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::stream::TryStreamExt;
 
@@ -38,28 +38,9 @@ pub async fn get_sme_proxy(
 }
 
 pub async fn get_first_sme(wlan_svc: &WlanService) -> Result<fidl_sme::ClientSmeProxy, Error> {
-    let wlan_iface_ids =
-        super::get_iface_list(wlan_svc).await.context("Connect: failed to get wlan iface list")?;
-
-    if wlan_iface_ids.len() == 0 {
-        return Err(format_err!("No wlan interface found"));
-    }
-    fx_log_info!("Found {} wlan iface entries", wlan_iface_ids.len());
-    for iface_id in wlan_iface_ids {
-        let (status, resp) = wlan_svc.query_iface(iface_id).await.context("querying iface info")?;
-
-        if status != zx::sys::ZX_OK {
-            return Err(format_err!("query_iface {} failed: {}", iface_id, status));
-        }
-        if resp.is_none() {
-            return Err(format_err!("invalid response"));
-        }
-        let resp = resp.unwrap();
-        if resp.role == MacRole::Client {
-            return get_sme_proxy(&wlan_svc, resp.id).await;
-        }
-    }
-    Err(format_err!("No client interface found"))
+    let iface_id =
+        super::get_first_iface(wlan_svc, MacRole::Client).await.context("failed to get iface")?;
+    get_sme_proxy(&wlan_svc, iface_id).await
 }
 
 pub async fn connect(
@@ -286,21 +267,6 @@ mod tests {
         wlan_common::assert_variant,
     };
 
-    fn respond_to_query_iface_list_request(
-        exec: &mut Executor,
-        req_stream: &mut DeviceServiceRequestStream,
-        iface_list_vec: Vec<IfaceListItem>,
-    ) {
-        let req = exec.run_until_stalled(&mut req_stream.next());
-        let responder = assert_variant !(
-            req,
-            Poll::Ready(Some(Ok(DeviceServiceRequest::ListIfaces{responder})))
-            => responder);
-        responder
-            .send(&mut ListIfacesResponse { ifaces: iface_list_vec })
-            .expect("fake query iface list response: send failed")
-    }
-
     fn extract_sme_server_from_get_client_sme_req_and_respond(
         exec: &mut Executor,
         req_stream: &mut DeviceServiceRequestStream,
@@ -407,7 +373,11 @@ mod tests {
             (0..iface_list.len() as u16).map(|iface_id| IfaceListItem { iface_id }).collect();
 
         assert!(exec.run_until_stalled(&mut fut).is_pending());
-        respond_to_query_iface_list_request(&mut exec, &mut req_stream, ifaces);
+        crate::wlan_service_util::tests::respond_to_query_iface_list_request(
+            &mut exec,
+            &mut req_stream,
+            ifaces,
+        );
 
         for mac_role in iface_list {
             // iface query response
@@ -440,7 +410,11 @@ mod tests {
             (0..iface_list.len() as u16).map(|iface_id| IfaceListItem { iface_id }).collect();
 
         assert!(exec.run_until_stalled(&mut fut).is_pending());
-        respond_to_query_iface_list_request(&mut exec, &mut req_stream, ifaces);
+        crate::wlan_service_util::tests::respond_to_query_iface_list_request(
+            &mut exec,
+            &mut req_stream,
+            ifaces,
+        );
 
         for (mac_role, status) in iface_list {
             // iface query response
