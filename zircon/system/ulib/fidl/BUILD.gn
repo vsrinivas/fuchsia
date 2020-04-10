@@ -69,6 +69,9 @@ zx_library("fidl-llcpp") {
   sdk = "source"
   sdk_headers = [
     "lib/fidl/llcpp/array.h",
+    "lib/fidl/llcpp/async_binding.h",
+    "lib/fidl/llcpp/async_transaction.h",
+    "lib/fidl/llcpp/client_base.h",
     "lib/fidl/llcpp/coding.h",
     "lib/fidl/llcpp/connect_service.h",
     "lib/fidl/llcpp/service_handler_interface.h",
@@ -88,19 +91,32 @@ zx_library("fidl-llcpp") {
     "lib/fidl/llcpp/memory.h",
     "lib/fidl/llcpp/unowned_ptr.h",
   ]
-  sources = [ "llcpp_transaction.cc" ]
+  sources = [
+    "llcpp_async_binding.cc",
+    "llcpp_async_transaction.cc",
+    "llcpp_client_base.cc",
+    "llcpp_transaction.cc",
+  ]
   public_deps = [
     ":headers",
 
+    # <lib/fidl/llcpp/async_binding.h> has #include <lib/async/dispatcher.h>
+    "$zx/system/ulib/async:headers",
+
     # <lib/fidl/llcpp/sync_call.h> has #include <lib/fit/result.h>.
     "$zx/system/ulib/fit:headers",
+
+    # <lib/fidl/llcpp/async_binding.h> has #include <lib/sync/completion.h>
+    "$zx/system/ulib/sync:headers",
 
     # <lib/fidl/llcpp/traits.h> has #include <lib/zx/object.h>.
     "$zx/system/ulib/zx:headers",
   ]
   deps = [
     ":fidl",
+    "$zx/system/ulib/async",
     "$zx/system/ulib/fit",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
 }

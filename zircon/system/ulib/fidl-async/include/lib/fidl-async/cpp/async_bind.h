@@ -5,25 +5,9 @@
 #ifndef LIB_FIDL_ASYNC_CPP_ASYNC_BIND_H_
 #define LIB_FIDL_ASYNC_CPP_ASYNC_BIND_H_
 
-#include <lib/fidl/llcpp/transaction.h>
-#include <lib/fit/function.h>
-#include <lib/fit/result.h>
-#include <lib/zx/channel.h>
-#include <zircon/fidl.h>
+#include <lib/fidl/llcpp/async_binding.h>
 
 namespace fidl {
-
-enum class UnboundReason {
-  // The user invoked Unbind() or Close().
-  kUnbind,
-  // The channel peer was closed.
-  kPeerClosed,
-  // An unexpected channel read/write error or dispatcher error occurred.
-  kInternalError,
-};
-
-template <typename Interface>
-using OnUnboundFn = fit::callback<void(Interface*, UnboundReason, zx::channel)>;
 
 // Forward declarations.
 class BindingRef;
@@ -39,9 +23,6 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
 
 namespace internal {
 
-class AsyncBinding;
-using TypeErasedServerDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
-using TypeErasedOnUnboundFn = fit::callback<void(void*, UnboundReason, zx::channel)>;
 fit::result<BindingRef, zx_status_t> AsyncTypeErasedBindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound);
@@ -89,7 +70,10 @@ class BindingRef {
   // outside the scope of the message handler for the same binding, the channel will have been fully
   // unbound on return, i.e. no other threads will be able to access it. Note that the |on_unbound|
   // will still be executed asynchronously if specified.
-  void Unbind();
+  void Unbind() {
+    if (auto binding = binding_.lock())
+      binding->Unbind(std::move(binding));
+  }
 
   // TODO(madhaviyengar): Re-introduce synchronous Unbind() which returns a zx::channel.
 
@@ -98,7 +82,10 @@ class BindingRef {
   // the unbind reason as an argument.
   //
   // This may be called from any thread.
-  void Close(zx_status_t epitaph);
+  void Close(zx_status_t epitaph) {
+    if (auto binding = binding_.lock())
+      binding->Close(std::move(binding), epitaph);
+  }
 
  private:
   friend fit::result<BindingRef, zx_status_t> internal::AsyncTypeErasedBindServer(
@@ -201,6 +188,23 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
       dispatcher, std::move(channel), impl_raw, &Interface::_Outer::TypeErasedDispatch,
       [intf = std::move(impl)](void*, UnboundReason, zx::channel) {});
 }
+
+namespace internal {
+
+inline fit::result<BindingRef, zx_status_t> AsyncTypeErasedBindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
+    TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
+  auto internal_binding = AsyncBinding::CreateServerBinding(
+      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound_fn));
+  auto status = internal_binding->BeginWait();
+  if (status == ZX_OK) {
+    return fit::ok(fidl::BindingRef(std::move(internal_binding)));
+  } else {
+    return fit::error(status);
+  }
+}
+
+}  // namespace internal
 
 }  // namespace fidl
 

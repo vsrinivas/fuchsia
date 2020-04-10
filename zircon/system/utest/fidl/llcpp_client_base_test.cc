@@ -7,7 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/txn_header.h>
-#include <lib/fidl-async/cpp/client_base.h>
+#include <lib/fidl/llcpp/client_base.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>

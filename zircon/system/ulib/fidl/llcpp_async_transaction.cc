@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl-async/cpp/async_bind_internal.h>
-#include <lib/fidl-async/cpp/async_transaction.h>
+#include <lib/fidl/llcpp/async_binding.h>
+#include <lib/fidl/llcpp/async_transaction.h>
 #include <zircon/assert.h>
 
 namespace fidl {

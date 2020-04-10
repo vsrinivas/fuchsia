@@ -3,16 +3,15 @@
 // found in the LICENSE file.
 
 #include <lib/async/time.h>
-#include <lib/fidl-async/cpp/async_bind_internal.h>
-#include <lib/fidl-async/cpp/async_transaction.h>
-#include <lib/fidl-async/cpp/client_base.h>
+#include <lib/fidl/llcpp/async_binding.h>
+#include <lib/fidl/llcpp/async_transaction.h>
+#include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/epitaph.h>
 #include <zircon/syscalls.h>
 
 #include <type_traits>
 
 namespace fidl {
-
 namespace internal {
 
 AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
@@ -242,29 +241,5 @@ std::shared_ptr<AsyncBinding> AsyncBinding::CreateClientBinding(
   return ret;
 }
 
-fit::result<BindingRef, zx_status_t> AsyncTypeErasedBindServer(
-    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
-  auto internal_binding = AsyncBinding::CreateServerBinding(
-      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound_fn));
-  auto status = internal_binding->BeginWait();
-  if (status == ZX_OK) {
-    return fit::ok(fidl::BindingRef(std::move(internal_binding)));
-  } else {
-    return fit::error(status);
-  }
-}
-
 }  // namespace internal
-
-void BindingRef::Unbind() {
-  if (auto binding = binding_.lock())
-    binding->Unbind(std::move(binding));
-}
-
-void BindingRef::Close(zx_status_t epitaph) {
-  if (auto binding = binding_.lock())
-    binding->Close(std::move(binding), epitaph);
-}
-
 }  // namespace fidl

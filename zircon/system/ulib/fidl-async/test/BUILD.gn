@@ -35,7 +35,6 @@ test("fidl-async-test") {
     "llcpp_async_bind_test.cc",
     "llcpp_bind_test.cc",
     "llcpp_channel_transaction_test.cc",
-    "llcpp_client_base_test.cc",
   ]
   deps = [
     ":fidl.test.simple_llcpp",

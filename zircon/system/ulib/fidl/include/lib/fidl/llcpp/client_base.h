@@ -6,7 +6,7 @@
 #define LIB_FIDL_ASYNC_CPP_CLIENT_BASE_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fidl-async/cpp/async_bind_internal.h>
+#include <lib/fidl/llcpp/async_binding.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 #include <zircon/listnode.h>

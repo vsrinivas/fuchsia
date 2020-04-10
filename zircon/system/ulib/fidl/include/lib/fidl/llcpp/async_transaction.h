@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_ASYNC_CPP_ASYNC_TRANSACTION_H_
 #define LIB_FIDL_ASYNC_CPP_ASYNC_TRANSACTION_H_
 
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>

@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include <lib/fidl/txn_header.h>
-#include <lib/fidl-async/cpp/client_base.h>
+#include <lib/fidl/llcpp/client_base.h>
 #include <lib/fit/function.h>
 
 namespace fidl {

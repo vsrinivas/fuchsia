@@ -95,7 +95,7 @@ Notes:
 3. The bindings library defined in [lib/fidl-async](/zircon/system/ulib/fidl-async) can dispatch an unbounded number of in-flight transactions via `fidl::AsyncBind` defined in [lib/fidl-async/cpp/async_bind.h](/zircon/system/ulib/fidl-async/include/lib/fidl-async/cpp/async_bind.h).
 4. The bindings library [lib/fidl-async](/zircon/system/ulib/fidl-async) enables
 parallel dispatch using the `EnableNextDispatch()` API defined in
-[lib/fidl-async/cpp/async_transaction.h](/zircon/system/ulib/fidl-async/include/lib/fidl-async/cpp/async_transaction.h).
+[lib/fidl/llcpp/async_transaction.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/async_transaction.h).
 
 ## Migrating From C Bindings To Low-Level C++
 

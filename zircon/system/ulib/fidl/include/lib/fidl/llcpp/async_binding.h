@@ -8,14 +8,33 @@
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
 #include <lib/async/wait.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fit/function.h>
+#include <lib/fit/result.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/channel.h>
+#include <zircon/fidl.h>
 
 #include <mutex>
 
 namespace fidl {
 
+enum class UnboundReason {
+  // The user invoked Unbind() or Close().
+  kUnbind,
+  // The channel peer was closed.
+  kPeerClosed,
+  // An unexpected channel read/write error or dispatcher error occurred.
+  kInternalError,
+};
+
+template <typename Interface>
+using OnUnboundFn = fit::callback<void(Interface*, UnboundReason, zx::channel)>;
+
 namespace internal {
+
+using TypeErasedServerDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
+using TypeErasedOnUnboundFn = fit::callback<void(void*, UnboundReason, zx::channel)>;
 
 class AsyncTransaction;
 class ClientBase;
