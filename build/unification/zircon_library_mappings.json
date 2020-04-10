@@ -3,5 +3,10 @@
     "label": "//zircon/system/ulib/zbi-bootfs:zbi-bootfs",
     "name": "zbi-bootfs",
     "sdk": false
+  },
+  {
+    "label": "//zircon/system/dev/lib/pci:pci",
+    "name": "pci",
+    "sdk": false
   }
 ]

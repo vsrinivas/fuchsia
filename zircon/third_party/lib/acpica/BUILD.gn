@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/config/globals.gni")
+import("$zx/kernel/params.gni")
 
 declare_args() {
   # Enable debug output in the ACPI library (used by the ACPI bus driver).
@@ -235,10 +235,10 @@ static_library("acpica") {
       "source/components/utilities/utxfmutex.c",
     ]
     deps = [
-      "//zircon/public/lib/ddk",
-      "//zircon/public/lib/fbl",
-      "//zircon/public/lib/pci",
-      "//zircon/public/lib/zircon-internal",
+      "$zx/system/dev/lib/pci",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/zircon-internal",
     ]
     defines = [ "_ALL_SOURCE" ]
     if (enable_acpi_debug) {
