@@ -3,18 +3,13 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <atomic>
 #include <inttypes.h>
-#include <link.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include <lib/backtrace-request/backtrace-request.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/thread.h>
-#include <pretty/hexdump.h>
-#include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <link.h>
+#include <stdlib.h>
+#include <string.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -24,10 +19,16 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
+#include <atomic>
+
+#include <pretty/hexdump.h>
+#include <test-utils/test-utils.h>
+#include <unittest/unittest.h>
+
 #include "crash-and-recover.h"
 #include "debugger.h"
-#include "inferior.h"
 #include "inferior-control.h"
+#include "inferior.h"
 #include "utils.h"
 
 namespace {
@@ -87,8 +88,8 @@ int reg_access_thread_func(void* arg_) {
       "\n\
         je 2b\n\
         mov %%" REG_ACCESS_TEST_REG_NAME ", %[result]"
-      : [ result ] "=r"(result), [ pc ] "=&r"(pc), [ sp ] "=&r"(sp)
-      : [ initial_value ] "r"(initial_value)
+      : [result] "=r"(result), [pc] "=&r"(pc), [sp] "=&r"(sp)
+      : [initial_value] "r"(initial_value)
       : REG_ACCESS_TEST_REG_NAME);
 #endif
 
@@ -105,8 +106,8 @@ int reg_access_thread_func(void* arg_) {
       "\n\
         b.eq 1b\n\
         mov %[result], " REG_ACCESS_TEST_REG_NAME
-      : [ result ] "=r"(result), [ pc ] "=&r"(pc), [ sp ] "=&r"(sp)
-      : [ initial_value ] "r"(initial_value)
+      : [result] "=r"(result), [pc] "=&r"(pc), [sp] "=&r"(sp)
+      : [initial_value] "r"(initial_value)
       : REG_ACCESS_TEST_REG_NAME);
 #endif
 
@@ -114,7 +115,7 @@ int reg_access_thread_func(void* arg_) {
   arg->pc = pc;
   arg->sp = sp;
 
-  tu_handle_close(arg->channel);
+  zx_handle_close(arg->channel);
 
   return 0;
 }
@@ -168,7 +169,7 @@ bool SuspendedRegAccessTest() {
 
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
   thrd_join(thread_c11, NULL);
-  tu_handle_close(thread);
+  zx_handle_close(thread);
 
   // We can't test the pc value exactly as we don't know on which instruction
   // the thread will be suspended. But we can verify it is within some
@@ -180,8 +181,8 @@ bool SuspendedRegAccessTest() {
 
   EXPECT_EQ(reg_access_write_test_value, arg.result);
 
-  tu_handle_close(channel);
-  tu_handle_close(port);
+  zx_handle_close(channel);
+  zx_handle_close(port);
   END_TEST;
 }
 
@@ -241,13 +242,13 @@ int suspended_in_syscall_reg_access_thread_func(void* arg_) {
   __asm__(
       "\
         mov %%rsp, %[sp]"
-      : [ sp ] "=r"(sp));
+      : [sp] "=r"(sp));
 #endif
 #ifdef __aarch64__
   __asm__(
       "\
         mov %[sp], sp"
-      : [ sp ] "=r"(sp));
+      : [sp] "=r"(sp));
 #endif
   arg->sp.store(sp);
 
@@ -366,13 +367,13 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
   int thread_result = -1;
   EXPECT_EQ(thrd_join(thread_c11, &thread_result), thrd_success);
   EXPECT_EQ(thread_result, 0);
-  tu_handle_close(thread);
+  zx_handle_close(thread);
 
-  tu_handle_close(port);
+  zx_handle_close(port);
   if (do_channel_call) {
-    tu_handle_close(arg.syscall_handle);
+    zx_handle_close(arg.syscall_handle);
   }
-  tu_handle_close(syscall_handle);
+  zx_handle_close(syscall_handle);
 
   END_HELPER;
 }
@@ -552,10 +553,10 @@ bool SuspendedInExceptionRegAccessTest() {
       data.resume_count.load() == kNumSegvTries || data.resume_count.load() == kNumSegvTries + 1,
       actual_msg);
 
-  tu_handle_close(data.thread_handle);
-  tu_handle_close(port);
-  tu_handle_close(channel);
-  tu_handle_close(inferior);
+  zx_handle_close(data.thread_handle);
+  zx_handle_close(port);
+  zx_handle_close(channel);
+  zx_handle_close(inferior);
 
   END_TEST;
 }

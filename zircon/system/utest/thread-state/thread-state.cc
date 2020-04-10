@@ -6,21 +6,21 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/zx/channel.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <fbl/algorithm.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/zx/channel.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
+
+#include <fbl/algorithm.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
@@ -152,7 +152,7 @@ static void do_msg_port_test(zx_handle_t channel, const Message* msg) {
   auto port = msg->handles[0];
   zx_port_packet_t packet;
   auto status = zx_port_wait(port, ZX_TIME_INFINITE, &packet);
-  tu_handle_close(port);
+  zx_handle_close(port);
   if (status != ZX_OK) {
     unittest_printf("ERROR: port_wait failed: %d/%s\n", status, zx_status_get_string(status));
     send_msg(channel, MSG_FAIL);
@@ -195,7 +195,7 @@ static void do_msg_channel_test(zx_handle_t channel, const Message* msg) {
   uint32_t actual_num_handles = 0;
   auto status = zx_channel_call(test_channel, 0, ZX_TIME_INFINITE, &args, &actual_num_bytes,
                                 &actual_num_handles);
-  tu_handle_close(test_channel);
+  zx_handle_close(test_channel);
   if (status == ZX_ERR_PEER_CLOSED) {
     // ok
   } else {
@@ -223,7 +223,7 @@ static void do_msg_wait_one_test(zx_handle_t channel, const Message* msg) {
   zx_signals_t observed = 0u;
   auto status =
       zx_object_wait_one(msg->handles[0], ZX_EVENTPAIR_PEER_CLOSED, ZX_TIME_INFINITE, &observed);
-  tu_handle_close(msg->handles[0]);
+  zx_handle_close(msg->handles[0]);
   if (status != ZX_OK) {
     unittest_printf("ERROR: wait_one failed: %d/%s\n", status, zx_status_get_string(status));
     send_msg(channel, MSG_FAIL);
@@ -259,7 +259,7 @@ static void do_msg_wait_many_test(zx_handle_t channel, const Message* msg) {
   }
   auto status = zx_object_wait_many(&items[0], num_handles, ZX_TIME_INFINITE);
   for (uint32_t i = 0; i < num_handles; ++i) {
-    tu_handle_close(msg->handles[i]);
+    zx_handle_close(msg->handles[i]);
   }
   if (status != ZX_OK) {
     unittest_printf("ERROR: wait_many failed: %d/%s\n", status, zx_status_get_string(status));
@@ -294,7 +294,7 @@ static void do_msg_interrupt_test(zx_handle_t channel, const Message* msg) {
   auto interrupt = msg->handles[0];
   zx_time_t timestamp;
   auto status = zx_interrupt_wait(interrupt, &timestamp);
-  tu_handle_close(interrupt);
+  zx_handle_close(interrupt);
   if (status != ZX_OK) {
     unittest_printf("ERROR: interrupt_wait failed: %d/%s\n", status, zx_status_get_string(status));
     send_msg(channel, MSG_FAIL);
@@ -486,7 +486,7 @@ static bool port_test() {
   // things went correctly on that side.
   ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
 
-  tu_handle_close(port);
+  zx_handle_close(port);
   terminate_process(child);
 
   END_TEST;
@@ -509,7 +509,7 @@ static bool channel_test() {
   wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_CHANNEL);
 
   // Wake the child up.
-  tu_handle_close(our_channel);
+  zx_handle_close(our_channel);
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
@@ -541,7 +541,7 @@ static bool wait_one_test() {
   wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
 
   // Wake the child up.
-  tu_handle_close(h[0]);
+  zx_handle_close(h[0]);
 
   // The child sends a pass/fail message back as extra verification that
   // things went correctly on that side.
@@ -577,7 +577,7 @@ static bool wait_many_test() {
 
   // Wake the child up.
   for (uint32_t i = 0; i < num_handles; ++i) {
-    tu_handle_close(h[0][i]);
+    zx_handle_close(h[0][i]);
   }
 
   // The child sends a pass/fail message back as extra verification that
@@ -640,7 +640,7 @@ static bool interrupt_test() {
   // things went correctly on that side.
   ASSERT_TRUE(recv_specific_msg(channel, MSG_PASS));
 
-  tu_handle_close(interrupt);
+  zx_handle_close(interrupt);
   terminate_process(child);
 
   END_TEST;

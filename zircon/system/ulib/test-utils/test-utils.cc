@@ -53,15 +53,6 @@ static void tu_check(const char* what, zx_status_t status) {
   }
 }
 
-void tu_handle_close(zx_handle_t handle) {
-  zx_status_t status = zx_handle_close(handle);
-  // TODO(dje): It's still an open question as to whether errors other than ZX_ERR_BAD_HANDLE are
-  // "advisory".
-  if (status < 0) {
-    tu_fatal(__func__, status);
-  }
-}
-
 zx_handle_t tu_handle_duplicate(zx_handle_t handle) {
   zx_handle_t copy = ZX_HANDLE_INVALID;
   zx_status_t status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &copy);

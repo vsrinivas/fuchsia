@@ -206,14 +206,14 @@ void detach_inferior(inferior_data_t* data, bool close_exception_channel) {
   }
   for (size_t i = 0; i < data->max_num_threads; ++i) {
     if (data->threads[i].handle != ZX_HANDLE_INVALID)
-      tu_handle_close(data->threads[i].handle);
+      zx_handle_close(data->threads[i].handle);
   }
   free(data->threads);
   free(data);
 }
 
 void unbind_inferior(inferior_data_t* data) {
-  tu_handle_close(data->exception_channel);
+  zx_handle_close(data->exception_channel);
   data->exception_channel = ZX_HANDLE_INVALID;
 }
 
@@ -325,7 +325,7 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info
   // either be DEBUGGER or NONE.
   EXPECT_TRUE(thread_info.wait_exception_channel_type == ZX_EXCEPTION_CHANNEL_TYPE_NONE ||
               thread_info.wait_exception_channel_type == ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER);
-  tu_handle_close(thread);
+  zx_handle_close(thread);
 
   // A thread is gone, but we only care about the process.
   unittest_printf("wait-inf: thread %" PRIu64 " exited\n", info->tid);

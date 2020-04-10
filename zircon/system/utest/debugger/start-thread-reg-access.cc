@@ -58,16 +58,21 @@ __asm__(
     ".type raw_capture_regs_thread_func,%function\n"
     "raw_capture_regs_thread_func:\n"
 #ifdef __aarch64__
-    "  mov x8, #(" MAGIC_REGISTER_VALUE_ASM " & 0xffff)\n"
-    "  movk x8, #((" MAGIC_REGISTER_VALUE_ASM " >> 16) & 0xffff), lsl #16\n"
-    "  movk x8, #((" MAGIC_REGISTER_VALUE_ASM " >> 32) & 0xffff), lsl #32\n"
-    "  movk x8, #((" MAGIC_REGISTER_VALUE_ASM " >> 48) & 0xffff), lsl #48\n"
+    "  mov x8, #(" MAGIC_REGISTER_VALUE_ASM
+    " & 0xffff)\n"
+    "  movk x8, #((" MAGIC_REGISTER_VALUE_ASM
+    " >> 16) & 0xffff), lsl #16\n"
+    "  movk x8, #((" MAGIC_REGISTER_VALUE_ASM
+    " >> 32) & 0xffff), lsl #32\n"
+    "  movk x8, #((" MAGIC_REGISTER_VALUE_ASM
+    " >> 48) & 0xffff), lsl #48\n"
     "  cmp x3, x8\n"
     "  bne 0f\n"
     "  br x2\n"
     "0:brk #0\n"
 #elif defined(__x86_64__)
-    "  movabs $" MAGIC_REGISTER_VALUE_ASM ", %rax\n"
+    "  movabs $" MAGIC_REGISTER_VALUE_ASM
+    ", %rax\n"
     "  cmpq %rax, %rcx\n"
     "  jne 0f\n"
     "  jmp *%rdx\n"
@@ -291,9 +296,9 @@ bool StoppedInThreadStartingRegAccessTest() {
 
   detach_inferior(inferior_data, true);
 
-  tu_handle_close(port);
-  tu_handle_close(channel);
-  tu_handle_close(inferior);
+  zx_handle_close(port);
+  zx_handle_close(channel);
+  zx_handle_close(inferior);
 
   END_TEST;
 }

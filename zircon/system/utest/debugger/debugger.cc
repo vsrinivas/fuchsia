@@ -63,7 +63,7 @@ bool handle_expected_page_fault(zx_handle_t inferior, const zx_exception_info_t*
   // before we can increment it.
   atomic_fetch_add(segv_count, 1);
 
-  tu_handle_close(thread);
+  zx_handle_close(thread);
 
   uint32_t exception_state = ZX_EXCEPTION_STATE_HANDLED;
   EXPECT_EQ(
@@ -165,9 +165,9 @@ bool DebuggerTest() {
 
   detach_inferior(inferior_data, true);
 
-  tu_handle_close(port);
-  tu_handle_close(channel);
-  tu_handle_close(inferior);
+  zx_handle_close(port);
+  zx_handle_close(channel);
+  zx_handle_close(inferior);
 
   END_TEST;
 }
@@ -226,9 +226,9 @@ bool DebuggerThreadListTest() {
 
   detach_inferior(inferior_data, true);
 
-  tu_handle_close(port);
-  tu_handle_close(channel);
-  tu_handle_close(inferior);
+  zx_handle_close(port);
+  zx_handle_close(channel);
+  zx_handle_close(inferior);
 
   END_TEST;
 }

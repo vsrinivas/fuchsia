@@ -31,10 +31,6 @@ __BEGIN_CDECLS
 
 void tu_fatal(const char* what, zx_status_t status) __NO_RETURN;
 
-// A wrapper on zx_handle_close.
-
-void tu_handle_close(zx_handle_t handle);
-
 // A wrapper on zx_handle_duplicate.
 
 zx_handle_t tu_handle_duplicate(zx_handle_t handle);

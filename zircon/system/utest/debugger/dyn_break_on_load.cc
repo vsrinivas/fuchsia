@@ -1,10 +1,9 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <link.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
-
-#include <link.h>
 
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
@@ -37,9 +36,9 @@ bool dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_
 
       // Get the debug break address
       uintptr_t r_debug_address;
-      zx_status_t status = zx_object_get_property(test_state->process_handle,
-                                                  ZX_PROP_PROCESS_DEBUG_ADDR,
-                                                  &r_debug_address, sizeof(r_debug_address));
+      zx_status_t status =
+          zx_object_get_property(test_state->process_handle, ZX_PROP_PROCESS_DEBUG_ADDR,
+                                 &r_debug_address, sizeof(r_debug_address));
       ASSERT_EQ(status, ZX_OK);
 
       size_t actual = 0;
@@ -126,9 +125,9 @@ bool DynBreakOnLoadTest() {
 
   detach_inferior(inferior_data, true);
 
-  tu_handle_close(port);
-  tu_handle_close(channel);
-  tu_handle_close(inferior);
+  zx_handle_close(port);
+  zx_handle_close(channel);
+  zx_handle_close(inferior);
 
   // Verify how many loads there were.
   ASSERT_EQ(test_state.dyn_load_count, 10);

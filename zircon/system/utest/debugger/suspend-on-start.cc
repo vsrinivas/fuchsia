@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-#include <stddef.h>
-
 #include <lib/zx/exception.h>
-#include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <zircon/syscalls/port.h>
 
+#include <test-utils/test-utils.h>
+#include <unittest/unittest.h>
+
 #include "debugger.h"
-#include "inferior.h"
 #include "inferior-control.h"
+#include "inferior.h"
 #include "utils.h"
 
 namespace {
@@ -85,9 +85,9 @@ bool SuspendOnStartTest() {
 
   detach_inferior(inferior_data, true);
 
-  tu_handle_close(port);
-  tu_handle_close(channel);
-  tu_handle_close(inferior);
+  zx_handle_close(port);
+  zx_handle_close(channel);
+  zx_handle_close(inferior);
 
   END_TEST;
 }
