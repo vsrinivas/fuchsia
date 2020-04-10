@@ -8,6 +8,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "src/modular/lib/fidl/clone.h"
 
@@ -26,18 +27,20 @@ TEST_F(SessionContextImplTest, StartSessionmgr) {
   fuchsia::modular::AppConfig app_config;
   app_config.url = url;
 
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   bool callback_called = false;
   launcher.RegisterComponent(
-      url, [&callback_called](fuchsia::sys::LaunchInfo launch_info,
-                              fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+      url, [&callback_called](fuchsia::sys::LaunchInfo,
+                              fidl::InterfaceRequest<fuchsia::sys::ComponentController>) {
         callback_called = true;
       });
 
   modular::SessionContextImpl impl(
-      &launcher, kSessionId, modular::CloneStruct(app_config) /* sessionmgr_config */,
+      &launcher, kSessionId, false /* ephemeral_account */,
+      modular::CloneStruct(app_config) /* sessionmgr_config */,
       modular::CloneStruct(app_config) /* session_shell_config */,
       modular::CloneStruct(app_config) /* story_shell_config */,
-      false /* use_session_shell_for_story_shell_factory */, fuchsia::ui::views::ViewToken(),
+      false /* use_session_shell_for_story_shell_factory */, std::move(view_token),
       nullptr /* additional_services */, zx::channel() /* overridden_config_handle */,
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {} /* get_presentation */,
       [](modular::SessionContextImpl::ShutDownReason, bool) {} /* done_callback */);
@@ -54,17 +57,18 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
   fuchsia::modular::AppConfig app_config;
   app_config.url = url;
 
-  launcher.RegisterComponent(
-      url, [](fuchsia::sys::LaunchInfo launch_info,
-              fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) { return; });
+  launcher.RegisterComponent(url, [](fuchsia::sys::LaunchInfo,
+                                     fidl::InterfaceRequest<fuchsia::sys::ComponentController>) {});
 
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   bool done_callback_called = false;
   modular::SessionContextImpl impl(
-      &launcher, kSessionId, /* sessionmgr_config= */ modular::CloneStruct(app_config),
+      &launcher, kSessionId,
+      /* ephemeral_account */ false,
+      /* sessionmgr_config= */ modular::CloneStruct(app_config),
       /* session_shell_config= */ modular::CloneStruct(app_config),
       /* story_shell_config= */ modular::CloneStruct(app_config),
-      /* use_session_shell_for_story_shell_factory= */ false,
-      fuchsia::ui::views::ViewToken(),
+      /* use_session_shell_for_story_shell_factory= */ false, std::move(view_token),
       /* additional_services */ nullptr, zx::channel() /* overridden_config_handle */,
       /* get_presentation= */
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {},

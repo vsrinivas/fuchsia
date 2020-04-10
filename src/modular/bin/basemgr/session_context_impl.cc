@@ -4,6 +4,7 @@
 
 #include "src/modular/bin/basemgr/session_context_impl.h"
 
+#include <dirent.h>
 #include <fcntl.h>
 
 #include "src/lib/files/directory.h"
@@ -11,14 +12,52 @@
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
 
+using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
+
+namespace {
+
+// The path containing a subdirectory for each session.
+constexpr char kSessionDirectoryLocation[] = "/data/modular";
+
+// A standard prefix used on every session directory.
+// Note: This is named "USER_" for legacy reasons. SESSION_ may have been more
+// appropriate but a change would require a data migration and there is no
+// plan to support more than a single session per user.
+constexpr char kSessionDirectoryPrefix[] = "USER_";
+
+// Returns a fully qualified session directory path for |session_id|.
+std::string GetSessionDirectory(const std::string& session_id) {
+  return std::string(kSessionDirectoryLocation) + "/" + kSessionDirectoryPrefix + session_id;
+}
+
+// Returns the fully qualified paths of all existing session directories.
+std::vector<std::string> GetExistingSessionDirectories() {
+  std::vector<std::string> dirs;
+  if (!files::ReadDirContents(kSessionDirectoryLocation, &dirs)) {
+    FX_LOGS(WARNING) << "Could not open session directory location.";
+    return std::vector<std::string>();
+  }
+  std::vector<std::string> output;
+  for (const auto& dir : dirs) {
+    if (strncmp(dir.c_str(), kSessionDirectoryPrefix, strlen(kSessionDirectoryPrefix)) == 0) {
+      FX_LOGS(INFO) << "Found session directory: " << dir;
+      output.push_back(std::string(kSessionDirectoryLocation) + "/" + dir);
+    }
+  }
+  return output;
+}
+
+}  // namespace
+
 SessionContextImpl::SessionContextImpl(
-    fuchsia::sys::Launcher* const launcher, std::string session_id,
+    fuchsia::sys::Launcher* const launcher, std::string session_id, bool is_ephemeral_account,
     fuchsia::modular::AppConfig sessionmgr_config, fuchsia::modular::AppConfig session_shell_config,
     fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
     fuchsia::ui::views::ViewToken view_token, fuchsia::sys::ServiceListPtr additional_services,
@@ -31,10 +70,34 @@ SessionContextImpl::SessionContextImpl(
   FX_CHECK(get_presentation_);
   FX_CHECK(on_session_shutdown_);
 
-  // TODO(MF-280): We should replace USER* with SESSION* below. However, this
-  // will lose existing user data, so the timing needs to be considered.
   // 0. Generate the path to map '/data' for the sessionmgr we are starting.
-  std::string data_origin = std::string("/data/modular/USER_") + session_id;
+  auto data_origin = GetSessionDirectory(session_id);
+
+  // TODO(45946): We currently verify the existing session directories reflect
+  // the session we are being asked to create. Once we have gained confidence in
+  // the validity of existing directories, remove session_id as an input to the
+  // constructor and derive session ID from the existing directories (or set a
+  // random session ID in the case of a new epheremal account or a fixed
+  // session ID in the case of a new persistent account).
+  if (is_ephemeral_account) {
+    FX_LOGS(INFO) << "Creating session using ephemeral account.";
+    ReportEvent(ModularLifetimeEventsMetricDimensionEventType::CreateSessionNewEphemeralAccount);
+  } else {
+    auto existing_sessions = GetExistingSessionDirectories();
+    if (existing_sessions.empty()) {
+      FX_LOGS(INFO) << "Creating session using new persistent account.";
+      ReportEvent(ModularLifetimeEventsMetricDimensionEventType::CreateSessionNewPersistentAccount);
+    } else if (existing_sessions.size() == 1 && existing_sessions[0] == data_origin) {
+      FX_LOGS(INFO) << "Creating session using existing persistent account.";
+      ReportEvent(
+          ModularLifetimeEventsMetricDimensionEventType::CreateSessionExistingPersistentAccount);
+    } else {
+      FX_LOGS(WARNING) << "Creating session " << session_id << " that cannot be verified against "
+                       << existing_sessions.size() << " directories.";
+      ReportEvent(ModularLifetimeEventsMetricDimensionEventType::
+                      CreateSessionUnverifiablePersistentAccount);
+    }
+  }
 
   // 1. Create a PseudoDir containing startup.config. This directory will be
   // injected into sessionmgr's namespace and sessionmgr will read its

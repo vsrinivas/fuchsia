@@ -97,9 +97,10 @@ bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token,
 
   // Session context initializes and holds the sessionmgr process.
   session_context_ = std::make_unique<SessionContextImpl>(
-      launcher_, session_id, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
-      CloneStruct(story_shell_), use_session_shell_for_story_shell_factory_, std::move(view_token),
-      std::move(services), std::move(client),
+      launcher_, session_id, /* is_ephemeral_account */ account == nullptr,
+      CloneStruct(sessionmgr_), CloneStruct(session_shell_), CloneStruct(story_shell_),
+      use_session_shell_for_story_shell_factory_, std::move(view_token), std::move(services),
+      std::move(client),
       /* get_presentation= */
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));

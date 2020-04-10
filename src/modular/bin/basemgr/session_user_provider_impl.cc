@@ -64,7 +64,7 @@ void SessionUserProviderImpl::Connect(
 void SessionUserProviderImpl::AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
                                       AddUserCallback callback) {
   FX_LOGS(INFO) << "AddUser(IDP) is not implemented yet.";
-    callback(nullptr, "Provision new account from auth provider not supported.");
+  callback(nullptr, "Provision new account from auth provider not supported.");
 }
 
 void SessionUserProviderImpl::Login(fuchsia::modular::UserLoginParams params) {
