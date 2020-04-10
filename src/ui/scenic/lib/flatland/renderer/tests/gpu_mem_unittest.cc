@@ -7,6 +7,7 @@
 #include <lib/fdio/directory.h>
 
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_downloader.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/util/image_utils.h"
@@ -52,6 +53,15 @@ void SetClientConstraints(fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
   EXPECT_EQ(status, ZX_OK);
 }
 
+vk::BufferCollectionFUCHSIA CreateVulkanCollection(const vk::Device& device,
+                                                   const vk::DispatchLoaderDynamic& vk_loader,
+                                                   flatland::BufferCollectionHandle token) {
+  vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
+  buffer_collection_create_info.collectionToken = token.TakeChannel().release();
+  return escher::ESCHER_CHECKED_VK_RESULT(
+      device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader));
+}
+
 }  // anonymous namespace
 
 namespace escher {
@@ -74,19 +84,23 @@ VK_TEST_F(MemoryTest, SimpleTest) {
       escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined);
 
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-  SetClientConstraints(sysmem_allocator_.get(), std::move(tokens.local_token),
-                       kImageCount, kWidth, kHeight);
+  SetClientConstraints(sysmem_allocator_.get(), std::move(tokens.local_token), kImageCount, kWidth,
+                       kHeight);
 
-  auto collection = flatland::BufferCollectionInfo::CreateWithConstraints(
-      vk_device, vk_loader, sysmem_allocator_.get(), image_create_info,
-      std::move(tokens.dup_token));
+  auto collection =
+      flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(collection);
+
+  auto vk_collection = CreateVulkanCollection(vk_device, vk_loader, collection->GenerateToken());
+  EXPECT_EQ(
+      vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info, vk_loader),
+      vk::Result::eSuccess);
 
   EXPECT_TRUE(collection->WaitUntilAllocated());
 
   for (uint32_t i = 0; i < kImageCount; i++) {
     auto gpu_info = flatland::GpuImageInfo::New(vk_device, vk_loader, collection->GetSysmemInfo(),
-                                                collection->GetVkHandle(), i);
+                                                vk_collection, i);
     EXPECT_TRUE(gpu_info.GetGpuMem());
     EXPECT_TRUE(gpu_info.p_extension());
     auto vk_image_create_info = gpu_info.NewVkImageCreateInfo(kWidth, kHeight);
@@ -95,7 +109,7 @@ VK_TEST_F(MemoryTest, SimpleTest) {
   }
 
   // Cleanup.
-  collection->Destroy(vk_device, vk_loader);
+  vk_device.destroyBufferCollectionFUCHSIA(vk_collection, nullptr, vk_loader);
 }
 
 // Even if the BufferCollection is valid and allocated, no memory should be allocated if an
@@ -111,23 +125,28 @@ VK_TEST_F(MemoryTest, OutOfBoundsTest) {
 
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
 
-  auto collection = flatland::BufferCollectionInfo::CreateWithConstraints(
-      vk_device, vk_loader, sysmem_allocator_.get(), image_create_info,
-      std::move(tokens.dup_token));
+  auto collection =
+      flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(collection);
 
-  SetClientConstraints(sysmem_allocator_.get(), std::move(tokens.local_token),
-                       kImageCount, kWidth, kHeight);
+  SetClientConstraints(sysmem_allocator_.get(), std::move(tokens.local_token), kImageCount, kWidth,
+                       kHeight);
+
+  auto vk_collection = CreateVulkanCollection(vk_device, vk_loader, collection->GenerateToken());
+  EXPECT_EQ(
+      vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info, vk_loader),
+      vk::Result::eSuccess);
+
   EXPECT_TRUE(collection->WaitUntilAllocated());
 
   // This should fail however, as the index is beyond bounds.
-  auto gpu_info = flatland::GpuImageInfo::New(vk_device, vk_loader, collection->GetSysmemInfo(),
-                                              collection->GetVkHandle(),
-                                              /*index*/ 1);
+  auto gpu_info =
+      flatland::GpuImageInfo::New(vk_device, vk_loader, collection->GetSysmemInfo(), vk_collection,
+                                  /*index*/ 1);
   EXPECT_FALSE(gpu_info.GetGpuMem());
 
   // Cleanup.
-  collection->Destroy(vk_device, vk_loader);
+  vk_device.destroyBufferCollectionFUCHSIA(vk_collection, nullptr, vk_loader);
 }
 
 // This test checks the entire pipeline flow, which involves creating a buffer
@@ -183,11 +202,17 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
 
   // Create the buffer collection struct and set the server-side vulkan constraints.
   std::unique_ptr<flatland::BufferCollectionInfo> server_collection = nullptr;
+  vk::BufferCollectionFUCHSIA vk_collection;
   {
-    server_collection = flatland::BufferCollectionInfo::CreateWithConstraints(
-        vk_device, vk_loader, sysmem_allocator_.get(), image_create_info,
-        std::move(tokens.dup_token));
+    server_collection =
+        flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
     EXPECT_TRUE(server_collection);
+
+    vk_collection =
+        CreateVulkanCollection(vk_device, vk_loader, server_collection->GenerateToken());
+    EXPECT_EQ(vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info,
+                                                              vk_loader),
+              vk::Result::eSuccess);
 
     // Both client and server have set constraints, so this should not block.
     EXPECT_TRUE(server_collection->WaitUntilAllocated());
@@ -220,9 +245,8 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
   }
 
   // Create the GPU info from the server side collection.
-  auto gpu_info =
-      flatland::GpuImageInfo::New(vk_device, vk_loader, server_collection->GetSysmemInfo(),
-                                  server_collection->GetVkHandle(), /*index*/ 0);
+  auto gpu_info = flatland::GpuImageInfo::New(
+      vk_device, vk_loader, server_collection->GetSysmemInfo(), vk_collection, /*index*/ 0);
   EXPECT_TRUE(gpu_info.GetGpuMem());
 
   // Create an image from the server side collection.
@@ -257,9 +281,7 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(read_image_done);
   EXPECT_TRUE(batch_download_done);
-
-  // Cleanup.
-  server_collection->Destroy(vk_device, vk_loader);
+  vk_device.destroyBufferCollectionFUCHSIA(vk_collection, nullptr, vk_loader);
 }
 
 }  // namespace test

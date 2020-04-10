@@ -6,7 +6,6 @@
 
 #include <lib/fdio/directory.h>
 
-#include "src/ui/lib/escher/flatland/rectangle_compositor.h"
 #include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
 
 namespace escher {
@@ -14,51 +13,84 @@ namespace test {
 
 using BufferCollectionTest = flatland::RendererTest;
 
-// Simple test to make sure we can create a buffer collection from a token
-// and that it is bound.
-VK_TEST_F(BufferCollectionTest, CreateCollectionTest) {
-  auto escher = GetEscher();
-  auto vk_device = escher->vk_device();
-  auto vk_loader = escher->device()->dispatch_loader();
-  auto image_create_info =
-      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined);
-
+// Test the creation of a buffer collection that doesn't have any additional vulkan
+// constraints to show that it doesn't need vulkan to be valid.
+TEST_F(BufferCollectionTest, CreateCollectionTest) {
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-  auto collection = flatland::BufferCollectionInfo::CreateWithConstraints(
-      vk_device, vk_loader, sysmem_allocator_.get(), image_create_info,
-      std::move(tokens.dup_token));
+  auto collection =
+      flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(collection);
+  EXPECT_TRUE(collection->GetSyncPtr());
+  EXPECT_TRUE(collection->GetSyncPtr().is_bound());
+}
 
+// This test ensures that the buffer collection can still be allocated even if the server
+// does not set extra customizable constraints via a call to GenerateToken(). This is
+// necessary due to the fact that the buffer collection keeps around a dummy token in
+// case new constraints need to be added, but the existence of the dummy token itself
+// prevents allocation until it is closed out. So this test makes sure that when we close
+// out the dummy token inside the call to WaitUntilAllocated() that this is enough to ensure
+// that we can still allocate the buffer collection.
+TEST_F(BufferCollectionTest, AllocationWithoutExtraConstraints) {
+  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+  auto collection =
+      flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
+  EXPECT_TRUE(collection);
   EXPECT_TRUE(collection->GetSyncPtr());
   EXPECT_TRUE(collection->GetSyncPtr().is_bound());
 
-  // Cleanup.
-  collection->Destroy(vk_device, vk_loader);
+  {
+    const uint32_t kWidth = 32;
+    const uint32_t kHeight = 64;
+    fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+    zx_status_t status = sysmem_allocator_->BindSharedCollection(std::move(tokens.local_token),
+                                                                 buffer_collection.NewRequest());
+    EXPECT_EQ(status, ZX_OK);
+    fuchsia::sysmem::BufferCollectionConstraints constraints;
+    constraints.has_buffer_memory_constraints = true;
+    constraints.buffer_memory_constraints.cpu_domain_supported = true;
+    constraints.buffer_memory_constraints.ram_domain_supported = true;
+    constraints.usage.cpu = fuchsia::sysmem::cpuUsageWriteOften;
+    constraints.min_buffer_count = 1;
+
+    constraints.image_format_constraints_count = 1;
+    auto& image_constraints = constraints.image_format_constraints[0];
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0] =
+        fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+
+    image_constraints.required_min_coded_width = kWidth;
+    image_constraints.required_min_coded_height = kHeight;
+    image_constraints.required_max_coded_width = kWidth;
+    image_constraints.required_max_coded_height = kHeight;
+    image_constraints.max_coded_width = kWidth * 4;
+    image_constraints.max_coded_height = kHeight;
+    image_constraints.max_bytes_per_row = 0xffffffff;
+
+    status = buffer_collection->SetConstraints(true, constraints);
+    EXPECT_EQ(status, ZX_OK);
+
+    status = buffer_collection->Close();
+    EXPECT_EQ(status, ZX_OK);
+  }
+
+  EXPECT_TRUE(collection->WaitUntilAllocated());
 }
 
 // Check to make sure |CreateBufferCollectionAndSetConstraints| returns false if
 // an invalid BufferCollectionHandle is provided by the user.
-VK_TEST_F(BufferCollectionTest, NullTokenTest) {
-  auto escher = GetEscher();
-  auto vk_device = escher->vk_device();
-  auto vk_loader = escher->device()->dispatch_loader();
-  auto image_create_info =
-      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined);
-
-  auto collection = flatland::BufferCollectionInfo::CreateWithConstraints(
-      vk_device, vk_loader, sysmem_allocator_.get(), image_create_info, nullptr);
+TEST_F(BufferCollectionTest, NullTokenTest) {
+  auto collection = flatland::BufferCollectionInfo::New(sysmem_allocator_.get(),
+                                                        /*token*/ nullptr);
   EXPECT_FALSE(collection);
 }
 
 // We pass in a valid channel to |CreateBufferCollectionAndSetConstraints|, but
 // it's not actually a channel to a BufferCollection.
-VK_TEST_F(BufferCollectionTest, WrongTokenTypeTest) {
-  auto escher = GetEscher();
-  auto vk_device = escher->vk_device();
-  auto vk_loader = escher->device()->dispatch_loader();
-  auto image_create_info =
-      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined);
-
+TEST_F(BufferCollectionTest, WrongTokenTypeTest) {
   zx::channel local_endpoint;
   zx::channel remote_endpoint;
   zx::channel::create(0, &local_endpoint, &remote_endpoint);
@@ -73,26 +105,17 @@ VK_TEST_F(BufferCollectionTest, WrongTokenTypeTest) {
 
   // We should not be able to make a BufferCollectionInfon object with the wrong token type
   // passed in as a parameter.
-  auto collection = flatland::BufferCollectionInfo::CreateWithConstraints(
-      vk_device, vk_loader, sysmem_allocator_.get(), image_create_info, std::move(handle));
+  auto collection = flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(handle));
   EXPECT_FALSE(collection);
 }
 
 // If the client sets constraints on the buffer collection that are incompatible
 // with the constraints set on the server-side by the renderer, then waiting on
 // the buffers to be allocated should fail.
-VK_TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
-  auto escher = GetEscher();
-  auto vk_device = escher->vk_device();
-  auto vk_loader = escher->device()->dispatch_loader();
-  auto image_create_info =
-      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined);
-
+TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-
-  auto collection = flatland::BufferCollectionInfo::CreateWithConstraints(
-      vk_device, vk_loader, sysmem_allocator_.get(), image_create_info,
-      std::move(tokens.dup_token));
+  auto collection =
+      flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(collection);
   EXPECT_TRUE(collection->GetSyncPtr());
   EXPECT_TRUE(collection->GetSyncPtr().is_bound());
@@ -140,31 +163,6 @@ VK_TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
 
   // This should fail as sysmem won't be able to allocate anything.
   EXPECT_FALSE(collection->WaitUntilAllocated());
-
-  // Cleanup.
-  collection->Destroy(vk_device, vk_loader);
-}
-
-VK_TEST_F(BufferCollectionTest, DestructionTest) {
-  auto escher = GetEscher();
-  auto vk_device = escher->vk_device();
-  auto vk_loader = escher->device()->dispatch_loader();
-  auto image_create_info =
-      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined);
-
-  // First create the buffer and ensure that its members have been instantiated properly.
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-  auto collection = flatland::BufferCollectionInfo::CreateWithConstraints(
-      vk_device, vk_loader, sysmem_allocator_.get(), image_create_info,
-      std::move(tokens.dup_token));
-  EXPECT_TRUE(collection);
-
-  EXPECT_TRUE(collection->GetSyncPtr());
-  EXPECT_TRUE(collection->GetSyncPtr().is_bound());
-
-  // Now delete the collection and ensure its members have been deleted properly.
-  collection->Destroy(vk_device, vk_loader);
-  EXPECT_EQ(collection->GetVkHandle(), vk::BufferCollectionFUCHSIA());
 }
 
 }  // namespace test

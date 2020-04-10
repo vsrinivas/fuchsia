@@ -6,50 +6,12 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace {
-
-// We need to make sure that the buffer is Vulkan compatible, so this function sets
-// Vulkan-specific constraints on the buffer.
-bool SetVKBufferCollectionConstraints(const vk::Device& vk_device,
-                                      const vk::DispatchLoaderDynamic& vk_loader,
-                                      const vk::ImageCreateInfo& create_info,
-                                      fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
-                                      vk::BufferCollectionFUCHSIA* out_buffer_collection_fuchsia) {
-  // Set VkImage constraints using |create_info| on |token|
-  FXL_DCHECK(vk_device);
-  FXL_DCHECK(vk_loader.vkCreateBufferCollectionFUCHSIA);
-
-  vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
-  buffer_collection_create_info.collectionToken = token.Unbind().TakeChannel().release();
-  auto create_buffer_collection_result =
-      vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader);
-  if (create_buffer_collection_result.result != vk::Result::eSuccess) {
-    return false;
-  }
-
-  auto constraints_result = vk_device.setBufferCollectionConstraintsFUCHSIA(
-      create_buffer_collection_result.value, create_info, vk_loader);
-  if (constraints_result != vk::Result::eSuccess) {
-    return false;
-  }
-
-  *out_buffer_collection_fuchsia = create_buffer_collection_result.value;
-  return true;
-}
-
-}  // anonymous namespace
-
 namespace flatland {
 
-std::unique_ptr<BufferCollectionInfo> BufferCollectionInfo::CreateWithConstraints(
-    const vk::Device& device, const vk::DispatchLoaderDynamic& vk_loader,
+std::unique_ptr<BufferCollectionInfo> BufferCollectionInfo::New(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    const vk::ImageCreateInfo& vulkan_image_constraints,
     BufferCollectionHandle buffer_collection_token) {
   FXL_DCHECK(sysmem_allocator);
-  FXL_DCHECK((vulkan_image_constraints.usage &
-              (vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled)) ==
-             (vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled));
 
   if (!buffer_collection_token.is_valid()) {
     FXL_LOG(ERROR) << "Buffer collection token is not valid.";
@@ -60,13 +22,15 @@ std::unique_ptr<BufferCollectionInfo> BufferCollectionInfo::CreateWithConstraint
   // so we do not do any error checking at this stage.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token = buffer_collection_token.BindSync();
 
+  // Create an extra constraint token that will be kept around as a class member in the event that
+  // a client of this class wants to create their own additional constraints.
   // Only log an error here if duplicating the token fails, but allow |BindSharedCollection| and
   // |Sync| below to do the error handling if a failure occurs.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr constraint_token;
   zx_status_t status =
-      local_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
+      local_token->Duplicate(std::numeric_limits<uint32_t>::max(), constraint_token.NewRequest());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not generate vulkan token for buffer.";
+    FXL_LOG(ERROR) << "Could not generate constraint token for buffer.";
   }
 
   // Use local token to create a BufferCollection and then sync. We can trust
@@ -94,20 +58,31 @@ std::unique_ptr<BufferCollectionInfo> BufferCollectionInfo::CreateWithConstraint
   // failure occurs now, then that is some underlying issue unrelated to user input.
   FXL_DCHECK(status == ZX_OK) << "Could not set constraints on buffer collection.";
 
-  // Create a vulkan buffer collection object, and set VkImage constraints, separately from
-  // the sysmem constraints set above.
-  vk::BufferCollectionFUCHSIA vk_buffer_collection;
-  const bool vk_constraints_set = SetVKBufferCollectionConstraints(
-      device, vk_loader, vulkan_image_constraints, std::move(vulkan_token), &vk_buffer_collection);
-  FXL_DCHECK(vk_constraints_set) << "Could not set vk constraints on buffer collection.";
-
   return std::unique_ptr<BufferCollectionInfo>(
-      new BufferCollectionInfo(std::move(buffer_collection), vk_buffer_collection));
+      new BufferCollectionInfo(std::move(buffer_collection), std::move(constraint_token)));
+}
+
+BufferCollectionHandle BufferCollectionInfo::GenerateToken() const {
+  FXL_DCHECK(constraint_token_)
+      << "The buffer collection is already allocated. It can no longer generate any new tokens.";
+
+  BufferCollectionHandle result;
+  zx_status_t status =
+      constraint_token_->Duplicate(std::numeric_limits<uint32_t>::max(), result.NewRequest());
+  FXL_DCHECK(status == ZX_OK) << "Could not generate a new token for the buffer.";
+  return result;
 }
 
 bool BufferCollectionInfo::WaitUntilAllocated() {
   // Wait for the buffers to be allocated before adding the first Image.
   if (!buffer_collection_info_.buffer_count) {
+    // Close out the constraint token we've been keeping around for clients
+    // to set additional constraints with. The buffer collection cannot
+    // complete its allocation as long as there exist open tokens that have
+    // not had constraints set on them.
+    constraint_token_->Close();
+    constraint_token_ = nullptr;
+
     // We should wait for buffers to be allocated and then to be sure, check that
     // they have actually been allocated.
     zx_status_t allocation_status = ZX_OK;
@@ -126,19 +101,6 @@ bool BufferCollectionInfo::WaitUntilAllocated() {
     }
   }
   return true;
-}
-
-void BufferCollectionInfo::Destroy(const vk::Device& device,
-                                   const vk::DispatchLoaderDynamic& vk_loader) {
-  FXL_DCHECK(device);
-
-  // Close the connection.
-  buffer_collection_ptr_->Close();
-  buffer_collection_ptr_ = nullptr;
-
-  // Destroy the vkBufferCollection object.
-  device.destroyBufferCollectionFUCHSIA(vk_buffer_collection_, nullptr, vk_loader);
-  vk_buffer_collection_ = nullptr;
 }
 
 }  // namespace flatland
