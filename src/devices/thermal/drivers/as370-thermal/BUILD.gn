@@ -15,6 +15,7 @@ driver_module("as370-thermal") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "as370-thermal.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
     "//src/devices/lib/driver",
@@ -26,7 +27,6 @@ driver_module("as370-thermal") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.clock",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.power",
     "//zircon/system/dev/lib/as370",
@@ -42,6 +42,8 @@ test("as370-thermal-test") {
     "as370-thermal.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.clock:ddk.protocol.clock_mock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
@@ -56,8 +58,6 @@ test("as370-thermal-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.clock",
-    "//zircon/system/banjo/ddk.protocol.clock:ddk.protocol.clock_mock",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.power",
     "//zircon/system/banjo/ddk.protocol.power:ddk.protocol.power_mock",

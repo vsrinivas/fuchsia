@@ -13,12 +13,12 @@ driver_module("clock") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "clock.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.clock",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.clock",
     "//zircon/system/banjo/ddk.protocol.clockimpl",
   ]
 }

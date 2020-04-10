@@ -15,6 +15,7 @@ driver_module("bma253") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "bma253.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.clock",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -24,7 +25,6 @@ driver_module("bma253") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.clock",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.i2c",

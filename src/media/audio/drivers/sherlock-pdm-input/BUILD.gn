@@ -14,6 +14,7 @@ driver_module("sherlock-pdm-input") {
   sources = [ "audio-stream-in.cc" ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.clock",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -23,7 +24,6 @@ driver_module("sherlock-pdm-input") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.clock",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",

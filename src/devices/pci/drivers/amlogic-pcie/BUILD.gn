@@ -19,6 +19,7 @@ driver_module("amlogic-pcie") {
     "aml-pcie.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -27,7 +28,6 @@ driver_module("amlogic-pcie") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.clock",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/amlogic",
