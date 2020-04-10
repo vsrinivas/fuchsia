@@ -2,28 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::registry::base::State;
+use crate::registry::device_storage::DeviceStorageCompatible;
+use crate::registry::setting_handler::persist::{
+    controller as data_controller, write, ClientProxy,
+};
+use crate::registry::setting_handler::{controller, ControllerError};
+use crate::switchboard::base::{
+    Merge, SettingRequest, SettingResponse, SettingResponseResult, SettingType, SwitchboardError,
+};
+use crate::switchboard::intl_types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
+use async_trait::async_trait;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
-use futures::lock::Mutex;
-use futures::StreamExt;
-use parking_lot::RwLock;
 
-use futures::future::BoxFuture;
 use rust_icu_uenum as uenum;
-
-use crate::registry::base::{Command, Context, Notifier, SettingHandler, State};
-use crate::registry::device_storage::DeviceStorageFactory;
-use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{
-    Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType, SwitchboardError,
-};
-use crate::switchboard::intl_types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
-
-type IntlStorage = Arc<Mutex<DeviceStorage<IntlInfo>>>;
 
 impl DeviceStorageCompatible for IntlInfo {
     const KEY: &'static str = "intl_info";
@@ -39,51 +34,35 @@ impl DeviceStorageCompatible for IntlInfo {
 }
 
 pub struct IntlController {
-    service_context_handle: ServiceContextHandle,
-    stored_value: IntlInfo,
-    listen_notifier: Arc<RwLock<Option<Notifier>>>,
-    storage: IntlStorage,
+    client: ClientProxy<IntlInfo>,
     time_zone_ids: std::collections::HashSet<String>,
+}
+
+#[async_trait]
+impl data_controller::Create<IntlInfo> for IntlController {
+    /// Creates the controller
+    async fn create(client: ClientProxy<IntlInfo>) -> Result<Self, ControllerError> {
+        let time_zone_ids = IntlController::load_time_zones();
+        Ok(IntlController { client: client, time_zone_ids: time_zone_ids })
+    }
+}
+
+#[async_trait]
+impl controller::Handle for IntlController {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+        match request {
+            SettingRequest::SetIntlInfo(info) => Some(self.set(info).await),
+            SettingRequest::Get => Some(Ok(Some(SettingResponse::Intl(self.client.read().await)))),
+            _ => None,
+        }
+    }
+
+    async fn change_state(&mut self, _state: State) {}
 }
 
 /// Controller for processing switchboard messages surrounding the Intl
 /// protocol, backed by a number of services, including TimeZone.
 impl IntlController {
-    pub fn spawn<T: DeviceStorageFactory + Send + Sync + 'static>(
-        context: Context<T>,
-    ) -> BoxFuture<'static, SettingHandler> {
-        let service_context_handle = context.environment.service_context_handle.clone();
-        let storage_handle = context.environment.storage_factory_handle.clone();
-
-        let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
-
-        fasync::spawn(async move {
-            let storage = storage_handle.lock().await.get_store::<IntlInfo>();
-            // Local copy of persisted i18n values.
-            let stored_value: IntlInfo;
-            {
-                let mut storage_lock = storage.lock().await;
-                stored_value = storage_lock.get().await;
-            }
-
-            let time_zone_ids = IntlController::load_time_zones();
-
-            let handle = Arc::new(RwLock::new(Self {
-                service_context_handle,
-                stored_value,
-                listen_notifier: Arc::new(RwLock::new(None)),
-                storage,
-                time_zone_ids,
-            }));
-
-            while let Some(command) = ctrl_rx.next().await {
-                handle.write().process_command(command);
-            }
-        });
-
-        return Box::pin(async move { ctrl_tx });
-    }
-
     /// Loads the set of valid time zones from resources.
     fn load_time_zones() -> std::collections::HashSet<String> {
         let _icu_data_loader = icu_data::Loader::new().expect("icu data loaded");
@@ -106,48 +85,17 @@ impl IntlController {
         time_zone_set
     }
 
-    fn process_command(&mut self, command: Command) {
-        match command {
-            Command::ChangeState(state) => match state {
-                State::Listen(notifier) => {
-                    *self.listen_notifier.write() = Some(notifier);
-                }
-                State::EndListen => {
-                    *self.listen_notifier.write() = None;
-                }
-            },
-            Command::HandleRequest(request, responder) => match request {
-                SettingRequest::SetIntlInfo(info) => {
-                    self.set(info, responder);
-                }
-                SettingRequest::Get => {
-                    self.get(responder);
-                }
-                _ => {
-                    responder
-                        .send(Err(SwitchboardError::UnimplementedRequest {
-                            setting_type: SettingType::Intl,
-                            request: request,
-                        }))
-                        .ok();
-                }
-            },
-        }
-    }
-
-    fn get(&self, responder: SettingRequestResponder) {
-        let _ = responder.send(Ok(Some(SettingResponse::Intl(self.stored_value.clone()))));
-    }
-
-    fn set(&mut self, info: IntlInfo, responder: SettingRequestResponder) {
+    async fn set(&self, info: IntlInfo) -> SettingResponseResult {
         if let Err(err) = self.validate_intl_info(info.clone()) {
             fx_log_err!("Invalid IntlInfo provided: {:?}", err);
-            let _ = responder.send(Err(err));
-            return;
+            return Err(err);
         }
 
-        self.write_intl_info_to_service(info.clone());
-        self.write_intl_info_to_local_storage(info.clone(), responder);
+        self.write_intl_info_to_service(info.clone()).await;
+
+        let current = self.client.read().await;
+
+        write(&self.client, info.merge(current), false).await
     }
 
     /// Checks if the given IntlInfo is valid.
@@ -170,8 +118,8 @@ impl IntlController {
     ///
     /// Errors are only logged as this is an intermediate step in a migration.
     /// TODO(fxb/41639): remove this
-    fn write_intl_info_to_service(&self, info: IntlInfo) {
-        let service_context = self.service_context_handle.clone();
+    async fn write_intl_info_to_service(&self, info: IntlInfo) {
+        let service_context = self.client.get_service_context().await.clone();
         fasync::spawn(async move {
             let service_result = service_context
                 .lock()
@@ -194,51 +142,6 @@ impl IntlController {
             if let Err(e) = proxy.set_timezone(time_zone_id.as_str()).await {
                 fx_log_err!("Failed to write timezone to fuchsia.timezone: {:?}", e);
             }
-        });
-    }
-
-    /// Writes the intl info to persistent storage and updates our local copy.
-    ///
-    /// TODO(fxb/41639): inline this method into set_time_zone
-    fn write_intl_info_to_local_storage(
-        &mut self,
-        info: IntlInfo,
-        responder: SettingRequestResponder,
-    ) {
-        let old_value = self.stored_value.clone();
-
-        self.stored_value = info.merge(self.stored_value.clone());
-
-        if old_value == self.stored_value {
-            // Value unchanged, no need to persist or notify listeners.
-            responder.send(Ok(None)).ok();
-            return;
-        }
-
-        // Attempt to persist the value.
-        self.persist_intl_info(self.stored_value.clone(), responder);
-
-        // Notify listeners of value change.
-        if let Some(notifier) = (*self.listen_notifier.read()).clone() {
-            let _ = notifier.unbounded_send(SettingType::Intl);
-        }
-    }
-
-    /// Writes the intl info to persistent storage.
-    ///
-    /// TODO(fxb/41639): inline this method into set_time_zone
-    fn persist_intl_info(&self, info: IntlInfo, responder: SettingRequestResponder) {
-        let storage_clone = self.storage.clone();
-        // Spin off a separate thread to persist the value.
-        fasync::spawn(async move {
-            let mut storage_lock = storage_clone.lock().await;
-            let write_request = storage_lock.write(&info, false).await;
-            let _ = match write_request {
-                Ok(_) => responder.send(Ok(None)),
-                Err(_) => responder.send(Err(SwitchboardError::StorageFailure {
-                    setting_type: SettingType::Intl,
-                })),
-            };
         });
     }
 }

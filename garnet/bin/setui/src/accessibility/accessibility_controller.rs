@@ -1,25 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {
-    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
-    crate::registry::device_storage::{
-        DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
-    },
-    crate::switchboard::accessibility_types::AccessibilityInfo,
-    crate::switchboard::base::{
-        Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
-        SwitchboardError,
-    },
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
-    futures::future::BoxFuture,
-    futures::lock::Mutex,
-    futures::stream::StreamExt,
-    futures::TryFutureExt,
-    parking_lot::RwLock,
-    std::sync::Arc,
+use crate::registry::base::State;
+use crate::registry::device_storage::DeviceStorageCompatible;
+use crate::registry::setting_handler::persist::{
+    controller as data_controller, write, ClientProxy,
 };
+use crate::registry::setting_handler::{controller, ControllerError};
+use crate::switchboard::accessibility_types::AccessibilityInfo;
+use crate::switchboard::base::{Merge, SettingRequest, SettingResponse, SettingResponseResult};
+
+use async_trait::async_trait;
 
 impl DeviceStorageCompatible for AccessibilityInfo {
     const KEY: &'static str = "accessibility_info";
@@ -36,99 +27,31 @@ impl DeviceStorageCompatible for AccessibilityInfo {
     }
 }
 
-/// Controller that handles commands for SettingType::Accessibility.
-pub fn spawn_accessibility_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: Context<T>,
-) -> BoxFuture<'static, SettingHandler> {
-    let storage_factory_handle = context.environment.storage_factory_handle.clone();
-    let (accessibility_handler_tx, mut accessibility_handler_rx) =
-        futures::channel::mpsc::unbounded::<Command>();
-
-    let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
-
-    fasync::spawn(
-        async move {
-            let storage = storage_factory_handle.lock().await.get_store::<AccessibilityInfo>();
-
-            // Local copy of persisted audio description value.
-            let mut stored_value: AccessibilityInfo;
-            {
-                let mut storage_lock = storage.lock().await;
-                stored_value = storage_lock.get().await;
-            }
-
-            while let Some(command) = accessibility_handler_rx.next().await {
-                match command {
-                    Command::ChangeState(state) => match state {
-                        State::Listen(notifier) => {
-                            *notifier_lock.write() = Some(notifier);
-                        }
-                        State::EndListen => {
-                            *notifier_lock.write() = None;
-                        }
-                    },
-                    Command::HandleRequest(request, responder) => {
-                        #[allow(unreachable_patterns)]
-                        match request {
-                            SettingRequest::Get => {
-                                let _ = responder.send(Ok(Some(SettingResponse::Accessibility(
-                                    stored_value.clone(),
-                                ))));
-                                // Done handling request, no need to notify listeners or persist.
-                                continue;
-                            }
-                            SettingRequest::SetAccessibilityInfo(info) => {
-                                let old_value = stored_value.clone();
-
-                                stored_value = info.merge(stored_value);
-
-                                if old_value == stored_value {
-                                    // No change in value, no need to notify listeners or persist.
-                                    continue;
-                                }
-                            }
-                            _ => {
-                                responder
-                                    .send(Err(SwitchboardError::UnimplementedRequest {
-                                        setting_type: SettingType::Accessibility,
-                                        request: request,
-                                    }))
-                                    .ok();
-                                continue;
-                            }
-                        }
-
-                        // Notify listeners of value change.
-                        if let Some(notifier) = (*notifier_lock.read()).clone() {
-                            notifier.unbounded_send(SettingType::Accessibility)?;
-                        }
-
-                        // Persist the new value.
-                        persist_accessibility_info(stored_value, storage.clone(), responder).await;
-                    }
-                }
-            }
-            Ok(())
-        }
-        .unwrap_or_else(|e: anyhow::Error| {
-            fx_log_err!("Error processing accessibility command: {:?}", e)
-        }),
-    );
-
-    Box::pin(async move { accessibility_handler_tx })
+pub struct AccessibilityController {
+    client: ClientProxy<AccessibilityInfo>,
 }
 
-async fn persist_accessibility_info(
-    info: AccessibilityInfo,
-    storage: Arc<Mutex<DeviceStorage<AccessibilityInfo>>>,
-    responder: SettingRequestResponder,
-) {
-    let mut storage_lock = storage.lock().await;
-    let write_request = storage_lock.write(&info, false).await;
-    let _ = match write_request {
-        Ok(_) => responder.send(Ok(None)),
-        Err(_) => responder.send(Err(SwitchboardError::StorageFailure {
-            setting_type: SettingType::Accessibility,
-        })),
-    };
+#[async_trait]
+impl data_controller::Create<AccessibilityInfo> for AccessibilityController {
+    /// Creates the controller
+    async fn create(client: ClientProxy<AccessibilityInfo>) -> Result<Self, ControllerError> {
+        Ok(AccessibilityController { client: client })
+    }
+}
+
+#[async_trait]
+impl controller::Handle for AccessibilityController {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+        match request {
+            SettingRequest::Get => {
+                Some(Ok(Some(SettingResponse::Accessibility(self.client.read().await))))
+            }
+            SettingRequest::SetAccessibilityInfo(info) => {
+                Some(write(&self.client, info.merge(self.client.read().await), false).await)
+            }
+            _ => None,
+        }
+    }
+
+    async fn change_state(&mut self, _: State) {}
 }

@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async_trait::async_trait;
 use {
-    crate::registry::base::{Command, Context, SettingHandler},
-    crate::registry::device_storage::DeviceStorageFactory,
+    crate::registry::base::State,
+    crate::registry::setting_handler::{controller, ClientProxy, ControllerError},
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
-    fuchsia_async as fasync,
-    futures::future::BoxFuture,
-    futures::StreamExt,
 };
 
-async fn reboot(service_context_handle: ServiceContextHandle) {
+async fn reboot(service_context_handle: &ServiceContextHandle) {
     let device_admin = service_context_handle
         .lock()
         .await
@@ -23,38 +21,30 @@ async fn reboot(service_context_handle: ServiceContextHandle) {
     device_admin.suspend(fidl_fuchsia_device_manager::SUSPEND_FLAG_REBOOT).await.ok();
 }
 
-pub fn spawn_power_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: Context<T>,
-) -> BoxFuture<'static, SettingHandler> {
-    let service_context_handle = context.environment.service_context_handle.clone();
-    let (system_handler_tx, mut system_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
+pub struct PowerController {
+    service_context: ServiceContextHandle,
+}
 
-    fasync::spawn(async move {
-        while let Some(command) = system_handler_rx.next().await {
-            match command {
-                #[allow(unreachable_patterns)]
-                Command::HandleRequest(request, responder) =>
-                {
-                    #[allow(unreachable_patterns)]
-                    match request {
-                        SettingRequest::Reboot => {
-                            reboot(service_context_handle.clone()).await;
-                            responder.send(Ok(None)).ok();
-                        }
-                        _ => {
-                            responder
-                                .send(Err(SwitchboardError::UnimplementedRequest {
-                                    setting_type: SettingType::Power,
-                                    request: request,
-                                }))
-                                .ok();
-                        }
-                    }
-                }
-                // Ignore unsupported commands
-                _ => {}
+#[async_trait]
+impl controller::Create for PowerController {
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
+        let service_context = client.get_service_context().await;
+        Ok(Self { service_context: service_context })
+    }
+}
+
+#[async_trait]
+impl controller::Handle for PowerController {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+        #[allow(unreachable_patterns)]
+        match request {
+            SettingRequest::Reboot => {
+                reboot(&self.service_context).await;
+                return Some(Ok(None));
             }
+            _ => return None,
         }
-    });
-    Box::pin(async move { system_handler_tx })
+    }
+
+    async fn change_state(&mut self, _state: State) {}
 }

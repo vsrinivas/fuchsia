@@ -1,21 +1,16 @@
-use crate::switchboard::base::SettingRequestResponder;
-use {
-    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
-    crate::registry::device_storage::{
-        DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
-    },
-    crate::switchboard::base::{
-        DoNotDisturbInfo, SettingRequest, SettingResponse, SettingType, SwitchboardError,
-    },
-    anyhow::Error,
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
-    futures::future::BoxFuture,
-    futures::lock::Mutex,
-    futures::StreamExt,
-    parking_lot::RwLock,
-    std::sync::Arc,
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+use crate::switchboard::base::SettingResponseResult;
+
+use crate::registry::base::State;
+use crate::registry::device_storage::DeviceStorageCompatible;
+use crate::registry::setting_handler::persist::{
+    controller as data_controller, write, ClientProxy,
 };
+use crate::registry::setting_handler::{controller, ControllerError};
+use crate::switchboard::base::{DoNotDisturbInfo, SettingRequest, SettingResponse};
+use async_trait::async_trait;
 
 impl DeviceStorageCompatible for DoNotDisturbInfo {
     const KEY: &'static str = "do_not_disturb_info";
@@ -25,96 +20,38 @@ impl DeviceStorageCompatible for DoNotDisturbInfo {
     }
 }
 
-// Controller that handles commands for SettingType::DoNotDisturb
-pub fn spawn_do_not_disturb_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: Context<T>,
-) -> BoxFuture<'static, SettingHandler> {
-    let storage_handle = context.environment.storage_factory_handle.clone();
-    let (do_not_disturb_handler_tx, mut do_not_disturb_handler_rx) =
-        futures::channel::mpsc::unbounded::<Command>();
+pub struct DoNotDisturbController {
+    client: ClientProxy<DoNotDisturbInfo>,
+}
 
-    let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
+#[async_trait]
+impl data_controller::Create<DoNotDisturbInfo> for DoNotDisturbController {
+    /// Creates the controller
+    async fn create(client: ClientProxy<DoNotDisturbInfo>) -> Result<Self, ControllerError> {
+        Ok(DoNotDisturbController { client: client })
+    }
+}
 
-    fasync::spawn(async move {
-        let storage = storage_handle.lock().await.get_store::<DoNotDisturbInfo>();
-        // Load stored value
-        let mut stored_value: DoNotDisturbInfo;
-        {
-            let mut storage_lock = storage.lock().await;
-            stored_value = storage_lock.get().await;
-        }
-
-        while let Some(command) = do_not_disturb_handler_rx.next().await {
-            match command {
-                Command::ChangeState(state) => match state {
-                    State::Listen(notifier) => {
-                        *notifier_lock.write() = Some(notifier);
-                    }
-                    State::EndListen => {
-                        *notifier_lock.write() = None;
-                    }
-                },
-                Command::HandleRequest(request, responder) =>
-                {
-                    #[allow(unreachable_patterns)]
-                    match request {
-                        SettingRequest::SetDnD(dnd_info) => {
-                            if dnd_info.user_dnd.is_some() {
-                                stored_value.user_dnd = dnd_info.user_dnd;
-                            }
-                            if dnd_info.night_mode_dnd.is_some() {
-                                stored_value.night_mode_dnd = dnd_info.night_mode_dnd;
-                            }
-
-                            write_value(stored_value, &notifier_lock, &storage, responder).await;
-                        }
-                        SettingRequest::Get => {
-                            let mut storage_lock = storage.lock().await;
-                            let _ = responder.send(Ok(Some(SettingResponse::DoNotDisturb(
-                                storage_lock.get().await,
-                            ))));
-                        }
-                        _ => {
-                            responder
-                                .send(Err(SwitchboardError::UnimplementedRequest {
-                                    setting_type: SettingType::DoNotDisturb,
-                                    request: request,
-                                }))
-                                .ok();
-                        }
-                    }
+#[async_trait]
+impl controller::Handle for DoNotDisturbController {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+        match request {
+            SettingRequest::SetDnD(dnd_info) => {
+                let mut stored_value = self.client.read().await;
+                if dnd_info.user_dnd.is_some() {
+                    stored_value.user_dnd = dnd_info.user_dnd;
                 }
+                if dnd_info.night_mode_dnd.is_some() {
+                    stored_value.night_mode_dnd = dnd_info.night_mode_dnd;
+                }
+                Some(write(&self.client, stored_value, false).await)
             }
+            SettingRequest::Get => {
+                Some(Ok(Some(SettingResponse::DoNotDisturb(self.client.read().await))))
+            }
+            _ => None,
         }
-    });
-    Box::pin(async move { do_not_disturb_handler_tx })
-}
-
-async fn write_value(
-    request_info: DoNotDisturbInfo,
-    notifier_lock: &Arc<RwLock<Option<Notifier>>>,
-    storage: &Arc<Mutex<DeviceStorage<DoNotDisturbInfo>>>,
-    responder: SettingRequestResponder,
-) {
-    let mut storage_lock = storage.lock().await;
-    let write_result = storage_lock.write(&request_info, false).await;
-    if let Err(_) = write_result {
-        responder
-            .send(Err(SwitchboardError::StorageFailure { setting_type: SettingType::DoNotDisturb }))
-            .ok();
-        return;
     }
-    let _ = responder.send(Ok(None));
-    notify(notifier_lock.clone()).unwrap_or_else(|e: anyhow::Error| {
-        fx_log_err!("Error notifying do not disturb changes: {:#?}", e);
-    });
-}
 
-// TODO: watch for changes on current do_not_disturb and notify changes
-// that way instead.
-fn notify(notifier_lock: Arc<RwLock<Option<Notifier>>>) -> std::result::Result<(), Error> {
-    if let Some(notifier) = (*notifier_lock.read()).clone() {
-        notifier.unbounded_send(SettingType::DoNotDisturb)?;
-    }
-    Ok(())
+    async fn change_state(&mut self, _state: State) {}
 }

@@ -37,6 +37,6 @@ pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
 
     return Box::new(move |_| {
         let tx_clone = handler_tx_clone.clone();
-        Box::pin(async move { tx_clone.clone() })
+        Box::pin(async move { Ok(tx_clone.clone()) })
     });
 }

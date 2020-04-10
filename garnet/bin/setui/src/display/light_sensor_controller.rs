@@ -1,118 +1,115 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {
-    crate::display::light_sensor::{open_sensor, read_sensor},
-    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
-    crate::registry::device_storage::DeviceStorageFactory,
-    crate::switchboard::base::{
-        LightData, SettingRequest, SettingResponse, SettingType, SwitchboardError,
-    },
-    fidl_fuchsia_hardware_input::{DeviceMarker as SensorMarker, DeviceProxy as SensorProxy},
-    fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_syslog::fx_log_err,
-    fuchsia_zircon::Duration,
-    futures::channel::mpsc::{unbounded, UnboundedReceiver},
-    futures::future::BoxFuture,
-    futures::future::{AbortHandle, Abortable},
-    futures::prelude::*,
-    parking_lot::RwLock,
-    std::sync::Arc,
-};
+use crate::display::light_sensor::{open_sensor, read_sensor};
+use crate::registry::base::State;
+use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
+use crate::switchboard::base::{LightData, SettingRequest, SettingResponse, SettingResponseResult};
+use async_trait::async_trait;
+use fidl_fuchsia_hardware_input::{DeviceMarker as SensorMarker, DeviceProxy as SensorProxy};
+use fuchsia_async::{self as fasync, DurationExt};
+use fuchsia_zircon::Duration;
+use futures::channel::mpsc::{unbounded, UnboundedReceiver};
+use futures::future::{AbortHandle, Abortable};
+use futures::lock::Mutex;
+use futures::prelude::*;
+use std::sync::Arc;
 
 pub const LIGHT_SENSOR_SERVICE_NAME: &str = "light_sensor_hid";
 const SCAN_DURATION_MS: i64 = 1000;
 
-/// Launches a new controller for the light sensor which periodically scans the light sensor
-/// for values, and sends out values on change.
-pub fn spawn_light_sensor_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: Context<T>,
-) -> BoxFuture<'static, SettingHandler> {
-    let service_context_handle = context.environment.service_context_handle.clone();
-    let (light_sensor_handler_tx, light_sensor_handler_rx) = unbounded::<Command>();
+pub struct LightSensorController {
+    client: ClientProxy,
+    proxy: SensorProxy,
+    current_value: Arc<Mutex<LightData>>,
+    notifier_abort: Option<AbortHandle>,
+}
 
-    let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
-
-    fasync::spawn(async move {
-        // First connect to service if it is provided by service context
-        let mut sensor_proxy_result = service_context_handle
+#[async_trait]
+impl controller::Create for LightSensorController {
+    async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
+        let service_context = client.get_service_context().await;
+        let mut sensor_proxy_result = service_context
             .lock()
             .await
             .connect_named::<SensorMarker>(LIGHT_SENSOR_SERVICE_NAME)
             .await;
 
-        // If not, enumuerate through HIDs to try to find it
-        if let Err(_) = sensor_proxy_result {
+        if sensor_proxy_result.is_err() {
             sensor_proxy_result = open_sensor().await;
         }
 
         if let Ok(proxy) = sensor_proxy_result {
-            let current_value: Arc<RwLock<LightData>> =
-                Arc::new(RwLock::new(get_sensor_data(&proxy).await));
-
-            handle_commands(
-                proxy,
-                light_sensor_handler_rx,
-                notifier_lock.clone(),
-                current_value.clone(),
-            )
-            .await;
+            let current_data = Arc::new(Mutex::new(get_sensor_data(&proxy).await));
+            Ok(Self {
+                client: client,
+                proxy: proxy,
+                current_value: current_data,
+                notifier_abort: None,
+            })
         } else {
-            fx_log_err!("Couldn't connect to light sensor controller");
+            Err(ControllerError::InitFailure {
+                description: "Could not connect to proxy".to_string(),
+            })
         }
-    });
-    Box::pin(async move { light_sensor_handler_tx })
+    }
 }
 
-/// Listens to commands from the registry; doesn't return until stream ends.
-async fn handle_commands(
-    proxy: SensorProxy,
-    mut light_sensor_handler_rx: UnboundedReceiver<Command>,
-    notifier: Arc<RwLock<Option<Notifier>>>,
-    current_value: Arc<RwLock<LightData>>,
-) {
-    let mut notifier_abort: Option<AbortHandle> = None;
+#[async_trait]
+impl controller::Handle for LightSensorController {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+        #[allow(unreachable_patterns)]
+        match request {
+            SettingRequest::Get => Some(Ok(Some(SettingResponse::LightSensor(
+                self.current_value.lock().await.clone(),
+            )))),
+            _ => None,
+        }
+    }
 
-    while let Some(command) = light_sensor_handler_rx.next().await {
-        match command {
-            Command::ChangeState(state) => match state {
-                State::Listen(new_notifier) => {
-                    *notifier.write() = Some(new_notifier);
-                    let change_receiver =
-                        start_light_sensor_scanner(proxy.clone(), SCAN_DURATION_MS);
-                    notifier_abort = Some(
-                        notify_on_change(change_receiver, notifier.clone(), current_value.clone())
-                            .await,
-                    );
+    async fn change_state(&mut self, state: State) {
+        match state {
+            State::Listen(_) => {
+                let change_receiver =
+                    start_light_sensor_scanner(self.proxy.clone(), SCAN_DURATION_MS);
+                self.notifier_abort = Some(
+                    notify_on_change(
+                        change_receiver,
+                        ClientNotifier::create(self.client.clone()),
+                        self.current_value.clone(),
+                    )
+                    .await,
+                );
+            }
+            State::EndListen => {
+                if let Some(abort_handle) = &self.notifier_abort {
+                    abort_handle.abort();
                 }
-                State::EndListen => {
-                    if let Some(abort_handle) = notifier_abort {
-                        abort_handle.abort();
-                    }
-                    notifier_abort = None;
-                    *notifier.write() = None;
-                }
-            },
-            Command::HandleRequest(request, responder) =>
-            {
-                #[allow(unreachable_patterns)]
-                match request {
-                    SettingRequest::Get => {
-                        let data = current_value.read().clone();
-
-                        responder.send(Ok(Some(SettingResponse::LightSensor(data)))).unwrap();
-                    }
-                    _ => {
-                        responder
-                            .send(Err(SwitchboardError::UnimplementedRequest {
-                                setting_type: SettingType::LightSensor,
-                                request: request,
-                            }))
-                            .ok();
-                    }
-                }
+                self.notifier_abort = None;
             }
         }
+    }
+}
+
+#[async_trait]
+trait LightNotifier {
+    async fn notify(&self);
+}
+
+struct ClientNotifier {
+    client: ClientProxy,
+}
+
+impl ClientNotifier {
+    pub fn create(client: ClientProxy) -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Self { client: client }))
+    }
+}
+
+#[async_trait]
+impl LightNotifier for ClientNotifier {
+    async fn notify(&self) {
+        self.client.notify().await;
     }
 }
 
@@ -120,8 +117,8 @@ async fn handle_commands(
 /// startListen and endListen.
 async fn notify_on_change(
     mut change_receiver: UnboundedReceiver<LightData>,
-    notifier_lock: Arc<RwLock<Option<Notifier>>>,
-    current_value: Arc<RwLock<LightData>>,
+    notifier: Arc<Mutex<dyn LightNotifier + Send + Sync>>,
+    current_value: Arc<Mutex<LightData>>,
 ) -> AbortHandle {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
 
@@ -129,10 +126,8 @@ async fn notify_on_change(
         Abortable::new(
             async move {
                 while let Some(value) = change_receiver.next().await {
-                    *current_value.write() = value;
-                    if let Some(notifier) = (*notifier_lock.read()).clone() {
-                        notifier.unbounded_send(SettingType::LightSensor).unwrap();
-                    }
+                    *current_value.lock().await = value;
+                    notifier.lock().await.notify().await;
                 }
             },
             abort_registration,
@@ -182,10 +177,31 @@ async fn get_sensor_data(sensor: &SensorProxy) -> LightData {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::switchboard::base::SettingType;
     use fidl_fuchsia_hardware_input::DeviceRequest as SensorRequest;
 
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
+    use parking_lot::RwLock;
+
+    use crate::registry::base::Notifier;
+
+    struct TestNotifier {
+        notifier: Notifier,
+    }
+
+    impl TestNotifier {
+        pub fn create(notifier: Notifier) -> Arc<Mutex<Self>> {
+            Arc::new(Mutex::new(Self { notifier: notifier }))
+        }
+    }
+
+    #[async_trait]
+    impl LightNotifier for TestNotifier {
+        async fn notify(&self) {
+            self.notifier.unbounded_send(SettingType::LightSensor).ok();
+        }
+    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_start_auto_brightness_task() {
@@ -241,11 +257,10 @@ mod tests {
 
         let (notifier_sender, mut notifier_receiver) = unbounded::<SettingType>();
 
-        let data: Arc<RwLock<LightData>> = Arc::new(RwLock::new(data1));
+        let data: Arc<Mutex<LightData>> = Arc::new(Mutex::new(data1));
 
         let aborter =
-            notify_on_change(light_receiver, Arc::new(RwLock::new(Some(notifier_sender))), data)
-                .await;
+            notify_on_change(light_receiver, TestNotifier::create(notifier_sender), data).await;
 
         light_sender.unbounded_send(data2).unwrap();
 

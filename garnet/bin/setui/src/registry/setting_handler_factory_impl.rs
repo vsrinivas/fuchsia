@@ -28,7 +28,11 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
         }
 
         if let Some(generate_function) = self.generators.get(&setting_type) {
-            return Some((generate_function)(Context::new(self.environment.clone())).await);
+            if let Ok(handler) =
+                (generate_function)(Context::new(setting_type, self.environment.clone())).await
+            {
+                return Some(handler);
+            }
         }
 
         None

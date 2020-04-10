@@ -5,6 +5,7 @@
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{SettingRequest, SettingRequestResponder, SettingType};
+use anyhow::Error;
 use async_trait::async_trait;
 use futures::channel::mpsc::UnboundedSender;
 use futures::future::BoxFuture;
@@ -14,9 +15,10 @@ use std::sync::Arc;
 
 pub type Notifier = UnboundedSender<SettingType>;
 pub type SettingHandler = UnboundedSender<Command>;
+pub type SettingHandlerResult = Result<SettingHandler, Error>;
 
 pub type GenerateHandler<T> =
-    Box<dyn Fn(Context<T>) -> BoxFuture<'static, SettingHandler> + Send + Sync>;
+    Box<dyn Fn(Context<T>) -> BoxFuture<'static, SettingHandlerResult> + Send + Sync>;
 
 /// An command represents messaging from the registry to take a
 /// particular action.
@@ -71,11 +73,16 @@ impl<T: DeviceStorageFactory> Environment<T> {
 /// Context captures all details necessary for a handler to execute in a given
 /// settings service environment.
 pub struct Context<T: DeviceStorageFactory> {
+    pub setting_type: SettingType,
     pub environment: Environment<T>,
 }
 
 impl<T: DeviceStorageFactory> Context<T> {
-    pub fn new(environment: Environment<T>) -> Context<T> {
-        return Context { environment: environment.clone() };
+    pub fn new(setting_type: SettingType, environment: Environment<T>) -> Context<T> {
+        return Context { setting_type: setting_type, environment: environment.clone() };
+    }
+
+    pub fn clone(&self) -> Self {
+        Self::new(self.setting_type.clone(), self.environment.clone())
     }
 }

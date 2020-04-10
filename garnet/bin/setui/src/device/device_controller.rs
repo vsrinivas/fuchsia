@@ -1,48 +1,37 @@
-use {
-    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
-    crate::registry::device_storage::DeviceStorageFactory,
-    crate::switchboard::base::{DeviceInfo, SettingResponse},
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_info,
-    futures::future::BoxFuture,
-    futures::StreamExt,
-    parking_lot::RwLock,
-    std::fs,
+use crate::registry::base::State;
+use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
+use crate::switchboard::base::{
+    DeviceInfo, SettingRequest, SettingResponse, SettingResponseResult,
 };
+use async_trait::async_trait;
+use std::fs;
 
 const BUILD_TAG_FILE_PATH: &str = "/config/build-info/version";
 
-pub fn spawn_device_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    _context: Context<T>,
-) -> BoxFuture<'static, SettingHandler> {
-    let (device_handler_tx, mut device_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
+pub struct DeviceController;
 
-    let notifier_lock = RwLock::<Option<Notifier>>::new(None);
+#[async_trait]
+impl controller::Create for DeviceController {
+    /// Creates the controller
+    async fn create(_: ClientProxy) -> Result<Self, ControllerError> {
+        Ok(Self {})
+    }
+}
 
-    fasync::spawn(async move {
-        while let Some(command) = device_handler_rx.next().await {
-            match command {
-                Command::ChangeState(state) => match state {
-                    State::Listen(notifier) => {
-                        let mut n = notifier_lock.write();
-                        *n = Some(notifier);
-                    }
-                    State::EndListen => {
-                        let mut n = notifier_lock.write();
-                        *n = None;
-                    }
-                },
-                Command::HandleRequest(_request, responder) => {
-                    // TODO (go/fxb/36506): Send error back to client through responder.
-                    // Right now will panic in hanging_get_handler if Err is sent back.
-                    let contents = fs::read_to_string(BUILD_TAG_FILE_PATH)
-                        .expect("Could not read build tag file");
-                    let device_info = DeviceInfo { build_tag: contents.trim().to_string() };
-                    fx_log_info!("{:?}", device_info);
-                    responder.send(Ok(Some(SettingResponse::Device(device_info)))).ok();
-                }
+#[async_trait]
+impl controller::Handle for DeviceController {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+        match request {
+            SettingRequest::Get => {
+                let contents =
+                    fs::read_to_string(BUILD_TAG_FILE_PATH).expect("Could not read build tag file");
+                let device_info = DeviceInfo { build_tag: contents.trim().to_string() };
+
+                Some(Ok(Some(SettingResponse::Device(device_info))))
             }
+            _ => None,
         }
-    });
-    Box::pin(async move { device_handler_tx })
+    }
+
+    async fn change_state(&mut self, _state: State) {}
 }

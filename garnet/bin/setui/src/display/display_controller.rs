@@ -1,22 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {
-    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
-    crate::registry::device_storage::{
-        DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
-    },
-    crate::switchboard::base::{
-        DisplayInfo, SettingRequest, SettingResponse, SettingType, SwitchboardError,
-    },
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
-    futures::future::BoxFuture,
-    futures::lock::Mutex,
-    futures::StreamExt,
-    parking_lot::RwLock,
-    std::sync::Arc,
+
+use crate::registry::base::State;
+use crate::registry::device_storage::DeviceStorageCompatible;
+use crate::registry::setting_handler::persist::{
+    controller as data_controller, write, ClientProxy,
 };
+use crate::registry::setting_handler::{controller, ControllerError};
+use crate::switchboard::base::{
+    DisplayInfo, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
+    SwitchboardError,
+};
+use async_trait::async_trait;
 
 impl DeviceStorageCompatible for DisplayInfo {
     const KEY: &'static str = "display_info";
@@ -26,148 +22,107 @@ impl DeviceStorageCompatible for DisplayInfo {
     }
 }
 
-pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: Context<T>,
-) -> BoxFuture<'static, SettingHandler> {
-    let storage_handle = context.environment.storage_factory_handle.clone();
-    let service_context_handle = context.environment.service_context_handle.clone();
-    let (display_handler_tx, mut display_handler_rx) =
-        futures::channel::mpsc::unbounded::<Command>();
+pub struct DisplayController {
+    client: ClientProxy<DisplayInfo>,
+    brightness_service: fidl_fuchsia_ui_brightness::ControlProxy,
+}
 
-    let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
-
-    fasync::spawn(async move {
-        let brightness_service = service_context_handle
+#[async_trait]
+impl data_controller::Create<DisplayInfo> for DisplayController {
+    /// Creates the controller
+    async fn create(client: ClientProxy<DisplayInfo>) -> Result<Self, ControllerError> {
+        if let Ok(brightness_service) = client
+            .get_service_context()
+            .await
             .lock()
             .await
             .connect::<fidl_fuchsia_ui_brightness::ControlMarker>()
             .await
-            .expect("connected to brightness");
-
-        let storage = storage_handle.lock().await.get_store::<DisplayInfo>();
-
-        while let Some(command) = display_handler_rx.next().await {
-            match command {
-                Command::ChangeState(state) => match state {
-                    State::Listen(notifier) => {
-                        *notifier_lock.write() = Some(notifier);
-                    }
-                    State::EndListen => {
-                        *notifier_lock.write() = None;
-                    }
-                },
-                Command::HandleRequest(request, responder) => {
-                    #[allow(unreachable_patterns)]
-                    match request {
-                        SettingRequest::Restore => {
-                            // Load and set value
-                            // TODO(fxb/35004): Listen to changes using hanging
-                            // get as well
-                            let stored_value: DisplayInfo;
-                            {
-                                let mut storage_lock = storage.lock().await;
-                                stored_value = storage_lock.get().await;
-                            }
-                            match set_brightness(stored_value, &brightness_service, storage.clone())
-                                .await
-                            {
-                                Ok(_) => {
-                                    responder.send(Ok(None)).unwrap();
-                                }
-                                Err(e) => {
-                                    responder
-                                        .send(Err(SwitchboardError::ExternalFailure {
-                                            setting_type: SettingType::Display,
-                                            dependency: "brightness_service".to_string(),
-                                            request: "set_brightness".to_string(),
-                                        }))
-                                        .ok();
-                                    fx_log_err!("failed to set brightness: {}", e);
-                                }
-                            }
-                        }
-                        SettingRequest::SetBrightness(brightness_value) => {
-                            set_brightness(
-                                DisplayInfo::new(
-                                    false, /*auto_brightness_enabled*/
-                                    brightness_value,
-                                ),
-                                &brightness_service,
-                                storage.clone(),
-                            )
-                            .await
-                            .unwrap_or_else(move |e| {
-                                fx_log_err!("failed setting brightness_value, {}", e);
-                            });
-
-                            responder.send(Ok(None)).unwrap();
-                            notify(notifier_lock.clone());
-                        }
-                        SettingRequest::SetAutoBrightness(auto_brightness_enabled) => {
-                            let brightness_value: f32;
-                            {
-                                let mut storage_lock = storage.lock().await;
-                                let stored_value = storage_lock.get().await;
-                                brightness_value = stored_value.manual_brightness_value;
-                            }
-
-                            set_brightness(
-                                DisplayInfo::new(auto_brightness_enabled, brightness_value),
-                                &brightness_service,
-                                storage.clone(),
-                            )
-                            .await
-                            .unwrap_or_else(move |e| {
-                                fx_log_err!("failed setting brightness_value, {}", e);
-                            });
-
-                            responder.send(Ok(None)).unwrap();
-                            notify(notifier_lock.clone());
-                        }
-                        SettingRequest::Get => {
-                            let mut storage_lock = storage.lock().await;
-                            responder
-                                .send(Ok(Some(SettingResponse::Brightness(
-                                    storage_lock.get().await,
-                                ))))
-                                .unwrap();
-                        }
-                        _ => {
-                            responder
-                                .send(Err(SwitchboardError::UnimplementedRequest {
-                                    setting_type: SettingType::Display,
-                                    request: request,
-                                }))
-                                .ok();
-                        }
-                    }
-                }
-            }
+        {
+            return Ok(Self { client: client, brightness_service: brightness_service });
         }
-    });
-    Box::pin(async move { display_handler_tx })
+
+        Err(ControllerError::InitFailure {
+            description: "could not connect to brightness service".to_string(),
+        })
+    }
+}
+
+#[async_trait]
+impl controller::Handle for DisplayController {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+        #[allow(unreachable_patterns)]
+        match request {
+            SettingRequest::Restore => {
+                // Load and set value
+                // TODO(fxb/35004): Listen to changes using hanging
+                // get as well
+                Some(
+                    set_brightness(
+                        self.client.read().await,
+                        &self.brightness_service,
+                        &self.client,
+                    )
+                    .await,
+                )
+            }
+            SettingRequest::SetBrightness(brightness_value) => {
+                Some(
+                    set_brightness(
+                        DisplayInfo::new(false /*auto_brightness_enabled*/, brightness_value),
+                        &self.brightness_service,
+                        &self.client,
+                    )
+                    .await,
+                )
+            }
+            SettingRequest::SetAutoBrightness(auto_brightness_enabled) => {
+                let brightness_value: f32;
+                {
+                    let stored_value = self.client.read().await;
+                    brightness_value = stored_value.manual_brightness_value;
+                }
+                Some(
+                    set_brightness(
+                        DisplayInfo::new(auto_brightness_enabled, brightness_value),
+                        &self.brightness_service,
+                        &self.client,
+                    )
+                    .await,
+                )
+            }
+            SettingRequest::Get => {
+                Some(Ok(Some(SettingResponse::Brightness(self.client.read().await))))
+            }
+            _ => None,
+        }
+    }
+
+    async fn change_state(&mut self, _state: State) {}
 }
 
 async fn set_brightness(
     info: DisplayInfo,
     brightness_service: &fidl_fuchsia_ui_brightness::ControlProxy,
-    storage: Arc<Mutex<DeviceStorage<DisplayInfo>>>,
-) -> Result<(), fidl::Error> {
-    let mut storage_lock = storage.lock().await;
-    storage_lock.write(&info, false).await.unwrap_or_else(move |e| {
-        fx_log_err!("failed storing brightness, {}", e);
-    });
-    if info.auto_brightness {
+    client: &ClientProxy<DisplayInfo>,
+) -> SettingResponseResult {
+    if let Err(e) = write(&client, info, false).await {
+        return Err(e);
+    }
+
+    let result = if info.auto_brightness {
         brightness_service.set_auto_brightness()
     } else {
         brightness_service.set_manual_brightness(info.manual_brightness_value)
-    }
-}
+    };
 
-// TODO(fxb/35459): watch for changes on current brightness and notify changes
-// that way instead.
-fn notify(notifier_lock: Arc<RwLock<Option<Notifier>>>) {
-    if let Some(notifier) = (*notifier_lock.read()).clone() {
-        notifier.unbounded_send(SettingType::Display).unwrap();
+    if result.is_ok() {
+        Ok(None)
+    } else {
+        Err(SwitchboardError::ExternalFailure {
+            setting_type: SettingType::Display,
+            dependency: "brightness_service".to_string(),
+            request: "set_brightness".to_string(),
+        })
     }
 }

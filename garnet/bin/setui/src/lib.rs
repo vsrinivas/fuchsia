@@ -3,42 +3,49 @@
 // found in the LICENSE file.
 
 use {
-    crate::accessibility::spawn_accessibility_controller,
+    crate::accessibility::accessibility_controller::AccessibilityController,
     crate::accessibility::spawn_accessibility_fidl_handler,
-    crate::account::spawn_account_controller,
+    crate::account::account_controller::AccountController,
     crate::agent::authority_impl::AuthorityImpl,
     crate::agent::base::{AgentHandle, Authority, Lifespan},
-    crate::audio::spawn_audio_controller,
+    crate::audio::audio_controller::AudioController,
     crate::audio::spawn_audio_fidl_handler,
-    crate::device::spawn_device_controller,
+    crate::device::device_controller::DeviceController,
     crate::device::spawn_device_fidl_handler,
-    crate::display::spawn_display_controller,
+    crate::display::display_controller::DisplayController,
+    crate::display::light_sensor_controller::LightSensorController,
     crate::display::spawn_display_fidl_handler,
-    crate::display::spawn_light_sensor_controller,
-    crate::do_not_disturb::spawn_do_not_disturb_controller,
+    crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
     crate::internal::core::create_message_hub as create_registry_message_hub,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
     crate::night_mode::night_mode_controller::NightModeController,
     crate::night_mode::spawn_night_mode_fidl_handler,
-    crate::power::spawn_power_controller,
+    crate::power::power_controller::PowerController,
     crate::privacy::privacy_controller::PrivacyController,
     crate::privacy::spawn_privacy_fidl_handler,
     crate::registry::base::GenerateHandler,
     crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::registry_impl::RegistryImpl,
+    crate::registry::setting_handler::persist::Handler as DataHandler,
+    crate::registry::setting_handler::Handler,
     crate::registry::setting_handler_factory_impl::SettingHandlerFactoryImpl,
     crate::service_context::GenerateService,
     crate::service_context::ServiceContext,
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
     crate::setup::spawn_setup_fidl_handler,
-    crate::switchboard::base::SettingType,
+    crate::switchboard::accessibility_types::AccessibilityInfo,
+    crate::switchboard::base::{
+        AudioInfo, DisplayInfo, DoNotDisturbInfo, NightModeInfo, PrivacyInfo, SettingType,
+        SetupInfo, SystemInfo,
+    },
+    crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::switchboard_impl::SwitchboardImpl,
     crate::system::spawn_setui_fidl_handler,
-    crate::system::spawn_system_controller,
     crate::system::spawn_system_fidl_handler,
+    crate::system::system_controller::SystemController,
     anyhow::{format_err, Error},
     fidl_fuchsia_settings::*,
     fidl_fuchsia_setui::SetUiServiceRequestStream,
@@ -250,39 +257,75 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     fn get_configuration_handlers(factory_handle: &mut SettingHandlerFactoryImpl<T>) {
         // Power
-        register_handler!(factory_handle, SettingType::Power, spawn_power_controller);
+        register_handler!(factory_handle, SettingType::Power, Handler::<PowerController>::spawn);
         // Accessibility
         register_handler!(
             factory_handle,
             SettingType::Accessibility,
-            spawn_accessibility_controller
+            DataHandler::<AccessibilityInfo, AccessibilityController>::spawn
         );
         // Account
-        register_handler!(factory_handle, SettingType::Account, spawn_account_controller);
+        register_handler!(
+            factory_handle,
+            SettingType::Account,
+            Handler::<AccountController>::spawn
+        );
         // Audio
-        register_handler!(factory_handle, SettingType::Audio, spawn_audio_controller);
+        register_handler!(
+            factory_handle,
+            SettingType::Audio,
+            DataHandler::<AudioInfo, AudioController>::spawn
+        );
         // Device
-        register_handler!(factory_handle, SettingType::Device, spawn_device_controller);
+        register_handler!(factory_handle, SettingType::Device, Handler::<DeviceController>::spawn);
         // Display
-        register_handler!(factory_handle, SettingType::Display, spawn_display_controller);
+        register_handler!(
+            factory_handle,
+            SettingType::Display,
+            DataHandler::<DisplayInfo, DisplayController>::spawn
+        );
         // Light sensor
-        register_handler!(factory_handle, SettingType::LightSensor, spawn_light_sensor_controller);
+        register_handler!(
+            factory_handle,
+            SettingType::LightSensor,
+            Handler::<LightSensorController>::spawn
+        );
         // Intl
-        register_handler!(factory_handle, SettingType::Intl, IntlController::spawn);
+        register_handler!(
+            factory_handle,
+            SettingType::Intl,
+            DataHandler::<IntlInfo, IntlController>::spawn
+        );
         // Do not disturb
         register_handler!(
             factory_handle,
             SettingType::DoNotDisturb,
-            spawn_do_not_disturb_controller
+            DataHandler::<DoNotDisturbInfo, DoNotDisturbController>::spawn
         );
         // Night mode
-        register_handler!(factory_handle, SettingType::NightMode, NightModeController::spawn);
+        register_handler!(
+            factory_handle,
+            SettingType::NightMode,
+            DataHandler::<NightModeInfo, NightModeController>::spawn
+        );
         // Privacy
-        register_handler!(factory_handle, SettingType::Privacy, PrivacyController::spawn);
+        register_handler!(
+            factory_handle,
+            SettingType::Privacy,
+            DataHandler::<PrivacyInfo, PrivacyController>::spawn
+        );
         // System
-        register_handler!(factory_handle, SettingType::System, spawn_system_controller);
+        register_handler!(
+            factory_handle,
+            SettingType::System,
+            DataHandler::<SystemInfo, SystemController>::spawn
+        );
         // Setup
-        register_handler!(factory_handle, SettingType::Setup, SetupController::spawn);
+        register_handler!(
+            factory_handle,
+            SettingType::Setup,
+            DataHandler::<SetupInfo, SetupController>::spawn
+        );
     }
 }
 

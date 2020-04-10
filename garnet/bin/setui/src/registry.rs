@@ -7,6 +7,10 @@
 /// blocks used with the Registry.
 pub mod base;
 
+/// Trait definition for setting controllers and a wrapper handler to interface
+/// with the registry.
+pub mod setting_handler;
+
 /// This mod provides a concrete implementation of the Registry trait. It should
 /// be shared as the trait beyond its construction.
 pub mod registry_impl;

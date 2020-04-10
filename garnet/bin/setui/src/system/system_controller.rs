@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
-    crate::registry::device_storage::{DeviceStorageCompatible, DeviceStorageFactory},
-    crate::switchboard::base::*,
-    fuchsia_async as fasync,
-    futures::future::BoxFuture,
-    futures::StreamExt,
-    parking_lot::RwLock,
-    std::sync::Arc,
+use crate::registry::base::State;
+use crate::registry::device_storage::DeviceStorageCompatible;
+use crate::registry::setting_handler::persist::{
+    controller as data_controller, write, ClientProxy,
 };
+use crate::registry::setting_handler::{controller, ControllerError};
+use crate::switchboard::base::{
+    SettingRequest, SettingResponse, SettingResponseResult, SystemInfo, SystemLoginOverrideMode,
+};
+use async_trait::async_trait;
 
 impl DeviceStorageCompatible for SystemInfo {
     const KEY: &'static str = "system_info";
@@ -21,71 +21,35 @@ impl DeviceStorageCompatible for SystemInfo {
     }
 }
 
-pub fn spawn_system_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
-    context: Context<T>,
-) -> BoxFuture<'static, SettingHandler> {
-    let storage_handle = context.environment.storage_factory_handle.clone();
-    let (system_handler_tx, mut system_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
+pub struct SystemController {
+    client: ClientProxy<SystemInfo>,
+}
 
-    let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
+#[async_trait]
+impl data_controller::Create<SystemInfo> for SystemController {
+    /// Creates the controller
+    async fn create(client: ClientProxy<SystemInfo>) -> Result<Self, ControllerError> {
+        Ok(Self { client: client })
+    }
+}
 
-    fasync::spawn(async move {
-        let storage = storage_handle.lock().await.get_store::<SystemInfo>();
+#[async_trait]
+impl controller::Handle for SystemController {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+        #[allow(unreachable_patterns)]
+        match request {
+            SettingRequest::SetLoginOverrideMode(mode) => {
+                let mut value = self.client.read().await;
+                value.login_override_mode = SystemLoginOverrideMode::from(mode);
 
-        let mut stored_value: SystemInfo;
-        {
-            let mut storage_lock = storage.lock().await;
-            stored_value = storage_lock.get().await;
-        }
-
-        while let Some(command) = system_handler_rx.next().await {
-            match command {
-                Command::ChangeState(state) => match state {
-                    State::Listen(notifier) => {
-                        *notifier_lock.write() = Some(notifier);
-                    }
-                    State::EndListen => {
-                        *notifier_lock.write() = None;
-                    }
-                },
-                Command::HandleRequest(request, responder) =>
-                {
-                    #[allow(unreachable_patterns)]
-                    match request {
-                        SettingRequest::SetLoginOverrideMode(mode) => {
-                            stored_value.login_override_mode = SystemLoginOverrideMode::from(mode);
-
-                            let storage_clone = storage.clone();
-                            let notifier_clone = notifier_lock.clone();
-                            fasync::spawn(async move {
-                                {
-                                    let mut storage_lock = storage_clone.lock().await;
-                                    storage_lock.write(&stored_value, true).await.unwrap();
-                                }
-                                responder.send(Ok(None)).ok();
-
-                                if let Some(notifier) = &*notifier_clone.read() {
-                                    notifier.unbounded_send(SettingType::System).unwrap();
-                                }
-                            });
-                        }
-                        SettingRequest::Get => {
-                            responder
-                                .send(Ok(Some(SettingResponse::System(stored_value))))
-                                .unwrap();
-                        }
-                        _ => {
-                            responder
-                                .send(Err(SwitchboardError::UnimplementedRequest {
-                                    setting_type: SettingType::System,
-                                    request: request,
-                                }))
-                                .ok();
-                        }
-                    }
-                }
+                Some(write(&self.client, value, false).await)
             }
+            SettingRequest::Get => {
+                Some(Ok(Some(SettingResponse::System(self.client.read().await))))
+            }
+            _ => None,
         }
-    });
-    Box::pin(async move { system_handler_tx })
+    }
+
+    async fn change_state(&mut self, _: State) {}
 }

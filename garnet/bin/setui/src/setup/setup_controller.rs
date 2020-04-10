@@ -2,20 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::registry::base::{Command, Context, Notifier, SettingHandler, State};
-use crate::registry::device_storage::{
-    DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
+use crate::registry::base::State;
+use crate::registry::device_storage::DeviceStorageCompatible;
+use crate::registry::setting_handler::persist::{
+    controller as data_controller, write, ClientProxy,
 };
+use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
-    ConfigurationInterfaceFlags, SettingRequest, SettingRequestResponder, SettingResponse,
-    SettingType, SetupInfo, SwitchboardError,
+    ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingResponseResult, SetupInfo,
 };
-use fuchsia_async as fasync;
-use futures::future::BoxFuture;
-use futures::lock::Mutex;
-use futures::StreamExt;
-use parking_lot::RwLock;
-use std::sync::Arc;
+use async_trait::async_trait;
 
 impl DeviceStorageCompatible for SetupInfo {
     const KEY: &'static str = "setup_info";
@@ -26,107 +22,33 @@ impl DeviceStorageCompatible for SetupInfo {
 }
 
 pub struct SetupController {
-    info: SetupInfo,
-    listen_notifier: Arc<RwLock<Option<Notifier>>>,
-    storage: Arc<Mutex<DeviceStorage<SetupInfo>>>,
+    client: ClientProxy<SetupInfo>,
 }
 
-impl SetupController {
-    pub fn spawn<T: DeviceStorageFactory + Send + Sync + 'static>(
-        context: Context<T>,
-    ) -> BoxFuture<'static, SettingHandler> {
-        let storage_handle = context.environment.storage_factory_handle.clone();
-
-        let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
-
-        fasync::spawn(async move {
-            let storage = storage_handle.lock().await.get_store::<SetupInfo>();
-            let stored_value: SetupInfo;
-            {
-                let mut storage_lock = storage.lock().await;
-                stored_value = storage_lock.get().await;
-            }
-
-            let handle = Arc::new(RwLock::new(Self {
-                info: stored_value,
-                listen_notifier: Arc::new(RwLock::new(None)),
-                storage: storage,
-            }));
-
-            while let Some(command) = ctrl_rx.next().await {
-                handle.write().process_command(command);
-            }
-        });
-
-        return Box::pin(async move { ctrl_tx });
+#[async_trait]
+impl data_controller::Create<SetupInfo> for SetupController {
+    /// Creates the controller
+    async fn create(client: ClientProxy<SetupInfo>) -> Result<Self, ControllerError> {
+        Ok(Self { client: client })
     }
+}
 
-    fn process_command(&mut self, command: Command) {
-        match command {
-            Command::HandleRequest(request, responder) => match request {
-                SettingRequest::SetConfigurationInterfaces(interfaces) => {
-                    self.set_interfaces(interfaces, responder);
-                }
-                SettingRequest::Get => {
-                    self.get(responder);
-                }
-                _ => {
-                    responder
-                        .send(Err(SwitchboardError::UnimplementedRequest {
-                            setting_type: SettingType::Setup,
-                            request: request,
-                        }))
-                        .ok();
-                }
-            },
-            Command::ChangeState(state) => match state {
-                State::Listen(notifier) => {
-                    *self.listen_notifier.write() = Some(notifier);
-                }
-                State::EndListen => {
-                    *self.listen_notifier.write() = None;
-                }
-            },
+#[async_trait]
+impl controller::Handle for SetupController {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+        match request {
+            SettingRequest::SetConfigurationInterfaces(interfaces) => {
+                let mut info = self.client.read().await;
+                info.configuration_interfaces = interfaces;
+
+                return Some(write(&self.client, info, true).await);
+            }
+            SettingRequest::Get => {
+                return Some(Ok(Some(SettingResponse::Setup(self.client.read().await))));
+            }
+            _ => None,
         }
     }
 
-    fn set_interfaces(
-        &mut self,
-        interfaces: ConfigurationInterfaceFlags,
-        responder: SettingRequestResponder,
-    ) {
-        // In case of no changes, acknowledge the request and ignore.
-        if self.info.configuration_interfaces == interfaces {
-            responder.send(Ok(None)).ok();
-            return;
-        }
-
-        self.info.configuration_interfaces = interfaces;
-
-        let storage_clone = self.storage.clone();
-        let info = self.info;
-
-        let optional_notifier = (*self.listen_notifier.read()).clone();
-
-        fasync::spawn(async move {
-            let mut storage_lock = storage_clone.lock().await;
-            storage_lock.write(&info, true).await.unwrap();
-
-            responder.send(Ok(None)).ok();
-
-            // Unlike other settings, it is important that writing and rebooting
-            // happens before notification.
-            // TODO(fxb/37186): Determine whether notification is necessary. The
-            // nature of rebooting here leads to a race condition whether the
-            // listener will receive the update before reboot. This currently
-            // allows tests to know when to proceed.
-            if let Some(notifier) = optional_notifier {
-                notifier.unbounded_send(SettingType::Setup).unwrap();
-            }
-        });
-    }
-
-    fn get(&self, responder: SettingRequestResponder) {
-        responder.send(Ok(Some(SettingResponse::Setup(self.info)))).ok();
-    }
+    async fn change_state(&mut self, _state: State) {}
 }

@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 pub use self::setui_fidl_handler::spawn_setui_fidl_handler;
-pub use self::system_controller::spawn_system_controller;
 pub use self::system_fidl_handler::spawn_system_fidl_handler;
+pub mod system_controller;
 
 mod setui_fidl_handler;
-mod system_controller;
 mod system_fidl_handler;
