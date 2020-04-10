@@ -139,6 +139,7 @@ executable("fshost") {
     ":block-watcher",
     ":fshost-registry",
     ":metrics",
+    "//src/sys/lib/stdout-to-debuglog",
     "//zircon/public/lib/cobalt-client",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fs-management",

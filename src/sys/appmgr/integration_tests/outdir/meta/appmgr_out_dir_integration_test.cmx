@@ -1,9 +1,17 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.WriteOnlyLog"
+            ]
+        }
+    },
     "program": {
         "binary": "test/appmgr_out_dir_integration_test"
     },
     "sandbox": {
         "services": [
+            "fuchsia.boot.WriteOnlyLog",
             "fuchsia.process.Launcher"
         ]
     }

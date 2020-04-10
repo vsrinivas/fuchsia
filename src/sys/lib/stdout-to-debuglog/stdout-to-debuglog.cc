@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/boot/llcpp/fidl.h>
-#include <lib/zx/debuglog.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/zx/debuglog.h>
 
-int init_stdout_and_stderr(void) {
+namespace StdoutToDebuglog {
+
+int Init(void) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
@@ -20,7 +22,7 @@ int init_stdout_and_stderr(void) {
   llcpp::fuchsia::boot::WriteOnlyLog::SyncClient write_only_log(std::move(local));
   auto result = write_only_log.Get();
   if (result.status() != ZX_OK) {
-      return result.status();
+    return result.status();
   }
   zx::debuglog log = std::move(result.Unwrap()->log);
   for (int fd = 1; fd <= 2; ++fd) {
@@ -41,3 +43,5 @@ int init_stdout_and_stderr(void) {
   }
   return ZX_OK;
 }
+
+}  // namespace StdoutToDebuglog

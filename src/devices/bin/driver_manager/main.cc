@@ -44,6 +44,7 @@
 #include "devhost_loader_service.h"
 #include "fdio.h"
 #include "log.h"
+#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
 #include "system_instance.h"
 
 namespace {
@@ -232,10 +233,8 @@ int main(int argc, char** argv) {
   DevmgrArgs devmgr_args;
   ParseArgs(argc, argv, &devmgr_args);
   if (devmgr_args.log_to_debuglog) {
-    zx_status_t status = init_stdout_and_stderr();
+    zx_status_t status = StdoutToDebuglog::Init();
     if (status != ZX_OK) {
-      log(ERROR, "driver_manager: failed to initialize logging: '%s'",
-          zx_status_get_string(status));
       return status;
     }
   }
@@ -262,8 +261,8 @@ int main(int argc, char** argv) {
   status = get_root_resource(&config.root_resource);
   if (status != ZX_OK) {
     log(INFO,
-            "driver_manager: failed to get root resource, assuming test "
-            "environment and continuing\n");
+        "driver_manager: failed to get root resource, assuming test "
+        "environment and continuing\n");
   }
   // TODO(ZX-4177): Remove all uses of the root job.
   zx::job root_job;
@@ -282,8 +281,8 @@ int main(int argc, char** argv) {
   status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &oom_event);
   if (status != ZX_OK) {
     log(INFO,
-            "driver_manager: failed to get oom event, assuming test "
-            "environment and continuing\n");
+        "driver_manager: failed to get oom event, assuming test "
+        "environment and continuing\n");
   } else {
     config.oom_event = zx::event(oom_event);
   }
@@ -337,7 +336,7 @@ int main(int argc, char** argv) {
   status = system_instance.PrepareChannels();
   if (status != ZX_OK) {
     log(ERROR, "driver_manager: failed to create other system channels %s\n",
-            zx_status_get_string(status));
+        zx_status_get_string(status));
     return 1;
   }
 
@@ -355,15 +354,14 @@ int main(int argc, char** argv) {
     status = system_instance.StartSvchost(root_job, root_client,
                                           driver_manager_params.require_system, &coordinator);
     if (status != ZX_OK) {
-      log(ERROR, "driver_manager: failed to start svchost: %s\n",
-              zx_status_get_string(status));
+      log(ERROR, "driver_manager: failed to start svchost: %s\n", zx_status_get_string(status));
       return 1;
     }
   } else {
     status = system_instance.ReuseExistingSvchost();
     if (status != ZX_OK) {
       log(ERROR, "driver_manager: failed to reuse existing svchost: %s\n",
-              zx_status_get_string(status));
+          zx_status_get_string(status));
       return 1;
     }
   }
@@ -417,7 +415,7 @@ int main(int argc, char** argv) {
       zx_status_t status = system_instance.clone_fshost_ldsvc(c);
       if (status != ZX_OK) {
         log(ERROR, "driver_manager: failed to clone fshost loader for driver_host: %s\n",
-                zx_status_get_string(status));
+            zx_status_get_string(status));
       }
       return status;
     });

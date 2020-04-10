@@ -15,6 +15,7 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/sys/appmgr/appmgr.h"
+#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
 
 namespace {
 
@@ -34,11 +35,19 @@ std::vector<std::string> RootRealmServices() {
 }  // namespace
 
 int main(int argc, char** argv) {
+  // Wire up standard streams. This sends all stdout and stderr to the debuglog.
+  // This is necessary, instead of using fuchsia.logger.LogSink, because we need
+  // to get appmgr logs before v1 components are running.
+  zx_status_t status = StdoutToDebuglog::Init();
+  if (status != ZX_OK) {
+    return status;
+  }
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
   zx::channel svc_for_sys_server, svc_for_sys_client;
-  zx_status_t status = zx::channel::create(0, &svc_for_sys_server, &svc_for_sys_client);
+  status = zx::channel::create(0, &svc_for_sys_server, &svc_for_sys_client);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "failed to create channel: " << errno;
     return status;

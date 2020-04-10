@@ -34,6 +34,7 @@
 #include "block-watcher.h"
 #include "fs-manager.h"
 #include "metrics.h"
+#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
 
 namespace devmgr {
 namespace {
@@ -188,12 +189,15 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
 
 int main(int argc, char** argv) {
   bool disable_block_watcher = false;
+  bool log_to_debuglog = false;
 
   enum {
     kDisableBlockWatcher,
+    kLogToDebuglog,
   };
   option options[] = {
       {"disable-block-watcher", no_argument, nullptr, kDisableBlockWatcher},
+      {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
   };
 
   int opt;
@@ -203,6 +207,16 @@ int main(int argc, char** argv) {
         printf("fshost: received --disable-block-watcher\n");
         disable_block_watcher = true;
         break;
+      case kLogToDebuglog:
+        log_to_debuglog = true;
+        break;
+    }
+  }
+
+  if (log_to_debuglog) {
+    zx_status_t status = StdoutToDebuglog::Init();
+    if (status != ZX_OK) {
+      return status;
     }
   }
 

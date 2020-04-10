@@ -101,6 +101,7 @@ source_set("appmgr_for_test") {
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/sys/lib/stdout-to-debuglog",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
   ]
@@ -118,6 +119,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
+    "//src/sys/lib/stdout-to-debuglog",
   ]
 
   # appmgr starts early in the boot sequence before shared libraries from

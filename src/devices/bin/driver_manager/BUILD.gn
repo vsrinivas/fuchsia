@@ -37,7 +37,6 @@ source_set("lib") {
     "fdio.cc",
     "fidl.cc",
     "init_task.cc",
-    "log.cc",
     "log.h",
     "resume_task.cc",
     "suspend_task.cc",
@@ -95,7 +94,10 @@ source_set("lib") {
 executable("driver_manager") {
   sources = [ "main.cc" ]
 
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//src/sys/lib/stdout-to-debuglog",
+  ]
 
   defines = [ "_ALL_SOURCE=1" ]
 }
