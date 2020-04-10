@@ -100,7 +100,12 @@ func (s *sshServer) start() error {
 
 // stop shuts down the server.
 func (s *sshServer) stop() {
-	close(s.stopping)
+	select {
+	case <-s.stopping:
+		return // Server has already been stopped, no more work to do.
+	default:
+		close(s.stopping)
+	}
 }
 
 func (s *sshServer) serveConnection(

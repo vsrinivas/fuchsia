@@ -22,11 +22,11 @@ const (
 	connectInterval = 5 * time.Second
 
 	// Interval between keep-alive pings.
-	keepaliveInterval = 1 * time.Second
+	defaultKeepaliveInterval = 1 * time.Second
 
 	// Cancel the connection if a we don't receive a response to a keep-alive
 	// ping within this amount of time.
-	keepaliveDeadline = keepaliveInterval + 15*time.Second
+	defaultKeepaliveDeadline = defaultKeepaliveInterval + 15*time.Second
 )
 
 // Client is a wrapper around ssh that supports keepalive and auto-reconnection.
@@ -44,30 +44,27 @@ type Client struct {
 	disconnectionListeners []chan struct{}
 }
 
-// NewClient creates a new ssh client to the address.
+// NewClient creates a new ssh client to the address and launches a goroutine to
+// send keep-alive pings as long as the client is connected.
 func NewClient(ctx context.Context, addr string, config *ssh.ClientConfig) (*Client, error) {
-	client, conn, err := connect(ctx, addr, config)
+	client, err := connect(ctx, addr, config)
 	if err != nil {
 		return nil, err
 	}
-
-	c := &Client{
-		addr:         addr,
-		config:       config,
-		client:       client,
-		conn:         conn,
-		shuttingDown: make(chan struct{}),
-	}
-
-	go c.keepalive()
-
-	return c, nil
+	go func() {
+		t := time.NewTicker(defaultKeepaliveInterval)
+		defer t.Stop()
+		timeout := func() <-chan time.Time {
+			return time.After(defaultKeepaliveDeadline)
+		}
+		client.keepalive(t.C, timeout)
+	}()
+	return client, nil
 }
 
 // connect continously attempts to connect to a remote server, and returns an
-// ssh client and connection if successful, or errs out if the context is
-// canceled.
-func connect(ctx context.Context, addr string, config *ssh.ClientConfig) (*ssh.Client, net.Conn, error) {
+// ssh client if successful, or errs out if the context is canceled.
+func connect(ctx context.Context, addr string, config *ssh.ClientConfig) (*Client, error) {
 	var client *ssh.Client
 	var conn net.Conn
 	err := retry.Retry(ctx, retry.NewConstantBackoff(connectInterval), func() error {
@@ -81,7 +78,16 @@ func connect(ctx context.Context, addr string, config *ssh.ClientConfig) (*ssh.C
 		log.Printf("connected to %s", addr)
 		return nil
 	}, nil)
-	return client, conn, err
+	if err != nil {
+		return nil, err
+	}
+	return &Client{
+		addr:         addr,
+		config:       config,
+		client:       client,
+		conn:         conn,
+		shuttingDown: make(chan struct{}),
+	}, nil
 }
 
 func connectToSSH(ctx context.Context, addr string, config *ssh.ClientConfig) (*ssh.Client, net.Conn, error) {
@@ -93,13 +99,14 @@ func connectToSSH(ctx context.Context, addr string, config *ssh.ClientConfig) (*
 
 	// We made a TCP connection, now establish an SSH connection over it.
 	clientConn, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
-	if err == nil {
-		return ssh.NewClient(clientConn, chans, reqs), conn, nil
+	if err != nil {
+		if closeErr := conn.Close(); closeErr != nil {
+			return nil, nil, fmt.Errorf(
+				"error closing connection: %v; original error: %w", closeErr, err)
+		}
+		return nil, nil, err
 	}
-
-	conn.Close()
-
-	return nil, nil, err
+	return ssh.NewClient(clientConn, chans, reqs), conn, nil
 }
 
 func (c *Client) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writer) (*Session, error) {
@@ -214,10 +221,17 @@ func (c *Client) disconnect() {
 
 // Send periodic keep-alives. If we don't do this, then we might not observe
 // the server side disconnecting from us.
-func (c *Client) keepalive() {
-	t := time.NewTicker(keepaliveInterval)
-	defer t.Stop()
-
+// A keep-alive ping is sent whenever we receive something on the `ticks`
+// channel.
+// After sending a ping, we call the `timeout` function and wait until either we
+// recieve a response or we receive something on the channel returned by
+// `timeout`.
+func (c *Client) keepalive(ticks <-chan time.Time, timeout func() <-chan time.Time) {
+	if timeout == nil {
+		timeout = func() <-chan time.Time {
+			return nil
+		}
+	}
 	for {
 		c.mu.Lock()
 		client := c.client
@@ -240,7 +254,7 @@ func (c *Client) keepalive() {
 			// addition to emitting it, we'll also set a tcp
 			// deadline to timeout if we don't get a keepalive
 			// response within some period of time.
-			conn.SetDeadline(time.Now().Add(keepaliveDeadline))
+			conn.SetDeadline(time.Now().Add(defaultKeepaliveDeadline))
 
 			// Try to emit a keepalive message. We use a unique
 			// name to distinguish ourselves from the server-side
@@ -263,7 +277,7 @@ func (c *Client) keepalive() {
 				return
 			}
 
-		case <-time.After(keepaliveDeadline):
+		case <-timeout():
 			log.Printf("timed out sending keepalive, disconnecting")
 			c.disconnect()
 			return
@@ -271,7 +285,7 @@ func (c *Client) keepalive() {
 
 		// Otherwise, sleep until the next poll cycle.
 		select {
-		case <-t.C:
+		case <-ticks:
 		case <-c.shuttingDown:
 			return
 		}
