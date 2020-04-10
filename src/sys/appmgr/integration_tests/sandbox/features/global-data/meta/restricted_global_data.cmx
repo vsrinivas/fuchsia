@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/restricted_global_data"
+    },
+    "sandbox": {
+        "features": [
+            "global-data"
+        ]
     }
 }

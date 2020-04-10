@@ -24,8 +24,6 @@ class SandboxMetadata {
 
   bool HasService(const std::string& service) const;
 
-  bool HasInternalFeature(const std::string& feature) const;
-
   // Returns true if the |pkgfs_path| is provided in this namespace.
   bool HasPkgFsPath(const std::string& pkgfs_path) const;
 
@@ -35,7 +33,6 @@ class SandboxMetadata {
   const std::vector<std::string>& pkgfs() const { return pkgfs_; }
   const std::vector<std::string>& features() const { return features_; }
   const std::vector<std::string>& boot() const { return boot_; }
-  const std::vector<std::string>& internal_features() const { return internal_features_; }
 
   bool IsNull() const { return null_; }
 
@@ -47,7 +44,6 @@ class SandboxMetadata {
   std::vector<std::string> pkgfs_;
   std::vector<std::string> features_;
   std::vector<std::string> boot_;
-  std::vector<std::string> internal_features_;
 };
 
 }  // namespace component

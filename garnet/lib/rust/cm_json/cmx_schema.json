@@ -85,6 +85,7 @@
               "config-data",
               "deprecated-misc-storage",
               "deprecated-shell",
+              "global-data",
               "hub",
               "isolated-cache-storage",
               "isolated-persistent-storage",

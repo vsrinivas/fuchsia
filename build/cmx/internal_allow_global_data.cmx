@@ -1,7 +1,0 @@
-{
-    "sandbox": {
-        "__internal_features": [
-            "global-data"
-        ]
-    }
-}

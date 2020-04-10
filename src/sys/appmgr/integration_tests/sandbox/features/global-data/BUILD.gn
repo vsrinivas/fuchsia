@@ -14,8 +14,6 @@ group("global-data") {
 }
 
 sandbox_test_package("has_global_data") {
-  global_data = "//build"
-
   sources = [ "has_global_data.cc" ]
 
   deps = [
@@ -36,9 +34,7 @@ sandbox_test_package("no_global_data") {
 }
 
 sandbox_test_package("restricted_global_data") {
-  # Has global-data feature, but not in appmgr allowlist.
-  global_data = "//build"
-
+  # Has global-data feature, but not in //src/security/policy allowlist.
   sources = [ "no_global_data.cc" ]
 
   deps = [

@@ -635,22 +635,6 @@ template("package") {
           manifest_path = merged_outputs[0]
         }
 
-        if (defined(pkg.global_data)) {
-          merge_target = "global_data_" + pkg_target_name + "_" +
-                         get_path_info(meta.dest, "file")
-          cmx_merge(merge_target) {
-            sources = [
-              rebase_path(meta.path),
-              rebase_path("//build/cmx/internal_allow_global_data.cmx"),
-            ]
-            deps = pkg.deps
-          }
-          manifest_deps += [ ":${merge_target}" ]
-          merged_outputs = []
-          merged_outputs = get_target_outputs(":${merge_target}")
-          manifest_path = merged_outputs[0]
-        }
-
         # This is where we add sys.process.Launcher to test packages which
         # need it (see above).
         if (pkg.tests != []) {
