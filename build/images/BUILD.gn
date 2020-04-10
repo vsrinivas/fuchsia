@@ -1335,15 +1335,6 @@ paver_targets = [
     } else {
       deps += [ ":netboot" ]
     }
-    metadata = {
-      images = [
-        {
-          name = "netboot"
-          path = "netboot.sh"
-          type = "sh"
-        },
-      ]
-    }
   },
   {
     name = "zedboot-script"
@@ -1357,15 +1348,6 @@ paver_targets = [
       switch = "--pave_zedboot="
     }
     extra_bootserver_arguments = "--allow-zedboot-version-mismatch"
-    metadata = {
-      images = [
-        {
-          name = "pave-zedboot"
-          path = "pave-zedboot.sh"
-          type = "sh"
-        },
-      ]
-    }
   },
   {
     name = "paver-script"
@@ -1379,15 +1361,6 @@ paver_targets = [
       switch = "--pave="
     }
     extra_bootserver_arguments = ""
-    metadata = {
-      images = [
-        {
-          name = "pave"
-          path = "pave.sh"
-          type = "sh"
-        },
-      ]
-    }
   },
 ]
 
@@ -1453,7 +1426,9 @@ foreach(target, paver_targets) {
       "checkout_artifacts.json",
     ]
 
-    metadata = target.metadata
+    if (defined(target.metadata)) {
+      metadata = target.metadata
+    }
   }
   archive_deps += [ ":${target.name}" ]
 }
