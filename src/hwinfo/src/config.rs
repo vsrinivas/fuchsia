@@ -27,6 +27,14 @@ const SKU_KEY: &str = "config";
 const LANGUAGE_KEY: &str = "lang";
 const REGULATORY_DOMAIN_KEY: &str = "country";
 const BUILD_DATE_KEY: &str = "mfg_date";
+const BUILD_NAME_KEY: &str = "build_name";
+const COLORWAY_KEY: &str = "color";
+const DISPLAY_KEY: &str = "display";
+const MEMORY_KEY: &str = "memory";
+const NAND_STORAGE_KEY: &str = "nand";
+const EMMC_STORAGE_KEY: &str = "emmc";
+const MICROPHONE_KEY: &str = "mic";
+const AUDIO_AMPLIFIER_KEY: &str = "amp";
 
 async fn read_factory_file(
     path: &str,
@@ -111,6 +119,14 @@ pub struct ProductInfo {
     pub model: Option<String>,
     pub manufacturer: Option<String>,
     pub build_date: Option<String>,
+    pub build_name: Option<String>,
+    pub colorway: Option<String>,
+    pub display: Option<String>,
+    pub memory: Option<String>,
+    pub nand_storage: Option<String>,
+    pub emmc_storage: Option<String>,
+    pub microphone: Option<String>,
+    pub audio_amplifier: Option<String>,
 }
 
 impl ProductInfo {
@@ -124,6 +140,14 @@ impl ProductInfo {
             model: None,
             manufacturer: None,
             build_date: None,
+            build_name: None,
+            colorway: None,
+            display: None,
+            memory: None,
+            nand_storage: None,
+            emmc_storage: None,
+            microphone: None,
+            audio_amplifier: None,
         }
     }
 
@@ -159,10 +183,35 @@ impl ProductInfo {
                 BUILD_DATE_KEY => {
                     self.build_date = Some(value.to_owned());
                 }
+                BUILD_NAME_KEY => {
+                    self.build_name = Some(value.to_owned());
+                }
+                COLORWAY_KEY => {
+                    self.colorway = Some(value.to_owned());
+                }
+                DISPLAY_KEY => {
+                    self.display = Some(value.to_owned());
+                }
+                MEMORY_KEY => {
+                    self.memory = Some(value.to_owned());
+                }
+                NAND_STORAGE_KEY => {
+                    self.nand_storage = Some(value.to_owned());
+                }
+                EMMC_STORAGE_KEY => {
+                    self.emmc_storage = Some(value.to_owned());
+                }
+                MICROPHONE_KEY => {
+                    self.microphone = Some(value.to_owned());
+                }
+                AUDIO_AMPLIFIER_KEY => {
+                    self.audio_amplifier = Some(value.to_owned());
+                }
                 _ => {
                     fx_log_warn!("hw.txt dictionary values {} - {}", key, value.to_owned());
                 }
             }
+            fx_log_warn!("hw.txt line: {}", config);
         }
         Ok(())
     }
@@ -217,6 +266,14 @@ impl Into<fidl_fuchsia_hwinfo::ProductInfo> for ProductInfo {
             model: self.model,
             manufacturer: self.manufacturer,
             build_date: self.build_date,
+            build_name: self.build_name,
+            colorway: self.colorway,
+            display: self.display,
+            memory: self.memory,
+            nand_storage: self.nand_storage,
+            emmc_storage: self.emmc_storage,
+            microphone: self.microphone,
+            audio_amplifier: self.audio_amplifier,
         }
     }
 }

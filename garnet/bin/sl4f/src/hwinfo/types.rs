@@ -27,6 +27,14 @@ pub struct SerializableProductInfo {
     pub model: Option<String>,
     pub manufacturer: Option<String>,
     pub build_date: Option<String>,
+    pub build_name: Option<String>,
+    pub colorway: Option<String>,
+    pub display: Option<String>,
+    pub memory: Option<String>,
+    pub nand_storage: Option<String>,
+    pub emmc_storage: Option<String>,
+    pub microphone: Option<String>,
+    pub audio_amplifier: Option<String>,
 }
 
 /// ProductInfo object is not serializable so serialize the object.
@@ -67,6 +75,14 @@ impl SerializableProductInfo {
             model: product.model.clone(),
             manufacturer: product.manufacturer.clone(),
             build_date: build_date,
+            build_name: product.build_name.clone(),
+            colorway: product.colorway.clone(),
+            display: product.display.clone(),
+            memory: product.memory.clone(),
+            nand_storage: product.nand_storage.clone(),
+            emmc_storage: product.emmc_storage.clone(),
+            microphone: product.microphone.clone(),
+            audio_amplifier: product.audio_amplifier.clone(),
         }
     }
 }
