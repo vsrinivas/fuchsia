@@ -15,6 +15,8 @@
 namespace camera {
 
 fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
+  std::lock_guard guard(lock_);
+
   fzl::VmoMapper mapper;
   zx::vmo vmo;
   zx_status_t status =

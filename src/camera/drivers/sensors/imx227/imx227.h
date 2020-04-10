@@ -10,6 +10,7 @@
 #include <lib/fit/result.h>
 
 #include <array>
+#include <mutex>
 
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
@@ -127,18 +128,18 @@ class Imx227Device : public DeviceType,
 
  private:
   // I2C Helpers
-  uint16_t Read16(uint16_t addr);
-  uint8_t Read8(uint16_t addr);
-  void Write8(uint16_t addr, uint8_t val);
+  uint16_t Read16(uint16_t addr) __TA_REQUIRES(lock_);
+  uint8_t Read8(uint16_t addr) __TA_REQUIRES(lock_);
+  void Write8(uint16_t addr, uint8_t val) __TA_REQUIRES(lock_);
 
   // Other
   zx_status_t InitPdev(zx_device_t* parent);
-  zx_status_t InitSensor(uint8_t idx);
+  zx_status_t InitSensor(uint8_t idx) __TA_REQUIRES(lock_);
   void ShutDown();
-  bool ValidateSensorID();
+  bool ValidateSensorID() __TA_REQUIRES(lock_);
 
   // Sensor Context
-  SensorCtx ctx_;
+  SensorCtx ctx_ __TA_GUARDED(lock_);
 
   // Protocols
   ddk::I2cChannel i2c_;
@@ -150,6 +151,8 @@ class Imx227Device : public DeviceType,
 
   // Sensor Status
   bool initialized_ = false;
+
+  std::mutex lock_;
 };
 
 }  // namespace camera

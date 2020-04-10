@@ -46,6 +46,8 @@ constexpr uint32_t kMasterClock = 288000000;
 }  // namespace
 
 zx_status_t Imx227Device::InitPdev(zx_device_t* parent) {
+  std::lock_guard guard(lock_);
+
   // I2c for communicating with the sensor.
   if (!i2c_.is_valid()) {
     zxlogf(ERROR, "%s; I2C not available\n", __func__);
@@ -169,6 +171,7 @@ zx_status_t Imx227Device::InitSensor(uint8_t idx) {
 }
 
 zx_status_t Imx227Device::CameraSensorInit() {
+  std::lock_guard guard(lock_);
   // Power up sequence. Reference: Page 51- IMX227-0AQH5-C datasheet.
   gpio_vana_enable_.Write(1);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
@@ -210,6 +213,8 @@ zx_status_t Imx227Device::CameraSensorInit() {
 }
 
 void Imx227Device::CameraSensorDeInit() {
+  std::lock_guard guard(lock_);
+
   mipi_.DeInit();
   // Enable 24M clock for sensor.
   clk24_.Disable();
@@ -220,6 +225,8 @@ void Imx227Device::CameraSensorDeInit() {
 }
 
 zx_status_t Imx227Device::CameraSensorGetInfo(camera_sensor_info_t* out_info) {
+  std::lock_guard guard(lock_);
+
   if (out_info == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -231,6 +238,8 @@ zx_status_t Imx227Device::CameraSensorGetInfo(camera_sensor_info_t* out_info) {
 zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list,
                                                         size_t modes_count,
                                                         size_t* out_modes_actual) {
+  std::lock_guard guard(lock_);
+
   if (out_modes_list == nullptr || out_modes_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -245,6 +254,7 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* ou
 }
 
 zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
+  std::lock_guard guard(lock_);
   zxlogf(TRACE, "%s IMX227 Camera Sensor Mode Set request to %d\n", __func__, mode);
 
   // Get Sensor ID to see if sensor is initialized.
@@ -322,6 +332,8 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
 }
 
 zx_status_t Imx227Device::CameraSensorStartStreaming() {
+  std::lock_guard guard(lock_);
+
   if (!IsSensorInitialized() || ctx_.streaming_flag) {
     return ZX_ERR_BAD_STATE;
   }
@@ -332,6 +344,8 @@ zx_status_t Imx227Device::CameraSensorStartStreaming() {
 }
 
 zx_status_t Imx227Device::CameraSensorStopStreaming() {
+  std::lock_guard guard(lock_);
+
   if (!IsSensorInitialized() || !ctx_.streaming_flag) {
     return ZX_ERR_BAD_STATE;
   }
@@ -340,16 +354,27 @@ zx_status_t Imx227Device::CameraSensorStopStreaming() {
   return ZX_OK;
 }
 
-int32_t Imx227Device::CameraSensorSetAnalogGain(int32_t gain) { return ZX_ERR_NOT_SUPPORTED; }
+int32_t Imx227Device::CameraSensorSetAnalogGain(int32_t gain) {
+  std::lock_guard guard(lock_);
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
-int32_t Imx227Device::CameraSensorSetDigitalGain(int32_t gain) { return ZX_ERR_NOT_SUPPORTED; }
+int32_t Imx227Device::CameraSensorSetDigitalGain(int32_t gain) {
+  std::lock_guard guard(lock_);
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
 zx_status_t Imx227Device::CameraSensorSetIntegrationTime(int32_t int_time) {
+  std::lock_guard guard(lock_);
+
   // TODO(41260): Add support for this.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Imx227Device::CameraSensorUpdate() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Imx227Device::CameraSensorUpdate() {
+  std::lock_guard guard(lock_);
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
 zx_status_t Imx227Device::Create(void* ctx, zx_device_t* parent,
                                  std::unique_ptr<Imx227Device>* device_out) {
