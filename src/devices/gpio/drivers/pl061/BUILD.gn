@@ -7,9 +7,9 @@ import("//build/unification/images/migrated_manifest.gni")
 source_set("pl061") {
   sources = [ "pl061.c" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gpioimpl",
     "//zircon/public/lib/ddk",
     "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.gpioimpl",
     "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
 

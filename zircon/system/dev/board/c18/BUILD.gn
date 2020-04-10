@@ -31,11 +31,11 @@ driver_module("c18") {
     "c18.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gpioimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpioimpl",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/dev/lib/mt8167",
     "//zircon/system/dev/lib/mt8183",

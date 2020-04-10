@@ -34,6 +34,7 @@ driver_module("luis") {
     "luis.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -42,7 +43,6 @@ driver_module("luis") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpioimpl",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/usb",
