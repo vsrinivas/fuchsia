@@ -662,6 +662,13 @@ mod tests {
              failure_persistence: None,
              .. ProptestConfig::default()
         };
+
+        // Overrides the default number of test cases that must pass, from the default of 256.
+        static ref EXTRA_CASES_NO_PERSIST: ProptestConfig = ProptestConfig {
+             failure_persistence: None,
+             cases: 1024,
+             .. ProptestConfig::default()
+        };
     }
 
     struct RegexTest<'a> {
@@ -995,10 +1002,10 @@ mod tests {
     }
 
     proptest! {
-        #![proptest_config(NO_PERSIST)]
+        #![proptest_config(EXTRA_CASES_NO_PERSIST)]
         #[test]
         fn bad_property_name(
-            propname in r#"[0-9][\w&&[^0-9]][\w$]*"#,
+            propname in r#"[0-9][\w&&[^0-9eExX]][\w$]*"#,
             whitespace_to_colon in r#"[\s&&[^\n]]*:"#,
             trailing_content in r#"\PC+"#,
         ) {
@@ -1017,7 +1024,7 @@ mod tests {
     }
 
     proptest! {
-        #![proptest_config(NO_PERSIST)]
+        #![proptest_config(EXTRA_CASES_NO_PERSIST)]
         #[test]
         fn bad_property_name_captures_number_first(
             propname in r#"[0-9]\$[\w$]*"#,
