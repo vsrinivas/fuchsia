@@ -95,6 +95,7 @@ class MdnsInterfaceTransceiver {
 
  private:
   int SetOptionSharePort();
+  int SetOptionBindToDevice();
 
   void WaitForInbound();
 

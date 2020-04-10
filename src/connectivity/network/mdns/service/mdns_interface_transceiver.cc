@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <net/if.h>
 #include <poll.h>
 #include <sys/socket.h>
 
@@ -68,7 +69,7 @@ bool MdnsInterfaceTransceiver::Start(const MdnsAddresses& addresses,
   if (SetOptionSharePort() != 0 || SetOptionDisableMulticastLoop() != 0 ||
       SetOptionJoinMulticastGroup() != 0 || SetOptionOutboundInterface() != 0 ||
       SetOptionUnicastTtl() != 0 || SetOptionMulticastTtl() != 0 ||
-      SetOptionFamilySpecific() != 0 || Bind() != 0) {
+      SetOptionFamilySpecific() != 0 || SetOptionBindToDevice() != 0 || Bind() != 0) {
     socket_fd_.reset();
     return false;
   }
@@ -141,6 +142,22 @@ void MdnsInterfaceTransceiver::LogTraffic() {
   std::cout << "    bytes received:     " << bytes_received_ << "\n";
   std::cout << "    messages sent:      " << messages_sent_ << "\n";
   std::cout << "    bytes sent:         " << bytes_sent_ << "\n";
+}
+
+int MdnsInterfaceTransceiver::SetOptionBindToDevice() {
+  char ifname[IF_NAMESIZE];
+  uint32_t index = this->index();
+  if (if_indextoname(index, ifname) == nullptr) {
+    FX_LOGS(ERROR) << "Failed to look up interface name with index=" << index << ", error "
+                   << strerror(errno);
+  }
+  int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_BINDTODEVICE, &ifname,
+                          strnlen(ifname, IF_NAMESIZE));
+  if (result < 0) {
+    FX_LOGS(ERROR) << "Failed to set socket option SO_BINDTODEVICE with ifname=" << ifname
+                   << ", error" << strerror(errno);
+  }
+  return result;
 }
 
 int MdnsInterfaceTransceiver::SetOptionSharePort() {

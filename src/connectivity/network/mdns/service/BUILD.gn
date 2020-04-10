@@ -173,6 +173,7 @@ config_data("mdns_fuchsia_udp_config") {
 group("tests") {
   testonly = true
   deps = [
+    ":mdns-netemul-multi-network-tests",
     ":mdns_fuzzers",
     ":mdns_netemul_tests",
     ":mdns_netemul_v6_tests",
@@ -186,7 +187,7 @@ test_package("mdns_tests") {
   tests = [
     {
       name = "mdns_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
     },
   ]
 }
@@ -289,4 +290,52 @@ test_package("mdns_netemul_v6_tests") {
 
 group("netemul_empty_v6_binaries") {
   write_file("$root_out_dir/mdns_netemul_v6_test", "")
+}
+
+executable("mdns_netemul_multi_network_test_agent") {
+  testonly = true
+
+  sources = [ "test/mdns_netemul_multi_network_test_agent.cc" ]
+
+  deps = [
+    ":source_set",
+    "//sdk/lib/sys/cpp",
+    "//src/connectivity/network/testing/netemul/lib/fidl:sync",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/fidl/fuchsia-net",
+  ]
+}
+
+test_package("mdns-netemul-multi-network-tests") {
+  deps = [
+    ":mdns_netemul_multi_network_test_agent",
+    ":netemul_empty_multi_network_binaries",
+    "//src/connectivity/network/tests:device_name_provider",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mdns_netemul_multi_network_test_agent.cmx")
+      dest = "mdns_netemul_multi_network_test_agent.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "mdns_netemul_multi_network_test_agent"
+    },
+  ]
+
+  tests = [
+    {
+      name = "mdns_netemul_multi_network_test"
+      environments = [ qemu_env ]
+    },
+  ]
+}
+
+group("netemul_empty_multi_network_binaries") {
+  write_file("$root_out_dir/mdns_netemul_multi_network_test", "")
 }
