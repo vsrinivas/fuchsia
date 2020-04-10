@@ -113,9 +113,14 @@ impl Output {
         self.scroll(0, 0);
     }
 
+    fn max_lines() -> i64 {
+        let (_, h) = termion::terminal_size().unwrap();
+        h as i64 - 2 // Leave 2 lines for info.
+    }
+
     fn refresh(&self, stdout: &mut impl Write) {
         let (w, h) = termion::terminal_size().unwrap();
-        let max_lines = h as usize - 2; // Leave 2 lines for info.
+        let max_lines = Output::max_lines() as usize;
 
         self.lines
             .iter()
@@ -487,6 +492,12 @@ fn interactive_apply(
                 stdout.flush().unwrap();
 
                 output.set_lines(filter_data_to_lines(&selector_file, &data, &component_name)?)
+            }
+            Event::Key(Key::PageUp) => {
+                output.scroll(-Output::max_lines(), 0);
+            }
+            Event::Key(Key::PageDown) => {
+                output.scroll(Output::max_lines(), 0);
             }
             Event::Key(Key::Up) => {
                 output.scroll(-1, 0);
