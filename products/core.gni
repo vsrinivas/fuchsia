@@ -59,6 +59,7 @@ base_package_labels += [
   "//src/diagnostics/archivist",
   "//src/diagnostics/archivist:with_default_config",
   "//src/hwinfo:hwinfo",
+  "//src/hwinfo:default_product_config",
   "//src/identity/bin:core",
   "//src/media/audio/bundles:audio_config",
   "//src/recovery/factory_reset",

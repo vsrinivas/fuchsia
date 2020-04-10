@@ -37,33 +37,14 @@ rustc_binary("hwinfo_bin") {
   ]
 }
 
-hwinfo_config_validate("hwinfo_default_product_config_validate") {
-  type = "product"
-  config = "default_product_config.json"
-}
-
-hwinfo_config_validate("hwinfo_default_board_config_validate") {
-  type = "board"
-  config = "default_board_config.json"
-}
-
 hwinfo_config("default_board_config") {
   type = "board"
   config = rebase_path("default_board_config.json")
 }
 
-config_data("hwinfo_default_config") {
-  for_pkg = "hwinfo"
-
-  sources = [
-    "default_board_config.json",
-    "default_product_config.json",
-  ]
-
-  deps = [
-    ":hwinfo_default_board_config_validate",
-    ":hwinfo_default_product_config_validate",
-  ]
+hwinfo_config("default_product_config") {
+  type = "product"
+  config = rebase_path("default_product_config.json")
 }
 
 template("hwinfo_package") {
