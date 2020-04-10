@@ -39,7 +39,6 @@ test("aml-canvas-test") {
   deps = [
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
@@ -50,6 +49,7 @@ test("aml-canvas-test") {
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/lib/fake-bti",
+    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/dev/lib/mock-mmio-reg",
   ]
 }

@@ -66,9 +66,9 @@ test("usb-device") {
   sources = [ "tests/usb-device.cc" ]
   deps = [
     ":common",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/lib/fake-bti",
+    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/ulib/utf_conversion",
   ]
 }

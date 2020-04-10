@@ -45,7 +45,6 @@ test("mtk-gpio") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
@@ -57,6 +56,7 @@ test("mtk-gpio") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-platform-device",
+    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/dev/lib/mock-mmio-reg",
     "//zircon/system/dev/lib/mt8167",
   ]

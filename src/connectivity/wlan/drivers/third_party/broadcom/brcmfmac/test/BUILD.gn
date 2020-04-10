@@ -22,7 +22,7 @@ executable("channel_conversion_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -33,7 +33,7 @@ executable("debug_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -44,9 +44,9 @@ executable("dma_buffer_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/zx",
     "//zircon/system/dev/lib/fake-bti",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -57,9 +57,9 @@ executable("dma_pool_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/zx",
     "//zircon/system/dev/lib/fake-bti",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -70,9 +70,9 @@ executable("dma_ring_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/zx",
     "//zircon/system/dev/lib/fake-bti",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -83,7 +83,7 @@ executable("firmware_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -95,7 +95,7 @@ executable("intrusive_list_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -107,7 +107,7 @@ executable("netbuf_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   # TODO(46540): Fix the leaks and remove this.
@@ -121,8 +121,8 @@ executable("timer_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/sync",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -133,8 +133,8 @@ executable("workqueue_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/sync",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

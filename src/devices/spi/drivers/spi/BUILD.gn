@@ -45,7 +45,6 @@ test("spi-test") {
     "//sdk/banjo/ddk.protocol.spiimpl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/sync",
@@ -53,6 +52,7 @@ test("spi-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.spi",
+    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/fidl/fuchsia-hardware-spi:llcpp",
     "//zircon/system/ulib/spi",
   ]

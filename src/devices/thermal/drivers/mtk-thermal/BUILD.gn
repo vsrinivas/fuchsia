@@ -50,7 +50,6 @@ test("mtk-thermal-test") {
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-utils",
@@ -68,6 +67,7 @@ test("mtk-thermal-test") {
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
+    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/dev/lib/mock-mmio-reg",
     "//zircon/system/dev/lib/mt8167",
   ]

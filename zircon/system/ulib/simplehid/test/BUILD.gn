@@ -35,7 +35,6 @@ test("simplehid") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
@@ -44,6 +43,7 @@ test("simplehid") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.hidbus",
+    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/ulib/simplehid",
   ]
 }

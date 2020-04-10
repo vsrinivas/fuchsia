@@ -14,7 +14,7 @@ source_set("shared") {
   ]
   public_deps = [
     "//src/devices/block/drivers/ftl:common",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

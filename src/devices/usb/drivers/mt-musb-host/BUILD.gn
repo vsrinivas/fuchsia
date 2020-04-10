@@ -56,8 +56,8 @@ test("mt-hci-test") {
   sources = [ "usb-hci-test.cc" ]
   deps = [
     ":common",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -72,7 +72,6 @@ test("mt-hci-transaction-test") {
   ]
   deps = [
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
@@ -81,6 +80,7 @@ test("mt-hci-transaction-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/dev/lib/mt8167",
   ]
 }
@@ -98,7 +98,6 @@ test("mt-hci-request-queue-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.usb.hci",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
@@ -108,6 +107,7 @@ test("mt-hci-request-queue-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/dev/lib/mt8167",
     "//zircon/system/dev/lib/usb",
   ]

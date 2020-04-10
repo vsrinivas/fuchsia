@@ -29,9 +29,9 @@ test("aml-pwm-test") {
   ]
   deps = [
     ":common",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/dev/lib/mock-mmio-reg",
   ]
 }

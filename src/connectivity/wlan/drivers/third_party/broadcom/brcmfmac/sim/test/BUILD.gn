@@ -40,7 +40,7 @@ executable("assoc_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   # TODO(46539): Fix the leaks and remove this.
@@ -59,7 +59,7 @@ executable("create_softap_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   # TODO(46539): Fix the leaks and remove this.
@@ -78,7 +78,7 @@ executable("auth_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   # TODO(46539): Fix the leaks and remove this.
@@ -96,7 +96,7 @@ executable("dynamic_if_test") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   # TODO(46539): Fix the leaks and remove this.
@@ -114,7 +114,7 @@ executable("firmware_config_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   # TODO(46539): Fix the leaks and remove this.
@@ -130,7 +130,7 @@ executable("lifecycle_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   # TODO(46539): Fix the leaks and remove this.
@@ -147,7 +147,7 @@ executable("scan_dwell_time_test") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   # TODO(46539): Fix the leaks and remove this.
@@ -164,7 +164,7 @@ executable("passive_scan_test") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
@@ -182,7 +182,7 @@ executable("active_scan_test") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
@@ -199,7 +199,7 @@ executable("set_cc_test") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
@@ -217,7 +217,7 @@ executable("tx_data_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
@@ -237,7 +237,7 @@ executable("beacon_lost_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   # TODO(46539): Fix the leaks and remove this.

@@ -29,8 +29,8 @@ source_set("iwlwifi_sim_trans_ss") {
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   public_deps = [
@@ -48,11 +48,11 @@ group("test") {
 # Definition for simulated transportation layer + gtest
 testing_deps = [
   ":iwlwifi_sim_trans_ss",
-  "//zircon/public/lib/fake_ddk",
   "//zircon/public/lib/mock-function",
   "//zircon/public/lib/zircon-internal",
   "//zircon/public/lib/zxtest",
   "//zircon/system/dev/lib/fake-bti",
+  "//zircon/system/dev/lib/fake_ddk",
 ]
 
 # The dummy code for developer to start a new test.

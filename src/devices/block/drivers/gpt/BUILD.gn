@@ -40,7 +40,6 @@ test("gpt-device-test") {
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/sync",
@@ -48,6 +47,7 @@ test("gpt-device-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.block",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

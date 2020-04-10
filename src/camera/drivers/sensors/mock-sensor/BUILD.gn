@@ -17,9 +17,9 @@ driver_module("mock-sensor-driver") {
     "//sdk/banjo/ddk.protocol.camerasensor",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -49,10 +49,10 @@ executable("mock-sensor-device-test") {
     "//sdk/banjo/ddk.protocol.camerasensor",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -69,9 +69,9 @@ executable("mock-sensor-integration-test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
+    "//zircon/system/dev/lib/fake_ddk",
 
     #"//zircon/public/lib/zxtest",
   ]
