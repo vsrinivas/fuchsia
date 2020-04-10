@@ -69,8 +69,8 @@ var _ stack.LinkEndpoint = (*endpoint)(nil)
 type endpoint struct {
 	dispatcher stack.NetworkDispatcher
 	remote     []*endpoint
-	// onWritePacket returns a slice of packets to send and a delay to be added before every send.
-	onWritePacket func(stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration)
+	// onWritePacket returns the packet to send or nil if no packets should be sent.
+	onWritePacket func(stack.PacketBuffer) *stack.PacketBuffer
 
 	stack.LinkEndpoint
 }
@@ -103,22 +103,19 @@ func (e *endpoint) IsAttached() bool {
 }
 
 func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
-	pkts := []stack.PacketBuffer{pkt}
-	var delay time.Duration
-
 	if fn := e.onWritePacket; fn != nil {
-		pkts, delay = fn(pkt)
-	}
-
-	for _, pkt := range pkts {
-		time.Sleep(delay)
-		for _, remote := range e.remote {
-			if !remote.IsAttached() {
-				panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
-			}
-			// the "remote" address for `other` is our local address and vice versa.
-			remote.dispatcher.DeliverNetworkPacket(remote, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
+		p := fn(pkt)
+		if p == nil {
+			return nil
 		}
+		pkt = *p
+	}
+	for _, remote := range e.remote {
+		if !remote.IsAttached() {
+			panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
+		}
+		// the "remote" address for `other` is our local address and vice versa.
+		remote.dispatcher.DeliverNetworkPacket(remote, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
 	}
 	return nil
 }
@@ -163,12 +160,12 @@ func newZeroJitterClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkA
 func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 	sent := make(chan struct{}, 1)
 	e := endpoint{
-		onWritePacket: func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
+		onWritePacket: func(b stack.PacketBuffer) *stack.PacketBuffer {
 			select {
 			case sent <- struct{}{}:
 			default:
 			}
-			return []stack.PacketBuffer{b}, 0
+			return &b
 		},
 	}
 	s := createTestStack()
@@ -229,15 +226,14 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	}
 	cond := sync.Cond{L: &mu.Mutex}
 	serverLinkEP := endpoint{
-		onWritePacket: func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
+		onWritePacket: func(b stack.PacketBuffer) *stack.PacketBuffer {
 			mu.Lock()
 			mu.buffered++
 			for mu.buffered < len(clientLinkEPs) {
 				cond.Wait()
 			}
 			mu.Unlock()
-
-			return []stack.PacketBuffer{b}, 0
+			return &b
 		},
 	}
 	serverStack := createTestStack()
@@ -450,7 +446,7 @@ func TestDelayRetransmission(t *testing.T) {
 			defer cancel()
 
 			_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
-			serverEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
+			serverEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
 				func() {
 					switch mustMsgType(t, b) {
 					case dhcpOFFER:
@@ -472,8 +468,7 @@ func TestDelayRetransmission(t *testing.T) {
 					// notice it has been timed out.
 					time.Sleep(10 * time.Millisecond)
 				}()
-
-				return []stack.PacketBuffer{b}, 0
+				return &b
 			}
 
 			info := c.Info()
@@ -528,65 +523,186 @@ func TestExponentialBackoff(t *testing.T) {
 	}
 }
 
+func waitForSignal(ctx context.Context, ch <-chan struct{}) {
+	select {
+	case <-ch:
+	case <-ctx.Done():
+	}
+}
+
+func signal(ctx context.Context, ch chan struct{}) {
+	select {
+	case ch <- struct{}{}:
+	case <-ctx.Done():
+	}
+}
+
+func signalTimeout(ctx context.Context, timeout chan time.Time) {
+	select {
+	case timeout <- time.Time{}:
+	case <-ctx.Done():
+	}
+}
+
 func TestRetransmissionExponentialBackoff(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// The actual value of retransTimeout does not matter because the timer is
+	// stubbed out in this test.
+	retransTimeout := time.Millisecond
+
 	for _, tc := range []struct {
-		serverDelay, baseRetran time.Duration
-		wantTimeouts            uint64
+		offerTimeouts, ackTimeouts int
+		wantTimeouts               []time.Duration
 	}{
 		{
-			serverDelay:  10 * time.Millisecond,
-			baseRetran:   100 * time.Millisecond,
-			wantTimeouts: 0,
+			wantTimeouts: []time.Duration{
+				// No timeouts, got a DHCP offer on first try.
+				retransTimeout,
+				// No timeouts, got a DHCP ack on first try.
+				retransTimeout,
+			},
 		},
 		{
-			serverDelay:  11 * time.Millisecond,
-			baseRetran:   10 * time.Millisecond,
-			wantTimeouts: 1,
+			offerTimeouts: 1,
+			ackTimeouts:   1,
+			wantTimeouts: []time.Duration{
+				// 1 timeout waiting for DHCP offer.
+				retransTimeout,
+				// Successfully received a DHCP offer.
+				2 * retransTimeout,
+				// 1 timeouts waiting for DHCP ack.
+				retransTimeout,
+				// Successfully received a DHCP ack.
+				2 * retransTimeout,
+			},
 		},
 		{
-			serverDelay:  80 * time.Millisecond,
-			baseRetran:   10 * time.Millisecond,
-			wantTimeouts: 3,
+			offerTimeouts: 3,
+			ackTimeouts:   5,
+			wantTimeouts: []time.Duration{
+				// 3 timeouts waiting for DHCP offer.
+				retransTimeout,
+				2 * retransTimeout,
+				4 * retransTimeout,
+				// Successfully received a DHCP offer.
+				8 * retransTimeout,
+				// 5 timeouts waiting for DHCP ack.
+				retransTimeout,
+				2 * retransTimeout,
+				4 * retransTimeout,
+				8 * retransTimeout,
+				16 * retransTimeout,
+				// Successfully received a DHCP ack.
+				32 * retransTimeout,
+			},
+		},
+		{
+			offerTimeouts: 5,
+			ackTimeouts:   2,
+			wantTimeouts: []time.Duration{
+				// 5 timeouts waiting for DHCP offer.
+				retransTimeout,
+				2 * retransTimeout,
+				4 * retransTimeout,
+				8 * retransTimeout,
+				16 * retransTimeout,
+				// Successfully received a DHCP offer.
+				32 * retransTimeout,
+				// 2 timeouts waiting for DHCP ack.
+				retransTimeout,
+				2 * retransTimeout,
+				// Successfully received a DHCP ack.
+				4 * retransTimeout,
+			},
 		},
 	} {
-		t.Run(fmt.Sprintf("serverDelay=%s,baseRetransmission=%s", tc.serverDelay, tc.baseRetran), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+		t.Run(fmt.Sprintf("offerTimeouts=%d,ackTimeouts=%d", tc.offerTimeouts, tc.ackTimeouts), func(t *testing.T) {
+			_, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 			info := c.Info()
-			info.Retransmission = tc.baseRetran
+			info.Retransmission = retransTimeout
 			c.info.Store(info)
 
-			var offerSent bool
-			serverEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
-				switch typ := mustMsgType(t, b); typ {
-				case dhcpOFFER:
-					// Only respond to the first DHCPDISCOVER to avoid unwanted delays on responses to DHCPREQUEST.
-					if offerSent {
-						return nil, 0
-					}
-					offerSent = true
-					return []stack.PacketBuffer{b}, tc.serverDelay
-				case dhcpACK:
-					return []stack.PacketBuffer{b}, tc.serverDelay
-				default:
-					t.Fatalf("test server is sending packet with unexpected type: %s", typ)
-					return nil, 0
-				}
+			timeoutCh := make(chan time.Time)
+			var gotTimeouts []time.Duration
+			c.retransTimeout = func(d time.Duration) <-chan time.Time {
+				gotTimeouts = append(gotTimeouts, d)
+				return timeoutCh
 			}
+
+			requestSent := make(chan struct{})
+			clientEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
+				defer signal(ctx, requestSent)
+
+				return &b
+			}
+
+			unblockResponse := make(chan struct{})
+			var dropServerPackets bool
+			serverEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
+				waitForSignal(ctx, unblockResponse)
+				if dropServerPackets {
+					return nil
+				}
+				return &b
+			}
+
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// Configure the server to drop all responses, causing the client to
+				// timeout waiting for response and retransmit another DHCP discover.
+				dropServerPackets = true
+				for i := 0; i < tc.offerTimeouts; i++ {
+					waitForSignal(ctx, requestSent)
+					signalTimeout(ctx, timeoutCh)
+					signal(ctx, unblockResponse)
+				}
+				// Allow the server to respond to DHCP discover, so the client can start
+				// sending DHCP requests.
+				waitForSignal(ctx, requestSent)
+				dropServerPackets = false
+				signal(ctx, unblockResponse)
+
+				// Wait for the client to send a DHCP request to confirm it has
+				// successfully received a DHCP offer and moved to the requesting phase.
+				//
+				// Then configure the server to drop all responses, causing the client
+				// to timeout waiting for response and retransmit another DHCP request.
+				for i := 0; i < tc.ackTimeouts; i++ {
+					waitForSignal(ctx, requestSent)
+					if i == 0 {
+						dropServerPackets = true
+					}
+					signalTimeout(ctx, timeoutCh)
+					signal(ctx, unblockResponse)
+				}
+				// Allow server to respond to DHCP requests, so the client can acquire
+				// an address.
+				waitForSignal(ctx, requestSent)
+				dropServerPackets = false
+				signal(ctx, unblockResponse)
+			}()
 
 			if _, err := c.acquire(ctx, &info); err != nil {
 				t.Fatalf("c.acquire(ctx, &c.Info()) failed: %s", err)
 			}
-			if got := c.stats.RecvOfferTimeout.Value(); got != tc.wantTimeouts {
-				t.Errorf("c.acquire(ctx, &c.Info()) got RecvOfferTimeout count: %d, want: %d", got, tc.wantTimeouts)
+
+			wg.Wait()
+
+			if !cmp.Equal(gotTimeouts, tc.wantTimeouts) {
+				t.Errorf("c.acquire(ctx, &c.Info()) got timeouts: %v, want timeouts: %v", gotTimeouts, tc.wantTimeouts)
+			}
+			if got := c.stats.RecvOfferTimeout.Value(); int(got) != tc.offerTimeouts {
+				t.Errorf("c.acquire(ctx, &c.Info()) got RecvOfferTimeout count: %d, want: %d", got, tc.offerTimeouts)
 			}
 			if got := c.stats.RecvOffers.Value(); got != 1 {
 				t.Errorf("c.acquire(ctx, &c.Info()) got RecvOffers count: %d, want: 1", got)
 			}
-			if got := c.stats.RecvAckTimeout.Value(); got != tc.wantTimeouts {
-				t.Errorf("c.acquire(ctx, &c.Info()) got RecvAckTimeout count: %d, want: %d", got, tc.wantTimeouts)
+			if got := c.stats.RecvAckTimeout.Value(); int(got) != tc.ackTimeouts {
+				t.Errorf("c.acquire(ctx, &c.Info()) got RecvAckTimeout count: %d, want: %d", got, tc.ackTimeouts)
 			}
 			if got := c.stats.RecvAcks.Value(); got != 1 {
 				t.Errorf("c.acquire(ctx, &c.Info()) got RecvAcks count: %d, want: 1", got)
@@ -629,62 +745,79 @@ func mustCloneWithNewMsgType(t *testing.T, b stack.PacketBuffer, msgType dhcpMsg
 }
 
 func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
-	// Server is stubbed to only respond to the first DHCPDISCOVER to avoid unwanted
-	// delays on responses to DHCPREQUEST.
-	//
-	// Server delay and retransmission delay are chosen so that client retransmits
-	// excatly once for both DHCPDISCOVER and DHCPREQUEST.
-	//
-	// 0ms: Client sends DHCPDISCOVER.
-	// 30ms: Sever sends DHCPNAK. Client receives and discards DHCPNAK.
-	// 50ms: Client retransmits DHCPDISCOVER (server won't respond to this DISCOVER).
-	// 60ms: Server sends DHCPOFFER. Client receives DHCPOFFER, sends DHCPREQUEST.
-	// Similar flow of events happens for DHCPREQUEST.
-	const serverDelay = 30 * time.Millisecond
-	const retransmissionDelay = 50 * time.Millisecond
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
-	info := c.Info()
-	info.Retransmission = retransmissionDelay
-	c.info.Store(info)
+	_, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 
-	var offerSent bool
-	serverEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
-		switch typ := mustMsgType(t, b); typ {
-		case dhcpOFFER:
-			if offerSent {
-				return nil, 0
-			}
-			offerSent = true
-			return []stack.PacketBuffer{
-				mustCloneWithNewMsgType(t, b, dhcpNAK),
-				b,
-			}, serverDelay
-		case dhcpACK:
-			return []stack.PacketBuffer{
-				mustCloneWithNewMsgType(t, b, dhcpOFFER),
-				b,
-			}, serverDelay
-		default:
-			t.Fatalf("test server is sending packet with unexpected type: %s", typ)
-			return nil, 0
-		}
+	timeoutCh := make(chan time.Time)
+	c.retransTimeout = func(time.Duration) <-chan time.Time {
+		return timeoutCh
 	}
 
+	requestSent := make(chan struct{})
+	clientEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
+		defer signal(ctx, requestSent)
+		return &b
+	}
+
+	unblockResponse := make(chan struct{})
+	responseSent := make(chan struct{})
+	var serverShouldDecline bool
+	serverEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
+		defer signal(ctx, responseSent)
+		waitForSignal(ctx, unblockResponse)
+
+		if serverShouldDecline {
+			b = mustCloneWithNewMsgType(t, b, dhcpDECLINE)
+		}
+		return &b
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		wg.Done()
+		// Run the same exchange for 2 rounds. One for DHCP discover, another for
+		// DHCP request.
+		for i := 0; i < 2; i++ {
+			// Receive unexpected response, then timeout.
+			waitForSignal(ctx, requestSent)
+
+			serverShouldDecline = true
+			signal(ctx, unblockResponse)
+			// Must wait for an unexpected response by the server before moving
+			// forward, otherwise the timout signal below will cause the client to
+			// send another request and change the server's behavior on how to
+			// respond.
+			waitForSignal(ctx, responseSent)
+
+			signalTimeout(ctx, timeoutCh)
+
+			// Receive expected response and move on to the next phase.
+			waitForSignal(ctx, requestSent)
+
+			serverShouldDecline = false
+			signal(ctx, unblockResponse)
+			waitForSignal(ctx, responseSent)
+		}
+	}()
+
+	info := c.Info()
 	if _, err := c.acquire(ctx, &info); err != nil {
 		t.Fatalf("c.acquire(ctx, &c.Info()) failed: %s", err)
 	}
+
+	wg.Wait()
+
 	if got := c.stats.RecvOfferTimeout.Value(); got != 1 {
 		t.Errorf("c.acquire(ctx, &c.Info()) got RecvOfferTimeout count: %d, want: 1", got)
 	}
-	if got := c.stats.RecvOffers.Value(); got != 1 {
-		t.Errorf("c.acquire(ctx, &c.Info()) got RecvOffers count: %d, want: 1", got)
-	}
 	if got := c.stats.RecvOfferUnexpectedType.Value(); got != 1 {
 		t.Errorf("c.acquire(ctx, &c.Info()) got RecvOfferUnexpectedType count: %d, want: 1", got)
+	}
+	if got := c.stats.RecvOffers.Value(); got != 1 {
+		t.Errorf("c.acquire(ctx, &c.Info()) got RecvOffers count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvAckTimeout.Value(); got != 1 {
 		t.Errorf("c.acquire(ctx, &c.Info()) got RecvAckTimeout count: %d, want: 1", got)
@@ -825,19 +958,19 @@ func TestStateTransition(t *testing.T) {
 			}
 
 			var blockData uint32 = 0
-			clientEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
+			clientEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
 				if atomic.LoadUint32(&blockData) == 1 {
-					return nil, 0
+					return nil
 				}
 				if tc.typ == testRebind {
 					// Only pass client broadcast packets back into the stack. This simulates
 					// packet loss during the client's unicast RENEWING state, forcing
 					// it into broadcast REBINDING state.
 					if header.IPv4(b.Header.View()).DestinationAddress() != header.IPv4Broadcast {
-						return nil, 0
+						return nil
 					}
 				}
-				return []stack.PacketBuffer{b}, 0
+				return &b
 			}
 
 			c.Run(ctx)
@@ -918,14 +1051,14 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	// Only respond to the first DHCP request. This makes sure the client is stuck
 	// in init selecting state after lease expiration.
 	var ackSent bool
-	serverEP.onWritePacket = func(b stack.PacketBuffer) ([]stack.PacketBuffer, time.Duration) {
+	serverEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
 		if ackSent {
-			return nil, 0
+			return nil
 		}
 		if mustMsgType(t, b) == dhcpACK {
 			ackSent = true
 		}
-		return []stack.PacketBuffer{b}, 0
+		return &b
 	}
 
 	var curAddr tcpip.AddressWithPrefix

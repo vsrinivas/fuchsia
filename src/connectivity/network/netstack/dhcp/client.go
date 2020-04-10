@@ -50,7 +50,9 @@ type Client struct {
 
 	stats Stats
 
-	rand *rand.Rand
+	// Stubbable in test.
+	rand           *rand.Rand
+	retransTimeout func(time.Duration) <-chan time.Time
 }
 
 type dhcpClientState uint8
@@ -121,10 +123,11 @@ type Info struct {
 // linkAddr when broadcasting on multiple interfaces works.
 func NewClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkAddress, acquisition, backoff, retransmission time.Duration, acquiredFunc AcquiredFunc) *Client {
 	c := &Client{
-		stack:        s,
-		acquiredFunc: acquiredFunc,
-		sem:          make(chan struct{}, 1),
-		rand:         rand.New(rand.NewSource(time.Now().UnixNano())),
+		stack:          s,
+		acquiredFunc:   acquiredFunc,
+		sem:            make(chan struct{}, 1),
+		rand:           rand.New(rand.NewSource(time.Now().UnixNano())),
+		retransTimeout: time.After,
 	}
 	c.info.Store(Info{
 		NICID:          nicid,
@@ -510,7 +513,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 			c.stats.SendDiscovers.Increment()
 
 			// Receive a DHCPOFFER message from a responding DHCP server.
-			timeoutCh := time.After(c.exponentialBackoff(i))
+			timeoutCh := c.retransTimeout(c.exponentialBackoff(i))
 			for {
 				srcAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:], timeoutCh)
 				if err != nil {
@@ -593,7 +596,7 @@ retransmitRequest:
 		c.stats.SendRequests.Increment()
 
 		// Receive a DHCPACK/DHCPNAK from the server.
-		timeoutCh := time.After(c.exponentialBackoff(i))
+		timeoutCh := c.retransTimeout(c.exponentialBackoff(i))
 		for {
 			fromAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:], timeoutCh)
 			if err != nil {
