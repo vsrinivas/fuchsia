@@ -12,6 +12,27 @@ group("management") {
   ]
 }
 
+# TODO(49379): Remove when updating the network_config_* rules
+# below.
+group("netcfg") {
+  deps = [
+    "//src/connectivity/network/netcfg",
+    "//src/connectivity/network/netcfg:config",
+  ]
+}
+
+group("network_config_default") {
+}
+
+group("network_config_no_ssh_over_wlan") {
+  # TODO(49379): Switch to the equivalent Network Manager config
+  # once we've migrated off of netcfg and onto Network Manager.
+  deps = [
+    ":netcfg",
+    "//src/connectivity/network/netcfg:config_no_ssh_over_wlan",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
