@@ -91,3 +91,6 @@ fx build && fx triage --test
         *   config/parse.rs - A `nom`-based parser for Eval metrics.
 *   //src/diagnostics/triage/test/src/main.rs - Integration tester that invokes
     the "fx triage" script and evaluates its output.
+*   //src/diagnostics/triage/build
+    *   triage_config_test.gni defines a gn target to run config tests in CQ.
+    * triage_config_test_runner defines a binary which executes the tests for the triage_config_test.gni target.

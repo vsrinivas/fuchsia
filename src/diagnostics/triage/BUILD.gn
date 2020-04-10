@@ -68,7 +68,7 @@ group("tests") {
 
   deps = [
     ":triage_lib_test($host_toolchain)",
-    "build/triage_config_testing_helper:tests",
+    "build/triage_config_test_runner:tests",
     "test:congfig_tests",
   ]
 }

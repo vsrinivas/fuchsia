@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
+import("//build/testing/test_spec.gni")
 
 # Defines a host-side test for a triage configuration
 #
@@ -42,29 +43,87 @@ template("triage_config_test") {
     config_source_dir = "config"
   }
 
-  generated_test_target = target_name + "__test_main"
-  generated_test_main = "$target_gen_dir/${target_name}__test_main.rs"
-
-  action(generated_test_target) {
-    script = "//src/diagnostics/triage/build/gen_triage_config_test.py"
-    outputs = [ generated_test_main ]
-    inputs = []
-    args = [ "--out=" + rebase_path(generated_test_main, root_build_dir) ]
-    foreach(source, invoker.sources) {
-      source_path = "$config_source_dir/$source"
-      args += [ "--config=" + rebase_path(source_path, root_build_dir) ]
-      inputs += [ source_path ]
-    }
-    testonly = true
+  # Copy the config files into test_data/target_name to read in the test
+  copy_sources = []
+  foreach(source, invoker.sources) {
+    copy_sources += [ "$config_source_dir/$source" ]
   }
 
-  rustc_test(target_name) {
-    source_root = generated_test_main
-    testonly = true
+  copy_configs = target_name + "__copy_configs"
+  copy(copy_configs) {
+    sources = copy_sources
+    outputs =
+        [ "$target_gen_dir/runtime_deps/${target_name}/{{source_file_part}}" ]
+
+    metadata = {
+      test_runtime_deps = []
+    }
+  }
+
+  copy_configs_output = get_target_outputs(":$copy_configs")
+
+  test_deps_target = target_name + "_test_deps"
+  group(test_deps_target) {
     deps = [
-      ":$generated_test_target($host_toolchain)",
-      "//src/diagnostics/triage/build/triage_config_testing_helper",
-      "//third_party/rust_crates:anyhow",
+      ":${copy_configs}",
+      "//src/diagnostics/triage/build/triage_config_test_runner",
     ]
+
+    runtime_deps = copy_configs_output
+    runtime_deps += [ "${root_out_dir}/triage_config_test_runner" ]
+
+    metadata = {
+      test_runtime_deps = runtime_deps
+    }
+  }
+
+  test_spec_target = target_name + "_spec"
+
+  # This is a dummy file that is generated as an output of this target,
+  # and only used to define the `path` in the test_spec. This is needed
+  # to ensure the test builds in CQ, which uses `path` as a Ninja target.
+  test_spec_file = "${target_name}.triage_config_test"
+  test_path = "${root_out_dir}/${test_spec_file}"
+
+  # Create a test spec to run this test
+  test_spec(test_spec_target) {
+    name = invoker.target_name
+    target = invoker.target_name
+
+    command_target =
+        rebase_path("${root_out_dir}/triage_config_test_runner", root_build_dir)
+    config_files = copy_configs_output
+
+    # This path needs to be passed like this because the test_spec
+    # will rebase the path against the root_build_dir and pass it
+    # along as a target to ninja.
+    path = test_path
+
+    command = [ command_target ]
+    foreach(file, config_files) {
+      command += [
+        "--config",
+        rebase_path(file, root_build_dir),
+      ]
+    }
+
+    deps = [ ":$test_deps_target" ]
+  }
+
+  generated_file(test_spec_file) {
+    testonly = true
+    outputs = [ "${target_out_dir}/${test_spec_file}" ]
+    data_keys = [ "tests" ]
+
+    deps = [ ":$test_spec_target" ]
+  }
+
+  copy(target_name) {
+    testonly = true
+
+    sources = [ "${target_out_dir}/${test_spec_file}" ]
+    outputs = [ test_path ]
+
+    deps = [ ":${test_spec_file}" ]
   }
 }

@@ -146,17 +146,7 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
         bail!("Need at least one config file; use --config");
     }
 
-    let mut config_file_map = HashMap::new();
-    for file_name in config_files {
-        let namespace = base_name(&file_name)?;
-        let file_data = match fs::read_to_string(file_name.clone()) {
-            Ok(data) => data,
-            Err(_) => {
-                bail!("Couldn't read config file '{}' to string", file_name);
-            }
-        };
-        config_file_map.insert(namespace, file_data);
-    }
+    let config_file_map = load_config_files(config_files)?;
 
     let ParseResult { actions, metrics, tests } =
         parse_config_files(config_file_map, action_tag_directive)?;
@@ -166,16 +156,30 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
     Ok(StateHolder { metrics, actions, inspect_contexts, output_format })
 }
 
-pub fn initialize_for_validation(
-    config_files: HashMap<String, String>,
-) -> Result<ParseResult, Error> {
-    parse_config_files(config_files, ActionTagDirective::AllowAll)
+pub fn initialize_for_validation(config_files: Vec<String>) -> Result<ParseResult, Error> {
+    let config_file_map = load_config_files(config_files)?;
+    parse_config_files(config_file_map, ActionTagDirective::AllowAll)
 }
 
 pub struct ParseResult {
     pub metrics: Metrics,
     pub actions: Actions,
     pub tests: Trials,
+}
+
+fn load_config_files(config_files: Vec<String>) -> Result<HashMap<String, String>, Error> {
+    let mut config_file_map = HashMap::new();
+    for file_name in config_files {
+        let namespace = base_name(&file_name)?;
+        let file_data = match fs::read_to_string(file_name.clone()) {
+            Ok(data) => data,
+            Err(e) => {
+                bail!("Couldn't read config file '{}' to string, {}", file_name, e);
+            }
+        };
+        config_file_map.insert(namespace, file_data);
+    }
+    Ok(config_file_map)
 }
 
 fn parse_config_files(
