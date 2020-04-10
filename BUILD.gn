@@ -423,10 +423,6 @@ build_api_module("images") {
     # not in fact have a complete description. See the associated
     # conditional at this group also.
     "build/images",
-
-    # TODO(fxbug.dev/9708): have this target roll up to a build API module of
-    # archives.
-    "build/images:archives",
   ]
 }
 
