@@ -20,21 +20,21 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
 )
 
-var c *Config
+var c *config
 
 func TestMain(m *testing.M) {
 	log.SetPrefix("upgrade-test: ")
 	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
 
 	var err error
-	c, err = NewConfig(flag.CommandLine)
+	c, err = newConfig(flag.CommandLine)
 	if err != nil {
 		log.Fatalf("failed to create config: %s", err)
 	}
 
 	flag.Parse()
 
-	if err = c.Validate(); err != nil {
+	if err = c.validate(); err != nil {
 		log.Fatalf("config is invalid: %s", err)
 	}
 
@@ -64,7 +64,7 @@ func TestOTA(t *testing.T) {
 		}
 	}()
 
-	if c.ShouldRepaveDevice() {
+	if c.shouldRepaveDevice() {
 		rpcClient, err = paveDevice(ctx, device)
 		if err != nil {
 			log.Fatalf("failed to pave device: %s", err)
@@ -97,7 +97,7 @@ func doTestOTAs(ctx context.Context, device *device.Client, rpcClient **sl4f.Cli
 	}
 	defer cleanup()
 
-	repo, err := c.GetUpgradeRepository(ctx, outputDir)
+	repo, err := c.getUpgradeRepository(ctx, outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to get upgrade repository: %s", err)
 	}
@@ -152,12 +152,12 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 	}
 	defer cleanup()
 
-	downgradePaver, err := c.GetDowngradePaver(ctx, outputDir)
+	downgradePaver, err := c.getDowngradePaver(ctx, outputDir)
 	if err != nil {
 		return nil, fmt.Errorf("error getting downgrade paver: %s", err)
 	}
 
-	downgradeRepo, err := c.GetDowngradeRepository(ctx, outputDir)
+	downgradeRepo, err := c.getDowngradeRepository(ctx, outputDir)
 	if err != nil {
 		return nil, fmt.Errorf("error etting downgrade repository: %s", err)
 	}
