@@ -216,8 +216,8 @@ enum H264Status {
   kH264PicDataDone = 0x2,
 };
 
-H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client)
-    : VideoDecoder(owner, client, /*is_secure=*/false) {
+H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* provider)
+    : VideoDecoder(owner, client, /*is_secure=*/false), frame_data_provider_(provider) {
   media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<MultiAccelerator>(this),
                                                         media::H264PROFILE_HIGH);
 }
@@ -888,7 +888,7 @@ bool H264MultiDecoder::CanBeSwappedIn() {
   // kRanOutOfStreamData before trying to decode any of it.
   // TODO(fxb/13483): Wait for all requirements before swapping in the hardware to avoid unnecessary
   // changes.
-  return (decoder_buffer_list_.size() > 0) || current_decoder_buffer_;
+  return current_decoder_buffer_ || frame_data_provider_->HasMoreInputData();
 }
 
 bool H264MultiDecoder::CanBeSwappedOut() const {
@@ -911,11 +911,7 @@ void H264MultiDecoder::OnFatalError() {
   }
 }
 
-void H264MultiDecoder::ProcessNalUnit(std::vector<uint8_t> data) {
-  DLOG("H264MultiDecoder::ProcessNalUnit input data %p size %zu", data.data(), data.size());
-  decoder_buffer_list_.push_back(std::make_unique<media::DecoderBuffer>(std::move(data)));
-  PumpOrReschedule();
-}
+void H264MultiDecoder::ReceivedNewInput() { PumpOrReschedule(); }
 
 void H264MultiDecoder::PumpDecoder() {
   while (true) {
@@ -953,14 +949,16 @@ void H264MultiDecoder::PumpDecoder() {
       // because video_frames_ is empty.
     } else if (res == media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
       current_decoder_buffer_.reset();
-      if (decoder_buffer_list_.size() == 0) {
+      std::vector<uint8_t> next_decoder_buffer = frame_data_provider_->ReadMoreInputData(this);
+      if (next_decoder_buffer.empty()) {
         DLOG("Not decoding because decoder ran out of inputs, state %d", static_cast<int>(state_));
         owner_->TryToReschedule();
         return;
       }
-      current_decoder_buffer_ = std::move(decoder_buffer_list_.front());
-      decoder_buffer_list_.pop_front();
+      current_decoder_buffer_ =
+          std::make_unique<media::DecoderBuffer>(std::move(next_decoder_buffer));
       media_decoder_->SetStream(0, *current_decoder_buffer_);
+
       uint32_t nal_unit_type = GetNalUnitType(fbl::Span<const uint8_t>(
           current_decoder_buffer_->data(), current_decoder_buffer_->data_size()));
       constexpr uint32_t kSpsNalUnitType = 7;

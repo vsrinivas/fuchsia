@@ -50,8 +50,14 @@ class H264MultiDecoder : public VideoDecoder {
     std::vector<std::shared_ptr<media::H264Picture>> ref_pic_list0;
     std::vector<std::shared_ptr<media::H264Picture>> ref_pic_list1;
   };
+  class FrameDataProvider {
+   public:
+    // Called with the video_decoder_lock held.
+    virtual std::vector<uint8_t> ReadMoreInputData(H264MultiDecoder* decoder) = 0;
+    virtual bool HasMoreInputData() = 0;
+  };
 
-  H264MultiDecoder(Owner* owner, Client* client);
+  H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* frame_data_provider);
   H264MultiDecoder(const H264MultiDecoder&) = delete;
 
   ~H264MultiDecoder() override;
@@ -70,7 +76,7 @@ class H264MultiDecoder : public VideoDecoder {
 
   zx_status_t InitializeBuffers();
 
-  void ProcessNalUnit(std::vector<uint8_t> data);
+  void ReceivedNewInput();
   void FlushFrames();
   void DumpStatus();
 
@@ -108,9 +114,9 @@ class H264MultiDecoder : public VideoDecoder {
   // Try to pump the decoder, rescheduling it if it isn't currently scheduled in.
   void PumpOrReschedule();
 
+  FrameDataProvider* frame_data_provider_;
   bool fatal_error_ = false;
   std::unique_ptr<media::H264Decoder> media_decoder_;
-  std::list<std::unique_ptr<media::DecoderBuffer>> decoder_buffer_list_;
   std::unique_ptr<media::DecoderBuffer> current_decoder_buffer_;
 
   std::optional<InternalBuffer> secondary_firmware_;

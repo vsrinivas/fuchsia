@@ -19,6 +19,26 @@
 #include "vdec1.h"
 #include "video_frame_helpers.h"
 
+class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvider {
+ public:
+  void AppendFrameData(std::vector<std::vector<uint8_t>> frame_data) {
+    frame_data_.insert(frame_data_.end(), frame_data.begin(), frame_data.end());
+  }
+
+  std::vector<uint8_t> ReadMoreInputData(H264MultiDecoder* decoder) override {
+    std::vector<uint8_t> result;
+    if (frame_data_.empty())
+      return result;
+    result = std::move(frame_data_.front());
+    frame_data_.pop_front();
+    return result;
+  }
+  bool HasMoreInputData() override { return !frame_data_.empty(); }
+
+ private:
+  std::list<std::vector<uint8_t>> frame_data_;
+};
+
 class TestH264Multi {
  public:
   static void DecodeSetStream(const char* input_filename,
@@ -32,11 +52,12 @@ class TestH264Multi {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
-
+    H264TestFrameDataProvider frame_data_provider;
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
-      video->SetDefaultInstance(std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator),
-                                /*hevc=*/false);
+      video->SetDefaultInstance(
+          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider),
+          /*hevc=*/false);
       frame_allocator.set_decoder(video->video_decoder());
     }
     // Don't use parser, because we need to be able to save and restore the read
@@ -106,12 +127,12 @@ class TestH264Multi {
     ASSERT_NE(nullptr, input_h264);
     video->core()->InitializeDirectInput();
     auto nal_units = SplitNalUnits(input_h264->ptr, input_h264->size);
-    for (auto& nal_unit : nal_units) {
+    {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      frame_data_provider.AppendFrameData(std::move(nal_units));
       auto multi_decoder = static_cast<H264MultiDecoder*>(video->video_decoder());
-      multi_decoder->ProcessNalUnit(std::move(nal_unit));
+      multi_decoder->ReceivedNewInput();
     }
-
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(10)));
     {
@@ -133,11 +154,13 @@ class TestH264Multi {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
+    H264TestFrameDataProvider frame_data_provider;
 
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
-      video->SetDefaultInstance(std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator),
-                                /*hevc=*/false);
+      video->SetDefaultInstance(
+          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider),
+          /*hevc=*/false);
       frame_allocator.set_decoder(video->video_decoder());
     }
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, 1024 * PAGE_SIZE,
@@ -166,15 +189,18 @@ class TestH264Multi {
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
     std::vector<std::unique_ptr<TestFrameAllocator>> clients;
+    std::vector<std::unique_ptr<H264TestFrameDataProvider>> providers;
     std::vector<H264MultiDecoder*> decoder_ptrs;
 
     for (uint32_t i = 0; i < 2; i++) {
       auto client = std::make_unique<TestFrameAllocator>(video.get());
+      auto provider = std::make_unique<H264TestFrameDataProvider>();
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
-      auto decoder = std::make_unique<H264MultiDecoder>(video.get(), client.get());
+      auto decoder = std::make_unique<H264MultiDecoder>(video.get(), client.get(), provider.get());
       decoder_ptrs.push_back(decoder.get());
       client->set_decoder(decoder.get());
       clients.push_back(std::move(client));
+      providers.push_back(std::move(provider));
       EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
       auto decoder_instance =
           std::make_unique<DecoderInstance>(std::move(decoder), video->vdec1_core());
@@ -246,9 +272,10 @@ class TestH264Multi {
       auto input_h264 = TestSupport::LoadFirmwareFile(input_files[i]);
       ASSERT_NE(nullptr, input_h264);
       auto nal_units = SplitNalUnits(input_h264->ptr, input_h264->size);
-      for (auto& nal_unit : nal_units) {
+      {
         std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
-        decoder_ptrs[i]->ProcessNalUnit(std::move(nal_unit));
+        providers[i]->AppendFrameData(std::move(nal_units));
+        decoder_ptrs[i]->ReceivedNewInput();
       }
     }
 
