@@ -7,7 +7,7 @@ This document only focuses on the details specific to Rust.
 ## Write a Rust fuzzer {#write-a-rust-fuzzer}
 
 You need to implement a fuzz target function and annotate it with the `[#fuzz]`
-attribute from the [`fuchsia-fuzzing`][fuchsia-fuzzing] crate.
+attribute from the [`fuzz` crate][fuzz crate].
 
 This function should typically be located near the code that it tests. It is
 analogous to a [fuzz target] function in C or C++, and is used by libFuzzer to
@@ -47,13 +47,13 @@ To write a fuzz target function that automatically transforms arbitrary inputs:
    struct ToyStruct { ... }
    ```
 
-1. Create a function with the [`#[fuzz]`][fuchsia-fuzzing] attribute that passes
+1. Create a function with the [`#[fuzz]`][fuzz crate] attribute that passes
    the necessary parameters to the code you wish to test.
 
    For example, in your `src/lib.rs`:
 
    ```
-   use fuchsia_fuzzing::fuzz;
+   use fuzz::fuzz;
 
    #[fuzz]
    fn toy_example_arbitrary(input: ToyStruct) {
@@ -66,13 +66,13 @@ To write a fuzz target function that automatically transforms arbitrary inputs:
 If the code you wish to test already operates on bytes, or if it's not possible
 to implement the `Arbitrary` trait for your inputs, you can create a fuzz target
 function that uses the bytes provided by the fuzzer engine directly. As before,
-this function needs the [`#[fuzz]`][fuchsia-fuzzing] attribute. It should take a
+this function needs the [`#[fuzz]`][fuzz crate] attribute. It should take a
 reference to byte slice as its single parameter, i.e. `&[u8]`.
 
 For example, in your `src/lib.rs`:
 
 ```
-use fuchsia_fuzzing::fuzz;
+use fuzz::fuzz;
 
 #[fuzz]
 fn toy_example_u8(input: &[u8]) {
@@ -156,40 +156,21 @@ To build a Rust fuzzer:
        ```
 
 1. Add the fuzzer to a new or existing [`fuzzers_package`][fuzzers_package] GN
-   target to bundle it into a deployable package. You'll want to add it to a
-   `fuzzer_profile` that tells the build to add Rust instrumentation.
+   target to bundle it into a deployable package.
 
    For example:
 
    ```
    fuzzers_package("example_fuzzers") {
-     fuzzer_profiles = [
-       {
-         fuzzers = [
-           "rust:toy_example_arbitrary",
-           "rust:toy_example_u8",
-         ]
-         sanitizers = [ "rust-asan" ]
-       },
-     ]
+     rust_fuzzers = [
+        "rust:toy_example_arbitrary",
+        "rust:toy_example_u8",
+      ]
    }
    ```
 
 After this, you can continue following the instructions in
 [Fuzz testing in Fuchsia with LibFuzzer](libfuzzer.md).
-
-
-Note: There are different versions of each supported sanitizer runtime for
-different compilers (e.g. `clang`, `rustc`, etc.). Supported variants are
-those with the prefix of "rust-" in the list of [known_variants], e.g.
-"rust-asan-fuzzer".
-
-To use the `rust-asan-fuzzer` variant, [configure your build][fx_set] with the
-following:
-
-```
-fx set [other-args...] --fuzz-with rust-asan`
-```
 
 ## Run a rust fuzzer
 
@@ -203,7 +184,7 @@ The code in this document is taken from the complete Rust fuzzer example in
 
 [addresssanitizer]: https://clang.llvm.org/docs/AddressSanitizer.html
 [arbitrary]: https://docs.rs/arbitrary/0.4.0/arbitrary
-[fuchsia-fuzzing]: /src/lib/fuzzing/rust/src/lib.rs
+[fuzz crate]: /src/lib/fuzzing/rust/src/lib.rs
 [fuzz target]: https://llvm.org/docs/LibFuzzer.html#fuzz-target
 [fuzzers_package]: libfuzzer.md#the-fuzzers-package-gn-template
 [fx_set]: /docs/development/build/fx.md#configure-a-build
