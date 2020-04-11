@@ -33,6 +33,10 @@ fn zx_multithreaded() {
     run_test_with_args(&["--spawn", "--spawn-on-thread", "--job"], true);
     run_test_with_args(&["--spawn", "--spawn-on-thread", "--kill"], true);
     run_test_with_args(&["--spawn", "--spawn-on-thread", "--job", "--kill"], true);
+    run_test_with_args(&["--spawn", "--spawn-on-thread", "--wait"], true);
+    run_test_with_args(&["--spawn", "--spawn-on-thread", "--wait", "--job"], true);
+    run_test_with_args(&["--spawn", "--spawn-on-thread", "--wait", "--kill"], true);
+    run_test_with_args(&["--spawn", "--spawn-on-thread", "--wait", "--job", "--kill"], true);
 }
 
 #[test]
@@ -41,6 +45,13 @@ fn zx_multithreaded_with_panic() {
     run_test_with_args(&["--spawn", "--spawn-on-thread", "--panic", "--job"], false);
     run_test_with_args(&["--spawn", "--spawn-on-thread", "--panic", "--kill"], false);
     run_test_with_args(&["--spawn", "--spawn-on-thread", "--panic", "--job", "--kill"], false);
+    run_test_with_args(&["--spawn", "--spawn-on-thread", "--wait", "--panic"], false);
+    run_test_with_args(&["--spawn", "--spawn-on-thread", "--wait", "--panic", "--job"], false);
+    run_test_with_args(&["--spawn", "--spawn-on-thread", "--wait", "--panic", "--kill"], false);
+    run_test_with_args(
+        &["--spawn", "--spawn-on-thread", "--wait", "--panic", "--job", "--kill"],
+        false,
+    );
 }
 
 #[test]
@@ -111,13 +122,18 @@ fn check_all_processes_terminated(job: &zx::Job) {
     for koid in &koids[0..actual] {
         let process: zx::Process = unsafe {
             let mut handle: zx_handle_t = Default::default();
-            let status = zx_object_get_child(
+            let status = zx::Status::from_raw(zx_object_get_child(
                 job.raw_handle(),
                 *koid,
                 ZX_RIGHT_SAME_RIGHTS,
                 &mut handle as *mut zx_handle_t,
-            );
-            assert_eq!(zx::Status::OK, zx::Status::from_raw(status));
+            ));
+            if status == zx::Status::NOT_FOUND {
+                // The process object can get cleaned up before we create a handle to it.
+                println!("object for process koid {} not found, continuing", koid);
+                continue;
+            }
+            assert_eq!(zx::Status::OK, status);
             zx::Handle::from_raw(handle)
         }
         .into();
@@ -146,13 +162,18 @@ fn check_all_processes_terminated(job: &zx::Job) {
     for koid in &koids[0..actual] {
         let job: zx::Job = unsafe {
             let mut handle: zx_handle_t = Default::default();
-            let status = zx_object_get_child(
+            let status = zx::Status::from_raw(zx_object_get_child(
                 job.raw_handle(),
                 *koid,
                 ZX_RIGHT_SAME_RIGHTS,
                 &mut handle as *mut zx_handle_t,
-            );
-            assert_eq!(zx::Status::OK, zx::Status::from_raw(status));
+            ));
+            if status == zx::Status::NOT_FOUND {
+                // The job object can get cleaned up before we create a handle to it.
+                println!("object for job koid {} not found, continuing", koid);
+                continue;
+            }
+            assert_eq!(zx::Status::OK, status);
             zx::Handle::from_raw(handle)
         }
         .into();

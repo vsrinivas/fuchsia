@@ -42,6 +42,7 @@ rustc_binary("scoped_task_test_spawner") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
   ]
 }

@@ -4,6 +4,7 @@
 
 //! Spawns a subprocess in a configurable way. Used by the scoped_task test.
 
+use anyhow::{format_err, Context};
 use argh::FromArgs;
 use cstr::cstr;
 use fdio::SpawnOptions;
@@ -13,10 +14,11 @@ use scoped_task;
 use std::any::Any;
 use std::env;
 use std::ffi::{CStr, CString};
+use std::sync::mpsc;
 use std::thread;
 
 /// Spawns a subprocess in a configurable way. Used by the scoped_task test.
-#[derive(FromArgs, Clone, Copy)]
+#[derive(FromArgs, Clone, Copy, Debug)]
 struct Options {
     /// sleep forever
     #[argh(switch)]
@@ -27,6 +29,9 @@ struct Options {
     /// spawn process on a new thread
     #[argh(switch)]
     spawn_on_thread: bool,
+    /// wait for thread to finish spawning before exiting or panicking
+    #[argh(switch)]
+    wait: bool,
     /// spawn a job (with a scoped subprocess) instead of a scoped process
     #[argh(switch)]
     job: bool,
@@ -43,33 +48,49 @@ struct Options {
 
 fn main() {
     let opts: Options = argh::from_env();
+    println!("spawner opts={:?}", opts);
     if opts.sleep {
         zx::Time::INFINITE.sleep();
     }
 
     let mut _process = None;
+    let (sender, receiver) = mpsc::channel();
     if opts.spawn {
         if opts.spawn_on_thread {
             scoped_task::install_hooks();
             thread::spawn(move || {
-                let _proc = spawn_sleeper(opts);
+                let proc = spawn_sleeper(opts);
+                if let Err(e) = &proc {
+                    println!("{:#}", e);
+                    assert!(!opts.wait, "spawning should always succeed with --wait");
+                }
+
                 println!("process spawned");
+                sender.send(()).unwrap();
                 zx::Time::INFINITE.sleep();
             });
-        // We let the creation of the child process creation race the
-        // termination of the parent process. Both cases should work.
         } else {
-            _process = Some(spawn_sleeper(opts));
+            _process = Some(
+                spawn_sleeper(opts)
+                    .expect("spawning should always succeed in the singlethreaded case"),
+            );
         }
     }
+
+    if opts.wait {
+        assert!(opts.spawn_on_thread);
+        receiver.recv().unwrap();
+    }
+    // If !opts.wait, we let the creation of the child process creation race the
+    // termination of the parent process. Both cases should work.
 
     if opts.panic {
         panic!("panic requested");
     }
 }
 
-fn spawn_sleeper(opts: Options) -> Box<dyn Any> {
-    let bin = env::args().next().unwrap();
+fn spawn_sleeper(opts: Options) -> anyhow::Result<Box<dyn Any>> {
+    let bin = env::args().next().ok_or(format_err!("couldn't get binary name"))?;
     let bin = CString::new(bin).unwrap();
     let args: [&CStr; 2] = [&bin, cstr!("--sleep")];
 
@@ -77,25 +98,30 @@ fn spawn_sleeper(opts: Options) -> Box<dyn Any> {
         if opts.job || opts.kill {
             panic!("not supported");
         }
-        return Box::new(fdio::spawn(
+        return Ok(Box::new(fdio::spawn(
             &runtime::job_default(),
             SpawnOptions::CLONE_ALL,
             &bin,
             &args,
-        ));
+        )));
     }
 
+    // N.B. Creating the child job and/or process can fail due to the default
+    // scoped job being killed by another thread. We return an error instead of
+    // panicking, so we don't get unexpected panics in a test that's supposed to
+    // exit gracefully.
+
     let job = match opts.job {
-        true => Some(scoped_task::create_child_job().expect("could not create job")),
+        true => Some(scoped_task::create_child_job().context("could not create job")?),
         false => None,
     };
     let job_ref = job.as_ref().unwrap_or_else(|| scoped_task::job_default());
 
-    let proc =
-        scoped_task::spawn(job_ref, SpawnOptions::CLONE_ALL, &bin, &args).expect("could not spawn");
+    let proc = scoped_task::spawn(job_ref, SpawnOptions::CLONE_ALL, &bin, &args)
+        .context("could not spawn")?;
     let proc: Box<dyn Any> = match opts.kill {
         true => Box::new(proc.kill()),
         false => Box::new(proc),
     };
-    Box::new((job, proc))
+    Ok(Box::new((job, proc)))
 }
