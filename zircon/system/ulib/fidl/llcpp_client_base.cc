@@ -36,15 +36,18 @@ void ClientBase::Unbind() {
 }
 
 ClientBase::ClientBase(zx::channel channel, async_dispatcher_t* dispatcher,
-                       TypeErasedOnUnboundFn on_unbound) {
-  binding_ = AsyncBinding::CreateClientBinding(
-      dispatcher, std::move(channel), this, fit::bind_member(this, &ClientBase::InternalDispatch),
-      std::move(on_unbound));
-}
+                       TypeErasedOnUnboundFn on_unbound)
+    : binding_(AsyncBinding::CreateClientBinding(dispatcher, std::move(channel),
+                                                 std::move(on_unbound))) {}
 
 zx_status_t ClientBase::Bind() {
-  if (auto binding = binding_.lock())
+  if (auto binding = binding_.lock()) {
+    binding->SetInterface(this, [this](std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg,
+                                       bool*, zx_status_t* status) {
+                                  *status = Dispatch(msg);
+                                });
     return binding->BeginWait();
+  }
   return ZX_ERR_CANCELED;
 }
 
@@ -78,13 +81,14 @@ void ClientBase::ForgetAsyncTxn(ResponseContext* context) {
   list_delete(node);
 }
 
-void ClientBase::InternalDispatch(std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*,
-                                  zx_status_t* status) {
+zx_status_t ClientBase::Dispatch(fidl_msg_t* msg) {
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+
   // Check the message header. If invalid, return and trigger unbinding.
-  if ((*status = fidl_validate_txn_header(hdr)) != ZX_OK) {
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
     fprintf(stderr, "%s: Received message with invalid header.\n", __func__);
-    return;
+    return status;
   }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.
@@ -106,13 +110,12 @@ void ClientBase::InternalDispatch(std::shared_ptr<AsyncBinding>&, fidl_msg_t* ms
     // If there was no associated context, log the unknown txid and exit.
     if (!context) {
       fprintf(stderr, "%s: Received response for unknown txid %u.\n", __func__, hdr->txid);
-      *status = ZX_ERR_NOT_FOUND;
-      return;
+      return ZX_ERR_NOT_FOUND;
     }
   }
 
   // Dispatch the message
-  *status = Dispatch(msg, context);
+  return dispatch_(msg, context);
 }
 
 }  // namespace internal

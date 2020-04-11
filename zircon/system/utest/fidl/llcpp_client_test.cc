@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -20,39 +21,56 @@
 #include <unordered_set>
 
 namespace fidl {
-namespace internal {
 namespace {
 
-class TestClient : public ClientBase {
+class TestClient final {
  public:
-  TestClient(zx::channel channel, async_dispatcher_t* dispatcher,
-             TypeErasedOnUnboundFn on_unbound)
-      : ClientBase(std::move(channel), dispatcher, std::move(on_unbound)) {
-    ASSERT_OK(Bind());
+  // Generated client will define a nested EventHandlers type.
+  struct EventHandlers {};
+
+  TestClient(internal::ClientBase* binding, EventHandlers handlers) : binding_(binding) {
+    binding_->SetDispatchFn(fit::bind_member(this, &TestClient::Dispatch));
   }
 
-  void PrepareAsyncTxn(ResponseContext* context) {
-    ClientBase::PrepareAsyncTxn(context);
+  void PrepareAsyncTxn(internal::ResponseContext* context) {
+    binding_->PrepareAsyncTxn(context);
     std::unique_lock lock(lock_);
     EXPECT_FALSE(txids_.count(context->Txid()));
     txids_.insert(context->Txid());
   }
 
-  void ForgetAsyncTxn(ResponseContext* context) {
+  void ForgetAsyncTxn(internal::ResponseContext* context) {
     {
       std::unique_lock lock(lock_);
       txids_.erase(context->Txid());
     }
-    ClientBase::ForgetAsyncTxn(context);
+    binding_->ForgetAsyncTxn(context);
   }
 
-  std::shared_ptr<AsyncBinding> GetBinding() {
-    return ClientBase::GetBinding();
+  std::shared_ptr<internal::AsyncBinding> GetBinding() {
+    return binding_->GetBinding();
   }
 
+  uint32_t GetEventCount() {
+    std::unique_lock lock(lock_);
+    return event_count_;
+  }
+
+  bool IsPending(zx_txid_t txid) {
+    std::unique_lock lock(lock_);
+    return txids_.count(txid);
+  }
+
+  size_t GetTxidCount() {
+    std::unique_lock lock(lock_);
+    EXPECT_EQ(binding_->GetTransactionCount(), txids_.size());
+    return txids_.size();
+  }
+
+ private:
   // For responses, find and remove the entry for the matching txid. For events, increment the
   // event count.
-  zx_status_t Dispatch(fidl_msg_t* msg, ResponseContext* context) override {
+  zx_status_t Dispatch(fidl_msg_t* msg, internal::ResponseContext* context) {
     auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
     EXPECT_EQ(!hdr->txid, !context);  // hdr->txid == 0 iff context == nullptr.
     if (!hdr->txid != !context) {
@@ -71,29 +89,14 @@ class TestClient : public ClientBase {
     return ZX_OK;
   }
 
-  uint32_t GetEventCount() {
-    std::unique_lock lock(lock_);
-    return event_count_;
-  }
-
-  bool IsPending(zx_txid_t txid) {
-    std::unique_lock lock(lock_);
-    return txids_.count(txid);
-  }
-
-  size_t GetTxidCount() {
-    auto internal_count = list_length(&contexts_);
-    std::unique_lock lock(lock_);
-    EXPECT_EQ(txids_.size(), internal_count);
-    return internal_count;
-  }
+  internal::ClientBase* const binding_;
 
   std::mutex lock_;
   std::unordered_set<zx_txid_t> txids_;
   uint32_t event_count_ = 0;
 };
 
-class TestResponseContext : public ResponseContext {
+class TestResponseContext : public internal::ResponseContext {
  public:
   TestResponseContext() = default;
   void OnError() {}
@@ -108,16 +111,14 @@ TEST(ClientBaseTestCase, AsyncTxn) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  TypeErasedOnUnboundFn on_unbound =
-      [&](void* impl, UnboundReason reason, zx::channel channel) {
-        EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
-        EXPECT_EQ(local_handle, channel.get());
-        auto* client = static_cast<TestClient*>(impl);
-        EXPECT_EQ(0, client->GetTxidCount());
-        delete client;
-        sync_completion_signal(&unbound);
-      };
-  auto* client = new TestClient(std::move(local), loop.dispatcher(), std::move(on_unbound));
+  ClientPtr<TestClient> client;
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
+                                   EXPECT_EQ(local_handle, channel.get());
+                                   EXPECT_EQ(0, client->GetTxidCount());
+                                   sync_completion_signal(&unbound);
+                                 };
+  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
 
   // Generate a txid for a ResponseContext. Send a "response" message with the same txid from the
   // remote end of the channel.
@@ -142,23 +143,21 @@ TEST(ClientBaseTestCase, ParallelAsyncTxns) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  TypeErasedOnUnboundFn on_unbound =
-      [&](void* impl, UnboundReason reason, zx::channel channel) {
-        EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
-        EXPECT_EQ(local_handle, channel.get());
-        auto* client = static_cast<TestClient*>(impl);
-        EXPECT_EQ(0, client->GetTxidCount());
-        delete client;
-        sync_completion_signal(&unbound);
-      };
-  auto* client = new TestClient(std::move(local), loop.dispatcher(), std::move(on_unbound));
+  ClientPtr<TestClient> client;
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
+                                   EXPECT_EQ(local_handle, channel.get());
+                                   EXPECT_EQ(0, client->GetTxidCount());
+                                   sync_completion_signal(&unbound);
+                                 };
+  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
 
   // In parallel, simulate 10 async transactions and send "response" messages from the remote end of
   // the channel.
   TestResponseContext contexts[10];
   std::thread threads[10];
   for (int i = 0; i < 10; ++i) {
-    threads[i] = std::thread([context = &contexts[i], &remote, client]{
+    threads[i] = std::thread([context = &contexts[i], &remote, &client]{
       client->PrepareAsyncTxn(context);
       EXPECT_TRUE(client->IsPending(context->Txid()));
       fidl_message_header_t hdr;
@@ -181,16 +180,16 @@ TEST(ClientBaseTestCase, ForgetAsyncTxn) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  TestClient client(std::move(local), loop.dispatcher(), nullptr);
+  ClientPtr<TestClient> client(std::move(local), loop.dispatcher());
 
   // Generate a txid for a ResponseContext.
   TestResponseContext context;
-  client.PrepareAsyncTxn(&context);
-  EXPECT_TRUE(client.IsPending(context.Txid()));
+  client->PrepareAsyncTxn(&context);
+  EXPECT_TRUE(client->IsPending(context.Txid()));
 
   // Forget the transaction.
-  client.ForgetAsyncTxn(&context);
-  EXPECT_EQ(0, client.GetTxidCount());
+  client->ForgetAsyncTxn(&context);
+  EXPECT_EQ(0, client->GetTxidCount());
 }
 
 TEST(ClientBaseTestCase, UnknownResponseTxid) {
@@ -202,16 +201,14 @@ TEST(ClientBaseTestCase, UnknownResponseTxid) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  TypeErasedOnUnboundFn on_unbound =
-      [&](void* impl, UnboundReason reason, zx::channel channel) {
-        EXPECT_EQ(fidl::UnboundReason::kInternalError, reason);
-        EXPECT_EQ(local_handle, channel.get());
-        auto* client = static_cast<TestClient*>(impl);
-        EXPECT_EQ(0, client->GetTxidCount());
-        delete client;
-        sync_completion_signal(&unbound);
-      };
-  auto* client = new TestClient(std::move(local), loop.dispatcher(), std::move(on_unbound));
+  ClientPtr<TestClient> client;
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnboundReason::kInternalError, reason);
+                                   EXPECT_EQ(local_handle, channel.get());
+                                   EXPECT_EQ(0, client->GetTxidCount());
+                                   sync_completion_signal(&unbound);
+                                 };
+  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
 
   // Send a "response" message for which there was no outgoing request.
   ASSERT_EQ(0, client->GetTxidCount());
@@ -232,17 +229,14 @@ TEST(ClientBaseTestCase, Events) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  TypeErasedOnUnboundFn on_unbound =
-      [&](void* impl, UnboundReason reason, zx::channel channel) {
-        EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
-        EXPECT_EQ(local_handle, channel.get());
-        auto* client = static_cast<TestClient*>(impl);
-        EXPECT_EQ(10, client->GetEventCount());  // Expect 10 events.
-        delete client;
-        sync_completion_signal(&unbound);
-      };
-  auto* client = new TestClient(std::move(local), loop.dispatcher(), std::move(on_unbound));
-  (void)client;
+  ClientPtr<TestClient> client;
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
+                                   EXPECT_EQ(local_handle, channel.get());
+                                   EXPECT_EQ(10, client->GetEventCount());  // Expect 10 events.
+                                   sync_completion_signal(&unbound);
+                                 };
+  ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
 
   // In parallel, send 10 event messages from the remote end of the channel.
   std::thread threads[10];
@@ -270,15 +264,15 @@ TEST(ClientBaseTestCase, Unbind) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  TypeErasedOnUnboundFn on_unbound = [&](void*, UnboundReason reason, zx::channel channel) {
-                                        EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
-                                        EXPECT_EQ(local_handle, channel.get());
-                                        sync_completion_signal(&unbound);
-                                      };
-  auto* client = new TestClient(std::move(local), loop.dispatcher(), std::move(on_unbound));
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
+                                   EXPECT_EQ(local_handle, channel.get());
+                                   sync_completion_signal(&unbound);
+                                 };
+  ClientPtr<TestClient> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
   // Unbind the client and wait for on_unbound to run.
-  client->Unbind();
+  client.Unbind();
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
@@ -291,12 +285,13 @@ TEST(ClientBaseTestCase, UnbindOnDestroy) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  TypeErasedOnUnboundFn on_unbound = [&](void*, UnboundReason reason, zx::channel channel) {
-                                        EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
-                                        EXPECT_EQ(local_handle, channel.get());
-                                        sync_completion_signal(&unbound);
-                                      };
-  auto* client = new TestClient(std::move(local), loop.dispatcher(), std::move(on_unbound));
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
+                                   EXPECT_EQ(local_handle, channel.get());
+                                   sync_completion_signal(&unbound);
+                                 };
+  auto* client =
+      new ClientPtr<TestClient>(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
   // Delete the client and wait for on_unbound to run.
   delete client;
@@ -312,16 +307,16 @@ TEST(ClientBaseTestCase, BindingRefPreventsUnbind) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  TypeErasedOnUnboundFn on_unbound = [&](void*, UnboundReason reason, zx::channel channel) {
-                                        EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
-                                        EXPECT_EQ(local_handle, channel.get());
-                                        sync_completion_signal(&unbound);
-                                      };
-  auto* client = new TestClient(std::move(local), loop.dispatcher(), std::move(on_unbound));
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
+                                   EXPECT_EQ(local_handle, channel.get());
+                                   sync_completion_signal(&unbound);
+                                 };
+  ClientPtr<TestClient> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
   // Create a strong reference to the binding. Spawn a thread to trigger an Unbind().
   auto binding = client->GetBinding();
-  std::thread([client] { client->Unbind(); }).detach();
+  std::thread([&client] { client.Unbind(); }).detach();
 
   // Yield to allow the other thread to run.
   zx_nanosleep(0);
@@ -333,7 +328,7 @@ TEST(ClientBaseTestCase, BindingRefPreventsUnbind) {
 }
 
 TEST(ClientBaseTestCase, ReleaseOutstandingTxnsOnDestroy) {
-  class ReleaseTestResponseContext : public ResponseContext {
+  class ReleaseTestResponseContext : public internal::ResponseContext {
    public:
     ReleaseTestResponseContext(sync_completion_t* done) : done_(done) {}
     void OnError() {
@@ -349,11 +344,11 @@ TEST(ClientBaseTestCase, ReleaseOutstandingTxnsOnDestroy) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  auto* client = new TestClient(std::move(local), loop.dispatcher(), nullptr);
+  auto* client = new ClientPtr<TestClient>(std::move(local), loop.dispatcher());
 
   // Create and register a response context which will signal when deleted.
   sync_completion_t done;
-  client->PrepareAsyncTxn(new ReleaseTestResponseContext(&done));
+  (*client)->PrepareAsyncTxn(new ReleaseTestResponseContext(&done));
 
   // Delete the client and ensure that the response context is deleted.
   delete client;
@@ -361,5 +356,4 @@ TEST(ClientBaseTestCase, ReleaseOutstandingTxnsOnDestroy) {
 }
 
 }  // namespace
-}  // namespace internal
 }  // namespace fidl

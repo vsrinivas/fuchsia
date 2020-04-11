@@ -45,22 +45,33 @@ class ResponseContext : private list_node_t {
 // derived from `ClientBase` should only be aware of the public APIs.
 class ClientBase {
  public:
+  // Generated client dispatch function. If the ResponseContext* is non-null, the message is a
+  // response to an asynchronous transaction. Otherwise, it is an event.
+  using ClientDispatchFn = fit::function<zx_status_t(fidl_msg_t*, ResponseContext*)>;
+
+  // Transfer ownership of the channel to a new client, initializing state.
+  ClientBase(zx::channel channel, async_dispatcher_t* dispatcher, TypeErasedOnUnboundFn on_unbound);
+
   // If the binding is not already unbound or in the process of being unbound, unbinds the channel
   // from the dispatcher, invoking on_unbound if provided. Note that this object will have been
   // destroyed prior to on_unbound being invoked.
   virtual ~ClientBase();
 
-  // Asynchronously unbind the channel from the dispatcher. on_unbound will be invoked on a
-  // dispatcher thread if provided.
-  void Unbind();
+  // Neither copyable nor movable.
+  ClientBase(const ClientBase& other) = delete;
+  ClientBase& operator=(const ClientBase& other) = delete;
+  ClientBase(ClientBase&& other) = delete;
+  ClientBase& operator=(ClientBase&& other) = delete;
 
- protected:
-  // Transfer ownership of the channel to a new client, initializing state.
-  ClientBase(zx::channel channel, async_dispatcher_t* dispatcher,
-             TypeErasedOnUnboundFn on_unbound);
+  // Set the generated client dispatch function. Must be called before Bind().
+  void SetDispatchFn(ClientDispatchFn dispatch) { dispatch_ = std::move(dispatch); }
 
   // Bind the channel to the dispatcher. Invoke on_unbound on error or unbinding.
   zx_status_t Bind();
+
+  // Asynchronously unbind the channel from the dispatcher. on_unbound will be invoked on a
+  // dispatcher thread if provided.
+  void Unbind();
 
   // Stores the given asynchronous transaction response context, setting the txid field.
   void PrepareAsyncTxn(ResponseContext* context);
@@ -72,16 +83,20 @@ class ClientBase {
   // zx_channel_write(). The caller is responsible for releasing the reference.
   std::shared_ptr<AsyncBinding> GetBinding() { return binding_.lock(); }
 
-  // Invoked by InternalDispatch() below. If `context` is non-null, the message was the response to
-  // an asynchronous transaction. Otherwise, the message was an event.
-  virtual zx_status_t Dispatch(fidl_msg_t* msg, ResponseContext* context) = 0;
+  // For debugging.
+  size_t GetTransactionCount() {
+    std::scoped_lock lock(lock_);
+    return list_length(&contexts_);
+  }
 
-  // Dispatch function invoked by AsyncBinding on incoming message. The client only requires `msg`.
-  void InternalDispatch(std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*,
-                        zx_status_t* status);
+ private:
+  // Dispatch function invoked by AsyncBinding on incoming message.
+  zx_status_t Dispatch(fidl_msg_t* msg);
 
   // Weak reference to the internal binding state.
   std::weak_ptr<AsyncBinding> binding_;
+
+  ClientDispatchFn dispatch_;  // Invoked by Dispatch().
 
   // State for tracking outstanding transactions.
   std::mutex lock_;
