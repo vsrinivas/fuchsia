@@ -18,9 +18,9 @@ executable("run-vc") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.c" ]
   deps = [
+    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/fidl/fuchsia-virtualconsole:c",
   ]
 
   # TODO(44350): UBSan has found an instance of undefined behavior in this target.

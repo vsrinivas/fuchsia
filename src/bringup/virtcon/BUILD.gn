@@ -23,6 +23,7 @@ group("common") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_c",
     "//src/bringup/virtcon/port",
     "//src/storage/deprecated-fs-fidl-handler",
     "//src/ui/input/lib/hid-input-report",
@@ -43,7 +44,6 @@ group("common") {
     "//zircon/system/fidl/fuchsia-hardware-pty:c",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
-    "//zircon/system/fidl/fuchsia-virtualconsole:c",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/image-format:image-format-llcpp",
@@ -95,10 +95,10 @@ test("virtual-console-test-integration") {
   sources = [ "vc-integration-test.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-virtualconsole:c",
   ]
 }
 
