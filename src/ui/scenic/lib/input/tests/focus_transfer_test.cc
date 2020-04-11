@@ -159,8 +159,8 @@ class FocusTransferTest : public InputSystemTest {
 class A11yListener : public fuchsia::ui::input::accessibility::PointerEventListener {
  public:
   A11yListener(scenic_impl::input::InputSystem* input_system) : listener_binding_(this) {
-    input_system->Register(listener_binding_.NewBinding(),
-                           [](bool success) { ASSERT_TRUE(success); });
+    input_system->RegisterA11yListener(listener_binding_.NewBinding(),
+                                       [](bool success) { ASSERT_TRUE(success); });
   }
 
  private:

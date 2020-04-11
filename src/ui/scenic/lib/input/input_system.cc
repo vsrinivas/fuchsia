@@ -88,12 +88,12 @@ const char* InputSystem::kName = "InputSystem";
 InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph)
     : System(std::move(context)), scene_graph_(scene_graph) {
   FXL_CHECK(scene_graph);
+
+  pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(this->context());
+
   ime_service_ = this->context()->app_context()->svc()->Connect<fuchsia::ui::input::ImeService>();
   ime_service_.set_error_handler(
       [](zx_status_t status) { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
-
-  this->context()->app_context()->outgoing()->AddPublicService(
-      accessibility_pointer_event_registry_.GetHandler(this));
 
   this->context()->app_context()->outgoing()->AddPublicService(
       pointer_capture_registry_.GetHandler(this));
@@ -110,12 +110,17 @@ CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
       [](CommandDispatcher* cd) { delete cd; });
 }
 
-void InputSystem::Register(
+A11yPointerEventRegistry::A11yPointerEventRegistry(SystemContext* context) {
+  context->app_context()->outgoing()->AddPublicService(
+      accessibility_pointer_event_registry_.GetHandler(this));
+}
+
+void A11yPointerEventRegistry::Register(
     fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
         pointer_event_listener,
     RegisterCallback callback) {
-  if (!accessibility_pointer_event_listener_) {
-    accessibility_pointer_event_listener_.Bind(std::move(pointer_event_listener));
+  if (!accessibility_pointer_event_listener()) {
+    accessibility_pointer_event_listener().Bind(std::move(pointer_event_listener));
     callback(/*success=*/true);
   } else {
     // An accessibility listener is already registered.
@@ -530,7 +535,7 @@ bool InputSystem::ShouldForwardAccessibilityPointerEvents() {
           },
           /* ReportAccessibilityEventFunction */
           [this](fuchsia::ui::input::accessibility::PointerEvent pointer) {
-            accessibility_pointer_event_listener_->OnEvent(std::move(pointer));
+            accessibility_pointer_event_listener()->OnEvent(std::move(pointer));
           });
 
       for (const auto& kv : touch_targets_) {
@@ -542,7 +547,7 @@ bool InputSystem::ShouldForwardAccessibilityPointerEvents() {
       }
       // Registers an event handler for this listener. This callback captures a pointer to the event
       // buffer that we own, so we need to clear it before we destroy it (see below).
-      accessibility_pointer_event_listener_.events().OnStreamHandled =
+      accessibility_pointer_event_listener().events().OnStreamHandled =
           [buffer = pointer_event_buffer_.get()](
               uint32_t device_id, uint32_t pointer_id,
               fuchsia::ui::input::accessibility::EventHandling handled) {
@@ -552,7 +557,7 @@ bool InputSystem::ShouldForwardAccessibilityPointerEvents() {
     return true;
   } else if (pointer_event_buffer_) {
     // The listener disconnected. Release held events, delete the buffer.
-    accessibility_pointer_event_listener_.events().OnStreamHandled = nullptr;
+    accessibility_pointer_event_listener().events().OnStreamHandled = nullptr;
     pointer_event_buffer_.reset();
   }
   return false;

@@ -20,10 +20,31 @@
 namespace scenic_impl {
 namespace input {
 
+// Implementation of PointerEventRegistry API.
+class A11yPointerEventRegistry : public fuchsia::ui::policy::accessibility::PointerEventRegistry {
+ public:
+  A11yPointerEventRegistry(SystemContext* context);
+
+  // |fuchsia.ui.policy.accessibility.PointerEventRegistry|
+  void Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
+                    pointer_event_listener,
+                RegisterCallback callback) override;
+
+  fuchsia::ui::input::accessibility::PointerEventListenerPtr&
+  accessibility_pointer_event_listener() {
+    return accessibility_pointer_event_listener_;
+  }
+
+ private:
+  fidl::BindingSet<fuchsia::ui::policy::accessibility::PointerEventRegistry>
+      accessibility_pointer_event_registry_;
+  // We honor the first accessibility listener to register. A call to Register()
+  // above will fail if there is already a registered listener.
+  fuchsia::ui::input::accessibility::PointerEventListenerPtr accessibility_pointer_event_listener_;
+};
+
 // Tracks input APIs.
-class InputSystem : public System,
-                    public fuchsia::ui::policy::accessibility::PointerEventRegistry,
-                    public fuchsia::ui::input::PointerCaptureListenerRegistry {
+class InputSystem : public System, public fuchsia::ui::input::PointerCaptureListenerRegistry {
  public:
   struct PointerCaptureListener {
     fuchsia::ui::input::PointerCaptureListenerPtr listener_ptr;
@@ -42,19 +63,19 @@ class InputSystem : public System,
 
   fuchsia::ui::input::ImeServicePtr& ime_service() { return ime_service_; }
 
+  fuchsia::ui::input::accessibility::PointerEventListenerPtr& accessibility_pointer_event_listener()
+      const {
+    return pointer_event_registry_->accessibility_pointer_event_listener();
+  }
+
   bool IsAccessibilityPointerEventForwardingEnabled() const {
-    return accessibility_pointer_event_listener_ &&
-           accessibility_pointer_event_listener_.is_bound();
+    return accessibility_pointer_event_listener() &&
+           accessibility_pointer_event_listener().is_bound();
   }
 
   std::map<scheduling::SessionId, EventReporterWeakPtr>& hard_keyboard_requested() {
     return hard_keyboard_requested_;
   }
-
-  // |fuchsia.ui.policy.accessibility.PointerEventRegistry|
-  void Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
-                    pointer_event_listener,
-                RegisterCallback callback) override;
 
   // |fuchsia.ui.pointercapture.ListenerRegistry|
   void RegisterListener(
@@ -67,6 +88,13 @@ class InputSystem : public System,
   // Retrieve focused ViewRef's KOID from the scene graph.
   // Return ZX_KOID_INVALID if scene does not exist, or if the focus chain is empty.
   zx_koid_t focus() const;
+
+  // For tests.
+  void RegisterA11yListener(
+      fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener> listener,
+      A11yPointerEventRegistry::RegisterCallback callback) {
+    pointer_event_registry_->Register(std::move(listener), std::move(callback));
+  }
 
  private:
   // Gets the global transform of the view corresponding to |view_ref| from the scene graph's view
@@ -116,7 +144,15 @@ class InputSystem : public System,
   void ReportPointerEventToPointerCaptureListener(const fuchsia::ui::input::PointerEvent& pointer,
                                                   GlobalId compositor_id) const;
 
+ private:
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
+
+  std::unique_ptr<A11yPointerEventRegistry> pointer_event_registry_;
+
+  // When accessibility pointer event forwarding is enabled, this buffer stores
+  // pointer events until an accessibility listener decides how to handle them.
+  // It is always null otherwise.
+  std::unique_ptr<PointerEventBuffer> pointer_event_buffer_;
 
   // Send hard keyboard events to IME Service for dispatch via IME.
   // NOTE: This flow will be replaced by a direct dispatch from a "Root Presenter" to IME Service.
@@ -128,17 +164,6 @@ class InputSystem : public System,
   // each InputCommandDispatcher works independently.
   // NOTE: This flow will be replaced by a direct dispatch from a "Root Presenter" to IME Service.
   std::map<scheduling::SessionId, EventReporterWeakPtr> hard_keyboard_requested_;
-
-  fidl::BindingSet<fuchsia::ui::policy::accessibility::PointerEventRegistry>
-      accessibility_pointer_event_registry_;
-  // We honor the first accessibility listener to register. A call to Register()
-  // above will fail if there is already a registered listener.
-  fuchsia::ui::input::accessibility::PointerEventListenerPtr accessibility_pointer_event_listener_;
-
-  // When accessibility pointer event forwarding is enabled, this buffer stores
-  // pointer events until an accessibility listener decides how to handle them.
-  // It is always null otherwise.
-  std::unique_ptr<PointerEventBuffer> pointer_event_buffer_;
 
   fidl::BindingSet<fuchsia::ui::input::PointerCaptureListenerRegistry> pointer_capture_registry_;
   // A singleton listener who wants to be notified when pointer events happen.

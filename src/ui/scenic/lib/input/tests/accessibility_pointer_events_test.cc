@@ -50,7 +50,8 @@ class MockAccessibilityPointerEventListener
  public:
   MockAccessibilityPointerEventListener(scenic_impl::input::InputSystem* input) : binding_(this) {
     binding_.set_error_handler([this](zx_status_t) { is_registered_ = false; });
-    input->Register(binding_.NewBinding(), [this](bool success) { is_registered_ = success; });
+    input->RegisterA11yListener(binding_.NewBinding(),
+                                [this](bool success) { is_registered_ = success; });
   }
 
   bool is_registered() const { return is_registered_; }
