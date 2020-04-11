@@ -51,7 +51,7 @@ class KeyboardHelp extends StatelessWidget {
                           height: 500,
                           child: SingleChildScrollView(
                             child: Text(
-                              model.keyboardShortcuts,
+                              model.keyboardShortcutsHelpText,
                               style: TextStyle(
                                 fontFamily: 'RobotoMono',
                                 fontSize: 14.0,

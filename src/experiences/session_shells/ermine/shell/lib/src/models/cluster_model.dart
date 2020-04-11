@@ -157,8 +157,12 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
     }
 
     // If the story was also focused, set focus on next story in same cluster.
-    if (focusedStory == story && currentCluster.value.stories.isNotEmpty) {
-      currentCluster.value.stories.last.focus();
+    if (focusedStory == story) {
+      if (currentCluster.value.stories.isNotEmpty) {
+        currentCluster.value.stories.last.focus();
+      } else {
+        focusedStoryNotifier.value = null;
+      }
     }
   }
 

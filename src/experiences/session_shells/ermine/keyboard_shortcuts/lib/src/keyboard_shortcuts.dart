@@ -9,8 +9,9 @@ import 'package:meta/meta.dart';
 
 import 'package:fidl_fuchsia_ui_input2/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
-    show Registry, Shortcut, Trigger, Listener, ListenerBinding;
+    show Registry, RegistryProxy, Shortcut, Trigger, Listener, ListenerBinding;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
+import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:zircon/zircon.dart' show EventPairPair;
 
 /// Listens for keyboard shortcuts and triggers callbacks when they occur.
@@ -36,7 +37,25 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
     shortcuts.forEach(registry.registerShortcut);
   }
 
+  factory KeyboardShortcuts.fromStartupContext(
+    StartupContext startupContext, {
+    Map<String, VoidCallback> actions,
+    String bindings,
+  }) {
+    final shortcutRegistry = ui_shortcut.RegistryProxy();
+    startupContext.incoming.connectToService(shortcutRegistry);
+    return KeyboardShortcuts(
+      registry: shortcutRegistry,
+      actions: actions,
+      bindings: bindings,
+    );
+  }
+
   void dispose() {
+    if (registry is ui_shortcut.RegistryProxy) {
+      ui_shortcut.RegistryProxy proxy = registry;
+      proxy.ctrl.close();
+    }
     shortcuts.clear();
     _listenerBinding.close();
   }

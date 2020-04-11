@@ -74,7 +74,7 @@ class Overview extends StatelessWidget {
                 Expanded(
                   child: Container(
                     padding: ErmineStyle.kOverviewElementPadding,
-                    child: Status(model: model.status),
+                    child: Status(model: model.statusModel),
                   ),
                 ),
               ],

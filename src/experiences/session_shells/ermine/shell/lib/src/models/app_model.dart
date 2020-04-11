@@ -6,14 +6,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
-import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
-    show RegistryProxy;
 import 'package:fidl_fuchsia_ui_policy/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
-
 import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
@@ -27,13 +23,16 @@ import 'status_model.dart';
 import 'topbar_model.dart';
 
 /// Model that manages all the application state of this session shell.
+///
+/// Its primary responsibility is to manage visibility of top level UI widgets
+/// like Overview, Recents, Ask and Status.
 class AppModel {
-  final _presentation = PresentationProxy();
-  final _pointerEventsListener = PointerEventsListener();
-  final _shortcutRegistry = ui_shortcut.RegistryProxy();
+  KeyboardShortcuts _keyboardShortcuts;
+  PointerEventsListener _pointerEventsListener;
+  SuggestionService _suggestionService;
+
   final _intl = PropertyProviderProxy();
 
-  SuggestionService _suggestionService;
   PresenterService _presenterService;
 
   /// The [GlobalKey] associated with [Ask] widget.
@@ -52,30 +51,60 @@ class AppModel {
   ValueNotifier<bool> peekNotifier = ValueNotifier(false);
   ValueNotifier<bool> recentsVisibility = ValueNotifier(false);
   Stream<Locale> _localeStream;
-  KeyboardShortcuts _keyboardShortcuts;
+
   ClustersModel clustersModel;
-  StatusModel status;
+  StatusModel statusModel;
   TopbarModel topbarModel;
-  String keyboardShortcuts = 'Help Me!';
+  String keyboardShortcutsHelpText = 'Help Me!';
 
-  AppModel() {
-    _startupContext.incoming.connectToService(_shortcutRegistry);
-    _startupContext.incoming.connectToService(_intl);
-    _startupContext.incoming.connectToService(_presentation);
+  AppModel({
+    KeyboardShortcuts keyboardShortcuts,
+    PointerEventsListener pointerEventsListener,
+    LocaleSource localeSource,
+    SuggestionService suggestionService,
+    this.statusModel,
+    this.clustersModel,
+  })  : _keyboardShortcuts = keyboardShortcuts,
+        _pointerEventsListener = pointerEventsListener,
+        _suggestionService = suggestionService {
+    // Setup child models.
+    topbarModel = TopbarModel(appModel: this);
 
-    _localeStream = LocaleSource(_intl).stream().asBroadcastStream();
+    statusModel ??= StatusModel.fromStartupContext(_startupContext, onLogout);
 
-    clustersModel = ClustersModel();
+    clustersModel ??= ClustersModel();
 
-    _suggestionService = SuggestionService.fromStartupContext(
+    // Setup keyboard shortcuts.
+    _keyboardShortcuts ??= KeyboardShortcuts.fromStartupContext(
+      _startupContext,
+      actions: actions,
+      bindings: keyboardBindings,
+    );
+    keyboardShortcutsHelpText = _keyboardShortcuts.helpText();
+
+    // Setup pointer events listener.
+    _pointerEventsListener ??=
+        _PointerEventsListener.fromStartupContext(_startupContext);
+
+    // Setup locale stream.
+    if (localeSource == null) {
+      _startupContext.incoming.connectToService(_intl);
+      localeSource = LocaleSource(_intl);
+    }
+    _localeStream = localeSource.stream().asBroadcastStream();
+
+    // Suggestion service.
+    _suggestionService ??= SuggestionService.fromStartupContext(
       startupContext: _startupContext,
       onSuggestion: clustersModel.storySuggested,
     );
 
-    topbarModel = TopbarModel(appModel: this);
+    // Expose PresenterService to the environment.
+    advertise();
+  }
 
-    status = StatusModel.fromStartupContext(_startupContext, onLogout);
-
+  @visibleForTesting
+  void advertise() {
     // Expose the presenter service to the environment.
     _presenterService = PresenterService(clustersModel.presentStory);
     _startupContext.outgoing
@@ -93,33 +122,9 @@ class AppModel {
   /// Called after runApp which initializes flutter's gesture system.
   Future<void> onStarted() async {
     // Capture pointer events directly from Scenic.
-    _pointerEventsListener.listen(_presentation);
-
-    // Capture key pressess for key bindings in keyboard_shortcuts.json.
-    File file = File('/pkg/data/keyboard_shortcuts.json');
-    if (file.existsSync()) {
-      final bindings = await file.readAsString();
-      _keyboardShortcuts = KeyboardShortcuts(
-        registry: _shortcutRegistry,
-        actions: {
-          'shortcuts': onKeyboard,
-          'ask': onMeta,
-          'overview': onOverview,
-          'recents': onRecents,
-          'fullscreen': onFullscreen,
-          'cancel': onCancel,
-          'close': onClose,
-          'status': onStatus,
-          'nextCluster': clustersModel.nextCluster,
-          'previousCluster': clustersModel.previousCluster,
-          'logout': onLogout,
-        },
-        bindings: bindings,
-      );
-      keyboardShortcuts = _keyboardShortcuts.helpText();
-    } else {
-      throw ArgumentError.value(
-          'keyboard_shortcuts.json', 'fileName', 'File does not exist');
+    if (_pointerEventsListener is _PointerEventsListener) {
+      _PointerEventsListener listener = _pointerEventsListener;
+      listener.listen(listener.presentation);
     }
 
     // Update the current time every second.
@@ -141,6 +146,28 @@ class AppModel {
     inspect.Inspect.onDemand('ermine', _onInspect);
   }
 
+  // Map key shortcuts to corresponding actions.
+  Map<String, VoidCallback> get actions => {
+        'shortcuts': onKeyboard,
+        'ask': onAsk,
+        'overview': onOverview,
+        'recents': onRecents,
+        'fullscreen': onFullscreen,
+        'cancel': onCancel,
+        'close': onClose,
+        'status': onStatus,
+        'nextCluster': clustersModel.nextCluster,
+        'previousCluster': clustersModel.previousCluster,
+        'logout': onLogout,
+      };
+
+  // Returns key bindings in keyboard_shortcuts.json. Throws a fatal exception
+  // if not found.
+  String get keyboardBindings {
+    File file = File('/pkg/data/keyboard_shortcuts.json');
+    return file.readAsStringSync();
+  }
+
   void onFullscreen() {
     if (clustersModel.fullscreenStory != null) {
       clustersModel.fullscreenStory.restore();
@@ -151,9 +178,9 @@ class AppModel {
     }
   }
 
-  /// Toggles the Ask bar.
-  void onMeta() {
-    if (!hasStories) {
+  /// Toggles the Ask bar when Overview is not visible.
+  void onAsk() {
+    if (!hasStories || overviewVisibility.value == true) {
       return;
     }
     if (askVisibility.value == false) {
@@ -176,9 +203,9 @@ class AppModel {
     overviewVisibility.value = !overviewVisibility.value;
   }
 
-  /// Toggles recents.
+  /// Toggles recents when Overview is not visible.
   void onRecents() {
-    if (!hasStories) {
+    if (!hasStories || overviewVisibility.value == true) {
       return;
     }
     if (recentsVisibility.value == false) {
@@ -189,9 +216,9 @@ class AppModel {
     recentsVisibility.value = !recentsVisibility.value;
   }
 
-  /// Toggles the Status menu on/off.
+  /// Toggles the Status menu on/off when Overview is not visible.
   void onStatus() {
-    if (!hasStories) {
+    if (!hasStories || overviewVisibility.value == true) {
       return;
     }
     if (statusVisibility.value == false) {
@@ -204,22 +231,25 @@ class AppModel {
   /// Called when tapped behind Ask bar, quick settings, notifications or the
   /// Escape key was pressed.
   void onCancel() {
-    status.reset();
+    statusModel.reset();
     askVisibility.value = false;
     statusVisibility.value = false;
     helpVisibility.value = false;
     recentsVisibility.value = false;
-    overviewVisibility.value = !hasStories;
+    overviewVisibility.value = overviewVisibility.value || !hasStories;
   }
 
   /// Called when the user wants to delete the story.
   void onClose() {
-    clustersModel.focusedStory?.delete();
+    // Close is allowed when not in Overview.
+    if (overviewVisibility.value == false) {
+      clustersModel.focusedStory?.delete();
+    }
   }
 
   /// Called when the keyboard help button is tapped.
   void onKeyboard() {
-    if (!hasStories) {
+    if (overviewVisibility.value == true) {
       return;
     }
     if (helpVisibility.value == false) {
@@ -232,50 +262,13 @@ class AppModel {
   /// Called when the user initiates logout (using keyboard or UI).
   void onLogout() {
     onCancel();
+    _keyboardShortcuts.dispose();
     _pointerEventsListener.stop();
 
-    _intl.ctrl.close();
+    _intl?.ctrl?.close();
     _suggestionService.dispose();
-    status.dispose();
-    _keyboardShortcuts.dispose();
-    _shortcutRegistry.ctrl.close();
-    _presentation.ctrl.close();
+    statusModel.dispose();
   }
-
-  void injectTap(Offset offset) {
-    _presentation
-      ..injectPointerEventHack(_createPointerEvent(
-        phase: input.PointerEventPhase.add,
-        offset: offset,
-      ))
-      ..injectPointerEventHack(_createPointerEvent(
-        phase: input.PointerEventPhase.down,
-        offset: offset,
-      ))
-      ..injectPointerEventHack(_createPointerEvent(
-        phase: input.PointerEventPhase.up,
-        offset: offset,
-      ))
-      ..injectPointerEventHack(_createPointerEvent(
-        phase: input.PointerEventPhase.remove,
-        offset: offset,
-      ));
-  }
-
-  input.PointerEvent _createPointerEvent({
-    input.PointerEventPhase phase,
-    Offset offset,
-  }) =>
-      input.PointerEvent(
-        eventTime: 0,
-        deviceId: 0,
-        pointerId: 0,
-        type: input.PointerEventType.touch,
-        phase: phase,
-        x: offset.dx,
-        y: offset.dy,
-        buttons: 0,
-      );
 
   void _onInspect(inspect.Node node) {
     // Session.
@@ -285,9 +278,27 @@ class AppModel {
     askKey.currentState?.onInspect(node.child('ask'));
 
     // Status.
-    status.onInspect(node.child('status'));
+    statusModel.onInspect(node.child('status'));
 
     // Topbar.
     topbarModel.onInspect(node.child('topbar'));
+  }
+}
+
+class _PointerEventsListener extends PointerEventsListener {
+  final PresentationProxy presentation;
+
+  _PointerEventsListener(this.presentation) : super();
+
+  factory _PointerEventsListener.fromStartupContext(StartupContext context) {
+    final presentation = PresentationProxy();
+    context.incoming.connectToService(presentation);
+    return _PointerEventsListener(presentation);
+  }
+
+  @override
+  void stop() {
+    super.stop();
+    presentation.ctrl.close();
   }
 }

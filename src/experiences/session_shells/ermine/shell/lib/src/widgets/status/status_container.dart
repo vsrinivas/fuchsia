@@ -26,7 +26,7 @@ class StatusContainer extends StatelessWidget {
             ErmineStyle.kTopBarHeight -
             ErmineStyle.kStoryTitleHeight;
     final status = Material(
-      key: model.status.key,
+      key: model.statusModel.key,
       color: ErmineStyle.kBackgroundColor,
       elevation: Elevations.systemOverlayElevation,
       child: Container(
@@ -36,7 +36,7 @@ class StatusContainer extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border.all(color: ErmineStyle.kOverlayBorderColor),
         ),
-        child: Status(model: model.status),
+        child: Status(model: model.statusModel),
       ),
     );
     return RepaintBoundary(

@@ -43,7 +43,7 @@ class TopbarModel implements Inspectable {
   void showRecents() => appModel.onRecents();
 
   /// Display the Ask bar. Called by Ask Button.
-  void showAsk() => appModel.onMeta();
+  void showAsk() => appModel.onAsk();
 
   /// Display the keyboard help panel.
   void showKeyboardHelp() => appModel.onKeyboard();
