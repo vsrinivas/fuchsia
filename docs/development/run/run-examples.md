@@ -26,7 +26,7 @@ In the example package's top level `BUILD.gn` file,
 the `hello_world` target is a group containing other dependencies,
 notably `cpp` and `rust`. Therefore, this target builds both of them:
 
-```uglyprint
+```none
 group("hello_world") {
   testonly = true
   deps = [
@@ -97,14 +97,14 @@ to the `fx shell run` command:
 
 This command prints the following output:
 
-```uglyprint
+```none
 Hello, World!
 ```
 
 If `fx serve` is not running, the command prints an error message from
 the device:
 
-```uglyprint
+```none
 fuchsia-pkg://fuchsia.com/hello_world_cpp#meta/hello_world_cpp.cmx: not found.
 ```
 
@@ -120,13 +120,13 @@ The `fx shell run` command can match a string to a package URL
 if the string is only mapped to one component
 in your product configuration. For example:
 
-```uglyprint
+```none
 $ fx shell run hello_world_cpp.cmx
 ```
 
 If multiple matches exist, the command prints the list of matches:
 
-```uglyprint
+```none
 $ fx shell run hello_world
 fuchsia-pkg://fuchsia.com/hello_world_cpp_tests#meta/hello_world_cpp_unittests.cmx
 fuchsia-pkg://fuchsia.com/hello_world_rust_tests#meta/hello_world_rust_bin_test.cm
