@@ -4,13 +4,13 @@
 
 mod apply;
 mod channel;
+mod channel_handler;
 mod check;
 mod config;
 mod connect;
 mod errors;
 mod last_update_storage;
 mod poller;
-mod provider_handler;
 mod rate_limiter;
 mod update_manager;
 mod update_monitor;
@@ -19,13 +19,14 @@ mod update_service;
 use {
     crate::{
         apply::Initiator,
+        channel_handler::ChannelHandler,
         config::Config,
         poller::run_periodic_update_check,
-        provider_handler::ProviderHandler,
         update_service::{RealUpdateManager, RealUpdateService},
     },
     anyhow::{Context as _, Error},
     fidl_fuchsia_update_channel::ProviderRequestStream,
+    fidl_fuchsia_update_channelcontrol::ChannelControlRequestStream,
     forced_fdr::perform_fdr_if_necessary,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -49,13 +50,12 @@ async fn main() -> Result<(), Error> {
 
     let inspector = finspect::Inspector::new();
 
-    let mut target_channel_manager =
+    let target_channel_manager =
         channel::TargetChannelManager::new(connect::ServiceConnector, "/misc/ota");
     if let Err(e) = target_channel_manager.update().await {
         fx_log_err!("while updating the target channel: {}", e);
     }
-
-    let info_handler = ProviderHandler::default();
+    let target_channel_manager = Arc::new(target_channel_manager);
 
     let futures = FuturesUnordered::new();
 
@@ -65,22 +65,36 @@ async fn main() -> Result<(), Error> {
             "/misc/ota",
         )?;
     futures.push(current_channel_notifier.run().boxed());
+    let current_channel_manager = Arc::new(current_channel_manager);
 
     let update_manager = RealUpdateManager::new(
-        target_channel_manager,
-        current_channel_manager,
+        Arc::clone(&target_channel_manager),
+        Arc::clone(&current_channel_manager),
         inspector.root().create_child("update-manager"),
     )
     .await;
     let update_manager = Arc::new(update_manager);
 
     let mut fs = ServiceFs::new();
-    let update_manager_clone = update_manager.clone();
+    let update_manager_clone = Arc::clone(&update_manager);
+    let channel_handler =
+        Arc::new(ChannelHandler::new(current_channel_manager, target_channel_manager));
+    let channel_handler_clone = Arc::clone(&channel_handler);
+    let channel_handler_provider_clone = Arc::clone(&channel_handler);
+
     fs.dir("svc")
         .add_fidl_service(move |stream| {
-            IncomingServices::Manager(stream, RealUpdateService::new(update_manager_clone.clone()))
+            IncomingServices::Manager(
+                stream,
+                RealUpdateService::new(Arc::clone(&update_manager_clone)),
+            )
         })
-        .add_fidl_service(|stream| IncomingServices::Provider(stream, &info_handler));
+        .add_fidl_service(move |stream| {
+            IncomingServices::Provider(stream, Arc::clone(&channel_handler_provider_clone))
+        })
+        .add_fidl_service(move |stream| {
+            IncomingServices::ChannelControl(stream, Arc::clone(&channel_handler_clone))
+        });
 
     inspector.serve(&mut fs)?;
 
@@ -118,18 +132,22 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-enum IncomingServices<'a> {
+enum IncomingServices {
     Manager(fidl_fuchsia_update::ManagerRequestStream, RealUpdateService),
-    Provider(ProviderRequestStream, &'a ProviderHandler),
+    Provider(ProviderRequestStream, Arc<ChannelHandler>),
+    ChannelControl(ChannelControlRequestStream, Arc<ChannelHandler>),
 }
 
-async fn handle_incoming_service(incoming_service: IncomingServices<'_>) -> Result<(), Error> {
+async fn handle_incoming_service(incoming_service: IncomingServices) -> Result<(), Error> {
     match incoming_service {
         IncomingServices::Manager(request_stream, update_service) => {
             update_service.handle_request_stream(request_stream).await
         }
         IncomingServices::Provider(request_stream, handler) => {
-            handler.handle_request_stream(request_stream).await
+            handler.handle_provider_request_stream(request_stream).await
+        }
+        IncomingServices::ChannelControl(request_stream, handler) => {
+            handler.handle_control_request_stream(request_stream).await
         }
     }
 }

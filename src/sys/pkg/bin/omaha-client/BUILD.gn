@@ -131,12 +131,6 @@ config_data("omaha-client-sysmgr-config") {
   sources = [ "sysmgr.config" ]
 }
 
-config_data("as-update-checker") {
-  for_pkg = "sysmgr"
-  outputs = [ "omaha_client_sysmgr.config" ]
-  sources = [ "as_update_checker_sysmgr.config" ]
-}
-
 group("tests") {
   testonly = true
   public_deps = [

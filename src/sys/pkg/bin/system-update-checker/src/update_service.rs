@@ -188,8 +188,8 @@ mod tests {
         let update_service = UpdateService::<T, Ch, C, A> {
             update_manager: Arc::new(
                 UpdateManager::<T, Ch, C, A, RealStateNotifier>::from_checker_and_applier(
-                    channel_updater,
-                    current_channel_updater,
+                    Arc::new(channel_updater),
+                    Arc::new(current_channel_updater),
                     update_checker,
                     update_applier,
                     FakeLastUpdateStorage::new(),

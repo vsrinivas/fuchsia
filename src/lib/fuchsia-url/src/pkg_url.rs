@@ -262,6 +262,17 @@ impl RepoUrl {
     pub fn host(&self) -> &str {
         &self.host
     }
+
+    /// Returns the channel name of the repo, if exists.
+    pub fn channel(&self) -> Option<&str> {
+        // TODO: replace with `.strip_suffix(".fuchsia.com")` once that's stable.
+        let suffix = ".fuchsia.com";
+        if self.host.ends_with(suffix) {
+            self.host[..self.host.len() - suffix.len()].split('.').nth(1)
+        } else {
+            None
+        }
+    }
 }
 
 impl str::FromStr for RepoUrl {
@@ -928,5 +939,26 @@ mod tests {
         for url in urls {
             assert_eq!(RepoUrl::parse(url), Err(ParseError::InvalidRepository));
         }
+    }
+
+    #[test]
+    fn test_repo_url_channel() {
+        for s in vec![
+            "devhost",
+            "fuchsia.com",
+            "example.com",
+            "test.fuchsia.com",
+            "test.example.com",
+            "a.b-c.d.example.com",
+            "ignore.channel.fuchsia.comx",
+            "ignore.channel.fuchsia.com.evil.com",
+        ] {
+            assert_eq!(RepoUrl::new(s.to_string()).unwrap().channel(), None);
+        }
+        assert_eq!(RepoUrl::new("a.b-c.d.fuchsia.com".to_string()).unwrap().channel(), Some("b-c"));
+        assert_eq!(
+            RepoUrl::new("test.fuchsia.com.fuchsia.com".to_string()).unwrap().channel(),
+            Some("fuchsia")
+        );
     }
 }

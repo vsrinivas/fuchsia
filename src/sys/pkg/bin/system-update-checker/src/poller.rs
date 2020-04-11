@@ -72,8 +72,8 @@ mod tests {
 
         let checker = FakeUpdateChecker::new_up_to_date();
         let mut fut = UpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             checker.clone(),
             UnreachableUpdateApplier,
             FakeLastUpdateStorage::new(),
@@ -99,8 +99,8 @@ mod tests {
         let checker = FakeUpdateChecker::new_up_to_date();
         let callback = StateChangeCollector::new();
         let mut fut = UpdateManager::<_, _, _, _, StateChangeCollector>::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             checker.clone(),
             UnreachableUpdateApplier,
             FakeLastUpdateStorage::new(),
@@ -161,8 +161,8 @@ mod tests {
         let update_blocked = checker.block().unwrap();
         let callback = StateChangeCollector::new();
         let mut fut = UpdateManager::<_, _, _, _, StateChangeCollector>::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             checker.clone(),
             UnreachableUpdateApplier,
             FakeLastUpdateStorage::new(),

@@ -3,6 +3,10 @@
         "binary": "bin/system-update-checker"
     },
     "sandbox": {
+        "dev": [
+            "class/skip-block",
+            "sys/platform"
+        ],
         "features": [
             "config-data",
             "deprecated-misc-storage",
@@ -18,6 +22,7 @@
             "fuchsia.logger.LogSink",
             "fuchsia.paver.Paver",
             "fuchsia.pkg.PackageResolver",
+            "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Launcher",

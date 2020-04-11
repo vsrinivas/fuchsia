@@ -113,14 +113,8 @@ impl RepositoryManager {
     /// Returns a reference to the [RepositoryConfig] static config that matches the `channel`.
     pub fn get_repo_for_channel(&self, channel: &str) -> Option<&Arc<RepositoryConfig>> {
         for (repo_url, config) in self.static_configs.iter() {
-            let host = repo_url.host();
-            if let Some(n) = host.rfind(".fuchsia.com") {
-                let (prefix, _) = host.split_at(n);
-                if let Some(name) = prefix.split('.').nth(1) {
-                    if name == channel {
-                        return Some(config);
-                    }
-                }
+            if repo_url.channel() == Some(channel) {
+                return Some(config);
             }
         }
 

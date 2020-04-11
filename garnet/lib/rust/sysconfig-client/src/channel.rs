@@ -42,7 +42,7 @@ impl Header {
 }
 
 /// To be serialized as JSON:
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct OtaUpdateChannelConfig {
     channel_name: String, // chars must be in the range [32-126], up to 1024 long
     tuf_config_name: String,

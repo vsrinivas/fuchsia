@@ -52,8 +52,8 @@ where
     C: UpdateChecker,
     A: UpdateApplier,
 {
-    target_channel_updater: T,
-    current_channel_updater: Ch,
+    target_channel_updater: Arc<T>,
+    current_channel_updater: Arc<Ch>,
     update_checker: C,
     update_applier: A,
     last_update_storage: Arc<dyn LastUpdateStorage + Send + Sync>,
@@ -66,8 +66,8 @@ where
     Ch: CurrentChannelUpdater,
 {
     pub async fn new(
-        target_channel_updater: T,
-        current_channel_updater: Ch,
+        target_channel_updater: Arc<T>,
+        current_channel_updater: Arc<Ch>,
         node: finspect::Node,
     ) -> Self {
         let (fut, update_monitor) = UpdateMonitor::from_inspect_node(node);
@@ -98,8 +98,8 @@ where
 {
     #[cfg(test)]
     pub async fn from_checker_and_applier(
-        target_channel_updater: T,
-        current_channel_updater: Ch,
+        target_channel_updater: Arc<T>,
+        current_channel_updater: Arc<Ch>,
         update_checker: C,
         update_applier: A,
         last_update_storage: Arc<impl LastUpdateStorage + Send + Sync + 'static>,
@@ -121,8 +121,8 @@ where
 
     #[cfg(test)]
     pub async fn from_checker_and_applier_and_last_known_update_package(
-        target_channel_updater: T,
-        current_channel_updater: Ch,
+        target_channel_updater: Arc<T>,
+        current_channel_updater: Arc<Ch>,
         update_checker: C,
         update_applier: A,
         last_update_storage: Arc<impl LastUpdateStorage + Send + Sync + 'static>,
@@ -247,8 +247,8 @@ where
     A: UpdateApplier,
 {
     fn new(
-        target_channel_updater: T,
-        current_channel_updater: Ch,
+        target_channel_updater: Arc<T>,
+        current_channel_updater: Arc<Ch>,
         update_checker: C,
         update_applier: A,
         last_update_storage: Arc<dyn LastUpdateStorage + Send + Sync>,
@@ -265,8 +265,8 @@ where
     }
 
     pub async fn load(
-        target_channel_updater: T,
-        current_channel_updater: Ch,
+        target_channel_updater: Arc<T>,
+        current_channel_updater: Arc<Ch>,
         update_checker: C,
         update_applier: A,
         last_update_storage: Arc<dyn LastUpdateStorage + Send + Sync>,
@@ -438,11 +438,11 @@ impl UpdateChecker for RealUpdateChecker {
 
 // For mocking
 pub trait TargetChannelUpdater: Send + Sync + 'static {
-    fn update(&mut self) -> BoxFuture<'_, ()>;
+    fn update(&self) -> BoxFuture<'_, ()>;
 }
 
 impl<S: ServiceConnect + 'static> TargetChannelUpdater for TargetChannelManager<S> {
-    fn update(&mut self) -> BoxFuture<'_, ()> {
+    fn update(&self) -> BoxFuture<'_, ()> {
         TargetChannelManager::update(self)
             .unwrap_or_else(|e| fx_log_err!("while updating target channel: {:?}", e))
             .boxed()
@@ -451,11 +451,11 @@ impl<S: ServiceConnect + 'static> TargetChannelUpdater for TargetChannelManager<
 
 // For mocking
 pub trait CurrentChannelUpdater: Send + Sync + 'static {
-    fn update(&mut self) -> BoxFuture<'_, ()>;
+    fn update(&self) -> BoxFuture<'_, ()>;
 }
 
 impl CurrentChannelUpdater for CurrentChannelManager {
-    fn update(&mut self) -> BoxFuture<'_, ()> {
+    fn update(&self) -> BoxFuture<'_, ()> {
         CurrentChannelManager::update(self)
             .unwrap_or_else(|e| fx_log_err!("while updating current channel: {:?}", e))
             .boxed()
@@ -573,7 +573,7 @@ pub(crate) mod tests {
         }
     }
     impl TargetChannelUpdater for FakeTargetChannelUpdater {
-        fn update(&mut self) -> BoxFuture<'_, ()> {
+        fn update(&self) -> BoxFuture<'_, ()> {
             let call_count = self.call_count.clone();
             async move {
                 call_count.fetch_add(1, Ordering::SeqCst);
@@ -595,7 +595,7 @@ pub(crate) mod tests {
         }
     }
     impl CurrentChannelUpdater for FakeCurrentChannelUpdater {
-        fn update(&mut self) -> BoxFuture<'_, ()> {
+        fn update(&self) -> BoxFuture<'_, ()> {
             let call_count = self.call_count.clone();
             async move {
                 call_count.fetch_add(1, Ordering::SeqCst);
@@ -756,8 +756,8 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_correct_initial_state() {
         let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
@@ -770,8 +770,8 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_try_start_update_returns_started() {
         let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
@@ -784,8 +784,8 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_temporary_callbacks_dropped_after_update_attempt() {
         let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
@@ -814,8 +814,8 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_try_start_update_callback_when_up_to_date() {
         let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
@@ -834,8 +834,8 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_try_start_update_callback_when_update_available_and_apply_errors() {
         let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
@@ -868,8 +868,8 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_try_start_update_callback_when_update_available_and_apply_succeeds() {
         let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
@@ -898,10 +898,10 @@ pub(crate) mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_channel_updater_called() {
-        let channel_updater = FakeTargetChannelUpdater::new();
+        let channel_updater = Arc::new(FakeTargetChannelUpdater::new());
         let manager = UpdateManager::from_checker_and_applier(
-            channel_updater.clone(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::clone(&channel_updater),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             UnreachableUpdateApplier,
             FakeLastUpdateStorage::new(),
@@ -919,8 +919,8 @@ pub(crate) mod tests {
     async fn test_update_applier_called_if_update_available() {
         let update_applier = FakeUpdateApplier::new_error();
         let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             update_applier.clone(),
             FakeLastUpdateStorage::new(),
@@ -939,8 +939,8 @@ pub(crate) mod tests {
         let last_update_storage = FakeLastUpdateStorage::new();
 
         let manager = FakeUpdateManager::from_checker_and_applier_and_last_known_update_package(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             last_update_storage.clone(),
@@ -961,10 +961,10 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_update_applier_not_called_if_up_to_date() {
         let update_applier = FakeUpdateApplier::new_error();
-        let current_channel_updater = FakeCurrentChannelUpdater::new();
+        let current_channel_updater = Arc::new(FakeCurrentChannelUpdater::new());
         let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            current_channel_updater.clone(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::clone(&current_channel_updater),
             FakeUpdateChecker::new_up_to_date(),
             update_applier.clone(),
             FakeLastUpdateStorage::new(),
@@ -984,8 +984,8 @@ pub(crate) mod tests {
         let last_update_storage = FakeLastUpdateStorage::new();
 
         let manager = FakeUpdateManager::from_checker_and_applier_and_last_known_update_package(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_error(),
             last_update_storage.clone(),
@@ -1008,8 +1008,8 @@ pub(crate) mod tests {
         let last_update_storage = FakeLastUpdateStorage::new();
 
         let manager = FakeUpdateManager::from_checker_and_applier_and_last_known_update_package(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_error(),
             last_update_storage.clone(),
@@ -1027,8 +1027,8 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_return_to_initial_state_on_update_check_error() {
         let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_error(),
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
@@ -1045,8 +1045,8 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_return_to_initial_state_on_update_apply_error() {
         let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
@@ -1093,8 +1093,8 @@ pub(crate) mod tests {
     async fn test_get_state_in_checking_for_updates() {
         let (blocking_update_checker, _sender) = BlockingUpdateChecker::new_checker_and_sender();
         let manager = BlockingManagerManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
@@ -1111,8 +1111,8 @@ pub(crate) mod tests {
         let (blocking_update_checker, sender) = BlockingUpdateChecker::new_checker_and_sender();
         let update_applier = FakeUpdateApplier::new_error();
         let manager = BlockingManagerManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
+            Arc::new(FakeTargetChannelUpdater::new()),
+            Arc::new(FakeCurrentChannelUpdater::new()),
             blocking_update_checker,
             update_applier.clone(),
             FakeLastUpdateStorage::new(),
