@@ -9,9 +9,8 @@ pub trait HttpUriExt {
     /// then appends `path`, preserving any query parameters. Does nothing if `path` is the empty
     /// string.
     ///
-    /// Note that this will add a path to a `Uri` without one, and `Uri` requires that `Uri`s
-    /// with a path and authority have a scheme, so this will fail when called on a `Uri` that
-    /// has an authority and no scheme.
+    /// Will only error if asked to add a path to a `Uri` without a scheme (because `Uri` requires
+    /// a scheme if a path is present), or if `path` contains invalid URI characters.
     fn extend_dir_with_path(self, path: &str) -> Result<Uri, Error>;
 }
 
