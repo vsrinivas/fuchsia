@@ -5,6 +5,7 @@
 #include <fidl/names.h>
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -91,7 +92,7 @@ struct Message {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(), "There is an includes-cycle in declarations");
+  ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
 
   END_TEST;
 }
@@ -110,7 +111,8 @@ struct Bad {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(), "int64 cannot be nullable");
+  ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "int64");
 
   END_TEST;
 }
@@ -131,7 +133,8 @@ struct Bad {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(), "int64 cannot be nullable");
+  ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "int64");
 
   END_TEST;
 }
@@ -374,9 +377,9 @@ struct Message {
 using alias_of_vector_of_string = vector<string>;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot parametrize twice");
+  ASSERT_ERR(errors[0], fidl::ErrCannotParametrizeTwice);
 
   END_TEST;
 }
@@ -394,9 +397,9 @@ struct Message {
 using alias_of_vector_of_string_max_5 = vector<string>:5;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot bound twice");
+  ASSERT_ERR(errors[0], fidl::ErrCannotBoundTwice);
 
   END_TEST;
 }
@@ -414,9 +417,9 @@ struct Message {
 using alias_of_vector_nullable = vector?;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot indicate nullability twice");
+  ASSERT_ERR(errors[0], fidl::ErrCannotIndicateNullabilityTwice);
 
   END_TEST;
 }
@@ -498,7 +501,7 @@ using foo.bar.baz = uint8;
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(), "alias identifiers cannot contain '.'");
+  ASSERT_ERR(errors[0], fidl::ErrCompoundAliasIdentifier);
 
   END_TEST;
 }

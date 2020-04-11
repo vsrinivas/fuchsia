@@ -6,6 +6,7 @@
 
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -78,9 +79,10 @@ library example;
 const bool c = "foo";
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "\"foo\" cannot be interpreted as type bool");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "\"foo\"");
 
   END_TEST;
 }
@@ -94,9 +96,10 @@ library example;
 const bool c = 6;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "6 cannot be interpreted as type bool");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "6");
 
   END_TEST;
 }
@@ -137,9 +140,10 @@ library example;
 const int32 c = "foo";
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "\"foo\" cannot be interpreted as type int32");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "\"foo\"");
 
   END_TEST;
 }
@@ -153,9 +157,10 @@ library example;
 const int32 c = true;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "true cannot be interpreted as type int32");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "true");
 
   END_TEST;
 }
@@ -196,9 +201,10 @@ library example;
 const uint64 a = -42;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "-42 cannot be interpreted as type uint64");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "-42");
 
   END_TEST;
 }
@@ -212,9 +218,10 @@ library example;
 const uint64 a = 18446744073709551616;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "18446744073709551616 cannot be interpreted as type uint64");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "18446744073709551616");
 
   END_TEST;
 }
@@ -268,9 +275,10 @@ library example;
 const float32 hi = 3.41e38;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "3.41e38 cannot be interpreted as type float32");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "3.41e38");
 
   END_TEST;
 }
@@ -284,9 +292,10 @@ library example;
 const float32 b = -3.41e38;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "-3.41e38 cannot be interpreted as type float32");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "-3.41e38");
 
   END_TEST;
 }
@@ -359,9 +368,10 @@ library example;
 const string c = 4;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "4 cannot be interpreted as type string");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "4");
 
   END_TEST;
 }
@@ -375,9 +385,10 @@ library example;
 const string c = true;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "true cannot be interpreted as type string");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "true");
 
   END_TEST;
 }
@@ -391,9 +402,10 @@ library example;
 const string:4 c = "hello";
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "\"hello\" (string:5) exceeds the size bound of type string:4");
+  ASSERT_ERR(errors[0], fidl::ErrStringConstantExceedsSizeBound);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "\"hello\"");
 
   END_TEST;
 }
@@ -422,9 +434,10 @@ using foo = int32;
 const foo c = "nope";
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "\"nope\" cannot be interpreted as type int32");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "\"nope\"");
 
   END_TEST;
 }
@@ -438,9 +451,10 @@ library example;
 const string? c = "";
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "invalid constant type string?");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidConstantType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "string?");
 
   END_TEST;
 }
@@ -454,9 +468,10 @@ library example;
 const array<int32>:2 c = -1;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "invalid constant type array<int32>:2");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidConstantType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "array<int32>:2");
 
   END_TEST;
 }
@@ -470,9 +485,10 @@ library example;
 const vector<int32>:2 c = -1;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "invalid constant type vector<int32>:2");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidConstantType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "vector<int32>:2");
 
   END_TEST;
 }
@@ -486,9 +502,10 @@ library example;
 const handle<thread> c = -1;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "invalid constant type handle<thread>");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidConstantType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "handle<thread>");
 
   END_TEST;
 }
@@ -560,9 +577,9 @@ enum OtherEnum : int32 { VALUE = 5; };
 const MyEnum c = OtherEnum.VALUE;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "mismatched named type assignment");
+  ASSERT_ERR(errors[0], fidl::ErrMismatchedNameTypeAssignment);
 
   END_TEST;
 }
@@ -578,9 +595,9 @@ bits OtherBits : uint32 { VALUE = 0x00000004; };
 const MyBits c = OtherBits.VALUE;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "mismatched named type assignment");
+  ASSERT_ERR(errors[0], fidl::ErrMismatchedNameTypeAssignment);
 
   END_TEST;
 }
@@ -595,9 +612,10 @@ enum MyEnum : int32 { VALUE = 1; };
 const MyEnum c = 5;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot be interpreted as type example/MyEnum");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "MyEnum");
 
   END_TEST;
 }
@@ -612,9 +630,10 @@ bits MyBits : uint32 { VALUE = 0x00000001; };
 const MyBits c = 5;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot be interpreted as type example/MyBits");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "MyBits");
 
   END_TEST;
 }
@@ -674,9 +693,10 @@ library example;
 const uint32 FOO = MAX;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "Unable to find the constant named: MAX");
+  ASSERT_ERR(errors[0], fidl::ErrFailedConstantLookup);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "MAX");
 
   END_TEST;
 }
@@ -702,9 +722,9 @@ struct Example { string:dependency.MAX s; };
 )FIDL");
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "unable to parse size bound");
+  ASSERT_ERR(errors[0], fidl::ErrCouldNotParseSizeBound);
 
   END_TEST;
 }
@@ -729,9 +749,9 @@ bool BadConstTestAssignTypeName() {
 
     TestLibrary library(ss.str());
     ASSERT_FALSE(library.Compile());
-    auto errors = library.errors();
+    const auto& errors = library.errors();
     ASSERT_GE(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "is a type, but a value was expected");
+    ASSERT_ERR(errors[0], fidl::ErrExpectedValueButGotType);
   }
 
   END_TEST;
@@ -777,10 +797,10 @@ const EnumType dee = EnumType.D;
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(), "Unknown enum member");
-  ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
+  ASSERT_ERR(errors[0], fidl::ErrUnknownEnumMember);
+  ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);
 
   END_TEST;
 }
@@ -804,10 +824,10 @@ const BitsType dee = BitsType.D;
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(), "Unknown bits member");
-  ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
+  ASSERT_ERR(errors[0], fidl::ErrUnknownBitsMember);
+  ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);
 
   END_TEST;
 }
@@ -855,10 +875,11 @@ const uint8 two_fifty_seven = one | two_fifty_six;
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot be converted to type uint8");
-  ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
+  ASSERT_ERR(errors[0], fidl::ErrCannotConvertConstantToType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "uint8");
+  ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);
 
   END_TEST;
 }
@@ -941,9 +962,9 @@ const uint16 fifteen = ( three | seven | eight;
 )FIDL",
                                     std::move(experimental_flags));
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "unexpected token Semicolon, was expecting RightParen");
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
 
   END_TEST;
 }
@@ -964,9 +985,9 @@ const uint16 fifteen = three | seven | eight );
 )FIDL",
                                     std::move(experimental_flags));
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "unexpected token RightParen, was expecting Semicolon");
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
 
   END_TEST;
 }
@@ -987,9 +1008,9 @@ const uint16 fifteen = ( three | seven | ) eight;
 )FIDL",
                                     std::move(experimental_flags));
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "found unexpected token");
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedToken);
 
   END_TEST;
 }
@@ -1014,12 +1035,12 @@ const AnotherEnum b = a;
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "cannot define a constant or default value of type "
-                 "AnotherEnum using a value of type OneEnum");
-  ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
+  ASSERT_ERR(errors[0], fidl::ErrMismatchedNameTypeAssignment);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "AnotherEnum");
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "OneEnum");
+  ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);
 
   END_TEST;
 }
@@ -1043,12 +1064,12 @@ const OneEnum a = AnotherEnum.B;
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "cannot define a constant or default value of type "
-                 "OneEnum using a value of type AnotherEnum");
-  ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
+  ASSERT_ERR(errors[0], fidl::ErrMismatchedNameTypeAssignment);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "AnotherEnum");
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "OneEnum");
+  ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);
 
   END_TEST;
 }

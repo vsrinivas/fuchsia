@@ -20,7 +20,7 @@ namespace fidl {
 
 std::string MakeSquiggle(const std::string& surrounding_line, int column);
 
-std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
+std::string FormatError(std::string qualifier, const std::optional<SourceSpan>& span,
                    std::string_view message, size_t squiggle_size = 0u);
 
 class ErrorReporter {
@@ -80,31 +80,35 @@ class ErrorReporter {
     return std::make_unique<Error<Args...>>(err, std::nullopt, args...);
   }
 
-  void ReportError(std::unique_ptr<BaseError> err);
   template <typename... Args>
-  void ReportError(const ErrorDef<Args...> err, const Args&... args) {
-    ReportErrorWithSpan(std::nullopt, internal::FormatErr(err.msg, args...));
+  void ReportError(const ErrorDef<Args...>& err, const Args&... args) {
+    ReportError(std::move(MakeError(err, args...)));
   }
   template <typename... Args>
-  void ReportError(const ErrorDef<Args...> err, const std::optional<SourceSpan>& span,
+  void ReportError(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
                    const Args&... args) {
-    ReportErrorWithSpan(span, internal::FormatErr(err.msg, args...));
+    ReportError(std::move(MakeError(err, span, args...)));
   }
   template <typename ...Args>
-  void ReportError(const ErrorDef<Args...> err, const Token& token, const Args& ...args) {
-    ReportErrorWithSpan(token.span(), internal::FormatErr(err.msg, args...));
+  void ReportError(const ErrorDef<Args...>& err, const Token& token, const Args& ...args) {
+    ReportError(std::move(MakeError(err, token.span(), args...)));
   }
 
+  void ReportError(std::unique_ptr<BaseError> err);
+
   template <typename... Args>
-  void ReportWarning(const ErrorDef<Args...> err, const std::optional<SourceSpan>& span,
+  void ReportWarning(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
                      const Args& ...args) {
-    ReportWarningWithSpan(span, internal::FormatErr(err.msg, args...));
+    ReportWarning(std::move(MakeError(err, span, args...)));
   }
   template <typename... Args>
-  void ReportWarning(const ErrorDef<Args...> err, const Token& token, const Args& ...args) {
-    ReportWarningWithSpan(token.span(), internal::FormatErr(err.msg, args...));
+  void ReportWarning(const ErrorDef<Args...>& err, const Token& token, const Args& ...args) {
+    ReportWarning(std::move(MakeError(err, token.span(), args...)));
   }
 
+  void ReportWarning(std::unique_ptr<BaseError> err);
+
+  // TODO(fxb/49667): delete once linter does not rely on it
   void ReportWarningWithSquiggle(const SourceSpan& span, std::string_view message);
 
   void PrintReports();
@@ -112,20 +116,21 @@ class ErrorReporter {
   ScopedReportingMode OverrideMode(ReportingMode mode_override) {
     return ScopedReportingMode(mode_, mode_override);
   }
-  const std::vector<std::string>& errors() const { return errors_; }
-  const std::vector<std::string>& warnings() const { return warnings_; }
+  // TODO(fxb/49667): delete once linter does not rely on it
+  const std::vector<std::string>& string_warnings() const { return string_warnings_; }
+  const std::vector<std::unique_ptr<BaseError>>& warnings() const { return warnings_; }
+  const std::vector<std::unique_ptr<BaseError>>& errors() const { return errors_; }
   void set_warnings_as_errors(bool value) { warnings_as_errors_ = value; }
 
  private:
-  void ReportErrorWithSpan(const std::optional<SourceSpan>& span, std::string_view message);
-  void ReportWarningWithSpan(const std::optional<SourceSpan>& span, std::string_view message);
-  void AddError(std::string formatted_message);
-  void AddWarning(std::string formatted_message);
+  void AddError(std::unique_ptr<BaseError> err);
+  void AddWarning(std::unique_ptr<BaseError> warn);
 
   ReportingMode mode_ = ReportingMode::kReport;
   bool warnings_as_errors_;
-  std::vector<std::string> errors_;
-  std::vector<std::string> warnings_;
+  std::vector<std::string> string_warnings_;
+  std::vector<std::unique_ptr<BaseError>> warnings_;
+  std::vector<std::unique_ptr<BaseError>> errors_;
 };
 
 }  // namespace fidl

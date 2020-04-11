@@ -4,6 +4,7 @@
 
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -38,8 +39,8 @@ bits Fruit : int64 {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
-  ASSERT_STR_STR(errors[0].data(), "may only be of unsigned integral primitive type");
+  const auto& errors = library.errors();
+  ASSERT_ERR(errors[0], fidl::ErrBitsTypeMustBeUnsignedIntegralPrimitive);
 
   END_TEST;
 }
@@ -56,11 +57,11 @@ bits Fruit : uint64 {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "value of member APPLE conflicts with previously declared "
-                 "member ORANGE in the bits Fruit");
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "APPLE");
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "ORANGE");
 
   END_TEST;
 }
@@ -80,11 +81,11 @@ const uint32 FOUR = 4;
 const uint32 TWO_SQUARED = 4;
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "value of member APPLE conflicts with previously declared "
-                 "member ORANGE in the bits Fruit");
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "APPLE");
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "ORANGE");
 
   END_TEST;
 }
@@ -101,9 +102,10 @@ bits Fruit : uint64 {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "-2 cannot be interpreted as type uint64");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "-2");
 
   END_TEST;
 }
@@ -120,9 +122,10 @@ bits Fruit : uint8 {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "256 cannot be interpreted as type uint8");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "256");
 
   END_TEST;
 }
@@ -140,11 +143,10 @@ bits Fruit : uint64 {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "name of member ORANGE conflicts with previously declared "
-                 "member in the bits Fruit");
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberName);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "ORANGE");
 
   END_TEST;
 }
@@ -177,9 +179,9 @@ bits non_power_of_two : uint64 {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "bits members must be powers of two");
+  ASSERT_ERR(errors[0], fidl::ErrBitsMemberMustBePowerOfTwo);
 
   END_TEST;
 }

@@ -51,7 +51,7 @@ std::string Display(const std::set<std::string>& s);
 std::string Display(const SourceSpan& s);
 std::string Display(const Token::KindAndSubkind& t);
 std::string Display(const raw::Attribute& a);
-std::string Display(raw::AttributeList* a);
+std::string Display(const raw::AttributeList& a);
 std::string Display(const std::vector<std::string_view>& library_name);
 std::string Display(const flat::Constant* c);
 std::string Display(const flat::TypeConstructor* tc);
@@ -77,7 +77,7 @@ std::string FormatErr(std::string_view msg, T t, Rest... rest) {
   size_t i = msg.find(kFormatMarker);
   // This assert should never fail (see non-template FormatErr)
   assert(i != std::string::npos &&
-        "number of format string parameters '{}' != number of supplied arguments");
+         "number of format string parameters '{}' != number of supplied arguments");
 
   // Split string at marker, insert formatted parameter
   std::stringstream s;

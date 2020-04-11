@@ -9,20 +9,15 @@
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
 static bool Compiles(const std::string& source_code,
-                     std::vector<std::string>* out_errors = nullptr) {
+                     std::vector<std::unique_ptr<fidl::BaseError>>* out_errors = nullptr) {
   auto library = TestLibrary("test.fidl", source_code);
-  const bool success = library.Compile();
-
-  if (out_errors) {
-    *out_errors = library.errors();
-  }
-
-  return success;
+  return library.Compile();
 }
 
 bool compiling() {
@@ -102,7 +97,7 @@ union Foo {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_STR_STR(library.errors().at(0).c_str(), "missing ordinal before type");
+  ASSERT_ERR(library.errors().at(0), fidl::ErrMissingOrdinalBeforeType);
 
   END_TEST;
 }
@@ -224,7 +219,7 @@ union Foo {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_STR_STR(library.errors().at(0).c_str(), "Multiple union fields with the same ordinal");
+  ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateUnionMemberOrdinal);
 
   END_TEST;
 }
@@ -243,7 +238,7 @@ union Foo {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_STR_STR(library.errors().at(0).c_str(), "missing ordinal before type");
+  ASSERT_ERR(library.errors().at(0), fidl::ErrMissingOrdinalBeforeType);
 
   END_TEST;
 }
@@ -261,7 +256,7 @@ union Foo {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_STR_STR(library.errors().at(0).c_str(), "ordinals must start at 1");
+  ASSERT_ERR(library.errors().at(0), fidl::ErrOrdinalsMustStartAtOne);
 
   END_TEST;
 }
@@ -279,7 +274,7 @@ union Foo {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_STR_STR(library.errors().at(0).c_str(), "unexpected token Equal");
+  ASSERT_ERR(library.errors().at(0), fidl::ErrUnexpectedTokenOfKind);
 
   END_TEST;
 }
@@ -298,8 +293,8 @@ union Example {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_STR_STR(library.errors().at(0).c_str(),
-                 "missing ordinal 2 (ordinals must be dense); consider marking it reserved");
+  ASSERT_ERR(library.errors().at(0), fidl::ErrNonDenseOrdinal);
+  ASSERT_STR_STR(library.errors().at(0)->Format().c_str(), "2");
 
   END_TEST;
 }
@@ -318,7 +313,7 @@ union Foo {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_STR_STR(library.errors().at(0).c_str(), "must have at least one non reserved member");
+  ASSERT_ERR(library.errors().at(0), fidl::ErrMustHaveNonReservedMember);
 
   END_TEST;
 }
@@ -335,9 +330,9 @@ union Foo {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "union members cannot be nullable");
+  ASSERT_ERR(errors[0], fidl::ErrNullableUnionMember);
 
   END_TEST;
 }
@@ -354,9 +349,9 @@ union Value {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "There is an includes-cycle in declarations");
+  ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
 
   END_TEST;
 }
@@ -371,9 +366,9 @@ union Foo {};
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "must have at least one non reserved member");
+  ASSERT_ERR(errors[0], fidl::ErrMustHaveNonReservedMember);
 
   END_TEST;
 }
@@ -403,12 +398,13 @@ library example;
 union Foo {
   [Selector = "v2"] 1: string v;
 };
- 
+
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "placement of attribute 'Selector' disallowed here");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "Selector");
 
   END_TEST;
 }
@@ -416,45 +412,50 @@ union Foo {
 bool deprecated_xunion_error() {
   BEGIN_TEST;
 
-  TestLibrary xunion_library(R"FIDL(
-library test;
+  {
+    TestLibrary xunion_library(R"FIDL(
+  library test;
 
-xunion Foo {
-  1: string foo;
-};
+  xunion Foo {
+    1: string foo;
+  };
 
-)FIDL");
-  ASSERT_FALSE(xunion_library.Compile());
-  auto errors = xunion_library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "xunion is deprecated, please use `flexible union` instead");
+  )FIDL");
+    ASSERT_FALSE(xunion_library.Compile());
+    const auto& errors = xunion_library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_ERR(errors[0], fidl::ErrXunionDeprecated);
+  }
 
-  TestLibrary flexible_xunion_library(R"FIDL(
-library test;
+  {
+    TestLibrary flexible_xunion_library(R"FIDL(
+  library test;
 
-flexible xunion FlexibleFoo {
-  1: string foo;
-};
+  flexible xunion FlexibleFoo {
+    1: string foo;
+  };
 
-)FIDL");
-  ASSERT_FALSE(flexible_xunion_library.Compile());
-  errors = flexible_xunion_library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "xunion is deprecated, please use `flexible union` instead");
+  )FIDL");
+    ASSERT_FALSE(flexible_xunion_library.Compile());
+    const auto& errors = flexible_xunion_library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_ERR(errors[0], fidl::ErrXunionDeprecated);
+  }
 
-  TestLibrary strict_xunion_library(R"FIDL(
-library test;
+  {
+    TestLibrary strict_xunion_library(R"FIDL(
+  library test;
 
-strict xunion StrictFoo {
-  1: string foo;
-};
+  strict xunion StrictFoo {
+    1: string foo;
+  };
 
-)FIDL");
-  ASSERT_FALSE(strict_xunion_library.Compile());
-  errors = strict_xunion_library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "strict xunion is deprecated, please use `strict union` instead");
+  )FIDL");
+    ASSERT_FALSE(strict_xunion_library.Compile());
+    const auto& errors = strict_xunion_library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_ERR(errors[0], fidl::ErrStrictXunionDeprecated);
+  }
 
   END_TEST;
 }

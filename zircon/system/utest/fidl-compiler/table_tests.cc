@@ -8,26 +8,18 @@
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
 
-static bool Compiles(const std::string& source_code,
-                     std::vector<std::string>* out_errors = nullptr) {
+static bool Compiles(const std::string& source_code) {
   auto library = TestLibrary("test.fidl", source_code);
-  const bool success = library.Compile();
-
-  if (out_errors) {
-    *out_errors = library.errors();
-  }
-
-  return success;
+  return library.Compile();
 }
 
 static bool compiling(void) {
   BEGIN_TEST;
-
-  std::vector<std::string> errors;
 
   // Populated fields.
   EXPECT_TRUE(Compiles(R"FIDL(
@@ -116,18 +108,19 @@ table Foo {
 };
 )FIDL"));
 
-  // Ordinals required.
-  EXPECT_FALSE(Compiles(R"FIDL(
+  {
+    // Ordinals required.
+    auto library = TestLibrary(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
     int64 x;
 };
-)FIDL",
-                        &errors));
-
-  EXPECT_EQ(errors.size(), 1u);
-  ASSERT_STR_STR(errors.at(0).c_str(), "Expected one of ordinal or '}'");
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    EXPECT_EQ(library.errors().size(), 1u);
+    ASSERT_ERR(library.errors().at(0), fidl::ErrExpectedOrdinalOrCloseBrace);
+  }
 
   // Attributes on fields.
   EXPECT_TRUE(Compiles(R"FIDL(
@@ -178,8 +171,9 @@ table Foo {
 };
 )FIDL"));
 
-  // Optional tables in structs are invalid.
-  EXPECT_FALSE(Compiles(R"FIDL(
+  {
+    // Optional tables in structs are invalid.
+    auto library = TestLibrary(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -189,14 +183,15 @@ table Foo {
 struct OptionalTableContainer {
     Foo? foo;
 };
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    EXPECT_EQ(library.errors().size(), 1u);
+    ASSERT_ERR(library.errors().at(0), fidl::ErrCannotBeNullable);
+  }
 
-)FIDL",
-                        &errors));
-  EXPECT_EQ(errors.size(), 1u);
-  ASSERT_STR_STR(errors.at(0).c_str(), "cannot be nullable");
-
-  // Optional tables in (static) unions are invalid.
-  EXPECT_FALSE(Compiles(R"FIDL(
+  {
+    // Optional tables in (static) unions are invalid.
+    auto library = TestLibrary(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -206,11 +201,11 @@ table Foo {
 union OptionalTableContainer {
     1: Foo? foo;
 };
-
-)FIDL",
-                        &errors));
-  EXPECT_EQ(errors.size(), 1u);
-  ASSERT_STR_STR(errors.at(0).c_str(), "cannot be nullable");
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    EXPECT_EQ(library.errors().size(), 1u);
+    ASSERT_ERR(library.errors().at(0), fidl::ErrNullableUnionMember);
+  }
 
   // Tables in tables are valid.
   EXPECT_TRUE(Compiles(R"FIDL(
@@ -246,18 +241,17 @@ flexible union OptionalTableContainer {
 bool default_not_allowed() {
   BEGIN_TEST;
 
-  std::vector<std::string> errors;
-  EXPECT_FALSE(Compiles(R"FIDL(
+  auto library = TestLibrary(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
     1: int64 t = 1;
 };
 
-)FIDL",
-                        &errors));
-  ASSERT_EQ(errors.size(), 1u);
-  ASSERT_STR_STR(errors.at(0).c_str(), "Defaults on tables are not yet supported.");
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 1u);
+  ASSERT_ERR(library.errors().at(0), fidl::ErrDefaultsOnTablesNotSupported);
 
   END_TEST;
 }
@@ -265,8 +259,7 @@ table Foo {
 bool must_be_dense() {
   BEGIN_TEST;
 
-  std::vector<std::string> errors;
-  EXPECT_FALSE(Compiles(R"FIDL(
+  auto library = TestLibrary(R"FIDL(
 library example;
 
 table Example {
@@ -274,11 +267,11 @@ table Example {
     3: int64 third;
 };
 
-)FIDL",
-                        &errors));
-  ASSERT_EQ(errors.size(), 1u);
-  ASSERT_STR_STR(errors.at(0).c_str(),
-                 "missing ordinal 2 (ordinals must be dense); consider marking it reserved");
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 1u);
+  ASSERT_ERR(library.errors().at(0), fidl::ErrNonDenseOrdinal);
+  ASSERT_STR_STR(library.errors().at(0)->Format().c_str(), "2");
 
   END_TEST;
 }

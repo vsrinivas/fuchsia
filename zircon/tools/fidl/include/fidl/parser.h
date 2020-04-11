@@ -200,14 +200,14 @@ class Parser {
   bool LookupHandleSubtype(const raw::Identifier* identifier,
                            std::optional<types::HandleSubtype>* out_handle_subtype);
 
-  decltype(nullptr) Fail();
-  decltype(nullptr) Fail(std::unique_ptr<BaseError> err);
+  std::nullptr_t Fail();
+  std::nullptr_t Fail(std::unique_ptr<BaseError> err);
   template <typename ...Args>
-  decltype(nullptr) Fail(const ErrorDef<Args...> err, const Args& ...args);
+  std::nullptr_t Fail(const ErrorDef<Args...>& err, const Args& ...args);
   template <typename ...Args>
-  decltype(nullptr) Fail(const ErrorDef<Args...> err, Token token, const Args& ...args);
+  std::nullptr_t Fail(const ErrorDef<Args...>& err, Token token, const Args& ...args);
   template <typename ...Args>
-  decltype(nullptr) Fail(const ErrorDef<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args);
+  std::nullptr_t Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span, const Args& ...args);
 
   std::optional<types::Strictness> MaybeParseStrictness();
 

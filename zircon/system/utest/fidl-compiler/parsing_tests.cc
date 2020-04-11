@@ -12,6 +12,7 @@
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -27,9 +28,9 @@ bool bad_compound_identifier_test() {
 library 0fidl.test.badcompoundidentifier;
 )FIDL");
   EXPECT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "unexpected token");
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
 
   END_TEST;
 }
@@ -44,9 +45,10 @@ library a_b;
 
   std::unique_ptr<fidl::raw::File> ast;
   library.Parse(&ast);
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "Invalid library name component a_b");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidLibraryNameComponent);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "a_b");
 
   END_TEST;
 }
@@ -271,9 +273,10 @@ struct Test {
 };
 )FIDL");
   EXPECT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "invalid character '@'");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "@");
 
   END_TEST;
 }
@@ -289,9 +292,10 @@ struct Test / {
 };
 )FIDL");
   EXPECT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "invalid character '/'");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "/");
 
   END_TEST;
 }
@@ -307,9 +311,10 @@ struct test_ {
 };
 )FIDL");
   EXPECT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "invalid identifier 'test_'");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidIdentifier);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "test_");
 
   END_TEST;
 }
@@ -341,7 +346,7 @@ struct ß {
 
   const auto& errors = test_library.errors();
   EXPECT_NE(errors.size(), 0);
-  ASSERT_STR_STR(errors[0].data(), "invalid character");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
 
   END_TEST;
 }
@@ -389,7 +394,7 @@ struct UseDependent {
 
   const auto& warnings = library.warnings();
   ASSERT_EQ(warnings.size(), 1);
-  ASSERT_STR_STR(warnings[0].data(), "library imports must be grouped at top-of-file");
+  ASSERT_ERR(warnings[0], fidl::WarnLibraryImportsMustBeGroupedAtTopOfFile);
 
   END_TEST;
 }
@@ -435,9 +440,9 @@ struct Empty{};
   std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
   library.Parse(&ast);
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot have blank lines within doc comment block");
+  ASSERT_ERR(errors[0], fidl::WarnBlankLinesWithinDocCommentBlock);
 
   END_TEST;
 }
@@ -456,9 +461,9 @@ struct Empty{};
 
   std::unique_ptr<fidl::raw::File> ast;
   library.Parse(&ast);
-  auto warnings = library.warnings();
+  const auto& warnings = library.warnings();
   ASSERT_GE(warnings.size(), 1);
-  ASSERT_STR_STR(warnings[0].c_str(), "cannot have comment within doc comment block");
+  ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
 
   END_TEST;
 }
@@ -478,10 +483,10 @@ struct Empty{};
 
   std::unique_ptr<fidl::raw::File> ast;
   library.Parse(&ast);
-  auto warnings = library.warnings();
+  const auto& warnings = library.warnings();
   ASSERT_EQ(warnings.size(), 2);
-  ASSERT_STR_STR(warnings[0].c_str(), "cannot have comment within doc comment block");
-  ASSERT_STR_STR(warnings[1].c_str(), "cannot have blank lines within doc comment block");
+  ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
+  ASSERT_ERR(warnings[1], fidl::WarnBlankLinesWithinDocCommentBlock);
 
   END_TEST;
 }
@@ -500,9 +505,9 @@ protocol Example {
 
   std::unique_ptr<fidl::raw::File> ast;
   library.Parse(&ast);
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot have doc comment on parameters");
+  ASSERT_ERR(errors[0], fidl::ErrDocCommentOnParameters);
 
   END_TEST;
 }
@@ -582,9 +587,9 @@ struct Empty{};
 
   std::unique_ptr<fidl::raw::File> ast;
   library.Parse(&ast);
-  auto warnings = library.warnings();
+  const auto& warnings = library.warnings();
   ASSERT_EQ(warnings.size(), 1);
-  ASSERT_STR_STR(warnings[0].c_str(), "doc comment must be followed by a declaration");
+  ASSERT_ERR(warnings[0], fidl::WarnDocCommentMustBeFollowedByDeclaration);
 
   END_TEST;
 }

@@ -8,6 +8,7 @@
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -125,9 +126,9 @@ protocol Child : Parent {};
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "unexpected token Colon, was expecting LeftCurly");
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
 
   END_TEST;
 }
@@ -145,9 +146,9 @@ protocol WellDocumented {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "expected protocol member");
+  ASSERT_ERR(errors[0], fidl::ErrExpectedProtocolMember);
 
   END_TEST;
 }
@@ -164,9 +165,9 @@ protocol Child {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "Cannot attach attributes to compose stanza");
+  ASSERT_ERR(errors[0], fidl::ErrCannotAttachAttributesToCompose);
 
   END_TEST;
 }
@@ -183,9 +184,9 @@ protocol Narcisse {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "There is an includes-cycle in declaration");
+  ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
 
   END_TEST;
 }
@@ -207,9 +208,9 @@ protocol Child {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "protocol composed multiple times");
+  ASSERT_ERR(errors[0], fidl::ErrProtocolComposedMultipleTimes);
 
   END_TEST;
 }
@@ -226,9 +227,10 @@ protocol Child {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "unknown type MissingParent");
+  ASSERT_ERR(errors[0], fidl::ErrUnknownType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "MissingParent");
 
   END_TEST;
 }
@@ -245,9 +247,9 @@ protocol NoMoreOrdinals {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "expected protocol member");
+  ASSERT_ERR(errors[0], fidl::ErrExpectedProtocolMember);
 
   END_TEST;
 }
@@ -264,9 +266,9 @@ protocol Wrong {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "unrecognized protocol member");
+  ASSERT_ERR(errors[0], fidl::ErrUnrecognizedProtocolMember);
 
   END_TEST;
 }
@@ -299,9 +301,9 @@ protocol D {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "Multiple methods with the same name in a protocol");
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodName);
 
   END_TEST;
 }
@@ -325,13 +327,10 @@ protocol cv {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "Multiple methods with the same ordinal in a protocol; "
-                 "previous was at example.fidl:8:4. "
-                 "Consider using attribute [Selector=\"f_\"] to change the name used to "
-                 "calculate the ordinal.");
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodOrdinal);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "f_");
 
   END_TEST;
 }
@@ -353,9 +352,10 @@ protocol YearningForSimplicity {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "member 'arg' is not simple");
+  ASSERT_ERR(errors[0], fidl::ErrMemberMustBeSimple);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "arg");
 
   END_TEST;
 }

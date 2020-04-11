@@ -9,6 +9,7 @@
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -83,9 +84,9 @@ service SomeService {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "multiple service members with the same name");
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateServiceMemberName);
 
   END_TEST;
 }
@@ -104,9 +105,9 @@ service SomeService {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot be nullable");
+  ASSERT_ERR(errors[0], fidl::ErrNullableServiceMember);
 
   END_TEST;
 }
@@ -125,9 +126,9 @@ service SomeService {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "only protocol members are allowed");
+  ASSERT_ERR(errors[0], fidl::ErrNonProtocolServiceMember);
 
   END_TEST;
 }
@@ -146,9 +147,9 @@ struct CannotUseService {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot use services");
+  ASSERT_ERR(errors[0], fidl::ErrCannotUseServicesInOtherDeclarations);
 
   END_TEST;
 }

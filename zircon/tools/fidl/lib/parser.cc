@@ -109,9 +109,9 @@ bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
   return true;
 }
 
-decltype(nullptr) Parser::Fail() { return Fail(ErrUnexpectedToken); }
+std::nullptr_t Parser::Fail() { return Fail(ErrUnexpectedToken); }
 
-decltype(nullptr) Parser::Fail(std::unique_ptr<BaseError> err) {
+std::nullptr_t Parser::Fail(std::unique_ptr<BaseError> err) {
   assert(err && "should not report nullptr error");
   if (Ok()) {
     err->span = last_token_.span();
@@ -121,12 +121,12 @@ decltype(nullptr) Parser::Fail(std::unique_ptr<BaseError> err) {
 }
 
 template <typename ...Args>
-decltype(nullptr) Parser::Fail(const ErrorDef<Args...> err, const Args& ...args) {
+std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const Args& ...args) {
   return Fail(err, last_token_, args...);
 }
 
 template <typename ...Args>
-decltype(nullptr) Parser::Fail(const ErrorDef<Args...> err, Token token, const Args& ...args) {
+std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, Token token, const Args& ...args) {
   if (Ok()) {
     error_reporter_->ReportError(err, token, args...);
   }
@@ -134,8 +134,8 @@ decltype(nullptr) Parser::Fail(const ErrorDef<Args...> err, Token token, const A
 }
 
 template <typename ...Args>
-decltype(nullptr) Parser::Fail(
-    const ErrorDef<Args...> err, const std::optional<SourceSpan>& span, const Args& ...args) {
+std::nullptr_t Parser::Fail(
+    const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span, const Args& ...args) {
   if (Ok()) {
     error_reporter_->ReportError(err, span, args...);
   }

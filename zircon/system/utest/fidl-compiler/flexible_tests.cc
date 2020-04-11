@@ -5,6 +5,7 @@
 #include <fidl/flat_ast.h>
 #include <zxtest/zxtest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -22,10 +23,11 @@ flexible enum Foo : uint8 {
   TestLibrary library(fidl_library);
   ASSERT_FALSE(library.Compile());
 
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
 
-  EXPECT_SUBSTR(errors[0].c_str(), "cannot specify flexible for \"enum\"");
+  ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyFlexible);
+  ASSERT_SUBSTR(errors[0]->Format().c_str(), "enum");
 }
 
 TEST(FlexibleEnum, MultipleUnknown) {
@@ -42,10 +44,10 @@ flexible enum Foo : uint8 {
       fidl_library, fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
   ASSERT_FALSE(library.Compile());
 
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
 
-  EXPECT_SUBSTR(errors[0].c_str(), "[Unknown] attribute can be only applied to one member");
+  ASSERT_ERR(errors[0], fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
 TEST(FlexibleEnum, MaxValueWithoutUnknown) {
@@ -63,10 +65,10 @@ flexible enum Foo : uint8 {
       fidl_library, fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
   ASSERT_FALSE(library.Compile());
 
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
 
-  EXPECT_SUBSTR(errors[0].c_str(), "explicitly specify the unknown value");
+  ASSERT_ERR(errors[0], fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
 TEST(FlexibleUnion, MultipleUnknown) {
@@ -82,10 +84,10 @@ flexible union Foo {
   TestLibrary library(fidl_library);
   ASSERT_FALSE(library.Compile());
 
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
 
-  EXPECT_SUBSTR(errors[0].c_str(), "[Unknown] attribute can be only applied to one member");
+  ASSERT_ERR(errors[0], fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
 TEST(FlexibleUnion, MaxValueWithoutUnknown) {

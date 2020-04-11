@@ -10,7 +10,7 @@ namespace {
 
 #define ASSERT_WARNINGS(quantity, lib, content)               \
   do {                                                        \
-    const auto& warnings = lib.warnings();                    \
+    const auto& warnings = lib.string_warnings();             \
     if (strlen(content) != 0) {                               \
       bool contains_content = false;                          \
       for (size_t i = 0; i < warnings.size(); i++) {          \
@@ -19,12 +19,12 @@ namespace {
           break;                                              \
         }                                                     \
       }                                                       \
-      ASSERT_TRUE(contains_content, content "not found");     \
+      ASSERT_TRUE(contains_content, content " not found");    \
     }                                                         \
     if (warnings.size() != quantity) {                        \
       std::string error = "Found warning: ";                  \
       for (size_t i = 0; i < warnings.size(); i++) {          \
-        error.append(warnings[i].c_str());                    \
+        error.append(warnings[i]);                            \
       }                                                       \
       ASSERT_EQ(quantity, warnings.size(), error.c_str());    \
     }                                                         \
@@ -55,8 +55,9 @@ const uint64 kAllIsCalm = 1234;
 )FIDL");
   ASSERT_FALSE(library.Lint());
   ASSERT_WARNINGS(1, library, "kAllIsCalm");
-  const auto& warnings = library.warnings();
-  ASSERT_STR_STR(warnings[0].c_str(), "ALL_IS_CALM", "Correct suggestion ALL_IS_CALM not found");
+  const auto& warnings = library.string_warnings();
+  ASSERT_STR_STR(warnings[0].c_str(),
+                 "ALL_IS_CALM", "Correct suggestion ALL_IS_CALM not found");
   END_TEST;
 }
 
@@ -84,8 +85,9 @@ protocol URLLoader {};
 )FIDL");
   ASSERT_FALSE(library.Lint());
   ASSERT_WARNINGS(1, library, "URLLoader");
-  const auto& warnings = library.warnings();
-  ASSERT_STR_STR(warnings[0].c_str(), "UrlLoader", "Correct suggestion UrlLoader not found");
+  const auto& warnings = library.string_warnings();
+  ASSERT_STR_STR(warnings[0].c_str(),
+                 "UrlLoader", "Correct suggestion UrlLoader not found");
 
   END_TEST;
 }

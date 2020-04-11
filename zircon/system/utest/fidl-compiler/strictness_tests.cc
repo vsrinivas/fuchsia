@@ -8,6 +8,7 @@
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -20,10 +21,10 @@ bool invalid_strictness(const std::string& type, const std::string& definition) 
   TestLibrary library(fidl_library);
   EXPECT_FALSE(library.Compile());
 
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  const std::string& expected_error = "cannot specify strictness for \"" + type + "\"";
-  ASSERT_STR_STR(errors[0].c_str(), expected_error.c_str());
+  ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyStrict);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), type.c_str());
 
   END_TEST;
 }

@@ -25,9 +25,9 @@ bool ReportErrorFormatParams() {
   std::string param2("param2");
   error_reporter.ReportError(ErrTest, param1, param2);
 
-  auto errors = error_reporter.errors();
+  const auto& errors = error_reporter.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
+  ASSERT_STR_STR(errors[0]->Format().c_str(),
                  "This test error has one string param 'param1' and another 'param2'.");
   END_TEST;
 }
@@ -41,9 +41,9 @@ bool MakeErrorThenReportIt() {
   ErrorReporter error_reporter;
   error_reporter.ReportError(std::move(reported_err));
 
-  auto errors = error_reporter.errors();
+  const auto& errors = error_reporter.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
+  ASSERT_STR_STR(errors[0]->Format().c_str(),
                  "This test error has one string param 'param1' and another 'param2'.");
   END_TEST;
 }

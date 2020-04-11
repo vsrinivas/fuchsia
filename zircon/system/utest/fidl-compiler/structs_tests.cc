@@ -4,6 +4,7 @@
 
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -103,9 +104,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "mismatched named type assignment");
+  ASSERT_ERR(errors[0], fidl::ErrMismatchedNameTypeAssignment);
 
   END_TEST;
 }
@@ -123,9 +124,10 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot be interpreted as type example/MyEnum");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "MyEnum");
 
   END_TEST;
 }
@@ -178,9 +180,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "mismatched named type assignment");
+  ASSERT_ERR(errors[0], fidl::ErrMismatchedNameTypeAssignment);
 
   END_TEST;
 }
@@ -198,9 +200,10 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "cannot be interpreted as type example/MyBits");
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "MyBits");
 
   END_TEST;
 }
@@ -234,9 +237,9 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "invalid default type");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidStructMemberType);
 
   END_TEST;
 }

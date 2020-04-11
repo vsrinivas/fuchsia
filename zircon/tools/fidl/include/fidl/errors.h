@@ -86,7 +86,7 @@ constexpr ErrorDef ErrFilesDisagreeOnLibraryName(
     "Two files in the library disagree about the name of the library");
 constexpr ErrorDef<std::vector<std::string_view>> ErrDuplicateLibraryImport(
     "Library {} already imported. Did you require it twice?");
-constexpr ErrorDef<raw::AttributeList *> ErrAttributesNotAllowedOnLibraryImport(
+constexpr ErrorDef<raw::AttributeList> ErrAttributesNotAllowedOnLibraryImport(
     "no attributes allowed on library import, found: {}");
 constexpr ErrorDef<std::vector<std::string_view>> ErrUnknownLibrary(
     "Could not find library named {}. Did you include its sources with --files?");
@@ -185,13 +185,11 @@ constexpr ErrorDef<SourceSpan> ErrDuplicateTableFieldOrdinal(
     "Multiple table fields with the same ordinal; previous was at {}");
 constexpr ErrorDef<SourceSpan> ErrDuplicateTableFieldName(
     "Multiple table fields with the same name; previous was at {}");
-constexpr ErrorDef<uint32_t> ErrNonDenseOrdinalInTable(
-    "missing ordinal {} (ordinals must be dense); consider marking it reserved");
 constexpr ErrorDef<SourceSpan> ErrDuplicateUnionMemberOrdinal(
     "Multiple union fields with the same ordinal; previous was at {}");
 constexpr ErrorDef<SourceSpan> ErrDuplicateUnionMemberName(
     "Multiple union members with the same name; previous was at {}");
-constexpr ErrorDef<uint32_t> ErrNonDenseOrdinalInUnion(
+constexpr ErrorDef<uint32_t> ErrNonDenseOrdinal(
     "missing ordinal {} (ordinals must be dense); consider marking it reserved");
 constexpr ErrorDef ErrCouldNotResolveHandleRights(
     "unable to resolve handle rights");
@@ -215,7 +213,7 @@ constexpr ErrorDef<raw::Attribute, std::string> ErrAttributeConstraintNotSatisfi
     "declaration did not satisfy constraint of attribute '{}' with value '{}'");
 constexpr ErrorDef<flat::Name> ErrUnionCannotBeSimple(
     "union '{}' is not allowed to be simple");
-constexpr ErrorDef<std::string_view> ErrStructMemberMustBeSimple(
+constexpr ErrorDef<std::string_view> ErrMemberMustBeSimple(
     "member '{}' is not simple");
 constexpr ErrorDef<uint32_t, uint32_t> ErrTooManyBytes(
     "too large: only {} bytes allowed, but {} bytes found");

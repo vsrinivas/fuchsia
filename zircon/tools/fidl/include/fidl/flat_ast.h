@@ -501,7 +501,7 @@ class TypeTemplate {
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const = 0;
 
  protected:
-  bool Fail(const ErrorDef<const TypeTemplate*> err, const std::optional<SourceSpan>& span) const;
+  bool Fail(const ErrorDef<const TypeTemplate*>& err, const std::optional<SourceSpan>& span) const;
 
   Typespace* typespace_;
 
@@ -687,21 +687,20 @@ class Library {
   bool Compile();
 
   const std::vector<std::string_view>& name() const { return library_name_; }
-  const std::vector<std::string>& errors() const { return error_reporter_->errors(); }
   const raw::AttributeList* attributes() const { return attributes_.get(); }
 
  private:
   bool Fail(std::unique_ptr<BaseError> err);
   template <typename... Args>
-  bool Fail(const ErrorDef<Args...> err, const Args&... args);
+  bool Fail(const ErrorDef<Args...>& err, const Args&... args);
   template <typename... Args>
-  bool Fail(const ErrorDef<Args...> err, const std::optional<SourceSpan>& span, const Args&... args);
+  bool Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span, const Args&... args);
   template <typename... Args>
-  bool Fail(const ErrorDef<Args...> err, const Name& name, const Args&... args) {
+  bool Fail(const ErrorDef<Args...>& err, const Name& name, const Args&... args) {
     return Fail(err, name.span(), args...);
   }
   template <typename... Args>
-  bool Fail(const ErrorDef<Args...> err, const Decl& decl, const Args&... args) {
+  bool Fail(const ErrorDef<Args...>& err, const Decl& decl, const Args&... args) {
     return Fail(err, decl.name, args...);
   }
 

@@ -4,6 +4,7 @@
 
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -128,9 +129,10 @@ protocol Example {
 )FIDL");
 
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "error: unknown type ErrorType");
+  ASSERT_ERR(errors[0], fidl::ErrUnknownType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "ErrorType");
   END_TEST;
 }
 
@@ -146,10 +148,9 @@ protocol Example {
 )FIDL");
 
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "error: invalid error type: must be int32, uint32 or an enum therof");
+  ASSERT_ERR(errors[0], fidl::ErrInvalidErrorType);
   END_TEST;
 }
 
@@ -163,9 +164,9 @@ protocol Example {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token");
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
   END_TEST;
 }
 
@@ -179,9 +180,9 @@ protocol Example {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token");
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
   END_TEST;
 }
 
@@ -195,9 +196,9 @@ protocol Example {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token \"error\"");
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
   END_TEST;
 }
 
@@ -210,9 +211,9 @@ table ForgotTheSemicolon {}
 )FIDL");
 
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "error: unexpected token EndOfFile, was expecting Semicolon");
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
   END_TEST;
 }
 
@@ -222,8 +223,9 @@ bool BadErrorEmptyFile() {
   TestLibrary library("");
 
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
+  const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedIdentifier);
   END_TEST;
 }
 }  // namespace

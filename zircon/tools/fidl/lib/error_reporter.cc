@@ -28,7 +28,7 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
   return squiggle;
 }
 
-std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
+std::string FormatError(std::string qualifier, const std::optional<SourceSpan>& span,
                    std::string_view message, size_t squiggle_size) {
   if (!span) {
     std::string error = qualifier;
@@ -99,13 +99,13 @@ std::string Display(const Token::KindAndSubkind& t) {
 
 std::string Display(const raw::Attribute& a) { return a.name; }
 
-std::string Display(raw::AttributeList* a) {
+std::string Display(const raw::AttributeList& a) {
   std::stringstream attributes_found;
-  for (auto it = a->attributes.begin(); it != a->attributes.end(); it++) {
-    if (it != a->attributes.cbegin()) {
+  for (auto it = a.attributes.begin(); it != a.attributes.end(); it++) {
+    if (it != a.attributes.cbegin()) {
       attributes_found << ", ";
     }
-    attributes_found << (*it).name;
+    attributes_found << it->name;
   }
   return attributes_found.str();
 }
@@ -126,25 +126,20 @@ std::string Display(const flat::Name& n) { return std::string(n.full_name()); }
 
 }  // namespace internal
 
-void ErrorReporter::AddError(std::string formatted_message) {
+void ErrorReporter::AddError(std::unique_ptr<BaseError> err) {
   if (mode_ == ReportingMode::kDoNotReport)
     return;
-  errors_.push_back(std::move(formatted_message));
+  errors_.push_back(std::move(err));
 }
 
-void ErrorReporter::AddWarning(std::string formatted_message) {
+void ErrorReporter::AddWarning(std::unique_ptr<BaseError> warn) {
   if (mode_ == ReportingMode::kDoNotReport)
     return;
   if (warnings_as_errors_) {
-    AddError(formatted_message);
+    errors_.push_back(std::move(warn));
   } else {
-    warnings_.push_back(std::move(formatted_message));
+    warnings_.push_back(std::move(warn));
   }
-}
-
-void ErrorReporter::ReportError(std::unique_ptr<BaseError> err) {
-  assert(err && "should not report nullptr error");
-  ReportErrorWithSpan(err->span, err->Format());
 }
 
 // Record an error with the span, message, source line, position indicator,
@@ -153,18 +148,13 @@ void ErrorReporter::ReportError(std::unique_ptr<BaseError> err) {
 //     filename:line:col: error: message
 //     sourceline
 //        ^~~~
-void ErrorReporter::ReportErrorWithSpan(
-  const std::optional<SourceSpan>& span, std::string_view message) {
-  size_t squiggle_size = span ? span.value().data().size() : 0;
-  auto error = Format("error", span, message, squiggle_size);
-  AddError(std::move(error));
+void ErrorReporter::ReportError(std::unique_ptr<BaseError> err) {
+  assert(err && "should not report nullptr error");
+  AddError(std::move(err));
 }
-
-void ErrorReporter::ReportWarningWithSpan(
-  const std::optional<SourceSpan>& span, std::string_view message) {
-  size_t squiggle_size = span ? span.value().data().size() : 0;
-  auto warning = Format("warning", span, message, squiggle_size);
-  AddWarning(std::move(warning));
+void ErrorReporter::ReportWarning(std::unique_ptr<BaseError> warn) {
+  assert(warn && "should not report nullptr warning");
+  AddWarning(std::move(warn));
 }
 
 // Records a warning with the span, message, source line,
@@ -175,16 +165,20 @@ void ErrorReporter::ReportWarningWithSpan(
 //        ^~~~
 void ErrorReporter::ReportWarningWithSquiggle(const SourceSpan& span, std::string_view message) {
   auto token_data = span.data();
-  auto warning = Format("warning", std::make_optional(span), message, token_data.size());
-  AddWarning(std::move(warning));
+  auto warning = FormatError("warning", std::make_optional(span), message, token_data.size());
+  string_warnings_.push_back(warning);
 }
 
 void ErrorReporter::PrintReports() {
   for (const auto& error : errors_) {
-    fprintf(stderr, "%s\n", error.data());
+    size_t squiggle_size = error->span ? error->span.value().data().size() : 0;
+    auto error_str = FormatError("error", error->span, error->Format(), squiggle_size);
+    fprintf(stderr, "%s\n", error_str.c_str());
   }
   for (const auto& warning : warnings_) {
-    fprintf(stderr, "%s\n", warning.data());
+    size_t squiggle_size = warning->span ? warning->span.value().data().size() : 0;
+    auto warning_str = FormatError("warning", warning->span, warning->Format(), squiggle_size);
+    fprintf(stderr, "%s\n", warning_str.c_str());
   }
 }
 

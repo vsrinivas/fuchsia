@@ -118,7 +118,7 @@ protocol b {
 
     fprintf(stderr, "errors.size() = %zu\n", errors.size());
     for (size_t i = 0; i < errors.size(); i++) {
-      fprintf(stderr, "error[%zu] = %s\n", i, errors.at(i).c_str());
+      fprintf(stderr, "error[%zu] = %s\n", i, errors.at(i)->Format().c_str());
     }
 
     fprintf(stderr, "=== END DEBUG INFO FOR FLK-435 ===\n");
@@ -127,8 +127,9 @@ protocol b {
   // The FTP requires the error message as follows
   const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
   std::smatch sm;
-  EXPECT_TRUE(std::regex_search(errors[0], sm, pattern),
-              ("Selector pattern not found in error: " + errors[0]).c_str());
+  std::string error_msg(errors[0]->Format());
+  EXPECT_TRUE(std::regex_search(error_msg, sm, pattern),
+              ("Selector pattern not found in error: " + errors[0]->Format()).c_str());
 
   END_TEST;
 }
@@ -156,8 +157,9 @@ protocol b {
   // The FTP requires the error message as follows
   const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ljz|clgn)_"\s*\])REGEX");
   std::smatch sm;
-  ASSERT_TRUE(std::regex_search(errors[0], sm, pattern),
-              ("Selector pattern not found in error: " + errors[0]).c_str());
+  std::string error_msg(errors[0]->Format());
+  ASSERT_TRUE(std::regex_search(error_msg, sm, pattern),
+              ("Selector pattern not found in error: " + errors[0]->Format()).c_str());
 
   END_TEST;
 }

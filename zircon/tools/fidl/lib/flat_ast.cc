@@ -323,7 +323,7 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
   return nullptr;
 }
 
-bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*> err,
+bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*>& err,
                         const std::optional<SourceSpan>& span) const {
   error_reporter_->ReportError(err, span, this);
   return false;
@@ -732,7 +732,7 @@ bool SimpleLayoutConstraint(ErrorReporter* error_reporter, const raw::Attribute&
   for (const auto& member : struct_decl->members) {
     if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld),
                   error_reporter)) {
-      error_reporter->ReportError(ErrStructMemberMustBeSimple, member.name, member.name.data());
+      error_reporter->ReportError(ErrMemberMustBeSimple, member.name, member.name.data());
       ok = false;
     }
   }
@@ -1151,13 +1151,13 @@ bool Library::Fail(std::unique_ptr<BaseError> err) {
 }
 
 template <typename... Args>
-bool Library::Fail(const ErrorDef<Args...> err, const Args&... args) {
+bool Library::Fail(const ErrorDef<Args...>& err, const Args&... args) {
   error_reporter_->ReportError(err, args...);
   return false;
 }
 
 template <typename... Args>
-bool Library::Fail(const ErrorDef<Args...> err, const std::optional<SourceSpan>& span,
+bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
                    const Args&... args) {
   error_reporter_->ReportError(err, span, args...);
   return false;
@@ -1410,7 +1410,7 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
 
   if (using_directive->attributes && using_directive->attributes->attributes.size() != 0) {
     return Fail(ErrAttributesNotAllowedOnLibraryImport, using_directive->span(),
-                using_directive->attributes.get());
+                *(using_directive->attributes));
   }
 
   std::vector<std::string_view> library_name;
@@ -3066,7 +3066,7 @@ bool Library::CompileTable(Table* table_declaration) {
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, span] = *ordinal_and_loc;
-    return Fail(ErrNonDenseOrdinalInTable, span, ordinal);
+    return Fail(ErrNonDenseOrdinal, span, ordinal);
   }
 
   return true;
@@ -3094,7 +3094,7 @@ bool Library::CompileUnion(Union* union_declaration) {
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, span] = *ordinal_and_loc;
-    return Fail(ErrNonDenseOrdinalInUnion, span, ordinal);
+    return Fail(ErrNonDenseOrdinal, span, ordinal);
   }
 
   {

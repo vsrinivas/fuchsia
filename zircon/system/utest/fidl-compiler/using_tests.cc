@@ -9,6 +9,7 @@
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -158,7 +159,8 @@ struct Foo {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(), "unknown type dependent.Bar");
+  ASSERT_ERR(errors[0], fidl::ErrUnknownType);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "dependent.Bar");
 
   END_TEST;
 }
@@ -179,9 +181,8 @@ struct Foo {
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(
-      errors[0].c_str(),
-      "Could not find library named dependent. Did you include its sources with --files?");
+  ASSERT_ERR(errors[0], fidl::ErrUnknownLibrary);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "dependent");
 
   END_TEST;
 }
@@ -209,8 +210,8 @@ using dependent; // duplicated
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "Library dependent already imported. Did you require it twice?");
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateLibraryImport);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "dependent");
 
   END_TEST;
 }
@@ -243,9 +244,8 @@ struct Foo {
 
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "Library example imports dependent but does not use it. Either use dependent, or "
-                 "remove import.");
+  ASSERT_ERR(errors[0], fidl::ErrUnusedImport);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "dependent");
 
   END_TEST;
 }
@@ -298,9 +298,8 @@ struct B{dep.A a;}; // So the import is used.
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "Declaration name 'dep' conflicts with a library import; consider using the 'as' "
-                 "keyword to import the library under a different name.");
+  ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "dep");
   END_TEST;
 }
 
@@ -333,9 +332,8 @@ struct B{dep.A a;}; // So the import is used.
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(errors[0].c_str(),
-                 "Declaration name 'x' conflicts with a library import; consider using the 'as' "
-                 "keyword to import the library under a different name.");
+  ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "x");
   END_TEST;
 }
 
@@ -368,11 +366,8 @@ struct B{depnoconflict.A a;}; // So the import is used.
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_STR_STR(
-      errors[0].c_str(),
-      R"ERROR(lib.fidl:6:8: error: Declaration name 'dep' conflicts with a library import; consider using the 'as' keyword to import the library under a different name.
-struct dep{};
-       ^)ERROR");
+  ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
+  ASSERT_STR_STR(errors[0]->Format().c_str(), "dep");
   END_TEST;
 }
 

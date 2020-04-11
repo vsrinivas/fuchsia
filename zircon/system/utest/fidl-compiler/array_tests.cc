@@ -4,6 +4,7 @@
 
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -34,8 +35,8 @@ struct S {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
-  ASSERT_STR_STR(errors[0].data(), "must have non-zero size");
+  const auto& errors = library.errors();
+  ASSERT_ERR(errors[0], fidl::ErrMustHaveNonZeroSize);
 
   END_TEST;
 }

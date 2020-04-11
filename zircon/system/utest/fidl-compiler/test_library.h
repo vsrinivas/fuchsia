@@ -109,7 +109,10 @@ class TestLibrary final {
     if (!parser.Ok()) {
       std::string_view beginning(source_file->data().data(), 0);
       fidl::SourceSpan span(beginning, *source_file);
-      findings->emplace_back(span, "parser-error", error_reporter_->errors().front() + "\n");
+      const auto& error = error_reporter_->errors().at(0);
+      size_t squiggle_size = error->span ? error->span.value().data().size() : 0;
+      auto error_msg = FormatError("error", error->span, error->Format(), squiggle_size);
+      findings->emplace_back(span, "parser-error", error_msg + "\n");
       return false;
     }
     fidl::linter::Linter linter;
@@ -234,9 +237,17 @@ class TestLibrary final {
     return fidl::SourceSpan(data, *all_sources_.at(0));
   }
 
-  const std::vector<std::string>& errors() const { return error_reporter_->errors(); }
+  const std::vector<std::unique_ptr<fidl::BaseError>>& errors() const {
+    return error_reporter_->errors();
+  }
 
-  const std::vector<std::string>& warnings() const { return error_reporter_->warnings(); }
+  const std::vector<std::unique_ptr<fidl::BaseError>>& warnings() const {
+    return error_reporter_->warnings();
+  }
+
+  const std::vector<std::string>& string_warnings() const {
+    return error_reporter_->string_warnings();
+  }
 
   const std::vector<fidl::flat::Decl*> declaration_order() const {
     return library_->declaration_order_;
