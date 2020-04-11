@@ -8,11 +8,18 @@
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
+// clang-format off
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
+// clang-format on
+
+#include <glm/mat3x3.hpp>
 #include <unordered_map>
 #include <unordered_set>
 
 #include "lib/fidl/cpp/interface_request.h"
 #include "src/ui/scenic/lib/flatland/hanging_get_helper.h"
+#include "src/ui/scenic/lib/flatland/global_matrix_data.h"
+#include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
@@ -150,13 +157,13 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> graph_link,
       TransformHandle link_origin);
 
-  // The LinkSystem stores topology links as a key-value pair of TransformHandles. The LinkSystem
-  // generates the key and returns it in CreateChildLink() and the value is passed into
-  // CreateParentLink(). Resolving the link places the entry into the map.
-  using LinkTopologyMap = std::unordered_map<TransformHandle, TransformHandle>;
-
-  // Snapshots and returns the current set of links.
-  LinkTopologyMap GetResolvedTopologyLinks();
+  // Returns a snapshot of the current set of links, represented as a map from LinkSystem-owned
+  // TransformHandles to TransformHandles in ParentLinks. The LinkSystem generates Keys for this
+  // map in CreateChildLink() and returns them to callers in a ChildLink's |link_handle|. The
+  // values in this map are arguments to CreateParentLink() and become the ParentLink's
+  // |link_origin|. The LinkSystem places entries in the map when a link resolves and removes them
+  // when a link is invalidated.
+  GlobalTopologyData::LinkTopologyMap GetResolvedTopologyLinks();
 
   // Returns the instance ID used for LinkSystem-authored handles.
   TransformHandle::InstanceId GetInstanceId() const;
@@ -168,17 +175,15 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // instances. |global_topology| is the ToplogyVector of all nodes visible from the (currently
   // single) display, |live_nodes| is the set of nodes in that vector, and |uber_structs| is the set
   // of UberStructs used to generate the global topology.
-  void UpdateLinks(const std::vector<TransformHandle>& global_topology,
-                   const std::vector<uint64_t>& child_counts,
+  void UpdateLinks(const GlobalTopologyData::TopologyVector& global_topology,
+                   const GlobalTopologyData::ChildCountVector& child_counts,
                    const std::unordered_set<TransformHandle>& live_handles,
+                   const GlobalMatrixVector& global_matrices, const glm::vec2& display_pixel_scale,
                    const UberStruct::InstanceMap& uber_structs);
 
  private:
   TransformHandle::InstanceId instance_id_;
   TransformGraph link_graph_;
-
-  // The set of current link topologies. Access is managed by |map_mutex_|.
-  LinkTopologyMap link_topologies_;
 
   ObjectLinker linker_;
 
@@ -189,6 +194,8 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   std::mutex map_mutex_;
   std::unordered_map<TransformHandle, std::shared_ptr<GraphLinkImpl>> graph_link_map_;
   std::unordered_map<TransformHandle, std::shared_ptr<ContentLinkImpl>> content_link_map_;
+  // The set of current link topologies. Access is managed by |map_mutex_|.
+  GlobalTopologyData::LinkTopologyMap link_topologies_;
 
   // Any FIDL requests that have to be bound, are bound in these BindingSets. All impl classes are
   // referenced by both these sets and the Flatland instance that created them via creation of a

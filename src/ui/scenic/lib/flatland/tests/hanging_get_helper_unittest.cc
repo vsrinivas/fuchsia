@@ -126,6 +126,7 @@ TEST(HangingGetHelperTest, TableDuplicateDataIsIgnored) {
 
   LayoutInfo info;
   info.set_logical_size(Vec2{1.0f, 2.0f});
+  info.set_pixel_scale(Vec2{3.f, 4.f});
 
   {
     LayoutInfo info2;
@@ -146,8 +147,9 @@ TEST(HangingGetHelperTest, TableDuplicateDataIsIgnored) {
   }
   EXPECT_FALSE(data);
 
+  // Updating just one part of the table is enough for it to not be a duplicate.
   LayoutInfo new_info;
-  new_info.set_logical_size(Vec2{3.0f, 4.0f});
+  new_info.set_logical_size(Vec2{5.0f, 6.0f});
 
   {
     LayoutInfo info4;

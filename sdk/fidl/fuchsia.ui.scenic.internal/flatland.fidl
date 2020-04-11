@@ -30,6 +30,10 @@ table LayoutInfo {
     /// The layout size of a Graph in logical pixels, defined by the parent’s call to
     /// SetLinkProperties(). Clients should re-layout their content when this value changes.
     1: Vec2 logical_size;
+    /// The ratio from physical display pixels to logical pixels, defined by the sizes and scale
+    /// transforms of the parent. Clients should not necessarily re-layout their content when this
+    /// value changes.
+    2: Vec2 pixel_scale;
 };
 
 /// GraphLinks will be informed when they are actively attached to a output display (either

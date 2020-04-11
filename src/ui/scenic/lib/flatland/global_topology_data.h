@@ -7,13 +7,17 @@
 
 #include <unordered_set>
 
-#include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
 
 namespace flatland {
 
 struct GlobalTopologyData {
+  // The LinkSystem stores topology links as a key-value pair of TransformHandles. This type alias
+  // is declared because while this map is created by the LinkSystem, it is only ever consumed
+  // by ComputeGlobalTopolgyData().
+  using LinkTopologyMap = std::unordered_map<TransformHandle, TransformHandle>;
+
   // The list of transforms reachable from a particular root, sorted in topological (i.e.,
   // depth-first) order. This vector may contain TransformHandles from multiple TransformGraphs,
   // but will never contain TransformHandles authored by the LinkSystem.
@@ -52,7 +56,7 @@ struct GlobalTopologyData {
   // TransformHandles with the |link_instance_id| are never included in the final topology,
   // regardless of whether or not the link resolves.
   static GlobalTopologyData ComputeGlobalTopologyData(const UberStruct::InstanceMap& uber_structs,
-                                                      const LinkSystem::LinkTopologyMap& links,
+                                                      const LinkTopologyMap& links,
                                                       TransformHandle::InstanceId link_instance_id,
                                                       TransformHandle root);
 };

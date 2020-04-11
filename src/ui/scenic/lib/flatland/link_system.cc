@@ -6,6 +6,8 @@
 
 #include "src/lib/fxl/logging.h"
 
+#include <glm/gtc/matrix_access.hpp>
+
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkStatus;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
@@ -15,6 +17,16 @@ using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::LayoutInfo;
 
 namespace flatland {
+
+namespace {
+
+glm::vec2 ComputeScale(const glm::mat3& matrix) {
+  const glm::vec3 x_row = glm::row(matrix, 0);
+  const glm::vec3 y_row = glm::row(matrix, 1);
+  return {std::fabs(glm::length(x_row)), std::fabs(glm::length(y_row))};
+}
+
+}  // namespace
 
 LinkSystem::LinkSystem(TransformHandle::InstanceId instance_id)
     : instance_id_(instance_id), link_graph_(instance_id_) {}
@@ -110,9 +122,11 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(GraphLinkToken token,
   });
 }
 
-void LinkSystem::UpdateLinks(const std::vector<TransformHandle>& global_topology,
-                             const std::vector<uint64_t>& child_counts,
+void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_topology,
+                             const GlobalTopologyData::ChildCountVector& child_counts,
                              const std::unordered_set<TransformHandle>& live_handles,
+                             const GlobalMatrixVector& global_matrices,
+                             const glm::vec2& display_pixel_scale,
                              const UberStruct::InstanceMap& uber_structs) {
   std::scoped_lock lock(map_mutex_);
 
@@ -144,8 +158,10 @@ void LinkSystem::UpdateLinks(const std::vector<TransformHandle>& global_topology
           properties_kv->second.has_logical_size()) {
         auto graph_kv = graph_link_map_.find(handle);
         if (graph_kv != graph_link_map_.end()) {
+          const auto pixel_scale = display_pixel_scale * ComputeScale(global_matrices[i]);
           LayoutInfo info;
           info.set_logical_size(properties_kv->second.logical_size());
+          info.set_pixel_scale({pixel_scale.x, pixel_scale.y});
           graph_kv->second->UpdateLayoutInfo(std::move(info));
         }
       }
@@ -153,8 +169,8 @@ void LinkSystem::UpdateLinks(const std::vector<TransformHandle>& global_topology
   }
 }
 
-LinkSystem::LinkTopologyMap LinkSystem::GetResolvedTopologyLinks() {
-  LinkTopologyMap copy;
+GlobalTopologyData::LinkTopologyMap LinkSystem::GetResolvedTopologyLinks() {
+  GlobalTopologyData::LinkTopologyMap copy;
 
   // Acquire the lock and copy.
   {

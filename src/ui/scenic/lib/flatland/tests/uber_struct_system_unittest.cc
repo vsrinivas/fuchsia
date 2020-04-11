@@ -14,7 +14,6 @@
 #include "gmock/gmock.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
-#include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 
 using flatland::TransformHandle;
@@ -27,7 +26,7 @@ constexpr TransformHandle::InstanceId kLinkInstanceId = 0;
 TransformHandle GetLinkHandle(uint64_t instance_id) { return {kLinkInstanceId, instance_id}; }
 
 // Creates a link in |links| to the the graph rooted at |instance_id:0|.
-void MakeLink(flatland::LinkSystem::LinkTopologyMap& links, uint64_t instance_id) {
+void MakeLink(flatland::GlobalTopologyData::LinkTopologyMap& links, uint64_t instance_id) {
   links[GetLinkHandle(instance_id)] = {instance_id, 0};
 }
 
@@ -237,7 +236,7 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
   };
 
   // Every relevant 0:X node should link to X:0.
-  LinkSystem::LinkTopologyMap links;
+  GlobalTopologyData::LinkTopologyMap links;
   for (uint64_t i = 2; i <= 13; ++i) {
     MakeLink(links, i);
   }

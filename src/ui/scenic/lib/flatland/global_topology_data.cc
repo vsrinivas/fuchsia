@@ -18,7 +18,7 @@ namespace flatland {
 
 // static
 GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
-    const UberStruct::InstanceMap& uber_structs, const LinkSystem::LinkTopologyMap& links,
+    const UberStruct::InstanceMap& uber_structs, const LinkTopologyMap& links,
     TransformHandle::InstanceId link_instance_id, TransformHandle root) {
   // There should never be an UberStruct for the |link_instance_id|.
   FXL_DCHECK(uber_structs.find(link_instance_id) == uber_structs.end());

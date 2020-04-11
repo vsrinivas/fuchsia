@@ -82,7 +82,8 @@ using fuchsia::ui::scenic::internal::Vec2;
 
 namespace {
 
-const float kDefaultSize = 1.0f;
+const float kDefaultSize = 1.f;
+const glm::vec2 kDefaultPixelScale = {1.f, 1.f};
 
 void CreateLink(Flatland* parent, Flatland* child, LinkId id,
                 fidl::InterfacePtr<ContentLink>* content_link,
@@ -123,6 +124,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
 
   Flatland CreateFlatland() { return Flatland(link_system_, uber_struct_system_); }
 
+  void SetDisplayPixelScale(const glm::vec2& pixel_scale) { display_pixel_scale_ = pixel_scale; }
+
   // The parent transform must be a topology root or ComputeGlobalTopologyData() will crash.
   bool IsDescendantOf(TransformHandle parent, TransformHandle child) {
     auto snapshot = uber_struct_system_->Snapshot();
@@ -155,7 +158,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
         snapshot, links, link_system_->GetInstanceId(), root_transform);
     auto matrices = ComputeGlobalMatrixData(data.topology_vector, data.parent_indices, snapshot);
 
-    link_system_->UpdateLinks(data.topology_vector, data.child_counts, data.live_handles, snapshot);
+    link_system_->UpdateLinks(data.topology_vector, data.child_counts, data.live_handles, matrices,
+                              display_pixel_scale_, snapshot);
 
     // Run the looper again to process any queued FIDL events (i.e., Link callbacks).
     RunLoopUntilIdle();
@@ -163,8 +167,10 @@ class FlatlandTest : public gtest::TestLoopFixture {
     return {.topology_data = std::move(data), .matrix_vector = std::move(matrices)};
   }
 
+ private:
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
   const std::shared_ptr<LinkSystem> link_system_;
+  glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
 };
 
 }  // namespace
@@ -979,6 +985,71 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
   EXPECT_TRUE(status_updated);
 }
 
+TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const uint64_t kTransformId = 1;
+  const uint64_t kLinkId = 2;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
+  ProcessMainLoop(parent.GetRoot());
+
+  // Confirm that the initial logical size is available immediately.
+  {
+    bool layout_updated = false;
+    graph_link->GetLayout([&](LayoutInfo info) {
+      EXPECT_EQ(kDefaultSize, info.logical_size().x);
+      EXPECT_EQ(kDefaultSize, info.logical_size().y);
+      layout_updated = true;
+    });
+
+    EXPECT_FALSE(layout_updated);
+    ProcessMainLoop(parent.GetRoot());
+    EXPECT_TRUE(layout_updated);
+  }
+
+  // Set the logical size to something new.
+  {
+    LinkProperties properties;
+    properties.set_logical_size({2.0f, 3.0f});
+    parent.SetLinkProperties(kLinkId, std::move(properties));
+    PRESENT(parent, true);
+  }
+
+  // Confirm that no update is triggered since the child is not in the global topology.
+  {
+    bool layout_updated = false;
+    graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
+
+    EXPECT_FALSE(layout_updated);
+    ProcessMainLoop(parent.GetRoot());
+    EXPECT_FALSE(layout_updated);
+  }
+
+  // Attach the child to the global topology.
+  parent.CreateTransform(kTransformId);
+  parent.SetRootTransform(kTransformId);
+  parent.SetLinkOnTransform(kLinkId, kTransformId);
+  PRESENT(parent, true);
+
+  // Confirm that the new logical size is accessible.
+  {
+    bool layout_updated = false;
+    graph_link->GetLayout([&](LayoutInfo info) {
+      EXPECT_EQ(2.0f, info.logical_size().x);
+      EXPECT_EQ(3.0f, info.logical_size().y);
+      layout_updated = true;
+    });
+
+    EXPECT_FALSE(layout_updated);
+    ProcessMainLoop(parent.GetRoot());
+    EXPECT_TRUE(layout_updated);
+  }
+}
+
 TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
   Flatland parent = CreateFlatland();
   Flatland child = CreateFlatland();
@@ -986,15 +1057,18 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
   const uint64_t kTransformId = 1;
   const uint64_t kLinkId = 2;
 
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
   CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
+
+  parent.CreateTransform(kTransformId);
+  parent.SetRootTransform(kTransformId);
   parent.SetLinkOnTransform(kLinkId, kTransformId);
+  PRESENT(parent, true);
+
   ProcessMainLoop(parent.GetRoot());
 
-  // Confirm that the current layout is the default.
+  // Confirm that the initial layout is the default.
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
@@ -1191,6 +1265,174 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     graph_link[i]->GetLayout([&](LayoutInfo info) {
       EXPECT_EQ(kLinkIds[i], info.logical_size().x);
       EXPECT_EQ(kLinkIds[i] * 2.0f, info.logical_size().y);
+      layout_updated = true;
+    });
+
+    EXPECT_FALSE(layout_updated);
+    ProcessMainLoop(parent.GetRoot());
+    EXPECT_TRUE(layout_updated);
+  }
+}
+
+TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const uint64_t kTransformId = 1;
+  const uint64_t kLinkId = 2;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
+
+  parent.CreateTransform(kTransformId);
+  parent.SetRootTransform(kTransformId);
+  parent.SetLinkOnTransform(kLinkId, kTransformId);
+  PRESENT(parent, true);
+
+  ProcessMainLoop(parent.GetRoot());
+
+  // Change the display pixel scale.
+  const glm::vec2 new_display_pixel_scale = {0.1f, 0.2f};
+  SetDisplayPixelScale(new_display_pixel_scale);
+
+  // Call and ignore GetLayout() to guarantee the next call hangs.
+  graph_link->GetLayout([&](LayoutInfo info) {});
+
+  // Confirm that the new pixel scale is (.1, .2).
+  {
+    bool layout_updated = false;
+    graph_link->GetLayout([&](LayoutInfo info) {
+      EXPECT_EQ(new_display_pixel_scale.x, info.pixel_scale().x);
+      EXPECT_EQ(new_display_pixel_scale.y, info.pixel_scale().y);
+      layout_updated = true;
+    });
+
+    EXPECT_FALSE(layout_updated);
+    ProcessMainLoop(parent.GetRoot());
+    EXPECT_TRUE(layout_updated);
+  }
+}
+
+TEST_F(FlatlandTest, LinkSizesAffectPixelScale) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const uint64_t kTransformId = 1;
+  const uint64_t kLinkId = 2;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
+
+  parent.CreateTransform(kTransformId);
+  parent.SetRootTransform(kTransformId);
+  parent.SetLinkOnTransform(kLinkId, kTransformId);
+  PRESENT(parent, true);
+
+  ProcessMainLoop(parent.GetRoot());
+
+  // Change the link size and logical size of the link.
+  const Vec2 kNewLinkSize = {2.f, 3.f};
+  parent.SetLinkSize(kLinkId, kNewLinkSize);
+
+  const Vec2 kNewLogicalSize = {5.f, 7.f};
+  {
+    LinkProperties properties;
+    properties.set_logical_size(kNewLogicalSize);
+    parent.SetLinkProperties(kLinkId, std::move(properties));
+  }
+
+  PRESENT(parent, true);
+
+  // Call and ignore GetLayout() to guarantee the next call hangs.
+  graph_link->GetLayout([&](LayoutInfo info) {});
+
+  // Confirm that the new pixel scale is (2 / 5, 3 / 7).
+  {
+    bool layout_updated = false;
+    graph_link->GetLayout([&](LayoutInfo info) {
+      EXPECT_FLOAT_EQ(kNewLinkSize.x / kNewLogicalSize.x, info.pixel_scale().x);
+      EXPECT_FLOAT_EQ(kNewLinkSize.y / kNewLogicalSize.y, info.pixel_scale().y);
+      layout_updated = true;
+    });
+
+    EXPECT_FALSE(layout_updated);
+    ProcessMainLoop(parent.GetRoot());
+    EXPECT_TRUE(layout_updated);
+  }
+}
+
+TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const uint64_t kTransformId = 1;
+  const uint64_t kLinkId = 2;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
+
+  parent.CreateTransform(kTransformId);
+  parent.SetRootTransform(kTransformId);
+  parent.SetLinkOnTransform(kLinkId, kTransformId);
+  PRESENT(parent, true);
+
+  ProcessMainLoop(parent.GetRoot());
+
+  // Set a scale on the parent transform.
+  const Vec2 scale = {2.f, 3.f};
+  parent.SetScale(kTransformId, scale);
+  PRESENT(parent, true);
+
+  // Call and ignore GetLayout() to guarantee the next call hangs.
+  graph_link->GetLayout([&](LayoutInfo info) {});
+
+  // Confirm that the new pixel scale is (2, 3).
+  {
+    bool layout_updated = false;
+    graph_link->GetLayout([&](LayoutInfo info) {
+      EXPECT_FLOAT_EQ(scale.x, info.pixel_scale().x);
+      EXPECT_FLOAT_EQ(scale.y, info.pixel_scale().y);
+      layout_updated = true;
+    });
+
+    EXPECT_FALSE(layout_updated);
+    ProcessMainLoop(parent.GetRoot());
+    EXPECT_TRUE(layout_updated);
+  }
+
+  // Set a negative scale, but confirm that pixel scale is still positive.
+  parent.SetScale(kTransformId, {-scale.x, -scale.y});
+  PRESENT(parent, true);
+
+  // Call and ignore GetLayout() to guarantee the next call hangs.
+  graph_link->GetLayout([&](LayoutInfo info) {});
+
+  // Pixel scale is still (2, 3), so nothing changes.
+  {
+    bool layout_updated = false;
+    graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
+
+    EXPECT_FALSE(layout_updated);
+    ProcessMainLoop(parent.GetRoot());
+    EXPECT_FALSE(layout_updated);
+  }
+
+  // Set a rotation on the parent transform.
+  parent.SetOrientation(kTransformId, Orientation::CCW_90_DEGREES);
+  PRESENT(parent, true);
+
+  // Call and ignore GetLayout() to guarantee the next call hangs.
+  graph_link->GetLayout([&](LayoutInfo info) {});
+
+  // Confirm that this flips the new pixel scale to (3, 2).
+  {
+    bool layout_updated = false;
+    graph_link->GetLayout([&](LayoutInfo info) {
+      EXPECT_FLOAT_EQ(scale.y, info.pixel_scale().x);
+      EXPECT_FLOAT_EQ(scale.x, info.pixel_scale().y);
       layout_updated = true;
     });
 

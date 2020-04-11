@@ -22,7 +22,7 @@ constexpr TransformHandle::InstanceId kLinkInstanceId = 0;
 TransformHandle GetLinkHandle(uint64_t instance_id) { return {kLinkInstanceId, instance_id}; }
 
 // Creates a link in |links| to the the graph rooted at |instance_id:0|.
-void MakeLink(flatland::LinkSystem::LinkTopologyMap& links, uint64_t instance_id) {
+void MakeLink(flatland::GlobalTopologyData::LinkTopologyMap& links, uint64_t instance_id) {
   links[GetLinkHandle(instance_id)] = {instance_id, 0};
 }
 
@@ -58,7 +58,7 @@ TEST(GlobalTopologyDataTest, GlobalTopologyUnknownGraph) {
 
 TEST(GlobalTopologyDataTest, GlobalTopologyLinkExpansion) {
   UberStruct::InstanceMap uber_structs;
-  LinkSystem::LinkTopologyMap links;
+  GlobalTopologyData::LinkTopologyMap links;
 
   auto link_2 = GetLinkHandle(2);
 
@@ -91,7 +91,7 @@ TEST(GlobalTopologyDataTest, GlobalTopologyLinkExpansion) {
 
 TEST(GlobalTopologyDataTest, GlobalTopologyIncompleteLink) {
   UberStruct::InstanceMap uber_structs;
-  LinkSystem::LinkTopologyMap links;
+  GlobalTopologyData::LinkTopologyMap links;
 
   auto link_2 = GetLinkHandle(2);
 
@@ -169,7 +169,7 @@ TEST(GlobalTopologyDataTest, GlobalTopologyIncompleteLink) {
 
 TEST(GlobalTopologyDataTest, GlobalTopologyLinksMismatchedUberStruct) {
   UberStruct::InstanceMap uber_structs;
-  LinkSystem::LinkTopologyMap links;
+  GlobalTopologyData::LinkTopologyMap links;
 
   auto link_2 = GetLinkHandle(2);
 
@@ -220,7 +220,7 @@ TEST(GlobalTopologyDataTest, GlobalTopologyLinksMismatchedUberStruct) {
 
 TEST(GlobalTopologyDataTest, GlobalTopologyDiamondInheritance) {
   UberStruct::InstanceMap uber_structs;
-  LinkSystem::LinkTopologyMap links;
+  GlobalTopologyData::LinkTopologyMap links;
 
   auto link_2 = GetLinkHandle(2);
   auto link_3 = GetLinkHandle(3);
