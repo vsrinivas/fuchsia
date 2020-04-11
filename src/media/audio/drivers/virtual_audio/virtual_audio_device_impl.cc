@@ -94,7 +94,7 @@ bool VirtualAudioDeviceImpl::CreateStream(zx_device_t* devnode) {
   return (stream_ != nullptr);
 }
 
-// Remove our child stream by calling its Unbind. This may already have occurred; check for null.
+// Remove our child stream by calling its DdkUnbind. This may already have occurred; check for null.
 //
 // TODO(mpuryear): This may not safely unwind in all cases: it makes some threading assumptions that
 // cannot necessarily be enforced. But until ZX-3461 is addressed, the current VAD code appears to
@@ -122,8 +122,7 @@ void VirtualAudioDeviceImpl::RemoveStream() {
     // Now that the stream has done its shutdown, we release our reference.
     stream_ = nullptr;
   }
-  input_binding_ = nullptr;
-  output_binding_ = nullptr;
+  // bindings are reset in the VirtualAudioDeviceImpl dtor
 }
 
 // In most cases, stream DdkUnbind is called by us (the parent DeviceImpl), above in RemoveStream.
