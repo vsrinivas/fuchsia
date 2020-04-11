@@ -151,6 +151,10 @@ def main():
         '--build-dir',
         help='Path to the ZN build dir',
         default=os.path.join(FUCHSIA_ROOT, 'out', 'default.zircon'))
+    parser.add_argument(
+        '--plain',
+        help='Only print library names, no dependency information',
+        action='store_true')
     type = parser.add_mutually_exclusive_group(required=True)
     type.add_argument(
         '--banjo', help='Inspect Banjo libraries', action='store_true')
@@ -246,9 +250,12 @@ def main():
         if not refs:
             movable.add(lib)
     if movable:
-        print('These libraries are free to go:')
+        if not args.plain:
+            print('These libraries are free to go:')
         for label in sorted(movable):
             print('  ' + format_label(label))
+            if args.plain:
+                continue
             unblocked = unblocked_by(graph, label)
             if unblocked:
                 print(
