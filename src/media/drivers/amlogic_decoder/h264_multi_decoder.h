@@ -29,6 +29,7 @@ class H264MultiDecoder : public VideoDecoder {
  public:
   struct ReferenceFrame {
     bool in_use = false;
+    bool in_internal_use = false;
     uint32_t index;
     std::shared_ptr<VideoFrame> frame;
     std::unique_ptr<CanvasEntry> y_canvas;
@@ -113,6 +114,9 @@ class H264MultiDecoder : public VideoDecoder {
                          uint32_t reg_offset);
   // Try to pump the decoder, rescheduling it if it isn't currently scheduled in.
   void PumpOrReschedule();
+  void StartConfigChange();
+  // Output all the frames in frames_to_output.
+  void OutputReadyFrames();
 
   FrameDataProvider* frame_data_provider_;
   bool fatal_error_ = false;
@@ -133,6 +137,10 @@ class H264MultiDecoder : public VideoDecoder {
   uint32_t mb_height_ = 0;
   bool waiting_for_surfaces_ = false;
   bool currently_decoding_ = false;
+  // This is true if media_decoder_ notified us about the config change, but the client hasn't yet
+  // been requested to provide new frames.
+  bool pending_config_change_ = false;
+  bool in_pump_decoder_ = false;
 
   std::vector<std::shared_ptr<ReferenceFrame>> video_frames_;
   ReferenceFrame* current_frame_ = nullptr;

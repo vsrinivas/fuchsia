@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -53,6 +53,7 @@ class TestFrameAllocator : public TestBasicClient {
           DECODE_ERROR("zx_vmo_create_contiguous failed - status: %d", vmo_create_result);
           return;
         }
+        frame_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, frame_vmo_bytes, nullptr, 0);
         fuchsia::media::StreamBufferData codec_buffer_data;
         fuchsia::media::StreamBufferDataVmo data_vmo;
         data_vmo.set_vmo_handle(std::move(frame_vmo));
@@ -85,4 +86,4 @@ class TestFrameAllocator : public TestBasicClient {
   bool use_minimum_frame_count_ = false;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_

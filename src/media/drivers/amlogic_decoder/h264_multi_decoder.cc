@@ -24,6 +24,12 @@ class AmlogicH264Picture : public media::H264Picture {
  public:
   explicit AmlogicH264Picture(std::shared_ptr<H264MultiDecoder::ReferenceFrame> pic)
       : internal_picture(pic) {}
+  ~AmlogicH264Picture() override {
+    auto pic = internal_picture.lock();
+    if (pic)
+      pic->in_internal_use = false;
+  }
+
   std::weak_ptr<H264MultiDecoder::ReferenceFrame> internal_picture;
 };
 class MultiAccelerator : public media::H264Decoder::H264Accelerator {
@@ -710,21 +716,29 @@ void H264MultiDecoder::HandlePicDataDone() {
   ZX_DEBUG_ASSERT(current_frame_);
   // TODO(fxb/13483): Get PTS
   current_frame_ = nullptr;
+  current_metadata_frame_ = nullptr;
   ZX_DEBUG_ASSERT(slice_data_list_.size() == 0);
 
-  while (!frames_to_output_.empty()) {
-    uint32_t index = frames_to_output_.front();
-    frames_to_output_.pop_front();
-    client_->OnFrameReady(video_frames_[index]->frame);
-  }
+  OutputReadyFrames();
   state_ = DecoderState::kInitialWaitingForInput;
   owner_->core()->StopDecoding();
 
   currently_decoding_ = false;
+  if (pending_config_change_) {
+    StartConfigChange();
+  } else {
+    owner_->TryToReschedule();
+    if (state_ == DecoderState::kInitialWaitingForInput) {
+      PumpDecoder();
+    }
+  }
+}
 
-  owner_->TryToReschedule();
-  if (state_ == DecoderState::kInitialWaitingForInput) {
-    PumpDecoder();
+void H264MultiDecoder::OutputReadyFrames() {
+  while (!frames_to_output_.empty()) {
+    uint32_t index = frames_to_output_.front();
+    frames_to_output_.pop_front();
+    client_->OnFrameReady(video_frames_[index]->frame);
   }
 }
 
@@ -766,6 +780,8 @@ void H264MultiDecoder::PumpOrReschedule() {
 
 void H264MultiDecoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
   DLOG("H264MultiDecoder::ReturnFrame %d", frame->index);
+  ZX_DEBUG_ASSERT(frame->index < video_frames_.size());
+  ZX_DEBUG_ASSERT(video_frames_[frame->index]->frame == frame);
   video_frames_[frame->index]->in_use = false;
   waiting_for_surfaces_ = false;
   PumpOrReschedule();
@@ -842,8 +858,8 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
     }
 
     video_frames_.push_back(std::shared_ptr<ReferenceFrame>(
-        new ReferenceFrame{false, i, std::move(frame), std::move(y_canvas), std::move(uv_canvas),
-                           create_result.take_value()}));
+        new ReferenceFrame{false, false, i, std::move(frame), std::move(y_canvas),
+                           std::move(uv_canvas), create_result.take_value()}));
   }
   waiting_for_surfaces_ = false;
   PumpOrReschedule();
@@ -866,7 +882,13 @@ void H264MultiDecoder::SubmitSliceData(SliceData data) {
 }
 
 void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame) {
+  ZX_DEBUG_ASSERT(reference_frame->in_use);
   frames_to_output_.push_back(reference_frame->index);
+  // Don't output a frame that's currently being decoded into, and don't output frames out of order
+  // if one's already been queued up.
+  if ((frames_to_output_.size() == 1) && (current_metadata_frame_ != reference_frame)) {
+    OutputReadyFrames();
+  }
 }
 
 void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length) {
@@ -882,6 +904,8 @@ bool H264MultiDecoder::CanBeSwappedIn() {
     return false;
   if (waiting_for_surfaces_)
     return false;
+
+  ZX_DEBUG_ASSERT(!pending_config_change_ || currently_decoding_);
   // If there aren't any free output frames the decoder will be swapped in, hit kRanOutOfSurfaces,
   // then be swapped out (if necessary). Similarly, if there isn't enough data for a complete frame
   // it will be swapped in, will put what data exists in the stream buffer, then hit
@@ -913,41 +937,62 @@ void H264MultiDecoder::OnFatalError() {
 
 void H264MultiDecoder::ReceivedNewInput() { PumpOrReschedule(); }
 
+void H264MultiDecoder::StartConfigChange() {
+  ZX_DEBUG_ASSERT(pending_config_change_);
+  // We shouldn't try to run this if decoding is currently ongoing, since the interrupt handlers are
+  // using the current set of video_frames_.
+  ZX_DEBUG_ASSERT(!currently_decoding_);
+  ZX_DEBUG_ASSERT(frames_to_output_.empty());
+
+  video_frames_.clear();
+  zx::bti bti;
+  zx_status_t status = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &bti);
+  if (status != ZX_OK) {
+    DECODE_ERROR("bti duplicate failed, status: %d\n", status);
+    return;
+  }
+  display_width_ = media_decoder_->GetVisibleRect().width();
+  display_height_ = media_decoder_->GetVisibleRect().height();
+  mb_width_ = media_decoder_->GetPicSize().width() / 16;
+  mb_height_ = media_decoder_->GetPicSize().height() / 16;
+  uint32_t min_frame_count = media_decoder_->GetRequiredNumOfPictures();
+  uint32_t max_frame_count = 24;
+  uint32_t coded_width = media_decoder_->GetPicSize().width();
+  uint32_t coded_height = media_decoder_->GetPicSize().height();
+  uint32_t stride = fbl::round_up(coded_width, 32u);
+  // TODO(fxb/13483): Plumb SAR through somehow.
+  bool has_sar = false;
+  uint32_t sar_width = 1;
+  uint32_t sar_height = 1;
+  client_->InitializeFrames(std::move(bti), min_frame_count, max_frame_count, coded_width,
+                            coded_height, stride, display_width_, display_height_, has_sar,
+                            sar_width, sar_height);
+  pending_config_change_ = false;
+  waiting_for_surfaces_ = true;
+  owner_->TryToReschedule();
+}
+
 void H264MultiDecoder::PumpDecoder() {
+  // Don't try to reenter media_decoder_->Decode().
+  if (in_pump_decoder_)
+    return;
+
   while (true) {
-    if (waiting_for_surfaces_ || currently_decoding_ || (state_ == DecoderState::kSwappedOut))
+    if (waiting_for_surfaces_ || currently_decoding_ || pending_config_change_ ||
+        (state_ == DecoderState::kSwappedOut))
       return;
+    ZX_DEBUG_ASSERT(!in_pump_decoder_);
+    in_pump_decoder_ = true;
     auto res = media_decoder_->Decode();
+    in_pump_decoder_ = false;
     DLOG("H264MultiDecoder::PumpDecoder Got result of %d\n", static_cast<int>(res));
     if (res == media::AcceleratedVideoDecoder::kConfigChange) {
-      zx::bti bti;
-      zx_status_t status = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &bti);
-      if (status != ZX_OK) {
-        DECODE_ERROR("bti duplicate failed, status: %d\n", status);
-        return;
+      pending_config_change_ = true;
+      if (!currently_decoding_) {
+        StartConfigChange();
       }
-      // TODO(fxb/13483): keep display_width and coded_width separate; keep display_height and
-      // coded_height separate
-      display_width_ = media_decoder_->GetVisibleRect().width();
-      display_height_ = media_decoder_->GetVisibleRect().height();
-      mb_width_ = media_decoder_->GetPicSize().width() / 16;
-      mb_height_ = media_decoder_->GetPicSize().height() / 16;
-      uint32_t min_frame_count = media_decoder_->GetRequiredNumOfPictures();
-      uint32_t max_frame_count = 24;
-      uint32_t coded_width = media_decoder_->GetPicSize().width();
-      uint32_t coded_height = media_decoder_->GetPicSize().height();
-      uint32_t stride = fbl::round_up(coded_width, 32u);
-      // TODO(fxb/13483): Plumb SAR through somehow.
-      bool has_sar = false;
-      uint32_t sar_width = 1;
-      uint32_t sar_height = 1;
-      client_->InitializeFrames(std::move(bti), min_frame_count, max_frame_count, coded_width,
-                                coded_height, stride, display_width_, display_height_, has_sar,
-                                sar_width, sar_height);
-      video_frames_.clear();
-      // Decoding can continue until the decoder next tries to allocate a surface, which will fail
-      // because video_frames_ is empty.
-    } else if (res == media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
+    }
+    if (res == media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
       current_decoder_buffer_.reset();
       std::vector<uint8_t> next_decoder_buffer = frame_data_provider_->ReadMoreInputData(this);
       if (next_decoder_buffer.empty()) {
@@ -981,9 +1026,15 @@ void H264MultiDecoder::PumpDecoder() {
 }
 
 std::shared_ptr<H264MultiDecoder::ReferenceFrame> H264MultiDecoder::GetUnusedReferenceFrame() {
+  ZX_DEBUG_ASSERT(!pending_config_change_);
   for (auto& frame : video_frames_) {
-    if (!frame->in_use) {
+    ZX_DEBUG_ASSERT(frame->frame->coded_width ==
+                    static_cast<uint32_t>(media_decoder_->GetPicSize().width()));
+    ZX_DEBUG_ASSERT(frame->frame->coded_height ==
+                    static_cast<uint32_t>(media_decoder_->GetPicSize().height()));
+    if (!frame->in_use && !frame->in_internal_use) {
       frame->in_use = true;
+      frame->in_internal_use = true;
       return frame;
     }
   }
