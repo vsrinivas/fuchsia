@@ -74,12 +74,7 @@ bool FilterByTypeAndName(const gpt_partition_t& part, const uint8_t type[GPT_GUI
 
 bool IsFvmPartition(const gpt_partition_t& part) {
   const uint8_t partition_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
-  return memcmp(part.type, partition_type, GPT_GUID_LEN) == 0;
-}
-
-bool IsGigabootPartition(const gpt_partition_t& part) {
-  const uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
-  return memcmp(part.type, efi_type, GPT_GUID_LEN) == 0;
+  return FilterByType(part, partition_type);
 }
 
 // Returns true if the spec partition is Zircon A/B/R.
@@ -1016,7 +1011,11 @@ zx_status_t EfiDevicePartitioner::FindPartition(
 
   switch (spec.partition) {
     case Partition::kBootloader: {
-      return gpt_->FindPartition(IsGigabootPartition, out_partition);
+      const auto filter = [](const gpt_partition_t& part) {
+        const uint8_t partition_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
+        return FilterByTypeAndName(part, partition_type, GUID_EFI_NAME);
+      };
+      return gpt_->FindPartition(filter, out_partition);
     }
     case Partition::kZirconA:
     case Partition::kZirconB:
@@ -1075,7 +1074,7 @@ zx_status_t EfiDevicePartitioner::InitPartitionTables() const {
       // Fuchsia-installed bootloader partition. This is to allow dual-booting.
       char cstring_name[GPT_NAME_LEN] = {};
       utf16_to_cstring(cstring_name, part.name, GPT_NAME_LEN);
-      if (strncmp(cstring_name, GUID_EFI_NAME, GPT_NAME_LEN) == 0) {
+      if (strncasecmp(cstring_name, GUID_EFI_NAME, GPT_NAME_LEN) == 0) {
         return true;
       }
     }

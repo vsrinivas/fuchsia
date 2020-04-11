@@ -514,7 +514,6 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitPartitionTables) {
   ASSERT_NO_FATAL_FAILURES(EnsurePartitionsMatch(gpt.get(), partitions_at_end));
 
   // Make sure we can find the important partitions.
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader), nullptr));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA), nullptr));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB), nullptr));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR), nullptr));
@@ -524,6 +523,12 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitPartitionTables) {
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kAbrMeta), nullptr));
   EXPECT_OK(
       partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager), nullptr));
+  // Check that we found the correct bootloader partition.
+  std::unique_ptr<paver::PartitionClient> partition;
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader), &partition));
+  size_t partition_size = 0;
+  EXPECT_OK(partition->GetPartitionSize(&partition_size));
+  EXPECT_EQ(partition_size, 0x8000 * kBlockSize);
 }
 
 TEST_F(EfiDevicePartitionerTests, DISABLED_SupportsPartition) {
