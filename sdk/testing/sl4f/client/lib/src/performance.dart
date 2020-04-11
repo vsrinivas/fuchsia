@@ -15,6 +15,13 @@ import 'storage.dart';
 import 'trace_processing/metrics_spec.dart';
 import 'trace_processing/trace_importing.dart';
 
+String _removeSuffix(String string, String suffix) {
+  if (!string.endsWith(suffix)) {
+    throw ArgumentError('String "$string" does not end with "$suffix"');
+  }
+  return string.substring(0, string.length - suffix.length);
+}
+
 String _traceExtension({bool binary, bool compress}) {
   String extension = 'json';
   if (binary) {
@@ -372,15 +379,14 @@ class Performance {
     }
 
     final resultsPath = result.absolute.path;
-    assert(resultsPath.endsWith('.fuchsiaperf.json'));
     // The infra recipe looks for the filename extension '.catapult_json',
     // so uploading to the Catapult performance dashboard is disabled if we
     // use a different extension.
     final catapultExtension = uploadToCatapultDashboard
         ? '.catapult_json'
         : '.catapult_json_disabled';
-    final outputFileName = resultsPath.replaceFirst(
-        RegExp(r'\.fuchsiaperf\.json$'), catapultExtension);
+    final outputFileName =
+        _removeSuffix(resultsPath, '.fuchsiaperf.json') + catapultExtension;
 
     final List<String> args = [
       '--input',

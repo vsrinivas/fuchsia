@@ -245,7 +245,7 @@ void main(List<String> args) {
 
   // convertResults() should raise an error if a non-empty subset of the
   // infra env vars are set.
-  test('convertResults error', () async {
+  test('convertResults check env vars', () async {
     final mockRunProcessObserver = MockRunProcessObserver();
     final performance =
         FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
@@ -256,6 +256,19 @@ void main(List<String> args) {
     expect(
         performance.convertResults('/bin/catapult_converter',
             File('test1-benchmark.fuchsiaperf.json'), environment),
+        throwsA(TypeMatcher<ArgumentError>()));
+  });
+
+  // convertResults() should raise an error when given a filename without the
+  // proper filename extension.
+  test('convertResults check filename extension', () async {
+    final mockRunProcessObserver = MockRunProcessObserver();
+    final performance =
+        FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
+
+    expect(
+        performance.convertResults(
+            '/bin/catapult_converter', File('results-fuchsiaperf.json'), {}),
         throwsA(TypeMatcher<ArgumentError>()));
   });
 
