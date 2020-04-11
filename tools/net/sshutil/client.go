@@ -33,7 +33,7 @@ const (
 // TODO(fxb/48042): change all usage of sshutil to use this Client type instead
 // of ssh.Client.
 type Client struct {
-	addr         string
+	addr         net.Addr
 	config       *ssh.ClientConfig
 	shuttingDown chan struct{}
 
@@ -46,7 +46,7 @@ type Client struct {
 
 // NewClient creates a new ssh client to the address and launches a goroutine to
 // send keep-alive pings as long as the client is connected.
-func NewClient(ctx context.Context, addr string, config *ssh.ClientConfig) (*Client, error) {
+func NewClient(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*Client, error) {
 	client, err := connect(ctx, addr, config)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func NewClient(ctx context.Context, addr string, config *ssh.ClientConfig) (*Cli
 
 // connect continously attempts to connect to a remote server, and returns an
 // ssh client if successful, or errs out if the context is canceled.
-func connect(ctx context.Context, addr string, config *ssh.ClientConfig) (*Client, error) {
+func connect(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*Client, error) {
 	var client *ssh.Client
 	var conn net.Conn
 	err := retry.Retry(ctx, retry.NewConstantBackoff(connectInterval), func() error {
@@ -90,15 +90,15 @@ func connect(ctx context.Context, addr string, config *ssh.ClientConfig) (*Clien
 	}, nil
 }
 
-func connectToSSH(ctx context.Context, addr string, config *ssh.ClientConfig) (*ssh.Client, net.Conn, error) {
+func connectToSSH(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*ssh.Client, net.Conn, error) {
 	d := net.Dialer{Timeout: config.Timeout}
-	conn, err := d.DialContext(ctx, "tcp", addr)
+	conn, err := d.DialContext(ctx, "tcp", addr.String())
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// We made a TCP connection, now establish an SSH connection over it.
-	clientConn, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	clientConn, chans, reqs, err := ssh.NewClientConn(conn, addr.String(), config)
 	if err != nil {
 		if closeErr := conn.Close(); closeErr != nil {
 			return nil, nil, fmt.Errorf(

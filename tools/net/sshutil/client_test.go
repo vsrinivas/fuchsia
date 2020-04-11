@@ -31,7 +31,7 @@ func setUpClient(
 		}
 	}()
 
-	client, err = connect(ctx, server.addr.String(), server.clientConfig)
+	client, err = connect(ctx, server.addr, server.clientConfig)
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}

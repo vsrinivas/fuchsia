@@ -30,7 +30,7 @@ const rebootCheckPath = "/tmp/ota_test_should_reboot"
 // Client manages the connection to the device.
 type Client struct {
 	deviceHostname string
-	addr           string
+	addr           net.Addr
 	sshConfig      *ssh.ClientConfig
 
 	// This mutex protects the following fields.
@@ -45,7 +45,10 @@ func NewClient(ctx context.Context, deviceHostname string, privateKey ssh.Signer
 		return nil, err
 	}
 
-	addr := net.JoinHostPort(deviceHostname, "22")
+	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(deviceHostname, "22"))
+	if err != nil {
+		return nil, err
+	}
 	sshClient, err := sshutil.NewClient(ctx, addr, sshConfig)
 	if err != nil {
 		return nil, err
