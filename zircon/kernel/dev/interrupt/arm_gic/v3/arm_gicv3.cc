@@ -9,13 +9,13 @@
 #include <bits.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/arch/intrin.h>
 #include <lib/ktrace.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
 
-#include <arch/arch_ops.h>
 #include <arch/arm64/hypervisor/gic/gicv3.h>
 #include <arch/arm64/periphmap.h>
 #include <dev/interrupt.h>
@@ -191,7 +191,7 @@ static zx_status_t gic_init() {
 
   gic_init_percpu_early();
 
-  mb();
+  arch::DeviceMemoryBarrier();
   __isb(ARM_MB_SY);
 
   return ZX_OK;
@@ -206,7 +206,7 @@ static zx_status_t arm_gic_sgi(unsigned int irq, unsigned int flags, unsigned in
     return ZX_ERR_INVALID_ARGS;
   }
 
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 
   uint cpu = 0;
   uint cluster = 0;

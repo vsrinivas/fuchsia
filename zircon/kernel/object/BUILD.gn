@@ -62,6 +62,7 @@ zx_library("object") {
     "$zx/kernel/dev/iommu/dummy",
     "$zx/kernel/dev/pcie",
     "$zx/kernel/hypervisor",
+    "$zx/kernel/lib/arch",
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/counters",

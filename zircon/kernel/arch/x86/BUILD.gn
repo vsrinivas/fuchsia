@@ -86,6 +86,9 @@ config("kernel") {
 
     # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
     "$zx/kernel/lib/ktl:headers.config",
+
+    # <arch/x86.h> has #include <lib/arch/intrin.h>.
+    "$zx/kernel/lib/arch/x86:headers.config",
   ]
 }
 
@@ -142,6 +145,7 @@ zx_library("x86") {
     "$zx/kernel/dev/iommu/dummy",
     "$zx/kernel/dev/iommu/intel",
     "$zx/kernel/lib/acpi_tables",
+    "$zx/kernel/lib/arch",
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/code_patching",
     "$zx/kernel/lib/console",
@@ -184,6 +188,9 @@ zx_library("x86") {
 
     # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
     "$zx/kernel/lib/ktl:headers",
+
+    # <arch/x86.h> has #include <lib/arch/intrin.h>.
+    "$zx/kernel/lib/arch:headers",
   ]
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

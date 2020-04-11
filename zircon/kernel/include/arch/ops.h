@@ -31,8 +31,6 @@ static void arch_enable_ints(void);
 static void arch_disable_ints(void);
 static bool arch_ints_disabled(void);
 
-static uint64_t arch_cycle_count(void);
-
 static cpu_num_t arch_curr_cpu_num(void);
 static uint arch_max_num_cpus(void);
 static uint arch_cpu_features(void);
@@ -56,9 +54,6 @@ class Event;
 void arch_flush_state_and_halt(Event *flush_done) __NO_RETURN;
 
 int arch_idle_thread_routine(void *) __NO_RETURN;
-
-/* function to call in spinloops to idle */
-static void arch_spinloop_pause(void);
 
 /* arch optimized version of a page zero routine against a page aligned buffer */
 void arch_zero_page(void *);

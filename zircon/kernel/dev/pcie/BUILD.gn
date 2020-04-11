@@ -23,6 +23,7 @@ zx_library("pcie") {
     "pcie_upstream_node.cc",
   ]
   deps = [
+    "$zx/kernel/lib/arch",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/kpci",
@@ -39,6 +40,9 @@ zx_library("pcie") {
 
     # <dev/pcie_bus_driver.h> has #include <region-alloc/region-alloc.h>.
     "$zx/system/ulib/region-alloc:headers",
+
+    # <dev/pcie_bus_driver.h> has #include <arch/ops.h>.
+    "$zx/kernel/lib/arch:headers",
   ]
 
   # TODO(mcgrathr): Say why this is needed.

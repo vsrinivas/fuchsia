@@ -145,7 +145,7 @@ static void imx_dputs(const char* str, size_t len, bool block, bool map_NL) {
       if (block) {
         uart_dputc_event.Wait();
       } else {
-        arch_spinloop_pause();
+        arch::Yield();
       }
       spin_lock_irqsave(&uart_spinlock, state);
     }

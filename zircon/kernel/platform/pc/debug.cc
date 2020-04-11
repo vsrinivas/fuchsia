@@ -9,6 +9,7 @@
 
 #include <bits.h>
 #include <lib/acpi_tables.h>
+#include <lib/arch/intrin.h>
 #include <lib/cbuf.h>
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
@@ -641,7 +642,7 @@ static void platform_dputs(const char* str, size_t len, bool block, bool map_NL)
         uart_dputc_event.Wait();
       } else {
         spin_unlock_irqrestore(&uart_spinlock, state);
-        arch_spinloop_pause();
+        arch::Yield();
       }
       spin_lock_irqsave(&uart_spinlock, state);
     }
@@ -683,7 +684,7 @@ static int debug_uart_getc_poll(char* c) {
 static void debug_uart_putc_poll(char c) {
   // while the fifo is non empty, spin
   while (!(uart_read(5) & (1 << 6))) {
-    arch_spinloop_pause();
+    arch::Yield();
   }
   uart_write(0, c);
 }

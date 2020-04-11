@@ -8,18 +8,22 @@
 #define ZIRCON_KERNEL_LIB_ARCH_ARM64_INCLUDE_LIB_ARCH_TICKS_H_
 
 #ifndef __ASSEMBLER__
-#include <stdint.h>
+#include <cstdint>
+
+namespace arch {
 
 // This is the C++ type that the assembly macro `sample_ticks` delivers.
 // Higher-level kernel code knows how to translate this into the Zircon
 // monotonic clock's zx_ticks_t.
-struct ArchEarlyTicks {
+struct EarlyTicks {
   uint64_t cntpct_el0, cntvct_el0;
 };
 
+}  // namespace arch
+
 #else  // clang-format off
 
-// Delivers an ArchEarlyTicks value in two registers \outp and \outv,
+// Delivers an arch::EarlyTicks value in two registers \outp and \outv,
 // as it's passed as a C++ function argument.  The remaining register
 // arguments are needed for scratch space.
 .macro sample_ticks outp, outv, tmp1, tmp2, tmp3

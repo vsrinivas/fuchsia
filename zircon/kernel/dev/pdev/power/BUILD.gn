@@ -9,5 +9,6 @@ source_set("power") {
   deps = [
     "$zx/kernel/dev/pdev",
     "$zx/kernel/dev/psci",
+    "$zx/kernel/lib/arch",
   ]
 }

@@ -176,7 +176,7 @@ static void dw8250_dputs(const char* str, size_t len, bool block, bool map_NL) {
         UARTREG(UART_IER) |= UART_IER_ETBEI;  // Enable TX interrupt.
         uart_dputc_event.Wait();
       } else {
-        arch_spinloop_pause();
+        arch::Yield();
       }
       spin_lock_irqsave(&uart_spinlock, state);
     }

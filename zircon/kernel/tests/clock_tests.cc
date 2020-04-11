@@ -7,6 +7,7 @@
 
 #include <err.h>
 #include <inttypes.h>
+#include <lib/arch/intrin.h>
 #include <platform.h>
 #include <stdio.h>
 #include <zircon/types.h>
@@ -23,9 +24,9 @@ int clock_tests(int, const cmd_args*, uint32_t) {
   zx_time_t t2;
 
   Thread::Current::SleepRelative(ZX_MSEC(100));
-  c = arch_cycle_count();
+  c = arch::Cycles();
   current_time();
-  c = arch_cycle_count() - c;
+  c = arch::Cycles() - c;
   printf("%" PRIu64 " cycles per current_time()\n", c);
 
   printf("making sure time never goes backwards\n");
@@ -64,11 +65,11 @@ int clock_tests(int, const cmd_args*, uint32_t) {
     Thread::Current::Get()->SetCpuAffinity(cpu_num_to_mask(cpu));
 
     for (int i = 0; i < 3; i++) {
-      uint64_t cycles = arch_cycle_count();
+      uint64_t cycles = arch::Cycles();
       zx_time_t start = current_time();
       while ((current_time() - start) < ZX_SEC(1))
         ;
-      cycles = arch_cycle_count() - cycles;
+      cycles = arch::Cycles() - cycles;
       printf("cpu %u: %" PRIu64 " cycles per second\n", cpu, cycles);
     }
   }

@@ -6,6 +6,7 @@ zx_library("jitterentropy") {
   kernel = true
   sources = [ "jitterentropy-base.c" ]
   include_dirs = [ "arch/$zircon_cpu" ]
+  deps = [ "$zx/kernel/lib/arch" ]
 
   # According to its documentation, jitterentropy must be compiled at
   # optimization level -O0.

@@ -8,6 +8,7 @@
 #include <arch.h>
 #include <debug.h>
 #include <err.h>
+#include <lib/arch/intrin.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/debuglog.h>
@@ -141,7 +142,7 @@ void platform_halt_cpu(void) {
 
 static zx_status_t platform_start_cpu(uint cpu_id, uint64_t mpid) {
   // Issue memory barrier before starting to ensure previous stores will be visible to new CPU.
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 
   uint32_t ret = psci_cpu_on(mpid, kernel_entry_paddr);
   dprintf(INFO, "Trying to start cpu %u, mpid %lu returned: %d\n", cpu_id, mpid, (int)ret);

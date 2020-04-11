@@ -9,6 +9,7 @@ source_set("amlogic_s905") {
   deps = [
     "$zx/kernel/dev/pdev",
     "$zx/kernel/dev/pdev/uart",
+    "$zx/kernel/lib/arch",
     "$zx/kernel/lib/cbuf",
     "$zx/kernel/lib/debuglog",
   ]

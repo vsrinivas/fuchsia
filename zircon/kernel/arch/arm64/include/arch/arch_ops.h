@@ -23,13 +23,6 @@ __BEGIN_CDECLS
 
 #define ENABLE_CYCLE_COUNTER 1
 
-static inline void arch_spinloop_pause(void) { __yield(); }
-
-#define mb() __dsb(ARM_MB_SY)
-#define smp_mb() __dmb(ARM_MB_SY)
-
-static inline uint64_t arch_cycle_count(void) { return __arm_rsr64("pmccntr_el0"); }
-
 static inline uint32_t arch_cpu_features(void) { return arm64_features; }
 
 static inline uint32_t arch_dcache_line_size(void) { return arm64_dcache_size; }

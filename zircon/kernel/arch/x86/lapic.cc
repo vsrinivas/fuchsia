@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <lib/arch/intrin.h>
 #include <lib/console.h>
 #include <stdio.h>
 #include <string.h>
@@ -377,7 +378,7 @@ void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked) {
   // Intel recommends using an MFENCE to ensure the LVT_TIMER_ADDR write
   // takes before the write_msr(), since writes to this MSR are ignored if the
   // time mode is not DEADLINE.
-  mb();
+  arch::DeviceMemoryBarrier();
   write_msr(X86_MSR_IA32_TSC_DEADLINE, deadline);
 
   arch_interrupt_restore(state, 0);

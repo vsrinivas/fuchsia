@@ -5,8 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+#include <lib/arch/intrin.h>
 
-#include <arch/arch_ops.h>
 #include <pdev/uart.h>
 
 static int default_getc(bool wait) { return ZX_ERR_NOT_SUPPORTED; }
@@ -53,5 +53,5 @@ int uart_pgetc() { return uart_ops->pgetc(); }
 
 void pdev_register_uart(const struct pdev_uart_ops* ops) {
   uart_ops = ops;
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 }

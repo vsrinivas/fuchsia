@@ -6,6 +6,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/arch/intrin.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>

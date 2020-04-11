@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+#include <lib/arch/intrin.h>
 #include <zircon/types.h>
 
 #include <kernel/auto_lock.h>
@@ -157,7 +158,7 @@ void platform_fiq(iframe_t* frame) { intr_ops->handle_fiq(frame); }
 
 void pdev_register_interrupts(const struct pdev_interrupt_ops* ops) {
   intr_ops = ops;
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 }
 
 static void interrupt_init_percpu_early(uint level) { intr_ops->init_percpu_early(); }

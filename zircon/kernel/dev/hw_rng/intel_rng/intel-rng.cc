@@ -4,13 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/arch/intrin.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
 
 #include <arch/x86/feature.h>
-#include <arch/x86/x86intrin.h>
 #include <dev/hw_rng.h>
 #include <fbl/algorithm.h>
 #include <lk/init.h>
@@ -19,8 +19,7 @@ enum entropy_instr {
   ENTROPY_INSTR_RDSEED,
   ENTROPY_INSTR_RDRAND,
 };
-static ssize_t get_entropy_from_instruction(void* buf, size_t len,
-                                            enum entropy_instr instr);
+static ssize_t get_entropy_from_instruction(void* buf, size_t len, enum entropy_instr instr);
 static ssize_t get_entropy_from_rdseed(void* buf, size_t len);
 static ssize_t get_entropy_from_rdrand(void* buf, size_t len);
 
@@ -65,8 +64,7 @@ __attribute__((target("rdrnd,rdseed"))) static bool instruction_step(enum entrop
   }
 }
 
-static ssize_t get_entropy_from_instruction(void* buf, size_t len,
-                                            enum entropy_instr instr) {
+static ssize_t get_entropy_from_instruction(void* buf, size_t len, enum entropy_instr instr) {
   size_t written = 0;
   while (written < len) {
     unsigned long long int val = 0;
@@ -112,8 +110,6 @@ static struct hw_rng_ops ops = {
     .hw_rng_get_entropy = intel_hw_rng_get_entropy,
 };
 
-static void intel_rng_init(uint level) {
-  hw_rng_register(&ops);
-}
+static void intel_rng_init(uint level) { hw_rng_register(&ops); }
 
 LK_INIT_HOOK(intel_rng_init, intel_rng_init, LK_INIT_LEVEL_TARGET_EARLY)

@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_CURRENT_THREAD_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_CURRENT_THREAD_H_
 
+#include <lib/arch/intrin.h>
+
 /* use the cpu local thread context pointer to store current_thread */
 static inline Thread* arch_get_current_thread(void) {
 #ifdef __clang__

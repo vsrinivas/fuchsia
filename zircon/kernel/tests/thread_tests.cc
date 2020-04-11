@@ -9,6 +9,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/arch/intrin.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <pow2.h>
@@ -289,11 +290,11 @@ static int context_switch_tester(void* arg) {
 
   context_switch_event.Wait();
 
-  uint64_t count = arch_cycle_count();
+  uint64_t count = arch::Cycles();
   for (i = 0; i < iter; i++) {
     Thread::Current::Yield();
   }
-  total_count += arch_cycle_count() - count;
+  total_count += arch::Cycles() - count;
   Thread::Current::SleepRelative(ZX_SEC(1));
   printf("took %" PRIu64 " cycles to yield %d times, %" PRIu64 " per yield, %" PRIu64
          " per yield per thread\n",
@@ -501,7 +502,7 @@ static int hold_and_release(void* arg) {
   spin_lock_saved_state_t state;
   spin_lock_irqsave(&pair->second, state);
   while (spin_lock_holder_cpu(&pair->first) != UINT_MAX) {
-    arch_spinloop_pause();
+    arch::Yield();
   }
   spin_unlock_irqrestore(&pair->second, state);
   return 0;
@@ -544,7 +545,7 @@ static void spinlock_test() {
   holder_thread->SetCpuAffinity(active ^ cpu_num_to_mask(arch_curr_cpu_num()));
   holder_thread->Resume();
   while (spin_lock_holder_cpu(&pair.second) == UINT_MAX) {
-    arch_spinloop_pause();
+    arch::Yield();
   }
 
   // See that from our perspective "second" is not held.

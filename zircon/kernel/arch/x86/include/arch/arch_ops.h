@@ -41,13 +41,6 @@ static inline bool arch_ints_disabled(void) {
   return !(state & (1 << 9));
 }
 
-static inline uint64_t arch_cycle_count(void) { return rdtsc(); }
-
-static inline void arch_spinloop_pause(void) { __asm__ volatile("pause" ::: "memory"); }
-
-#define mb() __asm__ volatile("mfence" ::: "memory")
-#define smp_mb() mb()
-
 static inline uint32_t arch_cpu_features(void) {
   return 0;  // Use cpuid instead.
 }

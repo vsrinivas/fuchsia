@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <lib/affine/ratio.h>
+#include <lib/arch/intrin.h>
 #include <lib/counters.h>
 #include <lib/fixed_point.h>
 #include <lib/unittest/unittest.h>
@@ -16,7 +17,6 @@
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
 
-#include <arch/ops.h>
 #include <dev/interrupt.h>
 #include <dev/timer/arm_generic.h>
 #include <ktl/atomic.h>
@@ -371,7 +371,7 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
   } else {
     panic("no irqs set in arm_generic_timer_pdev_init\n");
   }
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 
   timeline_zbi_entry.Set(kernel_entry_ticks[entry_ticks_idx]);
   timeline_virtual_entry.Set(kernel_virtual_entry_ticks[entry_ticks_idx]);

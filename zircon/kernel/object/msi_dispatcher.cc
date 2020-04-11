@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/arch/intrin.h>
 #include <lib/counters.h>
 #include <platform.h>
 #include <trace.h>
@@ -13,7 +14,6 @@
 #include <array>
 #include <cstring>
 
-#include <arch/arch_ops.h>
 #include <dev/interrupt.h>
 #include <fbl/alloc_checker.h>
 #include <kernel/auto_lock.h>
@@ -170,7 +170,7 @@ void MsiDispatcherImpl::MaskInterrupt() {
 
   if (capability_pvm_supported_) {
     *mask_reg_ |= (1 << msi_id());
-    mb();
+    arch::DeviceMemoryBarrier();
   }
 }
 
@@ -184,6 +184,6 @@ void MsiDispatcherImpl::UnmaskInterrupt() {
 
   if (capability_pvm_supported_) {
     *mask_reg_ &= ~(1 << msi_id());
-    mb();
+    arch::DeviceMemoryBarrier();
   }
 }

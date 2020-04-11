@@ -3,7 +3,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+
 #include "arch/x86/pvclock.h"
+
+#include <lib/arch/intrin.h>
 
 #include <arch/ops.h>
 #include <arch/x86.h>
@@ -69,7 +72,7 @@ uint64_t pvclock_get_tsc_freq() {
   do {
     pre_version = atomic_load_u32(&system_time->version);
     if (pre_version % 2 != 0) {
-      arch_spinloop_pause();
+      arch::Yield();
       continue;
     }
     tsc_mul = system_time->tsc_mul;

@@ -130,7 +130,7 @@ affine::Ratio hpet_ticks_to_clock_monotonic;  // Non-static so that hpet_init ha
 
 #define LOCAL_TRACE 0
 
-zx_ticks_t current_ticks_rdtsc(void) { return rdtsc(); }
+zx_ticks_t current_ticks_rdtsc(void) { return _rdtsc(); }
 
 zx_ticks_t current_ticks_hpet(void) { return hpet_get_value(); }
 
@@ -357,7 +357,7 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
     }
 
     serialize_instructions();
-    uint64_t start = rdtsc();
+    uint64_t start = _rdtsc();
     serialize_instructions();
 
     switch (calibration_clock) {
@@ -372,7 +372,7 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
     }
 
     serialize_instructions();
-    zx_ticks_t end = rdtsc();
+    zx_ticks_t end = _rdtsc();
     serialize_instructions();
 
     zx_ticks_t tsc_ticks = end - start;

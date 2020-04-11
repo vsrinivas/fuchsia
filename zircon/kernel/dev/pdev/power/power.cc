@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arch_ops.h>
+#include <lib/arch/intrin.h>
+
 #include <dev/power.h>
 #include <dev/psci.h>
 #include <pdev/power.h>
@@ -26,5 +27,5 @@ void power_shutdown() { power_ops->shutdown(); }
 
 void pdev_register_power(const struct pdev_power_ops* ops) {
   power_ops = ops;
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 }

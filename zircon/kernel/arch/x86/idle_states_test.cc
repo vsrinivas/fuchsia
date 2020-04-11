@@ -5,12 +5,12 @@
 // https://opensource.org/licenses/MIT
 #include "arch/x86/idle_states.h"
 
+#include <lib/arch/intrin.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <zircon/time.h>
 
-#include <arch/arch_ops.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <kernel/thread.h>
@@ -160,7 +160,7 @@ bool test_enter_idle_states() {
       thrd->Resume();
 
       monitor = i;
-      smp_mb();
+      arch::ThreadMemoryBarrier();
       x86_monitor(&monitor);
       auto start = current_time();
       x86_mwait(state.MwaitHint());

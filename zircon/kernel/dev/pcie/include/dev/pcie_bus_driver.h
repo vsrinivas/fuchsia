@@ -8,6 +8,8 @@
 #ifndef ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_BUS_DRIVER_H_
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_BUS_DRIVER_H_
 
+#include <lib/arch/intrin.h>
+
 #include <dev/address_provider/address_provider.h>
 #include <dev/pci_config.h>
 #include <dev/pcie_platform.h>
@@ -177,7 +179,7 @@ class PcieBusDriver : public fbl::RefCounted<PcieBusDriver> {
   bool AdvanceState(State expected, State next);
   bool IsNotStarted(bool allow_quirks_phase = false) const;
   bool IsOperational() const {
-    smp_mb();
+    arch::ThreadMemoryBarrier();
     return state_ == State::OPERATIONAL;
   }
 

@@ -7,6 +7,7 @@
 
 #include <err.h>
 #include <inttypes.h>
+#include <lib/arch/intrin.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,11 +38,11 @@ __NO_INLINE static void bench_set_overhead() {
 
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
-  uint64_t count = arch_cycle_count();
+  uint64_t count = arch::Cycles();
   for (size_t i = 0; i < ITER; i++) {
     __asm__ volatile("");
   }
-  count = arch_cycle_count() - count;
+  count = arch::Cycles() - count;
   arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
   printf("took %" PRIu64 " cycles overhead to loop %zu times\n", count, ITER);
@@ -58,11 +59,11 @@ __NO_INLINE static void bench_memset() {
 
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
-  uint64_t count = arch_cycle_count();
+  uint64_t count = arch::Cycles();
   for (size_t i = 0; i < ITER; i++) {
     memset(buf, 0, BUFSIZE);
   }
-  count = arch_cycle_count() - count;
+  count = arch::Cycles() - count;
   arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
   uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
@@ -83,13 +84,13 @@ __NO_INLINE static void bench_memset_per_page() {
 
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
-  uint64_t count = arch_cycle_count();
+  uint64_t count = arch::Cycles();
   for (size_t i = 0; i < ITER; i++) {
     for (size_t j = 0; j < BUFSIZE; j += PAGE_SIZE) {
       memset(buf + j, 0, PAGE_SIZE);
     }
   }
-  count = arch_cycle_count() - count;
+  count = arch::Cycles() - count;
   arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
   uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
@@ -110,13 +111,13 @@ __NO_INLINE static void bench_zero_page() {
 
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
-  uint64_t count = arch_cycle_count();
+  uint64_t count = arch::Cycles();
   for (size_t i = 0; i < ITER; i++) {
     for (size_t j = 0; j < BUFSIZE; j += PAGE_SIZE) {
       arch_zero_page(buf + j);
     }
   }
-  count = arch_cycle_count() - count;
+  count = arch::Cycles() - count;
   arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
   uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
@@ -138,13 +139,13 @@ __NO_INLINE static void bench_cset() {
 
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
-  uint64_t count = arch_cycle_count();
+  uint64_t count = arch::Cycles();
   for (size_t i = 0; i < ITER; i++) {
     for (size_t j = 0; j < BUFSIZE / sizeof(T); j++) {
       buf[j] = 0;
     }
   }
-  count = arch_cycle_count() - count;
+  count = arch::Cycles() - count;
   arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
   uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
@@ -166,7 +167,7 @@ __NO_INLINE static void bench_cset_wide() {
 
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
-  uint64_t count = arch_cycle_count();
+  uint64_t count = arch::Cycles();
   for (size_t i = 0; i < ITER; i++) {
     for (size_t j = 0; j < BUFSIZE / sizeof(*buf) / 8; j++) {
       buf[j * 8] = 0;
@@ -179,7 +180,7 @@ __NO_INLINE static void bench_cset_wide() {
       buf[j * 8 + 7] = 0;
     }
   }
-  count = arch_cycle_count() - count;
+  count = arch::Cycles() - count;
   arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
   uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
@@ -200,11 +201,11 @@ __NO_INLINE static void bench_memcpy() {
 
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
-  uint64_t count = arch_cycle_count();
+  uint64_t count = arch::Cycles();
   for (size_t i = 0; i < ITER; i++) {
     memcpy(buf, buf + BUFSIZE / 2, BUFSIZE / 2);
   }
-  count = arch_cycle_count() - count;
+  count = arch::Cycles() - count;
   arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
   uint64_t bytes_cycle = (BUFSIZE / 2 * ITER * 1000ULL) / count;
@@ -227,12 +228,12 @@ __NO_INLINE static void bench_spinlock() {
   // test 1: acquire/release a spinlock with interrupts already disabled
   arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
-  uint64_t c = arch_cycle_count();
+  uint64_t c = arch::Cycles();
   for (size_t i = 0; i < COUNT; i++) {
     spin_lock(&lock);
     spin_unlock(&lock);
   }
-  c = arch_cycle_count() - c;
+  c = arch::Cycles() - c;
 
   arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
@@ -242,12 +243,12 @@ __NO_INLINE static void bench_spinlock() {
   // test 2: acquire/release a spinlock with irq save and irqs already disabled
   arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
-  c = arch_cycle_count();
+  c = arch::Cycles();
   for (size_t i = 0; i < COUNT; i++) {
     spin_lock_irqsave(&lock, state2);
     spin_unlock_irqrestore(&lock, state2);
   }
-  c = arch_cycle_count() - c;
+  c = arch::Cycles() - c;
 
   arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
@@ -257,12 +258,12 @@ __NO_INLINE static void bench_spinlock() {
          c, COUNT, c / COUNT);
 
   // test 2: acquire/release a spinlock with irq save and irqs enabled
-  c = arch_cycle_count();
+  c = arch::Cycles();
   for (size_t i = 0; i < COUNT; i++) {
     spin_lock_irqsave(&lock, state2);
     spin_unlock_irqrestore(&lock, state2);
   }
-  c = arch_cycle_count() - c;
+  c = arch::Cycles() - c;
 
   printf("%" PRIu64 " cycles to acquire/release spinlock w/irqsave %d times (%" PRIu64
          " cycles per)\n",
@@ -274,12 +275,12 @@ __NO_INLINE static void bench_mutex() {
   Mutex m;
 
   static const uint count = 128 * 1024 * 1024;
-  uint64_t c = arch_cycle_count();
+  uint64_t c = arch::Cycles();
   for (size_t i = 0; i < count; i++) {
     m.Acquire();
     m.Release();
   }
-  c = arch_cycle_count() - c;
+  c = arch::Cycles() - c;
 
   printf("%" PRIu64 " cycles to acquire/release uncontended mutex %u times (%" PRIu64
          " cycles per)\n",
@@ -290,24 +291,24 @@ template <typename LockType>
 __NO_INLINE static void bench_rwlock() {
   LockType rw;
   static const uint count = 128 * 1024 * 1024;
-  uint64_t c = arch_cycle_count();
+  uint64_t c = arch::Cycles();
   for (size_t i = 0; i < count; i++) {
     rw.ReadAcquire();
     rw.ReadRelease();
   }
-  c = arch_cycle_count() - c;
+  c = arch::Cycles() - c;
 
   printf("%" PRIu64
          " cycles to acquire/release uncontended brwlock(PI: %d) for read %u times (%" PRIu64
          " cycles per)\n",
          c, ktl::is_same_v<LockType, BrwLockPi>, count, c / count);
 
-  c = arch_cycle_count();
+  c = arch::Cycles();
   for (size_t i = 0; i < count; i++) {
     rw.WriteAcquire();
     rw.WriteRelease();
   }
-  c = arch_cycle_count() - c;
+  c = arch::Cycles() - c;
 
   printf("%" PRIu64
          " cycles to acquire/release uncontended brwlock(PI: %d) for write %u times (%" PRIu64

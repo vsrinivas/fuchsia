@@ -142,18 +142,43 @@ constraints.  This is a non-exhaustive list:
 Hardware bit layouts are expressed using [`hwreg`] types, **never** with ad hoc
 `#define` or direct use of constants.
 
-TODO(mcgrathr): _Discuss source layout, header file conventions._
- * arch subdirs
- * common lib/arch/foo.h for differing apis
- * hwreg in isolated headers for host-side hwreg/asm.h use.
+### Header file & source code layout
+
+All header files are under `<lib/arch/...>`.  Some headers provide
+machine-independent APIs and some provide machine-specific APIs and some
+provide a mix of the two.  In general a common header file name is used for
+the same API topic across machines even if the actual APIs are partly or
+wholly machine-specific.  This reduces the number of places where the code
+using the library needs `#if` tests for each machine.  For example,
+`<lib/arch/intrin.h>` provides many machine-specific APIs as well as a few
+machine-independent APIs but there aren't separate `<lib/arch/arm64/intrin.h>`
+and `<lib/arch/x86/intrin.h>` names to `#include`.
+
+There is a source subdirectory for each machine, named by the kernel's name for
+the CPU (`$zircon_cpu` in GN, i.e. `arm64` or not `x86`).  Each is actually a
+`library()` target of its own, but users of `lib/arch` don't know the
+sub-library exists, they just use `deps = [ "$zx/kernel/lib/arch" ]`.  The
+machine-specific subdirectory provides `include/lib/arch/...` files for the
+machine-dependent header files with machine-independent file names.
+
+These subdirectories should be reserved for the things that really can't be
+compiled on a different machine, such as code using inline `asm` or
+intrinsics.  Declarations that are simply _about_ only one machine should go
+into the main `include/lib/arch/...` directory, possibly under a
+machine-specific subdirectory there.  Things like `hwreg` declarations for
+system registers are topically particular to one machine architecture, but the
+declarations themselves can and should be portable to any machine and indeed
+to any operating system.  That makes it possible to use these headers in
+`hwreg::AsmHeader` generator programs, which are compiled on the build host.
+Such declarations may also be useful in unit test code that can sometimes be
+built and tested on a different machine and/or operating system.
 
 ### C++
 
 Only C++ 17 with modern style is supported.
 There is no provision for C or for C++ 14.
 
-So far no C++ `namespace` is used for `lib/arch` declarations.
-This may be reconsidered.
+All `lib/arch` C++ APIs use the `arch` namespace.
 
 All public APIs are documented with [clang-doc]-style `///` comments before the
 declaration.

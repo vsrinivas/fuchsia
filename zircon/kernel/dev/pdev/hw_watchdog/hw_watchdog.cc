@@ -6,8 +6,7 @@
 
 #include <err.h>
 #include <zircon/types.h>
-
-#include <arch/arch_ops.h>
+#include <lib/arch/intrin.h>
 #include <dev/hw_watchdog.h>
 #include <pdev/watchdog.h>
 
@@ -30,5 +29,5 @@ zx_time_t hw_watchdog_get_last_pet_time() { return watchdog_ops->get_last_pet_ti
 
 void pdev_register_watchdog(const pdev_watchdog_ops_t* ops) {
   watchdog_ops = ops;
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 }

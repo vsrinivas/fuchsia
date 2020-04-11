@@ -30,6 +30,7 @@ source_set("kernel") {
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/dev/pdev/hw_watchdog",
     "$zx/kernel/lib/abi_type_validator",
+    "$zx/kernel/lib/arch",
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/counters",

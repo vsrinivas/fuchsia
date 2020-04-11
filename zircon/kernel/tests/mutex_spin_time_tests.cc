@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/affine/ratio.h>
+#include <lib/arch/intrin.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zx/time.h>
 #include <platform.h>
@@ -71,7 +72,7 @@ bool mutex_spin_time_test(void) {
     AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
     args.interlock.store(true);
     while (args.interlock.load() == true) {
-      arch_spinloop_pause();
+      arch::Yield();
     }
 
     Guard<Mutex> guard{&args.the_mutex, args.spin_max_duration.get()};
@@ -104,7 +105,7 @@ bool mutex_spin_time_test(void) {
       // Wait until the spinner thread is ready to go, then mark the start time
       // and tell the spinner it is OK to proceed.
       while (args.interlock.load() == false) {
-        arch_spinloop_pause();
+        arch::Yield();
       }
       start = zx::ticks(current_ticks());
       args.interlock.store(false);
@@ -121,7 +122,7 @@ bool mutex_spin_time_test(void) {
           break;
         }
 
-        arch_spinloop_pause();
+        arch::Yield();
       }
 
       end = zx::ticks(current_ticks());

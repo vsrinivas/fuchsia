@@ -10,6 +10,7 @@
 #include <align.h>
 #include <assert.h>
 #include <debug.h>
+#include <lib/arch/intrin.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -20,7 +21,6 @@
 #include <arch/x86/mp.h>
 #include <arch/x86/platform_access.h>
 #include <arch/x86/registers.h>
-#include <arch/x86/x86intrin.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 

@@ -7,6 +7,7 @@
 
 #include <bits.h>
 #include <inttypes.h>
+#include <lib/arch/intrin.h>
 
 #include <arch/arm64.h>
 #include <fbl/algorithm.h>

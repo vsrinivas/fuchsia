@@ -11,6 +11,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/arch/intrin.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <trace.h>
@@ -127,7 +128,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   // disable interrupts so our current CPU doesn't change
   spin_lock_saved_state_t irqstate;
   arch_interrupt_save(&irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 
   const uint local_cpu = arch_curr_cpu_num();
 
@@ -172,7 +173,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     mp_sync_task(&sync_context);
     arch_set_blocking_disallowed(previous_blocking_disallowed);
   }
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 
   // we can take interrupts again once we've executed our task
   arch_interrupt_restore(irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
@@ -202,9 +203,9 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
       }
     }
 
-    arch_spinloop_pause();
+    arch::Yield();
   }
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 
   // make sure the sync_tasks aren't in lists anymore, since they're
   // stack allocated

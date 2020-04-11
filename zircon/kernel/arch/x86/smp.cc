@@ -7,6 +7,7 @@
 #include <align.h>
 #include <assert.h>
 #include <err.h>
+#include <lib/arch/intrin.h>
 #include <stdint.h>
 #include <string.h>
 #include <trace.h>
@@ -100,7 +101,7 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
 
   // Memory fence to ensure all writes to the bootstrap region are
   // visible on the APs when they come up
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 
   dprintf(INFO, "booting apic ids: ");
   for (unsigned int i = 0; i < count; ++i) {

@@ -6,5 +6,8 @@
 
 source_set("interrupt") {
   sources = [ "interrupt.cc" ]
-  deps = [ "$zx/kernel/dev/pdev" ]
+  deps = [
+    "$zx/kernel/dev/pdev",
+    "$zx/kernel/lib/arch",
+  ]
 }

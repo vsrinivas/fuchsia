@@ -32,7 +32,7 @@ bool StackAligned(void* ptr) {
 
 }  // namespace
 
-void PhysMain(void*, ArchEarlyTicks) {
+void PhysMain(void*, arch::EarlyTicks) {
   void* machine_stack = __builtin_frame_address(0);
   ZX_ASSERT(StackAligned(machine_stack));
 

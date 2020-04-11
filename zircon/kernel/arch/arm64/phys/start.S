@@ -21,7 +21,7 @@
 // and x0 holds what's usually a Device Tree address.
 .function _start, global
   // As early as possible collect the time stamp.  x1 and x2 will be the
-  // second argument to PhysMain, the ArchEarlyTicks structure passed in
+  // second argument to PhysMain, the arch::EarlyTicks structure passed in
   // two registers.  The first argument is already in x0.
   sample_ticks x1, x2, x9, x10, x11
 

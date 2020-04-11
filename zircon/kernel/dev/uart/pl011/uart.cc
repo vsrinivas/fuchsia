@@ -5,6 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/arch/intrin.h>
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
 #include <reg.h>
@@ -172,7 +173,7 @@ static void pl011_dputs(const char* str, size_t len, bool block, bool map_NL) {
         uart_dputc_event.Wait();
       } else {
         spin_unlock_irqrestore(&uart_spinlock, state);
-        arch_spinloop_pause();
+        arch::Yield();
       }
       spin_lock_irqsave(&uart_spinlock, state);
     }

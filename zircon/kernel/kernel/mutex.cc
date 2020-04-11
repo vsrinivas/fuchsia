@@ -22,6 +22,7 @@
 #include <inttypes.h>
 #include <lib/affine/ratio.h>
 #include <lib/affine/utils.h>
+#include <lib/arch/intrin.h>
 #include <lib/ktrace.h>
 #include <platform.h>
 #include <trace.h>
@@ -165,7 +166,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
     }
 
     // Give the arch a chance to relax the CPU.
-    arch_spinloop_pause();
+    arch::Yield();
   } while (current_ticks() < spin_until_ticks);
 
   if ((LK_DEBUGLEVEL > 0) && unlikely(this->IsHeld())) {

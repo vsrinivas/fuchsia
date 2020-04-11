@@ -20,9 +20,12 @@
 #include <arch/x86/general_regs.h>
 #include <arch/x86/iframe.h>
 #include <arch/x86/registers.h>
-#include <arch/x86/x86intrin.h>
 #include <kernel/cpu.h>
 #include <syscalls/syscalls.h>
+
+#ifdef __cplusplus
+#include <lib/arch/intrin.h>
+#endif
 
 __BEGIN_CDECLS
 
@@ -155,8 +158,6 @@ static inline void outpw(uint16_t _port, uint16_t _data) {
 static inline void outpd(uint16_t _port, uint32_t _data) {
   __asm__ __volatile__("outl %1, %0" : : "dN"(_port), "a"(_data));
 }
-
-static inline uint64_t rdtsc(void) { return __rdtsc(); }
 
 static inline void cpuid(uint32_t sel, uint32_t* a, uint32_t* b, uint32_t* c, uint32_t* d) {
   __cpuid(sel, *a, *b, *c, *d);

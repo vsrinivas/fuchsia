@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <lib/arch/intrin.h>
 #include <lib/console.h>
 #include <stdio.h>
 #include <string.h>
@@ -150,7 +151,7 @@ static void x86_pat_sync_task(void* raw_context) {
   /* Step 3: Wait for all processors to reach this point. */
   atomic_and(&context->barrier1, ~(1 << cpu));
   while (context->barrier1 != 0) {
-    arch_spinloop_pause();
+    arch::Yield();
   }
 
   /* Step 4: Enter the no-fill cache mode (cache-disable and writethrough) */
@@ -233,7 +234,7 @@ static void x86_pat_sync_task(void* raw_context) {
   /* Step 14: Wait for all processors to reach this point. */
   atomic_and(&context->barrier2, ~(1 << cpu));
   while (context->barrier2 != 0) {
-    arch_spinloop_pause();
+    arch::Yield();
   }
 }
 

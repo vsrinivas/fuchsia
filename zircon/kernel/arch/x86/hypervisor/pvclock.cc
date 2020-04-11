@@ -131,7 +131,7 @@ void pvclock_update_system_time(PvClockState* pvclock,
   system_time->tsc_mul = tsc_mul;
   system_time->tsc_shift = tsc_shift;
   system_time->system_time = current_time();
-  system_time->tsc_timestamp = rdtsc();
+  system_time->tsc_timestamp = _rdtsc();
   system_time->flags = pvclock->is_stable ? kKvmSystemTimeStable : 0;
   ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
   atomic_store_relaxed_u32(&system_time->version, pvclock->version + 2);
@@ -155,7 +155,7 @@ zx_status_t pvclock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas,
   ZX_DEBUG_ASSERT(offset != nullptr);
   memset(offset, 0, sizeof(*offset));
   zx_time_t time = utc_offset.load() + current_time();
-  uint64_t tsc = rdtsc();
+  uint64_t tsc = _rdtsc();
   offset->sec = time / ZX_SEC(1);
   offset->nsec = time % ZX_SEC(1);
   offset->tsc = tsc;

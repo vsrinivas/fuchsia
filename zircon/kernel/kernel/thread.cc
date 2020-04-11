@@ -20,6 +20,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/arch/intrin.h>
 #include <lib/counters.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
@@ -569,7 +570,7 @@ void Thread::Kill() {
   // the thread lock, but go ahead and flush it out to memory to avoid the amount
   // of races if another thread is looking at this.
   signals_ |= THREAD_SIGNAL_KILL;
-  smp_mb();
+  arch::ThreadMemoryBarrier();
 
   bool local_resched = false;
 

@@ -7,6 +7,7 @@
 #include <err.h>
 #include <lib/affine/ratio.h>
 #include <lib/affine/transform.h>
+#include <lib/arch/intrin.h>
 #include <lib/counters.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/clock.h>
@@ -108,7 +109,7 @@ zx_status_t ClockDispatcher::Read(zx_time_t* out_now) {
     }
 
     // Pause just a bit before trying again.
-    arch_spinloop_pause();
+    arch::Yield();
   }
 
   *out_now = ticks_to_synthetic.Apply(now_ticks);
@@ -140,7 +141,7 @@ zx_status_t ClockDispatcher::GetDetails(zx_clock_details_v1_t* out_details) {
       }
 
       // Pause just a bit before trying again.
-      arch_spinloop_pause();
+      arch::Yield();
     }
   }
 

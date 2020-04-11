@@ -10,7 +10,6 @@
 
 #ifndef __ASSEMBLER__
 
-#include <arm_acle.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -19,25 +18,6 @@
 
 #include <arch/arm64/iframe.h>
 #include <syscalls/syscalls.h>
-
-// Constants from ACLE section 8.3, used as the argument for __dmb(), __dsb(), and __isb()
-// in arm_acle.h. Values are the architecturally defined immediate values encoded in barrier
-// instructions DMB, DSB, and ISB.
-#define ARM_MB_OSHLD 0x1
-#define ARM_MB_OSHST 0x2
-#define ARM_MB_OSH 0x3
-
-#define ARM_MB_NSHLD 0x5
-#define ARM_MB_NSHST 0x6
-#define ARM_MB_NSH 0x7
-
-#define ARM_MB_ISHLD 0x9
-#define ARM_MB_ISHST 0xa
-#define ARM_MB_ISH 0xb
-
-#define ARM_MB_LD 0xd
-#define ARM_MB_ST 0xe
-#define ARM_MB_SY 0xf
 
 __BEGIN_CDECLS
 

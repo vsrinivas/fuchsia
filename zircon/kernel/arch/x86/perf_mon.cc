@@ -1470,7 +1470,7 @@ static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) {
   PerfmonCpuData* data = &state->cpu_data[cpu];
   perfmon::RecordHeader* next = data->buffer_next;
 
-  zx_time_t now = rdtsc();
+  zx_time_t now = _rdtsc();
   next = arch_perfmon_write_time_record(next, perfmon::kEventIdNone, now);
 
   // If the counter triggers interrupts then the PMI handler will
@@ -1705,7 +1705,7 @@ static bool pmi_interrupt_handler(x86_iframe_t* frame, PerfmonState* state) {
   auto data = &state->cpu_data[cpu];
 
   // On x86 zx_ticks_get uses rdtsc.
-  zx_time_t now = rdtsc();
+  zx_time_t now = _rdtsc();
   LTRACEF("cpu %u: now %" PRIi64 ", sp %p\n", cpu, now, __GET_FRAME());
 
   // Rather than continually checking if we have enough space, just

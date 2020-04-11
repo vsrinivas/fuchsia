@@ -9,6 +9,7 @@
 #include <bits.h>
 #include <debug.h>
 #include <inttypes.h>
+#include <lib/arch/intrin.h>
 #include <lib/cmdline.h>
 #include <platform.h>
 #include <stdlib.h>
@@ -51,7 +52,8 @@ static constexpr uint64_t PMUSERENR_EL0_ENABLE = 1 << 0;  // Enable EL0 access t
 
 // System Control Register, EL1.
 static constexpr uint64_t SCTLR_EL1_UCI = 1 << 26;  // Allow certain cache ops in EL0.
-static constexpr uint64_t SCTLR_EL1_SPAN = 1 << 23; // Keep the value of PSTATE.PAN unchanged on taking an exception to EL1.
+static constexpr uint64_t SCTLR_EL1_SPAN =
+    1 << 23;  // Keep the value of PSTATE.PAN unchanged on taking an exception to EL1.
 static constexpr uint64_t SCTLR_EL1_UCT = 1 << 15;  // Allow EL0 access to CTR register.
 static constexpr uint64_t SCTLR_EL1_DZE = 1 << 14;  // Allow EL0 to use DC ZVA.
 static constexpr uint64_t SCTLR_EL1_SA0 = 1 << 4;   // Enable Stack Alignment Check EL0.
@@ -160,7 +162,8 @@ static void arm64_cpu_early_init() {
 
   // Set some control bits in sctlr.
   uint64_t sctlr = __arm_rsr64("sctlr_el1");
-  sctlr |= SCTLR_EL1_UCI | SCTLR_EL1_SPAN | SCTLR_EL1_UCT | SCTLR_EL1_DZE | SCTLR_EL1_SA0 | SCTLR_EL1_SA;
+  sctlr |=
+      SCTLR_EL1_UCI | SCTLR_EL1_SPAN | SCTLR_EL1_UCT | SCTLR_EL1_DZE | SCTLR_EL1_SA0 | SCTLR_EL1_SA;
   sctlr &= ~SCTLR_EL1_AC;  // Disable alignment checking for EL1, EL0.
   __arm_wsr64("sctlr_el1", sctlr);
   __isb(ARM_MB_SY);
@@ -224,7 +227,7 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   arch_clean_cache_range((vaddr_t)&secondaries_released, sizeof(secondaries_released));
 }
 
-void arch_cpu_late_init(void) { }
+void arch_cpu_late_init(void) {}
 
 __NO_RETURN int arch_idle_thread_routine(void*) {
   for (;;) {
@@ -274,7 +277,7 @@ extern "C" void arm64_secondary_entry() {
 
   // Wait until the primary has finished setting things up.
   while (!atomic_load(&secondaries_released)) {
-    arch_spinloop_pause();
+    arch::Yield();
   }
 
   uint cpu = arch_curr_cpu_num();

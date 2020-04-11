@@ -44,6 +44,7 @@ source_set("tests") {
     "variant_tests.cc",
   ]
   deps = [
+    "$zx/kernel/lib/arch",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/crypto",
     "$zx/kernel/lib/debuglog",

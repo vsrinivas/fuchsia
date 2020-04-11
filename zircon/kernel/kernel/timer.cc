@@ -25,6 +25,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <lib/affine/ratio.h>
+#include <lib/arch/intrin.h>
 #include <lib/counters.h>
 #include <platform.h>
 #include <stdlib.h>
@@ -305,7 +306,7 @@ bool Timer::Cancel() {
 
   // mark the timer as canceled
   cancel_ = true;
-  mb();
+  arch::DeviceMemoryBarrier();
 
   // see if we're trying to cancel the timer we're currently in the middle of handling
   if (unlikely(active_cpu_ == (int)cpu)) {
@@ -354,7 +355,7 @@ bool Timer::Cancel() {
 
   // wait for the timer to become un-busy in case a callback is currently active on another cpu
   while (active_cpu_ >= 0) {
-    arch_spinloop_pause();
+    arch::Yield();
   }
 
   // zero it out
@@ -426,7 +427,7 @@ void timer_tick(zx_time_t now) {
 
     // mark it not busy
     timer->active_cpu_ = -1;
-    mb();
+    arch::DeviceMemoryBarrier();
   }
 
   // get the deadline of the event at the head of the queue (if any)
@@ -459,7 +460,7 @@ zx_status_t Timer::TrylockOrCancel(spin_lock_t* lock) {
       return ZX_ERR_TIMED_OUT;
     }
     // tell the arch to wait
-    arch_spinloop_pause();
+    arch::Yield();
   }
 
   return ZX_OK;

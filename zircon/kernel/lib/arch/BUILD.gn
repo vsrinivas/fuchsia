@@ -15,5 +15,5 @@ library("arch") {
   # The per-CPU subdirectory is a separate library() target but it shares
   # (and overrides) the <lib/arch/...> header name space and users of this
   # library need never realize it's distinct.
-  public_deps = [ current_cpu ]
+  public_deps = [ zircon_cpu ]
 }

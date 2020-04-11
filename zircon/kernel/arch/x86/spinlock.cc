@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/arch/intrin.h>
+
 #include <arch/arch_ops.h>
 #include <arch/spinlock.h>
 
@@ -16,7 +18,7 @@ void arch_spin_lock(spin_lock_t *lock) TA_NO_THREAD_SAFETY_ANALYSIS {
                                                __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))) {
     expected = 0;
     do {
-      arch_spinloop_pause();
+      arch::Yield();
     } while (unlikely(__atomic_load_n(&lock->value, __ATOMIC_RELAXED) != 0));
   }
   percpu->num_spinlocks++;

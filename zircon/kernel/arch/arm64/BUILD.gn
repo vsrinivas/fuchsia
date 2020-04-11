@@ -82,6 +82,11 @@ if (current_toolchain == default_toolchain) {
 
     # For #include <arch/foo.h>.
     include_dirs = [ "include" ]
+
+    configs = [
+      # <arch/current_thread.h> has #include <lib/arch/intrin.h>.
+      "$zx/kernel/lib/arch/arm64:headers.config",
+    ]
   }
 
   source_set("arm64") {
@@ -113,6 +118,7 @@ if (current_toolchain == default_toolchain) {
     deps = [
       "$zx/kernel/dev/interrupt/arm_gic/common",
       "$zx/kernel/dev/iommu/dummy",
+      "$zx/kernel/lib/arch",
       "$zx/kernel/lib/cmdline",
       "$zx/kernel/lib/console",
       "$zx/kernel/lib/counters",

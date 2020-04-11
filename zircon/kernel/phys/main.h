@@ -32,6 +32,6 @@ constexpr Type kInstance;
 // The stack and thread pointer ABIs are fully set up for normal C++ code.
 // The first argument is passed along from the boot loader and the second
 // is the earliest possible time sample at entry.
-extern "C" [[noreturn]] void PhysMain(void*, ArchEarlyTicks) PHYS_SINGLETHREAD;
+extern "C" [[noreturn]] void PhysMain(void*, arch::EarlyTicks) PHYS_SINGLETHREAD;
 
 #endif  // ZIRCON_KERNEL_PHYS_MAIN_H_
