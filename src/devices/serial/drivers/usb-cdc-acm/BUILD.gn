@@ -15,6 +15,7 @@ driver_module("usb-cdc-acm") {
   deps = [
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl",
+    "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//src/devices/lib/driver",
@@ -23,7 +24,6 @@ driver_module("usb-cdc-acm") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/dev/lib/usb",
   ]
 }
@@ -36,6 +36,7 @@ driver_module("fake-usb-cdc-acm") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-acm-function.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/banjo/ddk.protocol.usb.function",
     "//src/devices/lib/driver",
@@ -44,7 +45,6 @@ driver_module("fake-usb-cdc-acm") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]

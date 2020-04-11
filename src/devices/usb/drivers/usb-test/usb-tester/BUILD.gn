@@ -16,12 +16,12 @@ driver_module("usb-tester") {  # TODO: test_driver?
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-tester.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/fidl/fuchsia.hardware.usb.tester:fuchsia.hardware.usb.tester_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]

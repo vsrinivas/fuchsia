@@ -82,7 +82,7 @@ appears as `/dev/sys/pci/00:02:00/intel-ethernet`.
 Devices may implement Protocols, which are Banjo ABIs used by child devices
 to interact with parent devices in a device-specific manner. The
 [PCI Protocol](/sdk/banjo/ddk.protocol.pci/pci.banjo),
-[USB Protocol](/zircon/system/banjo/ddk.protocol.usb/usb.banjo),
+[USB Protocol](/sdk/banjo/ddk.protocol.usb/usb.banjo),
 [Block Core Protocol](/zircon/system/banjo/ddk.protocol.block/block.banjo), and
 [Ethernet Protocol](/zircon/system/banjo/ddk.protocol.ethernet/ethernet.banjo), are
 examples of these.  Protocols are usually in-process interactions between

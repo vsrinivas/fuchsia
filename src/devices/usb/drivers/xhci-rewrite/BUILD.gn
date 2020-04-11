@@ -25,6 +25,7 @@ driver_module("xhci-rewrite") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.bus",
     "//sdk/banjo/ddk.protocol.usb.hci",
     "//sdk/banjo/ddk.protocol.usb.hub",
@@ -43,7 +44,6 @@ driver_module("xhci-rewrite") {
     "//zircon/public/lib/xdc-server-utils",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/device-protocol-pci",
     "//zircon/system/dev/lib/device-protocol-pdev",

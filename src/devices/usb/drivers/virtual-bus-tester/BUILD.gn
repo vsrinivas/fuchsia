@@ -13,6 +13,7 @@ driver_module("virtual-bus-tester") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "host.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/fidl/fuchsia.hardware.usb.virtualbustest:fuchsia.hardware.usb.virtualbustest_llcpp",
     "//src/devices/lib/driver",
@@ -21,7 +22,6 @@ driver_module("virtual-bus-tester") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]
@@ -35,6 +35,7 @@ driver_module("virtual-bus-tester-function") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "peripheral.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.function",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -42,7 +43,6 @@ driver_module("virtual-bus-tester-function") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]

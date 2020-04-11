@@ -18,12 +18,12 @@ if (is_fuchsia) {
     }
     sources = [ "driver.cc" ]
     deps = [
+      "//sdk/banjo/ddk.protocol.usb",
       "//sdk/banjo/ddk.protocol.usb.function",
       "//src/devices/lib/driver",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/sync",
-      "//zircon/system/banjo/ddk.protocol.usb",
       "//zircon/system/banjo/ddk.protocol.usb.request",
       "//zircon/system/dev/lib/usb",
     ]

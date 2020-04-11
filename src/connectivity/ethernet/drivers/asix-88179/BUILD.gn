@@ -20,6 +20,7 @@ driver_module("asix-88179") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "asix-88179.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb",
     "//src/devices/lib/driver",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/ddk",
@@ -29,7 +30,6 @@ driver_module("asix-88179") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.ethernet",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/dev-operation",
     "//zircon/system/dev/lib/usb",
@@ -51,6 +51,7 @@ driver_module("fake-asix-88179") {
   deps = [
     ":asix-88179-test-helper",
     ":asix-88179-test-helper_llcpp",
+    "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.function",
     "//src/devices/lib/driver",
     "//zircon/public/lib/async-loop-cpp",
@@ -60,7 +61,6 @@ driver_module("fake-asix-88179") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.ethernet",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
     "//zircon/system/ulib/inet6",

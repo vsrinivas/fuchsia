@@ -64,6 +64,7 @@ driver_module("driver") {
   sources = [ "usb-hci-test-driver.cc" ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.usb",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -71,7 +72,6 @@ driver_module("driver") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
     "//zircon/system/fidl/fuchsia-hardware-usb-hcitest:llcpp",

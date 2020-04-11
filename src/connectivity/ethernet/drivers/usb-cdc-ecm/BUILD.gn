@@ -26,10 +26,10 @@ driver_module("usb-cdc-ecm") {
 source_set("usb-cdc-ecm-lib") {
   sources = [ "usb-cdc-ecm-lib.c" ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.ethernet",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/dev/lib/usb",
   ]
 }

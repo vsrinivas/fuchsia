@@ -27,6 +27,7 @@ source_set("source") {
 
   deps = [
     "//sdk/banjo/ddk.protocol.test",
+    "//sdk/banjo/ddk.protocol.usb",
     "//sdk/fidl/fuchsia.camera",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
@@ -47,7 +48,6 @@ source_set("source") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.usb",
   ]
 }
 

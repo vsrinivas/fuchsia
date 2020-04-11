@@ -20,7 +20,7 @@
 The first step in a USB request's lifecycle is allocation. USB requests contain
 data from all of the drivers in the request stack in a single allocation. Each
 driver that is upstream of a USB device driver should provide a
-[GetRequestSize](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#96) method --
+[GetRequestSize](/sdk/banjo/ddk.protocol.usb/usb.banjo#96) method --
 which returns the size it needs to contain its local request context. When a
 USB device driver allocates a request, it should invoke this method to
 determine the size of the parent's request context.
@@ -93,7 +93,7 @@ parent_size, [=](Request request) {
 ## Submission
 
 You can submit requests using the
-[RequestQueue](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#22) method,
+[RequestQueue](/sdk/banjo/ddk.protocol.usb/usb.banjo#22) method,
 or -- in the case of CallbackRequests (as seen [here](#c-example)), using
 `Request::Queue` or simply `request.Queue(client)`. In all cases, ownership of
 the USB request is transferred to the parent driver (usually `usb-device`).
@@ -122,21 +122,21 @@ controller or device controller is as follows):
 ## Cancellation
 
 Requests may be cancelled by invoking
-[CancelAll](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#89). When
-[CancelAll](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#89) completes, all
+[CancelAll](/sdk/banjo/ddk.protocol.usb/usb.banjo#89). When
+[CancelAll](/sdk/banjo/ddk.protocol.usb/usb.banjo#89) completes, all
 requests are owned by the caller. Drivers implementing a
-[CancelAll](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#89) function (such
+[CancelAll](/sdk/banjo/ddk.protocol.usb/usb.banjo#89) function (such
 as the usb-device core driver and any HCI/DCI drivers) are responsible for
 transferring ownership to their children with a `ZX_ERR_CANCELLED` status code.
 
 ## Implementation notes for writers of HCI, DCI, or filter drivers
 
-### Implementing [GetRequestSize](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#96)
+### Implementing [GetRequestSize](/sdk/banjo/ddk.protocol.usb/usb.banjo#96)
 
 The value returned by
-[GetRequestSize](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#96) should
+[GetRequestSize](/sdk/banjo/ddk.protocol.usb/usb.banjo#96) should
 equal the value of your parent's
-[GetRequestSize](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#96) + the size
+[GetRequestSize](/sdk/banjo/ddk.protocol.usb/usb.banjo#96) + the size
 of your request context, including any padding that would be necessary to
 ensure proper alignment of your data structures (if applicable). If you are
 implementing an HCI or DCI driver, you must include `sizeof(usb_request_t)` in
@@ -144,16 +144,16 @@ your size calculation in addition to any other data structures that you are
 storing. `usb_request_t` has no special alignment requirements, so it is not
 necessary to add padding for that structure.
 
-### Implementing [RequestQueue](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#22)
+### Implementing [RequestQueue](/sdk/banjo/ddk.protocol.usb/usb.banjo#22)
 
 Implementors of
-[RequestQueue](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#22) temporarily
+[RequestQueue](/sdk/banjo/ddk.protocol.usb/usb.banjo#22) temporarily
 assumes ownership of the USB request from its client driver. As an implementor
-of [RequestQueue](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#22), you are
+of [RequestQueue](/sdk/banjo/ddk.protocol.usb/usb.banjo#22), you are
 allowed to access all fields of the `usb_request_t`, as well as any private
 data that you have appended to the `usb_request_t` structure (by requesting
 additional space through
-[GetRequestSize](/zircon/system/banjo/ddk.protocol.usb/usb.banjo#96)), but you
+[GetRequestSize](/sdk/banjo/ddk.protocol.usb/usb.banjo#96)), but you
 are not allowed to modify any data outside of your private area, which starts
 at `parent_req_size` bytes (past the end of `usb_request_t`).
 

@@ -13,6 +13,7 @@ driver_module("usb-harriet") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-harriet.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -20,7 +21,6 @@ driver_module("usb-harriet") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]
