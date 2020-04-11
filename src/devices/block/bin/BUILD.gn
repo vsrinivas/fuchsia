@@ -5,5 +5,8 @@
 group("tests") {
   testonly = true
 
-  deps = [ "sdio:tests" ]
+  deps = [
+    "ftl_proxy:tests",
+    "sdio:tests",
+  ]
 }

@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/ftl-proxy"
+    },
+    "sandbox": {
+        "dev": [
+            "class/block",
+            "misc"
+        ],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
