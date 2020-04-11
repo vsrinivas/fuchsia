@@ -20,6 +20,7 @@ test_list = [
   "ledger_perf_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
+  "netstack_iperf_test",
   "rust_inspect_benchmarks_test",
   "tspec_example_test",
 ]
@@ -44,15 +45,24 @@ foreach(target_name, test_list) {
 copy("runtime_deps") {
   _data_dir = "$target_gen_dir/runtime_deps"
 
-  sources = [ "$root_out_dir/catapult_converter" ]
+  sources = [
+    "$root_out_dir/catapult_converter",
+    "$root_out_dir/iperf3",
+  ]
 
   outputs = [ "$_data_dir/{{source_file_part}}" ]
 
   metadata = {
-    test_runtime_deps = [ "$_data_dir/catapult_converter" ]
+    test_runtime_deps = [
+      "$_data_dir/catapult_converter",
+      "$_data_dir/iperf3",
+    ]
   }
 
-  deps = [ "//garnet/bin/catapult_converter:converter_bin" ]
+  deps = [
+    "//garnet/bin/catapult_converter:converter_bin",
+    "//third_party/iperf:bin",
+  ]
 }
 
 # Packages required either:
@@ -75,6 +85,7 @@ group("package_deps") {
     "//src/tests/benchmarks/fidl/go:go_fidl_benchmarks",
     "//src/tests/benchmarks/fidl/rust:rust-fidl-benchmarks",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",
+    "//third_party/iperf",
 
     # These are used by garnet_input_latency_benchmarks.
     "//src/ui/bin/activity",
