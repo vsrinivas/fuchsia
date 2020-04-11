@@ -34,6 +34,7 @@ driver_module("vim3") {
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
@@ -48,7 +49,6 @@ driver_module("vim3") {
     "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.iommu",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/dev/lib/amlogic",

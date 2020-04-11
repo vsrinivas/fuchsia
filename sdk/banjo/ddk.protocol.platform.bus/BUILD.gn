@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/banjo.gni")
+import("//build/banjo/banjo.gni")
 
-banjo_library("ddk.protocol.platform.bus") {
+banjo("ddk.protocol.platform.bus") {
   sources = [ "platform-bus.banjo" ]
-  public_deps = [
-    "$zx/system/banjo/ddk.driver",
-    "$zx/system/banjo/ddk.protocol.platform.device",
+  deps = [
+    "//zircon/system/banjo/ddk.driver",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
 }

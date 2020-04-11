@@ -16,6 +16,7 @@ driver_module("as370-gpio") {
   sources = [ "as370-gpio.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -23,7 +24,6 @@ driver_module("as370-gpio") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
   ]
@@ -38,6 +38,7 @@ test("as370-gpio-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -48,7 +49,6 @@ test("as370-gpio-test") {
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/mock-mmio-reg",

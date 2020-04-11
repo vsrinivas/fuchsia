@@ -108,7 +108,7 @@ different.
 
 ## Platform Bus Protocol
 
-The [platform bus protocol](../../..//zircon/system/banjo/ddk.protocol.platform.bus/platform-bus.banjo)
+The [platform bus protocol](../../..//sdk/banjo/ddk.protocol.platform.bus/platform-bus.banjo)
 (`ZX_PROTOCOL_PBUS`) is used by board drivers and protocol implementation drivers
 to communicate with the platform bus driver. It is only available to drivers running in the
 platform bus's devhost (in particular, it is not accessible to platform device drivers).

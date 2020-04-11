@@ -39,7 +39,7 @@ static_library("base") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
   ]

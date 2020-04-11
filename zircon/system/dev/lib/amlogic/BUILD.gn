@@ -68,6 +68,7 @@ zx_library("amlogic") {
     "s905d2-pll-rates.c",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -75,7 +76,6 @@ zx_library("amlogic") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
 }

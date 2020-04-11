@@ -51,6 +51,7 @@ driver_module("nelson") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.sdmmc",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_c",
@@ -67,7 +68,6 @@ driver_module("nelson") {
     "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.iommu",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/dev/lib/amlogic",

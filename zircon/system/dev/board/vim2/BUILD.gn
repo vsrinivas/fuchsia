@@ -43,6 +43,7 @@ driver_module("vim2") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.sdmmc",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
@@ -56,7 +57,6 @@ driver_module("vim2") {
     "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.iommu",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/dev/lib/amlogic",

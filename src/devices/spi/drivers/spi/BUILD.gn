@@ -42,6 +42,7 @@ test("spi-test") {
     "spi.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.spiimpl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -50,7 +51,6 @@ test("spi-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.spi",
     "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/fidl/fuchsia-hardware-spi:llcpp",

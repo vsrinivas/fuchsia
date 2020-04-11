@@ -16,10 +16,10 @@ driver_module("hisi-ufs") {
     "ufs-common.c",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-platform-device",
   ]

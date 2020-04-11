@@ -18,6 +18,7 @@ driver_module("sherlock-tdm-output") {
 
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -29,7 +30,6 @@ driver_module("sherlock-tdm-output") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/audio/lib/simple-audio-stream",
     "//zircon/system/dev/lib/amlogic",

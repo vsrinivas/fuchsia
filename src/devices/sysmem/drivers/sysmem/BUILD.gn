@@ -21,6 +21,7 @@ source_set("sysmem_common_srcs") {
     "usage_pixel_format_cost.cc",
   ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -33,7 +34,6 @@ source_set("sysmem_common_srcs") {
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
@@ -93,6 +93,7 @@ test("sysmem-unittest") {
   include_dirs = [ "." ]
   deps = [
     ":sysmem_common_srcs",
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -105,7 +106,6 @@ test("sysmem-unittest") {
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/dev/lib/fake-bti",

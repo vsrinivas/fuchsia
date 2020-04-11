@@ -14,6 +14,7 @@ driver_module("msm8x53-power") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "msm8x53-power.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -23,7 +24,6 @@ driver_module("msm8x53-power") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.powerimpl",
     "//zircon/system/dev/lib/device-protocol-pdev",
@@ -42,6 +42,7 @@ test("msm8x53-power-test") {
     "msm8x53-power.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -51,7 +52,6 @@ test("msm8x53-power-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.powerimpl",
     "//zircon/system/dev/lib/device-protocol-pdev",

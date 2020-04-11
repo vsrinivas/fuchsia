@@ -103,7 +103,6 @@ group("banjo") {
 #------------------
 #------------------
 #------------------
-    "ddk.protocol.platform.bus",
 #------------------
 #------------------
     "ddk.protocol.platform.device",

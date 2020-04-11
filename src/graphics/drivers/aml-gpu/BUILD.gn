@@ -14,6 +14,7 @@ source_set("sources") {
   }
   sources = [ "aml-gpu.cc" ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/fidl/fuchsia.hardware.gpu.clock:fuchsia.hardware.gpu.clock_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//src/devices/lib/driver",
@@ -24,7 +25,6 @@ source_set("sources") {
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.iommu",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/dev/lib/amlogic",

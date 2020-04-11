@@ -28,9 +28,9 @@ driver_module("machina") {
     "machina.c",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
