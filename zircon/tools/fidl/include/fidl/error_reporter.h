@@ -113,16 +113,11 @@ class ErrorReporter {
 
   void ReportWarning(std::unique_ptr<BaseError> err);
 
-  // TODO(fxb/49667): delete once linter does not rely on it
-  void ReportWarningWithSquiggle(const SourceSpan& span, std::string_view message);
-
   void PrintReports();
   Counts Checkpoint() const { return Counts(this); }
   ScopedReportingMode OverrideMode(ReportingMode mode_override) {
     return ScopedReportingMode(mode_, mode_override);
   }
-  // TODO(fxb/49667): delete once linter does not rely on it
-  const std::vector<std::string>& string_warnings() const { return string_warnings_; }
   const std::vector<std::unique_ptr<BaseError>>& warnings() const { return warnings_; }
   const std::vector<std::unique_ptr<BaseError>>& errors() const { return errors_; }
   void set_warnings_as_errors(bool value) { warnings_as_errors_ = value; }
@@ -133,7 +128,6 @@ class ErrorReporter {
 
   ReportingMode mode_ = ReportingMode::kReport;
   bool warnings_as_errors_;
-  std::vector<std::string> string_warnings_;
   std::vector<std::unique_ptr<BaseError>> warnings_;
   std::vector<std::unique_ptr<BaseError>> errors_;
 };

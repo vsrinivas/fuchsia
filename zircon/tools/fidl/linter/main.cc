@@ -130,8 +130,11 @@ int main(int argc, char* argv[]) {
     // collection.
   }
   if (options.format == "text") {
-    fidl::utils::WriteFindingsToErrorReporter(findings, &error_reporter);
     error_reporter.PrintReports();
+    auto lints = fidl::utils::FormatFindings(findings);
+    for (const auto& lint : lints) {
+      fprintf(stderr, "%s\n", lint.c_str());
+    }
   } else {
     assert(options.format == "json");  // should never be false
     std::cout << fidl::FindingsJson(findings).Produce().str();

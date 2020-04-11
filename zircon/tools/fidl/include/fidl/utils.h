@@ -146,14 +146,14 @@ std::string to_upper_snake_case(const std::string& str);
 std::string to_lower_camel_case(const std::string& str);
 std::string to_upper_camel_case(const std::string& str);
 
-// Used by fidl-lint WriteFindingsToErrorReporter, and for testing,
+// Used by fidl-lint FormatFindings, and for testing,
 // this generates the linter error message string in the format
 // required for the fidl::ErrorReporter.
 void PrintFinding(std::ostream& os, const Finding& finding);
 
 // Used by fidl-lint main() and for testing, this generates the linter error
 // messages for a list of findings.
-void WriteFindingsToErrorReporter(const Findings& findings, ErrorReporter* error_reporter);
+std::vector<std::string> FormatFindings(const Findings& findings);
 
 // Gets a string with the original file contents, and a string with the
 // formatted file, and makes sure that the only difference is in the whitespace.

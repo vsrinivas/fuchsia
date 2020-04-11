@@ -10,7 +10,7 @@ namespace {
 
 #define ASSERT_WARNINGS(quantity, lib, content)               \
   do {                                                        \
-    const auto& warnings = lib.string_warnings();             \
+    const auto& warnings = lib.lints();                       \
     if (strlen(content) != 0) {                               \
       bool contains_content = false;                          \
       for (size_t i = 0; i < warnings.size(); i++) {          \
@@ -55,7 +55,7 @@ const uint64 kAllIsCalm = 1234;
 )FIDL");
   ASSERT_FALSE(library.Lint());
   ASSERT_WARNINGS(1, library, "kAllIsCalm");
-  const auto& warnings = library.string_warnings();
+  const auto& warnings = library.lints();
   ASSERT_STR_STR(warnings[0].c_str(),
                  "ALL_IS_CALM", "Correct suggestion ALL_IS_CALM not found");
   END_TEST;
@@ -85,7 +85,7 @@ protocol URLLoader {};
 )FIDL");
   ASSERT_FALSE(library.Lint());
   ASSERT_WARNINGS(1, library, "URLLoader");
-  const auto& warnings = library.string_warnings();
+  const auto& warnings = library.lints();
   ASSERT_STR_STR(warnings[0].c_str(),
                  "UrlLoader", "Correct suggestion UrlLoader not found");
 

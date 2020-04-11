@@ -89,7 +89,7 @@ void ErrorReporter::AddWarning(std::unique_ptr<BaseError> warn) {
 // Record an error with the span, message, source line, position indicator,
 // and, if span is not nullopt, tildes under the token reported.
 //
-//     filename:line:col: error: message
+//     filename:line:col: {error, warning}: message
 //     sourceline
 //        ^~~~
 void ErrorReporter::ReportError(std::unique_ptr<BaseError> err) {
@@ -99,18 +99,6 @@ void ErrorReporter::ReportError(std::unique_ptr<BaseError> err) {
 void ErrorReporter::ReportWarning(std::unique_ptr<BaseError> warn) {
   assert(warn && "should not report nullptr warning");
   AddWarning(std::move(warn));
-}
-
-// Records a warning with the span, message, source line,
-// position indicator, and tildes under the token reported.
-//
-//     filename:line:col: warning: message
-//     sourceline
-//        ^~~~
-void ErrorReporter::ReportWarningWithSquiggle(const SourceSpan& span, std::string_view message) {
-  auto token_data = span.data();
-  auto warning = Format("warning", std::make_optional(span), message, token_data.size());
-  string_warnings_.push_back(warning);
 }
 
 void ErrorReporter::PrintReports() {

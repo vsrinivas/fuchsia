@@ -130,7 +130,7 @@ class TestLibrary final {
   bool Lint() {
     fidl::Findings findings;
     bool passed = Lint(&findings);
-    fidl::utils::WriteFindingsToErrorReporter(findings, error_reporter_);
+    lints_ = fidl::utils::FormatFindings(findings);
     return passed;
   }
 
@@ -246,9 +246,7 @@ class TestLibrary final {
     return error_reporter_->warnings();
   }
 
-  const std::vector<std::string>& string_warnings() const {
-    return error_reporter_->string_warnings();
-  }
+  const std::vector<std::string>& lints() const { return lints_; }
 
   const std::vector<fidl::flat::Decl*> declaration_order() const {
     return library_->declaration_order_;
@@ -257,6 +255,7 @@ class TestLibrary final {
  protected:
   SharedAmongstLibraries owned_shared_;
   fidl::ErrorReporter* error_reporter_;
+  std::vector<std::string> lints_;
   fidl::ExperimentalFlags experimental_flags_;
   fidl::flat::Typespace* typespace_;
   fidl::flat::Libraries* all_libraries_;

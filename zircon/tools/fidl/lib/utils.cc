@@ -185,12 +185,16 @@ void PrintFinding(std::ostream& os, const Finding& finding) {
   }
 }
 
-void WriteFindingsToErrorReporter(const Findings& findings, ErrorReporter* error_reporter) {
+std::vector<std::string> FormatFindings(const Findings& findings) {
+  std::vector<std::string> lint;
   for (auto& finding : findings) {
     std::stringstream ss;
     PrintFinding(ss, finding);
-    error_reporter->ReportWarningWithSquiggle(finding.span(), ss.str());
+    auto warning = error_reporter::Format("warning", std::make_optional(finding.span()),
+                                          ss.str(), finding.span().data().size());
+    lint.push_back(warning);
   }
+  return lint;
 }
 
 bool OnlyWhitespaceChanged(const std::string& unformatted_input,
