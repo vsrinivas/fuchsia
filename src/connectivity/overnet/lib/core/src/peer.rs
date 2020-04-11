@@ -409,7 +409,7 @@ async fn client_conn_handle_command(
     on_link_status_ack: &mut Option<futures::channel::oneshot::Sender<()>>,
     conn_stats: Rc<PeerConnStats>,
 ) -> Result<(), Error> {
-    log::info!("Handle client peer command from {:?}: {:?}", peer_node_id, command);
+    log::trace!("Handle client peer command from {:?}: {:?}", peer_node_id, command);
     match command {
         ClientPeerCommand::UpdateLinkStatus(status, on_ack) => {
             assert!(on_link_status_ack.is_none());

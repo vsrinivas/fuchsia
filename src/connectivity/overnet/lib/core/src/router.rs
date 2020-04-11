@@ -534,7 +534,7 @@ impl Router {
             // initiated, and to where.
             drop(proxied_streams);
             assert_eq!(info.this_handle_key, pair.original_paired);
-            log::info!("Send paired proxied {:?} orig_pair={:?}", handle, pair.original_paired);
+            log::trace!("Send paired proxied {:?} orig_pair={:?}", handle, pair.original_paired);
             // We allocate a drain stream to flush any messages we've buffered locally to the new
             // endpoint.
             let drain_stream = conn.alloc_uni().into();

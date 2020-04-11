@@ -38,16 +38,27 @@ pub(crate) async fn follow<Hdl: 'static + Proxyable>(
         log::trace!("open_transfer got {:?}", r);
         match r {
             OpenedTransfer::Fused => {
+                log::info!("[PROXY] fused after follow {:?}", transfer_key);
                 assert!(initiate_transfer.await.unwrap().is_dropped());
                 Ok(())
             }
-            OpenedTransfer::Remote(new_writer, new_reader, handle) => main::spawn_main_loop(
-                Proxy::new(Hdl::from_fidl_handle(handle)?, Rc::downgrade(&router), stats),
-                initiate_transfer,
-                new_writer.into(),
-                None,
-                new_reader.into(),
-            ),
+            OpenedTransfer::Remote(new_writer, new_reader, handle) => {
+                let handle = Hdl::from_fidl_handle(handle)?;
+                log::info!(
+                    "[PROXY {:?}] spawn from {:?}:{:?} for follow {:?}",
+                    handle,
+                    new_writer.peer_node_id(),
+                    new_writer.id(),
+                    transfer_key
+                );
+                main::spawn_main_loop(
+                    Proxy::new(handle, Rc::downgrade(&router), stats),
+                    initiate_transfer,
+                    new_writer.into(),
+                    None,
+                    new_reader.into(),
+                )
+            }
         }
     })
     .await?;
@@ -94,6 +105,7 @@ pub(crate) async fn initiate<Hdl: 'static + Proxyable>(
             .await?;
 
             // Send the BeginTransfer.
+            log::info!("[PROXY {:?}] Send begin transfer {:?}", proxy.hdl().hdl(), transfer_key);
             stream_writer.send_begin_transfer(peer_node_id, transfer_key).await?;
 
             if let Some(stream_ref_sender) = stream_ref_sender {
@@ -115,6 +127,7 @@ pub(crate) async fn initiate<Hdl: 'static + Proxyable>(
                 stream_reader.expect_ack_transfer().await?;
             }
 
+            log::info!("[PROXY {:?}] Initiated transfer complete", proxy.hdl().hdl());
             Ok(())
         },
     )
@@ -174,6 +187,12 @@ async fn flush_outgoing_messages<Hdl: 'static + Proxyable>(
                 // handle. We use the quic endpoint to determine behavior (such that each end makes
                 // a consistent decision) - clients start a new stream to the target, servers await
                 // that stream, and then we just need to drain messages.
+                log::info!(
+                    "[PROXY {:?}] remote is also transferring with key {:?}; this is the {:?}",
+                    proxy.hdl().hdl(),
+                    new_transfer_key,
+                    endpoint
+                );
                 match endpoint {
                     Endpoint::Client => {
                         stream_ref_sender.draining_initiate(
@@ -181,15 +200,13 @@ async fn flush_outgoing_messages<Hdl: 'static + Proxyable>(
                             new_destination_node,
                             new_transfer_key,
                         )?;
-                        proxy.drain_handle_to_stream(stream_writer).await?;
-                        return Ok(None);
                     }
                     Endpoint::Server => {
                         stream_ref_sender.draining_await(drain_stream_id, original_transfer_key)?;
-                        proxy.drain_handle_to_stream(stream_writer).await?;
-                        return Ok(None);
                     }
                 }
+                proxy.drain_handle_to_stream(stream_writer).await?;
+                return Ok(None);
             }
             FromStream(Frame::Hello) => bail!("Hello frame received after stream established"),
             FromStream(Frame::AckTransfer) => {

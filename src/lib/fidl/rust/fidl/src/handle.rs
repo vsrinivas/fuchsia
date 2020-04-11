@@ -421,11 +421,15 @@ pub mod non_fuchsia_handles {
     }
 
     /// An I/O object representing a `Channel`.
-    #[derive(Debug)]
     pub struct AsyncChannel {
         channel: Channel,
     }
 
+    impl std::fmt::Debug for AsyncChannel {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            self.channel.fmt(f)
+        }
+    }
     impl AsyncChannel {
         /// Writes a message into the channel.
         pub fn write(
@@ -710,9 +714,14 @@ pub mod non_fuchsia_handles {
     }
 
     /// An I/O object representing a `Socket`.
-    #[derive(Debug)]
     pub struct AsyncSocket {
         socket: Socket,
+    }
+
+    impl std::fmt::Debug for AsyncSocket {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            self.socket.fmt(f)
+        }
     }
 
     impl AsyncSocket {

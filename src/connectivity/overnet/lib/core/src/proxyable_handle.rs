@@ -117,6 +117,10 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         &self.stats
     }
 
+    pub(crate) fn hdl(&self) -> &Hdl {
+        &self.hdl
+    }
+
     async fn handle_io(
         &self,
         msg: &mut Hdl::Message,

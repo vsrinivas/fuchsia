@@ -132,6 +132,7 @@ pub(crate) fn spawn_main_loop<Hdl: 'static + Proxyable>(
                 },
             )
             .await?;
+            log::info!("[PROXY {:?}] entering main loop", proxy.hdl().hdl());
             futures::future::try_join(
                 stream_to_handle(proxy.clone(), initiate_transfer, stream_reader, tx_join),
                 handle_to_stream(proxy, stream_writer, rx_join),
@@ -159,6 +160,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
         match r {
             Ok(()) => stream.send_data(&mut message).await?,
             Err(zx_status::Status::PEER_CLOSED) => {
+                log::info!("[PROXY {:?}] handle closed normally", proxy.hdl().hdl());
                 stream.send_shutdown(Ok(())).await?;
                 return Ok(());
             }
@@ -168,7 +170,6 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             }
         }
     };
-    log::trace!("finish_proxy_loop_action: stream={} {:?}", stream.id(), finish_proxy_loop_action);
     let proxy = Rc::try_unwrap(proxy).map_err(|_| format_err!("Proxy should be isolated"))?;
     match finish_proxy_loop_action {
         Ok(FinishProxyLoopAction::InitiateTransfer {
@@ -177,6 +178,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             stream_ref_sender,
             stream_reader,
         }) => {
+            log::info!("[PROXY {:?}] finish main loop and initiate transfer", proxy.hdl().hdl(),);
             xfer::initiate(
                 proxy,
                 paired_handle,
@@ -193,6 +195,11 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             transfer_key,
             stream_reader,
         }) => {
+            log::info!(
+                "[PROXY {:?}] finish main loop and follow {:?}",
+                proxy.hdl().hdl(),
+                transfer_key
+            );
             xfer::follow(
                 proxy,
                 initiate_transfer,
@@ -204,6 +211,11 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             .await
         }
         Ok(FinishProxyLoopAction::Shutdown { result, stream_reader }) => {
+            log::info!(
+                "[PROXY {:?}] finish main loop and shutdown; result={:?}",
+                proxy.hdl().hdl(),
+                result
+            );
             join_shutdown(proxy, stream, stream_reader, result).await
         }
         Err(futures::channel::oneshot::Canceled) => unreachable!(),

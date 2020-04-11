@@ -291,7 +291,6 @@ impl AsyncQuicStreamWriter {
 impl Drop for AsyncQuicStreamWriter {
     fn drop(&mut self) {
         if !self.sent_fin {
-            log::warn!("Stream {} writer dropped before sending fin", self.id);
             self.abandon();
         }
     }

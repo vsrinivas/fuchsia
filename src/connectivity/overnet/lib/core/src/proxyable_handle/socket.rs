@@ -15,9 +15,14 @@ use std::pin::Pin;
 use std::rc::Rc;
 use std::task::{Context, Poll};
 
-#[derive(Debug)]
 pub(crate) struct Socket {
     socket: RefCell<AsyncSocket>,
+}
+
+impl std::fmt::Debug for Socket {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.socket.borrow().fmt(f)
+    }
 }
 
 impl Proxyable for Socket {
