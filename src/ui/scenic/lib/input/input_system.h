@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/pointerflow/cpp/fidl.h>
 #include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
@@ -44,7 +45,9 @@ class A11yPointerEventRegistry : public fuchsia::ui::policy::accessibility::Poin
 };
 
 // Tracks input APIs.
-class InputSystem : public System, public fuchsia::ui::input::PointerCaptureListenerRegistry {
+class InputSystem : public System,
+                    public fuchsia::ui::pointerflow::InjectorRegistry,
+                    public fuchsia::ui::input::PointerCaptureListenerRegistry {
  public:
   struct PointerCaptureListener {
     fuchsia::ui::input::PointerCaptureListenerPtr listener_ptr;
@@ -60,6 +63,11 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   CommandDispatcherUniquePtr CreateCommandDispatcher(
       scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
       std::shared_ptr<ErrorReporter> error_reporter) override;
+
+  // |fuchsia.ui.pointerflow.InjectorRegistry|
+  void Register(fuchsia::ui::pointerflow::InjectorConfig config,
+                fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector,
+                RegisterCallback callback) override;
 
   fuchsia::ui::input::ImeServicePtr& ime_service() { return ime_service_; }
 
@@ -145,6 +153,39 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
                                                   GlobalId compositor_id) const;
 
  private:
+  using InjectorId = uint64_t;
+  class Injector : public fuchsia::ui::pointerflow::Injector {
+   public:
+    Injector(InjectorId id, fuchsia::ui::pointerflow::DispatchPolicy policy, uint32_t device_id,
+             fuchsia::ui::input3::PointerDeviceType device_type,
+             fuchsia::ui::views::ViewRef context, fuchsia::ui::views::ViewRef target,
+             fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector);
+
+    // |fuchsia::ui::pointerflow::Injector|
+    void Inject(::std::vector<fuchsia::ui::pointerflow::Event> events,
+                InjectCallback callback) override;
+
+    fidl::Binding<fuchsia::ui::pointerflow::Injector> binding_;
+
+    // TODO: Make member variables private when they're being accessed and no longer giving "unused
+    // variable" errors.
+
+    // Scenic-internal identifier.
+    const InjectorId id_;
+
+    // Client defined data.
+    const fuchsia::ui::pointerflow::DispatchPolicy dispatch_policy_;
+    const uint32_t device_id_;
+    const fuchsia::ui::input3::PointerDeviceType device_type_;
+
+    const fuchsia::ui::views::ViewRef context_;
+    const fuchsia::ui::views::ViewRef target_;
+  };
+
+  InjectorId last_injector_id_ = 0;
+
+  std::map<InjectorId, Injector> injectors_;
+
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
 
   std::unique_ptr<A11yPointerEventRegistry> pointer_event_registry_;
@@ -164,6 +205,8 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   // each InputCommandDispatcher works independently.
   // NOTE: This flow will be replaced by a direct dispatch from a "Root Presenter" to IME Service.
   std::map<scheduling::SessionId, EventReporterWeakPtr> hard_keyboard_requested_;
+
+  fidl::BindingSet<fuchsia::ui::pointerflow::InjectorRegistry> injector_registry_;
 
   fidl::BindingSet<fuchsia::ui::input::PointerCaptureListenerRegistry> pointer_capture_registry_;
   // A singleton listener who wants to be notified when pointer events happen.

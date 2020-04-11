@@ -15,6 +15,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/input/helper.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace scenic_impl {
 namespace input {
@@ -95,6 +96,8 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
   ime_service_.set_error_handler(
       [](zx_status_t status) { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
 
+  this->context()->app_context()->outgoing()->AddPublicService(injector_registry_.GetHandler(this));
+
   this->context()->app_context()->outgoing()->AddPublicService(
       pointer_capture_registry_.GetHandler(this));
 
@@ -126,6 +129,90 @@ void A11yPointerEventRegistry::Register(
     // An accessibility listener is already registered.
     callback(/*success=*/false);
   }
+}
+
+void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
+                           fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector,
+                           RegisterCallback callback) {
+  if (!config.has_device_config() || !config.has_context() || !config.has_target() ||
+      !config.has_dispatch_policy()) {
+    FXL_LOG(ERROR) << "InjectorRegistry::Register : Argument |config| is incomplete.";
+    return;
+  }
+
+  if (config.dispatch_policy() != fuchsia::ui::pointerflow::DispatchPolicy::EXCLUSIVE) {
+    FXL_LOG(ERROR) << "InjectorRegistry::Register : Only EXCLUSIVE DispatchPolicy is supported.";
+    return;
+  }
+
+  if (!config.device_config().has_device_id() || !config.device_config().has_device_type()) {
+    FXL_LOG(ERROR) << "InjectorRegistry::Register : Argument |config.DeviceConfig| is incomplete.";
+    return;
+  }
+
+  if (config.device_config().device_type() != fuchsia::ui::input3::PointerDeviceType::TOUCH) {
+    FXL_LOG(ERROR) << "InjectorRegistry::Register : Only TOUCH device type is supported.";
+    return;
+  }
+
+  if (!config.context().is_view() || !config.target().is_view()) {
+    FXL_LOG(ERROR) << "InjectorRegistry::Register : Argument |config.context| or |config.target| "
+                      "is incomplete.";
+    return;
+  }
+
+  const zx_koid_t context_koid = utils::ExtractKoid(config.context().view());
+  const zx_koid_t target_koid = utils::ExtractKoid(config.target().view());
+  if (context_koid == ZX_KOID_INVALID || target_koid == ZX_KOID_INVALID) {
+    FXL_LOG(ERROR)
+        << "InjectorRegistry::Register : Argument |config.context| or |config.target| was invalid.";
+    return;
+  }
+  if (context_koid == target_koid) {
+    FXL_LOG(ERROR) << "InjectorRegistry::Register : Arguments |config.context| and |config.target| "
+                      "must not be equal.";
+    return;
+  }
+
+  const InjectorId id = ++last_injector_id_;
+  const auto [it, success] = injectors_.try_emplace(
+      id, id, config.dispatch_policy(), config.device_config().device_id(),
+      config.device_config().device_type(), std::move(config.mutable_context()->view()),
+      std::move(config.mutable_target()->view()), std::move(injector));
+  FXL_CHECK(success) << "Injector already exists.";
+
+  // Remove the injector if the channel has an error.
+  injectors_.at(id).binding_.set_error_handler(
+      [this, id](zx_status_t status) { injectors_.erase(id); });
+
+  callback();
+
+  FXL_LOG(INFO) << "InjectorRegistry::Register : Registered new injector with Device Id: "
+                << injectors_.at(id).device_id_
+                << " Device Type: " << static_cast<uint32_t>(injectors_.at(id).device_type_)
+                << " Dispatch Policy: " << static_cast<uint32_t>(injectors_.at(id).dispatch_policy_)
+                << " Context koid: " << context_koid << " and Target koid: " << target_koid;
+}
+
+InputSystem::Injector::Injector(InjectorId id,
+                                fuchsia::ui::pointerflow::DispatchPolicy dispatch_policy,
+                                uint32_t device_id,
+                                fuchsia::ui::input3::PointerDeviceType device_type,
+                                fuchsia::ui::views::ViewRef context,
+                                fuchsia::ui::views::ViewRef target,
+                                fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector)
+    : binding_(this, std::move(injector)),
+      id_(id),
+      dispatch_policy_(dispatch_policy),
+      device_id_(device_id),
+      device_type_(device_type),
+      context_(std::move(context)),
+      target_(std::move(target)) {}
+
+void InputSystem::Injector::Inject(::std::vector<fuchsia::ui::pointerflow::Event> events,
+                                   InjectCallback callback) {
+  FXL_LOG(ERROR) << "Injector::Inject New injection API not yet implemented.";
+  callback();
 }
 
 std::optional<glm::mat4> InputSystem::GetGlobalTransformByViewRef(

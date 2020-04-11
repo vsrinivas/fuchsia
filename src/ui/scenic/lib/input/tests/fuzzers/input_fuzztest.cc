@@ -15,7 +15,10 @@ namespace lib_ui_input_tests {
 
 class FuzzInputSystemTest : public InputSystemTest {
  public:
-  FuzzInputSystemTest(uint32_t display_width, uint32_t display_height) : InputSystemTest(), display_width_(display_width), display_height_(display_height) { InputSystemTest::SetUp(); }
+  FuzzInputSystemTest(uint32_t display_width, uint32_t display_height)
+      : InputSystemTest(), display_width_(display_width), display_height_(display_height) {
+    InputSystemTest::SetUp();
+  }
 
   ~FuzzInputSystemTest() { InputSystemTest::TearDown(); }
 
@@ -35,11 +38,13 @@ class FuzzInputSystemTest : public InputSystemTest {
 // Create a fuzzed pointer command.
 fuchsia::ui::input::SendPointerInputCmd CreatePointerCmd(FuzzedDataProvider& fuzzed_data) {
   fuchsia::ui::input::PointerEvent pointer_event;
-  pointer_event.type = static_cast<fuchsia::ui::input::PointerEventType>(fuzzed_data.ConsumeIntegral<uint32_t>());
+  pointer_event.type =
+      static_cast<fuchsia::ui::input::PointerEventType>(fuzzed_data.ConsumeIntegral<uint32_t>());
   pointer_event.event_time = fuzzed_data.ConsumeIntegral<uint64_t>();
   pointer_event.device_id = fuzzed_data.ConsumeIntegral<uint32_t>();
   pointer_event.pointer_id = fuzzed_data.ConsumeIntegral<uint32_t>();
-  pointer_event.phase = static_cast<fuchsia::ui::input::PointerEventPhase>(fuzzed_data.ConsumeIntegral<uint32_t>());
+  pointer_event.phase =
+      static_cast<fuchsia::ui::input::PointerEventPhase>(fuzzed_data.ConsumeIntegral<uint32_t>());
   pointer_event.x = fuzzed_data.ConsumeFloatingPoint<float>();
   pointer_event.y = fuzzed_data.ConsumeFloatingPoint<float>();
 
