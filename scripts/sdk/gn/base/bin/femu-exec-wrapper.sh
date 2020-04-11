@@ -33,16 +33,18 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
 function get_child_pids {
-  local children
+  children=()
   if is-mac; then
-    children=$(pgrep -P "$1")
+    while IFS='' read -r v; do children+=("$v"); done < <(pgrep -P "$1")
   else
-    children=$(ps -o pid= --ppid "$1")
+    while IFS='' read -r v; do children+=("$v"); done < <(ps -o pid= --ppid "$1")
   fi
-  for pid in $children; do
-    get_child_pids "$pid"
-  done
-  echo "$children"
+  if (( ${#children[@]} )); then
+    for pid in "${children[@]}"; do
+        while IFS='' read -r v; do children+=("$v"); done < <(get_child_pids "$pid")
+    done
+    echo "${children[@]}"
+  fi
 }
 
 # Called when there is an error and we need to dump the log
@@ -57,16 +59,18 @@ function dump_femu_log {
 
 # This is only used after femu.sh has been started
 function cleanup {
-  # The emu, emulator*, and qemu* children need to be terminated separately since it is detached from the script
-  # Note that CHILD_PIDS needs to be used without quotes because we want the newlines to be removed
-  CHILD_PIDS=$(get_child_pids "${FEMU_PID}")
-  echo "Cleaning up femu pid $FEMU_PID, qemu child processes ${CHILD_PIDS} and package server for exit ..."
-  #
-  # I believe this should be an array, but deferring to waynepie@
-  #shellcheck disable=SC2086
-  kill ${CHILD_PIDS} &> /dev/null
-  kill "${FEMU_PID}" &> /dev/null
-  "${SCRIPT_SRC_DIR}/fserve.sh" --kill &> /dev/null
+  declare -a CHILD_PIDS=()
+  IFS=" " read -r -a CHILD_PIDS <<< "$(get_child_pids "${FEMU_PID}")"
+  msg="Cleaning up femu pid ${FEMU_PID}"
+
+  if (( "${#CHILD_PIDS[@]}" )); then
+    echo "$msg qemu child processes ${CHILD_PIDS[*]} and package server for exit ..."
+    kill "${CHILD_PIDS[@]}" > /dev/null 2>&1  || true
+  elif [[ "${FEMU_PID}" != "" ]]; then
+    echo "${msg}"
+    kill "${FEMU_PID}"  > /dev/null 2>&1 || true
+  fi
+  "${SCRIPT_SRC_DIR}/fserve.sh" --kill  > /dev/null 2>&1  || true
 }
 
 HEADLESS=""
@@ -79,35 +83,35 @@ EMU_ARGS=()
 
 # Check for some of the emu flags, but pass everything else on to femu.sh
 while (( "$#" )); do
-case $1 in
-  --help|-h)
-    usage
-    exit 0
+  case $1 in
+    --help|-h)
+      usage
+      exit 0
     ;;
-  --headless)
-    HEADLESS="yes"
+    --headless)
+      HEADLESS="yes"
     ;;
-  --interactive)
-    INTERACTIVE="yes"
+    --interactive)
+      INTERACTIVE="yes"
     ;;
-  --exec)
-    shift
-    EXEC_SCRIPT="${1}"
+    --exec)
+      shift
+      EXEC_SCRIPT="${1}"
     ;;
-  --femu-log)
-    shift
-    FEMU_LOG="${1}"
+    --femu-log)
+      shift
+      FEMU_LOG="${1}"
     ;;
-  --image)
-    shift
-    IMAGE_NAME="${1}"
+    --image)
+      shift
+      IMAGE_NAME="${1}"
     ;;
-  *)
-    # Everything else is passed on to the emulator
-    EMU_ARGS+=( "${1}" )
+    *)
+      # Everything else is passed on to the emulator
+      EMU_ARGS+=( "${1}" )
     ;;
-esac
-shift
+  esac
+  shift
 done
 
 # This IPv6 address is always generated according to the hash of the qemu network interface in femu.sh
@@ -123,15 +127,9 @@ if [[ "${FEMU_LOG}" == "" ]]; then
   FEMU_LOG_TEMP="${FEMU_LOG_TEMP}"
 fi
 
-femu_command_args=("${SCRIPT_SRC_DIR}/femu.sh" --image "${IMAGE_NAME}")
+# Always start femu with network access.
+femu_command_args=("${SCRIPT_SRC_DIR}/femu.sh" --image "${IMAGE_NAME}" -N)
 
-# Only use -N on linux for now
-if ! is-mac; then
-  femu_command_args+=("-N")
-fi
-
-
-# Always start with -N for SSH access to the emulator
 echo "Starting emulator with logging to ${FEMU_LOG}"
 if [[ "${INTERACTIVE}" == "yes" ]]; then
   if (( ${#EMU_ARGS[@]} )); then
@@ -139,6 +137,7 @@ if [[ "${INTERACTIVE}" == "yes" ]]; then
   fi
   # Start up the emulator in the background within a new window, useful for interactive debugging
   xterm -T "femu" -e "${femu_command_args[@]}" &
+  FEMU_PID=$!
 elif [[ "${HEADLESS}" == "yes" ]]; then
   # When there is no graphics support, run femu in the background with no output visible, and use a software GPU
   femu_command_args+=("--headless" "--software-gpu")
@@ -146,14 +145,15 @@ elif [[ "${HEADLESS}" == "yes" ]]; then
     femu_command_args+=("${EMU_ARGS[@]}")
   fi
   "${femu_command_args[@]}" &> "${FEMU_LOG}" < /dev/null &
+  FEMU_PID=$!
 else
   # Allow femu to open up a window for the emulator and use hardware Vulkan support
   if (( ${#EMU_ARGS[@]} )); then
     femu_command_args+=("${EMU_ARGS[@]}")
   fi
   "${femu_command_args[@]}" &> "${FEMU_LOG}" < /dev/null &
+  FEMU_PID=$!
 fi
-FEMU_PID=$!
 trap cleanup EXIT
 
 # Wait for the emulator to start, and check if emu is still running in the background or this will never complete
@@ -183,8 +183,7 @@ EXEC_RESULT=0
 if [[ "${EXEC_SCRIPT}" == "" ]]; then
   fx-warn "No --exec script specified, will now clean up"
 else
-  echo "Executing bash -c \"${EXEC_SCRIPT}\""
-  bash -c "${EXEC_SCRIPT}" || EXEC_RESULT=$?
+  eval "${EXEC_SCRIPT}" "${EMULATOR_ADDRESS}" || EXEC_RESULT=$?
 fi
 
 if [[ "${EXEC_RESULT}" != "0" ]]; then
