@@ -7,7 +7,8 @@
         "bin/fx-image-common.sh",
         "bin/devshell/emu",
         "bin/devshell/lib/image_build_vars.sh",
-        "bin/devshell/lib/fvm.sh"
+        "bin/devshell/lib/fvm.sh",
+        "bin/devshell/lib/emu-ifup-macos.sh"
     ],
     "name": "femu",
     "root": "bin",

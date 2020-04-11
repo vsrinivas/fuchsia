@@ -18,6 +18,8 @@ fi
 # Variables expected by fx emu
 ZIRCON_TOOLS_DIR="${FUCHSIA_SDK_PATH}/tools"
 # shellcheck disable=SC2034
+FUCHSIA_DIR="${FUCHSIA_SDK_PATH}/bin"
+# shellcheck disable=SC2034
 HOST_OUT_DIR="${FUCHSIA_SDK_PATH}/tools"
 # shellcheck disable=SC2034
 IMAGE_ZIRCONA_ZBI="zircon-a.zbi"

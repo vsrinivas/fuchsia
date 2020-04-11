@@ -80,3 +80,35 @@ gn-test-check-mock-args() {
   return 0
 }
 
+# Verifies that the given arguments appear in the command line invocation of the
+# most previously sourced mock state. Any arguments passed to this function will
+# be searched for in the actual arguments. This succeeds if the arguments are
+# found in adjacent positions in the correct order.
+#
+# This function only checks for presence. As a result, it will NOT verify any of
+# the following:
+#
+# * The arguments only appear once.
+# * The arguments don't appear with conflicting arguments.
+# * Any given argument --foo isn't overridden, say with a --no-foo flag later.
+#
+# Args: any number of arguments to check.
+# Returns: 0 if found; 1 if not found.
+gn-test-check-mock-partial() {
+  local expected=("$@")
+  for j in "${!BT_MOCK_ARGS[@]}"; do
+    local window=("${BT_MOCK_ARGS[@]:$j:${#expected}}")
+    local found=true
+    for k in "${!expected[@]}"; do
+      if [[ "${expected[$k]}" != "${window[$k]}" ]]; then
+        found=false
+        break
+      fi
+    done
+    if [[ "${found}" == "true" ]]; then
+      return 0
+    fi
+  done
+  BT_EXPECT false "Could not find expected:\n${expected[*]}\nin arguments:\n${BT_MOCK_ARGS[*]}"
+  return 1
+}
