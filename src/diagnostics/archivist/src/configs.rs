@@ -98,7 +98,9 @@ impl PipelineConfig {
         if self.errors.len() != 0 {
             let errors = node.create_child("errors");
             for (i, error) in self.errors.iter().enumerate() {
-                errors.record_string(format!("{}", i), error);
+                let error_node = errors.create_child(format!("{}", i));
+                error_node.record_string("message", error);
+                errors.record(error_node);
             }
             node.record(errors);
         }
@@ -242,7 +244,9 @@ mod tests {
         config.record_to_inspect(inspector.root());
         assert_inspect_tree!(inspector, root: {
             errors: {
-                "0": "Failed to read directory config/missing"
+                "0": {
+                    message: "Failed to read directory config/missing"
+                }
             },
             config_files: {}
         });
@@ -265,7 +269,9 @@ mod tests {
         config.record_to_inspect(inspector.root());
         assert_inspect_tree!(inspector, root: {
             errors: {
-                "0": AnyProperty
+                "0": {
+                    message: AnyProperty
+                }
             },
             config_files: {
                 ok: {},
