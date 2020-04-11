@@ -16,12 +16,9 @@ namespace audio {
 
 class PolicyLoader {
  public:
-  static std::optional<AudioPolicy> LoadDefaultPolicy();
+  static AudioPolicy LoadPolicy();
 
-  static std::optional<AudioPolicy> ParseConfig(const char* file_body);
-
- private:
-  static std::optional<AudioPolicy> LoadConfigFromFile(const std::string config);
+  static fit::result<AudioPolicy> ParseConfig(const char* file_body);
 };
 
 }  // namespace audio

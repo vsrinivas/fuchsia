@@ -114,9 +114,8 @@ void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media:
 
 void AudioCoreImpl::LoadDefaults() {
   TRACE_DURATION("audio", "AudioCoreImpl::LoadDefaults");
-  auto policy = PolicyLoader::LoadDefaultPolicy();
-  FX_CHECK(policy);
-  context_.audio_admin().SetInteractionsFromAudioPolicy(std::move(*policy));
+  auto policy = PolicyLoader::LoadPolicy();
+  context_.audio_admin().SetInteractionsFromAudioPolicy(std::move(policy));
 }
 
 void AudioCoreImpl::ResetInteractions() {

@@ -31,19 +31,19 @@ TEST_F(AudioAdminUnitTest, GoodConfigs) {
 
 TEST_F(AudioAdminUnitTest, BadConfigs) {
   // Configs that aren't complete enough to use.
-  EXPECT_FALSE(PolicyLoader::ParseConfig(test::no_rules));
-  EXPECT_FALSE(PolicyLoader::ParseConfig(test::no_active));
-  EXPECT_FALSE(PolicyLoader::ParseConfig(test::no_affected));
-  EXPECT_FALSE(PolicyLoader::ParseConfig(test::no_behavior));
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::no_rules).is_ok());
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::no_active).is_ok());
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::no_affected).is_ok());
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::no_behavior).is_ok());
 
   // Malformed configs.
-  EXPECT_FALSE(PolicyLoader::ParseConfig(test::rules_not_array));
-  EXPECT_FALSE(PolicyLoader::ParseConfig(test::rules_array_not_rules));
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::rules_not_array).is_ok());
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::rules_array_not_rules).is_ok());
 
   // Configs that have all the required parts, but have invalid values.
-  EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_renderusage));
-  EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_captureusage));
-  EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_behavior));
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_renderusage).is_ok());
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_captureusage).is_ok());
+  EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_behavior).is_ok());
 }
 
 }  // namespace

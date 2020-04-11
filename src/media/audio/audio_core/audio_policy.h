@@ -19,6 +19,8 @@ class AudioPolicy {
     fuchsia::media::Behavior behavior;
   };
 
+  AudioPolicy() = default;
+
   explicit AudioPolicy(std::vector<Rule> rules) : rules_(std::move(rules)) {}
 
   const std::vector<Rule>& rules() const { return rules_; }

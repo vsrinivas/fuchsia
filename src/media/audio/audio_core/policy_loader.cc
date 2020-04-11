@@ -23,9 +23,7 @@ namespace media::audio {
 
 namespace {
 static constexpr size_t kMaxSettingFileSize = (64 << 10);
-static const std::string kDefaultPolicyPath = "/config/data/settings/default/audio_policy.json";
-static const std::string kPlatformDefaultPolicyPath =
-    "/config/data/settings/default/platform_audio_policy.json";
+static const std::string kPolicyPath = "/config/data/audio_policy.json";
 
 std::optional<fuchsia::media::AudioRenderUsage> JsonToRenderUsage(const rapidjson::Value& usage) {
   static_assert(fuchsia::media::RENDER_USAGE_COUNT == 5,
@@ -112,7 +110,7 @@ static std::optional<fuchsia::media::Usage> JsonToUsage(const rapidjson::Value& 
 
 }  // namespace
 
-std::optional<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
+fit::result<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
   rapidjson::Document doc;
 
   std::vector<AudioPolicy::Rule> rules;
@@ -121,7 +119,7 @@ std::optional<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
     FX_LOGS(ERROR) << "Failed to parse settings file JSON schema: "
                    << rapidjson::GetParseError_En(parse_res.Code()) << " " << parse_res.Offset()
                    << file_body + parse_res.Offset();
-    return std::nullopt;
+    return fit::error();
   }
 
   rapidjson::Document doc2;
@@ -130,7 +128,7 @@ std::optional<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
     FX_LOGS(ERROR) << "Failed to parse settings file JSON schema: "
                    << rapidjson::GetParseError_En(parse_res.Code()) << " " << parse_res.Offset()
                    << kAudioPolicySchema + parse_res.Offset();
-    return std::nullopt;
+    return fit::error();
   }
 
   rapidjson::SchemaDocument schema_doc(doc2);
@@ -139,69 +137,66 @@ std::optional<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
   if (!doc.Accept(validator)) {
     FX_LOGS(ERROR) << "Schema validation error when reading policy settings.";
 
-    return std::nullopt;
+    return fit::error();
   }
 
   const rapidjson::Value& rules_json = doc["audio_policy_rules"];
   if (!rules_json.IsArray()) {
-    return std::nullopt;
+    return fit::error();
   }
   for (auto& rule_json : rules_json.GetArray()) {
     auto& rule = rules.emplace_back();
     if (!rule_json.IsObject()) {
-      return std::nullopt;
+      return fit::error();
     }
     if (rule_json.HasMember("active")) {
       auto active = JsonToUsage(rule_json["active"]);
       if (!active) {
         FX_LOGS(ERROR) << "Rule `active` object invalid.";
-        return std::nullopt;
+        return fit::error();
       }
       rule.active = std::move(*active);
     } else {
       FX_LOGS(ERROR) << "Rule `active` object missing.";
-      return std::nullopt;
+      return fit::error();
     }
 
     if (rule_json.HasMember("affected")) {
       auto affected = JsonToUsage(rule_json["affected"]);
       if (!affected) {
         FX_LOGS(ERROR) << "Rule `affected` object invalid.";
-        return std::nullopt;
+        return fit::error();
       }
       rule.affected = std::move(*affected);
     } else {
       FX_LOGS(ERROR) << "Rule `affected` object missing.";
-      return std::nullopt;
+      return fit::error();
     }
 
     if (rule_json.HasMember("behavior")) {
       auto behavior = JsonToBehavior(rule_json["behavior"]);
       if (!behavior) {
         FX_LOGS(ERROR) << "Rule `behavior` object invalid.";
-        return std::nullopt;
+        return fit::error();
       }
       rule.behavior = std::move(*behavior);
     } else {
       FX_LOGS(ERROR) << "Rule `behavior` object missing.";
-      return std::nullopt;
+      return fit::error();
     }
   }
 
   FX_LOGS(INFO) << "Successfully loaded " << rules.size() << " rules.";
 
-  return {AudioPolicy{std::move(rules)}};
+  return fit::ok(AudioPolicy{std::move(rules)});
 }
 
-std::optional<AudioPolicy> PolicyLoader::LoadConfigFromFile(const std::string config) {
+fit::result<std::optional<AudioPolicy>> LoadConfigFromFile(const std::string config) {
   fbl::unique_fd json_file;
-
-  FX_LOGS(INFO) << "Loading " << config;
   json_file.reset(open(config.c_str(), O_RDONLY));
 
   if (!json_file.is_valid()) {
-    FX_LOGS(WARNING) << "Failed to load " << config;
-    return std::nullopt;
+    return fit::ok(std::nullopt);
   }
 
   // Figure out the size of the file, then allocate storage for reading the
@@ -209,45 +204,50 @@ std::optional<AudioPolicy> PolicyLoader::LoadConfigFromFile(const std::string co
   off_t file_size = lseek(json_file.get(), 0, SEEK_END);
   if ((file_size <= 0)) {
     FX_LOGS(ERROR) << "Could not find filesize";
-    return std::nullopt;
+    return fit::error();
   }
 
   if (static_cast<size_t>(file_size) > kMaxSettingFileSize) {
     FX_LOGS(ERROR) << "Config file too large. Max file size: " << kMaxSettingFileSize
                    << " Config file size: " << file_size;
-    return std::nullopt;
+    return fit::error();
   }
 
   if (lseek(json_file.get(), 0, SEEK_SET) != 0) {
     FX_LOGS(ERROR) << "Failed to seek to 0.";
-    return std::nullopt;
+    return fit::error();
   }
 
   // Allocate the buffer and read in the contents.
   auto buffer = std::make_unique<char[]>(file_size + 1);
   if (read(json_file.get(), buffer.get(), file_size) != file_size) {
     FX_LOGS(ERROR) << "Failed to read buffer.";
-    return std::nullopt;
+    return fit::error();
   }
   buffer[file_size] = 0;
 
-  return ParseConfig(buffer.get());
+  auto result = PolicyLoader::ParseConfig(buffer.get());
+  if (result.is_error()) {
+    return fit::error();
+  }
+  return fit::ok(std::make_optional(result.take_value()));
 }
 
-std::optional<AudioPolicy> PolicyLoader::LoadDefaultPolicy() {
-  auto policy = LoadConfigFromFile(kPlatformDefaultPolicyPath);
-  if (policy) {
-    return policy;
+AudioPolicy PolicyLoader::LoadPolicy() {
+  auto result = LoadConfigFromFile(kPolicyPath);
+  if (result.is_ok()) {
+    auto maybe_policy = result.take_value();
+    if (maybe_policy.has_value()) {
+      FX_LOGS(INFO) << "Loaded policy with " << maybe_policy->rules().size() << " rules.";
+      return std::move(*maybe_policy);
+    } else {
+      FX_LOGS(INFO) << "No policy found; using default.";
+      return AudioPolicy();
+    }
   }
 
-  policy = LoadConfigFromFile(kDefaultPolicyPath);
-  if (policy) {
-    FX_LOGS(WARNING) << "No platform audio_policy found; using defaults.";
-    return policy;
-  }
-
-  FX_LOGS(ERROR) << "No audio_policy found; no policy will be used.";
-  return std::nullopt;
+  FX_LOGS(WARNING) << "Failed to load audio policy from " << kPolicyPath << ", using default.";
+  return AudioPolicy();
 }
 
 }  // namespace media::audio
