@@ -9,6 +9,7 @@
         "services": [
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.boot.RootJob",
+            "fuchsia.logger.LogSink",
             "fuchsia.tracing.provider.Registry"
         ]
     }

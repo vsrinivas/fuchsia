@@ -12,6 +12,7 @@
         "services": [
             "fuchsia.accessibility.ColorTransform",
             "fuchsia.accessibility.Magnifier",
+            "fuchsia.logger.LogSink",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",

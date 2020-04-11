@@ -5,6 +5,9 @@
     "sandbox": {
         "system": [
             "lib"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
         ]
     }
 }

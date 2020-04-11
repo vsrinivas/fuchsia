@@ -7,6 +7,7 @@
             "sys/cpu-trace"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.tracing.provider.Registry"
         ]
     }
