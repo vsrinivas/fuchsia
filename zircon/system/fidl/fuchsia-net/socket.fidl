@@ -1,0 +1,47 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net;
+
+/// An IPv4 socket address, composed of an IPv4 address and a port.
+///
+/// Inspired by the address definition in the [POSIX specification].
+///
+/// [POSIX specification]: https://pubs.opengroup.org/onlinepubs/9699919799/
+struct Ipv4SocketAddress {
+    /// IPv4 Address.
+    Ipv4Address address;
+    /// Transport-layer port.
+    uint16 port;
+};
+
+/// An IPV6 socket address, composed of an IPv6 address, a port, and a scope identifier.
+///
+/// Inspired by the address definition in the [POSIX specification].
+///
+/// [POSIX specification]: https://pubs.opengroup.org/onlinepubs/9699919799/
+struct Ipv6SocketAddress {
+    /// IPv6 Address.
+    Ipv6Address address;
+    /// Transport-layer port.
+    uint16 port;
+    /// Provides a means to identify to which zone a non-global address belongs.
+    ///
+    /// A node may have interfaces attached to different zones of the same scope, for example
+    /// different link-local zones are disambiguated by the use of a `zone_index` providing the
+    /// interface identifier.
+    ///
+    /// `zone_index` 0 is the default zone.
+    ///
+    /// See [RFC 4007] for terminology and examples.
+    ///
+    /// [RFC 4007]: https://tools.ietf.org/html/rfc4007
+    uint64 zone_index;
+};
+
+/// Represents an IP socket address that may be either v4 or v6.
+union SocketAddress {
+    1: Ipv4SocketAddress ipv4;
+    2: Ipv6SocketAddress ipv6;
+};
