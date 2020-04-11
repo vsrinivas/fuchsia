@@ -91,11 +91,15 @@ package("use_h264_decoder_stream_switching_test") {
       # Should pass when run on VIM2, sherlock, or QEMU.
       name = "use_h264_decoder_stream_switching_test"
 
-      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable in
+      # astro_env.
+      #
+      # Disable on qemu because the test flakes so far. TODO(fxb/49932) Re-enable in qemu_env.
       environments = [
         vim2_env,
         sherlock_env,
-        qemu_env,
+        # qemu_env,
+        # astro_env,
       ]
     },
   ]
