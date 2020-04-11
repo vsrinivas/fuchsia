@@ -8,6 +8,6 @@
   "fidl/fuchsia.settings/night_mode.fidl": "c37d97b3111d3d8db4017872f6176e7a",
   "fidl/fuchsia.settings/privacy.fidl": "84179421335bed4537d8fa4dcda5170d",
   "fidl/fuchsia.settings/settings.fidl": "30fc2c4d2806f968f501f96621d81a6a",
-  "fidl/fuchsia.settings/setup.fidl": "e9987e6a39f33a2e19a04c67a7dc67f7",
+  "fidl/fuchsia.settings/setup.fidl": "ed62d78a52056c2345bea9e943a272e9",
   "fidl/fuchsia.settings/system.fidl": "ec09fa81dff19a05971e7eaf873f6b43"
 }

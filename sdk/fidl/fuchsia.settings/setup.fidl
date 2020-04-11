@@ -21,7 +21,11 @@ protocol Setup {
     /// the table will not perform any system operation. An error will be
     /// returned if the provided settings is an invalid change (for example, if
     /// it is empty).
+    [Transitional = "Changes network interfaces configuration with reboot"]
     Set(SetupSettings settings) -> () error Error;
+
+    [Transitional = "Changes network interfaces configuration with optional reboot"]
+    Set2(SetupSettings settings, bool reboot_device) -> () error Error;
 };
 
 table SetupSettings {

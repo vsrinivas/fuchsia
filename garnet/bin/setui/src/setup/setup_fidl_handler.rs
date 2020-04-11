@@ -9,10 +9,8 @@ use crate::switchboard::base::{
 };
 use crate::switchboard::hanging_get_handler::Sender;
 use fidl_fuchsia_settings::{
-    SetupMarker, SetupRequest, SetupRequestStream, SetupSetResponder, SetupSettings,
-    SetupWatchResponder,
+    Error, SetupMarker, SetupRequest, SetupRequestStream, SetupSettings, SetupWatchResponder,
 };
-use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 use std::convert::TryFrom;
@@ -41,7 +39,6 @@ impl From<SettingResponse> for SetupSettings {
         if let SettingResponse::Setup(info) = response {
             return SetupSettings::from(info);
         }
-
         panic!("incorrect value sent");
     }
 }
@@ -92,55 +89,36 @@ impl From<SetupInfo> for SetupSettings {
     }
 }
 
-async fn reboot(switchboard_client: SwitchboardClient, responder: SetupSetResponder) {
-    match switchboard_client.request(SettingType::Power, SettingRequest::Reboot).await {
-        Err(_) => {
-            // Respond immediately with an error if request was not possible.
-            responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-            return;
-        }
-        Ok(response_rx) => {
-            fasync::spawn(async move {
-                // Return success if we get a Ok result from the
-                // switchboard.
-                if let Ok(Ok(_)) = response_rx.await {
-                    responder.send(&mut Ok(())).ok();
-                    return;
-                }
-
-                responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-            });
+async fn reboot(switchboard_client: SwitchboardClient) -> Result<(), Error> {
+    if let Ok(response_rx) =
+        switchboard_client.request(SettingType::Power, SettingRequest::Reboot).await
+    {
+        if let Ok(Ok(_)) = response_rx.await {
+            return Ok(());
         }
     }
+    return Err(fidl_fuchsia_settings::Error::Failed);
 }
 
 async fn set(
     context: RequestContext<SetupSettings, SetupWatchResponder>,
     settings: SetupSettings,
-    responder: SetupSetResponder,
-) {
+    do_reboot: bool,
+) -> Result<(), Error> {
     if let Ok(request) = SettingRequest::try_from(settings) {
-        match context.switchboard_client.request(SettingType::Setup, request).await {
-            Err(_) => {
-                // Respond immediately with an error if request was not possible.
-                responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-                return;
-            }
-            Ok(response_rx) => {
-                let switchboard_client = context.switchboard_client.clone();
-                fasync::spawn(async move {
-                    // Return success if we get a Ok result from the
-                    // switchboard.
-                    if let Ok(Ok(_)) = response_rx.await {
-                        reboot(switchboard_client, responder).await;
-                        return;
-                    }
-
-                    responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-                });
+        if let Ok(response_rx) =
+            context.switchboard_client.request(SettingType::Setup, request).await
+        {
+            let switchboard_client = context.switchboard_client.clone();
+            if let Ok(Ok(_)) = response_rx.await {
+                if do_reboot {
+                    return Ok(());
+                }
+                return reboot(switchboard_client).await;
             }
         }
     }
+    return Err(fidl_fuchsia_settings::Error::Failed);
 }
 
 pub fn spawn_setup_fidl_handler(switchboard_client: SwitchboardClient, stream: SetupRequestStream) {
@@ -157,14 +135,21 @@ pub fn spawn_setup_fidl_handler(switchboard_client: SwitchboardClient, stream: S
                     #[allow(unreachable_patterns)]
                     match req {
                         SetupRequest::Set { settings, responder } => {
-                            set(context, settings, responder).await;
+                            match set(context, settings, true).await {
+                                Ok(_) => responder.send(&mut Ok(())).ok(),
+                                Err(e) => responder.send(&mut Err(e)).ok(),
+                            };
+                        }
+                        SetupRequest::Set2 { settings, reboot_device, responder } => {
+                            match set(context, settings, reboot_device).await {
+                                Ok(_) => responder.send(&mut Ok(())).ok(),
+                                Err(e) => responder.send(&mut Err(e)).ok(),
+                            };
                         }
                         SetupRequest::Watch { responder } => {
                             context.watch(responder).await;
                         }
-                        _ => {
-                            return Ok(Some(req));
-                        }
+                        _ => return Ok(Some(req)),
                     }
 
                     return Ok(None);
