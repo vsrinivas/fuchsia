@@ -29,6 +29,8 @@ protocol Presentation {
     /// The full KeyboardEvent is supplied to `listener`'s OnEvent.
     // TODO: Figure out the feasibility of this feature and the best place to put
     // it.
+    // TODO(43601): Remove the method after we remove usage in all clients.
+    [Transitional]
     CaptureKeyboardEventHACK(fuchsia.ui.input.KeyboardEvent event_to_capture,
                              KeyboardCaptureListenerHACK listener);
 
