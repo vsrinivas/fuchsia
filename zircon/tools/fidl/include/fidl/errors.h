@@ -8,6 +8,7 @@
 #include "error_types.h"
 
 namespace fidl {
+namespace errors {
 
 // ---------------------------------------------------------------------------
 // Lexer
@@ -262,6 +263,7 @@ constexpr ErrorDef<std::vector<std::string_view>, std::vector<std::string_view>,
                 std::vector<std::string_view>> ErrUnusedImport(
     "Library {} imports {} but does not use it. Either use {}, or remove import.");
 
+}  // namespace errors
 }  // namespace fidl
 
 #endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERRORS_H_

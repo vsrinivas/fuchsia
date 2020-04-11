@@ -16,6 +16,9 @@
 
 namespace fidl {
 
+using namespace errors;
+using error_reporter::ErrorReporter;
+
 // See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#_parsing
 // for additional context
 class Parser {

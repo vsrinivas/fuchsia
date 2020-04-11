@@ -23,6 +23,8 @@
 namespace fidl {
 namespace flat {
 
+using namespace errors;
+
 namespace {
 
 constexpr uint32_t kHandleSameRights = 0x80000000;  // ZX_HANDLE_SAME_RIGHTS

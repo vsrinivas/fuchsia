@@ -18,6 +18,8 @@
 namespace fidl {
 namespace utils {
 
+using error_reporter::ErrorReporter;
+
 constexpr char kWhitespaceChars[] = " \t\n\v\f\r";
 constexpr char kWhitespaceNoNewlineChars[] = " \t\v\f\r";
 

@@ -17,6 +17,8 @@
 
 namespace fidl {
 
+using error_reporter::ErrorReporter;
+
 // The lexer does not own the data it operates on. It merely takes a
 // std::string_view and produces a stream of tokens and possibly a failure
 // partway through.

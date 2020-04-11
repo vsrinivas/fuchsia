@@ -17,10 +17,15 @@
 #include "token.h"
 
 namespace fidl {
+namespace error_reporter {
+
+using errors::BaseError;
+using errors::Error;
+using errors::ErrorDef;
 
 std::string MakeSquiggle(const std::string& surrounding_line, int column);
 
-std::string FormatError(std::string qualifier, const std::optional<SourceSpan>& span,
+std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
                    std::string_view message, size_t squiggle_size = 0u);
 
 class ErrorReporter {
@@ -133,6 +138,7 @@ class ErrorReporter {
   std::vector<std::unique_ptr<BaseError>> errors_;
 };
 
+}  // namespace error_reporter
 }  // namespace fidl
 
 #endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERROR_REPORTER_H_

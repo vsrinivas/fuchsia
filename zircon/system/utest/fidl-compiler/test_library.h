@@ -111,7 +111,8 @@ class TestLibrary final {
       fidl::SourceSpan span(beginning, *source_file);
       const auto& error = error_reporter_->errors().at(0);
       size_t squiggle_size = error->span ? error->span.value().data().size() : 0;
-      auto error_msg = FormatError("error", error->span, error->Format(), squiggle_size);
+      auto error_msg = fidl::error_reporter::Format("error", error->span,
+                                                    error->Format(), squiggle_size);
       findings->emplace_back(span, "parser-error", error_msg + "\n");
       return false;
     }

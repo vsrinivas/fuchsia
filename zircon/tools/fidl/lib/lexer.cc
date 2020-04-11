@@ -11,6 +11,8 @@
 
 namespace fidl {
 
+using namespace errors;
+
 namespace {
 
 bool IsIdentifierBody(char c) {

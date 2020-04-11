@@ -6,6 +6,8 @@
 
 namespace fidl {
 
+using namespace errors;
+
 bool AttributesBuilder::Insert(raw::Attribute attribute) {
   auto attribute_name = attribute.name;
   auto attribute_span = attribute.span();

@@ -42,6 +42,10 @@
 namespace fidl {
 namespace flat {
 
+using errors::BaseError;
+using errors::ErrorDef;
+using error_reporter::ErrorReporter;
+
 template <typename T>
 struct PtrCompare {
   bool operator()(const T* left, const T* right) const { return *left < *right; }

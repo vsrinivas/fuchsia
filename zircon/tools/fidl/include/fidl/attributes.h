@@ -13,6 +13,8 @@
 
 namespace fidl {
 
+using error_reporter::ErrorReporter;
+
 class AttributesBuilder {
  public:
   AttributesBuilder(ErrorReporter* error_reporter) : error_reporter_(error_reporter) {}

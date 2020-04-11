@@ -6,13 +6,10 @@
 
 #include <cassert>
 
-#include "fidl/flat_ast.h"
-#include "fidl/names.h"
-#include "fidl/raw_ast.h"
-#include "fidl/source_span.h"
 #include "fidl/token.h"
 
 namespace fidl {
+namespace error_reporter {
 
 std::string MakeSquiggle(const std::string& surrounding_line, int column) {
   std::string squiggle;
@@ -28,7 +25,7 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
   return squiggle;
 }
 
-std::string FormatError(std::string qualifier, const std::optional<SourceSpan>& span,
+std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
                    std::string_view message, size_t squiggle_size) {
   if (!span) {
     std::string error = qualifier;
@@ -73,59 +70,6 @@ std::string FormatError(std::string qualifier, const std::optional<SourceSpan>& 
   return error;
 }
 
-namespace internal {
-
-std::string Display(const std::string& s) { return s; }
-
-std::string Display(std::string_view s) { return std::string(s); }
-
-// {'A', 'B', 'C'} -> "A, B, C"
-std::string Display(const std::set<std::string>& s) {
-  std::stringstream ss;
-  for (auto it = s.begin(); it != s.end(); it++) {
-    if (it != s.cbegin()) {
-      ss << ", ";
-    }
-    ss << *it;
-  }
-  return ss.str();
-}
-
-std::string Display(const SourceSpan& s) { return s.position_str(); }
-
-std::string Display(const Token::KindAndSubkind& t) {
-  return std::string(Token::Name(t));
-}
-
-std::string Display(const raw::Attribute& a) { return a.name; }
-
-std::string Display(const raw::AttributeList& a) {
-  std::stringstream attributes_found;
-  for (auto it = a.attributes.begin(); it != a.attributes.end(); it++) {
-    if (it != a.attributes.cbegin()) {
-      attributes_found << ", ";
-    }
-    attributes_found << it->name;
-  }
-  return attributes_found.str();
-}
-
-std::string Display(const std::vector<std::string_view>& library_name) {
-  return NameLibrary(library_name);
-}
-
-std::string Display(const flat::Constant* c) { return NameFlatConstant(c); }
-
-std::string Display(const flat::TypeConstructor* tc) { return NameFlatTypeConstructor(tc); }
-
-std::string Display(const flat::Type* t) { return NameFlatType(t); }
-
-std::string Display(const flat::TypeTemplate* t) { return NameFlatName(t->name()); }
-
-std::string Display(const flat::Name& n) { return std::string(n.full_name()); }
-
-}  // namespace internal
-
 void ErrorReporter::AddError(std::unique_ptr<BaseError> err) {
   if (mode_ == ReportingMode::kDoNotReport)
     return;
@@ -165,21 +109,22 @@ void ErrorReporter::ReportWarning(std::unique_ptr<BaseError> warn) {
 //        ^~~~
 void ErrorReporter::ReportWarningWithSquiggle(const SourceSpan& span, std::string_view message) {
   auto token_data = span.data();
-  auto warning = FormatError("warning", std::make_optional(span), message, token_data.size());
+  auto warning = Format("warning", std::make_optional(span), message, token_data.size());
   string_warnings_.push_back(warning);
 }
 
 void ErrorReporter::PrintReports() {
   for (const auto& error : errors_) {
     size_t squiggle_size = error->span ? error->span.value().data().size() : 0;
-    auto error_str = FormatError("error", error->span, error->Format(), squiggle_size);
+    auto error_str = Format("error", error->span, error->Format(), squiggle_size);
     fprintf(stderr, "%s\n", error_str.c_str());
   }
   for (const auto& warning : warnings_) {
     size_t squiggle_size = warning->span ? warning->span.value().data().size() : 0;
-    auto warning_str = FormatError("warning", warning->span, warning->Format(), squiggle_size);
+    auto warning_str = Format("warning", warning->span, warning->Format(), squiggle_size);
     fprintf(stderr, "%s\n", warning_str.c_str());
   }
 }
 
+}  // namespace error_reporter
 }  // namespace fidl

@@ -31,19 +31,10 @@ class TypeTemplate;
 class Name;
 }  // namespace flat
 
+namespace errors {
 namespace internal {
 
 constexpr std::string_view kFormatMarker = "{}";
-
-constexpr size_t count_format_args(std::string_view s) {
-  size_t i = s.find(kFormatMarker, 0);
-  size_t total = 0;
-  while (i != std::string::npos && i < s.size()) {
-    total++;
-    i = s.find(kFormatMarker, i + kFormatMarker.size());
-  }
-  return total;
-}
 
 std::string Display(const std::string& s);
 std::string Display(std::string_view s);
@@ -85,6 +76,16 @@ std::string FormatErr(std::string_view msg, T t, Rest... rest) {
     << msg.substr(i + kFormatMarker.length(), msg.length() - i - kFormatMarker.length());
 
   return FormatErr(s.str(), rest...);
+}
+
+constexpr size_t count_format_args(std::string_view s) {
+  size_t i = s.find(kFormatMarker, 0);
+  size_t total = 0;
+  while (i != std::string::npos && i < s.size()) {
+    total++;
+    i = s.find(kFormatMarker, i + kFormatMarker.size());
+  }
+  return total;
 }
 
 }  // namespace internal
@@ -139,6 +140,7 @@ struct Error : BaseError {
   std::tuple<Args...> params;
 };
 
+}  // namespace errors
 }  // namespace fidl
 
 #endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERROR_TYPES_H_
