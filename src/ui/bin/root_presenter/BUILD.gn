@@ -102,7 +102,6 @@ source_set("lib") {
     ":displays",
     ":factory_reset_manager",
     ":media_buttons_handler",
-    ":renderer_params",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
@@ -170,18 +169,6 @@ source_set("media_buttons_handler") {
     ":activity_notifier",
     "//sdk/lib/sys/cpp",
     "//src/lib/ui/input",
-  ]
-}
-
-source_set("renderer_params") {
-  sources = [
-    "renderer_params.cc",
-    "renderer_params.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//src/lib/fxl",
   ]
 }
 

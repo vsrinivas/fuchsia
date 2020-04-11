@@ -76,10 +76,6 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   void set_binding_error_handler(fit::function<void(zx_status_t)> error_handler);
 
-  // For testing purposes.
-  // TODO(42510): Remove when test for SetRenderContinuously command is removed.
-  gfx::Session* GetGfxSession();
-
  private:
   // Helper class which manages the reporting of events and errors to Scenic clients.
   // NOTE: this object is not only reffed by the owning Session; it is also reffed by

@@ -1,6 +1,5 @@
 sdk://docs/metadata_schemas
 sdk://fidl/fuchsia.auth
-sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.input
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.mem
@@ -9,8 +8,6 @@ sdk://fidl/fuchsia.modular.auth
 sdk://fidl/fuchsia.modular.session
 sdk://fidl/fuchsia.modular.testing
 sdk://fidl/fuchsia.sys
-sdk://fidl/fuchsia.sysmem
-sdk://fidl/fuchsia.ui.gfx
 sdk://fidl/fuchsia.ui.input
 sdk://fidl/fuchsia.ui.input2
 sdk://fidl/fuchsia.ui.input3

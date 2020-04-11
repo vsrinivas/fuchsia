@@ -721,14 +721,9 @@ bool GfxCommandApplier::ApplySetRendererParamCmd(Session* session,
     switch (command.param.Which()) {
       case fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         return renderer->SetShadowTechnique(command.param.shadow_technique());
-      case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency: {
-        // TODO(42510): Remove the SetRenderContinuously command.
-        // TODO(SCN-1169): SetRenderContinuously should only affect the
-        // compositor that has the renderer attached to it.
-        bool render_continuously =
-            command.param.render_frequency() == fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY;
-        session->session_context().frame_scheduler->SetRenderContinuously(render_continuously);
-        return true;
+      case fuchsia::ui::gfx::RendererParam::Tag::kReserved: {
+        // No longer supported.
+        return false;
       }
       case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
         renderer->set_enable_debugging(command.param.enable_debugging());

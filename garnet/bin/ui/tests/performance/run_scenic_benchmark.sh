@@ -10,9 +10,6 @@
 #          (optional) --extra_categories <category names, separated by ,>
 #          (optional) --trace_duration <duration>
 #          (optional) --buffer_size <trace buffer size>
-#          [renderer_params...]
-#
-# See renderer_params.cc for more arguments.
 #
 
 set -o errexit -o nounset
@@ -114,9 +111,6 @@ kill_processes() {
 }
 
 kill_processes
-
-echo "== $BENCHMARK_LABEL: Configuring scenic renderer params..."
-/pkgfs/packages/run/0/bin/run fuchsia-pkg://fuchsia.com/set_renderer_params#meta/set_renderer_params.cmx --render_continuously $RENDERER_PARAMS
 
 echo "== $BENCHMARK_LABEL: Tracing..."
 echo $TRACE_FILE

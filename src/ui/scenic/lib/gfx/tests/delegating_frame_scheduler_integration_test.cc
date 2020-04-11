@@ -92,40 +92,6 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, SessionIntegration2) {
   EXPECT_TRUE(got_return_value);
 }
 
-// Test that if FrameScheduler is set _after_ applying a SetRendererParamCmd to
-// change render frequency, it still gets the render frequency callback.
-//
-// TODO(42510): Remove the SetRenderContinuously command.
-TEST_F(DelegatingFrameSchedulerIntegrationTest, GfxCommandApplierIntegration) {
-  TestSession session = CreateTestSession(shared_event_reporter(), shared_error_reporter());
-  CommandContext empty_command_context;
-  constexpr uint32_t kRendererId = 1;
-  gfx::Session* gfx_session = session.session->GetGfxSession();
-
-  EXPECT_TRUE(GfxCommandApplier::ApplyCommand(gfx_session, &empty_command_context,
-                                              scenic::NewCreateRendererCmd(kRendererId)));
-
-  auto param = fuchsia::ui::gfx::RendererParam();
-  param.set_render_frequency(fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
-
-  EXPECT_TRUE(GfxCommandApplier::ApplyCommand(
-      gfx_session, &empty_command_context,
-      scenic::NewSetRendererParamCmd(kRendererId, std::move(param))));
-
-  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
-
-  bool render_frequency_was_set = false;
-  // Mock method callback for test.
-  frame_scheduler->set_set_render_continuously_callback([&](bool render_continuosly) {
-    render_frequency_was_set = true;
-    EXPECT_EQ(true, render_continuosly);
-  });
-
-  EXPECT_FALSE(render_frequency_was_set);
-  session.delegating_frame_scheduler->SetFrameScheduler(frame_scheduler);
-  EXPECT_TRUE(render_frequency_was_set);
-}
-
 // Test that if FrameScheduler is set _after_ a call to ImagePipeUpdater::ScheduleImagePipeUpdate,
 // that the FrameScheduler will still get a call to FrameScheduler::ScheduleUpdateForSession.
 TEST_F(DelegatingFrameSchedulerIntegrationTest, ImagePipeUpdaterIntegration) {

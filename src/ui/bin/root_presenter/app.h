@@ -79,9 +79,6 @@ class App : public fuchsia::ui::policy::Presenter,
                    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
                    bool clobber_previous_presentation = false);
 
-  void HACK_SetRendererParams(bool enable_clipping,
-                              std::vector<fuchsia::ui::gfx::RendererParam> params) override;
-
   // |DeviceListenerRegistry|
   void RegisterMediaButtonsListener(
       fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) override;
@@ -152,7 +149,6 @@ class App : public fuchsia::ui::policy::Presenter,
   std::unique_ptr<scenic::DisplayCompositor> compositor_;
   std::unique_ptr<scenic::LayerStack> layer_stack_;
 
-  RendererParams renderer_params_;
   std::vector<std::unique_ptr<Presentation>> presentations_;
   // A valid index into presentations_, otherwise size_t::max().
   size_t active_presentation_idx_ = std::numeric_limits<size_t>::max();

@@ -11,7 +11,6 @@ group("tools") {
     ":present_view",
     ":print_input",
     ":screencap",
-    ":set_renderer_params",
     ":snapshot",
     "paper_shader_compiler",
     "print-input-report",
@@ -40,7 +39,6 @@ component_shell_tools = [
   "gltf_export",
   "present_view",
   "screencap",
-  "set_renderer_params",
   "snapshot",
 ]
 foreach(tool, component_shell_tools) {

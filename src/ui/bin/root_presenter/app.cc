@@ -80,8 +80,7 @@ void App::PresentView(
 
   auto presentation = std::make_unique<Presentation>(
       scenic_.get(), session_.get(), compositor_->id(), std::move(view_holder_token),
-      std::move(presentation_request), &activity_notifier_, renderer_params_,
-      display_startup_rotation_adjustment,
+      std::move(presentation_request), &activity_notifier_, display_startup_rotation_adjustment,
       [this](bool yield_to_next) {
         if (yield_to_next) {
           SwitchToNextPresentation();
@@ -125,37 +124,6 @@ void App::ReplacePresentationWith(std::unique_ptr<Presentation> presentation) {
       << "Can only replace presentation when there is a single instance.";
   ShutdownPresentation(/*presentation_idx=*/0);
   AddPresentation(std::move(presentation));
-}
-
-void App::HACK_SetRendererParams(bool enable_clipping,
-                                 std::vector<fuchsia::ui::gfx::RendererParam> params) {
-  renderer_params_.clipping_enabled = enable_clipping;
-  FXL_LOG(INFO) << "Presenter::HACK_SetRendererParams: Setting clipping enabled to "
-                << (enable_clipping ? "true" : "false");
-  for (auto& param : params) {
-    switch (param.Which()) {
-      case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
-        renderer_params_.shadow_technique = param.shadow_technique();
-        FXL_LOG(INFO) << "Presenter::HACK_SetRendererParams: Setting shadow technique to "
-                      << fidl::ToUnderlying(param.shadow_technique());
-        continue;
-      case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
-        renderer_params_.render_frequency = param.render_frequency();
-        FXL_LOG(INFO) << "Presenter::HACK_SetRendererParams: Setting render frequency to "
-                      << fidl::ToUnderlying(param.render_frequency());
-        continue;
-      case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
-        renderer_params_.debug_enabled = param.enable_debugging();
-        FXL_LOG(INFO) << "Presenter::HACK_SetRendererParams: Setting debug enabled to "
-                      << param.enable_debugging();
-        continue;
-      case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
-        continue;
-    }
-  }
-  for (const auto& presentation : presentations_) {
-    presentation->OverrideRendererParams(renderer_params_);
-  }
 }
 
 void App::ShutdownPresentation(size_t presentation_idx) {

@@ -4,7 +4,6 @@
 
 library fuchsia.ui.policy;
 
-using fuchsia.ui.gfx;
 using fuchsia.ui.views;
 
 /// The Presenter service provides a way for applications to ask that a view be
@@ -23,9 +22,4 @@ protocol Presenter {
     /// This is true whether the existing view was created by a call to
     /// PresentOrReplaceView or to PresentView.
     PresentOrReplaceView(fuchsia.ui.views.ViewHolderToken view_holder_token, request<Presentation>? presentation_request);
-
-    /// Sets new default renderer params and forces them on for the duration of the
-    /// presenter's lifetime. Only applies to any subsequent calls to Present().
-    /// Used for testing.
-    HACK_SetRendererParams(bool enable_clipping, vector<fuchsia.ui.gfx.RendererParam> params);
 };

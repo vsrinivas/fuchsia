@@ -38,10 +38,6 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   return (((uint64_t)ia) << 32) | ib;
 }
 
-// Light intensities.
-constexpr float kAmbient = 0.3f;
-constexpr float kNonAmbient = 1.f - kAmbient;
-
 // Applies the inverse of the given translation in a dimension of Vulkan NDC and scale (about the
 // center of the range) to the given coordinate, for inverting the clip-space transform for pointer
 // input.
@@ -56,9 +52,8 @@ Presentation::Presentation(
     fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session, scenic::ResourceId compositor_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-    ActivityNotifier* activity_notifier, RendererParams renderer_params,
-    int32_t display_startup_rotation_adjustment, YieldCallback yield_callback,
-    MediaButtonsHandler* media_buttons_handler)
+    ActivityNotifier* activity_notifier, int32_t display_startup_rotation_adjustment,
+    YieldCallback yield_callback, MediaButtonsHandler* media_buttons_handler)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
@@ -67,9 +62,6 @@ Presentation::Presentation(
       renderer_(session_),
       scene_(session_),
       camera_(scene_),
-      ambient_light_(session_),
-      directional_light_(session_),
-      point_light_(session_),
       view_holder_node_(session),
       root_node_(session_),
       view_holder_(session, std::move(view_holder_token), "root_presenter"),
@@ -80,7 +72,6 @@ Presentation::Presentation(
       yield_callback_(std::move(yield_callback)),
       presentation_binding_(this),
       a11y_binding_(this),
-      renderer_params_override_(renderer_params),
       media_buttons_handler_(media_buttons_handler),
       weak_factory_(this) {
   FXL_DCHECK(compositor_id != 0);
@@ -99,27 +90,32 @@ Presentation::Presentation(
   // lights (either one or the other).  When directional light support is added
   // to PaperRenderer, the code here will result in over-brightening, and will
   // need to be adjusted at that time.
-  scene_.AddLight(ambient_light_);
-  scene_.AddLight(directional_light_);
-  scene_.AddLight(point_light_);
-  directional_light_.SetDirection(1.f, 1.f, 2.f);
-  point_light_.SetPosition(300.f, 300.f, -2000.f);
-  point_light_.SetFalloff(0.f);
+  scenic::AmbientLight ambient_light(session_);
+  scenic::DirectionalLight directional_light(session_);
+  scenic::PointLight point_light(session_);
+  scene_.AddLight(ambient_light);
+  scene_.AddLight(directional_light);
+  scene_.AddLight(point_light);
+  directional_light.SetDirection(1.f, 1.f, 2.f);
+  point_light.SetPosition(300.f, 300.f, -2000.f);
+  point_light.SetFalloff(0.f);
 
   // Explicitly set "UNSHADOWED" as the default shadow type. In addition to
   // setting the param, this sets appropriate light intensities.
   {
+    // When no shadows, ambient light needs to be full brightness.  Otherwise,
+    // ambient needs to be dimmed so that other lights don't "overbrighten".
+    ambient_light.SetColor(1.f, 1.f, 1.f);
+    directional_light.SetColor(0.f, 0.f, 0.f);
+    point_light.SetColor(0.f, 0.f, 0.f);
     fuchsia::ui::gfx::RendererParam param;
     param.set_shadow_technique(fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED);
-    SetRendererParam(std::move(param));
+    renderer_.SetParam(std::move(param));
   }
 
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
 
   SetScenicDisplayRotation();
-
-  // NOTE: This invokes Present(); all initial scene setup should happen before.
-  OverrideRendererParams(renderer_params, false);
 
   // Link ourselves to the presentation interface once screen dimensions are
   // available for us to present into.
@@ -144,33 +140,6 @@ Presentation::~Presentation() = default;
 void Presentation::RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier) {
   magnifier->RegisterHandler(a11y_binding_.NewBinding());
   a11y_binding_.set_error_handler([this](auto) { ResetClipSpaceTransform(); });
-}
-
-void Presentation::OverrideRendererParams(RendererParams renderer_params, bool present_changes) {
-  renderer_params_override_ = renderer_params;
-
-  if (renderer_params_override_.clipping_enabled.has_value()) {
-    presentation_clipping_enabled_ = renderer_params_override_.clipping_enabled.value();
-  }
-  if (renderer_params_override_.render_frequency.has_value()) {
-    fuchsia::ui::gfx::RendererParam param;
-    param.set_render_frequency(renderer_params_override_.render_frequency.value());
-    renderer_.SetParam(std::move(param));
-  }
-  if (renderer_params_override_.shadow_technique.has_value()) {
-    fuchsia::ui::gfx::RendererParam param;
-    param.set_shadow_technique(renderer_params_override_.shadow_technique.value());
-    renderer_.SetParam(std::move(param));
-
-    UpdateLightsForShadowTechnique(renderer_params_override_.shadow_technique.value());
-  }
-  if (present_changes) {
-    PresentScene();
-  }
-
-  FXL_CHECK(display_startup_rotation_adjustment_ % 90 == 0)
-      << "Rotation adjustments must be in (+/-) 90 deg increments; received: "
-      << display_startup_rotation_adjustment_;
 }
 
 void Presentation::InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info) {
@@ -585,9 +554,6 @@ void Presentation::PresentScene() {
   session_present_state_ = kPresentPending;
 
   bool use_clipping = perspective_demo_mode_.WantsClipping();
-  if (renderer_params_override_.clipping_enabled.has_value()) {
-    use_clipping = renderer_params_override_.clipping_enabled.value();
-  }
   renderer_.SetDisableClipping(!use_clipping);
 
   // TODO(SCN-631): Individual Presentations shouldn't directly manage cursor
@@ -630,25 +596,6 @@ void Presentation::PresentScene() {
   });
 }
 
-void Presentation::UpdateLightsForShadowTechnique(fuchsia::ui::gfx::ShadowTechnique tech) {
-  if (tech == fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED) {
-    ambient_light_.SetColor(1.f, 1.f, 1.f);
-    directional_light_.SetColor(0.f, 0.f, 0.f);
-    point_light_.SetColor(0.f, 0.f, 0.f);
-  } else {
-    ambient_light_.SetColor(kAmbient, kAmbient, kAmbient);
-    directional_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
-    point_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
-  }
-}
-
-void Presentation::SetRendererParams(std::vector<fuchsia::ui::gfx::RendererParam> params) {
-  for (size_t i = 0; i < params.size(); ++i) {
-    SetRendererParam(std::move(params[i]));
-  }
-  session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
-}
-
 void Presentation::SetScenicDisplayRotation() {
   fuchsia::ui::gfx::Command command;
   fuchsia::ui::gfx::SetDisplayRotationCmdHACK display_rotation_cmd;
@@ -656,36 +603,6 @@ void Presentation::SetScenicDisplayRotation() {
   display_rotation_cmd.rotation_degrees = display_startup_rotation_adjustment_;
   command.set_set_display_rotation(std::move(display_rotation_cmd));
   session_->Enqueue(std::move(command));
-}
-
-void Presentation::SetRendererParam(fuchsia::ui::gfx::RendererParam param) {
-  switch (param.Which()) {
-    case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
-      if (renderer_params_override_.shadow_technique.has_value()) {
-        FXL_LOG(WARNING) << "Presentation::SetRendererParams: Cannot change "
-                            "shadow technique, default was overriden in root_presenter";
-        return;
-      }
-      UpdateLightsForShadowTechnique(param.shadow_technique());
-      break;
-    case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
-      if (renderer_params_override_.render_frequency.has_value()) {
-        FXL_LOG(WARNING) << "Presentation::SetRendererParams: Cannot change "
-                            "render frequency, default was overriden in root_presenter";
-        return;
-      }
-      break;
-    case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
-      if (renderer_params_override_.debug_enabled.has_value()) {
-        FXL_LOG(WARNING) << "Presentation::SetRendererParams: Cannot change "
-                            "debug enabled, default was overriden in root_presenter";
-        return;
-      }
-      break;
-    case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
-      return;
-  }
-  renderer_.SetParam(std::move(param));
 }
 
 }  // namespace root_presenter

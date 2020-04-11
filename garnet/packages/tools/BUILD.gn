@@ -14,7 +14,6 @@ group("scenic") {
     "//src/ui/tools:present_view",
     "//src/ui/tools:print_input",
     "//src/ui/tools:screencap",
-    "//src/ui/tools:set_renderer_params",
     "//src/ui/tools:snapshot",
   ]
 }

@@ -470,9 +470,4 @@ void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
   }
 }
 
-gfx::Session* Session::GetGfxSession() {
-  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
-  return dispatcher ? static_cast<gfx::Session*>(dispatcher.get()) : nullptr;
-}
-
 }  // namespace scenic_impl

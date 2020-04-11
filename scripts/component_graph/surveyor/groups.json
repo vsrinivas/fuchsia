@@ -146,7 +146,6 @@
     "accessibility_settings",
     "a11y_manager",
     "display_manager",
-    "set_renderer_params",
     "shadertoy_service",
     "setui_service",
     "activity",

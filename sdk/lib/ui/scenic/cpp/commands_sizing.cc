@@ -1012,7 +1012,7 @@ class MeasuringTape {
       case fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         num_bytes_ += 8;
         break;
-      case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
+      case fuchsia::ui::gfx::RendererParam::Tag::kReserved:
         num_bytes_ += 8;
         break;
       case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:

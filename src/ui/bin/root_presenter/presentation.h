@@ -37,7 +37,6 @@
 #include "src/ui/bin/root_presenter/perspective_demo_mode.h"
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/presentation_switcher.h"
-#include "src/ui/bin/root_presenter/renderer_params.h"
 
 namespace root_presenter {
 
@@ -65,9 +64,8 @@ class Presentation : fuchsia::ui::policy::Presentation,
                scenic::ResourceId compositor_id,
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-               ActivityNotifier* activity_notifier, RendererParams renderer_params,
-               int32_t display_startup_rotation_adjustment, YieldCallback yield_callback,
-               MediaButtonsHandler* media_buttons_handler);
+               ActivityNotifier* activity_notifier, int32_t display_startup_rotation_adjustment,
+               YieldCallback yield_callback, MediaButtonsHandler* media_buttons_handler);
   ~Presentation() override;
 
   void RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier);
@@ -75,9 +73,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   void OnReport(uint32_t device_id, fuchsia::ui::input::InputReport report);
   void OnDeviceAdded(ui_input::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
-
-  // Used internally by Presenter. Allows overriding of renderer params.
-  void OverrideRendererParams(RendererParams renderer_params, bool present_changes = true);
 
   const scenic::Layer& layer() const { return layer_; }
   const scenic::ViewHolder& view_holder() const { return view_holder_; }
@@ -88,7 +83,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   friend class PresentationSwitcher;
 
   // |fuchsia::ui::policy::Presentation|
-  void SetRendererParams(std::vector<fuchsia::ui::gfx::RendererParam> params);
   void CaptureKeyboardEventHACK(
       fuchsia::ui::input::KeyboardEvent event_to_capture,
       fidl::InterfaceHandle<fuchsia::ui::policy::KeyboardCaptureListenerHACK> listener) override;
@@ -125,13 +119,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   void OnEvent(fuchsia::ui::input::InputEvent event);
   void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
 
-  // When no shadows, ambient light needs to be full brightness.  Otherwise,
-  // ambient needs to be dimmed so that other lights don't "overbrighten".
-  void UpdateLightsForShadowTechnique(fuchsia::ui::gfx::ShadowTechnique tech);
-
-  // Set a single RendererParam, unless this value is overridden.
-  void SetRendererParam(fuchsia::ui::gfx::RendererParam param);
-
   // Passes the display rotation in degrees down to the scenic compositor.
   void SetScenicDisplayRotation();
 
@@ -148,9 +135,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   // TODO(SCN-254): put camera before scene.
   scenic::Scene scene_;
   scenic::Camera camera_;
-  scenic::AmbientLight ambient_light_;
-  scenic::DirectionalLight directional_light_;
-  scenic::PointLight point_light_;
   scenic::EntityNode view_holder_node_;
   scenic::EntityNode root_node_;
   scenic::ViewHolder view_holder_;
@@ -195,10 +179,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   // Toggles through different presentations.
   PresentationSwitcher presentation_switcher_;
-
-  // Stores values that, if set, override any renderer params.
-  bool presentation_clipping_enabled_ = true;
-  RendererParams renderer_params_override_;
 
   struct CursorState {
     bool created;

@@ -9,7 +9,6 @@ fidl("fuchsia.ui.policy") {
   excluded_checks = [
     "invalid-case-for-constant",
     "invalid-case-for-decl-name",
-    "vector-bounds-not-specified",
   ]
 
   sdk_category = "partner"
@@ -22,7 +21,6 @@ fidl("fuchsia.ui.policy") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.views",
   ]

@@ -69,9 +69,6 @@ class TileView : public scenic::BaseView, public fuchsia::ui::policy::Presenter 
       fuchsia::ui::views::ViewHolderToken view_holder_token,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) final;
 
-  void HACK_SetRendererParams(bool enable_clipping,
-                              std::vector<fuchsia::ui::gfx::RendererParam> params) override {}
-
   // Set up environment with a |Presenter| service.
   // We launch apps with this environment.
   void CreateNestedEnvironment();

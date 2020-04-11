@@ -8,7 +8,10 @@ library fuchsia.ui.gfx;
 /// `Renderer`.
 union RendererParam {
     1: ShadowTechnique shadow_technique;
-    2: RenderFrequency render_frequency;
+
+    [Deprecated]
+    2: RenderFrequency reserved; // No longer supported.
+
     3: bool enable_debugging;
 };
 
@@ -27,10 +30,8 @@ enum ShadowTechnique {
     STENCIL_SHADOW_VOLUME = 4;
 };
 
+[Deprecated]
 enum RenderFrequency {
-    /// Render only on when requested (i.e. when something triggers it).
-    /// Default behavior.
     WHEN_REQUESTED = 0;
-    /// Render one frame after another regardless of it it's needed.
     CONTINUOUSLY = 1;
 };

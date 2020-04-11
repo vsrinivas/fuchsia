@@ -6,7 +6,6 @@
 #define SRC_MODULAR_BIN_BASEMGR_PRESENTATION_CONTAINER_H_
 
 #include <fuchsia/modular/session/cpp/fidl.h>
-#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
