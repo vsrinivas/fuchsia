@@ -285,6 +285,12 @@ void App::InitializeServices() {
     // Add Color Transform Handler.
     color_transform_handler_ = std::make_unique<ColorTransformHandler>(
         *component_context_.get(), compositor_->id(), session_.get());
+
+    // If a11y tried to register a Focuser while Scenic wasn't ready yet, bind the request now.
+    if (deferred_a11y_focuser_binding_) {
+      deferred_a11y_focuser_binding_();
+      deferred_a11y_focuser_binding_ = nullptr;
+    }
   }
 }
 
@@ -349,6 +355,14 @@ void App::Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::Poin
 }
 
 void App::RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
+  if (!view_focuser_) {
+    // Scenic hasn't started yet, so defer the binding of the incoming focuser request.
+    // Similar to the case below, drop any old focuser binding request and defer the new one.
+    deferred_a11y_focuser_binding_ = [this, view_focuser = std::move(view_focuser)]() mutable {
+      RegisterFocuser(std::move(view_focuser));
+    };
+    return;
+  }
   if (focuser_binding_.is_bound()) {
     FXL_LOG(INFO) << "Registering a new Focuser for a11y. Dropping the old one.";
   }
@@ -356,11 +370,10 @@ void App::RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> vi
 }
 
 void App::RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) {
-  fuchsia::ui::views::Focuser_RequestFocus_Result result;
   if (!view_focuser_) {
-    result.set_err(fuchsia::ui::views::Error::DENIED);
-    callback(std::move(result));
-    focuser_binding_.Close(ZX_ERR_NOT_FOUND);
+    // Scenic disconnected, close the connection.
+    callback(fit::error(fuchsia::ui::views::Error::DENIED));
+    focuser_binding_.Close(ZX_ERR_BAD_STATE);
   } else {
     view_focuser_->RequestFocus(std::move(view_ref), std::move(callback));
   }

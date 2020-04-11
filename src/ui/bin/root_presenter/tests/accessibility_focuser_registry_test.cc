@@ -59,17 +59,24 @@ class AccessibilityFocuserRegistryTest : public sys::testing::TestWithEnvironmen
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
 };
 
-TEST_F(AccessibilityFocuserRegistryTest, AccessibilityFocusRequestFailsWhenScenicIsNotInitialized) {
+TEST_F(AccessibilityFocuserRegistryTest, AccessibilityFocusRequestIsDeferredUntilScenicConnects) {
   fuchsia::ui::views::FocuserPtr view_focuser;
   registry_->RegisterFocuser(view_focuser.NewRequest());
   RunLoopUntil([&view_focuser] { return view_focuser.is_bound(); });
   bool callback_ran = false;
   auto callback = [&callback_ran](fuchsia::ui::views::Focuser_RequestFocus_Result result) {
-    EXPECT_TRUE(result.is_err());
+    EXPECT_FALSE(result.is_err());
     callback_ran = true;
   };
   auto [view_control_ref, view_ref] = scenic::ViewRefPair::New();
   view_focuser->RequestFocus(std::move(view_ref), std::move(callback));
+  RunLoopUntilIdle();
+  // The request is deferred, because scenic hasn't started yet.
+  EXPECT_FALSE(callback_ran);
+  // Here, a dummy call to PresentView() is done so that Scenic services are initialized.
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  presenter_->PresentView(std::move(view_holder_token), nullptr);
+  // Now, the deferred requests are dispatched.
   RunLoopUntil([&callback_ran] { return callback_ran; });
 }
 

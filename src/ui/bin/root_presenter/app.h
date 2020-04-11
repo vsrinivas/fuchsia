@@ -133,6 +133,9 @@ class App : public fuchsia::ui::policy::Presenter,
   // Binding holding the connection between a11y and Root Presenter. The incoming Focuser calls are
   // simply forwarded using |view_focuser_|.
   fidl::Binding<fuchsia::ui::views::Focuser> focuser_binding_;
+  // If accessibility requests to register a Focuser and Scenic hasn't started yet, the binding of
+  // |focuser_binding_| is deferred until |view_focuser_| is initialized.
+  fit::function<void()> deferred_a11y_focuser_binding_;
   // This is a privileged interface between Root Presenter and Accessibility. It allows Root
   // Presenter to register presentations with Accessibility for magnification.
   fuchsia::accessibility::MagnifierPtr magnifier_;
