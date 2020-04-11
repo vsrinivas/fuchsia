@@ -9,10 +9,13 @@
   <packages>
     <package
       name="fuchsia/third_party/aemu/${platform}"
-      version="git_revision:0123456789abcdef0123456789abcdef01234567"/>
+      version="git_revision:a123456789abcdef0123456789abcdef01234567"/>
+    <package
+      name="fuchsia/third_party/grpcwebproxy/${platform}"
+      version="git_revision:b123456789abcdef0123456789abcdef01234567"/>
     <package
       name="unused/${platform}"
-      version="git_revision:0123456789abcdef0123456789abcdef01234567"/>
+      version="git_revision:c123456789abcdef0123456789abcdef01234567"/>
   </packages>
 </manifest>
 

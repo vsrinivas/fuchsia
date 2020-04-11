@@ -1,6 +1,7 @@
 {
     "files": [
         "bin/aemu.version",
+        "bin/grpcwebproxy.version",
         "bin/femu.sh",
         "bin/femu-exec-wrapper.sh",
         "bin/fuchsia-common.sh",

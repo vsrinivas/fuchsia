@@ -14,11 +14,12 @@ source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 # Initialize variables that need to be set before BT_SET_UP()
 
-# Specify a simulated CIPD instance id for aemu.version
+# Specify a simulated CIPD instance id for prebuilts
 AEMU_VERSION="git_revision:unknown"
 AEMU_LABEL="$(echo "${AEMU_VERSION}" | tr ':/' '_')"
+GRPCWEBPROXY_VERSION="git_revision:unknown"
 # Force mac-amd64 to test OSX on Linux
-AEMU_PLATFORM="mac-amd64"
+PLATFORM="mac-amd64"
 
 # Create fake "uname -s" to pretend we are on OSX
 set_up_uname() {
@@ -56,7 +57,7 @@ INPUT
 # Create fake ZIP file download so femu.sh doesn't try to download it, and
 # later on provide a mocked emulator script so it doesn't try to unzip it.
 set_up_cipd() {
-  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}.zip"
+  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
 }
 
 
@@ -98,7 +99,7 @@ TEST_femu_osx_networking() {
 
   # Verify some of the arguments passed to the emulator binary
   # shellcheck disable=SC1090
-  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
+  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
   # The mac address is computed with a hash function in fx emu based on the device name.
   # We test the generated mac address since other scripts hard code this to SSH into the device.
   gn-test-check-mock-partial -fuchsia
@@ -126,7 +127,7 @@ TEST_femu_osx_fail_tuntap() {
 
     # Verify some of the arguments passed to the emulator binary
     # shellcheck disable=SC1090
-    source "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
+    source "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
     # The mac address is computed with a hash function in fx emu based on the device name.
     # We test the generated mac address since other scripts hard code this to SSH into the device.
     gn-test-check-mock-partial -fuchsia
@@ -157,7 +158,7 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/images/emulator/aemu-"${AEMU_PLATFORM}"-"${AEMU_LABEL}"/emulator
+  scripts/sdk/gn/base/images/emulator/aemu-"${PLATFORM}"-"${AEMU_LABEL}"/emulator
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/tools/zbi
@@ -196,8 +197,9 @@ BT_SET_UP() {
 
 BT_INIT_TEMP_DIR() {
 
-  # Generate the aemu.version file based on the simulated version string
+  # Generate the prebuilt version file based on the simulated version string
   echo "${AEMU_VERSION}" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/aemu.version"
+  echo "${GRPCWEBPROXY_VERSION}" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/grpcwebproxy.version"
 
   # Create empty authorized_keys file to add to the system image, but the contents are not used.
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata"

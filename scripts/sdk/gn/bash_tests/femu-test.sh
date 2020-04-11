@@ -13,24 +13,26 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 
-# Specify a simulated CIPD instance id for aemu.version
+# Specify a simulated CIPD instance id for prebuilts
 AEMU_VERSION="git_revision:unknown"
 AEMU_LABEL="$(echo "${AEMU_VERSION}" | tr ':/' '_')"
+GRPCWEBPROXY_VERSION="git_revision:unknown"
+GRPCWEBPROXY_LABEL="$(echo "${GRPCWEBPROXY_VERSION}" | tr ':/' '_')"
 if is-mac; then
-  AEMU_PLATFORM="mac-amd64"
+  PLATFORM="mac-amd64"
 else
-  AEMU_PLATFORM="linux-amd64"
+  PLATFORM="linux-amd64"
 fi
 
-# Verifies that the correct emulator command is run by femu when no arguments are provided on the command line.
-TEST_femu_noargs() {
+# Verifies that the correct emulator command is run by femu, do not activate the network interface
+TEST_femu_standalone() {
 
   PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
   export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
 
   # Create fake ZIP file download so femu.sh doesn't try to download it, and
   # later on provide a mocked emulator script so it doesn't try to unzip it.
-  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}.zip"
+  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
 
   # Need to configure a DISPLAY so that we can get past the graphics error checks
   export DISPLAY="fakedisplay"
@@ -60,7 +62,7 @@ TEST_femu_noargs() {
 
   # Verify some of the arguments passed to the emulator binary
   # shellcheck disable=SC1090
-  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
+  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
   gn-test-check-mock-partial -fuchsia
 }
 
@@ -78,7 +80,7 @@ INPUT
 
   # Create fake ZIP file download so femu.sh doesn't try to download it, and
   # later on provide a mocked emulator script so it doesn't try to unzip it.
-  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}.zip"
+  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
 
   # Need to configure a DISPLAY so that we can get past the graphics error checks
   export DISPLAY="fakedisplay"
@@ -121,7 +123,7 @@ INPUT
 
   # Verify some of the arguments passed to the emulator binary
   # shellcheck disable=SC1090
-  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${AEMU_PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
+  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
   # The mac address is computed with a hash function in fx emu based on the device name.
   # We test the generated mac address since other scripts hard code this to SSH into the device.
   gn-test-check-mock-partial -fuchsia
@@ -140,6 +142,50 @@ INPUT
   gn-test-check-mock-partial --unknown-arg1-to-qemu
   gn-test-check-mock-partial --unknown-arg2-to-qemu
 }
+
+# Verifies that fx emu starts up grpcwebproxy correctly
+TEST_femu_grpcwebproxy() {
+
+  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
+  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
+
+  # Create fake "kill" command so when emu tries to kill grpcwebproxy, it doesn't fail
+  # this test. Need to embed "enable -n kill" into fx-image-common.sh to disable the
+  # bash builtin kill so we can intercept it.
+  cat >"${PATH_DIR_FOR_TEST}/kill.mock_side_effects" <<INPUT
+echo "$@"
+INPUT
+  echo "enable -n kill" >> "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fx-image-common.sh"
+
+  # Create fake ZIP file download so femu.sh doesn't try to download it, and
+  # later on provide a mocked emulator script so it doesn't try to unzip it.
+  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
+  touch "${FUCHSIA_WORK_DIR}/emulator/grpcwebproxy-${PLATFORM}-${AEMU_LABEL}.zip"
+
+  # Need to configure a DISPLAY so that we can get past the graphics error checks
+  export DISPLAY="fakedisplay"
+
+  # Run command with the default grpcwebproxy.
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+    -x 1234
+
+  # Verify that the default grpcwebproxy binary is called correctly
+  # shellcheck disable=SC1090
+  source "${FUCHSIA_WORK_DIR}/emulator/grpcwebproxy-${PLATFORM}-${GRPCWEBPROXY_LABEL}/grpcwebproxy.mock_state"
+  gn-test-check-mock-partial --backend_addr localhost:5556
+  gn-test-check-mock-partial --server_http_debug_port 1234
+
+  # Run command and test the -X for a manually provided grpcwebproxy.
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+    -x 1234 -X "${BT_TEMP_DIR}/mocked/grpcwebproxy-dir"
+
+  # Verify that the grpcwebproxy binary is called correctly
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/mocked/grpcwebproxy-dir/grpcwebproxy.mock_state"
+  gn-test-check-mock-partial --backend_addr localhost:5556
+  gn-test-check-mock-partial --server_http_debug_port 1234
+}
+
 # Test initialization. Note that we copy various tools/devshell files and need to replicate the
 # behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
 # shellcheck disable=SC2034
@@ -155,12 +201,15 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/images/emulator/aemu-"${AEMU_PLATFORM}"-"${AEMU_LABEL}"/emulator
+  scripts/sdk/gn/base/images/emulator/aemu-"${PLATFORM}"-"${AEMU_LABEL}"/emulator
+  scripts/sdk/gn/base/images/emulator/grpcwebproxy-"${PLATFORM}"-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/tools/zbi
   scripts/sdk/gn/base/tools/fvm
+  mocked/grpcwebproxy-dir/grpcwebproxy
   _isolated_path_for/ip
+  _isolated_path_for/kill
   # Create fake "stty sane" command so that fx emu test succeeds when < /dev/null is being used
   _isolated_path_for/stty
 )
@@ -175,9 +224,9 @@ BT_SET_UP() {
 
 BT_INIT_TEMP_DIR() {
 
-  # Generate the aemu.version file based on the simulated version string
+  # Generate the prebuilt version file based on the simulated version string
   echo "${AEMU_VERSION}" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/aemu.version"
-
+  echo "${GRPCWEBPROXY_VERSION}" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/grpcwebproxy.version"
 
   # Create empty authorized_keys file to add to the system image, but the contents are not used.
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata"

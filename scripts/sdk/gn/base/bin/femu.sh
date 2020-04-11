@@ -17,12 +17,43 @@ source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
 IMAGE_NAME="qemu-x64"
 VER_AEMU="$(cat "${SCRIPT_SRC_DIR}/aemu.version")"
+VER_GRPCWEBPROXY="$(cat "${SCRIPT_SRC_DIR}/grpcwebproxy.version")"
+ENABLE_GRPCWEBPROXY=0
 
 # Export variables needed here but also in femu.sh
 FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 export FUCHSIA_SDK_PATH
 FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 export FUCHSIA_IMAGE_WORK_DIR
+
+# Download a URL $1 from CIPD, extract into directory $2
+function download-extract-cipd {
+  CIPD_URL="${1}"
+  CIPD_DIR="${2}"
+  CIPD_FILE="${2}.zip"
+
+  if [ ! -f "${CIPD_FILE}" ]; then
+    echo "Downloading from ${CIPD_URL} ..."
+    curl -L "${CIPD_URL}" -o "${CIPD_FILE}" -#
+    echo "Verifying download ${CIPD_FILE}"
+    # CIPD will return a file containing "no such ref" if the URL is invalid, so need to check the ZIP file
+    if ! unzip -qq -t "${CIPD_FILE}" &> /dev/null; then
+      rm -f "${CIPD_FILE}"
+      fx-error "Downloaded archive from ${CIPD_URL} failed with invalid data - the version is probably invalid"
+      exit 1
+    fi
+    echo "Download complete."
+  fi
+  if [ ! -d "${CIPD_DIR}" ]; then
+    echo -e "Extracting archive to ${CIPD_DIR} ..."
+    rm -rf "${CIPD_DIR}" "${CIPD_DIR}-temp"
+    unzip -q "${CIPD_FILE}" -d "${CIPD_DIR}-temp"
+    mv "${CIPD_DIR}-temp" "${CIPD_DIR}"
+    echo "Extract complete."
+  else
+    echo "Using existing archive in ${CIPD_DIR}"
+  fi
+}
 
 emu_help () {
   # Extract command-line argument help from emu script, similar to fx-print-command-help
@@ -81,6 +112,15 @@ case $1 in
     usage
     exit 0
     ;;
+    -x)
+    shift
+    ENABLE_GRPCWEBPROXY=1
+    EMU_ARGS+=( -x "$1" )
+    ;;
+    -X)
+    shift
+    PREBUILT_GRPCWEBPROXY_DIR="$1"
+    ;;
     *)
     # Unknown options are passed to emu
     EMU_ARGS+=( "$1" )
@@ -104,43 +144,34 @@ echo "Checking for system images and packages"
 # Do not create directory names with : otherwise LD_PRELOAD usage in aemu will fail.
 # Avoid / to prevent extra sub-directories being created.
 LABEL_AEMU="$(echo "${VER_AEMU}" | tr ':/' '_')"
+LABEL_GRPCWEBPROXY="$(echo "${VER_GRPCWEBPROXY}" | tr ':/' '_')"
 
-# Download aemu binaries for the aemu.version if not already present
+# Download CIPD prebuilt binaries if not already present
 DOWNLOADS_DIR="${FUCHSIA_IMAGE_WORK_DIR}/emulator"
+mkdir -p "${DOWNLOADS_DIR}"
 if is-mac; then
   ARCH="mac-amd64"
 else
   ARCH="linux-amd64"
 fi
-CIPD_FILE="${DOWNLOADS_DIR}/aemu-${ARCH}-${LABEL_AEMU}.zip"
-if [ ! -f "${CIPD_FILE}" ]; then
-  mkdir -p "${DOWNLOADS_DIR}"
-  CIPD_URL="https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/aemu/${ARCH}/+/${VER_AEMU}"
-  echo "Downloading aemu archive from ${CIPD_URL} ..."
-  curl -L "${CIPD_URL}" -o "${CIPD_FILE}" -#
-  echo "Verifying aemu download ${CIPD_FILE}"
-  # CIPD will return a file containing "no such ref" if the URL is invalid, so need to check the ZIP file
-  if ! unzip -qq -t "${CIPD_FILE}" &> /dev/null; then
-    rm -f "${CIPD_FILE}"
-    fx-error "Downloaded archive from ${CIPD_URL} failed with invalid data - the version ${VER_AEMU} is probably invalid"
-    exit 1
-  fi
-  echo "Download complete."
-fi
-CIPD_DIR="${DOWNLOADS_DIR}/aemu-${ARCH}-${LABEL_AEMU}"
-if [ ! -d "${CIPD_DIR}" ]; then
-  echo -e "Extracting aemu archive to ${CIPD_DIR} ..."
-  rm -rf "${DOWNLOADS_DIR}/tmp-aemu-${ARCH}-${LABEL_AEMU}" "${CIPD_DIR}"
-  unzip -q "${CIPD_FILE}" -d "${CIPD_DIR}-temp"
-  mv "${CIPD_DIR}-temp" "${CIPD_DIR}"
-  echo "Extract complete."
-else
-  echo "Using existing aemu archive in ${CIPD_DIR}"
-fi
 
 # Export variables needed for fx emu and fx-image-common.sh
 export FUCHSIA_BUILD_DIR="${FUCHSIA_IMAGE_WORK_DIR}/image"
-export PREBUILT_AEMU_DIR="${CIPD_DIR}"
+export PREBUILT_AEMU_DIR="${DOWNLOADS_DIR}/aemu-${ARCH}-${LABEL_AEMU}"
+
+download-extract-cipd \
+  "https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/aemu/${ARCH}/+/${VER_AEMU}" \
+  "${PREBUILT_AEMU_DIR}"
+
+if (( ENABLE_GRPCWEBPROXY )); then
+  if [[ -z "$PREBUILT_GRPCWEBPROXY_DIR" ]]; then
+    PREBUILT_GRPCWEBPROXY_DIR="${DOWNLOADS_DIR}/grpcwebproxy-${ARCH}-${LABEL_GRPCWEBPROXY}"
+    download-extract-cipd \
+      "https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/grpcwebproxy/${ARCH}/+/${VER_GRPCWEBPROXY}" \
+      "${PREBUILT_GRPCWEBPROXY_DIR}"
+  fi
+  EMU_ARGS+=( "-X" "${PREBUILT_GRPCWEBPROXY_DIR}" )
+fi
 
 # Need to make the SDK storage-full.blk writable so that the copy is writable as well, otherwise fvm extend fails in lib/fvm.sh
 # shellcheck disable=SC1090
