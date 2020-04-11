@@ -384,12 +384,6 @@ void Presentation::CapturePointerEventsHACK(
   captured_pointerbindings_.AddInterfacePtr(listener_handle.Bind());
 }
 
-void Presentation::InjectPointerEventHACK(fuchsia::ui::input::PointerEvent event) {
-  fuchsia::ui::input::InputEvent input_event;
-  input_event.set_pointer(std::move(event));
-  OnEvent(std::move(input_event));
-}
-
 void Presentation::SetClipSpaceTransform(float x, float y, float scale,
                                          SetClipSpaceTransformCallback callback) {
   camera_.SetClipSpaceTransform(x, y, scale);

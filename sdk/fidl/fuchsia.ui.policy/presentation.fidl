@@ -36,10 +36,4 @@ protocol Presentation {
     // TODO: Figure out the feasibility of this feature and the best place to put
     // it. This call will be replaced by gesture disambiguation system in future.
     CapturePointerEventsHACK(PointerCaptureListenerHACK listener);
-
-    /// EXPERIMENTAL. Inject pointer events into input stream. This WILL go
-    /// away. Used exclusively by Session Shells to test focus navigation.
-    // TODO(SCN-1186): Delete when RequestFocus is available.
-    [Transitional]
-    InjectPointerEventHACK(fuchsia.ui.input.PointerEvent event);
 };
