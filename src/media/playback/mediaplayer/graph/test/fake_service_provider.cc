@@ -168,6 +168,12 @@ void FakeServiceProvider::BindSharedCollection(
       ->Bind(std::move(buffer_collection_request));
 }
 
+void FakeServiceProvider::ValidateBufferCollectionToken(
+    uint64_t token_server_koid,
+    fuchsia::sysmem::Allocator::ValidateBufferCollectionTokenCallback callback) {
+  callback(tokens_by_server_koid_.find(token_server_koid) != tokens_by_server_koid_.end());
+}
+
 FakeBufferCollection* FakeServiceProvider::FindOrCreateCollectionForToken(
     zx::channel client_channel) {
   zx_info_handle_basic_t info;

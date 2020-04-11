@@ -4,6 +4,8 @@
 
 library fuchsia.sysmem;
 
+using zx;
+
 /// Allocates system memory buffers.
 ///
 // Needs Layout = "Simple" because used with "FIDL Simple C Bindings".
@@ -62,4 +64,51 @@ protocol Allocator {
     /// BufferCollection channel to the logical BufferCollection.
     BindSharedCollection(BufferCollectionToken token,
                          request<BufferCollection> buffer_collection_request);
+
+    /// Validate that a BufferCollectionToken is known to the sysmem server.
+    ///
+    /// This can be used in cases where BindSharedCollection() won't be called
+    /// until after BufferCollectionToken.Duplicate() +
+    /// BufferCollectionToken.Sync(), when the client code wants to know earlier
+    /// whether an incoming token is valid (so far).
+    ///
+    /// Calling BufferCollectionToken.Sync() on a token that isn't known to
+    /// sysmem risks the Sync() hanging forever.
+    ///
+    /// Given that an incoming token can become invalid at any time if any
+    /// participant drops their BufferCollectionToken(s) or BufferCollection(s),
+    /// authors of client code are encouraged to consider not calling
+    /// ValidateBufferCollectionToken() and instead dealing with async failure
+    /// of the BufferCollection.Sync() after all the
+    /// BufferCollectionToken.Duplicate() and BindSharedCollection() (before
+    /// sending any duplicate tokens to other processes).
+    ///
+    /// Regardless of the result of this call, this call has no effect on the
+    /// token with the referenced koid.
+    ///
+    /// A true result from this call doesn't guarantee that the token remains
+    /// valid for any duration afterwards.
+    ///
+    /// Client code will zx_object_get_info() on the client's token handle,
+    /// passing ZX_INFO_HANDLE_BASIC and getting back the related_koid
+    /// which then gets passed to ValidateBufferCollectionToken().
+    ///
+    /// If ValidateBufferCollectionToken() returns true, the token was known at
+    /// the time the sysmem server processed the call, but may no longer be
+    /// valid/known by the time the client code receives the response.
+    ///
+    /// If ValidateBufferCollectionToken() returns false, the token wasn't known
+    /// at the time the sysmem server processed the call, but the token may
+    /// become known by the time the client code receives the response.  However
+    /// client code is not required to mitigate the possibility that the token
+    /// may become known late, since the source of the token should have synced
+    /// the token to sysmem before sending the token to the client code.
+    ///
+    /// If calling ValidateBufferCollectionToken() fails in some way, there will
+    /// be a zx_status_t from the FIDL layer.
+    ///
+    /// `token_server_koid` the koid of the server end of a channel that might
+    /// be a BufferCollectionToken channel.  This can be obtained from
+    /// zx_object_get_info() ZX_INFO_HANDLE_BASIC related_koid.
+    ValidateBufferCollectionToken(zx.koid token_server_koid) -> (bool is_known);
 };

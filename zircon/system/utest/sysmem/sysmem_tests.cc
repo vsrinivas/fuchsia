@@ -105,6 +105,15 @@ zx_koid_t get_koid(zx_handle_t handle) {
   return info.koid;
 }
 
+zx_koid_t get_related_koid(zx_handle_t handle) {
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  EXPECT_EQ(status, ZX_OK, "");
+  ZX_ASSERT(status == ZX_OK);
+  return info.related_koid;
+}
+
 zx_status_t verify_connectivity(zx::channel& allocator2_client) {
   zx_status_t status;
 
@@ -384,6 +393,54 @@ TEST(Sysmem, ServiceConnection) {
 
   status = verify_connectivity(allocator2_client);
   ASSERT_EQ(status, ZX_OK, "");
+}
+
+TEST(Sysmem, VerifyBufferCollectionToken) {
+  zx_status_t status;
+  zx::channel allocator_client;
+  status = connect_to_sysmem_driver(&allocator_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client;
+  zx::channel token_server;
+  status = zx::channel::create(0, &token_client, &token_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                            token_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token2_client;
+  zx::channel token2_server;
+  status = zx::channel::create(0, &token2_client, &token2_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  ASSERT_EQ(fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                          token2_server.release()),
+            ZX_OK, "");
+
+  zx::channel not_token_client;
+  zx::channel not_token_server;
+  status = zx::channel::create(0, &not_token_client, &not_token_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  ASSERT_EQ(fuchsia_sysmem_BufferCollectionTokenSync(token_client.get()), ZX_OK, "");
+  ASSERT_EQ(fuchsia_sysmem_BufferCollectionTokenSync(token2_client.get()), ZX_OK, "");
+
+  bool is_token_valid = false;
+  ASSERT_EQ(fuchsia_sysmem_AllocatorValidateBufferCollectionToken(
+                allocator_client.get(), get_related_koid(token_client.get()), &is_token_valid),
+            ZX_OK, "");
+  ASSERT_EQ(is_token_valid, true, "");
+  ASSERT_EQ(fuchsia_sysmem_AllocatorValidateBufferCollectionToken(
+                allocator_client.get(), get_related_koid(token2_client.get()), &is_token_valid),
+            ZX_OK, "");
+  ASSERT_EQ(is_token_valid, true, "");
+
+  ASSERT_EQ(fuchsia_sysmem_AllocatorValidateBufferCollectionToken(
+                allocator_client.get(), get_related_koid(not_token_client.get()), &is_token_valid),
+            ZX_OK, "");
+  ASSERT_EQ(is_token_valid, false, "");
 }
 
 TEST(Sysmem, TokenOneParticipantNoImageConstraints) {

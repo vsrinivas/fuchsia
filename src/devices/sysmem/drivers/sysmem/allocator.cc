@@ -25,6 +25,7 @@ const fuchsia_sysmem_Allocator_ops_t Allocator::kOps = {
     fidl::Binder<Allocator>::BindMember<&Allocator::AllocateNonSharedCollection>,
     fidl::Binder<Allocator>::BindMember<&Allocator::AllocateSharedCollection>,
     fidl::Binder<Allocator>::BindMember<&Allocator::BindSharedCollection>,
+    fidl::Binder<Allocator>::BindMember<&Allocator::ValidateBufferCollectionToken>,
 };
 
 Allocator::Allocator(Device* parent_device)
@@ -115,6 +116,14 @@ zx_status_t Allocator::BindSharedCollection(zx_handle_t token_param,
   LogicalBufferCollection::BindSharedCollection(parent_device_, std::move(token),
                                                 std::move(buffer_collection_request));
   return ZX_OK;
+}
+
+zx_status_t Allocator::ValidateBufferCollectionToken(zx_koid_t token_server_koid, fidl_txn_t* txn) {
+  BindingType::Txn::RecognizeTxn(txn);
+  zx_status_t status =
+      LogicalBufferCollection::ValidateBufferCollectionToken(parent_device_, token_server_koid);
+  ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
+  return fuchsia_sysmem_AllocatorValidateBufferCollectionToken_reply(txn, status == ZX_OK);
 }
 
 }  // namespace sysmem_driver

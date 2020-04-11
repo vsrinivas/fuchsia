@@ -35,6 +35,7 @@ class Allocator : public FidlServer<Allocator,
   zx_status_t AllocateNonSharedCollection(zx_handle_t buffer_collection_request_param);
   zx_status_t AllocateSharedCollection(zx_handle_t token_request);
   zx_status_t BindSharedCollection(zx_handle_t token, zx_handle_t buffer_collection);
+  zx_status_t ValidateBufferCollectionToken(zx_koid_t token_server_koid, fidl_txn_t* txn);
 
   Device* parent_device_ = nullptr;
 };

@@ -109,6 +109,10 @@ class FakeServiceProvider : public ServiceProvider, public fuchsia::sysmem::Allo
       fidl::InterfaceHandle<class fuchsia::sysmem::BufferCollectionToken> token,
       fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> buffer_collection_request) override;
 
+  void ValidateBufferCollectionToken(
+      uint64_t token_server_koid,
+      fuchsia::sysmem::Allocator::ValidateBufferCollectionTokenCallback callback) override;
+
   FakeBufferCollection* FindOrCreateCollectionForToken(zx::channel client_channel);
 
   fidl::BindingSet<fuchsia::sysmem::Allocator> bindings_;

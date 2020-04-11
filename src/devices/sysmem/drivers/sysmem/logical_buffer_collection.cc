@@ -179,6 +179,12 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   // ~buffer_collection_token
 }
 
+zx_status_t LogicalBufferCollection::ValidateBufferCollectionToken(Device* parent_device,
+                                                                   zx_koid_t token_server_koid) {
+  BufferCollectionToken* token = parent_device->FindTokenByServerChannelKoid(token_server_koid);
+  return token ? ZX_OK : ZX_ERR_NOT_FOUND;
+}
+
 void LogicalBufferCollection::CreateBufferCollectionToken(
     fbl::RefPtr<LogicalBufferCollection> self, uint32_t rights_attenuation_mask,
     zx::channel buffer_collection_token_request) {

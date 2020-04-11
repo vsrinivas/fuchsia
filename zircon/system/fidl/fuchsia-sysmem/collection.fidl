@@ -88,9 +88,29 @@ protocol BufferCollectionToken {
     /// into BindSharedCollection by the other participant.
     ///
     /// Other options include waiting for each Duplicate() to complete
-    /// individually, or calling Sync() on BufferCollection after this token has
+    /// individually (using separate call to BufferCollectionToken.Sync() after
+    /// each), or calling Sync() on BufferCollection after this token has
     /// been turned in via BindSharedCollection(), or noticing arrival of
     /// BufferCollectionEvents::OnDuplicatedTokensKnownByServer().
+    ///
+    /// Calling BufferCollectionToken.Sync() on a token that isn't/wasn't a
+    /// valid sysmem token risks the Sync() hanging forever.  See
+    /// ValidateBufferCollectionToken() for one way to mitigate the possiblity
+    /// of a hostile/fake BufferCollectionToken at the cost of one round trip.
+    ///
+    /// Another way to mitigate is to avoid calling Sync() on the token, and
+    /// instead later deal with potential failure of BufferCollection.Sync() if
+    /// the original token was invalid.  This option can be preferable from a
+    /// performance point of view, but requires client code to delay sending
+    /// tokens duplicated from this token until after client code has converted
+    /// this token to a BufferCollection and received successful response from
+    /// BufferCollection.Sync() (or received OnDuplicatedTokensKnownByServer()).
+    ///
+    /// Prefer using BufferCollection.Sync() instead, when feasible (see above).
+    /// When BufferCollection.Sync() isn't feasible, the caller must already
+    /// know that this token is/was valid, or BufferCollectionToken.Sync() may
+    /// hang forever.  See ValidateBufferCollectionToken() to check token
+    /// validity first if the token isn't already known to be (is/was) valid.
     Sync() -> ();
 
     /// Normally a participant will convert the token into a BufferCollection

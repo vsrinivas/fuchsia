@@ -55,6 +55,11 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   static void BindSharedCollection(Device* parent_device, zx::channel buffer_collection_token,
                                    zx::channel buffer_collection_request);
 
+  // ZX_OK if the token is known to the server.
+  // ZX_ERR_NOT_FOUND if the token isn't known to the server.
+  static zx_status_t ValidateBufferCollectionToken(Device* parent_device,
+                                                   zx_koid_t token_server_koid);
+
   // This is used to create the initial BufferCollectionToken, and also used
   // by BufferCollectionToken::Duplicate().
   //
