@@ -937,12 +937,12 @@ data_image_path = "$target_out_dir/data.blk"
 # data.blk creates minfs data partition. The partition is included in fvm.blk
 # and fvm.sparse.blk. To increase the size of the data partition, increase
 # the total size of the fvm images using |fvm_image_size|.
-zircon_tool_action("data.blk") {
+compiled_action("data.blk") {
   testonly = true
 
   rebased_data_image_path = rebase_path(data_image_path, root_build_dir)
 
-  tool = "minfs"
+  tool = "//zircon/tools/minfs"
   outputs = [ data_image_path ]
   depfile = data_image_path + ".d"
   args = [
@@ -1075,9 +1075,9 @@ filesystem_sizes_deps += [
   ":blob.blk",
   ":data.blk",
   ":fvm.sparse.blk",
-  "//zircon/public/tool/minfs($host_toolchain)",
   "//zircon/tools/blobfs($host_toolchain)",
   "//zircon/tools/fvm($host_toolchain)",
+  "//zircon/tools/minfs($host_toolchain)",
 ]
 filesystem_sizes_inputs += [
   blob_image_path,

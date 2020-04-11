@@ -229,12 +229,12 @@ template("assemble_system") {
     ]
   }
 
-  zircon_tool_action("${image_name}_data.blk") {
+  compiled_action("${image_name}_data.blk") {
     data_image_path = "$target_out_dir/${target_name}"
     visibility = [ ":*" ]
     testonly = true
     outputs = [ data_image_path ]
-    tool = "minfs"
+    tool = "//zircon/tools/minfs"
     args = [
       rebase_path(data_image_path, root_build_dir),
       "create",

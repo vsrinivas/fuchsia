@@ -2,13 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_host_tool("minfs") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+import("//build/cpp/sdk_executable.gni")
+
+sdk_executable("minfs") {
+  category = "partner"
   sources = [ "main.cc" ]
   deps = [
-    "$zx/system/ulib/bitmap",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fs-host",
-    "$zx/system/ulib/fs/journal",
-    "$zx/system/ulib/minfs",
+    "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fs-host",
+    "//zircon/public/lib/journal",
+    "//zircon/public/lib/minfs",
   ]
+
+  if (!is_fuchsia) {
+    deps += [ "//zircon/public/lib/zx-panic-libc" ]
+  }
 }

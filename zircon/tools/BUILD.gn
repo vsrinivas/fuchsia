@@ -40,7 +40,6 @@ foreach(host, standard_build_hosts) {
       "loglistener",
       "lz4",
       "merkleroot",
-      "minfs",
       "netprotocol",
       "xdc-server",
       "zbi",

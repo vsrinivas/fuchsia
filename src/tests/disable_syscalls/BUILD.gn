@@ -42,8 +42,10 @@ if (is_linux) {
   copy("copy_misc_tools") {
     visibility = [ ":*" ]
 
+    deps = [ "//zircon/tools/minfs" ]
+
     sources = [
-      "$zircon_root_build_dir/tools/minfs",
+      "$root_out_dir/minfs",
       "$zircon_root_build_dir/tools/zbi",
     ]
     outputs = [ "$root_out_dir/test_data/tools/{{source_file_part}}" ]
