@@ -21,7 +21,7 @@ const uint32_t kValidSensorMode = 0;
 class Imx227DeviceTest : public zxtest::Test {
  protected:
   void SetUp() override {
-    ASSERT_OK(Imx227Device::Create(nullptr, driver_unit_test::GetParent(), &imx227_device_));
+    ASSERT_OK(Imx227Device::Create(driver_unit_test::GetParent(), &imx227_device_));
     ASSERT_OK(imx227_device_->CameraSensorInit());
   }
 

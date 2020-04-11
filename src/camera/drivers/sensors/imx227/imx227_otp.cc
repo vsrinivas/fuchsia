@@ -26,7 +26,7 @@ fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
     return fit::error(status);
   }
 
-  auto dest = static_cast<unsigned char*>(mapper.start());
+  auto* dest = static_cast<unsigned char*>(mapper.start());
 
   // Endian-flipped OTP start address to read through I2C channel
   const uint16_t kPageStartRegister = htobe16(OTP_PAGE_START);

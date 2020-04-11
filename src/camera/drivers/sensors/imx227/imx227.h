@@ -81,8 +81,7 @@ class Imx227Device : public DeviceType,
         clk24_(clk24),
         mipi_(mipicsi) {}
 
-  static zx_status_t Create(void* ctx, zx_device_t* parent,
-                            std::unique_ptr<Imx227Device>* device_out);
+  static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Imx227Device>* device_out);
   static zx_status_t CreateAndBind(void* ctx, zx_device_t* parent);
   static bool RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel);
 
@@ -91,7 +90,7 @@ class Imx227Device : public DeviceType,
   void DdkRelease();
 
   // Testing interface will need to use this to check the status of the sensor.
-  bool IsSensorInitialized() { return initialized_; }
+  bool IsSensorInitialized() const { return initialized_; }
 
   // Methods for ZX_PROTOCOL_CAMERA_SENSOR
   zx_status_t CameraSensorInit();
@@ -133,7 +132,7 @@ class Imx227Device : public DeviceType,
   void Write8(uint16_t addr, uint8_t val) __TA_REQUIRES(lock_);
 
   // Other
-  zx_status_t InitPdev(zx_device_t* parent);
+  zx_status_t InitPdev();
   zx_status_t InitSensor(uint8_t idx) __TA_REQUIRES(lock_);
   void ShutDown();
   bool ValidateSensorID() __TA_REQUIRES(lock_);

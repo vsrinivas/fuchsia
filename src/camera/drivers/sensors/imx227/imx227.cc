@@ -45,7 +45,7 @@ constexpr uint32_t kMasterClock = 288000000;
 
 }  // namespace
 
-zx_status_t Imx227Device::InitPdev(zx_device_t* parent) {
+zx_status_t Imx227Device::InitPdev() {
   std::lock_guard guard(lock_);
 
   // I2c for communicating with the sensor.
@@ -376,8 +376,7 @@ zx_status_t Imx227Device::CameraSensorUpdate() {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Imx227Device::Create(void* ctx, zx_device_t* parent,
-                                 std::unique_ptr<Imx227Device>* device_out) {
+zx_status_t Imx227Device::Create(zx_device_t* parent, std::unique_ptr<Imx227Device>* device_out) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
     zxlogf(ERROR, "%s could not get composite protocoln", __func__);
@@ -396,7 +395,7 @@ zx_status_t Imx227Device::Create(void* ctx, zx_device_t* parent,
       parent, fragments[FRAGMENT_I2C], fragments[FRAGMENT_GPIO_VANA], fragments[FRAGMENT_GPIO_VDIG],
       fragments[FRAGMENT_GPIO_CAM_RST], fragments[FRAGMENT_CLK24], fragments[FRAGMENT_MIPICSI]);
 
-  zx_status_t status = sensor_device->InitPdev(parent);
+  zx_status_t status = sensor_device->InitPdev();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s InitPdev failed\n", __func__);
     return status;
@@ -414,9 +413,9 @@ void Imx227Device::DdkRelease() {
   delete this;
 }
 
-zx_status_t Imx227Device::CreateAndBind(void* ctx, zx_device_t* parent) {
+zx_status_t Imx227Device::CreateAndBind(void* /*ctx*/, zx_device_t* parent) {
   std::unique_ptr<Imx227Device> device;
-  zx_status_t status = Imx227Device::Create(ctx, parent, &device);
+  zx_status_t status = Imx227Device::Create(parent, &device);
   if (status != ZX_OK) {
     zxlogf(ERROR, "imx227: Could not setup imx227 sensor device: %d\n", status);
     return status;
