@@ -22,6 +22,7 @@ const char StreamType::kAudioEncodingFlac[] = "fuchsia.media.flac";
 const char StreamType::kAudioEncodingGsmMs[] = "fuchsia.media.gsmms";
 const char StreamType::kAudioEncodingLpcm[] = "fuchsia.media.lpcm";
 const char StreamType::kAudioEncodingMp3[] = "fuchsia.media.mp3";
+const char StreamType::kAudioEncodingOpus[] = "fuchsia.media.opus";
 const char StreamType::kAudioEncodingPcmALaw[] = "fuchsia.media.pcmalaw";
 const char StreamType::kAudioEncodingPcmMuLaw[] = "fuchsia.media.pcmmulaw";
 const char StreamType::kAudioEncodingSbc[] = "fuchsia.media.sbc";

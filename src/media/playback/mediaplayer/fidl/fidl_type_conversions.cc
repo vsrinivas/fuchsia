@@ -44,10 +44,14 @@ bool KnownEncodingsMatch() {
          !strcmp(media_player::StreamType::kAudioEncodingLpcm,
                  fuchsia::media::AUDIO_ENCODING_LPCM) &&
          !strcmp(media_player::StreamType::kAudioEncodingMp3, fuchsia::media::AUDIO_ENCODING_MP3) &&
+         !strcmp(media_player::StreamType::kAudioEncodingOpus,
+                 fuchsia::media::AUDIO_ENCODING_OPUS) &&
          !strcmp(media_player::StreamType::kAudioEncodingPcmALaw,
                  fuchsia::media::AUDIO_ENCODING_PCMALAW) &&
          !strcmp(media_player::StreamType::kAudioEncodingPcmMuLaw,
                  fuchsia::media::AUDIO_ENCODING_PCMMULAW) &&
+         !strcmp(media_player::StreamType::kAudioEncodingSbc,
+                 fuchsia::media::AUDIO_ENCODING_SBC) &&
          !strcmp(media_player::StreamType::kAudioEncodingVorbis,
                  fuchsia::media::AUDIO_ENCODING_VORBIS) &&
          !strcmp(media_player::StreamType::kVideoEncodingH263,

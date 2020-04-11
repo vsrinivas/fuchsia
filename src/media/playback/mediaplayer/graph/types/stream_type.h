@@ -37,6 +37,7 @@ class StreamType {
   static const char kAudioEncodingGsmMs[];
   static const char kAudioEncodingLpcm[];
   static const char kAudioEncodingMp3[];
+  static const char kAudioEncodingOpus[];
   static const char kAudioEncodingPcmALaw[];
   static const char kAudioEncodingPcmMuLaw[];
   static const char kAudioEncodingSbc[];

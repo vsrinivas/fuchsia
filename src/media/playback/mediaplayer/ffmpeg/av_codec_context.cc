@@ -185,6 +185,8 @@ const char* EncodingFromCodecId(AVCodecID from) {
       return StreamType::kAudioEncodingGsmMs;
     case AV_CODEC_ID_MP3:
       return StreamType::kAudioEncodingMp3;
+    case AV_CODEC_ID_OPUS:
+      return StreamType::kAudioEncodingOpus;
     case AV_CODEC_ID_PCM_ALAW:
       return StreamType::kAudioEncodingPcmALaw;
     case AV_CODEC_ID_PCM_MULAW:
@@ -400,6 +402,8 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(const AudioStreamType& strea
     codec_id = AV_CODEC_ID_GSM_MS;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingMp3) {
     codec_id = AV_CODEC_ID_MP3;
+  } else if (stream_type.encoding() == StreamType::kAudioEncodingOpus) {
+    codec_id = AV_CODEC_ID_OPUS;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingPcmALaw) {
     codec_id = AV_CODEC_ID_PCM_ALAW;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingPcmMuLaw) {
