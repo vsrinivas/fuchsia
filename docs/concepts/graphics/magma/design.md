@@ -21,7 +21,7 @@ Clients can cause the gpu to hang or fault, and when this happens it will affect
 
 As mentioned in the overview, the Magma architecture involves two driver components: a client library, and a privileged system driver process.  Both are gpu-specific; the client library must compile software from IR (intermediate representation, for example SPIR-V) into machine code, and format command buffers correctly for consumption by the hardware.  These are fed to the Magma system driver, which performs that actual programming of the hardware.
 
-![](block_diagram.png)
+![Block diagram of Magma architecture](block_diagram.png)
 
 Magma defines two interfaces to gpu-specific code:
 * The **magma** interface provides the foundation for the client driver, typically libvulkan
@@ -96,7 +96,7 @@ A client driver library that implements the Vulkan api is referred to as a **vcd
 
 Vulkan state configuration, resource creation and drawing command buffers are sent from the vcd to the msd over the primary channel.  The notification channel is used to convey asynchronous status messages back to the vcd.  A good example of a notification the vcd may be interested in is the completion of a command buffer.  The exact messages sent over the device and notification channels along with how those messages are handled varies by GPU driver.
 
-![](vulkan_driver_thread_model.png)
+![Vulkan driver thread model](vulkan_driver_thread_model.png)
 
 Note that the process boundary enclosing the msd is the Fuchsia devhost process boundary for the msd.  This devhost process may include threads from other drivers as well but only msd-specific threads are shown here.
 
