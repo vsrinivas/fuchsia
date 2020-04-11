@@ -24,7 +24,7 @@ zx_library("device-protocol-pci") {
   ]
   public_deps = [
     # <lib/device-protocol/pci.h> has #include <ddk/protocol/pci.h>
-    "//zircon/system/banjo/ddk.protocol.pci",
+    "//sdk/banjo/ddk.protocol.pci",
 
     # <lib/device-protocol/pci.h> has #include <zircon/syscalls.h>
     "//zircon/public/lib/zx",

@@ -20,10 +20,10 @@ driver_module("intel-serialio") {
   ]
   include_dirs = [ "intel-serialio-include" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.pci",
     "//sdk/banjo/ddk.protocol.serial",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/dev/lib/device-protocol-pci",
   ]
 }

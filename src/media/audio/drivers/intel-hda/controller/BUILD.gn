@@ -66,6 +66,7 @@ source_set("src") {
     "//zircon/system/ulib/dispatcher-pool",
   ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.pci",
     "//sdk/fidl/fuchsia.hardware.intel.hda:fuchsia.hardware.intel.hda_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
@@ -74,7 +75,6 @@ source_set("src") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/ulib/intel-hda",
     "//zircon/system/ulib/refcount",
   ]

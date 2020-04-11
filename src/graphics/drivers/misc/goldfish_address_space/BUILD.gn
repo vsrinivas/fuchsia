@@ -11,6 +11,7 @@ driver_module("address_space_driver") {
   sources = [ "address_space_device.cc" ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.pci",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -24,7 +25,6 @@ driver_module("address_space_driver") {
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/dev/lib/device-protocol-pci",
   ]
 

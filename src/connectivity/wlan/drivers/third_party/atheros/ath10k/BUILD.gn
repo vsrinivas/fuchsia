@@ -73,13 +73,13 @@ driver_module("ath10k_driver") {
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.hw.wlan.ieee80211",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.protocol.pci",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/dev/lib/device-protocol-pci",
   ]
 

@@ -13,11 +13,11 @@ driver_module("nvme") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "nvme.c" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/dev/lib/device-protocol-pci",
   ]
 }

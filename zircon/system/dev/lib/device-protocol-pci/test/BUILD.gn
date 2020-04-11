@@ -33,11 +33,11 @@ test("device-protocol-pci") {
   sources = [ "pci-test.cc" ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.pci",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/dev/lib/device-protocol-pci",
   ]
 }

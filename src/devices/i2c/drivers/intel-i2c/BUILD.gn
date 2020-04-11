@@ -20,13 +20,13 @@ driver_module("intel-i2c") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.i2cimpl",
+    "//sdk/banjo/ddk.protocol.pci",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/dev/lib/device-protocol-pci",
   ]
   public_configs = [ ":internal" ]

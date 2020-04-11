@@ -42,10 +42,10 @@ driver_module("e1000") {
     "fuchsia.c",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/system/banjo/ddk.protocol.ethernet",
-    "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/dev/lib/device-protocol-pci",
   ]
 }
