@@ -123,7 +123,6 @@ fn main() -> Result<(), Error> {
             log_manager2.spawn_log_handler(stream);
         })
         .add_fidl_service(move |stream| {
-            eprintln!("WARNING: processing unattributed LogSink");
             log_manager3.spawn_log_sink_handler(stream, SourceIdentity::empty());
         })
         .add_fidl_service(move |stream| {

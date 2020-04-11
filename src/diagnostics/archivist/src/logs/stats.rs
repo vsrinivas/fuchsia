@@ -17,6 +17,7 @@ pub(super) struct LogManagerStats {
     warning_logs: inspect::UintProperty,
     error_logs: inspect::UintProperty,
     fatal_logs: inspect::UintProperty,
+    unattributed_log_sinks: inspect::UintProperty,
 }
 
 impl LogManagerStats {
@@ -30,6 +31,7 @@ impl LogManagerStats {
         let warning_logs = node.create_uint("warning_logs", 0);
         let error_logs = node.create_uint("error_logs", 0);
         let fatal_logs = node.create_uint("fatal_logs", 0);
+        let unattributed_log_sinks = node.create_uint("unattributed_log_sinks", 0);
 
         Self {
             _node: node,
@@ -41,6 +43,7 @@ impl LogManagerStats {
             warning_logs,
             error_logs,
             fatal_logs,
+            unattributed_log_sinks,
         }
     }
 
@@ -74,6 +77,11 @@ impl LogManagerStats {
                 self.verbose_logs.add(1);
             }
         }
+    }
+
+    /// Record an unattributed log message.
+    pub fn record_unattributed(&self) {
+        self.unattributed_log_sinks.add(1);
     }
 }
 

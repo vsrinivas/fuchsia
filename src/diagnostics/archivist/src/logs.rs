@@ -141,6 +141,9 @@ impl LogManager {
         mut stream: LogSinkRequestStream,
         source: SourceIdentity,
     ) -> Result<(), Error> {
+        if source.component_name.is_none() {
+            self.inner.lock().await.stats.record_unattributed();
+        }
         while let Some(LogSinkRequest::Connect { socket, control_handle }) =
             stream.try_next().await?
         {
@@ -328,6 +331,7 @@ mod tests {
                     warning_logs: 2u64,
                     error_logs: 1u64,
                     fatal_logs: 0u64,
+                    unattributed_log_sinks: 1u64,
                     buffer_stats: {
                         rolled_out_entries: 0u64,
                     }
@@ -559,6 +563,7 @@ mod tests {
                     warning_logs: 0u64,
                     error_logs: 0u64,
                     fatal_logs: 0u64,
+                    unattributed_log_sinks: 0u64,
                 }
             }
         );
