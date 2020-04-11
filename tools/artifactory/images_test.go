@@ -61,11 +61,6 @@ func TestImageUploads(t *testing.T) {
 				Path: "qemu-kernel.bin",
 				Type: "kernel",
 			},
-			{
-				Name: "pave",
-				Path: "pave.sh",
-				Type: "sh",
-			},
 		},
 	}
 

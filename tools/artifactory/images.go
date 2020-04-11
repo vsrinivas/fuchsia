@@ -30,7 +30,7 @@ func imageUploads(mods imgModules, namespace string) []Upload {
 	// The same image might appear in multiple entries.
 	seen := make(map[string]bool)
 	for _, img := range mods.Images() {
-		if _, ok := seen[img.Path]; !ok && isActualImage(img) {
+		if _, ok := seen[img.Path]; !ok {
 			files = append(files, Upload{
 				Source:      filepath.Join(mods.BuildDir(), img.Path),
 				Destination: path.Join(namespace, img.Path),
@@ -46,8 +46,4 @@ type imgModules interface {
 	BuildDir() string
 	Images() []build.Image
 	ImageManifest() string
-}
-
-func isActualImage(img build.Image) bool {
-	return len(img.PaveArgs) > 0 || len(img.NetbootArgs) > 0 || len(img.PaveZedbootArgs) > 0 || img.Name == "qemu-kernel" || img.Name == "storage-full"
 }
