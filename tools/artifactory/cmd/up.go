@@ -84,6 +84,8 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   └── <debug binaries>
 │   │   ├── builds
 │   │   │   ├── $UUID
+│   │   │   │   ├── build-ids.txt
+│   │   │   │   ├── jiri.snapshot
 │   │   │   │   ├── packages
 │   │   │   │   │   ├── repository
 │   │   │   │   │   │   ├── targets
@@ -91,8 +93,11 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   │   │   │   └── <package repo metadata files>
 │   │   │   │   │   └── keys
 │   │   │   │   │       └── <package repo keys>
-│   │   │   │   ├── images
-│   │   │   │   │   └── <images>
+│   │   │   │   ├── build_api
+│   │   │   │   │   └── <build API module JSON>
+│   │   │   │   ├── tools
+│   │   │   │   │   └── <OS>-<CPU>
+|	│   │   │   │   │   └── <tool names>
 
 flags:
 
@@ -193,6 +198,12 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		Source:      buildIDManifest,
 		Destination: path.Join(buildsUUIDDir, buildIDsTxt),
 	})
+
+	snapshot, err := artifactory.JiriSnapshotUpload(m, buildsUUIDDir)
+	if err != nil {
+		return err
+	}
+	files = append(files, *snapshot)
 
 	for _, dir := range dirs {
 		contents, err := dirToFiles(ctx, dir)

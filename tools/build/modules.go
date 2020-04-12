@@ -13,28 +13,30 @@ import (
 )
 
 const (
-	apiModuleName            = "api.json"
-	binaryModuleName         = "binaries.json"
-	imageModuleName          = "images.json"
-	platformModuleName       = "platforms.json"
-	prebuiltBinaryModuleName = "prebuilt_binaries.json"
-	testDurationsName        = "test_durations.json"
-	testModuleName           = "tests.json"
-	toolModuleName           = "tool_paths.json"
+	apiModuleName              = "api.json"
+	binaryModuleName           = "binaries.json"
+	checkoutArtifactModuleName = "checkout_artifacts.json"
+	imageModuleName            = "images.json"
+	platformModuleName         = "platforms.json"
+	prebuiltBinaryModuleName   = "prebuilt_binaries.json"
+	testDurationsName          = "test_durations.json"
+	testModuleName             = "tests.json"
+	toolModuleName             = "tool_paths.json"
 )
 
 // Modules is a convenience interface for accessing the various build API
 // modules associated with a build.
 type Modules struct {
-	buildDir      string
-	apis          []string
-	binaries      []Binary
-	images        []Image
-	platforms     []DimensionSet
-	prebuiltBins  []PrebuiltBinaries
-	testSpecs     []TestSpec
-	testDurations []TestDuration
-	tools         []Tool
+	buildDir          string
+	apis              []string
+	binaries          []Binary
+	checkoutArtifacts []CheckoutArtifact
+	images            []Image
+	platforms         []DimensionSet
+	prebuiltBins      []PrebuiltBinaries
+	testSpecs         []TestSpec
+	testDurations     []TestDuration
+	tools             []Tool
 }
 
 // NewModules returns a Modules associated with a given build directory.
@@ -49,6 +51,11 @@ func NewModules(buildDir string) (*Modules, error) {
 	}
 
 	m.binaries, err = loadBinaries(m.BinaryManifest())
+	if err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
+	m.checkoutArtifacts, err = loadCheckoutArtifacts(m.CheckoutArtifactManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
@@ -112,6 +119,16 @@ func (m Modules) Binaries() []Binary {
 // BinaryManifest returns the path to the manifest of binaries in the build.
 func (m Modules) BinaryManifest() string {
 	return filepath.Join(m.BuildDir(), binaryModuleName)
+}
+
+// CheckoutArtifacts returns the build API module of checkout artifacts.
+func (m Modules) CheckoutArtifacts() []CheckoutArtifact {
+	return m.checkoutArtifacts
+}
+
+// CheckoutArtifactManifest returns the path to the manifest of checkout artifacts in the build.
+func (m Modules) CheckoutArtifactManifest() string {
+	return filepath.Join(m.BuildDir(), checkoutArtifactModuleName)
 }
 
 // Images returns the aggregated build APIs of fuchsia and zircon images.
