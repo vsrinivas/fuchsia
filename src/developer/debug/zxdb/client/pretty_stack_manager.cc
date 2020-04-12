@@ -38,6 +38,30 @@ void PrettyStackManager::LoadDefaultMatchers() {
   matchers.push_back(std::move(cpp_async_loop));
   matchers.push_back(std::move(c_async_loop));
 
+  // Typical background thread startup.
+  StackGlob pthread_startup("pthread startup", {PrettyFrameGlob::Func("start_pthread"),
+                                                PrettyFrameGlob::Func("thread_trampoline")});
+
+  // std::thread startup (wraps pthread startup). This has a crazy function name the matcher can't
+  // support so accept anything from std::thread being called from pthread startup.
+  StackGlob std_thread_startup("std::thread startup", {PrettyFrameGlob::File("thread")});
+  std_thread_startup.frames.insert(std_thread_startup.frames.end(), pthread_startup.frames.begin(),
+                                   pthread_startup.frames.end());
+
+  matchers.push_back(std::move(pthread_startup));
+  matchers.push_back(std::move(std_thread_startup));
+
+  // fit::promise and fit::function occur a lot and generate extremely long and useless names.
+  // Matching useful sequences is difficult. But just replacing individual stack entries with
+  // a simple string eliminates ~3 lines of template goop and ~3 lines of unnecessary function
+  // parameters. This makes backtraces much easier to read.
+  matchers.push_back(
+      StackGlob("fit::promise code", {PrettyFrameGlob::File("fit/promise_internal.h")}));
+  matchers.push_back(StackGlob("fit::promise code", {PrettyFrameGlob::File("fit/promise.h")}));
+  matchers.push_back(StackGlob("fit::function code", {PrettyFrameGlob::File("fit/function.h")}));
+  matchers.push_back(
+      StackGlob("fit::function code", {PrettyFrameGlob::File("fit/function_internal.h")}));
+
   // Rust async loop waiting.
   StackGlob rust_async_loop(
       "Waiting for event in Executor::run_singlethreaded()",
