@@ -9,6 +9,7 @@ use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
 
 /// MessageBuilder allows constructing a message or reply with optional signals.
+#[derive(Clone)]
 pub struct MessageBuilder<P: Payload + 'static, A: Address + 'static> {
     payload: P,
     message_type: MessageType<P, A>,

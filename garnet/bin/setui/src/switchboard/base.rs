@@ -52,6 +52,9 @@ pub enum SwitchboardError {
 
     #[error("Unexpected error: {description:?}")]
     UnexpectedError { description: String },
+
+    #[error("Undeliverable Request:{request:?} for setting type: {setting_type:?}")]
+    UndeliverableError { setting_type: SettingType, request: SettingRequest },
 }
 
 /// The setting types supported by the messaging system. This is used as a key

@@ -18,6 +18,7 @@ use {
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
     crate::internal::core::create_message_hub as create_registry_message_hub,
+    crate::internal::handler::create_message_hub as create_setting_handler_message_hub,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
     crate::night_mode::night_mode_controller::NightModeController,
@@ -342,6 +343,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Receiver<Result<(), Error>> {
     let registry_messenger_factory = create_registry_message_hub();
+    let setting_handler_messenger_factory = create_setting_handler_message_hub();
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
@@ -354,9 +356,13 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     let mut agent_authority = AuthorityImpl::new();
 
     // Creates registry, used to register handlers for setting types.
-    let _ = RegistryImpl::create(handler_factory.clone(), registry_messenger_factory.clone())
-        .await
-        .expect("could not create registry");
+    let _ = RegistryImpl::create(
+        handler_factory.clone(),
+        registry_messenger_factory.clone(),
+        setting_handler_messenger_factory,
+    )
+    .await
+    .expect("could not create registry");
     if components.contains(&SettingType::Accessibility) {
         let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: AccessibilityRequestStream| {
