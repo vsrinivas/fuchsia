@@ -8,6 +8,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/errors.h>
 
+#include <limits>
+
 #include "src/camera/bin/device/device_impl.h"
 #include "src/camera/bin/device/stream_impl.h"
 #include "src/camera/bin/device/test/fake_controller.h"
@@ -23,7 +25,7 @@ static void nop() {}
 static void nop_stream_requested(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-    fit::function<void(uint32_t)> callback) {
+    fit::function<void(uint32_t)> callback, uint32_t format_index) {
   token.Bind()->Close();
   request.Close(ZX_ERR_NOT_SUPPORTED);
   callback(0);
@@ -78,19 +80,21 @@ class DeviceTest : public gtest::RealLoopFixture {
   std::unique_ptr<DeviceImpl> device_;
   std::unique_ptr<FakeController> controller_;
   fuchsia::sysmem::AllocatorPtr allocator_;
+  fuchsia::camera3::StreamProperties fake_properties_;
+  fuchsia::camera2::hal::StreamConfig fake_legacy_config_;
 };
 
 TEST_F(DeviceTest, CreateStreamNullConnection) {
-  StreamImpl stream(nullptr, nop_stream_requested, nop);
+  StreamImpl stream(fake_properties_, fake_legacy_config_, nullptr, nop_stream_requested, nop);
 }
 
 TEST_F(DeviceTest, CreateStreamFakeLegacyStream) {
   fidl::InterfaceHandle<fuchsia::camera3::Stream> stream;
   StreamImpl stream_impl(
-      stream.NewRequest(),
+      fake_properties_, fake_legacy_config_, stream.NewRequest(),
       [](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
          fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-         fit::function<void(uint32_t)> callback) {
+         fit::function<void(uint32_t)> callback, uint32_t format_index) {
         token.Bind()->Close();
         auto result = FakeLegacyStream::Create(std::move(request));
         ASSERT_TRUE(result.is_ok());
@@ -120,10 +124,10 @@ TEST_F(DeviceTest, GetFrames) {
   std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
   bool legacy_stream_created = false;
   auto stream_impl = std::make_unique<StreamImpl>(
-      stream.NewRequest(),
+      fake_properties_, fake_legacy_config_, stream.NewRequest(),
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-          fit::function<void(uint32_t)> callback) {
+          fit::function<void(uint32_t)> callback, uint32_t format_index) {
         auto result = FakeLegacyStream::Create(std::move(request));
         ASSERT_TRUE(result.is_ok());
         legacy_stream_fake = result.take_value();
@@ -211,10 +215,10 @@ TEST_F(DeviceTest, GetFramesInvalidCall) {
   });
   std::unique_ptr<FakeLegacyStream> fake_legacy_stream;
   auto stream_impl = std::make_unique<StreamImpl>(
-      stream.NewRequest(),
+      fake_properties_, fake_legacy_config_, stream.NewRequest(),
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-          fit::function<void(uint32_t)> callback) {
+          fit::function<void(uint32_t)> callback, uint32_t format_index) {
         auto result = FakeLegacyStream::Create(std::move(request));
         ASSERT_TRUE(result.is_ok());
         fake_legacy_stream = result.take_value();
@@ -341,6 +345,7 @@ TEST_F(DeviceTest, DeviceClientDisconnect) {
 
   RunLoopUntilFailureOr(callback_received);
 }
+
 TEST_F(DeviceTest, StreamClientDisconnect) {
   // Create the first client.
   fuchsia::camera3::DevicePtr device;
@@ -379,6 +384,51 @@ TEST_F(DeviceTest, StreamClientDisconnect) {
     });
     RunLoopUntil([&] { return error_received || callback_received; });
   }
+}
+
+TEST_F(DeviceTest, SetResolution) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  fuchsia::camera3::StreamPtr stream;
+  device->ConnectToStream(0, stream.NewRequest());
+  SetFailOnError(stream, "Stream");
+  constexpr fuchsia::math::Size kRequestedSize{.width = 1025, .height = 32};
+  constexpr fuchsia::math::Size kExpectedSize{.width = 1280, .height = 720};
+  constexpr fuchsia::math::Size kRequestedSize2{.width = 1, .height = 1};
+  constexpr fuchsia::math::Size kExpectedSize2{.width = 1024, .height = 576};
+  stream->SetResolution(kRequestedSize);
+  bool callback_received = false;
+  stream->WatchResolution([&](fuchsia::math::Size coded_size) {
+    EXPECT_GE(coded_size.width, kExpectedSize.width);
+    EXPECT_GE(coded_size.height, kExpectedSize.height);
+    callback_received = true;
+  });
+  RunLoopUntilFailureOr(callback_received);
+  callback_received = false;
+  stream->SetResolution(kRequestedSize2);
+  stream->WatchResolution([&](fuchsia::math::Size coded_size) {
+    EXPECT_GE(coded_size.width, kExpectedSize2.width);
+    EXPECT_GE(coded_size.height, kExpectedSize2.height);
+    callback_received = true;
+  });
+  RunLoopUntilFailureOr(callback_received);
+}
+
+TEST_F(DeviceTest, SetResolutionInvalid) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  fuchsia::camera3::StreamPtr stream;
+  device->ConnectToStream(0, stream.NewRequest());
+  constexpr fuchsia::math::Size kSize{.width = std::numeric_limits<int32_t>::max(), .height = 42};
+  stream->SetResolution(kSize);
+  bool error_received = false;
+  stream.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    error_received = true;
+  });
+  RunLoopUntilFailureOr(error_received);
 }
 
 }  // namespace camera

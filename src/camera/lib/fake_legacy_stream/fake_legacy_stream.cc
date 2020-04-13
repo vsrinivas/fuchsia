@@ -21,15 +21,18 @@
 
 namespace camera {
 
-static constexpr std::array<fuchsia::sysmem::ImageFormat_2, 2> kFakeImageFormats{{
+// NOTE: these must be a superset of the formats defined in
+// //src/camera/bin/device/test/take_controller.cc
+// TODO(49137): improve legacy test fakes
+static constexpr std::array<fuchsia::sysmem::ImageFormat_2, 3> kFakeImageFormats{{
     {
         .pixel_format =
             {
                 .type = fuchsia::sysmem::PixelFormatType::NV12,
             },
-        .coded_width = 640,
-        .coded_height = 480,
-        .bytes_per_row = 640,
+        .coded_width = 1920,
+        .coded_height = 1080,
+        .bytes_per_row = 1920,
         .color_space =
             {
                 .type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC,
@@ -40,9 +43,22 @@ static constexpr std::array<fuchsia::sysmem::ImageFormat_2, 2> kFakeImageFormats
             {
                 .type = fuchsia::sysmem::PixelFormatType::NV12,
             },
-        .coded_width = 1366,
-        .coded_height = 768,
-        .bytes_per_row = 1408,
+        .coded_width = 1280,
+        .coded_height = 720,
+        .bytes_per_row = 1920,
+        .color_space =
+            {
+                .type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC,
+            },
+    },
+    {
+        .pixel_format =
+            {
+                .type = fuchsia::sysmem::PixelFormatType::NV12,
+            },
+        .coded_width = 1024,
+        .coded_height = 576,
+        .bytes_per_row = 1920,
         .color_space =
             {
                 .type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC,

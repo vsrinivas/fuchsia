@@ -24,7 +24,7 @@ class HangingGetHelper;
 template <class T, class Compare>
 class HangingGetHelper<T, Compare, true> {
  public:
-  HangingGetHelper(const Compare& eq = Compare()) : eq_(std::move(eq)) {}
+  HangingGetHelper(Compare eq = Compare()) : eq_(std::move(eq)) {}
 
   // Sets or updates the saved callback to the provided value. Returns true iff an existing callback
   // was overwritten.

@@ -67,7 +67,8 @@ class DeviceImpl {
   void OnStreamRequested(uint32_t index,
                          fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
                          fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-                         fit::function<void(uint32_t)> max_camping_buffers_callback);
+                         fit::function<void(uint32_t)> max_camping_buffers_callback,
+                         uint32_t format_index);
 
   // Represents a single client connection to the DeviceImpl class.
   class Client : public fuchsia::camera3::Device {

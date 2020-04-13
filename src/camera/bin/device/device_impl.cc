@@ -188,16 +188,17 @@ void DeviceImpl::ConnectToStream(uint32_t index,
   auto on_stream_requested =
       [this, index](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
                     fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-                    fit::function<void(uint32_t)> max_camping_buffers_callback) {
+                    fit::function<void(uint32_t)> max_camping_buffers_callback,
+                    uint32_t format_index) {
         FX_LOGS(DEBUG) << "New request for legacy stream.";
-        ZX_ASSERT(
-            async::PostTask(
-                loop_.dispatcher(),
-                [this, index, token = std::move(token), request = std::move(request),
-                 max_camping_buffers_callback = std::move(max_camping_buffers_callback)]() mutable {
-                  OnStreamRequested(index, std::move(token), std::move(request),
-                                    std::move(max_camping_buffers_callback));
-                }) == ZX_OK);
+        ZX_ASSERT(async::PostTask(
+                      loop_.dispatcher(),
+                      [this, index, token = std::move(token), request = std::move(request),
+                       max_camping_buffers_callback = std::move(max_camping_buffers_callback),
+                       format_index]() mutable {
+                        OnStreamRequested(index, std::move(token), std::move(request),
+                                          std::move(max_camping_buffers_callback), format_index);
+                      }) == ZX_OK);
       };
 
   // When the last client disconnects, post a task to the device thread to destroy the stream.
@@ -206,14 +207,16 @@ void DeviceImpl::ConnectToStream(uint32_t index,
               ZX_OK);
   };
 
-  streams_[index] = std::make_unique<StreamImpl>(std::move(request), std::move(on_stream_requested),
-                                                 std::move(on_no_clients));
+  streams_[index] = std::make_unique<StreamImpl>(
+      configurations_[current_configuration_index_].streams[index],
+      configs_[current_configuration_index_].stream_configs[index], std::move(request),
+      std::move(on_stream_requested), std::move(on_no_clients));
 }
 
 void DeviceImpl::OnStreamRequested(
     uint32_t index, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-    fit::function<void(uint32_t)> max_camping_buffers_callback) {
+    fit::function<void(uint32_t)> max_camping_buffers_callback, uint32_t format_index) {
   // Negotiate buffers for this stream.
   // TODO(44770): Watch for buffer collection events.
   fuchsia::sysmem::BufferCollectionPtr collection;
@@ -221,7 +224,7 @@ void DeviceImpl::OnStreamRequested(
   collection->SetConstraints(
       true, configs_[current_configuration_index_].stream_configs[index].constraints);
   collection->WaitForBuffersAllocated(
-      [this, index, request = std::move(request),
+      [this, index, format_index, request = std::move(request),
        max_camping_buffers_callback = std::move(max_camping_buffers_callback),
        collection = std::move(collection)](
           zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) mutable {
@@ -249,8 +252,8 @@ void DeviceImpl::OnStreamRequested(
         }
 
         // Get the legacy stream using the negotiated buffers.
-        controller_->CreateStream(current_configuration_index_, index, 0, std::move(buffers),
-                                  std::move(request));
+        controller_->CreateStream(current_configuration_index_, index, format_index,
+                                  std::move(buffers), std::move(request));
 
         collection->Close();
       });

@@ -16,7 +16,10 @@ StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
     : stream_(stream),
       id_(id),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      binding_(this, std::move(request), loop_.dispatcher()) {
+      binding_(this, std::move(request), loop_.dispatcher()),
+      resolution_([](fuchsia::math::Size a, fuchsia::math::Size b) {
+        return (a.width == b.width) && (a.height == b.height);
+      }) {
   FX_LOGS(DEBUG) << "Stream client " << id << " connected.";
   binding_.set_error_handler(fit::bind_member(this, &StreamImpl::Client::OnClientDisconnected));
   std::ostringstream oss;
@@ -33,11 +36,23 @@ void StreamImpl::Client::PostSendFrame(fuchsia::camera3::FrameInfo frame) {
             }) == ZX_OK);
 }
 
+void StreamImpl::Client::PostCloseConnection(zx_status_t epitaph) {
+  zx_status_t status =
+      async::PostTask(loop_.dispatcher(), [this, epitaph] { CloseConnection(epitaph); });
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+}
+
 void StreamImpl::Client::PostReceiveBufferCollection(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   ZX_ASSERT(async::PostTask(loop_.dispatcher(), [this, token = std::move(token)]() mutable {
               buffers_.Set(std::move(token));
             }) == ZX_OK);
+}
+
+void StreamImpl::Client::PostReceiveResolution(fuchsia::math::Size coded_size) {
+  zx_status_t status =
+      async::PostTask(loop_.dispatcher(), [this, coded_size] { resolution_.Set(coded_size); });
+  ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 bool& StreamImpl::Client::Participant() { return participant_; }
@@ -61,11 +76,13 @@ void StreamImpl::Client::WatchCropRegion(WatchCropRegionCallback callback) {
 }
 
 void StreamImpl::Client::SetResolution(fuchsia::math::Size coded_size) {
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  stream_.PostSetResolution(id_, coded_size);
 }
 
 void StreamImpl::Client::WatchResolution(WatchResolutionCallback callback) {
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  if (resolution_.Get(std::move(callback))) {
+    CloseConnection(ZX_ERR_BAD_STATE);
+  }
 }
 
 void StreamImpl::Client::SetBufferCollection(

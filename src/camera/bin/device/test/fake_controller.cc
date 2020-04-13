@@ -48,12 +48,28 @@ static std::vector<fuchsia::camera2::hal::Config> DefaultConfigs() {
                .frames_per_sec_denominator = 1,
            },
        .constraints = kBufferCollectionConstraints,
-       .image_formats = {{
-           .pixel_format = kBufferCollectionConstraints.image_format_constraints[0].pixel_format,
-           .coded_width = 1920,
-           .coded_height = 1080,
-           .bytes_per_row = 1920,
-       }}});
+       .image_formats = {
+           {
+               .pixel_format =
+                   kBufferCollectionConstraints.image_format_constraints[0].pixel_format,
+               .coded_width = 1920,
+               .coded_height = 1080,
+               .bytes_per_row = 1920,
+           },
+           {
+               .pixel_format =
+                   kBufferCollectionConstraints.image_format_constraints[0].pixel_format,
+               .coded_width = 1280,
+               .coded_height = 720,
+               .bytes_per_row = 1920,
+           },
+           {
+               .pixel_format =
+                   kBufferCollectionConstraints.image_format_constraints[0].pixel_format,
+               .coded_width = 1024,
+               .coded_height = 576,
+               .bytes_per_row = 1920,
+           }}});
   fuchsia::camera2::hal::Config config2;
   config2.stream_configs.push_back(
       {.frame_rate =

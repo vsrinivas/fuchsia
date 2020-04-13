@@ -6,6 +6,7 @@
 #define SRC_CAMERA_BIN_DEVICE_STREAM_IMPL_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
+#include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
@@ -26,8 +27,10 @@ class StreamImpl {
  public:
   using StreamRequestedCallback = fit::function<void(
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
-      fidl::InterfaceRequest<fuchsia::camera2::Stream>, fit::function<void(uint32_t)>)>;
-  StreamImpl(fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
+      fidl::InterfaceRequest<fuchsia::camera2::Stream>, fit::function<void(uint32_t)>, uint32_t)>;
+  StreamImpl(const fuchsia::camera3::StreamProperties& properties,
+             const fuchsia::camera2::hal::StreamConfig& legacy_config,
+             fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
              StreamRequestedCallback on_stream_requested, fit::closure on_no_clients);
   ~StreamImpl();
 
@@ -52,6 +55,9 @@ class StreamImpl {
   // Sends pending frames to waiting recipients.
   void SendFrames();
 
+  // Posts a task from the client with the given id to change the resolution of the stream.
+  void PostSetResolution(uint32_t id, fuchsia::math::Size coded_size);
+
   // Represents a single client connection to the StreamImpl class.
   class Client : public fuchsia::camera3::Stream {
    public:
@@ -62,9 +68,15 @@ class StreamImpl {
     // Posts a task to transfer ownership of the given frame to this client.
     void PostSendFrame(fuchsia::camera3::FrameInfo frame);
 
+    // Posts a task to close the client connection with the given epitaph.
+    void PostCloseConnection(zx_status_t epitaph);
+
     // Posts a task to add the given token to the client's token queue.
     void PostReceiveBufferCollection(
         fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
+
+    // Posts a task to update the client's resolution.
+    void PostReceiveResolution(fuchsia::math::Size coded_size);
 
     // Returns a mutable reference to this client's state as a participant in buffer renegotiation.
     // This state must be managed by the parent stream's thread, not the client thread.
@@ -95,12 +107,18 @@ class StreamImpl {
     fidl::Binding<fuchsia::camera3::Stream> binding_;
     camera::HangingGetHelper<fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>>
         buffers_;
+    camera::HangingGetHelper<fuchsia::math::Size,
+                             fit::function<bool(fuchsia::math::Size, fuchsia::math::Size)>>
+        resolution_;
     GetNextFrameCallback frame_callback_;
     bool participant_;
   };
 
   async::Loop loop_;
+  const fuchsia::camera3::StreamProperties& properties_;
+  const fuchsia::camera2::hal::StreamConfig& legacy_config_;
   fuchsia::camera2::StreamPtr legacy_stream_;
+  uint32_t legacy_stream_format_index_ = 0;
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
   StreamRequestedCallback on_stream_requested_;

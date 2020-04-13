@@ -17,9 +17,13 @@
 #include "src/camera/bin/device/util.h"
 #include "src/lib/syslog/cpp/logger.h"
 
-StreamImpl::StreamImpl(fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
+StreamImpl::StreamImpl(const fuchsia::camera3::StreamProperties& properties,
+                       const fuchsia::camera2::hal::StreamConfig& legacy_config,
+                       fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
                        StreamRequestedCallback on_stream_requested, fit::closure on_no_clients)
     : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      properties_(properties),
+      legacy_config_(legacy_config),
       on_stream_requested_(std::move(on_stream_requested)),
       on_no_clients_(std::move(on_no_clients)) {
   legacy_stream_.set_error_handler(fit::bind_member(this, &StreamImpl::OnLegacyStreamDisconnected));
@@ -138,7 +142,8 @@ void StreamImpl::PostSetBufferCollection(
       frame_waiters_.clear();
       on_stream_requested_(
           std::move(token), legacy_stream_.NewRequest(loop_.dispatcher()),
-          [this](uint32_t max_camping_buffers) { max_camping_buffers_ = max_camping_buffers; });
+          [this](uint32_t max_camping_buffers) { max_camping_buffers_ = max_camping_buffers; },
+          legacy_stream_format_index_);
       legacy_stream_->Start();
     });
   });
@@ -158,4 +163,68 @@ void StreamImpl::SendFrames() {
       frames_.pop();
     }
   }
+}
+
+static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) {
+  ZX_DEBUG_ASSERT(format.coded_width < std::numeric_limits<int32_t>::max());
+  ZX_DEBUG_ASSERT(format.coded_height < std::numeric_limits<int32_t>::max());
+  return {.width = static_cast<int32_t>(format.coded_width),
+          .height = static_cast<int32_t>(format.coded_height)};
+}
+
+void StreamImpl::PostSetResolution(uint32_t id, fuchsia::math::Size coded_size) {
+  zx_status_t status = async::PostTask(loop_.dispatcher(), [this, id, coded_size] {
+    auto it = clients_.find(id);
+    if (it == clients_.end()) {
+      FX_LOGS(ERROR) << "Client " << id << " not found.";
+      ZX_DEBUG_ASSERT(false);
+      return;
+    }
+    auto& client = it->second;
+
+    // Begin with the full resolution.
+    auto best_size = ConvertToSize(properties_.image_format);
+    if (coded_size.width > best_size.width || coded_size.height > best_size.height) {
+      client->PostCloseConnection(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    // Examine all supported resolutions, preferring those that cover the requested resolution but
+    // have fewer pixels, breaking ties by picking the one with a smaller width.
+    uint32_t best_index = 0;
+    for (uint32_t i = 0; i < legacy_config_.image_formats.size(); ++i) {
+      auto size = ConvertToSize(legacy_config_.image_formats[i]);
+      bool contains_request = size.width >= coded_size.width && size.height >= coded_size.height;
+      bool smaller_size = size.width * size.height < best_size.width * best_size.height;
+      bool equal_size = size.width * size.height == best_size.width * best_size.height;
+      bool smaller_width = size.width < best_size.width;
+      if (contains_request && (smaller_size || (equal_size && smaller_width))) {
+        best_size = size;
+        best_index = i;
+      }
+    }
+
+    // Save the selected image format, and set it on the stream if bound.
+    legacy_stream_format_index_ = best_index;
+    if (legacy_stream_) {
+      legacy_stream_->SetImageFormat(legacy_stream_format_index_, [this](zx_status_t status) {
+        if (status != ZX_OK) {
+          FX_PLOGS(ERROR, status) << "Unexpected response from driver.";
+          while (!clients_.empty()) {
+            auto it = clients_.begin();
+            it->second->PostCloseConnection(ZX_ERR_INTERNAL);
+            clients_.erase(it);
+          }
+          on_no_clients_();
+          return;
+        }
+      });
+    }
+
+    // Inform clients of the resolution change.
+    for (auto& [id, client] : clients_) {
+      client->PostReceiveResolution(best_size);
+    }
+  });
+  ZX_DEBUG_ASSERT(status == ZX_OK);
 }
