@@ -61,7 +61,13 @@ void main() {
               .webSocketDebuggerUrlsForHost('fuchsia.dev',
                   filters: {'type': 'page'}))
           .single;
+
+      const traceName = 'fuchsia-dev';
       final traceWebsocket = await performance.startChromeTrace(debuggerUrl);
+      final trace = performance.trace(
+          duration: Duration(seconds: 5),
+          traceName: traceName,
+          categories: 'kernel:sched,kernel:meta');
 
       WebDriver webdriver =
           (await webDriverConnector.webDriversForHost('fuchsia.dev')).single;
@@ -70,12 +76,30 @@ void main() {
       termsLink.click();
 
       await Future.delayed(Duration(seconds: 5));
-      final traceFile = await performance.stopChromeTrace(traceWebsocket,
-          traceName: 'fuchsia-dev');
 
-      final traceData = json.decode(await traceFile.readAsString());
-      expect(traceData, isList);
-      expect(traceData, isNotEmpty);
+      expect(await trace, isTrue);
+      final fuchsiaTraceFile = await performance.downloadTraceFile(traceName);
+      final chromeTraceFile = await performance.stopChromeTrace(traceWebsocket,
+          traceName: traceName);
+
+      final chromeTraceData = json.decode(await chromeTraceFile.readAsString());
+      expect(chromeTraceData, isList);
+      expect(chromeTraceData, isNotEmpty);
+
+      final mergedTraceFile = await performance.mergeTraces(
+          fuchsiaTrace: fuchsiaTraceFile,
+          chromeTrace: chromeTraceFile,
+          traceName: traceName);
+      final mergedTraceString = await mergedTraceFile.readAsString();
+      final mergedTraceData = json.decode(mergedTraceString);
+      expect(mergedTraceData, isMap);
+      expect(mergedTraceData, isNotEmpty);
+      expect(
+          mergedTraceString.contains('Compositor_Fuchsia') ||
+              mergedTraceString.contains('CrBrowserMain_Fuchsia') ||
+              mergedTraceString.contains('CrRendererMain_Fuchsia') ||
+              mergedTraceString.contains('VizCompositorThread_Fuchsia'),
+          isTrue);
     });
   }, timeout: Timeout(_timeout));
 }

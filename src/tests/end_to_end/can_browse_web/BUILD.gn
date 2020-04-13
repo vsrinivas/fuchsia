@@ -50,9 +50,5 @@ copy("runtime_deps") {
 group("test") {
   testonly = true
 
-  deps = []
-
-  if (is_linux) {
-    deps += [ ":can_browse_web_test($host_toolchain)" ]
-  }
+  deps = [ ":can_browse_web_test($host_toolchain)" ]
 }

@@ -47,6 +47,34 @@ String _traceNameToTargetPath(String traceName, String extension) {
   return '/tmp/$traceName-trace.$extension';
 }
 
+// Chromium tracing tools requires only one "Compositor", "CrBrowserMain",
+// "CrRendererMain" and "VizCompositorThread" appears in the tracing
+// json file, so we need to remove these names in the Fuchsia trace files
+// to avoid name collision.
+//
+// Note that this function mutates the value of argument |rootTraceObject|.
+Map<String, dynamic> _renameChromiumProcessesInFuchsiaTrace(
+    Map<String, dynamic> rootTraceObject) {
+  if (!rootTraceObject.containsKey('systemTraceEvents') ||
+      !rootTraceObject['systemTraceEvents'].containsKey('events')) {
+    return rootTraceObject;
+  }
+  final List<Map<String, dynamic>> events =
+      rootTraceObject['systemTraceEvents']['events'];
+  for (final Map<String, dynamic> event in events) {
+    if (event['ph'] == 't' && event.containsKey('name')) {
+      final String name = event['name'];
+      if (name == 'Compositor' ||
+          name == 'CrBrowserMain' ||
+          name == 'CrRendererMain' ||
+          name == 'VizCompositorThread') {
+        event['name'] = '${name}_Fuchsia';
+      }
+    }
+  }
+  return rootTraceObject;
+}
+
 final _log = Logger('Performance');
 
 class Performance {
@@ -222,7 +250,8 @@ class Performance {
       {@required File fuchsiaTrace,
       @required File chromeTrace,
       @required String traceName}) async {
-    final fuchsiaTraceData = json.decode(await fuchsiaTrace.readAsString());
+    final fuchsiaTraceData = _renameChromiumProcessesInFuchsiaTrace(
+        json.decode(await fuchsiaTrace.readAsString()));
     final chromeTraceData = json.decode(await chromeTrace.readAsString());
 
     final mergedTraceData = fuchsiaTraceData;
