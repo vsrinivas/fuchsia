@@ -119,12 +119,16 @@ class FifoHolder {
           // register waiter when rx fifo is hit
           fifo_data_wait_.set_object(rx_.get_handle());
           fifo_data_wait_.set_trigger(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED | ETH_SIGNAL_STATUS);
+          fifo_signal_wait_.set_object(rx_.get_handle());
+          fifo_signal_wait_.set_trigger(ETH_SIGNAL_STATUS | ZX_FIFO_PEER_CLOSED);
           WaitOnFifoData();
+          WaitOnFifoSignal();
           callback(ZX_OK);
         });
   }
 
   fzl::fifo<ZFifoEntry>& tx_fifo() { return tx_; }
+
   fzl::fifo<ZFifoEntry>& rx_fifo() { return rx_; }
 
   ZFifoEntry* GetTxBuffer() {
@@ -172,15 +176,31 @@ class FifoHolder {
     }
   }
 
+  void WaitOnFifoSignal() {
+    zx_status_t status = fifo_signal_wait_.Begin(dispatcher_);
+    if (status != ZX_OK) {
+      fprintf(stderr, "EthernetClient can't wait on fifo signal: %s\n",
+              zx_status_get_string(status));
+    }
+  }
+
+  void OnFifoSignal(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                    const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+      fprintf(stderr, "EthernetClient fifo signal watch failed: %s\n",
+              zx_status_get_string(status));
+      return;
+    }
+    if (link_signal_callback_ && (signal->observed & ETH_SIGNAL_STATUS)) {
+      link_signal_callback_();
+    }
+  }
+
   void OnRxData(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                 const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
       fprintf(stderr, "EthernetClient fifo rx failed: %s\n", zx_status_get_string(status));
       return;
-    }
-
-    if (link_signal_callback_ && (signal->observed & ETH_SIGNAL_STATUS)) {
-      link_signal_callback_();
     }
 
     if (signal->observed & ZX_FIFO_READABLE) {
@@ -221,7 +241,10 @@ class FifoHolder {
     peer_closed_callback_ = std::move(cb);
   }
 
-  void SetLinkSignalCallback(fit::closure cb) { link_signal_callback_ = std::move(cb); }
+  void WatchLinkSignal(fit::callback<void()> on_link_signal) {
+    link_signal_callback_ = std::move(on_link_signal);
+    WaitOnFifoSignal();
+  }
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -231,12 +254,13 @@ class FifoHolder {
   EthernetConfig buf_config_{};
   EthernetClient::DataCallback data_callback_;
   EthernetClient::PeerClosedCallback peer_closed_callback_;
-  fit::closure link_signal_callback_;
+  fit::callback<void()> link_signal_callback_;
   fzl::fifo<ZFifoEntry> tx_;
   fzl::fifo<ZFifoEntry> rx_;
   fbl::SinglyLinkedList<std::unique_ptr<LLFifoEntry>> tx_available_;
   fbl::SinglyLinkedList<std::unique_ptr<LLFifoEntry>> tx_pending_;
   async::WaitMethod<FifoHolder, &FifoHolder::OnRxData> fifo_data_wait_{this};
+  async::WaitMethod<FifoHolder, &FifoHolder::OnFifoSignal> fifo_signal_wait_{this};
 };
 
 static zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
@@ -308,18 +332,14 @@ void EthernetClient::Setup(const EthernetConfig& config,
       }
     });
 
-    fifos_->SetLinkSignalCallback([this]() {
-      device_->GetStatus([this](int32_t status) {
-        set_online((status & fuchsia::hardware::ethernet::DEVICE_STATUS_ONLINE) != 0);
-      });
-    });
-
     fifos_->Startup(this->device_,
                     [this, callback = std::move(callback)](zx_status_t status) mutable {
                       if (status != ZX_OK) {
                         callback(status);
                         return;
                       }
+
+                      WatchLinkSignal();
 
                       this->device_->Start(std::move(callback));
                     });
@@ -474,6 +494,15 @@ int EthernetClientFactory::OpenDir() {
   } else {
     return open(base_dir_.c_str(), O_RDONLY);
   }
+}
+
+void EthernetClient::WatchLinkSignal() {
+  fifos_->WatchLinkSignal([this]() {
+    device_->GetStatus([this](int32_t status) mutable {
+      set_online((status & fuchsia::hardware::ethernet::DEVICE_STATUS_ONLINE) != 0);
+      WatchLinkSignal();
+    });
+  });
 }
 
 }  // namespace netemul

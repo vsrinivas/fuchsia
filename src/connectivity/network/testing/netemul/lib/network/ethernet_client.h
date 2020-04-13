@@ -61,6 +61,7 @@ class EthernetClient {
 
  private:
   void set_online(bool online);
+  void WatchLinkSignal();
 
   async_dispatcher_t* dispatcher_;
   PeerClosedCallback peer_closed_callback_;
