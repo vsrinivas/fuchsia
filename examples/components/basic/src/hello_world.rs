@@ -5,3 +5,11 @@
 fn main() {
     println!("Hippo: Hello World!");
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn assert_0_is_0() {
+        assert_eq!(0, 0);
+    }
+}

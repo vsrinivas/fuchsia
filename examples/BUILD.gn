@@ -17,6 +17,7 @@ group("examples") {
     "rolldice",
     "speech",
     "//examples/components/basic:components_basic_example",
+    "//examples/components/basic:hello-world-tests",
     "//examples/components/routing:components_routing_example",
     "//examples/rust/staticlib:crust",
   ]

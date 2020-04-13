@@ -4,11 +4,13 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 
 rustc_binary("hello_world_bin") {
   source_root = "src/hello_world.rs"
   name = "hello_world"
   edition = "2018"
+  with_unit_tests = true
 }
 
 rustc_binary("ls_root_pkg_bin") {
@@ -98,6 +100,24 @@ package("components_basic_example") {
     {
       path = rebase_path("meta/lifecycle_full.cml")
       dest = "lifecycle_full.cm"
+    },
+  ]
+}
+
+test_package("hello-world-tests") {
+  deps = [
+    ":hello_world_bin_test",
+    "//src/sys/test_adapters/rust",
+  ]
+  v2_tests = [
+    {
+      name = "hello_world_bin_test"
+      environments = basic_envs
+    },
+  ]
+  binaries = [
+    {
+      name = "rust_test_adapter"
     },
   ]
 }

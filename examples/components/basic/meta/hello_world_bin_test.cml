@@ -1,0 +1,21 @@
+{
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: [ "/pkg/test/hello_world_bin_test" ],
+    },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}
