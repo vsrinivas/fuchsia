@@ -42,9 +42,6 @@ test("fs-transaction") {
     ]
     deps += [ "//zircon/public/lib/fake-device" ]
   }
-
-  # TODO(47873): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("fs-transaction-package") {

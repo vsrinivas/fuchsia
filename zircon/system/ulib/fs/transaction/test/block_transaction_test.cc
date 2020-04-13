@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <block-client/cpp/fake-device.h>
+#include <sanitizer/lsan_interface.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -147,7 +148,13 @@ TEST_F(TransactionHandlerCrashTest, RunRequestsMixedRequests) {
   std::vector<BufferedOperation> operations;
   operations.push_back({10, {OperationType::kRead, 11, 12, 13}});
   operations.push_back({20, {OperationType::kWrite, 24, 25, 26}});
-  ASSERT_DEATH(([this, operations]() { handler_->RunRequests(operations); }));
+  ASSERT_DEATH(([this, operations]() {
+#if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
+    // Disable LSAN, this thread is expected to leak by way of a crash.
+    __lsan::ScopedDisabler _;
+#endif
+    handler_->RunRequests(operations);
+  }));
 }
 
 }  // namespace
