@@ -16,7 +16,7 @@ use {
         lock::Mutex as AsyncMutex,
         stream::StreamExt,
     },
-    http_uri_ext::HttpUriExt,
+    http_uri_ext::HttpUriExt as _,
     hyper_rustls::HttpsConnector,
     std::sync::{Arc, Weak},
     tuf::{
@@ -125,8 +125,11 @@ where
                 Abortable::new(
                     AutoClient::from_updating_client_and_auto_url(
                         Arc::downgrade(&ret),
-                        http::Uri::extend_dir_with_path(config.mirror_url().to_owned(), "auto")
-                            // Guaranteed not to panic due to scheme invariant in MirrorConfig.
+                        config
+                            .mirror_url()
+                            .to_owned()
+                            .extend_dir_with_path("auto")
+                            // Safe because mirror_url has a scheme and "auto" is a valid path segment.
                             .unwrap()
                             .to_string(),
                         node,

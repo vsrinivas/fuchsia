@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use hex;
-
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -11,26 +9,23 @@ pub enum BlobIdParseError {
     #[error("cannot contain uppercase hex characters")]
     CannotContainUppercase,
 
-    #[error("invalid length, expected 32 hex bytes, got {}", _0)]
+    #[error("invalid length, expected 32 hex bytes, got {0}")]
     InvalidLength(usize),
 
-    #[error("{}", _0)]
-    FromHexError(hex::FromHexError),
-}
-
-impl From<hex::FromHexError> for BlobIdParseError {
-    fn from(err: hex::FromHexError) -> Self {
-        BlobIdParseError::FromHexError(err)
-    }
+    #[error("invalid hex: {0}")]
+    FromHexError(#[from] hex::FromHexError),
 }
 
 #[derive(Error, Debug)]
-pub enum MirrorConfigBuilderError {
-    #[error("URLs must have schemes")]
-    UrlMissingScheme,
+pub enum MirrorConfigError {
+    #[error("Mirror URLs must have schemes")]
+    MirrorUrlMissingScheme,
+
+    #[error("Blob mirror URLs must have schemes")]
+    BlobMirrorUrlMissingScheme,
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum RepositoryParseError {
     #[error("unsupported key type")]
     UnsupportedKeyType,
@@ -44,24 +39,21 @@ pub enum RepositoryParseError {
     #[error("missing required field subscribe")]
     SubscribeMissing,
 
-    #[error("invalid repository url: {}", _0)]
+    #[error("invalid repository url: {0}")]
     InvalidRepoUrl(fuchsia_url::pkg_url::ParseError),
 
-    #[error("invalid update package url: {}", _0)]
+    #[error("invalid update package url: {0}")]
     InvalidUpdatePackageUrl(fuchsia_url::pkg_url::ParseError),
 
-    #[error("invalid root version: {}", _0)]
+    #[error("invalid root version: {0}")]
     InvalidRootVersion(u32),
 
-    #[error("invalid root threshold: {}", _0)]
+    #[error("invalid root threshold: {0}")]
     InvalidRootThreshold(u32),
 
-    #[error("invalid uri")]
-    InvalidUri(),
-}
+    #[error("invalid uri: {0}")]
+    InvalidUri(#[from] http::uri::InvalidUri),
 
-impl From<http::uri::InvalidUri> for RepositoryParseError {
-    fn from(_err: http::uri::InvalidUri) -> Self {
-        RepositoryParseError::InvalidUri()
-    }
+    #[error("invalid config: {0}")]
+    MirrorConfig(#[from] MirrorConfigError),
 }

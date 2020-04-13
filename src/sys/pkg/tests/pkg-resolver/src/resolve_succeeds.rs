@@ -14,7 +14,7 @@ use {
     fuchsia_pkg_testing::{serve::handler, Package, PackageBuilder, RepositoryBuilder},
     fuchsia_zircon::Status,
     futures::{join, prelude::*},
-    http_uri_ext::HttpUriExt,
+    http_uri_ext::HttpUriExt as _,
     lib::{
         extra_blob_contents, make_pkg_with_extra_blobs, resolve_package, test_package_bin,
         test_package_cmx, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH,
@@ -98,9 +98,7 @@ async fn separate_blobs_url() {
     let mirror = MirrorConfigBuilder::new(mirror.mirror_url().to_owned())
         .unwrap()
         .subscribe(mirror.subscribe())
-        .blob_mirror_url(
-            http::Uri::extend_dir_with_path(mirror.mirror_url().to_owned(), "blobsbolb").unwrap(),
-        )
+        .blob_mirror_url(mirror.mirror_url().to_owned().extend_dir_with_path("blobsbolb").unwrap())
         .unwrap()
         .build();
     repo_config.insert_mirror(mirror).unwrap();

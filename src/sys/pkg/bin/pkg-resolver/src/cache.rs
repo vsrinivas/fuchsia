@@ -21,7 +21,7 @@ use {
         prelude::*,
         stream::FuturesUnordered,
     },
-    http_uri_ext::HttpUriExt,
+    http_uri_ext::HttpUriExt as _,
     hyper::{body::Payload, Body, Request, StatusCode},
     parking_lot::Mutex,
     pkgfs::install::BlobKind,
@@ -624,12 +624,6 @@ pub enum FetchError {
 
     #[error("blob url error: {0}")]
     BlobUrl(#[source] http_uri_ext::Error),
-}
-
-impl From<http_uri_ext::Error> for FetchError {
-    fn from(x: http_uri_ext::Error) -> Self {
-        FetchError::BlobUrl(x)
-    }
 }
 
 impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {

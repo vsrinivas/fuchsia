@@ -27,6 +27,8 @@ rustc_library("fidl-fuchsia-pkg-ext") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 test_package("fidl-fuchsia-pkg-ext-tests") {
