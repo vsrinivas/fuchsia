@@ -37,6 +37,7 @@ esac
 
 declare -x PATH=$PREBUILT_CMAKE_DIR/cmake/bin:$PATH
 export RUSTC=$PREBUILT_RUST_DIR/bin/rustc
+export CARGO=$PREBUILT_RUST_DIR/bin/cargo
 
 GNAW_BIN="${FUCHSIA_BUILD_DIR}/host-tools/gnaw"
 
@@ -53,6 +54,7 @@ fi
 (cd $FUCHSIA_DIR; $GNAW_BIN \
    --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
    --project-root $FUCHSIA_DIR \
+   --cargo $CARGO \
   -o $FUCHSIA_DIR/third_party/rust_crates/BUILD.gn \
   --gn-bin $PREBUILT_GN \
   --skip-root)
