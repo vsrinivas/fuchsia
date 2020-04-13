@@ -42,14 +42,16 @@ class MdnsTransceiver {
   // |MdnsAddresses::V4Multicast|.
   void SendMessage(DnsMessage* message, const ReplyAddress& reply_address);
 
+  // Returns the interface transceiver with address |address| if it exists,
+  // nullptr if not.
+  // TODO(fxbug.dev/49875): move this back to private after multi-network test
+  // is rewritten in Rust.
+  MdnsInterfaceTransceiver* GetInterfaceTransceiver(const inet::IpAddress& address);
+
   // Writes log messages describing lifetime traffic.
   void LogTraffic();
 
  private:
-  // Returns the interface transceiver with address |address| if it exists,
-  // nullptr if not.
-  MdnsInterfaceTransceiver* GetInterfaceTransceiver(const inet::IpAddress& address);
-
   // Handles |OnInterfaceChanged| events from |Netstack|.
   void InterfacesChanged(std::vector<fuchsia::netstack::NetInterface> interfaces);
 
