@@ -6,8 +6,6 @@ package golang
 
 import (
 	"testing"
-
-	fidlir "fidl/compiler/backend/types"
 )
 
 func TestIdentifierName(t *testing.T) {
@@ -20,7 +18,7 @@ func TestIdentifierName(t *testing.T) {
 		{"A/foo_bar", "a.FooBar"},
 	}
 	for _, ex := range cases {
-		actual := identifierName(fidlir.EncodedCompoundIdentifier(ex.fidlIdentifier))
+		actual := identifierName(ex.fidlIdentifier)
 		if actual != ex.goIdentifier {
 			t.Errorf("with %s: expected %s, got %s", ex.fidlIdentifier, ex.goIdentifier, actual)
 		}

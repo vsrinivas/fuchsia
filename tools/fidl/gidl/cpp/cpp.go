@@ -437,27 +437,16 @@ func typeName(decl gidlmixer.Declaration) string {
 	switch decl := decl.(type) {
 	case gidlmixer.PrimitiveDeclaration:
 		return primitiveTypeName(decl.Subtype())
+	case gidlmixer.NamedDeclaration:
+		if decl.IsNullable() {
+			return fmt.Sprintf("std::unique_ptr<%s>", declName(decl))
+		}
+		return declName(decl)
 	case *gidlmixer.StringDecl:
 		if decl.IsNullable() {
 			return "::fidl::StringPtr"
 		}
 		return "std::string"
-	case *gidlmixer.BitsDecl:
-		return identifierName(decl.Name)
-	case *gidlmixer.EnumDecl:
-		return identifierName(decl.Name)
-	case *gidlmixer.StructDecl:
-		if decl.IsNullable() {
-			return fmt.Sprintf("std::unique_ptr<%s>", identifierName(decl.Name))
-		}
-		return identifierName(decl.Name)
-	case *gidlmixer.TableDecl:
-		return identifierName(decl.Name)
-	case *gidlmixer.UnionDecl:
-		if decl.IsNullable() {
-			return fmt.Sprintf("std::unique_ptr<%s>", identifierName(decl.Name))
-		}
-		return identifierName(decl.Name)
 	case *gidlmixer.ArrayDecl:
 		return fmt.Sprintf("std::array<%s, %d>", typeName(decl.Elem()), decl.Size())
 	case *gidlmixer.VectorDecl:
@@ -470,8 +459,8 @@ func typeName(decl gidlmixer.Declaration) string {
 	}
 }
 
-func identifierName(eci fidlir.EncodedCompoundIdentifier) string {
-	parts := strings.Split(string(eci), "/")
+func declName(decl gidlmixer.NamedDeclaration) string {
+	parts := strings.Split(decl.Name(), "/")
 	return strings.Join(parts, "::")
 }
 

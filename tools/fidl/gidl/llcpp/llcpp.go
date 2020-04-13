@@ -452,19 +452,13 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 		return primitiveTypeName(decl.Subtype())
 	case *gidlmixer.StringDecl:
 		return "fidl::StringView"
-	case *gidlmixer.BitsDecl:
-		return identifierName(decl.Name)
-	case *gidlmixer.EnumDecl:
-		return identifierName(decl.Name)
 	case *gidlmixer.StructDecl:
 		if !ignoreNullable && decl.IsNullable() {
-			return fmt.Sprintf("fidl::tracking_ptr<%s>", identifierName(decl.Name))
+			return fmt.Sprintf("fidl::tracking_ptr<%s>", declName(decl))
 		}
-		return identifierName(decl.Name)
-	case *gidlmixer.TableDecl:
-		return identifierName(decl.Name)
-	case *gidlmixer.UnionDecl:
-		return identifierName(decl.Name)
+		return declName(decl)
+	case gidlmixer.NamedDeclaration:
+		return declName(decl)
 	case *gidlmixer.ArrayDecl:
 		return fmt.Sprintf("fidl::Array<%s, %d>", typeName(decl.Elem()), decl.Size())
 	case *gidlmixer.VectorDecl:
@@ -482,8 +476,8 @@ func typeNameIgnoreNullable(decl gidlmixer.Declaration) string {
 	return typeNameImpl(decl, true)
 }
 
-func identifierName(eci fidlir.EncodedCompoundIdentifier) string {
-	parts := strings.Split(string(eci), "/")
+func declName(decl gidlmixer.NamedDeclaration) string {
+	parts := strings.Split(decl.Name(), "/")
 	if parts[0] == "conformance" {
 		parts = append([]string{"llcpp"}, parts...)
 	}

@@ -257,8 +257,8 @@ func decoderName(wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("Decoders.%s", wireFormat)
 }
 
-func typeName(decl *gidlmixer.StructDecl) string {
-	parts := strings.Split(string(decl.Name), "/")
+func typeName(decl gidlmixer.NamedDeclaration) string {
+	parts := strings.Split(decl.Name(), "/")
 	lastPart := parts[len(parts)-1]
 	return dartTypeName(lastPart)
 }

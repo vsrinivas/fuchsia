@@ -142,7 +142,7 @@ func goDecodeBenchmarks(gidlDecodeBenchmarks []gidlir.DecodeBenchmark, schema gi
 			Name:           goBenchmarkName(decodeBenchmark.Name),
 			ChromeperfPath: decodeBenchmark.Name,
 			Value:          value,
-			ValueType:      identifierName(decl.Name),
+			ValueType:      declName(decl),
 		})
 	}
 	return goDecodeBenchmarks, nil

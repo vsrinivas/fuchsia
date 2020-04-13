@@ -42,9 +42,11 @@ var testSchema = func() Schema {
 // checkStruct is a helper function to test the Declaration for a struct.
 func checkStruct(t *testing.T, decl *StructDecl, expectedName string, expectedNullable bool) {
 	t.Helper()
-	name := decl.Name.Parts()
-	if name.Name != fidlir.Identifier(expectedName) {
-		t.Errorf("expected name to be %s, got %s\n\ndecl: %#v", expectedName, name.Name, decl)
+	qualifiedName := decl.Name()
+	expectedQualifiedName := fmt.Sprintf("test.mixer/%s", expectedName)
+	if qualifiedName != expectedQualifiedName {
+		t.Errorf("expected name to be %s, got %s\n\ndecl: %#v",
+			expectedQualifiedName, qualifiedName, decl)
 	}
 	if decl.nullable != expectedNullable {
 		t.Errorf("expected nullable to be %v, got %v\n\ndecl: %#v",

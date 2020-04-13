@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	fidlcommon "fidl/compiler/backend/common"
-	fidlir "fidl/compiler/backend/types"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
 )
@@ -64,9 +63,9 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 	var fields []string
 	if decl, ok := decl.(*gidlmixer.UnionDecl); ok && len(value.Fields) >= 1 {
-		parts := strings.Split(string(decl.Name), "/")
+		parts := strings.Split(string(decl.Name()), "/")
 		unqualifiedName := fidlcommon.ToLowerCamelCase(parts[len(parts)-1])
-		fullName := identifierName(decl.Name)
+		fullName := declName(decl)
 		fieldName := fidlcommon.ToUpperCamelCase(value.Fields[0].Key.Name)
 		fields = append(fields,
 			fmt.Sprintf("I_%sTag: %s%s", unqualifiedName, fullName, fieldName))
@@ -123,18 +122,10 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 	switch decl := decl.(type) {
 	case gidlmixer.PrimitiveDeclaration:
 		return string(decl.Subtype())
+	case gidlmixer.NamedDeclaration:
+		return pointerPrefix + declName(decl)
 	case *gidlmixer.StringDecl:
 		return pointerPrefix + "string"
-	case *gidlmixer.BitsDecl:
-		return identifierName(decl.Name)
-	case *gidlmixer.EnumDecl:
-		return identifierName(decl.Name)
-	case *gidlmixer.StructDecl:
-		return pointerPrefix + identifierName(decl.Name)
-	case *gidlmixer.TableDecl:
-		return pointerPrefix + identifierName(decl.Name)
-	case *gidlmixer.UnionDecl:
-		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.ArrayDecl:
 		return fmt.Sprintf("[%d]%s", decl.Size(), typeName(decl.Elem()))
 	case *gidlmixer.VectorDecl:
@@ -144,11 +135,15 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 	}
 }
 
+func declName(decl gidlmixer.NamedDeclaration) string {
+	return identifierName(decl.Name())
+}
+
 // TODO(fxb/39407): Such utilities (and their accompanying tests) would be
 // useful as part of fidlcommon or fidlir to do FIDL-to-<target_lang>
 // conversion.
-func identifierName(eci fidlir.EncodedCompoundIdentifier) string {
-	parts := strings.Split(string(eci), "/")
+func identifierName(qualifiedName string) string {
+	parts := strings.Split(qualifiedName, "/")
 	lastPartsIndex := len(parts) - 1
 	for i, part := range parts {
 		if i == lastPartsIndex {

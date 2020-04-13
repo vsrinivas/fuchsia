@@ -275,10 +275,10 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			return fmt.Sprintf("%v%s", value, suffix)
 		case *gidlmixer.BitsDecl:
 			primitive := visit(value, &decl.Underlying)
-			return fmt.Sprintf("%s::from_bits(%v).unwrap()", identifierName(decl.Name), primitive)
+			return fmt.Sprintf("%s::from_bits(%v).unwrap()", declName(decl), primitive)
 		case *gidlmixer.EnumDecl:
 			primitive := visit(value, &decl.Underlying)
-			return fmt.Sprintf("%s::from_primitive(%v).unwrap()", identifierName(decl.Name), primitive)
+			return fmt.Sprintf("%s::from_primitive(%v).unwrap()", declName(decl), primitive)
 		}
 	case string:
 		// TODO(fxb/39686) Consider Go/Rust escape sequence differences
@@ -308,8 +308,8 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 	panic(fmt.Sprintf("not implemented: %T", value))
 }
 
-func identifierName(eci fidlir.EncodedCompoundIdentifier) string {
-	parts := strings.Split(string(eci), "/")
+func declName(decl gidlmixer.NamedDeclaration) string {
+	parts := strings.Split(decl.Name(), "/")
 	return rustType(parts[len(parts)-1])
 }
 
@@ -377,12 +377,8 @@ func onStruct(value gidlir.Record, decl *gidlmixer.StructDecl) string {
 		fieldValueStr := visit(field.Value, fieldDecl)
 		structFields = append(structFields, fmt.Sprintf("%s: %s", fieldName, fieldValueStr))
 	}
-	for _, member := range decl.Members {
-		key := string(member.Name)
+	for _, key := range decl.FieldNames() {
 		if _, ok := providedKeys[key]; !ok {
-			if !member.Type.Nullable {
-				panic(fmt.Sprintf("omitted field %s of struct %s is not nullable", member.Name, value.Name))
-			}
 			fieldName := fidlcommon.ToSnakeCase(key)
 			structFields = append(structFields, fmt.Sprintf("%s: None", fieldName))
 		}
@@ -408,8 +404,7 @@ func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 		fieldValueStr := visit(field.Value, fieldDecl)
 		tableFields = append(tableFields, fmt.Sprintf("%s: Some(%s)", fieldName, fieldValueStr))
 	}
-	for _, member := range decl.SortedMembersNoReserved() {
-		key := string(member.Name)
+	for _, key := range decl.FieldNames() {
 		if _, ok := providedKeys[key]; !ok {
 			fieldName := fidlcommon.ToSnakeCase(key)
 			tableFields = append(tableFields, fmt.Sprintf("%s: None", fieldName))

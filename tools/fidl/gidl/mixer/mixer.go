@@ -125,6 +125,7 @@ var _ = []Declaration{
 
 type PrimitiveDeclaration interface {
 	Declaration
+
 	// Subtype returns the primitive subtype (bool, uint32, float64, etc.).
 	Subtype() fidlir.PrimitiveSubtype
 }
@@ -136,8 +137,30 @@ var _ = []PrimitiveDeclaration{
 	&FloatDecl{},
 }
 
+type NamedDeclaration interface {
+	Declaration
+
+	// Name returns the fully qualified name of this declaration, e.g.
+	// "the.library.name/TheTypeName".
+	// TODO(fxb/39407): Return common.DeclName.
+	Name() string
+}
+
+// Assert that wrappers conform to the NamedDeclaration interface.
+var _ = []NamedDeclaration{
+	&BitsDecl{},
+	&EnumDecl{},
+	&StructDecl{},
+	&TableDecl{},
+	&UnionDecl{},
+}
+
 type RecordDeclaration interface {
 	Declaration
+
+	// AllFields returns the names of all fields in the type.
+	FieldNames() []string
+
 	// Field returns the declaration for the field with the given name. It
 	// returns false if no field with that name exists.
 	Field(name string) (Declaration, bool)
@@ -152,6 +175,7 @@ var _ = []RecordDeclaration{
 
 type ListDeclaration interface {
 	Declaration
+
 	// Elem returns the declaration for the list's element type.
 	Elem() Declaration
 }
@@ -278,8 +302,12 @@ func (decl *StringDecl) conforms(value interface{}) error {
 
 type BitsDecl struct {
 	NeverNullable
-	fidlir.Bits
 	Underlying IntegerDecl
+	bitsDecl   fidlir.Bits
+}
+
+func (decl *BitsDecl) Name() string {
+	return string(decl.bitsDecl.Name)
 }
 
 func (decl *BitsDecl) conforms(value interface{}) error {
@@ -289,8 +317,12 @@ func (decl *BitsDecl) conforms(value interface{}) error {
 
 type EnumDecl struct {
 	NeverNullable
-	fidlir.Enum
 	Underlying IntegerDecl
+	enumDecl   fidlir.Enum
+}
+
+func (decl *EnumDecl) Name() string {
+	return string(decl.enumDecl.Name)
 }
 
 func (decl *EnumDecl) conforms(value interface{}) error {
@@ -300,17 +332,29 @@ func (decl *EnumDecl) conforms(value interface{}) error {
 
 // StructDecl describes a struct declaration.
 type StructDecl struct {
-	fidlir.Struct
-	nullable bool
-	schema   Schema
+	structDecl fidlir.Struct
+	nullable   bool
+	schema     Schema
 }
 
 func (decl *StructDecl) IsNullable() bool {
 	return decl.nullable
 }
 
+func (decl *StructDecl) Name() string {
+	return string(decl.structDecl.Name)
+}
+
+func (decl *StructDecl) FieldNames() []string {
+	var names []string
+	for _, member := range decl.structDecl.Members {
+		names = append(names, string(member.Name))
+	}
+	return names
+}
+
 func (decl *StructDecl) Field(name string) (Declaration, bool) {
-	for _, member := range decl.Members {
+	for _, member := range decl.structDecl.Members {
 		if string(member.Name) == name {
 			return decl.schema.lookupDeclByType(member.Type)
 		}
@@ -322,36 +366,48 @@ func (decl *StructDecl) Field(name string) (Declaration, bool) {
 // types that expect a gidlir.Record value. It takes the kind ("struct", etc.),
 // expected identifier, schema, and nullability, and returns the record or an
 // error. It can also return (nil, nil) when value is nil and nullable is true.
-func recordConforms(value interface{}, kind string, identifier fidlir.EncodedCompoundIdentifier, schema Schema, nullable bool) (*gidlir.Record, error) {
+func recordConforms(value interface{}, kind string, decl NamedDeclaration, schema Schema) (*gidlir.Record, error) {
 	switch value := value.(type) {
 	default:
 		return nil, fmt.Errorf("expecting %s, found %T (%v)", kind, value, value)
 	case gidlir.Record:
-		if actualIdentifier := schema.nameToIdentifier(value.Name); actualIdentifier != identifier {
-			return nil, fmt.Errorf("expecting %s %s, found %s", kind, identifier, actualIdentifier)
+		if name := schema.qualifyName(value.Name); name != decl.Name() {
+			return nil, fmt.Errorf("expecting %s %s, found %s", kind, decl.Name(), name)
 		}
 		return &value, nil
 	case nil:
-		if nullable {
+		if decl.IsNullable() {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("expecting non-null %s %s, found nil", kind, identifier)
+		return nil, fmt.Errorf("expecting non-null %s %s, found nil", kind, decl.Name())
 	}
 }
 
 func (decl *StructDecl) conforms(value interface{}) error {
-	record, err := recordConforms(value, "struct", decl.Name, decl.schema, decl.nullable)
+	record, err := recordConforms(value, "struct", decl, decl.schema)
 	if err != nil {
 		return err
 	}
 	if record == nil {
 		return nil
 	}
+	provided := make(map[string]struct{}, len(record.Fields))
 	for _, field := range record.Fields {
+		if field.Key.IsUnknown() {
+			return fmt.Errorf("field %d: ordinal keys are invalid in structs", field.Key.UnknownOrdinal)
+		}
 		if fieldDecl, ok := decl.Field(field.Key.Name); !ok {
 			return fmt.Errorf("field %s: unknown", field.Key.Name)
 		} else if err := fieldDecl.conforms(field.Value); err != nil {
 			return fmt.Errorf("field %s: %s", field.Key.Name, err)
+		}
+		provided[field.Key.Name] = struct{}{}
+	}
+	for _, member := range decl.structDecl.Members {
+		// TODO(fxb/49939) Allow omitted non-nullable fields that have defaults.
+		if _, ok := provided[string(member.Name)]; !ok && !member.Type.Nullable {
+			panic(fmt.Sprintf("missing non-nullable field %s in struct %s",
+				member.Name, decl.Name()))
 		}
 	}
 	return nil
@@ -360,12 +416,26 @@ func (decl *StructDecl) conforms(value interface{}) error {
 // TableDecl describes a table declaration.
 type TableDecl struct {
 	NeverNullable
-	fidlir.Table
-	schema Schema
+	tableDecl fidlir.Table
+	schema    Schema
+}
+
+func (decl *TableDecl) Name() string {
+	return string(decl.tableDecl.Name)
+}
+
+func (decl *TableDecl) FieldNames() []string {
+	var names []string
+	for _, member := range decl.tableDecl.Members {
+		if !member.Reserved {
+			names = append(names, string(member.Name))
+		}
+	}
+	return names
 }
 
 func (decl *TableDecl) Field(name string) (Declaration, bool) {
-	for _, member := range decl.Members {
+	for _, member := range decl.tableDecl.Members {
 		if string(member.Name) == name {
 			return decl.schema.lookupDeclByType(member.Type)
 		}
@@ -374,7 +444,7 @@ func (decl *TableDecl) Field(name string) (Declaration, bool) {
 }
 
 func (decl *TableDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
-	for _, member := range decl.Members {
+	for _, member := range decl.tableDecl.Members {
 		if uint64(member.Ordinal) == ordinal {
 			return decl.schema.lookupDeclByType(member.Type)
 		}
@@ -383,7 +453,7 @@ func (decl *TableDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
 }
 
 func (decl *TableDecl) conforms(value interface{}) error {
-	record, err := recordConforms(value, "table", decl.Name, decl.schema, false)
+	record, err := recordConforms(value, "table", decl, decl.schema)
 	if err != nil {
 		return err
 	}
@@ -408,17 +478,29 @@ func (decl *TableDecl) conforms(value interface{}) error {
 
 // UnionDecl describes a union declaration.
 type UnionDecl struct {
-	fidlir.Union
-	nullable bool
-	schema   Schema
+	unionDecl fidlir.Union
+	nullable  bool
+	schema    Schema
 }
 
 func (decl *UnionDecl) IsNullable() bool {
 	return decl.nullable
 }
 
+func (decl *UnionDecl) Name() string {
+	return string(decl.unionDecl.Name)
+}
+
+func (decl *UnionDecl) FieldNames() []string {
+	var names []string
+	for _, member := range decl.unionDecl.Members {
+		names = append(names, string(member.Name))
+	}
+	return names
+}
+
 func (decl *UnionDecl) Field(name string) (Declaration, bool) {
-	for _, member := range decl.Members {
+	for _, member := range decl.unionDecl.Members {
 		if string(member.Name) == name {
 			return decl.schema.lookupDeclByType(member.Type)
 		}
@@ -427,7 +509,7 @@ func (decl *UnionDecl) Field(name string) (Declaration, bool) {
 }
 
 func (decl *UnionDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
-	for _, member := range decl.Members {
+	for _, member := range decl.unionDecl.Members {
 		if uint64(member.Ordinal) == ordinal {
 			return decl.schema.lookupDeclByType(member.Type)
 		}
@@ -436,7 +518,7 @@ func (decl *UnionDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
 }
 
 func (decl *UnionDecl) conforms(value interface{}) error {
-	record, err := recordConforms(value, "union", decl.Name, decl.schema, decl.nullable)
+	record, err := recordConforms(value, "union", decl, decl.schema)
 	if err != nil {
 		return err
 	}
@@ -552,40 +634,43 @@ func (decl *VectorDecl) conforms(untypedValue interface{}) error {
 // Schema is the GIDL-level concept of a FIDL library. It provides functions to
 // lookup types and return the corresponding Declaration.
 type Schema struct {
-	library fidlir.EncodedLibraryIdentifier
-	// Maps identifiers to *fidlir.Struct, *fidlir.Table, or *fidlir.Union.
-	types map[fidlir.EncodedCompoundIdentifier]interface{}
+	// TODO(fxb/39407): Use common.LibraryName.
+	libraryName string
+	// Maps fully qualified type names to fidlir data structures:
+	// *fidlir.Struct, *fidlir.Table, or *fidlir.Union.
+	// TODO(fxb/39407): Use common.DeclName.
+	types map[string]interface{}
 }
 
 // BuildSchema builds a Schema from a FIDL library.
 // Note: The returned schema contains pointers into fidl.
 func BuildSchema(fidl fidlir.Root) Schema {
 	total := len(fidl.Bits) + len(fidl.Enums) + len(fidl.Structs) + len(fidl.Tables) + len(fidl.Unions)
-	types := make(map[fidlir.EncodedCompoundIdentifier]interface{}, total)
+	types := make(map[string]interface{}, total)
 	// These loops must use fidl.Structs[i], fidl.Tables[i], etc. rather than
 	// iterating `for i, decl := ...` and using &decl, because that would store
 	// the same local variable address in every entry.
 	for i := range fidl.Bits {
 		decl := &fidl.Bits[i]
-		types[decl.Name] = decl
+		types[string(decl.Name)] = decl
 	}
 	for i := range fidl.Enums {
 		decl := &fidl.Enums[i]
-		types[decl.Name] = decl
+		types[string(decl.Name)] = decl
 	}
 	for i := range fidl.Structs {
 		decl := &fidl.Structs[i]
-		types[decl.Name] = decl
+		types[string(decl.Name)] = decl
 	}
 	for i := range fidl.Tables {
 		decl := &fidl.Tables[i]
-		types[decl.Name] = decl
+		types[string(decl.Name)] = decl
 	}
 	for i := range fidl.Unions {
 		decl := &fidl.Unions[i]
-		types[decl.Name] = decl
+		types[string(decl.Name)] = decl
 	}
-	return Schema{library: fidl.Name, types: types}
+	return Schema{libraryName: string(fidl.Name), types: types}
 }
 
 // ExtractDeclaration extract the top-level declaration for the provided value,
@@ -614,63 +699,67 @@ func (s Schema) ExtractDeclarationUnsafe(value interface{}) (*StructDecl, error)
 }
 
 // ExtractDeclarationByName extracts the top-level declaration for the given
-// type name. This is used in cases where only the type name is provided in the
-// test (e.g. decoding-only tests).
-func (s Schema) ExtractDeclarationByName(name string) (*StructDecl, error) {
-	decl, ok := s.lookupDeclByName(name, false)
+// unqualified type name. This is used in cases where only the type name is
+// provided in the test (e.g. decoding-only tests).
+func (s Schema) ExtractDeclarationByName(unqualifiedName string) (*StructDecl, error) {
+	decl, ok := s.lookupDeclByName(unqualifiedName, false)
 	if !ok {
-		return nil, fmt.Errorf("unknown declaration %s", name)
+		return nil, fmt.Errorf("unknown declaration %s", unqualifiedName)
 	}
 	structDecl, ok := decl.(*StructDecl)
 	if !ok {
-		return nil, fmt.Errorf("top-level message must be a struct; got %s (%T)", name, decl)
+		return nil, fmt.Errorf("top-level message must be a struct; got %s (%T)",
+			unqualifiedName, decl)
 	}
+
 	return structDecl, nil
 }
 
-func (s Schema) lookupDeclByName(name string, nullable bool) (Declaration, bool) {
-	return s.lookupDeclByIdentifier(s.nameToIdentifier(name), nullable)
+func (s Schema) lookupDeclByName(unqualifiedName string, nullable bool) (Declaration, bool) {
+	return s.lookupDeclByQualifiedName(s.qualifyName(unqualifiedName), nullable)
 }
 
-func (s Schema) nameToIdentifier(name string) fidlir.EncodedCompoundIdentifier {
-	return fidlir.EncodedCompoundIdentifier(fmt.Sprintf("%s/%s", s.library, name))
+// TODO(fxb/39407): Take common.MemberName, return common.DeclName.
+func (s Schema) qualifyName(unqualifiedName string) string {
+	return fmt.Sprintf("%s/%s", s.libraryName, unqualifiedName)
 }
 
-func (s Schema) lookupDeclByIdentifier(eci fidlir.EncodedCompoundIdentifier, nullable bool) (Declaration, bool) {
-	typ, ok := s.types[eci]
+// TODO(fxb/39407): Take common.DeclName.
+func (s Schema) lookupDeclByQualifiedName(name string, nullable bool) (Declaration, bool) {
+	typ, ok := s.types[name]
 	if !ok {
 		return nil, false
 	}
 	switch typ := typ.(type) {
 	case *fidlir.Bits:
 		return &BitsDecl{
-			Bits:       *typ,
+			bitsDecl:   *typ,
 			Underlying: *lookupDeclByPrimitive(typ.Type.PrimitiveSubtype).(*IntegerDecl),
 		}, true
 	case *fidlir.Enum:
 		return &EnumDecl{
-			Enum:       *typ,
+			enumDecl:   *typ,
 			Underlying: *lookupDeclByPrimitive(typ.Type).(*IntegerDecl),
 		}, true
 	case *fidlir.Struct:
 		return &StructDecl{
-			Struct:   *typ,
-			nullable: nullable,
-			schema:   s,
+			structDecl: *typ,
+			nullable:   nullable,
+			schema:     s,
 		}, true
 	case *fidlir.Table:
 		if nullable {
 			panic(fmt.Sprintf("nullable table %s is not allowed", typ.Name))
 		}
 		return &TableDecl{
-			Table:  *typ,
-			schema: s,
+			tableDecl: *typ,
+			schema:    s,
 		}, true
 	case *fidlir.Union:
 		return &UnionDecl{
-			Union:    *typ,
-			nullable: nullable,
-			schema:   s,
+			unionDecl: *typ,
+			nullable:  nullable,
+			schema:    s,
 		}, true
 	}
 	return nil, false
@@ -716,7 +805,7 @@ func (s Schema) lookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 	case fidlir.PrimitiveType:
 		return lookupDeclByPrimitive(typ.PrimitiveSubtype), true
 	case fidlir.IdentifierType:
-		return s.lookupDeclByIdentifier(typ.Identifier, typ.Nullable)
+		return s.lookupDeclByQualifiedName(string(typ.Identifier), typ.Nullable)
 	case fidlir.ArrayType:
 		return &ArrayDecl{schema: s, typ: typ}, true
 	case fidlir.VectorType:
