@@ -1,0 +1,230 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+
+###############################################################################
+# PACKAGES
+###############################################################################
+package("feedback_agent") {
+  binaries = [
+    {
+      name = "feedback_agent"
+    },
+    {
+      name = "system_log_recorder"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/feedback_agent.cmx"
+      dest = "feedback_agent.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = "config.json"
+      dest = "config.json"
+    },
+  ]
+
+  deps = [
+    ":main",
+    "//src/developer/feedback/feedback_agent/system_log_recorder",
+  ]
+}
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("main") {
+  output_name = "feedback_agent"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":feedback_agent_src",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("config") {
+  sources = [
+    "config.cc",
+    "config.h",
+  ]
+
+  public_deps = [
+    "//src/developer/feedback/feedback_agent/annotations:aliases",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//src/lib/files",
+    "//src/lib/syslog/cpp",
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("constants") {
+  sources = [ "constants.h" ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
+
+  visibility = [ "//src/developer/feedback/feedback_agent/*" ]
+}
+
+source_set("data_provider") {
+  public = [ "data_provider.h" ]
+
+  sources = [
+    "data_provider.cc",
+    "data_provider.h",
+    "image_conversion.cc",
+    "image_conversion.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/utils:cobalt",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    ":constants",
+    ":datastore",
+    "//garnet/public/lib/fostr/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/developer/feedback/feedback_agent/annotations:aliases",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
+    "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
+    "//src/developer/feedback/feedback_agent/attachments:util",
+    "//src/developer/feedback/utils:archive",
+    "//src/developer/feedback/utils/fit",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//third_party/libpng",
+    "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
+source_set("datastore") {
+  sources = [
+    "datastore.cc",
+    "datastore.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/feedback_agent/annotations:aliases",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
+    "//src/developer/feedback/utils:cobalt",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    ":constants",
+    "//src/developer/feedback/feedback_agent/annotations:annotation_providers",
+    "//src/developer/feedback/feedback_agent/annotations:static_annotations",
+    "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
+    "//src/developer/feedback/feedback_agent/attachments:static_attachments",
+    "//src/developer/feedback/feedback_agent/attachments:util",
+    "//src/lib/syslog/cpp",
+  ]
+}
+
+source_set("data_register") {
+  sources = [
+    "data_register.cc",
+    "data_register.h",
+  ]
+
+  public_deps = [
+    ":constants",
+    ":datastore",
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/feedback/feedback_agent/annotations:aliases",
+    "//src/lib/fxl",
+  ]
+
+  deps = [ "//src/lib/syslog/cpp" ]
+}
+
+source_set("device_id_provider") {
+  sources = [
+    "device_id_provider.cc",
+    "device_id_provider.h",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
+
+  deps = [
+    ":constants",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//src/lib/uuid",
+  ]
+}
+
+source_set("feedback_agent_src") {
+  sources = [
+    "feedback_agent.cc",
+    "feedback_agent.h",
+  ]
+
+  public_deps = [
+    ":config",
+    ":data_provider",
+    ":data_register",
+    ":datastore",
+    ":device_id_provider",
+    ":inspect_manager",
+    "//src/developer/feedback/utils:cobalt",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+
+  deps = [
+    ":constants",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("inspect_manager") {
+  public = [ "inspect_manager.h" ]
+
+  sources = [
+    "inspect_manager.cc",
+    "inspect_manager.h",
+  ]
+
+  public_deps = [ "//src/developer/feedback/utils:inspect_node_manager" ]
+
+  deps = [ "//src/developer/feedback/utils:inspect_protocol_stats" ]
+}

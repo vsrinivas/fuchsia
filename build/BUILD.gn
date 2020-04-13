@@ -426,6 +426,8 @@ group("deprecated_package_underscore") {
     "//src/developer/feedback/crashpad_agent:crashpad_agent",
     "//src/developer/feedback/crashpad_agent:fake_crashpad_agent_invalid_override_config",
     "//src/developer/feedback/crashpad_agent:fake_crashpad_agent_valid_override_config",
+    "//src/developer/feedback/feedback_agent/tests:feedback_agent_tests",
+    "//src/developer/feedback/feedback_agent:feedback_agent",
     "//src/developer/feedback/testing/fakes:fake_crash_reporter",
     "//src/developer/feedback/testing/fakes:fake_data_provider",
     "//src/developer/feedback/utils/tests:feedback_utils_tests",

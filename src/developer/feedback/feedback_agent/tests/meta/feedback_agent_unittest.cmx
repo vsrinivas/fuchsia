@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/feedback_agent_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "build-info",
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
