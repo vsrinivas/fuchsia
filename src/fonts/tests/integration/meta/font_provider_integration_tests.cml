@@ -1,48 +1,52 @@
 {
-    "children": [
+    children: [
         {
-            "name": "font_resolver",
-            "url": "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/mock_font_resolver.cm",
+            name: "font_resolver",
+            url: "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/mock_font_resolver.cm",
         },
         {
-            "name": "driver",
-            "url": "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/test_driver.cm",
-        },
-    ],
-    "expose": [
-        {
-            "protocol": "/svc/fuchsia.test.Suite",
-            "from": "#driver",
+            name: "driver",
+            url: "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/test_driver.cm",
         },
     ],
-    "offer": [
+    offer: [
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [ "#driver", "#font_resolver" ],
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#driver",
+                "#font_resolver",
+            ],
         },
         {
-            "protocol": "/svc/fuchsia.pkg.FontResolver",
-            "from": "#font_resolver",
-            "to": [ "#driver" ],
+            protocol: "/svc/fuchsia.pkg.FontResolver",
+            from: "#font_resolver",
+            to: [ "#driver" ],
         },
+
         // Some components run under test get fonts from /config/data.
         {
-            "directory": "/config/data",
-            "subdir": "fonts",
-            "from": "realm",
-            "to": [ "#driver" ],
-            "as": "/config/data",
+            directory: "/config/data",
+            from: "realm",
+            as: "/config/data",
+            to: [ "#driver" ],
+            subdir: "fonts",
         },
 
         // These "offer" statements are needed for the RustTestAdapter trampoline
         {
-            "protocol": [
-                "/svc/fuchsia.process.Launcher",
+            protocol: [
                 "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
             ],
-            "from": "realm",
-            "to": [ "#driver" ],
+            from: "realm",
+            to: [ "#driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "#driver",
         },
     ],
 }

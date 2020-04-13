@@ -7,15 +7,9 @@
         {
             directory: "/dev/class/input-report",
             from: "realm",
-            rights: [
-                "r*",
-            ],
+            rights: [ "r*" ],
         },
-        {
-            protocol: "/svc/fuchsia.ui.scenic.Scenic",
-        },
-        {
-            protocol: "/svc/fuchsia.logger.LogSink",
-        }
+        { protocol: "/svc/fuchsia.ui.scenic.Scenic" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
     ],
 }

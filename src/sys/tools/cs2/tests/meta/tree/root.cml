@@ -1,27 +1,27 @@
 // 'root' is the root component and has two children.
 // See README.md for the exact tree structure
 {
-    "children": [
+    children: [
         {
-            "name": "foo",
-            "url": "fuchsia-pkg://fuchsia.com/cs2_test#meta/foo.cm",
-            "startup": "eager",
+            name: "foo",
+            url: "fuchsia-pkg://fuchsia.com/cs2_test#meta/foo.cm",
+            startup: "eager",
         },
         {
-            "name": "bar",
-            "url": "fuchsia-pkg://fuchsia.com/cs2_test#meta/bar.cm",
-            "startup": "eager",
+            name: "bar",
+            url: "fuchsia-pkg://fuchsia.com/cs2_test#meta/bar.cm",
+            startup: "eager",
         },
     ],
-    "offer": [
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#foo",
+            runner: "elf",
+            from: "realm",
+            to: [
                 "#bar",
-            ]
+                "#foo",
+            ],
         },
-    ]
+    ],
 }

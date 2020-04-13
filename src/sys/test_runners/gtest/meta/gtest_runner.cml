@@ -1,36 +1,32 @@
 {
     program: {
-        binary: "bin/gtest_runner"
+        binary: "bin/gtest_runner",
     },
-    runners: [
-        {
-            name: "gtest_runner",
-            from: "self",
-            path: "/svc/fuchsia.component.runner.ComponentRunner"
-        }
-    ],
     use: [
-        {
-            runner: "elf"
-        },
-        {
-            storage: "data"
-        },
+        { runner: "elf" },
+        { storage: "data" },
         {
             protocol: [
-                "/svc/fuchsia.process.Launcher",
                 "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
             ],
         },
     ],
     expose: [
         {
             protocol: "/svc/fuchsia.component.runner.ComponentRunner",
-            from: "self"
+            from: "self",
         },
         {
             runner: "gtest_runner",
-            from: "self"
-        }
-    ]
+            from: "self",
+        },
+    ],
+    runners: [
+        {
+            name: "gtest_runner",
+            from: "self",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
 }

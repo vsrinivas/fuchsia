@@ -1,8 +1,8 @@
 {
-    "program": {
-        "args": [
+    program: {
+        args: [
             "--font-manifest",
-            "/pkg/data/testdata/ephemeral.font_manifest.json"
+            "/pkg/data/testdata/ephemeral.font_manifest.json",
         ],
     },
 }

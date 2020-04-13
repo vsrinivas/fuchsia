@@ -1,8 +1,8 @@
 {
-    "program": {
-        "args": [
+    program: {
+        args: [
             "--font-manifest",
-            "/config/data/test_fonts_large.font_manifest.json"
+            "/config/data/test_fonts_large.font_manifest.json",
         ],
     },
 }

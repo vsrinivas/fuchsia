@@ -1,19 +1,17 @@
 // Component manifest for the `echo_test_client`.
 // It connects to echo server and passes back test results.
 {
-    "program": {
-        "binary": "bin/echo_test_client",
+    program: {
+        binary: "bin/echo_test_client",
     },
-    "use": [
-        { "runner": "elf" },
-        {
-            "protocol": "/svc/fidl.examples.routing.echo.Echo",
-        },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fuchsia.test.Suite",
-            "from": "self",
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
         },
     ],
 }

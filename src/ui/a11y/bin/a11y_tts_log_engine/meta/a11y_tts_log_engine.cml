@@ -1,11 +1,9 @@
 {
     program: {
-        binary: "bin/a11y_tts_log_engine"
+        binary: "bin/a11y_tts_log_engine",
     },
     use: [
-        {
-            runner: "elf"
-        },
+        { runner: "elf" },
         {
             protocol: [
                 "/svc/fuchsia.accessibility.tts.EngineEngineRegistry",
@@ -15,4 +13,3 @@
         },
     ],
 }
-

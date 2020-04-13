@@ -1,112 +1,109 @@
 // This is a v2 component manifest.
 {
-  "program": {
-    "binary": "bin/example",
-    "lifecycle": {
-      "stop_event": "notify",
+    program: {
+        binary: "bin/example",
+        lifecycle: { stop_event: "notify" },
     },
-  },
-  "use": [
-    {
-      "runner": "elf",
+    children: [
+        {
+            name: "logger",
+            url: "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+            environment: "#env_one",
+        },
+    ],
+    collections: [
+        {
+            name: "modular",
+            durability: "persistent",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            service: "/fonts/CoolFonts",
+            as: "/svc/fuchsia.fonts.Provider",
+        },
+        {
+            protocol: "/fonts/LegacyCoolFonts",
+            as: "/svc/fuchsia.fonts.LegacyProvider",
+        },
+        {
+            from: "framework",
+            event: "started",
+        },
+        {
+            from: "realm",
+            as: "diagnostics_ready",
+            event: "capability_ready",
+            filter: { path: "/diagnostics" },
+        },
+    ],
+    offer: [
+        {
+            service: "/svc/fuchsia.logger.Log",
+            from: "#logger",
+            to: [ "#modular" ],
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LegacyLog",
+            from: "#logger",
+            to: [ "#modular" ],
+        },
+        {
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#logger",
+                "#modular",
+            ],
+        },
+        {
+            from: "realm",
+            as: "stopped-logger",
+            to: [ "#logger" ],
+            event: "stopped",
+        },
+    ],
+    expose: [
+        {
+            service: "/loggers/fuchsia.logger.Log",
+            from: "#logger",
+            as: "/svc/fuchsia.logger.Log",
+        },
+        {
+            protocol: "/loggers/fuchsia.logger.LegacyLog",
+            from: "#logger",
+            as: "/svc/fuchsia.logger.LegacyLog",
+            to: "realm",
+        },
+        {
+            directory: "/volumes/blobfs",
+            from: "self",
+            to: "framework",
+            rights: [ "rw*" ],
+            subdir: "blob",
+        },
+    ],
+    runners: [
+        {
+            name: "dart_runner",
+            from: "self",
+            path: "/svc/fuchsia.sys2.Runner",
+        },
+    ],
+    environments: [
+        {
+            name: "env_one",
+            extends: "none",
+            __stop_timeout_ms: 1337,
+        },
+        {
+            name: "env_two",
+            extends: "realm",
+        },
+    ],
+    facets: {
+        author: "Fuchsia",
+        year: 2018,
     },
-    {
-      "service": "/fonts/CoolFonts",
-      "as": "/svc/fuchsia.fonts.Provider",
-    },
-    {
-      "protocol": "/fonts/LegacyCoolFonts",
-      "as": "/svc/fuchsia.fonts.LegacyProvider",
-    },
-    {
-      "event": "started",
-      "from": "framework",
-    },
-    {
-      "event": "capability_ready",
-      "as": "diagnostics_ready",
-      "from": "realm",
-      "filter": {
-        "path": "/diagnostics"
-      }
-    },
-  ],
-  "expose": [
-    {
-      "service": "/loggers/fuchsia.logger.Log",
-      "from": "#logger",
-      "as": "/svc/fuchsia.logger.Log",
-    },
-    {
-      "protocol": "/loggers/fuchsia.logger.LegacyLog",
-      "from": "#logger",
-      "as": "/svc/fuchsia.logger.LegacyLog",
-      "to": "realm",
-    },
-    {
-      "directory": "/volumes/blobfs",
-      "from": "self",
-      "to": "framework",
-      "rights": ["rw*"],
-      "subdir": "blob",
-    },
-  ],
-  "offer": [
-    {
-      "service": "/svc/fuchsia.logger.Log",
-      "from": "#logger",
-      "to": [ "#modular" ]
-    },
-    {
-      "protocol": "/svc/fuchsia.logger.LegacyLog",
-      "from": "#logger",
-      "to": [ "#modular" ]
-    },
-    {
-      "runner": "elf",
-      "from": "realm",
-      "to": [ "#logger", "#modular" ]
-    },
-    {
-      "event": "stopped",
-      "from": "realm",
-      "to": [ "#logger" ],
-      "as": "stopped-logger",
-    },
-  ],
-  "children": [
-    {
-      "name": "logger",
-      "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-      "environment": "#env_one",
-    },
-  ],
-  "collections": [
-    {
-      "name": "modular",
-      "durability": "persistent",
-    },
-  ],
-  "runners": [
-    {
-      "name": "dart_runner",
-      "from": "self",
-      "path": "/svc/fuchsia.sys2.Runner",
-    },
-  ],
-  "facets": {
-    "author": "Fuchsia",
-    "year": 2018,
-  },
-  "environments": [
-    {
-      "name": "env_one",
-      "__stop_timeout_ms": 1337,
-      "extends": "none",
-    },
-    {
-      "name": "env_two",
-      "extends": "realm",
-    },
-  ]
 }

@@ -1,49 +1,49 @@
 {
     program: {
         binary: "bin/rust_test_adapter",
-        args: ["/pkg/test/test_manager_test"]
+        args: [ "/pkg/test/test_manager_test" ],
     },
+    children: [
+        {
+            name: "test_manager",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
+        },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: "/svc/fuchsia.sys2.Realm",
-            from: "framework"
+            from: "framework",
         },
         {
             protocol: [
+                "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.logger.LogSink"
-            ]
-        }
-    ],
-    expose: [
-        {
-            protocol: "/svc/fuchsia.test.Suite",
-            from: "self"
-        }
+            ],
+        },
     ],
     offer: [
         // Offer the ELF runner to children.
         {
             runner: "elf",
             from: "realm",
-            to: ["#test_manager"]
+            to: [ "#test_manager" ],
         },
         {
             protocol: "/svc/fuchsia.logger.LogSink",
             from: "realm",
-            to: ["#test_manager"]
+            to: [ "#test_manager" ],
         },
         {
             protocol: "/svc/fuchsia.process.Launcher",
             from: "realm",
-            to: ["#test_manager"]
-        }
+            to: [ "#test_manager" ],
+        },
     ],
-    children: [
+    expose: [
         {
-            name: "test_manager",
-            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm"
-        }
-    ]
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
 }

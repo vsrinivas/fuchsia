@@ -1,54 +1,56 @@
 {
-    "program": {
+    program: {
         // Use the rust test adapter because we don't have the ability to use a runner yet.
-        "binary": "bin/rust_test_adapter",
-        "args": [ "/pkg/test/font_provider_integration_tests" ],
+        binary: "bin/rust_test_adapter",
+        args: [ "/pkg/test/font_provider_integration_tests" ],
     },
-    "collections": [
+    collections: [
         {
-            "name": "coll",
-            "durability": "transient",
+            name: "coll",
+            durability: "transient",
         },
     ],
-    "use": [
-        { "runner": "elf" },
+    use: [
+        { runner: "elf" },
         {
-            "protocol": "/svc/fuchsia.sys2.Realm",
-            "from": "framework",
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
         },
+
         // These "use" statements are needed for the RustTestAdapter trampoline
         {
-            "protocol": [
-                "/svc/fuchsia.process.Launcher",
+            protocol: [
                 "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
             ],
         },
     ],
-    "expose": [
+    offer: [
         {
-            "protocol": "/svc/fuchsia.test.Suite",
-            "from": "self",
+            runner: "elf",
+            from: "realm",
+            to: [ "#coll" ],
         },
-    ],
-    "offer": [
-        {
-            "runner": "elf",
-            "from": "realm",
-            "to": [ "#coll" ],
-        },
+
         // Some components run under test get fonts from /config/data.
         {
-            "directory": "/config/data",
-            "from": "realm",
-            "to": [ "#coll" ],
+            directory: "/config/data",
+            from: "realm",
+            to: [ "#coll" ],
         },
         {
-            "protocol": [
+            protocol: [
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.pkg.FontResolver",
             ],
-            "from": "realm",
-            "to": [ "#coll" ],
+            from: "realm",
+            to: [ "#coll" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
         },
     ],
 }

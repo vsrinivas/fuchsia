@@ -1,23 +1,18 @@
 {
     program: {
         binary: "bin/rust_test_adapter",
-        args: ["/pkg/test/scene_manager_session_bin_test",],
+        args: [ "/pkg/test/scene_manager_session_bin_test" ],
     },
     use: [
         {
             directory: "/dev/class/input-report",
             from: "realm",
-            rights: [
-                "r*",
-            ],
+            rights: [ "r*" ],
         },
-        {
-            protocol: "/svc/fuchsia.logger.LogSink",
-        },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
+
         // The last "use" statement is needed for the RustTestAdapter trampoline
-        {
-            protocol: "/svc/fuchsia.process.Launcher",
-        },
+        { protocol: "/svc/fuchsia.process.Launcher" },
     ],
     expose: [
         {

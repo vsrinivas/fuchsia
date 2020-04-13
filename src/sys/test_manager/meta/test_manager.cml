@@ -1,112 +1,111 @@
 {
-    "program": {
-        "binary": "bin/test_manager",
+    program: {
+        binary: "bin/test_manager",
     },
     children: [
         {
             name: "gtest_runner",
-            url: "fuchsia-pkg://fuchsia.com/gtest_runner#meta/gtest_runner.cm"
+            url: "fuchsia-pkg://fuchsia.com/gtest_runner#meta/gtest_runner.cm",
         },
         {
             name: "runner_memfs",
-            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm"
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm",
         },
         {
             name: "test_tmpfs",
-            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm"
-        }
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm",
+        },
     ],
-    "collections": [
+    collections: [
         {
-            "name": "tests",
-            "durability": "transient",
+            name: "tests",
+            durability: "transient",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        // Offer the ELF runner to children.
+        {
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#gtest_runner",
+                "#runner_memfs",
+                "#test_tmpfs",
+                "#tests",
+            ],
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+            to: [
+                "#gtest_runner",
+                "#runner_memfs",
+                "#test_tmpfs",
+                "#tests",
+            ],
+        },
+        {
+            protocol: "/svc/fuchsia.process.Launcher",
+            from: "realm",
+            to: [
+                "#gtest_runner",
+                "#tests",
+            ],
+        },
+        {
+            runner: "gtest_runner",
+            from: "#gtest_runner",
+            to: [ "#tests" ],
+        },
+        {
+            storage: "data",
+            from: "#runner_storage",
+            to: [ "#gtest_runner" ],
+        },
+
+        // Some components run under test need access to /config/data.
+        {
+            directory: "/config/data",
+            from: "realm",
+            to: [ "#tests" ],
+        },
+
+        // temporary solution to provide /tmp. All tests will share same /tmp.
+        {
+            directory: "/memfs",
+            from: "#test_tmpfs",
+            as: "/tmp",
+            to: [ "#tests" ],
+        },
+
+        // fuchsia-pkg://fuchsia.com/input_session_tests#meta/input_session_bin_test.cm
+        // access to /dev/class/input-report.
+        {
+            directory: "/dev/class/input-report",
+            from: "realm",
+            to: [ "#tests" ],
+            rights: [ "r*" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.manager.Harness",
+            from: "self",
         },
     ],
     storage: [
         {
             name: "runner_storage",
             from: "#runner_memfs",
-            path: "/memfs"
+            path: "/memfs",
         },
-    ],
-    "use": [
-        { "runner": "elf" },
-        {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-        },
-        {
-            "protocol": "/svc/fuchsia.sys2.Realm",
-            "from": "framework",
-        }
-    ],
-    "offer": [
-        // Offer the ELF runner to children.
-        {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#tests",
-                "#gtest_runner",
-                "#test_tmpfs",
-                "#runner_memfs"
-            ]
-        },
-        {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-            "from": "realm",
-            "to": [
-                "#tests",
-                "#gtest_runner",
-                "#test_tmpfs",
-                "#runner_memfs"
-            ]
-        },
-        {
-            "protocol": "/svc/fuchsia.process.Launcher",
-            "from": "realm",
-            "to": [
-                "#gtest_runner",
-                "#tests",
-            ]
-        },
-        {
-            runner: "gtest_runner",
-            from: "#gtest_runner",
-            to: ["#tests"]
-        },
-        {
-            storage: "data",
-            from: "#runner_storage",
-            to: ["#gtest_runner"]
-        },
-         // Some components run under test need access to /config/data.
-        {
-            "directory": "/config/data",
-            "from": "realm",
-            "to": [ "#tests" ],
-        },
-        // temporary solution to provide /tmp. All tests will share same /tmp.
-        {
-            "directory": "/memfs",
-            "from": "#test_tmpfs",
-            "to": [ "#tests" ],
-            "as": "/tmp",
-        },
-         // fuchsia-pkg://fuchsia.com/input_session_tests#meta/input_session_bin_test.cm
-         // access to /dev/class/input-report.
-        {
-            directory: "/dev/class/input-report",
-            from: "realm",
-            rights: [
-                "r*",
-            ],
-            "to": [ "#tests" ],
-        },
-    ],
-    "expose": [
-        {
-            "protocol": "/svc/fuchsia.test.manager.Harness",
-            "from": "self",
-        }
     ],
 }

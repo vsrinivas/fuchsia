@@ -1,28 +1,26 @@
 {
-    "program": {
-        "binary": "bin/remote_control_bin"
+    program: {
+        binary: "bin/remote_control_bin",
     },
-    "use": [
+    use: [
+        { runner: "elf" },
         {
-            "runner": "elf",
-        },
-        {
-            "protocol": [
-                "/svc/fuchsia.device.NameProvider",
+            protocol: [
                 "/svc/fuchsia.device.manager.Administrator",
+                "/svc/fuchsia.device.NameProvider",
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.net.stack.Stack",
                 "/svc/fuchsia.overnet.Overnet",
                 "/svc/fuchsia.overnet.ServicePublisher",
                 "/svc/fuchsia.sys.Launcher",
                 "/svc/fuchsia.test.manager.Harness",
-            ]
+            ],
         },
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fuchsia.developer.remotecontrol.RemoteControl",
-            "from": "self",
+            protocol: "/svc/fuchsia.developer.remotecontrol.RemoteControl",
+            from: "self",
         },
     ],
 }

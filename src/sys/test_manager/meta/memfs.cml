@@ -1,17 +1,17 @@
 {
     program: {
-        binary: "bin/memfs"
+        binary: "bin/memfs",
     },
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.logger.LogSink" }
+        { protocol: "/svc/fuchsia.logger.LogSink" },
     ],
     expose: [
         {
             directory: "/svc/fuchsia.io.Directory",
             from: "self",
             as: "/memfs",
-            rights: ["rw*"]
-        }
-    ]
+            rights: [ "rw*" ],
+        },
+    ],
 }

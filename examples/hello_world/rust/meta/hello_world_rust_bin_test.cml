@@ -1,20 +1,11 @@
 {
     program: {
         binary: "bin/rust_test_adapter",
-        args: [
-            "/pkg/test/hello_world_rust_bin_test",
-        ],
+        args: [ "/pkg/test/hello_world_rust_bin_test" ],
     },
-    expose: [
-        {
-            protocol: "/svc/fuchsia.test.Suite",
-            from: "self",
-        },
-    ],
     use: [
-        {
-            runner: "elf"
-        },
+        { runner: "elf" },
+
         // These protocols are used by the RustTestAdapter trampoline
         {
             protocol: [
@@ -22,6 +13,12 @@
                 "/svc/fuchsia.process.Launcher",
             ],
             from: "realm",
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
         },
     ],
 }

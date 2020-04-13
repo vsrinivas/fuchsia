@@ -1,26 +1,22 @@
 {
-    "program": {
+    program: {
         // Using a trampoline
-        "binary": "bin/gtest_adapter",
-        "args": ["/pkg/test/disabled/huge_gtest_adapter_example"]
+        binary: "bin/gtest_adapter",
+        args: [ "/pkg/test/disabled/huge_gtest_adapter_example" ],
     },
-    "use": [
-        { "runner": "elf" },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.process.Launcher" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
         {
-            "protocol": "/svc/fuchsia.process.Launcher",
-        },
-        {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-        },
-        {
-            "directory": "/tmp",
-            "rights": ["rw*"],
+            directory: "/tmp",
+            rights: [ "rw*" ],
         },
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fuchsia.test.Suite",
-            "from": "self",
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
         },
     ],
 }

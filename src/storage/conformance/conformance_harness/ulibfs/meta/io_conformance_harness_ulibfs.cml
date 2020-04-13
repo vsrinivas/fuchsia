@@ -1,18 +1,18 @@
 {
-    "program": {
-        "binary": "bin/io_conformance_harness_ulibfs"
+    program: {
+        binary: "bin/io_conformance_harness_ulibfs",
     },
-    "use": [
-        { "runner": "elf" },
+    use: [
+        { runner: "elf" },
         {
-            "protocol": "/svc/fuchsia.io.test.Io1HarnessReceiver",
-            "from": "framework",
-        }
+            protocol: "/svc/fuchsia.io.test.Io1HarnessReceiver",
+            from: "framework",
+        },
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fuchsia.io.test.Io1TestHarness",
-            "from": "self",
-        }
+            protocol: "/svc/fuchsia.io.test.Io1TestHarness",
+            from: "self",
+        },
     ],
 }

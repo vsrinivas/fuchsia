@@ -1,11 +1,9 @@
 {
-    "program": {
-        "binary": "bin/lifecycle",
+    program: {
+        binary: "bin/lifecycle",
     },
-    "use": [
-        { "runner": "elf" },
-        {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-        },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
     ],
 }

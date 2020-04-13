@@ -1,8 +1,8 @@
 {
-    "program": {
-        "binary": "bin/hello_world"
+    program: {
+        binary: "bin/hello_world",
     },
-    "use": [
-        { "runner": "elf" }
-    ]
+    use: [
+        { runner: "elf" },
+    ],
 }

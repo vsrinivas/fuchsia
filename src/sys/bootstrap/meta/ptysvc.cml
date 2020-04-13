@@ -1,9 +1,14 @@
 {
-  "program": { "binary": "bin/ptysvc" },
-  "use": [
-    { "runner": "elf" },
-  ],
-  "expose": [
-    { "protocol": "/svc/fuchsia.hardware.pty.Device", "from": "self" },
-  ]
+    program: {
+        binary: "bin/ptysvc",
+    },
+    use: [
+        { runner: "elf" },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.hardware.pty.Device",
+            from: "self",
+        },
+    ],
 }

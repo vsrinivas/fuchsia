@@ -1,8 +1,58 @@
-
 {
     program: {
-        binary: "bin/setui_service"
+        binary: "bin/setui_service",
     },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "/svc/fuchsia.accessibility.SettingsManager",
+                "/svc/fuchsia.deprecatedtimezone.Timezone",
+                "/svc/fuchsia.device.manager.Administrator",
+                "/svc/fuchsia.devicesettings.DeviceSettingsManager",
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.media.audio.VolumeControl",
+                "/svc/fuchsia.media.AudioCore",
+                "/svc/fuchsia.media.sounds.Player",
+                "/svc/fuchsia.media.UsageReporter",
+                "/svc/fuchsia.net.Connectivity",
+                "/svc/fuchsia.netstack.Netstack",
+                "/svc/fuchsia.stash.Store",
+                "/svc/fuchsia.sys.Environment",
+                "/svc/fuchsia.timezone.Timezone",
+                "/svc/fuchsia.ui.brightness.Control",
+                "/svc/fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
+            from: "realm",
+        },
+        {
+            directory: "/dev/class/input",
+            from: "realm",
+            rights: [ "r*" ],
+        },
+
+        // features: build-info
+        {
+            directory: "/config/build-info",
+            from: "realm",
+            rights: [ "r*" ],
+        },
+
+        // features: config-data
+        {
+            directory: "/pkgfs/packages/config-data/0/data/setui_service",
+            from: "realm",
+            as: "/config/data",
+            rights: [ "r*" ],
+        },
+
+        // features: isolated-persistent-storage
+        {
+            directory: "/data",
+            from: "realm",
+            rights: [ "rw*" ],
+        },
+    ],
     expose: [
         {
             protocol: [
@@ -21,53 +71,4 @@
             from: "self",
         },
     ],
-    use: [
-        { runner: "elf" },
-        {
-            protocol: [
-                "/svc/fuchsia.accessibility.SettingsManager",
-                "/svc/fuchsia.deprecatedtimezone.Timezone",
-                "/svc/fuchsia.device.manager.Administrator",
-                "/svc/fuchsia.devicesettings.DeviceSettingsManager",
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.media.AudioCore",
-                "/svc/fuchsia.media.UsageReporter",
-                "/svc/fuchsia.media.audio.VolumeControl",
-                "/svc/fuchsia.media.sounds.Player",
-                "/svc/fuchsia.net.Connectivity",
-                "/svc/fuchsia.netstack.Netstack",
-                "/svc/fuchsia.stash.Store",
-                "/svc/fuchsia.sys.Environment",
-                "/svc/fuchsia.timezone.Timezone",
-                "/svc/fuchsia.ui.brightness.Control",
-                "/svc/fuchsia.ui.policy.DeviceListenerRegistry",
-            ],
-            from: "realm",
-        },
-        {
-            directory: "/dev/class/input",
-            from: "realm",
-            rights: [ "r*" ]
-        },
-        // features: build-info
-        {
-            directory: "/config/build-info",
-            from: "realm",
-            rights: [ "r*" ]
-        },
-        // features: config-data
-        {
-            directory: "/pkgfs/packages/config-data/0/data/setui_service",
-            as: "/config/data",
-            from: "realm",
-            rights: [ "r*" ]
-        },
-        // features: isolated-persistent-storage
-        {
-            directory: "/data",
-            from: "realm",
-            rights: [ "rw*" ]
-        },
-    ],
 }
-

@@ -1,26 +1,9 @@
 {
     program: {
-        binary: "bin/a11y_manager"
+        binary: "bin/a11y_manager",
     },
-    expose: [
-        {
-            protocol: [
-                "/svc/fuchsia.accessibility.Magnifier",
-                "/svc/fuchsia.accessibility.ColorTransform",
-                "/svc/fuchsia.accessibility.Manager",
-                "/svc/fuchsia.accessibility.SettingsManager",
-                "/svc/fuchsia.accessibility.semantics.SemanticTree",
-                "/svc/fuchsia.accessibility.semantics.SemanticsManager",
-                "/svc/fuchsia.accessibility.tts.TtsManager",
-                "/svc/fuchsia.accessibility.tts.EngineRegistry",
-            ],
-            from: "self",
-        },
-    ],
     use: [
-        {
-            runner: "elf"
-        },
+        { runner: "elf" },
         {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
@@ -31,5 +14,19 @@
             from: "realm",
         },
     ],
+    expose: [
+        {
+            protocol: [
+                "/svc/fuchsia.accessibility.ColorTransform",
+                "/svc/fuchsia.accessibility.Magnifier",
+                "/svc/fuchsia.accessibility.Manager",
+                "/svc/fuchsia.accessibility.semantics.SemanticsManager",
+                "/svc/fuchsia.accessibility.semantics.SemanticTree",
+                "/svc/fuchsia.accessibility.SettingsManager",
+                "/svc/fuchsia.accessibility.tts.EngineRegistry",
+                "/svc/fuchsia.accessibility.tts.TtsManager",
+            ],
+            from: "self",
+        },
+    ],
 }
-

@@ -4,8 +4,6 @@
     },
     use: [
         { runner: "elf" },
-        {
-            protocol: "/svc/fuchsia.session.examples.ElementPing",
-        },
+        { protocol: "/svc/fuchsia.session.examples.ElementPing" },
     ],
 }

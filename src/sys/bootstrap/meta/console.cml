@@ -1,10 +1,15 @@
 {
-  "program": { "binary": "bin/console" },
-  "use": [
-    { "runner": "elf" },
-    { "protocol": "/svc/fuchsia.boot.RootResource" },
-  ],
-  "expose": [
-    { "protocol": "/svc/fuchsia.hardware.pty.Device", "from": "self" },
-  ],
+    program: {
+        binary: "bin/console",
+    },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.boot.RootResource" },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.hardware.pty.Device",
+            from: "self",
+        },
+    ],
 }

@@ -1,15 +1,14 @@
 {
-    "program": {
-        "binary": "bin/invalid-test-example",
+    program: {
+        binary: "bin/invalid-test-example",
     },
-    "use": [
-        { "runner": "elf" }
+    use: [
+        { runner: "elf" },
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fuchsia.test.Suite",
-            "from": "self",
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
         },
-    ]
+    ],
 }
-

@@ -1,9 +1,13 @@
 {
-    "program": {
-        "binary": "bin/ls_root_pkg"
+    program: {
+        binary: "bin/ls_root_pkg",
     },
-    "use": [
-        { "runner": "elf" },
-        { "directory": "/pkg", "as": "/root_pkg", "rights": ["rw*"] },
-    ]
+    use: [
+        { runner: "elf" },
+        {
+            directory: "/pkg",
+            as: "/root_pkg",
+            rights: [ "rw*" ],
+        },
+    ],
 }

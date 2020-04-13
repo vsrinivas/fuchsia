@@ -1,27 +1,27 @@
 {
-    "program": {
-        "binary": "bin/app",
+    program: {
+        binary: "bin/app",
     },
-    "use": [
-        { "runner": "elf" },
+    use: [
+        { runner: "elf" },
         {
-            "protocol": [
+            protocol: [
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.pkg.FontResolver",
             ],
         },
         {
-            "directory": "/config/data",
-            "rights": [ "r*" ],
+            directory: "/config/data",
+            rights: [ "r*" ],
         },
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": [
-                "/svc/fuchsia.fonts.Provider",
+            protocol: [
                 "/svc/fuchsia.fonts.experimental.Provider",
+                "/svc/fuchsia.fonts.Provider",
             ],
-            "from": "self",
+            from: "self",
         },
     ],
 }
