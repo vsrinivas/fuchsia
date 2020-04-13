@@ -4,7 +4,7 @@
 
 use crate::internal::handler::{MessengerClient, MessengerFactory, Receptor};
 use crate::registry::device_storage::DeviceStorageFactory;
-use crate::service_context::ServiceContextHandle;
+use crate::service_context::{ServiceContext, ServiceContextHandle};
 use crate::switchboard::base::{SettingRequest, SettingType};
 use anyhow::Error;
 use async_trait::async_trait;
@@ -105,5 +105,62 @@ impl<T: DeviceStorageFactory> Context<T> {
             self.receptor.clone(),
             self.environment.clone(),
         )
+    }
+}
+
+/// ContextBuilder is a convenience builder to facilitate creating a Context
+/// (and associated environment).
+pub struct ContextBuilder<T: DeviceStorageFactory> {
+    setting_type: SettingType,
+    storage_factory: Arc<Mutex<T>>,
+    settings: HashSet<SettingType>,
+    service_context: Option<ServiceContextHandle>,
+    messenger: MessengerClient,
+    receptor: Receptor,
+}
+
+impl<T: DeviceStorageFactory> ContextBuilder<T> {
+    pub fn new(
+        setting_type: SettingType,
+        storage_factory: Arc<Mutex<T>>,
+        messenger: MessengerClient,
+        receptor: Receptor,
+    ) -> Self {
+        Self {
+            setting_type: setting_type,
+            storage_factory: storage_factory,
+            settings: HashSet::new(),
+            service_context: None,
+            messenger: messenger,
+            receptor: receptor,
+        }
+    }
+
+    // Sets the service context to be used.
+    pub fn service_context(mut self, service_context_handle: ServiceContextHandle) -> Self {
+        self.service_context = Some(service_context_handle);
+
+        self
+    }
+
+    /// Adds the settings to given environment.
+    pub fn add_settings(mut self, settings: &[SettingType]) -> Self {
+        for setting in settings {
+            self.settings.insert(setting.clone());
+        }
+
+        self
+    }
+
+    /// Generates the Context.
+    pub fn build(self) -> Context<T> {
+        let service_context = if self.service_context.is_none() {
+            ServiceContext::create(None)
+        } else {
+            self.service_context.unwrap()
+        };
+        let environment = Environment::new(self.settings, service_context, self.storage_factory);
+
+        Context::new(self.setting_type, self.messenger, self.receptor, environment)
     }
 }

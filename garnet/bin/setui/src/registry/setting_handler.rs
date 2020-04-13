@@ -101,7 +101,7 @@ impl ClientImpl {
         }
     }
 
-    async fn create<S: StorageFactory + 'static>(
+    pub async fn create<S: StorageFactory + 'static>(
         context: Context<S>,
         generate_controller: GenerateController,
     ) -> SettingHandlerResult {
@@ -112,7 +112,7 @@ impl ClientImpl {
             return Err(anyhow::Error::new(error));
         }
 
-        let controller = controller_result.unwrap();
+        let mut controller = controller_result.unwrap();
 
         {
             let mut receptor = context.receptor.clone();
@@ -135,6 +135,8 @@ impl ClientImpl {
                                     client.lock().await.notify = false;
                                 }
                             }
+
+                            controller.change_state(state).await;
                         }
                         _ => {}
                     }
