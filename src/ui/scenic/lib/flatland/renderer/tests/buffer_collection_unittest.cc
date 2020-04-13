@@ -17,11 +17,13 @@ using BufferCollectionTest = flatland::RendererTest;
 // constraints to show that it doesn't need vulkan to be valid.
 TEST_F(BufferCollectionTest, CreateCollectionTest) {
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-  auto collection =
+  auto result =
       flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
-  EXPECT_TRUE(collection);
-  EXPECT_TRUE(collection->GetSyncPtr());
-  EXPECT_TRUE(collection->GetSyncPtr().is_bound());
+  EXPECT_TRUE(result.is_ok());
+
+  auto collection = std::move(result.value());
+  EXPECT_TRUE(collection.GetSyncPtr());
+  EXPECT_TRUE(collection.GetSyncPtr().is_bound());
 }
 
 // This test ensures that the buffer collection can still be allocated even if the server
@@ -33,11 +35,13 @@ TEST_F(BufferCollectionTest, CreateCollectionTest) {
 // that we can still allocate the buffer collection.
 TEST_F(BufferCollectionTest, AllocationWithoutExtraConstraints) {
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-  auto collection =
+  auto result =
       flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
-  EXPECT_TRUE(collection);
-  EXPECT_TRUE(collection->GetSyncPtr());
-  EXPECT_TRUE(collection->GetSyncPtr().is_bound());
+  EXPECT_TRUE(result.is_ok());
+
+  auto collection = std::move(result.value());
+  EXPECT_TRUE(collection.GetSyncPtr());
+  EXPECT_TRUE(collection.GetSyncPtr().is_bound());
 
   {
     const uint32_t kWidth = 32;
@@ -77,15 +81,15 @@ TEST_F(BufferCollectionTest, AllocationWithoutExtraConstraints) {
     EXPECT_EQ(status, ZX_OK);
   }
 
-  EXPECT_TRUE(collection->WaitUntilAllocated());
+  EXPECT_TRUE(collection.WaitUntilAllocated());
 }
 
 // Check to make sure |CreateBufferCollectionAndSetConstraints| returns false if
 // an invalid BufferCollectionHandle is provided by the user.
 TEST_F(BufferCollectionTest, NullTokenTest) {
-  auto collection = flatland::BufferCollectionInfo::New(sysmem_allocator_.get(),
-                                                        /*token*/ nullptr);
-  EXPECT_FALSE(collection);
+  auto result = flatland::BufferCollectionInfo::New(sysmem_allocator_.get(),
+                                                    /*token*/ nullptr);
+  EXPECT_TRUE(result.is_error());
 }
 
 // We pass in a valid channel to |CreateBufferCollectionAndSetConstraints|, but
@@ -105,8 +109,8 @@ TEST_F(BufferCollectionTest, WrongTokenTypeTest) {
 
   // We should not be able to make a BufferCollectionInfon object with the wrong token type
   // passed in as a parameter.
-  auto collection = flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(handle));
-  EXPECT_FALSE(collection);
+  auto result = flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(handle));
+  EXPECT_TRUE(result.is_error());
 }
 
 // If the client sets constraints on the buffer collection that are incompatible
@@ -114,11 +118,13 @@ TEST_F(BufferCollectionTest, WrongTokenTypeTest) {
 // the buffers to be allocated should fail.
 TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-  auto collection =
+  auto result =
       flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
-  EXPECT_TRUE(collection);
-  EXPECT_TRUE(collection->GetSyncPtr());
-  EXPECT_TRUE(collection->GetSyncPtr().is_bound());
+  EXPECT_TRUE(result.is_ok());
+
+  auto collection = std::move(result.value());
+  EXPECT_TRUE(collection.GetSyncPtr());
+  EXPECT_TRUE(collection.GetSyncPtr().is_bound());
 
   // Create a client-side handle to the buffer collection and set the client
   // constraints. We set it to have a max of zero buffers and to not use
@@ -162,7 +168,7 @@ TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
   }
 
   // This should fail as sysmem won't be able to allocate anything.
-  EXPECT_FALSE(collection->WaitUntilAllocated());
+  EXPECT_FALSE(collection.WaitUntilAllocated());
 }
 
 }  // namespace test

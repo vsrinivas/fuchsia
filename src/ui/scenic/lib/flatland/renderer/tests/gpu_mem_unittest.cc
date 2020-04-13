@@ -87,19 +87,20 @@ VK_TEST_F(MemoryTest, SimpleTest) {
   SetClientConstraints(sysmem_allocator_.get(), std::move(tokens.local_token), kImageCount, kWidth,
                        kHeight);
 
-  auto collection =
+  auto result =
       flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
-  EXPECT_TRUE(collection);
+  EXPECT_TRUE(result.is_ok());
+  auto collection = std::move(result.value());
 
-  auto vk_collection = CreateVulkanCollection(vk_device, vk_loader, collection->GenerateToken());
+  auto vk_collection = CreateVulkanCollection(vk_device, vk_loader, collection.GenerateToken());
   EXPECT_EQ(
       vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info, vk_loader),
       vk::Result::eSuccess);
 
-  EXPECT_TRUE(collection->WaitUntilAllocated());
+  EXPECT_TRUE(collection.WaitUntilAllocated());
 
   for (uint32_t i = 0; i < kImageCount; i++) {
-    auto gpu_info = flatland::GpuImageInfo::New(vk_device, vk_loader, collection->GetSysmemInfo(),
+    auto gpu_info = flatland::GpuImageInfo::New(vk_device, vk_loader, collection.GetSysmemInfo(),
                                                 vk_collection, i);
     EXPECT_TRUE(gpu_info.GetGpuMem());
     EXPECT_TRUE(gpu_info.p_extension());
@@ -125,23 +126,24 @@ VK_TEST_F(MemoryTest, OutOfBoundsTest) {
 
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
 
-  auto collection =
+  auto result =
       flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
-  EXPECT_TRUE(collection);
+  EXPECT_TRUE(result.is_ok());
+  auto collection = std::move(result.value());
 
   SetClientConstraints(sysmem_allocator_.get(), std::move(tokens.local_token), kImageCount, kWidth,
                        kHeight);
 
-  auto vk_collection = CreateVulkanCollection(vk_device, vk_loader, collection->GenerateToken());
+  auto vk_collection = CreateVulkanCollection(vk_device, vk_loader, collection.GenerateToken());
   EXPECT_EQ(
       vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info, vk_loader),
       vk::Result::eSuccess);
 
-  EXPECT_TRUE(collection->WaitUntilAllocated());
+  EXPECT_TRUE(collection.WaitUntilAllocated());
 
   // This should fail however, as the index is beyond bounds.
   auto gpu_info =
-      flatland::GpuImageInfo::New(vk_device, vk_loader, collection->GetSysmemInfo(), vk_collection,
+      flatland::GpuImageInfo::New(vk_device, vk_loader, collection.GetSysmemInfo(), vk_collection,
                                   /*index*/ 1);
   EXPECT_FALSE(gpu_info.GetGpuMem());
 
@@ -201,21 +203,21 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
   }
 
   // Create the buffer collection struct and set the server-side vulkan constraints.
-  std::unique_ptr<flatland::BufferCollectionInfo> server_collection = nullptr;
+  flatland::BufferCollectionInfo server_collection;
   vk::BufferCollectionFUCHSIA vk_collection;
   {
-    server_collection =
+    auto result =
         flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
-    EXPECT_TRUE(server_collection);
+    EXPECT_TRUE(result.is_ok());
+    server_collection = std::move(result.value());
 
-    vk_collection =
-        CreateVulkanCollection(vk_device, vk_loader, server_collection->GenerateToken());
+    vk_collection = CreateVulkanCollection(vk_device, vk_loader, server_collection.GenerateToken());
     EXPECT_EQ(vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info,
                                                               vk_loader),
               vk::Result::eSuccess);
 
     // Both client and server have set constraints, so this should not block.
-    EXPECT_TRUE(server_collection->WaitUntilAllocated());
+    EXPECT_TRUE(server_collection.WaitUntilAllocated());
   }
 
   // Have the client also wait for buffers allocated so it can populate its information
@@ -246,7 +248,7 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
 
   // Create the GPU info from the server side collection.
   auto gpu_info = flatland::GpuImageInfo::New(
-      vk_device, vk_loader, server_collection->GetSysmemInfo(), vk_collection, /*index*/ 0);
+      vk_device, vk_loader, server_collection.GetSysmemInfo(), vk_collection, /*index*/ 0);
   EXPECT_TRUE(gpu_info.GetGpuMem());
 
   // Create an image from the server side collection.

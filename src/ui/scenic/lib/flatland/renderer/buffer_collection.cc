@@ -6,16 +6,19 @@
 
 #include "src/lib/fxl/logging.h"
 
+#include <lib/zx/status.h>
+#include <zircon/errors.h>
+
 namespace flatland {
 
-std::unique_ptr<BufferCollectionInfo> BufferCollectionInfo::New(
+fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     BufferCollectionHandle buffer_collection_token) {
   FXL_DCHECK(sysmem_allocator);
 
   if (!buffer_collection_token.is_valid()) {
     FXL_LOG(ERROR) << "Buffer collection token is not valid.";
-    return nullptr;
+    return fitx::failed();
   }
 
   // Bind the buffer collection token to get the local token. Valid tokens can always be bound,
@@ -41,7 +44,7 @@ std::unique_ptr<BufferCollectionInfo> BufferCollectionInfo::New(
   status = buffer_collection->Sync();
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Could not bind buffer collection.";
-    return nullptr;
+    return fitx::failed();
   }
 
   // Set basic usage constraints, such as requiring at least one buffer and using Vulkan. This is
@@ -58,8 +61,7 @@ std::unique_ptr<BufferCollectionInfo> BufferCollectionInfo::New(
   // failure occurs now, then that is some underlying issue unrelated to user input.
   FXL_DCHECK(status == ZX_OK) << "Could not set constraints on buffer collection.";
 
-  return std::unique_ptr<BufferCollectionInfo>(
-      new BufferCollectionInfo(std::move(buffer_collection), std::move(constraint_token)));
+  return fitx::ok(BufferCollectionInfo(std::move(buffer_collection), std::move(constraint_token)));
 }
 
 BufferCollectionHandle BufferCollectionInfo::GenerateToken() const {

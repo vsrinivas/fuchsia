@@ -12,5 +12,7 @@ source_set("renderer") {
     "gpu_mem.h",
   ]
 
+  public_deps = [ "//zircon/public/lib/zxc" ]
+
   deps = [ "//src/ui/lib/escher" ]
 }

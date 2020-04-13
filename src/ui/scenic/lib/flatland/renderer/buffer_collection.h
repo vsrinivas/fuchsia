@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_BUFFER_COLLECTION_H_
 
 #include <fuchsia/images/cpp/fidl.h>
+#include <lib/fitx/result.h>
 
 #include <memory>
 
@@ -22,7 +23,7 @@ class BufferCollectionInfo {
   // TODO(48210): Make this an asynchronous call.
   // This operation is thread-safe as long as we do not use the same sysmem_allocator
   // across different threads simultaneously.
-  static std::unique_ptr<BufferCollectionInfo> New(
+  static fitx::result<fitx::failed, BufferCollectionInfo> New(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       BufferCollectionHandle buffer_collection_token);
 
