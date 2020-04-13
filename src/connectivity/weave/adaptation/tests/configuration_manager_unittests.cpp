@@ -15,6 +15,8 @@
 
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl_test_base.h>
+#include <fuchsia/weave/cpp/fidl.h>
+#include <fuchsia/weave/cpp/fidl_test_base.h>
 #include <fuchsia/wlan/device/service/cpp/fidl.h>
 #include <fuchsia/wlan/device/service/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -44,11 +46,14 @@ constexpr uint16_t kExpectedVendorId = 5050;
 constexpr uint16_t kExpectedProductId = 60209;
 constexpr char kExpectedFirmwareRevision[] = "prerelease-1";
 constexpr char kExpectedSerialNumber[] = "dummy_serial_number";
+constexpr char kExpectedPairingCode[] = "PAIRDUMMY123";
 
 constexpr uint16_t kMaxFirmwareRevisionSize =
     nl::Weave::DeviceLayer::ConfigurationManager::kMaxFirmwareRevisionLength + 1;
 constexpr uint16_t kMaxSerialNumberSize =
     nl::Weave::DeviceLayer::ConfigurationManager::kMaxSerialNumberLength + 1;
+constexpr uint16_t kMaxPairingCodeSize =
+    nl::Weave::DeviceLayer::ConfigurationManager::kMaxPairingCodeLength + 1;
 
 }  // namespace
 
@@ -114,6 +119,32 @@ class FakeHwinfo : public fuchsia::hwinfo::testing::Device_TestBase {
   async_dispatcher_t* dispatcher_;
 };
 
+class FakeWeaveFactoryDataManager : public fuchsia::weave::testing::FactoryDataManager_TestBase {
+ public:
+  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
+
+  void GetPairingCode(GetPairingCodeCallback callback) override {
+    constexpr char device_pairing_code[] = "PAIRCODE123";
+    fuchsia::weave::FactoryDataManager_GetPairingCode_Result result;
+    fuchsia::weave::FactoryDataManager_GetPairingCode_Response response((::std::vector<uint8_t>(
+        std::begin(device_pairing_code), std::end(device_pairing_code) - 1)));
+    result.set_response(response);
+    callback(std::move(result));
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::weave::FactoryDataManager> GetHandler(
+      async_dispatcher_t* dispatcher = nullptr) {
+    dispatcher_ = dispatcher;
+    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::weave::FactoryDataManager> request) {
+      binding_.Bind(std::move(request), dispatcher);
+    };
+  }
+
+ private:
+  fidl::Binding<fuchsia::weave::FactoryDataManager> binding_{this};
+  async_dispatcher_t* dispatcher_;
+};
+
 class ConfigurationManagerTest : public ::gtest::RealLoopFixture {
  public:
   ConfigurationManagerTest() {
@@ -121,6 +152,8 @@ class ConfigurationManagerTest : public ::gtest::RealLoopFixture {
         fake_wlan_stack_.GetHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
         fake_hwinfo_.GetHandler(dispatcher()));
+    context_provider_.service_directory_provider()->AddService(
+        fake_weave_factory_data_manager_.GetHandler(dispatcher()));
   }
   ~ConfigurationManagerTest() { QuitLoop(); }
 
@@ -165,6 +198,7 @@ class ConfigurationManagerTest : public ::gtest::RealLoopFixture {
 
   FakeHwinfo fake_hwinfo_;
   FakeWlanStack fake_wlan_stack_;
+  FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
 };
 
 TEST_F(ConfigurationManagerTest, SetAndGetFabricId) {
@@ -220,6 +254,13 @@ TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
   EXPECT_STREQ(device_desc.SerialNumber, kExpectedSerialNumber);
   EXPECT_EQ(device_desc.ProductId, kExpectedProductId);
   EXPECT_EQ(device_desc.VendorId, kExpectedVendorId);
+}
+
+TEST_F(ConfigurationManagerTest, GetPairingCode) {
+  char pairing_code[kMaxPairingCodeSize];
+  size_t out_len;
+  EXPECT_EQ(cfg_mgr_->GetPairingCode(pairing_code, sizeof(pairing_code), out_len), WEAVE_NO_ERROR);
+  EXPECT_STREQ(pairing_code, kExpectedPairingCode);
 }
 
 }  // namespace testing

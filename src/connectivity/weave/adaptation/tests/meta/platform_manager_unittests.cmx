@@ -3,7 +3,10 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
-            }
+            },
+            "system-services": [
+                "fuchsia.boot.FactoryItems"
+            ]
         }
     },
     "program": {
@@ -14,7 +17,11 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.posix.socket.Provider"
+            "fuchsia.hwinfo.Device",
+            "fuchsia.logger.LogSink",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.weave.FactoryDataManager",
+            "fuchsia.wlan.device.service.DeviceService"
         ]
     }
 }

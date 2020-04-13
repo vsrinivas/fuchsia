@@ -10,6 +10,7 @@
 // clang-format on
 
 #include <fuchsia/hwinfo/cpp/fidl.h>
+#include <fuchsia/weave/cpp/fidl.h>
 #include <fuchsia/wlan/device/service/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -71,10 +72,12 @@ class ConfigurationManagerImpl final
 
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_;
+  fuchsia::weave::FactoryDataManagerSyncPtr weave_factory_data_manager_;
   fuchsia::wlan::device::service::DeviceServiceSyncPtr wlan_device_service_;
   std::unique_ptr<Internal::WeaveConfigReader> device_info_;
 
   WEAVE_ERROR GetAndStoreHWInfo();
+  WEAVE_ERROR GetAndStorePairingCode();
 
  public:
   ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context);

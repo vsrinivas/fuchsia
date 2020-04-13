@@ -63,8 +63,15 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
       << "Failed to connect to wlan service.";
   FXL_CHECK(context_->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
       << "Failed to connect to hwinfo device service.";
+  FXL_CHECK(context_->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
+      << "Failed to connect to weave factory data manager service.";
 
   err = ConfigurationManagerImpl::GetAndStoreHWInfo();
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  err = ConfigurationManagerImpl::GetAndStorePairingCode();
   if (err != WEAVE_NO_ERROR) {
     return err;
   }
@@ -74,12 +81,50 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
 
 WEAVE_ERROR ConfigurationManagerImpl::GetAndStoreHWInfo() {
   fuchsia::hwinfo::DeviceInfo device_info;
-  FXL_CHECK(ZX_OK == hwinfo_device_->GetInfo(&device_info)) << "Failed to get device information";
-  if (device_info.has_serial_number()) {
+  if (ZX_OK == hwinfo_device_->GetInfo(&device_info) && device_info.has_serial_number()) {
     return StoreSerialNumber(device_info.serial_number().c_str(),
                              device_info.serial_number().length());
   }
   return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::GetAndStorePairingCode() {
+  fuchsia::weave::FactoryDataManager_GetPairingCode_Result pairing_code_result;
+  fuchsia::weave::FactoryDataManager_GetPairingCode_Response pairing_code_response;
+  std::string pairing_code;
+  char read_value[kMaxPairingCodeLength + 1];
+  size_t read_value_size = 0;
+  WEAVE_ERROR err;
+
+  zx_status_t status = weave_factory_data_manager_->GetPairingCode(&pairing_code_result);
+  if (ZX_OK != status || !pairing_code_result.is_response()) {
+    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+  }
+
+  pairing_code_response = pairing_code_result.response();
+  if (pairing_code_response.pairing_code.size() > kMaxPairingCodeLength) {
+    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+  }
+
+  err = StorePairingCode((const char*)pairing_code_response.pairing_code.data(),
+                         pairing_code_response.pairing_code.size());
+
+  if (WEAVE_NO_ERROR != err) {
+    return err;
+  }
+
+  // Device pairing code can be overridden with configured value for testing.
+  // Current unit tests only look for this configured value. To ensure code coverage
+  // in unit tests device pairing code is read and stored even if a pairing code
+  // is configured for test. TODO: fxb/49671
+  err = device_info_->ReadConfigValueStr(kConfigKey_PairingCode, read_value,
+                                         kMaxPairingCodeLength + 1, &read_value_size);
+  if (err == WEAVE_NO_ERROR) {
+    return StorePairingCode(read_value, read_value_size);
+  }
+
+  // return no error, will continue to use device pairing code
+  return WEAVE_NO_ERROR;
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendor_id) {
