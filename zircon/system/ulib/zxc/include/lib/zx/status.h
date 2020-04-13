@@ -70,6 +70,9 @@ class status<T> : public ::fitx::result<zx_status_t, T> {
   constexpr zx_status_t status_value() const {
     return this->is_error() ? base::error_value() : ZX_OK;
   }
+
+  // Returns the string representation of the status value.
+  const char* status_string() const { return zx_status_get_string(status_value()); }
 };
 
 // Specialization of status for empty value type.

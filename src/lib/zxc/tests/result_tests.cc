@@ -902,4 +902,26 @@ TEST(LibZxCommon, ErrorResults) {
   counter_b::reset();
 }
 
+TEST(LibZxCommon, StatusString) {
+  {
+    zx::status<> status = zx::ok();
+    EXPECT_STR_EQ(status.status_string(), zx_status_get_string(ZX_OK));
+  }
+
+  {
+    zx::status<> status = zx::error(ZX_ERR_NO_MEMORY);
+    EXPECT_STR_EQ(status.status_string(), zx_status_get_string(ZX_ERR_NO_MEMORY));
+  }
+
+  {
+    zx::status<int> status = zx::ok(10);
+    EXPECT_STR_EQ(status.status_string(), zx_status_get_string(ZX_OK));
+  }
+
+  {
+    zx::status<int> status = zx::error(ZX_ERR_NO_MEMORY);
+    EXPECT_STR_EQ(status.status_string(), zx_status_get_string(ZX_ERR_NO_MEMORY));
+  }
+}
+
 }  // anonymous namespace
