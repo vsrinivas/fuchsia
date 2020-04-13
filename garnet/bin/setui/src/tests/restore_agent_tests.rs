@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent::RestoreAgent;
-use crate::registry::base::Command;
 use crate::registry::device_storage::testing::InMemoryStorageFactory;
 use crate::switchboard::base::{
     SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
@@ -27,18 +26,17 @@ async fn verify_restore_handling(
     if let Ok(environment) = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .handler(
             SettingType::Unknown,
-            create_setting_handler(Box::new(move |command| {
+            create_setting_handler(Box::new(move |request| {
                 let counter = counter_clone.clone();
-                if let Command::HandleRequest(SettingRequest::Restore, responder) = command {
+                if request == SettingRequest::Restore {
                     let result = (response_generate)();
                     return Box::pin(async move {
                         let mut counter_lock = counter.lock().await;
                         *counter_lock += 1;
-                        responder.send(result).ok();
-                        return ();
+                        return result;
                     });
                 } else {
-                    return Box::pin(async move {});
+                    return Box::pin(async { Ok(None) });
                 }
             })),
         )

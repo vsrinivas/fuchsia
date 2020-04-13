@@ -42,4 +42,7 @@ impl<P: Payload + 'static, A: Address + 'static> Receptor<P, A> {
 
         return Err(format_err!("could not retrieve event"));
     }
+
+    // Used to consume receptor.
+    pub fn ack(self) {}
 }

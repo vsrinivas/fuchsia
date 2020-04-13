@@ -69,7 +69,7 @@ impl controller::Handle for LightSensorController {
 
     async fn change_state(&mut self, state: State) {
         match state {
-            State::Listen(_) => {
+            State::Listen => {
                 let change_receiver =
                     start_light_sensor_scanner(self.proxy.clone(), SCAN_DURATION_MS);
                 self.notifier_abort = Some(
@@ -179,12 +179,13 @@ mod tests {
     use super::*;
     use crate::switchboard::base::SettingType;
     use fidl_fuchsia_hardware_input::DeviceRequest as SensorRequest;
+    use futures::channel::mpsc::UnboundedSender;
 
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use parking_lot::RwLock;
 
-    use crate::registry::base::Notifier;
+    type Notifier = UnboundedSender<SettingType>;
 
     struct TestNotifier {
         notifier: Notifier,

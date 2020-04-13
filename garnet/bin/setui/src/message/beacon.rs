@@ -18,7 +18,7 @@ use futures::channel::mpsc::UnboundedSender;
 /// It is important to note that Beacons spawn from sending a Message. Status
 /// and other context sent through the Beacon are in relation to this original
 /// Message (either an origin or reply).
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Beacon<P: Payload + 'static, A: Address + 'static> {
     /// A reference to the associated Messenger. This is only used when delivering
     /// a new message to a beacon, where a MessageClient (which references both

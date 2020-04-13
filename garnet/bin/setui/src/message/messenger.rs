@@ -56,7 +56,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessengerClient<P, A> {
 
 /// Messengers provide clients the ability to send messages to other registered
 /// clients. They can only be created through a MessageHub.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Messenger<P: Payload + 'static, A: Address + 'static> {
     id: MessengerId,
     action_tx: ActionSender<P, A>,

@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 mod accessibility_tests;
 mod agent_tests;
 mod audio_tests;
@@ -13,6 +17,7 @@ mod light_sensor_tests;
 mod message_tests;
 mod night_mode_tests;
 mod privacy_tests;
+mod registry_tests;
 mod restore_agent_tests;
 mod service_configuration_tests;
 mod setting_handler_tests;

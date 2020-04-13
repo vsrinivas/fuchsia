@@ -2,34 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::internal::handler::{MessengerClient, MessengerFactory, Receptor};
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{SettingRequest, SettingRequestResponder, SettingType};
+use crate::switchboard::base::{SettingRequest, SettingType};
 use anyhow::Error;
 use async_trait::async_trait;
-use futures::channel::mpsc::UnboundedSender;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-pub type Notifier = UnboundedSender<SettingType>;
-pub type SettingHandler = UnboundedSender<Command>;
-pub type SettingHandlerResult = Result<SettingHandler, Error>;
+pub type HandlerId = usize;
+pub type SettingHandlerResult = Result<(), Error>;
 
 pub type GenerateHandler<T> =
     Box<dyn Fn(Context<T>) -> BoxFuture<'static, SettingHandlerResult> + Send + Sync>;
 
 /// An command represents messaging from the registry to take a
 /// particular action.
+#[derive(Debug, Clone)]
 pub enum Command {
+    HandleRequest(SettingRequest),
     ChangeState(State),
-    HandleRequest(SettingRequest, SettingRequestResponder),
 }
 
-/// A given state the registry entity can move into.
+#[derive(Debug, Clone, PartialEq)]
 pub enum State {
-    Listen(Notifier),
+    Listen,
     EndListen,
 }
 
@@ -37,7 +37,11 @@ pub enum State {
 /// viable handler can be created, None will be returned.
 #[async_trait]
 pub trait SettingHandlerFactory {
-    async fn generate(&mut self, setting_type: SettingType) -> Option<SettingHandler>;
+    async fn generate(
+        &mut self,
+        setting_type: SettingType,
+        messenger_factory: MessengerFactory,
+    ) -> Option<HandlerId>;
 }
 
 pub struct Environment<T: DeviceStorageFactory> {
@@ -74,15 +78,32 @@ impl<T: DeviceStorageFactory> Environment<T> {
 /// settings service environment.
 pub struct Context<T: DeviceStorageFactory> {
     pub setting_type: SettingType,
+    pub messenger: MessengerClient,
+    pub receptor: Receptor,
     pub environment: Environment<T>,
 }
 
 impl<T: DeviceStorageFactory> Context<T> {
-    pub fn new(setting_type: SettingType, environment: Environment<T>) -> Context<T> {
-        return Context { setting_type: setting_type, environment: environment.clone() };
+    pub fn new(
+        setting_type: SettingType,
+        messenger: MessengerClient,
+        receptor: Receptor,
+        environment: Environment<T>,
+    ) -> Context<T> {
+        return Context {
+            setting_type: setting_type,
+            messenger: messenger,
+            receptor: receptor,
+            environment: environment.clone(),
+        };
     }
 
     pub fn clone(&self) -> Self {
-        Self::new(self.setting_type.clone(), self.environment.clone())
+        Self::new(
+            self.setting_type.clone(),
+            self.messenger.clone(),
+            self.receptor.clone(),
+            self.environment.clone(),
+        )
     }
 }

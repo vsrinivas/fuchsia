@@ -24,6 +24,7 @@ impl<T: Clone + Debug + Eq + Hash + Send + Sync> Address for T {}
 
 /// A MessageEvent defines the data that can be returned through a message
 /// receptor.
+#[derive(Debug)]
 pub enum MessageEvent<P: Payload + 'static, A: Address + 'static> {
     /// A message that has been delivered, either as a new message directed at to
     /// the recipient's address or a reply to a previously sent message
@@ -54,7 +55,7 @@ pub enum DeliveryStatus {
 }
 
 /// The intended recipients for a message.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Audience<A> {
     // All non-broker messengers outside of the sender.
     Broadcast,
@@ -63,7 +64,7 @@ pub enum Audience<A> {
 }
 
 /// The messengers that can participate in messaging
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum MessengerType<A: Address + 'static> {
     /// An endpoint in the messenger graph. Can have messages specifically
     /// addressed to it and can author new messages.
@@ -75,7 +76,7 @@ pub enum MessengerType<A: Address + 'static> {
 }
 
 /// MessageType captures details about the Message's source.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum MessageType<P: Payload + 'static, A: Address + 'static> {
     /// A completely new message that is intended for the specified audience.
     Origin(Audience<A>),
@@ -87,7 +88,7 @@ pub enum MessageType<P: Payload + 'static, A: Address + 'static> {
 
 /// The core messaging unit. A Message may be annotated by messengers, but is
 /// not associated with a particular Messenger instance.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Message<P: Payload + 'static, A: Address + 'static> {
     payload: P,
     message_type: MessageType<P, A>,
@@ -160,6 +161,7 @@ pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static> {
 }
 
 /// Internal representation for possible actions on a message.
+#[derive(Debug)]
 pub(super) enum MessageAction<P: Payload + 'static, A: Address + 'static> {
     // A new message sent to the specified audience.
     Send(P, MessageType<P, A>),

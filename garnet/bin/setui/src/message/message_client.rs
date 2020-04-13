@@ -13,7 +13,7 @@ use crate::message::receptor::Receptor;
 /// delivered message. The client may duplicate/move the MessageClient as
 /// desired. Once all MessageClient instances go out of scope, the original
 /// message is forwarded to the next Messenger if no interaction preceded it.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MessageClient<P: Payload + 'static, A: Address + 'static> {
     // The "source" message for the client. Any replies or action are done in the
     // context of this message.

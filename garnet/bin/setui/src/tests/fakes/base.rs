@@ -1,14 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::internal::handler::{reply, Payload};
+use crate::message::base::MessageEvent;
 use crate::registry::base::Command;
 use crate::registry::base::GenerateHandler;
 use crate::registry::device_storage::DeviceStorageFactory;
+use crate::switchboard::base::{SettingRequest, SettingResponseResult};
 use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
-use futures::StreamExt;
+use futures::lock::Mutex;
+use std::sync::Arc;
 
 /// Trait for providing a service.
 pub trait Service {
@@ -23,20 +27,29 @@ pub trait Service {
 
 /// A helper function for creating a simple setting handler.
 pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
-    command_handler: Box<dyn Fn(Command) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
+    request_handler: Box<
+        dyn Fn(SettingRequest) -> BoxFuture<'static, SettingResponseResult> + Send + Sync + 'static,
+    >,
 ) -> GenerateHandler<T> {
-    let (handler_tx, mut handler_rx) = futures::channel::mpsc::unbounded::<Command>();
+    let shared_handler = Arc::new(Mutex::new(request_handler));
+    return Box::new(move |context| {
+        let mut receptor = context.receptor.clone();
+        let handler = shared_handler.clone();
+        fasync::spawn(async move {
+            while let Ok(event) = receptor.watch().await {
+                match event {
+                    MessageEvent::Message(
+                        Payload::Command(Command::HandleRequest(request)),
+                        client,
+                    ) => {
+                        let response = (handler.lock().await)(request).await;
+                        reply(client, response);
+                    }
+                    _ => {}
+                }
+            }
+        });
 
-    fasync::spawn(async move {
-        while let Some(command) = handler_rx.next().await {
-            let _ = (command_handler)(command).await;
-        }
-    });
-
-    let handler_tx_clone = handler_tx.clone();
-
-    return Box::new(move |_| {
-        let tx_clone = handler_tx_clone.clone();
-        Box::pin(async move { Ok(tx_clone.clone()) })
+        Box::pin(async move { Ok(()) })
     });
 }

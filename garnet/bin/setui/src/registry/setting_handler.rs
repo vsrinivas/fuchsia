@@ -1,7 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::registry::base::{Command, Context, Notifier, SettingHandlerResult, State};
+use crate::internal::handler::{reply, Address, MessengerClient, Payload};
+use crate::message::base::{Audience, MessageEvent};
+use crate::registry::base::{Command, Context, SettingHandlerResult, State};
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
@@ -11,7 +13,6 @@ use async_trait::async_trait;
 use fuchsia_async as fasync;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
-use futures::StreamExt;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use thiserror::Error;
@@ -70,7 +71,8 @@ impl ClientProxy {
 }
 
 pub struct ClientImpl {
-    listen_notifier: Option<Notifier>,
+    notify: bool,
+    messenger: MessengerClient,
     service_context: ServiceContextHandle,
     setting_type: SettingType,
 }
@@ -78,9 +80,24 @@ pub struct ClientImpl {
 impl ClientImpl {
     fn new<S: StorageFactory + 'static>(context: Context<S>) -> Self {
         Self {
+            messenger: context.messenger.clone(),
             setting_type: context.setting_type,
-            listen_notifier: None,
+            notify: false,
             service_context: context.environment.service_context_handle,
+        }
+    }
+
+    async fn process_request(
+        controller: &BoxedController,
+        request: SettingRequest,
+    ) -> SettingResponseResult {
+        let result = controller.handle(request.clone()).await;
+        match result {
+            Some(response_result) => response_result,
+            None => Err(SwitchboardError::UnimplementedRequest {
+                setting_type: SettingType::Intl,
+                request: request,
+            }),
         }
     }
 
@@ -88,8 +105,7 @@ impl ClientImpl {
         context: Context<S>,
         generate_controller: GenerateController,
     ) -> SettingHandlerResult {
-        let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
-        let client = Arc::new(Mutex::new(Self::new(context)));
+        let client = Arc::new(Mutex::new(Self::new(context.clone())));
         let controller_result = generate_controller(ClientProxy::new(client.clone())).await;
 
         if let Err(error) = controller_result {
@@ -98,40 +114,35 @@ impl ClientImpl {
 
         let controller = controller_result.unwrap();
 
-        fasync::spawn(async move {
-            while let Some(command) = ctrl_rx.next().await {
-                match command {
-                    Command::HandleRequest(request, responder) => {
-                        match controller.handle(request.clone()).await {
-                            Some(response_result) => {
-                                responder.send(response_result).ok();
-                            }
-                            None => {
-                                responder
-                                    .send(Err(SwitchboardError::UnimplementedRequest {
-                                        setting_type: SettingType::Intl,
-                                        request: request,
-                                    }))
-                                    .ok();
+        {
+            let mut receptor = context.receptor.clone();
+            // Process MessageHub requests
+            fasync::spawn(async move {
+                while let Ok(event) = receptor.watch().await {
+                    match event {
+                        MessageEvent::Message(
+                            Payload::Command(Command::HandleRequest(request)),
+                            client,
+                        ) => {
+                            reply(client, Self::process_request(&controller, request.clone()).await)
+                        }
+                        MessageEvent::Message(Payload::Command(Command::ChangeState(state)), _) => {
+                            match state {
+                                State::Listen => {
+                                    client.lock().await.notify = true;
+                                }
+                                State::EndListen => {
+                                    client.lock().await.notify = false;
+                                }
                             }
                         }
+                        _ => {}
                     }
-                    Command::ChangeState(state) => match state {
-                        State::Listen(notifier) => {
-                            client.lock().await.set_notifier(Some(notifier)).await;
-                        }
-                        State::EndListen => {
-                            client.lock().await.set_notifier(None).await;
-                        }
-                    },
                 }
-            }
-        });
+            });
+        }
 
-        Ok(ctrl_tx)
-    }
-    async fn set_notifier(&mut self, notifier: Option<Notifier>) {
-        self.listen_notifier = notifier;
+        Ok(())
     }
 
     async fn get_service_context(&self) -> ServiceContextHandle {
@@ -139,8 +150,11 @@ impl ClientImpl {
     }
 
     async fn notify(&self) {
-        if let Some(notifier) = &self.listen_notifier {
-            notifier.unbounded_send(self.setting_type).ok();
+        if self.notify {
+            self.messenger
+                .message(Payload::Changed(self.setting_type), Audience::Address(Address::Registry))
+                .send()
+                .ack();
         }
     }
 }
