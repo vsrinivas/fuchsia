@@ -85,6 +85,7 @@ bool StubLogListener::ListenFiltered(const std::shared_ptr<sys::ServiceDirectory
   auto options = fuchsia::logger::LogFilterOptions::New();
   options->filter_by_pid = true;
   options->pid = pid;
+  options->verbosity = 10;
   options->tags = {tag};
   log_service->ListenSafe(std::move(log_listener_), std::move(options));
   return true;
@@ -108,22 +109,44 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
   auto pid = fsl::GetCurrentProcessKoid();
   auto tag = "logger_integration_cpp_test.ListenFiltered";
   auto message = "my message";
-  ASSERT_EQ(syslog::SetTags({tag}), ZX_OK);
-  FX_LOGS(INFO) << message;
+  std::vector<int> severities_in_use = {
+      -10,             // V=10, "sigh, ktrace" TRACE
+      -5,              // V=5, "hey buddy, you doing ok?" TRACE
+      -4,              // V=4, "super secret" TRACE
+      -3,              // V=3, "secret" TRACE
+      -2,              // V=2, TRACE
+      -1,              // V=1, DEBUG
+      FX_LOG_INFO,     // 0
+      FX_LOG_WARNING,  // 1
+      FX_LOG_ERROR,    // 2
+  };
 
-  // Start the log listener and the logger, and wait for the log message to
-  // arrive.
+  syslog::LogSettings settings = {severities_in_use[0], -1};  // min_severity, fallback fd
+  ASSERT_EQ(syslog::SetSettings(settings, {tag}), ZX_OK);
+
+  for (auto severity : severities_in_use) {
+    FX_LOGS_WITH_SEVERITY(severity) << message;
+  }
+
+  // Start the log listener and the logger, and wait for the log message to arrive.
   StubLogListener log_listener;
   ASSERT_TRUE(log_listener.ListenFiltered(sys::ServiceDirectory::CreateFromNamespace(), pid, tag));
   auto& logs = log_listener.GetLogs();
-  RunLoopUntil([&logs] { return logs.size() >= 1u; });
+  RunLoopUntil(
+      [&logs, expected_size = severities_in_use.size()] { return logs.size() >= expected_size; });
 
-  ASSERT_EQ(logs.size(), 1u);
-  ASSERT_EQ(logs[0].tags.size(), 1u);
-  EXPECT_EQ(logs[0].tags[0], tag);
-  EXPECT_EQ(logs[0].severity, FX_LOG_INFO);
-  EXPECT_EQ(logs[0].pid, pid);
-  EXPECT_THAT(logs[0].msg, testing::EndsWith(message));
+  std::vector<fuchsia::logger::LogMessage> sorted_by_severity(logs.begin(), logs.end());
+  std::sort(sorted_by_severity.begin(), sorted_by_severity.end(),
+            [](auto a, auto b) { return a.severity < b.severity; });
+
+  ASSERT_EQ(sorted_by_severity.size(), severities_in_use.size());
+  for (auto i = 0ul; i < logs.size(); i++) {
+    ASSERT_EQ(sorted_by_severity[i].tags.size(), 1u);
+    EXPECT_EQ(sorted_by_severity[i].tags[0], tag);
+    EXPECT_EQ(sorted_by_severity[i].severity, severities_in_use[i]);
+    EXPECT_EQ(sorted_by_severity[i].pid, pid);
+    EXPECT_THAT(sorted_by_severity[i].msg, testing::EndsWith(message));
+  }
 }
 
 TEST_F(LoggerIntegrationTest, NoKlogs) {
