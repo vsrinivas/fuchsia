@@ -31,8 +31,6 @@ void spin(uint32_t usecs) {
     ;
 }
 
-void abort(void) { panic("abort!"); }
-
 void _panic(void* caller, void* frame, const char* fmt, ...) {
   platform_panic_start();
 
@@ -51,8 +49,6 @@ void _panic_no_format(const char* msg, size_t len) {
   stdout->Write({msg, len});
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
-
-void __stack_chk_fail(void) { panic_no_format("stack canary corrupted!\n"); }
 
 __NO_SAFESTACK uintptr_t choose_stack_guard(void) {
   uintptr_t guard;

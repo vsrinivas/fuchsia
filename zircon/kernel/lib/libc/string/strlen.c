@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <string.h>
-#include <sys/types.h>
 
 size_t strlen(char const *s) {
   size_t i;

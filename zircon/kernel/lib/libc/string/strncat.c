@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <string.h>
-#include <sys/types.h>
 
 char *strncat(char *dest, char const *src, size_t count) {
   char *tmp = dest;

@@ -9,8 +9,11 @@
 
 // The kernel doesn't want this file but some libc++ headers we need
 // wind up including it and they need these declarations.
+//
+// Note this specifically avoids <stdio.h> because libc++ doesn't need that
+// but <string_view> indirectly reaches <cstdio> and the kernel's <stdio.h>
+// uses <ktl/string_view.h> so there would be a circularity.
 
-#include <stdio.h>
 #include <wchar.h>
 
 #define EOF (-1)

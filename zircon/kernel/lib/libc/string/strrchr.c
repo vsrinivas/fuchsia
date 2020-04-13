@@ -7,7 +7,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <string.h>
-#include <sys/types.h>
 
 char *strrchr(char const *s, int c) {
   char const *last = c ? 0 : s;

@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <string.h>
-#include <sys/types.h>
 
 static char *___strtok = NULL;
 

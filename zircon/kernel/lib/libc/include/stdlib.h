@@ -8,12 +8,13 @@
 #ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDLIB_H_
 #define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDLIB_H_
 
-#include <lib/heap.h>  //  lib/heap provides malloc/free definitions.
 #include <stddef.h>
-#include <sys/types.h>
+#include <stdint.h>
 #include <zircon/compiler.h>
 
-#include <arch/defines.h>
+#ifdef _KERNEL
+#include <lib/heap.h>  //  lib/heap provides malloc/free definitions.
+#endif
 
 __BEGIN_CDECLS
 

@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <string.h>
-#include <sys/types.h>
 
 char *strstr(char const *s1, char const *s2) {
   int l1, l2;

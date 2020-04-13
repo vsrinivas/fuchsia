@@ -26,6 +26,8 @@ class FILE {
 
   using Callback = int(void*, ktl::string_view);
 
+  FILE() = default;
+
   FILE(Callback* write, void* ptr) : write_(write), ptr_(ptr) {}
 
   template <typename T>

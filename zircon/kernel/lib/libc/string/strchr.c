@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <string.h>
-#include <sys/types.h>
 
 char *strchr(const char *s, int c) {
   for (; *s != (char)c; ++s)

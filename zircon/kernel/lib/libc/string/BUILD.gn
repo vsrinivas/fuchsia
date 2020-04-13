@@ -31,6 +31,7 @@ source_set("string") {
   ]
   deps = [
     "$zx/kernel/lib/libc:ctype",
+    "$zx/kernel/lib/libc:headers",
     "arch/$zircon_cpu",
   ]
 }

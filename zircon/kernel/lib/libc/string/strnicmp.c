@@ -7,7 +7,6 @@
 
 #include <ctype.h>
 #include <string.h>
-#include <sys/types.h>
 
 int strnicmp(char const *s1, char const *s2, size_t len) {
   unsigned char c1 = '\0';

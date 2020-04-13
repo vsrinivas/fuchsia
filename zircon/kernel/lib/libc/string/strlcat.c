@@ -7,7 +7,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <string.h>
-#include <sys/types.h>
 
 size_t strlcat(char *dst, char const *src, size_t s) {
   size_t i;

@@ -7,7 +7,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <string.h>
-#include <sys/types.h>
 
 void *memchr(void const *buf, int c, size_t len) {
   size_t i;

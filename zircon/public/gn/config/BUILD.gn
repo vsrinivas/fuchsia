@@ -164,7 +164,15 @@ config("compiler") {
                         rebase_path(crash_diagnostics_dir, root_build_dir) ]
   }
 
-  include_dirs = toolchain.include_dirs
+  # The toolchain-supplied headers come after include_dirs from targets and
+  # configs but before libc.
+  foreach(dir, toolchain.include_dirs) {
+    compiler_flags += [
+      "-isystem",
+      rebase_path(dir, root_build_dir),
+    ]
+  }
+
   lib_dirs = toolchain.lib_dirs
 
   asmflags = compiler_flags

@@ -4,12 +4,14 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-source_set("libc") {
+library("libc") {
+  kernel = true
+  static = false
   sources = [
+    "abort.cc",
     "atomic.cc",
     "cxa_atexit.cc",
     "cxa_pure_virtual.cc",
-    "cxx_allocator.cc",
     "fprintf.cc",
     "printf.cc",
     "rand.cc",
@@ -20,19 +22,50 @@ source_set("libc") {
   deps = [
     ":ctype",
     ":tests",
-    "$zx/kernel/lib/heap",
-    "$zx/kernel/lib/io",
-    "$zx/kernel/lib/ktl",
     "string",
+  ]
+  public_deps = [
+    # <stdio.h> has #include <ktl/string_view.h>.
+    "$zx/kernel/lib/ktl:headers",
+  ]
+
+  if (toolchain.environment == "kernel") {
+    deps += [ "$zx/kernel/lib/heap" ]
+  }
+  public_configs = [ ":limits-dummy" ]
+}
+
+config("limits-dummy") {
+  visibility = [
+    ":*",
+    "$zx/kernel:headers",
+  ]
+
+  # libc/include is before toolchain headers because it needs to be able to
+  # override some libc++ headers that won't work in the kernel context.
+  # However, libc/include/limits.h punts to the toolchain via #include_next
+  # <limits.h> and the toolchain's limits.h does the same to get the "system"
+  # libc <limits.h>, so we need another include directory after the toolchain
+  # headers that has a limits.h for that to find, even though in the kernel
+  # there is nothing to add to the toolchain's <limits.h> content.
+  cflags = [
+    "-idirafter",
+    rebase_path("limits-dummy", root_build_dir),
   ]
 }
 
 source_set("ctype") {
   sources = [ "ctype.cc" ]
+  deps = [ ":headers" ]
 }
 
 source_set("tests") {
   # TODO: testonly = true
-  sources = [ "atomic_tests.cc" ]
-  deps = [ "$zx/kernel/lib/unittest" ]
+  if (toolchain.environment == "kernel") {
+    sources = [ "atomic_tests.cc" ]
+    deps = [
+      "$zx/kernel/lib/ktl:headers",
+      "$zx/kernel/lib/unittest",
+    ]
+  }
 }

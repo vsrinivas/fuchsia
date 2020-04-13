@@ -6,6 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdlib.h>
 
 unsigned long strtoul(const char *nptr, char **endptr, int base) {

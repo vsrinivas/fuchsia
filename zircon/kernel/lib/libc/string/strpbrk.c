@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <string.h>
-#include <sys/types.h>
 
 char *strpbrk(char const *cs, char const *ct) {
   const char *sc1;

@@ -10,6 +10,8 @@ library("ktl") {
   sources = [ "dummy-new.cc" ]
 
   public_configs = [ ":ktl.config" ]
+
+  deps = [ "$zx/kernel/lib/libc" ]
 }
 
 config("ktl.config") {

@@ -4,10 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <stdlib.h>
 #include <zircon/assert.h>
 
-#include "main.h"
+void abort() { ZX_PANIC("abort() called!\n"); }
 
-// This is what ZX_ASSERT calls.
-// TODO(mcgrathr): print message, backtrace
-PHYS_SINGLETHREAD void __zx_panic(const char* format, ...) { __builtin_trap(); }
+// The compiler generates calls to this for -fstack-protector.
+extern "C" void __stack_chk_fail() { ZX_PANIC("stack canary corrupted!\n"); }

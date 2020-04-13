@@ -234,7 +234,7 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
               (flags & LONGFLAG) ? va_arg(ap, long) :
               (flags & HALFHALFFLAG) ? (signed char)va_arg(ap, int) :
               (flags & HALFFLAG) ? (short)va_arg(ap, int) :
-              (flags & SIZETFLAG) ? va_arg(ap, ssize_t) :
+              (flags & SIZETFLAG) ? va_arg(ap, intptr_t) :
               (flags & INTMAXFLAG) ? va_arg(ap, intmax_t) :
               (flags & PTRDIFFFLAG) ? va_arg(ap, ptrdiff_t) :
               va_arg(ap, int);
