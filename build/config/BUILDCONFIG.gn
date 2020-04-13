@@ -162,7 +162,7 @@ if (is_fuchsia) {
 # (current_toolchain rather than host_toolchain).  To handle this, the
 # `executable()` template below will define its target in other variant
 # toolchains as a copy of the real executable.
-if (toolchain_variant.base == host_toolchain) {
+if (toolchain_variant.base == host_x64_toolchain || toolchain_variant.base == host_arm64_toolchain) {
   is_fuchsia_host = true
   is_host = true
   host_toolchain += toolchain_variant.suffix
