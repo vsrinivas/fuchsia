@@ -35,10 +35,10 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.bus",
     "//sdk/banjo/ddk.protocol.usb.hci",
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.device:fuchsia.hardware.usb.device_llcpp",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]
 }

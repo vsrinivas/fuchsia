@@ -19,10 +19,10 @@ driver_module("fx3") {  # TODO: test_driver?
   deps = [
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.fwloader:fuchsia.hardware.usb.fwloader_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
     "//zircon/system/fidl/fuchsia-mem:c",
   ]

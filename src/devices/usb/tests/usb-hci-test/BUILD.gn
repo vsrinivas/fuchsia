@@ -65,6 +65,7 @@ driver_module("driver") {
 
   deps = [
     "//sdk/banjo/ddk.protocol.usb",
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -72,7 +73,6 @@ driver_module("driver") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
     "//zircon/system/fidl/fuchsia-hardware-usb-hcitest:llcpp",
   ]

@@ -26,6 +26,7 @@ source_set("block") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -35,7 +36,6 @@ source_set("block") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]
 }

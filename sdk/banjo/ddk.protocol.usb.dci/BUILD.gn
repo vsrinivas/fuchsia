@@ -7,8 +7,8 @@ import("//build/banjo/banjo.gni")
 banjo("ddk.protocol.usb.dci") {
   sources = [ "usb-dci.banjo" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//zircon/system/banjo/ddk.physiter",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/banjo/zircon.hw.usb",
   ]
 }

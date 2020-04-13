@@ -15,12 +15,12 @@ driver_module("ums-function") {
   deps = [
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.function",
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.peripheral.block:fuchsia.hardware.usb.peripheral.block_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]
 }

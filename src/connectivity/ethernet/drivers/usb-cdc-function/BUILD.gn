@@ -15,12 +15,12 @@ driver_module("usb-cdc-function") {
   deps = [
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.function",
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.ethernet",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
     "//zircon/system/ulib/inet6",
   ]

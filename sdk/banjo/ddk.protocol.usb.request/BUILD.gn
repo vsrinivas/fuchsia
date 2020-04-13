@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/banjo.gni")
+import("//build/banjo/banjo.gni")
 
-banjo_library("ddk.protocol.usb.request") {
+banjo("ddk.protocol.usb.request") {
   sources = [ "usb-request.banjo" ]
-  public_deps = [
-    "$zx/system/banjo/ddk.physiter",
-    "$zx/system/banjo/zircon.hw.usb",
+  deps = [
+    "//zircon/system/banjo/ddk.physiter",
+    "//zircon/system/banjo/zircon.hw.usb",
   ]
 }

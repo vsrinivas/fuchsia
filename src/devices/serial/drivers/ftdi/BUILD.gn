@@ -22,6 +22,7 @@ driver_module("ftdi") {
     "//sdk/banjo/ddk.protocol.serialimpl",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//src/devices/lib/driver",
@@ -31,7 +32,6 @@ driver_module("ftdi") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]
 }
@@ -46,6 +46,7 @@ driver_module("ftdi-fake-usb") {
   deps = [
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.function",
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -53,7 +54,6 @@ driver_module("ftdi-fake-usb") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]
 }

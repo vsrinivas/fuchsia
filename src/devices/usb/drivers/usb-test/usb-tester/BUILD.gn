@@ -18,11 +18,11 @@ driver_module("usb-tester") {  # TODO: test_driver?
   deps = [
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
+    "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.tester:fuchsia.hardware.usb.tester_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/dev/lib/usb",
   ]
 }
