@@ -14,6 +14,7 @@ if (target_cpu == "x64") {
     sources = [ "thermd.cc" ]
 
     deps = [
+      "//sdk/banjo/ddk.protocol.scpi",
       "//sdk/fidl/fuchsia.hardware.gpu.clock:fuchsia.hardware.gpu.clock_c_client",
       "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
       "//zircon/public/lib/async",
@@ -27,7 +28,6 @@ if (target_cpu == "x64") {
       "//zircon/public/lib/trace",
       "//zircon/public/lib/trace-provider-with-fdio",
       "//zircon/public/lib/zx",
-      "//zircon/system/banjo/ddk.protocol.scpi",
       "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
     ]
   }
