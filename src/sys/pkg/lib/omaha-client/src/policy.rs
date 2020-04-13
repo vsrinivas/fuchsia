@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
+    clock,
     common::{format_system_time, App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
     request_builder::RequestParams,
@@ -24,11 +25,50 @@ pub struct PolicyData {
     pub current_time: SystemTime,
 }
 
+impl PolicyData {
+    /// Create and return a new builder for PolicyData.    
+    pub fn builder() -> PolicyDataBuilder {
+        PolicyDataBuilder::default()
+    }
+}
+
 impl std::fmt::Debug for PolicyData {
+    /// Implement Debug such that it uses the same time formatting as
+    /// crate::common::UpdateCheckSchedule uses.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PolicyData")
             .field("current_time", &format_system_time(self.current_time))
             .finish()
+    }
+}
+
+/// The PolicyDataBuilder uses the typestate pattern.  The builder cannot be built until the time
+/// has been specified (which changes the type of the builder).
+#[derive(Debug, Default)]
+pub struct PolicyDataBuilder;
+
+/// The PolicyDataBuilder, once it has time set.
+pub struct PolicyDataBuilderWithTime {
+    current_time: SystemTime,
+}
+
+impl PolicyDataBuilder {
+    /// Use |crate::clock| to set the |current_time|.
+    pub fn use_clock(self) -> PolicyDataBuilderWithTime {
+        PolicyDataBuilderWithTime { current_time: clock::now() }
+    }
+
+    /// Set the |current_time| explicitly from a given SystemTime.
+    pub fn time(self, current_time: SystemTime) -> PolicyDataBuilderWithTime {
+        PolicyDataBuilderWithTime { current_time }
+    }
+}
+
+/// These are the operations that can be performed once the time has been set.
+impl PolicyDataBuilderWithTime {
+    /// Construct the PolicyData
+    pub fn build(self) -> PolicyData {
+        PolicyData { current_time: self.current_time }
     }
 }
 
@@ -129,4 +169,24 @@ pub trait PolicyEngine {
         &mut self,
         proposed_install_plan: &impl Plan,
     ) -> BoxFuture<'_, UpdateDecision>;
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    pub fn test_policy_data_builder_with_system_time() {
+        let current_time = SystemTime::UNIX_EPOCH + Duration::from_secs(200000);
+        let policy_data = PolicyData::builder().time(current_time).build();
+        assert_eq!(policy_data.current_time, current_time);
+    }
+
+    #[test]
+    pub fn test_policy_data_builder_with_clock() {
+        let current_time = clock::now();
+        let policy_data = PolicyData::builder().use_clock().build();
+        assert_eq!(policy_data.current_time, current_time);
+    }
 }

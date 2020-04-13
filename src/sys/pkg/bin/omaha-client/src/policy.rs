@@ -6,7 +6,6 @@ use futures::future::BoxFuture;
 use futures::prelude::*;
 use log::info;
 use omaha_client::{
-    clock,
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
     policy::{CheckDecision, Policy, PolicyData, PolicyEngine, UpdateDecision},
@@ -120,7 +119,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
         protocol_state: &ProtocolState,
     ) -> BoxFuture<'_, UpdateCheckSchedule> {
         let schedule = FuchsiaPolicy::compute_next_update_time(
-            &PolicyData { current_time: clock::now() },
+            &PolicyData::builder().use_clock().build(),
             apps,
             scheduling,
             protocol_state,
@@ -136,7 +135,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
         check_options: &CheckOptions,
     ) -> BoxFuture<'_, CheckDecision> {
         let decision = FuchsiaPolicy::update_check_allowed(
-            &PolicyData { current_time: clock::now() },
+            &PolicyData::builder().use_clock().build(),
             apps,
             scheduling,
             protocol_state,
@@ -150,7 +149,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
         proposed_install_plan: &impl Plan,
     ) -> BoxFuture<'_, UpdateDecision> {
         let decision = FuchsiaPolicy::update_can_start(
-            &PolicyData { current_time: clock::now() },
+            &PolicyData::builder().use_clock().build(),
             proposed_install_plan,
         );
         future::ready(decision).boxed()
@@ -160,6 +159,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use omaha_client::clock;
     use omaha_client::installer::stub::StubPlan;
     use pretty_assertions::assert_eq;
 
@@ -178,7 +178,7 @@ mod tests {
             UpdateCheckSchedule::builder().last_time(now - Duration::from_secs(1234)).build();
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = PolicyData { current_time: now };
+        let policy_data = PolicyData::builder().time(now).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -212,7 +212,7 @@ mod tests {
             UpdateCheckSchedule::builder().last_time(now - Duration::from_secs(123456)).build();
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = PolicyData { current_time: now };
+        let policy_data = PolicyData::builder().time(now).build();
         // Execute the policy check.
         let result = FuchsiaPolicy::compute_next_update_time(
             &policy_data,
@@ -245,7 +245,7 @@ mod tests {
             ProtocolState { consecutive_failed_update_checks: 1, ..Default::default() };
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = PolicyData { current_time: now };
+        let policy_data = PolicyData::builder().time(now).build();
         // Execute the policy check
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
@@ -277,7 +277,7 @@ mod tests {
             ProtocolState { consecutive_failed_update_checks: 4, ..Default::default() };
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = PolicyData { current_time: now };
+        let policy_data = PolicyData::builder().time(now).build();
         // Execute the policy check
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
@@ -311,7 +311,7 @@ mod tests {
         };
         // Set up the state for this check:
         //  - the time is "now"
-        let policy_data = PolicyData { current_time: now };
+        let policy_data = PolicyData::builder().time(now).build();
         // Execute the policy check
         let result =
             FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
@@ -341,7 +341,7 @@ mod tests {
         // Set up the state for this check:
         //  - the time is "now"
         //  - the check options are at normal defaults (scheduled background check)
-        let policy_data = PolicyData { current_time: now };
+        let policy_data = PolicyData::builder().time(now).build();
         let check_options = CheckOptions::default();
         // Execute the policy check
         let result = FuchsiaPolicy::update_check_allowed(
@@ -377,7 +377,7 @@ mod tests {
         // Set up the state for this check:
         //  - the time is "now"
         //  - the check options are at normal defaults (scheduled background check)
-        let policy_data = PolicyData { current_time: now };
+        let policy_data = PolicyData::builder().time(now).build();
         // Execute the policy check
         let result = FuchsiaPolicy::update_check_allowed(
             &policy_data,
@@ -394,7 +394,7 @@ mod tests {
     // Test that update_can_start returns Ok (always)
     #[test]
     fn test_update_can_start_always_ok() {
-        let policy_data = PolicyData { current_time: clock::now() };
+        let policy_data = PolicyData::builder().use_clock().build();
         let result = FuchsiaPolicy::update_can_start(&policy_data, &StubPlan);
         assert_eq!(result, UpdateDecision::Ok);
     }
