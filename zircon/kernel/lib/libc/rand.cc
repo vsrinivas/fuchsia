@@ -7,20 +7,30 @@
 
 #include <stdlib.h>
 
-#include <kernel/atomic.h>
+#include <ktl/atomic.h>
 
-static uint64_t randseed;
+namespace {
 
-void srand(unsigned int seed) { atomic_store_u64_relaxed(&randseed, seed - 1); }
+uint64_t TrivialPrng(uint64_t old_seed) { return (6364136223846793005ULL * old_seed) + 1; }
 
+int TrivialRand(uint64_t prng) { return static_cast<int>(prng >> 33); }
+
+ktl::atomic<uint64_t> gPrng;
+
+}  // namespace
+
+void srand(unsigned int seed) { gPrng.store(seed - 1, ktl::memory_order::relaxed); }
+
+// rand_r doesn't need to access the state atomically.
 int rand_r(uint64_t* seed) {
-  for (;;) {
-    uint64_t old_seed = atomic_load_u64_relaxed(seed);
-    uint64_t new_seed = 6364136223846793005ULL * old_seed + 1;
-    if (atomic_cmpxchg_u64_relaxed(seed, &old_seed, new_seed)) {
-      return static_cast<int>(new_seed >> 33);
-    }
-  }
+  *seed = TrivialPrng(*seed);
+  return TrivialRand(*seed);
 }
 
-int rand(void) { return rand_r(&randseed); }
+int rand() {
+  uint64_t new_seed, old_seed = gPrng.load(ktl::memory_order::relaxed);
+  do {
+    new_seed = TrivialPrng(old_seed);
+  } while (!gPrng.compare_exchange_weak(old_seed, new_seed, ktl::memory_order::relaxed));
+  return TrivialRand(new_seed);
+}
