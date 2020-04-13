@@ -148,11 +148,11 @@ protocol ServiceSubscriber {
 /// calling another method.
 protocol ServiceSubscriber2 {
     /// Notifies the subscriber that a service instance has been discovered.
-    OnInstanceDiscovered(ServiceInstance instance) -> ();
+    OnInstanceDiscovered(ServiceInstance2 instance) -> ();
 
     /// Notifies the subscriber that addresses or text for a known service
     /// instance have changed.
-    OnInstanceChanged(ServiceInstance instance) -> ();
+    OnInstanceChanged(ServiceInstance2 instance) -> ();
 
     /// Notifies the subscriber that a known service instance has been lost.
     OnInstanceLost(service_name service, instance_name instance) -> ();
@@ -191,6 +191,32 @@ struct ServiceInstance {
     /// The weight of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
     uint16 srv_weight;
+};
+
+/// Describes a service instance.
+table ServiceInstance2 {
+    /// The name of the service.
+    1: service_name service;
+
+    /// The name of the service instance.
+    2: instance_name instance;
+
+    /// IPv4 socket address for the service. May be unset.
+    3: fuchsia.net.Ipv4SocketAddress ipv4_endpoint;
+
+    /// IPv6 socket address for the service. May be unset.
+    4: fuchsia.net.Ipv6SocketAddress ipv6_endpoint;
+
+    /// Text strings describing the instance.
+    5: vector<txt_string>:MAX_TEXT_STRINGS text;
+
+    /// The priority of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    6: uint16 srv_priority;
+
+    /// The weight of the SRV resource record for this publication. See
+    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
+    7: uint16 srv_weight;
 };
 
 /// Client-supplied publication responder interface.

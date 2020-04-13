@@ -16,46 +16,6 @@ namespace mdns {
 const std::string MdnsFidlUtil::kFuchsiaServiceName = "_fuchsia._tcp.";
 
 // static
-fuchsia::net::mdns::ServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
-    const std::string& service, const std::string& instance, const inet::SocketAddress& v4_address,
-    const inet::SocketAddress& v6_address, const std::vector<std::string>& text) {
-  fuchsia::net::mdns::ServiceInstancePtr service_instance =
-      fuchsia::net::mdns::ServiceInstance::New();
-
-  service_instance->service = service;
-  service_instance->instance = instance;
-  service_instance->text = text;
-
-  if (v4_address.is_valid()) {
-    service_instance->endpoints.push_back(CreateEndpointV4(v4_address));
-  }
-
-  if (v6_address.is_valid()) {
-    service_instance->endpoints.push_back(CreateEndpointV6(v6_address));
-  }
-
-  return service_instance;
-}
-
-// static
-void MdnsFidlUtil::UpdateServiceInstance(
-    const fuchsia::net::mdns::ServiceInstancePtr& service_instance,
-    const inet::SocketAddress& v4_address, const inet::SocketAddress& v6_address,
-    const std::vector<std::string>& text) {
-  service_instance->text = text;
-
-  service_instance->endpoints.clear();
-
-  if (v4_address.is_valid()) {
-    service_instance->endpoints.push_back(CreateEndpointV4(v4_address));
-  }
-
-  if (v6_address.is_valid()) {
-    service_instance->endpoints.push_back(CreateEndpointV6(v6_address));
-  }
-}
-
-// static
 fuchsia::net::Ipv4Address MdnsFidlUtil::CreateIpv4Address(const inet::IpAddress& ip_address) {
   FX_DCHECK(ip_address);
   FX_DCHECK(ip_address.is_v4());
@@ -94,27 +54,24 @@ fuchsia::net::IpAddress MdnsFidlUtil::CreateIpAddress(const inet::IpAddress& ip_
 }
 
 // static
-fuchsia::net::Endpoint MdnsFidlUtil::CreateEndpointV4(const inet::SocketAddress& socket_address) {
+fuchsia::net::Ipv4SocketAddress MdnsFidlUtil::CreateSocketAddressV4(
+    const inet::SocketAddress& socket_address) {
   FX_DCHECK(socket_address);
   FX_DCHECK(socket_address.is_v4());
 
-  fuchsia::net::Endpoint endpoint;
-  endpoint.addr.set_ipv4(CreateIpv4Address(socket_address.address()));
-  endpoint.port = socket_address.port().as_uint16_t();
-
-  return endpoint;
+  return fuchsia::net::Ipv4SocketAddress{CreateIpv4Address(socket_address.address()),
+                                         socket_address.port().as_uint16_t()};
 }
 
 // static
-fuchsia::net::Endpoint MdnsFidlUtil::CreateEndpointV6(const inet::SocketAddress& socket_address) {
+fuchsia::net::Ipv6SocketAddress MdnsFidlUtil::CreateSocketAddressV6(
+    const inet::SocketAddress& socket_address) {
   FX_DCHECK(socket_address);
   FX_DCHECK(socket_address.is_v6());
 
-  fuchsia::net::Endpoint endpoint;
-  endpoint.addr.set_ipv6(CreateIpv6Address(socket_address.address()));
-  endpoint.port = socket_address.port().as_uint16_t();
-
-  return endpoint;
+  return fuchsia::net::Ipv6SocketAddress{CreateIpv6Address(socket_address.address()),
+                                         socket_address.port().as_uint16_t(),
+                                         socket_address.scope_id()};
 }
 
 // static
@@ -180,6 +137,25 @@ fuchsia::net::mdns::ResourceType MdnsFidlUtil::Convert(DnsType type) {
     default:
       FX_DCHECK(false) << "Asked to convert unexpected DnsType " << static_cast<uint32_t>(type);
       return fuchsia::net::mdns::ResourceType::ANY;
+  }
+}
+
+void MdnsFidlUtil::FillServiceInstance2(fuchsia::net::mdns::ServiceInstance2* service_instance,
+                                        const std::string& service, const std::string& instance,
+                                        const inet::SocketAddress& v4_address,
+                                        const inet::SocketAddress& v6_address,
+                                        const std::vector<std::string>& text, uint16_t srv_priority,
+                                        uint16_t srv_weight) {
+  service_instance->set_service(service);
+  service_instance->set_instance(instance);
+  service_instance->set_text(text);
+  service_instance->set_srv_priority(srv_priority);
+  service_instance->set_srv_weight(srv_weight);
+  if (v4_address) {
+    service_instance->set_ipv4_endpoint(MdnsFidlUtil::CreateSocketAddressV4(v4_address));
+  }
+  if (v6_address) {
+    service_instance->set_ipv6_endpoint(MdnsFidlUtil::CreateSocketAddressV6(v6_address));
   }
 }
 

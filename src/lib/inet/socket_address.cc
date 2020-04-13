@@ -75,7 +75,7 @@ SocketAddress::SocketAddress(const sockaddr_in6& addr) {
   v6_ = addr;
 }
 
-SocketAddress::SocketAddress(const IpAddress& addr, IpPort port) {
+void SocketAddress::Build(const IpAddress& addr, IpPort port, uint32_t scope_id) {
   if (!addr.is_valid()) {
     std::memset(&v6_, 0, sizeof(v6_));
     return;
@@ -91,7 +91,12 @@ SocketAddress::SocketAddress(const IpAddress& addr, IpPort port) {
     v6_.sin6_family = AF_INET6;
     v6_.sin6_port = port.as_in_port_t();
     v6_.sin6_addr = addr.as_in6_addr();
+    v6_.sin6_scope_id = scope_id;
   }
+}
+
+SocketAddress::SocketAddress(const IpAddress& addr, IpPort port, uint32_t scope_id) {
+  Build(addr, port, scope_id);
 }
 
 SocketAddress::SocketAddress(const sockaddr_storage& addr) {
@@ -108,9 +113,30 @@ SocketAddress::SocketAddress(const fuchsia::netstack::SocketAddress* addr)
   FXL_DCHECK(addr != nullptr);
 }
 
-SocketAddress::SocketAddress(const fuchsia::net::Endpoint* endpoint)
-    : SocketAddress(IpAddress(&endpoint->addr), IpPort::From_uint16_t(endpoint->port)) {
-  FXL_DCHECK(endpoint != nullptr);
+SocketAddress::SocketAddress(const fuchsia::net::SocketAddress* addr) : SocketAddress() {
+  FXL_DCHECK(addr != nullptr);
+  switch (addr->Which()) {
+    case fuchsia::net::SocketAddress::kIpv4:
+      Build(IpAddress(&addr->ipv4().address), IpPort::From_uint16_t(addr->ipv4().port), 0);
+      break;
+    case fuchsia::net::SocketAddress::kIpv6:
+      Build(IpAddress(&addr->ipv6().address), IpPort::From_uint16_t(addr->ipv6().port),
+            static_cast<uint32_t>(addr->ipv6().zone_index));
+      break;
+    case fuchsia::net::SocketAddress::Invalid:
+      break;
+  }
+}
+
+SocketAddress::SocketAddress(const fuchsia::net::Ipv4SocketAddress* addr)
+    : SocketAddress(IpAddress(&addr->address), IpPort::From_uint16_t(addr->port)) {
+  FXL_DCHECK(addr != nullptr);
+}
+
+SocketAddress::SocketAddress(const fuchsia::net::Ipv6SocketAddress* addr) {
+  FXL_DCHECK(addr != nullptr);
+  Build(IpAddress(&addr->address), IpPort::From_uint16_t(addr->port),
+        static_cast<uint32_t>(addr->zone_index));
 }
 
 std::string SocketAddress::ToString() const {

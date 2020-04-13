@@ -127,7 +127,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
 
  private:
   // fuchsia::net::mdns::ServiceSubscriber2 implementation.
-  void OnInstanceDiscovered(fuchsia::net::mdns::ServiceInstance instance,
+  void OnInstanceDiscovered(fuchsia::net::mdns::ServiceInstance2 instance,
                             OnInstanceDiscoveredCallback callback) override {
     callback();
     if (VerifyInstance(instance)) {
@@ -145,7 +145,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
     }
   }
 
-  void OnInstanceChanged(fuchsia::net::mdns::ServiceInstance instance,
+  void OnInstanceChanged(fuchsia::net::mdns::ServiceInstance2 instance,
                          OnInstanceChangedCallback callback) override {
     callback();
   }
@@ -171,26 +171,26 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
     quit_callback_(exit_code);
   }
 
-  bool VerifyInstance(const fuchsia::net::mdns::ServiceInstance& instance) {
-    return instance.service == kServiceName && instance.instance == kInstanceName &&
-           !instance.endpoints.empty() &&
-           (VerifyRemoteEndpoint(instance.endpoints[0]) ||
-            (instance.endpoints.size() == 2 && VerifyRemoteEndpoint(instance.endpoints[1]))) &&
-           std::equal(kText.begin(), kText.end(), instance.text.begin(), instance.text.end()) &&
-           instance.srv_priority == kPriority && instance.srv_weight == kWeight;
+  bool VerifyInstance(const fuchsia::net::mdns::ServiceInstance2& instance) {
+    return instance.service() == kServiceName && instance.instance() == kInstanceName &&
+           VerifyRemoteEndpoints(instance) &&
+           std::equal(kText.begin(), kText.end(), instance.text().begin(), instance.text().end()) &&
+           instance.srv_priority() == kPriority && instance.srv_weight() == kWeight;
   }
 
-  bool VerifyRemoteEndpoint(const fuchsia::net::Endpoint& endpoint) {
-    if (endpoint.port != kPort) {
-      return false;
+  bool VerifyRemoteEndpoints(const fuchsia::net::mdns::ServiceInstance2& instance) {
+    bool valid_v4 = false;
+    bool valid_v6 = false;
+    if (instance.has_ipv4_endpoint()) {
+      valid_v4 = instance.ipv4_endpoint().port == kPort &&
+                 fidl::Equals(instance.ipv4_endpoint().address, kRemoteV4Address);
     }
-
-    if (endpoint.addr.is_ipv4() && fidl::Equals(endpoint.addr.ipv4(), kRemoteV4Address)) {
-      return true;
+    if (instance.has_ipv6_endpoint()) {
+      // TODO(dalesat): Restore this check once we have predictable addresses in netemul.
+      // fidl::Equals(endpoint.addr.ipv6(), kRemoteV6Address) &&
+      valid_v6 = instance.ipv6_endpoint().port == kPort;
     }
-
-    // TODO(dalesat): Restore this check once we have predictable addresses in netemul.
-    return endpoint.addr.is_ipv6();  // && fidl::Equals(endpoint.addr.ipv6(), kRemoteV6Address);
+    return valid_v4 || valid_v6;
   }
 
   sys::ComponentContext* component_context_;

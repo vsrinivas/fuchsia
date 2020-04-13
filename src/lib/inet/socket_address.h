@@ -49,7 +49,7 @@ class SocketAddress {
   explicit SocketAddress(const sockaddr_in6& addr);
 
   // Creates a socket address from a IpAddress and an IpPort.
-  SocketAddress(const IpAddress& addr, IpPort port);
+  SocketAddress(const IpAddress& addr, IpPort port, uint32_t scope_id = 0);
 
   // Creates a socket address from an sockaddr_storage struct.
   explicit SocketAddress(const sockaddr_storage& addr);
@@ -57,8 +57,14 @@ class SocketAddress {
   // Creates a socket address from a fuchsia.netstack SocketAddress struct.
   explicit SocketAddress(const fuchsia::netstack::SocketAddress* addr);
 
-  // Creates a socket address from a fuchsia.net Endpoint struct.
-  explicit SocketAddress(const fuchsia::net::Endpoint* endpoint);
+  // Creates a socket address from a fuchsia.net SocketAddress struct.
+  explicit SocketAddress(const fuchsia::net::SocketAddress* addr);
+
+  // Creates a socket address from a fuchsia.net Ipv4SocketAddress struct.
+  explicit SocketAddress(const fuchsia::net::Ipv4SocketAddress* addr);
+
+  // Creates a socket address from a fuchsia.net Ipv6SocketAddress struct.
+  explicit SocketAddress(const fuchsia::net::Ipv6SocketAddress* addr);
 
   bool is_valid() const { return family() != AF_UNSPEC; }
 
@@ -71,6 +77,8 @@ class SocketAddress {
   IpAddress address() const { return is_v4() ? IpAddress(v4_.sin_addr) : IpAddress(v6_.sin6_addr); }
 
   IpPort port() const { return IpPort::From_in_port_t(v4_.sin_port); }
+
+  uint32_t scope_id() const { return as_sockaddr_in6().sin6_scope_id; }
 
   const sockaddr_in& as_sockaddr_in() const {
     FXL_DCHECK(is_v4());
@@ -98,6 +106,8 @@ class SocketAddress {
   bool operator!=(const SocketAddress& other) const { return !(*this == other); }
 
  private:
+  void Build(const IpAddress& address, IpPort port, uint32_t scope_id);
+
   union {
     sockaddr_in v4_;
     sockaddr_in6 v6_;

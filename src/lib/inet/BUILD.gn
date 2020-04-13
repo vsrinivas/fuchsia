@@ -26,7 +26,10 @@ static_library("inet") {
 test("tests_bin") {
   output_name = "libinet_tests"
 
-  sources = [ "test/ip_address_test.cc" ]
+  sources = [
+    "test/ip_address_test.cc",
+    "test/socket_address_test.cc",
+  ]
 
   deps = [
     ":inet",

@@ -91,7 +91,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
 
     struct Entry {
       EntryType type;
-      fuchsia::net::mdns::ServiceInstance service_instance;
+      fuchsia::net::mdns::ServiceInstance2 service_instance;
       DnsType type_queried;
     };
 

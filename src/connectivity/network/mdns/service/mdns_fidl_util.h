@@ -17,25 +17,17 @@ class MdnsFidlUtil {
  public:
   static const std::string kFuchsiaServiceName;
 
-  static fuchsia::net::mdns::ServiceInstancePtr CreateServiceInstance(
-      const std::string& service, const std::string& instance,
-      const inet::SocketAddress& v4_address, const inet::SocketAddress& v6_address,
-      const std::vector<std::string>& text);
-
-  static void UpdateServiceInstance(const fuchsia::net::mdns::ServiceInstancePtr& service_instance,
-                                    const inet::SocketAddress& v4_address,
-                                    const inet::SocketAddress& v6_address,
-                                    const std::vector<std::string>& text);
-
   static fuchsia::net::Ipv4Address CreateIpv4Address(const inet::IpAddress& ip_address);
 
   static fuchsia::net::Ipv6Address CreateIpv6Address(const inet::IpAddress& ip_address);
 
   static fuchsia::net::IpAddress CreateIpAddress(const inet::IpAddress& ip_address);
 
-  static fuchsia::net::Endpoint CreateEndpointV4(const inet::SocketAddress& socket_address);
+  static fuchsia::net::Ipv4SocketAddress CreateSocketAddressV4(
+      const inet::SocketAddress& socket_address);
 
-  static fuchsia::net::Endpoint CreateEndpointV6(const inet::SocketAddress& socket_address);
+  static fuchsia::net::Ipv6SocketAddress CreateSocketAddressV6(
+      const inet::SocketAddress& socket_address);
 
   static inet::IpAddress IpAddressFrom(const fuchsia::net::IpAddress* addr);
 
@@ -46,6 +38,13 @@ class MdnsFidlUtil {
       const std::vector<inet::SocketAddress>& addresses);
 
   static fuchsia::net::mdns::ResourceType Convert(DnsType type);
+
+  static void FillServiceInstance2(fuchsia::net::mdns::ServiceInstance2* service_instance,
+                                   const std::string& service, const std::string& instance,
+                                   const inet::SocketAddress& v4_address,
+                                   const inet::SocketAddress& v6_address,
+                                   const std::vector<std::string>& text, uint16_t srv_priority,
+                                   uint16_t srv_weight);
 };
 
 }  // namespace mdns

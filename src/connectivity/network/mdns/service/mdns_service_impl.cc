@@ -40,6 +40,27 @@ std::string GetHostName() {
   return host_name;
 }
 
+fuchsia::net::mdns::ServiceInstance MakeOldServiceInstance(
+    fuchsia::net::mdns::ServiceInstance2 instance2) {
+  fuchsia::net::mdns::ServiceInstance old;
+  old.service = std::move(instance2.service());
+  old.instance = std::move(instance2.instance());
+  old.text = std::move(instance2.text());
+  old.srv_priority = instance2.srv_priority();
+  old.srv_weight = instance2.srv_weight();
+  if (instance2.has_ipv4_endpoint()) {
+    auto& endpoint = old.endpoints.emplace_back();
+    endpoint.port = instance2.ipv4_endpoint().port;
+    endpoint.addr.set_ipv4(instance2.ipv4_endpoint().address);
+  }
+  if (instance2.has_ipv6_endpoint()) {
+    auto& endpoint = old.endpoints.emplace_back();
+    endpoint.port = instance2.ipv6_endpoint().port;
+    endpoint.addr.set_ipv6(instance2.ipv6_endpoint().address);
+  }
+  return old;
+}
+
 }  // namespace
 
 MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
@@ -321,20 +342,9 @@ void MdnsServiceImpl::Subscriber::InstanceDiscovered(const std::string& service,
                                                      const inet::SocketAddress& v6_address,
                                                      const std::vector<std::string>& text,
                                                      uint16_t srv_priority, uint16_t srv_weight) {
-  Entry entry{.type = EntryType::kInstanceDiscovered,
-              .service_instance = fuchsia::net::mdns::ServiceInstance{.service = service,
-                                                                      .instance = instance,
-                                                                      .text = text,
-                                                                      .srv_priority = srv_priority,
-                                                                      .srv_weight = srv_weight}};
-  if (v4_address) {
-    entry.service_instance.endpoints.push_back(MdnsFidlUtil::CreateEndpointV4(v4_address));
-  }
-
-  if (v6_address) {
-    entry.service_instance.endpoints.push_back(MdnsFidlUtil::CreateEndpointV6(v6_address));
-  }
-
+  Entry entry{.type = EntryType::kInstanceDiscovered};
+  MdnsFidlUtil::FillServiceInstance2(&entry.service_instance, service, instance, v4_address,
+                                     v6_address, text, srv_priority, srv_weight);
   entries_.push(std::move(entry));
   MaybeSendNextEntry();
 }
@@ -345,19 +355,9 @@ void MdnsServiceImpl::Subscriber::InstanceChanged(const std::string& service,
                                                   const inet::SocketAddress& v6_address,
                                                   const std::vector<std::string>& text,
                                                   uint16_t srv_priority, uint16_t srv_weight) {
-  Entry entry{.type = EntryType::kInstanceChanged,
-              .service_instance = fuchsia::net::mdns::ServiceInstance{.service = service,
-                                                                      .instance = instance,
-                                                                      .text = text,
-                                                                      .srv_priority = srv_priority,
-                                                                      .srv_weight = srv_weight}};
-  if (v4_address) {
-    entry.service_instance.endpoints.push_back(MdnsFidlUtil::CreateEndpointV4(v4_address));
-  }
-
-  if (v6_address) {
-    entry.service_instance.endpoints.push_back(MdnsFidlUtil::CreateEndpointV6(v6_address));
-  }
+  Entry entry{.type = EntryType::kInstanceChanged};
+  MdnsFidlUtil::FillServiceInstance2(&entry.service_instance, service, instance, v4_address,
+                                     v6_address, text, srv_priority, srv_weight);
 
   entries_.push(std::move(entry));
   MaybeSendNextEntry();
@@ -365,9 +365,11 @@ void MdnsServiceImpl::Subscriber::InstanceChanged(const std::string& service,
 
 void MdnsServiceImpl::Subscriber::InstanceLost(const std::string& service,
                                                const std::string& instance) {
-  entries_.push({.type = EntryType::kInstanceLost,
-                 .service_instance = fuchsia::net::mdns::ServiceInstance{.service = service,
-                                                                         .instance = instance}});
+  Entry entry{.type = EntryType::kInstanceLost};
+  entry.service_instance.set_service(service);
+  entry.service_instance.set_instance(instance);
+  entries_.push(std::move(entry));
+
   MaybeSendNextEntry();
 }
 
@@ -388,13 +390,15 @@ void MdnsServiceImpl::Subscriber::MaybeSendNextEntry() {
   if (client_) {
     switch (entry.type) {
       case EntryType::kInstanceDiscovered:
-        client_->OnInstanceDiscovered(std::move(entry.service_instance), std::move(on_reply));
+        client_->OnInstanceDiscovered(MakeOldServiceInstance(std::move(entry.service_instance)),
+                                      std::move(on_reply));
         break;
       case EntryType::kInstanceChanged:
-        client_->OnInstanceChanged(std::move(entry.service_instance), std::move(on_reply));
+        client_->OnInstanceChanged(MakeOldServiceInstance(std::move(entry.service_instance)),
+                                   std::move(on_reply));
         break;
       case EntryType::kInstanceLost:
-        client_->OnInstanceLost(entry.service_instance.service, entry.service_instance.instance,
+        client_->OnInstanceLost(entry.service_instance.service(), entry.service_instance.instance(),
                                 std::move(on_reply));
         break;
       case EntryType::kQuery:
@@ -410,8 +414,8 @@ void MdnsServiceImpl::Subscriber::MaybeSendNextEntry() {
         client2_->OnInstanceChanged(std::move(entry.service_instance), std::move(on_reply));
         break;
       case EntryType::kInstanceLost:
-        client2_->OnInstanceLost(entry.service_instance.service, entry.service_instance.instance,
-                                 std::move(on_reply));
+        client2_->OnInstanceLost(entry.service_instance.service(),
+                                 entry.service_instance.instance(), std::move(on_reply));
         break;
       case EntryType::kQuery:
         client2_->OnQuery(MdnsFidlUtil::Convert(entry.type_queried), std::move(on_reply));
