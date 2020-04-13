@@ -4,12 +4,16 @@
 #[cfg(test)]
 use {
     crate::agent::restore_agent::RestoreAgent,
-    crate::registry::base::State,
+    crate::internal::handler::{
+        create_message_hub as create_setting_handler_message_hub, Address, Payload,
+    },
+    crate::message::base::{Audience, MessengerType},
+    crate::registry::base::{Command, ContextBuilder, HandlerId, State},
     crate::registry::device_storage::testing::*,
     crate::registry::setting_handler::{
         controller, persist::controller as data_controller,
         persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, persist::Storage,
-        ClientProxy, ControllerError, Handler,
+        BoxedController, ClientImpl, ClientProxy, ControllerError, GenerateController, Handler,
     },
     crate::switchboard::base::{
         DoNotDisturbInfo, SettingRequest, SettingResponseResult, SettingType,
@@ -17,7 +21,9 @@ use {
     crate::{Environment, EnvironmentBuilder},
     anyhow::Error,
     async_trait::async_trait,
+    futures::channel::mpsc::{unbounded, UnboundedSender},
     futures::lock::Mutex,
+    futures::StreamExt,
     std::marker::PhantomData,
     std::sync::Arc,
 };
@@ -158,4 +164,75 @@ async fn verify_environment_startup(spawn_result: Result<Environment, Error>) {
     } else {
         panic!("Should have successfully created environment");
     }
+}
+
+/// StateController allows for exposing incoming handler state to an outside
+/// listener.
+struct StateController {
+    state_reporter: UnboundedSender<State>,
+}
+
+impl StateController {
+    pub fn create_generator(reporter: UnboundedSender<State>) -> GenerateController {
+        Box::new(move |_| {
+            let reporter = reporter.clone();
+            Box::pin(async move {
+                Ok(Box::new(StateController { state_reporter: reporter.clone() })
+                    as BoxedController)
+            })
+        })
+    }
+}
+
+#[async_trait]
+impl controller::Handle for StateController {
+    async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+        return None;
+    }
+
+    async fn change_state(&mut self, state: State) {
+        self.state_reporter.unbounded_send(state).ok();
+    }
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_event_propagation() {
+    let factory = create_setting_handler_message_hub();
+    let handler_id: HandlerId = 3;
+    let setting_type = SettingType::Unknown;
+
+    let (messenger, _) =
+        factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+    let (event_tx, mut event_rx) = unbounded::<State>();
+    let (handler_messenger, handler_receptor) =
+        factory.create(MessengerType::Addressable(Address::Handler(handler_id))).await.unwrap();
+    let context = ContextBuilder::new(
+        setting_type,
+        InMemoryStorageFactory::create(),
+        handler_messenger,
+        handler_receptor,
+    )
+    .build();
+
+    assert!(ClientImpl::create(context, StateController::create_generator(event_tx)).await.is_ok());
+
+    messenger
+        .message(
+            Payload::Command(Command::ChangeState(State::Listen)),
+            Audience::Address(Address::Handler(handler_id)),
+        )
+        .send()
+        .ack();
+
+    assert_eq!(Some(State::Listen), event_rx.next().await);
+
+    messenger
+        .message(
+            Payload::Command(Command::ChangeState(State::EndListen)),
+            Audience::Address(Address::Handler(handler_id)),
+        )
+        .send()
+        .ack();
+
+    assert_eq!(Some(State::EndListen), event_rx.next().await);
 }
