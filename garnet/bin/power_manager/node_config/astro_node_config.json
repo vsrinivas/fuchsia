@@ -1,5 +1,9 @@
 [
   {
+    "type": "CrashReportHandler",
+    "name": "crash_handler"
+  },
+  {
     "type": "CpuStatsHandler",
     "name": "cpu_stats"
   },
@@ -42,6 +46,7 @@
     "type": "ThermalPolicy",
     "name": "thermal_policy",
     "dependencies": {
+      "crash_report_handler_node": "crash_handler",
       "temperature_handler_node": "temperature",
       "cpu_control_nodes": [
         "cpu_control"

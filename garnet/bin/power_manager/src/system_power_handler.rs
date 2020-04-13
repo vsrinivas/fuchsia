@@ -11,7 +11,7 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device_manager as fdevmgr;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::fx_log_info;
 use fuchsia_zircon as zx;
 use serde_json as json;
 use std::collections::HashMap;

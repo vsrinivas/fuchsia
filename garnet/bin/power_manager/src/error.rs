@@ -12,6 +12,9 @@ pub enum PowerManagerError {
 
     #[error("Invalid argument")]
     InvalidArgument(String),
+
+    #[error("Out of space")]
+    OutOfSpace(String),
 }
 
 impl From<anyhow::Error> for PowerManagerError {

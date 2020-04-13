@@ -26,6 +26,7 @@ rustc_binary("bin") {
 
   deps = [
     ":power_manager_metrics_rustlib",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl-rustc",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal-rustc",
     "//sdk/fidl/fuchsia.thermal:fuchsia.thermal-rustc",

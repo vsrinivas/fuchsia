@@ -11,7 +11,6 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device as fdev;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
-use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use serde_derive::Deserialize;
 use serde_json as json;

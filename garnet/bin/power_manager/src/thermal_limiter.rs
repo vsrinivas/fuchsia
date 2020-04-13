@@ -595,11 +595,11 @@ pub mod tests {
         let trip_points_client1 = vec![1, 50, 100].into_iter().map(ThermalLoad).collect();
         let trip_points_client2 = vec![1, 25, 99, 100].into_iter().map(ThermalLoad).collect();
 
-        // Setup the node and executor
+        // Set up the node and executor
         let mut exec = fasync::Executor::new().unwrap();
         let node = setup_test_node();
 
-        // Setup the Actor clients
+        // Set up the Actor clients
         let (mut stream_client1, mut stream_client2) = exec.run_singlethreaded(async {
             let stream1 = subscribe_actor(
                 node.clone(),
@@ -674,7 +674,7 @@ pub mod tests {
         let mut exec = fasync::Executor::new().unwrap();
         let node = setup_test_node();
 
-        // Setup the actor stream with trip_points: [50]
+        // Set up the actor stream with trip_points: [50]
         let mut stream = exec
             .run_singlethreaded(subscribe_actor(
                 node.clone(),

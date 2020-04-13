@@ -17,7 +17,7 @@ use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_inspect::{
     self as inspect, ArrayProperty, HistogramProperty, LinearHistogramParams, Property,
 };
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::fx_log_info;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use power_manager_metrics::power_manager_metrics as power_metrics_registry;
@@ -75,6 +75,7 @@ impl<'a> ThermalPolicyBuilder<'a> {
 
         #[derive(Deserialize)]
         struct Dependencies {
+            crash_report_handler_node: String,
             cpu_control_nodes: Vec<String>,
             system_power_handler_node: String,
             temperature_handler_node: String,
@@ -98,6 +99,7 @@ impl<'a> ThermalPolicyBuilder<'a> {
                 .collect(),
             sys_pwr_handler: nodes[&data.dependencies.system_power_handler_node].clone(),
             thermal_limiter_node: nodes[&data.dependencies.thermal_limiter_node].clone(),
+            crash_report_handler: nodes[&data.dependencies.crash_report_handler_node].clone(),
             policy_params: ThermalPolicyParams {
                 controller_params: ThermalControllerParams {
                     sample_interval: Seconds(data.config.controller_params.sample_interval),
@@ -190,6 +192,10 @@ pub struct ThermalConfig {
     /// load of the system. It is expected that this node responds to the UpdateThermalLoad
     /// message.
     pub thermal_limiter_node: Rc<dyn Node>,
+
+    /// The node used for filing a crash report. It is expected that this node responds to the
+    /// FileCrashReport message.
+    pub crash_report_handler: Rc<dyn Node>,
 
     /// All parameter values relating to the thermal policy itself
     pub policy_params: ThermalPolicyParams,
@@ -521,6 +527,7 @@ impl ThermalPolicy {
             self.state.throttle_end_deadline.set(None);
             self.thermal_metrics.borrow_mut().log_throttle_end_mitigated(timestamp);
             self.inspect.throttle_history().mark_throttling_inactive(timestamp);
+            self.file_thermal_crash_report().await;
         }
 
         self.inspect.throttle_history().record_thermal_load(thermal_load);
@@ -639,6 +646,18 @@ impl ThermalPolicy {
         }
 
         Ok(())
+    }
+
+    /// File a crash report with the signature "fuchsia-thermal-throttle".
+    async fn file_thermal_crash_report(&self) {
+        log_if_err!(
+            self.send_message(
+                &self.config.crash_report_handler,
+                &Message::FileCrashReport("fuchsia-thermal-throttle".to_string()),
+            )
+            .await,
+            "Failed to file crash report"
+        );
     }
 }
 
@@ -1074,7 +1093,7 @@ pub mod tests {
     /// CPU control nodes.
     #[fasync::run_singlethreaded(test)]
     async fn test_multiple_cpu_actors() {
-        // Setup the two CpuControlHandler mock nodes. The message reply to SetMaxPowerConsumption
+        // Set up the two CpuControlHandler mock nodes. The message reply to SetMaxPowerConsumption
         // indicates how much power the mock node was able to utilize, and ultimately drives the
         // test logic.
         let cpu_node_1 = create_mock_node(
@@ -1128,6 +1147,7 @@ pub mod tests {
             cpu_control_nodes: vec![cpu_node_1, cpu_node_2],
             sys_pwr_handler: create_mock_node("SysPwrNode", vec![]),
             thermal_limiter_node: create_mock_node("ThermalLimiterNode", vec![]),
+            crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
         };
         let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
@@ -1150,6 +1170,7 @@ pub mod tests {
             cpu_control_nodes: vec![create_mock_node("CpuCtrlNode", vec![])],
             sys_pwr_handler: create_mock_node("SysPwrNode", vec![]),
             thermal_limiter_node: create_mock_node("ThermalLimiterNode", vec![]),
+            crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
         };
         let inspector = inspect::Inspector::new();
@@ -1219,7 +1240,7 @@ pub mod tests {
         let throttle_start_time = Nanoseconds(0);
         let throttle_end_time = Nanoseconds(1000);
 
-        // Setup the ThermalPolicy node
+        // Set up the ThermalPolicy node
         let thermal_config = ThermalConfig {
             temperature_node: create_dummy_node(),
             cpu_control_nodes: vec![
@@ -1240,6 +1261,7 @@ pub mod tests {
             ],
             sys_pwr_handler: create_dummy_node(),
             thermal_limiter_node: create_dummy_node(),
+            crash_report_handler: create_dummy_node(),
             policy_params,
         };
         let inspector = inspect::Inspector::new();
@@ -1397,15 +1419,17 @@ pub mod tests {
                 ],
                 "system_power_handler_node": "sys_power",
                 "temperature_handler_node": "temperature",
-                "thermal_limiter_node": "limiter"
+                "thermal_limiter_node": "limiter",
+                "crash_report_handler_node": "crash_report"
               },
         });
 
         let mut nodes: HashMap<String, Rc<dyn Node>> = HashMap::new();
-        nodes.insert("temperature".to_string(), create_mock_node("MockNode", vec![]));
-        nodes.insert("cpu_control".to_string(), create_mock_node("MockNode", vec![]));
-        nodes.insert("sys_power".to_string(), create_mock_node("MockNode", vec![]));
-        nodes.insert("limiter".to_string(), create_mock_node("MockNode", vec![]));
+        nodes.insert("temperature".to_string(), create_dummy_node());
+        nodes.insert("cpu_control".to_string(), create_dummy_node());
+        nodes.insert("sys_power".to_string(), create_dummy_node());
+        nodes.insert("limiter".to_string(), create_dummy_node());
+        nodes.insert("crash_report".to_string(), create_dummy_node());
         let _ = ThermalPolicyBuilder::new_from_json(json_data, &nodes);
     }
 
@@ -1419,12 +1443,13 @@ pub mod tests {
         let throttle_temperature = policy_params.thermal_limiting_range[0] + Celsius(1.0);
         let throttle_duration = Nanoseconds(1e9 as i64); // 1s
 
-        // Setup the ThermalPolicy node
+        // Set up the ThermalPolicy node
         let thermal_config = ThermalConfig {
             temperature_node: create_dummy_node(),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
             thermal_limiter_node: create_dummy_node(),
+            crash_report_handler: create_dummy_node(),
             policy_params,
         };
 
@@ -1475,12 +1500,13 @@ pub mod tests {
         let policy_params = default_policy_params();
         let shutdown_temperature = policy_params.thermal_shutdown_temperature + Celsius(1.0);
 
-        // Setup the ThermalPolicy node
+        // Set up the ThermalPolicy node
         let thermal_config = ThermalConfig {
             temperature_node: create_dummy_node(),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
             thermal_limiter_node: create_dummy_node(),
+            crash_report_handler: create_dummy_node(),
             policy_params,
         };
         let (sender, mut receiver) = futures::channel::mpsc::channel(10);
@@ -1531,13 +1557,14 @@ pub mod tests {
                 .collect(),
         );
 
-        // Setup the ThermalPolicy node
+        // Set up the ThermalPolicy node
         let policy_params = default_policy_params();
         let thermal_config = ThermalConfig {
             temperature_node,
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
             thermal_limiter_node: create_dummy_node(),
+            crash_report_handler: create_dummy_node(),
             policy_params,
         };
         let (sender, mut receiver) = futures::channel::mpsc::channel(10);
@@ -1609,12 +1636,13 @@ pub mod tests {
         let total_throttle_duration =
             initial_throttle_duration + Nanoseconds(throttle_end_delay.into_nanos());
 
-        // Setup the ThermalPolicy node
+        // Set up the ThermalPolicy node
         let thermal_config = ThermalConfig {
             temperature_node: create_dummy_node(),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
             thermal_limiter_node: create_dummy_node(),
+            crash_report_handler: create_dummy_node(),
             policy_params,
         };
 
@@ -1662,5 +1690,40 @@ pub mod tests {
 
         // Verify there were no more dispatched Cobalt events
         assert!(receiver.try_next().is_err());
+    }
+
+    /// Tests that when thermal throttling exits, the ThermalPolicy triggers a crash report on the
+    /// CrashReportHandler node.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_throttle_crash_report() {
+        // Define the test parameters
+        let mut policy_params = default_policy_params();
+        policy_params.throttle_end_delay = Seconds(0.0);
+        policy_params.thermal_limiting_range[0] = Celsius(80.0);
+        policy_params.thermal_limiting_range[1] = Celsius(100.0);
+        let idle_temperature = Celsius(50.0);
+        let throttle_temperature = Celsius(90.0);
+
+        // Set up the ThermalPolicy node
+        let thermal_config = ThermalConfig {
+            temperature_node: create_dummy_node(),
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: create_dummy_node(),
+            crash_report_handler: create_mock_node(
+                "CrashReportMock",
+                vec![(
+                    msg_eq!(FileCrashReport("fuchsia-thermal-throttle".to_string())),
+                    msg_ok_return!(FileCrashReport),
+                )],
+            ),
+            policy_params,
+        };
+        let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
+
+        // Enter and then exit thermal throttling. The mock crash_report_handler node will assert if
+        // it does not receive a FileCrashReport message.
+        let _ = node.update_thermal_load(Nanoseconds(0), throttle_temperature).await;
+        let _ = node.update_thermal_load(Nanoseconds(0), idle_temperature).await;
     }
 }

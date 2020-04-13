@@ -41,6 +41,10 @@ pub enum Message {
     /// Arg: a value in the range [0 - x] where x is an upper bound defined in the
     /// dev_control_handler crate. An increasing value indicates a lower performance state.
     SetPerformanceState(u32),
+
+    /// File a crash report
+    /// Arg: the crash report signature
+    FileCrashReport(String),
 }
 
 /// Defines the return values for each of the Message types from above
@@ -74,4 +78,7 @@ pub enum MessageReturn {
 
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
     SetPerformanceState,
+
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    FileCrashReport,
 }

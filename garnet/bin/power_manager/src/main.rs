@@ -13,6 +13,7 @@ mod utils;
 // nodes
 mod cpu_control_handler;
 mod cpu_stats_handler;
+mod crash_report_handler;
 mod dev_control_handler;
 mod system_power_handler;
 mod temperature_handler;
@@ -25,20 +26,20 @@ mod test;
 use crate::power_manager::PowerManager;
 use anyhow::Error;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::fx_log_info;
 use fuchsia_trace_provider;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    // Setup tracing
+    // Set up tracing
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
-    // Setup syslog
+    // Set up syslog
     fuchsia_syslog::init_with_tags(&["power_manager"])?;
     fuchsia_syslog::set_verbosity(1);
     fx_log_info!("started");
 
-    // Setup the PowerManager
+    // Set up the PowerManager
     let mut pm = PowerManager::new();
 
     // This future should never complete

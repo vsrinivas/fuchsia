@@ -13,6 +13,7 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.manager.Administrator",
+            "fuchsia.feedback.CrashReporter",
             "fuchsia.kernel.Stats",
             "fuchsia.logger.LogSink",
             "fuchsia.sysinfo.SysInfo",

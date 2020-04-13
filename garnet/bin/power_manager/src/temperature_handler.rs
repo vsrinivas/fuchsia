@@ -13,7 +13,6 @@ use async_trait::async_trait;
 use fidl_fuchsia_hardware_thermal as fthermal;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
-use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use serde_derive::Deserialize;
 use serde_json as json;

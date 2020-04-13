@@ -7,7 +7,7 @@
 macro_rules! log_if_err {
     ($result:expr, $log_prefix:expr) => {
         if let Err(e) = $result.as_ref() {
-            fx_log_err!("{}: {}", $log_prefix, e);
+            fuchsia_syslog::fx_log_err!("{}: {}", $log_prefix, e);
         }
     };
 }

@@ -15,8 +15,8 @@ use std::rc::Rc;
 
 // nodes
 use crate::{
-    cpu_control_handler, cpu_stats_handler, dev_control_handler, system_power_handler,
-    temperature_handler, thermal_limiter, thermal_policy,
+    cpu_control_handler, cpu_stats_handler, crash_report_handler, dev_control_handler,
+    system_power_handler, temperature_handler, thermal_limiter, thermal_policy,
 };
 
 /// Path to the node config JSON file.
@@ -86,6 +86,9 @@ impl PowerManager {
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) -> Result<Rc<dyn Node>, Error> {
         Ok(match json_data["type"].as_str().unwrap() {
+            "CrashReportHandler" => {
+                crash_report_handler::CrashReportHandlerBuilder::new().build()?
+            }
             "CpuControlHandler" => {
                 cpu_control_handler::CpuControlHandlerBuilder::new_from_json(json_data, &self.nodes)
                     .build()
