@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
 import("//build/json/validate_json.gni")
+import("//src/sys/cmc/cmc.gni")
 
 # Given a .cmx file, validates the module facet of it
 #
@@ -57,7 +57,7 @@ template("cmx_module_validate") {
 #     data = meta.path
 #   }
 template("cmx_validate") {
-  compiled_action(target_name) {
+  cmc(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -67,9 +67,6 @@ template("cmx_validate") {
                              "visibility",
                            ])
 
-    tool = "//src/sys/cmc"
-    tool_output_name = "cmc"
-
     stamp_file = "$target_gen_dir/$target_name.verified"
 
     inputs = [ invoker.data ]
@@ -78,14 +75,14 @@ template("cmx_validate") {
 
     args = [
       "--stamp",
-      rebase_path(stamp_file),
+      rebase_path(stamp_file, root_build_dir),
       "validate",
-      rebase_path(invoker.data),
+      rebase_path(invoker.data, root_build_dir),
     ]
     if (defined(invoker.extra_schemas)) {
       foreach(extra_schema, invoker.extra_schemas) {
-        schema_path = rebase_path(extra_schema.schema)
-        inputs += [ schema_path ]
+        inputs += [ extra_schema.schema ]
+        schema_path = rebase_path(extra_schema.schema, root_build_dir)
         args += [ "--extra_schema" ]
         if (defined(extra_schema.error_msg)) {
           args += [ "${schema_path}:${extra_schema.error_msg}" ]
@@ -136,7 +133,7 @@ template("cmx_validate") {
 #     ]
 #   }
 template("cmx_merge") {
-  compiled_action(target_name) {
+  cmc(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -151,9 +148,6 @@ template("cmx_merge") {
       dest = target_name
     }
 
-    tool = "//src/sys/cmc"
-    tool_output_name = "cmc"
-
     merged_output = "${target_out_dir}/${dest}"
     inputs = invoker.sources
     outputs = [ merged_output ]
@@ -161,7 +155,7 @@ template("cmx_merge") {
     args = [
       "merge",
       "--output",
-      rebase_path(merged_output),
+      rebase_path(merged_output, root_build_dir),
     ]
 
     foreach(source, sources) {
@@ -192,7 +186,7 @@ template("cmx_merge") {
 #     data = rebase_path(meta.path)
 #   }
 template("cmx_format") {
-  compiled_action(target_name) {
+  cmc(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -201,9 +195,6 @@ template("cmx_format") {
                              "visibility",
                            ])
 
-    tool = "//src/sys/cmc"
-    tool_output_name = "cmc"
-
     formatted_output = "$target_out_dir/$target_name"
     inputs = [ invoker.data ]
     outputs = [ formatted_output ]
@@ -211,7 +202,7 @@ template("cmx_format") {
     args = [
       "format",
       "--output",
-      rebase_path(formatted_output),
+      rebase_path(formatted_output, root_build_dir),
       invoker.data,
     ]
 

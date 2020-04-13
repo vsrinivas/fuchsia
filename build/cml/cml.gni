@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
+import("//src/sys/cmc/cmc.gni")
 
 # Compiles a cml file into a cm file.
 # If is_debug is true, pretty-prints the generated cm file.
@@ -24,7 +24,7 @@ import("//build/compiled_action.gni")
 #     data = rebase_path(meta.path)
 #   }
 template("cm") {
-  compiled_action(target_name) {
+  cmc(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -32,8 +32,6 @@ template("cm") {
                              "testonly",
                              "visibility",
                            ])
-    tool = "//src/sys/cmc"
-    tool_output_name = "cmc"
 
     compiled_output = "$target_out_dir/$target_name"
     inputs = [ invoker.data ]
@@ -42,7 +40,7 @@ template("cm") {
     args = [
       "compile",
       "--output",
-      rebase_path(compiled_output),
+      rebase_path(compiled_output, root_build_dir),
       invoker.data,
     ]
 
