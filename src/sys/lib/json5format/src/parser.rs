@@ -19,7 +19,7 @@ fn from_start(regex: &str) -> String {
     "^".to_owned() + regex
 }
 
-/// Wraps a regex patter to match the string *only* if it matches the entire string.
+/// Wraps a regex pattern to match the string *only* if it matches the entire string.
 fn exact_match(regex: &str) -> String {
     "^".to_owned() + regex + "$"
 }
@@ -45,8 +45,44 @@ lazy_static! {
 
     /// Any non-string primitive (Number, Boolean, 'null').
     static ref NON_STRING_PRIMITIVE_PATTERN: &'static str =
-        concat!(r#"((?:(?:null|true|false)\b)|(?:[-+]?(?:(?:(?:NaN|Infinity|(?:0[xX][0-9a-fA-F]+)"#,
-                r#"|(?:[0-9]+[eE][+-]?[0-9]+)|(?:[0-9]*\.[0-9]+))\b)|(?:[0-9]+(?:\.|\b)))))"#);
+        r#"((?x) # ignore whitespace and allow '#' comments
+
+            # Capture null, true, or false (lowercase only, as in the ECMAScript keywords).
+            # End with a word boundary ('\b' marker) to ensure the pattern does not match if
+            # it is followed by a word ('\w') character; for example, 'nullify' is a valid
+            # identifier (depending on the context) and must not match the 'null' value.
+
+            (?:(?:null|true|false)\b)|
+
+            # Capture all number formats. Every variant is allowed an optional '-' or '+' prefix.
+
+            (?:[-+]?(?:
+
+                # All of the following variants end in a word character. Use '\b' to prevent
+                # matching numbers immediately followed by another word character, for example,
+                # 'NaNo', 'Infinity_', or '0xadef1234ghi'.
+
+                (?:(?:
+                    NaN|
+                    Infinity|
+                    (?:0[xX][0-9a-fA-F]+)|     # hexadecimal notation
+                    (?:[0-9]+[eE][+-]?[0-9]+)| # exponent notation
+                    (?:[0-9]*\.[0-9]+)         # decimal notation
+                )\b)|
+
+                # Capture integers, with an optional trailing decimal point.
+                # If the value ends in a digit (no trailing decimal point), apply `\b` to prevent
+                # matching integers immediatly followed by a word character (for example, 1200PDT).
+                # But if the integer has a trailing decimal, the '\b' does not apply. (Since '.' is
+                # not itself a '\w' word character, the '\b' would have the opposite affect,
+                # matching only if the next character is a word character, unless there is no next
+                # character.)
+
+                (?:
+                    [0-9]+(?:\.|\b)
+                )
+            ))
+        )"#;
     static ref NON_STRING_PRIMITIVE: usize = 5;
 
     /// Property name without quotes.
@@ -900,7 +936,6 @@ mod tests {
             line_comment_content in r#"(|[^\n][^\n]*)"#,
             more_lines_or_eof in r#"(\n\PC*)?"#,
         ) {
-            // Should validate any 2 or more slashes are captured as the line comment prefix.
             test_regex(
                 *LINE_COMMENT_SLASHES,
                 RegexTest {
@@ -1001,6 +1036,30 @@ mod tests {
         }
     }
 
+    // Test two variations of invalid unquoted property name error handling, when expecting a match
+    // against the regex `UNQUOTED_PROPERTY_NAME_AND_COLON` numbered capture group pattern:
+    //
+    // 1) No generated test candidates match any `NEXT_TOKEN` pattern.
+    // 2) The first digit is a number, which does match a `NEXT_TOKEN` capture, but is an invalid
+    //    property name.
+    //
+    // It's challenging to write a pattern for what does NOT constitute a valid property name since
+    // the set of things not part of a given set is infinite. Unicode support also can make it hard
+    // to define exhaustive patterns sometimes. So here are two tests for invalid unquoted property
+    // names, both of which validate that a property name cannot start with a digit. The difference
+    // between the two tests is:
+    //
+    //   * The first test generates candidate property names that will not match any pattern in the
+    //     `NEXT_TOKEN` regex, generating a "capture failed" error.
+    //   * The second test successfully captures a `NEXT_TOKEN`, but it captures a number literal,
+    //     not an `UNQUOTED_PROPERTY_NAME_AND_COLON`, generating a different error message:
+    //     "capture group {n} did not match" (where '{n}' is the capture group number for
+    //     `UNQUOTED_PROPERTY_NAME_AND_COLON`).
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // Excluding 0-9, e & E, and x and X from the allowed pattern set for the second character
+    // ensures the pattern generator will not generate strings with prefixes such as: `25`, `0X4`,
+    // `0xf`, and `3E2`.
     proptest! {
         #![proptest_config(EXTRA_CASES_NO_PERSIST)]
         #[test]
@@ -1023,6 +1082,10 @@ mod tests {
         }
     }
 
+    // In this case, the second character is a dollar sign, which is legal for a property name,
+    // but _not_ a "Word" character in the regex `\w` pattern set. The `\b` (word boundary) applies,
+    // matching the digit as the `NEXT_TOKEN`, generating an error: "capture group {n} did not
+    // match" (where '{n}' is the capture group number for `UNQUOTED_PROPERTY_NAME_AND_COLON`).
     proptest! {
         #![proptest_config(EXTRA_CASES_NO_PERSIST)]
         #[test]
