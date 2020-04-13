@@ -49,6 +49,9 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_c",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_c",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
     "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -77,9 +80,6 @@ source_set("lib") {
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-device-manager:llcpp",
     "//zircon/system/fidl/fuchsia-fshost:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol",
-    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol:c",
-    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol:llcpp",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/fidl/fuchsia-ldsvc:llcpp",
     "//zircon/system/fidl/fuchsia-mem:c",

@@ -52,6 +52,7 @@ executable("svchost") {
   ]
   deps = [
     ":crashsvc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_c",
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -62,7 +63,6 @@ executable("svchost") {
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-fshost:c",
-    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol:c",
     "//zircon/system/fidl/fuchsia-hardware-pty:c",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/fidl/fuchsia-kernel:c",
