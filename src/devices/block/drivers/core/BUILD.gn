@@ -31,7 +31,10 @@ test("core-unittest") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "blockcore"
   include_dirs = [ "." ]
-  sources = [ "test/main.cc" ]
+  sources = [
+    "test/main.cc",
+    "test/stub-block-device.cc",
+  ]
   deps = [
     ":shared",
     "//zircon/public/lib/fdio",

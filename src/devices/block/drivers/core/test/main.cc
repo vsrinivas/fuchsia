@@ -10,55 +10,23 @@
 #include <zxtest/zxtest.h>
 
 #include "manager.h"
+#include "test/stub-block-device.h"
 
 namespace {
 
-constexpr uint32_t kBlockSize = 1024;
-constexpr uint64_t kBlockCount = 4096;
-
-// Block op size is currently an arbitrary value.
-constexpr size_t kBlockOpSize = 4096;
-
-block_info_t info{
-    .block_count = kBlockCount,
-    .block_size = kBlockSize,
-    .max_transfer_size = 2048,
-    .flags = 0,
-    .reserved = 0,
-};
-
-void bop_query(void* ctx, block_info_t* out_info, size_t* out_block_op_size) {
-  memcpy(out_info, &info, sizeof(info));
-  *out_block_op_size = kBlockOpSize;
-  return;
-}
-
-void bop_queue(void* ctx, block_op_t* bop, block_queue_callback callback, void* cookie) {
-  callback(cookie, ZX_OK, bop);
-  return;
-}
-
-block_protocol_ops_t block_ops{
-    .query = bop_query,
-    .queue = bop_queue,
-};
-
-block_protocol_t block_proto{
-    .ops = &block_ops,
-    .ctx = nullptr,
-};
-
 TEST(ManagerTest, StartServer) {
+  StubBlockDevice blkdev;
+  ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
-  ddk::BlockProtocolClient client(&block_proto);
   zx::fifo fifo;
   ASSERT_OK(manager.StartServer(&client, &fifo));
   ASSERT_OK(manager.CloseFifoServer());
 }
 
 TEST(ManagerTest, AttachVmo) {
+  StubBlockDevice blkdev;
+  ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
-  ddk::BlockProtocolClient client(&block_proto);
   zx::fifo fifo;
   ASSERT_OK(manager.StartServer(&client, &fifo));
 
@@ -72,8 +40,9 @@ TEST(ManagerTest, AttachVmo) {
 }
 
 TEST(ManagerTest, CloseVMO) {
+  StubBlockDevice blkdev;
+  ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
-  ddk::BlockProtocolClient client(&block_proto);
   zx::fifo fifo;
   ASSERT_OK(manager.StartServer(&client, &fifo));
   zx::vmo vmo;
@@ -128,8 +97,9 @@ zx_status_t FillVMO(zx::unowned_vmo vmo, size_t size) {
 }
 
 TEST(ManagerTest, ReadSingleTest) {
+  StubBlockDevice blkdev;
+  ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
-  ddk::BlockProtocolClient client(&block_proto);
   zx::fifo fifo;
   ASSERT_OK(manager.StartServer(&client, &fifo));
 
