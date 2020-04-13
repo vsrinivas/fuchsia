@@ -49,6 +49,13 @@ Escher* GetEscher() {
   return EscherEnvironment::GetGlobalTestEnvironment()->GetEscher();
 }
 
+bool GlobalEscherUsesSwiftShader() {
+  vk::PhysicalDevice physical_device =
+      EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanDevice()->vk_physical_device();
+  std::string physical_device_name = physical_device.getProperties().deviceName;
+  return physical_device_name.find("SwiftShader") != std::string::npos;
+}
+
 void EscherEnvironment::RegisterGlobalTestEnvironment() {
   FXL_CHECK(global_escher_environment_ == nullptr);
   global_escher_environment_ = static_cast<escher::test::EscherEnvironment*>(

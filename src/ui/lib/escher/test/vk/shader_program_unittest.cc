@@ -523,6 +523,10 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
 
   // Test that we can create pipelines using a VkPipelineCache, and that creating the "same"
   // pipeline twice does not result in a second invocation of the StorePipelineCacheDataCallback.
+
+  // TODO(49692): SwiftShader ICD doesn't store cached pipeline to disk correctly.
+  // So we disabled all the EXPECT checks on SwiftShader. We need to remove this
+  // after the bug is solved.
   {
     // Keeps track of the number of times that a newly-built pipeline results in updated
     // cache data, which the application should persist to disk.
@@ -546,16 +550,16 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
     // MaybeStorePipelineCacheData() is polled.
     auto pipeline1a = builder.BuildGraphicsPipeline(*create_info1, /*do_logging=*/true);
     EXPECT_EQ(1U, log_graphics_callback_count);
-    EXPECT_EQ(0U, updated_vk_cache_data_count);
+    EXEC_IF_NOT_SWIFTSHADER(EXPECT_EQ(0U, updated_vk_cache_data_count));
     builder.MaybeStorePipelineCacheData();
-    EXPECT_EQ(1U, updated_vk_cache_data_count);
+    EXEC_IF_NOT_SWIFTSHADER(EXPECT_EQ(1U, updated_vk_cache_data_count));
 
     // Same thing, with different pipeline create info.
     auto pipeline2a = builder.BuildGraphicsPipeline(*create_info2, /*do_logging=*/true);
     EXPECT_EQ(2U, log_graphics_callback_count);
-    EXPECT_EQ(1U, updated_vk_cache_data_count);
+    EXEC_IF_NOT_SWIFTSHADER(EXPECT_EQ(1U, updated_vk_cache_data_count));
     builder.MaybeStorePipelineCacheData();
-    EXPECT_EQ(2U, updated_vk_cache_data_count);
+    EXEC_IF_NOT_SWIFTSHADER(EXPECT_EQ(2U, updated_vk_cache_data_count));
 
     // Creating additional pipelines with previously-seen create_info does not result in a change to
     // the persisted Vk cache data.
@@ -563,7 +567,7 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
     auto pipeline2b = builder.BuildGraphicsPipeline(*create_info2, /*do_logging=*/true);
     builder.MaybeStorePipelineCacheData();
     EXPECT_EQ(4U, log_graphics_callback_count);
-    EXPECT_EQ(2U, updated_vk_cache_data_count);
+    EXEC_IF_NOT_SWIFTSHADER(EXPECT_EQ(2U, updated_vk_cache_data_count));
 
     // Create a new builder, primed with the data needed to build pipeline1 and pipeline2.  Building
     // these will not result in any new data to persist.
@@ -575,7 +579,7 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
     auto pipeline1c = builder.BuildGraphicsPipeline(*create_info1, /*do_logging=*/true);
     builder.MaybeStorePipelineCacheData();
     EXPECT_EQ(6U, log_graphics_callback_count);
-    EXPECT_EQ(2U, updated_vk_cache_data_count);
+    EXEC_IF_NOT_SWIFTSHADER(EXPECT_EQ(2U, updated_vk_cache_data_count));
 
     ASSERT_TRUE(pipeline1a);
     ASSERT_TRUE(pipeline1b);

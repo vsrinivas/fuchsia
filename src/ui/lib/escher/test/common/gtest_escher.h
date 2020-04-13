@@ -65,6 +65,33 @@ class EscherEnvironment : public ::testing::Environment {
   inline static EscherEnvironment* global_escher_environment_ = nullptr;
 };
 
+// Checks if the global Escher environment uses SwiftShader as its physical
+// device. This is used in macro SKIP_TEST_IF_ESCHER_USES_SWIFTSHADER().
+bool GlobalEscherUsesSwiftShader();
+
+// Skip the test if Escher uses SwiftShader ICD.
+// TODO(49863): This is a workaround since some tests doesn't work on
+// SwiftShader ICD. We should remove this macro after these issues are
+// resolved.
+#define SKIP_TEST_IF_ESCHER_USES_SWIFTSHADER()                                           \
+  do {                                                                                   \
+    if (escher::test::GlobalEscherUsesSwiftShader()) {                                   \
+      FXL_LOG(WARNING) << "This test doesn't work on SwiftShader device; Test skipped."; \
+      GTEST_SKIP();                                                                      \
+    }                                                                                    \
+  } while (0)
+
+// Execute the statements only if Escher doesn't use SwiftShader ICD.
+// TODO(49863): This is a workaround since some tests doesn't work on
+// SwiftShader ICD. We should remove this macro after these issues are
+// resolved.
+#define EXEC_IF_NOT_SWIFTSHADER(stmt)                   \
+  do {                                                  \
+    if (!escher::test::GlobalEscherUsesSwiftShader()) { \
+      stmt;                                             \
+    }                                                   \
+  } while (0)
+
 }  // namespace test
 }  // namespace escher
 
