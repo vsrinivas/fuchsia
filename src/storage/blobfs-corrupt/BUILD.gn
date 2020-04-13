@@ -9,11 +9,11 @@ executable("blobfs-corrupt") {
   sources = [ "main.cc" ]
   deps = [
     ":common",
-    "//zircon/public/lib/blobfs",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/ulib/blobfs",
   ]
 }
 
@@ -24,12 +24,12 @@ executable("blobfs-corrupt-test") {
   include_dirs = [ "." ]
   deps = [
     ":common",
-    "//zircon/public/lib/blobfs",
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fake-device",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/ulib/blobfs",
   ]
 }
 
@@ -39,11 +39,11 @@ source_set("common") {
     "fs_block_client.cc",
   ]
   deps = [
-    "//zircon/public/lib/blobfs",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/ulib/blobfs",
   ]
 }
 

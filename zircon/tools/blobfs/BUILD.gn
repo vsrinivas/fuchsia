@@ -13,11 +13,11 @@ executable("blobfs") {
   sources = [ "main.cc" ]
   deps = [
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/blobfs",
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs-host",
+    "//zircon/system/ulib/blobfs",
   ]
 
   if (!is_fuchsia) {

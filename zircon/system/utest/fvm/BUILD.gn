@@ -33,7 +33,6 @@ executable("fvm") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/blobfs",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/cksum",
@@ -61,6 +60,7 @@ executable("fvm") {
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
     "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fvm-devices",
   ]
 

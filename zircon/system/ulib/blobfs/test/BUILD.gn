@@ -46,17 +46,29 @@ group("large-test") {
   ]
 }
 
+config("test-utils-headers") {
+  # blob_utils.h is referred to as test/blob_utils.h.
+  include_dirs = [ ".." ]
+}
+
 source_set("test-utils") {
   # TODO(44278): revert to true.
   testonly = false
-  sources = [ "blob_utils.cc" ]
+  sources = [
+    "blob_utils.cc",
+    "blob_utils.h",
+  ]
   deps = [
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
-  include_dirs = [ ".." ]
+  public_deps = [
+    "..:blobfs",
+    "..:private_headers",
+  ]
+  public_configs = [ ":test-utils-headers" ]
 }
 
 test("blobfs-unit") {
@@ -99,7 +111,6 @@ test("blobfs-unit") {
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/blobfs",
     "//zircon/public/lib/buffer",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fake-device",
@@ -114,17 +125,16 @@ test("blobfs-unit") {
     "//zircon/public/lib/zstd",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-blobfs:c",
+    "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fs-test-utils",
   ]
-
-  include_dirs = [ ".." ]
 }
 
 test("blobfs-host") {
   sources = [ "host/host-test.cc" ]
   deps = [
-    "//zircon/public/lib/blobfs",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/blobfs",
   ]
 }
 
@@ -134,11 +144,11 @@ source_set("integration-fixtures") {
   sources = [ "integration/blobfs_fixtures.cc" ]
   deps = [
     ":test-utils",
-    "//zircon/public/lib/blobfs",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fs-test-utils",
   ]
 }
@@ -165,7 +175,6 @@ test("blobfs-integration") {
     ":test-utils",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/blobfs",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fs_test_support",
@@ -178,10 +187,9 @@ test("blobfs-integration") {
     "//zircon/system/fidl/fuchsia-blobfs:c",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-fs:llcpp",
+    "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fs-test-utils",
   ]
-
-  include_dirs = [ ".." ]
 }
 
 source_set("load-generator") {
@@ -189,14 +197,13 @@ source_set("load-generator") {
   testonly = false
   sources = [ "integration/load_generator.cc" ]
   deps = [
-    ":test-utils",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs-test-utils",
   ]
-  include_dirs = [ ".." ]
+  public_deps = [ ":test-utils" ]
 }
 
 blobfs_large_integration_test("fragmentation") {
@@ -239,36 +246,36 @@ fuzzer("zstd-fuzzer") {
   sources = [ "zstd-fuzzer.cc" ]
   deps = [
     "//third_party/zstd",
-    "//zircon/public/lib/blobfs",
+    "//zircon/system/ulib/blobfs",
+    "//zircon/system/ulib/blobfs:private_headers",
   ]
-  include_dirs = [ ".." ]
 }
 
 fuzzer("lz4-fuzzer") {
   sources = [ "lz4-fuzzer.cc" ]
   deps = [
-    "//zircon/public/lib/blobfs",
     "//zircon/public/lib/lz4",
+    "//zircon/system/ulib/blobfs",
+    "//zircon/system/ulib/blobfs:private_headers",
   ]
-  include_dirs = [ ".." ]
 }
 
 fuzzer("zstd-seekable-symmetric-fuzzer") {
   sources = [ "zstd-seekable-symmetric-fuzzer.cc" ]
   deps = [
     "//third_party/zstd:zstdseek",
-    "//zircon/public/lib/blobfs",
+    "//zircon/system/ulib/blobfs",
+    "//zircon/system/ulib/blobfs:private_headers",
   ]
-  include_dirs = [ ".." ]
 }
 
 fuzzer("zstd-seekable-fuzzer") {
   sources = [ "zstd-seekable-fuzzer.cc" ]
   deps = [
     "//third_party/zstd:zstdseek",
-    "//zircon/public/lib/blobfs",
+    "//zircon/system/ulib/blobfs",
+    "//zircon/system/ulib/blobfs:private_headers",
   ]
-  include_dirs = [ ".." ]
 }
 
 executable("blobfs-load-generator") {
@@ -282,7 +289,6 @@ executable("blobfs-load-generator") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs-test-utils",
   ]
-  include_dirs = [ ".." ]
 }
 
 migrated_manifest("blobfs-unit-manifest") {
