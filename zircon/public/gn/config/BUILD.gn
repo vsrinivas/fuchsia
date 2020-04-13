@@ -702,14 +702,19 @@ if (is_fuchsia) {
   }
 }
 
-config("rodso") {
-  if (is_gcc) {
-    inputs = [ "rodso.ld" ]
-    ldflags = [ "-Wl,-T," + rebase_path(inputs[0], root_build_dir) ]
-  } else {
+config("pure") {
+  if (!is_gcc) {
     # TODO(48501): This disables the SwitchToLookupTable optimization,
     # which is not PIC-friendly.
     cflags = [ "-fno-jump-tables" ]
+  }
+}
+
+config("rodso") {
+  configs = [ ":pure" ]
+  if (is_gcc) {
+    inputs = [ "rodso.ld" ]
+    ldflags = [ "-Wl,-T," + rebase_path(inputs[0], root_build_dir) ]
   }
 }
 

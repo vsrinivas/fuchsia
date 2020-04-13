@@ -26,6 +26,7 @@ if (current_toolchain == default_toolchain) {
       configs += standard_fuchsia_configs
       configs += [
         "$zx/kernel:standalone",
+        "$zx/public/gn/config:pure",
         "$zx/kernel:warnings",
         "$zx/kernel/arch/$kernel_cpu:abi",
 
