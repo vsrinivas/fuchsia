@@ -111,7 +111,6 @@ group("banjo") {
     "ddk.protocol.power",
 #------------------
 #------------------
-    "ddk.protocol.powerimpl",
 #------------------
 #------------------
     "ddk.protocol.pwm",

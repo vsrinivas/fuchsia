@@ -116,6 +116,7 @@ driver_module("test-power") {
   sources = [ "test/power.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.powerimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -123,7 +124,6 @@ driver_module("test-power") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.power",
-    "//zircon/system/banjo/ddk.protocol.powerimpl",
   ]
 }
 

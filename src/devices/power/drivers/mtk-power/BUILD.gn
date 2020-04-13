@@ -16,6 +16,7 @@ driver_module("mtk-power") {
   sources = [ "mtk-power.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.powerimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -28,7 +29,6 @@ driver_module("mtk-power") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.powerimpl",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/mt8167",
   ]
@@ -43,6 +43,7 @@ test("mtk-power-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.powerimpl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -53,7 +54,6 @@ test("mtk-power-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.powerimpl",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/dev/lib/mock-mmio-reg",
