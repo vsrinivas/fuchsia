@@ -108,6 +108,62 @@ clang_runtime = read_file(_clang_runtime_file, "json")
 template("toolchain_runtime_deps") {
   # TODO(fxb/3367): remove this attribute.
   not_needed(invoker, [ "zx_publish" ])
+
+  if (!defined(toolchain.shlib) || current_toolchain == toolchain.shlib) {
+    breakpad_deps = []
+    if (toolchain.breakpad_syms != false) {
+      match = false
+      foreach(config, clang_runtime) {
+        if (!defined(config.cflags)) {
+          config.cflags = []
+        }
+        if (!defined(config.ldflags)) {
+          config.ldflags = []
+        }
+        if (config.target + [ toolchain.target_tuple ] -
+            [ toolchain.target_tuple ] != config.target &&
+            invoker.cflags == config.cflags &&
+            invoker.ldflags == config.ldflags) {
+          match = config
+        }
+      }
+      assert(match != false,
+             "$_clang_runtime_file has no match for" +
+                 " --target=${toolchain.target_tuple} + $invoker")
+
+      foreach(lib, match.runtime) {
+        if (!defined(idx)) {
+          idx = 0
+        }
+        idx += 1
+        _file = get_path_info(lib.dist, "file")
+        breakpad_path = "$target_gen_dir/${target_name}_${_file}.sym"
+        breakpad_target_name = "${target_name}_breakpad_${idx}"
+        breakpad_deps += [ ":${breakpad_target_name}" ]
+        if (defined(lib.debug)) {
+          action(breakpad_target_name) {
+            debug = rebase_path(lib.debug, root_build_dir, _clang_lib_dir)
+            dump_syms = rebase_path(
+                    "$prebuilt_dir/third_party/breakpad/linux-x64/dump_syms/dump_syms")
+
+            script = "$zx/public/gn/toolchain/dump_syms.sh"
+            args = [
+              dump_syms,
+              debug,
+              rebase_path(breakpad_path, root_build_dir),
+            ]
+
+            inputs = [
+              dump_syms,
+              "${_clang_lib_dir}/${lib.debug}",
+            ]
+            outputs = [ breakpad_path ]
+          }
+        }
+      }
+    }
+  }
+
   group(target_name) {
     forward_variables_from(invoker,
                            [
@@ -147,6 +203,8 @@ template("toolchain_runtime_deps") {
              "$_clang_runtime_file has no match for" +
                  " --target=${toolchain.target_tuple} + $invoker")
 
+      deps = breakpad_deps
+
       toolchain_label = get_label_info(":$target_name", "toolchain")
       not_needed([ "toolchain_label" ])  # In case the for loop below is empty.
 
@@ -166,6 +224,13 @@ template("toolchain_runtime_deps") {
               dist = rebase_path(lib.dist, root_build_dir, _clang_lib_dir)
               if (defined(lib.debug)) {
                 debug = rebase_path(lib.debug, root_build_dir, _clang_lib_dir)
+              }
+
+              if (toolchain.breakpad_syms != false) {
+                _file = get_path_info(dist, "file")
+                breakpad =
+                    rebase_path("$target_gen_dir/${target_name}_${_file}.sym",
+                                root_build_dir)
               }
 
               target_tuple = match.target
@@ -189,31 +254,37 @@ template("toolchain_runtime_deps") {
           # Make the manifest describing this library available to the build
           # API module for unification.
           # The manifest is not published for fuzzer variants.
-          if (defined(invoker.zx_publish) && invoker.zx_publish &&
-              string_replace(toolchain_label, "fuzzer", "") == toolchain_label) {
-            write_file("$target_gen_dir/${lib.soname}.zx_manifest.txt", [ "lib/${toolchain.libprefix}${lib.soname}=" +
-                rebase_path(lib.dist, root_build_dir, _clang_lib_dir) ], "list lines")
+          if (defined(invoker.zx_publish) && invoker.zx_publish && string_replace(
+                                                                       toolchain_label,
+                                                                       "fuzzer",
+                                                                       "") == toolchain_label) {
+            write_file(
+                "$target_gen_dir/${lib.soname}.zx_manifest.txt",
+                [ "lib/${toolchain.libprefix}${lib.soname}=" +
+                      rebase_path(lib.dist, root_build_dir, _clang_lib_dir) ],
+                "list lines")
             zx_manifest += [
               {
                 label = get_label_info(":$target_name", "label_with_toolchain")
                 name = "lib.${lib.soname}"
-                if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] != toolchain.tags) {
+                if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
+                    toolchain.tags) {
                   name += toolchain.variant_suffix
                 }
                 name = string_replace(name, "+", "p")
                 toolchain = toolchain_label
-                path = rebase_path("$target_gen_dir/${lib.soname}.zx_manifest.txt", root_build_dir)
+                path =
+                    rebase_path("$target_gen_dir/${lib.soname}.zx_manifest.txt",
+                                root_build_dir)
                 cpu = current_cpu
                 os = current_os
-              }
+              },
             ]
           }
         }
       }
     } else {
-      public_deps = [
-        ":$target_name(${toolchain.shlib})",
-      ]
+      public_deps = [ ":$target_name(${toolchain.shlib})" ]
       not_needed(invoker,
                  [
                    "cflags",
