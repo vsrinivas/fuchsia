@@ -102,7 +102,7 @@ func (c *Client) Reconnect(ctx context.Context) error {
 
 // Run a command to completion on the remote device and write STDOUT and STDERR
 // to the passed in io.Writers.
-func (c *Client) Run(ctx context.Context, command string, stdout io.Writer, stderr io.Writer) error {
+func (c *Client) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
 	c.mu.Lock()
 	sshClient := c.sshClient
 	c.mu.Unlock()
@@ -120,11 +120,11 @@ func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
 	sshClient.RegisterDisconnectListener(ch)
 }
 
-func (c *Client) GetSshConnection(ctx context.Context) (string, error) {
+func (c *Client) GetSSHConnection(ctx context.Context) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := c.Run(ctx, "PATH= echo $SSH_CONNECTION", &stdout, &stderr)
-	if err != nil {
+	cmd := []string{"PATH=''", "echo", "$SSH_CONNECTION"}
+	if err := c.Run(ctx, cmd, &stdout, &stderr); err != nil {
 		return "", fmt.Errorf("failed to read SSH_CONNECTION: %s: %s", err, string(stderr.Bytes()))
 	}
 	return strings.Split(string(stdout.Bytes()), " ")[0], nil
@@ -148,8 +148,8 @@ func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClien
 	return c.ExpectReboot(ctx, repo, rpcClient, func() error {
 		// Run the reboot in the background, which gives us a chance to
 		// observe us successfully executing the reboot command.
-		err := c.Run(ctx, "dm reboot & exit 0", os.Stdout, os.Stderr)
-		if err != nil {
+		cmd := []string{"dm", "reboot", "&", "exit", "0"}
+		if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 			// If the device rebooted before ssh was able to tell
 			// us the command ran, it will tell us the session
 			// exited without passing along an exit code. So,
@@ -173,8 +173,8 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 	return c.ExpectDisconnect(ctx, func() error {
 		// Run the reboot in the background, which gives us a chance to
 		// observe us successfully executing the reboot command.
-		err := c.Run(ctx, "dm reboot-recovery & exit 0", os.Stdout, os.Stderr)
-		if err != nil {
+		cmd := []string{"dm", "reboot-recovery", "&", "exit", "0"}
+		if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 			// If the device rebooted before ssh was able to tell
 			// us the command ran, it will tell us the session
 			// exited without passing along an exit code. So,
@@ -233,7 +233,11 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 
 		// FIXME: running this out of /pkgfs/versions is unsound WRT using the correct loader service
 		// Adding this as a short-term hack to unblock http://fxb/47213
-		cmd := fmt.Sprintf("/pkgfs/versions/%s/bin/update check-now --monitor", updateBinMerkle)
+		cmd := []string{
+			fmt.Sprintf("/pkgfs/versions/%s/bin/update", updateBinMerkle),
+			"check-now",
+			"--monitor",
+		}
 		if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 			// If the device rebooted before ssh was able to tell
 			// us the command ran, it will tell us the session
@@ -395,7 +399,7 @@ func (c *Client) ValidateStaticPackages(ctx context.Context) error {
 func (c *Client) ReadRemotePath(ctx context.Context, path string) ([]byte, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := c.Run(ctx, fmt.Sprintf(
+	cmd := fmt.Sprintf(
 		`(
 		test -e "%s" &&
 		while IFS='' read f; do
@@ -404,8 +408,8 @@ func (c *Client) ReadRemotePath(ctx context.Context, path string) ([]byte, error
 		if [ ! -z "$f" ];
 			then echo "$f";
 		fi
-		)`, path, path), &stdout, &stderr)
-	if err != nil {
+		)`, path, path)
+	if err := c.Run(ctx, strings.Fields(cmd), &stdout, &stderr); err != nil {
 		return nil, fmt.Errorf("failed to read %q: %s: %s", path, err, string(stderr.Bytes()))
 	}
 
@@ -415,8 +419,8 @@ func (c *Client) ReadRemotePath(ctx context.Context, path string) ([]byte, error
 // DeleteRemotePath deletes a file off the remote device.
 func (c *Client) DeleteRemotePath(ctx context.Context, path string) error {
 	var stderr bytes.Buffer
-	err := c.Run(ctx, fmt.Sprintf("PATH= rm %q", path), os.Stdout, &stderr)
-	if err != nil {
+	cmd := []string{"PATH=''", "rm", path}
+	if err := c.Run(ctx, cmd, os.Stdout, &stderr); err != nil {
 		return fmt.Errorf("failed to delete %q: %s: %s", path, err, string(stderr.Bytes()))
 	}
 
@@ -426,29 +430,30 @@ func (c *Client) DeleteRemotePath(ctx context.Context, path string) error {
 // RemoteFileExists checks if a file exists on the remote device.
 func (c *Client) RemoteFileExists(ctx context.Context, path string) (bool, error) {
 	var stderr bytes.Buffer
-	err := c.Run(ctx, fmt.Sprintf("PATH= ls %s", path), ioutil.Discard, &stderr)
-	if err == nil {
-		return true, nil
-	}
+	cmd := []string{"PATH=''", "ls", path}
 
-	if e, ok := err.(*ssh.ExitError); ok {
-		if e.ExitStatus() == 1 {
-			return false, nil
+	if err := c.Run(ctx, cmd, ioutil.Discard, &stderr); err != nil {
+		if e, ok := err.(*ssh.ExitError); ok {
+			if e.ExitStatus() == 1 {
+				return false, nil
+			}
 		}
+		return false, fmt.Errorf("error reading %q: %s: %s", path, err, string(stderr.Bytes()))
 	}
 
-	return false, fmt.Errorf("error reading %q: %s: %s", path, err, string(stderr.Bytes()))
+	return true, nil
 }
 
 // RegisterPackageRepository adds the repository as a repository inside the device.
 func (c *Client) RegisterPackageRepository(ctx context.Context, repo *packages.Server, createRewriteRule bool) error {
 	log.Printf("registering package repository: %s", repo.Dir)
-	var cmd string
+	var subcmd string
 	if createRewriteRule {
-		cmd = fmt.Sprintf("amberctl add_src -f %s -h %s -verbose", repo.URL, repo.Hash)
+		subcmd = "add_src"
 	} else {
-		cmd = fmt.Sprintf("amberctl add_repo_cfg -f %s -h %s -verbose", repo.URL, repo.Hash)
+		subcmd = "add_repo_cfg"
 	}
+	cmd := []string{"amberctl", subcmd, "-f", repo.URL, "-h", repo.Hash, "-verbose"}
 	return c.Run(ctx, cmd, os.Stdout, os.Stderr)
 }
 
@@ -464,7 +469,7 @@ func (c *Client) ServePackageRepository(
 	}
 
 	// Tell the device to connect to our repository.
-	localHostname, err := c.GetSshConnection(ctx)
+	localHostname, err := c.GetSSHConnection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -531,15 +536,23 @@ func (c *Client) DownloadOTA(ctx context.Context, repo *packages.Repository, upd
 	// In order to manually trigger the system updater, we need the `run`
 	// package. Since builds can be configured to not automatically install
 	// packages, we need to explicitly resolve it.
-	err = c.Run(ctx, "pkgctl resolve fuchsia-pkg://fuchsia.com/run/0", os.Stdout, os.Stderr)
-	if err != nil {
+	cmd := []string{"pkgctl", "resolve", "fuchsia-pkg://fuchsia.com/run/0"}
+	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		return fmt.Errorf("error resolving the run package: %v", err)
 	}
 
 	log.Printf("Downloading system OTA")
 
-	cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --initiator manual --reboot=false --update \"%s\"", updatePackageUrl)
-	if err = c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
+	cmd = []string{
+		"run",
+		"\"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\"",
+		"--initiator", "manual",
+		// Go's boolean flag parsing requires that the argument name and value
+		// be separated by "=" instead of by whitespace.
+		"--reboot=false",
+		"--update", fmt.Sprintf("%q", updatePackageUrl),
+	}
+	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		return fmt.Errorf("failed to run system_updater.cmx: %s", err)
 	}
 

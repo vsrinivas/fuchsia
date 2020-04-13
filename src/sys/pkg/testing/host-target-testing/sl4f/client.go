@@ -69,7 +69,7 @@ func (c *Client) connect(ctx context.Context) error {
 	// In order to run components via SSH, we need the `run` package to be
 	// cached on the device. Since builds can be configured to not
 	// automatically cache packages, we need to explicitly resolve it.
-	cmd := fmt.Sprintf("pkgctl resolve fuchsia-pkg://%s/run/0", c.repoName)
+	cmd := []string{"pkgctl", "resolve", fmt.Sprintf("fuchsia-pkg://%s/run/0", c.repoName)}
 	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		log.Printf("unable to resolve `run` package: %s", err)
 		return err
@@ -78,14 +78,14 @@ func (c *Client) connect(ctx context.Context) error {
 	// Additionally, we must resolve the sl4f package before attempting to
 	// run it if the build is not configured to automatically cache
 	// packages.
-	cmd = fmt.Sprintf("pkgctl resolve fuchsia-pkg://%s/sl4f/0", c.repoName)
+	cmd = []string{"pkgctl", "resolve", fmt.Sprintf("fuchsia-pkg://%s/sl4f/0", c.repoName)}
 	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		log.Printf("unable to resolve `sl4f` package: %s", err)
 		return err
 	}
 
 	// Start the sl4f daemon.
-	cmd = fmt.Sprintf("run fuchsia-pkg://%s/sl4f#meta/sl4f.cmx", c.repoName)
+	cmd = []string{"run", fmt.Sprintf("fuchsia-pkg://%s/sl4f#meta/sl4f.cmx", c.repoName)}
 	server, err := c.sshClient.Start(ctx, cmd, os.Stdout, os.Stderr)
 	if err != nil {
 		log.Printf("unable to launch sl4f: %s", err)

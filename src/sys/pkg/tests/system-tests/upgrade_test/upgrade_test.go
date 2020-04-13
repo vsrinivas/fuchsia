@@ -213,9 +213,9 @@ func rebootToRecovery(ctx context.Context, device *device.Client, repo *packages
 	}
 
 	return device.ExpectDisconnect(ctx, func() error {
-		err := device.Run(ctx, "dm reboot", os.Stdout, os.Stderr)
+		cmd := []string{"dm", "reboot"}
 
-		if err != nil {
+		if err := device.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 			// If the device rebooted before ssh was able to tell
 			// us the command ran, it will tell us the session
 			// exited without passing along an exit code. So,

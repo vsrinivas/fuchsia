@@ -270,8 +270,8 @@ func otaToPackage(
 	// In order to manually trigger the system updater, we need the `run`
 	// package. Since builds can be configured to not automatically install
 	// packages, we need to explicitly resolve it.
-	err = device.Run(ctx, "pkgctl resolve fuchsia-pkg://fuchsia.com/run/0", os.Stdout, os.Stderr)
-	if err != nil {
+	cmd := []string{"pkgctl", "resolve", "fuchsia-pkg://fuchsia.com/run/0"}
+	if err := device.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		return fmt.Errorf("error resolving the run package: %v", err)
 	}
 
@@ -280,9 +280,16 @@ func otaToPackage(
 
 	log.Printf("starting system OTA")
 
-	cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --update \"%s\" && sleep 60", updatePackageUrl)
-	err = device.Run(ctx, cmd, os.Stdout, os.Stderr)
-	if err != nil {
+	cmd = []string{
+		"run",
+		"\"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\"",
+		"--update",
+		updatePackageUrl,
+		"&&",
+		"sleep",
+		"60",
+	}
+	if err := device.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		if _, ok := err.(*ssh.ExitMissingError); !ok {
 			return fmt.Errorf("failed to run system_updater.cmx: %s", err)
 		}

@@ -169,7 +169,7 @@ func TestRun(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		errs := make(chan error)
 		go func() {
-			errs <- client.Run(ctx, "foo", nil, nil)
+			errs <- client.Run(ctx, []string{"foo"}, nil, nil)
 		}()
 
 		cancel()

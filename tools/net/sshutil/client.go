@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -155,7 +156,7 @@ func (c *Client) makeSession(ctx context.Context, stdout io.Writer, stderr io.Wr
 
 // Start a command on the remote device and write STDOUT and STDERR to the
 // passed in io.Writers.
-func (c *Client) Start(ctx context.Context, command string, stdout io.Writer, stderr io.Writer) (*Session, error) {
+func (c *Client) Start(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) (*Session, error) {
 	session, err := c.makeSession(ctx, stdout, stderr)
 	if err != nil {
 		return nil, err
@@ -172,7 +173,7 @@ func (c *Client) Start(ctx context.Context, command string, stdout io.Writer, st
 
 // Run a command to completion on the remote device and write STDOUT and STDERR
 // to the passed in io.Writers.
-func (c *Client) Run(ctx context.Context, command string, stdout io.Writer, stderr io.Writer) error {
+func (c *Client) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
 	session, err := c.makeSession(ctx, stdout, stderr)
 	if err != nil {
 		return err
@@ -301,10 +302,10 @@ func (s *Session) Close() {
 	s.session.Close()
 }
 
-func (s *Session) Start(ctx context.Context, command string) error {
+func (s *Session) Start(ctx context.Context, command []string) error {
 	ch := make(chan error, 1)
 	go func() {
-		ch <- s.session.Start(command)
+		ch <- s.session.Start(strings.Join(command, " "))
 	}()
 
 	select {
@@ -330,10 +331,10 @@ func (s *Session) Wait(ctx context.Context) error {
 
 }
 
-func (s *Session) Run(ctx context.Context, command string) error {
+func (s *Session) Run(ctx context.Context, command []string) error {
 	ch := make(chan error, 1)
 	go func() {
-		ch <- s.session.Run(command)
+		ch <- s.session.Run(strings.Join(command, " "))
 	}()
 
 	select {
