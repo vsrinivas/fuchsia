@@ -447,11 +447,6 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
         }
         status = fdio_fd_transfer(actions[a].fd.local_fd, &fd_handle);
         if (status != ZX_OK) {
-          report_error(err_msg, "invalid target %d to transfer fd %d (action index %zu): %d",
-                       actions[a].fd.target_fd, actions[a].fd.local_fd, a, status);
-          goto cleanup;
-        }
-        if (status != ZX_OK) {
           report_error(err_msg, "failed to transfer fd %d (action index %zu): %d",
                        actions[a].fd.local_fd, a, status);
           goto cleanup;
@@ -462,8 +457,8 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
           int fd = PA_HND_ARG(actions[a].h.id) & ~FDIO_FLAG_USE_FOR_STDIO;
           status = check_fd(fd);
           if (status != ZX_OK) {
-            report_error(err_msg, "add-handle action has invalid fd %d (action index %zu): %d", fd, a,
-                         status);
+            report_error(err_msg, "add-handle action has invalid fd %d (action index %zu): %d", fd,
+                         a, status);
             goto cleanup;
           }
         }

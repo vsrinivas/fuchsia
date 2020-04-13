@@ -7,16 +7,19 @@
 
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/fdio/fd.h>
+#include <lib/fdio/spawn.h>
 #include <lib/sync/completion.h>
 #include <poll.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <array>
 #include <thread>
 
 #include <fbl/unique_fd.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/testing/predicates/status.h"
 #include "util.h"
 
 TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
@@ -308,4 +311,74 @@ TEST(SocketTest, DISABLED_CloseClonedSocketAfterTcpRst) {
   }
 
   ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);
+}
+
+TEST(SocketTest, PassFD) {
+  fbl::unique_fd listener;
+  ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr_in = {
+      .sin_family = AF_INET,
+      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+  };
+  auto addr = reinterpret_cast<struct sockaddr*>(&addr_in);
+  socklen_t addr_len = sizeof(addr_in);
+
+  ASSERT_EQ(bind(listener.get(), addr, addr_len), 0) << strerror(errno);
+  {
+    socklen_t addr_len_in = addr_len;
+    ASSERT_EQ(getsockname(listener.get(), addr, &addr_len), 0) << strerror(errno);
+    EXPECT_EQ(addr_len, addr_len_in);
+  }
+  ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+
+  zx::handle proc;
+  {
+    fbl::unique_fd client;
+    ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+    ASSERT_EQ(connect(client.get(), addr, addr_len), 0) << strerror(errno);
+
+    std::array<fdio_spawn_action_t, 2> actions = {
+        fdio_spawn_action_t{
+            .action = FDIO_SPAWN_ACTION_CLONE_FD,
+            .fd =
+                {
+                    .local_fd = client.get(),
+                    .target_fd = STDIN_FILENO,
+                },
+        },
+        fdio_spawn_action_t{
+            .action = FDIO_SPAWN_ACTION_CLONE_FD,
+            .fd =
+                {
+                    .local_fd = client.get(),
+                    .target_fd = STDOUT_FILENO,
+                },
+        },
+    };
+
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH] = {};
+    constexpr char bin_path[] = "/bin/cat";
+    const char* argv[] = {bin_path, nullptr};
+
+    ASSERT_OK(fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO,
+                             bin_path, argv, nullptr, actions.size(), actions.data(),
+                             proc.reset_and_get_address(), err_msg))
+        << err_msg;
+
+    ASSERT_EQ(close(client.release()), 0) << strerror(errno);
+  }
+
+  fbl::unique_fd conn;
+  ASSERT_TRUE(conn = fbl::unique_fd(accept(listener.get(), nullptr, nullptr))) << strerror(errno);
+
+  constexpr char out[] = "hello";
+  ASSERT_EQ(write(conn.get(), out, sizeof(out)), (ssize_t)sizeof(out)) << strerror(errno);
+  ASSERT_EQ(shutdown(conn.get(), SHUT_WR), 0) << strerror(errno);
+
+  ASSERT_OK(proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
+
+  char in[sizeof(out) + 1];
+  ASSERT_EQ(read(conn.get(), in, sizeof(in)), (ssize_t)sizeof(out)) << strerror(errno);
+  ASSERT_STREQ(in, out);
 }

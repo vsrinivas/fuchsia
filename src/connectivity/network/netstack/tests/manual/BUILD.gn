@@ -82,16 +82,6 @@ executable("sockopttest") {
   deps = [ "//zircon/public/lib/fdio" ]
 }
 
-executable("passfdtest") {
-  testonly = true
-
-  sources = [ "passfdtest.c" ]
-
-  libs = [ "zircon" ]
-
-  deps = [ "//zircon/public/lib/fdio" ]
-}
-
 executable("gethostbyname_test") {
   testonly = true
 

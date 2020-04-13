@@ -19,7 +19,6 @@ package("netstack_manual_tests") {
     "manual:keepalivetest",
     "manual:mctest",
     "manual:nbiotest",
-    "manual:passfdtest",
     "manual:polltest",
     "manual:selecttest",
     "manual:sockettest",
@@ -45,11 +44,6 @@ package("netstack_manual_tests") {
 
     {
       name = "nbiotest"
-      shell = true
-    },
-
-    {
-      name = "passfdtest"
       shell = true
     },
 

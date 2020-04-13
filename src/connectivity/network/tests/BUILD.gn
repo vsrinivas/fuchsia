@@ -181,6 +181,7 @@ test("netstack_fuchsia_c_api_test") {
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/predicates",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
@@ -238,6 +239,9 @@ group("netstack_c_api_tests") {
 
     # netemul is used to create hermetic environments.
     "//src/connectivity/network/testing/netemul",
+
+    # cat is used to test FD passing.
+    "//third_party/sbase:cat",
   ]
 }
 
@@ -280,14 +284,7 @@ test_package("netstack_c_api_tests_inner") {
   tests = [
     {
       name = "connect_test"
-      environments = [
-        # qemu_env
-        {
-          dimensions = {
-            device_type = "QEMU"
-          }
-        },
-      ]
+      environments = [ qemu_env ]
     },
     {
       name = "name_provider_service_not_present_test"
