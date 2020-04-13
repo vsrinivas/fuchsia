@@ -5,13 +5,13 @@
 /// The update_check module contains the structures and functions for performing a single update
 /// check with Omaha.
 use crate::{
-    clock,
     common::{ProtocolState, UpdateCheckSchedule, UserCounting},
     protocol::Cohort,
     state_machine::time::{i64_to_time, time_to_i64},
-    storage::Storage,
+    storage::{Storage, StorageExt},
 };
 use log::error;
+use std::convert::TryFrom;
 use std::time::Duration;
 
 // These are the keys used to persist data to storage.
@@ -34,18 +34,15 @@ pub struct Context {
 impl Context {
     /// Load and initialize update check context from persistent storage.
     pub async fn load(storage: &impl Storage) -> Self {
-        let micros = storage.get_int(LAST_UPDATE_TIME).await.unwrap_or(0);
-        let last_update_time = i64_to_time(micros);
+        let last_update_time = storage.get_int(LAST_UPDATE_TIME).await.map(i64_to_time);
         let server_dictated_poll_interval = storage
             .get_int(SERVER_DICTATED_POLL_INTERVAL)
             .await
-            .map(|micros| Duration::from_micros(micros as u64));
+            .and_then(|t| u64::try_from(t).ok())
+            .map(Duration::from_micros);
         Context {
-            schedule: UpdateCheckSchedule::builder()
-                .last_time(last_update_time)
-                .next_time(clock::now())
-                .build(),
-            state: ProtocolState { server_dictated_poll_interval, ..ProtocolState::default() },
+            schedule: UpdateCheckSchedule::builder().last_time(last_update_time).build(),
+            state: ProtocolState { server_dictated_poll_interval, ..Default::default() },
         }
     }
 
@@ -53,20 +50,24 @@ impl Context {
     /// previous set fails.
     /// It will NOT call commit() on |storage|, caller is responsible to call commit().
     pub async fn persist<'a>(&'a self, storage: &'a mut impl Storage) {
-        let micros = time_to_i64(self.schedule.last_update_time);
-        if let Err(e) = storage.set_int(LAST_UPDATE_TIME, micros).await {
+        if let Err(e) = storage
+            .set_option_int(LAST_UPDATE_TIME, self.schedule.last_update_time.map(time_to_i64))
+            .await
+        {
             error!("Unable to persist {}: {}", LAST_UPDATE_TIME, e);
         }
 
-        if let Some(interval) = &self.state.server_dictated_poll_interval {
-            let interval = interval.as_micros() as i64;
-            if let Err(e) = storage.set_int(SERVER_DICTATED_POLL_INTERVAL, interval).await {
-                error!("Unable to persist {}: {}", SERVER_DICTATED_POLL_INTERVAL, e);
-            }
-        } else {
-            if let Err(e) = storage.remove(SERVER_DICTATED_POLL_INTERVAL).await {
-                error!("Unable to remove {}: {}", SERVER_DICTATED_POLL_INTERVAL, e);
-            }
+        if let Err(e) = storage
+            .set_option_int(
+                SERVER_DICTATED_POLL_INTERVAL,
+                self.state
+                    .server_dictated_poll_interval
+                    .map(|t| t.as_micros())
+                    .and_then(|t| i64::try_from(t).ok()),
+            )
+            .await
+        {
+            error!("Unable to persist {}: {}", SERVER_DICTATED_POLL_INTERVAL, e);
         }
     }
 }
@@ -127,7 +128,6 @@ mod tests {
     use super::*;
     use crate::storage::MemStorage;
     use futures::executor::block_on;
-    use std::time::SystemTime;
 
     #[test]
     fn test_load_context() {
@@ -142,7 +142,7 @@ mod tests {
                 .unwrap();
 
             let context = Context::load(&storage).await;
-            assert_eq!(last_update_time, context.schedule.last_update_time);
+            assert_eq!(Some(last_update_time), context.schedule.last_update_time);
             assert_eq!(Some(poll_interval), context.state.server_dictated_poll_interval);
         });
     }
@@ -152,7 +152,7 @@ mod tests {
         block_on(async {
             let storage = MemStorage::new();
             let context = Context::load(&storage).await;
-            assert_eq!(SystemTime::UNIX_EPOCH, context.schedule.last_update_time);
+            assert_eq!(None, context.schedule.last_update_time);
             assert_eq!(None, context.state.server_dictated_poll_interval);
         });
     }
@@ -164,10 +164,7 @@ mod tests {
             let last_update_time = i64_to_time(123456789);
             let server_dictated_poll_interval = Some(Duration::from_micros(56789));
             let context = Context {
-                schedule: UpdateCheckSchedule::builder()
-                    .last_time(last_update_time)
-                    .next_time(clock::now())
-                    .build(),
+                schedule: UpdateCheckSchedule::builder().last_time(last_update_time).build(),
                 state: ProtocolState { server_dictated_poll_interval, ..ProtocolState::default() },
             };
             context.persist(&mut storage).await;
@@ -185,10 +182,7 @@ mod tests {
             storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 987654).await.unwrap();
 
             let context = Context {
-                schedule: UpdateCheckSchedule::builder()
-                    .last_time(last_update_time)
-                    .next_time(clock::now())
-                    .build(),
+                schedule: UpdateCheckSchedule::builder().last_time(last_update_time).build(),
                 state: ProtocolState {
                     server_dictated_poll_interval: None,
                     ..ProtocolState::default()

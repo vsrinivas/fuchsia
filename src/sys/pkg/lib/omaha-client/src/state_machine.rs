@@ -4,7 +4,7 @@
 
 use crate::{
     clock,
-    common::{App, AppSet, CheckOptions},
+    common::{format_system_time, App, AppSet, CheckOptions},
     configuration::Config,
     http_request::HttpRequest,
     installer::{Installer, Plan},
@@ -27,7 +27,6 @@ use crate::{
     policy::StubPolicyEngine,
     storage::StubStorage,
 };
-use chrono::{DateTime, Utc};
 use futures::{
     channel::{mpsc, oneshot},
     compat::Stream01CompatExt,
@@ -389,30 +388,44 @@ where
 
             let now = clock::now();
             // Wait if |next_update_time| is in the future.
-            let delay = if let Ok(mut duration) =
-                self.context.schedule.next_update_time.duration_since(clock::now())
-            {
-                if duration > Duration::from_secs(1 * 60 * 60) {
-                    warn!(
-                        "update check duration exceeds hard 1 hour limit! The value was {} secs",
-                        duration.as_secs()
-                    );
-
-                    // Cap the duration at 1 hour.
-                    duration = Duration::from_secs(1 * 60 * 60);
+            let delay = match self.context.schedule.next_update_time {
+                // If no |next_update_time|, complain loudly in logs and then use a safe, long,
+                // duration, as this indicates that there's an issue with the Policy implementation
+                // and the state machine needs to behave in a protective manner (not too aggressive,
+                // or waiting forever, either.)
+                None => {
+                    error!("No scheduled next_update_time found, waiting one hour.");
+                    Some(self.timer.wait(Duration::from_secs(1 * 60 * 60)).fuse())
                 }
-                let duration = duration; // strip mutability
+                // If there is a |next_update_time|, compute the duration to it for waiting.
+                Some(next_update_time) => {
+                    match next_update_time.duration_since(now) {
+                        // |next_update_time| is in the past.
+                        Err(_) => None,
+                        // |next_update_time| is in the future.
+                        Ok(mut duration) => {
+                            if duration > Duration::from_secs(1 * 60 * 60) {
+                                warn!(
+                                    "update check duration exceeds hard 1 hour limit! The value was {} secs",
+                                    duration.as_secs()
+                                );
 
-                info!(
-                    "Waiting until {} (or {} seconds) for the next update check (currently: {})",
-                    DateTime::<Utc>::from(self.context.schedule.next_update_time).to_string(),
-                    duration.as_secs(),
-                    DateTime::<Utc>::from(now).to_string()
-                );
+                                // Cap the wait duration at 1 hour.
+                                duration = Duration::from_secs(1 * 60 * 60);
+                            }
+                            let duration = duration; // strip mutability
 
-                Some(self.timer.wait(duration).fuse())
-            } else {
-                None
+                            info!(
+                                "Waiting until {} (or {} seconds) for the next update check (currently: {})",
+                                format_system_time(next_update_time),
+                                duration.as_secs(),
+                                format_system_time(now)
+                            );
+
+                            Some(self.timer.wait(duration).fuse())
+                        }
+                    }
+                }
             };
 
             let options = match delay {
@@ -480,7 +493,7 @@ where
             Ok(result) => {
                 info!("Update check result: {:?}", result);
                 // Update check succeeded, update |last_update_time|.
-                self.context.schedule.last_update_time = clock::now();
+                self.context.schedule.last_update_time = Some(clock::now());
 
                 // Update the service dictated poll interval (which is an Option<>, so doesn't
                 // need to be tested for existence here).
@@ -516,7 +529,7 @@ where
                 let failure_reason = match error {
                     UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
                         // We talked to Omaha, update |last_update_time|.
-                        self.context.schedule.last_update_time = clock::now();
+                        self.context.schedule.last_update_time = Some(clock::now());
 
                         UpdateCheckFailureReason::Omaha
                     }
@@ -1675,10 +1688,8 @@ mod tests {
                 .collect::<Vec<UpdateCheckSchedule>>()
                 .await;
 
-            let expected_schedule = UpdateCheckSchedule::builder()
-                .last_time(clock::now())
-                .next_time(clock::now())
-                .build();
+            // The resultant schedule should only contain the timestamp of the above update check.
+            let expected_schedule = UpdateCheckSchedule::builder().last_time(clock::now()).build();
 
             assert_eq!(actual_schedules, vec![expected_schedule]);
         });
@@ -1950,7 +1961,7 @@ mod tests {
 
             assert_eq!(
                 time_to_i64(last_update_time),
-                time_to_i64(state_machine.context.schedule.last_update_time)
+                time_to_i64(state_machine.context.schedule.last_update_time.unwrap())
             );
         });
     }

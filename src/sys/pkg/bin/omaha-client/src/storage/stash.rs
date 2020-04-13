@@ -203,6 +203,12 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_set_option_int() {
+        let mut storage = Stash::new("test_set_get_remove_int").await;
+        do_test_set_option_int(&mut storage).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_set_get_remove_bool() {
         let mut storage = Stash::new("test_set_get_remove_bool").await;
         do_test_set_get_remove_bool(&mut storage).await;

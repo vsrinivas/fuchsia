@@ -368,22 +368,13 @@ pub struct CheckOptions {
 }
 
 /// This describes the data around the scheduling of update checks
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 pub struct UpdateCheckSchedule {
     /// When the last update check was attempted (start time of the check process).
-    pub last_update_time: SystemTime,
+    pub last_update_time: Option<SystemTime>,
 
     /// When the update should happen.
-    pub next_update_time: SystemTime,
-}
-
-impl Default for UpdateCheckSchedule {
-    fn default() -> Self {
-        UpdateCheckSchedule {
-            last_update_time: SystemTime::UNIX_EPOCH,
-            next_update_time: SystemTime::UNIX_EPOCH,
-        }
-    }
+    pub next_update_time: Option<SystemTime>,
 }
 
 impl UpdateCheckSchedule {
@@ -403,33 +394,103 @@ pub struct ScheduleBuilder {
 }
 
 impl ScheduleBuilder {
-    pub fn last_time(mut self, last_update_time: SystemTime) -> Self {
-        self.last_time = Some(last_update_time);
+    /// Set the last_update_time for the UpdateCheckSchedule that's to be built.
+    /// This method takes both SystemTime and Option<SystemTime>.
+    pub fn last_time(mut self, last_update_time: impl Into<Option<SystemTime>>) -> Self {
+        self.last_time = last_update_time.into();
         self
     }
-    pub fn next_time(mut self, next_update_time: SystemTime) -> Self {
-        self.next_time = Some(next_update_time);
+    /// Set the next_update_time for the UpdateCheckSchedule that's to be built.
+    /// This method takes both SystemTime and Option<SystemTime>.
+    pub fn next_time(mut self, next_update_time: impl Into<Option<SystemTime>>) -> Self {
+        self.next_time = next_update_time.into();
         self
     }
+    /// Build the UpdateCheckSchedule.
     pub fn build(self) -> UpdateCheckSchedule {
-        UpdateCheckSchedule {
-            last_update_time: self.last_time.unwrap_or(SystemTime::UNIX_EPOCH),
-            next_update_time: self.next_time.unwrap_or(SystemTime::UNIX_EPOCH),
+        UpdateCheckSchedule { last_update_time: self.last_time, next_update_time: self.next_time }
+    }
+}
+
+/// Helper struct for providing a consistent, readable `SystemTime`.
+///
+/// This displays a `SystemTime` in a human-readable date+time in UTC plus the raw `[seconds].[ns]`
+/// since epoch of the SystemTime.
+///
+/// Example:
+/// ```
+/// let sys_time = SystemTime::UNIX_EPOCH + Duration::from_nanos(994610096026420000);
+///
+/// assert_eq!(
+///     format!("{}", ReadableSystemTime(sys_time)),
+///     "2001-07-08 16:34:56.026 UTC (994610096.026420000)"   
+/// );
+/// ```
+pub struct ReadableSystemTime(SystemTime);
+impl fmt::Display for ReadableSystemTime {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        DateTime::<Utc>::from(self.0).format("%Y-%m-%d %H:%M:%S%.3f %Z (%s%.9f)").fmt(f)
+    }
+}
+
+/// Helper struct that provides a nicer format for Debug printing `Option` by dropping the
+/// `Some(...)` that wraps its value, and instead uses the Display trait implementation of the
+/// value.
+///
+/// Examples:
+/// `"MyStruct { option_string_field: None }"`
+/// `"MyStruct { option_string_field: "string field value" }"`
+///
+pub struct PrettyOptionDisplay<T>(Option<T>)
+where
+    T: fmt::Display;
+impl<T> fmt::Display for PrettyOptionDisplay<T>
+where
+    T: fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.0 {
+            None => write!(f, "None"),
+            Some(value) => fmt::Display::fmt(value, f),
         }
     }
 }
-
-// The default Debug implementation for SystemTime will only print seconds since unix epoch, which
-// is not useful, so we implement our own Debug format with readable time string.
-impl fmt::Debug for UpdateCheckSchedule {
+impl<T> fmt::Debug for PrettyOptionDisplay<T>
+where
+    T: fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UpdateCheckSchedule")
-            .field("last_update_time", &DateTime::<Utc>::from(self.last_update_time).to_rfc3339())
-            .field("next_update_time", &DateTime::<Utc>::from(self.next_update_time).to_rfc3339())
-            .finish()
+        fmt::Display::fmt(self, f)
     }
 }
 
+/// This is a utility function that provides a standardized conversion of both SystemTime and
+/// Option<SystemTime> into a human-readable date/time using ReadableSystemTime, or "None" if it
+/// is Option::None.
+pub fn format_system_time(time: impl Into<Option<SystemTime>>) -> String {
+    time.into().map_or("None".to_string(), |t| ReadableSystemTime(t).to_string())
+}
+
+/// The default Debug implementation for SystemTime will only print seconds since unix epoch, which
+/// is not terribly useful in logs, so this prints a more human-relatable format.
+///
+/// e.g.
+/// `UpdateCheckSchedule { last_update_time: None, next_uptime_time: None }`
+/// `UpdateCheckSchedule { last_update_time: "2001-07-08 16:34:56.026 UTC (994518299.026420000)", next_uptime_time: None }`
+impl fmt::Debug for UpdateCheckSchedule {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UpdateCheckSchedule")
+            .field(
+                "last_update_time",
+                &PrettyOptionDisplay(self.last_update_time.map(ReadableSystemTime)),
+            )
+            .field(
+                "next_update_time",
+                &PrettyOptionDisplay(self.next_update_time.map(ReadableSystemTime)),
+            )
+            .finish()
+    }
+}
 /// These hold the data maintained request-to-request so that the requirements for
 /// backoffs, throttling, proxy use, etc. can all be properly maintained.  This is
 /// NOT the state machine's internal state.
@@ -878,12 +939,53 @@ mod tests {
     }
 
     #[test]
+    fn test_readable_system_time() {
+        let sys_time = SystemTime::UNIX_EPOCH + Duration::from_nanos(994610096026420000);
+
+        assert_eq!(
+            format!("{}", ReadableSystemTime(sys_time)),
+            "2001-07-08 16:34:56.026 UTC (994610096.026420000)"
+        );
+    }
+
+    #[test]
+    fn test_format_system_time() {
+        assert_eq!(
+            "1979-04-24 17:19:04.012 UTC (293822344.012345678)",
+            format_system_time(SystemTime::UNIX_EPOCH + Duration::from_nanos(293822344012345678))
+        );
+    }
+
+    #[test]
+    fn test_pretty_option_display_with_none() {
+        assert_eq!("None", format!("{:?}", PrettyOptionDisplay(Option::<String>::None)));
+    }
+
+    #[test]
+    fn test_pretty_option_display_with_some() {
+        assert_eq!("this is a test", format!("{:?}", PrettyOptionDisplay(Some("this is a test"))));
+    }
+
+    #[test]
+    fn test_format_system_time_some_system_time() {
+        assert_eq!(
+            "1979-04-24 17:19:04.000 UTC (293822344.000000000)",
+            format_system_time(Some(SystemTime::UNIX_EPOCH + Duration::from_secs(293822344)))
+        );
+    }
+
+    #[test]
+    fn test_format_system_time_none() {
+        assert_eq!("None", format_system_time(None));
+    }
+
+    #[test]
     fn test_update_check_schedule_debug_with_defaults() {
         assert_eq!(
             "UpdateCheckSchedule { \
-                last_update_time: \"1970-01-01T00:00:00+00:00\", \
-                next_update_time: \"1970-01-01T00:00:00+00:00\" \
-                }",
+                last_update_time: None, \
+                next_update_time: None \
+            }",
             format!("{:?}", UpdateCheckSchedule::default())
         );
     }
@@ -892,15 +994,15 @@ mod tests {
     fn test_update_check_schedule_debug_with_values() {
         assert_eq!(
             "UpdateCheckSchedule { \
-             last_update_time: \"1970-01-02T03:46:40+00:00\", \
-             next_update_time: \"1970-01-03T07:33:20+00:00\" \
+             last_update_time: 1970-01-02 03:46:40.000 UTC (100000.000000000), \
+             next_update_time: 1970-01-03 07:33:20.000 UTC (200000.000000000) \
              }",
             format!(
                 "{:?}",
-                UpdateCheckSchedule {
-                    last_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
-                    next_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(200000),
-                }
+                UpdateCheckSchedule::builder()
+                    .last_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
+                    .next_time(SystemTime::UNIX_EPOCH + Duration::from_secs(200000))
+                    .build()
             )
         );
     }
@@ -913,8 +1015,23 @@ mod tests {
                 .next_time(SystemTime::UNIX_EPOCH + Duration::from_secs(200000))
                 .build(),
             UpdateCheckSchedule {
-                last_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
-                next_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(200000),
+                last_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(100000)),
+                next_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(200000)),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_update_check_schedule_builder_all_fields_from_options() {
+        assert_eq!(
+            UpdateCheckSchedule::builder()
+                .last_time(Some(SystemTime::UNIX_EPOCH + Duration::from_secs(100000)))
+                .next_time(Some(SystemTime::UNIX_EPOCH + Duration::from_secs(200000)))
+                .build(),
+            UpdateCheckSchedule {
+                last_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(100000)),
+                next_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(200000)),
                 ..Default::default()
             }
         );
@@ -927,7 +1044,7 @@ mod tests {
                 .last_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
                 .build(),
             UpdateCheckSchedule {
-                last_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
+                last_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(100000)),
                 ..Default::default()
             }
         );
@@ -937,19 +1054,8 @@ mod tests {
                 .next_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
                 .build(),
             UpdateCheckSchedule {
-                next_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
+                next_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(100000)),
                 ..Default::default()
-            }
-        );
-    }
-
-    #[test]
-    fn test_update_check_schedule_default_impl() {
-        assert_eq!(
-            UpdateCheckSchedule { ..Default::default() },
-            UpdateCheckSchedule {
-                last_update_time: SystemTime::UNIX_EPOCH,
-                next_update_time: SystemTime::UNIX_EPOCH,
             }
         );
     }

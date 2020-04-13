@@ -12,6 +12,7 @@ use omaha_client::{
     policy::{CheckDecision, Policy, PolicyData, PolicyEngine, UpdateDecision},
     protocol::request::InstallSource,
     request_builder::RequestParams,
+    unless::Unless,
 };
 use std::cmp::max;
 use std::time::Duration;
@@ -34,23 +35,34 @@ impl Policy for FuchsiaPolicy {
         protocol_state: &ProtocolState,
     ) -> UpdateCheckSchedule {
         info!(
-            "FuchsiaPolicy::UpdateCheckSchedule last_update_time={:?}, current_time={:?}",
-            scheduling.last_update_time, policy_data.current_time
+            "FuchsiaPolicy::compute_next_update_time from {:?} and {:?}",
+            scheduling, policy_data
         );
-        // Use server dictated interval if exists, otherwise default to 5 hours.
-        let interval = protocol_state.server_dictated_poll_interval.unwrap_or(PERIODIC_INTERVAL);
-        let mut next_update_time = scheduling.last_update_time + interval;
+        // Use the standard poll interval, unless a server-dictated interval exists.
+        let interval = PERIODIC_INTERVAL.unless(protocol_state.server_dictated_poll_interval);
+
         // If we didn't talk to Omaha in the last update check, the `last_update_time` won't be
         // updated, and we need to have to a minimum delay time based on number of consecutive
         // failed update checks.
-        let min_delay = if protocol_state.consecutive_failed_update_checks > 3 {
-            interval
-        } else if protocol_state.consecutive_failed_update_checks > 0 {
-            RETRY_DELAY
-        } else {
-            STARTUP_DELAY
+        let delay_from_now = policy_data.current_time
+            + if protocol_state.consecutive_failed_update_checks > 3 {
+                interval
+            } else if protocol_state.consecutive_failed_update_checks > 0 {
+                RETRY_DELAY
+            } else {
+                STARTUP_DELAY
+            };
+
+        let next_update_time = match scheduling.last_update_time {
+            // If there's no |last_update_time|, then use the delay from 'now' as the only possible
+            // choice.
+            None => delay_from_now,
+
+            // If there's a |last_update_time|, then use the farther-away of:
+            //  - the delay from now  (this is usually too short, as it becomes the STARTUP_DELAY)
+            //  - the poll interval from the last check
+            Some(last_update_time) => max(last_update_time + interval, delay_from_now),
         };
-        next_update_time = max(next_update_time, policy_data.current_time + min_delay);
         UpdateCheckSchedule::builder()
             .last_time(scheduling.last_update_time)
             .next_time(next_update_time)
@@ -70,13 +82,21 @@ impl Policy for FuchsiaPolicy {
                 source: InstallSource::OnDemand,
                 use_configured_proxies: true,
             })
-        } else if policy_data.current_time >= scheduling.next_update_time {
-            CheckDecision::Ok(RequestParams {
-                source: InstallSource::ScheduledTask,
-                use_configured_proxies: true,
-            })
         } else {
-            CheckDecision::TooSoon
+            match scheduling.next_update_time {
+                // Cannot check without first scheduling a next update time.
+                None => CheckDecision::TooSoon,
+                Some(next_update_time) => {
+                    if policy_data.current_time >= next_update_time {
+                        CheckDecision::Ok(RequestParams {
+                            source: InstallSource::ScheduledTask,
+                            use_configured_proxies: true,
+                        })
+                    } else {
+                        CheckDecision::TooSoon
+                    }
+                }
+            }
         }
     }
 
@@ -171,7 +191,7 @@ mod tests {
         //  - the policy-computed next update time is a standard poll interval from then.
         let expected = UpdateCheckSchedule::builder()
             .last_time(schedule.last_update_time)
-            .next_time(schedule.last_update_time + PERIODIC_INTERVAL)
+            .next_time(schedule.last_update_time.unwrap() + PERIODIC_INTERVAL)
             .build();
         assert_eq!(result, expected);
     }
@@ -300,7 +320,7 @@ mod tests {
         //  - the computed next update time is a server-dictated poll interval from now.
         let expected = UpdateCheckSchedule::builder()
             .last_time(schedule.last_update_time)
-            .next_time(schedule.last_update_time + server_dictated_poll_interval)
+            .next_time(schedule.last_update_time.unwrap() + server_dictated_poll_interval)
             .build();
         assert_eq!(result, expected);
     }

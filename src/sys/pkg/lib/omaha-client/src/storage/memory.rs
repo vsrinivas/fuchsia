@@ -145,6 +145,11 @@ mod tests {
     }
 
     #[test]
+    fn test_set_option_int() {
+        block_on(do_test_set_option_int(&mut MemStorage::new()));
+    }
+
+    #[test]
     fn test_set_get_remove_bool() {
         block_on(do_test_set_get_remove_bool(&mut MemStorage::new()));
     }

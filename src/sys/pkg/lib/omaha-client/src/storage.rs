@@ -89,6 +89,41 @@ pub trait Storage {
     fn commit(&mut self) -> BoxFuture<'_, Result<(), Self::Error>>;
 }
 
+/// Extension trait that adds some features to Storage that can be implemented using the base
+/// `Storage` implementation.
+pub trait StorageExt<T>
+where
+    T: Storage,
+{
+    /// Set an Option<i64> to be stored in the backing store.  The implementation should cache the
+    /// value until the |commit()| fn is called, and then persist all cached values at that time.
+    /// If the Option is None, the implementation should call |remove()| for the key.
+    fn set_option_int<'a>(
+        &'a mut self,
+        key: &'a str,
+        value: Option<i64>,
+    ) -> BoxFuture<'_, Result<(), T::Error>>;
+}
+
+impl<T> StorageExt<T> for T
+where
+    T: Storage,
+{
+    /// Set an Option<i64> to be stored in the backing store.  The implementation should cache the
+    /// value until the |commit()| fn is called, and then persist all cached values at that time.
+    /// If the Option is None, the implementation should call |remove()| for the key.
+    fn set_option_int<'a>(
+        &'a mut self,
+        key: &'a str,
+        value: Option<i64>,
+    ) -> BoxFuture<'_, Result<(), T::Error>> {
+        match value {
+            Some(value) => self.set_int(key, value),
+            None => self.remove(key),
+        }
+    }
+}
+
 /// The storage::tests module contains test vectors that implementations of the Storage trait should
 /// pass.  These can be called with a Storage implementation as part of a test.
 ///
@@ -130,6 +165,19 @@ pub mod tests {
         assert_eq!(Some(1), storage.get_int("some int key").await);
 
         storage.remove("some int key").await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(None, storage.get_int("some int key").await);
+    }
+
+    /// Test that the implementation stores, retrieves, and clears Option<i64> values correctly.
+    pub async fn do_test_set_option_int<S: Storage>(storage: &mut S) {
+        assert_eq!(None, storage.get_int("some int key").await);
+
+        storage.set_option_int("some int key", Some(42)).await.unwrap();
+        storage.commit().await.unwrap();
+        assert_eq!(Some(42), storage.get_int("some int key").await);
+
+        storage.set_option_int("some int key", None).await.unwrap();
         storage.commit().await.unwrap();
         assert_eq!(None, storage.get_int("some int key").await);
     }

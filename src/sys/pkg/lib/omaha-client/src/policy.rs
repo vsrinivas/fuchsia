@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
+    common::{format_system_time, App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
     request_builder::RequestParams,
 };
@@ -22,6 +22,14 @@ pub use stub::StubPolicyEngine;
 pub struct PolicyData {
     /// The current time at the start of the update
     pub current_time: SystemTime,
+}
+
+impl std::fmt::Debug for PolicyData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PolicyData")
+            .field("current_time", &format_system_time(self.current_time))
+            .finish()
+    }
 }
 
 /// Reasons why a check can/cannot be performed at this time
