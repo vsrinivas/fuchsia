@@ -92,7 +92,7 @@ impl Injector for TriggerCapability {
         while let Some(Ok(ftest::TriggerRequest::Run { responder })) = request_stream.next().await {
             let trigger = self.tx.send().await?;
             trigger.await?;
-            responder.send()?;
+            responder.send("")?;
         }
         Ok(())
     }

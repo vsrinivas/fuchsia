@@ -32,4 +32,10 @@
             rights: [ "r*" ],
         },
     ],
+    expose: [
+        {
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "self",
+        },
+    ],
 }

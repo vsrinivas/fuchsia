@@ -140,7 +140,7 @@ impl Injector for TriggerCapability {
         mut request_stream: ftest::TriggerRequestStream,
     ) -> Result<(), Error> {
         while let Some(Ok(ftest::TriggerRequest::Run { responder })) = request_stream.next().await {
-            responder.send()?;
+            responder.send("")?;
         }
         Ok(())
     }

@@ -18,7 +18,7 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
 
         // Notify early to unblock the reporter and then start the children. Otherwise this could
         // deadlock as component manager would be waiting for the reporter to call resume().
-        responder.send().expect("respond");
+        responder.send("").expect("respond");
 
         let realm = connect_to_service::<fsys::RealmMarker>().expect("connect to realm");
         for id in &["a", "b", "c"] {

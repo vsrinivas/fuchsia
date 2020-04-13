@@ -11,54 +11,27 @@ rustc_test("collections_integration_test_bin") {
   edition = "2018"
   source_root = "integration_test.rs"
   deps = [
-    "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests:test_utils_lib",
-    "//third_party/rust_crates:anyhow",
-  ]
-}
-
-rustc_binary("collection_realm_bin") {
-  name = "collection_realm"
-  edition = "2018"
-  source_root = "collection_realm.rs"
-  deps = [
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:log",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-}
-
-rustc_binary("trigger_bin") {
-  name = "trigger"
-  edition = "2018"
-  source_root = "trigger.rs"
-  deps = [
-    "//examples/components/routing/fidl:echo-rustc",
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests:test_utils_lib",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
   ]
 }
 
 test_package("collections_integration_test") {
   deps = [
-    ":collection_realm_bin",
     ":collections_integration_test_bin",
-    ":trigger_bin",
     "//examples/components/routing/echo_client",
     "//examples/components/routing/echo_server",
+    "//src/sys/component_manager/tests:trigger_bin",
+
+    # TODO: Remove once tests use a test runner
+    "//src/sys/test_adapters/rust",
   ]
 
   meta = [
@@ -78,10 +51,6 @@ test_package("collections_integration_test") {
       path = rebase_path("meta/trigger_realm.cml")
       dest = "trigger_realm.cm"
     },
-    {
-      path = rebase_path("meta/collection_realm.cml")
-      dest = "collection_realm.cm"
-    },
   ]
 
   binaries = [
@@ -92,11 +61,12 @@ test_package("collections_integration_test") {
       name = "trigger"
     },
     {
-      name = "collection_realm"
+      # TODO: Remove once tests use a test runner
+      name = "rust_test_adapter"
     },
   ]
 
-  tests = [
+  v2_tests = [
     {
       name = "collections_integration_test"
     },

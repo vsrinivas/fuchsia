@@ -6,7 +6,7 @@ use {anyhow::Error, fuchsia_async as fasync, test_utils_lib::test_utils::*};
 
 #[fasync::run_singlethreaded(test)]
 async fn test() -> Result<(), Error> {
-    let test = BlackBoxTest::default(
+    let mut test = BlackBoxTest::default(
         "fuchsia-pkg://fuchsia.com/shutdown_integration_test#meta/shutdown_integration_root.cm",
     )
     .await?;
@@ -14,7 +14,7 @@ async fn test() -> Result<(), Error> {
     test.connect_to_event_source().await?.start_component_tree().await?;
 
     test.component_manager_app
-        .wait_with_output()
+        .wait()
         .await
-        .and_then(|result| result.exit_status.ok().map_err(|e| e.into()))
+        .and_then(|exit_status| exit_status.ok().map_err(|e| e.into()))
 }

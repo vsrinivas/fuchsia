@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/component_manager_for_rights_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

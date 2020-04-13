@@ -25,6 +25,6 @@ fn main() {
 async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
     while let Some(event) = stream.try_next().await.expect("failed to serve trigger service") {
         let ftest::TriggerRequest::Run { responder } = event;
-        responder.send().expect("failed to send trigger response");
+        responder.send("").expect("failed to send trigger response");
     }
 }

@@ -4,7 +4,6 @@
         {
             name: "use_dir_rights",
             url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_dir_rights.cm",
-            startup: "eager",
         },
         {
             name: "expose_dir_rights",
@@ -55,6 +54,12 @@
             as: "/read_only_after_scoped",
             to: [ "#use_dir_rights" ],
             rights: [ "r*" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "#use_dir_rights",
         },
     ],
 }

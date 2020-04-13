@@ -4,23 +4,20 @@
 
 use {
     crate::events::EventSource,
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, EnvironmentControllerEvent, EnvironmentControllerProxy,
-        EnvironmentMarker, EnvironmentOptions, FileDescriptor, LauncherProxy,
+        EnvironmentMarker, EnvironmentOptions, LauncherProxy,
     },
     fidl_fuchsia_sys2 as fsys, files_async,
     fuchsia_component::client::*,
-    fuchsia_runtime::HandleType,
     fuchsia_zircon as zx,
     futures::future,
     futures::stream::{StreamExt, TryStreamExt},
-    parking_lot::{Condvar, Mutex},
     rand::random,
     std::fs::*,
     std::path::PathBuf,
-    std::{fs::File, io::Read, sync::Arc, thread, time::Duration},
 };
 
 /// This static string is used by BlackBoxTest to start Component Manager v2.
@@ -86,8 +83,9 @@ impl BlackBoxTest {
     /// At the end of this function call, a component manager has been created
     /// in a hermetic environment and its execution is halted.
     pub async fn default(root_component_url: &str) -> Result<Self, Error> {
-        Self::custom(COMPONENT_MANAGER_URL, root_component_url, vec![], None).await
+        Self::custom(COMPONENT_MANAGER_URL, root_component_url, vec![]).await
     }
+
     /// Creates a black box test from the given component manager and
     /// root component URL. The supplied directory handles are given to the
     /// started component manager. If an output file descriptor is supplied it
@@ -99,7 +97,6 @@ impl BlackBoxTest {
         component_manager_url: &str,
         root_component_url: &str,
         dir_handles: Vec<(String, zx::Handle)>,
-        output_file_descriptor: Option<FileDescriptor>,
     ) -> Result<Self, Error> {
         // Use a random integer to identify this component manager
         let random_num = random::<u32>();
@@ -111,7 +108,6 @@ impl BlackBoxTest {
             component_manager_url,
             root_component_url,
             dir_handles,
-            output_file_descriptor,
         )
         .await?;
 
@@ -144,41 +140,6 @@ impl BlackBoxTest {
         let path = self.get_component_manager_path();
         connect_to_event_source(&path).await
     }
-}
-
-/// Starts component manager, launches the provided v2 component and expects the provided output.
-/// The output may have already arrived or is expected to arrive within a constant amount
-/// of time (defined by WAIT_TIMEOUT_SEC) after invoking this function.
-pub async fn launch_component_and_expect_output(
-    root_component_url: &str,
-    expected_output: String,
-) -> Result<(), Error> {
-    launch_component_and_expect_output_with_extra_dirs(root_component_url, vec![], expected_output)
-        .await
-}
-
-/// Starts component manager, attaches the provided directory handles, launches the provided
-/// v2 component and expects the provided output.
-/// The output may have already arrived or is expected to arrive within a constant amount
-/// of time (defined by WAIT_TIMEOUT_SEC) after invoking this function.
-pub async fn launch_component_and_expect_output_with_extra_dirs(
-    root_component_url: &str,
-    dir_handles: Vec<(String, zx::Handle)>,
-    expected_output: String,
-) -> Result<(), Error> {
-    // TODO(fsamuel): Once we have LogEvents, we can remove this utiltiy function.
-    let (file, pipe_handle) = make_pipe();
-    let test = BlackBoxTest::custom(
-        COMPONENT_MANAGER_URL,
-        root_component_url,
-        dir_handles,
-        Some(pipe_handle),
-    )
-    .await?;
-
-    let event_source = &test.connect_to_event_source().await?;
-    event_source.start_component_tree().await?;
-    read_from_pipe(file, expected_output)
 }
 
 /// Creates an isolated environment for component manager inside this component.
@@ -238,14 +199,8 @@ async fn launch_component_manager(
     component_manager_url: &str,
     root_component_url: &str,
     dir_handles: Vec<(String, zx::Handle)>,
-    output_file_descriptor: Option<FileDescriptor>,
 ) -> Result<App, Error> {
     let mut options = LaunchOptions::new();
-
-    // Redirect the output to the provided descriptor
-    if let Some(output_file_descriptor) = output_file_descriptor {
-        options.set_out(output_file_descriptor);
-    }
 
     // Add in any provided directory handles to component manager's namespace
     for dir in dir_handles {
@@ -324,77 +279,6 @@ fn find_component_manager_in_hub(component_manager_url: &str, label: &str) -> Pa
     assert_eq!(dir.len(), 1);
 
     dir[0].path()
-}
-
-/// The maximum time that read_from_pipe will wait for a message to appear in a file.
-/// After this time elapses, an error is returned by the function.
-const WAIT_TIMEOUT_SEC: u64 = 10;
-
-fn make_pipe() -> (std::fs::File, FileDescriptor) {
-    match fdio::pipe_half() {
-        Err(_) => panic!("failed to create pipe"),
-        Ok((pipe, handle)) => {
-            let pipe_handle = FileDescriptor {
-                type0: HandleType::FileDescriptor as i32,
-                type1: 0,
-                type2: 0,
-                handle0: Some(handle.into()),
-                handle1: None,
-                handle2: None,
-            };
-            (pipe, pipe_handle)
-        }
-    }
-}
-
-fn read_from_pipe(mut f: File, expected_msg: String) -> Result<(), Error> {
-    let pair = Arc::new((Mutex::new(Vec::new()), Condvar::new()));
-
-    // This uses a blocking std::file::File::read call, so we can't use async or the timeout below
-    // will never trigger since the read doesn't yield. Need to spawn a thread.
-    // TODO: Improve this to use async I/O and replace the thread with an async closure.
-    {
-        let pair = pair.clone();
-        let expected_msg = expected_msg.clone();
-        thread::spawn(move || {
-            let expected = expected_msg.as_bytes();
-            let mut buf = [0; 1024];
-            loop {
-                let n = f.read(&mut buf).expect("failed to read pipe");
-
-                let (actual, cond) = &*pair;
-                let mut actual = actual.lock();
-                actual.extend_from_slice(&buf[0..n]);
-
-                // If the read data equals expected message, return early; the test passed. Otherwise
-                // keep gathering data until the timeout is reached. This allows tests to print info
-                // about failed expectations, even though this is most often used with
-                // component_manager.cmx which doesn't exit (so we can't just get output on exit).
-                if &**actual == expected {
-                    cond.notify_one();
-                    return;
-                }
-            }
-        });
-    }
-
-    // parking_lot::Condvar has no spurious wakeups, yay!
-    let (actual, cond) = &*pair;
-    let mut actual = actual.lock();
-    if cond.wait_for(&mut actual, Duration::from_secs(WAIT_TIMEOUT_SEC)).timed_out() {
-        let actual_msg = String::from_utf8(actual.clone())
-            .map(|v| format!("'{}'", v))
-            .unwrap_or(format!("{:?}", actual));
-
-        return Err(format_err!(
-            "Timed out waiting for matching output\n\
-             Expected: '{}'\n\
-             Actual: {}",
-            expected_msg,
-            actual_msg,
-        ));
-    }
-    Ok(())
 }
 
 /// Convenience method to lists the contents of a directory proxy as a sorted vector of strings.

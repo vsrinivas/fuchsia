@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_io as fio, fuchsia_async as fasync, std::io};
+use {
+    anyhow::Error,
+    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    futures::{StreamExt, TryStreamExt},
+    std::io,
+};
 
 /// Contains all the information required to verify that a particular path contains some set of
 /// rights.
@@ -54,7 +60,26 @@ impl RightsTestCase {
 }
 
 #[fasync::run_singlethreaded]
-async fn main() -> io::Result<()> {
+async fn main() {
+    let mut fs = ServiceFs::new_local();
+    fs.dir("svc").add_fidl_service(move |stream| {
+        fasync::spawn_local(async move {
+            run_trigger_service(stream).await.expect("failed to run trigger service");
+        });
+    });
+    fs.take_and_serve_directory_handle().expect("failed to serve outgoing directory");
+    fs.collect::<()>().await;
+}
+
+async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) -> Result<(), Error> {
+    while let Some(event) = stream.try_next().await? {
+        handle_trigger(event).await;
+    }
+    Ok(())
+}
+
+async fn handle_trigger(event: ftest::TriggerRequest) {
+    let ftest::TriggerRequest::Run { responder } = event;
     let tests = [
         RightsTestCase::new("/read_only", fio::OPEN_RIGHT_READABLE),
         RightsTestCase::new("/read_write", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE),
@@ -65,10 +90,14 @@ async fn main() -> io::Result<()> {
     ];
     for test_case in tests.iter() {
         if let Err(test_failure) = test_case.verify() {
-            println!("Directory rights test failed: {} - {}", test_case.path, test_failure);
-            return Ok(());
+            responder
+                .send(&format!(
+                    "Directory rights test failed: {} - {}",
+                    test_case.path, test_failure,
+                ))
+                .expect("failed to send trigger response");
+            return;
         }
     }
-    println!("All tests passed");
-    Ok(())
+    responder.send("All tests passed").expect("failed to send trigger response");
 }

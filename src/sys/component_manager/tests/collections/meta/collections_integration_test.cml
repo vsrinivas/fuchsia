@@ -1,7 +1,9 @@
 // Realm for integration test that creates and binds to component instances in a collection.
 {
     program: {
-        binary: "bin/collection_realm",
+        // Use the rust test adapter because we don't have the ability to use a runner yet.
+        binary: "bin/rust_test_adapter",
+        args: [ "/pkg/test/collections_integration_test" ],
     },
     children: [
         {
@@ -17,10 +19,19 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+
+        // Needed to bind to and create children
         {
             protocol: "/svc/fuchsia.sys2.Realm",
             from: "framework",
+        },
+
+        // These "use" statements are needed for the RustTestAdapter trampoline
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+            ],
         },
     ],
 
@@ -36,14 +47,20 @@
             ],
         },
         {
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+            to: [ "#coll" ],
+        },
+        {
             protocol: "/svc/fuchsia.logger.LogSink",
             from: "realm",
             to: [ "#coll" ],
         },
+    ],
+    expose: [
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
-            from: "#echo_server",
-            to: [ "#coll" ],
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
         },
     ],
 }

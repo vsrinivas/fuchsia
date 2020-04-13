@@ -7,6 +7,6 @@ library fidl.test.components;
 /// Simple FIDL protocol for tests that allows triggering an action.
 [Discoverable]
 protocol Trigger {
-    /// Triggers some action.
-    Run() -> ();
+    /// Triggers some action, returning a string encoding the result.
+    Run() -> (string:MAX result);
 };

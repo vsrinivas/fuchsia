@@ -8,14 +8,14 @@ use {anyhow::Error, fuchsia_async as fasync, test_utils_lib::test_utils::BlackBo
 async fn test() -> Result<(), Error> {
     // For the root component manifest, pass in the path the component manager
     // itself, which should be completely invalid.
-    let test =
+    let mut test =
         BlackBoxTest::default("fuchsia-pkg://fuchsia.com/component_manager#bin/component_manager")
             .await?;
 
     // We expect that component manager will crash since the root component
     // manifest is invalid.
-    let run_result = test.component_manager_app.wait_with_output().await?;
-    if run_result.exit_status.success() {
+    let exit_status = test.component_manager_app.wait().await?;
+    if exit_status.success() {
         panic!("component manager should have exited with error, but exited normally");
     }
     Ok(())

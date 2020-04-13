@@ -33,7 +33,9 @@ async fn call_trigger(directory: &DirectoryProxy, paths: &Vec<String>) {
                 ServerEnd::new(server_end.into_channel()),
             )
             .expect("open dir");
-        trigger.run().await.expect("call trigger")
+        // We're only interested in this function successfully returning, we don't care about the
+        // contents of the string returned.
+        let _ = trigger.run().await.expect("call trigger");
     }
 }
 

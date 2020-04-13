@@ -5,7 +5,6 @@
         {
             name: "use_dir_rights",
             url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_dir_rights.cm",
-            startup: "eager",
         },
     ],
     offer: [
@@ -51,6 +50,12 @@
             from: "realm",
             to: [ "#use_dir_rights" ],
             rights: [ "r*" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "#use_dir_rights",
         },
     ],
 }

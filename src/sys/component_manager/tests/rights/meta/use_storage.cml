@@ -6,4 +6,10 @@
         { runner: "elf" },
         { storage: "data" },
     ],
+    expose: [
+        {
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "self",
+        },
+    ],
 }

@@ -12,7 +12,7 @@ use {
 async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
     if let Some(event) = stream.try_next().await.expect("failed to serve Trigger") {
         let ftest::TriggerRequest::Run { responder } = event;
-        responder.send().expect("respond");
+        responder.send("").expect("respond");
     }
 }
 

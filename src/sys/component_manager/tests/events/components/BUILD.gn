@@ -14,7 +14,9 @@ rustc_binary("interpose_echo_looper_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:log",
   ]
 }
 
@@ -108,9 +110,11 @@ rustc_binary("echo_client_for_events_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
   ]
 }
 

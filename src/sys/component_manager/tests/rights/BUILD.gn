@@ -23,6 +23,7 @@ rustc_test("rights_integration_test_bin") {
     "//src/lib/scoped_task",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
@@ -49,11 +50,40 @@ rustc_binary("use_dir_rights") {
   edition = "2018"
   source_root = "use_dir_rights.rs"
   deps = [
-    "//garnet/lib/rust/io_util",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_binary("component_manager_for_rights_test") {
+  edition = "2018"
+  source_root = "component_manager.rs"
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/storage/pseudo-fs",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager:lib",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/test_manager/fidl:test_manager-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -66,14 +96,20 @@ rustc_binary("use_storage") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
 test_package("rights_integration_test") {
   deps = [
+    ":component_manager_for_rights_test",
     ":expose_dir_rights",
     ":rights_integration_test_bin",
     ":use_dir_rights",
@@ -81,6 +117,10 @@ test_package("rights_integration_test") {
   ]
 
   meta = [
+    {
+      path = rebase_path("meta/component_manager_for_rights_test.cmx")
+      dest = "component_manager_for_rights_test.cmx"
+    },
     {
       path = rebase_path("meta/use_dir_rights.cml")
       dest = "use_dir_rights.cm"
@@ -166,6 +206,9 @@ test_package("rights_integration_test") {
     },
     {
       name = "expose_dir_rights"
+    },
+    {
+      name = "component_manager_for_rights_test"
     },
   ]
 

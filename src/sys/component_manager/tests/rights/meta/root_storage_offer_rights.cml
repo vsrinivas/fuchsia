@@ -5,7 +5,6 @@
         {
             name: "use_storage",
             url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_storage.cm",
-            startup: "eager",
         },
         {
             name: "expose_dir_rights",
@@ -26,6 +25,12 @@
             storage: "data",
             from: "#mystorage",
             to: [ "#use_storage" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "#use_storage",
         },
     ],
     storage: [
