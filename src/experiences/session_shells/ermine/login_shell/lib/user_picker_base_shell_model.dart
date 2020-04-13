@@ -27,10 +27,7 @@ const Duration _kShowLoadingSpinnerDelay = Duration(milliseconds: 500);
 /// Model that provides common state
 class UserPickerBaseShellModel extends CommonBaseShellModel
     with TickerProviderModelMixin
-    implements
-        ServiceProvider,
-        KeyboardCaptureListenerHack,
-        PointerCaptureListenerHack {
+    implements ServiceProvider, PointerCaptureListenerHack {
   /// Called when the base shell stops.
   final VoidCallback onBaseShellStopped;
 

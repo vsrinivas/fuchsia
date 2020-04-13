@@ -37,14 +37,6 @@ class CommonBaseShellPresentationImpl extends Presentation {
 
   /// |Presentation|.
   @override
-  Future<void> captureKeyboardEventHack(input.KeyboardEvent eventToCapture,
-      InterfaceHandle<KeyboardCaptureListenerHack> listener) async {
-    await _model.presentation
-        .captureKeyboardEventHack(eventToCapture, listener);
-  }
-
-  /// |Presentation|.
-  @override
   Future<void> capturePointerEventsHack(
       InterfaceHandle<PointerCaptureListenerHack> listener) async {
     await _model.presentation.capturePointerEventsHack(listener);
@@ -53,13 +45,9 @@ class CommonBaseShellPresentationImpl extends Presentation {
 
 /// Provides common features needed by all base shells.
 ///
-/// This includes user management, presentation handling,
-/// and keyboard shortcuts.
+/// This includes user management and presentation handling.
 class CommonBaseShellModel extends BaseShellModel
-    implements
-        ServiceProvider,
-        KeyboardCaptureListenerHack,
-        PointerCaptureListenerHack {
+    implements ServiceProvider, PointerCaptureListenerHack {
   /// Handles login, logout, and adding/removing users.
   ///
   /// Shouldn't be used before onReady.
@@ -74,8 +62,6 @@ class CommonBaseShellModel extends BaseShellModel
   ///
   /// Only updated after [refreshUsers] is called.
   List<Account> _accounts;
-
-  final List<KeyboardCaptureListenerHackBinding> _keyBindings = [];
 
   final PointerCaptureListenerHackBinding _pointerCaptureListenerBinding =
       PointerCaptureListenerHackBinding();
@@ -159,23 +145,23 @@ class CommonBaseShellModel extends BaseShellModel
     }
 
     Timeline.instantSync('logging in', arguments: {'accountId': '$accountId'});
-    
+
     if (logger != null) {
       await logger
-      .startTimer(
-        _kSessionShellLoginTimeMetricId,
-        0,
-        '',
-        'session_shell_login_timer_id',
-        DateTime.now().millisecondsSinceEpoch,
-        _kCobaltTimerTimeout.inSeconds)
-      .then((status) {
-          if (status != cobalt.Status.ok) {
-            log.warning(
-              'Failed to start timer metric '
-              '$_kSessionShellLoginTimeMetricId: $status. ',
-            );
-          }
+          .startTimer(
+              _kSessionShellLoginTimeMetricId,
+              0,
+              '',
+              'session_shell_login_timer_id',
+              DateTime.now().millisecondsSinceEpoch,
+              _kCobaltTimerTimeout.inSeconds)
+          .then((status) {
+        if (status != cobalt.Status.ok) {
+          log.warning(
+            'Failed to start timer metric '
+            '$_kSessionShellLoginTimeMetricId: $status. ',
+          );
+        }
       });
     }
 
@@ -197,10 +183,6 @@ class CommonBaseShellModel extends BaseShellModel
 
     notifyListeners();
   }
-
-  /// |KeyboardCaptureListener|.
-  @override
-  Future<void> onEvent(input.KeyboardEvent ev) async {}
 
   /// |PointerCaptureListener|.
   @override
@@ -229,25 +211,25 @@ class CommonBaseShellModel extends BaseShellModel
     _userManager = BaseShellUserManager(userProvider);
 
     _userManager.onLogout.listen((_) async {
-        if (logger != null) {
-          await logger
-          .endTimer(
-            'session_shell_log_out_timer_id',
-            DateTime.now().millisecondsSinceEpoch,
-            _kCobaltTimerTimeout.inSeconds)
-          .then((status) {
-              if (status != cobalt.Status.ok) {
-                log.warning(
-                  'Failed to end timer metric '
-                  'session_shell_log_out_timer_id: $status. ',
-                );
-              }
-          });
-        }
-        log.info('UserPickerBaseShell: User logged out!');
-        await onLogout();
+      if (logger != null) {
+        await logger
+            .endTimer(
+                'session_shell_log_out_timer_id',
+                DateTime.now().millisecondsSinceEpoch,
+                _kCobaltTimerTimeout.inSeconds)
+            .then((status) {
+          if (status != cobalt.Status.ok) {
+            log.warning(
+              'Failed to end timer metric '
+              'session_shell_log_out_timer_id: $status. ',
+            );
+          }
+        });
+      }
+      log.info('UserPickerBaseShell: User logged out!');
+      await onLogout();
     });
-    
+
     await refreshUsers();
   }
 
@@ -255,9 +237,6 @@ class CommonBaseShellModel extends BaseShellModel
   // TODO: revert to default state when client logs out.
   @override
   void onStop() {
-    for (final binding in _keyBindings) {
-      binding.close();
-    }
     _netstackModel.dispose();
     super.onStop();
   }
