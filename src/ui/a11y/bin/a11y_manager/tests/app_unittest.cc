@@ -19,6 +19,7 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_setui_accessibility.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
 #include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/util/util.h"
@@ -26,10 +27,8 @@
 namespace accessibility_test {
 namespace {
 
-using fuchsia::accessibility::semantics::Attributes;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::NodePtr;
-using fuchsia::accessibility::semantics::Role;
 using fuchsia::ui::input::accessibility::EventHandling;
 using fuchsia::ui::input::accessibility::PointerEventListener;
 using fuchsia::ui::input::accessibility::PointerEventListenerPtr;
@@ -68,8 +67,10 @@ class AppUnitTest : public gtest::TestLoopFixture {
   std::optional<EventHandling> SendPointerEvents(PointerEventListenerPtr* listener,
                                                  const std::vector<PointerParams>& events) {
     std::optional<EventHandling> event_handling;
-    listener->events().OnStreamHandled =
-        [&event_handling](uint32_t, uint32_t, EventHandling handled) { event_handling = handled; };
+    listener->events().OnStreamHandled = [&event_handling](uint32_t /*unused*/, uint32_t /*unused*/,
+                                                           EventHandling handled) {
+      event_handling = handled;
+    };
 
     for (const auto& params : events) {
       SendPointerEvent(listener->get(), params);
@@ -79,7 +80,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
   }
 
   void SendPointerEvent(PointerEventListener* listener, const PointerParams& params) {
-    listener->OnEvent(ToPointerEvent(params, input_event_time_++));
+    listener->OnEvent(ToPointerEvent(params, input_event_time_++, a11y::GetKoid(view_ref_)));
 
     // Simulate trivial passage of time (can expose edge cases with posted async tasks).
     RunLoopUntilIdle();
@@ -215,15 +216,19 @@ TEST_F(AppUnitTest, ListenerForAll) {
 }
 
 TEST_F(AppUnitTest, NoListenerAfterAllRemoved) {
-  fuchsia::settings::AccessibilitySettings settings;
-  settings.set_screen_reader(true);
-  settings.set_enable_magnification(true);
-  mock_setui_.Set(std::move(settings), [](auto) {});
+  {
+    fuchsia::settings::AccessibilitySettings settings;
+    settings.set_screen_reader(true);
+    settings.set_enable_magnification(true);
+    mock_setui_.Set(std::move(settings), [](auto) {});
+  }
   RunLoopUntilIdle();
-
-  settings.set_screen_reader(false);
-  settings.set_enable_magnification(false);
-  mock_setui_.Set(std::move(settings), [](auto) {});
+  {
+    fuchsia::settings::AccessibilitySettings settings;
+    settings.set_screen_reader(false);
+    settings.set_enable_magnification(false);
+    mock_setui_.Set(std::move(settings), [](auto) {});
+  }
 
   RunLoopUntilIdle();
   EXPECT_FALSE(mock_pointer_event_registry_.listener());
@@ -231,15 +236,19 @@ TEST_F(AppUnitTest, NoListenerAfterAllRemoved) {
 
 // Covers a couple additional edge cases around removing listeners.
 TEST_F(AppUnitTest, ListenerRemoveOneByOne) {
-  fuchsia::settings::AccessibilitySettings settings;
-  settings.set_screen_reader(true);
-  settings.set_enable_magnification(true);
-  mock_setui_.Set(std::move(settings), [](auto) {});
+  {
+    fuchsia::settings::AccessibilitySettings settings;
+    settings.set_screen_reader(true);
+    settings.set_enable_magnification(true);
+    mock_setui_.Set(std::move(settings), [](auto) {});
+  }
   RunLoopUntilIdle();
-
-  settings.set_screen_reader(false);
-  settings.set_enable_magnification(true);
-  mock_setui_.Set(std::move(settings), [](auto) {});
+  {
+    fuchsia::settings::AccessibilitySettings settings;
+    settings.set_screen_reader(false);
+    settings.set_enable_magnification(true);
+    mock_setui_.Set(std::move(settings), [](auto) {});
+  }
   RunLoopUntilIdle();
 
   EXPECT_EQ(app_.state().screen_reader_enabled(), false);
@@ -248,9 +257,12 @@ TEST_F(AppUnitTest, ListenerRemoveOneByOne) {
   ASSERT_TRUE(mock_pointer_event_registry_.listener());
   EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()),
             EventHandling::REJECTED);
-
-  settings.set_enable_magnification(false);
-  mock_setui_.Set(std::move(settings), [](auto) {});
+  {
+    fuchsia::settings::AccessibilitySettings settings;
+    settings.set_screen_reader(false);
+    settings.set_enable_magnification(false);
+    mock_setui_.Set(std::move(settings), [](auto) {});
+  }
   RunLoopUntilIdle();
 
   EXPECT_EQ(app_.state().magnifier_enabled(), false);
@@ -350,8 +362,59 @@ TEST_F(AppUnitTest, InitializesFocusChain) {
   ASSERT_TRUE(mock_focus_chain_.HasRegisteredFocuser());
 }
 
-// TODO(fxb/48064): Write a test to verify that screen reader is wired up with the Focus Chain when
-// it initializes.
+// Makes sure FocusChain is wired up with the screen reader, when screen reader is enabled.
+// This test uses explore action to make sure when a node is tapped, then screen reader can call
+// RequestFocus() on FocusChain. This confirms that FocusChain is connected to ScreenReader.
+TEST_F(AppUnitTest, FocusChainIsWiredToScreenReader) {
+  // Enable Screen Reader.
+  fuchsia::settings::AccessibilitySettings accessibilitySettings;
+  accessibilitySettings.set_screen_reader(true);
+  accessibilitySettings.set_color_inversion(false);
+  accessibilitySettings.set_enable_magnification(false);
+  accessibilitySettings.set_color_correction(fuchsia::settings::ColorBlindnessType::NONE);
+  mock_setui_.Set(std::move(accessibilitySettings), [](auto) {});
+  RunLoopUntilIdle();
+
+  // Create ViewRef.
+  fuchsia::ui::views::ViewRef view_ref_connection;
+  fidl::Clone(view_ref_, &view_ref_connection);
+
+  // Create ActionListener.
+  accessibility_test::MockSemanticListener semantic_listener(&context_provider_,
+                                                             std::move(view_ref_connection));
+  // We make sure the Semantic Listener has finished connecting to the
+  // root.
+  RunLoopUntilIdle();
+
+  // Creating test node to update.
+  std::vector<Node> update_nodes;
+  uint32_t node_id = 0;
+  std::string node_label = "Label A";
+  Node node = CreateTestNode(node_id, node_label);
+  update_nodes.push_back(std::move(node));
+
+  // Update the node created above.
+  semantic_listener.UpdateSemanticNodes(std::move(update_nodes));
+  RunLoopUntilIdle();
+
+  // Commit nodes.
+  semantic_listener.CommitUpdates();
+  RunLoopUntilIdle();
+
+  // Set HitTest result which is required to know which node is being tapped.
+  semantic_listener.SetHitTestResult(node_id);
+
+  // Send Tap event for view_ref_. This should trigger explore action, which should then call
+  // FocusChain to set focus to the tapped view.
+  SendPointerEvents(&mock_pointer_event_registry_.listener(), TapEvents(1, {}));
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+
+  ASSERT_TRUE(mock_focus_chain_.IsRequestFocusCalled());
+  EXPECT_EQ(a11y::GetKoid(view_ref_), mock_focus_chain_.GetFocusedViewKoid());
+}
+
+// TODO(fxb/49924): Improve tests to cover what happens if services aren't available at
+// startup.
 
 }  // namespace
 }  // namespace accessibility_test

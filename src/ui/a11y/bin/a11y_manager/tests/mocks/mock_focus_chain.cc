@@ -6,6 +6,8 @@
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include "src/ui/a11y/lib/util/util.h"
+
 namespace accessibility_test {
 
 MockFocusChain::MockFocusChain(sys::testing::ComponentContextProvider* context)
@@ -26,6 +28,9 @@ void MockFocusChain::Register(
 
 void MockFocusChain::RequestFocus(fuchsia::ui::views::ViewRef view_ref,
                                   RequestFocusCallback callback) {
+  request_focus_called_ = true;
+  fidl::Clone(view_ref, &focused_view_ref_);
+
   fuchsia::ui::views::Focuser_RequestFocus_Result result;
   result.set_response(fuchsia::ui::views::Focuser_RequestFocus_Response{});
   callback(std::move(result));
@@ -35,6 +40,13 @@ void MockFocusChain::RequestFocus(fuchsia::ui::views::ViewRef view_ref,
     focus_chain.mutable_focus_chain()->push_back(std::move(view_ref));
     listener_->OnFocusChange(std::move(focus_chain), []() {});
   }
+}
+
+zx_koid_t MockFocusChain::GetFocusedViewKoid() {
+  if (request_focus_called_) {
+    return a11y::GetKoid(focused_view_ref_);
+  }
+  return ZX_KOID_INVALID;
 }
 
 }  // namespace accessibility_test

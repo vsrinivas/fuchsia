@@ -38,9 +38,9 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   void OnSemanticsModeChanged(bool update_enabled,
                               OnSemanticsModeChangedCallback callback) override;
 
-  // Sets hit_test_node_id_ with given node_id, which will then be returned when
-  // HitTest() is called. If no value is passed, the node id will not be filled in the hit test
-  // result. used to simulate missing data or failures in the hit test.
+  // Sets hit_test_node_id_ with given node_id, which will then be returned when HitTest() is
+  // called. If no value is passed, the node id will not be filled in the hit test result. used to
+  // simulate missing data or failures in the hit test.
   void SetHitTestResult(std::optional<uint32_t> node_id);
 
   // Sets is_accessibility_action_requested_called_ with the given boolean value. This will be used
@@ -62,7 +62,7 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
 
   void Bind(fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> *listener);
 
-  bool GetSemanticsEnabled() { return semantics_enabled_; }
+  bool GetSemanticsEnabled() const { return semantics_enabled_; }
 
  private:
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticListener> semantic_listener_bindings_;

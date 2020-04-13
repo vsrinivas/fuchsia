@@ -37,6 +37,11 @@ class MockSemanticListener : public SemanticListener {
   void DeleteSemanticNodes(std::vector<uint32_t> node_ids);
   void CommitUpdates();
 
+  // Sets hit_test_node_id_ with given node_id, which will then be returned when
+  // HitTest() is called. If no value is passed, the node id will not be filled in the hit test
+  // result. used to simulate missing data or failures in the hit test.
+  void SetHitTestResult(std::optional<uint32_t> hit_test_result);
+
  private:
   // |fuchsia::accessibility::semantics::SemanticListener|
   void OnAccessibilityActionRequested(
@@ -44,10 +49,13 @@ class MockSemanticListener : public SemanticListener {
       SemanticListener::OnAccessibilityActionRequestedCallback callback) override {}
 
   // |fuchsia::accessibility::semantics::SemanticListener|
-  void HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) override {}
+  void HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) override;
 
   // |fuchsia::accessibility::semantics::SemanticListener|
   void OnSemanticsModeChanged(bool enabled, OnSemanticsModeChangedCallback callback) override {}
+
+  // Node id which will be returned when HitTest() is called.
+  std::optional<uint32_t> hit_test_node_id_ = 1;
 
   sys::testing::ComponentContextProvider* context_provider_;
   SemanticsManagerPtr manager_;

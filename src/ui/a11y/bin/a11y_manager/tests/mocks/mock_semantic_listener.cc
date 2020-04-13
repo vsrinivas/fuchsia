@@ -33,4 +33,17 @@ void MockSemanticListener::CommitUpdates() {
   tree_ptr_->CommitUpdates([]() {});
 }
 
+void MockSemanticListener::SetHitTestResult(std::optional<uint32_t> hit_test_result) {
+  hit_test_node_id_ = hit_test_result;
+}
+
+void MockSemanticListener::HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) {
+  fuchsia::accessibility::semantics::Hit hit;
+  if (hit_test_node_id_) {
+    hit.set_node_id(*hit_test_node_id_);
+    hit.mutable_path_from_root()->push_back(*hit_test_node_id_);
+  }
+  callback(std::move(hit));
+}
+
 }  // namespace accessibility_test
