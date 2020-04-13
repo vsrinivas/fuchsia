@@ -201,6 +201,11 @@ RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   FindIf)
 RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   FindIf)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     FindIf)
 
+RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     NodeState)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   NodeState)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   NodeState)
+RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     NodeState)
+
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////

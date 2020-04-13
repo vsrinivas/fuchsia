@@ -175,6 +175,33 @@ struct SinglyLinkedListNodeState {
   bool IsValid() const { return true; }
   bool InContainer() const { return (next_ != nullptr); }
 
+  // Copy-construct a node.
+  //
+  // It is an error to copy a node that's in a container. Attempting to do so
+  // will result in an assertion failure or a default constructed node if
+  // assertions are not enabled.
+  SinglyLinkedListNodeState(const SinglyLinkedListNodeState& other) : SinglyLinkedListNodeState() {
+    ZX_DEBUG_ASSERT(!other.InContainer());
+  }
+
+  // Copy-assign a node.
+  //
+  // It is an error to copy-assign to or from a node that's in a
+  // container. Attempting to do so will result in an assertion failure or a
+  // no-op if assertions are not enabled.
+  //
+  // |this| will not be modified.
+  SinglyLinkedListNodeState& operator=(const SinglyLinkedListNodeState& other) {
+    ZX_DEBUG_ASSERT(!InContainer());
+    ZX_DEBUG_ASSERT(!other.InContainer());
+    // To avoid corrupting the container, |this| must remain unmodified.
+    return *this;
+  }
+
+  // Move-construction and move-assignment have the same behavior as
+  // copy-construction and copy-assignment, respectively. |other| and |this| are
+  // never modified.
+
  private:
   template <typename, typename, typename, SizeOrder>
   friend class SinglyLinkedList;

@@ -207,6 +207,11 @@ RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   FindIf)
 RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   FindIf)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     FindIf)
 
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     NodeState)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   NodeState)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   NodeState)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     NodeState)
+
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////

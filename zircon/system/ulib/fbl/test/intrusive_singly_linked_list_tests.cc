@@ -166,6 +166,11 @@ RUN_ZXTEST(SinglyLinkedListTest, UPDDTE,  FindIf)
 RUN_ZXTEST(SinglyLinkedListTest, UPCDTE,  FindIf)
 RUN_ZXTEST(SinglyLinkedListTest, RPTE,    FindIf)
 
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    NodeState)
+RUN_ZXTEST(SinglyLinkedListTest, UPDDTE,  NodeState)
+RUN_ZXTEST(SinglyLinkedListTest, UPCDTE,  NodeState)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    NodeState)
+
 //////////////////////////////////////////
 // Sequence container specific tests.
 //////////////////////////////////////////

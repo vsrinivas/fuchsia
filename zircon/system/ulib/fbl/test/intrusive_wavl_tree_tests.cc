@@ -614,6 +614,11 @@ RUN_ZXTEST(WavlTreeTest, UPDDTE,   FindIf)
 RUN_ZXTEST(WavlTreeTest, UPCDTE,   FindIf)
 RUN_ZXTEST(WavlTreeTest, RPTE,     FindIf)
 
+RUN_ZXTEST(WavlTreeTest, UMTE,     NodeState)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   NodeState)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   NodeState)
+RUN_ZXTEST(WavlTreeTest, RPTE,     NodeState)
+
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////
