@@ -20,6 +20,7 @@ group("lib") {
     "system-health-check",
     "system-image",
     "tuf",
+    "update-package",
   ]
 }
 
@@ -41,5 +42,6 @@ group("tests") {
     "system-health-check:tests",
     "system-image:tests",
     "tuf:tests",
+    "update-package:tests",
   ]
 }
