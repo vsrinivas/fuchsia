@@ -73,9 +73,11 @@ func CheckConnection(client *ssh.Client) error {
 	return nil
 }
 
-// Connect establishes an SSH connection at the given remote address. If it fails
-// to connect, it will return an error that unwraps as a ConnectionError.
-func Connect(ctx context.Context, raddr net.Addr, config *ssh.ClientConfig) (*ssh.Client, error) {
+// ConnectDeprecated establishes an SSH connection at the given remote address.
+// If it fails to connect, it will return an error that unwraps as a
+// ConnectionError.
+// TODO(fxb/48042): Delete in favor of a method that returns sshutil.Client.
+func ConnectDeprecated(ctx context.Context, raddr net.Addr, config *ssh.ClientConfig) (*ssh.Client, error) {
 	network, err := network(raddr)
 	if err != nil {
 		return nil, err
@@ -122,14 +124,16 @@ func dialWithTimeout(network, addr string, config *ssh.ClientConfig, timeout tim
 	return client, nil
 }
 
-// ConnectToNode connects to the device with the given nodename.
-func ConnectToNode(ctx context.Context, nodename string, config *ssh.ClientConfig) (*ssh.Client, error) {
+// ConnectToNodeConnectToNodeDeprecated connects to the device with the given
+// nodename.
+// TODO(fxb/48042): Delete in favor of a method that returns sshutil.Client.
+func ConnectToNodeDeprecated(ctx context.Context, nodename string, config *ssh.ClientConfig) (*ssh.Client, error) {
 	addr, err := netutil.GetNodeAddress(ctx, nodename, true)
 	if err != nil {
 		return nil, err
 	}
 	addr.Port = SSHPort
-	return Connect(ctx, addr, config)
+	return ConnectDeprecated(ctx, addr, config)
 }
 
 // DefaultSSHConfig returns a basic SSH client configuration.

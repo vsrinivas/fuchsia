@@ -288,7 +288,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 		if err != nil {
 			return err
 		}
-		client, err := sshutil.ConnectToNode(ctx, t.Nodename(), config)
+		client, err := sshutil.ConnectToNodeDeprecated(ctx, t.Nodename(), config)
 		if err != nil {
 			return err
 		}

@@ -23,7 +23,7 @@ func TestConnectAndClose(t *testing.T) {
 	}
 	defer server.stop()
 
-	client, err := Connect(context.Background(), server.addr, server.clientConfig)
+	client, err := ConnectDeprecated(context.Background(), server.addr, server.clientConfig)
 	if err != nil {
 		t.Errorf("failed to connect: %v", err)
 	}

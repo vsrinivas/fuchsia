@@ -103,7 +103,7 @@ func (r *SSHRunner) run(ctx context.Context, command []string, stdout, stderr io
 // connection error, the returned value will unwrap as sshutil.ConnectionError.
 func (r *SSHRunner) Reconnect(ctx context.Context) (*ssh.Client, error) {
 	raddr := r.client.Conn.RemoteAddr()
-	client, err := sshutil.Connect(ctx, raddr, r.config)
+	client, err := sshutil.ConnectDeprecated(ctx, raddr, r.config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new client: %w", err)
 	}

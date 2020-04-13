@@ -135,7 +135,7 @@ func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputD
 	if err != nil {
 		return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
 	}
-	client, err := sshutil.ConnectToNode(ctx, nodename, config)
+	client, err := sshutil.ConnectToNodeDeprecated(ctx, nodename, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish an SSH connection: %v", err)
 	}
