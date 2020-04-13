@@ -92,8 +92,24 @@ pub mod non_fuchsia_handles {
         Socket,
     }
 
+    /// Wakeup state - because we keep wakeups and channel state under different
+    /// locks, we can end up in a situation whereby we record the need for a wakeup
+    /// only after the relevant wakeup occurs, and so we introduce an extra state
+    /// to signify this.
+    /// This design will sometimes cause spurious wakeups and so has some CPU cost.
+    /// I expect such costs will be minimal.
+    /// To alleviate these costs, we'd need to change API's to Channel/Socket in
+    /// non-Fuchsia compatible ways so that the Context object could be passed down
+    /// into relevant read functions. This could certainly be done, but seems like
+    /// a higher cost thing long term.
+    enum WakeState {
+        AwokenWithoutWaker,
+        Idle,
+        Waiting(Waker),
+    }
+
     lazy_static::lazy_static! {
-        static ref HANDLE_WAKEUPS: Mutex<Vec<Option<Waker>>> = Mutex::new(Vec::new());
+        static ref HANDLE_WAKEUPS: Mutex<Vec<WakeState>> = Mutex::new(Vec::new());
     }
 
     /// Awaken a handle by index.
@@ -104,10 +120,16 @@ pub mod non_fuchsia_handles {
     fn hdl_awaken(hdl: u32) {
         let mut w = HANDLE_WAKEUPS.lock();
         let i = hdl as usize;
-        if i >= w.len() {
-            return;
+        while w.len() <= i {
+            w.push(WakeState::Idle);
         }
-        w[i].take().map(Waker::wake);
+        w[i] = match w[i] {
+            WakeState::Waiting(ref waker) => {
+                waker.clone().wake();
+                WakeState::Idle
+            }
+            _ => WakeState::AwokenWithoutWaker,
+        };
     }
 
     #[must_use]
@@ -115,9 +137,15 @@ pub mod non_fuchsia_handles {
         let mut w = HANDLE_WAKEUPS.lock();
         let i = hdl as usize;
         while w.len() <= i {
-            w.push(None);
+            w.push(WakeState::Idle);
         }
-        w[i] = Some(cx.waker().clone());
+        w[i] = match w[i] {
+            WakeState::AwokenWithoutWaker => {
+                cx.waker().clone().wake();
+                WakeState::Idle
+            }
+            _ => WakeState::Waiting(cx.waker().clone()),
+        };
         Poll::Pending
     }
 
