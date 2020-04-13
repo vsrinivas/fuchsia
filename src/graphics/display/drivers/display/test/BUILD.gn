@@ -19,13 +19,13 @@ test("display-core-unittests") {
   deps = [
     ":base",
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
 }
@@ -44,6 +44,7 @@ static_library("base") {
     "//zircon/system/banjo/ddk.protocol.sysmem",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
     "//src/graphics/display/drivers/display:shared",
     "//src/graphics/display/drivers/fake:fake-lib",
@@ -51,7 +52,6 @@ static_library("base") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/lib/fake-bti",
     "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
 }

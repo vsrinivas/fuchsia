@@ -14,6 +14,7 @@ executable("display-test") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.display.controller",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//src/graphics/display/testing",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -21,7 +22,6 @@ executable("display-test") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/ulib/image-format:image-format-llcpp",

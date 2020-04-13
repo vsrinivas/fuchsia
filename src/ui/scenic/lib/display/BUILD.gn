@@ -19,6 +19,8 @@ source_set("display") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_c",
     "//sdk/fidl/fuchsia.ui.display",
     "//src/lib/files",
     "//src/lib/fsl",
@@ -27,8 +29,6 @@ source_set("display") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-display",
-    "//zircon/system/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
   ]
   deps = [
     # TODO(SCN-1398): For displayOwned/NotOwnedSignal.
