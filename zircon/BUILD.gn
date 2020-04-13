@@ -301,7 +301,7 @@ build_api_module("tool_paths") {
   deps = [
     ":tool_paths.metadata",
     "$zx/public/gn/toolchain:llvm-tools",
-    "tools",
+    "tools:all-hosts",
   ]
   data_keys = [ "tool_paths" ]
 }
