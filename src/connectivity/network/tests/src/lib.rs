@@ -26,8 +26,7 @@ trait Netstack {
 enum Netstack2 {}
 
 impl Netstack for Netstack2 {
-    const URL: &'static str =
-        fuchsia_component::fuchsia_single_component_package_url!("netstack_debug");
+    const URL: &'static str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx";
 }
 
 /// Uninstantiable type that represents Netstack3's implementation of a
@@ -411,7 +410,7 @@ async fn inspect_objects() -> Result {
 
     let netstack = fuchsia_component::client::launch(
         &launcher,
-        fuchsia_component::fuchsia_single_component_package_url!("netstack").to_string(),
+        <Netstack2 as Netstack>::URL.to_string(),
         None,
     )
     .context("failed to start netstack")?;

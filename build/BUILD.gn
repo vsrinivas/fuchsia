@@ -378,7 +378,6 @@ group("deprecated_package_underscore") {
     "//src/connectivity/network/netstack/tests:netstack_manual_tests",
     "//src/connectivity/network/netstack3/tools:netstack3_tools",
     "//src/connectivity/network/netstack3:netstack3_tests",
-    "//src/connectivity/network/netstack:netstack_debug",
     "//src/connectivity/network/netstack:netstack_gotests",
     "//src/connectivity/network/testing/netemul/lib:netemul_lib_test",
     "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",

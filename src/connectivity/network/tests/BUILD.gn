@@ -105,8 +105,9 @@ group("netstack_integration_tests") {
     # dhcpd is used to test DHCP address acquisition.
     "//src/connectivity/network/dhcp:dhcpd",
 
-    # netstack_debug provides extraneous debug information.
-    "//src/connectivity/network/netstack:netstack_debug",
+    # netstack{,3} is under test.
+    "//src/connectivity/network/netstack",
+    "//src/connectivity/network/netstack3",
 
     # netemul is used to create hermetic environments.
     "//src/connectivity/network/testing/netemul",
@@ -231,6 +232,9 @@ group("netstack_c_api_tests") {
 
     # device_name_provider provides fuchsia.device.NameProvider.
     ":device_name_provider",
+
+    # netstack is under test.
+    "//src/connectivity/network/netstack",
 
     # netemul is used to create hermetic environments.
     "//src/connectivity/network/testing/netemul",
