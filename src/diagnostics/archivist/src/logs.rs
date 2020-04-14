@@ -13,14 +13,16 @@ use fidl_fuchsia_sys_internal::{
 };
 use fuchsia_async as fasync;
 use fuchsia_inspect as inspect;
-use futures::{lock::Mutex, FutureExt, StreamExt, TryStreamExt};
+use futures::{
+    channel::mpsc, future, lock::Mutex, sink::SinkExt, FutureExt, StreamExt, TryStreamExt,
+};
 use std::sync::Arc;
 
 mod buffer;
 mod debuglog;
 mod error;
 mod listener;
-mod message;
+pub mod message;
 mod socket;
 mod stats;
 
@@ -90,18 +92,9 @@ impl LogManager {
         Ok(())
     }
 
-    /// Spawn a task to handle requests from components with logs.
-    pub fn spawn_log_sink_handler(&self, stream: LogSinkRequestStream, source: SourceIdentity) {
-        let handler = self.clone();
-        fasync::spawn(async move {
-            if let Err(e) = handler.handle_log_sink_requests(stream, source).await {
-                eprintln!("logsink stream errored: {:?}", e);
-            }
-        })
-    }
-
     /// Spawn a task which attempts to act as `LogConnectionListener` for its parent realm, eventually
     /// passing `LogSink` connections into the manager.
+    /// TODO(49764): Make this run on main future
     pub fn spawn_log_consumer(&self, connector: LogConnectorProxy) {
         let handler = self.clone();
         fasync::spawn(async move {
@@ -115,12 +108,14 @@ impl LogManager {
                                 connection: LogConnection { log_request, source_identity },
                                 control_handle: _,
                             } => {
-                                handler.spawn_log_sink_handler(
+                                let fut = handler.clone().process_log_sink(
                                     log_request
                                         .into_stream()
                                         .expect("getting LogSinkRequestStream from serverend"),
                                     source_identity,
                                 );
+
+                                fasync::spawn(fut);
                             }
                         };
                     }
@@ -135,37 +130,55 @@ impl LogManager {
         });
     }
 
-    /// Handle incoming LogSink requests, currently only to receive sockets that will contain logs.
-    async fn handle_log_sink_requests(
-        self,
-        mut stream: LogSinkRequestStream,
-        source: SourceIdentity,
-    ) -> Result<(), Error> {
+    /// Process LogSink protocol on `stream`. The future returned by this
+    /// function will not complete before all messages on this connection are
+    /// processed.
+    pub async fn process_log_sink(self, mut stream: LogSinkRequestStream, source: SourceIdentity) {
         if source.component_name.is_none() {
             self.inner.lock().await.stats.record_unattributed();
         }
-        while let Some(LogSinkRequest::Connect { socket, control_handle }) =
-            stream.try_next().await?
-        {
-            let source = SourceIdentity {
-                component_name: source.component_name.clone(),
-                component_url: source.component_url.clone(),
-                instance_id: source.instance_id.clone(),
-                realm_path: source.realm_path.clone(),
-            };
-            let log_stream = match LogMessageSocket::new(socket, source)
-                .context("creating log stream from socket")
+        let (mut log_stream_sender, recv) = mpsc::channel(0);
+        let log_sink_fut = async move {
+            while let Some(LogSinkRequest::Connect { socket, control_handle }) =
+                stream.try_next().await?
             {
-                Ok(s) => s,
-                Err(e) => {
-                    control_handle.shutdown();
-                    return Err(e);
-                }
-            };
+                let source = SourceIdentity {
+                    component_name: source.component_name.clone(),
+                    component_url: source.component_url.clone(),
+                    instance_id: source.instance_id.clone(),
+                    realm_path: source.realm_path.clone(),
+                };
+                let log_stream = match LogMessageSocket::new(socket, source)
+                    .context("creating log stream from socket")
+                {
+                    Ok(s) => s,
+                    Err(e) => {
+                        control_handle.shutdown();
+                        return Err(e);
+                    }
+                };
+                log_stream_sender.send(log_stream).await?;
+            }
+            Ok(())
+        };
 
-            fasync::spawn(self.clone().drain_messages(log_stream));
-        }
-        Ok(())
+        let log_sink_fut = async move {
+            if let Err(e) = log_sink_fut.await {
+                eprintln!("logsink stream errored: {:?}", e);
+            }
+        };
+
+        // move it into async block else two futures are no compatiable to join.
+        let drain_messages_fut = async move {
+            recv.for_each_concurrent(None, |log_stream| async {
+                self.clone().drain_messages(log_stream).await;
+            })
+            .await;
+        };
+
+        // Join future processing LogSink and future processing sockets so as to
+        // drain all the messages.
+        future::join(log_sink_fut, drain_messages_fut).await;
     }
 
     /// Drain a `LoggerStream` which wraps a socket from a component generating logs.
@@ -596,7 +609,11 @@ mod tests {
 
             let (log_sink_proxy, log_sink_stream) =
                 fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-            lm.spawn_log_sink_handler(log_sink_stream, SourceIdentity::empty());
+
+            let manager = lm.clone();
+            fasync::spawn(async move {
+                manager.process_log_sink(log_sink_stream, SourceIdentity::empty()).await;
+            });
 
             log_sink_proxy.connect(sout).expect("unable to connect out socket to log sink");
 

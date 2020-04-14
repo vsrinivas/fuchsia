@@ -13,6 +13,7 @@ use futures::TryStreamExt;
 // Include the generated FIDL bindings for the `Logger` service.
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeRequest, LogListenerSafeRequestStream, LogMarker, LogMessage,
+    LogProxy,
 };
 
 /// This trait is used to pass log message back to client.
@@ -51,14 +52,13 @@ async fn log_listener(
     Ok(())
 }
 
-/// This fn will connect to fuchsia.logger.Log service and then
-/// register listener or log dumper based on the parameters passed.
-pub async fn run_log_listener<'a>(
+/// Register listener or log dumper based on the parameters passed.
+pub async fn run_log_listener_with_proxy<'a>(
+    logger: &LogProxy,
     processor: impl LogProcessor + 'a,
     options: Option<&'a mut LogFilterOptions>,
     dump_logs: bool,
 ) -> Result<(), Error> {
-    let logger = connect_to_service::<LogMarker>()?;
     let (listener_ptr, listener_stream) = fidl::endpoints::create_request_stream()?;
 
     let options = options;
@@ -70,4 +70,15 @@ pub async fn run_log_listener<'a>(
 
     log_listener(processor, listener_stream).await?;
     Ok(())
+}
+
+/// This fn will connect to fuchsia.logger.Log service and then
+/// register listener or log dumper based on the parameters passed.
+pub async fn run_log_listener<'a>(
+    processor: impl LogProcessor + 'a,
+    options: Option<&'a mut LogFilterOptions>,
+    dump_logs: bool,
+) -> Result<(), Error> {
+    let logger = connect_to_service::<LogMarker>()?;
+    run_log_listener_with_proxy(&logger, processor, options, dump_logs).await
 }

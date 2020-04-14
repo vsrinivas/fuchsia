@@ -174,7 +174,7 @@ impl Default for fx_log_packet_t {
 impl fx_log_packet_t {
     /// This struct has no padding bytes, but we can't use zerocopy because it needs const
     /// generics to support arrays this large.
-    pub(super) fn as_bytes(&self) -> &[u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         unsafe {
             std::slice::from_raw_parts(
                 (self as *const Self) as *const u8,
@@ -183,8 +183,20 @@ impl fx_log_packet_t {
         }
     }
 
-    pub(super) fn fill_data(&mut self, region: std::ops::Range<usize>, with: c_char) {
+    /// Fills data with a single value for defined region.
+    pub fn fill_data(&mut self, region: std::ops::Range<usize>, with: c_char) {
         self.data[region].iter_mut().for_each(|c| *c = with);
+    }
+
+    /// Copies bytes to data at specifies offset.
+    pub fn add_data<T: std::convert::TryInto<c_char> + Copy>(&mut self, offset: usize, bytes: &[T])
+    where
+        <T as std::convert::TryInto<c_char>>::Error: std::fmt::Debug,
+    {
+        self.data[offset..(offset + bytes.len())]
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, x)| *x = bytes[i].try_into().unwrap());
     }
 }
 
