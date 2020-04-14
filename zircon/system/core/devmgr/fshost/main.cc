@@ -228,9 +228,11 @@ int main(int argc, char** argv) {
 
   // Initialize the local filesystem in isolation.
   zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
+  zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
   std::unique_ptr<devmgr::FsManager> fs_manager;
-  zx_status_t status = devmgr::FsManager::Create(loader_svc, std::move(dir_request),
-                                                 devmgr::MakeMetrics(), &fs_manager);
+  zx_status_t status =
+      devmgr::FsManager::Create(loader_svc, std::move(dir_request), std::move(lifecycle_request),
+                                devmgr::MakeMetrics(), &fs_manager);
   if (status != ZX_OK) {
     printf("fshost: Cannot create FsManager: %s\n", zx_status_get_string(status));
     return status;

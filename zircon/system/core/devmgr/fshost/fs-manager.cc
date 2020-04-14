@@ -60,7 +60,8 @@ FsManager::~FsManager() {
 }
 
 zx_status_t FsManager::Create(loader_service_t* loader_svc, zx::channel dir_request,
-                              FsHostMetrics metrics, std::unique_ptr<FsManager>* out) {
+                              zx::channel lifecycle_request, FsHostMetrics metrics,
+                              std::unique_ptr<FsManager>* out) {
   auto fs_manager = std::unique_ptr<FsManager>(new FsManager(std::move(metrics)));
   zx_status_t status = fs_manager->Initialize();
   if (status != ZX_OK) {
@@ -72,8 +73,19 @@ zx_status_t FsManager::Create(loader_service_t* loader_svc, zx::channel dir_requ
       return status;
     }
   }
+  if (lifecycle_request.is_valid()) {
+    status = fs_manager->SetupLifecycleServer(std::move(lifecycle_request));
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
   *out = std::move(fs_manager);
   return ZX_OK;
+}
+
+zx_status_t FsManager::SetupLifecycleServer(zx::channel lifecycle_request) {
+  return devmgr::LifecycleServer::Create(global_loop_->dispatcher(), this,
+                                         std::move(lifecycle_request));
 }
 
 // Sets up the outgoing directory, and runs it on the PA_DIRECTORY_REQUEST

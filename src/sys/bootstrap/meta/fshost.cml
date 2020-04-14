@@ -2,6 +2,9 @@
     program: {
         binary: "bin/fshost",
         args: [ "--log-to-debuglog" ],
+        "lifecycle": {
+            "stop_event": "notify",
+        },
     },
     use: [
         { runner: "elf" },

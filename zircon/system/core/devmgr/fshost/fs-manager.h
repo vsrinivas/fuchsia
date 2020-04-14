@@ -24,6 +24,7 @@
 #include "delayed-outdir.h"
 #include "fdio.h"
 #include "fshost-boot-args.h"
+#include "lifecycle.h"
 #include "metrics.h"
 #include "registry.h"
 
@@ -36,7 +37,8 @@ class AdminServer;
 class FsManager {
  public:
   static zx_status_t Create(loader_service_t* loader_svc, zx::channel dir_request,
-                            FsHostMetrics metrics, std::unique_ptr<FsManager>* out);
+                            zx::channel lifecycle_request, FsHostMetrics metrics,
+                            std::unique_ptr<FsManager>* out);
 
   ~FsManager();
 
@@ -78,6 +80,7 @@ class FsManager {
  private:
   FsManager(FsHostMetrics metrics);
   zx_status_t SetupOutgoingDirectory(zx::channel dir_request, loader_service_t* loader_svc);
+  zx_status_t SetupLifecycleServer(zx::channel lifecycle_request);
   zx_status_t Initialize();
 
   // Event on which "FSHOST_SIGNAL_XXX" signals are set.
