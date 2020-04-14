@@ -7,10 +7,7 @@
 use {
     anyhow::Error,
     fidl_fuchsia_amber_ext::{self as types, SourceConfigBuilder},
-    fidl_fuchsia_pkg::{
-        PackageCacheRequest, PackageCacheRequestStream, PackageIndexEntry,
-        PackageIndexIteratorRequest, RepositoryManagerMarker, RepositoryManagerProxy,
-    },
+    fidl_fuchsia_pkg::{RepositoryManagerMarker, RepositoryManagerProxy},
     fidl_fuchsia_pkg_ext::{
         MirrorConfigBuilder, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
     },
@@ -24,7 +21,6 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_url::pkg_url::RepoUrl,
-    fuchsia_zircon::Status,
     futures::prelude::*,
     http::Uri,
     parking_lot::Mutex,
@@ -119,7 +115,6 @@ impl MockSpaceManager {
 }
 
 struct TestEnv {
-    _pkg_cache: Arc<MockPackageCacheService>,
     _pkg_resolver: App,
     _mounts: Mounts,
     env: NestedEnvironment,
@@ -168,23 +163,12 @@ impl TestEnv {
             pkg_resolver.directory_request().unwrap().clone(),
         );
 
-        let pkg_cache = Arc::new(MockPackageCacheService::new());
-        let pkg_cache_clone = Arc::clone(&pkg_cache);
-        fs.add_fidl_service(move |stream: PackageCacheRequestStream| {
-            let pkg_cache_clone = pkg_cache_clone.clone();
-            fasync::spawn(
-                pkg_cache_clone
-                    .run_service(stream)
-                    .unwrap_or_else(|e| panic!("error running mock cache service: {:?}", e)),
-            )
-        });
-
         let env = fs
             .create_salted_nested_environment("amberctl_env")
             .expect("nested environment to create successfully");
         fasync::spawn(fs.collect());
 
-        let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("package resolver to launch");
+        let pkg_resolver = pkg_resolver.spawn(env.launcher()).unwrap();
 
         let repo_manager_proxy = env
             .connect_to_service::<RepositoryManagerMarker>()
@@ -193,7 +177,6 @@ impl TestEnv {
             env.connect_to_service::<RewriteEngineMarker>().expect("connect to rewrite engine");
 
         Self {
-            _pkg_cache: pkg_cache,
             _pkg_resolver: pkg_resolver,
             _mounts: mounts,
             env,
@@ -309,46 +292,6 @@ where
         res.extend(more.into_iter().map(|cfg| cfg.try_into()).collect::<Result<Vec<_>, _>>()?);
     }
     Ok(res)
-}
-
-struct MockPackageCacheService {}
-impl MockPackageCacheService {
-    fn new() -> Self {
-        Self {}
-    }
-    async fn run_service(
-        self: Arc<Self>,
-        mut stream: PackageCacheRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(req) = stream.try_next().await? {
-            match req {
-                PackageCacheRequest::Open { responder, .. } => {
-                    responder.send(Status::OK.into_raw())?;
-                }
-                PackageCacheRequest::Get { .. } => {
-                    panic!("PackageCacheRequest::Get should not be called");
-                }
-                PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
-                    let mut stream = iterator.into_stream()?;
-                    fasync::spawn(
-                        async move {
-                            while let Some(PackageIndexIteratorRequest::Next { responder }) =
-                                stream.try_next().await?
-                            {
-                                let mut eof = Vec::<PackageIndexEntry>::new();
-                                responder.send(&mut eof.iter_mut())?;
-                            }
-                            Ok(())
-                        }
-                        .unwrap_or_else(|e: anyhow::Error| {
-                            panic!("error serving base package index: {:?}", e)
-                        }),
-                    )
-                }
-            }
-        }
-        Ok(())
-    }
 }
 
 struct SourceConfigGenerator {

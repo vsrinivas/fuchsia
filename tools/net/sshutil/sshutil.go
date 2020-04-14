@@ -85,7 +85,7 @@ func ConnectDeprecated(ctx context.Context, raddr net.Addr, config *ssh.ClientCo
 
 	var client *ssh.Client
 	// TODO: figure out optimal backoff time and number of retries
-	if err := retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, 2*time.Minute), func() error {
+	if err := retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, time.Minute), func() error {
 		var err error
 		client, err = dialWithTimeout(network, raddr.String(), config, totalDialTimeout)
 		return err
