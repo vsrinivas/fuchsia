@@ -50,11 +50,13 @@ type BlobFromJSON struct {
 }
 
 const (
-	MetaFar   = "meta.far"
-	BlobSizes = "blob.sizes"
-	BlobList  = "gen/build/images/blob.manifest.list"
-	BlobsJSON = "blobs.json"
-	InputJSON = "size_checker.json"
+	MetaFar    = "meta.far"
+	BlobSizes  = "blob.sizes"
+	BlobList   = "gen/build/images/blob.manifest.list"
+	BlobsJSON  = "blobs.json"
+	ConfigData = "config-data"
+	DataPrefix = "data/"
+	InputJSON  = "size_checker.json"
 )
 
 func newDummyNode() *Node {
@@ -286,7 +288,14 @@ func processBlobsJSON(
 				delete(blobMap, blob.Merkle)
 			}
 		} else {
-			root.add(pkgPath, blobMap[blob.Merkle])
+			var configPkgPath string
+			if filepath.Base(pkgPath) == ConfigData && strings.HasPrefix(blob.Path, DataPrefix) {
+				// If the package is config-data, we want to group the blobs by the name of the package
+				// the config data is for.
+				// By contract defined in config.gni, the path has the format 'data/$for_pkg/$outputs'
+				configPkgPath = strings.TrimPrefix(blob.Path, DataPrefix)
+			}
+			root.add(filepath.Join(pkgPath, configPkgPath), blobMap[blob.Merkle])
 		}
 	}
 }

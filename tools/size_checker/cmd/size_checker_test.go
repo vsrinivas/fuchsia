@@ -166,6 +166,58 @@ func Test_processBlobsJSON(t *testing.T) {
 		})
 	}
 }
+
+func Test_processBlobsJSON_blobLookup(t *testing.T) {
+	tests := []struct {
+		name               string
+		pkgPath            string
+		blobMap            map[string]*Blob
+		blob               BlobFromJSON
+		expectedPathInTree string
+	}{
+		{
+			"Adding non config-data blob",
+			"path/to/pkg/non-config-data",
+			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
+			BlobFromJSON{Path: "data/test/foo.txt", Merkle: "hash"},
+			"path/to/pkg/non-config-data",
+		},
+		{
+			"Adding config-data blob meta far",
+			"path/to/pkg/config-data",
+			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
+			BlobFromJSON{Path: "meta/", Merkle: "hash"},
+			"path/to/pkg/config-data",
+		},
+		{
+			"Adding config-data blob",
+			"path/to/pkg/config-data",
+			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
+			BlobFromJSON{Path: "data/test/foo.txt", Merkle: "hash"},
+			"path/to/pkg/config-data/test/foo.txt",
+		},
+	}
+
+	var dummyAssetMap map[string]bool
+	var dummyAssetSize int64
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := newDummyNode()
+			processBlobsJSON(test.blobMap, dummyAssetMap, &dummyAssetSize, []BlobFromJSON{test.blob}, root, test.pkgPath)
+
+			expectedNode := root.find(test.expectedPathInTree)
+			if expectedNode == nil {
+				t.Fatalf("tree.find(%s) returns nil; expect to find a node", test.expectedPathInTree)
+			}
+
+			expectedSize := test.blobMap[test.blob.Merkle].size
+			if expectedNode.size != expectedSize {
+				t.Fatalf("tree.find(%s).size returns %d; expect %d", test.expectedPathInTree, expectedNode.size, expectedSize)
+			}
+		})
+	}
+}
 func Test_checkLimit(t *testing.T) {
 	tests := []struct {
 		name     string
