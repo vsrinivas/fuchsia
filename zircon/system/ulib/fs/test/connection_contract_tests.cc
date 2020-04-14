@@ -32,6 +32,9 @@ class NoOpVfs : public fs::Vfs {
     ADD_FAILURE("Should never be reached in this test");
     return false;
   }
+  void CloseAllConnectionsForVnode(const fs::Vnode& node) final {
+    FAIL("Should never be reached in this test");
+  }
 };
 
 // A Vfs that first places connections into a linked list before

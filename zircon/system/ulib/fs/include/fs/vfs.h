@@ -221,6 +221,10 @@ class Vfs {
     return ServeDirectory(vn, std::move(channel), fs::Rights::All());
   }
 
+  // Closes all connections to a Vnode. The caller must ensure that no new
+  // connections or transactions are created during this point.
+  virtual void CloseAllConnectionsForVnode(const Vnode& node) = 0;
+
   // Pins a handle to a remote filesystem onto a vnode, if possible.
   zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) FS_TA_EXCLUDES(vfs_lock_);
 

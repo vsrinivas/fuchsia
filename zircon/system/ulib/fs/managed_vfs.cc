@@ -47,6 +47,17 @@ void ManagedVfs::Shutdown(ShutdownCallback handler) {
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
+void ManagedVfs::CloseAllConnectionsForVnode(const Vnode& node) {
+  async::PostTask(dispatcher(), [this, &node]() {
+    fbl::AutoLock<fbl::Mutex> lock(&lock_);
+    for (auto& connection : connections_) {
+      if (connection.vnode().get() == &node) {
+        connection.AsyncTeardown();
+      }
+    }
+  });
+}
+
 // Trigger "OnShutdownComplete" if all preconditions have been met.
 void ManagedVfs::CheckForShutdownComplete() {
   if (IsTerminated()) {

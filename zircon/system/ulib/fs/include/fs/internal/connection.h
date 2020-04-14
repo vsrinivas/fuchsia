@@ -97,6 +97,8 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   void RegisterInflightTransaction() { vnode_->RegisterInflightTransaction(); }
   void UnregisterInflightTransaction() { vnode_->UnregisterInflightTransaction(); }
 
+  fbl::RefPtr<fs::Vnode>& vnode() { return vnode_; }
+
  protected:
   // Subclasses of |Connection| should implement a particular |fuchsia.io| protocol.
   // This is a utility for creating corresponding message dispatch functions which
@@ -167,8 +169,6 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   void set_append(bool append) { options_.flags.append = append; }
 
   Vfs* vfs() const { return vfs_; }
-
-  fbl::RefPtr<fs::Vnode>& vnode() { return vnode_; }
 
   zx::event& token() { return token_; }
 

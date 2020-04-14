@@ -33,6 +33,9 @@ namespace fs {
 class SynchronousVfs : public Vfs {
  public:
   SynchronousVfs();
+
+  void CloseAllConnectionsForVnode(const Vnode& node) final;
+
   explicit SynchronousVfs(async_dispatcher_t* dispatcher);
 
   // The SynchronousVfs destructor terminates all open

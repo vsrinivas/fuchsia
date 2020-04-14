@@ -36,6 +36,16 @@ void SynchronousVfs::Shutdown(ShutdownCallback handler) {
   }
 }
 
+void SynchronousVfs::CloseAllConnectionsForVnode(const Vnode& node) {
+  for (auto connection = connections_.begin(); connection != connections_.end();) {
+    auto c = connection;
+    connection++;
+    if (c->vnode().get() == &node) {
+      c->SyncTeardown();
+    }
+  }
+}
+
 zx_status_t SynchronousVfs::RegisterConnection(std::unique_ptr<internal::Connection> connection,
                                                zx::channel channel) {
   ZX_DEBUG_ASSERT(!is_shutting_down_);

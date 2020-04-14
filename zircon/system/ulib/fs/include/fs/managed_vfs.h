@@ -46,6 +46,8 @@ class ManagedVfs : public Vfs {
   // It is unsafe to call Shutdown multiple times.
   void Shutdown(ShutdownCallback handler) override __TA_EXCLUDES(lock_);
 
+  void CloseAllConnectionsForVnode(const Vnode& node) final;
+
  private:
   // Posts the task for OnShutdownComplete if it is safe to do so.
   void CheckForShutdownComplete() __TA_REQUIRES(lock_);

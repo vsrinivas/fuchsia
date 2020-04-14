@@ -60,3 +60,35 @@ TEST(ManagedVfs, UnmountAndShutdown) {
   ASSERT_OK(result->s);
   ASSERT_TRUE(static_cast<fs::Vfs*>(&vfs)->IsTerminating());
 }
+
+static void CheckClosesConnection(fs::Vfs* vfs) {
+  zx::channel local_a, remote_a, local_b, remote_b;
+  ASSERT_OK(zx::channel::create(0, &local_a, &remote_a));
+  ASSERT_OK(zx::channel::create(0, &local_b, &remote_b));
+
+  auto dir_a = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto dir_b = fbl::MakeRefCounted<fs::PseudoDir>();
+  ASSERT_OK(vfs->ServeDirectory(dir_a, std::move(remote_a)));
+  ASSERT_OK(vfs->ServeDirectory(dir_b, std::move(remote_b)));
+  vfs->CloseAllConnectionsForVnode(*dir_a);
+  zx_signals_t signals;
+  ASSERT_OK(local_a.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals));
+  ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
+  ASSERT_EQ(ZX_ERR_TIMED_OUT, local_b.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time(0), &signals));
+}
+
+TEST(ManagedVfs, CloseAllConnections) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fs::ManagedVfs vfs(loop.dispatcher());
+  loop.StartThread();
+  CheckClosesConnection(&vfs);
+  loop.Shutdown();
+}
+
+TEST(SynchronousVfs, CloseAllConnections) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fs::SynchronousVfs vfs(loop.dispatcher());
+  loop.StartThread();
+  CheckClosesConnection(&vfs);
+  loop.Shutdown();
+}
