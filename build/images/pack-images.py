@@ -54,6 +54,7 @@ class TarArchiver(object):
             mode += ':gz'
 
         self._archive = tarfile.open(outfile, mode, dereference=True)
+
     def __enter__(self):
         return self
 
@@ -83,7 +84,42 @@ class TarArchiver(object):
         self._archive.addfile(info, StringIO.StringIO(contents))
 
 
-def write_archive(outfile, compress, images, board_name, additional_bootserver_arguments):
+# Produces a deflated zip archive.
+class ZipArchiver(object):
+    """Public interface needs to match TarArchiver."""
+
+    def __init__(self, outfile):
+        self._archive = zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED)
+        self._archive.comment = 'Fuchsia build archive'
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, unused_type, unused_value, unused_traceback):
+        self._archive.close()
+
+    def add_path(self, path, name, unused_executable):
+        self._archive.write(path, name)
+
+    def add_contents(self, contents, name, unused_executable):
+        self._archive.writestr(name, contents)
+
+
+def format_archiver(outfile):
+    if outfile.endswith('.tar'):
+        return TarArchiver(outfile, compress=False)
+    if outfile.endswith('.tgz') or outfile.endswith('.tar.gz'):
+        return TarArchiver(outfile, compress=True)
+    if outfile.endswith('.zip'):
+        return ZipArchiver(outfile)
+    sys.stderr.write(
+        '''\
+Cannot guess archive format from file name %r; use --format.
+''' % outfile)
+    sys.exit(1)
+
+
+def write_archive(outfile, images, board_name, additional_bootserver_arguments):
     # Synthesize a sanitized form of the input.
     path_images = []
     for image in images:
@@ -141,7 +177,7 @@ def write_archive(outfile, compress, images, board_name, additional_bootserver_a
     def is_executable(image):
         return image['type'] == 'sh' or image['type'].startswith('exe')
 
-    with TarArchiver(outfile, compress=compress) as archiver:
+    with format_archiver(outfile) as archiver:
         for path, image in path_images:
             archiver.add_path(path, image['path'], is_executable(image))
         for contents, image in content_images:
@@ -220,9 +256,8 @@ def main():
             image for image in images if image.get('archive', False)
         ]
         files_read |= set(image['path'] for image in archive_images)
-        compress = outfile.endswith('.tgz') or outfile.endswith('.tar.gz')
         write_archive(
-            outfile, compress, archive_images, args.board_name,
+            outfile, archive_images, args.board_name,
             ' '.join(args.additional_bootserver_arguments))
 
     if outfile and args.depfile:
