@@ -8,7 +8,6 @@
 group("fidl") {
   deps = [
 #------------------
-    "fuchsia-blobfs",
 #------------------
 #------------------
     "fuchsia-boot",

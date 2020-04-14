@@ -108,6 +108,7 @@ test("blobfs-unit") {
   ]
   deps = [
     ":test-utils",
+    "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -124,7 +125,6 @@ test("blobfs-unit") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zstd",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-blobfs:c",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fs-test-utils",
   ]
@@ -173,6 +173,7 @@ test("blobfs-integration") {
   deps = [
     ":integration-fixtures",
     ":test-utils",
+    "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
@@ -184,7 +185,6 @@ test("blobfs-integration") {
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-blobfs:c",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-fs:llcpp",
     "//zircon/system/ulib/blobfs",
