@@ -194,11 +194,11 @@ protocol Controller {
 
     /// Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
     /// state.
+    /// On success, the out_state is same as requested_state.
+    /// On failure, the out_state is the state the device is currently in.
     // TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
     // In a future change, this api will result in suspend hook being called on all the children and
     // descendants before transitioning this device.
-    // On success, the out_state is same as requested_state.
-    // On failure, the out_state is the state the device is currently in.
     Suspend(DevicePowerState requested_state) -> (zx.status status, DevicePowerState out_state);
 
     /// Transition this device from a sleep state to a working state.

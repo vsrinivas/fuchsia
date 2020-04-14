@@ -6,29 +6,29 @@ library fuchsia.ldsvc;
 
 using zx;
 
-// See //docs/zircon/program_loading.md for a more complete
-// description of this and related process bootstrapping protocols, and
-// for specifics about the default global loader service's
-// interpretation of names, paths, and configurations.
+/// See ///docs/zircon/program_loading.md for a more complete
+/// description of this and related process bootstrapping protocols, and
+/// for specifics about the default global loader service's
+/// interpretation of names, paths, and configurations.
 
 // WARNING: This interface is manually implemented in libldmsg.a. Please
 // update that implementation if you change this protocol.
 
 [Layout = "Simple"]
 protocol Loader {
-    // Cleanly shutdown the connection to the Loader service.
+    /// Cleanly shutdown the connection to the Loader service.
     Done();
 
-    // The dynamic linker sends `object_name` and gets back a VMO
-    // handle containing the file.
+    /// The dynamic linker sends `object_name` and gets back a VMO
+    /// handle containing the file.
     LoadObject(string:1024 object_name) -> (zx.status rv, handle<vmo>? object);
 
-    // The dynamic linker sends a `config` identifying its load
-    // configuration.  This is intended to affect how later
-    // `LoadObject` requests decide what particular implementation
-    // file to supply for a given name.
+    /// The dynamic linker sends a `config` identifying its load
+    /// configuration.  This is intended to affect how later
+    /// `LoadObject` requests decide what particular implementation
+    /// file to supply for a given name.
     Config(string:1024 config) -> (zx.status rv);
 
-    // Obtain a new loader service connection.
+    /// Obtain a new loader service connection.
     Clone(request<Loader> loader) -> (zx.status rv);
 };

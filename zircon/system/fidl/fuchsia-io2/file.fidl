@@ -163,7 +163,7 @@ bits VmoFlags : uint64 {
     /// Requests that the VMO be writable.
     WRITE = 0x00000002;
 
-    //// Request that the VMO be executable.
+    /// Request that the VMO be executable.
     EXECUTE = 0x00000004;
 
     /// Require a copy-on-write clone of the underlying VMO.

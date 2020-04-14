@@ -9,43 +9,43 @@ using zx;
 // The zx library does not include zx_info_kmem_stats_t, so this table is mirroring it.
 // See zircon/system/public/zircon/syscalls/object.h for more details.
 table MemoryStats {
-  1: uint64 total_bytes;
-  2: uint64 free_bytes;
-  3: uint64 wired_bytes;
-  4: uint64 total_heap_bytes;
-  5: uint64 free_heap_bytes;
-  6: uint64 vmo_bytes;
-  7: uint64 mmu_overhead_bytes;
-  8: uint64 ipc_bytes;
-  9: uint64 other_bytes;
+    1: uint64 total_bytes;
+    2: uint64 free_bytes;
+    3: uint64 wired_bytes;
+    4: uint64 total_heap_bytes;
+    5: uint64 free_heap_bytes;
+    6: uint64 vmo_bytes;
+    7: uint64 mmu_overhead_bytes;
+    8: uint64 ipc_bytes;
+    9: uint64 other_bytes;
 };
 
 // Similarly, this table mirrors zx_info_cpu_stats_t.
 // See zircon/system/public/zircon/syscalls/object.h for more details.
 table PerCpuStats {
-  1: uint32 cpu_number;
-  2: uint32 flags;
-  3: zx.duration idle_time;
-  4: uint64 reschedules;
-  5: uint64 context_switches;
-  6: uint64 irq_preempts;
-  7: uint64 yields;
-  8: uint64 ints;
-  9: uint64 timer_ints;
-  10: uint64 timers;
-  11: uint64 page_faults;
-  12: uint64 exceptions;
-  13: uint64 syscalls;
-  14: uint64 reschedule_ipis;
-  15: uint64 generic_ipis;
+    1: uint32 cpu_number;
+    2: uint32 flags;
+    3: zx.duration idle_time;
+    4: uint64 reschedules;
+    5: uint64 context_switches;
+    6: uint64 irq_preempts;
+    7: uint64 yields;
+    8: uint64 ints;
+    9: uint64 timer_ints;
+    10: uint64 timers;
+    11: uint64 page_faults;
+    12: uint64 exceptions;
+    13: uint64 syscalls;
+    14: uint64 reschedule_ipis;
+    15: uint64 generic_ipis;
 };
 
 struct CpuStats {
-  // This is the total number of CPUs on the actual device. This may not be the same as the length
-  // of the vector `per_cpu_stats` as it is possible the underlying syscall will not return stats
-  // for all CPUs.
-  uint64 actual_num_cpus;
-  vector<PerCpuStats>:zx.MAX_CPUS? per_cpu_stats;
+    /// This is the total number of CPUs on the actual device. This may not be the same as the length
+    /// of the vector `per_cpu_stats` as it is possible the underlying syscall will not return stats
+    /// for all CPUs.
+    uint64 actual_num_cpus;
+    vector<PerCpuStats>:zx.MAX_CPUS? per_cpu_stats;
 };
 
 /// Protocol for providing kernel stats. This is roughly a wrapper around zx_object_get_info for

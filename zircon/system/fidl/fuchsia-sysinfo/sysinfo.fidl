@@ -37,6 +37,6 @@ protocol SysInfo {
     /// Return the bootloader vendor for the platform we are running on.
     GetBootloaderVendor() -> (zx.status status, string:BOOTLOADER_VENDOR_LEN? vendor);
 
-    // Return interrupt controller information.
+    /// Return interrupt controller information.
     GetInterruptControllerInfo() -> (zx.status status, InterruptControllerInfo? info);
 };

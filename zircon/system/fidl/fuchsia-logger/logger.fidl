@@ -27,17 +27,17 @@ struct LogFilterOptions {
     bool filter_by_tid;
     uint64 tid;
 
-    // If more than zero, logs would be filtered based on verbosity and
-    // `min_severity` would be ignored.
+    /// If more than zero, logs would be filtered based on verbosity and
+    /// `min_severity` would be ignored.
     uint8 verbosity;
 
     LogLevelFilter min_severity;
 
-    // If non-empty, return all messages which contain at least one specified
-    // tag.  If empty, messages will not be filtered by tag.
-    // Passed tags should not be more than `MAX_TAG_LEN_BYTES` bytes in length
-    // and max tags can be `MAX_TAGS`.
-    // Listener would be discarded if the limit is not followed.
+    /// If non-empty, return all messages which contain at least one specified
+    /// tag.  If empty, messages will not be filtered by tag.
+    /// Passed tags should not be more than `MAX_TAG_LEN_BYTES` bytes in length
+    /// and max tags can be `MAX_TAGS`.
+    /// Listener would be discarded if the limit is not followed.
     vector<string:MAX_TAG_LEN_BYTES>:MAX_TAGS tags;
 };
 

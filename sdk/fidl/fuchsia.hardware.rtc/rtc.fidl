@@ -17,9 +17,9 @@ struct Time {
 
 [Layout = "Simple"]
 protocol Device {
-    // Get the current RTC time
+    /// Get the current RTC time
     Get() -> (Time rtc);
 
-    // Set the RTC time
+    /// Set the RTC time
     Set(Time rtc) -> (zx.status status);
 };

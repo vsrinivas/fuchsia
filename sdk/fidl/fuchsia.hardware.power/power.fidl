@@ -21,35 +21,35 @@ struct SourceInfo {
 };
 
 enum BatteryUnit {
-    // Milliwatts
+    /// Milliwatts
     MW = 0;
-    // Milliamps
+    /// Milliamps
     MA = 1;
 };
 
 struct BatteryInfo {
-    // capacity unit. all voltage fields are in millivolts
+    /// capacity unit. all voltage fields are in millivolts
     BatteryUnit unit;
-    // nominal capacity of a new battery
+    /// nominal capacity of a new battery
     uint32 design_capacity;
-    // predicted battery capacity when fully charged
+    /// predicted battery capacity when fully charged
     uint32 last_full_capacity;
-    // nominal voltage of a new battery
+    /// nominal voltage of a new battery
     uint32 design_voltage;
-    // capacity when the device will generate a warning notification
+    /// capacity when the device will generate a warning notification
     uint32 capacity_warning;
-    // capacity when the device will generate a low battery notification
+    /// capacity when the device will generate a low battery notification
     uint32 capacity_low;
-    // the smallest increment the battery is capable of measuring between the
-    // low and warning capacities
+    /// the smallest increment the battery is capable of measuring between the
+    /// low and warning capacities
     uint32 capacity_granularity_low_warning;
-    // the smallest increment the battery is capable of measuring between the low
-    // and warning capacities
+    /// the smallest increment the battery is capable of measuring between the low
+    /// and warning capacities
     uint32 capacity_granularity_warning_full;
 
-    // below fields are in units specified the `unit` field.
-    // charging/discharging rate in the capacity unit. positive is charging,
-    // negative is discharging
+    /// below fields are in units specified the `unit` field.
+    /// charging/discharging rate in the capacity unit. positive is charging,
+    /// negative is discharging
     int32 present_rate;
     uint32 remaining_capacity;
     uint32 present_voltage;
@@ -57,14 +57,14 @@ struct BatteryInfo {
 
 [Layout = "Simple"]
 protocol Source {
-    // Get device info.
+    /// Get device info.
     GetPowerInfo() -> (zx.status status, SourceInfo info);
 
-    // Get an event to receive state change notifications on. ZX_USER_SIGNAL_0 is
-    // asserted when power_info_t.state is changed. It is deasserted when the
-    // state is read via `GetPowerInfo`.
+    /// Get an event to receive state change notifications on. ZX_USER_SIGNAL_0 is
+    /// asserted when power_info_t.state is changed. It is deasserted when the
+    /// state is read via `GetPowerInfo`.
     GetStateChangeEvent() -> (zx.status status, handle<event> handle);
 
-    // Get battery info. Only supported if type == PowerType::BATTERY.
+    /// Get battery info. Only supported if type == PowerType::BATTERY.
     GetBatteryInfo() -> (zx.status status, BatteryInfo info);
 };

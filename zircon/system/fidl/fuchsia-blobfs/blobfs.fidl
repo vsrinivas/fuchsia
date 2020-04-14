@@ -6,7 +6,7 @@ library fuchsia.blobfs;
 
 using zx;
 
-// Describes contiguous run of allocated blocks.
+/// Describes contiguous run of allocated blocks.
 struct BlockRegion {
     uint64 offset;
     uint64 length;
@@ -14,37 +14,37 @@ struct BlockRegion {
 
 [Layout = "Simple"]
 protocol Blobfs {
-    // Retrieve information about allocated regions on the filesystem.
+    /// Retrieve information about allocated regions on the filesystem.
     GetAllocatedRegions() -> (zx.status status, handle<vmo>? regions, uint64 count);
 
-    // Assign the handler for blob corruption callbacks. Only one handler will receive callbacks at
-    // any given time.
+    /// Assign the handler for blob corruption callbacks. Only one handler will receive callbacks at
+    /// any given time.
     SetCorruptBlobHandler(CorruptBlobHandler handler) -> (zx.status status);
 };
 
-// Action to be taken on blob corruption.
-// Depending on the "type" of blob (i.e system critical/non critical),
-// CorruptBlobHandler can instruct blobfs to take appropriate action on the blob.
+/// Action to be taken on blob corruption.
+/// Depending on the "type" of blob (i.e system critical/non critical),
+/// CorruptBlobHandler can instruct blobfs to take appropriate action on the blob.
 enum TakeAction : uint8 {
-    // Return error without deleting.
+    /// Return error without deleting.
     RETURN_ERROR = 0;
 
-    // Delete the blob and hang execution.
+    /// Delete the blob and hang execution.
     DELETE_AND_HANG = 1;
 
-    // Delete the blob and return error.
+    /// Delete the blob and return error.
     DELETE_AND_RETURN_ERROR = 2;
 };
 
 [Layout = "Simple"]
 protocol CorruptBlobHandler {
-    // A corruption handler may determine that a blob is sufficiently critical that returning errors
-    // to clients may lead to undesirable system configuration or behavior. In this case the handler
-    // may return DELETE_AND_HANG to prevent such an event. As this behavior effectively leaks
-    // resources, it is expected that the corruption handler otherwise arranges that the system will
-    // be restarted/recovered.
-    // For non critical blobs, CorruptBlob will return with a DELETE_AND_RETURN_ERROR or
-    // RETURN_ERROR, and the read may "continue" i.e an error will be observed by the blobfs
-    // client that is reading.
+    /// A corruption handler may determine that a blob is sufficiently critical that returning errors
+    /// to clients may lead to undesirable system configuration or behavior. In this case the handler
+    /// may return DELETE_AND_HANG to prevent such an event. As this behavior effectively leaks
+    /// resources, it is expected that the corruption handler otherwise arranges that the system will
+    /// be restarted/recovered.
+    /// For non critical blobs, CorruptBlob will return with a DELETE_AND_RETURN_ERROR or
+    /// RETURN_ERROR, and the read may "continue" i.e an error will be observed by the blobfs
+    /// client that is reading.
     CorruptBlob(vector<uint8>:64 merkleroot) -> (TakeAction action);
 };
