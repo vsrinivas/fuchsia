@@ -63,7 +63,6 @@ test_package("camera_tests") {
     "//src/camera/drivers/controller/test",
     "//src/camera/drivers/hw_accel/gdc/test",
     "//src/camera/drivers/hw_accel/ge2d/test",
-    "//src/camera/drivers/isp/mali-009/test",
     "//src/camera/drivers/isp/modules:gamma-rgb-registers",
     "//src/camera/drivers/isp/modules:isp-mem-array",
     "//src/camera/drivers/isp/modules/test:modules_bin",
@@ -167,11 +166,6 @@ test_package("camera_tests") {
     {
       name = "camera_plug_detector_test"
       manifest = "camera_manager2/test/meta/camera_plug_detector_test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "mali_009_test"
-      manifest = "drivers/isp/mali-009/test/meta/mali_009_test.cmx"
       environments = basic_envs
     },
     {

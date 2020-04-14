@@ -8,7 +8,6 @@ group("drivers") {
     "bus",
     "controller",
     "hw_accel",
-    "isp",
     "sensors",
     "test_utils",
     "usb_video",
@@ -21,7 +20,6 @@ group("sherlock") {
     "bus",
     "controller",
     "hw_accel",
-    "isp",
     "sensors",
   ]
 }
