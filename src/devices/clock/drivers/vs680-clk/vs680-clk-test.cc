@@ -22,7 +22,7 @@ class Vs680ClkTest : public zxtest::Test {
       : dut_(nullptr,
              ddk::MmioBuffer({chip_ctrl_regs_, 0, sizeof(chip_ctrl_regs_), ZX_HANDLE_INVALID}),
              ddk::MmioBuffer({cpu_pll_regs_, 0, sizeof(cpu_pll_regs_), ZX_HANDLE_INVALID}),
-             ddk::MmioBuffer({avio_regs_, 0, sizeof(avio_regs_), ZX_HANDLE_INVALID}), 0) {}
+             ddk::MmioBuffer({avio_regs_, 0, sizeof(avio_regs_), ZX_HANDLE_INVALID}), zx::sec(0)) {}
 
   void SetUp() {
     memset(chip_ctrl_regs_, 0, sizeof(chip_ctrl_regs_));
@@ -208,6 +208,58 @@ TEST_F(Vs680ClkTest, GetRate) {
   chip_ctrl_regs_[0x80 + 4] = 1063004;
   EXPECT_OK(dut_.ClockImplGetRate(vs680::kSysPll0, &hz));
   EXPECT_EQ(hz, 180'633'599);
+
+  avio_regs_[0x0a + 0] = 0;
+  avio_regs_[0x0a + 2] = 24;
+  avio_regs_[0x0a + 3] = 39;
+  avio_regs_[0x0a + 5] = 7;
+  avio_regs_[0x4c] = 0;
+  EXPECT_OK(dut_.ClockImplGetRate(vs680::kAPll0, &hz));
+  EXPECT_EQ(hz, 10'000'000);
+
+  avio_regs_[0x0a + 0] = 0b10;
+  EXPECT_OK(dut_.ClockImplGetRate(vs680::kAPll0, &hz));
+  EXPECT_EQ(hz, 25'000'000);
+
+  avio_regs_[0x0a + 0] = 0;
+  avio_regs_[0x4c + 0] = 0b100;
+  EXPECT_OK(dut_.ClockImplGetRate(vs680::kAPll0, &hz));
+  EXPECT_EQ(hz, 10'000'000);
+}
+
+TEST_F(Vs680ClkTest, EnableDisable) {
+  chip_ctrl_regs_[0x4c] = 0;
+  EXPECT_OK(dut_.ClockImplDisable(vs680::kAPll0));
+  EXPECT_EQ(avio_regs_[0x4c], 0b100);
+
+  bool enabled = true;
+  EXPECT_OK(dut_.ClockImplIsEnabled(vs680::kAPll0, &enabled));
+  EXPECT_FALSE(enabled);
+
+  avio_regs_[0x4c] = 1;
+  EXPECT_OK(dut_.ClockImplEnable(vs680::kVPll0));
+  EXPECT_EQ(avio_regs_[0x4c], 0);
+
+  EXPECT_OK(dut_.ClockImplIsEnabled(vs680::kVPll0, &enabled));
+  EXPECT_TRUE(enabled);
+
+  avio_regs_[0x4c] = 0;
+  EXPECT_OK(dut_.ClockImplDisable(vs680::kAPll1));
+  EXPECT_EQ(avio_regs_[0x4c], 0b1000);
+
+  EXPECT_OK(dut_.ClockImplIsEnabled(vs680::kAPll1, &enabled));
+  EXPECT_FALSE(enabled);
+
+  avio_regs_[0x4c] = 0b10;
+  EXPECT_OK(dut_.ClockImplEnable(vs680::kVPll1));
+  EXPECT_EQ(avio_regs_[0x4c], 0);
+
+  EXPECT_OK(dut_.ClockImplIsEnabled(vs680::kVPll1, &enabled));
+  EXPECT_TRUE(enabled);
+
+  EXPECT_NOT_OK(dut_.ClockImplEnable(vs680::kSysPll0));
+  EXPECT_NOT_OK(dut_.ClockImplDisable(vs680::kSysPll1));
+  EXPECT_NOT_OK(dut_.ClockImplIsEnabled(vs680::kCpuPll, &enabled));
 }
 
 }  // namespace clk

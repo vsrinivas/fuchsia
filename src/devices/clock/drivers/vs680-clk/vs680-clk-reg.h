@@ -11,7 +11,7 @@ namespace clk {
 
 class PllCtrlA : public hwreg::RegisterBase<PllCtrlA, uint32_t> {
  public:
-  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<PllCtrlA>(offset + 0x00); }
+  static auto Get() { return hwreg::RegisterAddr<PllCtrlA>(0x00); }
 
   DEF_FIELD(5, 3, range);  // PLL filter range
   DEF_BIT(1, bypass);
@@ -20,42 +20,42 @@ class PllCtrlA : public hwreg::RegisterBase<PllCtrlA, uint32_t> {
 
 class PllCtrlC : public hwreg::RegisterBase<PllCtrlC, uint32_t> {
  public:
-  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<PllCtrlC>(offset + 0x08); }
+  static auto Get() { return hwreg::RegisterAddr<PllCtrlC>(0x08); }
 
   DEF_FIELD(8, 0, divr);  // Reference divider
 };
 
 class PllCtrlD : public hwreg::RegisterBase<PllCtrlD, uint32_t> {
  public:
-  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<PllCtrlD>(offset + 0x0c); }
+  static auto Get() { return hwreg::RegisterAddr<PllCtrlD>(0x0c); }
 
   DEF_FIELD(8, 0, divfi);  // Integer divider
 };
 
 class PllCtrlE : public hwreg::RegisterBase<PllCtrlE, uint32_t> {
  public:
-  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<PllCtrlE>(offset + 0x10); }
+  static auto Get() { return hwreg::RegisterAddr<PllCtrlE>(0x10); }
 
   DEF_FIELD(23, 0, divff);  // Fractional divider
 };
 
 class PllCtrlF : public hwreg::RegisterBase<PllCtrlF, uint32_t> {
  public:
-  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<PllCtrlF>(offset + 0x14); }
+  static auto Get() { return hwreg::RegisterAddr<PllCtrlF>(0x14); }
 
   DEF_FIELD(4, 0, divq);  // Output divider for PLLOUT
 };
 
 class PllCtrlG : public hwreg::RegisterBase<PllCtrlG, uint32_t> {
  public:
-  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<PllCtrlG>(offset + 0x18); }
+  static auto Get() { return hwreg::RegisterAddr<PllCtrlG>(0x18); }
 
   DEF_FIELD(2, 0, divqf);  // Output divider for PLLOUT1
 };
 
 class PllStatus : public hwreg::RegisterBase<PllStatus, uint32_t> {
  public:
-  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<PllStatus>(offset + 0x1c); }
+  static auto Get() { return hwreg::RegisterAddr<PllStatus>(0x1c); }
 
   DEF_BIT(0, lock);  // Output lock detection
 };
