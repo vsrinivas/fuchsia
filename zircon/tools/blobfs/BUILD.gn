@@ -16,8 +16,8 @@ executable("blobfs") {
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs-host",
     "//zircon/system/ulib/blobfs",
+    "//zircon/system/ulib/fs-host",
   ]
 
   if (!is_fuchsia) {

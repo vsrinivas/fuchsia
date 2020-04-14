@@ -17,9 +17,9 @@ sdk_executable("minfs") {
   deps = [
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fs-host",
     "//zircon/public/lib/journal",
     "//zircon/public/lib/minfs",
+    "//zircon/system/ulib/fs-host",
   ]
 
   if (!is_fuchsia) {

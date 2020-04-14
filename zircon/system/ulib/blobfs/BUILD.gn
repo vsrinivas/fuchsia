@@ -180,7 +180,7 @@ zx_library("blobfs") {
       "fsck-host.cc",
       "host.cc",
     ]
-    deps += [ "//zircon/public/lib/fs-host" ]
+    deps += [ "//zircon/system/ulib/fs-host" ]
   }
   include_dirs = [ "." ]
 }
