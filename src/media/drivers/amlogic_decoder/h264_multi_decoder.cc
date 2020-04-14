@@ -102,7 +102,7 @@ class MultiAccelerator : public media::H264Decoder::H264Accelerator {
     if (!ref_pic)
       return false;
     DLOG("Got MultiAccelerator::OutputPicture picture %d", ref_pic->index);
-    owner_->OutputFrame(ref_pic.get());
+    owner_->OutputFrame(ref_pic.get(), pic->bitstream_id());
     return true;
   }
 
@@ -881,8 +881,14 @@ void H264MultiDecoder::SubmitSliceData(SliceData data) {
   slice_data_list_.push_back(data);
 }
 
-void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame) {
+void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame, uint32_t pts_id) {
   ZX_DEBUG_ASSERT(reference_frame->in_use);
+  auto it = id_to_pts_map_.find(pts_id);
+  if (it != id_to_pts_map_.end()) {
+    reference_frame->frame->has_pts = true;
+    reference_frame->frame->pts = it->second;
+    id_to_pts_map_.erase(it);
+  }
   frames_to_output_.push_back(reference_frame->index);
   // Don't output a frame that's currently being decoded into, and don't output frames out of order
   // if one's already been queued up.
@@ -994,15 +1000,18 @@ void H264MultiDecoder::PumpDecoder() {
     }
     if (res == media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
       current_decoder_buffer_.reset();
-      std::vector<uint8_t> next_decoder_buffer = frame_data_provider_->ReadMoreInputData(this);
-      if (next_decoder_buffer.empty()) {
+      auto next_decoder_buffer = frame_data_provider_->ReadMoreInputData(this);
+      if (next_decoder_buffer.data.empty()) {
         DLOG("Not decoding because decoder ran out of inputs, state %d", static_cast<int>(state_));
         owner_->TryToReschedule();
         return;
       }
       current_decoder_buffer_ =
-          std::make_unique<media::DecoderBuffer>(std::move(next_decoder_buffer));
-      media_decoder_->SetStream(0, *current_decoder_buffer_);
+          std::make_unique<media::DecoderBuffer>(std::move(next_decoder_buffer.data));
+      if (next_decoder_buffer.pts) {
+        id_to_pts_map_[next_pts_id_] = next_decoder_buffer.pts.value();
+      }
+      media_decoder_->SetStream(next_pts_id_++, *current_decoder_buffer_);
 
       uint32_t nal_unit_type = GetNalUnitType(fbl::Span<const uint8_t>(
           current_decoder_buffer_->data(), current_decoder_buffer_->data_size()));

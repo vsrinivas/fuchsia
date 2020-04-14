@@ -6,6 +6,7 @@
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MULTI_DECODER_H_
 
 #include <list>
+#include <unordered_map>
 #include <vector>
 
 #include "macros.h"
@@ -51,10 +52,14 @@ class H264MultiDecoder : public VideoDecoder {
     std::vector<std::shared_ptr<media::H264Picture>> ref_pic_list0;
     std::vector<std::shared_ptr<media::H264Picture>> ref_pic_list1;
   };
+  struct DataInput {
+    std::vector<uint8_t> data;
+    std::optional<uint64_t> pts;
+  };
   class FrameDataProvider {
    public:
     // Called with the video_decoder_lock held.
-    virtual std::vector<uint8_t> ReadMoreInputData(H264MultiDecoder* decoder) = 0;
+    virtual DataInput ReadMoreInputData(H264MultiDecoder* decoder) = 0;
     virtual bool HasMoreInputData() = 0;
   };
 
@@ -86,7 +91,7 @@ class H264MultiDecoder : public VideoDecoder {
   void SubmitSliceData(SliceData data);
   void SubmitFrameMetadata(ReferenceFrame* reference_frame, const media::H264SPS* sps,
                            const media::H264PPS* pps, const media::H264DPB& dpb);
-  void OutputFrame(ReferenceFrame* reference_frame);
+  void OutputFrame(ReferenceFrame* reference_frame, uint32_t pts_id);
   void StartFrameDecode();
   std::shared_ptr<ReferenceFrame> GetUnusedReferenceFrame();
   bool currently_decoding() { return currently_decoding_; }
@@ -151,6 +156,12 @@ class H264MultiDecoder : public VideoDecoder {
   media::H264POC poc_;
   bool have_initialized_ = false;
   uint32_t seq_info2_{};
+  // This is the index of the next bitstream id to be assigned to an input buffer.
+  uint32_t next_pts_id_{};
+
+  // |id_to_pts_map_| maps from bitstream ids to PTSes. Bitstream IDs are assigned to input buffers
+  // and media::H264Decoder plumbs them through to the resulting H264Pictures.
+  std::unordered_map<uint32_t, uint64_t> id_to_pts_map_;
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MULTI_DECODER_H_

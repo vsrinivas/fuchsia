@@ -25,18 +25,24 @@ class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvid
     frame_data_.insert(frame_data_.end(), frame_data.begin(), frame_data.end());
   }
 
-  std::vector<uint8_t> ReadMoreInputData(H264MultiDecoder* decoder) override {
-    std::vector<uint8_t> result;
+  H264MultiDecoder::DataInput ReadMoreInputData(H264MultiDecoder* decoder) override {
+    H264MultiDecoder::DataInput result;
     if (frame_data_.empty())
       return result;
-    result = std::move(frame_data_.front());
+    result.data = std::move(frame_data_.front());
     frame_data_.pop_front();
+    uint32_t nal_unit_type = GetNalUnitType(result.data);
+    if (nal_unit_type == 1 || nal_unit_type == 5) {
+      // Only assign PTS for slices, to try to avoid jumps.
+      result.pts = next_pts_++;
+    }
     return result;
   }
   bool HasMoreInputData() override { return !frame_data_.empty(); }
 
  private:
   std::list<std::vector<uint8_t>> frame_data_;
+  uint64_t next_pts_{};
 };
 
 class TestH264Multi {
@@ -67,11 +73,12 @@ class TestH264Multi {
                                                    /*is_secure=*/false));
     uint32_t frame_count = 0;
     std::promise<void> wait_valid;
+    std::set<uint64_t> received_pts_set;
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       frame_allocator.SetFrameReadyNotifier([&video, &frame_count, &wait_valid, input_filename,
-                                             filename,
-                                             input_hashes](std::shared_ptr<VideoFrame> frame) {
+                                             filename, input_hashes,
+                                             &received_pts_set](std::shared_ptr<VideoFrame> frame) {
         ++frame_count;
         DLOG("Got frame %d\n", frame_count);
         EXPECT_EQ(320u, frame->coded_width);
@@ -101,10 +108,19 @@ class TestH264Multi {
             EXPECT_EQ(kExpectedData[i], buf_start[i]) << " index " << i;
           }
         }
+
         uint8_t md[SHA256_DIGEST_LENGTH];
         HashFrame(frame.get(), md);
         EXPECT_EQ(0, memcmp(md, input_hashes[frame_count - 1], sizeof(md)))
             << "Incorrect hash for frame " << frame_count << ": " << StringifyHash(md);
+
+        EXPECT_TRUE(frame->has_pts);
+        // The "pts" assigned in the TestFrameDataProvider goes in decode order, so we need to allow
+        // the current one to be two less than the max previously seen.
+        if (received_pts_set.size() > 0)
+          EXPECT_LE(*std::prev(received_pts_set.end()), frame->pts + 2);
+        EXPECT_EQ(0u, received_pts_set.count(frame->pts));
+        received_pts_set.insert(frame->pts);
 
         video->AssertVideoDecoderLockHeld();
         video->video_decoder()->ReturnFrame(frame);
