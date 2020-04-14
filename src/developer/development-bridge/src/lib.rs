@@ -292,8 +292,16 @@ impl Daemon {
                 // parsing.
                 let targets = self.target_collection.lock().await;
                 let response = match value.as_ref() {
-                    "" => format!("{:?}", *targets),
-                    _ => format!("{:?}", targets.get(value.into()).await),
+                    "" => futures::future::join_all(targets.iter().map(|t| t.to_string_async()))
+                        .await
+                        .join("\n"),
+                    _ => format!(
+                        "{}",
+                        match targets.get(value.into()).await {
+                            Some(t) => t.to_string_async().await,
+                            None => String::new(),
+                        }
+                    ),
                 };
                 responder.send(response.as_ref()).context("error sending response")?;
             }

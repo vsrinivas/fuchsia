@@ -383,7 +383,7 @@ async fn async_main() -> Result<(), Error> {
         Subcommand::List(c) => {
             match Cli::new(writer).await?.list_targets(c.nodename).await {
                 Ok(r) => {
-                    println!("SUCCESS: received {:?}", r);
+                    println!("{}", r.as_str());
                 }
                 Err(e) => {
                     println!("ERROR: {:?}", e);

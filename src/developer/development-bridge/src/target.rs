@@ -96,6 +96,29 @@ impl Target {
         }
     }
 
+    pub async fn to_string_async(&self) -> String {
+        // Need to hold onto the state for the duration of the format
+        // function to ensure that it doesn't change abruptly.
+        let state = self.state.lock().await;
+        format!(
+            "{} [{}] [overnet_started: {}] [overnet_peer_id: {}] {}",
+            self.nodename,
+            self.addrs
+                .lock()
+                .await
+                .iter()
+                .map(|addr| addr.to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
+            state.overnet_started,
+            match state.rcs.as_ref() {
+                Some(s) => s.overnet_id.id.to_string(),
+                None => String::from("not connected"),
+            },
+            self.last_response.lock().await.to_rfc2822(),
+        )
+    }
+
     pub async fn from_rcs_connection(r: RCSConnection) -> Result<Self, RCSConnectionError> {
         let fidl_target = match r.proxy.identify_host().await {
             Ok(res) => match res {
@@ -565,6 +588,20 @@ mod test {
             assert_eq!(**tc.get("fe80::dead:beef:beef:beef".into()).await.unwrap(), t);
             assert_eq!(**tc.get(addr.clone().into()).await.unwrap(), t);
             assert_eq!(**tc.get("fooberdoober".into()).await.unwrap(), t);
+        });
+    }
+
+    #[test]
+    fn test_target_debug_string() {
+        hoist::run(async move {
+            let t = Target::new("foo", fake_now());
+            assert_eq!(t.to_string_async().await, "foo [] [overnet_started: false] [overnet_peer_id: not connected] Fri, 31 Oct 2014 09:10:12 +0000");
+            t.addrs.lock().await.insert((IpAddr::from([192, 168, 1, 1]), 0).into());
+            t.state.lock().await.rcs = Some(RCSConnection::new_with_proxy(
+                setup_fake_remote_control_service(false, "foo".to_owned()),
+                &NodeId { id: 2u64 },
+            ));
+            assert_eq!(t.to_string_async().await, "foo [192.168.1.1] [overnet_started: false] [overnet_peer_id: 2] Fri, 31 Oct 2014 09:10:12 +0000");
         });
     }
 }
