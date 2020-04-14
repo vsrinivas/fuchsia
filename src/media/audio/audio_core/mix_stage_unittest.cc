@@ -48,6 +48,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
   }
 };
 
+// TODO(50004): Add tests to verify we can read from other mix stages with unaligned frames.
+
 TEST_F(MixStageTest, Trim) {
   // Set timeline rate to match our format.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
