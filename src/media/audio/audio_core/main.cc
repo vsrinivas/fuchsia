@@ -40,19 +40,19 @@ static int StartAudioCore() {
   REPORT(Init(component_context.get()));
 
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
-  if (!process_config) {
-    FX_LOGS(INFO) << "No audio_core_config.json; using default configuration";
-    auto default_config = ProcessConfig::Builder()
-                              .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(
-                                  VolumeCurve::kDefaultGainForMinVolume))
-                              .Build();
-    process_config = {std::move(default_config)};
+  if (process_config.is_error()) {
+    FX_LOGS(WARNING) << "Failed to load audio_core_config.json;" << process_config.error()
+                     << ". Falling back to default configuration.";
+    process_config = fit::ok(ProcessConfig::Builder()
+                                 .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(
+                                     VolumeCurve::kDefaultGainForMinVolume))
+                                 .Build());
   }
   FX_CHECK(process_config);
-  auto config_handle = ProcessConfig::set_instance(*process_config);
+  auto config_handle = ProcessConfig::set_instance(process_config.value());
 
   auto context = Context::Create(std::move(threading_model), std::move(component_context),
-                                 PlugDetector::Create(), std::move(*process_config));
+                                 PlugDetector::Create(), process_config.take_value());
   context->PublishOutgoingServices();
 
   AudioCoreImpl audio_core(context.get());

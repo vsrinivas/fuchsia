@@ -24,8 +24,25 @@
       "additionalProperties": false
     },
     "stream_type": {
+      "type": "string",
       "enum": [
-        "background", "communications", "interruption", "media", "system_agent"
+        "background",
+        "communications",
+        "interruption",
+        "media",
+        "system_agent",
+        "render:background",
+        "render:communications",
+        "render:interruption",
+        "render:media",
+        "render:system_agent",
+        "render:ultrasound",
+        "capture:foreground",
+        "capture:background",
+        "capture:system_agent",
+        "capture:communications",
+        "capture:ultrasound",
+        "capture:loopback"
       ]
     },
     "effect": {
@@ -82,11 +99,11 @@
         },
         "supported_output_stream_types": {
           "type": "array",
-          "items" : { "$ref" : "#definitions/stream_type" }
+          "items": { "$ref": "#/definitions/stream_type" }
         },
         "supported_stream_types": {
           "type": "array",
-          "items" : { "$ref" : "#definitions/stream_type" }
+          "items": { "$ref": "#/definitions/stream_type" }
         },
 
         // Whether this device is eligible to be looped back to loopback capturers.
@@ -97,7 +114,7 @@
         "independent_volume_control": "bool",
 
         // The mix pipeline to construct for this device.
-        "pipeline": { "$ref" : "#definitions/mix_group" }
+        "pipeline": { "$ref" : "#/definitions/mix_group" }
       },
       "required": [ "device_id" ],
       "oneOf": [
@@ -146,7 +163,7 @@
 
         "supported_stream_types": {
           "type": "array",
-          "items" : { "$ref" : "#definitions/stream_type" }
+          "items" : { "$ref" : "#/definitions/stream_type" }
         },
 
         // The target rate for this device. A different rate may be chosen if the driver does
