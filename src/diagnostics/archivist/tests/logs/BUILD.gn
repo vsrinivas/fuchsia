@@ -2,9 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("logging_component") {
+  name = "logging_component"
+  source_root = "./logging_component.rs"
+  edition = "2018"
+
+  deps = [
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:log",
+  ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [
+    ":logging_component",
     "cpp",
     "cpp:logs_integration_cpp_tests",
     "go",

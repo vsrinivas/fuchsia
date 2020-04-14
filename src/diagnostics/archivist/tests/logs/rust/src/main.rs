@@ -7,12 +7,24 @@ fn main() {}
 
 #[cfg(test)]
 mod tests {
-    use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
+    use fidl_fuchsia_diagnostics_test::ControllerMarker;
+    use fidl_fuchsia_logger::{
+        LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker,
+    };
+    use fidl_fuchsia_sys::LauncherMarker;
     use fidl_test_log_stdio::StdioPuppetMarker;
     use fuchsia_async as fasync;
-    use fuchsia_component::client as fclient;
-    use fuchsia_syslog::{self as syslog, fx_log_info};
-    use fuchsia_syslog_listener::{self as syslog_listener, LogProcessor};
+    use fuchsia_component::{
+        client::{self as fclient, connect_to_service, launch_with_options, LaunchOptions},
+        server::{ServiceFs, ServiceObj},
+    };
+    use fuchsia_syslog::{
+        self as syslog, fx_log_info,
+        levels::{INFO, WARN},
+    };
+    use fuchsia_syslog_listener::{
+        self as syslog_listener, run_log_listener_with_proxy, LogProcessor,
+    };
     use fuchsia_zircon as zx;
     use futures::{channel::mpsc, Stream, StreamExt};
     use log::warn;
@@ -120,5 +132,71 @@ mod tests {
         logs.filter(|m| futures::future::ready(m.msg == msg)).next().await;
 
         // TODO(49357): add test for multiline log once behavior is defined.
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_observer_stop_api() {
+        let launcher = connect_to_service::<LauncherMarker>().unwrap();
+        // launch observer.cmx
+        let mut observer = launch_with_options(
+            &launcher,
+            "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx".to_owned(),
+            Some(vec!["--disable-log-connector".to_owned()]),
+            LaunchOptions::new(),
+        )
+        .unwrap();
+
+        let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
+        let dir_req = observer.directory_request().clone();
+        let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
+
+        let (_env_proxy, mut logging_component) = fs
+            .add_proxy_service_to::<LogSinkMarker, _>(dir_req)
+            .launch_component_in_nested_environment(
+                "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logging_component.cmx"
+                    .to_owned(),
+                None,
+                "test_env",
+            )
+            .unwrap();
+        fasync::spawn(Box::pin(async move {
+            fs.collect::<()>().await;
+        }));
+
+        let mut options = LogFilterOptions {
+            filter_by_pid: false,
+            pid: 0,
+            min_severity: LogLevelFilter::None,
+            verbosity: 0,
+            filter_by_tid: false,
+            tid: 0,
+            tags: vec![],
+        };
+        let (send_logs, recv_logs) = mpsc::unbounded();
+        let l = Listener { send_logs };
+        fasync::spawn(async move {
+            run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false).await.unwrap();
+        });
+
+        // wait for logging_component to die
+        assert!(logging_component.wait().await.unwrap().success());
+
+        // connect to controller and call stop
+        let controller = observer.connect_to_service::<ControllerMarker>().unwrap();
+        controller.stop().unwrap();
+
+        // collect all logs
+        let logs = recv_logs.map(|l| (l.severity, l.msg)).collect::<Vec<_>>().await;
+
+        // recv_logs returned, means observer must be dead. check.
+        assert!(observer.wait().await.unwrap().success());
+        assert_eq!(
+            logs,
+            vec![
+                (-1, "my debug message.".to_owned()),
+                (INFO, "my info message.".to_owned()),
+                (WARN, "my warn message.".to_owned()),
+            ]
+        );
     }
 }

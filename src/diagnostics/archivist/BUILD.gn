@@ -16,6 +16,7 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
+    "fidl:controller-rustc",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",

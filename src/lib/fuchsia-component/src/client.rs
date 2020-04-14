@@ -393,6 +393,12 @@ impl App {
         &self.directory_request
     }
 
+    /// Returns reference of directory request which can be passed to `ServiceFs::add_proxy_service_to`.
+    #[inline]
+    pub fn directory_request(&self) -> &Arc<zx::Channel> {
+        &self.directory_request
+    }
+
     /// Returns a reference to the component controller.
     #[inline]
     pub fn controller(&self) -> &ComponentControllerProxy {

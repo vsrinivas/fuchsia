@@ -14,7 +14,9 @@
         "services": [
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ]
     }
 }

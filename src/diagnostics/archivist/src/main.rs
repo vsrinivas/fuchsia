@@ -30,6 +30,10 @@ pub struct Args {
     #[argh(switch)]
     disable_log_connector: bool,
 
+    /// serve fuchsia.diagnostics.test.Controller
+    #[argh(switch)]
+    install_controller: bool,
+
     /// path to a JSON configuration file
     #[argh(option)]
     config_path: PathBuf,
@@ -40,7 +44,6 @@ fn main() -> Result<(), Error> {
 
     let event_provider = connect_to_service::<ComponentEventProviderMarker>()
         .context("failed to connect to entity resolver")?;
-
     diagnostics::init();
     let opt: Args = argh::from_env();
 
@@ -48,6 +51,7 @@ fn main() -> Result<(), Error> {
         Ok(config) => config,
         Err(parsing_error) => panic!("Parsing configuration failed: {}", parsing_error),
     };
+
     let num_threads = archivist_configuration.num_threads;
 
     let mut archivist = archivist::Archivist::new(archivist_configuration)?;
@@ -55,6 +59,10 @@ fn main() -> Result<(), Error> {
 
     if !opt.disable_log_connector {
         archivist.set_log_connector(connect_to_service::<LogConnectorMarker>()?);
+    }
+
+    if opt.install_controller {
+        archivist.install_controller_service();
     }
 
     if !opt.disable_klog {

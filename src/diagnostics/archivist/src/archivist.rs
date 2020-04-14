@@ -8,13 +8,15 @@ use {
         logs,
     },
     anyhow::{format_err, Error},
+    fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_sys_internal::{ComponentEventProviderProxy, LogConnectorProxy, SourceIdentity},
+    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
-        future::{self, Either, FutureObj},
+        future::{self, abortable, Either, FutureObj},
         prelude::*,
         stream,
     },
@@ -22,6 +24,25 @@ use {
     parking_lot::RwLock,
     std::{path::Path, sync::Arc},
 };
+
+/// Spawns controller sends stop signal.
+fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::Sender<()>) {
+    fasync::spawn(
+        async move {
+            while let Some(ControllerRequest::Stop { .. }) = stream.try_next().await? {
+                stop_sender.send(()).await.ok();
+                break;
+            }
+            Ok(())
+        }
+        .map(|o: Result<(), fidl::Error>| {
+            if let Err(e) = o {
+                eprintln!("error serving controller: {}", e);
+            }
+            ()
+        }),
+    );
+}
 
 /// The `Archivist` is responsible for publishing all the services and monitoring component's health.
 /// # All resposibilities:
@@ -52,6 +73,9 @@ pub struct Archivist {
 
     /// Provider to optionally collect component events.
     provider: Option<ComponentEventProviderProxy>,
+
+    /// Recieve stop signal to kill this archivist.
+    stop_recv: Option<mpsc::Receiver<()>>,
 }
 
 impl Archivist {
@@ -87,6 +111,16 @@ impl Archivist {
     // Sets log connector which is used to server attributed LogSink.
     pub fn set_log_connector(&mut self, log_connector: LogConnectorProxy) -> &mut Self {
         self.log_manager.spawn_log_consumer(log_connector);
+        return self;
+    }
+
+    /// Install controller service.
+    pub fn install_controller_service(&mut self) -> &mut Self {
+        let (stop_sender, stop_recv) = mpsc::channel(0);
+        self.fs
+            .dir("svc")
+            .add_fidl_service(move |stream| spawn_controller(stream, stop_sender.clone()));
+        self.stop_recv = Some(stop_recv);
         return self;
     }
 
@@ -187,6 +221,7 @@ impl Archivist {
             _pipeline_configs: vec![feedback_config, legacy_config],
             log_manager,
             provider: None,
+            stop_recv: None,
         })
     }
 
@@ -221,8 +256,30 @@ impl Archivist {
                 .await;
         }
         .map(Ok);
+
+        let (abortable_fut, abort_handle) =
+            abortable(future::try_join(run_outgoing, run_event_collection));
+
+        let abortable_fut = abortable_fut.map(|o| {
+            if let Ok(r) = o {
+                return r;
+            } else {
+                // discard aborted error
+                return Ok(((), ()));
+            }
+        });
+
+        let stop_fut = match self.stop_recv {
+            Some(stop_recv) => Either::Left(async move {
+                stop_recv.into_future().await;
+                abort_handle.abort();
+                Ok(())
+            }),
+            None => Either::Right(future::ok(())),
+        };
+
         // Combine all three futures into a main future.
-        future::try_join3(run_outgoing, run_event_collection, all_msg).await?;
+        future::try_join3(abortable_fut, stop_fut, all_msg).await?;
         Ok(())
     }
 }
@@ -233,6 +290,7 @@ mod tests {
         super::*,
         crate::logs::message::fx_log_packet_t,
         fidl::endpoints::create_proxy,
+        fidl_fuchsia_diagnostics_test::ControllerMarker,
         fidl_fuchsia_io as fio,
         fidl_fuchsia_logger::{
             LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker, LogSinkProxy,
@@ -241,6 +299,7 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_component::client::connect_to_protocol_at_dir,
         fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor},
+        futures::channel::oneshot,
     };
 
     /// Helper to connec tot log sink and make it easy to write logs to socket.
@@ -313,9 +372,7 @@ mod tests {
         }
     }
 
-    // runs archivist and returns its directory.
-    fn run_archivist() -> DirectoryProxy {
-        let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
+    fn init_archivist() -> Archivist {
         let config = configs::Config {
             archive_path: None,
             max_archive_size_bytes: 10,
@@ -324,12 +381,31 @@ mod tests {
             summarized_dirs: None,
         };
 
-        let mut archivist = Archivist::new(config).unwrap();
+        Archivist::new(config).unwrap()
+    }
+
+    // run archivist and send signal when it dies.
+    fn run_archivist_and_signal_on_exit() -> (DirectoryProxy, oneshot::Receiver<()>) {
+        let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
+        let mut archivist = init_archivist();
+        archivist.install_logger_services().install_controller_service();
+        let (signal_send, signal_recv) = oneshot::channel();
+        fasync::spawn(async move {
+            archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");
+            signal_send.send(()).unwrap();
+        });
+        (directory, signal_recv)
+    }
+
+    // runs archivist and returns its directory.
+    fn run_archivist() -> DirectoryProxy {
+        let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
+        let mut archivist = init_archivist();
         archivist.install_logger_services();
         fasync::spawn(async move {
             archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");
         });
-        return directory;
+        directory
     }
 
     fn start_listener(directory: &DirectoryProxy) -> mpsc::UnboundedReceiver<String> {
@@ -436,6 +512,63 @@ mod tests {
             recv_logs.next().await.unwrap(),
         ];
         actual.sort();
+
+        assert_eq!(expected, actual);
+    }
+
+    /// Stop API works
+    #[fasync::run_singlethreaded(test)]
+    async fn stop_works() {
+        let (directory, signal_recv) = run_archivist_and_signal_on_exit();
+        let mut recv_logs = start_listener(&directory);
+
+        {
+            // make sure we can write logs
+            let log_sink_helper = LogSinkHelper::new(&directory);
+            let sock1 = log_sink_helper.connect();
+            LogSinkHelper::write_log_at(&sock1, "msg sock1-1");
+            log_sink_helper.write_log("msg sock1-2");
+            let mut expected = vec!["msg sock1-1".to_owned(), "msg sock1-2".to_owned()];
+            expected.sort();
+            let mut actual = vec![recv_logs.next().await.unwrap(), recv_logs.next().await.unwrap()];
+            actual.sort();
+            assert_eq!(expected, actual);
+
+            //  Start new connections and sockets
+            let log_sink_helper1 = LogSinkHelper::new(&directory);
+            let sock2 = log_sink_helper.connect();
+            // Write logs before calling stop
+            log_sink_helper1.write_log("msg 1");
+            log_sink_helper1.write_log("msg 2");
+            let log_sink_helper2 = LogSinkHelper::new(&directory);
+
+            let controller = connect_to_protocol_at_dir::<ControllerMarker>(&directory)
+                .expect("cannot connect to log proxy");
+            controller.stop().unwrap();
+
+            // make more socket connections and write to them and old ones.
+            let sock3 = log_sink_helper2.connect();
+            log_sink_helper2.write_log("msg 3");
+            log_sink_helper2.write_log("msg 4");
+
+            LogSinkHelper::write_log_at(&sock3, "msg 5");
+            LogSinkHelper::write_log_at(&sock2, "msg 6");
+            log_sink_helper.write_log("msg 7");
+            LogSinkHelper::write_log_at(&sock1, "msg 8");
+
+            LogSinkHelper::write_log_at(&sock2, "msg 9");
+        } // kills all sockets and log_sink connections
+        let mut expected = vec![];
+        let mut actual = vec![];
+        for i in 1..=9 {
+            expected.push(format!("msg {}", i));
+            actual.push(recv_logs.next().await.unwrap());
+        }
+        expected.sort();
+        actual.sort();
+
+        // make sure archivist is dead.
+        signal_recv.await.unwrap();
 
         assert_eq!(expected, actual);
     }

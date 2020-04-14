@@ -34,6 +34,9 @@ test_package("archivist_integration_tests") {
     {
       name = "stdio_puppet"
     },
+    {
+      name = "logging_component"
+    },
   ]
 
   meta = [
@@ -58,6 +61,10 @@ test_package("archivist_integration_tests") {
     {
       path = rebase_path("logs/rust/puppet/meta/stdio_puppet.cmx")
       dest = "stdio_puppet.cmx"
+    },
+    {
+      path = rebase_path("meta/logging_component.cmx")
+      dest = "logging_component.cmx"
     },
   ]
 

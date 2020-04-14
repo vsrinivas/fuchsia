@@ -2,6 +2,7 @@
     "program": {
         "args": [
             "--disable-klog",
+            "--install-controller",
             "--config-path",
             "/config/data/observer_config.json"
         ],
