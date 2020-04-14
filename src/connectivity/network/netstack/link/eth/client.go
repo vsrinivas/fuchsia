@@ -58,6 +58,8 @@ type IOBuffer struct {
 	size  uint64
 }
 
+// MakeIOBuffer maps the given VMO into the root VMAR. It does not take
+// ownership of the given VMO.
 func MakeIOBuffer(vmo zx.VMO) (IOBuffer, error) {
 	size, err := vmo.Size()
 	if err != nil {
@@ -65,7 +67,6 @@ func MakeIOBuffer(vmo zx.VMO) (IOBuffer, error) {
 	}
 	vaddr, err := zx.VMARRoot.Map(0 /* vmarOffset */, vmo, 0 /* vmoOffset */, size, zx.VMFlagPermRead|zx.VMFlagPermWrite)
 	if err != nil {
-		_ = vmo.Close()
 		return IOBuffer{}, err
 	}
 	return IOBuffer{

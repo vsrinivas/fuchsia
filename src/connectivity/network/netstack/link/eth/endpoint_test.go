@@ -156,6 +156,9 @@ func TestEndpoint(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
+					if err := vmo.Close(); err != nil {
+						t.Fatal(err)
+					}
 					device.iob = iob
 					return int32(zx.ErrOk), nil
 				},
