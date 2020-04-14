@@ -4,6 +4,7 @@
 
 use {
     crate::{queue, repository::Repository, repository_manager::Stats},
+    anyhow::Error,
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
@@ -26,7 +27,7 @@ use {
     parking_lot::Mutex,
     pkgfs::install::BlobKind,
     std::{
-        collections::HashSet,
+        collections::{HashMap, HashSet},
         hash::Hash,
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -37,9 +38,11 @@ use {
     tuf::metadata::TargetPath,
 };
 
+mod base_package_index;
 mod retry;
 
 pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
+pub type BasePackageIndex = HashMap<PkgUrl, BlobId>;
 
 /// Provides access to the package cache components.
 #[derive(Clone)]
@@ -88,6 +91,15 @@ impl PackageCache {
             Err(PackageOpenError::NotFound) => Ok(false),
             Err(e) => Err(e),
         }
+    }
+
+    /// Loads all of the base packages and returns them in a hash map.
+    /// Unpinned base package resolution skips TUF and returns the directory
+    /// directly from pkg-cache.
+    pub async fn base_package_index(&self) -> Result<BasePackageIndex, Error> {
+        let base_package_index_map =
+            base_package_index::base_package_index_impl(self.cache.clone()).await?;
+        Ok(base_package_index_map)
     }
 
     /// Create a new blob with the given install intent.

@@ -4,7 +4,10 @@
 
 use {
     crate::{
-        cache::{BlobFetcher, CacheError, MerkleForError, PackageCache, ToResolveStatus as _},
+        cache::{
+            BasePackageIndex, BlobFetcher, CacheError, MerkleForError, PackageCache,
+            ToResolveStatus as _,
+        },
         font_package_manager::FontPackageManager,
         queue,
         repository_manager::GetPackageError,
@@ -36,6 +39,7 @@ pub type PackageFetcher = queue::WorkSender<PkgUrl, (), Result<BlobId, Status>>;
 
 pub fn make_package_fetch_queue(
     cache: PackageCache,
+    base_package_index: Arc<BasePackageIndex>,
     system_cache_list: Arc<CachePackages>,
     repo_manager: Arc<RwLock<RepositoryManager>>,
     rewriter: Arc<RwLock<RewriteManager>>,
@@ -45,14 +49,16 @@ pub fn make_package_fetch_queue(
     let (package_fetch_queue, package_fetcher) =
         queue::work_queue(max_concurrency, move |url: PkgUrl, _: ()| {
             let cache = cache.clone();
+            let base_package_index = Arc::clone(&base_package_index);
             let system_cache_list = Arc::clone(&system_cache_list);
             let repo_manager = Arc::clone(&repo_manager);
             let rewriter = Arc::clone(&rewriter);
             let blob_fetcher = blob_fetcher.clone();
             async move {
-                Ok(package_from_repo_or_cache(
+                Ok(package_from_repo_or_system_image(
                     &repo_manager,
                     &rewriter,
+                    &base_package_index,
                     &system_cache_list,
                     &url,
                     cache,
@@ -69,6 +75,7 @@ pub async fn run_resolver_service(
     repo_manager: Arc<RwLock<RepositoryManager>>,
     rewriter: Arc<RwLock<RewriteManager>>,
     package_fetcher: Arc<PackageFetcher>,
+    base_package_index: Arc<BasePackageIndex>,
     system_cache_list: Arc<CachePackages>,
     stream: PackageResolverRequestStream,
 ) -> Result<(), Error> {
@@ -96,6 +103,7 @@ pub async fn run_resolver_service(
                         match get_hash(
                             &rewriter,
                             &repo_manager,
+                            &base_package_index,
                             &system_cache_list,
                             &package_url.url,
                         )
@@ -128,12 +136,18 @@ fn rewrite_url(rewriter: &RwLock<RewriteManager>, url: &PkgUrl) -> Result<PkgUrl
     Ok(rewritten_url)
 }
 
-async fn hash_from_repo_or_cache(
+async fn hash_from_repo_or_system_image(
     repo_manager: &RwLock<RepositoryManager>,
     rewriter: &RwLock<RewriteManager>,
+    base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
 ) -> Result<BlobId, Status> {
+    // If a package is in "base" and not Merkle-pinned, skip TUF resolution.
+    if let Some(base_merkle) = unpinned_base_package(pkg_url, base_package_index) {
+        return Ok(base_merkle);
+    }
+
     let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
     let fut = repo_manager.read().get_package_hash(&rewritten_url);
     let res = fut.await;
@@ -155,14 +169,20 @@ async fn hash_from_repo_or_cache(
     res.map_err(|e| e.to_resolve_status())
 }
 
-async fn package_from_repo_or_cache(
+async fn package_from_repo_or_system_image(
     repo_manager: &RwLock<RepositoryManager>,
     rewriter: &RwLock<RewriteManager>,
+    base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
     cache: PackageCache,
     blob_fetcher: BlobFetcher,
 ) -> Result<BlobId, Status> {
+    // If a package is in "base" and not Merkle-pinned, skip TUF resolution.
+    if let Some(base_merkle) = unpinned_base_package(pkg_url, base_package_index) {
+        return Ok(base_merkle);
+    }
+
     let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
     // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
@@ -188,6 +208,30 @@ async fn package_from_repo_or_cache(
         fx_log_info!("resolved {} as {} to {}", pkg_url, rewritten_url, b);
         b
     })
+}
+
+fn unpinned_base_package(
+    pkg_url: &PkgUrl,
+    base_package_index: &BasePackageIndex,
+) -> Option<BlobId> {
+    // Always send Merkle-pinned requests through the resolver.
+    // TODO: consider checking the Merkle pin to see if it matches the base hash.
+    if pkg_url.package_hash().is_some() {
+        return None;
+    }
+    // Make sure to strip off a "/0" variant before checking the base index.
+    let stripped_url;
+    let base_url = match pkg_url.variant() {
+        Some("0") => {
+            stripped_url = pkg_url.strip_variant();
+            &stripped_url
+        }
+        _ => pkg_url,
+    };
+    match base_package_index.get(&base_url) {
+        Some(base_merkle) => Some(base_merkle.clone()),
+        None => None,
+    }
 }
 
 fn lookup_from_system_cache<'a>(
@@ -233,6 +277,7 @@ fn lookup_from_system_cache<'a>(
 async fn get_hash(
     rewriter: &RwLock<RewriteManager>,
     repo_manager: &RwLock<RepositoryManager>,
+    base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,
     url: &str,
 ) -> Result<BlobId, Status> {
@@ -243,8 +288,14 @@ async fn get_hash(
         }
     };
     trace::duration_begin!("app", "get-hash", "url" => pkg_url.to_string().as_str());
-    let hash_or_status =
-        hash_from_repo_or_cache(&repo_manager, &rewriter, &system_cache_list, &pkg_url).await;
+    let hash_or_status = hash_from_repo_or_system_image(
+        &repo_manager,
+        &rewriter,
+        &base_package_index,
+        &system_cache_list,
+        &pkg_url,
+    )
+    .await;
 
     trace::duration_end!("app", "get-hash", "status" => hash_or_status.err().unwrap_or(Status::OK).to_string().as_str());
     hash_or_status
@@ -271,16 +322,12 @@ async fn resolve(
     let queued_fetch = package_fetcher.push(pkg_url.clone(), ());
     let merkle_or_status = queued_fetch.await.expect("expected queue to be open");
     trace::duration_end!("app", "resolve", "status" => merkle_or_status.err().unwrap_or(Status::OK).to_string().as_str());
-    match merkle_or_status {
-        Ok(merkle) => {
-            let selectors = vec![];
-            cache
-                .open(merkle, &selectors, dir_request)
-                .await
-                .map_err(|err| handle_bad_package_open(err, &url))
-        }
-        Err(status) => Err(status),
-    }
+    let merkle = merkle_or_status?;
+    let selectors = vec![];
+    cache
+        .open(merkle, &selectors, dir_request)
+        .await
+        .map_err(|err| handle_bad_package_open(err, &url))
 }
 
 /// Run a service that only resolves registered font packages.

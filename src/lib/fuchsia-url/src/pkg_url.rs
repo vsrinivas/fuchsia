@@ -144,6 +144,23 @@ impl PkgUrl {
         }
     }
 
+    /// Produce a new [PkgUrl] with any variant stripped off.
+    pub fn strip_variant(&self) -> PkgUrl {
+        let name = match self.name() {
+            Some(n) => {
+                // name() removes the preceding slash, so put it back.
+                format!("/{}", n)
+            }
+            _ => "/".to_string(),
+        };
+        PkgUrl {
+            repo: self.repo.clone(),
+            path: name,
+            hash: self.hash.clone(),
+            resource: self.resource.clone(),
+        }
+    }
+
     pub fn new_repository(host: String) -> Result<PkgUrl, ParseError> {
         Ok(PkgUrl { repo: RepoUrl::new(host)?, path: "/".to_string(), hash: None, resource: None })
     }
@@ -960,5 +977,38 @@ mod tests {
             RepoUrl::new("test.fuchsia.com.fuchsia.com".to_string()).unwrap().channel(),
             Some("fuchsia")
         );
+    }
+
+    #[test]
+    fn test_strip_variant() {
+        let urls = &[
+            "fuchsia-pkg://fuchsia.com/foo",
+            "fuchsia-pkg://fuchsia.com?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+            "fuchsia-pkg://fuchsia.com#bar",
+            "fuchsia-pkg://fuchsia.com",
+            "fuchsia-pkg://fuchsia.com/",
+        ];
+        for url in urls {
+            // Don't change urls with no variant.
+            assert_eq!(PkgUrl::parse(url).unwrap(), PkgUrl::parse(url).unwrap().strip_variant());
+        }
+
+        let var_urls = &[
+            "fuchsia-pkg://fuchsia.com/foo/0",
+            "fuchsia-pkg://fuchsia.com/foo/0#bar",
+            "fuchsia-pkg://fuchsia.com/foo/0?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+        ];
+        let stripped_urls = &[
+            "fuchsia-pkg://fuchsia.com/foo",
+            "fuchsia-pkg://fuchsia.com/foo#bar",
+            "fuchsia-pkg://fuchsia.com/foo?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+        ];
+
+        for (i, want_url) in stripped_urls.iter().enumerate() {
+            assert_eq!(
+                PkgUrl::parse(var_urls[i]).unwrap().strip_variant(),
+                PkgUrl::parse(want_url).unwrap()
+            );
+        }
     }
 }

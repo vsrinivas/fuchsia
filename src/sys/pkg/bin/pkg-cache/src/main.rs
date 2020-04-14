@@ -38,8 +38,7 @@ async fn main_inner_async() -> Result<(), Error> {
         pkgfs::system::Client::open_from_namespace().context("error opening /pkgfs/system")?;
     let pkgfs_versions =
         pkgfs::versions::Client::open_from_namespace().context("error opening pkgfs/versions")?;
-
-    let static_packages = get_static_packages(pkgfs_system.clone()).await?;
+    let static_packages = get_static_packages(pkgfs_system.clone()).await;
 
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::spawn(
@@ -76,15 +75,22 @@ async fn main_inner_async() -> Result<(), Error> {
     Ok(())
 }
 
-async fn get_static_packages(
+// Deserializes the static packages list. Returns an empty StaticPackages on error.
+async fn get_static_packages(pkgfs_system: pkgfs::system::Client) -> Arc<StaticPackages> {
+    get_static_packages_impl(pkgfs_system).await.unwrap_or_else(|e| {
+        fx_log_err!("Failed to load static packages, assumping empty: {:?}", e);
+        Arc::new(StaticPackages::empty())
+    })
+}
+
+async fn get_static_packages_impl(
     pkgfs_system: pkgfs::system::Client,
 ) -> Result<Arc<StaticPackages>, Error> {
-    Ok(Arc::new(if let Ok(file) = pkgfs_system.open_file("data/static_packages").await {
-        StaticPackages::deserialize(file).unwrap_or_else(|e| {
-            fx_log_err!("error deserializing data/static_packages: {:?}", e);
-            StaticPackages::empty()
-        })
-    } else {
-        StaticPackages::empty()
-    }))
+    let file = pkgfs_system
+        .open_file("data/static_packages")
+        .await
+        .context("failed to open data/static_packages from system image package")?;
+    Ok(Arc::new(
+        StaticPackages::deserialize(file).context("error deserializing data/static_packages")?,
+    ))
 }
