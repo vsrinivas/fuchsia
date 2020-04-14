@@ -137,7 +137,7 @@ func GenerateConformanceTests(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) e
 		EncodeFailureCases: encodeFailureCases,
 		DecodeFailureCases: decodeFailureCases,
 	}
-	return conformanceTmpl.Execute(wr, input)
+	return withGoFmt{conformanceTmpl}.Execute(wr, input)
 }
 
 func marshalerContext(wireFormat gidlir.WireFormat) string {

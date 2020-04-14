@@ -110,7 +110,7 @@ func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 		EncodeBenchmarks: encodeBenchmarks,
 		DecodeBenchmarks: decodeBenchmarks,
 	}
-	return benchmarkTmpl.Execute(wr, input)
+	return withGoFmt{benchmarkTmpl}.Execute(wr, input)
 }
 
 func goEncodeBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gidlmixer.Schema) ([]goEncodeBenchmark, error) {

@@ -5,14 +5,37 @@
 package golang
 
 import (
+	"bytes"
 	"fmt"
+	"go/format"
+	"io"
 	"strconv"
 	"strings"
+	"text/template"
 
 	fidlcommon "fidl/compiler/backend/common"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
 )
+
+// withGoFmt wraps a template that produces Go source code, and formats the
+// execution result using go/format.
+type withGoFmt struct {
+	template *template.Template
+}
+
+func (w withGoFmt) Execute(wr io.Writer, data interface{}) error {
+	var b bytes.Buffer
+	if err := w.template.Execute(&b, data); err != nil {
+		return err
+	}
+	formatted, err := format.Source(b.Bytes())
+	if err != nil {
+		return err
+	}
+	_, err = wr.Write(formatted)
+	return err
+}
 
 func bytesBuilder(bytes []byte) string {
 	var builder strings.Builder
