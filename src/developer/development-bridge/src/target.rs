@@ -7,8 +7,10 @@ use std::fmt;
 use std::fmt::{Debug, Display};
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{anyhow, Context, Error};
+use async_std::task;
 use chrono::{DateTime, Utc};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_developer_remotecontrol::{
@@ -16,7 +18,7 @@ use fidl_fuchsia_developer_remotecontrol::{
 };
 use fidl_fuchsia_overnet::ServiceConsumerProxyInterface;
 use fidl_fuchsia_overnet_protocol::NodeId;
-use futures::lock::Mutex;
+use futures::lock::{Mutex, MutexGuard};
 
 use crate::net::IsLinkLocal;
 
@@ -143,6 +145,28 @@ impl Target {
         }
 
         Ok(target)
+    }
+
+    pub async fn wait_for_state_with_rcs(
+        &self,
+        retries: u32,
+        retry_delay: Duration,
+    ) -> Result<MutexGuard<'_, TargetState>, Error> {
+        // TODO(awdavies): It would make more sense to have something
+        // like std::sync::CondVar here, but there is no implementation
+        // in futures or async_std yet.
+        for _ in 0..retries {
+            let state_guard = self.state.lock().await;
+            match &state_guard.rcs {
+                Some(_) => return Ok(state_guard),
+                None => {
+                    std::mem::drop(state_guard);
+                    task::sleep(retry_delay).await;
+                }
+            }
+        }
+
+        Err(anyhow!("Waiting for RCS timed out"))
     }
 }
 
@@ -602,6 +626,28 @@ mod test {
                 &NodeId { id: 2u64 },
             ));
             assert_eq!(t.to_string_async().await, "foo [192.168.1.1] [overnet_started: false] [overnet_peer_id: 2] Fri, 31 Oct 2014 09:10:12 +0000");
+        });
+    }
+
+    #[test]
+    fn test_wait_for_rcs() {
+        hoist::run(async move {
+            let t = Arc::new(Target::new("foo", Utc::now()));
+            assert!(t.wait_for_state_with_rcs(0, Duration::from_millis(1)).await.is_err());
+            assert!(t.wait_for_state_with_rcs(1, Duration::from_millis(1)).await.is_err());
+            assert!(t.wait_for_state_with_rcs(10, Duration::from_millis(1)).await.is_err());
+            let t_clone = t.clone();
+            hoist::spawn(async move {
+                let mut state = t_clone.state.lock().await;
+                let conn = RCSConnection::new_with_proxy(
+                    setup_fake_remote_control_service(false, "foo".to_owned()),
+                    &NodeId { id: 5u64 },
+                );
+                state.overnet_started = true;
+                state.rcs = Some(conn);
+            });
+            // Adds a few hundred thousands as this is a race test.
+            assert!(t.wait_for_state_with_rcs(500000, Duration::from_millis(1)).await.is_ok());
         });
     }
 }

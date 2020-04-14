@@ -66,7 +66,7 @@ impl DiscoveryHook for RCSActivatorHook {
 // Daemon
 #[derive(Clone)]
 pub struct Daemon {
-    target_collection: Arc<Mutex<TargetCollection>>,
+    target_collection: GuardedTargetCollection,
 
     discovered_target_hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
 }
@@ -257,11 +257,24 @@ impl Daemon {
                         return Ok(());
                     }
                 };
-                let target_state = target.state.lock().await;
-                let mut response = match &target_state.rcs {
-                    None => Err(ComponentControlError::ComponentControlFailure),
-                    Some(rcs) => {
-                        rcs.proxy
+                let target_state =
+                    match target.wait_for_state_with_rcs(MAX_RETRY_COUNT, RETRY_DELAY).await {
+                        Ok(state) => state,
+                        Err(e) => {
+                            log::warn!("{}", e);
+                            responder
+                                .send(&mut Err(ComponentControlError::ComponentControlFailure))
+                                .context("sending error response")?;
+                            return Ok(());
+                        }
+                    };
+                responder
+                    .send(
+                        &mut target_state
+                            .rcs
+                            .as_ref()
+                            .unwrap()
+                            .proxy
                             .start_component(
                                 &component_url,
                                 &mut args.iter().map(|s| s.as_str()),
@@ -269,10 +282,9 @@ impl Daemon {
                                 stderr,
                                 controller,
                             )
-                            .await?
-                    }
-                };
-                responder.send(&mut response).context("error sending response")?;
+                            .await?,
+                    )
+                    .context("error sending response")?;
             }
             DaemonRequest::ListTargets { value, responder } => {
                 if !quiet {
