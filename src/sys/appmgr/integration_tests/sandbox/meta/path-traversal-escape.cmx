@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/path-traversal-escape"
+    },
+    "sandbox": {
+        "pkgfs": [
+            "../boot"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

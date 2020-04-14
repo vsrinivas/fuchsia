@@ -23,6 +23,8 @@
 
 namespace component {
 
+namespace fio = ::llcpp::fuchsia::io;
+
 constexpr char kDeprecatedDataName[] = "deprecated-data";
 constexpr char kBlockedDataName[] = "data";
 
@@ -174,9 +176,11 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
     FuchsiaPkgUrl pkg_url;
     if (pkg_url.Parse(ns_id) && global_data_allowlist.IsAllowed(pkg_url)) {
       PushDirectoryFromPathAsWithPermissions("/data", "/global_data",
-                                             O_DIRECTORY | O_RDONLY | O_ADMIN);
+                                             fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_POSIX |
+                                                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_ADMIN);
       PushDirectoryFromPathAsWithPermissions("/tmp", "/global_tmp",
-                                             O_DIRECTORY | O_RDONLY | O_ADMIN);
+                                             fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_POSIX |
+                                                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_ADMIN);
     } else {
       FXL_LOG(WARNING) << "Component " << ns_id
                        << " is not allowed to use global-data. Blocked by allowlist.";
@@ -192,18 +196,22 @@ void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
 }
 
 void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path, std::string dst_path) {
-  PushDirectoryFromPathAsWithPermissions(std::move(src_path), std::move(dst_path),
-                                         O_DIRECTORY | O_RDONLY);
+  PushDirectoryFromPathAsWithPermissions(
+      std::move(src_path), std::move(dst_path),
+      fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_POSIX | fio::OPEN_RIGHT_READABLE);
 }
 
 void NamespaceBuilder::PushDirectoryFromPathAsWithPermissions(std::string src_path,
                                                               std::string dst_path,
                                                               uint64_t flags) {
-  if (std::find(paths_.begin(), paths_.end(), dst_path) != paths_.end())
+  if (std::find(paths_.begin(), paths_.end(), dst_path) != paths_.end()) {
     return;
-  fbl::unique_fd dir(open(src_path.c_str(), flags));
-  if (!dir.is_valid())
+  }
+  fbl::unique_fd dir;
+  zx_status_t status = fdio_open_fd(src_path.c_str(), flags, dir.reset_and_get_address());
+  if (status != ZX_OK) {
     return;
+  }
   zx::channel handle = fsl::CloneChannelFromFileDescriptor(dir.get());
   if (!handle) {
     FXL_DLOG(WARNING) << "Failed to clone channel for " << src_path;
