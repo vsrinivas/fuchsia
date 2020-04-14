@@ -26,10 +26,17 @@ launch_script() {
   local test_script_name=""
   test_script_name="$1"
   shift
-  local test_script_path=""
-  test_script_path="${TEST_DIR}/${test_script_name}"
-  local test_framework_path=""
-  test_framework_path="$(get_jiri_root)/tools/devshell/tests/lib/bash_test_framework.sh"
+  local test_script_path="${TEST_DIR}/${test_script_name}"
+  local test_script_arg="${test_script_name}"
+
+  # Check the local directory as the root of the test framework first,
+  # then fall back to jiri_root.
+  local test_framework_path="${TEST_DIR}/tools/devshell/tests/lib/bash_test_framework.sh"
+  if [[ ! -e "${test_framework_path}" ]]; then
+    test_framework_path="$(get_jiri_root)/tools/devshell/tests/lib/bash_test_framework.sh"
+    test_script_arg="${test_script_path}"
+
+  fi
 
   if [[ ! -f "${test_script_path}" ]]; then
     echo >&2 "Test script '${test_script_path}' not found. Aborting."
@@ -50,11 +57,13 @@ source "${test_script_path}" || exit \$?
 EOF
 )"
 
+echo "Launching test script $test_script_path"
+
   /usr/bin/env -i \
       USER="${USER}" \
       HOME="${HOME}" \
       bash "${shell_flags[@]}" \
-      -c "${launch_script}" "${test_script_path}" "$@"
+      -c "${launch_script}" "${test_script_arg}" "$@"
 }
 
 launch_script "$@"
