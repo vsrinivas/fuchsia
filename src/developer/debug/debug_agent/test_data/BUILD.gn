@@ -218,12 +218,12 @@ executable("limbo_caller") {
   sources = [ "limbo_caller.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-exception",
   ]
 }

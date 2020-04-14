@@ -17,6 +17,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.exception",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
@@ -30,7 +31,6 @@ source_set("lib") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-exception",
   ]
 }
 

@@ -24,11 +24,11 @@ zx_library("crashsvc") {
   sources = [ "crashsvc.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.exception:fuchsia.exception_llcpp",
     "//zircon/public/lib/backtrace-request-utils",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/inspector",
-    "//zircon/system/fidl/fuchsia-exception:llcpp",
   ]
 
   public_deps = [ "//zircon/public/lib/zx" ]
@@ -105,6 +105,7 @@ test("crashsvc-test") {
   sources = [ "crashsvc-test.cc" ]
   deps = [
     ":crashsvc",
+    "//sdk/fidl/fuchsia.exception:fuchsia.exception_llcpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -113,7 +114,6 @@ test("crashsvc-test") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/mini-process",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-exception:llcpp",
   ]
 }
 
