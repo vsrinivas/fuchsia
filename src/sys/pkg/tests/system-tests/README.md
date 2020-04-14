@@ -43,9 +43,9 @@ You should be able to run the tests with:
 
 ```
 % ~/fuchsia/out/default/host_x64/system_tests_upgrade \
-  -ssh-private-key ~/fuchsia/.ssh/pkey \
-  -downgrade-builder-name fuchsia/ci/fuchsia-x64-release \
-  -upgrade-fuchsia-build-dir $FUCHSIA_BUILD_DIR
+  --ssh-private-key ~/fuchsia/.ssh/pkey \
+  --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
+  --upgrade-fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
 
 This will run through the whole test paving the build to the latest version
@@ -57,18 +57,18 @@ determine the build ids from the downgrade and upgrade builds, then run:
 
 ```
 % ~/fuchsia/out/default/host_x64/system_tests_upgrade \
-  -ssh-private-key ~/fuchsia/.ssh/pkey \
-  -downgrade-build-id 123456789... \
-  -upgrade-build-id 987654321...
+  --ssh-private-key ~/fuchsia/.ssh/pkey \
+  --downgrade-build-id 123456789... \
+  --upgrade-build-id 987654321...
 ```
 
 Or you can combine these options:
 
 ```
 % ~/fuchsia/out/default/host_x64/system_tests_upgrade \
-  -ssh-private-key ~/fuchsia/.ssh/pkey \
-  -downgrade-build-id 123456789... \
-  -upgrade-fuchsia-build-dir $FUCHSIA_BUILD_DIR
+  --ssh-private-key ~/fuchsia/.ssh/pkey \
+  --downgrade-build-id 123456789... \
+  --upgrade-fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
 
 There are more options to the test, to see them all run
@@ -82,9 +82,15 @@ can be done by running:
 
 ```
 % ~/fuchsia/out/default/host_x64/system_tests_reboot \
-  -ssh-private-key ~/fuchsia/.ssh/pkey \
-  -builder-name fuchsia/ci/fuchsia-x64-release
+  --ssh-private-key ~/fuchsia/.ssh/pkey \
+  --fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
+
+Or if you want to test a build, you can use:
+
+* `--builder-name fuchsia/global.ci/fuchsia-x64-release-build_only`, to test the
+  latest build published by that builder.
+* `--build-id 1234...` to test the specific build.
 
 ### Tracking Testing
 
@@ -94,16 +100,16 @@ occurs. This can be done by running:
 
 ```
 % ~/fuchsia/out/default/host_x64/system_tests_tracking \
-  -ssh-private-key ~/fuchsia/.ssh/pkey \
-  -downgrade-builder-name fuchsia/ci/fuchsia-x64-release \
-  -upgrade-builder-name fuchsia/ci/fuchsia-x64-release
+  --ssh-private-key ~/fuchsia/.ssh/pkey \
+  --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
+  --upgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only
 ```
 
-The `-downgrade-build*` argument is optional, and only necessary if you want to
+The `--downgrade-build*` argument is optional, and only necessary if you want to
 start the tracking test from a known zero state.
 
 Note that at the moment the only supported upgrade mode is
-`-upgrade-builder-name $BUILDER_NAME`.
+`--upgrade-builder-name $BUILDER_NAME`.
 
 ## Running the Tests
 
@@ -118,8 +124,8 @@ for you. You can run it like this:
   -o ~/logs \
   --tty /dev/ttyUSB0 \
   $(fx get-build-dir)/host_x64/system_tests_upgrade \
-  -downgrade-builder-name fuchsia/ci/fuchsia-x64-release \
-  -upgrade-fuchsia-build-dir $(fx get-build-dir)
+  --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
+  --upgrade-fuchsia-build-dir $(fx get-build-dir)
 ```
 
 This will setup a `tmux` with 3 windows, one for the serial session on
