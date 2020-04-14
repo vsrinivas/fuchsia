@@ -46,7 +46,6 @@ test("zxcrypt") {
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
-    "//zircon/public/lib/kms-stateless",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/unittest",
@@ -54,6 +53,7 @@ test("zxcrypt") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-ramdisk:c",
+    "//zircon/system/ulib/kms-stateless",
     "//zircon/system/ulib/zxcrypt:zxcrypt-fdio",
   ]
 }
