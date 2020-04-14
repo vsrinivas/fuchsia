@@ -166,7 +166,6 @@ aggregate_manifest("legacy-aux") {
     "devmgr-launcher",
 #------------------
 #------------------
-    "driver",
 #------------------
 #------------------
     "driver-integration-test",

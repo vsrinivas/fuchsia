@@ -67,9 +67,6 @@ input_binary = namedtuple('input_binary', ['target_pattern', 'output_group'])
 def collect_auxiliaries(manifest, examined):
     aux_binaries = {}
     for entry in manifest:
-        # TODO(bwb): Temporary workaround for ZN/GN migration. Remove when all drivers are outside of ZN
-        if "libdriver.so" in entry.source and ".zircon" not in entry.source:
-            continue
         examined.add(entry.source)
         info = binary_info(entry.source)
         if info:
@@ -103,10 +100,6 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
             old_binary.entry._replace(group=group_override), old_binary.info)
 
     def add_binary(binary, context=None, auxiliary=False):
-        # TODO(bwb): Temporary workaround for ZN/GN migration. Remove when all drivers are outside of ZN
-        if "libdriver.so" in binary.entry.source and ".zircon" not in binary.entry.source:
-            return
-
         # Add a binary by target name.
         def add_auxiliary(target, required, group_override=None):
             if group_override is None:
