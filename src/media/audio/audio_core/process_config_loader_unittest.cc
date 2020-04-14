@@ -53,17 +53,19 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
-          "media",
-          "interruption",
-          "background",
-          "communications"
-        ],
-        "eligible_for_loopback": true
+          "render:media",
+          "render:interruption",
+          "render:background",
+          "render:communications",
+          "capture:loopback"
+        ]
       },
       {
         "device_id": "*",
-        "supported_stream_types": ["media", "system_agent"],
-        "eligible_for_loopback": false,
+        "supported_stream_types": [
+          "render:media",
+          "render:system_agent"
+        ],
         "independent_volume_control": true
       }
     ]
@@ -114,20 +116,19 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingMultipleDeviceIds) {
       {
         "device_id" : ["34384e7da9d52c8062a9765baeb6053a", "34384e7da9d52c8062a9765baeb6053b" ],
         "supported_stream_types": [
-          "media"
-        ],
-        "eligible_for_loopback": false
+          "render:media"
+        ]
       },
       {
         "device_id" : "*",
         "supported_stream_types": [
-          "media",
-          "interruption",
-          "background",
-          "communications",
-          "system_agent"
-        ],
-        "eligible_for_loopback": true
+          "render:media",
+          "render:interruption",
+          "render:background",
+          "render:communications",
+          "render:system_agent",
+          "capture:loopback"
+        ]
       }
     ]
   })JSON";
@@ -175,14 +176,14 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
-          "media",
-          "interruption",
-          "background",
-          "communications",
-          "system_agent",
-          "ultrasound"
-        ],
-        "eligible_for_loopback": true
+          "render:media",
+          "render:interruption",
+          "render:background",
+          "render:communications",
+          "render:system_agent",
+          "render:ultrasound",
+          "capture:loopback"
+        ]
       }
     ]
   })JSON";
@@ -225,11 +226,11 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCove
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
-          "media",
-          "interruption",
-          "system_agent"
-        ],
-        "eligible_for_loopback": true
+          "render:media",
+          "render:interruption",
+          "render:system_agent",
+          "capture:loopback"
+        ]
       }
     ]
   })JSON";
@@ -256,13 +257,13 @@ TEST(ProcessConfigLoaderTest, AllowConfigWithoutUltrasound) {
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
-          "media",
-          "interruption",
-          "background",
-          "communications",
-          "system_agent"
-        ],
-        "eligible_for_loopback": true
+          "render:media",
+          "render:interruption",
+          "render:background",
+          "render:communications",
+          "render:system_agent",
+          "capture:loopback"
+        ]
       }
     ]
   })JSON";
@@ -350,15 +351,20 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
-          "media",
-          "interruption",
-          "background",
-          "communications",
-          "system_agent"
+          "render:media",
+          "render:interruption",
+          "render:background",
+          "render:communications",
+          "render:system_agent",
+          "capture:loopback"
         ],
-        "eligible_for_loopback": true,
         "pipeline": {
-          "streams": ["background", "system_agent", "media", "interruption"],
+          "streams": [
+            "render:background",
+            "render:system_agent",
+            "render:media",
+            "render:interruption"
+          ],
           "output_rate": 96000,
           "effects": [
             {
@@ -385,7 +391,9 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
               ],
               "inputs": [
                 {
-                  "streams": ["media"],
+                  "streams": [
+                    "render:media"
+                  ],
                   "name": "media",
                   "effects": [
                     {
@@ -406,7 +414,9 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
                   ]
                 },
                 {
-                  "streams": ["communications"],
+                  "streams": [
+                    "render:communications"
+                  ],
                   "name": "communications",
                   "effects": [
                     {
@@ -565,20 +575,27 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithMultipleLoopbackStages) {
       {
         "device_id" : "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
-          "media",
-          "interruption",
-          "background",
-          "communications",
-          "system_agent",
+          "render:media",
+          "render:interruption",
+          "render:background",
+          "render:communications",
+          "render:system_agent",
           "capture:loopback"
         ],
         "pipeline": {
           "inputs": [
             {
-              "streams": [ "media", "interruption", "background", "system_agent" ],
+              "streams": [
+                "render:media",
+                "render:interruption",
+                "render:background",
+                "render:system_agent"
+              ],
               "loopback": true
             }, {
-              "streams": [ "communications" ],
+              "streams": [
+                "render:communications"
+              ],
               "loopback": true
             }
           ]

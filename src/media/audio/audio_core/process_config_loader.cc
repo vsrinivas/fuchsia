@@ -107,6 +107,8 @@ std::optional<CaptureUsage> CaptureUsageFromString(std::string_view string) {
     return CaptureUsage::COMMUNICATION;
   } else if (string == "ultrasound" || string == "capture:ultrasound") {
     return CaptureUsage::ULTRASOUND;
+  } else if (string == "loopback" || string == "capture:loopback") {
+    return CaptureUsage::LOOPBACK;
   }
   return std::nullopt;
 }
