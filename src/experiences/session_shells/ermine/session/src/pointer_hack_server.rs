@@ -72,9 +72,6 @@ impl PointerHackServer {
         .await;
     }
 
-    // TODO(43601): Remove this and the invalid_request pattern after removing
-    // CaptureKeyboardEventHACK from fidl interface.
-    #[allow(unreachable_patterns)]
     async fn handle_presentation_request_stream(
         mut stream: PresentationRequestStream,
         pointer_listeners: Arc<Mutex<Vec<PointerCaptureListenerHackProxy>>>,
@@ -89,9 +86,6 @@ impl PointerHackServer {
                     if let Ok(proxy) = listener.into_proxy() {
                         pointer_listeners.push(proxy);
                     }
-                }
-                invalid_request => {
-                    println!("Received invalid PresentationRequest {:?}", invalid_request);
                 }
             }
         }
