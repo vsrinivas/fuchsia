@@ -9,7 +9,7 @@ banjo("ddk.protocol.wlan.mac") {
   deps = [
     "//sdk/banjo/ddk.hw.wlan.ieee80211",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.wlan.info",
-    "//zircon/system/banjo/ddk.protocol.ethernet",
   ]
 }

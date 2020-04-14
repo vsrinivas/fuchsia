@@ -14,9 +14,9 @@ source_set("virtio_ethernet_lib") {
     "ethernet_driver.cc",
   ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.ethernet",
     "//src/devices/bus/lib/virtio",
     "//zircon/public/lib/ddktl",
-    "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/dev/lib/dev-operation",
   ]
 }

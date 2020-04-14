@@ -69,7 +69,7 @@ source_set("linuxisms") {
     "//zircon/public/lib/zircon-internal",
   ]
   public_deps = [
-    "//zircon/system/banjo/ddk.protocol.ethernet",
+    "//sdk/banjo/ddk.protocol.ethernet",
     "//zircon/system/public",
   ]
 }
@@ -167,13 +167,13 @@ source_set("core") {
   public_deps = [
     ":linuxisms",
     "//garnet/lib/wlan/protocol",
+    "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/dev/lib/broadcom",
     "//zircon/system/public",
   ]

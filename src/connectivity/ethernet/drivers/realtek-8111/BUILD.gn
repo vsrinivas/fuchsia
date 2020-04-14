@@ -15,11 +15,11 @@ driver_module("realtek-8111") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "rtl8111.c" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/dev/lib/device-protocol-pci",
   ]
 }

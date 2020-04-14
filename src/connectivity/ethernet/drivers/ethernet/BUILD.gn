@@ -15,6 +15,7 @@ driver_module("ethernet") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ethernet.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -25,7 +26,6 @@ driver_module("ethernet") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/dev/lib/dev-operation",
   ]
 }
@@ -38,6 +38,7 @@ test("ethernet-unittest") {
     "ethernet.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -46,7 +47,6 @@ test("ethernet-unittest") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/dev/lib/dev-operation",
     "//zircon/system/dev/lib/fake_ddk",
   ]

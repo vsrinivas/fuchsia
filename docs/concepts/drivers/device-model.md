@@ -84,7 +84,7 @@ to interact with parent devices in a device-specific manner. The
 [PCI Protocol](/sdk/banjo/ddk.protocol.pci/pci.banjo),
 [USB Protocol](/sdk/banjo/ddk.protocol.usb/usb.banjo),
 [Block Core Protocol](/zircon/system/banjo/ddk.protocol.block/block.banjo), and
-[Ethernet Protocol](/zircon/system/banjo/ddk.protocol.ethernet/ethernet.banjo), are
+[Ethernet Protocol](/sdk/banjo/ddk.protocol.ethernet/ethernet.banjo), are
 examples of these.  Protocols are usually in-process interactions between
 devices in the same devhost, but in cases of driver isolation, they may take
 place via RPC to a "higher" devhost (via proxy).
