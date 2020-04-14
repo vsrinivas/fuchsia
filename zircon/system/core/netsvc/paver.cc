@@ -16,6 +16,8 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <string>
+#include <string_view>
 
 #include <fbl/auto_call.h>
 
@@ -26,8 +28,6 @@
 
 namespace netsvc {
 namespace {
-
-size_t NB_IMAGE_PREFIX_LEN() { return strlen(NB_IMAGE_PREFIX); }
 
 zx_status_t ClearSysconfig(const fbl::unique_fd& devfs_root) {
   std::optional<sysconfig::SyncClient> client;
@@ -438,9 +438,24 @@ int Paver::MonitorBuffer() {
       status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
     }
-    case Command::kBootloader: {
-      auto res = data_sink.WriteBootloader(std::move(buffer));
-      status = res.status() == ZX_OK ? res.value().status : res.status();
+    case Command::kFirmware: {
+      auto res = data_sink.WriteFirmware(fidl::StringView(firmware_type_, strlen(firmware_type_)),
+                                         std::move(buffer));
+      if (!res.ok()) {
+        status = res.status();
+      } else if (res->result.is_status()) {
+        status = res->result.status();
+      } else if (res->result.is_unsupported_type()) {
+        // Log a message but just skip this, we want to keep going so that we
+        // can add new firmware types in the future without breaking older
+        // paver versions.
+        printf("netsvc: skipping unsupported firmware type '%s'\n", firmware_type_);
+        status = ZX_OK;
+      } else {
+        // We must have added another union field but forgot to update this code.
+        fprintf(stderr, "netsvc: unknown WriteFirmware result\n");
+        status = ZX_ERR_INTERNAL;
+      }
       break;
     }
     case Command::kAsset:
@@ -456,55 +471,94 @@ int Paver::MonitorBuffer() {
   return 0;
 }
 
-tftp_status Paver::OpenWrite(const char* filename, size_t size) {
+namespace {
+
+// If |string| starts with |prefix|, returns |string| with |prefix| removed.
+// Otherwise, returns std::nullopt.
+std::optional<std::string_view> WithoutPrefix(std::string_view string, std::string_view prefix) {
+  if (string.size() >= prefix.size() && (string.compare(0, prefix.size(), prefix) == 0)) {
+    return std::string_view(string.data() + prefix.size(), string.size() - prefix.size());
+  }
+  return std::nullopt;
+}
+
+}  // namespace
+
+tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
+  // Skip past the NB_IMAGE_PREFIX prefix.
+  std::string_view host_filename;
+  if (auto without_prefix = WithoutPrefix(filename, NB_IMAGE_PREFIX); without_prefix.has_value()) {
+    host_filename = without_prefix.value();
+  } else {
+    fprintf(stderr, "netsvc: Missing '%s' prefix in '%.*s'\n", NB_IMAGE_PREFIX,
+            static_cast<int>(filename.size()), filename.data());
+    return TFTP_ERR_IO;
+  }
+
   // Paving an image to disk.
-  if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_FVM_HOST_FILENAME)) {
+  if (host_filename == NB_FVM_HOST_FILENAME) {
     printf("netsvc: Running FVM Paver\n");
     command_ = Command::kFvm;
-  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_BOOTLOADER_HOST_FILENAME)) {
-    printf("netsvc: Running BOOTLOADER Paver\n");
-    command_ = Command::kBootloader;
-  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_ZIRCONA_HOST_FILENAME)) {
+  } else if (host_filename == NB_BOOTLOADER_HOST_FILENAME) {
+    // WriteBootloader() has been replaced by WriteFirmware() with an empty
+    // firmware type, but keep this function around for backwards-compatibility
+    // until we don't use it anymore.
+    printf("netsvc: Running BOOTLOADER Paver (firmware type '')\n");
+    command_ = Command::kFirmware;
+    firmware_type_[0] = '\0';
+  } else if (auto type = WithoutPrefix(host_filename, NB_FIRMWARE_HOST_FILENAME_PREFIX);
+             type.has_value()) {
+    printf("netsvc: Running FIRMWARE Paver (firmware type '%.*s')\n",
+           static_cast<int>(type->size()), type->data());
+    if (type->length() >= sizeof(firmware_type_)) {
+      fprintf(stderr, "netsvc: Firmware type '%.*s' is too long (max %zu)\n",
+              static_cast<int>(type->size()), type->data(), sizeof(firmware_type_) - 1);
+      return TFTP_ERR_INVALID_ARGS;
+    }
+    command_ = Command::kFirmware;
+    memcpy(firmware_type_, type->data(), type->length());
+    firmware_type_[type->length()] = '\0';
+  } else if (host_filename == NB_ZIRCONA_HOST_FILENAME) {
     printf("netsvc: Running ZIRCON-A Paver\n");
     command_ = Command::kAsset;
     configuration_ = ::llcpp::fuchsia::paver::Configuration::A;
     asset_ = ::llcpp::fuchsia::paver::Asset::KERNEL;
-  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_ZIRCONB_HOST_FILENAME)) {
+  } else if (host_filename == NB_ZIRCONB_HOST_FILENAME) {
     printf("netsvc: Running ZIRCON-B Paver\n");
     command_ = Command::kAsset;
     configuration_ = ::llcpp::fuchsia::paver::Configuration::B;
     asset_ = ::llcpp::fuchsia::paver::Asset::KERNEL;
-  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_ZIRCONR_HOST_FILENAME)) {
+  } else if (host_filename == NB_ZIRCONR_HOST_FILENAME) {
     printf("netsvc: Running ZIRCON-R Paver\n");
     command_ = Command::kAsset;
     configuration_ = ::llcpp::fuchsia::paver::Configuration::RECOVERY;
     asset_ = ::llcpp::fuchsia::paver::Asset::KERNEL;
-  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_VBMETAA_HOST_FILENAME)) {
+  } else if (host_filename == NB_VBMETAA_HOST_FILENAME) {
     printf("netsvc: Running VBMETA-A Paver\n");
     command_ = Command::kAsset;
     configuration_ = ::llcpp::fuchsia::paver::Configuration::A;
     asset_ = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
-  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_VBMETAB_HOST_FILENAME)) {
+  } else if (host_filename == NB_VBMETAB_HOST_FILENAME) {
     printf("netsvc: Running VBMETA-B Paver\n");
     command_ = Command::kAsset;
     configuration_ = ::llcpp::fuchsia::paver::Configuration::B;
     asset_ = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
-  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_VBMETAR_HOST_FILENAME)) {
+  } else if (host_filename == NB_VBMETAR_HOST_FILENAME) {
     printf("netsvc: Running VBMETA-R Paver\n");
     command_ = Command::kAsset;
     configuration_ = ::llcpp::fuchsia::paver::Configuration::RECOVERY;
     asset_ = ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA;
-  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_SSHAUTH_HOST_FILENAME)) {
+  } else if (host_filename == NB_SSHAUTH_HOST_FILENAME) {
     printf("netsvc: Installing SSH authorized_keys\n");
     command_ = Command::kDataFile;
     strncpy(path_, "ssh/authorized_keys", PATH_MAX);
-  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_INIT_PARTITION_TABLES_HOST_FILENAME)) {
+  } else if (host_filename == NB_INIT_PARTITION_TABLES_HOST_FILENAME) {
     if (size < sizeof(modify_partition_table_info_t)) {
       return ZX_ERR_BUFFER_TOO_SMALL;
     }
     printf("netsvc: Initializing partition tables\n");
     command_ = Command::kInitPartitionTables;
-  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_WIPE_PARTITION_TABLES_HOST_FILENAME)) {
+  } else if (host_filename == NB_WIPE_PARTITION_TABLES_HOST_FILENAME) {
     if (size < sizeof(modify_partition_table_info_t)) {
       return ZX_ERR_BUFFER_TOO_SMALL;
     }

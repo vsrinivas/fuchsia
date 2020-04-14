@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,9 +17,6 @@ import (
 
 // The default nodename given to an target with the default QEMU MAC address.
 const DefaultNodename = "swarm-donut-petri-acre"
-
-var distro qemu.Distribution
-var Instance *qemu.Instance
 
 type LogMatch struct {
 	Pattern     string
@@ -44,6 +40,13 @@ func ToolPath(t *testing.T, name string) string {
 	}
 	exPath := filepath.Dir(ex)
 	return filepath.Join(exPath, "test_data", "bootserver_tools", name)
+}
+
+func FirmwarePath(t *testing.T) string {
+	// QEMU doesn't know how to write firmware so the contents don't matter,
+	// it just has to be a real file. It does get sent over the network though
+	// so use a small file to avoid long transfers.
+	return ToolPath(t, "fake_firmware")
 }
 
 func matchPattern(t *testing.T, pattern string, reader *bufio.Reader) bool {
@@ -154,61 +157,42 @@ func AttemptPaveNoBind(t *testing.T, shouldWork bool) {
 
 }
 
-func startQemuInstance(appendCmdline string, modeString string) error {
+// Starts a QEMU instance with the given kernel commandline args.
+// Returns the qemu.Instance and a cleanup function to call when finished.
+func StartQemu(t *testing.T, appendCmdline string, modeString string) (*qemu.Instance, func()) {
 	distro, err := qemu.Unpack()
 	if err != nil {
-		return err
+		t.Fatalf("Failed to unpack QEMU: %s", err)
 	}
 	arch, err := distro.TargetCPU()
 	if err != nil {
-		return err
+		t.Fatalf("Failed to get distro CPU: %s", err)
 	}
 	zbi, err := zbiPath()
 	if err != nil {
-		return err
+		t.Fatalf("Failed to get ZBI path: %s", err)
 	}
 
-	Instance = distro.Create(qemu.Params{
+	instance := distro.Create(qemu.Params{
 		Arch:          arch,
 		ZBI:           zbi,
 		AppendCmdline: appendCmdline,
 		Networking:    true,
 	})
 
-	Instance.Start()
+	instance.Start()
 	if err != nil {
-		return err
+		t.Fatalf("Failed to start QEMU instance: %s", err)
 	}
 
 	// Make sure netsvc in expected mode.
-	Instance.WaitForLogMessage("netsvc: running in " + modeString + " mode")
+	instance.WaitForLogMessage("netsvc: running in " + modeString + " mode")
 
 	// Make sure netsvc is booted.
-	Instance.WaitForLogMessage("netsvc: start")
+	instance.WaitForLogMessage("netsvc: start")
 
-	return nil
-}
-
-func stopQemuInstance() {
-	Instance.Kill()
-	distro.Delete()
-}
-
-// Tests should provide a custom main which calls RunTests() e.g.:
-//
-// func TestMain(m *testing.M) {
-// 	 bootserver.RunTests(m, "netsvc.all-features=true, netsvc.netboot=true")
-// }
-//
-// Note that RunTests() calls os.Exit() so will never return.
-func RunTests(m *testing.M, kernelArgs string) {
-	err := startQemuInstance(kernelArgs, "full")
-	if err != nil {
-		log.Fatalf("Failed to start QEMU: %v", err)
+	return instance, func() {
+		instance.Kill()
+		distro.Delete()
 	}
-
-	result := m.Run()
-
-	stopQemuInstance()
-	os.Exit(result)
 }

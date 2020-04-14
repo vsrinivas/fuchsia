@@ -24,6 +24,8 @@ if (host_os == "linux") {
     "test_init_partition_tables",
     "test_pave_no_bind",
     "test_pave_no_bind_failure",
+    "test_write_firmware_no_type",
+    "test_write_firmware_with_type",
   ]
 }
 
@@ -67,6 +69,7 @@ if (is_linux) {
     sources = [
       "$zircon_root_build_dir/tools/bootserver",
       "$zircon_root_build_dir/tools/netls",
+      "testdata/fake_firmware",
     ]
     outputs =
         [ "$root_out_dir/test_data/bootserver_tools/{{source_file_part}}" ]
@@ -78,6 +81,7 @@ if (is_linux) {
     metadata = {
       test_runtime_deps = [
         "$root_out_dir/test_data/bootserver_tools/bootserver",
+        "$root_out_dir/test_data/bootserver_tools/fake_firmware",
         "$root_out_dir/test_data/bootserver_tools/netls",
       ]
     }
