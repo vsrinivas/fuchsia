@@ -8,10 +8,11 @@ use {
     dns::async_resolver::{Handle, Resolver},
     fidl_fuchsia_net::{self as fnet, NameLookupRequest, NameLookupRequestStream},
     fidl_fuchsia_net_ext::IpAddress,
-    fidl_fuchsia_netstack::{ResolverAdminRequest, ResolverAdminRequestStream},
+    fidl_fuchsia_net_name::{LookupAdminRequest, LookupAdminRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
+    fuchsia_zircon as zx,
     futures::{StreamExt, TryStreamExt},
     parking_lot::RwLock,
     std::{net::IpAddr, rc::Rc},
@@ -46,8 +47,8 @@ impl<T> SharedResolver<T> {
 enum IncomingRequest {
     // NameLookup service.
     NameLookup(NameLookupRequestStream),
-    // ResolverAdmin Service.
-    ResolverAdmin(ResolverAdminRequestStream),
+    // LookupAdmin Service.
+    LookupAdmin(LookupAdminRequestStream),
 }
 
 #[async_trait]
@@ -235,7 +236,7 @@ async fn handle_lookup_hostname<T: ResolverLookup>(
     }
 }
 
-async fn run_namelookup<T: ResolverLookup>(
+async fn run_name_lookup<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     stream: NameLookupRequestStream,
 ) -> Result<(), fidl::Error> {
@@ -257,7 +258,8 @@ async fn run_namelookup<T: ResolverLookup>(
 async fn handle_set_server_names<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     servers: Vec<fnet::IpAddress>,
-) -> Result<(), fidl::Error> {
+) -> Result<(), zx::Status> {
+    // TODO validate that servers contains only valid unicast addresses
     let servers: Vec<IpAddr> = servers
         .into_iter()
         .map(|addr| {
@@ -277,16 +279,18 @@ async fn handle_set_server_names<T: ResolverLookup>(
     Ok(())
 }
 
-async fn run_resolveradmin<T: ResolverLookup>(
+async fn run_lookup_admin<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
-    stream: ResolverAdminRequestStream,
+    stream: LookupAdminRequestStream,
 ) -> Result<(), fidl::Error> {
     stream
         .try_for_each_concurrent(None, |request| async {
             match request {
-                ResolverAdminRequest::SetNameServers { servers, control_handle: _ } => {
-                    handle_set_server_names(resolver, servers).await
-                }
+                LookupAdminRequest::SetDefaultDnsServers { servers, responder } => responder.send(
+                    &mut handle_set_server_names(resolver, servers)
+                        .await
+                        .map_err(zx::Status::into_raw),
+                ),
             }
         })
         .await
@@ -313,17 +317,17 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc")
         .add_fidl_service(IncomingRequest::NameLookup)
-        .add_fidl_service(IncomingRequest::ResolverAdmin);
+        .add_fidl_service(IncomingRequest::LookupAdmin);
     fs.take_and_serve_directory_handle()?;
 
     fs.for_each_concurrent(None, |incoming_service| async {
         match incoming_service {
-            IncomingRequest::ResolverAdmin(stream) => run_resolveradmin(&resolver, stream)
+            IncomingRequest::LookupAdmin(stream) => run_lookup_admin(&resolver, stream)
                 .await
-                .unwrap_or_else(|e| fx_log_err!("run_resolveradmin finished with error: {:?}", e)),
-            IncomingRequest::NameLookup(stream) => run_namelookup(&resolver, stream)
+                .unwrap_or_else(|e| fx_log_err!("run_lookup_admin finished with error: {:?}", e)),
+            IncomingRequest::NameLookup(stream) => run_name_lookup(&resolver, stream)
                 .await
-                .unwrap_or_else(|e| fx_log_err!("run_namelookup finished with error: {:?}", e)),
+                .unwrap_or_else(|e| fx_log_err!("run_name_lookup finished with error: {:?}", e)),
         }
     })
     .await;
@@ -334,7 +338,7 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
 
-    use fidl_fuchsia_netstack as fnetstack;
+    use fidl_fuchsia_net_name as net_name;
     use std::{net::Ipv4Addr, net::Ipv6Addr, str::FromStr, sync::Arc};
     use trust_dns_proto::{
         op::Query,
@@ -388,7 +392,7 @@ mod tests {
         );
 
         fasync::spawn_local(async move {
-            let () = run_namelookup(&resolver, stream).await.expect("failed to run_namelookup");
+            let () = run_name_lookup(&resolver, stream).await.expect("failed to run_name_lookup");
         });
         proxy
     }
@@ -414,15 +418,17 @@ mod tests {
 
     async fn check_set_name_servers(
         name_lookup_proxy: &fnet::NameLookupProxy,
-        resolver_admin_proxy: &fnetstack::ResolverAdminProxy,
+        lookup_admin_proxy: &net_name::LookupAdminProxy,
         mut name_servers: Vec<fnet::IpAddress>,
         host: &str,
         option: fnet::LookupIpOptions,
         expected: Result<fnet::IpAddressInfo, fnet::LookupError>,
     ) {
-        resolver_admin_proxy
-            .set_name_servers(&mut name_servers.iter_mut())
-            .expect("failed to set name servers");
+        lookup_admin_proxy
+            .set_default_dns_servers(&mut name_servers.iter_mut())
+            .await
+            .expect("failed to complete set_default_dns_servers")
+            .expect("set_default_dns_servers failed");
         // Test set_server_names by checking the result of lookup ip.
         check_lookup_ip(&name_lookup_proxy, host, option, expected).await;
     }
@@ -612,13 +618,12 @@ mod tests {
         }
     }
 
-    fn setup_services_with_mock_resolver() -> (fnet::NameLookupProxy, fnetstack::ResolverAdminProxy)
-    {
+    fn setup_services_with_mock_resolver() -> (fnet::NameLookupProxy, net_name::LookupAdminProxy) {
         let (name_lookup_proxy, name_lookup_stream) =
             fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
                 .expect("failed to create NameLookupProxy");
-        let (resolver_admin_proxy, resolver_admin_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fnetstack::ResolverAdminMarker>()
+        let (lookup_admin_proxy, lookup_admin_stream) =
+            fidl::endpoints::create_proxy_and_stream::<net_name::LookupAdminMarker>()
                 .expect("failed to create AdminResolverProxy");
 
         let mock_resolver = SharedResolver::new(MockResolver(ResolverConfig::from_parts(
@@ -630,15 +635,15 @@ mod tests {
         )));
 
         fasync::spawn_local(async move {
-            let name_lookup_fut = run_namelookup(&mock_resolver, name_lookup_stream);
-            let resolver_admin_fut = run_resolveradmin(&mock_resolver, resolver_admin_stream);
-            let (resolver_admin, name_lookup) =
-                futures::future::join(resolver_admin_fut, name_lookup_fut).await;
-            name_lookup.expect("failed to run_namelookup");
-            resolver_admin.expect("failed to run_adminresolver");
+            let name_lookup_fut = run_name_lookup(&mock_resolver, name_lookup_stream);
+            let lookup_admin_fut = run_lookup_admin(&mock_resolver, lookup_admin_stream);
+            let (lookup_admin, name_lookup) =
+                futures::future::join(lookup_admin_fut, name_lookup_fut).await;
+            name_lookup.expect("failed to run_name_lookup");
+            lookup_admin.expect("failed to run_adminresolver");
         });
 
-        (name_lookup_proxy, resolver_admin_proxy)
+        (name_lookup_proxy, lookup_admin_proxy)
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -751,10 +756,10 @@ mod tests {
     // used for testing.
     #[fasync::run_singlethreaded(test)]
     async fn test_set_server_names_ipv4() {
-        let (name_lookup_proxy, resolver_admin_proxy) = setup_services_with_mock_resolver();
+        let (name_lookup_proxy, lookup_admin_proxy) = setup_services_with_mock_resolver();
         check_set_name_servers(
             &name_lookup_proxy,
-            &resolver_admin_proxy,
+            &lookup_admin_proxy,
             vec![fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_NAMESERVER.octets() })],
             REMOTE_IPV4_HOST,
             fnet::LookupIpOptions::V4Addrs,
@@ -769,10 +774,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_server_names_ipv6() {
-        let (name_lookup_proxy, resolver_admin_proxy) = setup_services_with_mock_resolver();
+        let (name_lookup_proxy, lookup_admin_proxy) = setup_services_with_mock_resolver();
         check_set_name_servers(
             &name_lookup_proxy,
-            &resolver_admin_proxy,
+            &lookup_admin_proxy,
             vec![fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_NAMESERVER.octets() })],
             REMOTE_IPV6_HOST,
             fnet::LookupIpOptions::V6Addrs,
@@ -787,10 +792,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_server_names_ipv4_ipv6() {
-        let (name_lookup_proxy, resolver_admin_proxy) = setup_services_with_mock_resolver();
+        let (name_lookup_proxy, lookup_admin_proxy) = setup_services_with_mock_resolver();
         check_set_name_servers(
             &name_lookup_proxy,
-            &resolver_admin_proxy,
+            &lookup_admin_proxy,
             vec![
                 fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_NAMESERVER.octets() }),
                 fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_NAMESERVER.octets() }),

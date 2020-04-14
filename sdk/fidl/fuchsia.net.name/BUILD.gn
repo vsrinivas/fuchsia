@@ -1,0 +1,10 @@
+# Copyright 2020 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.net.name") {
+  sources = [ "lookup_admin.fidl" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
+}

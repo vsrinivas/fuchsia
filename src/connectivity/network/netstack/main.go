@@ -33,6 +33,7 @@ import (
 	"fidl/fuchsia/device"
 	inspect "fidl/fuchsia/inspect/deprecated"
 	"fidl/fuchsia/net"
+	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/posix/socket"
@@ -324,12 +325,12 @@ func Main() {
 		},
 	)
 
-	var dnsService netstack.ResolverAdminService
+	var nameLookupAdminService name.LookupAdminService
 	appCtx.OutgoingService.AddService(
-		netstack.ResolverAdminName,
-		&netstack.ResolverAdminWithCtxStub{Impl: &dnsImpl{ns: ns}},
+		name.LookupAdminName,
+		&name.LookupAdminWithCtxStub{Impl: &nameLookupAdminImpl{ns: ns}},
 		func(s fidl.Stub, c zx.Channel) error {
-			_, err := dnsService.BindingSet.Add(s, c, nil)
+			_, err := nameLookupAdminService.BindingSet.Add(s, c, nil)
 			return err
 		},
 	)

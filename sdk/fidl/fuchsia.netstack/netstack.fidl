@@ -180,11 +180,6 @@ protocol Netstack {
 };
 
 [Discoverable]
-protocol ResolverAdmin {
-    SetNameServers(vector<fuchsia.net.IpAddress> servers);
-};
-
-[Discoverable]
 protocol RouteTableTransaction {
     AddRoute(RouteTableEntry2 r) -> (zx.status status);
     DelRoute(RouteTableEntry2 r) -> (zx.status status);

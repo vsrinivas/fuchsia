@@ -12,16 +12,16 @@ use {
     crate::DnsPolicy,
     anyhow::{Context as _, Error},
     fidl_fuchsia_net as fnet,
+    fidl_fuchsia_net_name::{LookupAdminMarker, LookupAdminProxy},
     fidl_fuchsia_net_stack::{
         self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker,
         StackProxy,
     },
     fidl_fuchsia_net_stack_ext::FidlReturn,
-    fidl_fuchsia_netstack::{
-        self as netstack, NetstackMarker, NetstackProxy, ResolverAdminMarker, ResolverAdminProxy,
-    },
+    fidl_fuchsia_netstack::{self as netstack, NetstackMarker, NetstackProxy},
     fidl_fuchsia_router_config as netconfig,
     fuchsia_component::client::connect_to_service,
+    fuchsia_zircon as zx,
     std::convert::TryFrom,
     std::net::IpAddr,
 };
@@ -137,7 +137,7 @@ impl From<&netstack::RouteTableEntry2> for Route {
 pub struct NetCfg {
     stack: StackProxy,
     netstack: NetstackProxy,
-    resolver_admin: ResolverAdminProxy,
+    lookup_admin: LookupAdminProxy,
 }
 
 #[derive(Debug)]
@@ -291,9 +291,9 @@ impl NetCfg {
             .context("network_manager failed to connect to netstack")?;
         let netstack = connect_to_service::<NetstackMarker>()
             .context("network_manager failed to connect to netstack")?;
-        let resolver_admin = connect_to_service::<ResolverAdminMarker>()
-            .context("network_manager failed to connect to resolver admin")?;
-        Ok(NetCfg { stack, netstack, resolver_admin })
+        let lookup_admin = connect_to_service::<LookupAdminMarker>()
+            .context("network_manager failed to connect to lookup admin")?;
+        Ok(NetCfg { stack, netstack, lookup_admin })
     }
 
     /// Returns event streams for fuchsia.fnet.stack and fuchsia.netstack.
@@ -592,9 +592,18 @@ impl NetCfg {
         _domains: Option<String>,
         _policy: DnsPolicy,
     ) -> error::Result<()> {
-        self.resolver_admin
-            .set_name_servers(&mut servers.iter_mut())
+        self.lookup_admin
+            .set_default_dns_servers(&mut servers.iter_mut())
+            .await
             .with_context(|| "failed setting interface state".to_string())
+            .and_then(|r| {
+                r.map_err(|status| {
+                    anyhow::anyhow!(
+                        "set_default_dns_servers returned {:?}",
+                        zx::Status::from_raw(status)
+                    )
+                })
+            })
             .map_err(|e| {
                 error!("set_dns_resolver error {:?}", e);
                 error::NetworkManager::Hal(error::Hal::OperationFailed)
@@ -743,9 +752,9 @@ mod tests {
             fidl::endpoints::spawn_stream_handler(handle_list_interfaces).unwrap();
         let netstack: NetstackProxy =
             fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
-        let resolver_admin: ResolverAdminProxy =
+        let lookup_admin: LookupAdminProxy =
             fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
-        let mut netcfg = NetCfg { stack, netstack, resolver_admin };
+        let mut netcfg = NetCfg { stack, netstack, lookup_admin };
         assert_eq!(
             netcfg.interfaces().await.unwrap(),
             // Should return only interfaces with a valid address.

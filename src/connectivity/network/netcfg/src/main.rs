@@ -130,7 +130,8 @@ fn should_enable_filter(
     }
 }
 
-fn main() -> Result<(), anyhow::Error> {
+#[fuchsia_async::run_singlethreaded]
+async fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init_with_tags(&["netcfg"])?;
     fx_log_info!("Started");
 
@@ -156,13 +157,12 @@ fn main() -> Result<(), anyhow::Error> {
 
     let mut persisted_interface_config =
         interface::FileBackedConfig::load(&"/data/net_interfaces.cfg.json")?;
-    let mut executor = fuchsia_async::Executor::new().context("could not create executor")?;
     let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
         .context("could not connect to stack")?;
     let netstack = connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
         .context("could not connect to netstack")?;
-    let resolver_admin = connect_to_service::<fidl_fuchsia_netstack::ResolverAdminMarker>()
-        .context("could not connect to resolver admin")?;
+    let lookup_admin = connect_to_service::<fidl_fuchsia_net_name::LookupAdminMarker>()
+        .context("could not connect to lookup admin")?;
     let filter = connect_to_service::<fidl_fuchsia_net_filter::FilterMarker>()
         .context("could not connect to filter")?;
 
@@ -193,8 +193,18 @@ fn main() -> Result<(), anyhow::Error> {
         .map(Into::into)
         .collect::<Vec<fidl_fuchsia_net::IpAddress>>();
 
-    let () = resolver_admin
-        .set_name_servers(&mut servers.iter_mut())
+    let () = lookup_admin
+        .set_default_dns_servers(&mut servers.iter_mut())
+        .await
+        .map_err(anyhow::Error::new)
+        .and_then(|r| {
+            r.map_err(|status| {
+                anyhow::anyhow!(
+                    "Failed to set DNS servers: {:?}",
+                    fuchsia_zircon::Status::from_raw(status)
+                )
+            })
+        })
         .context("could not set name servers")?;
 
     // Interface metrics are used to sort the route table. An interface with a
@@ -394,7 +404,7 @@ fn main() -> Result<(), anyhow::Error> {
         Ok(())
     };
 
-    let ((), ()) = executor.run_singlethreaded(try_join(filter_setup, ethernet_device))?;
+    let ((), ()) = try_join(filter_setup, ethernet_device).await?;
     Ok(())
 }
 

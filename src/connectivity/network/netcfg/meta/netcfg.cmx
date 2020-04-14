@@ -13,9 +13,9 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.filter.Filter",
+            "fuchsia.net.name.LookupAdmin",
             "fuchsia.net.stack.Stack",
-            "fuchsia.netstack.Netstack",
-            "fuchsia.netstack.ResolverAdmin"
+            "fuchsia.netstack.Netstack"
         ]
     }
 }

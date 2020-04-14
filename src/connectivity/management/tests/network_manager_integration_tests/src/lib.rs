@@ -60,7 +60,7 @@ fn generate_launch_services() -> Vec<LaunchService> {
         ("fuchsia.net.stack.Stack", component_url!("netstack"), None),
         ("fuchsia.net.NameLookup", component_url!("netstack"), None),
         ("fuchsia.netstack.Netstack", component_url!("netstack"), None),
-        ("fuchsia.netstack.ResolverAdmin", component_url!("netstack"), None),
+        ("fuchsia.net.name.LookupAdmin", component_url!("netstack"), None),
         ("fuchsia.posix.socket.Provider", component_url!("netstack"), None),
         ("fuchsia.net.filter.Filter", component_url!("netstack"), None),
         (

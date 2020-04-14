@@ -5,6 +5,7 @@
 package netstack
 
 import (
+	"fidl/fuchsia/net/name"
 	"net"
 	"sort"
 	"syscall/zx"
@@ -393,11 +394,11 @@ func (ns *netstackImpl) AddEthernetDevice(_ fidl.Context, topological_path strin
 	return uint32(ifs.nicid), err
 }
 
-type dnsImpl struct {
+type nameLookupAdminImpl struct {
 	ns *Netstack
 }
 
-func (dns *dnsImpl) SetNameServers(_ fidl.Context, servers []fidlnet.IpAddress) error {
+func (dns *nameLookupAdminImpl) SetDefaultDnsServers(_ fidl.Context, servers []fidlnet.IpAddress) (name.LookupAdminSetDefaultDnsServersResult, error) {
 	ss := make([]tcpip.Address, len(servers))
 
 	for i, s := range servers {
@@ -406,5 +407,7 @@ func (dns *dnsImpl) SetNameServers(_ fidl.Context, servers []fidlnet.IpAddress) 
 
 	syslog.Infof("setting default name servers: %s", ss)
 	dns.ns.dnsClient.SetDefaultServers(ss)
-	return nil
+	// NOTE(brunodalbo) we're not bothering checking for invalid server addresses here in expectation that this
+	// implementation will move to dns_resolver.
+	return name.LookupAdminSetDefaultDnsServersResultWithResponse(name.LookupAdminSetDefaultDnsServersResponse{}), nil
 }
