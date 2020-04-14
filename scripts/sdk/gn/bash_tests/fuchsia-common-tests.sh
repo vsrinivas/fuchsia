@@ -5,15 +5,10 @@
 #
 # Tests for fuchsia-common.sh library script
 
-SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
-# shellcheck disable=SC1090
-source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
-
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
   "scripts/sdk/gn/base/bin/fuchsia-common.sh"
   "scripts/sdk/gn/testdata/meta/manifest.json"
-  "scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
 )
 
 MOCKED_SSH_BIN="mocked/ssh"
