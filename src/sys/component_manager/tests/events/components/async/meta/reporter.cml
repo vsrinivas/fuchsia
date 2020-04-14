@@ -19,12 +19,12 @@
             from: "framework",
         },
         {
-            from: "framework",
             event: "started",
+            from: "framework",
         },
         {
-            from: "framework",
             event: "destroyed",
+            from: "framework",
         },
     ],
     offer: [

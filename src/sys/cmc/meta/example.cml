@@ -28,13 +28,13 @@
             as: "/svc/fuchsia.fonts.LegacyProvider",
         },
         {
-            from: "framework",
             event: "started",
+            from: "framework",
         },
         {
+            event: "capability_ready",
             from: "realm",
             as: "diagnostics_ready",
-            event: "capability_ready",
             filter: { path: "/diagnostics" },
         },
     ],
@@ -58,10 +58,10 @@
             ],
         },
         {
+            event: "stopped",
             from: "realm",
             as: "stopped-logger",
             to: [ "#logger" ],
-            event: "stopped",
         },
     ],
     expose: [

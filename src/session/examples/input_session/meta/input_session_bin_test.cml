@@ -30,16 +30,16 @@
             from: "framework",
         },
         {
-            from: "framework",
             event: "capability_routed",
+            from: "framework",
         },
         {
-            from: "framework",
             event: "started",
+            from: "framework",
         },
         {
-            from: "framework",
             event: "resolved",
+            from: "framework",
         },
     ],
     offer: [

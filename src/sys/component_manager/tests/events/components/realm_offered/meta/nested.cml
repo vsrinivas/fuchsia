@@ -51,10 +51,10 @@
             to: [ "#reporter" ],
         },
         {
+            event: "started",
             from: "framework",
             as: "started_nested",
             to: [ "#reporter" ],
-            event: "started",
         },
     ],
 }

@@ -26,8 +26,8 @@
             ],
         },
         {
-            from: "framework",
             event: "stopped",
+            from: "framework",
         },
     ],
     offer: [

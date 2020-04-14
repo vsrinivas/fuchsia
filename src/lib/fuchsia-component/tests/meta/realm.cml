@@ -18,8 +18,8 @@
             from: "framework",
         },
         {
-            from: "framework",
             event: "destroyed",
+            from: "framework",
         },
     ],
     offer: [
