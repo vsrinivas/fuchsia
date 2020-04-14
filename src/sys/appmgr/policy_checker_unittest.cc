@@ -50,10 +50,11 @@ TEST_F(PolicyCheckerTest, ReplaceAsExecPolicyPresent) {
   auto filename = NewFile(dir, "allowlist/deprecated_ambient_replace_as_executable.txt", kFile);
 
   PolicyChecker policy_checker(std::move(dirfd));
-  EXPECT_TRUE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(
-      "fuchsia-pkg://fuchsia.com/chromium#meta/chromium.cmx"));
-  EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(
-      "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"));
+  FuchsiaPkgUrl fp;
+  fp.Parse("fuchsia-pkg://fuchsia.com/chromium#meta/chromium.cmx");
+  EXPECT_TRUE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(fp));
+  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
+  EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(fp));
 }
 
 TEST_F(PolicyCheckerTest, ReplaceAsExecPolicyAbsent) {
@@ -71,10 +72,45 @@ TEST_F(PolicyCheckerTest, ReplaceAsExecPolicyAbsent) {
   fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   PolicyChecker policy_checker(std::move(dirfd));
 
-  EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(
-      "fuchsia-pkg://fuchsia.com/chromium#meta/chromium.cmx"));
-  EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(
-      "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"));
+  FuchsiaPkgUrl fp;
+  fp.Parse("fuchsia-pkg://fuchsia.com/chromium#meta/chromium.cmx");
+  EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(fp));
+  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
+  EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(fp));
+}
+
+TEST_F(PolicyCheckerTest, HubPolicy) {
+  static constexpr char kFile[] = R"F(
+  fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx
+  )F";
+
+  // Stub out a dispatcher.  We won't actually run anything on it, but some
+  // things in PolicyChecker assert they can grab the implicit default eventloop, so
+  // keep them happy.
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+
+  // Add the allowlist.
+  ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
+  auto filename = NewFile(dir, "allowlist/hub.txt", kFile);
+
+  FuchsiaPkgUrl fp;
+  PolicyChecker policy_checker(std::move(dirfd));
+
+  // "Vanilla" package url, without variant or hash
+  fp.Parse("fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx");
+  EXPECT_TRUE(policy_checker.CheckHub(fp));
+
+  // Variants and hashes should be thrown away
+  fp.Parse("fuchsia-pkg://fuchsia.com/terminal/0?hash=123#meta/terminal.cmx");
+  EXPECT_TRUE(policy_checker.CheckHub(fp));
+
+  // Check exclusion
+  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
+  EXPECT_FALSE(policy_checker.CheckHub(fp));
 }
 
 TEST_F(PolicyCheckerTest, PackageResolverPolicy) {
@@ -100,15 +136,15 @@ TEST_F(PolicyCheckerTest, PackageResolverPolicy) {
 
   // "Vanilla" package url, without variant or hash
   fp.Parse("fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx");
-  EXPECT_TRUE(policy_checker.CheckPackageResolver(fp.WithoutVariantAndHash()));
+  EXPECT_TRUE(policy_checker.CheckPackageResolver(fp));
 
   // Variants and hashes should be thrown away
   fp.Parse("fuchsia-pkg://fuchsia.com/amber/0?hash=123#meta/system_updater.cmx");
-  EXPECT_TRUE(policy_checker.CheckPackageResolver(fp.WithoutVariantAndHash()));
+  EXPECT_TRUE(policy_checker.CheckPackageResolver(fp));
 
   // Check exclusion
   fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
-  EXPECT_FALSE(policy_checker.CheckPackageResolver(fp.WithoutVariantAndHash()));
+  EXPECT_FALSE(policy_checker.CheckPackageResolver(fp));
 }
 
 TEST_F(PolicyCheckerTest, PackageCachePolicy) {
@@ -134,15 +170,15 @@ TEST_F(PolicyCheckerTest, PackageCachePolicy) {
 
   // "Vanilla" package url, without variant or hash
   fp.Parse("fuchsia-pkg://fuchsia.com/pkgctl#meta/pkgctl.cmx");
-  EXPECT_TRUE(policy_checker.CheckPackageCache(fp.WithoutVariantAndHash()));
+  EXPECT_TRUE(policy_checker.CheckPackageCache(fp));
 
   // Variants and hashes should be thrown away
   fp.Parse("fuchsia-pkg://fuchsia.com/pkgctl/0?hash=123#meta/pkgctl.cmx");
-  EXPECT_TRUE(policy_checker.CheckPackageCache(fp.WithoutVariantAndHash()));
+  EXPECT_TRUE(policy_checker.CheckPackageCache(fp));
 
   // Check exclusion
   fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
-  EXPECT_FALSE(policy_checker.CheckPackageCache(fp.WithoutVariantAndHash()));
+  EXPECT_FALSE(policy_checker.CheckPackageCache(fp));
 }
 
 TEST_F(PolicyCheckerTest, PkgFsVersionsPolicy) {
@@ -168,15 +204,15 @@ TEST_F(PolicyCheckerTest, PkgFsVersionsPolicy) {
 
   // "Vanilla" package url, without variant or hash
   fp.Parse("fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cmx");
-  EXPECT_TRUE(policy_checker.CheckPkgFsVersions(fp.WithoutVariantAndHash()));
+  EXPECT_TRUE(policy_checker.CheckPkgFsVersions(fp));
 
   // Variants and hashes should be thrown away
   fp.Parse("fuchsia-pkg://fuchsia.com/pkg-cache/0?hash=123#meta/pkg-cache.cmx");
-  EXPECT_TRUE(policy_checker.CheckPkgFsVersions(fp.WithoutVariantAndHash()));
+  EXPECT_TRUE(policy_checker.CheckPkgFsVersions(fp));
 
   // Check exclusion
   fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
-  EXPECT_FALSE(policy_checker.CheckPkgFsVersions(fp.WithoutVariantAndHash()));
+  EXPECT_FALSE(policy_checker.CheckPkgFsVersions(fp));
 }
 
 TEST_F(PolicyCheckerTest, RootJobPolicy) {
@@ -199,15 +235,15 @@ TEST_F(PolicyCheckerTest, RootJobPolicy) {
 
   // "Vanilla" package url, without variant or hash
   fp.Parse("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx");
-  EXPECT_TRUE(policy_checker.CheckRootJob(fp.WithoutVariantAndHash()));
+  EXPECT_TRUE(policy_checker.CheckRootJob(fp));
 
   // Variants and hashes should be thrown away
   fp.Parse("fuchsia-pkg://fuchsia.com/foo/0?hash=123#meta/foo.cmx");
-  EXPECT_TRUE(policy_checker.CheckRootJob(fp.WithoutVariantAndHash()));
+  EXPECT_TRUE(policy_checker.CheckRootJob(fp));
 
   // Check exclusion
   fp.Parse("fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx");
-  EXPECT_FALSE(policy_checker.CheckRootJob(fp.WithoutVariantAndHash()));
+  EXPECT_FALSE(policy_checker.CheckRootJob(fp));
 }
 
 TEST_F(PolicyCheckerTest, RootResourcePolicy) {
@@ -230,15 +266,15 @@ TEST_F(PolicyCheckerTest, RootResourcePolicy) {
 
   // "Vanilla" package url, without variant or hash
   fp.Parse("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx");
-  EXPECT_TRUE(policy_checker.CheckRootResource(fp.WithoutVariantAndHash()));
+  EXPECT_TRUE(policy_checker.CheckRootResource(fp));
 
   // Variants and hashes should be thrown away
   fp.Parse("fuchsia-pkg://fuchsia.com/foo/0?hash=123#meta/foo.cmx");
-  EXPECT_TRUE(policy_checker.CheckRootResource(fp.WithoutVariantAndHash()));
+  EXPECT_TRUE(policy_checker.CheckRootResource(fp));
 
   // Check exclusion
   fp.Parse("fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx");
-  EXPECT_FALSE(policy_checker.CheckRootResource(fp.WithoutVariantAndHash()));
+  EXPECT_FALSE(policy_checker.CheckRootResource(fp));
 }
 
 }  // namespace component

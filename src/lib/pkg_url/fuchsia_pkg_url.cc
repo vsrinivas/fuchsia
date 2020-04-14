@@ -4,11 +4,11 @@
 
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
-#include "src/lib/fxl/strings/concatenate.h"
-#include "src/lib/fxl/strings/substitute.h"
-
 #include <regex>
 #include <string>
+
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 namespace component {
 
@@ -59,6 +59,12 @@ bool FuchsiaPkgUrl::Parse(const std::string& url) {
   return true;
 }
 
+bool FuchsiaPkgUrl::operator==(const FuchsiaPkgUrl& rhs) const {
+  return (this->host_name() == rhs.host_name() && this->package_name() == rhs.package_name() &&
+          this->variant() == rhs.variant() && this->resource_path() == rhs.resource_path() &&
+          this->hash() == rhs.hash());
+}
+
 std::string FuchsiaPkgUrl::pkgfs_dir_path() const {
   return fxl::Substitute("/pkgfs/packages/$0/$1", package_name_, variant_);
 }
@@ -70,10 +76,6 @@ std::string FuchsiaPkgUrl::package_path() const {
   }
 
   return fxl::Substitute("fuchsia-pkg://$0/$1/$2$3", host_name_, package_name_, variant_, query);
-}
-
-std::string FuchsiaPkgUrl::WithoutVariantAndHash() const {
-  return fxl::Substitute("fuchsia-pkg://$0/$1#$2", host_name_, package_name_, resource_path_);
 }
 
 const std::string& FuchsiaPkgUrl::ToString() const { return url_; }

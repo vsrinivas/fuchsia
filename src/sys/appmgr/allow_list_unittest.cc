@@ -15,6 +15,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/substitute.h"
 
 namespace component {
@@ -32,51 +33,50 @@ class AllowListTest : public ::testing::Test {
 
   files::ScopedTempDir tmp_dir_;
 
+  static bool IsAllowed(const AllowList& al, const std::string& url_str) {
+    FuchsiaPkgUrl url;
+    FXL_CHECK(url.Parse(url_str)) << "Invalid URL in test: " << url_str;
+    return al.IsAllowed(url);
+  }
+
  private:
   int unique_id_ = 1;
 };
 
 TEST_F(AllowListTest, Parse) {
   static constexpr char kFile[] = R"F(
-  test_one
-  test_two)F";
+  fuchsia-pkg://fuchsia.com/test_one#meta/test_one.cmx
+  fuchsia-pkg://fuchsia.com/test_two#meta/test_two.cmx)F";
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
   fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
   AllowList allowlist(dirfd, filename);
-  EXPECT_TRUE(allowlist.IsAllowed("test_one"));
-  EXPECT_TRUE(allowlist.IsAllowed("test_two"));
-  EXPECT_FALSE(allowlist.IsAllowed(""));
-  EXPECT_FALSE(allowlist.IsAllowed("other"));
+  EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_one#meta/test_one.cmx"));
+  EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_two#meta/test_two.cmx"));
+  EXPECT_FALSE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_one#meta/other.cmx"));
 }
 
 TEST_F(AllowListTest, MissingFile) {
   fxl::UniqueFD dirfd(open(".", O_RDONLY));
   AllowList allowlist(dirfd, "/does/not/exist");
-  EXPECT_FALSE(allowlist.IsAllowed("test_one"));
-  EXPECT_FALSE(allowlist.IsAllowed("test_two"));
-  EXPECT_FALSE(allowlist.IsAllowed(""));
-  EXPECT_FALSE(allowlist.IsAllowed("other"));
+  EXPECT_FALSE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_one#meta/test_one.cmx"));
+  EXPECT_FALSE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_two#meta/test_two.cmx"));
 }
 
-TEST_F(AllowListTest, ParsePackageUrls) {
+TEST_F(AllowListTest, IgnoreVariantAndHash) {
   static constexpr char kFile[] = R"F(
-    fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx
-    fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx)F";
+    fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx)F";
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
   fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
   AllowList allowlist(dirfd, filename);
-  EXPECT_TRUE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx"));
-  EXPECT_TRUE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx"));
-  EXPECT_FALSE(allowlist.IsAllowed(""));
-  EXPECT_FALSE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/baz#meta/baz.cmx"));
-  EXPECT_FALSE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com"));
-  EXPECT_FALSE(allowlist.IsAllowed("fuchsia-pkg://"));
+  EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/foo/1#meta/foo.cmx"));
+  EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/foo?hash=1234#meta/foo.cmx"));
+  EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/foo/1?hash=1234#meta/foo.cmx"));
 }
 
 TEST_F(AllowListTest, WildcardAllow) {
@@ -89,34 +89,26 @@ TEST_F(AllowListTest, WildcardAllow) {
   fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
   AllowList allowlist(dirfd, filename);
-  EXPECT_TRUE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx"));
-  EXPECT_TRUE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx"));
-  EXPECT_TRUE(allowlist.IsAllowed("literally-anything-at-all"));
-  EXPECT_TRUE(allowlist.IsAllowed(""));
+  EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx"));
+  EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx"));
 }
 
-TEST_F(AllowListTest, CommentsAreOmitted) {
+TEST_F(AllowListTest, CommentsAreIgnored) {
   static constexpr char kFile[] = R"F(
-    test_one
-    # foo
-    test_two
-    #foo_bar
-    File#Name
-    FileName#)F";
+  #foo
+  fuchsia-pkg://fuchsia.com/test_one#meta/test_one.cmx
+  #bar
+  fuchsia-pkg://fuchsia.com/test_two#meta/test_two.cmx
+  #fuchsia-pkg://fuchsia.com/test_one#meta/other.cmx)F";
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
   fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
   AllowList allowlist(dirfd, filename);
-  EXPECT_TRUE(allowlist.IsAllowed("test_one"));
-  EXPECT_TRUE(allowlist.IsAllowed("test_two"));
-  EXPECT_TRUE(allowlist.IsAllowed("File#Name"));
-  EXPECT_TRUE(allowlist.IsAllowed("FileName#"));
-  EXPECT_FALSE(allowlist.IsAllowed(""));
-  EXPECT_FALSE(allowlist.IsAllowed("other"));
-  EXPECT_FALSE(allowlist.IsAllowed("# foo"));
-  EXPECT_FALSE(allowlist.IsAllowed("#foo_bar"));
+  EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_one#meta/test_one.cmx"));
+  EXPECT_TRUE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_two#meta/test_two.cmx"));
+  EXPECT_FALSE(IsAllowed(allowlist, "fuchsia-pkg://fuchsia.com/test_one#meta/other.cmx"));
 }
 
 }  // namespace

@@ -10,6 +10,7 @@ group("appmgr_policy_eng") {
     ":appmgr_deprecated_ambient_replace_as_executable_allowlist_eng",
     ":appmgr_deprecated_shell_allowlist_eng",
     ":appmgr_global_data_allowlist_eng",
+    ":appmgr_hub_allowlist_eng",
     ":appmgr_package_cache_allowlist_eng",
     ":appmgr_package_resolver_allowlist_eng",
     ":appmgr_pkgfs_versions_allowlist_eng",
@@ -17,6 +18,12 @@ group("appmgr_policy_eng") {
     ":appmgr_root_resource_allowlist_eng",
     "//build/validate:non_production_tag",
   ]
+}
+
+config_data("appmgr_hub_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "hub_allowlist_eng.txt" ]
+  outputs = [ "allowlist/hub.txt" ]
 }
 
 config_data("appmgr_package_resolver_allowlist_eng") {

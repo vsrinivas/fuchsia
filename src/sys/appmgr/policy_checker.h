@@ -33,22 +33,24 @@ class PolicyChecker final {
   // Returns a Policy object if the check was successful else no policy could
   // be set due to a policy being violated. If nullopt is returned the
   // component should not be launched.
-  std::optional<SecurityPolicy> Check(const SandboxMetadata& sandbox, const FuchsiaPkgUrl& fp);
+  std::optional<SecurityPolicy> Check(const SandboxMetadata& sandbox, const FuchsiaPkgUrl& pkg_url);
 
  private:
   fxl::UniqueFD config_;
 
-  bool CheckDeprecatedShell(std::string ns_id);
-  bool CheckDeprecatedAmbientReplaceAsExecutable(std::string ns_id);
-  bool CheckComponentEventProvider(std::string ns_id);
-  bool CheckPackageResolver(std::string ns_id);
-  bool CheckPackageCache(std::string ns_id);
-  bool CheckPkgFsVersions(std::string ns_id);
-  bool CheckRootJob(std::string ns_id);
-  bool CheckRootResource(std::string ns_id);
+  bool CheckDeprecatedShell(const FuchsiaPkgUrl& pkg_url);
+  bool CheckDeprecatedAmbientReplaceAsExecutable(const FuchsiaPkgUrl& pkg_url);
+  bool CheckComponentEventProvider(const FuchsiaPkgUrl& pkg_url);
+  bool CheckHub(const FuchsiaPkgUrl& pkg_url);
+  bool CheckPackageResolver(const FuchsiaPkgUrl& pkg_url);
+  bool CheckPackageCache(const FuchsiaPkgUrl& pkg_url);
+  bool CheckPkgFsVersions(const FuchsiaPkgUrl& pkg_url);
+  bool CheckRootJob(const FuchsiaPkgUrl& pkg_url);
+  bool CheckRootResource(const FuchsiaPkgUrl& pkg_url);
 
   FRIEND_TEST(PolicyCheckerTest, ReplaceAsExecPolicyPresent);
   FRIEND_TEST(PolicyCheckerTest, ReplaceAsExecPolicyAbsent);
+  FRIEND_TEST(PolicyCheckerTest, HubPolicy);
   FRIEND_TEST(PolicyCheckerTest, PackageResolverPolicy);
   FRIEND_TEST(PolicyCheckerTest, PackageCachePolicy);
   FRIEND_TEST(PolicyCheckerTest, PkgFsVersionsPolicy);

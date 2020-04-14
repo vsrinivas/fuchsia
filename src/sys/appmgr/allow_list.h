@@ -6,10 +6,11 @@
 #define SRC_SYS_APPMGR_ALLOW_LIST_H_
 
 #include <string>
-#include <unordered_set>
+#include <vector>
 
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
 
@@ -18,16 +19,21 @@ class AllowList {
  public:
   // Parses the given file as an allowlist.
   //
-  // The file should consist of Component URLs, one per line.
+  // The file should consist of bare strings or component URLs, one per line. May contain comments,
+  // starting with `#`.
+  //
+  // Wildcards are supported for matching the resource path (at most one).
+  //
   // No validation is done on the format of the file.
   explicit AllowList(const fxl::UniqueFD& dir, const std::string& file_path);
-
-  bool IsAllowed(const std::string& url) const {
-    return allow_all_ || internal_set_.find(url) != internal_set_.end();
-  }
+  // Returns true if |url| is allowed according to the allowlist. If |url| contains a variant or
+  // hash, they are ignored for the purposes of matching.
+  bool IsAllowed(const FuchsiaPkgUrl& url) const;
 
  private:
-  std::unordered_set<std::string> internal_set_;
+  static bool IsMatch(const std::string& allowlist_item, const FuchsiaPkgUrl& in_url);
+
+  std::vector<std::string> list_;
   bool allow_all_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AllowList);

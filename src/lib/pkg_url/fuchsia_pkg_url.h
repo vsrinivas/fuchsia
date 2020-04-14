@@ -14,8 +14,8 @@ namespace component {
 class FuchsiaPkgUrl {
  public:
   FuchsiaPkgUrl() = default;
-  FuchsiaPkgUrl(FuchsiaPkgUrl&) = default;
-  FuchsiaPkgUrl& operator=(FuchsiaPkgUrl&) = default;
+  FuchsiaPkgUrl(const FuchsiaPkgUrl&) = default;
+  FuchsiaPkgUrl& operator=(const FuchsiaPkgUrl&) = default;
   FuchsiaPkgUrl(FuchsiaPkgUrl&&) = default;
   FuchsiaPkgUrl& operator=(FuchsiaPkgUrl&&) = default;
 
@@ -27,8 +27,8 @@ class FuchsiaPkgUrl {
 
   bool Parse(const std::string& url);
 
-  // Serializes this url without a variant or hash included
-  std::string WithoutVariantAndHash() const;
+  bool operator==(const FuchsiaPkgUrl&) const;
+  bool operator!=(const FuchsiaPkgUrl& rhs) const { return !(*this == rhs); }
 
   const std::string& host_name() const { return host_name_; }
   const std::string& package_name() const { return package_name_; }

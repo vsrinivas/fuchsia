@@ -4,6 +4,8 @@
 
 #include "src/sys/appmgr/allow_list.h"
 
+#include <algorithm>
+
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/split_string.h"
 
@@ -29,9 +31,35 @@ AllowList::AllowList(const fxl::UniqueFD& dir, const std::string& path) : allow_
 
     // Skip over comments.
     if (line.rfind("#", 0) != 0) {
-      internal_set_.insert(std::move(line));
+      list_.push_back(std::move(line));
     }
   }
+}
+
+bool AllowList::IsAllowed(const FuchsiaPkgUrl& in_url) const {
+  if (allow_all_) {
+    return true;
+  }
+  for (const auto& item : list_) {
+    if (IsMatch(item, in_url)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// static
+bool AllowList::IsMatch(const std::string& allowlist_item, const FuchsiaPkgUrl& in_url) {
+  FuchsiaPkgUrl allowlist_url;
+  if (!allowlist_url.Parse(allowlist_item)) {
+    // Not a valid fuchsia-pkg URL, skip.
+    return false;
+  }
+
+  // Do not check variant or hash.
+  return (allowlist_url.host_name() == in_url.host_name() &&
+          allowlist_url.package_name() == in_url.package_name() &&
+          allowlist_url.resource_path() == in_url.resource_path());
 }
 
 }  // namespace component

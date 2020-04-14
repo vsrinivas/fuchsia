@@ -85,6 +85,10 @@ test_package("components_binary_tests") {
       dest = "echo_deprecated_shell.cmx"
     },
     {
+      path = rebase_path("meta/echo_hub.cmx")
+      dest = "echo_hub.cmx"
+    },
+    {
       path = rebase_path("meta/echo2.cmx")
       dest = "echo2.cmx"
     },

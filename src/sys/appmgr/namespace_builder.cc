@@ -171,7 +171,8 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
 
   if (sandbox.HasFeature("global-data")) {
     AllowList global_data_allowlist(appmgr_config_dir_, kGlobalDataAllowList);
-    if (global_data_allowlist.IsAllowed(ns_id)) {
+    FuchsiaPkgUrl pkg_url;
+    if (pkg_url.Parse(ns_id) && global_data_allowlist.IsAllowed(pkg_url)) {
       PushDirectoryFromPathAsWithPermissions("/data", "/global_data",
                                              O_DIRECTORY | O_RDONLY | O_ADMIN);
       PushDirectoryFromPathAsWithPermissions("/tmp", "/global_tmp",
