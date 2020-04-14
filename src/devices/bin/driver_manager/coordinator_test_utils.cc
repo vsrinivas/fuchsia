@@ -42,7 +42,9 @@ void InitializeCoordinator(Coordinator* coordinator) {
   // Initialize devfs.
   devfs_init(coordinator->root_device(), coordinator->dispatcher());
   status = devfs_publish(coordinator->root_device(), coordinator->test_device());
+  ASSERT_OK(status);
   status = devfs_publish(coordinator->root_device(), coordinator->sys_device());
   ASSERT_OK(status);
+  devfs_connect_diagnostics(coordinator->inspect_manager().diagnostics_channel());
   coordinator->set_running(true);
 }

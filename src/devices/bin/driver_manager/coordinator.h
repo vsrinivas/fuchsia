@@ -33,6 +33,7 @@
 #include "fuchsia/device/manager/llcpp/fidl.h"
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
 #include "init_task.h"
+#include "inspect.h"
 #include "metadata.h"
 #include "resume_task.h"
 #include "suspend_task.h"
@@ -330,6 +331,8 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   void ReleaseDevhost(Devhost* dh);
 
+  InspectManager& inspect_manager() { return inspect_manager_; }
+
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
 
@@ -369,6 +372,8 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   SuspendContext suspend_context_ = {};
   ResumeContext resume_context_;
+
+  InspectManager inspect_manager_;
 
   // Power state control interface
   void Suspend(

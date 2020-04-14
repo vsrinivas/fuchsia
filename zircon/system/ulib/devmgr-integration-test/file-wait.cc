@@ -45,7 +45,8 @@ namespace {
 // using the full_path. This is a workaround to deal with the fact that devhosts
 // do not implement open_at.
 zx_status_t WaitForFile2(const fbl::unique_fd& rootdir, const fbl::unique_fd& dir,
-                         const char* full_path, const char* file, bool last, fbl::unique_fd* out) {
+                         const char* full_path, const char* file, bool last, bool readonly,
+                         fbl::unique_fd* out) {
   auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
     auto file = reinterpret_cast<const char*>(cookie);
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -63,6 +64,9 @@ zx_status_t WaitForFile2(const fbl::unique_fd& rootdir, const fbl::unique_fd& di
     return status;
   }
   int flags = O_RDWR;
+  if (readonly) {
+    flags = O_RDONLY;
+  }
   if (!last) {
     flags = O_RDONLY | O_DIRECTORY;
   }
@@ -75,22 +79,23 @@ zx_status_t WaitForFile2(const fbl::unique_fd& rootdir, const fbl::unique_fd& di
 
 // Version of RecursiveWaitForFile that can mutate its path
 zx_status_t RecursiveWaitForFileHelper(const fbl::unique_fd& rootdir, const fbl::unique_fd& dir,
-                                       const char* full_path, char* path, fbl::unique_fd* out) {
+                                       const char* full_path, char* path, bool readonly,
+                                       fbl::unique_fd* out) {
   char* first_slash = strchr(path, '/');
   if (first_slash == nullptr) {
     // If there's no first slash, then we're just waiting for the file
     // itself to appear.
-    return WaitForFile2(rootdir, dir, full_path, path, true, out);
+    return WaitForFile2(rootdir, dir, full_path, path, true, readonly, out);
   }
   *first_slash = 0;
 
   fbl::unique_fd next_dir;
-  zx_status_t status = WaitForFile2(rootdir, dir, full_path, path, false, &next_dir);
+  zx_status_t status = WaitForFile2(rootdir, dir, full_path, path, false, readonly, &next_dir);
   if (status != ZX_OK) {
     return status;
   }
   *first_slash = '/';
-  return RecursiveWaitForFileHelper(rootdir, next_dir, full_path, first_slash + 1, out);
+  return RecursiveWaitForFileHelper(rootdir, next_dir, full_path, first_slash + 1, readonly, out);
 }
 
 }  // namespace
@@ -103,7 +108,18 @@ zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path, fb
     return ZX_ERR_INVALID_ARGS;
   }
   strcpy(path_copy, path);
-  return RecursiveWaitForFileHelper(dir, dir, path_copy, path_copy, out);
+  return RecursiveWaitForFileHelper(dir, dir, path_copy, path_copy, false, out);
+}
+
+__EXPORT
+zx_status_t RecursiveWaitForFileReadOnly(const fbl::unique_fd& dir, const char* path,
+                                         fbl::unique_fd* out) {
+  char path_copy[PATH_MAX];
+  if (strlen(path) >= sizeof(path_copy)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  strcpy(path_copy, path);
+  return RecursiveWaitForFileHelper(dir, dir, path_copy, path_copy, true, out);
 }
 
 }  // namespace devmgr_integration_test

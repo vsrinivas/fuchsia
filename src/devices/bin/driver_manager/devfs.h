@@ -31,6 +31,7 @@ void devfs_unpublish(Device* dev);
 void devfs_advertise(const fbl::RefPtr<Device>& dev);
 void devfs_advertise_modified(const fbl::RefPtr<Device>& dev);
 zx_status_t devfs_connect(const Device* dev, zx::channel client_remote);
+void devfs_connect_diagnostics(zx::unowned_channel diagnostics_channel);
 
 // This method is exposed for testing.  It walks the devfs from the given node,
 // traversing the given sub-path.

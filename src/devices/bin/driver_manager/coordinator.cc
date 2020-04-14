@@ -129,7 +129,8 @@ const char* kFragmentDriverPath = "/boot/driver/fragment.so";
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
-Coordinator::Coordinator(CoordinatorConfig config) : config_(std::move(config)) {
+Coordinator::Coordinator(CoordinatorConfig config)
+    : config_(std::move(config)), inspect_manager_(config_.dispatcher) {
   if (config_.oom_event) {
     wait_on_oom_event_.set_object(config_.oom_event.get());
     wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);

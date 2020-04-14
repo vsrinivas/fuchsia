@@ -57,6 +57,15 @@ std::unique_ptr<Devnode> class_devnode;
 
 std::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name);
 
+// Dummy node to represent dev/diagnostics directory.
+std::unique_ptr<Devnode> diagnostics_devnode;
+
+// Connection to diagnostics VFS server. Channel is owned by inspect manager.
+zx::unowned_channel diagnostics_channel;
+
+const char kDiagnosticsDirName[] = "diagnostics";
+const size_t kDiagnosticsDirLen = strlen(kDiagnosticsDirName);
+
 zx::channel g_devfs_root;
 
 }  // namespace
@@ -358,7 +367,9 @@ zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t l
       // "pure" directories (like /dev/class/$NAME) do not show up
       // if they have no children, to avoid clutter and confusion.
       // They remain openable, so they can be watched.
-      if (child.children.is_empty()) {
+      // An exception being /dev/diagnostics which is served by different VFS and
+      // should be listed even though it has no DevNode childrens.
+      if (child.children.is_empty() && child.ino != diagnostics_devnode->ino) {
         continue;
       }
     } else {
@@ -413,6 +424,21 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
                 uint32_t flags) {
   zx::channel ipc(h);
   h = ZX_HANDLE_INVALID;
+
+  // Filter requests for diagnostics path and pass it on to diagnostics vfs server.
+  if (!strncmp(path, kDiagnosticsDirName, kDiagnosticsDirLen) &&
+      (path[kDiagnosticsDirLen] == '\0' || path[kDiagnosticsDirLen] == '/')) {
+    char* dir_path = path + kDiagnosticsDirLen;
+    char current_dir[] = ".";
+    if (dir_path[0] == '/') {
+      dir_path++;
+    } else {
+      dir_path = current_dir;
+    }
+    fuchsia_io_DirectoryOpen(diagnostics_channel->get(), flags, 0, dir_path, strlen(dir_path),
+                             ipc.release());
+    return;
+  }
 
   if (!strcmp(path, ".")) {
     path = nullptr;
@@ -646,6 +672,8 @@ zx_status_t devfs_connect(const Device* dev, zx::channel client_remote) {
   return ZX_OK;
 }
 
+void devfs_connect_diagnostics(zx::unowned_channel h) { diagnostics_channel = h; }
+
 // Helper macros for |DevfsFidlHandler| which make it easier
 // avoid typing generated names.
 
@@ -818,6 +846,9 @@ void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatche
   root_devnode->ino = 1;
 
   prepopulate_protocol_dirs();
+
+  // Create dummy diagnostics devnode, so that the directory is listed.
+  diagnostics_devnode = devfs_mkdir(root_devnode.get(), "diagnostics");
 
   // TODO(teisenbe): Should this take a reference?
   root_devnode->device = device.get();

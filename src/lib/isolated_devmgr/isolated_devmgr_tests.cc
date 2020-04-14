@@ -204,5 +204,18 @@ TEST_F(DevmgrTest, ExposeDriverFromComponentNamespace) {
   EnableVirtualAudio(devfs);
 }
 
+TEST_F(DevmgrTest, DiagnosticsFiles) {
+  auto devmgr = CreateDevmgrSysdev();
+  ASSERT_TRUE(devmgr);
+
+  fbl::unique_fd fd;
+  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(devmgr->devfs_root(),
+                                                                         "diagnostics", &fd));
+  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(
+                       devmgr->devfs_root(), "diagnostics/driver_manager", &fd));
+  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(
+                       devmgr->devfs_root(), "diagnostics/driver_manager/dm.inspect", &fd));
+}
+
 }  // namespace testing
 }  // namespace isolated_devmgr
