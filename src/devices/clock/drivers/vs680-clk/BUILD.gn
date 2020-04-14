@@ -18,6 +18,7 @@ driver_module("vs680-clk") {
     "vs680-clk.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -28,7 +29,6 @@ driver_module("vs680-clk") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
-    "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
@@ -48,6 +48,7 @@ test("vs680-clk-test") {
     "vs680-clk.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -59,7 +60,6 @@ test("vs680-clk-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",

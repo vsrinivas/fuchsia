@@ -13,6 +13,7 @@ driver_module("mtk-clk") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "mtk-clk.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
     "//src/devices/lib/driver",
@@ -24,7 +25,6 @@ driver_module("mtk-clk") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",

@@ -14,12 +14,12 @@ driver_module("clock") {
   sources = [ "clock.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.clockimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.clockimpl",
   ]
 }
 

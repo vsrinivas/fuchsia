@@ -16,6 +16,7 @@ driver_module("as370-clk") {
   sources = [ "as370-clk.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -25,7 +26,6 @@ driver_module("as370-clk") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
@@ -43,6 +43,7 @@ test("as370-clk-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -53,7 +54,6 @@ test("as370-clk-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",

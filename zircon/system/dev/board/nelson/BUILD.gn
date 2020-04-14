@@ -50,6 +50,7 @@ driver_module("nelson") {
     "nelson.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.scpi",
@@ -66,7 +67,6 @@ driver_module("nelson") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.iommu",
     "//zircon/system/banjo/ddk.protocol.platform.device",
