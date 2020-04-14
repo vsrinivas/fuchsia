@@ -7,7 +7,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
-    fuchsia_component::client::{launcher, AppBuilder},
+    fuchsia_component::client::{launcher, AppBuilder, Stdio},
     fuchsia_zircon::DurationNum,
     serde_json::json,
     std::{
@@ -74,10 +74,12 @@ async fn data_stats() -> Result<(), Error> {
     });
 
     let launcher = launcher()?;
-    let archivist = AppBuilder::new(ARCHIVIST_URL)
+    let mut archivist = AppBuilder::new(ARCHIVIST_URL)
         .add_dir_to_namespace("/config/data".into(), File::open(config_path)?)?
         .add_dir_to_namespace("/data/archive".into(), File::open(archive_path)?)?
         .add_dir_to_namespace("/test_data".into(), File::open(test_data_path)?)?
+        .stdout(Stdio::MakePipe)
+        .stderr(Stdio::MakePipe)
         .spawn(&launcher)?;
     let archive_accessor = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
 
@@ -154,5 +156,18 @@ async fn data_stats() -> Result<(), Error> {
             panic!("failed to get meaningful results from reader service.")
         })
         .await;
+    archivist.kill().unwrap();
+    let output = archivist
+        .wait_with_output()
+        .on_timeout(READ_TIMEOUT_SECONDS.seconds().after_now(), || {
+            panic!("archivist did not terminate.")
+        })
+        .await
+        .unwrap();
+    assert_eq!("", String::from_utf8(output.stdout).expect("utf8 stdout"));
+    assert_eq!(
+        "[observer] INFO: Logging started.\n",
+        String::from_utf8(output.stderr).expect("utf8 stderr")
+    );
     Ok(())
 }

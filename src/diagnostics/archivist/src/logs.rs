@@ -16,6 +16,7 @@ use fuchsia_inspect as inspect;
 use futures::{
     channel::mpsc, future, lock::Mutex, sink::SinkExt, FutureExt, StreamExt, TryStreamExt,
 };
+use log::{error, warn};
 use std::sync::Arc;
 
 mod buffer;
@@ -81,8 +82,8 @@ impl LogManager {
                 .try_for_each(|log_msg| manager.ingest_message(log_msg, LogSource::Kernel).map(Ok));
 
             if let Err(e) = drain_result.await {
-                eprintln!(
-                    "ERROR: important logs may be missing from system log.\
+                error!(
+                    "important logs may be missing from system log.\
                            failed to drain kernel log: {:?}",
                     e
                 );
@@ -121,10 +122,10 @@ impl LogManager {
                     }
                 }
                 Ok(None) => {
-                    eprintln!("local realm already gave out LogConnectionListener, skipping logs")
+                    warn!("local realm already gave out LogConnectionListener, skipping logs")
                 }
                 Err(why) => {
-                    eprintln!("error retrieving LogConnectionListener from LogConnector: {:?}", why)
+                    error!("error retrieving LogConnectionListener from LogConnector: {:?}", why)
                 }
             }
         });
@@ -189,7 +190,7 @@ impl LogManager {
                     self.ingest_message(log_msg, stats::LogSource::LogSink).await;
                 }
                 Err(e) => {
-                    eprintln!("log stream errored: {:?}", e);
+                    warn!("log stream errored: {:?}", e);
                     return;
                 }
             }
@@ -201,7 +202,7 @@ impl LogManager {
         let handler = self.clone();
         fasync::spawn(async move {
             if let Err(e) = handler.handle_log_requests(stream).await {
-                eprintln!("error handling Log requests: {:?}", e);
+                warn!("error handling Log requests: {:?}", e);
             }
         });
     }
@@ -220,12 +221,12 @@ impl LogManager {
 
                 // TODO(fxb/48758) delete these methods!
                 LogRequest::Listen { log_listener, options, .. } => {
-                    eprintln!("WARNING: use of fuchsia.logger.Log.Listen. Use ListenSafe.");
+                    warn!("Use of fuchsia.logger.Log.Listen. Use ListenSafe.");
                     let listener = pretend_scary_listener_is_safe(log_listener)?;
                     (listener, options, false)
                 }
                 LogRequest::DumpLogs { log_listener, options, .. } => {
-                    eprintln!("WARNING: use of fuchsia.logger.Log.DumpLogs. Use DumpLogsSafe.");
+                    warn!("Use of fuchsia.logger.Log.DumpLogs. Use DumpLogsSafe.");
                     let listener = pretend_scary_listener_is_safe(log_listener)?;
                     (listener, options, true)
                 }
@@ -250,7 +251,7 @@ impl LogManager {
         listener.backfill(inner.log_msg_buffer.iter()).await;
 
         if !listener.is_healthy() {
-            eprintln!("listener dropped before we finished");
+            warn!("listener dropped before we finished");
             return Ok(());
         }
 

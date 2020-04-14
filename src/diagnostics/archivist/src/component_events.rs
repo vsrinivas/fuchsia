@@ -16,6 +16,7 @@ use {
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     fuchsia_zircon as zx,
     futures::{channel::mpsc, stream::BoxStream, SinkExt, StreamExt, TryStreamExt},
+    log::error,
     std::{collections::HashMap, path::PathBuf},
 };
 
@@ -180,7 +181,7 @@ impl EventListenerServer {
         fasync::spawn(async move {
             self.handle_request_stream(stream)
                 .await
-                .unwrap_or_else(|e: Error| eprintln!("error running tree server: {:?}", e));
+                .unwrap_or_else(|e: Error| error!("failed to run tree server: {:?}", e));
         });
     }
 

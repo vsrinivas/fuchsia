@@ -8,13 +8,14 @@
 
 use {
     anyhow::{Context, Error},
-    archivist_lib::{archivist, configs, diagnostics, logs},
+    archivist_lib::{archivist, configs, diagnostics, internal_logging, logs},
     argh::FromArgs,
     fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_zircon as zx,
+    log::{info, warn},
     std::path::PathBuf,
 };
 
@@ -40,12 +41,16 @@ pub struct Args {
 }
 
 fn main() -> Result<(), Error> {
+    let opt: Args = argh::from_env();
+
+    internal_logging::init(if opt.disable_klog { "observer" } else { "archivist" });
+    info!("Logging started.");
+
     let mut executor = fasync::Executor::new()?;
 
     let event_provider = connect_to_service::<ComponentEventProviderMarker>()
         .context("failed to connect to entity resolver")?;
     diagnostics::init();
-    let opt: Args = argh::from_env();
 
     let archivist_configuration: configs::Config = match configs::parse_config(&opt.config_path) {
         Ok(config) => config,

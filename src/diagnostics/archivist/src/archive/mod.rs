@@ -16,6 +16,7 @@ use {
     futures::StreamExt,
     itertools::Itertools,
     lazy_static::lazy_static,
+    log::{error, warn},
     parking_lot::{Mutex, RwLock},
     regex::Regex,
     serde::{Deserialize, Serialize},
@@ -716,7 +717,7 @@ async fn archive_event(
     let mut current_archive_size = current_group_stats.size + archived_size;
     if current_archive_size > max_archive_size_bytes {
         let dates = writer.get_archive().get_dates().unwrap_or_else(|e| {
-            eprintln!("Garbage collection failure");
+            warn!("Garbage collection failure");
             inspect_log!(log_node, event: "Failed to get dates for garbage collection",
                          reason: format!("{:?}", e));
             vec![]
@@ -724,7 +725,7 @@ async fn archive_event(
 
         for date in dates {
             let groups = writer.get_archive().get_event_file_groups(&date).unwrap_or_else(|e| {
-                eprintln!("Garbage collection failure");
+                warn!("Garbage collection failure");
                 inspect_log!(log_node, event: "Failed to get event file",
                              date: &date,
                              reason: format!("{:?}", e));
@@ -771,7 +772,7 @@ pub async fn run_archivist(
         process_event(state.clone(), event).await.unwrap_or_else(|e| {
             let mut state = state.lock();
             inspect_log!(state.log_node, event: "Failed to log event", result: format!("{:?}", e));
-            eprintln!("Failed to log event: {:?}", e);
+            error!("Failed to log event: {:?}", e);
         });
     }
 

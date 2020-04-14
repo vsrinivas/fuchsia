@@ -6,6 +6,7 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeMarker, LogListenerSafeProxy, LogMessage,
 };
+use log::error;
 use thiserror::Error;
 
 mod asbestos;
@@ -99,7 +100,7 @@ impl Listener {
             if e.is_closed() {
                 self.status = Status::Stale;
             } else {
-                eprintln!("Error calling listener: {:?}", e);
+                error!("Error calling listener: {:?}", e);
             }
         }
     }

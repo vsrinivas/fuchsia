@@ -27,6 +27,7 @@ use {
     futures::stream::{FusedStream, StreamExt},
     futures::{FutureExt, TryFutureExt, TryStreamExt},
     inspect_fidl_load as deprecated_inspect, io_util,
+    log::error,
     parking_lot::{Mutex, RwLock},
     pin_utils::pin_mut,
     selectors,
@@ -193,7 +194,7 @@ impl InspectDataCollector {
                         self.maybe_add(&entry.name, Data::File(contents));
                     }
                     ty @ _ => {
-                        eprintln!(
+                        error!(
                             "found an inspect file '{}' of unexpected type {:?}",
                             &entry.name, ty
                         );
@@ -527,15 +528,15 @@ impl ReaderServer {
                         ) {
                             Ok(filtered_hierarchy_opt) => filtered_hierarchy_opt,
                             Err(e) => {
-                                eprintln!("Archivist failed to filter a node hierarchy: {:?}", e);
+                                error!("Archivist failed to filter a node hierarchy: {:?}", e);
                                 None
                             }
                         }
                     }
                     Err(e) => {
-                        eprintln!(
-                            "Archivist failed to convert snapshot from component: {:?} to 
-hierarchy: {:?}",
+                        error!(
+                            "Archivist failed to convert snapshot from component: {:?} to \
+                             hierarchy: {:?}",
                             sanitized_moniker, e
                         );
                         None
@@ -667,7 +668,7 @@ hierarchy: {:?}",
                                         configured_selectors.as_ref().unwrap(),
                                     )
                                     .unwrap_or_else(|err| {
-                                        eprintln!(
+                                        error!(
                                         "Failed to evaluate client selectors for: {:?} Error: {:?}",
                                         relative_moniker, err
                                     );
@@ -677,7 +678,7 @@ hierarchy: {:?}",
                                 match (&matching_selectors).try_into() {
                                     Ok(hierarchy_matcher) => Some(hierarchy_matcher),
                                     Err(e) => {
-                                        eprintln!("Failed to create hierarchy matcher: {:?}", e);
+                                        error!("Failed to create hierarchy matcher: {:?}", e);
                                         None
                                     }
                                 }
@@ -738,7 +739,7 @@ hierarchy: {:?}",
                     Err(e) => {
                         // TODO(4601): Convert failed formattings into the
                         // canonical json schema, with a failure message in "data"
-                        eprintln!("parsing results from the inspect source failed: {:?}", e);
+                        error!("parsing results from the inspect source failed: {:?}", e);
                         "".to_string()
                     }
                 };
@@ -878,7 +879,7 @@ hierarchy: {:?}",
                 if stream_mode == fidl_fuchsia_diagnostics::StreamMode::Subscribe
                     || stream_mode == fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
                 {
-                    eprintln!("not yet supported");
+                    error!("not yet supported");
                 }
 
                 self.serve_terminal_batch(&mut iterator_req_stream).await?;
@@ -886,7 +887,7 @@ hierarchy: {:?}",
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| {
-                eprintln!("Error encountered running inspect stream: {:?}", e);
+                error!("Error encountered running inspect stream: {:?}", e);
             }),
         );
 

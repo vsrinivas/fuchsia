@@ -4,6 +4,7 @@
 use fidl::endpoints::ClientEnd;
 use fuchsia_async as fasync;
 use futures::TryStreamExt;
+use log::error;
 
 use fidl_fuchsia_logger::{
     LogListenerMarker, LogListenerProxy, LogListenerSafeMarker, LogListenerSafeRequest,
@@ -21,7 +22,7 @@ pub fn pretend_scary_listener_is_safe(
     fasync::spawn(async move {
         while let Ok(Some(request)) = new_requests.try_next().await {
             if let Err(why) = bridge_request(&mut old_listener, request) {
-                eprintln!("error bridging old LogListener to LogListenerSafe: {:?}", why);
+                error!("error bridging old LogListener to LogListenerSafe: {:?}", why);
                 break;
             }
         }

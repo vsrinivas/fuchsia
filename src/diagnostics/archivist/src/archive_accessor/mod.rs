@@ -12,6 +12,7 @@ use {
     },
     fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
     futures::{TryFutureExt, TryStreamExt},
+    log::{error, warn},
     parking_lot::RwLock,
     selectors,
     std::sync::Arc,
@@ -66,10 +67,10 @@ impl ArchiveAccessor {
             stream_parameters.client_selector_configuration,
         ) {
             (None, _, _) | (_, None, _) | (_, _, None) => {
-                eprintln!("Client was missing required stream parameters.");
+                warn!("Client was missing required stream parameters.");
 
                 result_stream.close_with_epitaph(zx_status::Status::INVALID_ARGS).unwrap_or_else(
-                    |e| eprintln!("Unable to write epitaph to result stream: {:?}", e),
+                    |e| error!("Unable to write epitaph to result stream: {:?}", e),
                 );
                 Ok(())
             }
@@ -85,12 +86,12 @@ impl ArchiveAccessor {
                             inspect_reader_server
                                 .stream_inspect(stream_mode, format, result_stream)
                                 .unwrap_or_else(|_| {
-                                    eprintln!("Inspect Reader session crashed.");
+                                    warn!("Inspect Reader session crashed.");
                                 });
                             Ok(())
                         }
                         Err(e) => {
-                            eprintln!(
+                            warn!(
                                 "Client provided invalid selectors to diagnostics stream: {:?}",
                                 e
                             );
@@ -98,7 +99,7 @@ impl ArchiveAccessor {
                             result_stream
                                 .close_with_epitaph(zx_status::Status::WRONG_TYPE)
                                 .unwrap_or_else(|e| {
-                                    eprintln!("Unable to write epitaph to result stream: {:?}", e)
+                                    warn!("Unable to write epitaph to result stream: {:?}", e)
                                 });
 
                             Ok(())
@@ -112,17 +113,17 @@ impl ArchiveAccessor {
                     inspect_reader_server
                         .stream_inspect(stream_mode, format, result_stream)
                         .unwrap_or_else(|_| {
-                            eprintln!("Inspect Reader session crashed.");
+                            warn!("Inspect Reader session crashed.");
                         });
                     Ok(())
                 }
                 _ => {
-                    eprintln!("Unable to process requested selector configuration.");
+                    warn!("Unable to process requested selector configuration.");
 
                     result_stream
                         .close_with_epitaph(zx_status::Status::INVALID_ARGS)
                         .unwrap_or_else(|e| {
-                            eprintln!("Unable to write epitaph to result stream: {:?}", e)
+                            warn!("Unable to write epitaph to result stream: {:?}", e)
                         });
 
                     Ok(())
@@ -147,15 +148,12 @@ impl ArchiveAccessor {
                                 self.handle_stream_inspect(result_stream, stream_parameters)?
                             }
                             None => {
-                                eprintln!("Client failed to specify a valid data type.");
+                                warn!("Client failed to specify a valid data type.");
 
                                 result_stream
                                     .close_with_epitaph(zx_status::Status::INVALID_ARGS)
                                     .unwrap_or_else(|e| {
-                                        eprintln!(
-                                            "Unable to write epitaph to result stream: {:?}",
-                                            e
-                                        )
+                                        warn!("Unable to write epitaph to result stream: {:?}", e)
                                     });
                             }
                         },
@@ -164,7 +162,7 @@ impl ArchiveAccessor {
                 Ok(())
             }
             .unwrap_or_else(|e: anyhow::Error| {
-                eprintln!("couldn't run archive accessor service: {:?}", e)
+                error!("couldn't run archive accessor service: {:?}", e)
             }),
         );
     }

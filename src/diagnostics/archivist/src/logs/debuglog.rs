@@ -11,6 +11,7 @@ use fidl_fuchsia_logger::{self, LogLevelFilter};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::stream::{unfold, Stream, TryStreamExt};
+use log::error;
 
 #[async_trait]
 pub trait DebugLog {
@@ -114,7 +115,7 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
 
     let mut contents = match String::from_utf8(buf[32..(32 + data_len)].to_vec()) {
         Err(e) => {
-            eprintln!("logger: invalid log record: {:?}", e);
+            error!("logger: invalid log record: {:?}", e);
             return None;
         }
         Ok(s) => s,

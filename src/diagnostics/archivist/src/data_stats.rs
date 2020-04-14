@@ -301,8 +301,7 @@ mod tests {
                             .expect("failed to send response");
                     }
                     r => {
-                        eprintln!("Error: Unknown request {:?}", r);
-                        return;
+                        panic!("Unknown request {:?}", r);
                     }
                 }
             }
@@ -334,8 +333,7 @@ mod tests {
                         responder.send(1, None).expect("failed to send response");
                     }
                     r => {
-                        eprintln!("Error: Unknown request {:?}", r);
-                        return;
+                        panic!("Unknown request {:?}", r);
                     }
                 }
             }
