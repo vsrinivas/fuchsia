@@ -188,8 +188,8 @@ func (t *fuchsiaSSHTester) isTimeoutError(test build.Test, err error) bool {
 func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
 	setCommand(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
 	var testErr error
-	const maxReconnectAttempts = 2
-	retry.Retry(ctx, retry.WithMaxRetries(t.connectionErrorRetryBackoff, maxReconnectAttempts), func() error {
+	const maxReconnectAttempts = 3
+	retry.Retry(ctx, retry.WithMaxAttempts(t.connectionErrorRetryBackoff, maxReconnectAttempts), func() error {
 		testErr = t.r.Run(ctx, test.Command, stdout, stderr)
 		if errors.Is(testErr, sshutil.ConnectionError) {
 			logger.Errorf(ctx, "attempting to reconnect over SSH after error: %v", testErr)

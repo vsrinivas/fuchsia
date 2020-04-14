@@ -154,7 +154,7 @@ func GetRootKeysInsecurely(repoURL string) ([]KeyConfig, error) {
 func getRepoRoot(repoURL string) (*tuf_data.Root, error) {
 	url := fmt.Sprintf("%s/%s", repoURL, rootJSON)
 	var resp *http.Response
-	b := retry.WithMaxRetries(retry.NewExponentialBackoff(backoffFloor, backoffCeiling, backoffMultiplier), 5)
+	b := retry.WithMaxAttempts(retry.NewExponentialBackoff(backoffFloor, backoffCeiling, backoffMultiplier), 5)
 	err := retry.Retry(context.Background(), b, func() error {
 		var err error
 		resp, err = http.Get(url)

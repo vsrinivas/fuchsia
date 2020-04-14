@@ -42,30 +42,31 @@ func NewConstantBackoff(d time.Duration) *ConstantBackoff {
 	return &ConstantBackoff{interval: d}
 }
 
-type maxTriesBackoff struct {
-	backOff  Backoff
-	maxTries uint64
-	numTries uint64
+type maxAttemptsBackoff struct {
+	backOff     Backoff
+	maxAttempts uint64
+	numAttempts uint64
 }
 
-func (b *maxTriesBackoff) Next() time.Duration {
-	if b.maxTries > 0 {
-		if b.maxTries <= b.numTries {
+func (b *maxAttemptsBackoff) Next() time.Duration {
+	if b.maxAttempts > 0 {
+		b.numAttempts++
+		if b.numAttempts >= b.maxAttempts {
 			return Stop
 		}
-		b.numTries++
 	}
 	return b.backOff.Next()
 }
 
-func (b *maxTriesBackoff) Reset() {
-	b.numTries = 0
+func (b *maxAttemptsBackoff) Reset() {
+	b.numAttempts = 0
 	b.backOff.Reset()
 }
 
-// WithMaxRetries wraps a back-off which stops after |max| retries.
-func WithMaxRetries(b Backoff, max uint64) Backoff {
-	return &maxTriesBackoff{backOff: b, maxTries: max}
+// WithMaxAttempts wraps a back-off which stops after |max| attempts. If the max
+// is 0, then it won't apply a maximum number attempts.
+func WithMaxAttempts(b Backoff, max uint64) Backoff {
+	return &maxAttemptsBackoff{backOff: b, maxAttempts: max}
 }
 
 type maxDurationBackoff struct {

@@ -55,7 +55,7 @@ const (
 
 	// Constants for upload retries.
 	uploadRetryBackoff = 1 * time.Second
-	maxUploadTries     = 3
+	maxUploadAttempts  = 4
 )
 
 type upCommand struct {
@@ -471,7 +471,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 			}
 
 			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
-			if err := retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(uploadRetryBackoff), maxUploadTries), func() error {
+			if err := retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(uploadRetryBackoff), maxUploadAttempts), func() error {
 				if err := dest.write(ctx, upload.Destination, upload.Source, upload.Compress); err != nil {
 					return fmt.Errorf("%s: %w", upload.Destination, err)
 				}

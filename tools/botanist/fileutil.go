@@ -19,7 +19,7 @@ import (
 // FetchAndCopyFile fetches a remote file via TFTP from a given node, and
 // writes it to an output directory.
 func FetchAndCopyFile(ctx context.Context, t tftp.Client, path, name, outDir string) error {
-	return retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 3), func() error {
+	return retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(time.Second), 3), func() error {
 		var err error
 		var reader *bytes.Reader
 		for {

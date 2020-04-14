@@ -24,16 +24,25 @@ func TestConstantBackoff(t *testing.T) {
 	}
 }
 
-func TestMaxTriesBackoff(t *testing.T) {
-	backoff := WithMaxRetries(&ZeroBackoff{}, 10)
+func TestMaxAttemptsBackoff(t *testing.T) {
+	backoff := WithMaxAttempts(&ZeroBackoff{}, 10)
 	backoff.Reset()
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 9; i++ {
 		if backoff.Next() != 0 {
-			t.Error("invalid interval")
+			t.Errorf("WithMaxAttempts stopped unexpectedly after %d attempts", i+1)
 		}
 	}
 	if backoff.Next() != Stop {
 		t.Error("did not stop")
+	}
+
+	backoff = WithMaxAttempts(&ZeroBackoff{}, 0)
+	// Three is an arbitrary number, but should be enough to validate that this
+	// doesn't stop early.
+	for i := 0; i < 3; i++ {
+		if backoff.Next() != 0 {
+			t.Error("setting maxAttempts to 0 should retry indefinitely, but stopped")
+		}
 	}
 }
 

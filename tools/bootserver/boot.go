@@ -261,7 +261,7 @@ func newNetsvcFile(name string, reader io.ReaderAt, size int64) (*netsvcFile, er
 func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 	// Attempt the whole process of sending every file over and retry on failure of any file.
 	// This behavior more closely aligns with that of the bootserver.
-	return retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 20), func() error {
+	return retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(time.Second), 21), func() error {
 		for _, f := range files {
 			// Attempt to send a file. If the server tells us we need to wait, then try
 			// again as long as it keeps telling us this. ErrShouldWait implies the server
