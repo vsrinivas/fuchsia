@@ -7,6 +7,7 @@ use bitfield::bitfield;
 use bt_a2dp as a2dp;
 use fidl_fuchsia_media::{AudioFormat, AudioUncompressedFormat, DomainFormat, PcmFormat};
 use fuchsia_audio_codec::{StreamProcessor, StreamProcessorOutputStream};
+use fuchsia_trace as trace;
 use futures::{
     io::AsyncWrite,
     stream::BoxStream,
@@ -145,7 +146,10 @@ impl Stream for EncodedStream {
                     return Poll::Ready(None);
                 }
                 Some(Err(e)) => return Poll::Ready(Some(Err(e.into()))),
-                Some(Ok(bytes)) => self.encoder_input_buffers.push_back(bytes),
+                Some(Ok(bytes)) => {
+                    trace::instant!("bt-a2dp-source", "Media:PacketReceived", trace::Scope::Thread);
+                    self.encoder_input_buffers.push_back(bytes)
+                }
             }
         }
         // Push audio into the encoder.

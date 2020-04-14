@@ -8,7 +8,8 @@
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioDeviceEnumerator",
-            "fuchsia.mediacodec.CodecFactory"
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

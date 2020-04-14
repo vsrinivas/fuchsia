@@ -22,6 +22,7 @@ use {
     },
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
+    fuchsia_trace::{self as trace},
     fuchsia_zircon as zx,
     futures::{self, select, AsyncWriteExt, StreamExt, TryStreamExt},
     parking_lot::Mutex,
@@ -365,16 +366,25 @@ async fn start_streaming(
         codec_config.rtp_frame_header().to_vec(),
     );
 
+    trace::instant!("bt-a2dp-source", "Media:Start", trace::Scope::Thread);
+
     while let Some(encoded) = encoded_stream.try_next().await? {
         if let Some(packet) =
             builder.push_frame(encoded, codec_config.pcm_frames_per_encoded_frame() as u32)?
         {
+            trace::duration_begin!("bt-a2dp-source", "Media:PacketSent");
+
             if let Err(e) = media_stream.write(&packet).await {
                 fx_log_info!("Failed sending packet to peer: {}", e);
-                return Ok(());
+                trace::duration_end!("bt-a2dp-source", "Media:PacketSent");
+                break;
             }
+
+            trace::duration_end!("bt-a2dp-source", "Media:PacketSent");
         }
     }
+
+    trace::instant!("bt-a2dp-source", "Media:Stop", trace::Scope::Thread);
     Ok(())
 }
 
@@ -393,6 +403,7 @@ async fn main() -> Result<(), Error> {
     let opts: Opt = argh::from_env();
 
     fuchsia_syslog::init_with_tags(&["a2dp-source"]).expect("Can't init logger");
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
