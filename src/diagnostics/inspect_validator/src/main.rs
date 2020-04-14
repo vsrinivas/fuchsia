@@ -41,17 +41,21 @@ struct Opt {
     #[argh(option, long = "url")]
     puppet_urls: Vec<String>,
 
-    /// quiet has no effect.
+    /// has no effect.
     #[argh(switch, long = "quiet")]
     quiet: bool,
 
     #[argh(switch, long = "verbose")]
-    /// verbose has no effect.
+    /// has no effect.
     verbose: bool,
 
     #[argh(switch, long = "version", short = 'v')]
-    /// version prints the version information and exits.
+    /// prints the version information and exits.
     version: bool,
+
+    #[argh(switch)]
+    /// tests that the Archive FIDL service output matches the expected values.
+    test_archive: bool,
 }
 
 #[derive(Debug)]
@@ -98,12 +102,14 @@ impl FromStr for DiffType {
 async fn main() -> Result<(), Error> {
     init_syslog();
     let mut results = results::Results::new();
-    let Opt { output, puppet_urls, version, diff_type, .. } = argh::from_env();
+    let Opt { output, puppet_urls, version, diff_type, test_archive, .. } = argh::from_env();
     if version {
-        println!("Inspect Validator version 0.8. See README.md for more information.");
+        println!("Inspect Validator version 0.9. See README.md for more information.");
         return Ok(());
     }
     results.diff_type = diff_type;
+    results.test_archive = test_archive;
+
     run_all_puppets(puppet_urls, &mut results).await;
     match output {
         OutputType::Text => results.print_pretty_text(),

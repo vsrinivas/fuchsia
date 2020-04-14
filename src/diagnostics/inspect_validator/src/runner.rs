@@ -7,9 +7,11 @@ use {
         data::Data,
         puppet, results,
         trials::{self, Step},
-        validate, DiffType,
+        validate,
     },
     anyhow::{bail, Error},
+    fidl_test_inspect_validate::TestResult,
+    fuchsia_inspect::testing::{ComponentSelector, InspectDataFetcher},
 };
 
 pub async fn run_all_trials(url: &str, results: &mut results::Results) {
@@ -17,11 +19,37 @@ pub async fn run_all_trials(url: &str, results: &mut results::Results) {
     for trial in trial_set.iter_mut() {
         match puppet::Puppet::connect(url).await {
             Ok(mut puppet) => {
+                if results.test_archive {
+                    match puppet.publish().await {
+                        Ok(TestResult::Ok) => {}
+                        Ok(result) => {
+                            results.error(format!("Publish reported {:?}", result));
+                            return;
+                        }
+                        Err(e) => {
+                            results.error(format!("Publish error: {:?}", e));
+                            return;
+                        }
+                    }
+                }
                 let mut data = Data::new();
                 if let Err(e) = run_trial(&mut puppet, &mut data, trial, results).await {
                     results.error(format!("Running trial {}, got failure:\n{}", trial.name, e));
                 } else {
                     results.log(format!("Trial {} succeeds", trial.name));
+                }
+                if results.test_archive {
+                    match puppet.unpublish().await {
+                        Ok(TestResult::Ok) => {}
+                        Ok(result) => {
+                            results.error(format!("Unpublish reported {:?}", result));
+                            return;
+                        }
+                        Err(e) => {
+                            results.error(format!("Unpublish error: {:?}", e));
+                            return;
+                        }
+                    }
                 }
             }
             Err(e) => {
@@ -42,8 +70,7 @@ async fn run_trial(
 ) -> Result<(), Error> {
     let trial_name = format!("{}:{}", puppet.name(), trial.name);
     // We have to give explicit type here because compiler can't deduce it from None option value.
-    try_compare::<validate::Action>(data, puppet, &trial_name, -1, None, -1, results.diff_type)
-        .await?;
+    try_compare::<validate::Action>(data, puppet, &trial_name, -1, None, -1, &results).await?;
     for (step_index, step) in trial.steps.iter_mut().enumerate() {
         match step {
             Step::Actions(actions) => {
@@ -111,7 +138,7 @@ async fn run_actions(
             step_index as i32,
             Some(action),
             action_number as i32,
-            results.diff_type,
+            &results,
         )
         .await?;
     }
@@ -168,7 +195,7 @@ async fn run_lazy_actions(
             step_index as i32,
             Some(action),
             action_number as i32,
-            results.diff_type,
+            &results,
         )
         .await?;
     }
@@ -182,7 +209,7 @@ async fn try_compare<ActionType: std::fmt::Debug>(
     step_index: i32,
     action: Option<&ActionType>,
     action_number: i32,
-    diff_type: DiffType,
+    results: &results::Results,
 ) -> Result<(), Error> {
     match puppet.read_data().await {
         Err(e) => {
@@ -196,7 +223,7 @@ async fn try_compare<ActionType: std::fmt::Debug>(
             );
         }
         Ok(puppet_data) => {
-            if let Err(e) = data.compare(&puppet_data, diff_type) {
+            if let Err(e) = data.compare(&puppet_data, results.diff_type) {
                 bail!(
                     "Compare error in trial {}, step {}, action {}:\n{:?}:\n{} ",
                     trial_name,
@@ -206,6 +233,21 @@ async fn try_compare<ActionType: std::fmt::Debug>(
                     e
                 );
             }
+        }
+    }
+    if results.test_archive {
+        if !data.is_empty() {
+            assert_ne!(
+                0,
+                InspectDataFetcher::new()
+                    .add_selector(ComponentSelector::new(vec![
+                        puppet.environment_name().to_string(),
+                        puppet.component_name(),
+                    ]))
+                    .get()
+                    .await?
+                    .len()
+            );
         }
     }
     Ok(())

@@ -253,6 +253,17 @@ protocol Validate {
     [Transitional]
     InitializeTree(InitializationParams params) -> (inspect.Tree? tree, TestResult result);
 
+    /// Instruct the puppet to expose its current data in its out/diagnostics directory.
+    ///
+    /// Note: It is an error for more than one Validate connection to
+    /// Publish at once. Unpublish must be called to cleanup.
+    [Transitional]
+    Publish() -> (TestResult result);
+
+    /// Instruct the puppet to unpublish any data it currently has present in out/diagnostics.
+    [Transitional]
+    Unpublish() -> (TestResult result);
+
     /// Modifies the contents of the VMO.
     Act(Action action) -> (TestResult result);
 

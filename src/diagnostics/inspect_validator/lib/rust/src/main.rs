@@ -11,17 +11,29 @@
 use fuchsia_inspect::Property as UsablePropertyTrait;
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::create_request_stream,
+    fidl::endpoints::{create_request_stream, DiscoverableService},
     fidl_fuchsia_inspect::TreeMarker,
+    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_test_inspect_validate::*,
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::*,
     fuchsia_syslog as syslog,
     fuchsia_zircon::HandleBased,
     futures::prelude::*,
     log::*,
     std::collections::HashMap,
+    std::sync::Arc,
+    vfs::{
+        directory::{
+            entry::DirectoryEntry,
+            entry_container::DirectlyMutable,
+            mutable::simple::{simple, Simple},
+        },
+        execution_scope::ExecutionScope,
+        path::Path,
+        service::host,
+    },
 };
 
 #[derive(Debug)]
@@ -53,6 +65,51 @@ struct Actor {
     nodes: HashMap<u32, Node>,
     properties: HashMap<u32, Property>,
     lazy_children: HashMap<u32, LazyNode>,
+}
+
+/// Handles publishing and unpublishing an inspect tree.
+struct Publisher {
+    inspector: Option<Inspector>,
+    dir: Arc<Simple>,
+}
+
+impl Publisher {
+    fn new(dir: Arc<Simple>) -> Self {
+        Self { inspector: None, dir }
+    }
+
+    fn publish(&mut self, inspector: Inspector) {
+        self.inspector = Some(inspector.clone());
+
+        self.dir
+            .clone()
+            .add_entry(
+                TreeMarker::SERVICE_NAME,
+                host(move |stream| {
+                    let inspector_clone = inspector.clone();
+                    async move {
+                        service::handle_request_stream(inspector_clone, stream)
+                            .await
+                            .expect("failed to run server");
+                    }
+                    .boxed()
+                }),
+            )
+            .expect("add entry");
+    }
+
+    fn unpublish(&mut self) {
+        if self.inspector.is_some() {
+            self.dir.clone().remove_entry(TreeMarker::SERVICE_NAME).expect("remove entry");
+        }
+        self.inspector = None;
+    }
+}
+
+impl Drop for Publisher {
+    fn drop(&mut self) {
+        self.unpublish();
+    }
 }
 
 impl Actor {
@@ -441,7 +498,10 @@ fn new_inspector(params: &InitializationParams) -> Inspector {
     }
 }
 
-async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Error> {
+async fn run_driver_service(
+    mut stream: ValidateRequestStream,
+    mut publisher: Publisher,
+) -> Result<(), Error> {
     let mut actor_maybe: Option<Actor> = None;
     while let Some(event) = stream.try_next().await? {
         match event {
@@ -494,6 +554,19 @@ async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Err
                 };
                 responder.send(result)?;
             }
+            ValidateRequest::Publish { responder } => match &actor_maybe {
+                Some(ref actor) => {
+                    publisher.publish(actor.inspector.clone());
+                    responder.send(TestResult::Ok)?;
+                }
+                None => {
+                    responder.send(TestResult::Illegal)?;
+                }
+            },
+            ValidateRequest::Unpublish { responder } => {
+                publisher.unpublish();
+                responder.send(TestResult::Ok)?;
+            }
         }
     }
     Ok(())
@@ -504,6 +577,24 @@ enum IncomingService {
     // ... more services here
 }
 
+fn make_diagnostics_dir<T: ServiceObjTrait>(fs: &mut ServiceFs<T>) -> Arc<Simple> {
+    let (proxy, server) =
+        fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory marker");
+    let dir = simple();
+    let server_end = server.into_channel().into();
+    let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+    dir.clone().open(
+        scope,
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        0,
+        Path::empty(),
+        server_end,
+    );
+    fs.add_remote("diagnostics", proxy);
+
+    dir
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&[]).expect("should not fail");
@@ -512,11 +603,15 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Validate);
 
+    let dir = make_diagnostics_dir(&mut fs);
+
     fs.take_and_serve_directory_handle()?;
 
-    const MAX_CONCURRENT: usize = 1;
+    const MAX_CONCURRENT: usize = 4;
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::Validate(stream)| {
-        run_driver_service(stream).unwrap_or_else(|e| error!("ERROR in puppet's main: {:?}", e))
+        info!("got connection");
+        run_driver_service(stream, Publisher::new(dir.clone()))
+            .unwrap_or_else(|e| error!("ERROR in puppet's main: {:?}", e))
     });
 
     fut.await;

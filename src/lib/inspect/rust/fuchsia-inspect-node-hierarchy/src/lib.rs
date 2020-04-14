@@ -146,6 +146,14 @@ impl NodeHierarchy {
         }
     }
 
+    /// Add a child to this NodeHierarchy.
+    ///
+    /// Note: It is possible to create multiple children with the same name using this method, but
+    /// readers may not support such a case.
+    pub fn add_child(&mut self, insert: NodeHierarchy) {
+        self.children.push(insert);
+    }
+
     /// Creates and returns a new Node whose location in a hierarchy
     /// rooted at `self` is defined by node_path.
     ///

@@ -15,6 +15,7 @@ pub struct Results {
     failed: bool,
     metrics: Vec<TrialMetrics>,
     pub diff_type: DiffType,
+    pub test_archive: bool,
 }
 
 pub trait Summary {
@@ -113,6 +114,7 @@ impl Results {
             unimplemented: HashSet::new(),
             failed: false,
             diff_type: DiffType::Full,
+            test_archive: false,
         }
     }
 

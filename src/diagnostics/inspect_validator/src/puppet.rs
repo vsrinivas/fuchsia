@@ -8,14 +8,24 @@ use {
         metrics::Metrics,
     },
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_inspect as fidl_inspect, fidl_test_inspect_validate as validate,
+    fidl_fuchsia_inspect as fidl_inspect,
+    fidl_fuchsia_sys::{EnvironmentControllerProxy, EnvironmentMarker, EnvironmentOptions},
+    fidl_test_inspect_validate as validate,
     fuchsia_component::client as fclient,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{self as zx, Vmo},
+    std::sync::atomic::{AtomicU64, Ordering},
     std::{convert::TryFrom, path::Path, str::FromStr},
 };
 
 pub const VMO_SIZE: u64 = 4096;
+
+/// Create a unique environment name with the given prefix.
+fn make_environment_name(prefix: impl AsRef<str>) -> String {
+    static NEXT_ENVIRONMENT_SUFFIX: AtomicU64 = AtomicU64::new(0);
+    let v = NEXT_ENVIRONMENT_SUFFIX.fetch_add(1, Ordering::Relaxed);
+    format!("{}_{}", prefix.as_ref(), v)
+}
 
 pub struct Puppet {
     vmo: Vmo,
@@ -42,8 +52,20 @@ impl Puppet {
         }
     }
 
+    pub async fn publish(&mut self) -> Result<validate::TestResult, Error> {
+        Ok(self.connection.fidl.publish().await?)
+    }
+
+    pub async fn unpublish(&mut self) -> Result<validate::TestResult, Error> {
+        Ok(self.connection.fidl.unpublish().await?)
+    }
+
     pub fn name<'a>(&'a self) -> &'a str {
         &self.name
+    }
+
+    pub fn component_name(&self) -> String {
+        format!("{}.cmx", self.name())
     }
 
     // Extracts the .cmx file basename for output to the user.
@@ -67,10 +89,18 @@ impl Puppet {
         .await
     }
 
+    /// Get the environment name the puppet was run in.
+    pub fn environment_name<'a>(&'a self) -> &'a str {
+        &self.connection.environment_name
+    }
+
     #[cfg(test)]
     pub async fn connect_local(local_fidl: validate::ValidateProxy) -> Result<Puppet, Error> {
-        Puppet::initialize_with_connection(Connection::new(local_fidl, None), "*Local*".to_owned())
-            .await
+        Puppet::initialize_with_connection(
+            Connection::new(local_fidl, None, None, "".to_owned()),
+            "*Local*".to_owned(),
+        )
+        .await
     }
 
     async fn initialize_with_connection(
@@ -104,24 +134,49 @@ struct Connection {
     // remote program doesn't go away. But we never use it once we have the
     // FIDL connection.
     _app: Option<fuchsia_component::client::App>,
+
+    // The nested environment we are starting the puppet in.
+    _env: Option<EnvironmentControllerProxy>,
+
+    // The name of the environment we started the component in.
+    pub environment_name: String,
 }
 
 impl Connection {
     // Note! In v1, the launch() and connect_to_service() functions do not return errors
     // when given a bad URL. There's no way to detect bad URLs until we actually make a
     // FIDL call that the server is supposed to serve, in initialize_vmo().
-    async fn start_and_connect(server_url: &str) -> Result<Self, Error> {
-        let launcher = fclient::launcher().context("Failed to open launcher service")?;
-        let app = fclient::launch(&launcher, server_url.to_owned(), None)
+    async fn start_and_connect(server_url: impl Into<String>) -> Result<Self, Error> {
+        let server_url = server_url.into();
+        let (new_env, new_env_server_end) = fidl::endpoints::create_proxy()?;
+        let (controller, controller_server_end) = fidl::endpoints::create_proxy()?;
+        let (launcher, launcher_server_end) = fidl::endpoints::create_proxy()?;
+
+        let env = fclient::connect_to_service::<EnvironmentMarker>()?;
+        let environment_name = make_environment_name("puppet");
+        env.create_nested_environment(
+            new_env_server_end,
+            controller_server_end,
+            &environment_name,
+            None,
+            &mut EnvironmentOptions {
+                inherit_parent_services: true,
+                use_parent_runners: false,
+                kill_on_oom: false,
+                delete_storage_on_death: false,
+            },
+        )
+        .context("creating isolated environment")?;
+
+        new_env.get_launcher(launcher_server_end).context("getting nested environment launcher")?;
+        let app = fclient::launch(&launcher, server_url.clone(), None)
             .context(format!("Failed to launch Validator puppet {}", server_url))?;
+
         let puppet_fidl = app
             .connect_to_service::<validate::ValidateMarker>()
             .context("Failed to connect to validate puppet")?;
-        Ok(Self::new(puppet_fidl, Some(app)))
-    }
 
-    fn new(fidl: validate::ValidateProxy, app: Option<fuchsia_component::client::App>) -> Self {
-        Self { fidl, root_link_channel: None, _app: app }
+        Ok(Self::new(puppet_fidl, Some(app), Some(controller), environment_name))
     }
 
     async fn fetch_link_channel(fidl: &validate::ValidateProxy) -> Option<fidl_inspect::TreeProxy> {
@@ -138,6 +193,15 @@ impl Connection {
         let tree_content = channel.get_content().await?;
         let buffer = tree_content.buffer.ok_or(format_err!("Buffer doesn't contain VMO"))?;
         Ok(buffer.vmo)
+    }
+
+    fn new(
+        fidl: validate::ValidateProxy,
+        app: Option<fuchsia_component::client::App>,
+        env: Option<EnvironmentControllerProxy>,
+        environment_name: String,
+    ) -> Self {
+        Self { fidl, root_link_channel: None, _app: app, _env: env, environment_name }
     }
 
     async fn initialize_vmo(&mut self) -> Result<Vmo, Error> {
@@ -282,6 +346,12 @@ pub(crate) mod tests {
                             responder.send(None, TestResult::Unimplemented)?;
                         }
                         ValidateRequest::ActLazy { lazy_action: _, responder } => {
+                            responder.send(TestResult::Unimplemented)?;
+                        }
+                        ValidateRequest::Publish { responder } => {
+                            responder.send(TestResult::Unimplemented)?;
+                        }
+                        ValidateRequest::Unpublish { responder } => {
                             responder.send(TestResult::Unimplemented)?;
                         }
                     }

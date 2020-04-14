@@ -11,12 +11,12 @@ use {
     anyhow::{bail, format_err, Error},
     difference,
     fuchsia_inspect::{self, format::block::ArrayFormat},
-    fuchsia_inspect_node_hierarchy::LinkNodeDisposition,
+    fuchsia_inspect_node_hierarchy::{LinkNodeDisposition, NodeHierarchy, Property as iProperty},
     num_derive::{FromPrimitive, ToPrimitive},
     std::{
         self,
         collections::{HashMap, HashSet},
-        convert::TryInto,
+        convert::{From, TryInto},
     },
 };
 
@@ -936,6 +936,11 @@ impl Data {
         }
         Ok(())
     }
+
+    /// Return true if this data has no nodes other than root.
+    pub fn is_empty(&self) -> bool {
+        return self.nodes.len() <= 1 && self.properties.len() == 0 && self.nodes.contains_key(&0);
+    }
 }
 
 // There's no enum in fuchsia_inspect::format::block which contains only
@@ -947,23 +952,196 @@ enum ArrayType {
     Double = 6,
 }
 
+impl From<NodeHierarchy> for Data {
+    fn from(hierarchy: NodeHierarchy) -> Self {
+        let mut nodes = HashMap::new();
+        let mut properties = HashMap::new();
+
+        nodes.insert(
+            0u32,
+            Node {
+                name: hierarchy.name.clone(),
+                parent: 0u32,
+                children: HashSet::new(),
+                properties: HashSet::new(),
+            },
+        );
+
+        let mut queue = vec![(0u32, &hierarchy)];
+        let mut next_id: u32 = 1;
+
+        while let Some((id, value)) = queue.pop() {
+            for ref node in value.children.iter() {
+                let child_id = next_id;
+                next_id += 1;
+                nodes.insert(
+                    child_id,
+                    Node {
+                        name: node.name.clone(),
+                        parent: id,
+                        children: HashSet::new(),
+                        properties: HashSet::new(),
+                    },
+                );
+                nodes.get_mut(&id).expect("parent must exist").children.insert(child_id);
+                queue.push((child_id, node));
+            }
+            for property in value.properties.iter() {
+                let prop_id = next_id;
+                next_id += 1;
+
+                let (name, payload) = match property.clone() {
+                    iProperty::String(n, v) => (n, Payload::String(v)),
+                    iProperty::Bytes(n, v) => (n, Payload::Bytes(v)),
+                    iProperty::Int(n, v) => (n, Payload::Int(v)),
+                    iProperty::Uint(n, v) => (n, Payload::Uint(v)),
+                    iProperty::Double(n, v) => (n, Payload::Double(v)),
+                    iProperty::Bool(n, v) => (n, Payload::Bool(v)),
+                    iProperty::IntArray(n, v) => (n, Payload::IntArray(v.values, v.format)),
+                    iProperty::UintArray(n, v) => (n, Payload::UintArray(v.values, v.format)),
+                    iProperty::DoubleArray(n, v) => (n, Payload::DoubleArray(v.values, v.format)),
+                };
+                properties.insert(prop_id, Property { name, id: prop_id, parent: id, payload });
+                nodes.get_mut(&id).expect("parent must exist").properties.insert(prop_id);
+            }
+        }
+
+        Data {
+            nodes,
+            properties,
+            tombstone_nodes: HashSet::new(),
+            tombstone_properties: HashSet::new(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         crate::*,
         fidl_test_inspect_validate::{Number, NumberType, ROOT_ID},
-        fuchsia_inspect::format::block_type::BlockType,
+        fuchsia_inspect::{
+            format::block_type::BlockType,
+            reader::{ArrayFormat as iArrayFormat, ArrayValue as iArrayValue},
+        },
     };
 
     #[test]
     fn test_basic_data_strings() -> Result<(), Error> {
         let mut info = Data::new();
         assert_eq!(info.to_string(), " root ->\n\n\n");
+
         info.apply(&create_node!(parent: ROOT_ID, id: 1, name: "foo"))?;
         assert_eq!(info.to_string(), " root ->\n\n>  foo ->\n\n\n\n");
+
         info.apply(&delete_node!( id: 1 ))?;
         assert_eq!(info.to_string(), " root ->\n\n\n");
+
+        Ok(())
+    }
+
+    const EXPECTED_HIERARCHY: &'static str = " root ->
+>  double: Double(2.5)
+>  int: Int(-5)
+>  string: String(\"value\")
+>  uint: Uint(10)
+>  child ->
+> >  bytes: Bytes([1, 2])
+> >  grandchild ->
+> > >  double_a: DoubleArray([0.5, 1.0], Default)
+> > >  double_eh: DoubleArray([0.5, 0.5, 2.0, 1.0, 2.0, 3.0], ExponentialHistogram)
+> > >  double_lh: DoubleArray([0.5, 0.5, 1.0, 2.0, 3.0], LinearHistogram)
+> > >  int_a: IntArray([-1, -2], Default)
+> > >  int_eh: IntArray([-1, 1, 2, 1, 2, 3], ExponentialHistogram)
+> > >  int_lh: IntArray([-1, 1, 1, 2, 3], LinearHistogram)
+> > >  uint_a: UintArray([1, 2], Default)
+> > >  uint_eh: UintArray([1, 1, 2, 0, 1, 2, 3], ExponentialHistogram)
+> > >  uint_lh: UintArray([1, 1, 0, 1, 2, 3], LinearHistogram)
+
+
+
+";
+
+    #[test]
+    fn test_parse_hierarchy() -> Result<(), Error> {
+        let hierarchy = NodeHierarchy {
+            name: "root".to_string(),
+            properties: vec![
+                iProperty::String("string".to_string(), "value".to_string()),
+                iProperty::Uint("uint".to_string(), 10u64),
+                iProperty::Int("int".to_string(), -5i64),
+                iProperty::Double("double".to_string(), 2.5f64),
+            ],
+            children: vec![NodeHierarchy {
+                name: "child".to_string(),
+                properties: vec![iProperty::Bytes("bytes".to_string(), vec![1u8, 2u8])],
+                children: vec![NodeHierarchy {
+                    name: "grandchild".to_string(),
+                    properties: vec![
+                        iProperty::UintArray(
+                            "uint_a".to_string(),
+                            iArrayValue::new(vec![1, 2], iArrayFormat::Default),
+                        ),
+                        iProperty::IntArray(
+                            "int_a".to_string(),
+                            iArrayValue::new(vec![-1i64, -2i64], iArrayFormat::Default),
+                        ),
+                        iProperty::DoubleArray(
+                            "double_a".to_string(),
+                            iArrayValue::new(vec![0.5, 1.0], iArrayFormat::Default),
+                        ),
+                        iProperty::UintArray(
+                            "uint_lh".to_string(),
+                            iArrayValue::new(vec![1, 1, 0, 1, 2, 3], iArrayFormat::LinearHistogram),
+                        ),
+                        iProperty::IntArray(
+                            "int_lh".to_string(),
+                            iArrayValue::new(
+                                vec![-1i64, 1, 1, 2, 3],
+                                iArrayFormat::LinearHistogram,
+                            ),
+                        ),
+                        iProperty::DoubleArray(
+                            "double_lh".to_string(),
+                            iArrayValue::new(
+                                vec![0.5, 0.5, 1.0, 2.0, 3.0],
+                                iArrayFormat::LinearHistogram,
+                            ),
+                        ),
+                        iProperty::UintArray(
+                            "uint_eh".to_string(),
+                            iArrayValue::new(
+                                vec![1, 1, 2, 0, 1, 2, 3],
+                                iArrayFormat::ExponentialHistogram,
+                            ),
+                        ),
+                        iProperty::IntArray(
+                            "int_eh".to_string(),
+                            iArrayValue::new(
+                                vec![-1i64, 1, 2, 1, 2, 3],
+                                iArrayFormat::ExponentialHistogram,
+                            ),
+                        ),
+                        iProperty::DoubleArray(
+                            "double_eh".to_string(),
+                            iArrayValue::new(
+                                vec![0.5, 0.5, 2.0, 1.0, 2.0, 3.0],
+                                iArrayFormat::ExponentialHistogram,
+                            ),
+                        ),
+                    ],
+                    children: vec![],
+                    missing: vec![],
+                }],
+                missing: vec![],
+            }],
+            missing: vec![],
+        };
+
+        let data: Data = hierarchy.into();
+        assert_eq!(EXPECTED_HIERARCHY, data.to_string());
+
         Ok(())
     }
 
@@ -974,13 +1152,16 @@ mod tests {
         assert!(!info.to_string().contains("child ->"));
         info.apply(&create_node!(parent: ROOT_ID, id: 1, name: "child"))?;
         assert!(info.to_string().contains("child ->"));
+
         info.apply(&create_node!(parent: 1, id: 2, name: "grandchild"))?;
         assert!(
             info.to_string().contains("grandchild ->") && info.to_string().contains("child ->")
         );
+
         info.apply(
             &create_numeric_property!(parent: ROOT_ID, id: 3, name: "int-42", value: Number::IntT(-42)),
         )?;
+
         assert!(info.to_string().contains("int-42: Int(-42)")); // Make sure it can hold negative #
         info.apply(&create_string_property!(parent: 1, id: 4, name: "stringfoo", value: "foo"))?;
         assert_eq!(
@@ -988,30 +1169,39 @@ mod tests {
             " root ->\n>  int-42: Int(-42)\n>  child ->\
              \n> >  stringfoo: String(\"foo\")\n> >  grandchild ->\n\n\n\n\n"
         );
+
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::UintT(1024)))?;
         assert!(info.to_string().contains("uint: Uint(1024)"));
+
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 6, name: "frac", value: Number::DoubleT(0.5)))?;
         assert!(info.to_string().contains("frac: Double(0.5)"));
+
         info.apply(
             &create_bytes_property!(parent: ROOT_ID, id: 7, name: "bytes", value: vec!(1u8, 2u8)),
         )?;
         assert!(info.to_string().contains("bytes: Bytes([1, 2])"));
+
         info.apply(&create_array_property!(parent: ROOT_ID, id: 8, name: "i_ntarr", slots: 1, type: NumberType::Int))?;
         assert!(info.to_string().contains("i_ntarr: IntArray([0], Default)"));
+
         info.apply(&create_array_property!(parent: ROOT_ID, id: 9, name: "u_intarr", slots: 2, type: NumberType::Uint))?;
         assert!(info.to_string().contains("u_intarr: UintArray([0, 0], Default)"));
+
         info.apply(&create_array_property!(parent: ROOT_ID, id: 10, name: "dblarr", slots: 3, type: NumberType::Double))?;
         assert!(info.to_string().contains("dblarr: DoubleArray([0.0, 0.0, 0.0], Default)"));
+
         info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 11, name: "ILhist", floor: 12,
             step_size: 3, buckets: 2, type: IntT))?;
         assert!(info
             .to_string()
             .contains("ILhist: IntArray([12, 3, 0, 0, 0, 0], LinearHistogram)"));
+
         info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 12, name: "ULhist", floor: 34,
             step_size: 5, buckets: 2, type: UintT))?;
         assert!(info
             .to_string()
             .contains("ULhist: UintArray([34, 5, 0, 0, 0, 0], LinearHistogram)"));
+
         info.apply(
             &create_linear_histogram!(parent: ROOT_ID, id: 13, name: "DLhist", floor: 56.0,
             step_size: 7.0, buckets: 2, type: DoubleT),
@@ -1019,21 +1209,25 @@ mod tests {
         assert!(info
             .to_string()
             .contains("DLhist: DoubleArray([56.0, 7.0, 0.0, 0.0, 0.0, 0.0], LinearHistogram)"));
+
         info.apply(&create_exponential_histogram!(parent: ROOT_ID, id: 14, name: "IEhist",
             floor: 12, initial_step: 3, step_multiplier: 5, buckets: 2, type: IntT))?;
         assert!(info
             .to_string()
             .contains("IEhist: IntArray([12, 3, 5, 0, 0, 0, 0], ExponentialHistogram)"));
+
         info.apply(&create_exponential_histogram!(parent: ROOT_ID, id: 15, name: "UEhist",
             floor: 34, initial_step: 9, step_multiplier: 6, buckets: 2, type: UintT))?;
         assert!(info
             .to_string()
             .contains("UEhist: UintArray([34, 9, 6, 0, 0, 0, 0], ExponentialHistogram)"));
+
         info.apply(&create_exponential_histogram!(parent: ROOT_ID, id: 16, name: "DEhist",
             floor: 56.0, initial_step: 27.0, step_multiplier: 7.0, buckets: 2, type: DoubleT))?;
         assert!(info.to_string().contains(
             "DEhist: DoubleArray([56.0, 27.0, 7.0, 0.0, 0.0, 0.0, 0.0], ExponentialHistogram)"
         ));
+
         info.apply(&create_bool_property!(parent: ROOT_ID, id: 17, name: "bool", value: true))?;
         assert!(info.to_string().contains("bool: Bool(true)"));
 

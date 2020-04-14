@@ -346,19 +346,19 @@ fn basic_double() -> Trial {
     Trial {
         name: "Basic Double".into(),
         steps: vec![Step::Actions(vec![
-            create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint",
+            create_numeric_property!(parent: ROOT_ID, id: 5, name: "double",
                                      value: Number::DoubleT(1.0)),
             set_number!(id: 5, value: Number::DoubleT(std::f64::MAX)),
-            subtract_number!(id: 5, value: Number::DoubleT(std::f64::MIN/10_f64)),
+            subtract_number!(id: 5, value: Number::DoubleT(std::f64::MAX/10_f64)),
             set_number!(id: 5, value: Number::DoubleT(std::f64::MIN)),
-            add_number!(id: 5, value: Number::DoubleT(std::f64::MIN / 10_f64)),
+            add_number!(id: 5, value: Number::DoubleT(std::f64::MAX / 10_f64)),
             delete_property!(id: 5),
         ])],
     }
 }
 
 fn array_indexes_to_test() -> Vec<u64> {
-    let mut ret: Vec<u64> = (0..200).collect();
+    let mut ret: Vec<u64> = (0..10).collect();
     ret.push(1000);
     ret.push(10000);
     ret.push(std::u64::MAX);
@@ -470,7 +470,7 @@ fn double_histogram_ops_trial() -> Trial {
     for value in &[std::f64::MIN, std::f64::MAX, std::f64::MIN_POSITIVE, 0.0] {
         push_ops(&mut actions, *value);
     }
-    for value in -100_i64..1000 {
+    for value in -10_i64..100 {
         push_ops(&mut actions, value as f64 / 10.0);
     }
     actions.push(delete_property!(id: 4));

@@ -1,15 +1,24 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
+            }
+        }
+    },
     "program": {
         "args": [
             "--url",
             "fuchsia-pkg://fuchsia.com/inspect_validator_test_rust#meta/inspect_validator_rust_puppet.cmx",
             "--output",
-            "text"
+            "text",
+            "--test-archive"
         ],
         "binary": "test/validator"
     },
     "sandbox": {
         "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
