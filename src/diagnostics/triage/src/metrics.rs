@@ -36,7 +36,7 @@ pub struct MetricState<'a> {
 ///
 /// Missing means that the value could not be calculated; its String tells
 /// the reason. Array and String are not used in v0.1 but will be useful later.
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone)]
 pub enum MetricValue {
     // TODO(cphoenix): Support u64.
     Int(i64),
@@ -46,6 +46,24 @@ pub enum MetricValue {
     Array(Vec<MetricValue>),
     Missing(String),
 }
+
+impl PartialEq for MetricValue {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (MetricValue::Int(l), MetricValue::Int(r)) => l == r,
+            (MetricValue::Float(l), MetricValue::Float(r)) => l == r,
+            (MetricValue::Int(l), MetricValue::Float(r)) => *l as f64 == *r,
+            (MetricValue::Float(l), MetricValue::Int(r)) => *l == *r as f64,
+            (MetricValue::String(l), MetricValue::String(r)) => l == r,
+            (MetricValue::Bool(l), MetricValue::Bool(r)) => l == r,
+            (MetricValue::Array(l), MetricValue::Array(r)) => l == r,
+            (MetricValue::Missing(l), MetricValue::Missing(r)) => l == r,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for MetricValue {}
 
 impl Into<MetricValue> for f64 {
     fn into(self) -> MetricValue {
@@ -205,8 +223,8 @@ impl<'a> MetricState<'a> {
             Function::Less => self.apply_cmp(namespace, &|a, b| a < b, operands),
             Function::GreaterEq => self.apply_cmp(namespace, &|a, b| a >= b, operands),
             Function::LessEq => self.apply_cmp(namespace, &|a, b| a <= b, operands),
-            Function::Equals => self.apply_cmp(namespace, &|a, b| a == b, operands),
-            Function::NotEq => self.apply_cmp(namespace, &|a, b| a != b, operands),
+            Function::Equals => self.apply_metric_cmp(namespace, &|a, b| a == b, operands),
+            Function::NotEq => self.apply_metric_cmp(namespace, &|a, b| a != b, operands),
             Function::Max => self.fold_math(namespace, &|a, b| if a > b { a } else { b }, operands),
             Function::Min => self.fold_math(namespace, &|a, b| if a < b { a } else { b }, operands),
             Function::And => self.fold_bool(namespace, &|a, b| a && b, operands),
@@ -282,7 +300,7 @@ impl<'a> MetricState<'a> {
         Ok((self.evaluate(namespace, &operands[0]), self.evaluate(namespace, &operands[1])))
     }
 
-    // Applies a comparison operator to two numbers.
+    // Applies an ord operator to two numbers. (>, >=, <, <=)
     fn apply_cmp(
         &self,
         namespace: &String,
@@ -309,6 +327,34 @@ impl<'a> MetricState<'a> {
             }
         };
         MetricValue::Bool(result)
+    }
+
+    // Transitional Function to allow for string equality comparisons.
+    // This function will eventually replace the apply_cmp function once MetricValue
+    // implements the std::cmp::PartialOrd trait
+    fn apply_metric_cmp(
+        &self,
+        namespace: &String,
+        function: &dyn (Fn(&MetricValue, &MetricValue) -> bool),
+        operands: &Vec<Expression>,
+    ) -> MetricValue {
+        if operands.len() != 2 {
+            return MetricValue::Missing(format!(
+                "Bad arg list {:?} for binary operator",
+                operands
+            ));
+        }
+        let left = self.evaluate(namespace, &operands[0]);
+        let right = self.evaluate(namespace, &operands[1]);
+
+        match (&left, &right) {
+            // Check if either of the values is a `Missing` metric and pass
+            // it along. This allows us to preserve error messaging.
+            (MetricValue::Missing(_), _) | (_, MetricValue::Missing(_)) => {
+                MetricValue::Missing(format!("{:?} or {:?} not comparable", &left, &right))
+            }
+            _ => MetricValue::Bool(function(&left, &right)),
+        }
     }
 
     fn fold_bool(
@@ -366,3 +412,87 @@ impl<'a> MetricState<'a> {
 //   $ fx triage --test
 // TODO(cphoenix): Test metric names in unit tests also, since integration tests aren't
 // run automatically.
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_equality() {
+        // Equal Value, Equal Type
+        assert_eq!(MetricValue::Int(1), MetricValue::Int(1));
+        assert_eq!(MetricValue::Float(1.0), MetricValue::Float(1.0));
+        assert_eq!(MetricValue::String("A".to_string()), MetricValue::String("A".to_string()));
+        assert_eq!(MetricValue::Bool(true), MetricValue::Bool(true));
+        assert_eq!(MetricValue::Bool(false), MetricValue::Bool(false));
+        assert_eq!(
+            MetricValue::Array(vec![
+                MetricValue::Int(1),
+                MetricValue::Float(1.0),
+                MetricValue::String("A".to_string()),
+                MetricValue::Bool(true),
+            ]),
+            MetricValue::Array(vec![
+                MetricValue::Int(1),
+                MetricValue::Float(1.0),
+                MetricValue::String("A".to_string()),
+                MetricValue::Bool(true),
+            ])
+        );
+
+        assert_eq!(MetricValue::Int(1), MetricValue::Float(1.0));
+
+        // Nested array
+        assert_eq!(
+            MetricValue::Array(vec![
+                MetricValue::Int(1),
+                MetricValue::Float(1.0),
+                MetricValue::String("A".to_string()),
+                MetricValue::Bool(true),
+            ]),
+            MetricValue::Array(vec![
+                MetricValue::Int(1),
+                MetricValue::Float(1.0),
+                MetricValue::String("A".to_string()),
+                MetricValue::Bool(true),
+            ])
+        );
+
+        // Missing should never be equal
+        assert_eq!(
+            MetricValue::Missing("err".to_string()),
+            MetricValue::Missing("err".to_string())
+        );
+    }
+
+    #[test]
+    fn test_inequality() {
+        // Different Value, Equal Type
+        assert_ne!(MetricValue::Int(1), MetricValue::Int(2));
+        assert_ne!(MetricValue::Float(1.0), MetricValue::Float(2.0));
+        assert_ne!(MetricValue::String("A".to_string()), MetricValue::String("B".to_string()));
+        assert_ne!(MetricValue::Bool(true), MetricValue::Bool(false));
+        assert_ne!(
+            MetricValue::Array(vec![
+                MetricValue::Int(1),
+                MetricValue::Float(1.0),
+                MetricValue::String("A".to_string()),
+                MetricValue::Bool(true),
+            ]),
+            MetricValue::Array(vec![
+                MetricValue::Int(2),
+                MetricValue::Float(2.0),
+                MetricValue::String("B".to_string()),
+                MetricValue::Bool(false),
+            ])
+        );
+
+        // Different Type
+        assert_ne!(MetricValue::Int(2), MetricValue::Float(1.0));
+        assert_ne!(MetricValue::Int(1), MetricValue::String("A".to_string()));
+        assert_ne!(MetricValue::Int(1), MetricValue::Bool(true));
+        assert_ne!(MetricValue::Float(1.0), MetricValue::String("A".to_string()));
+        assert_ne!(MetricValue::Float(1.0), MetricValue::Bool(true));
+        assert_ne!(MetricValue::String("A".to_string()), MetricValue::Bool(true));
+    }
+}

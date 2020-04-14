@@ -7,7 +7,7 @@ use {
     anyhow::{format_err, Error},
     nom::{
         branch::alt,
-        bytes::complete::{tag, take_while, take_while_m_n},
+        bytes::complete::{tag, take_until, take_while, take_while_m_n},
         character::{complete::char, is_alphabetic, is_alphanumeric},
         combinator::{all_consuming, map, recognize},
         error::{convert_error, VerboseError},
@@ -136,6 +136,54 @@ fn number<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>>
     }
 }
 
+macro_rules! any_string {
+    ($left:expr, $mid:expr, $right:expr, $i:expr) => {
+        match delimited($left, $mid, $right)($i) {
+            Ok((remaining, text)) => {
+                let next_pos = $i.len() - remaining.len();
+                Ok((&$i[next_pos..], Expression::Value(MetricValue::String(text.to_string()))))
+            }
+            Err(e) => Err(e),
+        }
+    };
+}
+
+fn single_quote_string<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+    any_string!(char('\''), take_until("'"), char('\''), i)
+}
+
+fn escaped_single_quote_string<'a>(
+    i: &'a str,
+) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+    any_string!(tag("\'"), take_until("\'"), tag("\'"), i)
+}
+
+fn double_quote_string<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+    any_string!(char('\"'), take_until("\""), char('\"'), i)
+}
+
+fn escaped_double_quote_string<'a>(
+    i: &'a str,
+) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+    any_string!(tag("\""), take_until("\""), tag("\""), i)
+}
+
+// Returns a Value-type expression holding a String.
+//
+// Will match the following strings
+// - "'hello'"
+// - '"hello"'
+// - "\"hello\""
+// - '\'hello\''
+fn string<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+    alt((
+        single_quote_string,
+        escaped_single_quote_string,
+        double_quote_string,
+        escaped_double_quote_string,
+    ))(i)
+}
+
 macro_rules! function {
     ($tag:expr, $function:ident) => {
         (map(spaced(tag($tag)), move |_| Function::$function))
@@ -167,7 +215,7 @@ fn function_expression<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseEr
 // parenthesized expression list), or any expression contained by ( ).
 fn expression_primitive<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
     let paren_expr = delimited(char('('), terminated(expression_top, whitespace), char(')'));
-    let res = spaced(alt((paren_expr, function_expression, name, number)))(i);
+    let res = spaced(alt((paren_expr, function_expression, name, alt((number, string)))))(i);
     res
 }
 
@@ -462,6 +510,58 @@ mod test {
     }
 
     #[test]
+    fn parse_string() {
+        // needs to have quotes
+        assert!(get_parse!(string, "OK").is_err());
+
+        // needs to close its quotes
+        assert!(get_parse!(string, "'OK").is_err());
+
+        assert_eq!(
+            get_parse!(string, "'OK'"),
+            Res::Ok("", Expression::Value(MetricValue::String("OK".to_string())))
+        );
+        assert_eq!(
+            get_parse!(string, "'OK'a"),
+            Res::Ok("a", Expression::Value(MetricValue::String("OK".to_string())))
+        );
+        assert_eq!(
+            get_parse!(string, r#""OK""#),
+            Res::Ok("", Expression::Value(MetricValue::String("OK".to_string())))
+        );
+        assert_eq!(
+            get_parse!(string, "\'OK\'"),
+            Res::Ok("", Expression::Value(MetricValue::String("OK".to_string())))
+        );
+        assert_eq!(
+            get_parse!(string, "\"OK\""),
+            Res::Ok("", Expression::Value(MetricValue::String("OK".to_string())))
+        );
+
+        // can handle nested qoutes
+        assert_eq!(
+            get_parse!(string, r#"'a"b'"#),
+            Res::Ok("", Expression::Value(MetricValue::String(r#"a"b"#.to_string())))
+        );
+        assert_eq!(
+            get_parse!(string, r#""a'b""#),
+            Res::Ok("", Expression::Value(MetricValue::String("a'b".to_string())))
+        );
+
+        // can handle whitespace
+        assert_eq!(
+            get_parse!(string, "'OK OK'"),
+            Res::Ok("", Expression::Value(MetricValue::String("OK OK".to_string())))
+        );
+
+        // can parse strings that are numbers
+        assert_eq!(
+            get_parse!(string, "'123'"),
+            Res::Ok("", Expression::Value(MetricValue::String("123".to_string())))
+        );
+    }
+
+    #[test]
     fn parse_names_no_namespace() {
         assert_eq!(
             get_parse!(name_no_namespace, "abc"),
@@ -592,6 +692,17 @@ mod test {
         assert_eq!(eval!("2<2"), MetricValue::Bool(false));
         assert_eq!(eval!("2<=2"), MetricValue::Bool(true));
         assert_eq!(eval!("2==2"), MetricValue::Bool(true));
+        assert_eq!(eval!("2==2.0"), MetricValue::Bool(true));
+
+        // can do string comparison
+        assert_eq!(eval!("'a'=='a'"), MetricValue::Bool(true));
+        assert_eq!(eval!("'a'!='a'"), MetricValue::Bool(false));
+        assert_eq!(eval!("'a'!='b'"), MetricValue::Bool(true));
+
+        // check variants of string parsing
+        assert_eq!(eval!(r#""a"=="a""#), MetricValue::Bool(true));
+        assert_eq!(eval!(r#"'a'=="a""#), MetricValue::Bool(true));
+
         // There can be only one.
         assert!(parse_expression("2==2==2").is_err());
         Ok(())
