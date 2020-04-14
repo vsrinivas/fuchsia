@@ -7,6 +7,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2cimpl.h>
 #include <fbl/algorithm.h>
+#include <soc/vs680/vs680-clk.h>
 #include <soc/vs680/vs680-hw.h>
 
 #include "luis.h"
@@ -28,6 +29,10 @@ zx_status_t Luis::SdioInit() {
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x44),
   };
+  constexpr zx_bind_inst_t sd0_clock_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+      BI_MATCH_IF(EQ, BIND_CLOCK_ID, vs680::kSd0Clock),
+  };
 
   const device_fragment_part_t expander2_fragment[] = {
       {fbl::count_of(root_match), root_match},
@@ -37,10 +42,15 @@ zx_status_t Luis::SdioInit() {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(expander3_i2c_match), expander3_i2c_match},
   };
+  const device_fragment_part_t sd0_clock_fragment[] = {
+      {fbl::count_of(root_match), root_match},
+      {fbl::count_of(sd0_clock_match), sd0_clock_match},
+  };
 
   const device_fragment_t sdio_fragments[] = {
       {fbl::count_of(expander2_fragment), expander2_fragment},
       {fbl::count_of(expander3_fragment), expander3_fragment},
+      {fbl::count_of(sd0_clock_fragment), sd0_clock_fragment},
   };
 
   constexpr pbus_mmio_t sdio_mmios[] = {

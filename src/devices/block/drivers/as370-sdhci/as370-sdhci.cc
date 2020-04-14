@@ -12,6 +12,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/i2c.h>
 #include <fbl/algorithm.h>
@@ -24,10 +25,13 @@ enum {
   FRAGMENT_PDEV = 0,
   FRAGMENT_EXPANDER_2,
   FRAGMENT_EXPANDER_3,
+  FRAGMENT_SD0_CLOCK,
   FRAGMENT_COUNT,
 };
 
 constexpr uint64_t kDmaBoundaryAlignment128M = 0x0800'0000;
+
+constexpr uint64_t kVs680CoreClockFreqHz = 200'000'000;
 
 constexpr uint32_t kPerifStickyResetNAddress = 0x688;
 constexpr uint32_t kSdioPhyRstNBit = 5;
@@ -110,6 +114,13 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
     if ((status = SetExpanderGpioHigh(expander2, kExpander2SdioOutputEnablePin)) != ZX_OK ||
         (status = SetExpanderGpioHigh(expander3, kExpander3SdSlotPowerOnPin)) != ZX_OK) {
       return status;
+    }
+
+    // The SDIO core clock defaults to 100 MHz on VS680, even though the SDHCI capabilities register
+    // says it is 200 MHz. Correct it so that the bus clock can be set properly.
+    ddk::ClockProtocolClient clock(fragments[FRAGMENT_SD0_CLOCK]);
+    if (clock.is_valid() && (status = clock.SetRate(kVs680CoreClockFreqHz)) != ZX_OK) {
+      zxlogf(WARN, "%s: Failed to set core clock frequency: %d\n", __FILE__, status);
     }
   } else {
     pdev = ddk::PDev(parent);
