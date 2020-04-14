@@ -39,7 +39,7 @@ source_set("button_checker") {
     "//zircon/public/lib/fdio",
   ]
   public_deps = [
-    "//zircon/system/fidl/fuchsia-hardware-input",
+    "//sdk/fidl/fuchsia.hardware.input",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]

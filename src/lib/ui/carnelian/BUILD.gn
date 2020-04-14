@@ -17,6 +17,7 @@ rustc_library("carnelian") {
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
@@ -54,7 +55,6 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:smallvec",
     "//third_party/rust_crates:textwrap",
     "//third_party/rust_crates:vk-sys",
-    "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
@@ -231,6 +231,7 @@ rustc_binary("ink") {
   edition = "2018"
   source_root = "examples/ink.rs"
   deps = [
+    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -250,7 +251,6 @@ rustc_binary("ink") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
   ]
 }
 
