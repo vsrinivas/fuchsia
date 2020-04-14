@@ -24,7 +24,6 @@ fidl("fuchsia.modular") {
     "component/component_context.fidl",
     "config/config.fidl",
     "intent/intent.fidl",
-    "intent/intent_handler.fidl",
     "lifecycle/lifecycle.fidl",
     "module/link_path.fidl",
     "module/module_context.fidl",

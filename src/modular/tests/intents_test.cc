@@ -18,15 +18,9 @@ constexpr char kIntentAction[] = "action";
 class IntentsTest : public modular_testing::TestHarnessFixture {
  protected:
   IntentsTest()
-      : number_of_intents_handled_(0),
-        test_module_(
-            modular_testing::FakeComponent::Args{
-                .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
-                .sandbox_services = modular_testing::FakeModule::GetDefaultSandboxServices()},
-            [this](fuchsia::modular::Intent intent) {
-              latest_handled_intent_ = std::move(intent);
-              number_of_intents_handled_++;
-            }) {
+      : test_module_(modular_testing::FakeComponent::Args{
+            .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+            .sandbox_services = modular_testing::FakeModule::GetDefaultSandboxServices()}) {
     builder_.InterceptComponent(test_module_.BuildInterceptOptions());
     builder_.BuildAndRun(test_harness());
   }
@@ -52,10 +46,8 @@ class IntentsTest : public modular_testing::TestHarnessFixture {
         [started](const fuchsia::modular::StartModuleStatus) mutable { *started = true; });
   }
 
-  int number_of_intents_handled_;
   modular_testing::FakeModule test_module_;
   modular_testing::TestHarnessBuilder builder_;
-  fuchsia::modular::Intent latest_handled_intent_;
 };
 
 // Launches a single module with an intent. Checks that the module exposes an
@@ -66,52 +58,6 @@ TEST_F(IntentsTest, ModuleUsesIntentHandler) {
   modular_testing::AddModToStory(test_harness(), kStoryName, kModuleName,
                                  std::move(initial_module_intent));
   RunLoopUntil([&] { return test_module_.is_running(); });
-}
-
-// TODO(fxb/47762): Remove test with IntentHandler cleanup.
-// Launches a module that exposes an intent handler service then tests that a
-// second intent sent to an already running module notifies the intent handler of the new intent.
-TEST_F(IntentsTest, DISABLED_ReuseIntentHandler) {
-  // Launch initial module
-  auto initial_module_intent = CreateIntent(test_module_.url());
-  modular_testing::AddModToStory(test_harness(), kStoryName, kModuleName,
-                                 std::move(initial_module_intent));
-  RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
-  ASSERT_TRUE(test_module_.is_running());
-
-  // Launch second module using first module's |module_context|
-  fuchsia::modular::ModuleControllerPtr second_module_controller;
-  bool module_started{false};
-
-  AddModuleToStory(test_module_.module_context(), CreateIntent(test_module_.url()),
-                   second_module_controller.NewRequest(), &module_started);
-
-  RunLoopUntil([&] { return number_of_intents_handled_ == 2; });
-}
-
-// TODO(fxb/47762): Remove test with IntentHandler cleanup.
-// Launches a module that exposes an intent handler service then tests that a
-// second intent with different handler is not delivered to the running
-// intent handler.
-TEST_F(IntentsTest, DISABLED_DifferentHandler) {
-  // Launch initial module
-  auto initial_module_intent = CreateIntent(test_module_.url());
-  modular_testing::AddModToStory(test_harness(), kStoryName, kModuleName,
-                                 std::move(initial_module_intent));
-  RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
-  ASSERT_TRUE(test_module_.is_running());
-
-  // Launch second module using first module's |module_context|
-  fuchsia::modular::ModuleControllerPtr second_module_controller;
-  bool module_started{false};
-
-  // Use different handler
-  auto different_module_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
-  auto different_intent = CreateIntent(different_module_url);
-  AddModuleToStory(test_module_.module_context(), std::move(different_intent),
-                   second_module_controller.NewRequest(), &module_started);
-
-  RunLoopUntil([&] { return module_started; });
 }
 
 }  // namespace

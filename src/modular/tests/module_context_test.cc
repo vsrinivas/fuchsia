@@ -50,11 +50,7 @@ class TestModule : public modular_testing::FakeModule {
   explicit TestModule(std::string module_name = "")
       : modular_testing::FakeModule(
             {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(module_name),
-             .sandbox_services = modular_testing::FakeModule::GetDefaultSandboxServices()},
-            [this](fuchsia::modular::Intent intent) {
-              handled_intents.push_back(std::move(intent));
-            }) {}
-  std::vector<fuchsia::modular::Intent> handled_intents;
+             .sandbox_services = modular_testing::FakeModule::GetDefaultSandboxServices()}) {}
   fit::function<void()> on_destroy;
   fit::function<void()> on_create;
   fuchsia::modular::ModuleControllerPtr controller;
@@ -69,7 +65,6 @@ class TestModule : public modular_testing::FakeModule {
 
   // |modular_testing::FakeModule|
   void OnDestroy() override {
-    handled_intents.clear();
     if (on_destroy)
       on_destroy();
   }
@@ -101,9 +96,7 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
       /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
         ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
       });
-  RunLoopUntil(
-      [&] { return child_module1.is_running() && child_module1.handled_intents.size() == 1; });
-  EXPECT_EQ(child_module1.handled_intents.at(0).action, "action");
+  RunLoopUntil([&] { return child_module1.is_running(); });
 
   // Add the same module again but with a different Intent action.
   bool child_module1_destroyed{false};
@@ -114,8 +107,7 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
       /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
         ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
       });
-  RunLoopUntil([&] { return child_module1.handled_intents.size() == 2; });
-  EXPECT_EQ(child_module1.handled_intents.at(1).action, "action2");
+  RunLoopUntil([&] { return child_module1.is_running(); });
   // At no time should the child module have been destroyed.
   EXPECT_EQ(child_module1_destroyed, false);
 
@@ -127,10 +119,8 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
       /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
         ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
       });
-  RunLoopUntil(
-      [&] { return child_module2.is_running() && child_module2.handled_intents.size() == 1; });
+  RunLoopUntil([&] { return child_module2.is_running(); });
   EXPECT_FALSE(child_module1.is_running());
-  EXPECT_EQ(child_module2.handled_intents.at(0).action, "action");
 }
 
 // Test that ModuleContext.RemoveSelfFromStory() has the affect of shutting

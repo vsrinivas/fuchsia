@@ -140,8 +140,6 @@ void StoryControllerImpl::RunningModInfo::InitializeInspect(
 
   module_intent_action_property = mod_inspect_node.CreateString(
       modular_config::kInspectIntentAction, module_data->intent().action.value_or(""));
-  module_intent_handler_property = mod_inspect_node.CreateString(
-      modular_config::kInspectIntentHandler, module_data->intent().handler.value_or(""));
 
   std::string module_path_str = fxl::JoinStrings(module_data->module_path(), ", ");
   module_path_property =
@@ -185,7 +183,6 @@ void StoryControllerImpl::RunningModInfo::InitializeInspect(
 
 void StoryControllerImpl::RunningModInfo::ResetInspect() {
   module_intent_action_property.Set(module_data->intent().action.value_or(""));
-  module_intent_handler_property.Set(module_data->intent().handler.value_or(""));
 
   std::string param_names_str = "";
   if (module_data->intent().parameters.has_value()) {
@@ -257,9 +254,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     if (module_controller_request_.is_valid()) {
       running_mod_info->module_controller_impl->Connect(std::move(module_controller_request_));
     }
-
-    // Since the module is already running send it the new intent.
-    NotifyModuleOfIntent(*running_mod_info);
   }
 
   void Launch(FlowToken /*flow*/) {
@@ -322,8 +316,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 
     running_mod_info.InitializeInspect(story_controller_impl_);
 
-    NotifyModuleOfIntent(running_mod_info);
-
     story_controller_impl_->running_mod_infos_.emplace_back(std::move(running_mod_info));
 
     for (auto& i : story_controller_impl_->watchers_.ptrs()) {
@@ -335,21 +327,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     zx_time_t now = 0;
     zx_clock_get(ZX_CLOCK_UTC, &now);
     ReportModuleLaunchTime(module_data_.module_url(), zx::duration(now - start_time_));
-  }
-
-  // Connects to the module's intent handler and sends it the intent from
-  // |module_data_.intent|.
-  void NotifyModuleOfIntent(const RunningModInfo& running_mod_info) {
-    if (!module_data_.has_intent()) {
-      return;
-    }
-    fuchsia::modular::IntentHandlerPtr intent_handler;
-    running_mod_info.module_controller_impl->services().ConnectToService(
-        intent_handler.NewRequest());
-    fuchsia::modular::Intent intent;
-    module_data_.intent().Clone(&intent);
-
-    intent_handler->HandleIntent(std::move(intent));
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned

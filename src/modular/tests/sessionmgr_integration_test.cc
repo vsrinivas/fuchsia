@@ -68,8 +68,7 @@ TEST_F(SessionmgrIntegrationTest, StoryModsGetServicesFromSessionEnvironment) {
   // Register a fake component to be launched as a story mod
   auto fake_module_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("fake_module");
   modular_testing::FakeModule fake_module{
-      {.url = fake_module_url, .sandbox_services = {"fuchsia.intl.PropertyProvider"}},
-      [](fuchsia::modular::Intent /*unused*/) {}};
+      {.url = fake_module_url, .sandbox_services = {"fuchsia.intl.PropertyProvider"}}};
   builder.InterceptComponent(fake_module.BuildInterceptOptions());
 
   // Create the test harness and verify the session shell is up

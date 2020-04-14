@@ -21,11 +21,9 @@ namespace modular_testing {
 // builder.InterceptComponent(fake_module->BuildInterceptOptions());
 // builder.BuildAndRun(test_harness());
 // ...
-class FakeModule : public modular_testing::FakeComponent, fuchsia::modular::IntentHandler {
+class FakeModule : public modular_testing::FakeComponent {
  public:
-  // |on_intent_handled| will be invoked whenever HandleIntent() is called.
-  explicit FakeModule(modular_testing::FakeComponent::Args args,
-                      fit::function<void(fuchsia::modular::Intent)> on_intent_handled);
+  explicit FakeModule(modular_testing::FakeComponent::Args args);
 
   ~FakeModule() override;
 
@@ -53,14 +51,9 @@ class FakeModule : public modular_testing::FakeComponent, fuchsia::modular::Inte
   void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
 
  private:
-  // |IntentHandler|
-  void HandleIntent(fuchsia::modular::Intent intent) override;
-
   // A callback to be executed when HandleIntent() is invoked.
-  fit::function<void(fuchsia::modular::Intent)> on_intent_handled_;
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::ModuleContextPtr module_context_;
-  fidl::BindingSet<fuchsia::modular::IntentHandler> bindings_;
 };
 
 }  // namespace modular_testing

@@ -422,8 +422,6 @@ See below for the quick start guide in your language of choice.
 
   ```
 
-  `root_intent_handler.dart`:
-
   ```dart {highlight="lines:6"}
   import 'package:fuchsia_inspect/inspect.dart' as inspect;
   [...]

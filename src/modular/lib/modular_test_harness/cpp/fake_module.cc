@@ -9,9 +9,8 @@
 
 namespace modular_testing {
 
-FakeModule::FakeModule(modular_testing::FakeComponent::Args args,
-                       fit::function<void(fuchsia::modular::Intent)> on_intent_handled)
-    : FakeComponent(std::move(args)), on_intent_handled_(std::move(on_intent_handled)) {}
+FakeModule::FakeModule(modular_testing::FakeComponent::Args args)
+    : FakeComponent(std::move(args)) {}
 
 FakeModule::~FakeModule() = default;
 
@@ -20,8 +19,7 @@ std::unique_ptr<FakeModule> FakeModule::CreateWithDefaultOptions() {
   return std::make_unique<FakeModule>(
       modular_testing::FakeComponent::Args{
           .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
-          .sandbox_services = FakeModule::GetDefaultSandboxServices()},
-      [](fuchsia::modular::Intent) {});
+          .sandbox_services = FakeModule::GetDefaultSandboxServices()});
 }
 
 // static
@@ -33,18 +31,6 @@ std::vector<std::string> FakeModule::GetDefaultSandboxServices() {
 void FakeModule::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->svc()->Connect(component_context_.NewRequest());
   component_context()->svc()->Connect(module_context_.NewRequest());
-
-  component_context()->outgoing()->AddPublicService<fuchsia::modular::IntentHandler>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::IntentHandler> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
 }
-
-// |IntentHandler|
-void FakeModule::HandleIntent(fuchsia::modular::Intent intent) {
-  if (on_intent_handled_) {
-    on_intent_handled_(std::move(intent));
-  }
-};
 
 }  // namespace modular_testing

@@ -302,9 +302,6 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
             data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectIsEmbedded}));
   EXPECT_EQ(rapidjson::Value("EXTERNAL"), data.GetByPath({"root", kStoryId, kFakeModuleUrl,
                                                           modular_config::kInspectModuleSource}));
-  EXPECT_EQ(
-      rapidjson::Value(kFakeModuleUrl),
-      data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectIntentHandler}));
   EXPECT_EQ(rapidjson::Value("action"), data.GetByPath({"root", kStoryId, kFakeModuleUrl,
                                                         modular_config::kInspectIntentAction}));
   EXPECT_EQ(rapidjson::Value("False"),

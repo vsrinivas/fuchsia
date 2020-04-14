@@ -43,8 +43,7 @@ TEST_F(TestHarnessFixtureTest, CanLaunchModular) {
 TEST_F(TestHarnessFixtureTest, AddModToStory) {
   modular_testing::TestHarnessBuilder builder;
 
-  modular_testing::FakeModule mod({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()},
-                                  [](fuchsia::modular::Intent) {});
+  modular_testing::FakeModule mod({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
   builder.InterceptComponent(mod.BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 

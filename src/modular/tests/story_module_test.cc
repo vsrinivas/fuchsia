@@ -20,8 +20,7 @@ class StoryModuleTest : public modular_testing::TestHarnessFixture {
     test_module_ = std::make_unique<modular_testing::FakeModule>(
         modular_testing::FakeComponent::Args{
             .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
-            .sandbox_services = {"fuchsia.modular.ModuleContext"}},
-        [](fuchsia::modular::Intent intent) {});
+            .sandbox_services = {"fuchsia.modular.ModuleContext"}});
     builder_.InterceptComponent(test_module_->BuildInterceptOptions());
     builder_.BuildAndRun(test_harness());
   }

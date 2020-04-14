@@ -31,8 +31,7 @@ class IntlPropertyProviderTest : public modular_testing::TestHarnessFixture {
                     "fuchsia.modular.ModuleContext",
                     "fuchsia.settings.Intl",
                 },
-        },
-        [](fuchsia::modular::Intent) {});
+        });
     builder_.InterceptComponent(test_module_->BuildInterceptOptions());
     builder_.BuildAndRun(test_harness());
   }

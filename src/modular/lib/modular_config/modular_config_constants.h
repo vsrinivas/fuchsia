@@ -62,7 +62,6 @@ constexpr char kUseMemfsForLedger[] = "use_memfs_for_ledger";
 constexpr char kInspectModuleSource[] = "module_source";
 constexpr char kInspectIsEmbedded[] = "is_embedded";
 constexpr char kInspectIntentAction[] = "intent_action";
-constexpr char kInspectIntentHandler[] = "intent_handler";
 constexpr char kInspectIsDeleted[] = "is_deleted";
 constexpr char kInspectSurfaceRelationArrangement[] = "surface_arrangement";
 constexpr char kInspectSurfaceRelationDependency[] = "surface_dependency";

@@ -169,7 +169,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     inspect::StringProperty is_deleted_property;
     inspect::StringProperty module_source_property;
     inspect::StringProperty module_intent_action_property;
-    inspect::StringProperty module_intent_handler_property;
     inspect::StringProperty module_intent_params_property;
     inspect::StringProperty module_surface_relation_arrangement;
     inspect::StringProperty module_surface_relation_dependency;

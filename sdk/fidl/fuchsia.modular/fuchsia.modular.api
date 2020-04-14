@@ -8,7 +8,6 @@
   "fidl/fuchsia.modular/component/component_context.fidl": "141dbe0f18390e59597d61e5652b810a",
   "fidl/fuchsia.modular/config/config.fidl": "030ee886d159c111ea334a90d5cbec54",
   "fidl/fuchsia.modular/intent/intent.fidl": "d1d28af491aaea44289ebb0202e98a32",
-  "fidl/fuchsia.modular/intent/intent_handler.fidl": "c482099986a181ecc8dcf31b4d9ead0b",
   "fidl/fuchsia.modular/lifecycle/lifecycle.fidl": "7fb5700b330eaaaa4c36b972b788e68a",
   "fidl/fuchsia.modular/module/link_path.fidl": "b33e4d912ca6c9416e2fe078da9b8377",
   "fidl/fuchsia.modular/module/module_context.fidl": "12ff8b34f291c01fd18422faf1705629",
