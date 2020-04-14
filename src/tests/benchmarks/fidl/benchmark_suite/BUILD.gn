@@ -4,12 +4,14 @@ import("//tools/fidl/gidl/gidl.gni")
 
 benchmark_suite_gidl_files = [
   "//src/tests/benchmarks/fidl/benchmark_suite/byte_array.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/byte_vector.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/struct_field.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/inline.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/result.gidl",
 ]
 benchmark_suite_fidl_files = [
   "byte_array.test.fidl",
+  "byte_vector.test.fidl",
   "struct_field.test.fidl",
   "inline.test.fidl",
   "result.test.fidl",
