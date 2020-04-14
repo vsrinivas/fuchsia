@@ -1110,7 +1110,8 @@ filesystem_sizes_args += [
 ]
 
 # fvm.blob.sparse.blk creates a sprase FVM partition image containing the blob
-# partition produced by blob.blk.
+# partition produced by blob.blk and an empty data partition that will be
+# formatted on first boot.
 fvm_blob_sparse_blk_path = "$target_out_dir/fvm.blob.sparse.blk"
 rebased_fvm_blob_sparse_blk_path =
     rebase_path(fvm_blob_sparse_blk_path, root_build_dir)
@@ -1119,6 +1120,7 @@ generate_fvm("fvm.blob.sparse.blk") {
   output_name = fvm_blob_sparse_blk_path
   deps = [ ":blob.blk" ]
   args = fvm_sparse_args
+  with_empty_minfs = true
   partitions = [
     {
       type = "blob"

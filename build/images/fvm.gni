@@ -102,9 +102,7 @@ template("generate_fvm") {
                              "visibility",
                            ])
     tool = "//zircon/tools/fvm"
-    outputs = [
-      invoker.output_name,
-    ]
+    outputs = [ invoker.output_name ]
     args = rebase_path(outputs, root_build_dir)
     if (defined(invoker.args)) {
       args += invoker.args
@@ -112,6 +110,9 @@ template("generate_fvm") {
     sources = []
     if (!defined(deps)) {
       deps = []
+    }
+    if (defined(invoker.with_empty_minfs) && invoker.with_empty_minfs) {
+      args += [ "--with-empty-minfs" ]
     }
     foreach(part, invoker.partitions) {
       args += [ "--${part.type}" ]
