@@ -9,6 +9,7 @@
         ],
         "services": [
             "fuchsia.hwinfo.Device",
+            "fuchsia.logger.LogSink",
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.wlan.device.service.DeviceService"
         ]

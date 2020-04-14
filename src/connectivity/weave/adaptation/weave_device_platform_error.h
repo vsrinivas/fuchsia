@@ -12,4 +12,7 @@
 // The requested configuration value did not match the expected type.
 #define WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH _WEAVE_DEVICE_PLATFORM_ERROR(1)
 
+// The configuration file is invalid or has an unsupported format.
+#define WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_INVALID _WEAVE_DEVICE_PLATFORM_ERROR(2)
+
 #endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_WEAVE_DEVICE_PLATFORM_ERROR_H_

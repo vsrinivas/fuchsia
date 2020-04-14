@@ -1,0 +1,11 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "type": "object",
+    "properties": {
+      "test-key-bool": {
+        "description": "test-key-bool",
+        "type": "boolean"
+      }
+    },
+    "additionalProperties": false
+}

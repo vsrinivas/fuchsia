@@ -33,27 +33,26 @@ namespace adaptation {
 namespace testing {
 namespace {
 
+using nl::Weave::DeviceLayer::ConfigurationManager;
 using nl::Weave::DeviceLayer::ConfigurationMgr;
 using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
+using nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor;
 
 constexpr uint8_t kExpectedMac[] = {124, 46, 119, 21, 27, 102};
 constexpr uint16_t kExpectedPhyId = 0;
 constexpr char kExpectedPath[] = "/dev/wifi/wlanphy";
 
-// Below expected values are from test/weave_device_config_test.json and shall be
-// consistent with the file for the related tests to pass
+// Below expected values are from testdata JSON files and should be
+// consistent with the file for the related tests to pass.
 constexpr uint16_t kExpectedVendorId = 5050;
 constexpr uint16_t kExpectedProductId = 60209;
+constexpr uint64_t kExpectedDeviceId = 65535;
 constexpr char kExpectedFirmwareRevision[] = "prerelease-1";
 constexpr char kExpectedSerialNumber[] = "dummy_serial_number";
 constexpr char kExpectedPairingCode[] = "PAIRDUMMY123";
-
-constexpr uint16_t kMaxFirmwareRevisionSize =
-    nl::Weave::DeviceLayer::ConfigurationManager::kMaxFirmwareRevisionLength + 1;
-constexpr uint16_t kMaxSerialNumberSize =
-    nl::Weave::DeviceLayer::ConfigurationManager::kMaxSerialNumberLength + 1;
-constexpr uint16_t kMaxPairingCodeSize =
-    nl::Weave::DeviceLayer::ConfigurationManager::kMaxPairingCodeLength + 1;
+constexpr uint16_t kMaxFirmwareRevisionSize = ConfigurationManager::kMaxFirmwareRevisionLength + 1;
+constexpr uint16_t kMaxSerialNumberSize = ConfigurationManager::kMaxSerialNumberLength + 1;
+constexpr uint16_t kMaxPairingCodeSize = ConfigurationManager::kMaxPairingCodeLength + 1;
 
 }  // namespace
 
@@ -256,10 +255,19 @@ TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
   EXPECT_EQ(device_desc.VendorId, kExpectedVendorId);
 }
 
+TEST_F(ConfigurationManagerTest, GetDeviceId) {
+  uint64_t device_id = 0U;
+  EXPECT_EQ(cfg_mgr_->GetDeviceId(device_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(device_id, kExpectedDeviceId);
+}
+
 TEST_F(ConfigurationManagerTest, GetPairingCode) {
   char pairing_code[kMaxPairingCodeSize];
-  size_t out_len;
-  EXPECT_EQ(cfg_mgr_->GetPairingCode(pairing_code, sizeof(pairing_code), out_len), WEAVE_NO_ERROR);
+  size_t pairing_code_len;
+  EXPECT_EQ(cfg_mgr_->GetPairingCode(pairing_code, sizeof(pairing_code), pairing_code_len),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(pairing_code_len,
+            strnlen(kExpectedPairingCode, WeaveDeviceDescriptor::kMaxPairingCodeLength) + 1);
   EXPECT_STREQ(pairing_code, kExpectedPairingCode);
 }
 

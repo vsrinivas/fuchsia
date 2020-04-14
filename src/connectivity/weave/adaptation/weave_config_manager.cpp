@@ -4,10 +4,12 @@
 
 #include "weave_config_manager.h"
 
+#include "rapidjson/schema.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "src/lib/files/file.h"
 #include "src/lib/json_parser/json_parser.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/modp_b64/modp_b64.h"
 #include "weave_device_platform_error.h"
 
@@ -204,6 +206,50 @@ WEAVE_ERROR WeaveConfigManager::CommitKVPairs() {
   return files::WriteFile(config_store_path_.c_str(), output.c_str(), output.size())
              ? WEAVE_NO_ERROR
              : WEAVE_ERROR_PERSISTED_STORAGE_FAIL;
+}
+
+WEAVE_ERROR WeaveConfigManager::SetDefaultConfiguration(const std::string& path,
+                                                        const std::string& schema_path) {
+  json::JSONParser json_parser;
+  rapidjson::Document default_config;
+  rapidjson::Document schema_config;
+
+  if (!files::IsFile(path)) {
+    FX_LOGS(ERROR) << "Default configuration file not found at " << path;
+    return WEAVE_ERROR_PERSISTED_STORAGE_FAIL;
+  }
+
+  if (!files::IsFile(schema_path)) {
+    FX_LOGS(ERROR) << "Schema configuration file not found at " << schema_path;
+    return WEAVE_ERROR_PERSISTED_STORAGE_FAIL;
+  }
+
+  default_config = json_parser.ParseFromFile(path);
+  if (json_parser.HasError()) {
+    FX_LOGS(ERROR) << "Failed to parse default configuration file: " << json_parser.error_str();
+    return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_INVALID;
+  }
+
+  schema_config = json_parser.ParseFromFile(schema_path);
+  if (json_parser.HasError()) {
+    FX_LOGS(ERROR) << "Failed to parse schema configuration file: " << json_parser.error_str();
+    return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_INVALID;
+  }
+
+  rapidjson::SchemaDocument schema(schema_config);
+  rapidjson::SchemaValidator validator(schema);
+  if (!default_config.Accept(validator)) {
+    return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_INVALID;
+  }
+
+  for (rapidjson::Value::MemberIterator it = default_config.MemberBegin();
+       it != default_config.MemberEnd(); ++it) {
+    rapidjson::Value::MemberIterator config_it = config_.FindMember(it->name);
+    if (config_it == config_.MemberEnd()) {
+      config_.AddMember(it->name, it->value, config_.GetAllocator());
+    }
+  }
+  return CommitKVPairs();
 }
 
 }  // namespace Internal

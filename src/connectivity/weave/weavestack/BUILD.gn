@@ -54,10 +54,19 @@ package("pkg") {
       dest = "weavestack.cmx"
     },
   ]
+
+  resources = [
+    {
+      path = rebase_path("data/default_environment_schema.json")
+      dest = "default_environment_schema.json"
+    },
+  ]
 }
 
 config_data("config") {
   for_pkg = "weavestack"
-  sources = [ "config/device_info.json" ]
-  outputs = [ "device_info.json" ]
+  sources = [
+    "config/default_environment.json",
+    "config/device_info.json",
+  ]
 }

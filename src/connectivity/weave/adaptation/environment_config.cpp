@@ -7,6 +7,7 @@
 #include "environment_config.h"
 // clang-format on
 #include "weave_config_manager.h"
+#include "src/lib/files/file.h"
 
 namespace nl {
 namespace Weave {
@@ -37,7 +38,26 @@ const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_OperationalDeviceICAC
 const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_OperationalDevicePrivateKey = "operational-device-private-key";
 // clang-format on
 
-WEAVE_ERROR EnvironmentConfig::Init() { return WEAVE_NO_ERROR; }
+namespace {
+
+// Store path for default environment information. Keys in this file must match
+// those in EnvironmentConfig and are used as the default environment state on a
+// fresh boot or configuration reset. In general, this file should only be
+// populated if explicit control over the initial variable state is required
+// (e.g. for testing, or if the variable can be provided statically).
+constexpr char kDefaultEnvironmentStorePath[] = "/config/data/default_environment.json";
+// Accompanying schema file for the default environment store.
+constexpr char kDefaultEnvironmentStoreSchemaPath[] = "/pkg/data/default_environment_schema.json";
+}  // namespace
+
+WEAVE_ERROR EnvironmentConfig::Init() {
+  if (!files::IsFile(kDefaultEnvironmentStorePath) ||
+      !files::IsFile(kDefaultEnvironmentStoreSchemaPath)) {
+    return WEAVE_NO_ERROR;
+  }
+  return WeaveConfigMgr().SetDefaultConfiguration(kDefaultEnvironmentStorePath,
+                                                  kDefaultEnvironmentStoreSchemaPath);
+}
 
 WEAVE_ERROR EnvironmentConfig::ReadConfigValue(Key key, bool& val) {
   return WeaveConfigMgr().ReadConfigValue(key, &val);

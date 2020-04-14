@@ -27,7 +27,7 @@ test_package("adaptation_tests") {
     },
   ]
   deps = [
-    ":config_test",
+    ":config",
     ":configuration_manager_unittests",
     ":group_key_store_unittests",
     ":platform_manager_unittests",
@@ -35,8 +35,25 @@ test_package("adaptation_tests") {
   ]
   resources = [
     {
-      path = rebase_path("data/test_config.json")
-      dest = "test_config.json"
+      path = rebase_path("testdata/config.json")
+      dest = "config.json"
+    },
+    {
+      path =
+          rebase_path("../../weavestack/data/default_environment_schema.json")
+      dest = "default_environment_schema.json"
+    },
+    {
+      path = rebase_path("testdata/default_store.json")
+      dest = "default_store.json"
+    },
+    {
+      path = rebase_path("testdata/default_store_schema.json")
+      dest = "default_store_schema.json"
+    },
+    {
+      path = rebase_path("testdata/invalid_default_store.json")
+      dest = "invalid_default_store.json"
     },
   ]
 }
@@ -94,8 +111,10 @@ executable("weave_config_manager_unittests") {
   ]
 }
 
-config_data("config_test") {
+config_data("config") {
   for_pkg = "adaptation_tests"
-  sources = [ "config/device_info_test.json" ]
-  outputs = [ "device_info.json" ]
+  sources = [
+    "testdata/default_environment.json",
+    "testdata/device_info.json",
+  ]
 }

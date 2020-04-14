@@ -34,6 +34,7 @@ using Internal::WeaveConfigManager;
 //
 GroupKeyStoreImpl gGroupKeyStore;
 
+// Store path and keys for static device information.
 constexpr char kDeviceInfoStorePath[] = "/config/data/device_info.json";
 constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
@@ -66,7 +67,12 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
   FXL_CHECK(context_->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
       << "Failed to connect to weave factory data manager service.";
 
-  err = ConfigurationManagerImpl::GetAndStoreHWInfo();
+  err = EnvironmentConfig::Init();
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  err = GetAndStoreHWInfo();
   if (err != WEAVE_NO_ERROR) {
     return err;
   }

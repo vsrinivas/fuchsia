@@ -1,0 +1,18 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "type": "object",
+    "properties": {
+      "mfr-device-id": {
+        "description": "Unique Weave Device ID (hex)",
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 18446744073709551615
+      },
+      "pairing-code": {
+        "description": "Pairing Code (PASE)",
+        "type": "string",
+        "pattern": "^[A-F0-9]{8}$"
+      }
+    },
+    "additionalProperties": false
+}
