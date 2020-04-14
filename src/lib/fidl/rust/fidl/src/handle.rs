@@ -719,7 +719,11 @@ pub mod non_fuchsia_handles {
             }
             let copy_bytes = std::cmp::min(bytes.len(), st.bytes.len());
             if copy_bytes == 0 {
-                return Err(zx_status::Status::SHOULD_WAIT);
+                if open {
+                    return Err(zx_status::Status::SHOULD_WAIT);
+                } else {
+                    return Err(zx_status::Status::PEER_CLOSED);
+                }
             }
             for (i, b) in st.bytes.drain(..copy_bytes).enumerate() {
                 bytes[i] = b;
