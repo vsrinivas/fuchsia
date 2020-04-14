@@ -28,6 +28,10 @@ import (
 	"syslog"
 )
 
+// When this suffix is found in the "images" file, it indicates a typed image
+// that looks for all matches within the update package.
+const ImageTypeSuffix = "[_type]"
+
 func ConnectToPackageResolver(context *context.Context) (*pkg.PackageResolverWithCtxInterface, error) {
 	req, pxy, err := pkg.NewPackageResolverWithCtxInterfaceRequest()
 
@@ -107,7 +111,28 @@ type Packages struct {
 	URIs []string `json:"content"`
 }
 
-func ParseRequirements(updatePkg *UpdatePackage) ([]string, []string, error) {
+// An image name and type string.
+type Image struct {
+	// The base name of the image.
+	Name string
+
+	// A type string, default "".
+	Type string
+}
+
+// Returns an Image's filename in an update package.
+//
+// If a type is given, the filename in the package will be <name>_<type>, e.g.:
+//   name="foo", type="" -> "foo"
+//   name="foo", type="bar" -> "foo_bar"
+func (i *Image) Filename() string {
+	if i.Type == "" {
+		return i.Name
+	}
+	return fmt.Sprintf("%s_%s", i.Name, i.Type)
+}
+
+func ParseRequirements(updatePkg *UpdatePackage) ([]string, []Image, error) {
 	// First, figure out which packages files we should parse
 	parseJson := true
 	pkgSrc, err := updatePkg.Open("packages.json")
@@ -142,7 +167,12 @@ func ParseRequirements(updatePkg *UpdatePackage) ([]string, []string, error) {
 	}
 	defer imgSrc.Close()
 
-	imgs, err := ParseImages(imgSrc)
+	filenames, err := updatePkg.ListFiles()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list package files: %v", err)
+	}
+
+	imgs, err := ParseImages(imgSrc, filenames)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse images: %v", err)
 	}
@@ -194,16 +224,52 @@ func ParsePackagesLineFormatted(pkgSrc io.ReadCloser) ([]string, error) {
 
 }
 
-func ParseImages(imgSrc io.ReadCloser) ([]string, error) {
+// Finds all images that match |basename| in |filenames|.
+//
+// A match is one of:
+//   <basename>
+//   <basename>_<type>
+func FindTypedImages(basename string, filenames []string) []Image {
+	var images []Image
+	for _, name := range filenames {
+		if strings.HasPrefix(name, basename) {
+			suffix := name[len(basename):]
+
+			if len(suffix) == 0 {
+				// The base name alone indicates default type (empty string).
+				images = append(images, Image{Name: basename, Type: ""})
+			} else if suffix[0] == '_' {
+				images = append(images, Image{Name: basename, Type: suffix[1:]})
+			}
+		}
+	}
+
+	return images
+}
+
+// Returns a list of images derived from the "images" file.
+//
+// Untyped images (those without the [_type] suffix) are included in the return
+// slice no matter what.
+//
+// Typed images, on the other hand, will only include matches that exist in
+// |filenames|.
+func ParseImages(imgSrc io.ReadCloser, filenames []string) ([]Image, error) {
 
 	rdr := bufio.NewReader(imgSrc)
-	imgs := []string{}
+	imgs := []Image{}
 
 	for {
 		l, err := rdr.ReadString('\n')
 		s := strings.TrimSpace(l)
 		if (err == nil || err == io.EOF) && len(s) > 0 {
-			imgs = append(imgs, s)
+			if strings.HasSuffix(s, ImageTypeSuffix) {
+				// Typed image: look for all matching images in the package.
+				basename := strings.TrimSuffix(s, ImageTypeSuffix)
+				imgs = append(imgs, FindTypedImages(basename, filenames)...)
+			} else {
+				imgs = append(imgs, Image{Name: s, Type: ""})
+			}
 		}
 
 		if err != nil {
@@ -288,7 +354,7 @@ func ValidateUpdatePackage(updatePkg *UpdatePackage) error {
 	return nil
 }
 
-func ValidateImgs(imgs []string, updatePkg *UpdatePackage) error {
+func ValidateImgs(imgs []Image, updatePkg *UpdatePackage) error {
 	// Require a 'zbi' or 'zbi.signed' partition in the update package.
 	found := false
 	for _, img := range []string{"zbi", "zbi.signed"} {
@@ -305,7 +371,7 @@ func ValidateImgs(imgs []string, updatePkg *UpdatePackage) error {
 	return nil
 }
 
-func WriteImgs(dataSink *paver.DataSinkWithCtxInterface, bootManager *paver.BootManagerWithCtxInterface, imgs []string, updatePkg *UpdatePackage) error {
+func WriteImgs(dataSink *paver.DataSinkWithCtxInterface, bootManager *paver.BootManagerWithCtxInterface, imgs []Image, updatePkg *UpdatePackage) error {
 	syslog.Infof("Writing images %+v from update package", imgs)
 
 	activeConfig, err := queryActiveConfig(bootManager)
@@ -428,30 +494,30 @@ func writeAsset(svc *paver.DataSinkWithCtxInterface, configuration paver.Configu
 	return nil
 }
 
-func writeImg(svc *paver.DataSinkWithCtxInterface, img string, updatePkg *UpdatePackage, targetConfig *paver.Configuration) error {
-	f, err := updatePkg.Open(img)
+func writeImg(svc *paver.DataSinkWithCtxInterface, img Image, updatePkg *UpdatePackage, targetConfig *paver.Configuration) error {
+	f, err := updatePkg.Open(img.Filename())
 	if err != nil {
-		syslog.Warnf("img_writer: %q image not found, skipping", img)
+		syslog.Warnf("img_writer: %q image not found, skipping", img.Filename())
 		return nil
 	}
 	if fi, err := f.Stat(); err != nil || fi.Size() == 0 {
-		syslog.Warnf("img_writer: %q zero length, skipping", img)
+		syslog.Warnf("img_writer: %q zero length, skipping", img.Filename())
 		return nil
 	}
 	defer f.Close()
 
 	buffer, err := bufferForFile(f)
 	if err != nil {
-		return fmt.Errorf("img_writer: while getting vmo for %q: %q", img, err)
+		return fmt.Errorf("img_writer: while getting vmo for %q: %q", img.Filename(), err)
 	}
 	defer buffer.Vmo.Close()
 
 	var writeImg func() error
-	switch img {
+	switch img.Name {
 	case "zbi", "zbi.signed":
 		childVmo, err := buffer.Vmo.CreateChild(zx.VMOChildOptionCopyOnWrite|zx.VMOChildOptionResizable, 0, buffer.Size)
 		if err != nil {
-			return fmt.Errorf("img_writer: while getting vmo for %q: %q", img, err)
+			return fmt.Errorf("img_writer: while getting vmo for %q: %q", img.Filename(), err)
 		}
 		buffer2 := &mem.Buffer{
 			Vmo:  childVmo,
@@ -472,7 +538,7 @@ func writeImg(svc *paver.DataSinkWithCtxInterface, img string, updatePkg *Update
 				if err := writeAsset(svc, paver.ConfigurationB, paver.AssetKernel, buffer2); err != nil {
 					asZxErr, ok := err.(*zx.Error)
 					if ok && asZxErr.Status == zx.ErrNotSupported {
-						syslog.Warnf("img_writer: skipping writing %q to B: %v", img, err)
+						syslog.Warnf("img_writer: skipping writing %q to B: %v", img.Filename(), err)
 					} else {
 						return err
 					}
@@ -489,7 +555,7 @@ func writeImg(svc *paver.DataSinkWithCtxInterface, img string, updatePkg *Update
 	case "fuchsia.vbmeta":
 		childVmo, err := buffer.Vmo.CreateChild(zx.VMOChildOptionCopyOnWrite|zx.VMOChildOptionResizable, 0, buffer.Size)
 		if err != nil {
-			return fmt.Errorf("img_writer: while getting vmo for %q: %q", img, err)
+			return fmt.Errorf("img_writer: while getting vmo for %q: %q", img.Filename(), err)
 		}
 		buffer2 := &mem.Buffer{
 			Vmo:  childVmo,
@@ -522,12 +588,26 @@ func writeImg(svc *paver.DataSinkWithCtxInterface, img string, updatePkg *Update
 			return writeAsset(svc, paver.ConfigurationRecovery, paver.AssetVerifiedBootMetadata, buffer)
 		}
 	case "bootloader":
+		// Keep support for update packages still using the older "bootloader"
+		// file, which is handled identically to "firmware" but without type
+		// support so img.Type will always be "".
+		fallthrough
+	case "firmware":
 		writeImg = func() error {
-			status, err := svc.WriteBootloader(fidl.Background(), *buffer)
+			result, err := svc.WriteFirmware(fidl.Background(), img.Type, *buffer)
 			if err != nil {
 				return err
 			}
-			statusErr := zx.Status(status)
+
+			if result.Which() == paver.WriteFirmwareResultUnsupportedType {
+				syslog.Infof("img_writer: skipping unsupported firmware type %q", img.Type)
+				// Return nil here to skip unsupported types rather than failing.
+				// This lets us add new types in the future without breaking
+				// the update flow from older devices.
+				return nil
+			}
+
+			statusErr := zx.Status(result.Status)
 			if statusErr != zx.ErrOk {
 				return fmt.Errorf("%s", statusErr)
 			}
@@ -536,14 +616,14 @@ func writeImg(svc *paver.DataSinkWithCtxInterface, img string, updatePkg *Update
 	case "board":
 		return nil
 	default:
-		return fmt.Errorf("unrecognized image %q", img)
+		return fmt.Errorf("unrecognized image %q", img.Filename())
 	}
 
-	syslog.Infof("img_writer: writing %q from update package", img)
+	syslog.Infof("img_writer: writing %q from update package", img.Filename())
 	if err := writeImg(); err != nil {
-		return fmt.Errorf("img_writer: error writing %q: %q", img, err)
+		return fmt.Errorf("img_writer: error writing %q: %q", img.Filename(), err)
 	}
-	syslog.Infof("img_writer: wrote %q successfully", img)
+	syslog.Infof("img_writer: wrote %q successfully", img.Filename())
 
 	return nil
 }

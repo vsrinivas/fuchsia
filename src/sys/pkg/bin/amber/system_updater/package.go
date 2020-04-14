@@ -5,6 +5,7 @@
 package system_updater
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"syscall"
@@ -34,6 +35,26 @@ func (p *UpdatePackage) Open(path string) (*os.File, error) {
 		return nil, err
 	}
 	return os.NewFile(uintptr(fileFd), path), nil
+}
+
+// Returns the files in the update package.
+func (p *UpdatePackage) ListFiles() ([]string, error) {
+	// Readdirnames() leaves the file offset where it finishes, make sure to
+	// reset it before exiting.
+	names, err := p.dir.Readdirnames(0)
+	if err != nil {
+		// Best-effort attempt to reset the directory but don't let it clobber
+		// the original error.
+		_, _ = p.dir.Seek(0, 0)
+		return nil, fmt.Errorf("Failed to read directory: %s", err)
+	}
+
+	_, err = p.dir.Seek(0, 0)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to reset directory: %s", err)
+	}
+
+	return names, nil
 }
 
 // ReadFile opens and reads a whole file from the update package

@@ -1,4 +1,5 @@
 bootloader
+firmware[_type]
 zbi
 zbi.signed
 fuchsia.vbmeta

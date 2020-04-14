@@ -6,6 +6,7 @@ package system_updater
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 )
 
@@ -80,31 +81,107 @@ func TestParsePackagesJson(t *testing.T) {
 	}
 }
 
-func TestParseImages(t *testing.T) {
-	expectedImgs := map[string]struct{}{
-		"dc38ffa1029c3fd44": {},
-	}
+// Verifies that ParseImages() using the given image file and update package
+// contents produces the expected image list.
+func VerifyParseImages(t *testing.T, imageFileContents string, updatePackageFiles []string, expectedImages []Image) {
+	iFile := newByteReadCloser([]byte(imageFileContents))
 
-	iFile := newByteReadCloser([]byte("dc38ffa1029c3fd44\n"))
-	imgs, err := ParseImages(iFile)
+	images, err := ParseImages(iFile, updatePackageFiles)
 	if err != nil {
-		t.Fatalf("Error processing images: %s", err)
+		t.Fatalf("Error parsing images: %s", err)
 	}
 
-	for _, i := range imgs {
-		if _, ok := expectedImgs[i]; !ok {
-			t.Fail()
-			t.Logf("Unexpected image %q found", i)
-			continue
-		}
-		delete(expectedImgs, i)
-	}
-
-	if len(expectedImgs) > 0 {
+	if !reflect.DeepEqual(expectedImages, images) {
 		t.Fail()
-		t.Logf("Some images were not found")
-		for _, i := range expectedImgs {
-			t.Logf("  %q expected, but not found", i)
-		}
+		t.Logf("Expected %+v but got %+v", expectedImages, images)
+	}
+}
+
+func TestParseImages(t *testing.T) {
+	imageFileContents := "dc38ffa1029c3fd44\n"
+	updatePackageFiles := []string{}
+	expectedImages := []Image{
+		// Untyped files don't care whether they exist in the package or not.
+		{Name: "dc38ffa1029c3fd44", Type: ""},
+	}
+
+	VerifyParseImages(t, imageFileContents, updatePackageFiles, expectedImages)
+}
+
+func TestParseImagesWithType(t *testing.T) {
+	imageFileContents := "firmware[_type]\n"
+	updatePackageFiles := []string{"firmware", "firmware_abc", "firmware_123"}
+	expectedImages := []Image{
+		{Name: "firmware", Type: ""},
+		{Name: "firmware", Type: "abc"},
+		{Name: "firmware", Type: "123"},
+	}
+
+	VerifyParseImages(t, imageFileContents, updatePackageFiles, expectedImages)
+}
+
+func TestParseImagesTypeRequiresUnderscore(t *testing.T) {
+	imageFileContents := "firmware[_type]\n"
+	updatePackageFiles := []string{"firmware_a", "firmware2"}
+	expectedImages := []Image{
+		{Name: "firmware", Type: "a"},
+		// firmware2 doesn't follow the <base>_<type> format, should be ignored.
+	}
+
+	VerifyParseImages(t, imageFileContents, updatePackageFiles, expectedImages)
+}
+
+func TestParseImagesTypeMultipleUnderscore(t *testing.T) {
+	imageFileContents := "firmware[_type]\n"
+	updatePackageFiles := []string{"firmware_a_b", "firmware_firmware_2"}
+	expectedImages := []Image{
+		{Name: "firmware", Type: "a_b"},
+		{Name: "firmware", Type: "firmware_2"},
+	}
+
+	VerifyParseImages(t, imageFileContents, updatePackageFiles, expectedImages)
+}
+
+func TestParseImagesEmptyType(t *testing.T) {
+	imageFileContents := "firmware[_type]\n"
+	updatePackageFiles := []string{"firmware_"}
+	expectedImages := []Image{
+		{Name: "firmware", Type: ""},
+	}
+
+	VerifyParseImages(t, imageFileContents, updatePackageFiles, expectedImages)
+}
+
+func TestParseImagesNoTypeMatches(t *testing.T) {
+	imageFileContents := "firmware[_type]\n"
+	updatePackageFiles := []string{"not_firmware"}
+	expectedImages := []Image{}
+
+	VerifyParseImages(t, imageFileContents, updatePackageFiles, expectedImages)
+}
+
+func TestParseImagesUntypedWithUnderscore(t *testing.T) {
+	imageFileContents := "untyped_firmware\n"
+	updatePackageFiles := []string{"untyped_firmware_2"}
+	expectedImages := []Image{
+		{Name: "untyped_firmware", Type: ""},
+	}
+
+	VerifyParseImages(t, imageFileContents, updatePackageFiles, expectedImages)
+}
+
+func TestImageFilenameWithoutType(t *testing.T) {
+	image := Image{Name: "name", Type: ""}
+	if image.Filename() != "name" {
+		t.Fail()
+		t.Logf("Expected %q, got %q\n", "name", image.Filename())
+	}
+}
+
+func TestImageFilenameWithType(t *testing.T) {
+	image := Image{Name: "name", Type: "type"}
+	if image.Filename() != "name_type" {
+		t.Fail()
+		t.Logf("Expected %q, got %q\n", "name_type", image.Filename())
 	}
 }

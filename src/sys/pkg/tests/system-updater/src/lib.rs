@@ -336,13 +336,14 @@ impl MockResolverService {
 #[derive(Debug, PartialEq, Eq)]
 enum PaverEvent {
     WriteAsset { configuration: paver::Configuration, asset: paver::Asset, payload: Vec<u8> },
-    WriteBootloader(Vec<u8>),
+    WriteFirmware { firmware_type: String, payload: Vec<u8> },
     QueryActiveConfiguration,
     SetConfigurationActive { configuration: paver::Configuration },
 }
 
 struct MockPaverServiceBuilder {
     call_hook: Option<Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>>,
+    firmware_hook: Option<Box<dyn Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync>>,
     active_config: paver::Configuration,
     boot_manager_close_with_epitaph: Option<Status>,
 }
@@ -351,6 +352,7 @@ impl MockPaverServiceBuilder {
     fn new() -> Self {
         Self {
             call_hook: None,
+            firmware_hook: None,
             active_config: paver::Configuration::A,
             boot_manager_close_with_epitaph: None,
         }
@@ -361,6 +363,14 @@ impl MockPaverServiceBuilder {
         F: Fn(&PaverEvent) -> Status + Send + Sync + 'static,
     {
         self.call_hook = Some(Box::new(call_hook));
+        self
+    }
+
+    fn firmware_hook<F>(mut self, firmware_hook: F) -> Self
+    where
+        F: Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync + 'static,
+    {
+        self.firmware_hook = Some(Box::new(firmware_hook));
         self
     }
 
@@ -376,10 +386,14 @@ impl MockPaverServiceBuilder {
 
     fn build(self) -> MockPaverService {
         let call_hook = self.call_hook.unwrap_or_else(|| Box::new(|_| Status::OK));
+        let firmware_hook = self.firmware_hook.unwrap_or_else(|| {
+            Box::new(|_| paver::WriteFirmwareResult::Status(Status::OK.into_raw()))
+        });
 
         MockPaverService {
             events: Mutex::new(vec![]),
             call_hook: Box::new(call_hook),
+            firmware_hook: Box::new(firmware_hook),
             active_config: self.active_config,
             boot_manager_close_with_epitaph: self.boot_manager_close_with_epitaph,
         }
@@ -389,6 +403,7 @@ impl MockPaverServiceBuilder {
 struct MockPaverService {
     events: Mutex<Vec<PaverEvent>>,
     call_hook: Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>,
+    firmware_hook: Box<dyn Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync>,
     active_config: paver::Configuration,
     boot_manager_close_with_epitaph: Option<Status>,
 }
@@ -416,12 +431,16 @@ impl MockPaverService {
                     self.events.lock().push(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
-                paver::DataSinkRequest::WriteBootloader { mut payload, responder } => {
+                paver::DataSinkRequest::WriteFirmware {
+                    type_: firmware_type,
+                    mut payload,
+                    responder,
+                } => {
                     let payload = verify_and_read_buffer(&mut payload);
-                    let event = PaverEvent::WriteBootloader(payload);
-                    let status = (*self.call_hook)(&event);
+                    let event = PaverEvent::WriteFirmware { firmware_type, payload };
+                    let mut result = (*self.firmware_hook)(&event);
                     self.events.lock().push(event);
-                    responder.send(status.into_raw()).expect("paver response to send");
+                    responder.send(&mut result).expect("paver response to send");
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
             }
@@ -1103,7 +1122,12 @@ async fn test_writes_bootloader() {
         env.paver_service.take_events(),
         vec![
             PaverEvent::QueryActiveConfiguration,
-            PaverEvent::WriteBootloader(b"new bootloader".to_vec(),),
+            // "bootloader" file should end up calling the paver WriteFirmware()
+            // but with the default "" type.
+            PaverEvent::WriteFirmware {
+                firmware_type: "".to_string(),
+                payload: b"new bootloader".to_vec()
+            },
             PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
@@ -1522,4 +1546,179 @@ async fn test_rejects_extra_args() {
     assert_eq!(*env.space_service.called.lock(), 0);
     assert_eq!(*env.resolver.resolved_urls.lock(), Vec::<String>::new());
     assert_eq!(*env.reboot_service.called.lock(), 0);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_writes_firmware() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi")
+        .add_file("firmware", "fake firmware");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect("success");
+
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::WriteFirmware {
+                firmware_type: "".to_string(),
+                payload: b"fake firmware".to_vec()
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+        ]
+    );
+
+    assert_eq!(*env.space_service.called.lock(), 1);
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_writes_multiple_firmware_types() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi")
+        .add_file("firmware_a", "fake firmware A")
+        .add_file("firmware_b", "fake firmware B");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect("success");
+
+    // The order of files listed from a directory isn't guaranteed so the
+    // firmware could be written in either order. Sort by type string so
+    // we can easily validate contents.
+    let mut events = env.paver_service.take_events();
+    events[1..3].sort_by_key(|event| {
+        if let PaverEvent::WriteFirmware { firmware_type, payload: _ } = event {
+            return firmware_type.clone();
+        } else {
+            panic!("Not a WriteFirmware event: {:?}", event);
+        }
+    });
+
+    assert_eq!(
+        events,
+        vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::WriteFirmware {
+                firmware_type: "a".to_string(),
+                payload: b"fake firmware A".to_vec()
+            },
+            PaverEvent::WriteFirmware {
+                firmware_type: "b".to_string(),
+                payload: b"fake firmware B".to_vec()
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+        ]
+    );
+
+    assert_eq!(*env.space_service.called.lock(), 1);
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_unsupported_firmware_type() {
+    let mut env = TestEnv::builder()
+        .paver_service(|builder| {
+            builder.firmware_hook(|_| paver::WriteFirmwareResult::UnsupportedType(true))
+        })
+        .build();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi")
+        .add_file("firmware", "fake firmware");
+
+    // Update should still succeed, we want to skip unsupported firmware types.
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect("success");
+
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::WriteFirmware {
+                firmware_type: "".to_string(),
+                payload: b"fake firmware".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+        ]
+    );
+
+    assert_eq!(*env.space_service.called.lock(), 1);
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_write_firmware_failure() {
+    let mut env = TestEnv::builder()
+        .paver_service(|builder| {
+            builder
+                .firmware_hook(|_| paver::WriteFirmwareResult::Status(Status::INTERNAL.into_raw()))
+        })
+        .build();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi")
+        .add_file("firmware", "fake firmware");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect_err("update should fail");
 }
