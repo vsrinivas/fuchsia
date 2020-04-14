@@ -58,7 +58,9 @@ typedef struct {
   zx_wait_item_t wait_items[NUM_WAIT_ITEMS];
   uint32_t wait_item_count;
 
+  thrd_t thread;
   bool thread_running;
+  atomic_bool shutting_down;
 
   // type of current packet being read from the UART
   uint8_t cur_uart_packet_type;
@@ -86,8 +88,9 @@ typedef struct {
   ((hci)->acl_buffer_offset > 4 ? ((hci)->acl_buffer[3] | ((hci)->acl_buffer[4] << 8)) + 5 : 0)
 
 static void channel_cleanup_locked(hci_t* hci, zx_handle_t* channel) {
-  if (*channel == ZX_HANDLE_INVALID)
+  if (*channel == ZX_HANDLE_INVALID) {
     return;
+  }
 
   zx_handle_close(*channel);
   *channel = ZX_HANDLE_INVALID;
@@ -351,20 +354,37 @@ fail:
 static void hci_read_complete(void* context, zx_status_t status, const void* buffer,
                               size_t length) {
   hci_t* hci = context;
+
+  // If we are in the process of shutting down, we are done.
+  if (atomic_load_explicit(&hci->shutting_down, memory_order_relaxed)) {
+    return;
+  }
+
   hci_handle_uart_read_events(context, status, buffer, length);
   if (status == ZX_OK) {
     serial_impl_async_read_async(&hci->serial, hci_read_complete, hci);
   }
 }
 
-static void hci_unbind(void* ctx);
+static void hci_begin_shutdown(hci_t* hci) {
+  if (!atomic_load_explicit(&hci->shutting_down, memory_order_relaxed)) {
+    atomic_store_explicit(&hci->shutting_down, true, memory_order_relaxed);
+    device_async_remove(hci->zxdev);
+  }
+}
 
 static void hci_write_complete(void* context, zx_status_t status) {
   hci_write_ctx_t* op = context;
   free(op->buffer);
 
+  // If we are in the process of shutting down, we are done as soon as we
+  // have freed our operation.
+  if (atomic_load_explicit(&op->hci->shutting_down, memory_order_relaxed)) {
+    return;
+  }
+
   if (status != ZX_OK) {
-    hci_unbind(op->hci);
+    hci_begin_shutdown(op->hci);
     free(op);
     return;
   }
@@ -391,7 +411,7 @@ static int hci_thread(void* arg) {
   }
 
   mtx_unlock(&hci->mutex);
-  while (1) {
+  while (!atomic_load_explicit(&hci->shutting_down, memory_order_relaxed)) {
     zx_status_t status =
         zx_object_wait_many(hci->wait_items, hci->wait_item_count, ZX_TIME_INFINITE);
     zx_signals_t observed;
@@ -400,6 +420,11 @@ static int hci_thread(void* arg) {
     // one.
     status =
         zx_object_wait_one(hci->writeable_event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, &observed);
+
+    if (atomic_load_explicit(&hci->shutting_down, memory_order_relaxed)) {
+      break;
+    }
+
     bool is_writeable = observed & ZX_USER_SIGNAL_0;
     if ((status < 0) || !is_writeable) {
       zxlogf(ERROR, "bt-transport-uart: zx_object_wait_many failed (%s) - exiting\n",
@@ -410,6 +435,7 @@ static int hci_thread(void* arg) {
       mtx_unlock(&hci->mutex);
       break;
     }
+
     mtx_lock(&hci->mutex);
     for (size_t i = 0; i < hci->wait_item_count; i++) {
       if ((hci->wait_items[i].pending == ZX_USER_SIGNAL_0) &&
@@ -418,6 +444,7 @@ static int hci_thread(void* arg) {
       }
     }
     mtx_unlock(&hci->mutex);
+
     for (unsigned i = 0; i < hci->wait_item_count; ++i) {
       mtx_lock(&hci->mutex);
       zx_wait_item_t item = hci->wait_items[i];
@@ -434,12 +461,10 @@ static int hci_thread(void* arg) {
     status = zx_object_wait_one(hci->channels_changed_evt, ZX_EVENT_SIGNALED, 0u, NULL);
     if (status == ZX_OK) {
       hci_build_read_wait_items(hci);
-      if (!hci_has_read_channels_locked(hci)) {
-        zxlogf(TRACE, "bt-transport-uart: all channels closed - exiting\n");
-        break;
-      }
     }
   }
+
+  zxlogf(INFO, "bt-transport-uart: thread exiting\n");
 
   mtx_lock(&hci->mutex);
   hci->thread_running = false;
@@ -462,10 +487,12 @@ static zx_status_t hci_open_channel(hci_t* hci, zx_handle_t* in_channel, zx_hand
   // Kick off the hci_thread if it's not already running.
   if (!hci->thread_running) {
     hci_build_wait_items_locked(hci);
-    thrd_t thread;
-    thrd_create_with_name(&thread, hci_thread, hci, "bt_uart_read_thread");
+    if (thrd_create_with_name(&hci->thread, hci_thread, hci, "bt_uart_read_thread") !=
+        thrd_success) {
+      result = ZX_ERR_INTERNAL;
+      goto done;
+    }
     hci->thread_running = true;
-    thrd_detach(thread);
   } else {
     // Poke the changed event to get the new channel.
     zx_object_signal(hci->channels_changed_evt, 0, ZX_EVENT_SIGNALED);
@@ -479,20 +506,33 @@ done:
 static void hci_unbind(void* ctx) {
   hci_t* hci = ctx;
 
-  // Close the transport channels so that the host stack is notified of device removal.
+  // We are now shutting down.  Make sure that any pending callbacks in
+  // flight from the serial_impl are nerfed and that our thread is shut down.
+  atomic_store_explicit(&hci->shutting_down, true, memory_order_relaxed);
+  if (hci->thread_running) {
+    zx_object_signal(hci->writeable_event, 0, ZX_USER_SIGNAL_0);
+    thrd_join(hci->thread, NULL);
+  }
+
+  // Close the transport channels so that the host stack is notified of device
+  // removal.
   mtx_lock(&hci->mutex);
-  serial_impl_async_cancel_all(&hci->serial);
   channel_cleanup_locked(hci, &hci->cmd_channel);
   channel_cleanup_locked(hci, &hci->acl_channel);
   channel_cleanup_locked(hci, &hci->snoop_channel);
-
   mtx_unlock(&hci->mutex);
 
+  // Finish by making sure that all in flight transactions transactions have
+  // been canceled.
+  serial_impl_async_cancel_all(&hci->serial);
+
+  // Tell the DDK we are done unbinding.
   device_unbind_reply(hci->zxdev);
 }
 
 static void hci_release(void* ctx) {
   hci_t* hci = ctx;
+
   zx_handle_close(hci->writeable_event);
   free(hci);
 }
