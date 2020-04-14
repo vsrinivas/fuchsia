@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
+#include <lib/zircon-internal/align.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
@@ -4235,7 +4236,7 @@ size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
   }
 
   size_t dest_offset = 0;
-  auto l2pad_len = ROUNDUP(frame_hdr_len, 4) - frame_hdr_len;
+  auto l2pad_len = ZX_ROUNDUP(frame_hdr_len, 4) - frame_hdr_len;
 
   // TODO(NET-649): Augument BulkoutAggregation with pointers and lengths.
   if (l2pad_len == 0) {
@@ -4266,7 +4267,7 @@ size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
 
   // Append Bulkout Aggregate padding and its Tail padding
   auto payload_len = head_len + tail_len_eff + l2pad_len;
-  auto aggregate_pad_len = ROUNDUP(payload_len, 4) - payload_len;
+  auto aggregate_pad_len = ZX_ROUNDUP(payload_len, 4) - payload_len;
   auto extra_pad_len = aggregate_pad_len + GetBulkoutAggrTailLen();
   std::memset(dest + payload_len, 0, extra_pad_len);
   payload_len += extra_pad_len;
@@ -5265,7 +5266,7 @@ size_t Device::GetBulkoutAggrPayloadLen(const wlan_tx_packet_t& wlan_pkt) {
   auto l2pad_len = GetL2PadLen(wlan_pkt);
 
   auto aggr_payload_len = GetTxwiLen() + mpdu_hdr_len + l2pad_len + msdu_len;
-  aggr_payload_len = ROUNDUP(aggr_payload_len, 4);
+  aggr_payload_len = ZX_ROUNDUP(aggr_payload_len, 4);
 
   return aggr_payload_len;
 }
@@ -5309,7 +5310,7 @@ size_t Device::GetL2PadLen(const wlan_tx_packet_t& wlan_pkt) {
   const auto head_data = static_cast<const uint8_t*>(wlan_pkt.packet_head.data_buffer);
   auto head_len = wlan_pkt.packet_head.data_size;
   auto frame_hdr_len = GetMacHdrLength(head_data, head_len);
-  auto l2pad_len = ROUNDUP(frame_hdr_len, 4) - frame_hdr_len;
+  auto l2pad_len = ZX_ROUNDUP(frame_hdr_len, 4) - frame_hdr_len;
 
   return l2pad_len;
 }

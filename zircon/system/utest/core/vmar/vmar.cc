@@ -12,6 +12,7 @@
 #include <stdalign.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <lib/zircon-internal/align.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
@@ -25,7 +26,6 @@
 #include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
 
-#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
 // These tests focus on the semantics of the VMARs themselves.  For heavier
 // testing of the mapping permissions, see the VMO tests.
@@ -1611,7 +1611,7 @@ TEST(Vmar, ProtectLargeUncomittedTest) {
 
   // Ensure we're misaligned relative to a larger paging structure level.
   // TODO(teisenbe): Would be nice for this to be more arch aware.
-  const uintptr_t base = ROUNDUP(mapping_addr, 512 * PAGE_SIZE) + PAGE_SIZE;
+  const uintptr_t base = ZX_ROUNDUP(mapping_addr, 512 * PAGE_SIZE) + PAGE_SIZE;
   const size_t protect_size = mapping_addr + size - base;
   ASSERT_EQ(zx_vmar_protect(zx_vmar_root_self(), ZX_VM_PERM_READ, base, protect_size), ZX_OK);
 
@@ -1739,7 +1739,7 @@ TEST(Vmar, UnmapLargeUncommittedTest) {
 
   // Ensure we're misaligned relative to a larger paging structure level.
   // TODO(teisenbe): Would be nice for this to be more arch aware.
-  const uintptr_t base = ROUNDUP(mapping_addr, 512 * PAGE_SIZE) + PAGE_SIZE;
+  const uintptr_t base = ZX_ROUNDUP(mapping_addr, 512 * PAGE_SIZE) + PAGE_SIZE;
   const size_t unmap_size = mapping_addr + size - base;
   ASSERT_EQ(zx_vmar_unmap(zx_vmar_root_self(), base, unmap_size), ZX_OK);
 

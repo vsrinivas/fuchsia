@@ -47,6 +47,7 @@ zx_library("as370") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.shareddma",
   ]

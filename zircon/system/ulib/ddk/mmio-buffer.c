@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <string.h>
+#include <lib/zircon-internal/align.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -19,9 +20,9 @@ zx_status_t mmio_buffer_init(mmio_buffer_t* buffer, zx_off_t offset, size_t size
   }
 
   uintptr_t vaddr;
-  const size_t vmo_offset = ROUNDDOWN(offset, ZX_PAGE_SIZE);
+  const size_t vmo_offset = ZX_ROUNDDOWN(offset, ZX_PAGE_SIZE);
   const size_t page_offset = offset - vmo_offset;
-  const size_t vmo_size = ROUNDUP(size + page_offset, ZX_PAGE_SIZE);
+  const size_t vmo_size = ZX_ROUNDUP(size + page_offset, ZX_PAGE_SIZE);
 
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE, 0,
                        vmo, vmo_offset, vmo_size, &vaddr);
@@ -62,9 +63,9 @@ zx_status_t mmio_buffer_pin(mmio_buffer_t* buffer, zx_handle_t bti, mmio_pinned_
   zx_paddr_t paddr;
   zx_handle_t pmt;
   const uint32_t options = ZX_BTI_PERM_WRITE | ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS;
-  const size_t vmo_offset = ROUNDDOWN(buffer->offset, ZX_PAGE_SIZE);
+  const size_t vmo_offset = ZX_ROUNDDOWN(buffer->offset, ZX_PAGE_SIZE);
   const size_t page_offset = buffer->offset - vmo_offset;
-  const size_t vmo_size = ROUNDUP(buffer->size + page_offset, ZX_PAGE_SIZE);
+  const size_t vmo_size = ZX_ROUNDUP(buffer->size + page_offset, ZX_PAGE_SIZE);
 
   zx_status_t status = zx_bti_pin(bti, options, buffer->vmo, vmo_offset, vmo_size, &paddr, 1, &pmt);
   if (status != ZX_OK) {

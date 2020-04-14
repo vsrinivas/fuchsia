@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/device-protocol/pci.h>
+#include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

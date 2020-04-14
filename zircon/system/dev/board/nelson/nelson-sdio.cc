@@ -11,6 +11,7 @@
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
+#include <lib/zircon-internal/align.h>
 #include <soc/aml-common/aml-sd-emmc.h>
 #include <soc/aml-s905d3/s905d3-gpio.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
@@ -213,7 +214,7 @@ zx_status_t Nelson::SdEmmcConfigurePortB() {
   // Please do not use get_root_resource() in new code. See ZX-1467.
   zx::unowned_resource resource(get_root_resource());
 
-  size_t aligned_size = ROUNDUP((S905D3_GPIO_BASE - kGpioBase) + S905D3_GPIO_LENGTH, PAGE_SIZE);
+  size_t aligned_size = ZX_ROUNDUP((S905D3_GPIO_BASE - kGpioBase) + S905D3_GPIO_LENGTH, PAGE_SIZE);
 
   status = ddk::MmioBuffer::Create(kGpioBase, aligned_size, *resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_base);

@@ -14,6 +14,7 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/usb-peripheral-config.h>
+#include <lib/zircon-internal/align.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
 #include <usb/dwc2/metadata.h>
 
@@ -251,7 +252,7 @@ zx_status_t Nelson::UsbInit() {
                                    : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
   constexpr size_t config_size = sizeof(UsbConfig) + 2 * sizeof(FunctionDescriptor);
   UsbConfig* config =
-      reinterpret_cast<UsbConfig*>(aligned_alloc(alignment, ROUNDUP(config_size, alignment)));
+      reinterpret_cast<UsbConfig*>(aligned_alloc(alignment, ZX_ROUNDUP(config_size, alignment)));
   if (!config) {
     return ZX_ERR_NO_MEMORY;
   }

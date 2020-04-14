@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <usb/dwc2/metadata.h>
+#include <lib/zircon-internal/align.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
@@ -242,7 +243,7 @@ zx_status_t Astro::UsbInit() {
                                    : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
   constexpr size_t config_size = sizeof(UsbConfig) + 2 * sizeof(FunctionDescriptor);
   UsbConfig* config =
-      reinterpret_cast<UsbConfig*>(aligned_alloc(alignment, ROUNDUP(config_size, alignment)));
+      reinterpret_cast<UsbConfig*>(aligned_alloc(alignment, ZX_ROUNDUP(config_size, alignment)));
   if (!config) {
     return ZX_ERR_NO_MEMORY;
   }

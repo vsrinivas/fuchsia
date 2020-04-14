@@ -26,5 +26,6 @@ source_set("vmar") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/public/lib/zircon-internal",
   ]
 }

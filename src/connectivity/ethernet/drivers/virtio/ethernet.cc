@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <lib/operation/ethernet.h>
+#include <lib/zircon-internal/align.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>

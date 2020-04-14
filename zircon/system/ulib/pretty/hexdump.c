@@ -9,8 +9,8 @@
 #include <stdio.h>
 
 #include <pretty/hexdump.h>
+#include <lib/zircon-internal/align.h>
 
-#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 void hexdump_stdio_printf(void* printf_arg, const char* fmt, ...) {
@@ -30,7 +30,7 @@ void hexdump_very_ex(const void* ptr, size_t len, uint64_t disp_addr,
       uint32_t buf[4];
       uint8_t cbuf[16];
     } u;
-    size_t s = ROUNDUP(MIN(len - count, 16), 4);
+    size_t s = ZX_ROUNDUP(MIN(len - count, 16), 4);
     size_t i;
 
     printf_func(printf_arg,

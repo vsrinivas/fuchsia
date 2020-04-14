@@ -36,6 +36,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 
 #include <lib/sync/completion.h>
+#include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <threads.h>
 #include <zircon/listnode.h>
@@ -880,8 +881,8 @@ fw_dbg_conf:
       IWL_ERR(drv, "invalid TLV len: %zd/%u\n", len, tlv_len);
       return ZX_ERR_INVALID_ARGS;
     }
-    len -= ALIGN(tlv_len, 4);
-    data += sizeof(*tlv) + ALIGN(tlv_len, 4);
+    len -= ZX_ALIGN(tlv_len, 4);
+    data += sizeof(*tlv) + ZX_ALIGN(tlv_len, 4);
 
     switch (tlv_type) {
       case IWL_UCODE_TLV_INST:

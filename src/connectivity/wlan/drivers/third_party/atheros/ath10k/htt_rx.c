@@ -911,7 +911,7 @@ static size_t ath10k_htt_rx_nwifi_hdrlen(struct ath10k* ar, struct ieee80211_fra
 
   if (!BITARR_TEST(ar->running_fw->fw_file.fw_features,
                    ATH10K_FW_FEATURE_NO_NWIFI_DECAP_4ADDR_PADDING)) {
-    len = ROUNDUP(len, 4);
+    len = ZX_ROUNDUP(len, 4);
   }
 
   return len;
@@ -1075,8 +1075,8 @@ static void* ath10k_htt_rx_h_find_rfc1042(struct ath10k* ar,
         hdr_len = ieee80211_hdrlen(hdr->frame_control);
         crypto_len = ath10k_htt_rx_crypto_param_len(ar, enctype);
 
-        rfc1042 += ROUNDUP(hdr_len, bytes_aligned) +
-                   ROUNDUP(crypto_len, bytes_aligned);
+        rfc1042 += ZX_ROUNDUP(hdr_len, bytes_aligned) +
+                   ZX_ROUNDUP(crypto_len, bytes_aligned);
     }
 
     if (is_amsdu) {

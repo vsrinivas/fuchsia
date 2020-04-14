@@ -15,4 +15,5 @@ zx_library("pretty") {
   if (!is_kernel) {
     sources += [ "hexdump.c" ]
   }
+  deps = ["$zx/system/ulib/zircon-internal:headers"]
 }

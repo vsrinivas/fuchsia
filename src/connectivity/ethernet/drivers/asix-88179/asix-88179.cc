@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/cksum.h>
+#include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -262,7 +263,7 @@ zx_status_t Asix88179Ethernet::Receive(usb::Request<>& request) {
 
     // Advance past this packet in the completed read
     offset += packet_length;
-    offset = ALIGN(offset, 8);
+    offset = ZX_ALIGN(offset, 8);
   }
 
   return ZX_OK;
@@ -400,7 +401,7 @@ void Asix88179Ethernet::InterruptComplete(usb_request_t* usb_request) {
 
 zx_status_t Asix88179Ethernet::RequestAppend(usb::Request<>& request,
                                              const eth::BorrowedOperation<>& netbuf) {
-  zx_off_t offset = ALIGN(request.request()->header.length, 4);
+  zx_off_t offset = ZX_ALIGN(request.request()->header.length, 4);
 
   struct {
     uint16_t transmit_length;

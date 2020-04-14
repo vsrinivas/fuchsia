@@ -18,6 +18,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <lib/zircon-internal/align.h>
 #include <pretty/hexdump.h>
 
 #include "src/devices/bus/lib/virtio/trace.h"
@@ -330,7 +331,7 @@ static zx_status_t pin_pages(zx_handle_t bti, block_txn_t* txn, size_t bytes, zx
                              size_t* num_pages) {
   uint64_t suboffset = txn->op.rw.offset_vmo & PAGE_MASK;
   uint64_t aligned_offset = txn->op.rw.offset_vmo & ~PAGE_MASK;
-  size_t pin_size = ROUNDUP(suboffset + bytes, PAGE_SIZE);
+  size_t pin_size = ZX_ROUNDUP(suboffset + bytes, PAGE_SIZE);
   *num_pages = pin_size / PAGE_SIZE;
   if (*num_pages > MAX_SCATTER) {
     TRACEF("virtio: transaction too large\n");

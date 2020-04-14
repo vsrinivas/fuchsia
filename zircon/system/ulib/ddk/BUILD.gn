@@ -58,5 +58,6 @@ zx_library("ddk") {
   deps = [
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }

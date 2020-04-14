@@ -17,6 +17,7 @@
 #include "sdio.h"
 
 #include <lib/sync/completion.h>
+#include <lib/zircon-internal/align.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -587,7 +588,7 @@ void pkt_align(struct brcmf_netbuf* p, int len, int align) {
   if (datalign) {
     brcmf_netbuf_shrink_head(p, datalign);
   }
-  brcmf_netbuf_set_length_to(p, ROUNDUP(len, SDIOD_SIZE_ALIGNMENT));
+  brcmf_netbuf_set_length_to(p, ZX_ROUNDUP(len, SDIOD_SIZE_ALIGNMENT));
 }
 
 /* To check if there's window offered */

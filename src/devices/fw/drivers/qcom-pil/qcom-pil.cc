@@ -6,6 +6,7 @@
 
 #include <elf.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/align.h>
 
 #include <algorithm>
 #include <limits>
@@ -55,7 +56,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
   metadata.read(phdrs.data(), ehdr.e_phoff, ehdr.e_phnum * sizeof(Elf32_Phdr));
 
   // Copy metadata to the intended physical address.
-  status = zx_vmo_read(metadata.get(), mmios_[fw_n]->get(), 0, ROUNDUP(metadata_size, PAGE_SIZE));
+  status = zx_vmo_read(metadata.get(), mmios_[fw_n]->get(), 0, ZX_ROUNDUP(metadata_size, PAGE_SIZE));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s VMO read failed %d\n", __func__, status);
     return status;
@@ -99,7 +100,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
     zxlogf(ERROR, "%s ELF headers could not find total size\n", __func__);
     return ZX_ERR_INTERNAL;
   }
-  total_size = ROUNDUP(end - start, PAGE_SIZE);
+  total_size = ZX_ROUNDUP(end - start, PAGE_SIZE);
   if (total_size > mmios_[fw_n]->get_size()) {
     zxlogf(ERROR, "%s ELF headers total size (0x%lX) too big (>0x%lX)\n", __func__, total_size,
            mmios_[fw_n]->get_size());
@@ -144,7 +145,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
     }
 
     status = segment.read(reinterpret_cast<void*>(v_addr + (phdrs[i].p_paddr - start)), 0,
-                          ROUNDUP(seg_size, PAGE_SIZE));
+                          ZX_ROUNDUP(seg_size, PAGE_SIZE));
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s vmo read failed %d\n", __func__, status);
       return status;

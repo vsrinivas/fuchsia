@@ -18,6 +18,7 @@
 #include "bmi.h"
 
 #include <string.h>
+#include <lib/zircon-internal/align.h>
 #include <zircon/status.h>
 
 #include <ddk/driver.h>
@@ -276,7 +277,7 @@ zx_status_t ath10k_bmi_write_memory(struct ath10k* ar, uint32_t address, const v
 
     /* copy before roundup to avoid reading beyond buffer*/
     memcpy(cmd.write_mem.payload, buffer, txlen);
-    txlen = ROUNDUP(txlen, 4);
+    txlen = ZX_ROUNDUP(txlen, 4);
 
     cmd.id = BMI_WRITE_MEMORY;
     cmd.write_mem.addr = address;
@@ -288,7 +289,7 @@ zx_status_t ath10k_bmi_write_memory(struct ath10k* ar, uint32_t address, const v
       return ret;
     }
 
-    /* fixup ROUNDUP() so `length` zeroes out for last chunk */
+    /* fixup ZX_ROUNDUP() so `length` zeroes out for last chunk */
     txlen = MIN(txlen, length);
 
     address += txlen;
@@ -398,7 +399,7 @@ zx_status_t ath10k_bmi_lz_stream_start(struct ath10k* ar, uint32_t address) {
 zx_status_t ath10k_bmi_fast_download(struct ath10k* ar, uint32_t address, const void* buffer,
                                      uint32_t length) {
   uint8_t trailer[4] = {};
-  uint32_t head_len = ROUNDDOWN(length, 4);
+  uint32_t head_len = ZX_ROUNDDOWN(length, 4);
   uint32_t trailer_len = length - head_len;
   zx_status_t ret;
 

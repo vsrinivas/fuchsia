@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <lib/zircon-internal/align.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -27,7 +28,7 @@ static zx_status_t pin_contig_buffer(zx_handle_t bti, zx_handle_t vmo, size_t si
   if (size > PAGE_SIZE) {
     options |= ZX_BTI_CONTIGUOUS;
   }
-  return zx_bti_pin(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), phys, 1, pmt);
+  return zx_bti_pin(bti, options, vmo, 0, ZX_ROUNDUP(size, PAGE_SIZE), phys, 1, pmt);
 }
 
 static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_handle,
@@ -200,10 +201,10 @@ zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
 
   // zx_bti_pin returns whole pages, so take into account unaligned vmo
   // offset and length when calculating the amount of pages returned
-  uint64_t page_offset = ROUNDDOWN(buffer->offset, PAGE_SIZE);
+  uint64_t page_offset = ZX_ROUNDDOWN(buffer->offset, PAGE_SIZE);
   // The buffer size is the vmo size from offset 0.
   uint64_t page_length = buffer->size - page_offset;
-  uint64_t pages = ROUNDUP(page_length, PAGE_SIZE) / PAGE_SIZE;
+  uint64_t pages = ZX_ROUNDUP(page_length, PAGE_SIZE) / PAGE_SIZE;
 
   zx_paddr_t* paddrs = malloc(pages * sizeof(zx_paddr_t));
   if (paddrs == NULL) {
@@ -239,7 +240,7 @@ zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset, size_t
   // management of this pin into the io_buffer API...
   const size_t sub_offset = offset & (PAGE_SIZE - 1);
   const size_t pin_offset = offset - sub_offset;
-  const size_t pin_length = ROUNDUP(length + sub_offset, PAGE_SIZE);
+  const size_t pin_length = ZX_ROUNDUP(length + sub_offset, PAGE_SIZE);
 
   if (pin_length / PAGE_SIZE != phys_count) {
     return ZX_ERR_INVALID_ARGS;

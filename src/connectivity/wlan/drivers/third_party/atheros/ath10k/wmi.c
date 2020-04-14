@@ -20,6 +20,7 @@
 // include the msg_buf.h. Then the msg_buf.h will include wmi.h and wmi-tlv.h to expand the macros
 // properly. TODO(WLAN-606): Cleanup ath10k msg_buf
 #include <ddk/driver.h>
+#include <lib/zircon-internal/align.h>
 #include <wlan/protocol/ieee80211.h>
 
 #include "core.h"
@@ -1753,7 +1754,7 @@ ath10k_wmi_op_gen_mgmt_tx(struct ath10k* ar, struct sk_buff* msdu) {
         buf_len += IEEE80211_CCMP_MIC_LEN;
     }
 
-    len = ROUNDUP(len, 4);
+    len = ZX_ROUNDUP(len, 4);
 
     skb = ath10k_wmi_alloc_skb(ar, len);
     if (!skb) {
@@ -2078,7 +2079,7 @@ static zx_status_t ath10k_wmi_op_pull_mgmt_rx_ev(struct ath10k* ar, struct ath10
   msg_buf->rx.frame_size = msdu_len;
 
   if (arg->status & WMI_RX_STATUS_EXT_INFO) {
-    len = ALIGN(arg->buf_len, 4);
+    len = ZX_ALIGN(arg->buf_len, 4);
     ext_info = (struct wmi_mgmt_rx_ext_info*)((uint8_t*)payload + len);
     memcpy(&arg->ext_info, ext_info, sizeof(struct wmi_mgmt_rx_ext_info));
   }
@@ -2119,7 +2120,7 @@ static int ath10k_wmi_10_4_op_pull_mgmt_rx_ev(struct ath10k* ar,
     }
 
     if (arg->status & WMI_RX_STATUS_EXT_INFO) {
-        len = ALIGN(arg->buf_len, 4);
+        len = ZX_ALIGN(arg->buf_len, 4);
         ext_info = (struct wmi_mgmt_rx_ext_info*)(skb->data + len);
         memcpy(&arg->ext_info, ext_info,
                sizeof(struct wmi_mgmt_rx_ext_info));
@@ -4371,7 +4372,7 @@ static zx_status_t ath10k_wmi_alloc_host_mem(struct ath10k* ar, uint32_t req_id,
   }
 
   struct ath10k_mem_chunk* chunk = &ar->wmi.mem_chunks[idx];
-  pool_size = num_units * ROUNDUP(unit_len, 4);
+  pool_size = num_units * ZX_ROUNDUP(unit_len, 4);
   ret = io_buffer_init(&chunk->handle, bti_handle, pool_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (ret != ZX_OK) {
     return ret;
@@ -4427,7 +4428,7 @@ static bool ath10k_wmi_is_host_mem_allocated(struct ath10k* ar,
     found = false;
     for (j = 0; j < ar->wmi.num_mem_chunks; j++) {
       if (ar->wmi.mem_chunks[j].req_id == req_id) {
-        pool_size = num_units * ROUNDUP(unit_size, 4);
+        pool_size = num_units * ZX_ROUNDUP(unit_size, 4);
         if (ar->wmi.mem_chunks[j].len == pool_size) {
           found = true;
           break;
@@ -5847,7 +5848,7 @@ static size_t ath10k_wmi_start_scan_tlvs_len(const struct wmi_start_scan_arg* ar
 
   if (arg->ie_len) {
     len += sizeof(struct wmi_ie_data);
-    len += ROUNDUP(arg->ie_len, 4);
+    len += ZX_ROUNDUP(arg->ie_len, 4);
   }
 
   if (arg->n_channels) {
@@ -5951,7 +5952,7 @@ static void ath10k_wmi_put_start_scan_tlvs(struct wmi_start_scan_tlvs* tlvs,
     memcpy(ie->ie_data, arg->ie, arg->ie_len);
 
     ptr += sizeof(*ie);
-    ptr += ROUNDUP(arg->ie_len, 4);
+    ptr += ZX_ROUNDUP(arg->ie_len, 4);
   }
 }
 

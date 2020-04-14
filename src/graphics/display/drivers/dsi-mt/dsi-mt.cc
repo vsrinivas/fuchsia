@@ -12,6 +12,7 @@
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <lib/zircon-internal/align.h>
 
 #include "mt-dsi-reg.h"
 
@@ -196,17 +197,17 @@ zx_status_t DsiMt::DsiImplConfig(const dsi_config_t* dsi_config) {
   // The numbers come from MT8167s spec
   uint32_t h_fp = disp_setting.h_period - disp_setting.h_active - disp_setting.hsync_bp -
                   disp_setting.hsync_width;
-  uint32_t hsync_width_byte = ALIGN(disp_setting.hsync_width * bpp - 10, 4);
+  uint32_t hsync_width_byte = ZX_ALIGN(disp_setting.hsync_width * bpp - 10, 4);
 
   uint32_t h_bp_byte;
   if (dsi_config->video_mode_type == VIDEO_MODE_BURST) {
-    h_bp_byte = ALIGN((disp_setting.hsync_bp + disp_setting.hsync_width) * bpp - 10, 4);
-    hsync_width_byte = ALIGN(disp_setting.hsync_width * bpp - 4, 4);
+    h_bp_byte = ZX_ALIGN((disp_setting.hsync_bp + disp_setting.hsync_width) * bpp - 10, 4);
+    hsync_width_byte = ZX_ALIGN(disp_setting.hsync_width * bpp - 4, 4);
   } else {
-    h_bp_byte = ALIGN(disp_setting.hsync_bp * bpp - 10, 4);
+    h_bp_byte = ZX_ALIGN(disp_setting.hsync_bp * bpp - 10, 4);
   }
 
-  uint32_t h_fp_byte = ALIGN(h_fp * bpp - 12, 4);
+  uint32_t h_fp_byte = ZX_ALIGN(h_fp * bpp - 12, 4);
 
   DsiHsaWcReg::Get().ReadFrom(&(*dsi_mmio_)).set_hsa(hsync_width_byte).WriteTo(&(*dsi_mmio_));
   DsiHbpWcReg::Get().ReadFrom(&(*dsi_mmio_)).set_hbp(h_bp_byte).WriteTo(&(*dsi_mmio_));

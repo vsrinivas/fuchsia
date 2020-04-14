@@ -18,6 +18,7 @@
 #include "core.h"
 
 #include <inttypes.h>
+#include <lib/zircon-internal/align.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
@@ -969,8 +970,8 @@ static zx_status_t ath10k_core_parse_bd_ie_board(struct ath10k* ar, const void* 
     buf_len -= sizeof(*hdr);
     buf += sizeof(*hdr);
 
-    if (buf_len < ALIGN(board_ie_len, 4)) {
-      ath10k_err("invalid ATH10K_BD_IE_BOARD length: %zu < %zu\n", buf_len, ALIGN(board_ie_len, 4));
+    if (buf_len < ZX_ALIGN(board_ie_len, 4)) {
+      ath10k_err("invalid ATH10K_BD_IE_BOARD length: %zu < %zu\n", buf_len, ZX_ALIGN(board_ie_len, 4));
       ret = ZX_ERR_INVALID_ARGS;
       goto out;
     }
@@ -1009,7 +1010,7 @@ static zx_status_t ath10k_core_parse_bd_ie_board(struct ath10k* ar, const void* 
     }
 
     /* jump over the padding */
-    board_ie_len = ALIGN(board_ie_len, 4);
+    board_ie_len = ZX_ALIGN(board_ie_len, 4);
 
     buf_len -= board_ie_len;
     buf += board_ie_len;
@@ -1054,7 +1055,7 @@ static zx_status_t ath10k_core_fetch_board_data_api_n(struct ath10k* ar, const c
   }
 
   /* magic is padded to 4 bytes */
-  magic_len = ALIGN(magic_len, 4);
+  magic_len = ZX_ALIGN(magic_len, 4);
   if (len < magic_len) {
     ath10k_err("failed: %s/%s too small to contain board data, len: %zu\n", ar->hw_params.fw.dir,
                filename, len);
@@ -1073,7 +1074,7 @@ static zx_status_t ath10k_core_fetch_board_data_api_n(struct ath10k* ar, const c
     len -= sizeof(*hdr);
     data = hdr->data;
 
-    if (len < ALIGN(ie_len, 4)) {
+    if (len < ZX_ALIGN(ie_len, 4)) {
       ath10k_err("invalid length for board ie_id %d ie_len %zu len %zu\n", ie_id, ie_len, len);
       ret = ZX_ERR_INVALID_ARGS;
       goto err;
@@ -1110,7 +1111,7 @@ static zx_status_t ath10k_core_fetch_board_data_api_n(struct ath10k* ar, const c
     }
 
     /* jump over the padding */
-    ie_len = ALIGN(ie_len, 4);
+    ie_len = ZX_ALIGN(ie_len, 4);
 
     len -= ie_len;
     data += ie_len;
@@ -1217,7 +1218,7 @@ zx_status_t ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name
   }
 
   /* jump over the padding */
-  magic_len = ALIGN(magic_len, 4);
+  magic_len = ZX_ALIGN(magic_len, 4);
 
   len -= magic_len;
   data += magic_len;
@@ -1325,7 +1326,7 @@ zx_status_t ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name
     }
 
     /* jump over the padding */
-    ie_len = ALIGN(ie_len, 4);
+    ie_len = ZX_ALIGN(ie_len, 4);
 
     len -= ie_len;
     data += ie_len;

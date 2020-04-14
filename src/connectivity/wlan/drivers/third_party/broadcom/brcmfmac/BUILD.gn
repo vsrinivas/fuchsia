@@ -66,6 +66,7 @@ source_set("linuxisms") {
   deps = [
     ":debug",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
   ]
   public_deps = [
     "//zircon/system/banjo/ddk.protocol.ethernet",

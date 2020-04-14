@@ -34,6 +34,7 @@
  *
  *****************************************************************************/
 #include <lib/sync/condition.h>
+#include <lib/zircon-internal/align.h>
 #include <zircon/assert.h>
 
 #include <ddk/io-buffer.h>
@@ -925,7 +926,7 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
     if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
       break;
     }
-    offset += ALIGN(len, FH_RSCSR_FRAME_ALIGN);
+    offset += ZX_ALIGN(len, FH_RSCSR_FRAME_ALIGN);
   }
 
   // Add the buffer back to the rx_free list.

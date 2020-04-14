@@ -5,6 +5,7 @@
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <lib/zircon-internal/align.h>
 #include <lib/zx/pmt.h>
 #include <zircon/pixelformat.h>
 
@@ -121,7 +122,7 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportImage(image_t* image,
   uint64_t offset = collection_info.buffers[index].vmo_usable_start;
 
   size_t size =
-      ROUNDUP((minimum_row_bytes * image->height) + (offset & (PAGE_SIZE - 1)), PAGE_SIZE);
+      ZX_ROUNDUP((minimum_row_bytes * image->height) + (offset & (PAGE_SIZE - 1)), PAGE_SIZE);
   zx_paddr_t paddr;
   zx_status_t status =
       bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, collection_info.buffers[index].vmo,

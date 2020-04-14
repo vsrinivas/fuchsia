@@ -11,10 +11,12 @@
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
+#include <lib/zircon-internal/align.h>
 #include <soc/aml-common/aml-sd-emmc.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <wifi/wifi-config.h>
+#include <lib/zircon-internal/align.h>
 
 #include "astro-gpios.h"
 #include "astro.h"
@@ -218,7 +220,7 @@ zx_status_t Astro::SdEmmcConfigurePortB() {
   // Please do not use get_root_resource() in new code. See ZX-1467.
   zx::unowned_resource resource(get_root_resource());
 
-  size_t aligned_size = ROUNDUP((S905D2_GPIO_BASE - kGpioBase) + S905D2_GPIO_LENGTH, PAGE_SIZE);
+  size_t aligned_size = ZX_ROUNDUP((S905D2_GPIO_BASE - kGpioBase) + S905D2_GPIO_LENGTH, PAGE_SIZE);
 
   status = ddk::MmioBuffer::Create(kGpioBase, aligned_size, *resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_base);

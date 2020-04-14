@@ -5,6 +5,7 @@
 #include "display.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/zircon-internal/align.h>
 #include <zircon/pixelformat.h>
 #include <zircon/threads.h>
 
@@ -379,7 +380,7 @@ zx_status_t Display::ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset) 
 
   // Linear images must be pinned.
   unsigned pixel_size = ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
-  color_buffer->size = ROUNDUP(image->width * image->height * pixel_size, PAGE_SIZE);
+  color_buffer->size = ZX_ROUNDUP(image->width * image->height * pixel_size, PAGE_SIZE);
   zx_status_t status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, offset,
                                 color_buffer->size, &color_buffer->paddr, 1, &color_buffer->pmt);
   if (status != ZX_OK) {

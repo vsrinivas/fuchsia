@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/zircon-internal/align.h>
 #include <lib/zx/vmar.h>
 #include <stdlib.h>
 #include <string.h>
@@ -234,7 +235,7 @@ zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index, uint8_t frame_
 
   // Round frame size up to a whole number of pages, to allow mapping the frames
   // individually to vmars.
-  max_frame_size_ = ROUNDUP(negotiation_result_.dwMaxVideoFrameSize, PAGE_SIZE);
+  max_frame_size_ = ZX_ROUNDUP(negotiation_result_.dwMaxVideoFrameSize, PAGE_SIZE);
 
   if (negotiation_result_.dwClockFrequency != 0) {
     // This field is optional. If it isn't present, we instead

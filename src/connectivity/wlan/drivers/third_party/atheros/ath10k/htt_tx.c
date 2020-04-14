@@ -376,7 +376,7 @@ static int ath10k_htt_tx_alloc_txdone_fifo(struct ath10k_htt* htt) {
     int ret;
     size_t size;
 
-    size = ROUNDUP_POW2(htt->max_num_pending_tx);
+    size = ZX_ROUNDUP_POW2(htt->max_num_pending_tx);
     ret = kfifo_alloc(&htt->txdone_fifo, size, GFP_KERNEL);
     return ret;
 }
@@ -905,7 +905,7 @@ zx_status_t ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmod
   uint16_t msdu_id = id;
 
   int prefetch_len = MIN(htt->prefetch_len, msdu->used);
-  prefetch_len = ROUNDUP(prefetch_len, 4);
+  prefetch_len = ZX_ROUNDUP(prefetch_len, 4);
 
   struct ath10k_htt_txbuf* txbuf = &htt->txbuf.vaddr[msdu_id];
   uint32_t txbuf_paddr = htt->txbuf.paddr + (sizeof(struct ath10k_htt_txbuf) * msdu_id);

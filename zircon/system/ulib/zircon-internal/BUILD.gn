@@ -5,6 +5,7 @@
 zx_library("zircon-internal") {
   sdk = "source"
   sdk_headers = [
+    "lib/zircon-internal/align.h",
     "lib/zircon-internal/default_stack_size.h",
     "lib/zircon-internal/device/cpu-trace/intel-pm-events.inc",
     "lib/zircon-internal/device/cpu-trace/intel-pm.h",

@@ -6,6 +6,7 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <lib/zircon-internal/align.h>
 #include <lib/zx/channel.h>
 #include <threads.h>
 #include <zircon/assert.h>
@@ -204,7 +205,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
 static uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
   // The amlogic display controller needs buffers with a stride that is an even
   // multiple of 32.
-  return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
+  return ZX_ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
@@ -497,7 +498,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     image_constraints.max_coded_width = disp_setting_.h_active;
     image_constraints.min_coded_height = disp_setting_.v_active;
     image_constraints.max_coded_height = disp_setting_.v_active;
-    image_constraints.min_bytes_per_row = ALIGN(
+    image_constraints.min_bytes_per_row = ZX_ALIGN(
         disp_setting_.h_active * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888), kBufferAlignment);
     image_constraints.max_coded_width_times_coded_height =
         disp_setting_.h_active * disp_setting_.v_active;

@@ -110,7 +110,7 @@ static void rtl8111_init_regs(ethernet_device_t* edev) {
   WRITE8(RTL_9436CR, (READ8(RTL_9436CR) & RTL_9436CR_EEM_MASK) | RTL_9436CR_EEM_UNLOCK);
 
   // Set the tx and rx maximum packet size
-  WRITE8(RTL_MTPS, (READ8(RTL_MTPS) & RTL_MTPS_MTPS_MASK) | ROUNDUP(ETH_BUF_SIZE, 128) / 128);
+  WRITE8(RTL_MTPS, (READ8(RTL_MTPS) & RTL_MTPS_MTPS_MASK) | ZX_ROUNDUP(ETH_BUF_SIZE, 128) / 128);
   WRITE16(RTL_RMS, (READ16(RTL_RMS) & RTL_RMS_RMS_MASK) | ETH_BUF_SIZE);
 
   // Set the rx/tx descriptor ring addresses

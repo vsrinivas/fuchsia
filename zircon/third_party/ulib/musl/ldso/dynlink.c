@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <lib/zircon-internal/align.h>
 #include <zircon/dlfcn.h>
 #include <zircon/fidl.h>
 #include <zircon/process.h>
@@ -49,7 +50,6 @@ static zx_status_t get_library_vmo(const char* name, zx_handle_t* vmo);
 static void loader_svc_config(const char* config);
 
 #define MAXP2(a, b) (-(-(a) & -(b)))
-#define ALIGN(x, y) (((x) + (y)-1) & -(y))
 
 #define VMO_NAME_DL_ALLOC "ld.so.1-internal-heap"
 #define VMO_NAME_UNKNOWN "<unknown ELF file>"
@@ -1639,7 +1639,7 @@ __NO_SAFESTACK static void update_tls_size(void) {
   libc.tls_cnt = tls_cnt;
   libc.tls_align = tls_align;
   libc.tls_size =
-      ALIGN((1 + tls_cnt) * sizeof(void*) + tls_offset + sizeof(struct pthread) + tls_align * 2,
+      ZX_ALIGN((1 + tls_cnt) * sizeof(void*) + tls_offset + sizeof(struct pthread) + tls_align * 2,
             tls_align);
   // TODO(mcgrathr): The TLS block is always allocated in whole pages.
   // We should keep track of the available slop to the end of the page

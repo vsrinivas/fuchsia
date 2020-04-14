@@ -7,6 +7,7 @@
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/operation/ethernet.h>
+#include <lib/zircon-internal/align.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
 #include <string.h>
@@ -281,7 +282,7 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
 }  // namespace eth
 
 zx_status_t DWMacDevice::InitBuffers() {
-  constexpr size_t kDescSize = ROUNDUP(2 * kNumDesc * sizeof(dw_dmadescr_t), PAGE_SIZE);
+  constexpr size_t kDescSize = ZX_ROUNDUP(2 * kNumDesc * sizeof(dw_dmadescr_t), PAGE_SIZE);
 
   constexpr size_t kBufSize = 2 * kNumDesc * kTxnBufSize;
 

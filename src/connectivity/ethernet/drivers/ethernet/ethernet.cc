@@ -4,6 +4,8 @@
 
 #include "ethernet.h"
 
+#include <lib/zircon-internal/align.h>
+
 #include <memory>
 #include <type_traits>
 
@@ -453,7 +455,7 @@ zx_status_t EthDev::SetIObufLocked(zx_handle_t vmo) {
   // We pin the memory and cache the physical address list.
   if (edev0_->info_.features & ETHERNET_FEATURE_DMA) {
     fbl::AllocChecker ac;
-    size_t pages = ROUNDUP(size, PAGE_SIZE) / PAGE_SIZE;
+    size_t pages = ZX_ROUNDUP(size, PAGE_SIZE) / PAGE_SIZE;
     paddr_map = std::unique_ptr<zx_paddr_t[]>(new (&ac) zx_paddr_t[pages]);
     if (!ac.check()) {
       status = ZX_ERR_NO_MEMORY;
@@ -969,7 +971,7 @@ zx_status_t EthDev0::AddDevice() {
            info_.netbuf_size);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  info_.netbuf_size = ROUNDUP(info_.netbuf_size, 8);
+  info_.netbuf_size = ZX_ROUNDUP(info_.netbuf_size, 8);
 
   if ((status = DdkAdd("ethernet", 0, nullptr, 0, ZX_PROTOCOL_ETHERNET)) < 0) {
     return status;

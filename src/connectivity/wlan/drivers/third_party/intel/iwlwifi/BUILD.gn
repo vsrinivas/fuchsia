@@ -95,6 +95,7 @@ source_set("pcie") {
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/devices/lib/driver",
+    "//zircon/public/lib/zircon-internal",
   ]
 
   public_deps = [

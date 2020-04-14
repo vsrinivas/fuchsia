@@ -5,6 +5,7 @@
 #include "gtt.h"
 
 #include <lib/device-protocol/pci.h>
+#include <lib/zircon-internal/align.h>
 #include <stdlib.h>
 
 #include <climits>
@@ -106,7 +107,7 @@ zx_status_t Gtt::Init(Controller* controller) {
 
 zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,
                              std::unique_ptr<GttRegion>* region_out) {
-  uint32_t region_length = ROUNDUP(length, PAGE_SIZE);
+  uint32_t region_length = ZX_ROUNDUP(length, PAGE_SIZE);
   fbl::AllocChecker ac;
   auto r = fbl::make_unique_checked<GttRegion>(&ac, this);
   if (!ac.check()) {
@@ -122,7 +123,7 @@ zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,
 void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length) {
   // Just clobber everything to get the bootloader framebuffer to work.
   unsigned pte_idx = 0;
-  for (unsigned i = 0; i < ROUNDUP(length, PAGE_SIZE) / PAGE_SIZE; i++, stolen_fb += PAGE_SIZE) {
+  for (unsigned i = 0; i < ZX_ROUNDUP(length, PAGE_SIZE) / PAGE_SIZE; i++, stolen_fb += PAGE_SIZE) {
     uint64_t pte = gen_pte_encode(stolen_fb);
     controller_->mmio_space()->Write<uint64_t>(pte, get_pte_offset(pte_idx++));
   }
@@ -145,12 +146,12 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uin
 
   zx_paddr_t paddrs[kEntriesPerPinTxn];
   zx_status_t status;
-  uint32_t num_pages = static_cast<uint32_t>(ROUNDUP(length, PAGE_SIZE) / PAGE_SIZE);
+  uint32_t num_pages = static_cast<uint32_t>(ZX_ROUNDUP(length, PAGE_SIZE) / PAGE_SIZE);
   uint64_t vmo_offset = page_offset * PAGE_SIZE;
   uint32_t pte_idx = static_cast<uint32_t>(region_->base / PAGE_SIZE);
   uint32_t pte_idx_end = pte_idx + num_pages;
 
-  size_t num_pins = ROUNDUP(length, gtt_->min_contiguity_) / gtt_->min_contiguity_;
+  size_t num_pins = ZX_ROUNDUP(length, gtt_->min_contiguity_) / gtt_->min_contiguity_;
   fbl::AllocChecker ac;
   pmts_.reserve(num_pins, &ac);
   if (!ac.check()) {
@@ -164,7 +165,7 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uin
       cur_len = kEntriesPerPinTxn * gtt_->min_contiguity_;
     }
 
-    uint64_t actual_entries = ROUNDUP(cur_len, gtt_->min_contiguity_) / gtt_->min_contiguity_;
+    uint64_t actual_entries = ZX_ROUNDUP(cur_len, gtt_->min_contiguity_) / gtt_->min_contiguity_;
     zx::pmt pmt;
     status = gtt_->bti_.pin(flags, *zx::unowned_vmo(vmo_), vmo_offset, cur_len, paddrs,
                             actual_entries, &pmt);

@@ -21,6 +21,7 @@ executable("display-test") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",

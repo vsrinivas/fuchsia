@@ -30,6 +30,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
+#include <lib/zircon-internal/align.h>
 
 #include "ddk/driver.h"
 #include "fuchsia/hardware/display/llcpp/fidl.h"
@@ -473,8 +474,8 @@ bool amlogic_capture_compare(void* capture_buf, void* actual_buf, size_t size, u
     tmpptr[i] = be32toh(tmpptr[i]);
   }
 
-  uint32_t capture_stride = ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888), 64);
-  uint32_t buffer_stride = ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_x888), 64);
+  uint32_t capture_stride = ZX_ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888), 64);
+  uint32_t buffer_stride = ZX_ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_x888), 64);
   uint32_t buffer_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_x888);
   uint32_t capture_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888);
   size_t buf_idx = 0;

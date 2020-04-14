@@ -5,6 +5,7 @@
 #include "platform-device.h"
 
 #include <assert.h>
+#include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -88,8 +89,8 @@ zx_status_t PlatformDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
   }
 
   const pbus_mmio_t& mmio = resources_.mmio(index);
-  const zx_paddr_t vmo_base = ROUNDDOWN(mmio.base, ZX_PAGE_SIZE);
-  const size_t vmo_size = ROUNDUP(mmio.base + mmio.length - vmo_base, ZX_PAGE_SIZE);
+  const zx_paddr_t vmo_base = ZX_ROUNDDOWN(mmio.base, ZX_PAGE_SIZE);
+  const size_t vmo_size = ZX_ROUNDUP(mmio.base + mmio.length - vmo_base, ZX_PAGE_SIZE);
   zx::vmo vmo;
 
   zx_status_t status = zx::vmo::create_physical(*bus_->GetResource(), vmo_base, vmo_size, &vmo);

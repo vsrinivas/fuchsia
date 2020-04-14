@@ -3,6 +3,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 
+#include <lib/zircon-internal/align.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -123,7 +124,7 @@ TEST_F(BrcmfNetbuf, CanAllocate) { EXPECT_NE(buf, nullptr); }
 TEST_F(BrcmfNetbuf, AllocSizeAligned) {
   struct brcmf_netbuf* buf = brcmf_netbuf_allocate(SMALL_SIZE);
   EXPECT_NE(buf, nullptr);
-  EXPECT_EQ(buf->allocated_size, ROUNDUP(SMALL_SIZE, SDIOD_SIZE_ALIGNMENT));
+  EXPECT_EQ(buf->allocated_size, ZX_ROUNDUP(SMALL_SIZE, SDIOD_SIZE_ALIGNMENT));
   brcmf_netbuf_free(buf);
 }
 

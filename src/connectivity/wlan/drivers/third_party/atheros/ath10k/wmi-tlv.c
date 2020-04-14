@@ -275,10 +275,10 @@ static int ath10k_wmi_tlv_event_diag_data(struct ath10k* ar,
                                         item->payload);
 
         len -= sizeof(*item);
-        len -= ROUNDUP(item->len, 4);
+        len -= ZX_ROUNDUP(item->len, 4);
 
         data += sizeof(*item);
-        data += ROUNDUP(item->len, 4);
+        data += ZX_ROUNDUP(item->len, 4);
     }
 
     if (num_items != -1 || len != 0)
@@ -1505,7 +1505,7 @@ static zx_status_t ath10k_wmi_tlv_op_gen_start_scan(struct ath10k* ar,
   size_t chan_len = arg->n_channels * sizeof(uint32_t);
   size_t ssid_len = arg->n_ssids * sizeof(struct wmi_ssid);
   size_t bssid_len = arg->n_bssids * sizeof(struct wmi_mac_addr);
-  size_t ie_len = ROUNDUP(arg->ie_len, 4);
+  size_t ie_len = ZX_ROUNDUP(arg->ie_len, 4);
   size_t extra = sizeof(struct wmi_tlv) + chan_len + sizeof(struct wmi_tlv) + ssid_len +
                  sizeof(struct wmi_tlv) + bssid_len + sizeof(struct wmi_tlv) + ie_len;
 
@@ -1866,7 +1866,7 @@ static zx_status_t ath10k_wmi_tlv_op_gen_vdev_install_key(
     return ZX_ERR_INVALID_ARGS;
   }
 
-  size_t len = sizeof(*tlv) + ROUNDUP(arg->key_len, sizeof(uint32_t));
+  size_t len = sizeof(*tlv) + ZX_ROUNDUP(arg->key_len, sizeof(uint32_t));
   status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_TLV_VDEV_INSTALL_KEY, len);
   if (status != ZX_OK) {
     return status;
@@ -1891,13 +1891,13 @@ static zx_status_t ath10k_wmi_tlv_op_gen_vdev_install_key(
   ptr = ath10k_msg_buf_get_payload(msg_buf);
   tlv = ptr;
   tlv->tag = WMI_TLV_TAG_ARRAY_BYTE;
-  tlv->len = ROUNDUP(arg->key_len, sizeof(uint32_t));
+  tlv->len = ZX_ROUNDUP(arg->key_len, sizeof(uint32_t));
   if (arg->key_data) {
     memcpy(tlv->value, arg->key_data, arg->key_len);
   }
 
   ptr += sizeof(*tlv);
-  ptr += ROUNDUP(arg->key_len, sizeof(uint32_t));
+  ptr += ZX_ROUNDUP(arg->key_len, sizeof(uint32_t));
 
   ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi tlv vdev install key\n");
   *msg_buf_ptr = msg_buf;
@@ -2207,8 +2207,8 @@ static zx_status_t ath10k_wmi_tlv_op_gen_peer_assoc(struct ath10k* ar,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  legacy_rate_len = ROUNDUP(arg->peer_legacy_rates.num_rates, sizeof(uint32_t));
-  ht_rate_len = ROUNDUP(arg->peer_ht_rates.num_rates, sizeof(uint32_t));
+  legacy_rate_len = ZX_ROUNDUP(arg->peer_legacy_rates.num_rates, sizeof(uint32_t));
+  ht_rate_len = ZX_ROUNDUP(arg->peer_ht_rates.num_rates, sizeof(uint32_t));
   extra = (sizeof(*tlv) + legacy_rate_len) + (sizeof(*tlv) + ht_rate_len) +
           (sizeof(*tlv) + sizeof(*vht_rate));
   status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_TLV_PEER_ASSOC, extra);
@@ -2653,7 +2653,7 @@ static zx_status_t ath10k_wmi_tlv_op_gen_bcn_tmpl(struct ath10k* ar,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  len = sizeof(*tlv) + sizeof(*info) + prb_ies_len + sizeof(*tlv) + ROUNDUP(bcn->used, 4);
+  len = sizeof(*tlv) + sizeof(*info) + prb_ies_len + sizeof(*tlv) + ZX_ROUNDUP(bcn->used, 4);
   status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_TLV_BCN_TMPL, len);
   if (status != ZX_OK) {
     return ZX_ERR_NO_MEMORY;
@@ -2690,7 +2690,7 @@ static zx_status_t ath10k_wmi_tlv_op_gen_bcn_tmpl(struct ath10k* ar,
   // Fill up the |bcn| passed to this function.
   tlv = ptr;
   tlv->tag = WMI_TLV_TAG_ARRAY_BYTE;
-  tlv->len = ROUNDUP(bcn->used, 4);
+  tlv->len = ZX_ROUNDUP(bcn->used, 4);
   memcpy(tlv->value, bcn->vaddr, bcn->used);
 
   /* FIXME: Adjust TSF? */
@@ -2712,7 +2712,7 @@ static zx_status_t ath10k_wmi_tlv_op_gen_prb_tmpl(struct ath10k* ar,
   void* ptr;
   size_t len;
 
-  len = sizeof(*tlv) + sizeof(*info) + sizeof(*tlv) + ROUNDUP(prb->used, 4);
+  len = sizeof(*tlv) + sizeof(*info) + sizeof(*tlv) + ZX_ROUNDUP(prb->used, 4);
   status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_TLV_PRB_TMPL, len);
   if (status != ZX_OK) {
     return ZX_ERR_NO_MEMORY;
@@ -2740,7 +2740,7 @@ static zx_status_t ath10k_wmi_tlv_op_gen_prb_tmpl(struct ath10k* ar,
 
   tlv = ptr;
   tlv->tag = WMI_TLV_TAG_ARRAY_BYTE;
-  tlv->len = ROUNDUP(prb->used, 4);
+  tlv->len = ZX_ROUNDUP(prb->used, 4);
   memcpy(tlv->value, prb->vaddr, prb->used);
 
   *msg_buf_ptr = msg_buf;
@@ -2760,7 +2760,7 @@ ath10k_wmi_tlv_op_gen_p2p_go_bcn_ie(struct ath10k* ar, uint32_t vdev_id,
     size_t len;
 
     len = sizeof(*tlv) + sizeof(*cmd) +
-          sizeof(*tlv) + ROUNDUP(p2p_ie[1] + 2, 4);
+          sizeof(*tlv) + ZX_ROUNDUP(p2p_ie[1] + 2, 4);
     skb = ath10k_wmi_alloc_skb(ar, len);
     if (!skb) {
         return ERR_PTR(-ENOMEM);
@@ -2779,11 +2779,11 @@ ath10k_wmi_tlv_op_gen_p2p_go_bcn_ie(struct ath10k* ar, uint32_t vdev_id,
 
     tlv = ptr;
     tlv->tag = WMI_TLV_TAG_ARRAY_BYTE;
-    tlv->len = ROUNDUP(p2p_ie[1] + 2, 4);
+    tlv->len = ZX_ROUNDUP(p2p_ie[1] + 2, 4);
     memcpy(tlv->value, p2p_ie, p2p_ie[1] + 2);
 
     ptr += sizeof(*tlv);
-    ptr += ROUNDUP(p2p_ie[1] + 2, 4);
+    ptr += ZX_ROUNDUP(p2p_ie[1] + 2, 4);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi tlv p2p go bcn ie for vdev %i\n",
                vdev_id);

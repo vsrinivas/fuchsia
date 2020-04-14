@@ -17,10 +17,12 @@
 // on the 8111h rev2 (i.e. 0x54100000), but it should work (or mostly work) with any model of
 // rtl8111, rtl8168, or rtl8411.
 
+#include <lib/zircon-internal/align.h>
+
 #define REALTEK_VID 0x10ec
 #define RTL8111_DID 0x8168 // Also the rtl8168 and rtl8411
 
-#define ETH_BUF_SIZE ROUNDDOWN(1522, 8) // maximum ethernet frame, rtl8111 requires 8 byte size
+#define ETH_BUF_SIZE ZX_ROUNDDOWN(1522, 8) // maximum ethernet frame, rtl8111 requires 8 byte size
 #define ETH_BUF_COUNT 64
 #define ETH_DESC_ELT_SIZE 16
 #define ETH_DESC_RING_SIZE (ETH_DESC_ELT_SIZE * ETH_BUF_COUNT)

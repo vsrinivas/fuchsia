@@ -7,6 +7,7 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/image-format/image_format.h>
+#include <lib/zircon-internal/align.h>
 #include <string.h>
 #include <sys/param.h>
 #include <zircon/compiler.h>
@@ -159,7 +160,7 @@ zx_status_t GpuDevice::Import(zx::vmo vmo, image_t* image, size_t offset, uint32
     return ZX_ERR_NO_MEMORY;
   }
 
-  unsigned size = ROUNDUP(row_bytes * image->height, PAGE_SIZE);
+  unsigned size = ZX_ROUNDUP(row_bytes * image->height, PAGE_SIZE);
   zx_paddr_t paddr;
   zx_status_t status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, offset, size, &paddr, 1,
                                 &import_data->pmt);

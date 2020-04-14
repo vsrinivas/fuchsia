@@ -338,20 +338,6 @@ typedef struct composite_device_desc {
 zx_status_t device_add_composite(zx_device_t* dev, const char* name,
                                  const composite_device_desc_t* comp_desc);
 
-#define ROUNDUP(a, b)                             \
-  ({                                              \
-    const __typeof(a) _a = (a);                   \
-    const __typeof(b) _b = (b);                   \
-    (_a + (_a % _b == 0 ? 0 : (_b - (_a % _b)))); \
-  })
-#define ROUNDDOWN(a, b)         \
-  ({                            \
-    const __typeof(a) _a = (a); \
-    const __typeof(b) _b = (b); \
-    _a - (_a % _b);             \
-  })
-#define ALIGN(a, b) ROUNDUP(a, b)
-
 // temporary accessor for root resource handle
 zx_handle_t get_root_resource(void);
 

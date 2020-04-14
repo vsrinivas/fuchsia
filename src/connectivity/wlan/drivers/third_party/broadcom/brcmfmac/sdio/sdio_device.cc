@@ -13,6 +13,8 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio_device.h"
 
+#include <lib/zircon-internal/align.h>
+
 #include <string>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
@@ -50,7 +52,7 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  const size_t padded_size_firmware = ROUNDUP(firmware_binary.size(), SDIOD_SIZE_ALIGNMENT);
+  const size_t padded_size_firmware = ZX_ROUNDUP(firmware_binary.size(), SDIOD_SIZE_ALIGNMENT);
   firmware_binary.resize(padded_size_firmware, '\0');
 
   std::string nvram_binary;
@@ -59,7 +61,7 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  const size_t padded_size_nvram = ROUNDUP(nvram_binary.size(), SDIOD_SIZE_ALIGNMENT);
+  const size_t padded_size_nvram = ZX_ROUNDUP(nvram_binary.size(), SDIOD_SIZE_ALIGNMENT);
   nvram_binary.resize(padded_size_nvram, '\0');
 
   if ((status = brcmf_sdio_firmware_callback(device->brcmf_pub_.get(), firmware_binary.data(),

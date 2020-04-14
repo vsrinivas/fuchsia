@@ -43,6 +43,7 @@ driver_module("intel-i915") {
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/image-format",
+    "//zircon/public/lib/zircon-internal",
   ]
 }
 
@@ -76,6 +77,7 @@ test("intel-i915-test") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/region-alloc",
+    "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.sysmem",
