@@ -780,6 +780,17 @@ impl<'a> ValidationContext<'a> {
                     _ => {}
                 }
 
+                // Subdir makes sense when routing, but when exposing to framework the subdirectory
+                // can be exposed directly.
+                match e.target.as_ref() {
+                    Some(fsys::Ref::Framework(_)) => {
+                        if e.subdir.is_some() {
+                            self.errors.push(Error::invalid_field("ExposeDirectoryDecl", "subdir"));
+                        }
+                    }
+                    _ => {}
+                }
+
                 if let Some(subdir) = e.subdir.as_ref() {
                     check_relative_path(
                         Some(subdir),
@@ -2729,6 +2740,25 @@ mod tests {
                 // We are attempting to expose a runner from "self", but we don't
                 // acutally declare a runner.
                 Error::invalid_field("ExposeRunnerDecl", "source"),
+            ])),
+        },
+        test_validate_exposes_invalid_subdir => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.exposes = Some(vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(Ref::Self_(SelfRef {})),
+                        source_path: Some("/foo".to_string()),
+                        target_path: Some("/foo".to_string()),
+                        target: Some(Ref::Framework(FrameworkRef {})),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: Some("bar".to_string()),
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("ExposeDirectoryDecl", "subdir"),
             ])),
         },
 

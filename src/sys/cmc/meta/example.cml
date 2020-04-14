@@ -79,7 +79,7 @@
         {
             directory: "/volumes/blobfs",
             from: "self",
-            to: "framework",
+            to: "realm",
             rights: [ "rw*" ],
             subdir: "blob",
         },

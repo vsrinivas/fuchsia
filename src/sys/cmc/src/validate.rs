@@ -516,6 +516,16 @@ impl<'a> ValidationContext<'a> {
                     )),
                 };
             }
+
+            // Exposing a subdirectory makes sense for routing but when exposing to framework,
+            // the subdir should be exposed directly.
+            if expose.to == Some(cml::Ref::Framework) {
+                if expose.subdir.is_some() {
+                    return Err(Error::validate(
+                        "`subdir` is not supported for expose to framework. Directly expose the subdirectory instead."
+                    ));
+                }
+            }
         }
 
         // Ensure that resolvers exposed from self are defined in `resolvers`.
@@ -1442,6 +1452,21 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /expose/0/subdir")),
+        },
+        test_cml_expose_invalid_subdir_to_framework => {
+            input = json!({
+                "expose": [
+                    {
+                        "directory": "/volumes/blobfs",
+                        "from": "self",
+                        "to": "framework",
+                        "rights": ["r*"],
+                        "subdir": "blob",
+                    },
+                ]
+            }),
+            result = Err(Error::validate(
+                "`subdir` is not supported for expose to framework. Directly expose the subdirectory instead.")),
         },
         test_cml_expose_resolver_from_self => {
             input = json!({

@@ -90,7 +90,7 @@ fn main() {
                 source: Some(Ref::Self_(SelfRef {})),
                 source_path: Some("/volumes/blobfs".to_string()),
                 target_path: Some("/volumes/blobfs".to_string()),
-                target: Some(Ref::Framework(FrameworkRef {})),
+                target: Some(Ref::Realm(RealmRef {})),
                 rights: Some(
                     fio2::Operations::Connect
                         | fio2::Operations::ReadBytes

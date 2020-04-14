@@ -1049,11 +1049,10 @@ mod tests {
                         "to": "realm"
                     },
                     {
-                        "directory": "/volumes/blobfs",
+                        "directory": "/volumes/blobfs/blob",
                         "from": "self",
                         "to": "framework",
                         "rights": ["r*"],
-                        "subdir": "blob",
                     },
                     { "directory": "/hub", "from": "framework" },
                     { "runner": "web", "from": "self" },
@@ -1140,8 +1139,8 @@ mod tests {
                 "source": {
                     "self": {}
                 },
-                "source_path": "/volumes/blobfs",
-                "target_path": "/volumes/blobfs",
+                "source_path": "/volumes/blobfs/blob",
+                "target_path": "/volumes/blobfs/blob",
                 "target": "framework",
                 "rights": [
                     "connect",
@@ -1149,8 +1148,7 @@ mod tests {
                     "traverse",
                     "read_bytes",
                     "get_attributes"
-                ],
-                "subdir": "blob"
+                ]
             }
         },
         {

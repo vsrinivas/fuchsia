@@ -82,7 +82,7 @@
                 },
                 "source_path": "/volumes/blobfs",
                 "target_path": "/volumes/blobfs",
-                "target": "framework",
+                "target": "realm",
                 "rights": [
                     "connect",
                     "enumerate",
