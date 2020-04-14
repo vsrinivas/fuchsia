@@ -192,4 +192,162 @@ zx_status_t Vs680AVPll::IsEnabled(bool* out_enabled) const {
 void Vs680AVPll::StartPllChange() const { Disable(); }
 void Vs680AVPll::EndPllChange() const { Enable(); }
 
+zx_status_t Vs680ClockMux::Enable() const {
+  ClockMux::Get().ReadFrom(&mmio_).set_clk_en(1).WriteTo(&mmio_);
+  return ZX_OK;
+}
+
+zx_status_t Vs680ClockMux::Disable() const {
+  ClockMux::Get().ReadFrom(&mmio_).set_clk_en(0).WriteTo(&mmio_);
+  return ZX_OK;
+}
+
+zx_status_t Vs680ClockMux::IsEnabled(bool* is_enabled) const {
+  *is_enabled = ClockMux::Get().ReadFrom(&mmio_).clk_en();
+  return ZX_OK;
+}
+
+zx_status_t Vs680ClockMux::SetRate(uint64_t parent_rate_hz, uint64_t hz) const {
+  if (hz == parent_rate_hz) {
+    ClockMux::Get().ReadFrom(&mmio_).set_clk_d3_switch(0).set_clk_switch(0).WriteTo(&mmio_);
+    return ZX_OK;
+  }
+  if (hz == (parent_rate_hz / 3)) {
+    ClockMux::Get().ReadFrom(&mmio_).set_clk_d3_switch(1).WriteTo(&mmio_);
+    return ZX_OK;
+  }
+
+  uint32_t clk_sel;
+  if (hz == (parent_rate_hz / 2)) {
+    clk_sel = ClockMux::kDiv2;
+  } else if (hz == (parent_rate_hz / 4)) {
+    clk_sel = ClockMux::kDiv4;
+  } else if (hz == (parent_rate_hz / 6)) {
+    clk_sel = ClockMux::kDiv6;
+  } else if (hz == (parent_rate_hz / 8)) {
+    clk_sel = ClockMux::kDiv8;
+  } else if (hz == (parent_rate_hz / 12)) {
+    clk_sel = ClockMux::kDiv12;
+  } else if (hz == (parent_rate_hz / 24) && supports_div_24_48_) {
+    clk_sel = ClockMux::kDiv24;
+  } else if (hz == (parent_rate_hz / 48) && supports_div_24_48_) {
+    clk_sel = ClockMux::kDiv48;
+  } else {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  ClockMux::Get()
+      .ReadFrom(&mmio_)
+      .set_clk_d3_switch(0)
+      .set_clk_switch(1)
+      .set_clk_sel(clk_sel)
+      .WriteTo(&mmio_);
+  return ZX_OK;
+}
+
+zx_status_t Vs680ClockMux::QuerySupportedRate(uint64_t parent_rate_hz, uint64_t hz,
+                                              uint64_t* out_hz) const {
+  if (hz >= parent_rate_hz) {
+    *out_hz = parent_rate_hz;
+  } else if (hz >= (parent_rate_hz / 2)) {
+    *out_hz = parent_rate_hz / 2;
+  } else if (hz >= (parent_rate_hz / 3)) {
+    *out_hz = parent_rate_hz / 3;
+  } else if (hz >= (parent_rate_hz / 4)) {
+    *out_hz = parent_rate_hz / 4;
+  } else if (hz >= (parent_rate_hz / 6)) {
+    *out_hz = parent_rate_hz / 6;
+  } else if (hz >= (parent_rate_hz / 8)) {
+    *out_hz = parent_rate_hz / 8;
+  } else if (hz >= (parent_rate_hz / 12)) {
+    *out_hz = parent_rate_hz / 12;
+  } else if (hz >= (parent_rate_hz / 24) && supports_div_24_48_) {
+    *out_hz = parent_rate_hz / 24;
+  } else if (hz >= (parent_rate_hz / 48) && supports_div_24_48_) {
+    *out_hz = parent_rate_hz / 48;
+  } else {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Vs680ClockMux::GetRate(uint64_t parent_rate_hz, uint64_t* out_hz) const {
+  const ClockMux mux_reg = ClockMux::Get().ReadFrom(&mmio_);
+  if (mux_reg.clk_d3_switch()) {
+    *out_hz = parent_rate_hz / 3;
+  } else if (!mux_reg.clk_switch()) {
+    *out_hz = parent_rate_hz;
+  } else if (mux_reg.clk_sel() == ClockMux::kDiv2) {
+    *out_hz = parent_rate_hz / 2;
+  } else if (mux_reg.clk_sel() == ClockMux::kDiv4) {
+    *out_hz = parent_rate_hz / 4;
+  } else if (mux_reg.clk_sel() == ClockMux::kDiv6) {
+    *out_hz = parent_rate_hz / 6;
+  } else if (mux_reg.clk_sel() == ClockMux::kDiv8) {
+    *out_hz = parent_rate_hz / 8;
+  } else if (mux_reg.clk_sel() == ClockMux::kDiv12) {
+    *out_hz = parent_rate_hz / 12;
+  } else if (mux_reg.clk_sel() == ClockMux::kDiv24 && supports_div_24_48_) {
+    *out_hz = parent_rate_hz / 24;
+  } else if (mux_reg.clk_sel() == ClockMux::kDiv48 && supports_div_24_48_) {
+    *out_hz = parent_rate_hz / 48;
+  } else {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Vs680ClockMux::SetInput(uint32_t idx) const {
+  switch (idx) {
+    case vs680::kClockInputSysPll0:
+      ClockMux::Get().ReadFrom(&mmio_).set_clk_pll_switch(0).WriteTo(&mmio_);
+      return ZX_OK;
+    case vs680::kClockInputSysPll1:
+    case vs680::kClockInputSysPll2:
+      ClockMux::Get().ReadFrom(&mmio_).set_clk_pll_switch(1).set_clk_pll_sel(idx).WriteTo(&mmio_);
+      return ZX_OK;
+    case vs680::kClockInputSysPll0F:
+    case vs680::kClockInputSysPll1F:
+    case vs680::kClockInputSysPll2F:
+      // TODO(bradenkell): Add support for PLL F outputs.
+      return ZX_ERR_NOT_SUPPORTED;
+    default:
+      return ZX_ERR_OUT_OF_RANGE;
+  }
+}
+
+zx_status_t Vs680ClockMux::GetNumInputs(uint32_t* out_n) const {
+  *out_n = vs680::kClockInputCount;
+  return ZX_OK;
+}
+
+zx_status_t Vs680ClockMux::GetInput(uint32_t* out_index) const {
+  const ClockMux mux_reg = ClockMux::Get().ReadFrom(&mmio_);
+  *out_index = mux_reg.clk_pll_switch() ? mux_reg.clk_pll_sel() : vs680::kClockInputSysPll0;
+  return ZX_OK;
+}
+
+zx::status<uint32_t> Vs680ClockMux::GetInputId() const {
+  const ClockMux mux_reg = ClockMux::Get().ReadFrom(&mmio_);
+  if (!mux_reg.clk_pll_switch()) {
+    return zx::success(vs680::kSysPll0);
+  }
+
+  switch (mux_reg.clk_pll_sel()) {
+    case vs680::kClockInputSysPll1:
+      return zx::success(vs680::kSysPll1);
+    case vs680::kClockInputSysPll2:
+      return zx::success(vs680::kSysPll2);
+      break;
+    // TODO(bradenkell): Add support for PLL F outputs.
+    case vs680::kClockInputSysPll0F:
+    case vs680::kClockInputSysPll1F:
+    case vs680::kClockInputSysPll2F:
+    default:
+      return zx::error(ZX_ERR_BAD_STATE);
+  }
+}
+
 }  // namespace clk

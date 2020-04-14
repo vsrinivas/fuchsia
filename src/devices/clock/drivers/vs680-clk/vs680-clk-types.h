@@ -143,6 +143,30 @@ class Vs680AVPll : public Vs680Pll {
   const uint32_t disable_bit_;
 };
 
+class Vs680ClockMux : public Vs680Clock {
+ public:
+  Vs680ClockMux(ddk::MmioView mmio, bool supports_div_24_48)
+      : mmio_(mmio), supports_div_24_48_(supports_div_24_48) {}
+  ~Vs680ClockMux() {}
+
+  zx_status_t Enable() const override;
+  zx_status_t Disable() const override;
+  zx_status_t IsEnabled(bool* is_enabled) const override;
+  zx_status_t SetRate(uint64_t parent_rate_hz, uint64_t hz) const override;
+  zx_status_t QuerySupportedRate(uint64_t parent_rate_hz, uint64_t hz,
+                                 uint64_t* out_hz) const override;
+  zx_status_t GetRate(uint64_t parent_rate_hz, uint64_t* out_hz) const override;
+  zx_status_t SetInput(uint32_t idx) const override;
+  zx_status_t GetNumInputs(uint32_t* out_n) const override;
+  zx_status_t GetInput(uint32_t* out_index) const override;
+
+  zx::status<uint32_t> GetInputId() const override;
+
+ private:
+  const ddk::MmioView mmio_;
+  const bool supports_div_24_48_;
+};
+
 class Vs680ClockContainer {
  public:
   Vs680ClockContainer(ddk::MmioBuffer chip_ctrl_mmio, ddk::MmioBuffer cpu_pll_mmio,
@@ -157,7 +181,8 @@ class Vs680ClockContainer {
         vpll0_(avio_mmio_.View(0x04, 0x20), reset_time, avio_mmio_.View(0x130, 4), 0),
         vpll1_(avio_mmio_.View(0x70, 0x20), reset_time, avio_mmio_.View(0x130, 4), 1),
         apll0_(avio_mmio_.View(0x28, 0x20), reset_time, avio_mmio_.View(0x130, 4), 2),
-        apll1_(avio_mmio_.View(0x4c, 0x20), reset_time, avio_mmio_.View(0x130, 4), 3) {}
+        apll1_(avio_mmio_.View(0x4c, 0x20), reset_time, avio_mmio_.View(0x130, 4), 3),
+        sd0clock_(chip_ctrl_mmio_.View(0x7b4, 4), false) {}
   ~Vs680ClockContainer() {}
 
   void PopulateClockList(const Vs680Clock* clocks[]) const {
@@ -170,6 +195,7 @@ class Vs680ClockContainer {
     clocks[vs680::kVPll1] = &vpll1_;
     clocks[vs680::kAPll0] = &apll0_;
     clocks[vs680::kAPll1] = &apll1_;
+    clocks[vs680::kSd0Clock] = &sd0clock_;
   }
 
  private:
@@ -186,6 +212,7 @@ class Vs680ClockContainer {
   const Vs680AVPll vpll1_;
   const Vs680AVPll apll0_;
   const Vs680AVPll apll1_;
+  const Vs680ClockMux sd0clock_;
 };
 
 }  // namespace clk

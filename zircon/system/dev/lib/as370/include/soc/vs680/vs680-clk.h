@@ -32,7 +32,18 @@ enum Clock : uint32_t {
   kVPll1,
   kAPll0,
   kAPll1,
+  kSd0Clock,
   kClockCount,
+};
+
+enum ClockInput : uint32_t {
+  kClockInputSysPll2 = 0,
+  kClockInputSysPll0F = 1,
+  kClockInputSysPll1F = 2,
+  kClockInputSysPll2F = 3,
+  kClockInputSysPll1 = 4,
+  kClockInputSysPll0,
+  kClockInputCount,
 };
 
 }  // namespace vs680

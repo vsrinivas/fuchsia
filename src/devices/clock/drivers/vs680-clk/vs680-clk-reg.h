@@ -60,6 +60,28 @@ class PllStatus : public hwreg::RegisterBase<PllStatus, uint32_t> {
   DEF_BIT(0, lock);  // Output lock detection
 };
 
+class ClockMux : public hwreg::RegisterBase<ClockMux, uint32_t> {
+ public:
+  enum ClkSel : uint32_t {
+    kDiv2 = 1,
+    kDiv4 = 2,
+    kDiv6 = 3,
+    kDiv8 = 4,
+    kDiv12 = 5,
+    kDiv24 = 6,
+    kDiv48 = 7,
+  };
+
+  static auto Get() { return hwreg::RegisterAddr<ClockMux>(0); }
+
+  DEF_FIELD(9, 7, clk_sel);      // Divide input, see values above.
+  DEF_BIT(6, clk_d3_switch);     // 0 - use clk_switch selection, 1 - divide input by 3
+  DEF_BIT(5, clk_switch);        // 0 - don't divide input, 1 - divide input using clk_sel selection
+  DEF_BIT(4, clk_pll_switch);    // 0 - use SYSPLL0 input, 1 - use clk_pll_sel selection
+  DEF_FIELD(3, 1, clk_pll_sel);  // Selects between SYSPLL1/F/2/F/SYSPLL0F.
+  DEF_BIT(0, clk_en);            // Clock enable, takes priority over all other settings.
+};
+
 }  // namespace clk
 
 #endif  // SRC_DEVICES_CLOCK_DRIVERS_VS680_CLK_VS680_CLK_REG_H_
