@@ -22,6 +22,7 @@ the syslog API.
 The global logger is lazily instantiated on the first use of the API (more
 specifically, on the first call to `fx_log_get_logger`). The default
 configuration for the global logger is:
+
 - Use process name as the tag
 - Write logs to `fuchsia.logger.LogSink`
 - Min log level of `FX_LOG_INFO`
