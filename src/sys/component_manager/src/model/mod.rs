@@ -30,3 +30,4 @@ mod namespace;
 mod storage;
 #[cfg(test)]
 mod tests;
+mod walk_state;

@@ -7,6 +7,7 @@ use {
         environment::EnvironmentError,
         moniker::{AbsoluteMoniker, PartialMoniker},
         resolver::ResolverError,
+        rights::RightsError,
         runner::RunnerError,
         storage::StorageError,
     },
@@ -93,7 +94,7 @@ pub enum ModelError {
     #[error("rights error")]
     RightsError {
         #[source]
-        err: ClonableError,
+        err: RightsError,
     },
 }
 
@@ -159,9 +160,11 @@ impl ModelError {
     ) -> ModelError {
         ModelError::OpenDirectoryError { moniker, relative_path: relative_path.into() }
     }
+}
 
-    pub fn rights_error(err: impl Into<Error>) -> ModelError {
-        ModelError::RightsError { err: err.into().into() }
+impl From<RightsError> for ModelError {
+    fn from(err: RightsError) -> Self {
+        ModelError::RightsError { err }
     }
 }
 

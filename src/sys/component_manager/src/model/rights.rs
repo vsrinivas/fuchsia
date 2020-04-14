@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::error::ModelError,
-    anyhow::format_err,
+    crate::model::walk_state::WalkStateUnit,
     fidl_fuchsia_io::{self as fio},
     fidl_fuchsia_io2::{self as fio2},
     lazy_static::lazy_static,
     std::cmp::Ordering,
     std::collections::HashSet,
     std::convert::From,
+    thiserror::Error,
 };
 
 /// List of all available fio2::Operation rights.
@@ -120,94 +120,29 @@ impl From<fio2::Operations> for Rights {
     }
 }
 
-/// RightWalkState contains all information required to traverse offer and expose chains in a tree
-/// tracing routes from any point back to their originating source. This includes in the most
-/// complex case traversing from a use to offer chain, back through to an expose chain.
-#[derive(Debug, Clone)]
-pub struct RightWalkState {
-    is_first: bool,
-    last_seen_rights: Option<Rights>,
-    finished: bool,
+#[derive(Debug, Error, Clone)]
+pub enum RightsError {
+    #[error("Requested rights greater than provided rights")]
+    Invalid,
+
+    #[error("Directory routes must end at source with a rights declaration")]
+    InvalidFinalize,
 }
 
-#[allow(dead_code)]
-impl RightWalkState {
-    /// Constructs a new RightWalkState representing the start of a walk.
-    pub fn new() -> RightWalkState {
-        RightWalkState { is_first: true, last_seen_rights: None, finished: false }
-    }
+impl WalkStateUnit for Rights {
+    type Error = RightsError;
 
-    /// Constructs a new RightWalkState representing the start of a walk after a
-    /// hard coded initial node. Used to represent fraework rights with static right
-    /// definitions.
-    pub fn at(rights: Rights) -> RightWalkState {
-        RightWalkState { is_first: false, last_seen_rights: Some(rights), finished: false }
-    }
-
-    /// Advances the RightWalkState if and only if the rights passed retain the required properties
-    /// of a monotonic decreasing sequence. See Rights PartialOrd trait for information on how
-    /// order is determined between elements.
-    pub fn advance(&self, rights: Option<Rights>) -> Result<Self, ModelError> {
-        if self.finished {
-            return Err(ModelError::rights_error(format_err!(
-                "Attempting to advance a finished RightWalkState"
-            )));
+    /// Ensures the next walk state of rights satisfies a monotonic decreasing sequence.
+    /// See Rights PartialOrd trait for information on how order is determined between elements.
+    fn validate_next(&self, next_rights: &Rights) -> Result<(), Self::Error> {
+        if *self > *next_rights {
+            return Err(RightsError::Invalid);
         }
-        if let Some(proposed_rights) = rights {
-            if self.is_first {
-                return Ok(RightWalkState {
-                    is_first: false,
-                    last_seen_rights: Some(proposed_rights.clone()),
-                    finished: false,
-                });
-            }
-            // Greater returns false if no ordering exists. This catches disjoint right
-            // escalations.
-            if *self.last_seen_rights.as_ref().unwrap() > proposed_rights {
-                return Err(ModelError::rights_error(format_err!(
-                    "Requested rights greater than provided rights"
-                )));
-            }
-            return Ok(RightWalkState {
-                is_first: self.is_first,
-                last_seen_rights: Some(proposed_rights.clone()),
-                finished: false,
-            });
-        }
-        Ok(self.clone())
+        Ok(())
     }
 
-    /// Finalizes the state preventing future modification, this is called when the walker arrives
-    /// at a node with a source of Framework, Builtin or Self. The provided |rights| should always
-    /// be the right at the CapabilitySource.
-    pub fn finalize(&self, rights: Option<Rights>) -> Result<Self, ModelError> {
-        if let Some(final_rights) = rights {
-            if self.is_first {
-                return Ok(RightWalkState {
-                    is_first: false,
-                    last_seen_rights: Some(final_rights.clone()),
-                    finished: true,
-                });
-            }
-            if *self.last_seen_rights.as_ref().unwrap() > final_rights {
-                return Err(ModelError::rights_error(format_err!(
-                    "Requested rights greater than provided rights"
-                )));
-            }
-            return Ok(RightWalkState {
-                is_first: self.is_first,
-                last_seen_rights: Some(final_rights.clone()),
-                finished: true,
-            });
-        }
-        return Err(ModelError::rights_error(format_err!(
-            "Directory routes must end at a source with a rights declaration"
-        )));
-    }
-
-    /// Returns true if the walk state is finished.
-    pub fn finished(&self) -> bool {
-        self.finished
+    fn finalize_error() -> Self::Error {
+        RightsError::InvalidFinalize
     }
 }
 

@@ -12,8 +12,9 @@ use {
             hooks::{Event, EventPayload},
             moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker, RelativeMoniker},
             realm::{Realm, WeakRealm},
-            rights::{RightWalkState, Rights, READ_RIGHTS, WRITE_RIGHTS},
+            rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
             storage,
+            walk_state::WalkState,
         },
         path::PathBufExt,
     },
@@ -432,7 +433,7 @@ enum CapabilityState {
     #[allow(dead_code)]
     Directory {
         /// Holds the state of the rights. This is used to enforce directory rights.
-        rights_state: RightWalkState,
+        rights_state: WalkState<Rights>,
         /// Holds the subdirectory path to open.
         subdir: PathBuf,
     },
@@ -450,14 +451,14 @@ impl CapabilityState {
             | ComponentCapability::Offer(OfferDecl::Directory(OfferDirectoryDecl {
                 subdir, ..
             })) => Self::Directory {
-                rights_state: RightWalkState::new(),
+                rights_state: WalkState::new(),
                 subdir: subdir.as_ref().map_or(PathBuf::new(), |s| PathBuf::from(s)),
             },
             ComponentCapability::UsedExpose(ExposeDecl::Directory(ExposeDirectoryDecl {
                 ..
-            })) => Self::Directory { rights_state: RightWalkState::new(), subdir: PathBuf::new() },
+            })) => Self::Directory { rights_state: WalkState::new(), subdir: PathBuf::new() },
             ComponentCapability::Storage(_) => Self::Directory {
-                rights_state: RightWalkState::at(Rights::from(*READ_RIGHTS | *WRITE_RIGHTS)),
+                rights_state: WalkState::at(Rights::from(*READ_RIGHTS | *WRITE_RIGHTS)),
                 subdir: PathBuf::new(),
             },
             _ => Self::Other,
@@ -893,8 +894,8 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                     capability: ComponentCapability::Runner(
                         cap.find_runner_source(cur_realm_state.decl())
                             .expect(&format!(
-                                "An `expose from runner` declaration was found at `{}` for `{}` 
-                                with no corresponding runner declaration. This ComponentDecl should 
+                                "An `expose from runner` declaration was found at `{}` for `{}`
+                                with no corresponding runner declaration. This ComponentDecl should
                                 not have passed validation.",
                                 pos.moniker(),
                                 cap.source_id()
