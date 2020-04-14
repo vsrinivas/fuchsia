@@ -112,7 +112,6 @@ zx_library("blobfs") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fvm",
-    "//zircon/public/lib/id_allocator",
     "//zircon/public/lib/journal",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/operation",
@@ -174,6 +173,7 @@ zx_library("blobfs") {
       "//zircon/public/lib/zx",
       "//zircon/system/fidl/fuchsia-fs:llcpp",
       "//zircon/system/fidl/fuchsia-io:llcpp",
+      "//zircon/system/ulib/id_allocator",
     ]
   } else {
     sources += [
