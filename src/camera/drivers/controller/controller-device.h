@@ -54,7 +54,7 @@ class ControllerDevice : public ControllerDeviceType,
         ge2d_(ge2d),
         buttons_(buttons),
         shutdown_event_(std::move(event)),
-        controller_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         sysmem_(sysmem) {}
 
   ~ControllerDevice() { ShutDown(); }
@@ -100,9 +100,9 @@ class ControllerDevice : public ControllerDeviceType,
   ddk::Ge2dProtocolClient ge2d_;
   ddk::ButtonsProtocolClient buttons_;
   fuchsia::buttons::ButtonsPtr buttons_client_;
-  async::Wait controller_shutdown_;
+  async::Wait shutdown_waiter_;
   zx::event shutdown_event_;
-  async::Loop controller_loop_;
+  async::Loop loop_;
   thrd_t loop_thread_;
   std::unique_ptr<ControllerImpl> controller_;
   ddk::SysmemProtocolClient sysmem_;

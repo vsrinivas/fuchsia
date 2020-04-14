@@ -66,38 +66,37 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
   }
 
   auto shutdown_callback = [this] {
-    controller_shutdown_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                            zx_status_t status, const zx_packet_signal_t* signal) {
+    shutdown_waiter_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
+                                        zx_status_t status, const zx_packet_signal_t* signal) {
       controller_ = nullptr;
       // Clear the signal.
       shutdown_event_.signal(kPipelineManagerSignalExitDone, 0u);
     });
 
-    controller_shutdown_.set_object(shutdown_event_.get());
-    controller_shutdown_.set_trigger(kPipelineManagerSignalExitDone);
-    controller_shutdown_.Begin(controller_loop_.dispatcher());
+    shutdown_waiter_.set_object(shutdown_event_.get());
+    shutdown_waiter_.set_trigger(kPipelineManagerSignalExitDone);
+    shutdown_waiter_.Begin(loop_.dispatcher());
 
     controller_->Shutdown();
   };
 
   if (control_interface.is_valid()) {
     controller_ = std::make_unique<ControllerImpl>(
-        parent(), std::move(control_interface), controller_loop_.dispatcher(), isp_, gdc_, ge2d_,
+        parent(), std::move(control_interface), loop_.dispatcher(), isp_, gdc_, ge2d_,
         shutdown_callback, std::move(sysmem_allocator), shutdown_event_);
     return ZX_OK;
   }
   return ZX_ERR_INTERNAL;
 }
 
-void ControllerDevice::ShutDown() { controller_loop_.Shutdown(); }
+void ControllerDevice::ShutDown() { loop_.Shutdown(); }
 
 zx_status_t ControllerDevice::StartThread() {
-  return controller_loop_.StartThread("camera-controller-loop", &loop_thread_);
+  return loop_.StartThread("camera-controller-loop", &loop_thread_);
 }
 
 zx_status_t ControllerDevice::RegisterMicButtonNotification() {
-  auto status =
-      buttons_.GetChannel(buttons_client_.NewRequest(controller_loop_.dispatcher()).TakeChannel());
+  auto status = buttons_.GetChannel(buttons_client_.NewRequest(loop_.dispatcher()).TakeChannel());
   if (status != ZX_OK) {
     return status;
   }
