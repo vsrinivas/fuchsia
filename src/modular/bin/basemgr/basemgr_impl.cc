@@ -108,8 +108,7 @@ void BasemgrImpl::StartBaseShell() {
 
   presentation_container_ = std::make_unique<PresentationContainer>(
       presenter_.get(), std::move(view_holder_token),
-      /* shell_config= */ GetActiveSessionShellConfig(),
-      /* on_swap_session_shell= */ [this] { SelectNextSessionShell(/* callback= */ [] {}); });
+      /* shell_config= */ GetActiveSessionShellConfig());
 
   // TODO(alexmin): Remove BaseShellParams.
   fuchsia::modular::BaseShellParams params;
@@ -275,9 +274,7 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account) {
   // Ownership of the Presenter should be moved to the session shell.
   presentation_container_ = std::make_unique<PresentationContainer>(
       presenter_.get(), std::move(view_holder_token),
-      /* shell_config= */ GetActiveSessionShellConfig(),
-      /* on_swap_session_shell= */ [this] {
-    SelectNextSessionShell(/* callback= */ [] {}); });
+      /* shell_config= */ GetActiveSessionShellConfig());
 }
 
 void BasemgrImpl::SelectNextSessionShell(SelectNextSessionShellCallback callback) {

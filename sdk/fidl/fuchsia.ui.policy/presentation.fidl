@@ -6,12 +6,6 @@ library fuchsia.ui.policy;
 
 using fuchsia.ui.input;
 
-/// `Presentation.CaptureKeyboardEvent` will consume this listener interface and
-/// call `OnEvent` when the registered keyboard event occurs.
-protocol KeyboardCaptureListenerHACK {
-    OnEvent(fuchsia.ui.input.KeyboardEvent event);
-};
-
 /// `Presentation.CapturePointerEvent` will consume this listener interface and
 /// call `OnEvent` when a pointer event occurs.
 protocol PointerCaptureListenerHACK {
@@ -22,18 +16,6 @@ protocol PointerCaptureListenerHACK {
 /// Experimental.
 [Discoverable]
 protocol Presentation {
-    /// This call exists so that base shell can capture hotkeys and do special
-    /// things with it (e.g., switch a session shell). Phase and modifiers are always
-    /// matched, and valid (non-zero) code points are matched. If there is no
-    /// valid code point, the filter will match against the hid usage value.
-    /// The full KeyboardEvent is supplied to `listener`'s OnEvent.
-    // TODO: Figure out the feasibility of this feature and the best place to put
-    // it.
-    // TODO(43601): Remove the method after we remove usage in all clients.
-    [Transitional]
-    CaptureKeyboardEventHACK(fuchsia.ui.input.KeyboardEvent event_to_capture,
-                             KeyboardCaptureListenerHACK listener);
-
     /// This call exists so that base shell can capture pointer events.
     // TODO: Figure out the feasibility of this feature and the best place to put
     // it. This call will be replaced by gesture disambiguation system in future.

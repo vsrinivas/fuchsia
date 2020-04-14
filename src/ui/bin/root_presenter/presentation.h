@@ -83,9 +83,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   friend class PresentationSwitcher;
 
   // |fuchsia::ui::policy::Presentation|
-  void CaptureKeyboardEventHACK(
-      fuchsia::ui::input::KeyboardEvent event_to_capture,
-      fidl::InterfaceHandle<fuchsia::ui::policy::KeyboardCaptureListenerHACK> listener) override;
   void CapturePointerEventsHACK(
       fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener) override;
 
@@ -189,14 +186,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   std::map<uint32_t, CursorState> cursors_;
   std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*, std::unique_ptr<ui_input::DeviceState>>>
       device_states_by_id_;
-
-  // A registry of listeners who want to be notified when their keyboard
-  // event happens.
-  struct KeyboardCaptureItem {
-    fuchsia::ui::input::KeyboardEvent event;
-    fuchsia::ui::policy::KeyboardCaptureListenerHACKPtr listener;
-  };
-  std::vector<KeyboardCaptureItem> captured_keybindings_;
 
   // A registry of listeners who want to be notified when pointer event happens.
   fidl::InterfacePtrSet<fuchsia::ui::policy::PointerCaptureListenerHACK> captured_pointerbindings_;

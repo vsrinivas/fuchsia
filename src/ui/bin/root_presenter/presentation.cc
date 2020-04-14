@@ -360,25 +360,6 @@ void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport 
   state->Update(std::move(input_report), size);
 }
 
-void Presentation::CaptureKeyboardEventHACK(
-    fuchsia::ui::input::KeyboardEvent event_to_capture,
-    fidl::InterfaceHandle<fuchsia::ui::policy::KeyboardCaptureListenerHACK> listener_handle) {
-  fuchsia::ui::policy::KeyboardCaptureListenerHACKPtr listener;
-  listener.Bind(std::move(listener_handle));
-  // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([this, listener = listener.get()](zx_status_t status) {
-    captured_keybindings_.erase(
-        std::remove_if(captured_keybindings_.begin(), captured_keybindings_.end(),
-                       [listener](const KeyboardCaptureItem& item) -> bool {
-                         return item.listener.get() == listener;
-                       }),
-        captured_keybindings_.end());
-  });
-
-  captured_keybindings_.push_back(
-      KeyboardCaptureItem{std::move(event_to_capture), std::move(listener)});
-}
-
 void Presentation::CapturePointerEventsHACK(
     fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener_handle) {
   captured_pointerbindings_.AddInterfacePtr(listener_handle.Bind());
