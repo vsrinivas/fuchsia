@@ -53,6 +53,9 @@ Engine::Engine(sys::ComponentContext* app_context,
 
   InitializeInspectObjects();
   InitializeAnnotationManager();
+
+  // TODO(42571): replace this with information extracted from fuchsia.hardware.display APIs.
+  engine_renderer_->WarmPipelineCache({vk::Format::eB8G8R8A8Unorm});
 }
 
 Engine::Engine(sys::ComponentContext* app_context,
@@ -196,6 +199,7 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
   escher::FramePtr frame = escher()->NewFrame("Scenic Compositor", frame_number, false,
                                               escher::CommandBuffer::Type::kGraphics,
                                               uses_protected_memory ? true : false);
+  frame->DisableLazyPipelineCreation();
 
   bool success = true;
   timings->RegisterSwapchains(hlas.size());

@@ -21,7 +21,8 @@ namespace scheduling {
 // FrameTiming::Timestamps. Used for debug data, i.e. inspect.
 class FrameStats {
  public:
-  FrameStats(inspect::Node inspect_node, std::unique_ptr<cobalt::CobaltLogger> cobalt_logger);
+  FrameStats(inspect::Node inspect_node,
+             std::shared_ptr<cobalt::CobaltLogger> cobalt_logger);
 
   void RecordFrame(FrameTimings::Timestamps timestamps, zx::duration display_vsync_interval);
 
@@ -86,7 +87,7 @@ class FrameStats {
   // Used for getting the cobalt histogram bucket number given a frame time number.
   std::unique_ptr<cobalt::config::IntegerBucketConfig> frame_times_bucket_config_;
 
-  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger_;
+  std::shared_ptr<cobalt::CobaltLogger> cobalt_logger_;
 
   async::TaskClosureMethod<FrameStats, &FrameStats::LogFrameTimes> cobalt_logging_task_{this};
 };

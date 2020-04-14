@@ -7,6 +7,8 @@
 
 #include <lib/zx/time.h>
 
+#include <set>
+
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
@@ -32,6 +34,8 @@ class EngineRenderer {
   // into |output_image|.
   void RenderLayers(const escher::FramePtr& frame, zx::time target_presentation_time,
                     const RenderTarget& render_target, const std::vector<Layer*>& layers);
+
+  void WarmPipelineCache(std::set<vk::Format> framebuffer_formats) const;
 
  private:
   void DrawLayer(const escher::FramePtr& frame, zx::time target_presentation_time, Layer* layer,

@@ -741,6 +741,8 @@ static impl::RenderPassPtr WarmRenderPassCache(impl::RenderPassCache* cache,
                                                const PaperRendererConfig& config,
                                                vk::Format output_format,
                                                vk::ImageLayout output_swapchain_layout) {
+  TRACE_DURATION("gfx", "PaperRenderer::WarmRenderPassCache", "format",
+                 vk::to_string(output_format), "layout", vk::to_string(output_swapchain_layout));
   RenderPassInfo info;
 
   RenderPassInfo::AttachmentInfo color_attachment_info;
@@ -757,7 +759,7 @@ static impl::RenderPassPtr WarmRenderPassCache(impl::RenderPassCache* cache,
 // Helper for WarmPipelineAndRenderPassCaches.
 static void BindMeshSpecHelper(CommandBufferPipelineState* cbps, const MeshSpec& mesh_spec) {
   const uint32_t total_attribute_count = mesh_spec.total_attribute_count();
-  BlockAllocator allocator;
+  BlockAllocator allocator(512);
   RenderFuncs::VertexAttributeBinding* attribute_bindings =
       RenderFuncs::NewVertexAttributeBindings(PaperRenderFuncs::kMeshAttributeBindingLocations,
                                               &allocator, mesh_spec, total_attribute_count);
@@ -777,6 +779,8 @@ static void BindMeshSpecHelper(CommandBufferPipelineState* cbps, const MeshSpec&
 // Helper for WarmPipelineAndRenderPassCaches.
 static void WarmProgramHelper(const ShaderProgramPtr& program, CommandBufferPipelineState* cbps,
                               const std::vector<SamplerPtr>& immutable_samplers) {
+  TRACE_DURATION("gfx", "PaperRenderer::WarmProgramHelper");
+
   // Generate pipeline which doesn't require an immutable sampler.
   PipelineLayout* layout = program->ObtainPipelineLayout(nullptr);
   cbps->FlushGraphicsPipeline(layout, program.get());
@@ -792,6 +796,8 @@ static void WarmProgramHelper(const ShaderProgramPtr& program, CommandBufferPipe
 void PaperRenderer::WarmPipelineAndRenderPassCaches(
     Escher* escher, const PaperRendererConfig& config, vk::Format output_format,
     vk::ImageLayout output_swapchain_layout, const std::vector<SamplerPtr>& immutable_samplers) {
+  TRACE_DURATION("gfx", "PaperRenderer::WarmPipelineAndRenderPassCaches");
+
   CommandBufferPipelineState cbps(escher->pipeline_builder()->GetWeakPtr());
 
   // Obtain and set the render pass; this is the only render pass that is used, so we just need to
@@ -806,7 +812,10 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
   // Set up vertex buffer bindings, as well as bindings to attributes within those buffers.  Of
   // course we don't actually have buffers right now; that's OK... see comments in the helper func
   // for details.
-  BindMeshSpecHelper(&cbps, PaperShapeCache::kShadowVolumeMeshSpec());
+  {
+    TRACE_DURATION("gfx", "PaperRenderer::WarmPipelineAndRenderPassCaches[bind mesh spec]");
+    BindMeshSpecHelper(&cbps, PaperShapeCache::kShadowVolumeMeshSpec());
+  }
   // NOTE: different mesh specs are used depending on whether stencil shadows
   // are enabled.  But it doesn't matter, because CommandBuffer will only use whichever attributes
   // are required for the specified shader.

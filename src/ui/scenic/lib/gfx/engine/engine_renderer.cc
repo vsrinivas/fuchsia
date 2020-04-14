@@ -10,8 +10,10 @@
 
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "src/ui/lib/escher/impl/image_cache.h"
+#include "src/ui/lib/escher/paper/paper_renderer_config.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/renderer/sampler_cache.h"
 #include "src/ui/lib/escher/scene/model.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/lib/escher/vk/image_layout_updater.h"
@@ -32,6 +34,11 @@
 #include <type_traits>
 static_assert(std::is_same<zx_time_t, int64_t>::value,
               "PoseBufferLatchingShader incorrectly assumes that zx_time_t is int64_t");
+
+namespace {
+// Format used for intermediate layers when we're rendering more than one layer.
+constexpr vk::Format kIntermediateLayerFormat = vk::Format::eB8G8R8A8Srgb;
+}
 
 namespace scenic_impl {
 namespace gfx {
@@ -292,10 +299,34 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
   paper_renderer_->EndFrame(std::move(escher_image_updater_semaphore));
 }
 
+void EngineRenderer::WarmPipelineCache(std::set<vk::Format> framebuffer_formats) const {
+  TRACE_DURATION("gfx", "EngineRenderer::WarmPipelineCache");
+
+  escher::PaperRendererConfig config;
+  config.shadow_type = escher::PaperRendererShadowType::kNone;
+  config.msaa_sample_count = 1;
+  config.depth_stencil_format = depth_stencil_format_;
+
+  // Generate the list of immutable samples for all of the YUV types that we expect to see.
+  const std::vector<vk::Format> immutable_sampler_formats{vk::Format::eG8B8G8R8422Unorm,
+                                                          vk::Format::eG8B8R82Plane420Unorm};
+  std::vector<escher::SamplerPtr> immutable_samplers;
+  for (auto fmt : immutable_sampler_formats) {
+    immutable_samplers.push_back(
+        escher_->sampler_cache()->ObtainYuvSampler(fmt, vk::Filter::eLinear));
+  }
+
+  framebuffer_formats.insert(kIntermediateLayerFormat);
+  for (auto fmt : framebuffer_formats) {
+    escher::PaperRenderer::WarmPipelineAndRenderPassCaches(
+        escher_.get(), config, fmt, vk::ImageLayout::eColorAttachmentOptimal, immutable_samplers);
+  }
+}
+
 escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width, uint32_t height,
                                                           bool use_protected_memory) {
   escher::ImageInfo info;
-  info.format = vk::Format::eB8G8R8A8Srgb;
+  info.format = kIntermediateLayerFormat;
   info.width = width;
   info.height = height;
   info.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled;

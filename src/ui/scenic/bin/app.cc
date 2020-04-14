@@ -19,6 +19,7 @@
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/files/file.h"
+#include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/scenic/lib/gfx/api/internal_snapshot_impl.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
@@ -153,6 +154,8 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
 
 void App::InitializeServices(escher::EscherUniquePtr escher,
                              std::shared_ptr<display::Display> display) {
+  TRACE_DURATION("gfx", "App::InitializeServices");
+
   if (!display) {
     FXL_LOG(ERROR) << "No default display, Graphics system exiting";
     shutdown_manager_->Shutdown(LifecycleControllerImpl::kShutdownTimeout);
@@ -167,22 +170,57 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 
   escher_ = std::move(escher);
 
-  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = cobalt::NewCobaltLoggerFromProjectId(
+  std::shared_ptr<cobalt::CobaltLogger> cobalt_logger = cobalt::NewCobaltLoggerFromProjectId(
       async_get_default_dispatcher(), app_context_->svc(), cobalt_registry::kProjectId);
-  if (cobalt_logger == nullptr) {
+  if (!cobalt_logger) {
     FX_LOGS(ERROR) << "CobaltLogger creation failed!";
   }
 
-  frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
-      display->vsync_timing(),
-      std::make_unique<scheduling::WindowedFramePredictor>(
-          GetMinimumPredictedFrameDuration(),
-          scheduling::DefaultFrameScheduler::kInitialRenderDuration,
-          scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
-      scenic_.inspect_node()->CreateChild("FrameScheduler"), std::move(cobalt_logger));
+  // Replace Escher's default pipeline builder with one which will log to Cobalt upon each
+  // unexpected lazy pipeline creation.  This allows us to detect when this slips through our
+  // testing and occurs in the wild.  In order to detect problems ASAP during development, debug
+  // builds CHECK instead of logging to Cobalt.
+  {
+    auto pipeline_builder = std::make_unique<escher::PipelineBuilder>(escher_->vk_device());
+    pipeline_builder->set_log_pipeline_creation_callback(
+        [cobalt_logger](const vk::GraphicsPipelineCreateInfo* graphics_info,
+                        const vk::ComputePipelineCreateInfo* compute_info) {
+          // TODO(49972): pre-warm compute pipelines in addition to graphics pipelines.
+          if (compute_info) {
+            FXL_LOG(WARNING) << "Unexpected lazy creation of Vulkan compute pipeline.";
+            return;
+          }
 
-  engine_.emplace(app_context_.get(), frame_scheduler_, escher_->GetWeakPtr(),
-                  scenic_.inspect_node()->CreateChild("Engine"));
+#if !defined(NDEBUG)
+          FXL_CHECK(false)  // debug builds should crash for early detection
+#else
+          FXL_LOG(WARNING)  // release builds should log to Cobalt, see below.
+#endif
+              << "Unexpected lazy creation of Vulkan pipeline.";
+
+          cobalt_logger->LogEvent(
+              cobalt_registry::kScenicRareEventMetricId,
+              cobalt_registry::ScenicRareEventMetricDimensionEvent_LazyPipelineCreation);
+        });
+    escher_->set_pipeline_builder(std::move(pipeline_builder));
+  }
+
+  {
+    TRACE_DURATION("gfx", "App::InitializeServices[frame-scheduler]");
+    frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
+        display->vsync_timing(),
+        std::make_unique<scheduling::WindowedFramePredictor>(
+            GetMinimumPredictedFrameDuration(),
+            scheduling::DefaultFrameScheduler::kInitialRenderDuration,
+            scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
+        scenic_.inspect_node()->CreateChild("FrameScheduler"), cobalt_logger);
+  }
+
+  {
+    TRACE_DURATION("gfx", "App::InitializeServices[engine]");
+    engine_.emplace(app_context_.get(), frame_scheduler_, escher_->GetWeakPtr(),
+                    scenic_.inspect_node()->CreateChild("Engine"));
+  }
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
   scenic_.SetFrameScheduler(frame_scheduler_);
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());

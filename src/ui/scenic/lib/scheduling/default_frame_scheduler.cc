@@ -33,7 +33,7 @@ namespace scheduling {
 DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
                                              std::unique_ptr<FramePredictor> predictor,
                                              inspect::Node inspect_node,
-                                             std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
+                                             std::shared_ptr<cobalt::CobaltLogger> cobalt_logger)
     : dispatcher_(async_get_default_dispatcher()),
       vsync_timing_(vsync_timing),
       frame_predictor_(std::move(predictor)),

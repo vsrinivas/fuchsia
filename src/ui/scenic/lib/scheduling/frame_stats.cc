@@ -29,7 +29,7 @@ using cobalt_registry::kScenicRenderTimeIntBucketsStepSize;
 namespace scheduling {
 
 FrameStats::FrameStats(inspect::Node inspect_node,
-                       std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
+                       std::shared_ptr<cobalt::CobaltLogger> cobalt_logger)
     : inspect_node_(std::move(inspect_node)), cobalt_logger_(std::move(cobalt_logger)) {
   inspect_frame_stats_dump_ = inspect_node_.CreateLazyValues("Aggregate Stats", [this] {
     inspect::Inspector insp;

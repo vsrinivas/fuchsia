@@ -31,7 +31,7 @@ class DefaultFrameScheduler : public FrameScheduler {
   explicit DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
                                  std::unique_ptr<FramePredictor> predictor,
                                  inspect::Node inspect_node = inspect::Node(),
-                                 std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = nullptr);
+                                 std::shared_ptr<cobalt::CobaltLogger> cobalt_logger = nullptr);
   ~DefaultFrameScheduler();
 
   // |FrameScheduler|
