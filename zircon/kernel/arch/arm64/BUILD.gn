@@ -87,6 +87,10 @@ if (current_toolchain == default_toolchain) {
       # <arch/current_thread.h> has #include <lib/arch/intrin.h>.
       "$zx/kernel/lib/arch/arm64:headers.config",
     ]
+
+    # Align the kernel's segments to 64k so it can use "combined pages" to
+    # reduce the TLB load.
+    ldflags += [ "-Wl,-z,max-page-size=65536" ]
   }
 
   source_set("arm64") {

@@ -68,7 +68,12 @@ SECTIONS
 
     PROVIDE_HIDDEN(__code_end = .);
 
-    . = ALIGN(4096);
+    /*
+     * The kernel's actual segments are aligned to the -z max-page-size=...
+     * value, which is 64k for ARM.  But the exported VMOs within segments
+     * are only aligned to 4k, since that's still the user-visible page size.
+     */
+    . = ALIGN(CONSTANT(MAXPAGESIZE));
     PROVIDE_HIDDEN(__rodata_start = .);
 
     /*
@@ -197,7 +202,7 @@ SECTIONS
      * exactly the end of the orphans rounded up to the next page.
      */
 
-    __llvm_profile_header : ALIGN(4096) {
+    __llvm_profile_header : ALIGN(CONSTANT(MAXPAGESIZE)) {
         PROVIDE_HIDDEN(__rodata_end = .);
         PROVIDE_HIDDEN(__data_start = .);
 
@@ -271,7 +276,7 @@ SECTIONS
      * good way to assert that, though.
      */
 
-    .bss : ALIGN(4096) {
+    .bss : ALIGN(CONSTANT(MAXPAGESIZE)) {
         PROVIDE_HIDDEN(__bss_start = .);
 
         /*
@@ -332,7 +337,7 @@ SECTIONS
      * Any SHT_NOBITS (.bss-like) sections would be inserted here.
      */
 
-     . = ALIGN(4096);
+     . = ALIGN(CONSTANT(MAXPAGESIZE));
     PROVIDE_HIDDEN(_end = .);
 }
 
