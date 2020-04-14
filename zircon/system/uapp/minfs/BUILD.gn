@@ -38,7 +38,6 @@ executable("minfs") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/minfs",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
@@ -47,6 +46,7 @@ executable("minfs") {
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/fidl/fuchsia-minfs:c",
+    "//zircon/system/ulib/minfs",
   ]
 }
 

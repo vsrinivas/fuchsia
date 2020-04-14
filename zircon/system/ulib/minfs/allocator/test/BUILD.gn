@@ -36,9 +36,9 @@ test("minfs-allocator-unit") {
   ]
   deps = [
     "//zircon/public/lib/block-client",
-    "//zircon/public/lib/minfs",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-minfs:c",
+    "//zircon/system/ulib/minfs",
   ]
 
   include_dirs = [ ".." ]

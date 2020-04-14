@@ -45,7 +45,7 @@ zx_library("fvm-host") {
     "//zircon/system/ulib/blobfs",
 
     # <fvm-host/format.h> has #include <minfs/bcache.h>.
-    "//zircon/public/lib/minfs",
+    "//zircon/system/ulib/minfs",
 
     # <fvm-host/container.h> has #include <fvm/sparse-reader.h>.
     "//zircon/public/lib/fvm",
@@ -59,9 +59,9 @@ zx_library("fvm-host") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/lz4",
-    "//zircon/public/lib/minfs",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/transaction",
     "//zircon/system/ulib/blobfs",
+    "//zircon/system/ulib/minfs",
   ]
 }

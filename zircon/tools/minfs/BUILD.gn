@@ -18,8 +18,8 @@ sdk_executable("minfs") {
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/journal",
-    "//zircon/public/lib/minfs",
     "//zircon/system/ulib/fs-host",
+    "//zircon/system/ulib/minfs",
   ]
 
   if (!is_fuchsia) {

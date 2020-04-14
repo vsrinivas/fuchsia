@@ -41,9 +41,9 @@ test("fs-host") {
   ]
   deps = [
     "//zircon/public/lib/journal",
-    "//zircon/public/lib/minfs",
     "//zircon/public/lib/unittest-static",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/minfs",
   ]
 }
 
