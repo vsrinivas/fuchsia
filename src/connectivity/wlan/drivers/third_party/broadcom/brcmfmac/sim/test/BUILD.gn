@@ -209,10 +209,10 @@ executable("active_scan_test") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-executable("set_cc_test") {
-  output_name = "set_cc_test"
+executable("cc_test") {
+  output_name = "cc_test"
   testonly = true
-  sources = [ "set_cc_test.cc" ]
+  sources = [ "cc_test.cc" ]
   deps = [
     ":sim_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -270,6 +270,7 @@ unittest_package("brcmfmac_sim_test") {
     ":assoc_test",
     ":auth_test",
     ":beacon_lost_test",
+    ":cc_test",
     ":channel_switch_test",
     ":create_softap_test",
     ":dynamic_if_test",
@@ -277,7 +278,6 @@ unittest_package("brcmfmac_sim_test") {
     ":lifecycle_test",
     ":passive_scan_test",
     ":scan_dwell_time_test",
-    ":set_cc_test",
     ":tx_data_test",
   ]
   tests = [
@@ -287,6 +287,10 @@ unittest_package("brcmfmac_sim_test") {
     },
     {
       name = "channel_switch_test"
+      environments = basic_envs
+    },
+    {
+      name = "cc_test"
       environments = basic_envs
     },
     {
@@ -319,10 +323,6 @@ unittest_package("brcmfmac_sim_test") {
     },
     {
       name = "active_scan_test"
-      environments = basic_envs
-    },
-    {
-      name = "set_cc_test"
       environments = basic_envs
     },
     {

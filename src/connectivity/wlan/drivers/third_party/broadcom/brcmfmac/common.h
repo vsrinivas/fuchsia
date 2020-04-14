@@ -60,6 +60,7 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
 /* Sets dongle media info (drv_version, mac address). */
 zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp);
 zx_status_t brcmf_set_country(brcmf_pub* drvr, const wlanphy_country_t* country);
+zx_status_t brcmf_get_country(brcmf_pub* drvr, wlanphy_country_t* out_country);
 // Get WiFi metadata
 zx_status_t brcmf_get_meta_data(brcmf_if* ifp, wifi_config_t* config);
 

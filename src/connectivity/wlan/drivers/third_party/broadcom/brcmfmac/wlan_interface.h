@@ -47,6 +47,8 @@ class WlanInterface {
 
   static zx_status_t Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info);
   static zx_status_t SetCountry(brcmf_pub* drvr, const wlanphy_country_t* country);
+  // Reads the currently configured `country` from the firmware.
+  static zx_status_t GetCountry(brcmf_pub* drvr, wlanphy_country_t* out_country);
 
   // ZX_PROTOCOL_WLANIF_IMPL operations.
   zx_status_t Start(const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel);

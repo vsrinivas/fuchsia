@@ -250,6 +250,29 @@ zx_status_t brcmf_set_country(brcmf_pub* drvr, const wlanphy_country_t* country)
   return err;
 }
 
+/* Retrieve the current country code from the firmware */
+zx_status_t brcmf_get_country(brcmf_pub* drvr, wlanphy_country_t* out_country) {
+  struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
+  struct brcmf_fil_country_le ccreq;
+  zx_status_t err;
+  int32_t fw_err = 0;
+
+  // Get country info from firmware
+  memset(&ccreq, 0, sizeof(ccreq));
+  err = brcmf_fil_iovar_data_get(ifp, "country", &ccreq, sizeof(ccreq), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Firmware rejected country read: %s fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
+
+  // Log out the country code settings for reference
+  BRCMF_INFO("Country code get ccode %s, abbrev %s, rev %d\n", ccreq.ccode, ccreq.country_abbrev,
+             ccreq.rev);
+  memcpy(out_country->alpha2, ccreq.ccode, WLANPHY_ALPHA2_LEN);
+  return ZX_OK;
+}
+
 // This function applies configured platform specific iovars to the firmware
 static void brcmf_set_init_cfg_params(brcmf_if* ifp) {
   int i;

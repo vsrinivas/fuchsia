@@ -17,7 +17,7 @@ class CountryCodeTest : public SimTest {
   void CreateInterface();
   void DeleteInterface();
   zx_status_t SetCountryCode(const wlanphy_country_t* country);
-  void GetCountryCode(brcmf_fil_country_le* ccode);
+  void GetCountryCodeFromFirmware(brcmf_fil_country_le* ccode);
   uint32_t DeviceCount();
 
  private:
@@ -55,7 +55,7 @@ zx_status_t CountryCodeTest::SetCountryCode(const wlanphy_country_t* country) {
 
 // Note that this function is meant for SIM only. It retrieves the internal
 // state of the country code setting by bypassing the interfaces.
-void CountryCodeTest::GetCountryCode(brcmf_fil_country_le* ccode) {
+void CountryCodeTest::GetCountryCodeFromFirmware(brcmf_fil_country_le* ccode) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "country", ccode, sizeof(brcmf_fil_country_le));
 }
@@ -81,9 +81,35 @@ TEST_F(CountryCodeTest, SetCCode) {
   ASSERT_NE(status, ZX_OK);
   status = SetCountryCode(&valid_country);
   ASSERT_EQ(status, ZX_OK);
-  GetCountryCode(&country_code);
+  GetCountryCodeFromFirmware(&country_code);
   code = memcmp(valid_country.alpha2, country_code.ccode, WLANPHY_ALPHA2_LEN);
   ASSERT_EQ(code, 0);
+  DeleteInterface();
+}
+
+TEST_F(CountryCodeTest, GetCCode) {
+  Init();
+  CreateInterface();
+
+  {
+    const wlanphy_country_t country = {{'W', 'W'}};
+    wlanphy_country_t get_country_result;
+    ASSERT_EQ(ZX_OK, SetCountryCode(&country));
+    ASSERT_EQ(ZX_OK, device_->WlanphyImplGetCountry(&get_country_result));
+    EXPECT_EQ(get_country_result.alpha2[0], 'W');
+    EXPECT_EQ(get_country_result.alpha2[1], 'W');
+  }
+
+  // Try again, just in case the first one was a default value.
+  {
+    const wlanphy_country_t country = {{'U', 'S'}};
+    wlanphy_country_t get_country_result;
+    ASSERT_EQ(ZX_OK, SetCountryCode(&country));
+    ASSERT_EQ(ZX_OK, device_->WlanphyImplGetCountry(&get_country_result));
+    EXPECT_EQ(get_country_result.alpha2[0], 'U');
+    EXPECT_EQ(get_country_result.alpha2[1], 'S');
+  }
+
   DeleteInterface();
 }
 

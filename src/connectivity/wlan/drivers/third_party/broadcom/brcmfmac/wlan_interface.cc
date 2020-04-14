@@ -211,6 +211,11 @@ zx_status_t WlanInterface::SetCountry(brcmf_pub* drvr, const wlanphy_country_t* 
   return brcmf_set_country(drvr, country);
 }
 
+// static
+zx_status_t WlanInterface::GetCountry(brcmf_pub* drvr, wlanphy_country_t* out_country) {
+  return brcmf_get_country(drvr, out_country);
+}
+
 zx_status_t WlanInterface::Start(const wlanif_impl_ifc_protocol_t* ifc,
                                  zx_handle_t* out_sme_channel) {
   return brcmf_if_start(wdev_->netdev, ifc, out_sme_channel);
