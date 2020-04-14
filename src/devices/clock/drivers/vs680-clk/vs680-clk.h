@@ -7,6 +7,7 @@
 
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/status.h>
 #include <lib/zx/time.h>
 
 #include <ddktl/device.h>
@@ -54,6 +55,9 @@ class Vs680Clk : public DeviceType, public ddk::ClockImplProtocol<Vs680Clk, ddk:
   zx_status_t ClockImplGetInput(uint32_t id, uint32_t* out_index) TA_EXCL(lock_);
 
  private:
+  zx::status<uint64_t> GetRate(uint32_t id) TA_REQ(lock_);
+  zx::status<uint64_t> GetParentRate(uint32_t id) TA_REQ(lock_);
+
   fbl::Mutex lock_;
   const Vs680ClockContainer clock_objects_;
   // These pointers are owned by clock_objects_.

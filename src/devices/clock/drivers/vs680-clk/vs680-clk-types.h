@@ -6,6 +6,7 @@
 #define SRC_DEVICES_CLOCK_DRIVERS_VS680_CLK_VS680_CLK_TYPES_H_
 
 #include <lib/mmio/mmio.h>
+#include <lib/zx/status.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>
 
@@ -20,12 +21,46 @@ class Vs680Clock {
   virtual zx_status_t Enable() const = 0;
   virtual zx_status_t Disable() const = 0;
   virtual zx_status_t IsEnabled(bool* is_enabled) const = 0;
-  virtual zx_status_t SetRate(uint64_t hz) const = 0;
-  virtual zx_status_t QuerySupportedRate(uint64_t hz, uint64_t* out_hz) const = 0;
-  virtual zx_status_t GetRate(uint64_t* out_hz) const = 0;
+  virtual zx_status_t SetRate(uint64_t parent_rate_hz, uint64_t hz) const = 0;
+  virtual zx_status_t QuerySupportedRate(uint64_t parent_rate_hz, uint64_t hz,
+                                         uint64_t* out_hz) const = 0;
+  virtual zx_status_t GetRate(uint64_t parent_rate_hz, uint64_t* out_hz) const = 0;
   virtual zx_status_t SetInput(uint32_t idx) const = 0;
   virtual zx_status_t GetNumInputs(uint32_t* out_n) const = 0;
   virtual zx_status_t GetInput(uint32_t* out_index) const = 0;
+
+  // Set out_id to an invalid ID (vs680::kClockCount or higher) to indicate that this clock doesn't
+  // have a parent.
+  virtual zx::status<uint32_t> GetInputId() const = 0;
+};
+
+class Vs680RefClock : public Vs680Clock {
+ public:
+  Vs680RefClock() {}
+  ~Vs680RefClock() {}
+
+  zx_status_t Enable() const override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t Disable() const override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t IsEnabled(bool* is_enabled) const override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t SetRate(uint64_t parent_rate_hz, uint64_t hz) const override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t QuerySupportedRate(uint64_t parent_rate_hz, uint64_t hz,
+                                 uint64_t* out_hz) const override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t GetRate(uint64_t parent_rate_hz, uint64_t* out_hz) const override {
+    *out_hz = kRefClockFreqHz;
+    return ZX_OK;
+  }
+  zx_status_t SetInput(uint32_t idx) const override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t GetNumInputs(uint32_t* out_n) const override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t GetInput(uint32_t* out_index) const override { return ZX_ERR_NOT_SUPPORTED; }
+
+  zx::status<uint32_t> GetInputId() const override { return zx::success(vs680::kClockCount); }
+
+ private:
+  static constexpr uint64_t kRefClockFreqHz = 25'000'000;
 };
 
 class Vs680Pll : public Vs680Clock {
@@ -34,12 +69,15 @@ class Vs680Pll : public Vs680Clock {
       : pll_mmio_(pll_mmio), reset_time_(reset_time) {}
   ~Vs680Pll() {}
 
-  zx_status_t SetRate(uint64_t hz) const override;
-  zx_status_t QuerySupportedRate(uint64_t hz, uint64_t* out_hz) const override;
-  zx_status_t GetRate(uint64_t* out_hz) const override;
+  zx_status_t SetRate(uint64_t parent_rate_hz, uint64_t hz) const override;
+  zx_status_t QuerySupportedRate(uint64_t parent_rate_hz, uint64_t hz,
+                                 uint64_t* out_hz) const override;
+  zx_status_t GetRate(uint64_t parent_rate_hz, uint64_t* out_hz) const override;
   zx_status_t SetInput(uint32_t idx) const override;
   zx_status_t GetNumInputs(uint32_t* out_n) const override;
   zx_status_t GetInput(uint32_t* out_index) const override;
+
+  zx::status<uint32_t> GetInputId() const override { return zx::success(vs680::kRefClock); }
 
  protected:
   virtual void StartPllChange() const = 0;
@@ -61,7 +99,7 @@ class Vs680SysPll : public Vs680Pll {
   zx_status_t Enable() const override;
   zx_status_t Disable() const override;
   zx_status_t IsEnabled(bool* out_enabled) const override;
-  zx_status_t GetRate(uint64_t* out_hz) const override;
+  zx_status_t GetRate(uint64_t parent_rate_hz, uint64_t* out_hz) const override;
 
  protected:
   void StartPllChange() const override;
@@ -123,6 +161,7 @@ class Vs680ClockContainer {
   ~Vs680ClockContainer() {}
 
   void PopulateClockList(const Vs680Clock* clocks[]) const {
+    clocks[vs680::kRefClock] = &refclock_;
     clocks[vs680::kSysPll0] = &syspll0_;
     clocks[vs680::kSysPll1] = &syspll1_;
     clocks[vs680::kSysPll2] = &syspll2_;
@@ -138,6 +177,7 @@ class Vs680ClockContainer {
   const ddk::MmioBuffer cpu_pll_mmio_;
   const ddk::MmioBuffer avio_mmio_;
 
+  const Vs680RefClock refclock_;
   const Vs680SysPll syspll0_;
   const Vs680SysPll syspll1_;
   const Vs680SysPll syspll2_;

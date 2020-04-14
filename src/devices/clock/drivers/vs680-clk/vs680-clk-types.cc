@@ -8,7 +8,6 @@
 
 namespace {
 
-constexpr uint32_t kSourceClockFreqHz = 25'000'000;
 constexpr uint32_t kPllMinFreqHz = 20'000'000;
 
 constexpr uint32_t kFractionBits = 24;
@@ -28,7 +27,7 @@ struct PllParameters {
   uint32_t range;
 };
 
-PllParameters GetPllParameters(const uint64_t hz) {
+PllParameters GetPllParameters(const uint64_t parent_rate_hz, const uint64_t hz) {
   constexpr uint64_t kMaxDivFI = 0x200;
 
   // Using a reference divider of 5 sets the PLL input frequency to 5 MHz, which can work with both
@@ -42,7 +41,7 @@ PllParameters GetPllParameters(const uint64_t hz) {
   ZX_DEBUG_ASSERT((hz * kReferenceDivider * kOutputDivider) < (1ULL << (64 - kOutputShift)));
 
   const uint64_t feedback_divider =
-      ((hz * kReferenceDivider * kOutputDivider) << kOutputShift) / kSourceClockFreqHz;
+      ((hz * kReferenceDivider * kOutputDivider) << kOutputShift) / parent_rate_hz;
 
   // Another sanity check, as the max feedback divider corresponds to a PLL output frequency of over
   // 5.12 GHz.
@@ -60,7 +59,7 @@ PllParameters GetPllParameters(const uint64_t hz) {
 
 namespace clk {
 
-zx_status_t Vs680Pll::SetRate(uint64_t hz) const {
+zx_status_t Vs680Pll::SetRate(uint64_t parent_rate_hz, uint64_t hz) const {
   if (hz > max_freq_hz() || hz < kPllMinFreqHz) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -74,7 +73,7 @@ zx_status_t Vs680Pll::SetRate(uint64_t hz) const {
       .set_reset(1)
       .WriteTo(&pll_mmio_);
 
-  const PllParameters params = GetPllParameters(hz);
+  const PllParameters params = GetPllParameters(parent_rate_hz, hz);
 
   PllCtrlC::Get().ReadFrom(&pll_mmio_).set_divr(params.reference_divider - 1).WriteTo(&pll_mmio_);
 
@@ -118,7 +117,8 @@ zx_status_t Vs680Pll::SetRate(uint64_t hz) const {
   return ZX_OK;
 }
 
-zx_status_t Vs680Pll::QuerySupportedRate(uint64_t hz, uint64_t* out_hz) const {
+zx_status_t Vs680Pll::QuerySupportedRate(uint64_t parent_rate_hz, uint64_t hz,
+                                         uint64_t* out_hz) const {
   if (hz < kPllMinFreqHz) {
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -126,16 +126,16 @@ zx_status_t Vs680Pll::QuerySupportedRate(uint64_t hz, uint64_t* out_hz) const {
     hz = max_freq_hz();
   }
 
-  const PllParameters params = GetPllParameters(hz);
-  *out_hz = ((kSourceClockFreqHz * params.feedback_divider) /
+  const PllParameters params = GetPllParameters(parent_rate_hz, hz);
+  *out_hz = ((parent_rate_hz * params.feedback_divider) /
              (params.reference_divider * params.output_divider)) >>
             kOutputShift;
   return ZX_OK;
 }
 
-zx_status_t Vs680Pll::GetRate(uint64_t* out_hz) const {
+zx_status_t Vs680Pll::GetRate(uint64_t parent_rate_hz, uint64_t* out_hz) const {
   if (PllCtrlA::Get().ReadFrom(&pll_mmio_).bypass()) {
-    *out_hz = kSourceClockFreqHz;
+    *out_hz = parent_rate_hz;
     return ZX_OK;
   }
 
@@ -150,7 +150,7 @@ zx_status_t Vs680Pll::GetRate(uint64_t* out_hz) const {
   const uint64_t feedback_divider = divff | (divfi << kFractionBits);
   const uint64_t output_divider = divq << kOutputDividerShift;
 
-  *out_hz = ((kSourceClockFreqHz * feedback_divider) / (divr * output_divider)) >> kOutputShift;
+  *out_hz = ((parent_rate_hz * feedback_divider) / (divr * output_divider)) >> kOutputShift;
   return ZX_OK;
 }
 
@@ -162,13 +162,13 @@ zx_status_t Vs680SysPll::Enable() const { return ZX_ERR_NOT_SUPPORTED; }
 zx_status_t Vs680SysPll::Disable() const { return ZX_ERR_NOT_SUPPORTED; }
 zx_status_t Vs680SysPll::IsEnabled(bool* out_enabled) const { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t Vs680SysPll::GetRate(uint64_t* out_hz) const {
+zx_status_t Vs680SysPll::GetRate(uint64_t parent_rate_hz, uint64_t* out_hz) const {
   if (bypass_mmio_.GetBit<uint32_t>(bypass_bit_, 0)) {
-    *out_hz = kSourceClockFreqHz;
+    *out_hz = parent_rate_hz;
     return ZX_OK;
   }
 
-  return Vs680Pll::GetRate(out_hz);
+  return Vs680Pll::GetRate(parent_rate_hz, out_hz);
 }
 
 void Vs680SysPll::StartPllChange() const { bypass_mmio_.SetBit<uint32_t>(bypass_bit_, 0); }

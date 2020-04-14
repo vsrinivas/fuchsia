@@ -23,7 +23,8 @@ enum ClockMmio : uint8_t {
 };
 
 enum Clock : uint32_t {
-  kSysPll0 = 0,
+  kRefClock = 0,
+  kSysPll0,
   kSysPll1,
   kSysPll2,
   kCpuPll,

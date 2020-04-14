@@ -78,7 +78,13 @@ zx_status_t Vs680Clk::ClockImplSetRate(uint32_t id, uint64_t hz) {
   if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  return clocks_[id]->SetRate(hz);
+
+  auto result = GetParentRate(id);
+  if (result.is_error()) {
+    return result.status_value();
+  }
+
+  return clocks_[id]->SetRate(result.value(), hz);
 }
 
 zx_status_t Vs680Clk::ClockImplQuerySupportedRate(uint32_t id, uint64_t hz, uint64_t* out_hz) {
@@ -86,7 +92,13 @@ zx_status_t Vs680Clk::ClockImplQuerySupportedRate(uint32_t id, uint64_t hz, uint
   if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  return clocks_[id]->QuerySupportedRate(hz, out_hz);
+
+  auto result = GetParentRate(id);
+  if (result.is_error()) {
+    return result.status_value();
+  }
+
+  return clocks_[id]->QuerySupportedRate(result.value(), hz, out_hz);
 }
 
 zx_status_t Vs680Clk::ClockImplGetRate(uint32_t id, uint64_t* out_hz) {
@@ -94,7 +106,12 @@ zx_status_t Vs680Clk::ClockImplGetRate(uint32_t id, uint64_t* out_hz) {
   if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  return clocks_[id]->GetRate(out_hz);
+
+  auto result = GetRate(id);
+  if (result.is_ok()) {
+    *out_hz = result.value();
+  }
+  return result.status_value();
 }
 
 zx_status_t Vs680Clk::ClockImplSetInput(uint32_t id, uint32_t idx) {
@@ -119,6 +136,33 @@ zx_status_t Vs680Clk::ClockImplGetInput(uint32_t id, uint32_t* out_index) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return clocks_[id]->GetInput(out_index);
+}
+
+zx::status<uint64_t> Vs680Clk::GetRate(uint32_t id) {
+  auto result = GetParentRate(id);
+  if (result.is_error()) {
+    return result;
+  }
+
+  uint64_t rate_hz;
+  zx_status_t status = clocks_[id]->GetRate(result.value(), &rate_hz);
+  if (status != ZX_OK) {
+    return zx::error_status(status);
+  }
+  return zx::success(rate_hz);
+}
+
+zx::status<uint64_t> Vs680Clk::GetParentRate(uint32_t id) {
+  auto result = clocks_[id]->GetInputId();
+  if (result.is_error()) {
+    return result;
+  }
+
+  if (result.value() >= vs680::kClockCount) {
+    return zx::success(0);
+  }
+
+  return GetRate(result.value());
 }
 
 }  // namespace clk
