@@ -264,7 +264,7 @@ void Write(std::ostringstream output_stream, const std::string file_path) {
 // reduce diff size while breaking things up.
 int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespace,
             std::string library_name, std::vector<std::pair<Behavior, std::string>> outputs,
-            std::vector<fidl::SourceManager> source_managers,
+            const std::vector<fidl::SourceManager>& source_managers,
             fidl::ExperimentalFlags experimental_flags);
 
 int main(int argc, char* argv[]) {
@@ -362,14 +362,14 @@ int main(int argc, char* argv[]) {
   fidl::ErrorReporter error_reporter(warnings_as_errors);
   auto typespace = fidl::flat::Typespace::RootTypes(&error_reporter);
   auto status = compile(&error_reporter, &typespace, library_name, std::move(outputs),
-                        std::move(source_managers), std::move(experimental_flags));
+                        source_managers, std::move(experimental_flags));
   error_reporter.PrintReports();
   return status;
 }
 
 int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespace,
             std::string library_name, std::vector<std::pair<Behavior, std::string>> outputs,
-            std::vector<fidl::SourceManager> source_managers,
+            const std::vector<fidl::SourceManager>& source_managers,
             fidl::ExperimentalFlags experimental_flags) {
   fidl::flat::Libraries all_libraries;
   const fidl::flat::Library* final_library = nullptr;
