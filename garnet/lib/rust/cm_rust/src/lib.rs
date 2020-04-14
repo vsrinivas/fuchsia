@@ -831,7 +831,7 @@ pub enum Value {
     Null,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DictionaryValue {
     Str(String),
     StrVec(Vec<String>),

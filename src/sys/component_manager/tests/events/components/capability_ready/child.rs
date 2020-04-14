@@ -27,6 +27,9 @@ async fn main() -> Result<(), Error> {
     fs.dir("qux").add_fidl_service(move |stream| {
         fasync::spawn(run_trigger_service(stream));
     });
+    fs.dir("quux").add_fidl_service(move |stream| {
+        fasync::spawn(run_trigger_service(stream));
+    });
     fs.dir("bar").dir("baz").add_fidl_service(move |stream| {
         fasync::spawn(run_trigger_service(stream));
     });

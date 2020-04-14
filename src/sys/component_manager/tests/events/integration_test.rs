@@ -283,13 +283,16 @@ async fn event_capability_ready() -> Result<(), Error> {
     event_source.start_component_tree().await?;
 
     let mut messages = vec![];
-    for _ in 0..2 {
+    for _ in 0..3 {
         let event = echo_rx.next().await.unwrap();
         messages.push(event.message.clone());
         event.resume();
     }
     messages.sort_unstable();
-    assert_eq!(vec!["Saw /bar on ./child:0", "Saw /foo on ./child:0",], messages);
+    assert_eq!(
+        vec!["Correctly timed out on 3rd event", "Saw /bar on ./child:0", "Saw /foo on ./child:0",],
+        messages
+    );
     injector.abort();
 
     Ok(())

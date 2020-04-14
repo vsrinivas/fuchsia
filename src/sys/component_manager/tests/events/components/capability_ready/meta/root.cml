@@ -23,7 +23,7 @@
             event: "capability_ready",
             filter: {
                 path: [
-                    "/bar/baz",
+                    "/bar",
                     "/foo",
                 ],
             },

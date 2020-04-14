@@ -16,29 +16,37 @@ pub enum EventFilterError {
     InvalidFinalize,
 }
 
-#[derive(Debug, Clone)]
+type OptionFilterMap = Option<HashMap<String, DictionaryValue>>;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct EventFilter {
     filter: Option<HashMap<String, DictionaryValue>>,
+    is_debug: bool,
 }
 
 impl EventFilter {
     pub fn new(filter: Option<HashMap<String, DictionaryValue>>) -> Self {
-        Self { filter }
+        Self { filter, is_debug: false }
     }
-}
 
-impl WalkStateUnit for EventFilter {
-    type Error = EventFilterError;
+    pub fn debug() -> Self {
+        Self { filter: None, is_debug: true }
+    }
 
-    /// Ensures the next walk state of filters is a superset of the current state.
-    ///
-    /// Consider A->B where A (next_state) is offering an event to B (self) and B is using it itself
-    /// or offering it again.
-    ///
-    /// For all properties of B, those properties are in A and they are subsets of the property in
-    /// B.
-    fn validate_next(&self, next_state: &EventFilter) -> Result<(), Self::Error> {
-        match (&self.filter, &next_state.filter) {
+    /// Verifies that for all fields given, they are present in the current filter. If no fields
+    /// are given, returns true.
+    pub fn has_fields(&self, fields: &OptionFilterMap) -> bool {
+        if self.is_debug {
+            return true;
+        }
+        Self::validate_subset(&fields, &self.filter).is_ok()
+    }
+
+    fn validate_subset(
+        self_filter: &OptionFilterMap,
+        next_filter: &OptionFilterMap,
+    ) -> Result<(), EventFilterError> {
+        match (self_filter, next_filter) {
             (None, None) => {}
             (None, Some(_)) => {}
             (Some(filter), Some(next_filter)) => {
@@ -55,6 +63,21 @@ impl WalkStateUnit for EventFilter {
             }
         }
         Ok(())
+    }
+}
+
+impl WalkStateUnit for EventFilter {
+    type Error = EventFilterError;
+
+    /// Ensures the next walk state of filters is a superset of the current state.
+    ///
+    /// Consider A->B where A (next_state) is offering an event to B (self) and B is using it itself
+    /// or offering it again.
+    ///
+    /// For all properties of B, those properties are in A and they are subsets of the property in
+    /// B.
+    fn validate_next(&self, next_state: &EventFilter) -> Result<(), Self::Error> {
+        Self::validate_subset(&self.filter, &next_state.filter)
     }
 
     fn finalize_error() -> Self::Error {

@@ -7,9 +7,11 @@ use {
     fidl::endpoints::{create_proxy, DiscoverableService, ServerEnd},
     fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
-    files_async, fuchsia_async as fasync,
+    files_async,
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
-    futures::StreamExt,
+    fuchsia_zircon::DurationNum,
+    futures::{FutureExt, StreamExt},
     io_util,
     maplit::hashmap,
     test_utils_lib::events::{CapabilityReady, Event, EventSource, Handler},
@@ -73,6 +75,23 @@ async fn main() -> Result<(), Error> {
             .echo_string(Some(&format!("Saw {} on {}", event.path, event.target_moniker())))
             .await;
         event.resume().await?;
+    }
+
+    // Child is exposing one more dir (/qux) ensure we don't see it by timing out when waiting for
+    // a third event.
+    let timed_out = event_stream
+        .expect_type::<CapabilityReady>()
+        .map(|result| match result {
+            Ok(_) => Ok(false),
+            Err(e) => Err(e),
+        })
+        .on_timeout(5.seconds().after_now(), || Ok(true))
+        .await?;
+
+    if timed_out {
+        let _ = echo.echo_string(Some(&format!("Correctly timed out on 3rd event"))).await;
+    } else {
+        panic!("Got unexpected third event");
     }
 
     fs.collect::<()>().await;

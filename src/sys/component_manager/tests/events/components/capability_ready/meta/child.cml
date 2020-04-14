@@ -18,5 +18,11 @@
             to: "framework",
             rights: [ "r*" ],
         },
+        {
+            directory: "/qux",
+            from: "self",
+            to: "framework",
+            rights: [ "r*" ],
+        },
     ],
 }

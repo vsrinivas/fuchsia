@@ -168,6 +168,7 @@ rustc_binary("capability_ready_root_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",

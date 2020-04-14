@@ -5,7 +5,7 @@
 use {
     crate::model::{
         events::{
-            dispatcher::EventDispatcher,
+            dispatcher::{EventDispatcher, ScopeMetadata},
             event::{Event, SyncMode},
         },
         hooks::EventType,
@@ -13,10 +13,7 @@ use {
     },
     fuchsia_trace as trace,
     futures::{channel::mpsc, StreamExt},
-    std::{
-        collections::HashSet,
-        sync::{Arc, Weak},
-    },
+    std::sync::{Arc, Weak},
 };
 
 pub struct EventStream {
@@ -39,10 +36,9 @@ impl EventStream {
     pub fn create_dispatcher(
         &mut self,
         sync_mode: SyncMode,
-        scope_monikers: HashSet<AbsoluteMoniker>,
+        scopes: Vec<ScopeMetadata>,
     ) -> Weak<EventDispatcher> {
-        let dispatcher =
-            Arc::new(EventDispatcher::new(sync_mode.clone(), scope_monikers, self.tx.clone()));
+        let dispatcher = Arc::new(EventDispatcher::new(sync_mode.clone(), scopes, self.tx.clone()));
         self.dispatchers.push(dispatcher.clone());
         Arc::downgrade(&dispatcher)
     }

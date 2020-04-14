@@ -8,7 +8,9 @@ use {
         model::{
             error::ModelError,
             events::{
+                dispatcher::ScopeMetadata,
                 event::SyncMode,
+                filter::EventFilter,
                 registry::{EventRegistry, RoutedEvent},
                 serve::serve_event_source_sync,
                 stream::EventStream,
@@ -25,9 +27,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    maplit::hashset,
     std::{
-        collections::{HashMap, HashSet},
+        collections::HashMap,
         path::PathBuf,
         sync::{Arc, Weak},
     },
@@ -72,7 +73,7 @@ pub enum EventsError {
 
 struct RouteEventsResult {
     /// Maps from source name to a set of scope monikers
-    mapping: HashMap<CapabilityName, HashSet<AbsoluteMoniker>>,
+    mapping: HashMap<CapabilityName, Vec<ScopeMetadata>>,
 }
 
 impl RouteEventsResult {
@@ -80,8 +81,11 @@ impl RouteEventsResult {
         Self { mapping: HashMap::new() }
     }
 
-    fn insert(&mut self, source_name: CapabilityName, scope_moniker: AbsoluteMoniker) {
-        self.mapping.entry(source_name).or_insert(HashSet::new()).insert(scope_moniker);
+    fn insert(&mut self, source_name: CapabilityName, scope: ScopeMetadata) {
+        let values = self.mapping.entry(source_name).or_insert(Vec::new());
+        if !values.contains(&scope) {
+            values.push(scope);
+        }
     }
 
     fn len(&self) -> usize {
@@ -95,7 +99,7 @@ impl RouteEventsResult {
     fn to_vec(self) -> Vec<RoutedEvent> {
         self.mapping
             .into_iter()
-            .map(|(source_name, scope_monikers)| RoutedEvent { source_name, scope_monikers })
+            .map(|(source_name, scopes)| RoutedEvent { source_name, scopes })
             .collect()
     }
 }
@@ -119,7 +123,7 @@ impl EventSource {
                         &sync_mode,
                         vec![RoutedEvent {
                             source_name: EventType::Resolved.into(),
-                            scope_monikers: hashset!(target_moniker.clone()),
+                            scopes: vec![ScopeMetadata::new(target_moniker.clone())],
                         }],
                     )
                     .await,
@@ -169,7 +173,7 @@ impl EventSource {
                 .into_iter()
                 .map(|event| RoutedEvent {
                     source_name: event.clone(),
-                    scope_monikers: hashset!(AbsoluteMoniker::root()),
+                    scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root()).for_debug()],
                 })
                 .collect()
         } else {
@@ -218,7 +222,9 @@ impl EventSource {
                         continue;
                     }
                     let (source_name, scope_moniker) = self.route_event(event_decl, &realm).await?;
-                    result.insert(source_name, scope_moniker);
+                    let scope = ScopeMetadata::new(scope_moniker)
+                        .with_filter(EventFilter::new(event_decl.filter.clone()));
+                    result.insert(source_name, scope);
                 }
                 _ => {}
             }

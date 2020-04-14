@@ -5,23 +5,26 @@
 use {
     crate::model::{
         error::ModelError,
-        events::{dispatcher::EventDispatcher, event::SyncMode, stream::EventStream},
+        events::{
+            dispatcher::{EventDispatcher, ScopeMetadata},
+            event::SyncMode,
+            stream::EventStream,
+        },
         hooks::{Event as ComponentEvent, EventType, Hook, HooksRegistration},
-        moniker::AbsoluteMoniker,
     },
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fuchsia_trace as trace,
     futures::lock::Mutex,
     std::{
-        collections::{HashMap, HashSet},
+        collections::HashMap,
         sync::{Arc, Weak},
     },
 };
 
 pub struct RoutedEvent {
     pub source_name: CapabilityName,
-    pub scope_monikers: HashSet<AbsoluteMoniker>,
+    pub scopes: Vec<ScopeMetadata>,
 }
 
 /// Subscribes to events from multiple tasks and sends events to all of them.
@@ -54,8 +57,7 @@ impl EventRegistry {
         let mut dispatcher_map = self.dispatcher_map.lock().await;
         for event in events {
             let dispatchers = dispatcher_map.entry(event.source_name).or_insert(vec![]);
-            let dispatcher =
-                event_stream.create_dispatcher(sync_mode.clone(), event.scope_monikers);
+            let dispatcher = event_stream.create_dispatcher(sync_mode.clone(), event.scopes);
             dispatchers.push(dispatcher);
         }
 
@@ -152,8 +154,10 @@ impl Hook for EventRegistry {
 mod tests {
     use {
         super::*,
-        crate::model::hooks::{Event as ComponentEvent, EventPayload},
-        maplit::hashset,
+        crate::model::{
+            hooks::{Event as ComponentEvent, EventPayload},
+            moniker::AbsoluteMoniker,
+        },
     };
 
     async fn dispatch_fake_event(registry: &EventRegistry) -> Result<(), ModelError> {
@@ -176,7 +180,7 @@ mod tests {
                 &SyncMode::Async,
                 vec![RoutedEvent {
                     source_name: EventType::Discovered.into(),
-                    scope_monikers: hashset!(AbsoluteMoniker::root()),
+                    scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root())],
                 }],
             )
             .await;
@@ -188,7 +192,7 @@ mod tests {
                 &SyncMode::Async,
                 vec![RoutedEvent {
                     source_name: EventType::Discovered.into(),
-                    scope_monikers: hashset!(AbsoluteMoniker::root()),
+                    scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root())],
                 }],
             )
             .await;
