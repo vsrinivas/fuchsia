@@ -7,6 +7,8 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
 
+#include <algorithm>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
@@ -25,6 +27,7 @@ using ::llcpp::fuchsia::hardware::thermal::OperatingPointEntry;
 enum {
   FRAGMENT_PDEV = 0,
   FRAGMENT_CPU_CLOCK,
+  FRAGMENT_CPU_POWER,
   FRAGMENT_COUNT,
 };
 
@@ -83,9 +86,15 @@ zx_status_t Vs680Thermal::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
+  ddk::PowerProtocolClient cpu_power(fragments[FRAGMENT_CPU_POWER]);
+  if (!cpu_power.is_valid()) {
+    zxlogf(ERROR, "%s: Failed to get power protocol\n", __func__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+
   fbl::AllocChecker ac;
   auto device = fbl::make_unique_checked<Vs680Thermal>(&ac, parent, *std::move(mmio),
-                                                       std::move(interrupt), cpu_clock);
+                                                       std::move(interrupt), cpu_clock, cpu_power);
   if (!ac.check()) {
     zxlogf(ERROR, "%s: Failed to allocate device memory\n", __func__);
     return ZX_ERR_NO_MEMORY;
@@ -121,8 +130,20 @@ zx_status_t Vs680Thermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 zx_status_t Vs680Thermal::Init() {
   TsenStatus::Get().ReadFrom(&mmio_).set_int_en(0).WriteTo(&mmio_);
 
-  zx_status_t status = SetOperatingPoint(kOperatingPoints.count - 1);
+  uint32_t max_volt_uv = kOperatingPoints.opp[0].volt_uv;
+  uint32_t min_volt_uv = kOperatingPoints.opp[0].volt_uv;
+  for (uint32_t i = 1; i < kOperatingPoints.count; i++) {
+    max_volt_uv = std::max(max_volt_uv, kOperatingPoints.opp[i].volt_uv);
+    min_volt_uv = std::min(min_volt_uv, kOperatingPoints.opp[i].volt_uv);
+  }
+
+  zx_status_t status = cpu_power_.RegisterPowerDomain(min_volt_uv, max_volt_uv);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to register VCPU power domain: %d\n", __func__, status);
+    return status;
+  }
+
+  if ((status = SetOperatingPoint(kOperatingPoints.count - 1)) != ZX_OK) {
     return status;
   }
 
@@ -203,13 +224,40 @@ zx_status_t Vs680Thermal::SetOperatingPoint(uint16_t op_idx) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  // TODO(bradenkell): Change VCPU if required by the chosen operating point.
+  const OperatingPointEntry current = kOperatingPoints.opp[operating_point_];
+  const OperatingPointEntry next = kOperatingPoints.opp[op_idx];
 
-  zx_status_t status = cpu_clock_.SetRate(kOperatingPoints.opp[op_idx].freq_hz);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to set CPU clock rate to %u: %d\n", __func__,
-           kOperatingPoints.opp[op_idx].freq_hz, status);
-    return status;
+  zx_status_t status;
+  if (next.freq_hz > current.freq_hz) {
+    uint32_t actual_voltage = 0;
+    if ((status = cpu_power_.RequestVoltage(next.volt_uv, &actual_voltage))) {
+      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u: %d\n", __func__, next.volt_uv, status);
+      return status;
+    }
+    if (actual_voltage != next.volt_uv) {
+      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u\n", __func__, next.volt_uv);
+      return ZX_ERR_INTERNAL;
+    }
+
+    if ((status = cpu_clock_.SetRate(next.freq_hz)) != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to set CPU clock rate to %u: %d\n", __func__, next.freq_hz, status);
+      return status;
+    }
+  } else {
+    if ((status = cpu_clock_.SetRate(next.freq_hz)) != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to set CPU clock rate to %u: %d\n", __func__, next.freq_hz, status);
+      return status;
+    }
+
+    uint32_t actual_voltage = 0;
+    if ((status = cpu_power_.RequestVoltage(next.volt_uv, &actual_voltage))) {
+      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u: %d\n", __func__, next.volt_uv, status);
+      return status;
+    }
+    if (actual_voltage != next.volt_uv) {
+      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u\n", __func__, next.volt_uv);
+      return ZX_ERR_INTERNAL;
+    }
   }
 
   operating_point_ = op_idx;

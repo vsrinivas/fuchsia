@@ -18,6 +18,7 @@
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/power.h>
 
 namespace {
 
@@ -39,11 +40,13 @@ class Vs680Thermal : public DeviceType,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   Vs680Thermal(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt interrupt,
-               const ddk::ClockProtocolClient& cpu_clock, zx::duration poll_interval = zx::sec(3))
+               const ddk::ClockProtocolClient& cpu_clock, const ddk::PowerProtocolClient& cpu_power,
+               zx::duration poll_interval = zx::sec(3))
       : DeviceType(parent),
         mmio_(std::move(mmio)),
         interrupt_(std::move(interrupt)),
         cpu_clock_(cpu_clock),
+        cpu_power_(cpu_power),
         poll_interval_(poll_interval) {}
 
   void DdkRelease();
@@ -75,6 +78,7 @@ class Vs680Thermal : public DeviceType,
   const ddk::MmioBuffer mmio_;
   const zx::interrupt interrupt_;
   const ddk::ClockProtocolClient cpu_clock_;
+  const ddk::PowerProtocolClient cpu_power_;
   const zx::duration poll_interval_;
   uint16_t operating_point_ = 0;
   thrd_t thread_ = {};

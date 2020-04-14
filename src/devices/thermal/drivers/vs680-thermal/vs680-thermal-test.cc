@@ -10,6 +10,7 @@
 #include <memory>
 
 #include <mock/ddktl/protocol/clock.h>
+#include <mock/ddktl/protocol/power.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -34,14 +35,17 @@ class Vs680ThermalTest : public zxtest::Test {
     ASSERT_OK(interrupt_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dut_interrupt));
 
     dut_.reset(new Vs680Thermal(nullptr, std::move(mmio), std::move(dut_interrupt),
-                                clock_.GetProto(), zx::msec(1)));
+                                clock_.GetProto(), power_.GetProto(), zx::msec(1)));
 
     ASSERT_OK(messenger_.SetMessageOp(
         dut_.get(), [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
           return static_cast<Vs680Thermal*>(ctx)->DdkMessage(msg, txn);
         }));
 
+    power_.ExpectRegisterPowerDomain(ZX_OK, 800'000, 800'000);
+
     clock_.ExpectSetRate(ZX_OK, 1'800'000'000);
+    power_.ExpectRequestVoltage(ZX_OK, 800'000, 800'000);
     ASSERT_OK(dut_->Init());
 
     // Init() started the interrupt thread, so DdkRelease must be called before destruction of the
@@ -57,6 +61,7 @@ class Vs680ThermalTest : public zxtest::Test {
   uint32_t registers_[0x180 / 4];
   zx::interrupt interrupt_;
   ddk::MockClock clock_;
+  ddk::MockPower power_;
   std::unique_ptr<Vs680Thermal> dut_;
   fake_ddk::FidlMessenger messenger_;
 };
@@ -93,14 +98,12 @@ TEST_F(Vs680ThermalTest, OperatingPoints) {
   EXPECT_EQ(get_result->op_idx, 0);
 
   clock_.ExpectSetRate(ZX_OK, 1'800'000'000);
+  power_.ExpectRequestVoltage(ZX_OK, 800'000, 800'000);
   auto set_result = client.SetDvfsOperatingPoint(0, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
   EXPECT_OK(set_result->status);
 
-  clock_.ExpectSetRate(ZX_ERR_IO, 1'800'000'000);
-  set_result = client.SetDvfsOperatingPoint(0, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_NOT_OK(set_result->status);
-
   ASSERT_NO_FATAL_FAILURES(clock_.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURES(power_.VerifyAndClear());
 }
 
 }  // namespace thermal

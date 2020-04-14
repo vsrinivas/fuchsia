@@ -8,6 +8,7 @@
 #include <fbl/algorithm.h>
 #include <soc/vs680/vs680-clk.h>
 #include <soc/vs680/vs680-hw.h>
+#include <soc/vs680/vs680-power.h>
 
 #include "luis.h"
 
@@ -37,13 +38,24 @@ zx_status_t Luis::ThermalInit() {
       BI_MATCH_IF(EQ, BIND_CLOCK_ID, vs680::kCpuPll),
   };
 
+  constexpr zx_bind_inst_t cpu_power_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
+      BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, vs680::kPowerDomainVCpu),
+  };
+
   const device_fragment_part_t cpu_clock_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(cpu_clock_match), cpu_clock_match},
   };
 
+  const device_fragment_part_t cpu_power_fragment[] = {
+      {fbl::count_of(root_match), root_match},
+      {fbl::count_of(cpu_power_match), cpu_power_match},
+  };
+
   const device_fragment_t thermal_fragments[] = {
       {fbl::count_of(cpu_clock_fragment), cpu_clock_fragment},
+      {fbl::count_of(cpu_power_fragment), cpu_power_fragment},
   };
 
   pbus_dev_t thermal_dev = {};
