@@ -235,7 +235,7 @@ void ShaderModuleTemplate::Variant::UpdateModule() {
   std::vector<uint32_t> spirv;
   bool result = GenerateSpirV(&spirv);
   FXL_CHECK(result) << "Shader compilation failed!";
-  RecreateModuleFromSpirvAndNotifyListeners(spirv);
+  UpdateSpirvAndNotifyListeners(spirv);
 }
 #else
 
@@ -259,7 +259,7 @@ void ShaderModuleTemplate::Variant::UpdateModule() {
         shader_util::ReadSpirvFromDisk(args_, *base_path + "/shaders/", template_->path_, &spirv);
     FXL_CHECK(result) << "Read SPIR-V file failed!";
   }
-  RecreateModuleFromSpirvAndNotifyListeners(spirv);
+  UpdateSpirvAndNotifyListeners(spirv);
 }
 
 #endif  // ESCHER_USE_RUNTIME_GLSL

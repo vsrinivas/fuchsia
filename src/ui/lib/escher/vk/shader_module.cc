@@ -10,14 +10,23 @@
 namespace escher {
 
 ShaderModule::ShaderModule(vk::Device device, ShaderStage shader_stage)
-    : device_(device), stage_(shader_stage) {}
+    : device_(device), stage_(shader_stage), is_valid_(false) {}
 
-ShaderModule::~ShaderModule() {
-  FXL_DCHECK(listeners_.empty());
-  if (module_) {
-    FXL_DCHECK(device_);
-    device_.destroyShaderModule(module_);
-  }
+ShaderModule::~ShaderModule() { FXL_DCHECK(listeners_.empty()); }
+
+vk::ShaderModule ShaderModule::CreateVkHandle() const {
+  FXL_DCHECK(device_);
+  FXL_DCHECK(is_valid_);
+
+  vk::ShaderModuleCreateInfo info;
+  info.codeSize = spirv_.size() * sizeof(uint32_t);
+  info.pCode = spirv_.data();
+
+  return ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(info));
+}
+
+void ShaderModule::DestroyVkHandle(vk::ShaderModule shader_module) const {
+  device_.destroyShaderModule(shader_module);
 }
 
 void ShaderModule::AddShaderModuleListener(ShaderModuleListener* listener) {
@@ -37,18 +46,10 @@ void ShaderModule::RemoveShaderModuleListener(ShaderModuleListener* listener) {
   listeners_.erase(it);
 }
 
-void ShaderModule::RecreateModuleFromSpirvAndNotifyListeners(std::vector<uint32_t> spirv) {
-  FXL_DCHECK(device_);
-  if (module_) {
-    device_.destroyShaderModule(module_);
-  }
-
-  vk::ShaderModuleCreateInfo info;
-  info.codeSize = spirv.size() * sizeof(uint32_t);
-  info.pCode = spirv.data();
-  module_ = ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(info));
-
-  GenerateShaderModuleResourceLayoutFromSpirv(std::move(spirv), stage_, &layout_);
+void ShaderModule::UpdateSpirvAndNotifyListeners(std::vector<uint32_t> spirv) {
+  spirv_ = std::move(spirv);
+  is_valid_ = true;
+  GenerateShaderModuleResourceLayoutFromSpirv(spirv_, stage_, &layout_);
 
   for (auto listener : listeners_) {
     listener->OnShaderModuleUpdated(this);

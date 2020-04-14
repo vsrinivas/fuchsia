@@ -328,6 +328,24 @@ void SetupVertexAttributeBindingsForTest(CommandBufferPipelineState* cbps) {
   }
 }
 
+// This tests if we can create multiple VkShaderModules using the same SPIRV
+// instead of reusing the same shader module.
+VK_TEST_F(ShaderProgramTest, CreateMultipleVkShaderModules) {
+  auto escher = test::GetEscher();
+
+  auto program = escher->GetProgram(escher::kNoLightingProgramData);
+  EXPECT_TRUE(program);
+
+  auto module = program->GetModuleForStage(ShaderStage::kVertex);
+  vk::ShaderModule vk_shader_module1 = module->CreateVkHandle();
+  vk::ShaderModule vk_shader_module2 = module->CreateVkHandle();
+
+  EXPECT_TRUE(vk_shader_module1);
+  EXPECT_TRUE(vk_shader_module2);
+
+  EXPECT_NE(vk_shader_module1, vk_shader_module2);
+}
+
 // This tests the most direct form of pipeline generation, without all of the laziness and caching
 // done by CommandBuffer.  Fundamentally this requires 4 things:
 //   1) a set of vk::ShaderModules
@@ -461,11 +479,13 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
   // 5) Set up two similar vk::GraphicsPipelineCreateInfo structs, one with stencil buffer enabled
   // and the other without.  These will be passed to PipelineBuilder instances.
   BlockAllocator allocator(128);
-  auto create_info1 =
-      cbps.InitGraphicsPipelineCreateInfo(&allocator, pipeline_layout1, program1.get());
+  std::vector<std::pair<ShaderModulePtr, vk::ShaderModule>> shader_modules;
+
+  auto create_info1 = cbps.InitGraphicsPipelineCreateInfo(&allocator, &shader_modules,
+                                                          pipeline_layout1, program1.get());
   cbps.SetStencilTest(true);
-  auto create_info2 =
-      cbps.InitGraphicsPipelineCreateInfo(&allocator, pipeline_layout2, program2.get());
+  auto create_info2 = cbps.InitGraphicsPipelineCreateInfo(&allocator, &shader_modules,
+                                                          pipeline_layout2, program2.get());
 
   // 6) This callback will be invoked after set_log_pipeline_creation_callback() has injected
   // it into a PipelineBuilder.
@@ -593,6 +613,11 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
     escher->vk_device().destroyPipeline(pipeline2a);
     escher->vk_device().destroyPipeline(pipeline2b);
     escher->vk_device().destroyPipeline(pipeline2c);
+  }
+
+  // Destroy temporary shader modules after all pipeline creation finished.
+  for (const auto& module_pair : shader_modules) {
+    module_pair.first->DestroyVkHandle(module_pair.second);
   }
 }
 
