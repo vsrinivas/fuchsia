@@ -4,6 +4,7 @@
 
 pub mod dispatcher;
 pub mod event;
+pub(crate) mod filter;
 pub mod registry;
 pub(crate) mod serve;
 pub mod source;

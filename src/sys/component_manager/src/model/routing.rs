@@ -9,6 +9,7 @@ use {
         },
         model::{
             error::ModelError,
+            events::filter::EventFilter,
             hooks::{Event, EventPayload},
             moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker, RelativeMoniker},
             realm::{Realm, WeakRealm},
@@ -21,9 +22,9 @@ use {
     async_trait::async_trait,
     cm_rust::{
         self, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeTarget, OfferDecl,
-        OfferDirectoryDecl, OfferDirectorySource, OfferEventSource, OfferRunnerSource,
-        OfferServiceSource, OfferStorageSource, StorageDirectorySource, UseDecl, UseDirectoryDecl,
-        UseStorageDecl,
+        OfferDirectoryDecl, OfferDirectorySource, OfferEventDecl, OfferEventSource,
+        OfferRunnerSource, OfferServiceSource, OfferStorageSource, StorageDirectorySource, UseDecl,
+        UseDirectoryDecl, UseEventDecl, UseStorageDecl,
     },
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -437,6 +438,9 @@ enum CapabilityState {
         /// Holds the subdirectory path to open.
         subdir: PathBuf,
     },
+    Event {
+        filter_state: WalkState<EventFilter>,
+    },
     Other,
 }
 
@@ -454,6 +458,12 @@ impl CapabilityState {
                 rights_state: WalkState::new(),
                 subdir: subdir.as_ref().map_or(PathBuf::new(), |s| PathBuf::from(s)),
             },
+            ComponentCapability::Use(UseDecl::Event(UseEventDecl { filter, .. }))
+            | ComponentCapability::Offer(OfferDecl::Event(OfferEventDecl { filter, .. })) => {
+                CapabilityState::Event {
+                    filter_state: WalkState::at(EventFilter::new(filter.clone())),
+                }
+            }
             ComponentCapability::UsedExpose(ExposeDecl::Directory(ExposeDirectoryDecl {
                 ..
             })) => Self::Directory { rights_state: WalkState::new(), subdir: PathBuf::new() },
@@ -654,6 +664,10 @@ async fn walk_offer_chain<'a>(
             }
             _ => (None, None),
         };
+        let event_filter = EventFilter::new(match offer {
+            OfferDecl::Event(OfferEventDecl { filter, .. }) => filter.clone(),
+            _ => None,
+        });
         match source {
             OfferSource::Service(_) => {
                 return Err(ModelError::unsupported("Service capability"));
@@ -681,6 +695,9 @@ async fn walk_offer_chain<'a>(
             }
             OfferSource::Event(OfferEventSource::Framework) => {
                 // An event offered from framework is scoped to the current realm.
+                if let CapabilityState::Event { filter_state } = &mut pos.cap_state {
+                    *filter_state = filter_state.finalize(Some(event_filter))?;
+                }
                 let capability =
                     FrameworkCapability::framework_from_offer_decl(offer).map_err(|_| {
                         ModelError::capability_discovery_error(format!(
@@ -697,10 +714,20 @@ async fn walk_offer_chain<'a>(
             }
             OfferSource::Protocol(OfferServiceSource::Realm)
             | OfferSource::Storage(OfferStorageSource::Realm)
-            | OfferSource::Runner(OfferRunnerSource::Realm)
-            | OfferSource::Event(OfferEventSource::Realm) => {
+            | OfferSource::Runner(OfferRunnerSource::Realm) => {
                 // The offered capability comes from the realm, so follow the
                 // parent
+                pos.capability = ComponentCapability::Offer(offer.clone());
+                pos.last_child_moniker = pos.moniker().path().last().map(|c| c.clone());
+                pos.realm = cur_realm.try_get_parent()?;
+                continue 'offerloop;
+            }
+            OfferSource::Event(OfferEventSource::Realm) => {
+                // The offered capability comes from the realm, so follow the
+                // parent
+                if let CapabilityState::Event { filter_state } = &mut pos.cap_state {
+                    *filter_state = filter_state.advance(Some(event_filter))?;
+                }
                 pos.capability = ComponentCapability::Offer(offer.clone());
                 pos.last_child_moniker = pos.moniker().path().last().map(|c| c.clone());
                 pos.realm = cur_realm.try_get_parent()?;

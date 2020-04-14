@@ -2452,3 +2452,135 @@ async fn use_event_from_grandparent() {
     )
     .await;
 }
+
+///   a
+///   |
+///   b
+///  / \
+/// c   d
+///
+/// a: offer framework event "capability_ready" with filters "/foo", "/bar", "/baz" to b
+/// b: uses realm event "capability_ready" with filters "/foo"
+/// b: offers realm event "capabilty_ready" with filters "/foo", "/bar" to c, d
+/// c: uses realm event "capability_ready" with filters "/foo", "/bar"
+/// d: uses realm event "capability_ready" with filters "/baz" (fails)
+#[fuchsia_async::run_singlethreaded(test)]
+async fn event_filter_routing() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Framework,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                    filter: Some(hashmap! {
+                        "path".to_string() => DictionaryValue::StrVec(vec![
+                            "/foo".to_string(), "/bar".to_string(), "/baz".to_string()
+                        ])
+                    }),
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Realm,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready_foo".into(),
+                    filter: Some(hashmap! {
+                        "path".to_string() => DictionaryValue::Str("/foo".into()),
+                    }),
+                }))
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Realm,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready".into(),
+                    target: OfferTarget::Child("c".to_string()),
+                    filter: Some(hashmap! {
+                        "path".to_string() => DictionaryValue::StrVec(vec![
+                            "/foo".to_string(), "/bar".to_string()
+                        ])
+                    }),
+                }))
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Realm,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready".into(),
+                    target: OfferTarget::Child("d".to_string()),
+                    filter: Some(hashmap! {
+                        "path".to_string() => DictionaryValue::StrVec(vec![
+                            "/foo".to_string(), "/bar".to_string()
+                        ])
+                    }),
+                }))
+                .add_lazy_child("c")
+                .add_lazy_child("d")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Realm,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready_foo_bar".into(),
+                    filter: Some(hashmap! {
+                        "path".to_string() => DictionaryValue::StrVec(vec![
+                            "/foo".to_string(), "/bar".to_string()
+                        ])
+                    }),
+                }))
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Realm,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready_baz".into(),
+                    filter: Some(hashmap! {
+                        "path".to_string() => DictionaryValue::Str("/baz".into()),
+                    }),
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Event { names: vec!["capability_ready_foo".into()], should_be_allowed: true },
+    )
+    .await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Event { names: vec!["capability_ready_foo_bar".into()], should_be_allowed: true },
+    )
+    .await;
+    test.check_use(
+        vec!["b:0", "d:0"].into(),
+        CheckUse::Event { names: vec!["capability_ready_baz".into()], should_be_allowed: false },
+    )
+    .await;
+}
