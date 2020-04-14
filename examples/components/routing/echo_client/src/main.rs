@@ -4,12 +4,13 @@
 
 use {
     anyhow::format_err, fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_service, fuchsia_syslog as syslog, log::*,
 };
 
 #[fasync::run_singlethreaded]
 async fn main() {
+    syslog::init_with_tags(&["echo_client"]).expect("failed to initialize logger");
     let echo = connect_to_service::<fecho::EchoMarker>().expect("error connecting to echo");
     let out = echo.echo_string(Some("Hippos rule!")).await.expect("echo_string failed");
-    println!("{}", out.ok_or(format_err!("empty result")).expect("echo_string got empty result"));
+    info!("{}", out.ok_or(format_err!("empty result")).expect("echo_string got empty result"));
 }

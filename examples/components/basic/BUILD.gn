@@ -11,6 +11,7 @@ rustc_binary("hello_world_bin") {
   name = "hello_world"
   edition = "2018"
   with_unit_tests = true
+  deps = [ "//src/lib/syslog/rust:syslog" ]
 }
 
 rustc_binary("ls_root_pkg_bin") {
@@ -23,6 +24,7 @@ rustc_binary("echo_args_bin") {
   source_root = "src/echo_args.rs"
   name = "echo_args"
   edition = "2018"
+  deps = [ "//src/lib/syslog/rust:syslog" ]
 }
 
 rustc_binary("lifecycle") {
