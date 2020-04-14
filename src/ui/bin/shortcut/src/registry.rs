@@ -191,7 +191,31 @@ impl RegistryStore {
             .fold(false, {
                 // Capture variables by reference, since `async` non-`move` closures with
                 // arguments are not currently supported
-                let (key, phase, modifiers) = (event.key, event.phase, event.modifiers);
+                let (key, phase) = (event.key, event.phase);
+                // Add LeftMeta and RightMeta for Released events to mitigate fxb/49768.
+                let modifiers = match (event.key, event.phase) {
+                    (Some(ui_input::Key::LeftMeta), Some(ui_input::KeyEventPhase::Released)) => {
+                        event
+                            .modifiers
+                            .map(|modifiers| {
+                                modifiers
+                                    | ui_input::Modifiers::Meta
+                                    | ui_input::Modifiers::LeftMeta
+                            })
+                            .or(Some(ui_input::Modifiers::Meta | ui_input::Modifiers::LeftMeta))
+                    }
+                    (Some(ui_input::Key::RightMeta), Some(ui_input::KeyEventPhase::Released)) => {
+                        event
+                            .modifiers
+                            .map(|modifiers| {
+                                modifiers
+                                    | ui_input::Modifiers::Meta
+                                    | ui_input::Modifiers::RightMeta
+                            })
+                            .or(Some(ui_input::Modifiers::Meta | ui_input::Modifiers::RightMeta))
+                    }
+                    _ => event.modifiers,
+                };
                 let matched_modifiers = self.matched_modifiers;
                 move |was_handled, registry| async move {
                     let event = ui_input::KeyEvent {
