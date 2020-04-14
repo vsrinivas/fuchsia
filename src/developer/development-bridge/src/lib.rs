@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{LOCAL_SOCAT, MAX_RETRY_COUNT, RETRY_DELAY, SOCAT, SOCKET, TARGET_SOCAT},
+    crate::constants::{MAX_RETRY_COUNT, RETRY_DELAY, SOCKET},
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::mdns::MdnsTargetFinder,
     crate::target::{RCSConnection, Target, TargetCollection},
     anyhow::{anyhow, Context, Error},
-    ascendd_lib::run_ascendd,
     async_std::task,
     async_trait::async_trait,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
@@ -32,19 +31,9 @@ mod constants;
 mod discovery;
 mod mdns;
 mod net;
+mod onet;
 mod target;
 mod util;
-
-async fn start_ascendd() {
-    log::info!("Starting ascendd");
-    spawn(async move {
-        run_ascendd(ascendd_lib::Opt { sockpath: Some(SOCKET.to_string()), ..Default::default() })
-            .await
-            .unwrap();
-    });
-    log::info!("Connecting to target");
-    Command::new(SOCAT).arg(LOCAL_SOCAT).arg(TARGET_SOCAT).spawn().unwrap();
-}
 
 /// A locked TargetCollection that has been acquired via the Mutex::lock fn.
 pub type GuardedTargetCollection = Arc<Mutex<TargetCollection>>;
@@ -84,6 +73,7 @@ pub struct Daemon {
 
 impl Daemon {
     pub async fn new() -> Result<Daemon, Error> {
+        log::info!("Starting daemon overnet server");
         let (tx, rx) = mpsc::unbounded::<Target>();
         let target_collection = Arc::new(Mutex::new(TargetCollection::new()));
         let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
@@ -397,11 +387,8 @@ pub async fn start() -> Result<(), Error> {
     if is_daemon_running() {
         return Ok(());
     }
-    log::info!("Starting ascendd");
-    start_ascendd().await;
-    log::info!("Starting daemon overnet server");
+    onet::start_ascendd().await;
     let daemon = Daemon::new().await?;
-
     exec_server(daemon, true).await
 }
 
