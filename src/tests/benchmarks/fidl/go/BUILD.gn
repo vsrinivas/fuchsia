@@ -25,16 +25,14 @@ go_library("go_fidl_benchmarks_lib") {
   ]
 }
 
-package("go_fidl_benchmarks") {
+package("go-fidl-benchmarks") {
   testonly = true
   deps = [ ":go_fidl_benchmarks_bin" ]
 
-  binary = "go_fidl_benchmarks"
-
-  meta = [
+  binaries = [
     {
-      path = rebase_path("meta/go_fidl_benchmarks.cmx")
-      dest = "go_fidl_benchmarks.cmx"
+      name = "go_fidl_benchmarks"
+      shell = true
     },
   ]
 }

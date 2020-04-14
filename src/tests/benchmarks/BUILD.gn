@@ -10,7 +10,7 @@ group("benchmarks") {
   deps = [
     ":fuchsia_benchmarks",
     ":kernel-boot-benchmarks",
-    "//src/tests/benchmarks/fidl/go:go_fidl_benchmarks",
+    "//src/tests/benchmarks/fidl/go:go-fidl-benchmarks",
     "//src/tests/benchmarks/fidl/rust:rust-fidl-benchmarks",
   ]
 }

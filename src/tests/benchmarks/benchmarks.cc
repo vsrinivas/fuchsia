@@ -76,7 +76,7 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
     constexpr const char* kLabel = "fuchsia.fidl_go_microbenchmarks";
     std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
     benchmarks_runner->AddCustomBenchmark(
-        kLabel, {"/pkgfs/packages/go_fidl_benchmarks/0/bin/app", "--out_file", out_file}, out_file);
+        kLabel, {"/bin/go_fidl_benchmarks", "--out_file", out_file}, out_file);
   }
   {
     constexpr const char* kLabel = "fuchsia.fidl_rust_microbenchmarks";

@@ -507,7 +507,7 @@ Available benchmarks:
 
 | Name | Benchmark Command | Notes | 
 |-|-|-|
-| fidl go benchmarks |  `fx shell /pkgfs/packages/go_fidl_benchmarks/0/bin/app` | |
+| fidl go benchmarks |  `fx shell /bin/go_fidl_benchmarks` | |
 | fidl rust benchmarks | `fx shell /bin/rust_fidl_benchmarks /tmp/myresultsfile` | Results can be viewed with `fx shell cat /tmp/myresultsfile/` |
 | fidl llcpp benchmarks |  `fx shell /bin/llcpp-fidl-benchmark` | |
 
