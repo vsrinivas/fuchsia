@@ -623,6 +623,7 @@ aggregate_manifest("migrated-image") {
       "//src/devices/misc/drivers/virtio-rng:virtio_rng-manifest",
       "//src/devices/misc/drivers/virtio-socket:virtio_socket-manifest",
       "//src/devices/power/drivers/as370-power:as370-power-manifest",
+      "//src/devices/power/drivers/vs680-power:vs680-power-manifest",
       "//src/devices/serial/bin/serial-test:serial-test-manifest",
       "//src/devices/serial/drivers/virtio-console:virtio_console-manifest",
       "//src/devices/tests/bind-debugger-test:bind-debugger-test-driver-manifest",

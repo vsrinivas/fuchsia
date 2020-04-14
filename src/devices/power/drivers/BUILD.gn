@@ -5,5 +5,8 @@
 group("tests") {
   testonly = true
 
-  deps = [ "mtk-power:tests" ]
+  deps = [
+    "mtk-power:tests",
+    "vs680-power:tests",
+  ]
 }

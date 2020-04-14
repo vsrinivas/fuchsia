@@ -69,6 +69,11 @@ int Luis::Thread() {
     return thrd_error;
   }
 
+  if (PowerInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: PowerInit() failed\n", __func__);
+    return thrd_error;
+  }
+
   if (EmmcInit() != ZX_OK) {
     zxlogf(ERROR, "%s: EmmcInit() failed\n", __func__);
   }

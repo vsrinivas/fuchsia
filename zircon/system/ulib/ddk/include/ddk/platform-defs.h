@@ -304,6 +304,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_VS680_USB_PHY      13
 #define PDEV_DID_VS680_CLOCK        14
 #define PDEV_DID_VS680_THERMAL      15
+#define PDEV_DID_VS680_POWER        16
 
 // Maxim
 #define PDEV_VID_MAXIM              21

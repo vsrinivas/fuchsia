@@ -519,6 +519,9 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       "vs680-sdio/as370-sdhci/sdhci",
       "class/thermal/000",
       "vs680-thermal/vs680-thermal",
+      "class/power/000",
+      "power/vs680-power",
+      "composite-pd-vcpu/power-0",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
