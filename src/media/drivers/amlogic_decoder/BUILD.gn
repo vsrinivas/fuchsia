@@ -141,6 +141,7 @@ if (target_cpu == "arm64") {
     ]
     public_deps = [
       "h264:h264_parser",
+      "//sdk/banjo/ddk.protocol.amlogiccanvas",
       "//sdk/banjo/ddk.protocol.composite",
       "//src/devices/lib/driver",
       "//zircon/public/lib/async-cpp",
@@ -157,7 +158,6 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/tee-client-api",
       "//zircon/public/lib/trace-driver",
       "//zircon/public/lib/zx",
-      "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
       "//zircon/system/banjo/ddk.protocol.platform.device",
       "//zircon/system/banjo/ddk.protocol.sysmem",
       "//zircon/system/banjo/ddk.protocol.tee",

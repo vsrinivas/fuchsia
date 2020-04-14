@@ -9,6 +9,7 @@ import("//build/unification/images/migrated_manifest.gni")
 
 source_set("common") {
   public_deps = [
+    "//sdk/banjo/ddk.protocol.amlogiccanvas",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/banjo/ddk.protocol.i2cimpl",
@@ -22,7 +23,6 @@ source_set("common") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",

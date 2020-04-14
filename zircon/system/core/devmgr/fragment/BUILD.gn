@@ -26,6 +26,7 @@ driver_module("fragment") {
   sources = [ "fragment.cc" ]
   data_deps = [ ":fragment.proxy" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.amlogiccanvas",
     "//sdk/banjo/ddk.protocol.buttons",
     "//sdk/banjo/ddk.protocol.camerasensor",
     "//sdk/banjo/ddk.protocol.clock",
@@ -44,7 +45,6 @@ driver_module("fragment") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
     "//zircon/system/banjo/ddk.protocol.codec",
     "//zircon/system/banjo/ddk.protocol.ethernet.board",
     "//zircon/system/banjo/ddk.protocol.gpio",
@@ -71,6 +71,7 @@ driver_module("fragment.proxy") {
   }
   sources = [ "fragment-proxy.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.amlogiccanvas",
     "//sdk/banjo/ddk.protocol.buttons",
     "//sdk/banjo/ddk.protocol.clock",
     "//src/devices/lib/driver",
@@ -79,7 +80,6 @@ driver_module("fragment.proxy") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
     "//zircon/system/banjo/ddk.protocol.codec",
     "//zircon/system/banjo/ddk.protocol.ethernet.board",
     "//zircon/system/banjo/ddk.protocol.gpio",
