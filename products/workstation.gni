@@ -68,4 +68,5 @@ cache_package_labels -=
 universe_package_labels += [
   "//src/experiences/tests/e2e:test",
   "//src/tests/end_to_end/can_browse_web:test",
+  "//src/tests/end_to_end/inspect_metrics:test",
 ]
