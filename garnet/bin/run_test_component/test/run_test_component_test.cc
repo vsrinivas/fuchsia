@@ -12,10 +12,12 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <cstddef>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -178,4 +180,98 @@ TEST_F(RunFixture, TestTimeout) {
       ZX_OK);
 
   ASSERT_EQ(process_info.return_code, -ZX_ERR_TIMED_OUT);
+}
+
+void run_logging_component(std::string log_level, std::string* output) {
+  std::vector<const char*> run_d_command_argv = {"/bin/run-test-component"};
+  std::string log_severity = std::string("--min-severity-logs=") + log_level;
+  if (!log_level.empty()) {
+    run_d_command_argv.push_back(log_severity.c_str());
+  }
+  run_d_command_argv.push_back(
+      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx");
+  run_d_command_argv.push_back(nullptr);
+
+  auto job = zx::job::default_job();
+  uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC | (FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE);
+
+  std::vector<fdio_spawn_action_t> fdio_actions = {
+      fdio_spawn_action_t{.action = FDIO_SPAWN_ACTION_SET_NAME,
+                          .name = {.data = "run-test-component"}},
+  };
+
+  auto action_ns_entry = [](const char* prefix, zx_handle_t handle) {
+    return fdio_spawn_action{.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+                             .ns = {
+                                 .prefix = prefix,
+                                 .handle = handle,
+                             }};
+  };
+
+  // collect stdout/err from run_test_component.
+  int temp_fds[2] = {-1, -1};
+  ASSERT_EQ(pipe(temp_fds), 0) << strerror(errno);
+
+  fdio_actions.push_back(
+      fdio_spawn_action{.action = FDIO_SPAWN_ACTION_CLONE_FD,
+                        .fd = {.local_fd = temp_fds[1], .target_fd = STDOUT_FILENO}});
+  fdio_actions.push_back(
+      fdio_spawn_action{.action = FDIO_SPAWN_ACTION_CLONE_FD,
+                        .fd = {.local_fd = temp_fds[1], .target_fd = STDERR_FILENO}});
+
+  // Export the root namespace.
+  fdio_flat_namespace_t* flat;
+  auto status = fdio_ns_export_root(&flat);
+  ASSERT_EQ(ZX_OK, status) << "FAILURE: Cannot export root namespace:"
+                           << zx_status_get_string(status);
+
+  for (size_t i = 0; i < flat->count; ++i) {
+    fdio_actions.push_back(action_ns_entry(flat->path[i], flat->handle[i]));
+  }
+
+  zx::process process;
+
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+
+  ASSERT_EQ(ZX_OK, fdio_spawn_etc(job->get(), flags,
+                                  run_d_command_argv[0],  // path
+                                  run_d_command_argv.data(),
+                                  nullptr,  // environ
+                                  fdio_actions.size(), fdio_actions.data(),
+                                  process.reset_and_get_address(), err_msg))
+      << err_msg;
+  zx_signals_t signal;
+  process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &signal);
+
+  char buf[4096] = {0};
+
+  auto len = read(temp_fds[0], buf, sizeof(buf));
+  ASSERT_GE(len, 0) << strerror(errno);
+  ASSERT_LT(len, 4096);
+
+  *output = std::string(buf);
+}
+
+TEST_F(RunFixture, TestIsolatedLogsWithDefaultSeverity) {
+  std::string got;
+  run_logging_component("", &got);
+  EXPECT_EQ(got.find("VLOG(1): my debug message."), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find("INFO: my info message."), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
+}
+
+TEST_F(RunFixture, TestIsolatedLogsWithHigherSeverity) {
+  std::string got;
+  run_logging_component("WARN", &got);
+  EXPECT_EQ(got.find("VLOG(1): my debug message."), std::string::npos) << "got: " << got;
+  EXPECT_EQ(got.find("INFO: my info message."), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
+}
+
+TEST_F(RunFixture, TestIsolatedLogsWithLowerSeverity) {
+  std::string got;
+  run_logging_component("DEBUG", &got);
+  EXPECT_NE(got.find("VLOG(1): my debug message."), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find("INFO: my info message."), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
 }

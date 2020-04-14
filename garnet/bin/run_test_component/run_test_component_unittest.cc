@@ -6,6 +6,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/logger.h>
 
 #include <string>
 
@@ -32,6 +33,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(0u, result.matching_urls.size());
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
+    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
   }
 
   {
@@ -45,6 +47,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[3], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
+    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
   }
 
   {
@@ -58,6 +61,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[4], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
+    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
   }
 
   {
@@ -72,6 +76,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[5], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
     EXPECT_EQ(30, result.timeout);
+    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
   }
 
   {
@@ -114,6 +119,56 @@ TEST(RunTest, ParseArgs) {
   }
 
   {
+    const char* argv[] = {
+        kBinName, "--realm-label=kittens", "--min-severity-logs=WARN", component_url, "myarg1",
+        "myarg2"};
+    auto result = ParseArgs(env_services, 6, argv);
+    EXPECT_FALSE(result.error);
+    EXPECT_EQ(component_url, result.launch_info.url);
+    ASSERT_TRUE(result.launch_info.arguments.has_value());
+    EXPECT_EQ(2u, result.launch_info.arguments->size());
+    EXPECT_EQ(argv[4], result.launch_info.arguments->at(0));
+    EXPECT_EQ(argv[5], result.launch_info.arguments->at(1));
+    EXPECT_EQ("kittens", result.realm_label);
+    EXPECT_EQ(FX_LOG_WARNING, result.min_log_severity);
+  }
+
+  {
+    const char* argv[] = {
+        kBinName, "--min-severity-logs=WARN", "--realm-label=kittens", component_url, "myarg1",
+        "myarg2"};
+    auto result = ParseArgs(env_services, 6, argv);
+    EXPECT_FALSE(result.error);
+    EXPECT_EQ(component_url, result.launch_info.url);
+    ASSERT_TRUE(result.launch_info.arguments.has_value());
+    EXPECT_EQ(2u, result.launch_info.arguments->size());
+    EXPECT_EQ(argv[4], result.launch_info.arguments->at(0));
+    EXPECT_EQ(argv[5], result.launch_info.arguments->at(1));
+    EXPECT_EQ("kittens", result.realm_label);
+    EXPECT_EQ(FX_LOG_WARNING, result.min_log_severity);
+  }
+
+  {
+    const char* argv[] = {kBinName, "--min-severity-logs=TRACE", component_url, "myarg1", "myarg2"};
+    auto result = ParseArgs(env_services, 5, argv);
+    EXPECT_FALSE(result.error);
+    EXPECT_EQ(component_url, result.launch_info.url);
+    ASSERT_TRUE(result.launch_info.arguments.has_value());
+    EXPECT_EQ(2u, result.launch_info.arguments->size());
+    EXPECT_EQ(argv[3], result.launch_info.arguments->at(0));
+    EXPECT_EQ(argv[4], result.launch_info.arguments->at(1));
+    EXPECT_EQ("", result.realm_label);
+    EXPECT_EQ(-2, result.min_log_severity);
+  }
+
+  {
+    const char* argv[] = {kBinName, "--min-severity-logs=invalid", component_url, "myarg1",
+                          "myarg2"};
+    auto result = ParseArgs(env_services, 5, argv);
+    EXPECT_TRUE(result.error);
+  }
+
+  {
     const char* argv[] = {kBinName, "run_test_component_test_invalid_matcher"};
     auto result = ParseArgs(env_services, 2, argv);
     EXPECT_TRUE(result.error);
@@ -126,13 +181,15 @@ TEST(RunTest, ParseArgs) {
         "fuchsia-pkg://fuchsia.com/run_test_component_unittests#meta/"
         "run_test_component_unittests.cmx",
         "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
-        "coverage_component.cmx"};
+        "coverage_component.cmx",
+        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx"};
     const char* argv[] = {kBinName, "run_test_component"};
     auto result = ParseArgs(env_services, 2, argv);
     EXPECT_FALSE(result.error);
     EXPECT_EQ(expected_urls.size(), result.matching_urls.size());
     EXPECT_THAT(result.matching_urls, ::testing::UnorderedElementsAreArray(expected_urls));
     EXPECT_EQ("", result.realm_label);
+    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
   }
 
   {
@@ -147,6 +204,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(result.matching_urls[0], expected_url);
     EXPECT_EQ(expected_url, result.launch_info.url);
     EXPECT_EQ("", result.realm_label);
+    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
   }
 }
 

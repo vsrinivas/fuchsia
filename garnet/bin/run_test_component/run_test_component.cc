@@ -8,6 +8,7 @@
 #include <glob.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/logger.h>
 #include <limits.h>
 
 #include <regex>
@@ -27,6 +28,7 @@ static constexpr char kComponentIndexerUrl[] =
 
 static constexpr char kLabelArgPrefix[] = "--realm-label=";
 static constexpr char kTimeoutArgPrefix[] = "--timeout=";
+static constexpr char kSeverityArgPrefix[] = "--min-severity-logs=";
 
 ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
                           const char** argv) {
@@ -46,8 +48,32 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
     std::string argument = argv[url_or_matcher_argi];
     const size_t kLabelArgPrefixLength = strlen(kLabelArgPrefix);
     const size_t kTimeoutArgPrefixLength = strlen(kTimeoutArgPrefix);
+    const size_t kSeverityArgPrefixLength = strlen(kSeverityArgPrefix);
     if (argument.substr(0, kLabelArgPrefixLength) == kLabelArgPrefix) {
       result.realm_label = argument.substr(kLabelArgPrefixLength);
+      url_or_matcher_argi++;
+      continue;
+    }
+    if (argument.substr(0, kSeverityArgPrefixLength) == kSeverityArgPrefix) {
+      std::string level = argument.substr(kSeverityArgPrefixLength);
+      // TODO(42169): Change these once fxr/375515 lands
+      if (level == "TRACE") {
+        result.min_log_severity = FX_LOG_INFO - 2;
+      } else if (level == "DEBUG") {
+        result.min_log_severity = FX_LOG_INFO - 1;
+      } else if (level == "INFO") {
+        result.min_log_severity = FX_LOG_INFO;
+      } else if (level == "WARN") {
+        result.min_log_severity = FX_LOG_WARNING;
+      } else if (level == "ERROR") {
+        result.min_log_severity = FX_LOG_ERROR;
+      } else if (level == "FATAL") {
+        result.min_log_severity = FX_LOG_FATAL;
+      } else {
+        result.error = true;
+        result.error_msg = fxl::StringPrintf("Invalid severity %s", level.c_str());
+        return result;
+      }
       url_or_matcher_argi++;
       continue;
     }

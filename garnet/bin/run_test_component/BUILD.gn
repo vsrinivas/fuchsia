@@ -11,6 +11,8 @@ source_set("lib") {
 
   sources = [
     "env_config.h",
+    "log_collector.cc",
+    "log_collector.h",
     "run_test_component.cc",
     "run_test_component.h",
     "test_metadata.cc",
@@ -31,12 +33,14 @@ source_set("lib") {
     "//src/lib/cmx",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
+    "//src/lib/syslog/cpp",
     "//src/sys/component_index/fidl:index",
     "//third_party/rapidjson",
     "//zircon/system/fidl/fuchsia-boot",
     "//zircon/system/fidl/fuchsia-device",
     "//zircon/system/fidl/fuchsia-hardware-pty",
     "//zircon/system/fidl/fuchsia-kernel",
+    "//zircon/system/fidl/fuchsia-logger",
     "//zircon/system/fidl/fuchsia-net",
     "//zircon/system/fidl/fuchsia-posix-socket",
     "//zircon/system/fidl/fuchsia-scheduler",
@@ -56,6 +60,8 @@ executable("bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
+    "//src/diagnostics/archivist/fidl:controller",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/system/fidl/fuchsia-debugdata",
@@ -88,6 +94,7 @@ executable("test_bin") {
   output_name = "run_test_component_unittests"
 
   sources = [
+    "log_collector_unittests.cc",
     "run_test_component_unittest.cc",
     "test_metadata_unittest.cc",
   ]

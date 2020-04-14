@@ -3,31 +3,39 @@
 // found in the LICENSE file.
 
 #include <fuchsia/debugdata/cpp/fidl.h>
+#include <fuchsia/diagnostics/test/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/fit/function.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
+#include <lib/syslog/logger.h>
+#include <lib/vfs/cpp/service.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <string>
 
 #include "garnet/bin/run_test_component/env_config.h"
+#include "garnet/bin/run_test_component/log_collector.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
-#include "lib/async/cpp/task.h"
-#include "lib/vfs/cpp/service.h"
-#include "lib/zx/time.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -36,10 +44,13 @@ using fuchsia::sys::TerminationReason;
 
 namespace {
 constexpr char kEnvPrefix[] = "test_env_";
+const uint64_t kMillisInSec = 1000UL;
+const uint64_t kMicrosInSec = 1000000UL;
+const uint64_t kNanosInSec = 1000000000UL;
 
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] <test_url>|<test_matcher> [arguments...]
+Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string]<test_url>|<test_matcher> [arguments...]
 
        *test_url* takes the form of component manifest URL which uniquely
        identifies a test component. Example:
@@ -63,6 +74,11 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] <test_ur
 
        If --timeout is specified, test would be killed in <timeout> secs and
        run_test_component will exit with -ZX_ERR_TIMED_OUT.
+
+       By default when installing log listener, all logs more than severity INFO are collected.
+       To enable verbose logs or to filter by higher severity please pass severity:
+       TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
+       example: run-test-component --min-severity-logs=WARN <url>
 )");
 }
 
@@ -107,6 +123,49 @@ bool ConnectToRequiredEnvironment(const run::EnvironmentType& env_type, zx::chan
     return false;
   }
   return true;
+}
+
+std::string join_tags(std::vector<std::string> tags) {
+  std::ostringstream stream;
+  for (size_t i = 0; i < tags.size(); ++i) {
+    if (i != 0) {
+      stream << ",";
+    }
+    stream << tags[i];
+  }
+  return stream.str();
+}
+
+std::string log_level(int32_t severity) {
+  switch (severity) {
+    case FX_LOG_INFO:
+      return "INFO";
+    case FX_LOG_WARNING:
+      return "WARNING";
+    case FX_LOG_ERROR:
+      return "ERROR";
+    case FX_LOG_FATAL:
+      return "FATAL";
+  }
+  if (severity > 3) {
+    return "INVALID";
+  }
+  std::ostringstream stream;
+  stream << "VLOG(" << -severity << ")";
+  return stream.str();
+}
+
+std::shared_ptr<sys::ServiceDirectory> launch_observer(
+    const fuchsia::sys::LauncherPtr& launcher,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
+  fuchsia::sys::LaunchInfo launch_info{.url =
+                                           "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"};
+  launch_info.arguments = {"--disable-log-connector"};
+  auto observer_svc = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+  launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
+  launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
+  launcher->CreateComponent(std::move(launch_info), std::move(controller));
+  return observer_svc;
 }
 
 }  // namespace
@@ -186,6 +245,20 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env;
 
   run::EnvironmentConfig config;
+  auto log_collector = std::make_unique<run::LogCollector>(
+      [dispather = loop.dispatcher()](fuchsia::logger::LogMessage log) {
+        async::PostTask(dispather, [log = std::move(log)]() mutable {
+          auto time = log.time;
+          printf("[%05ld.%06ld][%ld][%ld][%s] %s: %s\n", time / kNanosInSec,
+                 (time / kMillisInSec) % kMicrosInSec, log.pid, log.tid,
+                 join_tags(std::move(log.tags)).c_str(), log_level(log.severity).c_str(),
+                 log.msg.c_str());
+        });
+      });
+
+  fuchsia::sys::ComponentControllerPtr observer_component_ptr;
+  std::shared_ptr<sys::ServiceDirectory> observer_svc = nullptr;
+
   auto map_entry = config.url_map()->find(parse_result.launch_info.url);
   if (map_entry != config.url_map()->end()) {
     if (test_metadata.HasServices()) {
@@ -205,8 +278,9 @@ int main(int argc, const char** argv) {
     namespace_services->Connect(parent_env.NewRequest());
 
     // Our bots run tests in zircon shell which do not have all required services, so create the
-    // test environment from `parent_env` (i.e. the sys environment) instead of the services in the
-    // namespace. But pass DebugData from the namespace because it is not available in `parent_env`.
+    // test environment from `parent_env` (i.e. the sys environment) instead of the services in
+    // the namespace. But pass DebugData from the namespace because it is not available in
+    // `parent_env`.
     sys::testing::EnvironmentServices::ParentOverrides parent_overrides;
     parent_overrides.debug_data_service_ =
         std::make_shared<vfs::Service>([namespace_services = namespace_services](
@@ -217,18 +291,26 @@ int main(int argc, const char** argv) {
     auto test_env_services = sys::testing::EnvironmentServices::CreateWithParentOverrides(
         parent_env, std::move(parent_overrides));
     auto services = test_metadata.TakeServices();
-    bool provide_real_log_sink = true;
+    bool collect_isolated_logs = true;
     for (auto& service : services) {
       test_env_services->AddServiceWithLaunchInfo(std::move(service.second), service.first);
       if (service.first == fuchsia::logger::LogSink::Name_) {
         // don't add global log sink service if test component is injecting
         // it.
-        provide_real_log_sink = false;
+        collect_isolated_logs = false;
       }
     }
-    if (provide_real_log_sink) {
-      test_env_services->AllowParentService(fuchsia::logger::LogSink::Name_);
+    if (collect_isolated_logs) {
+      fuchsia::sys::LauncherPtr launcher;
+      parent_env->GetLauncher(launcher.NewRequest());
+      observer_svc = launch_observer(launcher, observer_component_ptr.NewRequest());
+
+      test_env_services->AddService<fuchsia::logger::LogSink>(
+          [observer_svc](fidl::InterfaceRequest<fuchsia::logger::LogSink> request) {
+            observer_svc->Connect(std::move(request));
+          });
     }
+
     auto& system_services = test_metadata.system_services();
     for (auto& service : system_services) {
       test_env_services->AllowParentService(service);
@@ -248,6 +330,26 @@ int main(int argc, const char** argv) {
 
     enclosing_env = sys::testing::EnclosingEnvironment::Create(
         std::move(env_label), parent_env, std::move(test_env_services), std::move(env_opt));
+
+    if (collect_isolated_logs) {
+      ZX_ASSERT(observer_svc != nullptr);
+      // this will launch the service and also collect logs.
+      auto log_ptr = observer_svc->Connect<fuchsia::logger::Log>();
+
+      fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener;
+      auto options = std::make_unique<fuchsia::logger::LogFilterOptions>();
+      if (parse_result.min_log_severity < 0) {
+        // TODO(42169): Change these once fxr/375515 lands
+        options->verbosity = -parse_result.min_log_severity;
+      } else {
+        options->min_severity =
+            static_cast<fuchsia::logger::LogLevelFilter>(parse_result.min_log_severity);
+      }
+
+      log_collector->Bind(log_listener.NewRequest(), loop.dispatcher());
+      log_ptr->ListenSafe(std::move(log_listener), std::move(options));
+    }
+
     launcher = enclosing_env->launcher_ptr();
     printf("Running test in realm: %s\n", env_label.c_str());
   }
@@ -299,6 +401,23 @@ int main(int argc, const char** argv) {
   // Wait and process all messages in the queue.
   loop.ResetQuit();
   loop.RunUntilIdle();
+
+  if (observer_svc) {
+    ZX_ASSERT(enclosing_env);
+    ZX_ASSERT(log_collector);
+    enclosing_env->Kill([&loop]() {
+      loop.Quit();
+      loop.ResetQuit();
+    });
+
+    loop.Run();
+
+    // collect all logs
+    log_collector->NotifyOnUnBind([&loop]() { loop.Quit(); });
+    auto observer_ptr = observer_svc->Connect<fuchsia::diagnostics::test::Controller>();
+    observer_ptr->Stop();
+    loop.Run();
+  }
 
   return ret_code;
 }

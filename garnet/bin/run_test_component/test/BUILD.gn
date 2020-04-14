@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -58,11 +59,15 @@ test_package("run_test_component_test") {
   deps = [
     ":bin",
     ":coverage_component",
+    "//src/diagnostics/archivist/tests/logs:logging_component",
   ]
 
   binaries = [
     {
       name = "coverage_component"
+    },
+    {
+      name = "logging_component"
     },
   ]
 
@@ -70,6 +75,11 @@ test_package("run_test_component_test") {
     {
       path = rebase_path("meta/coverage_component.cmx")
       dest = "coverage_component.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/diagnostics/archivist/tests/meta/logging_component.cmx")
+      dest = "logging_component.cmx"
     },
   ]
 
