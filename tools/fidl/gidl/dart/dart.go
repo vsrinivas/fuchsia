@@ -287,15 +287,11 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 	case bool:
 		return strconv.FormatBool(value)
 	case int64, uint64, float64:
-		switch decl.(type) {
+		switch decl := decl.(type) {
 		case *gidlmixer.IntegerDecl, *gidlmixer.FloatDecl:
 			return fmt.Sprintf("%#v", value)
-		case *gidlmixer.BitsDecl:
-			// TODO(fxb/43254)
-			panic("bits not implemented yet")
-		case *gidlmixer.EnumDecl:
-			// TODO(fxb/43254)
-			panic("enum not implemented yet")
+		case gidlmixer.NamedDeclaration:
+			return fmt.Sprintf("%s.ctor(%#v)", typeName(decl), value)
 		}
 	case string:
 		return fidlcommon.SingleQuote(value)
