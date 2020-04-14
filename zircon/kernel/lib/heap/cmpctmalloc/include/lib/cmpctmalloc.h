@@ -8,14 +8,23 @@
 #ifndef ZIRCON_KERNEL_LIB_HEAP_CMPCTMALLOC_INCLUDE_LIB_CMPCTMALLOC_H_
 #define ZIRCON_KERNEL_LIB_HEAP_CMPCTMALLOC_INCLUDE_LIB_CMPCTMALLOC_H_
 
-#ifdef _KERNEL
-
+#include <lib/zircon-internal/thread_annotations.h>
 #include <stddef.h>
 
-#include <lib/zircon-internal/thread_annotations.h>
+#ifdef _KERNEL
 #include <kernel/mutex.h>
 
 DECLARE_SINGLETON_MUTEX(TheHeapLock);
+#else
+#include <mutex>
+
+struct TheHeapLock {
+  static std::mutex* Get() {
+    static std::mutex m;
+    return &m;
+  }
+};
+#endif
 
 void* cmpct_alloc(size_t) TA_EXCL(TheHeapLock::Get());
 void* cmpct_realloc(void*, size_t) TA_EXCL(TheHeapLock::Get());
@@ -27,7 +36,5 @@ void cmpct_dump(bool panic_time) TA_EXCL(TheHeapLock::Get());
 void cmpct_get_info(size_t* size_bytes, size_t* free_bytes) TA_EXCL(TheHeapLock::Get());
 void cmpct_test(void) TA_EXCL(TheHeapLock::Get());
 void cmpct_trim(void) TA_EXCL(TheHeapLock::Get());
-
-#endif  // #ifdef _KERNEL
 
 #endif  // ZIRCON_KERNEL_LIB_HEAP_CMPCTMALLOC_INCLUDE_LIB_CMPCTMALLOC_H_

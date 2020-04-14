@@ -5,18 +5,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifdef _KERNEL
-
 #include "cmpctmalloc.h"
 
-#include <debug.h>
 #include <err.h>
 #include <inttypes.h>
 #include <lib/heap.h>
 #include <lib/zircon-internal/align.h>
 #include <string.h>
-#include <trace.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/limits.h>
 
 #include <fbl/algorithm.h>
@@ -111,6 +108,31 @@
 #include <platform.h>
 
 #define CMPCT_DEBUG
+#endif
+
+#ifdef _KERNEL
+#include <debug.h>
+#include <trace.h>
+
+using LockGuard = ::Guard<Mutex>;
+
+#else
+
+class __TA_SCOPED_CAPABILITY LockGuard {
+ public:
+  LockGuard(std::mutex* lock) __TA_ACQUIRE(lock) : guard_(*lock) {}
+  ~LockGuard() __TA_RELEASE() = default;
+
+  void Release() __TA_RELEASE() { guard_.unlock(); }
+
+ private:
+  std::unique_lock<std::mutex> guard_;
+};
+
+#define LTRACEF(...)
+#define LTRACE_ENTRY
+#define INFO 1
+
 #endif
 
 #define LOCAL_TRACE 0
@@ -212,7 +234,7 @@ static struct heap theheap TA_GUARDED(TheHeapLock::Get());
 
 static void dump_free(header_t* header) TA_REQ(TheHeapLock::Get()) {
   dprintf(INFO, "\t\tbase %p, end %#" PRIxPTR ", len %#zx (%zu)\n", header,
-          (vaddr_t)header + header->size, header->size, header->size);
+          (uintptr_t)header + header->size, header->size, header->size);
 }
 
 static void cmpct_dump_locked() TA_REQ(TheHeapLock::Get()) {
@@ -522,10 +544,13 @@ static ssize_t heap_grow(size_t size) TA_REQ(TheHeapLock::Get()) {
   return size;
 }
 
+// Use HEAP_ENABLE_TESTS to enable internal testing. The tests are not useful
+// when the target system is up. By that time we have done hundreds of allocations
+// already.
 #ifdef HEAP_ENABLE_TESTS
 
 static inline size_t cmpct_heap_remaining() TA_EXCL(TheHeapLock::Get()) {
-  Guard<Mutex> guard(TheHeapLock::Get());
+  LockGuard guard(TheHeapLock::Get());
   return theheap.remaining;
 }
 
@@ -811,7 +836,7 @@ void* cmpct_alloc(size_t size) {
 
   rounded_up += sizeof(header_t);
 
-  Guard<Mutex> guard(TheHeapLock::Get());
+  LockGuard guard(TheHeapLock::Get());
   int bucket = find_nonempty_bucket(start_bucket);
   if (bucket == -1) {
     // Grow heap by at least 12% if we can.
@@ -875,7 +900,7 @@ void cmpct_free(void* payload) {
     return;
   }
 
-  Guard<Mutex> guard(TheHeapLock::Get());
+  LockGuard guard(TheHeapLock::Get());
 
   header_t* header = (header_t*)payload - 1;
   ZX_DEBUG_ASSERT(!is_tagged_as_free(header));  // Double free!
@@ -923,7 +948,7 @@ void* cmpct_memalign(size_t size, size_t alignment) {
     return NULL;
   }
 
-  Guard<Mutex> guard(TheHeapLock::Get());
+  LockGuard guard(TheHeapLock::Get());
 
   size_t mask = alignment - 1;
   uintptr_t payload_int = (uintptr_t)unaligned + sizeof(free_t) + mask;
@@ -946,7 +971,7 @@ void* cmpct_memalign(size_t size, size_t alignment) {
 
 void cmpct_init(void) {
   LTRACE_ENTRY;
-  Guard<Mutex> guard(TheHeapLock::Get());
+  LockGuard guard(TheHeapLock::Get());
 
   // Initialize the free list.
   for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
@@ -968,13 +993,13 @@ void cmpct_dump(bool panic_time) {
     // If we are panic'ing, just skip the lock.  All bets are off anyway.
     ([]() TA_NO_THREAD_SAFETY_ANALYSIS { cmpct_dump_locked(); })();
   } else {
-    Guard<Mutex> guard(TheHeapLock::Get());
+    LockGuard guard(TheHeapLock::Get());
     cmpct_dump_locked();
   }
 }
 
 void cmpct_get_info(size_t* size_bytes, size_t* free_bytes) {
-  Guard<Mutex> guard(TheHeapLock::Get());
+  LockGuard guard(TheHeapLock::Get());
   *size_bytes = theheap.size;
   *free_bytes = theheap.remaining;
 }
@@ -1028,7 +1053,7 @@ void cmpct_test(void) {
     ptr[index] = cmpct_memalign((unsigned int)rand() % 32768, align);
     // printf("ptr[0x%x] = %p, align 0x%x\n", index, ptr[index], align);
 
-    ZX_DEBUG_ASSERT(((vaddr_t)ptr[index] % align) == 0);
+    ZX_DEBUG_ASSERT(((uintptr_t)ptr[index] % align) == 0);
     // cmpct_dump(false);
   }
 
@@ -1049,7 +1074,7 @@ void cmpct_trim(void) {
   // Look at free list entries that are at least as large as one page plus a
   // header. They might be at the start or the end of a block, so we can trim
   // them and free the page(s).
-  Guard<Mutex> guard(TheHeapLock::Get());
+  LockGuard guard(TheHeapLock::Get());
   for (int bucket = size_to_index_freeing(ZX_PAGE_SIZE); bucket < NUMBER_OF_BUCKETS; bucket++) {
     free_t* next;
     for (free_t* free_area = theheap.free_lists[bucket]; free_area != NULL; free_area = next) {
@@ -1116,4 +1141,3 @@ void cmpct_trim(void) {
     }
   }
 }
-#endif  // #ifdef _KERNEL
