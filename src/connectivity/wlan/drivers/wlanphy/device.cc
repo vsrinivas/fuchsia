@@ -46,7 +46,7 @@ Device::Device(zx_device_t* device, wlanphy_impl_protocol_t wlanphy_impl_proto)
   ZX_ASSERT(wlanphy_impl_.ops != nullptr && wlanphy_impl_.ops->query != nullptr &&
             wlanphy_impl_.ops->create_iface != nullptr &&
             wlanphy_impl_.ops->destroy_iface != nullptr &&
-            wlanphy_impl_.ops->set_country != nullptr);
+            wlanphy_impl_.ops->set_country != nullptr && wlanphy_impl_.ops->get_country != nullptr);
 }
 
 Device::~Device() { debugfn(); }
@@ -301,7 +301,7 @@ void Device::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceCall
   callback(std::move(resp));
 }
 
-void Device::SetCountry(wlan_device::SetCountryRequest req, SetCountryCallback callback) {
+void Device::SetCountry(wlan_device::CountryCode req, SetCountryCallback callback) {
   debugfn();
   debugf("wlanphy: SetCountry to %s\n", wlan::common::Alpha2ToStr(req.alpha2).c_str());
 
@@ -314,6 +314,22 @@ void Device::SetCountry(wlan_device::SetCountryRequest req, SetCountryCallback c
            wlan::common::Alpha2ToStr(req.alpha2).c_str(), zx_status_get_string(status));
   }
   callback(status);
+}
+
+void Device::GetCountry(GetCountryCallback callback) {
+  debugfn();
+
+  wlanphy_country_t country;
+  auto status = wlanphy_impl_.ops->get_country(wlanphy_impl_.ctx, &country);
+  if (status != ZX_OK) {
+    debugf("wlanphy: GetCountry failed with error %s\n", zx_status_get_string(status));
+    callback(fit::error(status));
+  } else {
+    wlan_device::CountryCode resp;
+    memcpy(resp.alpha2.data(), country.alpha2, WLANPHY_ALPHA2_LEN);
+    debugf("wlanphy: GetCountry returning %s\n", wlan::common::Alpha2ToStr(resp.alpha2).c_str());
+    callback(fit::ok(std::move(resp)));
+  }
 }
 
 }  // namespace wlanphy

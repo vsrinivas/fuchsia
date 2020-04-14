@@ -262,9 +262,14 @@ void PhyDevice::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceC
   callback(std::move(resp));
 }
 
-void PhyDevice::SetCountry(wlan_device::SetCountryRequest req, SetCountryCallback callback) {
+void PhyDevice::SetCountry(wlan_device::CountryCode req, SetCountryCallback callback) {
   zxlogf(INFO, "testing/PHY: SetCountry [%s]\n", wlan::common::Alpha2ToStr(req.alpha2).c_str());
   callback(ZX_OK);
+}
+
+void PhyDevice::GetCountry(GetCountryCallback callback) {
+  zxlogf(INFO, "testing/PHY: GetCountry\n");
+  callback(fit::error(ZX_ERR_NOT_SUPPORTED));
 }
 
 zx_status_t PhyDevice::Connect(zx::channel request) {

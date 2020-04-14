@@ -19,10 +19,11 @@ zx_status_t rtl88xx_bind_wlan_phy(void* ctx, zx_device_t* device);
 
 // The declarations below are only relevant to the C++ driver implementation.
 
+#include <zircon/types.h>
+
 #include <memory>
 
 #include <ddk/protocol/wlanphyimpl.h>
-#include <zircon/types.h>
 
 #include "device.h"
 #include "wlan_mac.h"

@@ -97,7 +97,7 @@ struct WlanTxStatus {
 
 /// Country code the device is to switch to.
 /// These values are populated by the wlantap driver and should not be specified manually.
-/// See also phy.fidl SetCountryRequest/Response.
+/// See also phy.fidl CountryCode.
 struct SetCountryArgs {
     array<uint8>:2 alpha2;
 };

@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_PHY_DEVICE_H
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_PHY_DEVICE_H
-
-#include <ddk/device.h>
-#include <wlan/common/dispatcher.h>
-#include <zircon/types.h>
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_PHY_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_PHY_DEVICE_H_
 
 #include <fuchsia/wlan/device/cpp/fidl.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+
+#include <ddk/device.h>
+#include <wlan/common/dispatcher.h>
 
 namespace wlan {
 namespace testing {
@@ -38,8 +38,9 @@ class PhyDevice : public ::fuchsia::wlan::device::Phy {
                            CreateIfaceCallback callback) override;
   virtual void DestroyIface(::fuchsia::wlan::device::DestroyIfaceRequest req,
                             DestroyIfaceCallback callback) override;
-  virtual void SetCountry(::fuchsia::wlan::device::SetCountryRequest req,
+  virtual void SetCountry(::fuchsia::wlan::device::CountryCode req,
                           SetCountryCallback callback) override;
+  virtual void GetCountry(GetCountryCallback callback) override;
 
  private:
   zx_status_t Connect(zx::channel request);
@@ -60,4 +61,4 @@ class PhyDevice : public ::fuchsia::wlan::device::Phy {
 }  // namespace testing
 }  // namespace wlan
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_PHY_DEVICE_H
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_PHY_DEVICE_H_

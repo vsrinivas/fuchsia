@@ -244,7 +244,7 @@ async fn set_country(phys: &PhyMap, req: fidl_svc::SetCountryRequest) -> zx::Sta
         Some(p) => p,
     };
 
-    let mut phy_req = fidl_wlan_dev::SetCountryRequest { alpha2: req.alpha2 };
+    let mut phy_req = fidl_wlan_dev::CountryCode { alpha2: req.alpha2 };
     match phy.proxy.set_country(&mut phy_req).await {
         Ok(status) => zx::Status::from_raw(status),
         Err(e) => {
