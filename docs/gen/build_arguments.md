@@ -523,7 +523,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#32)
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -536,13 +536,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/e621aaa1322819005c394818f1fd2b5a94dd2ccd/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/e5dbfa336351cf781d46dfedae8e1fa441440f15/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/e621aaa1322819005c394818f1fd2b5a94dd2ccd/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/e5dbfa336351cf781d46dfedae8e1fa441440f15/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -1256,38 +1256,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#13)
 
 ### is_debug
 Debug build.
@@ -2070,9 +2070,13 @@ components(object array): a list of component objects. Each object should contai
   component(string): name of the component.
 
   src(string array): path of the area / package to be included as part of the component.
-  The path should be relative to the build directory.
-  The target may also be a directory, in which case all blobs under that directory will be taken
-  into account.
+  The path should be relative to the obj/ in the output directory.
+  For example, consider two packages foo and far, built to out/.../obj/some_big_component/foo and out/.../obj/some_big_component/bar.
+  If you want to impose a limit on foo, your src will be ["some_big_component/foo"].
+  If you want to impose a limit on both foo and far, your src will be ["some_big_component"].
+  If a package has config-data, those prebuilt blobs actually live under the config-data package.
+  If you wish to impose a limit of those data as well, you should add "build/images/config-data/$for_pkg" to your src.
+  The $for_pkg corresponds to the $for_pkg field in config.gni.
 
   limit(number): maximum size (in bytes) allocated for the component.
 
@@ -2084,12 +2088,12 @@ size_checker_input = {
   components = [
     {
       component = "Foo"
-      src = [ "obj/topaz/runtime/foo_runner" ]
+      src = [ "topaz/runtime/foo_runner" ]
       limit = 10240
     },
     {
       component = "Bar"
-      src = [ "obj/build/images" ]
+      src = [ "build/images" ]
       limit = 20480
     },
   ]
@@ -2097,7 +2101,7 @@ size_checker_input = {
 
 **Current value (from the default):** `{ }`
 
-From //tools/size_checker/cmd/BUILD.gn:48
+From //tools/size_checker/cmd/BUILD.gn:52
 
 ### symbol_level
 How many symbols to include in the build. This affects the performance of
@@ -2502,35 +2506,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/0adb7094201a0a20a6c2ac5ab9816ff7e5fb5fd7/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/f064bcfd732fd66cfca6c0974d3ef5966dae1f6f/config.gni#23)
 
 ### wlancfg_config_type
 Selects the wlan configuration type to use. Choices:
