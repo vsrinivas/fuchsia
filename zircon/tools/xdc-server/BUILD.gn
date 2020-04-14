@@ -2,15 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_host_tool("xdc-server") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+executable("xdc-server") {
   sources = [
     "usb-handler.cc",
     "xdc-server.cc",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/xdc-host-utils",
-    "$zx/system/ulib/xdc-server-utils",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/xdc-host-utils",
+    "//zircon/public/lib/xdc-server-utils",
   ]
 }

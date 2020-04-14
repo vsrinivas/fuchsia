@@ -14,5 +14,6 @@ group("tools") {
     "//zircon/tools/blobfs($host_toolchain)",
     "//zircon/tools/fvm($host_toolchain)",
     "//zircon/tools/minfs($host_toolchain)",
+    "//zircon/tools/xdc-server($host_toolchain)",
   ]
 }

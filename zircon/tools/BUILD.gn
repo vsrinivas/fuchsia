@@ -41,7 +41,6 @@ foreach(host, standard_build_hosts) {
       "lz4",
       "merkleroot",
       "netprotocol",
-      "xdc-server",
       "zbi",
     ]
     if (os == "linux") {
