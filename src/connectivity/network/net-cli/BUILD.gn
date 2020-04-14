@@ -18,6 +18,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
     "//garnet/lib/rust/io_util",
     "//garnet/lib/rust/netfilter",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
@@ -35,7 +36,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:prettytable-rs",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }

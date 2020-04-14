@@ -122,6 +122,7 @@ test("usb-virtual-bus-cdc-ecm") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-ecm-test.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -130,7 +131,6 @@ test("usb-virtual-bus-cdc-ecm") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-ethernet:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
     "//zircon/system/ulib/hid",

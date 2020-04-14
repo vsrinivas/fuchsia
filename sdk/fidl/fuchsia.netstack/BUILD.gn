@@ -18,8 +18,8 @@ fidl("fuchsia.netstack") {
   sources = [ "netstack.fidl" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.net.dhcp",
-    "//zircon/system/fidl/fuchsia-hardware-ethernet",
     "//zircon/system/fidl/fuchsia-net",
   ]
 }

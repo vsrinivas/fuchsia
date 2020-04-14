@@ -75,6 +75,7 @@ test("usb-virtual-bus-asix-88179") {
   sources = [ "asix-88179-test.cc" ]
   deps = [
     ":asix-88179-test-helper_llcpp",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -83,7 +84,6 @@ test("usb-virtual-bus-asix-88179") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-ethernet:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
     "//zircon/system/ulib/hid",
