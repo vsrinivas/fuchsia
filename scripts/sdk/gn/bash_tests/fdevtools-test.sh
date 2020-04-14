@@ -8,9 +8,6 @@
 # set up steps happen as expected.
 
 set -e
-SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
-# shellcheck disable=SC1090
-source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 # Specify a simulated CIPD instance id for devtools.version
 DEVTOOLS_VERSION="git_revision:unknown"
@@ -75,6 +72,8 @@ BT_MOCKED_TOOLS=(
 
 BT_SET_UP() {
   FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
 }
 
 BT_INIT_TEMP_DIR() {

@@ -5,12 +5,11 @@
 #
 # Test that verifies that fconfig correctly handles properties
 set -e
-SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
-# shellcheck disable=SC1090
-source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 BT_SET_UP() {
     FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
+    # shellcheck disable=SC1090
+    source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
 }
 
 TEST_config_list() {

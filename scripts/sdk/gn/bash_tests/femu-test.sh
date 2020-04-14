@@ -8,21 +8,12 @@
 # the emulator, but check the arguments are as expected.
 
 set -e
-SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
-# shellcheck disable=SC1090
-source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
-
 
 # Specify a simulated CIPD instance id for prebuilts
 AEMU_VERSION="git_revision:unknown"
 AEMU_LABEL="$(echo "${AEMU_VERSION}" | tr ':/' '_')"
 GRPCWEBPROXY_VERSION="git_revision:unknown"
 GRPCWEBPROXY_LABEL="$(echo "${GRPCWEBPROXY_VERSION}" | tr ':/' '_')"
-if is-mac; then
-  PLATFORM="mac-amd64"
-else
-  PLATFORM="linux-amd64"
-fi
 
 # Verifies that the correct emulator command is run by femu, do not activate the network interface
 TEST_femu_standalone() {
@@ -201,8 +192,11 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/images/emulator/aemu-"${PLATFORM}"-"${AEMU_LABEL}"/emulator
-  scripts/sdk/gn/base/images/emulator/grpcwebproxy-"${PLATFORM}"-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
+  # mock both mac and linux so the test runs successfully on both.
+  scripts/sdk/gn/base/images/emulator/aemu-linux-amd64-"${AEMU_LABEL}"/emulator
+  scripts/sdk/gn/base/images/emulator/aemu-mac-amd64-"${AEMU_LABEL}"/emulator
+  scripts/sdk/gn/base/images/emulator/grpcwebproxy-mac-amd64-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
+  scripts/sdk/gn/base/images/emulator/grpcwebproxy-linux-amd64-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/tools/zbi
@@ -216,7 +210,15 @@ BT_MOCKED_TOOLS=(
 
 BT_SET_UP() {
   FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
 
+  if is-mac; then
+    PLATFORM="mac-amd64"
+  else
+    PLATFORM="linux-amd64"
+  fi
+  
   # Create a small disk image to avoid downloading, and test if it is doubled in size as expected
   mkdir -p "${FUCHSIA_WORK_DIR}/image"
   dd if=/dev/zero of="${FUCHSIA_WORK_DIR}/image/storage-full.blk" bs=1024 count=1  > /dev/null 2>/dev/null

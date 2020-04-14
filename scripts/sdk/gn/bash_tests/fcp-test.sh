@@ -6,9 +6,6 @@
 # Test that verifies that fcp correctly discovers and invokes sfp correctly.
 
 set -e
-SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
-# shellcheck disable=SC1090
-source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 # Sets up an sftp mock binary on the $PATH of any subshells.
 setup_sftp() {
@@ -99,6 +96,8 @@ BT_MOCKED_TOOLS=(
 
 BT_SET_UP() {
   FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
 }
 
 BT_RUN_TESTS "$@"

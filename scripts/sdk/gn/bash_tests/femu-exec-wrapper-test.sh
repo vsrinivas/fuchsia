@@ -8,9 +8,6 @@
 # the emulator, but check the arguments are as expected.
 
 set -e
-SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
-# shellcheck disable=SC1090
-source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 TEST_femu_exec_wrapper() {
   # Create femu.sh that fails with output to stderr to check redirection
@@ -128,5 +125,10 @@ BT_MOCKED_TOOLS=(
   isolated/pgrep
   mocked/kill
 )
+
+BT_SET_UP() {
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+}
 
 BT_RUN_TESTS "$@"

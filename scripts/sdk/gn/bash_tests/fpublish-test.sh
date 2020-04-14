@@ -10,10 +10,6 @@ set -e
 # Constants.
 readonly PACKAGE_NAME=placeholder.far
 
-# Paths.
-SCRIPT_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-# shellcheck disable=SC1090
-source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 # Verifies that the correct pm serve command is run by fpublish.
 TEST_fpublish() {
@@ -61,6 +57,8 @@ BT_MOCKED_TOOLS=(
 
 BT_SET_UP() {
   FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
 }
 
 BT_RUN_TESTS "$@"

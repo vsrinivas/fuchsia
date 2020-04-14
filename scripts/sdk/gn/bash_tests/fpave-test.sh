@@ -7,9 +7,6 @@
 # and starts up a bootserver for paving.
 
 set -e
-SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
-# shellcheck disable=SC1090
-source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 FPAVE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh"
 
@@ -63,28 +60,28 @@ EOF
 }
 
 set_up_gsutil_multibucket() {
-  cat > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/gsutil.mock_side_effects" <<"EOF"
-  if [[ "$1" == "ls" ]]; then
-    if [[ "${2}" == *unknown.tgz ]]; then
-      echo "ls: cannot access \'${2}\': No such file or directory"
+  cat > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/gsutil.mock_side_effects" <<EOF
+  if [[ "\$1" == "ls" ]]; then
+    if [[ "\${2}" == *unknown.tgz ]]; then
+      echo "ls: cannot access \'\${2}\': No such file or directory"
       exit 1
-    elif [[ "${2}" == gs://fuchsia/development/*image1.tgz ]]; then
-      echo "${2}"
-    elif [[ "${2}" == gs://fuchsia/development/*image2.tgz ]]; then
-      echo "${2}"
-    elif [[ "${2}" == gs://fuchsia/* ]]; then
+    elif [[ "\${2}" == gs://fuchsia/development/*image1.tgz ]]; then
+      echo "\${2}"
+    elif [[ "\${2}" == gs://fuchsia/development/*image2.tgz ]]; then
+      echo "\${2}"
+    elif [[ "\${2}" == gs://fuchsia/* ]]; then
       echo "gs://fuchsia/development/sdk_id/images/image1.tgz"
       echo "gs://fuchsia/development/sdk_id/images/image2.tgz"
       echo "gs://fuchsia/development/sdk_id/images/image3.tgz"
-    elif [[ "${2}" == gs://other/* ]]; then
+    elif [[ "\${2}" == gs://other/* ]]; then
       echo "gs://other/development/sdk_id/images/image4.tgz"
       echo "gs://other/development/sdk_id/images/image5.tgz"
       echo "gs://other/development/sdk_id/images/image6.tgz"
     fi
-  elif [[ "$1" == "cp" ]]; then
-    outpath="$3"
-    mkdir -p "$(dirname "${outpath}")"
-    cp ../testdata/empty.tar.gz "${outpath}"
+  elif [[ "\$1" == "cp" ]]; then
+    outpath="\$3"
+    mkdir -p "\$(dirname "\${outpath}")"
+    cp ${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz "\${outpath}"
   fi
 EOF
 }
@@ -247,6 +244,8 @@ BT_MOCKED_TOOLS=(
 
 BT_SET_UP() {
   FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/testdata"
   tar czf "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" -C "${FUCHSIA_WORK_DIR}/image"  "."
 }
