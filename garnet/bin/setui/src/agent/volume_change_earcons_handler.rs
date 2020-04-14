@@ -132,7 +132,6 @@ async fn handle_volume_request(
             Some(streams) => streams,
             None => Vec::new(),
         };
-        fx_log_info!("[earcons_agent] changed streams: {:?}", changed_streams);
 
         let new_media_user_volume: Option<f32> =
             match changed_streams.iter().find(|&&x| x.stream_type == AudioStreamType::Media) {
@@ -145,11 +144,15 @@ async fn handle_volume_request(
             changed_streams.iter().find(|&&x| x.stream_type == AudioStreamType::Media).is_some();
         let mut last_media_user_volume_lock = last_media_user_volume.lock().await;
 
-        // Logging for debugging volume changes
-        fx_log_info!("[earcons_agent] Is media stream: {}", stream_is_media);
-        fx_log_info!("[earcons_agent] Volume up pressed while max: {}", volume_up_max_pressed);
-        fx_log_info!("[earcons_agent] New media user volume: {:?}", new_media_user_volume);
-        fx_log_info!("[earcons_agent] Last media user volume: {:?}", *last_media_user_volume_lock);
+        // Logging for debugging volume changes.
+        if stream_is_media {
+            fx_log_info!("[earcons_agent] Volume up pressed while max: {}", volume_up_max_pressed);
+            fx_log_info!(
+                "[earcons_agent] New media user volume: {:?}, Last media user volume: {:?}",
+                new_media_user_volume,
+                *last_media_user_volume_lock
+            );
+        }
 
         if ((*last_media_user_volume_lock != new_media_user_volume) || volume_up_max_pressed)
             && stream_is_media
