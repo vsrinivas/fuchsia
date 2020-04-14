@@ -25,7 +25,7 @@ constexpr uint8_t kSrcValue = 0xaa;
 class VkCopyTest {
  public:
   explicit VkCopyTest(uint32_t buffer_size) : buffer_size_(buffer_size) {}
-  ~VkCopyTest();
+  virtual ~VkCopyTest();
 
   bool Initialize();
   bool Exec();

@@ -90,7 +90,6 @@ TEST(VkContext, Queue) {
     ctx = VulkanContext::Builder{}.set_queue_flag_bits(queue_flag_bits).Unique();
   }
   ASSERT_NE(ctx, nullptr);
-
   EXPECT_EQ(queue_flag_bits, ctx->queue_flag_bits());
 
   int queue_family_index = ctx->queue_family_index();

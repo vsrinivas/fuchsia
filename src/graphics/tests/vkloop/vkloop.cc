@@ -40,12 +40,10 @@ class VkLoopTest {
   VkPipelineLayout vk_pipeline_layout_;
   VkPipeline vk_compute_pipeline_;
   VkEvent vk_event_;
-
-  VkCommandPool vk_command_pool_;
-  VkCommandBuffer vk_command_buffer_;
-
-  VkBuffer vk_buffer_;
-  VkDeviceMemory device_memory_;
+  vk::UniqueBuffer buffer_;
+  vk::UniqueDeviceMemory buffer_memory_;
+  vk::UniqueCommandPool command_pool_;
+  std::vector<vk::UniqueCommandBuffer> command_buffers_;
 };
 
 bool VkLoopTest::Initialize() {
@@ -63,7 +61,7 @@ bool VkLoopTest::Initialize() {
   }
 
   if (!InitCommandBuffer()) {
-    RTN_MSG(false, "InitImage failed.\n");
+    RTN_MSG(false, "Failed to init command buffer.\n");
   }
 
   is_initialized_ = true;
@@ -72,77 +70,71 @@ bool VkLoopTest::Initialize() {
 }
 
 bool VkLoopTest::InitBuffer() {
-  VkResult result;
-  const auto &device = *ctx_->device();
+  const auto &device = ctx_->device();
 
+  // Create buffer.
   constexpr size_t kBufferSize = 4096;
-  VkBufferCreateInfo buffer_create_info = {
-      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .size = kBufferSize,
-      .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-      .queueFamilyIndexCount = 0,     // ignored
-      .pQueueFamilyIndices = nullptr  // ignored
-  };
+  vk::BufferCreateInfo buffer_info;
+  buffer_info.size = kBufferSize;
+  buffer_info.usage = vk::BufferUsageFlagBits::eStorageBuffer;
+  buffer_info.sharingMode = vk::SharingMode::eExclusive;
 
-  if ((result = vkCreateBuffer(device, &buffer_create_info, nullptr, &vk_buffer_)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateBuffer failed: %d\n", result);
+  auto rvt_buffer = device->createBufferUnique(buffer_info);
+  if (vk::Result::eSuccess != rvt_buffer.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Create buffer.\n", rvt_buffer.result);
   }
+  buffer_ = std::move(rvt_buffer.value);
 
-  VkMemoryRequirements buffer_memory_reqs = {};
-  vkGetBufferMemoryRequirements(device, vk_buffer_, &buffer_memory_reqs);
+  // Find host visible buffer memory type.
+  vk::PhysicalDeviceMemoryProperties memory_props;
+  ctx_->physical_device().getMemoryProperties(&memory_props);
 
-  VkPhysicalDeviceMemoryProperties memory_props;
-  vkGetPhysicalDeviceMemoryProperties(ctx_->physical_device(), &memory_props);
-
-  device_memory_ = VK_NULL_HANDLE;
-
-  for (uint32_t i = 0; i < memory_props.memoryTypeCount; i++) {
-    if (memory_props.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
-      VkMemoryAllocateInfo allocate_info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-                                            .pNext = nullptr,
-                                            .allocationSize = buffer_memory_reqs.size,
-                                            .memoryTypeIndex = i};
-      if ((result = vkAllocateMemory(device, &allocate_info, nullptr, &device_memory_)) !=
-          VK_SUCCESS) {
-        RTN_MSG(false, "vkAllocateMemory failed: %d\n", result);
-      }
+  uint32_t memory_type = 0;
+  for (; memory_type < memory_props.memoryTypeCount; memory_type++) {
+    if (memory_props.memoryTypes[memory_type].propertyFlags &
+        vk::MemoryPropertyFlagBits::eHostVisible) {
       break;
     }
   }
-
-  if (device_memory_ == VK_NULL_HANDLE) {
-    RTN_MSG(false, "Couldn't find host visible memory.\n");
+  if (memory_type >= memory_props.memoryTypeCount) {
+    RTN_MSG(false, "Can't find host visible memory for buffer.\n");
   }
 
-  {
-    void *data;
-    if ((result = vkMapMemory(device, device_memory_,
-                              0,  // offset
-                              VK_WHOLE_SIZE,
-                              0,  // flags
-                              &data)) != VK_SUCCESS) {
-      RTN_MSG(false, "vkMapMemory failed: %d\n", result);
-    }
-    // Set to 1 so the shader will ping pong about zero
-    *reinterpret_cast<uint32_t *>(data) = 1;
+  // Allocate buffer memory.
+  vk::MemoryRequirements buffer_memory_reqs = device->getBufferMemoryRequirements(*buffer_);
+  vk::MemoryAllocateInfo alloc_info;
+  alloc_info.allocationSize = buffer_memory_reqs.size;
+  alloc_info.memoryTypeIndex = memory_type;
 
-    VkMappedMemoryRange memory_range = {.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-                                        .pNext = nullptr,
-                                        .memory = device_memory_,
-                                        .offset = 0,
-                                        .size = VK_WHOLE_SIZE};
-    if ((result = vkFlushMappedMemoryRanges(device, 1, &memory_range)) != VK_SUCCESS) {
-      RTN_MSG(false, "vkFlushMappedMemoryRanges failed: %d\n", result);
-    }
+  auto rvt_memory = device->allocateMemoryUnique(alloc_info);
+  if (vk::Result::eSuccess != rvt_memory.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Create buffer memory.\n", rvt_memory.result);
+  }
+  buffer_memory_ = std::move(rvt_memory.value);
+
+  // Map, set, flush and bind buffer memory.
+  void *addr;
+  auto rv_map =
+      device->mapMemory(*buffer_memory_, 0 /* offset */, kBufferSize, vk::MemoryMapFlags(), &addr);
+  if (vk::Result::eSuccess != rv_map) {
+    RTN_MSG(false, "VK Error: 0x%x - Map buffer memory.\n", rv_map);
   }
 
-  if ((result = vkBindBufferMemory(device, vk_buffer_, device_memory_,
-                                   0  // memoryOffset
-                                   )) != VK_SUCCESS) {
-    RTN_MSG(false, "vkBindBufferMemory failed: %d\n", result);
+  // Set to 1 so the shader will ping pong about zero.
+  *reinterpret_cast<uint32_t *>(addr) = 1;
+
+  vk::MappedMemoryRange memory_range;
+  memory_range.memory = *buffer_memory_;
+  memory_range.size = VK_WHOLE_SIZE;
+
+  auto rv_flush = device->flushMappedMemoryRanges(1, &memory_range);
+  if (vk::Result::eSuccess != rv_flush) {
+    RTN_MSG(false, "VK Error: 0x%x - Flush buffer memory range.\n", rv_flush);
+  }
+
+  auto rv_bind = device->bindBufferMemory(*buffer_, *buffer_memory_, 0 /* offset */);
+  if (vk::Result::eSuccess != rv_bind) {
+    RTN_MSG(false, "VK Error: 0x%x - Bind buffer memory.\n", rv_bind);
   }
 
   return true;
@@ -150,37 +142,30 @@ bool VkLoopTest::InitBuffer() {
 
 bool VkLoopTest::InitCommandBuffer() {
   const auto &device = *ctx_->device();
-  VkCommandPoolCreateInfo command_pool_create_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .queueFamilyIndex = 0,
-  };
-  VkResult result;
-  if ((result = vkCreateCommandPool(device, &command_pool_create_info, nullptr,
-                                    &vk_command_pool_)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateCommandPool failed: %d\n", result);
-  }
+  vk::CommandPoolCreateInfo command_pool_info;
+  command_pool_info.queueFamilyIndex = ctx_->queue_family_index();
 
-  VkCommandBufferAllocateInfo command_buffer_create_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .commandPool = vk_command_pool_,
-      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-      .commandBufferCount = 1};
-  if ((result = vkAllocateCommandBuffers(device, &command_buffer_create_info,
-                                         &vk_command_buffer_)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkAllocateCommandBuffers failed: %d\n", result);
+  auto rvt_command_pool = ctx_->device()->createCommandPoolUnique(command_pool_info);
+  if (vk::Result::eSuccess != rvt_command_pool.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Create command pool.\n", rvt_command_pool.result);
   }
+  command_pool_ = std::move(rvt_command_pool.value);
 
-  VkCommandBufferBeginInfo begin_info = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .pInheritanceInfo = nullptr,  // ignored for primary buffers
-  };
-  if ((result = vkBeginCommandBuffer(vk_command_buffer_, &begin_info)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkBeginCommandBuffer failed: %d\n", result);
+  vk::CommandBufferAllocateInfo cmd_buff_alloc_info;
+  cmd_buff_alloc_info.commandPool = *command_pool_;
+  cmd_buff_alloc_info.level = vk::CommandBufferLevel::ePrimary;
+  cmd_buff_alloc_info.commandBufferCount = 1;
+
+  auto rvt_alloc_cmd_bufs = ctx_->device()->allocateCommandBuffersUnique(cmd_buff_alloc_info);
+  if (vk::Result::eSuccess != rvt_alloc_cmd_bufs.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Allocate command buffers.\n", rvt_alloc_cmd_bufs.result);
+  }
+  command_buffers_ = std::move(rvt_alloc_cmd_bufs.value);
+  vk::UniqueCommandBuffer &command_buffer = command_buffers_.front();
+
+  auto rv_begin = command_buffer->begin(vk::CommandBufferBeginInfo{});
+  if (vk::Result::eSuccess != rv_begin) {
+    RTN_MSG(false, "VK Error: 0x%x - Begin command buffer.\n", rv_begin);
   }
 
   VkShaderModule compute_shader_module_;
@@ -204,6 +189,7 @@ bool VkLoopTest::InitCommandBuffer() {
     sh_info.pCode = reinterpret_cast<uint32_t *>(shader.data());
   }
 
+  VkResult result;
   if ((result = vkCreateShaderModule(device, &sh_info, NULL, &compute_shader_module_)) !=
       VK_SUCCESS) {
     RTN_MSG(false, "vkCreateShaderModule failed: %d\n", result);
@@ -261,7 +247,7 @@ bool VkLoopTest::InitCommandBuffer() {
   }
 
   VkDescriptorBufferInfo descriptor_buffer_info = {
-      .buffer = vk_buffer_, .offset = 0, .range = VK_WHOLE_SIZE};
+      .buffer = *buffer_, .offset = 0, .range = VK_WHOLE_SIZE};
 
   VkWriteDescriptorSet write_descriptor_set = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                                .pNext = nullptr,
@@ -320,50 +306,44 @@ bool VkLoopTest::InitCommandBuffer() {
       RTN_MSG(false, "vkCreateEvent failed: %d\n", result);
     }
 
-    vkCmdWaitEvents(vk_command_buffer_, 1, &vk_event_, VK_PIPELINE_STAGE_HOST_BIT,
+    vkCmdWaitEvents(*command_buffer, 1, &vk_event_, VK_PIPELINE_STAGE_HOST_BIT,
                     VK_PIPELINE_STAGE_TRANSFER_BIT, 0, nullptr, 0, nullptr, 0, nullptr);
   } else {
-    vkCmdBindPipeline(vk_command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, vk_compute_pipeline_);
+    vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, vk_compute_pipeline_);
 
-    vkCmdBindDescriptorSets(vk_command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, vk_pipeline_layout_,
+    vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, vk_pipeline_layout_,
                             0,  // firstSet
                             1,  // descriptorSetCount,
                             &vk_descriptor_set_,
                             0,         // dynamicOffsetCount
                             nullptr);  // pDynamicOffsets
 
-    vkCmdDispatch(vk_command_buffer_, 1, 1, 1);
+    vkCmdDispatch(*command_buffer, 1, 1, 1);
   }
 
-  if ((result = vkEndCommandBuffer(vk_command_buffer_)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkEndCommandBuffer failed: %d\n", result);
+  auto rv_end = command_buffer->end();
+  if (vk::Result::eSuccess != rv_end) {
+    RTN_MSG(false, "VK Error: 0x%x - End command buffer.\n", rv_end);
   }
 
   return true;
 }
 
 bool VkLoopTest::Exec(bool kill_driver) {
-  VkResult result;
-  const auto &queue = ctx_->queue();
-  result = vkQueueWaitIdle(queue);
-  if (result != VK_SUCCESS) {
-    RTN_MSG(false, "vkQueueWaitIdle failed with result %d\n", result);
+  auto rv_wait = ctx_->queue().waitIdle();
+  if (vk::Result::eSuccess != rv_wait) {
+    RTN_MSG(false, "VK Error: 0x%x - Queue wait idle.\n", rv_wait);
   }
 
-  VkSubmitInfo submit_info = {
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .pNext = nullptr,
-      .waitSemaphoreCount = 0,
-      .pWaitSemaphores = nullptr,
-      .pWaitDstStageMask = nullptr,
-      .commandBufferCount = 1,
-      .pCommandBuffers = &vk_command_buffer_,
-      .signalSemaphoreCount = 0,
-      .pSignalSemaphores = nullptr,
-  };
+  // Submit command buffer and wait for it to complete.
+  vk::SubmitInfo submit_info;
+  submit_info.commandBufferCount = static_cast<uint32_t>(command_buffers_.size());
+  const vk::CommandBuffer &command_buffer = command_buffers_.front().get();
+  submit_info.pCommandBuffers = &command_buffer;
 
-  if ((result = vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkQueueSubmit failed.\n");
+  auto rv = ctx_->queue().submit(1 /* submitCt */, &submit_info, nullptr /* fence */);
+  if (rv != vk::Result::eSuccess) {
+    RTN_MSG(false, "VK Error: 0x%x - vk::Queue submit failed.\n", rv);
   }
 
   if (kill_driver) {
@@ -382,13 +362,13 @@ bool VkLoopTest::Exec(bool kill_driver) {
 
   constexpr int kReps = 5;
   for (int i = 0; i < kReps; i++) {
-    result = vkQueueWaitIdle(queue);
-    if (result != VK_SUCCESS) {
+    rv_wait = ctx_->queue().waitIdle();
+    if (vk::Result::eSuccess != rv_wait) {
       break;
     }
   }
-  if (result != VK_ERROR_DEVICE_LOST) {
-    RTN_MSG(false, "Result was %d instead of VK_ERROR_DEVICE_LOST.\n", result);
+  if (vk::Result::eErrorDeviceLost != rv_wait) {
+    RTN_MSG(false, "VK Error: Result was 0x%x instead of vk::Result::eErrorDeviceLost\n", rv_wait);
   }
 
   return true;
