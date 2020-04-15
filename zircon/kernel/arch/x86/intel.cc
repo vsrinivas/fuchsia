@@ -277,10 +277,6 @@ void x86_intel_init_percpu(void) {
   if (x86_cpu_has_enhanced_ibrs()) {
     x86_cpu_ibrs(&msr);
   }
-
-  if (gCmdline.GetBool("cpu.hwp", true)) {
-    x86_intel_hwp_init(&cpuid, &msr);
-  }
 }
 
 extern "C" void x86_mds_flush_select(const CodePatchInfo* patch) {

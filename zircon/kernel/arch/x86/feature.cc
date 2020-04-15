@@ -15,6 +15,7 @@
 
 #include <arch/ops.h>
 #include <arch/x86/cpuid.h>
+#include <arch/x86/hwp.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/platform_access.h>
 #include <fbl/algorithm.h>
@@ -225,6 +226,11 @@ void x86_cpu_feature_late_init(void) {
     g_ssb_mitigated = (x86_get_disable_spec_mitigations() == false) && g_has_ssb && g_has_ssbd &&
                       gCmdline.GetBool("kernel.x86.spec_store_bypass_disable",
                                        /*default_value=*/false);
+  }
+
+  // Set up hardware-controlled performance states.
+  if (gCmdline.GetBool("cpu.hwp", /*default_value=*/true)) {
+    x86_intel_hwp_init(&cpuid, &msr);
   }
 
   if (!gCmdline.GetBool("kernel.x86.turbo", /*default_value=*/true)) {
