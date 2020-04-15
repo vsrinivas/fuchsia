@@ -50,7 +50,7 @@ int main(int argc, const char** argv) {
 
     // Test BlobFs performance.
     benchmarks_runner.AddLibPerfTestBenchmark(
-        "blobfs_bench", "/pkgfs/packages/garnet_benchmarks/0/test/sys/blobfs-bench-test",
+        "blobfs_bench", "/pkgfs/packages/blobfs-bench/0/test/blobfs-bench-test",
         {"--fs", "blobfs", "--block_device", block_device, "--print_statistics"});
   } else if (benchmarks_bot_name == "garnet-arm64-perf-vim2") {
     // TODO(ZX-2466): Enable the storage perf tests on the VIM2 bots when we

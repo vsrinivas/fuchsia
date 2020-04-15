@@ -27,5 +27,6 @@ group("garnet") {
     "//garnet/packages/tests:scenic",
     "//garnet/tests/benchmarks:garnet_benchmarks",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
+    "//zircon/system/utest/blobfs-bench:blobfs-bench-package",
   ]
 }

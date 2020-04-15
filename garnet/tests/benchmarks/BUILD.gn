@@ -17,10 +17,7 @@ executable("garnet_benchmarks_bin") {
 zircon_extras_manifest("zircon-test-manifest") {
   visibility = [ ":*" ]
   manifest = "tests"
-  patterns = [
-    "test/fs/fs-bench-test",
-    "test/sys/blobfs-bench-test",
-  ]
+  patterns = [ "test/fs/fs-bench-test" ]
 }
 
 package("garnet_benchmarks") {
