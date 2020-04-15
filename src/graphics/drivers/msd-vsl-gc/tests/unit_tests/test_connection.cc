@@ -4,6 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "mock/mock_bus_mapper.h"
+#include "src/graphics/drivers/msd-vsl-gc/src/mapped_batch.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/msd_vsl_connection.h"
 
 class TestMsdVslConnection : public ::testing::Test, public MsdVslConnection::Owner {
@@ -152,4 +153,23 @@ TEST_F(TestMsdVslConnection, ReleaseBufferWhileMapped) {
   const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& mappings =
       connection_->mappings_to_release();
   EXPECT_EQ(0u, mappings.size());
+}
+
+TEST_F(TestMsdVslConnection, AddressSpaceDirty) {
+  constexpr uint64_t kBufferSizeInPages = 1;
+  constexpr uint64_t kGpuAddr = 0x10000;
+
+  EXPECT_FALSE(connection_->address_space_dirty());
+
+  std::shared_ptr<MsdVslBuffer> buffer =
+      MsdVslBuffer::Create(kBufferSizeInPages * magma::page_size(), "test");
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            connection_->MapBufferGpu(buffer, kGpuAddr, 0, kBufferSizeInPages).get());
+
+  EXPECT_TRUE(connection_->address_space_dirty());
+
+  EXPECT_EQ(MAGMA_STATUS_UNIMPLEMENTED,
+            connection_->SubmitBatch(std::make_unique<NullBatch>()).get());
+
+  EXPECT_FALSE(connection_->address_space_dirty());
 }

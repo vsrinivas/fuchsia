@@ -33,8 +33,12 @@ class MsdVslConnection {
   Ringbuffer* GetRingbuffer() { return owner_->GetRingbuffer(); }
 
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> mapped_batch, bool do_flush = false) {
+    do_flush |= address_space_dirty_;
+    address_space_dirty_ = false;
     return owner_->SubmitBatch(std::move(mapped_batch), do_flush);
   }
+
+  bool address_space_dirty() { return address_space_dirty_; }
 
   void SetNotificationCallback(msd_connection_notification_callback_t callback, void* token) {
     notifications_.Set(callback, token);
@@ -68,6 +72,7 @@ class MsdVslConnection {
   msd_client_id_t client_id_;
 
   std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_to_release_;
+  bool address_space_dirty_ = false;
 
   class Notifications {
    public:

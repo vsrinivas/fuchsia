@@ -40,6 +40,8 @@ magma::Status MsdVslConnection::MapBufferGpu(std::shared_ptr<MsdVslBuffer> buffe
   if (!status.ok()) {
     return DRET_MSG(status.get(), "MapBufferGpu failed");
   }
+  address_space_dirty_ = true;
+
   if (!address_space()->AddMapping(mapping)) {
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to add mapping");
   }
@@ -106,6 +108,7 @@ bool MsdVslConnection::ReleaseMapping(magma::PlatformBuffer* buffer, uint64_t gp
   }
   std::vector<std::shared_ptr<GpuMapping>> mappings = {std::move(mapping)};
   QueueReleasedMappings(std::move(mappings));
+  address_space_dirty_ = true;
 
   return true;
 }

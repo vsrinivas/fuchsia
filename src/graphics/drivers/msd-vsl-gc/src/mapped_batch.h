@@ -22,6 +22,7 @@ class NullBatch : public MappedBatch {
   void SetSequenceNumber(uint32_t sequence_number) override { seq_num_ = sequence_number; }
   uint32_t GetSequenceNumber() const override { return seq_num_; }
   const magma::GpuMappingView<MsdVslBuffer>* GetBatchMapping() const override { return nullptr; }
+  std::weak_ptr<MsdVslContext> GetContext() const override { return {}; }
 
   uint32_t seq_num_ = 0;
 };
