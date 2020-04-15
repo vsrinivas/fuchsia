@@ -35,4 +35,5 @@ pub mod update;
 pub mod weave;
 pub mod webdriver;
 pub mod wlan;
+pub mod wlan_phy;
 pub mod wlan_policy;

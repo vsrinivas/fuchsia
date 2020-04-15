@@ -43,7 +43,7 @@ async fn handle_request(sl4f: Arc<Sl4f>, request: AsyncRequest) {
                     let _ = tx.send(async_response);
                 }
                 Err(e) => {
-                    fx_log_err!("Error returned from calling method_to_fidl: {}", e);
+                    fx_log_err!("Error returned from calling method_to_fidl: {:?}", e);
                     let async_response = AsyncResponse::new(Err(e));
 
                     // Ignore any tx sending errors since there is not a recovery path.  The

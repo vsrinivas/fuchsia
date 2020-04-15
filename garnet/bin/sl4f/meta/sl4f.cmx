@@ -3,6 +3,10 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "class/wlanphy",
+            "wifi"
+        ],
         "features": [
             "deprecated-shell"
         ],
@@ -52,6 +56,7 @@
             "fuchsia.virtualaudio.Output",
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.web.ContextProvider",
+            "fuchsia.wlan.device.Phy",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.policy.ClientProvider"
         ]
