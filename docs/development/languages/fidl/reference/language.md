@@ -450,8 +450,9 @@ Handles are denoted:
 *   **`handle<H>?`** : nullable Zircon handle of
     type _H_
 
-_H_ can be any [object][zircon_objects] supported by Zircon, e.g. `channel`, `thread`, `vmo`.
-Please refer to the [grammar][grammar] for a full list.
+_H_ can be any [object](/docs/reference/kernel_objects/objects.md) supported by
+Zircon, e.g. `channel`, `thread`, `vmo`. Please refer to the
+[grammar](grammar.md) for a full list.
 
 ```fidl
 // A record which contains some handles.
@@ -892,7 +893,7 @@ struct SomeName {
 we treat this as `builtin.byte` automatically (so long as there isn't a
 more-specific name in scope).
 
-#### ZX Library
+#### ZX Library {#zx-library}
 
 The `fidlc` compiler automatically generates an internal [ZX library](library-zx.md)
 for you that contains commonly used Zircon definitions.
