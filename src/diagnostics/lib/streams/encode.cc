@@ -18,20 +18,25 @@ void write_string(const std::string& str, std::vector<uint8_t>* out) {
   out->insert(out->end(), std::begin(str), std::end(str));
 }
 
-void write_signed_int(int signed_int, std::vector<uint8_t>* out) {
-  // Write Signed Int
+void write_signed_int(int64_t signed_int, std::vector<uint8_t>* out) {
+  size_t orig_length = out->size();
+  out->resize(out->size() + sizeof(int64_t));
+  std::memcpy(out->data() + orig_length, &signed_int, sizeof(int64_t));
 }
 
-void write_unsigned_int(unsigned int unsigned_int, std::vector<uint8_t>* out) {
-  // Write Unigned Int
+void write_unsigned_int(uint64_t unsigned_int, std::vector<uint8_t>* out) {
+  size_t orig_length = out->size();
+  out->resize(out->size() + sizeof(uint64_t));
+  std::memcpy(out->data() + orig_length, &unsigned_int, sizeof(uint64_t));
 }
 
-void write_float(float f, std::vector<uint8_t>* out) {
-  // Write float
+void write_float(double f, std::vector<uint8_t>* out) {
+  size_t orig_length = out->size();
+  out->resize(out->size() + sizeof(double));
+  std::memcpy(out->data() + orig_length, &f, sizeof(double));
 }
 
-zx_status_t log_value(const fuchsia::diagnostics::stream::Value& arg,
-                      std::vector<uint8_t>* out) {
+zx_status_t log_value(const fuchsia::diagnostics::stream::Value& arg, std::vector<uint8_t>* out) {
   switch (arg.Which()) {
     case fuchsia::diagnostics::stream::Value::Tag::kSignedInt: {
       write_signed_int(arg.signed_int(), out);
