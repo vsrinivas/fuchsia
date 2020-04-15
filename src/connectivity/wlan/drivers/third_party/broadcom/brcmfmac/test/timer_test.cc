@@ -73,19 +73,17 @@ static void test_timer_handler(void* data) {
 
 static void test_timer_process(TestTimerCfg* cfg) {
   // There shouldn't be a race between the running tests and the async tasks lapping over
+  cfg->timer_cnt++;
   if (cfg->timer_cnt > cfg->target_cnt)
     return;
 
-  cfg->timer_cnt++;
   if (cfg->call_timerset) {
     cfg->timer.Start(cfg->delay);
   }
-  if (cfg->call_timerstop) {
+  if (cfg->call_timerstop || (cfg->timer_cnt == cfg->target_cnt)) {
     cfg->timer.Stop();
     sync_completion_signal(&cfg->wait_for_timer);
   }
-  if (cfg->timer_cnt == cfg->target_cnt)
-    sync_completion_signal(&cfg->wait_for_timer);
 }
 
 static void test_timeout_worker(WorkItem* work) {
@@ -109,6 +107,7 @@ TestTimerCfg::~TestTimerCfg() { timer.Stop(); }
 TEST_F(TimerTest, one_shot) {
   TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 1, false);
   zx_status_t status = sync_completion_wait(&timer.wait_for_timer, ZX_TIME_INFINITE);
+  timer.timer.Stop();
   // Check to make sure the timer fired
   EXPECT_EQ(status, ZX_OK);
   EXPECT_EQ(timer.timer_cnt, timer.target_cnt);
@@ -123,10 +122,12 @@ TEST_F(TimerTest, periodic) {
   // Wait for the first timer to complete
   zx_status_t status = sync_completion_wait(&timer.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);
+  timer.timer.Stop();
 
   // and wait for the second timer to complete
   status = sync_completion_wait(&timer2.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);
+  timer2.timer.Stop();
 
   // Check to make sure the timer fired exactly the expected # of times
   EXPECT_EQ(timer.timer_cnt, 4U);
@@ -145,8 +146,11 @@ TEST_F(TimerTest, timerset_in_handler) {
 
   zx_status_t status = sync_completion_wait(&timer2.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);
+  timer2.timer.Stop();
+
   status = sync_completion_wait(&timer.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);
+  timer.timer.Stop();
 
   // Check to make sure the first timer fired exactly twice and the second once
   EXPECT_EQ(timer.timer_cnt, 2U);
@@ -167,6 +171,8 @@ TEST_F(TimerTest, timerstop_in_handler) {
   // wait until timer2 is done (sometime after 20 msecs)
   zx_status_t status = sync_completion_wait(&timer2.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);
+  timer2.timer.Stop();
+
   status = sync_completion_wait(&timer.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);
   // In about 20 msecs, first timer should have fired only once and second one twice
