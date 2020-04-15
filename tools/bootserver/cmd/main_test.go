@@ -94,3 +94,76 @@ func TestPopulateReaders(t *testing.T) {
 		}
 	}
 }
+
+// Checks that getFirmwareArgs(args) returns the expected arg names and types.
+// To simplify usage, does not check for help text equality.
+func expectGetFirmwareArgs(t *testing.T, args []string, expected []firmwareArg) {
+	actual := getFirmwareArgs(args)
+
+	if len(actual) != len(expected) {
+		t.Errorf("Firmware length mismatch: expected %+v but got %+v", expected, actual)
+	}
+
+	for i := 0; i < len(actual); i++ {
+		if actual[i].name != expected[i].name || actual[i].fwType != expected[i].fwType {
+			t.Errorf("Firmware arg mismatch: expected %+v but got %+v", expected, actual)
+			break
+		}
+	}
+}
+
+func TestGetFirmwareArgsNil(t *testing.T) {
+	// Args always include the default "--firmware".
+	expectGetFirmwareArgs(t,
+		nil,
+		[]firmwareArg{{name: "firmware", fwType: ""}})
+}
+
+func TestGetFirmwareArgsNoFirmware(t *testing.T) {
+	expectGetFirmwareArgs(t,
+		[]string{"--foo", "bar"},
+		[]firmwareArg{{name: "firmware", fwType: ""}})
+}
+
+func TestGetFirmwareArgsUntypedFirmware(t *testing.T) {
+	expectGetFirmwareArgs(t,
+		[]string{"--firmware"},
+		[]firmwareArg{{name: "firmware", fwType: ""}})
+}
+
+func TestGetFirmwareArgsTypedFirmware(t *testing.T) {
+	expectGetFirmwareArgs(t,
+		[]string{"--firmware-foo"},
+		[]firmwareArg{
+			{name: "firmware", fwType: ""},
+			{name: "firmware-foo", fwType: "foo"},
+		})
+}
+
+func TestGetFirmwareArgsSingleDash(t *testing.T) {
+	expectGetFirmwareArgs(t,
+		[]string{"-firmware-foo"},
+		[]firmwareArg{
+			{name: "firmware", fwType: ""},
+			{name: "firmware-foo", fwType: "foo"},
+		})
+}
+
+func TestGetFirmwareArgsWithEquals(t *testing.T) {
+	expectGetFirmwareArgs(t,
+		[]string{"--firmware-foo=bar"},
+		[]firmwareArg{
+			{name: "firmware", fwType: ""},
+			{name: "firmware-foo", fwType: "foo"},
+		})
+}
+
+func TestGetFirmwareArgsMultiple(t *testing.T) {
+	expectGetFirmwareArgs(t,
+		[]string{"abc", "--firmware", "fw1", "--firmware-2", "fw2", "skip_me", "-firmware-3=fw3"},
+		[]firmwareArg{
+			{name: "firmware", fwType: ""},
+			{name: "firmware-2", fwType: "2"},
+			{name: "firmware-3", fwType: "3"},
+		})
+}

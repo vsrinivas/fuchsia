@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
@@ -25,6 +26,18 @@ const (
 	nodenameEnvVar                = "ZIRCON_NODENAME"
 )
 
+// Firmware arguments have variable names based on their type e.g.:
+//   --firmware=<file>
+//   --firmware-foo=<file>
+// The flag package doesn't support anything like this, so we have to do a  bit
+// of extra work to find any of these args and add them to the list.
+type firmwareArg struct {
+	name   string
+	value  string
+	fwType string
+	help   string
+}
+
 var (
 	bootOnce                       bool
 	bootIpv6                       string
@@ -36,6 +49,7 @@ var (
 	bootKernel                     string
 	fvm                            string
 	bootloader                     string
+	firmware                       []firmwareArg
 	zircona                        string
 	zirconb                        string
 	zirconr                        string
@@ -66,6 +80,12 @@ func init() {
 	flag.StringVar(&vbmetab, "vbmetab", "", "use the supplied file as a avb vbmeta_b image")
 	flag.StringVar(&vbmetar, "vbmetar", "", "use the supplied file as a avb vbmeta_r image")
 
+	// Support firmware arguments.
+	firmware = getFirmwareArgs(os.Args)
+	for i := range firmware {
+		flag.StringVar(&firmware[i].value, firmware[i].name, "", firmware[i].help)
+	}
+
 	// Support reading in images.json and paving zedboot.
 	flag.StringVar(&imageManifest, "images", "", "use an image manifest to pave")
 	flag.Var(&mode, "mode", "bootserver modes: either pave, netboot, or pave-zedboot")
@@ -85,6 +105,48 @@ func init() {
 	flag.BoolVar(&nocolor, "nocolor", false, "disable ANSI color (false)")
 	flag.BoolVar(&allowZedbootVersionMismatch, "allow-zedboot-version-mismatch", false, "warn on zedboot version mismatch rather than fail")
 	flag.BoolVar(&failFastZedbootVersionMismatch, "fail-fast-if-version-mismatch", false, "error if zedboot version does not match")
+}
+
+// Creates a slice of FirmwareArgs from |args|.
+func getFirmwareArgs(args []string) []firmwareArg {
+	// Always include the default --firmware whether specified or not, to give
+	// a useful help message.
+	fwArgs := []firmwareArg{{
+		name:   "firmware",
+		value:  "",
+		fwType: "",
+		help:   "use the supplied file as the default firmware image; use --firmware-<type> for typed images",
+	}}
+
+	for _, arg := range args {
+		// Go supports one or two dash prefixes.
+		fwType := strings.TrimPrefix(arg, "-firmware")
+		fwType = strings.TrimPrefix(fwType, "--firmware")
+		if fwType == arg {
+			// Didn't find a prefix match, on to the next arg.
+			continue
+		}
+
+		// If the caller used "arg=value", peel off the "=value" part as we're
+		// not actually parsing, but just finding all the necessary arg names.
+		fwType = strings.SplitN(fwType, "=", 2)[0]
+
+		if fwType == "" {
+			// We already added the default untyped "--firmware" arg.
+		} else if fwType[0] == '-' {
+			fwType = fwType[1:]
+			fwArgs = append(fwArgs, firmwareArg{
+				name:   fmt.Sprintf("firmware-%s", fwType),
+				value:  "",
+				fwType: fwType,
+				help:   fmt.Sprintf("use the supplied file as the %q firmware image", fwType),
+			})
+		}
+
+		// If we got here it wasn't a firmware arg, just ignore it.
+	}
+
+	return fwArgs
 }
 
 func getImages(ctx context.Context) ([]bootserver.Image, func() error, error) {
@@ -234,6 +296,12 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 	} else if imageManifest == "" && mode != bootserver.ModeNull {
 		return fmt.Errorf("cannot specify a bootserver mode without an image manifest [--images]")
 	}
+
+	// Remove the default firmware if the caller didn't actually use it.
+	if firmware[0].value == "" {
+		firmware = firmware[1:]
+	}
+
 	imgs, closeFunc, err := getImages(ctx)
 	if err != nil {
 		return err
