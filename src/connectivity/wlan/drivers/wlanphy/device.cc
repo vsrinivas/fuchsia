@@ -332,4 +332,13 @@ void Device::GetCountry(GetCountryCallback callback) {
   }
 }
 
+void Device::ClearCountry(ClearCountryCallback callback) {
+  debugfn();
+  auto status = wlanphy_impl_.ops->clear_country(wlanphy_impl_.ctx);
+  if (status != ZX_OK) {
+    debugf("wlanphy: ClearCountry failed with error %s\n", zx_status_get_string(status));
+  }
+  callback(status);
+}
+
 }  // namespace wlanphy

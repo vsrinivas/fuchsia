@@ -206,6 +206,9 @@ zx_status_t WlanInterface::Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info)
 
 // static
 zx_status_t WlanInterface::SetCountry(brcmf_pub* drvr, const wlanphy_country_t* country) {
+  if (country == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   const unsigned char* code = country->alpha2;
   BRCMF_ERR("WlanInterface::SetCountry() %c%c\n", code[0], code[1]);
   return brcmf_set_country(drvr, country);
@@ -215,6 +218,8 @@ zx_status_t WlanInterface::SetCountry(brcmf_pub* drvr, const wlanphy_country_t* 
 zx_status_t WlanInterface::GetCountry(brcmf_pub* drvr, wlanphy_country_t* out_country) {
   return brcmf_get_country(drvr, out_country);
 }
+
+zx_status_t WlanInterface::ClearCountry(brcmf_pub* drvr) { return brcmf_clear_country(drvr); }
 
 zx_status_t WlanInterface::Start(const wlanif_impl_ifc_protocol_t* ifc,
                                  zx_handle_t* out_sme_channel) {

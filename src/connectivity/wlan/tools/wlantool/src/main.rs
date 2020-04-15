@@ -92,6 +92,12 @@ async fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let response = wlan_svc.set_country(&mut req).await.context("error setting country")?;
             println!("response: {:?}", zx::Status::from_raw(response));
         }
+        opts::PhyCmd::ClearCountry { phy_id } => {
+            let mut req = wlan_service::ClearCountryRequest { phy_id };
+            let response =
+                wlan_svc.clear_country(&mut req).await.context("error clearing country")?;
+            println!("response: {:?}", zx::Status::from_raw(response));
+        }
     }
     Ok(())
 }
@@ -819,6 +825,27 @@ mod tests {
             }))) => {
                 assert_eq!(req.phy_id, 45);
                 assert_eq!(req.alpha2, "RS".as_bytes());
+                responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
+            }
+        );
+    }
+
+    #[test]
+    fn test_clear_country() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (wlansvc_local, wlansvc_remote) =
+            create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
+        let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
+        let fut = do_phy(PhyCmd::ClearCountry { phy_id: 45 }, wlansvc_local);
+        pin_mut!(fut);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut wlansvc_stream.next()),
+            Poll::Ready(Some(Ok(wlan_service::DeviceServiceRequest::ClearCountry {
+                req, responder,
+            }))) => {
+                assert_eq!(req.phy_id, 45);
                 responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
             }
         );

@@ -41,6 +41,7 @@ class PhyDevice : public ::fuchsia::wlan::device::Phy {
   virtual void SetCountry(::fuchsia::wlan::device::CountryCode req,
                           SetCountryCallback callback) override;
   virtual void GetCountry(GetCountryCallback callback) override;
+  virtual void ClearCountry(ClearCountryCallback callback) override;
 
  private:
   zx_status_t Connect(zx::channel request);

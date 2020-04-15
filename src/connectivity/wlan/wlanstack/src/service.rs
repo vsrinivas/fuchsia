@@ -152,6 +152,10 @@ pub async fn serve_device_requests(
                 let status = set_country(&phys, req).await;
                 responder.send(status.into_raw())
             }
+            DeviceServiceRequest::ClearCountry { req, responder } => {
+                let status = clear_country(&phys, req).await;
+                responder.send(status.into_raw())
+            }
         }?;
     }
     Ok(())
@@ -249,6 +253,24 @@ async fn set_country(phys: &PhyMap, req: fidl_svc::SetCountryRequest) -> zx::Sta
         Ok(status) => zx::Status::from_raw(status),
         Err(e) => {
             error!("Error sending SetCountry set_country request to phy #{}: {}", phy_id, e);
+            zx::Status::INTERNAL
+        }
+    }
+}
+
+async fn clear_country(phys: &PhyMap, req: fidl_svc::ClearCountryRequest) -> zx::Status {
+    let phy = match phys.get(&req.phy_id) {
+        None => return zx::Status::NOT_FOUND,
+        Some(p) => p,
+    };
+
+    match phy.proxy.clear_country().await {
+        Ok(status) => zx::Status::from_raw(status),
+        Err(e) => {
+            error!(
+                "Error sending ClearCountry clear_country request to phy #{}: {}",
+                req.phy_id, e
+            );
             zx::Status::INTERNAL
         }
     }
@@ -868,6 +890,68 @@ mod tests {
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
         let resp = zx::Status::NOT_SUPPORTED.into_raw();
         responder.send(resp).expect("failed to send the response to SetCountry");
+        assert_eq!(Poll::Ready(zx::Status::NOT_SUPPORTED), exec.run_until_stalled(&mut req_fut));
+    }
+
+    #[test]
+    fn test_clear_country() {
+        // Setup environment
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (phy_map, _phy_map_events) = PhyMap::new();
+        let phy_map = Arc::new(phy_map);
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let phy_id = 10u16;
+        phy_map.insert(phy_id, phy);
+
+        // Initiate a QueryPhy request. The returned future should not be able
+        // to produce a result immediately
+        // Issue service.fidl::ClearCountryRequest()
+        let req_msg = fidl_svc::ClearCountryRequest { phy_id };
+        let req_fut = super::clear_country(&phy_map, req_msg);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::ClearCountry { responder }))) => {
+                // Pretend to be a WLAN PHY to return the result.
+                responder.send(zx::Status::OK.into_raw())
+                    .expect("failed to send the response to ClearCountry");
+            }
+        );
+
+        // req_fut should have completed by now. Test the result.
+        assert_eq!(exec.run_until_stalled(&mut req_fut), Poll::Ready(zx::Status::OK));
+    }
+
+    #[test]
+    fn test_clear_country_failure() {
+        // Setup environment
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (phy_map, _phy_map_events) = PhyMap::new();
+        let phy_map = Arc::new(phy_map);
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let phy_id = 10u16;
+        phy_map.insert(phy_id, phy);
+
+        // Initiate a QueryPhy request. The returned future should not be able
+        // to produce a result immediately
+        // Issue service.fidl::ClearCountryRequest()
+        let req_msg = fidl_svc::ClearCountryRequest { phy_id };
+        let req_fut = super::clear_country(&phy_map, req_msg);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::ClearCountry { responder }))) => responder
+        );
+
+        // Failure case #1: WLAN PHY not responding
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        // Failure case #2: WLAN PHY has not implemented the feature.
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+        let resp = zx::Status::NOT_SUPPORTED.into_raw();
+        responder.send(resp).expect("failed to send the response to ClearCountry");
         assert_eq!(Poll::Ready(zx::Status::NOT_SUPPORTED), exec.run_until_stalled(&mut req_fut));
     }
 

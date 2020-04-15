@@ -168,7 +168,14 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
 }
 
 zx_status_t Device::WlanphyImplSetCountry(const wlanphy_country_t* country) {
+  if (country == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   return WlanInterface::SetCountry(brcmf_pub_.get(), country);
+}
+
+zx_status_t Device::WlanphyImplClearCountry() {
+  return WlanInterface::ClearCountry(brcmf_pub_.get());
 }
 
 zx_status_t Device::WlanphyImplGetCountry(wlanphy_country_t* out_country) {

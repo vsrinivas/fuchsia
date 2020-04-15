@@ -137,6 +137,13 @@ pub enum PhyCmd {
         #[structopt(raw(required = "true"))]
         country: String,
     },
+    #[structopt(name = "clear-country")]
+    /// sets the phy's country code to world-safe value
+    ClearCountry {
+        #[structopt(raw(required = "true"))]
+        /// id of the phy to query
+        phy_id: u16,
+    },
 }
 
 #[derive(StructOpt, Clone, Debug)]

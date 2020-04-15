@@ -51,6 +51,9 @@ protocol WlanphyImpl {
     /// Set country with a WlanphyCountry
     SetCountry(WlanphyCountry country) -> (zx.status s);
 
+    /// Set device to a world-safe country
+    ClearCountry() -> (zx.status s);
+
     /// Read currently configured country. Implementations are advised to read the
     /// country directly from the firmware, where possible.
     GetCountry() -> (zx.status s, WlanphyCountry country);

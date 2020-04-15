@@ -272,6 +272,11 @@ void PhyDevice::GetCountry(GetCountryCallback callback) {
   callback(fit::error(ZX_ERR_NOT_SUPPORTED));
 }
 
+void PhyDevice::ClearCountry(ClearCountryCallback callback) {
+  zxlogf(INFO, "testing/PHY: ClearCountry\n");
+  callback(ZX_OK);
+}
+
 zx_status_t PhyDevice::Connect(zx::channel request) {
   return dispatcher_->AddBinding(std::move(request), this);
 }

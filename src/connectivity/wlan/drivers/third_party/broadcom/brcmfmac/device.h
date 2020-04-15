@@ -48,6 +48,7 @@ class Device : public ::ddk::Device<Device>,
                                      uint16_t* out_iface_id);
   zx_status_t WlanphyImplDestroyIface(uint16_t iface_id);
   zx_status_t WlanphyImplSetCountry(const wlanphy_country_t* country);
+  zx_status_t WlanphyImplClearCountry();
   zx_status_t WlanphyImplGetCountry(wlanphy_country_t* out_country);
 
   // Trampolines for DDK functions, for platforms that support them.

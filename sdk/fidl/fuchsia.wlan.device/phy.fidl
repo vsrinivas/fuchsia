@@ -116,6 +116,7 @@ protocol Phy {
     DestroyIface(DestroyIfaceRequest req) -> (DestroyIfaceResponse resp);
     SetCountry(CountryCode req) -> (int32 status);
     GetCountry() -> (CountryCode resp) error int32;
+    ClearCountry() -> (int32 status);
 };
 
 // Temporary interface for bridging between the devhost-owned channel model and

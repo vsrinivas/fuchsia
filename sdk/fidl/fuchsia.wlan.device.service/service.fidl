@@ -65,6 +65,10 @@ struct SetCountryRequest {
     array<byte>:2 alpha2;
 };
 
+struct ClearCountryRequest {
+    uint16 phy_id;
+};
+
 protocol DeviceWatcher {
     -> OnPhyAdded(uint16 phy_id);
     -> OnPhyRemoved(uint16 phy_id);
@@ -96,4 +100,5 @@ protocol DeviceService {
 
     WatchDevices(request<DeviceWatcher> watcher);
     SetCountry(SetCountryRequest req) -> (int32 status);
+    ClearCountry(ClearCountryRequest req) -> (int32 status);
 };

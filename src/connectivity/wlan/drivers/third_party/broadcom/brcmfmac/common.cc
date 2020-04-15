@@ -202,6 +202,10 @@ zx_status_t brcmf_get_meta_data(brcmf_if* ifp, wifi_config_t* config) {
 
 /* Search through the given country code table and issue the iovar */
 zx_status_t brcmf_set_country(brcmf_pub* drvr, const wlanphy_country_t* country) {
+  if (country == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
   wifi_config_t config;
   struct brcmf_fil_country_le ccreq;
@@ -271,6 +275,24 @@ zx_status_t brcmf_get_country(brcmf_pub* drvr, wlanphy_country_t* out_country) {
              ccreq.rev);
   memcpy(out_country->alpha2, ccreq.ccode, WLANPHY_ALPHA2_LEN);
   return ZX_OK;
+}
+
+/* Set firmware country code to a world-safe one, which is "WW" in brcmfmac*/
+zx_status_t brcmf_clear_country(brcmf_pub* drvr) {
+  wlanphy_country_t country = {};
+  zx_status_t err;
+
+  BRCMF_DBG(TRACE, "Enter\n");
+  country.alpha2[0] = country.alpha2[1] = 'W';
+
+  err = brcmf_set_country(drvr, &country);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Clear country failed\n");
+  } else {
+    BRCMF_DBG(INFO, "Clear country success\n");
+  }
+
+  return err;
 }
 
 // This function applies configured platform specific iovars to the firmware

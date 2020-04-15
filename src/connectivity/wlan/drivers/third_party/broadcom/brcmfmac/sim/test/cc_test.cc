@@ -18,6 +18,7 @@ class CountryCodeTest : public SimTest {
   void DeleteInterface();
   zx_status_t SetCountryCode(const wlanphy_country_t* country);
   void GetCountryCodeFromFirmware(brcmf_fil_country_le* ccode);
+  zx_status_t ClearCountryCode();
   uint32_t DeviceCount();
 
  private:
@@ -52,6 +53,8 @@ uint32_t CountryCodeTest::DeviceCount() { return (dev_mgr_->DevicesCount()); }
 zx_status_t CountryCodeTest::SetCountryCode(const wlanphy_country_t* country) {
   return device_->WlanphyImplSetCountry(country);
 }
+
+zx_status_t CountryCodeTest::ClearCountryCode() { return device_->WlanphyImplClearCountry(); }
 
 // Note that this function is meant for SIM only. It retrieves the internal
 // state of the country code setting by bypassing the interfaces.
@@ -110,6 +113,23 @@ TEST_F(CountryCodeTest, GetCCode) {
     EXPECT_EQ(get_country_result.alpha2[1], 'S');
   }
 
+  DeleteInterface();
+}
+
+TEST_F(CountryCodeTest, ClearCCode) {
+  const wlanphy_country_t world_safe_country = {{'W', 'W'}};
+  struct brcmf_fil_country_le country_code;
+  zx_status_t status;
+  uint8_t code;
+
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  status = ClearCountryCode();
+  ASSERT_EQ(status, ZX_OK);
+  GetCountryCodeFromFirmware(&country_code);
+  code = memcmp(world_safe_country.alpha2, country_code.ccode, WLANPHY_ALPHA2_LEN);
+  ASSERT_EQ(code, 0);
   DeleteInterface();
 }
 
