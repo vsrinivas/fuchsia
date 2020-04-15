@@ -65,6 +65,7 @@ class AudioCoreHardwareTest : public TestFixture {
   fuchsia::media::audio::GainControlPtr stream_gain_control_;
 
   std::unordered_set<uint64_t> capture_device_tokens_;
+  bool capture_device_is_default_ = false;
 
   uint32_t channel_count_ = kDefaultChannelCount;
   uint32_t frames_per_second_ = kDefaultFramesPerSecond;

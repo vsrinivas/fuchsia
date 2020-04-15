@@ -42,22 +42,53 @@ bool AudioCoreHardwareTest::WaitForCaptureDevice() {
       ([this](fuchsia::media::AudioDeviceInfo device) {
         if (device.is_input) {
           capture_device_tokens_.insert(device.token_id);
-        }
-      });
-  audio_device_enumerator_.events().OnDeviceRemoved =
-      ([this](uint64_t token_id) { capture_device_tokens_.erase(token_id); });
-  audio_device_enumerator_->GetDevices(
-      [this](std::vector<fuchsia::media::AudioDeviceInfo> devices) {
-        for (auto& device : devices) {
-          if (device.is_input) {
-            capture_device_tokens_.insert(device.token_id);
+          if (device.is_default) {
+            capture_device_is_default_ = true;
           }
+        }
+        FX_LOGS(INFO) << "OnDeviceAdded: " << (device.is_input ? "input  " : "output ")
+                      << device.token_id << " is " << (device.is_default ? "" : "not")
+                      << " default";
+      });
+
+  audio_device_enumerator_.events().OnDeviceRemoved = ([this](uint64_t token_id) {
+    size_t num_removed = capture_device_tokens_.erase(token_id);
+    FAIL() << "OnDeviceRemoved: " << num_removed << " input devices just departed";
+  });
+
+  audio_device_enumerator_.events().OnDefaultDeviceChanged =
+      ([this](uint64_t old_default_token, uint64_t new_default_token) {
+        if (capture_device_tokens_.count(new_default_token) > 0) {
+          capture_device_is_default_ = true;
+          FX_LOGS(INFO) << "OnDefaultDeviceChanged: " << new_default_token
+                        << " is new default input (was " << old_default_token << ")";
+        } else if (capture_device_tokens_.count(old_default_token) > 0 && new_default_token == 0) {
+          capture_device_is_default_ = false;
+          FAIL() << "OnDefaultDeviceChanged: " << old_default_token
+                 << " is no longer default input (now 0)";
+        } else {
+          FX_LOGS(INFO) << "OnDefaultDeviceChanged: (unknown devices) from " << old_default_token
+                        << " to " << new_default_token;
         }
       });
 
-  RunLoopWithTimeoutOrUntil([this]() { return error_occurred_ || !capture_device_tokens_.empty(); },
+  audio_device_enumerator_->GetDevices([this](
+                                           std::vector<fuchsia::media::AudioDeviceInfo> devices) {
+    for (auto& device : devices) {
+      if (device.is_input) {
+        capture_device_tokens_.insert(device.token_id);
+        if (device.is_default) {
+          capture_device_is_default_ = true;
+        }
+      }
+      FX_LOGS(INFO) << "GetDevices: " << (device.is_input ? "input  " : "output ")
+                    << device.token_id << " is " << (device.is_default ? "" : "not") << " default";
+    }
+  });
+
+  RunLoopWithTimeoutOrUntil([this]() { return error_occurred_ || capture_device_is_default_; },
                             kDurationResponseExpected);
-  return !capture_device_tokens_.empty();
+  return capture_device_is_default_;
 }
 
 void AudioCoreHardwareTest::ConnectToAudioCore() {
@@ -232,8 +263,8 @@ TEST_F(AudioCoreHardwareTest, ZeroesInLiveCapture) {
   if (longest_stretch_consec_zero_samples > kLimitConsecFramesZero * channel_count_) {
     if (longest_stretch_consec_zero_samples == received_payload_frames_ * channel_count_) {
       printf(
-          "*** EVERY captured sample was '0'. Digital input, or not a real device, or capture gain "
-          "muted the signal? ***\n");
+          "*** EVERY captured sample was '0'. Digital input, or virtual device, or capture gain "
+          "too low? ***\n");
     }
 
     EXPECT_LE(longest_stretch_consec_zero_samples, kLimitConsecFramesZero * channel_count_);
