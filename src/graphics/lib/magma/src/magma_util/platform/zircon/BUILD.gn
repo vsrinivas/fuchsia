@@ -25,7 +25,10 @@ source_set("buffer") {
     "zircon_platform_buffer.h",
   ]
 
-  public_deps = [ "..:buffer_header" ]
+  public_deps = [
+    "..:buffer_header",
+    "//zircon/public/lib/zx",
+  ]
 
   deps = [
     "$magma_build_root/src/magma_util:macros",
