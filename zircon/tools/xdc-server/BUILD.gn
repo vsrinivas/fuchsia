@@ -17,7 +17,7 @@ executable("xdc-server") {
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/xdc-host-utils",
+    "//zircon/system/ulib/xdc-host-utils",
     "//zircon/system/ulib/xdc-server-utils",
   ]
 }
