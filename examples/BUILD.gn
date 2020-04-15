@@ -10,8 +10,7 @@ group("examples") {
     "criterion_bench",
     "dotmatrix_display",
     "fortune",
-
-    #"fuzzer",
+    "fuzzer",
     "hello_world",
     "isolated_cache",
     "rolldice",
@@ -26,7 +25,7 @@ group("examples") {
 group("tests") {
   testonly = true
   data_deps = [
-    #"fuzzer:tests",
+    "fuzzer:tests",
     "hello_world:tests",
     "isolated_cache:tests",
     "rolldice:rolldice-tests",
