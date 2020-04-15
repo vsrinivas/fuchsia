@@ -20,6 +20,7 @@ pub async fn test_lowpanctl() {
     test_lowpanctl_list().await;
     test_lowpanctl_provision().await;
     test_lowpanctl_join_network().await;
+    test_lowpanctl_form_network().await;
 }
 
 pub async fn test_lowpanctl_status() {
@@ -60,6 +61,12 @@ pub async fn test_lowpanctl_join_network() {
     test_lowpanctl_command(vec!["join".to_string(), "--name".to_string(), "some_name".to_string()])
         .await
         .expect("Call to `lowpanctl join` failed.");
+}
+
+pub async fn test_lowpanctl_form_network() {
+    test_lowpanctl_command(vec!["form".to_string(), "--name".to_string(), "some_name".to_string()])
+        .await
+        .expect("Call to `lowpanctl form` failed.");
 }
 
 pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {

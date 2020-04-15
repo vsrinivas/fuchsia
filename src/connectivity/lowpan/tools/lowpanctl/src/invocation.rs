@@ -6,6 +6,7 @@ use anyhow::Error;
 use argh::FromArgs;
 
 use crate::context::LowpanCtlContext;
+pub use crate::form_command::*;
 pub use crate::join_command::*;
 pub use crate::leave_command::*;
 pub use crate::list_command::*;
@@ -44,6 +45,7 @@ pub enum CommandEnum {
     List(ListCommand),
     Reset(ResetCommand),
     Join(JoinCommand),
+    Form(FormCommand),
 }
 
 impl LowpanCtlInvocation {
@@ -55,6 +57,7 @@ impl LowpanCtlInvocation {
             CommandEnum::List(x) => x.exec(context).await,
             CommandEnum::Reset(x) => x.exec(context).await,
             CommandEnum::Join(x) => x.exec(context).await,
+            CommandEnum::Form(x) => x.exec(context).await,
         }
     }
 }
