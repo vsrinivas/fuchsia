@@ -190,6 +190,9 @@ mod tests {
     use fuchsia_async as fasync;
     use omaha_client::storage::tests::*;
 
+    // NOTE:  Each test here needs to use it's own, uniquely-named Stash instance, or the tests will
+    // interfere with each other.  The Stash instances are real, not hermetic st
+
     #[fasync::run_singlethreaded(test)]
     async fn test_set_get_remove_string() {
         let mut storage = Stash::new("test_set_get_remove_string").await;
@@ -204,7 +207,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_option_int() {
-        let mut storage = Stash::new("test_set_get_remove_int").await;
+        let mut storage = Stash::new("test_set_option_int").await;
         do_test_set_option_int(&mut storage).await;
     }
 
