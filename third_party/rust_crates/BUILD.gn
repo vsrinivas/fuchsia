@@ -509,6 +509,11 @@ if (!is_fuchsia) {
     deps = [ ":signal-hook-v0_1_13" ]
   }
 }
+if (!is_fuchsia) {
+  group("simplelog") {
+    deps = [ ":simplelog-v0_7_5" ]
+  }
+}
 group("slab") {
   deps = [ ":slab-v0_4_2" ]
 }
@@ -7242,6 +7247,32 @@ rust_library("signal-hook-registry-v1_2_0") {
     "--edition=2015",
     "-Cmetadata=89f29a6954981833",
     "-Cextra-filename=89f29a6954981833",
+  ]
+}
+
+rust_library("simplelog-v0_7_5") {
+  crate_name = "simplelog"
+  crate_root = "//third_party/rust_crates/vendor/simplelog/src/lib.rs"
+  output_name = "simplelog-b68b3dad32069c38"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":chrono-v0_4_6" ]
+  deps += [ ":log-v0_4_8" ]
+  deps += [ ":term-v0_5_1" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=b68b3dad32069c38",
+    "-Cextra-filename=b68b3dad32069c38",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"term\"",
   ]
 }
 

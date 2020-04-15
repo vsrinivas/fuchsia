@@ -185,6 +185,7 @@ indoc = "0.3.3"
 pulldown-cmark = "0.6.0"
 proc-macro2 = "1.0.9"
 quote = "1.0.2"
+simplelog = "0.7.5"
 signal-hook = "0.1.13"
 syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
