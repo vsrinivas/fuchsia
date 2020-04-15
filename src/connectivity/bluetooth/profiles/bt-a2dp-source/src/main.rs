@@ -205,11 +205,22 @@ impl Peers {
                 peer.set_descriptor(d);
                 true
             });
+
+            let closed_fut = peer.closed();
             self.peers.insert(id, peer);
 
             if start_streaming_flag {
                 self.spawn_streaming(id);
             }
+
+            // Remove the peer when the device disconnects.
+            let detached_peer = self.peers.get(&id).expect("just added");
+            let peer_id = id.clone();
+            fasync::spawn_local(async move {
+                closed_fut.await;
+                fx_log_info!("Detaching closed peer {}", peer_id);
+                detached_peer.detach();
+            });
         }
         Ok(())
     }
@@ -508,6 +519,64 @@ mod tests {
             Poll::Ready(Ok(())) => {}
             x => panic!("Expected a response from the result, got {:?}", x),
         };
+    }
+
+    fn setup_peers_test() -> (fasync::Executor, PeerId, Peers, ProfileRequestStream) {
+        let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let (proxy, stream) =
+            create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
+        let id = PeerId(1);
+
+        let peers = Peers::new(stream::Streams::new(), proxy);
+
+        (exec, id, peers, stream)
+    }
+
+    fn run_to_stalled(exec: &mut fasync::Executor) {
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+    }
+
+    #[test]
+    fn peers_peer_disconnect_removes_peer() {
+        let (mut exec, id, mut peers, _stream) = setup_peers_test();
+
+        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+
+        let _ = peers.connected(id, signaling, None);
+        run_to_stalled(&mut exec);
+
+        // Disconnect the signaling channel, peer should be gone.
+        drop(remote);
+
+        run_to_stalled(&mut exec);
+
+        assert!(peers.get(&id).is_none());
+    }
+
+    #[test]
+    fn peers_reconnect_works() {
+        let (mut exec, id, mut peers, _stream) = setup_peers_test();
+
+        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let _ = peers.connected(id, signaling, None);
+        run_to_stalled(&mut exec);
+
+        assert!(peers.get(&id).is_some());
+
+        // Disconnect the signaling channel, peer should be gone.
+        drop(remote);
+
+        run_to_stalled(&mut exec);
+
+        assert!(peers.get(&id).is_none());
+
+        // Connect another peer with the same ID
+        let (_remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let _ = peers.connected(id, signaling, None);
+        run_to_stalled(&mut exec);
+
+        // Should be connected.
+        assert!(peers.get(&id).is_some());
     }
 
     #[test]

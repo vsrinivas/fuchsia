@@ -11,9 +11,15 @@ use {
     fuchsia_bluetooth::types::PeerId,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
-    futures::{Future, StreamExt},
+    futures::{
+        task::{Context as TaskContext, Poll, Waker},
+        Future, StreamExt,
+    },
     parking_lot::Mutex,
-    std::sync::Arc,
+    std::{
+        pin::Pin,
+        sync::{Arc, Weak},
+    },
 };
 
 use crate::stream;
@@ -27,7 +33,10 @@ pub struct Peer {
     profile: ProfileProxy,
     /// The profile descriptor for this peer, if it has been discovered.
     descriptor: Mutex<Option<ProfileDescriptor>>,
-    // TODO(39730): Add a future for when the peer closes?
+    /// Wakers that are to be woken when the peer disconnects.  If None, the peers have been woken
+    /// and this peer is disconnected.  Shared weakly with ClosedPeer future objects that complete
+    /// when the peer disconnects.
+    closed_wakers: Arc<Mutex<Option<Vec<Waker>>>>,
 }
 
 impl Peer {
@@ -46,6 +55,7 @@ impl Peer {
             inner: Arc::new(Mutex::new(PeerInner::new(peer, id, streams))),
             profile,
             descriptor: Mutex::new(None),
+            closed_wakers: Arc::new(Mutex::new(Some(Vec::new()))),
         };
         res.start_requests_task();
         res
@@ -170,6 +180,7 @@ impl Peer {
         let mut request_stream = lock.peer.take_request_stream();
         let id = self.id.clone();
         let peer = Arc::downgrade(&self.inner);
+        let disconnect_wakers = Arc::downgrade(&self.closed_wakers);
         fuchsia_async::spawn_local(async move {
             while let Some(r) = request_stream.next().await {
                 match r {
@@ -189,7 +200,40 @@ impl Peer {
                 }
             }
             fx_log_info!("Peer {} disconnected", id);
+            disconnect_wakers.upgrade().map(|wakers| {
+                for waker in wakers.lock().take().unwrap_or_else(Vec::new) {
+                    waker.wake();
+                }
+            });
         });
+    }
+
+    /// Returns a future that will complete when the peer disconnects.
+    pub fn closed(&self) -> ClosedPeer {
+        ClosedPeer { inner: Arc::downgrade(&self.closed_wakers) }
+    }
+}
+
+/// Future for the closed() future.
+pub struct ClosedPeer {
+    inner: Weak<Mutex<Option<Vec<Waker>>>>,
+}
+
+#[must_use = "futures do nothing unless you `.await` or poll them"]
+impl Future for ClosedPeer {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut TaskContext<'_>) -> Poll<Self::Output> {
+        match self.inner.upgrade() {
+            None => Poll::Ready(()),
+            Some(inner) => match inner.lock().as_mut() {
+                None => Poll::Ready(()),
+                Some(wakers) => {
+                    wakers.push(cx.waker().clone());
+                    Poll::Pending
+                }
+            },
+        }
     }
 }
 
@@ -480,6 +524,30 @@ mod tests {
         get_capabilities_rsp.extend_from_slice(response_capabilities);
 
         assert!(remote.write(&get_capabilities_rsp).is_ok());
+    }
+
+    #[test]
+    fn test_disconnected() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (proxy, _stream) =
+            create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
+        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+
+        let id = PeerId(1);
+
+        let avdtp = avdtp::Peer::new(signaling).expect("peer should be creatable");
+        let peer = Peer::create(id, avdtp, stream::Streams::new(), proxy);
+
+        let closed_fut = peer.closed();
+
+        pin_mut!(closed_fut);
+
+        assert!(exec.run_until_stalled(&mut closed_fut).is_pending());
+
+        // Close the remote socket.
+        drop(remote);
+
+        assert!(exec.run_until_stalled(&mut closed_fut).is_ready());
     }
 
     #[test]
