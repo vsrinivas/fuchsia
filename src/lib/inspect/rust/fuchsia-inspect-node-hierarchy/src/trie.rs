@@ -343,6 +343,14 @@ where
     fn next(&mut self) -> Option<(Vec<&'a K>, Option<&'a V>)> {
         if !self.iterator.is_initialized() {
             self.iterator.initialize();
+
+            // We must special-case "iteration" for an empty root
+            // here since we rely on is_curr_node_fully_processed
+            // being true to signal empty nodes when a new node is just processed,
+            // and we've already pre-processed root.
+            if self.iterator.is_curr_node_fully_processed() {
+                return Some((self.iterator.get_curr_key(), None));
+            }
         }
 
         while self.iterator.is_curr_node_fully_processed() && !self.iterator.is_work_stack_empty() {
@@ -475,6 +483,7 @@ mod tests {
             (vec!['t', 'e', 's'], None),
             (vec!['t', 'e'], None),
             (vec!['t'], None),
+            (vec![], None),
         ];
         let mut num_iterations = 0;
         for (key, val) in test_trie.iter() {
@@ -484,6 +493,34 @@ mod tests {
             assert_eq!(key.into_iter().collect::<String>(), expected_key.iter().collect::<String>())
         }
 
-        assert_eq!(num_iterations, 7);
+        assert_eq!(num_iterations, 8);
+    }
+
+    #[test]
+    fn test_empty_trie_iters() {
+        type TestTrie = Trie<char, String>;
+        let empty_trie: TestTrie = TestTrie::new();
+        let mut num_iterations = 0;
+        let mut results_vec: Vec<(Vec<char>, Option<String>)> = vec![(vec![], None)];
+        for (key, val) in empty_trie.iter() {
+            num_iterations = num_iterations + 1;
+            let (expected_key, expected_val) = results_vec.pop().unwrap();
+            assert_eq!(val, expected_val.as_ref());
+            assert_eq!(key.into_iter().collect::<String>(), expected_key.iter().collect::<String>())
+        }
+        assert_eq!(num_iterations, 1);
+
+        let mut one_entry_trie: TestTrie = TestTrie::new();
+        one_entry_trie.insert("t".to_string().chars().collect(), "a".to_string());
+        let mut results_vec = vec![(vec!['t'], Some("a".to_string())), (vec![], None)];
+        num_iterations = 0;
+        for (key, val) in one_entry_trie.iter() {
+            num_iterations = num_iterations + 1;
+            let (expected_key, expected_val) = results_vec.pop().unwrap();
+            assert_eq!(val, expected_val.as_ref());
+            assert_eq!(key.into_iter().collect::<String>(), expected_key.iter().collect::<String>())
+        }
+
+        assert_eq!(num_iterations, 2);
     }
 }

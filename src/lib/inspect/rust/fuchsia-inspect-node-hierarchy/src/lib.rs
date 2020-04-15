@@ -677,6 +677,26 @@ mod tests {
     use super::*;
     use selectors;
 
+    fn validate_hierarchy_iteration(
+        mut results_vec: Vec<(Vec<String>, Option<Property>)>,
+        test_hierarchy: NodeHierarchy,
+    ) {
+        let expected_num_entries = results_vec.len();
+        let mut num_entries = 0;
+        for (key, val) in test_hierarchy.property_iter() {
+            num_entries = num_entries + 1;
+            let (expected_key, expected_property) = results_vec.pop().unwrap();
+            assert_eq!(
+                key.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join("/"),
+                expected_key.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join("/")
+            );
+
+            assert_eq!(val, expected_property.as_ref());
+        }
+
+        assert_eq!(num_entries, expected_num_entries);
+    }
+
     #[test]
     fn test_node_hierarchy_iteration() {
         let double_array_data = vec![-1.2, 2.3, 3.4, 4.5, -5.6];
@@ -722,68 +742,101 @@ mod tests {
             )],
         );
 
-        let mut results_vec = vec![
+        let results_vec = vec![
             (
                 vec!["root".to_string(), "child-1".to_string(), "child-1-1".to_string()],
-                Property::UintArray(
+                Some(Property::UintArray(
                     "property-uint-array".to_string(),
                     ArrayValue::new(
                         vec![1, 1, 2, 0, 1, 1, 2, 0, 0],
                         ArrayFormat::ExponentialHistogram,
                     ),
-                ),
+                )),
             ),
             (
                 vec!["root".to_string(), "child-1".to_string(), "child-1-1".to_string()],
-                Property::Bytes("property-bytes".to_string(), bytes_data),
+                Some(Property::Bytes("property-bytes".to_string(), bytes_data)),
             ),
             (
                 vec!["root".to_string(), "child-1".to_string(), "child-1-1".to_string()],
-                Property::Int("property-int".to_string(), -9),
+                Some(Property::Int("property-int".to_string(), -9)),
             ),
             (
                 vec!["root".to_string(), "child-1".to_string()],
-                Property::IntArray(
+                Some(Property::IntArray(
                     "property-int-array".to_string(),
                     ArrayValue::new(vec![1, 2, 1, 1, 1, 1, 1], ArrayFormat::LinearHistogram),
-                ),
+                )),
             ),
             (
                 vec!["root".to_string(), "child-1".to_string()],
-                Property::String("property-string".to_string(), string_data),
+                Some(Property::String("property-string".to_string(), string_data)),
             ),
             (
                 vec!["root".to_string(), "child-1".to_string()],
-                Property::Double("property-double".to_string(), -3.4),
+                Some(Property::Double("property-double".to_string(), -3.4)),
             ),
             (
                 vec!["root".to_string(), "child-1".to_string()],
-                Property::Uint("property-uint".to_string(), 10),
+                Some(Property::Uint("property-uint".to_string(), 10)),
             ),
             (
                 vec!["root".to_string()],
-                Property::DoubleArray(
+                Some(Property::DoubleArray(
                     "property-double-array".to_string(),
                     ArrayValue::new(double_array_data, ArrayFormat::Default),
-                ),
+                )),
             ),
-            (vec!["root".to_string()], Property::Int("int-root".to_string(), 3)),
+            (vec!["root".to_string()], Some(Property::Int("int-root".to_string(), 3))),
         ];
 
-        let expected_num_entries = results_vec.len();
-        let mut num_entries = 0;
-        for (key, val) in test_hierarchy.property_iter() {
-            num_entries = num_entries + 1;
-            let (expected_key, expected_property) = results_vec.pop().unwrap();
-            assert_eq!(
-                key.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join("/"),
-                expected_key.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join("/")
-            );
+        validate_hierarchy_iteration(results_vec, test_hierarchy);
+    }
 
-            assert_eq!(*(val.unwrap()), expected_property);
-        }
+    #[test]
+    fn test_edge_case_hierarchy_iteration() {
+        let root_only_with_one_property_hierarchy = NodeHierarchy::new(
+            "root".to_string(),
+            vec![Property::Int("property-int".to_string(), -9)],
+            vec![],
+        );
 
-        assert_eq!(num_entries, expected_num_entries);
+        let results_vec =
+            vec![(vec!["root".to_string()], Some(Property::Int("property-int".to_string(), -9)))];
+
+        validate_hierarchy_iteration(results_vec, root_only_with_one_property_hierarchy);
+
+        let empty_hierarchy = NodeHierarchy::new("root".to_string(), vec![], vec![]);
+
+        let results_vec = vec![(vec!["root".to_string()], None)];
+
+        validate_hierarchy_iteration(results_vec, empty_hierarchy);
+
+        let empty_root_populated_child = NodeHierarchy::new(
+            "root",
+            vec![],
+            vec![NodeHierarchy::new("foo", vec![Property::Int("11".to_string(), -4)], vec![])],
+        );
+
+        let results_vec = vec![
+            (
+                vec!["root".to_string(), "foo".to_string()],
+                Some(Property::Int("11".to_string(), -4)),
+            ),
+            (vec!["root".to_string()], None),
+        ];
+
+        validate_hierarchy_iteration(results_vec, empty_root_populated_child);
+
+        let empty_root_empty_child =
+            NodeHierarchy::new("root", vec![], vec![NodeHierarchy::new("foo", vec![], vec![])]);
+
+        let results_vec = vec![
+            (vec!["root".to_string(), "foo".to_string()], None),
+            (vec!["root".to_string()], None),
+        ];
+
+        validate_hierarchy_iteration(results_vec, empty_root_empty_child);
     }
 
     #[test]
@@ -1065,6 +1118,26 @@ mod tests {
 
         assert_eq!(
             parse_selectors_and_filter_hierarchy(empty_hierarchy.clone(), test_selectors),
+            empty_hierarchy.clone()
+        );
+    }
+
+    #[test]
+    fn test_empty_tree_filtering() {
+        // Subtree selection on the empty tree should produce the empty tree.
+        let mut empty_hierarchy = NodeHierarchy::new("root", vec![], vec![]);
+        empty_hierarchy.sort();
+
+        let subtree_selector = vec!["*:root"];
+        assert_eq!(
+            parse_selectors_and_filter_hierarchy(empty_hierarchy.clone(), subtree_selector),
+            empty_hierarchy.clone()
+        );
+
+        // Selecting a property on the root, even if it doesnt exist, should produce the empty tree.
+        let fake_property_selector = vec!["*:root:blorp"];
+        assert_eq!(
+            parse_selectors_and_filter_hierarchy(empty_hierarchy.clone(), fake_property_selector),
             empty_hierarchy.clone()
         );
     }
