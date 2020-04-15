@@ -11,6 +11,7 @@ use {
     },
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigs},
+    fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
@@ -34,6 +35,7 @@ pub struct RepositoryManager {
     static_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
     dynamic_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
     repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
+    cobalt_sender: CobaltSender,
     inspect: RepositoryManagerInspectState,
 }
 
@@ -242,8 +244,9 @@ impl RepositoryManager {
         let fut = open_cached_or_new_repository(
             Arc::clone(&self.repositories),
             Arc::clone(&config),
-            Arc::clone(&self.inspect.repos_node),
             url.repo(),
+            self.cobalt_sender.clone(),
+            Arc::clone(&self.inspect.repos_node),
         );
 
         async move {
@@ -271,8 +274,9 @@ impl RepositoryManager {
         let repo = open_cached_or_new_repository(
             Arc::clone(&self.repositories),
             Arc::clone(&config),
-            Arc::clone(&self.inspect.repos_node),
             url.repo(),
+            self.cobalt_sender.clone(),
+            Arc::clone(&self.inspect.repos_node),
         );
 
         async move {
@@ -289,8 +293,9 @@ impl RepositoryManager {
 async fn open_cached_or_new_repository(
     repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     config: Arc<RepositoryConfig>,
-    inspect_node: Arc<inspect::Node>,
     url: &RepoUrl,
+    cobalt_sender: CobaltSender,
+    inspect_node: Arc<inspect::Node>,
 ) -> Result<Arc<AsyncMutex<Repository>>, OpenRepoError> {
     // Exit early if we've already connected to this repository.
     if let Some(conn) = repositories.read().get(url) {
@@ -301,10 +306,12 @@ async fn open_cached_or_new_repository(
     // create the client first, even if it proves to be redundant because we lost the race with
     // another thread.
     let mut repo = Arc::new(futures::lock::Mutex::new(
-        Repository::new(&config, inspect_node.create_child(url.host())).await.map_err(|e| {
-            fx_log_err!("Could not create Repository for {}: {:?}", config.repo_url(), e);
-            OpenRepoError(e)
-        })?,
+        Repository::new(&config, cobalt_sender, inspect_node.create_child(url.host()))
+            .await
+            .map_err(|e| {
+                fx_log_err!("Could not create Repository for {}: {:?}", config.repo_url(), e);
+                OpenRepoError(e)
+            })?,
     ));
 
     // It's still possible we raced with some other connection attempt
@@ -316,18 +323,22 @@ async fn open_cached_or_new_repository(
 #[derive(Debug)]
 pub struct UnsetInspectNode;
 
+#[derive(Debug)]
+pub struct UnsetCobaltSender;
+
 /// [RepositoryManagerBuilder] constructs a [RepositoryManager], optionally initializing it
 /// with [RepositoryConfig]s passed in directly or loaded out of the filesystem.
 #[derive(Clone, Debug)]
-pub struct RepositoryManagerBuilder<N> {
+pub struct RepositoryManagerBuilder<S, N> {
     dynamic_configs_path: Option<PathBuf>,
     static_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
     dynamic_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
     experiments: Experiments,
+    cobalt_sender: S,
     inspect_node: N,
 }
 
-impl<N> RepositoryManagerBuilder<N> {
+impl<S, N> RepositoryManagerBuilder<S, N> {
     /// Load a directory of [RepositoryConfigs](RepositoryConfig) files into the
     /// [RepositoryManager], or error out if we encounter errors during the load. The
     /// [RepositoryManagerBuilder] is also returned on error in case the errors should be ignored.
@@ -353,7 +364,7 @@ impl<N> RepositoryManagerBuilder<N> {
     }
 }
 
-impl RepositoryManagerBuilder<UnsetInspectNode> {
+impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
     /// Create a new builder and initialize it with the dynamic
     /// [RepositoryConfigs](RepositoryConfig) from this path if it exists, and add it to the
     /// [RepositoryManager], or error out if we encounter errors during the load. The
@@ -385,6 +396,7 @@ impl RepositoryManagerBuilder<UnsetInspectNode> {
                 .map(|config| (config.repo_url().clone(), Arc::new(config)))
                 .collect(),
             experiments,
+            cobalt_sender: UnsetCobaltSender,
             inspect_node: UnsetInspectNode,
         };
 
@@ -415,29 +427,61 @@ impl RepositoryManagerBuilder<UnsetInspectNode> {
 
         self
     }
+}
 
+impl<S> RepositoryManagerBuilder<S, UnsetInspectNode> {
     /// Use the given inspect_node in the [RepositoryManager].
     pub fn inspect_node(
         self,
         inspect_node: inspect::Node,
-    ) -> RepositoryManagerBuilder<inspect::Node> {
+    ) -> RepositoryManagerBuilder<S, inspect::Node> {
         RepositoryManagerBuilder {
             dynamic_configs_path: self.dynamic_configs_path,
             static_configs: self.static_configs,
             dynamic_configs: self.dynamic_configs,
             experiments: self.experiments,
+            cobalt_sender: self.cobalt_sender,
             inspect_node,
         }
     }
 }
 
+impl<N> RepositoryManagerBuilder<UnsetCobaltSender, N> {
+    /// Use the given cobalt_sender in the [RepositoryManager].
+    pub fn cobalt_sender(
+        self,
+        cobalt_sender: CobaltSender,
+    ) -> RepositoryManagerBuilder<CobaltSender, N> {
+        RepositoryManagerBuilder {
+            dynamic_configs_path: self.dynamic_configs_path,
+            static_configs: self.static_configs,
+            dynamic_configs: self.dynamic_configs,
+            experiments: self.experiments,
+            cobalt_sender,
+            inspect_node: self.inspect_node,
+        }
+    }
+}
+
 #[cfg(test)]
-impl RepositoryManagerBuilder<UnsetInspectNode> {
-    /// In test configurations, allow building the [RepositoryManager] without a configured inspect
-    /// node.
+impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
+    /// In test configurations, allow building the [RepositoryManager] without configuring Inspect
+    /// or Cobalt.
     pub fn build(self) -> RepositoryManager {
+        let (sender, _) = futures::channel::mpsc::channel(0);
+        let cobalt_sender = CobaltSender::new(sender);
         let node = inspect::Inspector::new().root().create_child("test");
-        self.inspect_node(node).build()
+        self.cobalt_sender(cobalt_sender).inspect_node(node).build()
+    }
+}
+
+#[cfg(test)]
+impl RepositoryManagerBuilder<UnsetCobaltSender, inspect::Node> {
+    /// In test configurations, allow building the [RepositoryManager] without configuring Cobalt.
+    pub fn build(self) -> RepositoryManager {
+        let (sender, _) = futures::channel::mpsc::channel(0);
+        let cobalt_sender = CobaltSender::new(sender);
+        self.cobalt_sender(cobalt_sender).build()
     }
 }
 
@@ -453,7 +497,7 @@ fn to_inspectable_map_with_node(
     out
 }
 
-impl RepositoryManagerBuilder<inspect::Node> {
+impl RepositoryManagerBuilder<CobaltSender, inspect::Node> {
     /// Build the [RepositoryManager].
     pub fn build(self) -> RepositoryManager {
         let inspect = RepositoryManagerInspectState {
@@ -479,6 +523,7 @@ impl RepositoryManagerBuilder<inspect::Node> {
             ),
             _experiments: self.experiments,
             repositories: Arc::new(RwLock::new(HashMap::new())),
+            cobalt_sender: self.cobalt_sender,
             inspect,
         }
     }

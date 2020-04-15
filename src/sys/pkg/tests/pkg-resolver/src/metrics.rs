@@ -210,6 +210,33 @@ async fn pkg_resolver_fetch_blob_failure() {
     .await;
 }
 
+// Resolving a package should trigger the creation of a TUF client.
+#[fasync::run_singlethreaded(test)]
+async fn create_tuf_client_success() {
+    verify_resolve_emits_cobalt_events_with_metric_id(
+        PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
+        Option::<handler::StaticResponseCode>::None,
+        Ok(()),
+        metrics::CREATE_TUF_CLIENT_METRIC_ID,
+        vec![metrics::CreateTufClientMetricDimensionResult::Success],
+    )
+    .await;
+}
+
+// Resolving a package should trigger the creation of a TUF client.
+#[fasync::run_singlethreaded(test)]
+async fn create_tuf_client_error() {
+    let handler = handler::ForPath::new("/1.root.json", handler::StaticResponseCode::not_found());
+    verify_resolve_emits_cobalt_events_with_metric_id(
+        PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
+        Some(handler),
+        Err(Status::INTERNAL),
+        metrics::CREATE_TUF_CLIENT_METRIC_ID,
+        vec![metrics::CreateTufClientMetricDimensionResult::NotFound],
+    )
+    .await;
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn font_resolver_is_font_package_check_not_font() {
     let env = TestEnvBuilder::new().build();

@@ -8,7 +8,9 @@
 use {
     crate::{cache::MerkleForError, clock, inspect_util},
     anyhow::format_err,
+    cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig, RepositoryKey},
+    fuchsia_cobalt::CobaltSender,
     fuchsia_hyper::HyperConnector,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::fx_log_err,
@@ -64,6 +66,7 @@ struct RepositoryInspectState {
 impl Repository {
     pub async fn new(
         config: &RepositoryConfig,
+        cobalt_sender: CobaltSender,
         node: inspect::Node,
     ) -> Result<Self, anyhow::Error> {
         let local = EphemeralRepository::<Json>::new();
@@ -76,7 +79,8 @@ impl Repository {
             HttpRepositoryBuilder::new_with_uri(remote_url, fuchsia_hyper::new_https_client())
                 .build();
 
-        Self::new_from_local_and_remote(local, remote, config, mirror_config, node).await
+        Self::new_from_local_and_remote(local, remote, config, mirror_config, cobalt_sender, node)
+            .await
     }
 
     async fn new_from_local_and_remote(
@@ -84,6 +88,7 @@ impl Repository {
         remote: HttpRepository<HttpsConnector<HyperConnector>, Json>,
         config: &RepositoryConfig,
         mirror_config: &MirrorConfig,
+        mut cobalt_sender: CobaltSender,
         node: inspect::Node,
     ) -> Result<Self, anyhow::Error> {
         let mut root_keys = vec![];
@@ -111,24 +116,38 @@ impl Repository {
             }
         }
 
+        let updating_client =
+            updating_tuf_client::UpdatingTufClient::from_tuf_client_and_mirror_config(
+                tuf::client::Client::with_trusted_root_keys(
+                    Config::default(),
+                    &MetadataVersion::Number(config.root_version()),
+                    config.root_threshold(),
+                    &root_keys,
+                    local,
+                    remote,
+                )
+                .await
+                .map_err(|e| {
+                    cobalt_sender.log_event_count(
+                        metrics::CREATE_TUF_CLIENT_METRIC_ID,
+                        tuf_error_as_event_code(&e),
+                        0,
+                        1,
+                    );
+                    format_err!("Unable to create rust tuf client, received error {:?}", e)
+                })?,
+                mirror_config,
+                node.create_child("updating_tuf_client"),
+            );
+        cobalt_sender.log_event_count(
+            metrics::CREATE_TUF_CLIENT_METRIC_ID,
+            metrics::CreateTufClientMetricDimensionResult::Success,
+            0,
+            1,
+        );
+
         Ok(Self {
-            updating_client:
-                updating_tuf_client::UpdatingTufClient::from_tuf_client_and_mirror_config(
-                    tuf::client::Client::with_trusted_root_keys(
-                        Config::default(),
-                        &MetadataVersion::Number(config.root_version()),
-                        config.root_threshold(),
-                        &root_keys,
-                        local,
-                        remote,
-                    )
-                    .await
-                    .map_err(|e| {
-                        format_err!("Unable to create rust tuf client, received error {:?}", e)
-                    })?,
-                    mirror_config,
-                    node.create_child("updating_tuf_client"),
-                ),
+            updating_client,
             inspect: RepositoryInspectState {
                 last_merkle_successfully_resolved_time: node.create_string(
                     "last_merkle_successfully_resolved_time",
@@ -185,6 +204,41 @@ impl Repository {
     }
 }
 
+// Using a free fn instead of impl From<> because both types are from other crates.
+fn tuf_error_as_event_code(e: &TufError) -> metrics::CreateTufClientMetricDimensionResult {
+    match e {
+        TufError::BadSignature => metrics::CreateTufClientMetricDimensionResult::BadSignature,
+        TufError::Encoding(_) => metrics::CreateTufClientMetricDimensionResult::Encoding,
+        TufError::ExpiredMetadata(_) => {
+            metrics::CreateTufClientMetricDimensionResult::ExpiredMetadata
+        }
+        TufError::IllegalArgument(_) => {
+            metrics::CreateTufClientMetricDimensionResult::IllegalArgument
+        }
+        TufError::MissingMetadata(_) => {
+            metrics::CreateTufClientMetricDimensionResult::MissingMetadata
+        }
+        TufError::NoSupportedHashAlgorithm => {
+            metrics::CreateTufClientMetricDimensionResult::NoSupportedHashAlgorithm
+        }
+        TufError::NotFound => metrics::CreateTufClientMetricDimensionResult::NotFound,
+        TufError::Opaque(_) => metrics::CreateTufClientMetricDimensionResult::Opaque,
+        TufError::Programming(_) => metrics::CreateTufClientMetricDimensionResult::Programming,
+        TufError::TargetUnavailable => {
+            metrics::CreateTufClientMetricDimensionResult::TargetUnavailable
+        }
+        TufError::UnkonwnHashAlgorithm(_) => {
+            metrics::CreateTufClientMetricDimensionResult::UnknownHashAlgorithm
+        }
+        TufError::UnknownKeyType(_) => {
+            metrics::CreateTufClientMetricDimensionResult::UnknownKeyType
+        }
+        TufError::VerificationFailure(_) => {
+            metrics::CreateTufClientMetricDimensionResult::VerificationFailure
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -205,9 +259,17 @@ mod tests {
     const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 
     impl Repository {
-        pub async fn new_no_inspect(config: &RepositoryConfig) -> Result<Self, anyhow::Error> {
-            Repository::new(config, inspect::Inspector::new().root().create_child("inner-node"))
-                .await
+        pub async fn new_no_cobalt_or_inspect(
+            config: &RepositoryConfig,
+        ) -> Result<Self, anyhow::Error> {
+            let (sender, _) = futures::channel::mpsc::channel(0);
+            let cobalt_sender = CobaltSender::new(sender);
+            Repository::new(
+                config,
+                cobalt_sender,
+                inspect::Inspector::new().root().create_child("inner-node"),
+            )
+            .await
         }
     }
 
@@ -225,7 +287,8 @@ mod tests {
         let served_repository = repo.server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo = Repository::new_no_inspect(&repo_config).await.expect("created opened repo");
+        let mut repo =
+            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
         let target_path =
             TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
 
@@ -249,7 +312,8 @@ mod tests {
         let served_repository = repo.server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo = Repository::new_no_inspect(&repo_config).await.expect("created opened repo");
+        let mut repo =
+            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
         let target_path =
             TargetPath::new("path_that_doesnt_exist/0".to_string()).expect("created target path");
 
@@ -279,7 +343,8 @@ mod tests {
             .expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo = Repository::new_no_inspect(&repo_config).await.expect("created opened repo");
+        let mut repo =
+            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
         let target_path =
             TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
 
@@ -318,7 +383,8 @@ mod tests {
             .expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config_with_subscribe(repo_url);
-        let repo = Repository::new_no_inspect(&repo_config).await.expect("created opened repo");
+        let repo =
+            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
         served_repository.wait_for_n_connected_auto_clients(1).await;
         (served_repository, notified, repo)
     }
@@ -393,6 +459,11 @@ mod inspect_tests {
 
     const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 
+    fn dummy_sender() -> CobaltSender {
+        let (sender, _) = futures::channel::mpsc::channel(0);
+        CobaltSender::new(sender)
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn initialization_and_destruction() {
         let inspector = inspect::Inspector::new();
@@ -406,9 +477,13 @@ mod inspect_tests {
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
 
-        let repo = Repository::new(&repo_config, inspector.root().create_child("repo-node"))
-            .await
-            .expect("created Repository");
+        let repo = Repository::new(
+            &repo_config,
+            dummy_sender(),
+            inspector.root().create_child("repo-node"),
+        )
+        .await
+        .expect("created Repository");
         assert_inspect_tree!(
             inspector,
             root: {
@@ -447,9 +522,13 @@ mod inspect_tests {
         let served_repository = repo.server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo = Repository::new(&repo_config, inspector.root().create_child("repo-node"))
-            .await
-            .expect("created Repository");
+        let mut repo = Repository::new(
+            &repo_config,
+            dummy_sender(),
+            inspector.root().create_child("repo-node"),
+        )
+        .await
+        .expect("created Repository");
         let target_path = tuf::metadata::TargetPath::new("just-meta-far/0".to_string())
             .expect("created target path");
 
@@ -495,9 +574,13 @@ mod inspect_tests {
             .expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config_with_subscribe(repo_url);
-        let repo = Repository::new(&repo_config, inspector.root().create_child("repo-node"))
-            .await
-            .expect("created opened repo");
+        let repo = Repository::new(
+            &repo_config,
+            dummy_sender(),
+            inspector.root().create_child("repo-node"),
+        )
+        .await
+        .expect("created opened repo");
         served_repository.wait_for_n_connected_auto_clients(1).await;
 
         served_repository

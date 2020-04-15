@@ -292,7 +292,7 @@ fn load_repo_manager(
             }
             builder
         }
-    }
+    }.cobalt_sender(cobalt_sender)
     .build()
 }
 
