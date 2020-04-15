@@ -97,12 +97,10 @@ fuchsia::sysmem::BufferCollectionConstraints StreamConstraints::MakeBufferCollec
   ZX_ASSERT(!formats_.empty());
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.min_buffer_count_for_camping = buffer_count_for_camping_;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
   if (contiguous_) {
-    constraints.has_buffer_memory_constraints = true;
     constraints.buffer_memory_constraints.physically_contiguous_required = true;
-    constraints.buffer_memory_constraints.secure_required = false;
-  } else {
-    constraints.has_buffer_memory_constraints = false;
   }
   if (cpu_access_) {
     constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
