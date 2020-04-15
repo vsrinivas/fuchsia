@@ -6,10 +6,11 @@
 
 use super::*;
 
+use anyhow::Error;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
     DeviceState, EnergyScanParameters, EnergyScanResult, NetworkScanParameters,
-    ProvisioningMonitorMarker,
+    ProvisioningMonitorMarker, ProvisioningMonitorRequest, ProvisioningProgress,
 };
 use futures::stream::BoxStream;
 
@@ -62,9 +63,41 @@ impl Driver for DummyDevice {
     async fn join_network(
         &self,
         params: ProvisioningParams,
-        _progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
+        progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
     ) {
         fx_log_info!("Got join command: {:?}", params);
+        let mut request_stream = progress.into_stream().expect("progress into stream");
+
+        let fut = async move {
+            match request_stream.try_next().await? {
+                Some(ProvisioningMonitorRequest::WatchProgress { responder: r }) => {
+                    r.send(&mut Ok(dummy_device::ProvisioningProgress::Progress(0.5)))?;
+                }
+                None => {
+                    return Err(format_err!("invalid request"));
+                }
+            };
+
+            match request_stream.try_next().await? {
+                Some(ProvisioningMonitorRequest::WatchProgress { responder: r }) => {
+                    r.send(&mut Ok(dummy_device::ProvisioningProgress::Identity(params.identity)))?;
+                }
+                None => {
+                    return Err(format_err!("invalid request"));
+                }
+            };
+
+            Ok::<(), Error>(())
+        };
+
+        match fut.await {
+            Ok(()) => {
+                fx_log_info!("Replied to ProvisioningProgress requests");
+            }
+            Err(e) => {
+                fx_log_info!("Error replying to ProvisioningProgress requests: {:?}", e);
+            }
+        }
     }
 
     async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>> {

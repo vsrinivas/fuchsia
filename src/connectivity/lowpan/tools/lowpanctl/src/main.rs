@@ -7,6 +7,7 @@ use fuchsia_async as fasync;
 
 pub mod context;
 pub mod invocation;
+pub mod join_command;
 pub mod leave_command;
 pub mod list_command;
 pub mod provision_command;
