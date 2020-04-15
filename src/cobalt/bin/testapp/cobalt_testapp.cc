@@ -69,7 +69,6 @@ bool CobaltTestApp::RunTests() {
   TRY_TEST(TestLogIntHistogram(&logger_));
   TRY_TEST(TestLogCustomEvent(&logger_));
   TRY_TEST(TestLogCobaltEvent(&logger_));
-  TRY_TEST(DoDebugMetricTest());
 
   if (!DoLocalAggregationTests(kEventAggregatorBackfillDays)) {
     return false;
@@ -82,18 +81,6 @@ void CobaltTestApp::SetChannel(const std::string &current_channel) {
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   system_data_updater_->SetChannel(current_channel, &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK) << "Unable to set channel";
-}
-
-bool CobaltTestApp::DoDebugMetricTest() {
-  // Currently Cobalt is hard-coded to always allow debug metrics.
-  // Here we test that setting the channel (the mechanism that we used
-  // to use to determine debug/non-debug) actually has no effect.
-  bool should_succeed = true;
-  SetChannel("prod");
-  TRY_TEST(TestDebugMetric(&logger_, should_succeed, &cobalt_controller_));
-  SetChannel("devhost");
-  TRY_TEST(TestDebugMetric(&logger_, should_succeed, &cobalt_controller_));
-  return true;
 }
 
 bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {

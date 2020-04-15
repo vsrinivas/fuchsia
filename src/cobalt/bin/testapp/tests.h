@@ -38,12 +38,6 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger);
 
 bool TestLogCobaltEvent(CobaltTestAppLogger* logger);
 
-// Tests that using a Cobalt metric registered as being debug-only either
-// does or does not result in an Observation added to the Observation Store,
-// depending on the expectation specified by |should_succeed|.
-bool TestDebugMetric(CobaltTestAppLogger* logger, bool should_succeed,
-                     fuchsia::cobalt::ControllerSyncPtr* cobalt_controller);
-
 // Tests of local aggregation.
 //
 // Each of these tests assumes that the EventAggregator has been updated with
