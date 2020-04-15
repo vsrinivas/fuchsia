@@ -92,10 +92,6 @@ zx_status_t DisplayView::RunOneSession() {
     image_info.height = format.coded_height;
     image_info.stride = format.bytes_per_row;
 
-    FX_LOGS(INFO) << "width=" << image_info.width;
-    FX_LOGS(INFO) << "height=" << image_info.height;
-    FX_LOGS(INFO) << "stride=" << image_info.stride;
-
     ZX_ASSERT(format.pixel_format.type == fuchsia::sysmem::PixelFormatType::NV12);
     image_info.pixel_format = fuchsia::images::PixelFormat::NV12;
     for (uint32_t i = 0; i < buffers.buffer_count; ++i) {

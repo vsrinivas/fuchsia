@@ -81,19 +81,6 @@ zx_status_t StreamProvider::Initialize() {
     return status;
   }
 
-  // Walk through the configurations
-  for (auto c : configurations_) {
-    FX_LOGS(INFO) << "configuration:";
-
-    for (auto s : c.streams) {
-      auto f = s.image_format;
-
-      FX_LOGS(INFO) << "  stream:";
-      FX_LOGS(INFO) << "    image_format.coded_width=" << f.coded_width;
-      FX_LOGS(INFO) << "    image_format.coded_height=" << f.coded_height;
-    }
-  }
-
   // Remember which format was requested
   ZX_ASSERT(configurations_.size() > kConfigId);
   ZX_ASSERT(configurations_[kConfigId].streams.size() > kStreamId);
