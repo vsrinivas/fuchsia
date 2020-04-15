@@ -6,6 +6,8 @@ toc:
   path: /docs/community/contribute/docs/documentation_standards.md
 - title: "General style guidelines"
   path: /docs/community/contribute/docs/documentation_style_guide.md
+- title: "Code sample style guidelines"
+  path: /docs/community/contribute/docs/code_sample_style_guide.md
 - title: "Documentation types"
   path: /docs/community/contribute/docs/documentation_types.md
 - title: "Documentation comments"

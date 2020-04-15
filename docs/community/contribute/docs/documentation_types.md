@@ -171,4 +171,6 @@ Consider the following when you think that you might need to create a codelab:
 - If a procedural document is meant for beginner users, avoid adding procedures that you might
   consider better suited for advanced users. If your document is intended for advanced users, state
   it up front and give them a list of prerequisites before they go through your how to or codelab.
-  
+- If you are incorporating code samples in your procedural documentation,
+  review the best practices detailed in [Code sample style guidelines](/docs/community/contribute/docs/code_sample_style_guide.md)
+
