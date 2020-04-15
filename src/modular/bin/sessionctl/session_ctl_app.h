@@ -89,7 +89,7 @@ class SessionCtlApp {
 
   std::string GenerateMissingFlagString(const std::vector<std::string>& missing_flags);
 
-  fuchsia::modular::internal::BasemgrDebugPtr basemgr_;
+  fuchsia::modular::internal::BasemgrDebugPtr basemgr_debug_;
   fuchsia::modular::PuppetMaster* const puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   const fxl::CommandLine command_line_;

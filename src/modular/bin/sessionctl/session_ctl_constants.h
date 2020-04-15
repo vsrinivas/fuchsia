@@ -19,7 +19,6 @@ constexpr char kRemoveModCommandString[] = "remove_mod";
 constexpr char kRestartSessionCommandString[] = "restart_session";
 constexpr char kHelpCommandString[] = "help";
 constexpr char kSelectNextSessionCommandString[] = "next_session_shell";
-constexpr char kShutdownBasemgrCommandString[] = "shutdown_basemgr";
 
 // Flags to pass to SessionCtlApp.
 constexpr char kJsonOutFlagString[] = "json_out";

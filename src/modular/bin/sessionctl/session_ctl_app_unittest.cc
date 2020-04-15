@@ -404,18 +404,5 @@ TEST_F(SessionCtlAppTest, DeleteAllStories) {
   EXPECT_FALSE(GetStoryData(story2));
 }
 
-TEST_F(SessionCtlAppTest, ShutdownBasemgr) {
-  auto command_line =
-      fxl::CommandLineFromInitializerList({kSessionCtlString, kShutdownBasemgrCommandString});
-  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
-  RunLoopUntilCommandExecutes([&] {
-    return sessionctl.ExecuteCommand(
-        kShutdownBasemgrCommandString, command_line, [this](std::string error) {
-          done_ = true;
-          EXPECT_EQ("Could not find a running basemgr. Is it running?", error);
-        });
-  });
-}
-
 }  // namespace
 }  // namespace modular

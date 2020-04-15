@@ -14,7 +14,7 @@ namespace modular {
 SessionCtlApp::SessionCtlApp(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
                              fuchsia::modular::PuppetMaster* const puppet_master,
                              const modular::Logger& logger, async_dispatcher_t* const dispatcher)
-    : basemgr_(std::move(basemgr)),
+    : basemgr_debug_(std::move(basemgr)),
       puppet_master_(puppet_master),
       logger_(logger),
       dispatcher_(dispatcher) {}
@@ -35,8 +35,6 @@ void SessionCtlApp::ExecuteCommand(std::string cmd, const fxl::CommandLine& comm
     ExecuteRestartSessionCommand(std::move(done));
   } else if (cmd == kSelectNextSessionCommandString) {
     ExecuteSelectNextSessionShellCommand(command_line, std::move(done));
-  } else if (cmd == kShutdownBasemgrCommandString) {
-    ExecuteShutdownBasemgrCommand(command_line, std::move(done));
   } else {
     done(kGetUsageErrorString);
   }
@@ -187,7 +185,7 @@ void SessionCtlApp::ExecuteListStoriesCommand(fit::function<void(std::string)> d
 }
 
 void SessionCtlApp::ExecuteRestartSessionCommand(fit::function<void(std::string)> done) {
-  basemgr_->RestartSession([this, done = std::move(done)]() {
+  basemgr_debug_->RestartSession([this, done = std::move(done)]() {
     logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
     done("");
   });
@@ -195,20 +193,10 @@ void SessionCtlApp::ExecuteRestartSessionCommand(fit::function<void(std::string)
 
 void SessionCtlApp::ExecuteSelectNextSessionShellCommand(const fxl::CommandLine& command_line,
                                                          fit::function<void(std::string)> done) {
-  basemgr_->SelectNextSessionShell([this, done = std::move(done)]() {
+  basemgr_debug_->SelectNextSessionShell([this, done = std::move(done)]() {
     logger_.Log(kSelectNextSessionCommandString, std::vector<std::string>());
     done("");
   });
-}
-
-void SessionCtlApp::ExecuteShutdownBasemgrCommand(const fxl::CommandLine& command_line,
-                                                  fit::function<void(std::string)> done) {
-  if (basemgr_) {
-    basemgr_->Shutdown();
-    basemgr_.set_error_handler([done = std::move(done)](zx_status_t status) { done(""); });
-    return;
-  }
-  done("Could not find a running basemgr. Is it running?");
 }
 
 fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusStoryCommand() {
