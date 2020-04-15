@@ -35,6 +35,10 @@ constexpr std::array<std::pair<const char*, fuchsia::media::AudioRenderUsage>,
         {"COMMUNICATION", fuchsia::media::AudioRenderUsage::COMMUNICATION},
     }};
 
+// Any audio output device fed by the system audio mixer will have this min_lead_time, at least.
+// Until then, we cannot be confident that our renderer is routed to an actual device.
+// TODO(50117): remove this workaround, once the underlying fxb/50017 is fixed in audio_core.
+constexpr zx::duration kRealDeviceMinLeadTime = zx::msec(1);
 }  // namespace
 
 namespace media::tools {

@@ -75,7 +75,7 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
   // Create VmoMapper(s) that Create+Map a VMO. Send these down via AudioRenderer::AddPayloadBuffer.
   CreateMemoryMapping();
 
-  // Retrieve the default reference clock for this renderer; once we receive it, start playback.
+  // Retrieve the default reference clock for this renderer; once a device is ready, start playback.
   GetClockAndStart();
 }
 
@@ -437,9 +437,15 @@ void MediaApp::GetClockAndStart() {
 
     if (verbose_) {
       audio::clock::GetAndDisplayClockDetails(reference_clock_);
+
+      auto mono_now = zx::clock::get_monotonic();
+      printf("- Received ref clock at %lu.  (%s sufficient min_lead_time)\n", mono_now.get(),
+             (min_lead_time_ >= kRealDeviceMinLeadTime ? "Received" : "Awaiting"));
     }
 
-    Play();
+    if (min_lead_time_ >= kRealDeviceMinLeadTime) {
+      Play();
+    }
   });
 }
 
@@ -688,11 +694,19 @@ void MediaApp::SetAudioRendererEvents() {
   });
 
   audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
-    if (verbose_) {
-      printf("- OnMinLeadTimeChanged: %lu\n", min_lead_time_nsec);
-    }
     received_min_lead_time_ = true;
     min_lead_time_ = zx::duration(min_lead_time_nsec);
+
+    if (verbose_) {
+      printf("- OnMinLeadTimeChanged: %lu at %lu: %s to start playback  (%s ref clock)\n",
+             min_lead_time_nsec, zx::clock::get_monotonic().get(),
+             (min_lead_time_ >= kRealDeviceMinLeadTime ? "sufficient" : "insufficient"),
+             (reference_clock_.is_valid() ? "Received" : "Awaiting"));
+    }
+
+    if (min_lead_time_ >= kRealDeviceMinLeadTime && reference_clock_.is_valid()) {
+      Play();
+    }
   };
 
   audio_renderer_->EnableMinLeadTimeEvents(true);
