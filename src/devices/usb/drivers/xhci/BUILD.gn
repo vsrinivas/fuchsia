@@ -41,12 +41,12 @@ driver_module("xhci") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/xdc-server-utils",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-pci",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/usb",
+    "//zircon/system/ulib/xdc-server-utils",
   ]
 }
 

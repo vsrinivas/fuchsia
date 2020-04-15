@@ -18,6 +18,6 @@ executable("xdc-server") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/xdc-host-utils",
-    "//zircon/public/lib/xdc-server-utils",
+    "//zircon/system/ulib/xdc-server-utils",
   ]
 }
