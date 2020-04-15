@@ -277,15 +277,24 @@ impl PeerInner {
                     Some(stream) => responder.send(stream.endpoint().capabilities()),
                 }
             }
-            // TOOO(2783): React correctly to sink connections.
-            // For now, we reject all opens.
-            avdtp::Request::Open { responder, stream_id: _ } => {
-                responder.reject(avdtp::ErrorCode::NotSupportedCommand)
+            avdtp::Request::Open { responder, stream_id } => {
+                if self.opening.is_none() {
+                    return responder.reject(avdtp::ErrorCode::BadState);
+                }
+                let stream = match self.get_mut(&stream_id) {
+                    Ok(s) => s,
+                    Err(e) => return responder.reject(e),
+                };
+                match stream.endpoint_mut().establish() {
+                    Ok(()) => responder.send(),
+                    Err(_) => responder.reject(avdtp::ErrorCode::BadState),
+                }
             }
             avdtp::Request::Close { responder, stream_id } => {
-                match self.local.get_mut(&stream_id) {
-                    None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
-                    Some(stream) => stream.release(responder, &self.peer).await,
+                let peer = self.peer.clone();
+                match self.get_mut(&stream_id) {
+                    Err(e) => responder.reject(e),
+                    Ok(stream) => stream.release(responder, &peer).await,
                 }
             }
             avdtp::Request::SetConfiguration {
@@ -294,12 +303,15 @@ impl PeerInner {
                 remote_stream_id,
                 capabilities,
             } => {
-                let peer_id = self.peer_id.clone();
-                let stream = match self.local.get_mut(&local_stream_id) {
-                    None => return responder.reject(None, avdtp::ErrorCode::BadAcpSeid),
-                    Some(stream) => stream,
+                if self.opening.is_some() {
+                    return responder.reject(None, avdtp::ErrorCode::BadState);
+                }
+                self.opening = Some(local_stream_id.clone());
+                let peer_id = self.peer_id;
+                let stream = match self.get_mut(&local_stream_id) {
+                    Err(e) => return responder.reject(None, e),
+                    Ok(stream) => stream,
                 };
-                // TODO(BT-695): Confirm the MediaCodec parameters are OK
                 match stream.configure(&peer_id, &remote_stream_id, capabilities) {
                     Ok(_) => responder.send(),
                     Err(e) => {
@@ -310,11 +322,11 @@ impl PeerInner {
                 }
             }
             avdtp::Request::GetConfiguration { stream_id, responder } => {
-                let stream = match self.local.get(&stream_id) {
+                let endpoint = match self.local.get(&stream_id) {
                     None => return responder.reject(avdtp::ErrorCode::BadAcpSeid),
-                    Some(stream) => stream,
+                    Some(stream) => stream.endpoint(),
                 };
-                match stream.endpoint().get_configuration() {
+                match endpoint.get_configuration() {
                     Ok(c) => responder.send(&c),
                     Err(e) => {
                         // Only happens when the stream is in the wrong state
@@ -324,11 +336,10 @@ impl PeerInner {
                 }
             }
             avdtp::Request::Reconfigure { responder, local_stream_id, capabilities } => {
-                let stream = match self.local.get_mut(&local_stream_id) {
-                    None => return responder.reject(None, avdtp::ErrorCode::BadAcpSeid),
-                    Some(stream) => stream,
+                let stream = match self.get_mut(&local_stream_id) {
+                    Err(e) => return responder.reject(None, e),
+                    Ok(stream) => stream,
                 };
-                // TODO(41656): Actually tweak the codec parameters.
                 match stream.reconfigure(capabilities) {
                     Ok(_) => responder.send(),
                     Err(e) => {
@@ -338,24 +349,33 @@ impl PeerInner {
                 }
             }
             avdtp::Request::Start { responder, stream_ids } => {
-                // TOOO(2783): React correctly to sink starts.
-                // No endpoint should be able to get into this state unless it's already opened.
                 for seid in stream_ids {
-                    return responder.reject(&seid, avdtp::ErrorCode::NotSupportedCommand);
+                    let stream = match self.get_mut(&seid) {
+                        Err(e) => return responder.reject(&seid, e),
+                        Ok(stream) => stream,
+                    };
+                    if let Err(_) = stream.start() {
+                        return responder.reject(&seid, avdtp::ErrorCode::BadState);
+                    }
                 }
-                Ok(())
+                responder.send()
             }
             avdtp::Request::Suspend { responder, stream_ids } => {
-                // TODO(39881): Support suspend and resume by the peer in source mode.
                 for seid in stream_ids {
-                    return responder.reject(&seid, avdtp::ErrorCode::NotSupportedCommand);
+                    let stream = match self.get_mut(&seid) {
+                        Err(e) => return responder.reject(&seid, e),
+                        Ok(stream) => stream,
+                    };
+                    if let Err(_) = stream.suspend() {
+                        return responder.reject(&seid, avdtp::ErrorCode::BadState);
+                    }
                 }
-                Ok(())
+                responder.send()
             }
             avdtp::Request::Abort { responder, stream_id } => {
-                let stream = match self.local.get_mut(&stream_id) {
-                    None => return Ok(()),
-                    Some(stream) => stream,
+                let stream = match self.get_mut(&stream_id) {
+                    Err(_) => return Ok(()),
+                    Ok(stream) => stream,
                 };
                 stream.abort(None).await?;
                 self.opening = self.opening.take().filter(|id| id != &stream_id);
@@ -369,6 +389,7 @@ impl PeerInner {
 mod tests {
     use super::*;
 
+    use bt_a2dp::media_types::*;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth::ErrorCode;
     use fidl_fuchsia_bluetooth_bredr::{
@@ -379,6 +400,8 @@ mod tests {
     use matches::assert_matches;
     use std::convert::TryInto;
     use std::task::Poll;
+
+    use crate::media_task::tests::TestMediaTaskBuilder;
 
     fn setup_avdtp_peer() -> (avdtp::Peer, zx::Socket) {
         let (remote, signaling) =
@@ -401,10 +424,8 @@ mod tests {
     /// ProfileRequestStream connected to the profile_proxy, and the Peer object.
     fn setup_peer_test() -> (zx::Socket, ProfileRequestStream, Peer) {
         let (avdtp, remote) = setup_avdtp_peer();
-
         let (profile_proxy, requests) =
             create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
-
         let peer =
             Peer::create(PeerId(1), avdtp, stream::tests::build_test_streams(), profile_proxy);
 
@@ -901,9 +922,139 @@ mod tests {
         }
     }
 
+    /// Test that the remote end can configure and start a stream.
     #[test]
+    fn test_peer_as_acceptor() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let (avdtp, remote) = setup_avdtp_peer();
+        let (profile_proxy, _requests) =
+            create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
+        let mut streams = stream::Streams::new();
+        let mut test_builder = TestMediaTaskBuilder::new();
+        streams.insert(stream::Stream::build(
+            stream::tests::make_sbc_endpoint(1),
+            test_builder.builder(),
+        ));
+        let next_task_fut = test_builder.next_task();
+        pin_mut!(next_task_fut);
+
+        let peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy);
+        let remote_peer = avdtp::Peer::new(remote).expect("create peer failure");
+
+        let discover_fut = remote_peer.discover();
+        pin_mut!(discover_fut);
+
+        let expected = vec![stream::tests::make_sbc_endpoint(1).information()];
+        match exec.run_until_stalled(&mut discover_fut) {
+            Poll::Ready(Ok(res)) => assert_eq!(res, expected),
+            x => panic!("Expected discovery to complete and got {:?}", x),
+        };
+
+        let sbc_endpoint_id = 1_u8.try_into().expect("should be able to get sbc endpointid");
+        let unknown_endpoint_id = 2_u8.try_into().expect("should be able to get sbc endpointid");
+
+        let get_caps_fut = remote_peer.get_capabilities(&sbc_endpoint_id);
+        pin_mut!(get_caps_fut);
+
+        match exec.run_until_stalled(&mut get_caps_fut) {
+            // There are two caps (mediatransport, mediacodec) in the sbc endpoint.
+            Poll::Ready(Ok(caps)) => assert_eq!(2, caps.len()),
+            x => panic!("Get capabilities should be ready but got {:?}", x),
+        };
+
+        let get_caps_fut = remote_peer.get_capabilities(&unknown_endpoint_id);
+        pin_mut!(get_caps_fut);
+
+        match exec.run_until_stalled(&mut get_caps_fut) {
+            // 0x12 is BadAcpSeid
+            Poll::Ready(Err(avdtp::Error::RemoteRejected(0x12))) => {}
+            x => panic!("Get capabilities should be a ready error but got {:?}", x),
+        };
+
+        let get_caps_fut = remote_peer.get_all_capabilities(&sbc_endpoint_id);
+        pin_mut!(get_caps_fut);
+
+        match exec.run_until_stalled(&mut get_caps_fut) {
+            // There are two caps (mediatransport, mediacodec) in the sbc endpoint.
+            Poll::Ready(Ok(caps)) => assert_eq!(2, caps.len()),
+            x => panic!("Get capabilities should be ready but got {:?}", x),
+        };
+
+        let sbc_codec_info = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ48000HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::SIXTEEN,
+            SbcSubBands::EIGHT,
+            SbcAllocation::LOUDNESS,
+            /* min_bpv= */ 53,
+            /* max_bpv= */ 53,
+        )
+        .expect("sbc codec info");
+
+        let capabilities = vec![
+            avdtp::ServiceCapability::MediaTransport,
+            avdtp::ServiceCapability::MediaCodec {
+                media_type: avdtp::MediaType::Audio,
+                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                codec_extra: sbc_codec_info.to_bytes().to_vec(),
+            },
+        ];
+
+        let set_config_fut =
+            remote_peer.set_configuration(&sbc_endpoint_id, &sbc_endpoint_id, &capabilities);
+        pin_mut!(set_config_fut);
+
+        match exec.run_until_stalled(&mut set_config_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Set capabilities should be ready but got {:?}", x),
+        };
+
+        // The task should be created locally
+        let media_task = match exec.run_until_stalled(&mut next_task_fut) {
+            Poll::Ready(Some(task)) => task,
+            x => panic!("Local task should be created at this point: {:?}", x),
+        };
+        assert!(!media_task.is_started());
+
+        let open_fut = remote_peer.open(&sbc_endpoint_id);
+        pin_mut!(open_fut);
+        match exec.run_until_stalled(&mut open_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Open should be ready but got {:?}", x),
+        };
+
+        // Establish a media transport stream
+        let (_remote_transport, transport) =
+            zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
+
+        assert_eq!(Some(()), peer.receive_channel(transport).ok());
+
+        let stream_ids = vec![sbc_endpoint_id.clone()];
+        let start_fut = remote_peer.start(&stream_ids);
+        pin_mut!(start_fut);
+        match exec.run_until_stalled(&mut start_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Start should be ready but got {:?}", x),
+        };
+
+        // Should have started the media task
+        assert!(media_task.is_started());
+
+        let suspend_fut = remote_peer.suspend(&stream_ids);
+        pin_mut!(suspend_fut);
+        match exec.run_until_stalled(&mut suspend_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Start should be ready but got {:?}", x),
+        };
+
+        // Should have stopped the media task on suspend.
+        assert!(!media_task.is_started());
+    }
+
     /// Test that the version check method correctly differentiates between newer
     /// and older A2DP versions.
+    #[test]
     fn test_a2dp_version_check() {
         let p1: ProfileDescriptor = ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,

@@ -113,7 +113,6 @@ impl Stream {
     }
 
     /// Suspends the media processor and endpoint.
-    #[cfg(test)]
     pub fn suspend(&mut self) -> avdtp::Result<()> {
         self.endpoint.suspend()?;
         self.media_task_ref()?.stop().map_err(Into::into)
@@ -215,7 +214,7 @@ pub mod tests {
         }
     }
 
-    fn make_endpoint(seid: u8) -> StreamEndpoint {
+    pub fn make_sbc_endpoint(seid: u8) -> StreamEndpoint {
         StreamEndpoint::new(
             seid,
             avdtp::MediaType::Audio,
@@ -226,7 +225,7 @@ pub mod tests {
     }
 
     fn make_stream(seid: u8) -> Stream {
-        Stream::build(make_endpoint(seid), TestMediaTaskBuilder::new().builder())
+        Stream::build(make_sbc_endpoint(seid), TestMediaTaskBuilder::new().builder())
     }
 
     #[test]
@@ -245,7 +244,8 @@ pub mod tests {
         assert!(streams.get_mut(&first_id).is_some());
         assert!(streams.get_mut(&missing_id).is_none());
 
-        let expected_info = vec![make_endpoint(1).information(), make_endpoint(6).information()];
+        let expected_info =
+            vec![make_sbc_endpoint(1).information(), make_sbc_endpoint(6).information()];
 
         let infos = streams.information();
 
@@ -265,7 +265,7 @@ pub mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         let mut task_builder = TestMediaTaskBuilder::new();
-        let mut stream = Stream::build(make_endpoint(1), task_builder.builder());
+        let mut stream = Stream::build(make_sbc_endpoint(1), task_builder.builder());
         let next_task_fut = task_builder.next_task();
         let remote_id = 1_u8.try_into().expect("good id");
 
