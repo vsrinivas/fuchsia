@@ -128,7 +128,6 @@ func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) {
 		}
 	case TargetEnum.X86_64:
 		q.SetFlag("-machine", "q35")
-		q.SetFlag("-device", "isa-debug-exit,iobase=0xf4,iosize=0x04")
 		if kvm {
 			q.SetFlag("-cpu", "host")
 			q.SetFlag("-enable-kvm")

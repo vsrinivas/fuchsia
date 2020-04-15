@@ -312,7 +312,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	t.process = cmd.Process
 
 	go func() {
-		t.c <- qemu.CheckExitCode(cmd.Wait())
+		t.c <- cmd.Wait()
 		os.RemoveAll(workdir)
 	}()
 	return nil
