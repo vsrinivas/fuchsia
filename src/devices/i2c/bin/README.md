@@ -8,8 +8,8 @@ Provides I2C devices writes and reads.
    Reads one byte from the specified `ADDRESS` of the specified `DEVICE` devfs node and
    outputs to the console. `ADDRESS` here refers to the internal register set of the device, the
    I2C address is already part of the `DEVICE` we are communicating with. Examples:
-   a) `i2cutil /dev/class/i2c/004 r 5`, reads one byte from the one byte address 0x05.
-   b) `i2cutil /dev/class/i2c/004 r 0x20 0x3d`, reads one byte from the two byte address 0x203d.
+   a) `i2cutil r /dev/class/i2c/004 5`, reads one byte from the one byte address 0x05.
+   b) `i2cutil r /dev/class/i2c/004 0x20 0x3d`, reads one byte from the two byte address 0x203d.
    This command is a convenience command, it is equivalent to a `t` command (transaction, see
    below) with 2 segments, one that writes the address bytes and one that reads one byte back.
 
@@ -17,8 +17,8 @@ Provides I2C devices writes and reads.
 
    Writes `DATA` bytes into the specified I2C `DEVICE` devfs node and outputs to the console.
    Depending on the device, the first byte(s) correspond to the devices' internal address. Examples:
-   a) `i2cutil /dev/class/i2c/004 w 0x05 0x12`, writes byte 0x12 to address 0x05.
-   b) `i2cutil /dev/class/i2c/004 w 0x20 0x3d 0x80`, writes byte 0x80 to address 0x203d.
+   a) `i2cutil w /dev/class/i2c/004 0x05 0x12`, writes byte 0x12 to address 0x05.
+   b) `i2cutil w /dev/class/i2c/004 0x20 0x3d 0x80`, writes byte 0x80 to address 0x203d.
    This command is a convenience command, it is equivalent to a `t` command (transaction, see
    below) with 1 segment that writes the specified bytes.
 
@@ -29,8 +29,8 @@ Provides I2C devices writes and reads.
    for each read `LENGTH` bytes are read from the specified I2C `DEVICE` devfs node.
    Outputs to the console the read bytes.
    Examples:
-   `i2cutil /dev/class/i2c/000 t w 5 r 1` (equivalent to example a) within section 1 above).
-   `i2cutil /dev/class/i2c/000 t w 0x20 0x3d 0x80` (equivalent to example b) within 2 above).
+   `i2cutil t /dev/class/i2c/000 w 5 r 1` (equivalent to example a) within section 1 above).
+   `i2cutil t /dev/class/i2c/000 w 0x20 0x3d 0x80` (equivalent to example b) within 2 above).
 
 4. `i2cutil p[ing]`
 

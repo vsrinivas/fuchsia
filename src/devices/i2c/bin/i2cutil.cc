@@ -15,10 +15,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/span.h>
 #include <fbl/unique_fd.h>
-#include <pretty/hexdump.h>
 
 static void usage(char* prog) {
   printf("Usage:\n");
+  printf(" (DATA and ADDRESS are a list of space separated bytes BYTE_0 BYTE_1...BYTE_N)\n");
   printf(" %s w[rite]    DEVICE DATA...                                          Write bytes\n",
          prog);
   printf(" %s r[ead]     DEVICE ADDRESS                                          Reads one byte\n",
@@ -29,10 +29,16 @@ static void usage(char* prog) {
          prog);
 }
 
-static void convert_args(char** argv, size_t length, uint8_t* buffer) {
+static zx_status_t convert_args(char** argv, size_t length, uint8_t* buffer) {
   for (size_t i = 0; i < length; i++) {
-    buffer[i] = static_cast<uint8_t>(strtoul(argv[i], nullptr, 0));
+    char* end = nullptr;
+    unsigned long value = strtoul(argv[i], &end, 0);
+    if (value > 0xFF || *end != '\0') {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    buffer[i] = static_cast<uint8_t>(value);
   }
+  return ZX_OK;
 }
 
 static zx_status_t write_bytes(llcpp::fuchsia::hardware::i2c::Device2::SyncClient client,
@@ -131,23 +137,43 @@ static zx_status_t transact(llcpp::fuchsia::hardware::i2c::Device2::SyncClient c
     } else {
       if (is_write[segment_cnt]) {
         auto write_len = segment_start[segment_cnt + 1] - segment_start[segment_cnt] - 1;
-        convert_args(&argv[3 + element_cnt], write_len, write_buffer_pos);
+        auto status = convert_args(&argv[3 + element_cnt], write_len, write_buffer_pos);
+        if (status != ZX_OK) {
+          usage(argv[0]);
+          return status;
+        }
         write_data[write_cnt].set_data(fidl::unowned_ptr(write_buffer_pos));
         write_data[write_cnt].set_count(write_len);
         write_buffer_pos += write_len;
         write_cnt++;
         element_cnt += write_len;
       } else {
-        convert_args(&argv[3 + element_cnt], 1, &read_lengths[read_cnt]);
+        auto status = convert_args(&argv[3 + element_cnt], 1, &read_lengths[read_cnt]);
+        if (status != ZX_OK) {
+          usage(argv[0]);
+          return status;
+        }
         read_cnt++;
         element_cnt++;
       }
       segment_cnt++;
     }
   }
-  ZX_ASSERT(write_cnt == n_writes);
-  ZX_ASSERT(read_cnt + write_cnt == segment_cnt);
+  if (write_cnt != n_writes || read_cnt + write_cnt != segment_cnt) {
+    usage(argv[0]);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
+  if (n_writes != 0) {
+    printf("Writes:");
+    for (size_t i = 0; i < n_writes; ++i) {
+      printf(" ");
+      for (size_t j = 0; j < write_data[i].count(); ++j) {
+        printf("0x%02X ", write_data[i].data()[j]);
+      }
+    }
+    printf("\n");
+  }
   auto read = client.Transfer(
       std::move(segments_is_write),
       fidl::VectorView<fidl::VectorView<uint8_t>>(fidl::unowned_ptr(write_data.get()), n_writes),
@@ -155,11 +181,18 @@ static zx_status_t transact(llcpp::fuchsia::hardware::i2c::Device2::SyncClient c
   auto status = read.status();
   if (status == ZX_OK) {
     if (read->result.is_err()) {
-      status = ZX_ERR_INTERNAL;
+      return ZX_ERR_INTERNAL;
     } else {
       auto& read_data = read->result.response().read_segments_data;
-      for (auto& i : read_data) {
-        hexdump8_ex(i.data(), i.count(), 0);
+      if (read_data.count() != 0) {
+        printf("Reads:");
+        for (auto& i : read_data) {
+          printf(" ");
+          for (size_t j = 0; j < i.count(); ++j) {
+            printf("0x%02X ", i.data()[j]);
+          }
+        }
+        printf("\n");
       }
     }
   }
@@ -200,10 +233,21 @@ static int device_cmd(int argc, char** argv, bool print_out) {
 
       size_t n_write_bytes = argc - 3;
       auto write_buffer = std::make_unique<uint8_t[]>(n_write_bytes);
-      convert_args(&argv[3], n_write_bytes, write_buffer.get());
+      status = convert_args(&argv[3], n_write_bytes, write_buffer.get());
+      if (status != ZX_OK) {
+        usage(argv[0]);
+        return status;
+      }
 
       status =
           write_bytes(std::move(client), fbl::Span<uint8_t>(write_buffer.get(), n_write_bytes));
+      if (status == ZX_OK && print_out) {
+        printf("Write: ");
+        for (size_t i = 0; i < n_write_bytes; ++i) {
+          printf("0x%02X ", write_buffer[i]);
+        }
+        printf("\n");
+      }
       break;
     }
 
@@ -215,13 +259,21 @@ static int device_cmd(int argc, char** argv, bool print_out) {
 
       size_t n_write_bytes = argc - 3;
       auto write_buffer = std::make_unique<uint8_t[]>(n_write_bytes);
-      convert_args(&argv[3], n_write_bytes, write_buffer.get());
+      auto status = convert_args(&argv[3], n_write_bytes, write_buffer.get());
+      if (status != ZX_OK) {
+        usage(argv[0]);
+        return status;
+      }
 
       uint8_t out_byte = 0;
       status = read_byte(std::move(client), fbl::Span<uint8_t>(write_buffer.get(), n_write_bytes),
                          &out_byte);
       if (status == ZX_OK && print_out) {
-        hexdump8_ex(&out_byte, 1, 0);
+        printf("Read from");
+        for (size_t i = 0; i < n_write_bytes; ++i) {
+          printf(" 0x%02X", write_buffer[i]);
+        }
+        printf(": 0x%02X\n", out_byte);
       }
       break;
     }
@@ -241,12 +293,8 @@ static int device_cmd(int argc, char** argv, bool print_out) {
       usage(argv[0]);
       return -1;
   }
-  if (status == ZX_OK) {
-    if (print_out) {
-      printf("Success\n");
-    }
-  } else {
-    printf("Error %d\n", status);
+  if (status != ZX_OK) {
+    printf("Error %s\n", zx_status_get_string(status));
   }
   return status;
 }
