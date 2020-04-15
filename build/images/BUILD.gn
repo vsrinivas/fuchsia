@@ -55,8 +55,9 @@ group("cache_packages") {
   testonly = true
   visibility = [ ":*" ]
   public_deps = [ "//:additional_cache_packages" ]
+  assert_no_deps = [ "//build/validate:cfv2_tag" ]
   if (check_production_eligibility) {
-    assert_no_deps = [ "//build/validate:non_production_tag" ]
+    assert_no_deps += [ "//build/validate:non_production_tag" ]
   }
 }
 

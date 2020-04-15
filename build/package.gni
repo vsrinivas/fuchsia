@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/allowlist_v2.gni")
 import("//build/cml/cml.gni")
 import("//build/cmx/cmx.gni")
 import("//build/images/args.gni")
@@ -437,6 +438,18 @@ template("package") {
         }
 
         pkg.deps += [ ":$validate" ]
+      }
+    }
+
+    # Tag v2 components, so that later we can assert they are not in cache + universe.
+    # TODO(46491) remove allowlist and cfv2 tag once CFv2 uses pkg-resolver to launch components.
+    foreach(meta, pkg.meta) {
+      if (get_path_info(meta.dest, "extension") == "cm") {
+        # Only add v2 tag if meta.dest is NOT in the allowlist.
+        if (v2_components_allowed_in_cache + [ meta.dest ] - [ meta.dest ] ==
+            v2_components_allowed_in_cache) {
+          pkg.deps += [ "//build/validate:cfv2_tag" ]
+        }
       }
     }
 

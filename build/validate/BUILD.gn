@@ -7,3 +7,7 @@
 # build to fail.
 group("non_production_tag") {
 }
+
+# Add this tag to deps of packages with a CFv2 manifest.
+group("cfv2_tag") {
+}
