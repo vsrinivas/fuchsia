@@ -22,6 +22,10 @@ class HermeticAudioTest : public TestFixture {
 
  protected:
   static void SetUpTestSuite();
+  struct Options {
+    const char* audio_core_config_data_path = nullptr;
+  };
+  static void SetUpTestSuiteWithOptions(Options options);
   static void TearDownTestSuite();
 
  private:

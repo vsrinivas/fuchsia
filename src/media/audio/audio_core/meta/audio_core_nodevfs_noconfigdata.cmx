@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/audio_core"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage",
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

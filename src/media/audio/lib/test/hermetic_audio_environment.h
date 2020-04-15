@@ -23,7 +23,7 @@ namespace media::audio::test {
 
 class HermeticAudioEnvironment {
  public:
-  HermeticAudioEnvironment();
+  HermeticAudioEnvironment(const char* audio_core_config_data_path = nullptr);
   ~HermeticAudioEnvironment();
 
   void Start(async::Loop* loop);
@@ -49,6 +49,8 @@ class HermeticAudioEnvironment {
   // |hermetic_environment_| with the mutex.
   std::condition_variable cv_;
   std::mutex mutex_;
+
+  const char* audio_core_config_data_path_;
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> hermetic_environment_;
   std::thread env_thread_;

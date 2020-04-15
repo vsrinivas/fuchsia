@@ -62,6 +62,14 @@ template("audio_core_package") {
                 "//src/media/audio/audio_core/meta/audio_core_nodevfs.cmx")
         dest = "audio_core_nodevfs.cmx"
       },
+
+      # The noconfigdata cmx additionally doesn't request the config-data feature so that the test
+      # fixture may provide a custom /config/data directory.
+      {
+        path = rebase_path(
+                "//src/media/audio/audio_core/meta/audio_core_nodevfs_noconfigdata.cmx")
+        dest = "audio_core_nodevfs_noconfigdata.cmx"
+      },
     ]
   }
 }

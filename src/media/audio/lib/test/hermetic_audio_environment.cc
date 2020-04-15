@@ -9,6 +9,8 @@
 #include <fuchsia/ultrasound/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
+#include <zircon/status.h>
 
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -20,9 +22,9 @@ namespace {
 constexpr const char kIsolatedDevmgrServiceName[] = "fuchsia.media.AudioTestDevmgr";
 
 fit::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
-    const char* url, std::vector<std::string> args,
-    std::shared_ptr<sys::ServiceDirectory> services) {
-  return [url, args = std::move(args), services = std::move(services)] {
+    const char* url, std::vector<std::string> args, std::shared_ptr<sys::ServiceDirectory> services,
+    const char* config_data_path = nullptr) {
+  return [url, args = std::move(args), services = std::move(services), config_data_path] {
     zx::channel devfs = services->Connect<fuchsia::io::Directory>(kIsolatedDevmgrServiceName)
                             .Unbind()
                             .TakeChannel();
@@ -32,6 +34,26 @@ fit::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
     launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
     launch_info.flat_namespace->paths.push_back("/dev");
     launch_info.flat_namespace->directories.push_back(std::move(devfs));
+
+    zx::channel config_data;
+    if (config_data_path) {
+      FX_LOGS(INFO) << "Using path '" << config_data_path << "' for /config/data directory for "
+                    << url << ".";
+      zx::channel remote;
+      zx::channel::create(0, &config_data, &remote);
+      zx_status_t status = fdio_open(
+          config_data_path, fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_DIRECTORY,
+          remote.release());
+      if (status == ZX_OK) {
+        launch_info.flat_namespace->paths.push_back("/config/data");
+        launch_info.flat_namespace->directories.push_back(std::move(config_data));
+      } else {
+        FX_PLOGS(ERROR, status) << "Unable to open '" << config_data_path << ".";
+      }
+    } else {
+      FX_LOGS(INFO) << "No config_data provided for " << url;
+    }
+
     return launch_info;
   };
 }
@@ -43,9 +65,10 @@ fit::function<fuchsia::sys::LaunchInfo()> AudioLaunchInfo(
 }
 
 fit::function<fuchsia::sys::LaunchInfo()> AudioCoreLaunchInfo(
-    std::shared_ptr<sys::ServiceDirectory> services) {
+    std::shared_ptr<sys::ServiceDirectory> services, const char* config_data_path) {
   return LaunchInfoWithIsolatedDevmgrForUrl(
-      "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core_nodevfs.cmx", {}, services);
+      "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core_nodevfs_noconfigdata.cmx", {}, services,
+      config_data_path);
 }
 
 fit::function<fuchsia::sys::LaunchInfo()> VirtualAudioLaunchInfo(
@@ -72,7 +95,8 @@ void EnvironmentMain(HermeticAudioEnvironment* env) {
 
 }  // namespace
 
-HermeticAudioEnvironment::HermeticAudioEnvironment() {
+HermeticAudioEnvironment::HermeticAudioEnvironment(const char* audio_core_config_data_path)
+    : audio_core_config_data_path_(audio_core_config_data_path) {
   // Create the thread here to ensure the rest of the class has fully initialized before starting
   // the new thread, which takes a reference to |this|.
   env_thread_ = std::thread(EnvironmentMain, this);
@@ -105,18 +129,23 @@ void HermeticAudioEnvironment::Start(async::Loop* loop) {
   // cmx files; these are needed to allow us to map in our isolated devmgr under /dev for each
   // component, otherwise these components would still be provided the shared/global devmgr.
   auto services = sys::testing::EnvironmentServices::Create(real_env);
-  services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services),
-                                     fuchsia::media::ActivityReporter::Name_);
-  services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services),
-                                     fuchsia::media::AudioCore::Name_);
-  services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services),
-                                     fuchsia::media::AudioDeviceEnumerator::Name_);
+  services->AddServiceWithLaunchInfo(
+      "audio_core", AudioCoreLaunchInfo(real_services, audio_core_config_data_path_),
+      fuchsia::media::ActivityReporter::Name_);
+  services->AddServiceWithLaunchInfo(
+      "audio_core", AudioCoreLaunchInfo(real_services, audio_core_config_data_path_),
+      fuchsia::media::AudioCore::Name_);
+  services->AddServiceWithLaunchInfo(
+      "audio_core", AudioCoreLaunchInfo(real_services, audio_core_config_data_path_),
+      fuchsia::media::AudioDeviceEnumerator::Name_);
   services->AddServiceWithLaunchInfo("audio", AudioLaunchInfo(real_services),
                                      fuchsia::media::Audio::Name_);
-  services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services),
-                                     fuchsia::media::UsageReporter::Name_);
-  services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services),
-                                     fuchsia::ultrasound::Factory::Name_);
+  services->AddServiceWithLaunchInfo(
+      "audio_core", AudioCoreLaunchInfo(real_services, audio_core_config_data_path_),
+      fuchsia::media::UsageReporter::Name_);
+  services->AddServiceWithLaunchInfo(
+      "audio_core", AudioCoreLaunchInfo(real_services, audio_core_config_data_path_),
+      fuchsia::ultrasound::Factory::Name_);
   services->AddServiceWithLaunchInfo("virtual_audio", VirtualAudioLaunchInfo(real_services),
                                      fuchsia::virtualaudio::Control::Name_);
   services->AddServiceWithLaunchInfo("virtual_audio", VirtualAudioLaunchInfo(real_services),
