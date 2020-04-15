@@ -12,6 +12,7 @@
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-gpio.h>
 #include <soc/mt8167/mt8167-hw.h>

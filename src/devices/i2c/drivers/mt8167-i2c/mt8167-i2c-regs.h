@@ -7,6 +7,7 @@
 
 #include <zircon/types.h>
 
+#include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-hw.h>
 

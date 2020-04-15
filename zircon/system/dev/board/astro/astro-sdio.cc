@@ -3,20 +3,20 @@
 // found in the LICENSE file.
 
 #include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/align.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/init-step.h>
 #include <ddk/platform-defs.h>
+#include <fbl/algorithm.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
-#include <lib/zircon-internal/align.h>
 #include <soc/aml-common/aml-sd-emmc.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <wifi/wifi-config.h>
-#include <lib/zircon-internal/align.h>
 
 #include "astro-gpios.h"
 #include "astro.h"

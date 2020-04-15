@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 
 #include <ddk/debug.h>
+#include <fbl/algorithm.h>
 
 #include "aml-fclk.h"
 #include "hiu-registers.h"

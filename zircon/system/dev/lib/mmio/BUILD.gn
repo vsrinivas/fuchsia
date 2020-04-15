@@ -6,4 +6,8 @@ zx_library("mmio") {
   sdk = "source"
   sdk_headers = [ "lib/mmio/mmio.h" ]
   sources = []
+  public_deps = [
+    # <lib/mmio/mmio.h> has #include <fbl/macros.h>.
+    "$zx/system/ulib/fbl:headers",
+  ]
 }

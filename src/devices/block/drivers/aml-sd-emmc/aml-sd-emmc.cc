@@ -27,6 +27,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sdmmc.h>
 #include <ddktl/protocol/composite.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>
 #include <hw/sdmmc.h>
@@ -164,9 +165,9 @@ zx_status_t AmlSdEmmc::WaitForInterruptImpl() {
 
 void AmlSdEmmc::ClearStatus() {
   AmlSdEmmcStatus::Get()
-    .ReadFrom(&mmio_)
-    .set_reg_value(AmlSdEmmcStatus::kClearStatus)
-    .WriteTo(&mmio_);
+      .ReadFrom(&mmio_)
+      .set_reg_value(AmlSdEmmcStatus::kClearStatus)
+      .WriteTo(&mmio_);
 }
 
 zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
@@ -182,9 +183,8 @@ zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
 
   auto complete_ac = fbl::MakeAutoCall([&]() { ClearStatus(); });
 
-  auto on_bus_error = fbl::MakeAutoCall([&]() {
-    AmlSdEmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_);
-  });
+  auto on_bus_error = fbl::MakeAutoCall(
+      [&]() { AmlSdEmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
 
   if (rxd_err) {
     if (req->probe_tuning_cmd) {
@@ -202,8 +202,8 @@ zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.desc_err()) {
-    AML_SD_EMMC_ERROR("Controller does not own the descriptor, cmd%d, status=0x%x\n",
-                      req->cmd_idx, status_irq.reg_value());
+    AML_SD_EMMC_ERROR("Controller does not own the descriptor, cmd%d, status=0x%x\n", req->cmd_idx,
+                      status_irq.reg_value());
     return ZX_ERR_IO_INVALID;
   }
   if (status_irq.resp_err()) {
@@ -686,9 +686,7 @@ zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
 
   ClearStatus();
 
-  start_reg.set_desc_busy(1)
-      .set_desc_addr((static_cast<uint32_t>(desc_phys)) >> 2)
-      .WriteTo(&mmio_);
+  start_reg.set_desc_busy(1).set_desc_addr((static_cast<uint32_t>(desc_phys)) >> 2).WriteTo(&mmio_);
 
   zx_status_t res = WaitForInterrupt(req);
   FinishReq(req);

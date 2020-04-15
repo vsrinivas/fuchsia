@@ -10,6 +10,8 @@
 
 #include <algorithm>
 
+#include <fbl/algorithm.h>
+
 #include "firmware_blob.h"
 #include "macros.h"
 #include "memory_barriers.h"

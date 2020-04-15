@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/syscalls/smc.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/metadata/fw.h>
+#include <fbl/algorithm.h>
 #include <soc/msm8x53/msm8x53-clock.h>
-#include <zircon/syscalls/smc.h>
 
 #include "msm8x53.h"
 
@@ -68,36 +70,36 @@ zx_status_t Msm8x53::PilInit() {
   dev.mmio_count = countof(fw_mmios);
 
   constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
+      BI_MATCH(),
   };
   constexpr zx_bind_inst_t clk_crypto_ahb_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoAhbClk),
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+      BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoAhbClk),
   };
   constexpr zx_bind_inst_t clk_crypto_axi_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoAxiClk),
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+      BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoAxiClk),
   };
   constexpr zx_bind_inst_t clk_crypto_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoClk),
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+      BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoClk),
   };
   const device_fragment_part_t clk_crypto_ahb_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(clk_crypto_ahb_match), clk_crypto_ahb_match},
+      {fbl::count_of(root_match), root_match},
+      {fbl::count_of(clk_crypto_ahb_match), clk_crypto_ahb_match},
   };
   const device_fragment_part_t clk_crypto_axi_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(clk_crypto_axi_match), clk_crypto_axi_match},
+      {fbl::count_of(root_match), root_match},
+      {fbl::count_of(clk_crypto_axi_match), clk_crypto_axi_match},
   };
   const device_fragment_part_t clk_crypto_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(clk_crypto_match), clk_crypto_match},
+      {fbl::count_of(root_match), root_match},
+      {fbl::count_of(clk_crypto_match), clk_crypto_match},
   };
   const device_fragment_t fragments[] = {
-    {fbl::count_of(clk_crypto_ahb_fragment), clk_crypto_ahb_fragment},
-    {fbl::count_of(clk_crypto_axi_fragment), clk_crypto_axi_fragment},
-    {fbl::count_of(clk_crypto_fragment), clk_crypto_fragment},
+      {fbl::count_of(clk_crypto_ahb_fragment), clk_crypto_ahb_fragment},
+      {fbl::count_of(clk_crypto_axi_fragment), clk_crypto_axi_fragment},
+      {fbl::count_of(clk_crypto_fragment), clk_crypto_fragment},
   };
 
   auto status = pbus_.CompositeDeviceAdd(&dev, fragments, fbl::count_of(fragments), UINT32_MAX);

@@ -167,14 +167,14 @@ class RegisterBase {
   template <typename F>
   void Print(F print_fn) {
     static_assert(PrinterEnabled::value, "Pass hwreg::EnablePrinter to RegisterBase to enable");
-    internal::PrintRegister(print_fn, params_.printer.fields, params_.printer.num_fields,
+    internal::PrintRegister(print_fn, params_.printer.fields.data(), params_.printer.num_fields,
                             reg_value_, params_.fields_mask, sizeof(ValueType));
   }
 
   // Equivalent to Print([](const char* arg) { printf("%s\n", arg); });
   void Print() {
     static_assert(PrinterEnabled::value, "Pass hwreg::EnablePrinter to RegisterBase to enable");
-    internal::PrintRegisterPrintf(params_.printer.fields, params_.printer.num_fields, reg_value_,
+    internal::PrintRegisterPrintf(params_.printer.fields.data(), params_.printer.num_fields, reg_value_,
                                   params_.fields_mask, sizeof(ValueType));
   }
 

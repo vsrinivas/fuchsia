@@ -20,6 +20,7 @@
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/protocol/composite.h>
+#include <fbl/algorithm.h>
 
 #include "ddktl/protocol/amlogiccanvas.h"
 #include "ddktl/protocol/sysmem.h"
@@ -445,8 +446,8 @@ zx_status_t DeviceCtx::CanvasConfig(zx_handle_t vmo, uint32_t bytes_per_row, uin
   return ZX_OK;
 }
 
-zx_status_t DeviceCtx::CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* y_canvas, ScopedCanvasId* uv_canvas, uint32_t* packed_canvas_ids)
-{
+zx_status_t DeviceCtx::CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* y_canvas,
+                                           ScopedCanvasId* uv_canvas, uint32_t* packed_canvas_ids) {
   uint32_t canvas_width = fbl::round_up(encoder_width_, kCanvasMinWidthAlignment);
   uint32_t canvas_height = fbl::round_up(encoder_height_, kCanvasMinHeightAlignment);
 
@@ -465,9 +466,8 @@ zx_status_t DeviceCtx::CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* 
   if (status != ZX_OK) {
     return status;
   }
-  status =
-      CanvasConfig(dup_vmo.get(), canvas_width, canvas_height / 2,
-                   /*offset=*/canvas_width * canvas_height, uv_canvas, CANVAS_FLAGS_READ);
+  status = CanvasConfig(dup_vmo.get(), canvas_width, canvas_height / 2,
+                        /*offset=*/canvas_width * canvas_height, uv_canvas, CANVAS_FLAGS_READ);
   if (status != ZX_OK) {
     return status;
   }
@@ -478,7 +478,6 @@ zx_status_t DeviceCtx::CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* 
 }
 
 zx_status_t DeviceCtx::CanvasInit() {
-
   auto status = CanvasInitReference(&*dec0_, &dec0_y_canvas_, &dec0_uv_canvas_, &dblk_buf_canvas_);
   if (status != ZX_OK) {
     return status;

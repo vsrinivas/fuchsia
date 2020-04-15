@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include <fbl/algorithm.h>
+
 #include "amlogic-video.h"
 #include "gtest/gtest.h"
 #include "tests/test_basic_client.h"
@@ -43,9 +45,9 @@ class FakeOwner : public VideoDecoder::Owner {
                                       FirmwareBlob::FirmwareVdecLoadMode vdec) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  [[nodiscard]] zx_status_t TeeVp9AddHeaders(
-      zx_paddr_t page_phys_base, uint32_t before_size, uint32_t max_after_size,
-      uint32_t *after_size) override {
+  [[nodiscard]] zx_status_t TeeVp9AddHeaders(zx_paddr_t page_phys_base, uint32_t before_size,
+                                             uint32_t max_after_size,
+                                             uint32_t* after_size) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
   std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer, uint32_t offset,

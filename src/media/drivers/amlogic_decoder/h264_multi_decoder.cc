@@ -8,6 +8,8 @@
 
 #include <cmath>
 
+#include <fbl/algorithm.h>
+
 #include "h264_utils.h"
 #include "media/base/decoder_buffer.h"
 #include "media/gpu/h264_decoder.h"

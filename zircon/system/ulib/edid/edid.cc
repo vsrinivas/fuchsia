@@ -10,6 +10,7 @@
 
 #include <memory>
 
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
 #include "eisa_vid_lut.h"

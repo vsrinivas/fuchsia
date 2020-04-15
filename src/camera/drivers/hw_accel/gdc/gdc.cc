@@ -15,6 +15,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 

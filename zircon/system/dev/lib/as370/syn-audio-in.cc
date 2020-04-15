@@ -10,6 +10,7 @@
 #include <optional>
 #include <utility>
 
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <soc/as370/as370-audio-regs.h>
 #include <soc/as370/as370-clk-regs.h>

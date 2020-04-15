@@ -7,6 +7,8 @@
 
 #include <limits.h>
 
+#include <fbl/algorithm.h>
+
 namespace as370 {
 
 // GBL Global Control Registers.

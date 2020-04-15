@@ -12,10 +12,9 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <array>
 #include <type_traits>
 #include <variant>
-
-#include <fbl/algorithm.h>
 
 namespace hwreg {
 
@@ -74,11 +73,11 @@ template <typename IntType>
 struct FieldPrinterList<true, IntType> {
   // These two members are used for implementing the Print() function above.
   // They will typically be optimized away if Print() is not used.
-  FieldPrinter fields[sizeof(IntType) * CHAR_BIT];
+  std::array<FieldPrinter, sizeof(IntType) * CHAR_BIT> fields;
   unsigned num_fields = 0;
 
   void AppendField(const char* name, uint32_t bit_high_incl, uint32_t bit_low) {
-    ZX_DEBUG_ASSERT(num_fields < fbl::count_of(fields));
+    ZX_DEBUG_ASSERT(num_fields < fields.size());
     fields[num_fields++] = FieldPrinter(name, bit_high_incl, bit_low);
   }
 };

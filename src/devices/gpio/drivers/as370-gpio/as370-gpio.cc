@@ -11,6 +11,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/platform/bus.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
 #include "as370-gpio-reg.h"

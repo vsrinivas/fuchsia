@@ -20,6 +20,7 @@
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/block.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
 #include "sdhci-reg.h"

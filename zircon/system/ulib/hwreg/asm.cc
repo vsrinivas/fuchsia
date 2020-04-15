@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <errno.h>
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <lib/fit/defer.h>
 
 #include <cctype>
+#include <cerrno>
+#include <cinttypes>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 
-#include <fbl/auto_call.h>
 #include <hwreg/asm.h>
 
 namespace hwreg {
@@ -55,7 +55,7 @@ int AsmHeader::Output(const char* filename, std::string_view include_name) {
 
   // Return early if the file exists and matches the contents.
   if (FILE* f = fopen(filename, "r")) {
-    auto cleanup = fbl::MakeAutoCall([f]() { fclose(f); });
+    auto cleanup = fit::defer([f]() { fclose(f); });
     if (fseek(f, 0, SEEK_END) == 0) {
       long int pos = ftell(f);
       if (pos > 0) {
