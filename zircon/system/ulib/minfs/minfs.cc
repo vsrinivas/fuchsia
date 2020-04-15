@@ -151,15 +151,16 @@ zx_status_t CheckSlices(const Superblock* info, size_t blocks_per_slice,
   return ZX_OK;
 }
 
-// Issues a sync to the journal and waits for it to complete.
+// Issues a sync to the journal's background thread and waits for it to complete.
 zx_status_t BlockingSync(fs::Journal* journal) {
   zx_status_t sync_status = ZX_OK;
   sync_completion_t sync_completion = {};
-  journal->schedule_task(journal->Sync().then([&](fit::result<void, zx_status_t>& a) {
-    sync_status = a.is_ok() ? ZX_OK : a.error();
-    sync_completion_signal(&sync_completion);
-    return fit::ok();
-  }));
+  journal->schedule_task(
+      journal->Sync().then([&sync_status, &sync_completion](fit::result<void, zx_status_t>& a) {
+        sync_status = a.is_ok() ? ZX_OK : a.error();
+        sync_completion_signal(&sync_completion);
+        return fit::ok();
+      }));
   zx_status_t status = sync_completion_wait(&sync_completion, ZX_TIME_INFINITE);
   if (status != ZX_OK) {
     return status;

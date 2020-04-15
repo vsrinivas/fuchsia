@@ -90,14 +90,6 @@ zx_status_t Blob::Verify() const {
   return verifier->Verify(GetDataBuffer(), inode_.blob_size);
 }
 
-void Blob::PopulateInode(uint32_t node_index) {
-  ZX_DEBUG_ASSERT(map_index_ == 0);
-  SetState(kBlobStateReadable);
-  map_index_ = node_index;
-  Inode* inode = blobfs_->GetNode(node_index);
-  inode_ = *inode;
-}
-
 uint64_t Blob::SizeData() const {
   if (GetState() == kBlobStateReadable) {
     return inode_.blob_size;
@@ -109,9 +101,18 @@ Blob::Blob(Blobfs* bs, const Digest& digest)
     : CacheNode(digest),
       blobfs_(bs),
       flags_(kBlobStateEmpty),
-      syncing_(false),
       blob_loader_(bs, bs),
       clone_watcher_(this) {}
+
+Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
+    : CacheNode(Digest(inode.merkle_root_hash)),
+      blobfs_(bs),
+      flags_(kBlobStateReadable),
+      syncing_state_(SyncingState::kDone),
+      blob_loader_(bs, bs),
+      clone_watcher_(this),
+      map_index_(node_index),
+      inode_(inode) {}
 
 zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "size_data", size_data);
@@ -225,7 +226,11 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
     }
   }
 
-  atomic_store(&syncing_, true);
+  // Currently only the syncing_state needs protection with the lock.
+  {
+    std::scoped_lock guard(mutex_);
+    syncing_state_ = SyncingState::kSyncing;
+  }
 
   storage::UnbufferedOperationsBuilder operations;
   if (inode_.block_count) {
@@ -597,9 +602,14 @@ zx_status_t Blob::LoadVmosFromDisk() {
   if (IsDataLoaded()) {
     return ZX_OK;
   }
-  return IsPagerBacked() ? blob_loader_.LoadBlobPaged(map_index_, &page_watcher_, &data_mapping_,
-                                                      &merkle_mapping_)
-                         : blob_loader_.LoadBlob(map_index_, &data_mapping_, &merkle_mapping_);
+  zx_status_t status =
+      IsPagerBacked()
+          ? blob_loader_.LoadBlobPaged(map_index_, &page_watcher_, &data_mapping_, &merkle_mapping_)
+          : blob_loader_.LoadBlob(map_index_, &data_mapping_, &merkle_mapping_);
+
+  std::scoped_lock guard(mutex_);
+  syncing_state_ = SyncingState::kDone;  // Nothing to sync when blob was loaded from the device.
+  return status;
 }
 
 zx_status_t Blob::PrepareVmosForWriting(uint32_t node_index, size_t data_size) {
@@ -648,11 +658,7 @@ zx_status_t Blob::QueueUnlink() {
 }
 
 zx_status_t Blob::LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index) {
-  Inode* inode = bs->GetNode(node_index);
-  Digest digest(inode->merkle_root_hash);
-  fbl::RefPtr<Blob> vn = fbl::AdoptRef(new Blob(bs, digest));
-
-  vn->PopulateInode(node_index);
+  fbl::RefPtr<Blob> vn = fbl::MakeRefCounted<Blob>(bs, node_index, *bs->GetNode(node_index));
 
   auto status = vn->LoadVmosFromDisk();
   if (status != ZX_OK) {
@@ -802,31 +808,53 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 
 #endif
 
-void Blob::Sync(SyncCallback closure) {
+void Blob::Sync(SyncCallback on_complete) {
+  // This function will issue its callbacks on either the current thread or the journal thread. The
+  // vnode interface says this is OK.
   TRACE_DURATION("blobfs", "Blob::Sync");
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kSync);
-  if (atomic_load(&syncing_)) {
-    auto trace_id = TRACE_NONCE();
-    TRACE_FLOW_BEGIN("blobfs", "Blob.sync", trace_id);
-    blobfs_->Sync(
-        [this, trace_id, evt = std::move(event), cb = std::move(closure)](zx_status_t status)
-        mutable {
-          TRACE_DURATION("blobfs", "Blob::Sync::callback");
-          if (status == ZX_OK) {
-            fs::WriteTxn sync_txn(blobfs_);
-            sync_txn.EnqueueFlush();
-            status = sync_txn.Transact();
-          }
-          TRACE_FLOW_END("blobfs", "Blob.sync", trace_id);
-          cb(status);
-        });
-  } else {
-    closure(ZX_OK);
+
+  SyncingState state;
+  {
+    std::scoped_lock guard(mutex_);
+    state = syncing_state_;
+  }
+
+  switch (state) {
+    case SyncingState::kDataIncomplete: {
+      // It doesn't make sense to sync a partial blob since it can't have its proper
+      // content-addressed name without all the data.
+      on_complete(ZX_ERR_BAD_STATE);
+      break;
+    }
+    case SyncingState::kSyncing: {
+      // The blob data is complete. When this happens the Blob object will automatically write its
+      // metadata, but it may not get flushed for some time. This call both encourages the sync to
+      // happen "soon" and provides a way to get notified when it does.
+      auto trace_id = TRACE_NONCE();
+      TRACE_FLOW_BEGIN("blobfs", "Blob.sync", trace_id);
+      blobfs_->Sync([evt = std::move(event),
+                     on_complete = std::move(on_complete)](zx_status_t status) mutable {
+        // Note: this may be executed on an arbitrary thread.
+        on_complete(status);
+      });
+      break;
+    }
+    case SyncingState::kDone: {
+      // All metadata has already been synced. Calling Sync() is a no-op.
+      on_complete(ZX_OK);
+      break;
+    }
   }
 }
 
 void Blob::CompleteSync() {
-  atomic_store(&syncing_, false);
+  // Called on the journal thread when the syncing is complete.
+  {
+    std::scoped_lock guard(mutex_);
+    syncing_state_ = SyncingState::kDone;
+  }
+
   // Drop the write info, since we no longer need it.
   write_info_.reset();
 }

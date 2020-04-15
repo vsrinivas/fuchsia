@@ -668,24 +668,26 @@ BlockIterator Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {
   return BlockIterator(std::make_unique<AllocatedExtentIterator>(GetAllocator(), node_index));
 }
 
-void Blobfs::Sync(SyncCallback closure) {
+void Blobfs::Sync(SyncCallback cb) {
   TRACE_DURATION("blobfs", "Blobfs::Sync");
   if (journal_ == nullptr) {
-    return closure(ZX_OK);
+    return cb(ZX_OK);
   }
+
   auto trace_id = TRACE_NONCE();
   TRACE_FLOW_BEGIN("blobfs", "Blobfs.sync", trace_id);
+
   journal_->schedule_task(journal_->Sync().then(
-      [trace_id, closure = std::move(closure)](
-          fit::result<void, zx_status_t>& result) mutable -> fit::result<void, zx_status_t> {
+      [trace_id, cb = std::move(cb)](fit::result<void, zx_status_t>& result) mutable {
         TRACE_DURATION("blobfs", "Blobfs::Sync::callback");
+
         if (result.is_ok()) {
-          closure(ZX_OK);
+          cb(ZX_OK);
         } else {
-          closure(result.error());
+          cb(result.error());
         }
+
         TRACE_FLOW_END("blobfs", "Blobfs.sync", trace_id);
-        return fit::ok();
       }));
 }
 
@@ -757,10 +759,8 @@ zx_status_t Blobfs::InitializeVnodes() {
     if (inode->header.IsExtentContainer()) {
       continue;
     }
-    Digest digest(inode->merkle_root_hash);
-    fbl::RefPtr<Blob> vnode = fbl::AdoptRef(new Blob(this, digest));
-    vnode->SetState(kBlobStateReadable);
-    vnode->PopulateInode(node_index);
+
+    fbl::RefPtr<Blob> vnode = fbl::MakeRefCounted<Blob>(this, node_index, *inode);
 
     // This blob is added to the cache, where it will quickly be relocated into the "closed
     // set" once we drop our reference to |vnode|. Although we delay reading any of the
@@ -850,11 +850,12 @@ zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPa
 
   // Enqueue operations to read in the required blocks to the transfer buffer.
   const uint64_t data_start = DataStartBlock(Info());
-  status = StreamBlocks(
-      &block_iter, block_count, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-        txn.Enqueue(transfer_vmoid_.get(), vmo_offset - start_block, dev_offset + data_start, length);
-        return ZX_OK;
-      });
+  status = StreamBlocks(&block_iter, block_count,
+                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+                          txn.Enqueue(transfer_vmoid_.get(), vmo_offset - start_block,
+                                      dev_offset + data_start, length);
+                          return ZX_OK;
+                        });
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to enqueue read operations: %s\n", zx_status_get_string(status));
     return status;

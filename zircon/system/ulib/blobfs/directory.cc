@@ -168,14 +168,17 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
 
 void Directory::Sync(SyncCallback closure) {
   blobfs_->Sync([this, cb = std::move(closure)](zx_status_t status) mutable {
-    if (status != ZX_OK) {
-      cb(status);
-      return;
+    // This callback will be issued on the journal thread in the normal case. This is important
+    // because the WriteTxn must happen there or it will block the main thread which would block
+    // processing other requests.
+    //
+    // If called during shutdown this may get issued on the main thread but then the flush
+    // transaction should be a no-op.
+    if (status == ZX_OK) {
+      fs::WriteTxn sync_txn(blobfs_);
+      sync_txn.EnqueueFlush();
+      status = sync_txn.Transact();
     }
-
-    fs::WriteTxn sync_txn(blobfs_);
-    sync_txn.EnqueueFlush();
-    status = sync_txn.Transact();
     cb(status);
   });
 }

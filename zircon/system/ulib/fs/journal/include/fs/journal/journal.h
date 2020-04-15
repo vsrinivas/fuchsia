@@ -80,6 +80,8 @@ class Journal final : public fit::executor {
   Journal(fs::TransactionHandler* transaction_handler,
           std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer);
 
+  // Synchronizes with the background thread to ensure all enqueued work is complete before
+  // returning.
   ~Journal() final;
 
   // Transmits operations containing pure data, which may be subject to different atomicity

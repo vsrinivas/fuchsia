@@ -71,14 +71,14 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
-  // Creates a blobfs object
+  // Creates a blobfs object with the default compression algorithm.
+  //
+  // The dispatcher should be for the current thread that blobfs is running on.
   static zx_status_t Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                             MountOptions* options, zx::resource vmex_resource,
                             std::unique_ptr<Blobfs>* out);
 
-  // Overrides
-  // |write_compression_algorithm = kBlobfsDefaultCompressionAlgorithm|
-  // on blob write.
+  // Same as Create() but uses a specified compression algorithm.
   static zx_status_t CreateWithWriteCompressionAlgorithm(
       async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, MountOptions* options,
       CompressionAlgorithm write_compression_algorithm, zx::resource vmex_resource,
@@ -142,7 +142,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   ////////////////
   // Other methods.
 
-  // Returns the internal blobfs dispatcher.
+  // Returns the dispatcher for the current thread that blobfs uses.
   async_dispatcher_t* dispatcher() { return dispatcher_; }
 
   const CompressionAlgorithm& write_compression_algorithm() { return write_compression_algorithm_; }
@@ -173,8 +173,12 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   zx_status_t GetFsId(zx::event* out_fs_id) const;
   uint64_t GetFsIdLegacy() const { return fs_id_legacy_; }
 
+  // Synchronizes the journal and then executes the callback from the journal thread.
+  //
+  // During shutdown there is no journal but there is nothing to sync. In this case the callback
+  // will be issued reentrantly from this function with ZX_OK.
   using SyncCallback = fs::Vnode::SyncCallback;
-  void Sync(SyncCallback closure);
+  void Sync(SyncCallback cb);
 
   // Frees an inode, from both the reserved map and the inode table. If the
   // inode was allocated in the inode table, write the deleted inode out to
@@ -271,7 +275,9 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   BlobCache blob_cache_;
 
+  // Dispatcher for the thread this object is running on.
   async_dispatcher_t* dispatcher_ = nullptr;
+
   std::unique_ptr<BlockDevice> block_device_;
   fuchsia_hardware_block_BlockInfo block_info_ = {};
   Writability writability_;

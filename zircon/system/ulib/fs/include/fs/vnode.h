@@ -264,7 +264,8 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
   // Syncs the vnode with its underlying storage.
   //
-  // Returns the result status through a closure.
+  // Returns the result status through a closure. The closure may be executed on a different thread
+  // than called the Sync() function, or reentrantly from the same thread.
   using SyncCallback = fit::callback<void(zx_status_t status)>;
   virtual void Sync(SyncCallback closure);
 

@@ -17,8 +17,8 @@
 #include <lib/zx/event.h>
 #include <string.h>
 
-#include <atomic>
 #include <memory>
+#include <mutex>
 
 #include <blobfs/common.h>
 #include <blobfs/format.h>
@@ -78,8 +78,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Constructs a blob, reads in data, verifies the contents, then destroys the in-memory copy.
   static zx_status_t LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index);
 
-  // Constructs actual blobs
   Blob(Blobfs* bs, const Digest& digest);
+
+  // Creates a readable blob from existing data.
+  Blob(Blobfs* bs, uint32_t node_index, const Inode& inode);
+
   virtual ~Blob();
 
   ////////////////
@@ -97,8 +100,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // Other methods.
 
-  BlobFlags GetState() const { return flags_ & kBlobStateMask; }
-
   // Identifies if we can safely remove all on-disk and in-memory storage used
   // by this blob.
   bool Purgeable() const {
@@ -107,14 +108,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   bool DeletionQueued() const { return flags_ & kBlobFlagDeletable; }
 
-  void SetState(BlobFlags new_state) { flags_ = (flags_ & ~kBlobStateMask) | new_state; }
-
   uint32_t GetMapIndex() const { return map_index_; }
 
   // Returns a unique identifier for this blob
   uint32_t Ino() const { return map_index_; }
-
-  void PopulateInode(uint32_t node_index);
 
   uint64_t SizeData() const;
 
@@ -156,7 +153,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
   zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
-  void Sync(SyncCallback closure) final;
+  void Sync(SyncCallback on_complete) final;
 
   ////////////////
   // blobfs::CacheNode interface.
@@ -167,6 +164,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   ////////////////
   // Other methods.
+
+  void SetState(BlobFlags new_state) { flags_ = (flags_ & ~kBlobStateMask) | new_state; }
+  BlobFlags GetState() const { return flags_ & kBlobStateMask; }
 
   // Returns a handle to an event which will be signalled when
   // the blob is readable.
@@ -252,7 +252,26 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   Blobfs* const blobfs_;
   BlobFlags flags_ = {};
-  std::atomic_bool syncing_;
+
+  // This object is not generally threadsafe but a few small things are done on the journal thread.
+  // This mutex protects such data.
+  std::mutex mutex_;
+
+  enum class SyncingState {
+    // The Blob is being streamed and it is not possible to generate the merkle root and metadata at
+    // this point.
+    kDataIncomplete,
+
+    // The blob merkle root is complete but the metadate write has not yet submitted to the
+    // underlying media.
+    kSyncing,
+
+    // The blob exists on the underlying media.
+    kDone,
+  };
+  // This value is marked kDone on the journal's background thread but read on the main thread so
+  // is protected by the mutex.
+  SyncingState syncing_state_ __TA_GUARDED(mutex_) = SyncingState::kDataIncomplete;
 
   BlobLoader blob_loader_;
 
