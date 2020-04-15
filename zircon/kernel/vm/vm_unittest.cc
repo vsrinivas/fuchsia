@@ -1955,7 +1955,7 @@ static bool vm_kernel_region_test() {
   for (vaddr_t base = reinterpret_cast<vaddr_t>(__code_start);
        base < reinterpret_cast<vaddr_t>(_end); base += PAGE_SIZE) {
     bool within_region = false;
-    for (auto kernel_region : kernel_regions) {
+    for (const auto& kernel_region : kernel_regions) {
       // This would not overflow because the region base and size are hard-coded.
       if (base >= kernel_region.base &&
           base + PAGE_SIZE <= kernel_region.base + kernel_region.size) {

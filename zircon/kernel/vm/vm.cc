@@ -40,6 +40,38 @@ paddr_t zero_page_paddr;
 // set early in arch code to record the start address of the kernel
 paddr_t kernel_base_phys;
 
+// construct an array of kernel program segment descriptors for use here
+// and elsewhere
+namespace {
+const ktl::array _kernel_regions = {
+    kernel_region{
+        .name = "kernel_code",
+        .base = (vaddr_t)__code_start,
+        .size = ROUNDUP((uintptr_t)__code_end - (uintptr_t)__code_start, PAGE_SIZE),
+        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE,
+    },
+    kernel_region{
+        .name = "kernel_rodata",
+        .base = (vaddr_t)__rodata_start,
+        .size = ROUNDUP((uintptr_t)__rodata_end - (uintptr_t)__rodata_start, PAGE_SIZE),
+        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ,
+    },
+    kernel_region{
+        .name = "kernel_data",
+        .base = (vaddr_t)__data_start,
+        .size = ROUNDUP((uintptr_t)__data_end - (uintptr_t)__data_start, PAGE_SIZE),
+        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
+    },
+    kernel_region{
+        .name = "kernel_bss",
+        .base = (vaddr_t)__bss_start,
+        .size = ROUNDUP((uintptr_t)_end - (uintptr_t)__bss_start, PAGE_SIZE),
+        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
+    },
+};
+}  // namespace
+const ktl::span<const kernel_region> kernel_regions{_kernel_regions};
+
 namespace {
 
 // mark a range of physical pages as WIRED
@@ -156,15 +188,14 @@ void vm_init() {
       &kernel_region);
   ASSERT(status == ZX_OK);
 
-  for (uint i = 0; i < fbl::count_of(kernel_regions); ++i) {
-    auto region = &kernel_regions[i];
-    ASSERT(IS_PAGE_ALIGNED(region->base));
+  for (const auto& region : kernel_regions) {
+    ASSERT(IS_PAGE_ALIGNED(region.base));
 
     dprintf(INFO,
             "VM: reserving kernel region [%#" PRIxPTR ", %#" PRIxPTR ") flags %#x name '%s'\n",
-            region->base, region->base + region->size, region->arch_mmu_flags, region->name);
-    status = kernel_region->ReserveSpace(region->name, region->base, region->size,
-                                         region->arch_mmu_flags);
+            region.base, region.base + region.size, region.arch_mmu_flags, region.name);
+    status =
+        kernel_region->ReserveSpace(region.name, region.base, region.size, region.arch_mmu_flags);
     ASSERT(status == ZX_OK);
   }
 
@@ -181,8 +212,8 @@ void vm_init() {
   crypto::GlobalPRNG::GetInstance()->Draw(&entropy, sizeof(entropy));
 
   size_t random_size = PAGE_ALIGN(entropy % (64ULL * GB));
-  status = aspace->RootVmar()->ReserveSpace(
-      "random_padding", PHYSMAP_BASE + PHYSMAP_SIZE, random_size, 0);
+  status = aspace->RootVmar()->ReserveSpace("random_padding", PHYSMAP_BASE + PHYSMAP_SIZE,
+                                            random_size, 0);
   ASSERT(status == ZX_OK);
   LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
 #endif

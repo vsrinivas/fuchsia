@@ -18,6 +18,7 @@
 #include <zircon/listnode.h>
 
 #include <arch/kernel_aspace.h>
+#include <ktl/span.h>
 #include <vm/arch_vm_aspace.h>
 
 // kernel address space
@@ -63,15 +64,22 @@ void print_module(const F &f, const char *build_id) {
 }
 
 // return the physical address corresponding to _start
-static inline paddr_t get_kernel_base_phys(void) {
+static inline paddr_t get_kernel_base_phys() {
   extern paddr_t kernel_base_phys;
 
   return kernel_base_phys;
 }
 
-static inline size_t get_kernel_size(void) { return _end - __code_start; }
+static inline size_t get_kernel_size() { return _end - __code_start; }
 
-__BEGIN_CDECLS
+// List of the kernel program's various segments.
+struct kernel_region {
+  const char *name;
+  vaddr_t base;
+  size_t size;
+  uint arch_mmu_flags;
+};
+extern const ktl::span<const kernel_region> kernel_regions;
 
 // C friendly opaque handle to the internals of the VMM.
 // Never defined, just used as a handle for C apis.
@@ -89,42 +97,5 @@ void vmm_set_active_aspace(vmm_aspace_t *aspace);
 // specialized version of above function that must be called with the thread_lock already held.
 // This is only intended for use by panic handlers.
 void vmm_set_active_aspace_locked(vmm_aspace_t *aspace);
-
-struct kernel_region {
-  const char *name;
-  vaddr_t base;
-  size_t size;
-  uint arch_mmu_flags;
-};
-
-// List of kernel program's various segments.
-static kernel_region kernel_regions[] = {
-    {
-        .name = "kernel_code",
-        .base = (vaddr_t)__code_start,
-        .size = ROUNDUP((uintptr_t)__code_end - (uintptr_t)__code_start, PAGE_SIZE),
-        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE,
-    },
-    {
-        .name = "kernel_rodata",
-        .base = (vaddr_t)__rodata_start,
-        .size = ROUNDUP((uintptr_t)__rodata_end - (uintptr_t)__rodata_start, PAGE_SIZE),
-        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ,
-    },
-    {
-        .name = "kernel_data",
-        .base = (vaddr_t)__data_start,
-        .size = ROUNDUP((uintptr_t)__data_end - (uintptr_t)__data_start, PAGE_SIZE),
-        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
-    },
-    {
-        .name = "kernel_bss",
-        .base = (vaddr_t)__bss_start,
-        .size = ROUNDUP((uintptr_t)_end - (uintptr_t)__bss_start, PAGE_SIZE),
-        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
-    },
-};
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_H_
