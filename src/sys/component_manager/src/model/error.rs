@@ -5,7 +5,7 @@
 use {
     crate::model::{
         environment::EnvironmentError,
-        events::filter::EventFilterError,
+        events::error::EventsError,
         moniker::{AbsoluteMoniker, PartialMoniker},
         resolver::ResolverError,
         rights::RightsError,
@@ -97,10 +97,10 @@ pub enum ModelError {
         #[source]
         err: RightsError,
     },
-    #[error("event filter error")]
-    EventFilterError {
+    #[error("events error")]
+    EventsError {
         #[source]
-        err: EventFilterError,
+        err: EventsError,
     },
 }
 
@@ -192,8 +192,8 @@ impl From<StorageError> for ModelError {
     }
 }
 
-impl From<EventFilterError> for ModelError {
-    fn from(err: EventFilterError) -> Self {
-        ModelError::EventFilterError { err }
+impl From<EventsError> for ModelError {
+    fn from(err: EventsError) -> Self {
+        ModelError::EventsError { err }
     }
 }

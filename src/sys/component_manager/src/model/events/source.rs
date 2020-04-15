@@ -9,6 +9,7 @@ use {
             error::ModelError,
             events::{
                 dispatcher::ScopeMetadata,
+                error::EventsError,
                 event::SyncMode,
                 filter::EventFilter,
                 registry::{EventRegistry, RoutedEvent},
@@ -32,7 +33,6 @@ use {
         path::PathBuf,
         sync::{Arc, Weak},
     },
-    thiserror::Error,
 };
 
 /// A system responsible for implementing basic events functionality on a scoped realm.
@@ -56,19 +56,6 @@ pub struct EventSource {
 
     /// Whether or not this EventSource dispatches events asynchronously.
     sync_mode: SyncMode,
-}
-
-#[derive(Debug, Error)]
-pub enum EventsError {
-    #[error("Registry not found")]
-    RegistryNotFound,
-
-    #[error("Events not allowed for subscription {:?}", names)]
-    NotAvailable { names: Vec<CapabilityName> },
-
-    // TODO(fxb/48720): use dedicated RoutingError type.
-    #[error("Routing failed")]
-    RoutingFailed(#[source] ModelError),
 }
 
 struct RouteEventsResult {
@@ -165,7 +152,7 @@ impl EventSource {
     pub async fn subscribe(
         &mut self,
         events: Vec<CapabilityName>,
-    ) -> Result<EventStream, EventsError> {
+    ) -> Result<EventStream, ModelError> {
         // Register event capabilities if any. It identifies the sources of these events (might be the
         // containing realm or this realm itself). It consturcts an "allow-list tree" of events and
         // realms.
@@ -178,14 +165,13 @@ impl EventSource {
                 })
                 .collect()
         } else {
-            let route_result =
-                self.route_events(&events).await.map_err(|e| EventsError::RoutingFailed(e))?;
+            let route_result = self.route_events(&events).await?;
             if route_result.len() != events.len() {
                 let names = events
                     .into_iter()
                     .filter(|event| !route_result.contains_event(&event))
                     .collect();
-                return Err(EventsError::NotAvailable { names });
+                return Err(EventsError::not_available(names).into());
             }
             route_result.to_vec()
         };
@@ -194,7 +180,7 @@ impl EventSource {
         if let Some(registry) = self.registry.upgrade() {
             return Ok(registry.subscribe(&self.sync_mode, events).await);
         }
-        Err(EventsError::RegistryNotFound)
+        Err(EventsError::RegistryNotFound.into())
     }
 
     /// Serves a `EventSource` FIDL protocol.

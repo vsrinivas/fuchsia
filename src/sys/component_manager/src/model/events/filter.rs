@@ -3,18 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::walk_state::WalkStateUnit, cm_rust::DictionaryValue, std::collections::HashMap,
-    thiserror::Error,
+    crate::model::{events::error::EventsError, walk_state::WalkStateUnit},
+    cm_rust::DictionaryValue,
+    std::collections::HashMap,
 };
-
-#[derive(Debug, Error, Clone)]
-pub enum EventFilterError {
-    #[error("Provided filter is not a superset")]
-    Invalid,
-
-    #[error("Event routes must end at source with a filter declaration")]
-    InvalidFinalize,
-}
 
 type OptionFilterMap = Option<HashMap<String, DictionaryValue>>;
 
@@ -45,7 +37,7 @@ impl EventFilter {
     fn validate_subset(
         self_filter: &OptionFilterMap,
         next_filter: &OptionFilterMap,
-    ) -> Result<(), EventFilterError> {
+    ) -> Result<(), EventsError> {
         match (self_filter, next_filter) {
             (None, None) => {}
             (None, Some(_)) => {}
@@ -54,12 +46,12 @@ impl EventFilter {
                     if !(next_filter.contains_key(key)
                         && is_subset(value, next_filter.get(key).as_ref().unwrap()))
                     {
-                        return Err(EventFilterError::Invalid);
+                        return Err(EventsError::InvalidFilter);
                     }
                 }
             }
             (Some(_), None) => {
-                return Err(EventFilterError::Invalid);
+                return Err(EventsError::InvalidFilter);
             }
         }
         Ok(())
@@ -67,7 +59,7 @@ impl EventFilter {
 }
 
 impl WalkStateUnit for EventFilter {
-    type Error = EventFilterError;
+    type Error = EventsError;
 
     /// Ensures the next walk state of filters is a superset of the current state.
     ///
@@ -81,7 +73,7 @@ impl WalkStateUnit for EventFilter {
     }
 
     fn finalize_error() -> Self::Error {
-        EventFilterError::InvalidFinalize
+        EventsError::MissingFilter
     }
 }
 
@@ -141,47 +133,47 @@ mod tests {
 
         assert_matches!(
             single_field_filter.validate_next(&none_filter),
-            Err(EventFilterError::Invalid)
+            Err(EventsError::InvalidFilter)
         );
         assert_matches!(
             single_field_filter.validate_next(&empty_filter),
-            Err(EventFilterError::Invalid)
+            Err(EventsError::InvalidFilter)
         );
         assert_matches!(single_field_filter.validate_next(&single_field_filter), Ok(()));
         assert_matches!(
             single_field_filter.validate_next(&single_field_filter_2),
-            Err(EventFilterError::Invalid)
+            Err(EventsError::InvalidFilter)
         );
         assert_matches!(
             single_field_filter.validate_next(&multi_field_filter),
-            Err(EventFilterError::Invalid)
+            Err(EventsError::InvalidFilter)
         );
         assert_matches!(single_field_filter.validate_next(&multi_field_filter_2), Ok(()));
 
         assert_matches!(
             multi_field_filter.validate_next(&none_filter),
-            Err(EventFilterError::Invalid)
+            Err(EventsError::InvalidFilter)
         );
         assert_matches!(
             multi_field_filter_2.validate_next(&multi_field_filter),
-            Err(EventFilterError::Invalid)
+            Err(EventsError::InvalidFilter)
         );
         assert_matches!(
             multi_field_filter.validate_next(&single_field_filter),
-            Err(EventFilterError::Invalid)
+            Err(EventsError::InvalidFilter)
         );
         assert_matches!(
             multi_field_filter.validate_next(&single_field_filter_2),
-            Err(EventFilterError::Invalid)
+            Err(EventsError::InvalidFilter)
         );
         assert_matches!(multi_field_filter.validate_next(&multi_field_filter), Ok(()));
         assert_matches!(multi_field_filter.validate_next(&multi_field_filter_2), Ok(()));
         assert_matches!(
             multi_field_filter.validate_next(&empty_filter),
-            Err(EventFilterError::Invalid)
+            Err(EventsError::InvalidFilter)
         );
 
-        assert_matches!(empty_filter.validate_next(&none_filter), Err(EventFilterError::Invalid));
+        assert_matches!(empty_filter.validate_next(&none_filter), Err(EventsError::InvalidFilter));
         assert_matches!(empty_filter.validate_next(&empty_filter), Ok(()));
         assert_matches!(empty_filter.validate_next(&single_field_filter), Ok(()));
         assert_matches!(empty_filter.validate_next(&multi_field_filter), Ok(()));
