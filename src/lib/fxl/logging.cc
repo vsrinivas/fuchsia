@@ -23,6 +23,7 @@
 namespace fxl {
 namespace {
 
+#ifndef __Fuchsia__
 const char* const kLogSeverityNames[LOG_NUM_SEVERITIES] = {"INFO", "WARNING", "ERROR", "FATAL"};
 
 const char* GetNameForLogSeverity(LogSeverity severity) {
@@ -30,6 +31,7 @@ const char* GetNameForLogSeverity(LogSeverity severity) {
     return kLogSeverityNames[severity];
   return "UNKNOWN";
 }
+#endif
 
 const char* StripDots(const char* path) {
   while (strncmp(path, "../", 3) == 0)
@@ -62,12 +64,16 @@ LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const c
 #endif
 {
   stream_ << "[";
+  // With syslog the severity is included in the metadata so no need to add it
+  // to the log message itself.
+#ifndef __Fuchsia__
   if (severity >= LOG_INFO)
     stream_ << GetNameForLogSeverity(severity);
   else
     stream_ << "VERBOSE" << -severity;
-  stream_ << ":" << (severity > LOG_INFO ? StripDots(file_) : StripPath(file_)) << "(" << line_
-          << ")] ";
+  stream_ << ":";
+#endif
+  stream_ << (severity > LOG_INFO ? StripDots(file_) : StripPath(file_)) << "(" << line_ << ")] ";
 
   if (condition)
     stream_ << "Check failed: " << condition << ". ";

@@ -23,32 +23,26 @@ namespace fxl {
 namespace {
 
 #ifdef __Fuchsia__
-bool ends_with(const char* str, const char* suffix) {
-  if (strlen(str) < strlen(suffix)) {
-    return false;
-  }
-  size_t l = strlen(suffix);
-  str += strlen(str) - l;
-  return strcmp(str, suffix) == 0;
-}
 
-void output_compare_helper_ptr(zx::socket* local, fx_log_severity_t severity, const char* msg,
-                               const char** tags, int num_tags) {
+struct LogPacket {
+  fx_log_metadata_t metadata;
+  std::vector<std::string> tags;
+  std::string message;
+};
+
+LogPacket ReadPacket(const zx::socket& local) {
+  LogPacket result;
   fx_log_packet_t packet;
-  ASSERT_EQ(ZX_OK, local->read(0, &packet, sizeof(packet), nullptr));
-  EXPECT_EQ(severity, packet.metadata.severity);
+  local.read(0, &packet, sizeof(packet), nullptr);
+  result.metadata = packet.metadata;
   int pos = 0;
-  for (int i = 0; i < num_tags; i++) {
-    const char* tag = tags[i];
-    auto tag_len = static_cast<int8_t>(strlen(tag));
-    ASSERT_EQ(tag_len, packet.data[pos]);
-    pos++;
-    ASSERT_STREQ(tag, packet.data + pos);
+  while (packet.data[pos]) {
+    int tag_len = packet.data[pos++];
+    result.tags.emplace_back(packet.data + pos, tag_len);
     pos += tag_len;
   }
-  ASSERT_EQ(0, packet.data[pos]);
-  pos++;
-  EXPECT_TRUE(ends_with(packet.data + pos, msg)) << (packet.data + pos);
+  result.message.append(packet.data + pos + 1);
+  return result;
 }
 
 #endif
@@ -88,11 +82,20 @@ TEST_F(LoggingFixture, Log) {
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
+#ifdef __Fuchsia__
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [src/lib/fxl/logging_unittest.cc(" +
+                                      std::to_string(error_line) + ")] something at error"));
+
+  EXPECT_THAT(log, testing::HasSubstr("INFO: [logging_unittest.cc(" + std::to_string(info_line) +
+                                      ")] and some other at info level"));
+#else
   EXPECT_THAT(log, testing::HasSubstr("[ERROR:src/lib/fxl/logging_unittest.cc(" +
                                       std::to_string(error_line) + ")] something at error"));
 
   EXPECT_THAT(log, testing::HasSubstr("[INFO:logging_unittest.cc(" + std::to_string(info_line) +
                                       ")] and some other at info level"));
+
+#endif
 }
 
 TEST_F(LoggingFixture, DVLogNoMinLevel) {
@@ -152,17 +155,28 @@ TEST_F(LoggingFixture, UseSyslog) {
   // Initialize syslog with a socket.
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  const char* tags[] = {"tags1", "tag2"};
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
                                .log_service_channel = remote.release(),
-                               .tags = NULL,
-                               .num_tags = 0};
-  ASSERT_EQ(ZX_OK, fx_log_init_with_config(&config));
+                               .tags = tags,
+                               .num_tags = 2};
+  ASSERT_EQ(ZX_OK, fx_log_reconfigure(&config));
 
-  // Write a message using FXL_LOG an verify that it's forwarded to syslog.
-  const char* msg = "test message";
+  // Write a message using FXL_LOG and verify that it's forwarded to syslog.
+  std::string msg = "test message";
   FXL_LOG(ERROR) << msg;
-  output_compare_helper_ptr(&local, FX_LOG_ERROR, msg, nullptr, 0);
+  LogPacket packet = ReadPacket(local);
+  EXPECT_EQ(2u, packet.tags.size());
+  EXPECT_EQ(tags[0], packet.tags[0]);
+  EXPECT_EQ(tags[1], packet.tags[1]);
+
+  // |msg| should appear at the end of the log.
+  EXPECT_EQ(packet.message.rfind(msg), packet.message.size() - msg.size());
+
+  // The error message should not contain the severity since it's already
+  // included in the metadata.
+  EXPECT_EQ(packet.message.find("ERROR"), std::string::npos);
 
   // Cleanup. Make sure syslog switches back to using stderr.
   fx_logger_activate_fallback(fx_log_get_logger(), -1);

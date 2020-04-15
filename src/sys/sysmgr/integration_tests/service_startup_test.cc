@@ -150,7 +150,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
                  "test_sysmgr_service.cc\\([0-9]{1,4}\\): Received ping.",
              });
   VerifyLogs(log_ptr, {"appmgr"},
-             {"\\[INFO:log_connector_impl.cc\\([0-9]{1,4}\\)\\] Successfully set up syslog"});
+             {"\\[log_connector_impl.cc\\([0-9]{1,4}\\)\\] Successfully set up syslog"});
 }
 
 }  // namespace
