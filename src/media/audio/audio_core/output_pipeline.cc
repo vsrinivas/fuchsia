@@ -109,13 +109,11 @@ std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
     // Create a new timeline function to represent the ref_clock_to_frac_frame mapping for this
     // input.
     auto frac_fps = FractionalFrames<int64_t>(input.output_rate).raw_value();
-    auto function = fbl::MakeRefCounted<VersionedTimelineFunction>(
-        TimelineFunction(
-          // Use the same reference point as the result timeline function. This is to ensure that
-          // we align frames between intermediate mix stages to integral frame numbers.
-          timeline_function.subject_time(),
-          timeline_function.reference_time(),
-          TimelineRate(frac_fps, zx::sec(1).to_nsecs())));
+    auto function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+        // Use the same reference point as the result timeline function. This is to ensure that
+        // we align frames between intermediate mix stages to integral frame numbers.
+        timeline_function.subject_time(), timeline_function.reference_time(),
+        TimelineRate(frac_fps, zx::sec(1).to_nsecs())));
     auto substage =
         CreateMixStage(input, channels, max_block_size_frames, function, usage_mask, sampler);
     stage->AddInput(substage, sampler);
