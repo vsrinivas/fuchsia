@@ -1,11 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::basemgr::types::{KillBasemgrResult, RestartSessionResult, StartBasemgrResult};
+use crate::basemgr::types::{
+    BasemgrResult, KillBasemgrResult, LaunchModRequest, RestartSessionResult,
+};
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
 use fidl::endpoints::ServerEnd;
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
+use fidl_fuchsia_modular::{
+    AddMod, FocusMod, Intent, PuppetMasterMarker, PuppetMasterSynchronousProxy, SetFocusState,
+    StoryCommand, StoryPuppetMasterMarker, SurfaceArrangement, SurfaceDependency, SurfaceRelation,
+};
 use fidl_fuchsia_modular_internal::BasemgrDebugSynchronousProxy;
 use fidl_fuchsia_sys::ComponentControllerEvent;
 use fuchsia_async as fasync;
@@ -19,10 +26,13 @@ use fuchsia_zircon::HandleBased;
 use futures::future;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use glob::glob;
-use serde_json::Value;
+use serde_json::{from_value, Value};
 use std::iter;
 use std::path::PathBuf;
 const COMPONENT_URL: &str = fuchsia_single_component_package_url!("basemgr");
+const SESSIONCTL_URL: &str = "/hub/c/sessionmgr.cmx/*/out/debug/sessionctl";
+const BASEMGR_URL: &str = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
+const CHUNK_SIZE: usize = 32;
 
 /// Facade providing access to session testing interfaces.
 #[derive(Debug)]
@@ -48,13 +58,11 @@ impl BaseManagerFacade {
     }
 
     fn find_all_sessions(&self) -> Result<Vec<PathBuf>, Error> {
-        let glob_path = "/hub/c/sessionmgr.cmx/*/out/debug/sessionctl";
-        Ok(glob(glob_path)?.filter_map(|entry| entry.ok()).collect())
+        Ok(glob(SESSIONCTL_URL)?.filter_map(|entry| entry.ok()).collect())
     }
 
     fn discover_basemgr_service(&self) -> Result<Option<BasemgrDebugSynchronousProxy>, Error> {
-        let glob_path = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
-        let found_path = glob(glob_path)?.filter_map(|entry| entry.ok()).next();
+        let found_path = glob(BASEMGR_URL)?.filter_map(|entry| entry.ok()).next();
         match found_path {
             Some(path) => {
                 let (client, server) = zx::Channel::create()?;
@@ -78,7 +86,7 @@ impl BaseManagerFacade {
 
     /// Facade to launch basemgr from Sl4f
     /// Use default config if custom config is not provided.
-    pub async fn start_basemgr(&self, args: Value) -> Result<StartBasemgrResult, Error> {
+    pub async fn start_basemgr(&self, args: Value) -> Result<BasemgrResult, Error> {
         match self.discover_basemgr_service()? {
             Some(mut proxy) => {
                 proxy.shutdown()?;
@@ -143,6 +151,156 @@ impl BaseManagerFacade {
             })
             .next()
             .await;
-        Ok(StartBasemgrResult::Success)
+        Ok(BasemgrResult::Success)
+    }
+
+    /// connect to puppetMasterSynchronousProxy
+    fn discover_puppet_master(&self) -> Result<Option<PuppetMasterSynchronousProxy>, Error> {
+        let glob_path = format!("{}/{}", SESSIONCTL_URL, PuppetMasterMarker::NAME);
+        let found_path = glob(glob_path.as_str())?.filter_map(|entry| entry.ok()).next();
+        match found_path {
+            Some(path) => {
+                let (client, server) = zx::Channel::create()?;
+                fdio::service_connect(path.to_string_lossy().as_ref(), server)?;
+                Ok(Some(PuppetMasterSynchronousProxy::new(client)))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// build FocusMod command
+    /// # Arguments
+    /// * `mod_name`: passed in for mod_name in FocusMod command
+    fn focus_mod_command(&self, modname: String) -> Option<StoryCommand> {
+        let focus_mod = FocusMod {
+            mod_name: vec![modname.clone()],
+            mod_name_transitional: Some(modname.clone()),
+        };
+        let command = StoryCommand::FocusMod(focus_mod);
+        Some(command)
+    }
+
+    /// build SetFocusState command
+    fn set_focus_state_command(&self) -> Option<StoryCommand> {
+        let set_focus_state = SetFocusState { focused: true };
+        let command = StoryCommand::SetFocusState(set_focus_state);
+        Some(command)
+    }
+
+    /// Facade to launch mod from Sl4f
+    /// # Arguments
+    /// * `args`: will be parsed to LaunchModRequest
+    /// * `mod_url`: url of the mod
+    /// * `mod_name`: same as mod_url if nothing is passed in
+    /// * `story_name`: same as mod_url if nothing is passed in
+    /// * `focus_mod`: default to true if nothing is passed in
+    /// * `focus_story`: default to true if nothing is passed in
+    pub async fn launch_mod(&self, args: Value) -> Result<BasemgrResult, Error> {
+        let req: LaunchModRequest = from_value(args)?;
+
+        // Building the component url from the name of component.
+        let mod_url = match req.mod_url {
+            Some(x) => {
+                let url = match x.find(":") {
+                    Some(_y) => x.to_string(),
+                    None => format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx", x, x).to_string(),
+                };
+                fx_log_info!("Launching mod {} in Basemgr Facade.", url);
+                url
+            }
+            None => return Err(format_err!("Missing MOD_URL to launch")),
+        };
+
+        let mod_name = match req.mod_name {
+            Some(x) => x.to_string(),
+            None => {
+                fx_log_info!("No mod_name specified, using auto-generated mod_name: {}", &mod_url);
+                mod_url.clone()
+            }
+        };
+
+        let story_name = match req.story_name {
+            Some(x) => x.to_string(),
+            None => {
+                fx_log_info!(
+                    "No story_name specified, using auto-generated story_name: {}",
+                    &mod_url
+                );
+                mod_url.clone()
+            }
+        };
+
+        let mut intent = Intent { action: None, handler: None, parameters: None };
+        intent.handler = Some(mod_url.clone());
+        let mut commands = vec![];
+
+        //set it to default value of surface relation
+        let sur_rel = SurfaceRelation {
+            dependency: SurfaceDependency::None,
+            arrangement: SurfaceArrangement::None,
+            emphasis: 1.0,
+        };
+        let add_mod = AddMod {
+            intent: intent,
+            mod_name_transitional: Some(mod_name.clone()),
+            mod_name: vec![mod_name.clone()],
+            surface_parent_mod_name: None,
+            surface_relation: sur_rel,
+        };
+        commands.push(StoryCommand::AddMod(add_mod));
+
+        // Focus the story by default, only set to false when users pass in "false"
+        match req.focus_story {
+            Some(x) => {
+                match x {
+                    false => {}
+                    true => {
+                        if let Some(command) = self.set_focus_state_command() {
+                            commands.push(command);
+                        }
+                    }
+                };
+            }
+            None => {
+                if let Some(command) = self.set_focus_state_command() {
+                    commands.push(command);
+                }
+            }
+        };
+
+        // Focus the mod by default, only set to false when users pass in "false"
+        match req.focus_mod {
+            Some(x) => {
+                match x {
+                    false => {}
+                    true => {
+                        if let Some(command) = self.focus_mod_command(mod_name.clone()) {
+                            commands.push(command);
+                        }
+                    }
+                };
+            }
+            None => {
+                if let Some(command) = self.focus_mod_command(mod_name.clone()) {
+                    commands.push(command);
+                }
+            }
+        };
+
+        let mut puppet_master = match self.discover_puppet_master()? {
+            Some(proxy) => proxy,
+            None => return Err(format_err!("Unable to connect to Puppet Master Service")),
+        };
+        let (proxy, server) = fidl::endpoints::create_proxy::<StoryPuppetMasterMarker>()?;
+        puppet_master.control_story(story_name.as_str(), server)?;
+
+        // Chunk the command list into fixed size chunks and cast it to iterator to
+        // meet fidl's specification
+        for chunk in commands.chunks_mut(CHUNK_SIZE).into_iter() {
+            proxy.enqueue(&mut chunk.into_iter()).expect("Session failed to enqueue commands");
+        }
+        proxy.execute().await?;
+
+        Ok(BasemgrResult::Success)
     }
 }

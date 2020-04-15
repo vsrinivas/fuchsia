@@ -51,6 +51,23 @@ class Modular {
     }
   }
 
+  /// Launches Mod.
+  ///
+  /// Take custom parameters or launch mod with defualt value.
+  Future<String> launchMod(String modUrl,
+      {String modName,
+      String storyName,
+      bool focusMod,
+      bool focusStory}) async {
+    return await _request('basemgr_facade.LaunchMod', {
+      'mod_url': modUrl,
+      'mod_name': modName,
+      'story_name': storyName,
+      'focus_mod': focusMod,
+      'focus_story': focusStory
+    });
+  }
+
   /// Whether basemgr is running on the DUT.
   Future<bool> get isRunning async {
     final response = await _inspect.snapshotRoot('basemgr.cmx');

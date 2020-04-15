@@ -8,6 +8,7 @@ pub enum BaseManagerMethod {
     RestartSession,
     StartBasemgr,
     KillBasemgr,
+    LaunchMod,
 }
 
 impl std::str::FromStr for BaseManagerMethod {
@@ -18,6 +19,7 @@ impl std::str::FromStr for BaseManagerMethod {
             "RestartSession" => Ok(BaseManagerMethod::RestartSession),
             "StartBasemgr" => Ok(BaseManagerMethod::StartBasemgr),
             "KillBasemgr" => Ok(BaseManagerMethod::KillBasemgr),
+            "LaunchMod" => Ok(BaseManagerMethod::LaunchMod),
             _ => return Err(format_err!("invalid BaseManager Facade method: {}", method)),
         }
     }
@@ -30,7 +32,7 @@ pub enum RestartSessionResult {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum StartBasemgrResult {
+pub enum BasemgrResult {
     Success,
     Fail,
 }
@@ -39,4 +41,13 @@ pub enum StartBasemgrResult {
 pub enum KillBasemgrResult {
     Success,
     NoBasemgrToKill,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct LaunchModRequest {
+    pub mod_url: Option<String>,
+    pub mod_name: Option<String>,
+    pub story_name: Option<String>,
+    pub focus_mod: Option<bool>,
+    pub focus_story: Option<bool>,
 }

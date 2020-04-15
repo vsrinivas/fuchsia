@@ -24,6 +24,10 @@ impl Facade for BaseManagerFacade {
                 let result = self.kill_basemgr().await?;
                 Ok(to_value(result)?)
             }
+            BaseManagerMethod::LaunchMod => {
+                let result = self.launch_mod(args).await?;
+                Ok(to_value(result)?)
+            }
         }
     }
 }
