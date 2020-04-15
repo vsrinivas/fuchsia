@@ -233,9 +233,11 @@ void x86_cpu_feature_late_init(void) {
     x86_intel_hwp_init(&cpuid, &msr);
   }
 
-  if (!gCmdline.GetBool("kernel.x86.turbo", /*default_value=*/true)) {
-    x86_cpu_set_turbo(&cpuid, &msr, Turbostate::DISABLED);
-  }
+  // Enable/disable Turbo on the processor.
+  x86_cpu_set_turbo(&cpuid, &msr,
+                    gCmdline.GetBool("kernel.x86.turbo", /*default_value=*/true)
+                        ? Turbostate::ENABLED
+                        : Turbostate::DISABLED);
 }
 
 static enum x86_hypervisor_list get_hypervisor() {
