@@ -1,0 +1,53 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library benchmarkfidl;
+
+// The following are based on fuchsia.posix.socket.DatagramSocket.RecvMsg:
+
+struct DatagramSocketRecvMsgRequest {
+    uint32 addr_len;
+    uint32 data_len;
+    uint32 control_len;
+    int16 flags;
+};
+
+struct DatagramSocketRecvMsgResponse {
+    bytes:128 addr;
+    bytes data;
+    bytes control;
+    uint32 truncated;
+};
+
+union DatagramSocketRecvMsgResult {
+    1: DatagramSocketRecvMsgResponse response;
+    2: uint32 err;
+};
+
+struct DatagramSocketRecvMsgResultStruct {
+    DatagramSocketRecvMsgResult result;
+};
+
+
+// The following are based on fuchsia.posix.socket.DatagramSocket.SendMsg2:
+
+struct DatagramSocketSendMsg2Request {
+    bytes:128 addr;
+    bytes:MAX data;
+    bytes control;
+    int16 flags;
+};
+
+struct DatagramSocketSendMsg2Response {
+    int64 len;
+};
+
+union DatagramSocketSendMsg2Result {
+    1: DatagramSocketSendMsg2Response response;
+    2: uint32 err;
+};
+
+struct DatagramSocketSendMsg2ResultStruct {
+    DatagramSocketSendMsg2Result result;
+};
