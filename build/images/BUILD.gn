@@ -301,7 +301,7 @@ action("system_image_prime.manifest") {
 }
 
 # Generate, sign, and seal the system_image package file.
-pm_build_package("system_image.meta") {
+pm_build("system_image.meta") {
   package_name = "system_image"
   visibility = [ ":*" ]
   testonly = true
@@ -376,7 +376,7 @@ default_image_deps += [ ":blob.blk" ]
 
 # The prime images are used to have an alternate known-compatible OTA
 # target for integration testing.
-pm_build_package("system_image_prime.meta") {
+pm_build("system_image_prime.meta") {
   package_name = "system_image_prime"
   visibility = [ ":*" ]
   testonly = true
@@ -1543,7 +1543,7 @@ action("update.manifest") {
   }
 }
 
-pm_build_package("update.meta") {
+pm_build("update.meta") {
   visibility = [ ":*" ]
   testonly = true
   manifest = ":update.manifest"
@@ -1634,7 +1634,7 @@ action("update_prime.manifest") {
   ]
 }
 
-pm_build_package("update_prime.meta") {
+pm_build("update_prime.meta") {
   visibility = [ ":*" ]
   testonly = true
   manifest = ":update_prime.manifest"
@@ -1699,7 +1699,7 @@ action("update-to-zedboot.manifest") {
   ]
 }
 
-pm_build_package("update-to-zedboot.meta") {
+pm_build("update-to-zedboot.meta") {
   visibility = [ ":*" ]
   testonly = true
   manifest = ":update-to-zedboot.manifest"

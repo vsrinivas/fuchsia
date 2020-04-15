@@ -14,6 +14,160 @@ amber_keys_dir = "//src/sys/pkg/bin/amber/keys"
 # this with copies of build products, but never removes old files.
 amber_repository_blobs_dir = "$amber_repository_dir/repository/blobs"
 
+template("_pm") {
+  compiled_action(target_name) {
+    tool = "//src/sys/pkg/bin/pm:pm_bin"
+    tool_output_name = "pm"
+    forward_variables_from(invoker,
+                           [
+                             "args",
+                             "data_deps",
+                             "depfile",
+                             "deps",
+                             "inputs",
+                             "metadata",
+                             "outputs",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+}
+
+# Generate a sealed package file from a manifest.
+#
+# Parameters
+#
+#   manifest (required)
+#     [label] A generate_manifest() target defined earlier in the same file.
+#     This provides the contents for the package.
+#
+#   The following two items are only required in order to produce metadata about
+#   the package sets, and may be removed in the future:
+#
+#   package_name (required)
+#     [string] Name of the package (should match what is in meta/package)
+#   package_variant (default: "0")
+#     [string] Variant of the package (should match what is in meta/package)
+#
+#   deps (optional)
+#   test (optional)
+#   visibility (optional)
+#     Same as for any GN `action()` target.
+template("pm_build") {
+  _pm(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                             "package_name",
+                             "package_variant",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    pkg_manifest_outputs = get_target_outputs(invoker.manifest)
+    pkg_manifest_file = pkg_manifest_outputs[0]
+    pkg_out_dir = "$target_out_dir/$target_name"
+
+    if (!defined(package_variant)) {
+      package_variant = "0"
+    }
+
+    assert(defined(package_name), "A package name is required")
+    assert(package_name != "", "A package name is required")
+
+    deps += [ invoker.manifest ]
+
+    if (string_replace(package_name, "_", "-") != package_name) {
+      # TODO(22679): packages ending up in this allowlist should be updated to
+      # use hyphens in their names. New entries should not be added to the
+      # allowlist or excluded by logic here.
+      deps += [ "//build:deprecated_package_underscore" ]
+    }
+
+    # if (string_replace(package_name, "_", "-") != package_name) {
+    #   print(get_label_info(":" + target_name, "label_no_toolchain"))
+    # }
+
+    inputs = [ pkg_manifest_file ]
+
+    depfile = "$pkg_out_dir/meta.far.d"
+
+    pkg_output_manifest = "$pkg_out_dir/package_manifest.json"
+    outputs = [
+      # produced by seal, must be listed first because of depfile rules.
+      "$pkg_out_dir/meta.far",
+
+      # update
+      "$pkg_out_dir/meta/contents",
+
+      # seal
+      "$pkg_out_dir/meta.far.merkle",
+
+      # package blob json manifest
+      "$pkg_out_dir/blobs.json",
+
+      # package blob manifest
+      "$pkg_out_dir/blobs.manifest",
+
+      # package output manifest
+      pkg_output_manifest,
+    ]
+
+    blobs_json_path = rebase_path("${pkg_out_dir}/blobs.json", root_build_dir)
+
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # We only ever want to collect the following package manifests from
+      # packages, not from dependencies of packages, so the barrier prevents us
+      # from walking any further in the dependency chain. See `gn help
+      # walk_keys` for more information on the mechanic.
+      package_barrier = []
+
+      package_names = [ package_name ]
+
+      snapshot_entries = [ "$package_name/$package_variant=$blobs_json_path" ]
+
+      blob_manifests =
+          [ rebase_path("$pkg_out_dir/blobs.manifest", root_build_dir) ]
+
+      meta_far_index_entries =
+          [ "$package_name/$package_variant=" +
+            rebase_path("$pkg_out_dir/meta.far", root_build_dir) ]
+
+      meta_far_merkle_index_entries =
+          [ "$package_name/$package_variant=" +
+            rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir) ]
+
+      package_output_manifests = [ pkg_output_manifest ]
+    }
+
+    args = [
+      "-o",
+      rebase_path(pkg_out_dir, root_build_dir),
+      "-m",
+      rebase_path(pkg_manifest_file, root_build_dir),
+      "-n",
+      package_name,
+      "-version",
+      package_variant,
+      "build",
+      "-output-package-manifest",
+      rebase_path(pkg_output_manifest, root_build_dir),
+      "-depfile",
+      "-blobsfile",
+      "-blobs-manifest",
+    ]
+  }
+}
+
 template("pm_publish") {
   # These files are copied from amber_keys_dir into $amber_repository_dir/keys.
 
@@ -24,9 +178,7 @@ template("pm_publish") {
       "$amber_keys_dir/timestamp.json",
     ]
 
-    outputs = [
-      "$amber_repository_dir/keys/{{source_file_part}}",
-    ]
+    outputs = [ "$amber_repository_dir/keys/{{source_file_part}}" ]
   }
 
   # TODO(38262) In order to be TUF-1.0 conformant, we need to have
@@ -35,13 +187,9 @@ template("pm_publish") {
   # should be computed so we don't forget to copy the file when we rotate the
   # root metadata.
   copy("root_manifest") {
-    sources = [
-      "$amber_keys_dir/metadata/6.root.json",
-    ]
+    sources = [ "$amber_keys_dir/metadata/6.root.json" ]
 
-    outputs = [
-      "$amber_repository_dir/repository/root.json",
-    ]
+    outputs = [ "$amber_repository_dir/repository/root.json" ]
   }
 
   # TODO(38262) See the comment on `root_manifest`.
@@ -55,15 +203,10 @@ template("pm_publish") {
       "$amber_keys_dir/metadata/6.root.json",
     ]
 
-    outputs = [
-      "$amber_repository_dir/repository/{{source_file_part}}",
-    ]
+    outputs = [ "$amber_repository_dir/repository/{{source_file_part}}" ]
   }
 
-  compiled_action(target_name) {
-    tool = "//src/sys/pkg/bin/pm:pm_bin"
-    tool_output_name = "pm"
-
+  _pm(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",

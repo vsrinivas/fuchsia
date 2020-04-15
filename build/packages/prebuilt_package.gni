@@ -128,9 +128,9 @@ template("prebuilt_package") {
 
     blobs_json_path = rebase_path(blobs_json, root_build_dir)
 
-    # Package metadata must be kept in sync between package.gni and
-    # prebuilt_package.gni. The template package_metadata_list in package.gni
-    # documents the fields required to be implemented by both templates.
+    # Package metadata must be kept in sync with pm.gni.
+    # The template package_metadata_list documents the fields required to be
+    # implemented.
     metadata = {
       # We only ever want to collect the following package manifests from
       # packages, not from dependencies of packages, so the barrier prevents us

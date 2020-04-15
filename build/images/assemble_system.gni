@@ -14,6 +14,7 @@ import("//build/images/shell_commands.gni")
 import("//build/images/ta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
+import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Assembles a Fuchsia system.
 #
@@ -184,7 +185,7 @@ template("assemble_system") {
       get_target_outputs(":${image_name}_system_image.manifest")
   assert(boot_manifest == system_manifest_outputs[2])
 
-  pm_build_package("${image_name}_system_image.meta") {
+  pm_build("${image_name}_system_image.meta") {
     visibility = [ ":*" ]
     testonly = true
     manifest = ":${image_name}_system_image.manifest"
