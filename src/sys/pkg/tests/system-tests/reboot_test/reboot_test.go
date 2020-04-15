@@ -11,11 +11,11 @@ import (
 	"log"
 	"os"
 	"testing"
-	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/artifacts"
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
+	"fuchsia.googlesource.com/system_tests/pave"
 )
 
 var c *config
@@ -156,25 +156,8 @@ func initializeDevice(
 		return nil
 	}
 
-	paver, err := build.GetPaver(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get paver: %s", err)
-	}
-
-	log.Printf("starting pave")
-
-	// Reboot the device into recovery and pave it.
-	if err = device.RebootToRecovery(ctx); err != nil {
-		return fmt.Errorf("failed to reboot to recovery: %s", err)
-	}
-
-	if err = paver.Pave(ctx, c.deviceConfig.DeviceName); err != nil {
-		return fmt.Errorf("device failed to pave: %s", err)
-	}
-
-	// Reconnect to the device.
-	if err := device.Reconnect(ctx); err != nil {
-		return fmt.Errorf("device failed to connect: %s", err)
+	if err := pave.PaveDevice(ctx, device, build, c.otaToRecovery); err != nil {
+		return fmt.Errorf("failed to pave device during initialization: %w", err)
 	}
 
 	rpcClient, err := device.StartRpcSession(ctx, repo)
@@ -196,33 +179,6 @@ func initializeDevice(
 	if err := validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig); err != nil {
 		return err
 	}
-
-	return nil
-}
-
-func paveDevice(ctx context.Context, device *device.Client, build artifacts.Build) error {
-	log.Printf("paving device")
-	startTime := time.Now()
-
-	paver, err := build.GetPaver(ctx)
-	if err != nil {
-		return fmt.Errorf("error getting downgrade paver: %s", err)
-	}
-
-	if err := device.RebootToRecovery(ctx); err != nil {
-		return fmt.Errorf("failed to reboot to recovery: %s", err)
-	}
-
-	if err = paver.Pave(ctx, c.deviceConfig.DeviceName); err != nil {
-		return fmt.Errorf("device failed to pave: %s", err)
-	}
-
-	// Reconnect to the device.
-	if err := device.Reconnect(ctx); err != nil {
-		return fmt.Errorf("device failed to connect: %s", err)
-	}
-
-	log.Printf("paving successful in %s", time.Now().Sub(startTime))
 
 	return nil
 }

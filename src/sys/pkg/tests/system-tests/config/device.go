@@ -117,5 +117,5 @@ func (c *DeviceConfig) NewDeviceClient(ctx context.Context) (*device.Client, err
 		return nil, err
 	}
 
-	return device.NewClient(ctx, deviceHostname, sshPrivateKey)
+	return device.NewClient(ctx, deviceHostname, c.DeviceName, sshPrivateKey)
 }

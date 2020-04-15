@@ -16,7 +16,7 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
-
+	"fuchsia.googlesource.com/system_tests/pave"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -176,11 +176,6 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 		return nil, fmt.Errorf("failed to get downgrade build: %w", err)
 	}
 
-	downgradePaver, err := downgradeBuild.GetPaver(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error getting downgrade paver: %s", err)
-	}
-
 	downgradeRepo, err := downgradeBuild.GetPackageRepository(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting downgrade repository: %w", err)
@@ -193,18 +188,8 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 		return nil, fmt.Errorf("error extracting expected system image merkle: %s", err)
 	}
 
-	// Reboot the device into recovery and pave it.
-	if err = device.RebootToRecovery(ctx); err != nil {
-		return nil, fmt.Errorf("failed to reboot to recovery: %s", err)
-	}
-
-	if err = downgradePaver.Pave(ctx, c.deviceConfig.DeviceName); err != nil {
-		return nil, fmt.Errorf("device failed to pave: %s", err)
-	}
-
-	// Reconnect to the device.
-	if err = device.Reconnect(ctx); err != nil {
-		return nil, fmt.Errorf("device failed to connect: %s", err)
+	if err := pave.PaveDevice(ctx, device, downgradeBuild, c.otaToRecovery); err != nil {
+		return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
 	}
 
 	rpcClient, err := device.StartRpcSession(ctx, downgradeRepo)

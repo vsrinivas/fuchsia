@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"fuchsia.googlesource.com/host_target_testing/artifacts"
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
@@ -28,8 +29,16 @@ import (
 
 const rebootCheckPath = "/tmp/ota_test_should_reboot"
 
+type RecoveryMode int
+
+const (
+	RebootToRecovery RecoveryMode = iota
+	OTAToRecovery
+)
+
 // Client manages the connection to the device.
 type Client struct {
+	Name           string
 	deviceHostname string
 	addr           net.Addr
 	sshConfig      *ssh.ClientConfig
@@ -40,7 +49,7 @@ type Client struct {
 }
 
 // NewClient creates a new Client.
-func NewClient(ctx context.Context, deviceHostname string, privateKey ssh.Signer) (*Client, error) {
+func NewClient(ctx context.Context, deviceHostname string, name string, privateKey ssh.Signer) (*Client, error) {
 	sshConfig, err := newSSHConfig(privateKey)
 	if err != nil {
 		return nil, err
@@ -56,6 +65,7 @@ func NewClient(ctx context.Context, deviceHostname string, privateKey ssh.Signer
 	}
 
 	return &Client{
+		Name:           name,
 		deviceHostname: deviceHostname,
 		addr:           addr,
 		sshConfig:      sshConfig,
@@ -169,7 +179,7 @@ func (c *Client) Reboot(ctx context.Context) error {
 // RebootToRecovery asks the device to reboot into the recovery partition. It
 // waits until the device disconnects before returning.
 func (c *Client) RebootToRecovery(ctx context.Context) error {
-	log.Printf("rebooting to recovery")
+	log.Printf("Rebooting to recovery")
 
 	return c.ExpectDisconnect(ctx, func() error {
 		// Run the reboot in the background, which gives us a chance to
@@ -183,7 +193,37 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 			if _, ok := err.(*ssh.ExitMissingError); ok {
 				log.Printf("ssh disconnected before returning a status")
 			} else {
-				return fmt.Errorf("failed to reboot into recovery: %s", err)
+				return fmt.Errorf("failed to reboot into recovery: %w", err)
+			}
+		}
+
+		return nil
+	})
+}
+
+// OTAToRecovery asks the device to OTA to the
+// fuchsia-pkg://fuchsia.com/update-to-recovery package. It waits until the
+// device disconnects before returning.
+func (c *Client) OTAToRecovery(ctx context.Context, repo *packages.Repository) error {
+	log.Printf("OTAing to recovery")
+
+	if err := c.DownloadOTA(ctx, repo, "fuchsia-pkg://fuchsia.com/update-to-zedboot/0"); err != nil {
+		return fmt.Errorf("failed to download OTA: %w", err)
+	}
+
+	return c.ExpectDisconnect(ctx, func() error {
+		cmd := []string{"dm", "reboot", "&", "exit", "0"}
+		err := c.Run(ctx, cmd, os.Stdout, os.Stderr)
+
+		if err != nil {
+			// If the device rebooted before ssh was able to tell
+			// us the command ran, it will tell us the session
+			// exited without passing along an exit code. So,
+			// ignore that specific error.
+			if _, ok := err.(*ssh.ExitMissingError); ok {
+				log.Printf("ssh disconnected before returning a status")
+			} else {
+				return fmt.Errorf("failed to OTA into recovery: %w", err)
 			}
 		}
 
@@ -562,6 +602,47 @@ func (c *Client) DownloadOTA(ctx context.Context, repo *packages.Repository, upd
 	}
 
 	log.Printf("OTA successfully downloaded in %s", time.Now().Sub(startTime))
+
+	return nil
+}
+
+// Pave paves the device to the specified build. It assumes the device is
+// already in recovery, since there are multiple ways to get a device into
+// recovery.
+func (c *Client) Pave(ctx context.Context, build artifacts.Build, mode RecoveryMode) error {
+	paver, err := build.GetPaver(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get paver to pave device: %w", err)
+	}
+
+	switch mode {
+	case RebootToRecovery:
+		if err := c.RebootToRecovery(ctx); err != nil {
+			return fmt.Errorf("failed to reboot to recovery during paving: %w", err)
+		}
+
+	case OTAToRecovery:
+		repo, err := build.GetPackageRepository(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get repo to OTA device to recovery: %w", err)
+		}
+
+		if err := c.OTAToRecovery(ctx, repo); err != nil {
+			return fmt.Errorf("failed to reboot to recovery during paving: %w", err)
+		}
+	default:
+		return fmt.Errorf("unknown recovery mode: %d", mode)
+	}
+
+	// Actually pave the device.
+	if err = paver.Pave(ctx, c.Name); err != nil {
+		return fmt.Errorf("device failed to pave: %w", err)
+	}
+
+	// Reconnect to the device.
+	if err = c.Reconnect(ctx); err != nil {
+		return fmt.Errorf("device failed to connect after pave: %w", err)
+	}
 
 	return nil
 }
