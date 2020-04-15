@@ -189,8 +189,9 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
     // clone of it to pass into std::move
     zx::job job_clone;
     zx_status_t status = job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_clone);
-    if (status != ZX_OK)
-      return NULL;
+    if (status != ZX_OK) {
+      return nullptr;
+    }
     return std::make_unique<ComponentControllerImpl>(
         controller.NewRequest(), &realm_, std::move(job_clone), std::move(process_), "test-url",
         "test-arg", "test-label", ns, std::move(export_dir), zx::channel());
