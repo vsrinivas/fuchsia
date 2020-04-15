@@ -160,11 +160,56 @@ void PrintRegister(F print_fn, FieldPrinter fields[], size_t num_fields, uint64_
 void PrintRegisterPrintf(FieldPrinter fields[], size_t num_fields, uint64_t reg_value,
                          uint64_t fields_mask, int register_width_bytes);
 
+// The std::visit implementation is quite complicated and works in a way that
+// relies on constexpr arrays of function pointers.  This is not reliably
+// compiled to pure PIC as is required in some contexts like phys executables.
+//
+// This Visit provides a limited implementation that is much simpler.  It's
+// less general than std::visit in that it doesn't handle return values or
+// multiple arguments of variant types.  The first argument to the function
+// must be the variant type, and any other arguments are forwarded perfectly.
+//
+// Visit also has two additional features over std::visit.  It works in the
+// degenerate case where the first argument is not a std::variant type.  It
+// also works "recursively", i.e. if the selected variant is itself another
+// std::variant type, then Visit acts on the selected inner variant.
+
 template <typename T>
 constexpr bool IsVariant = false;
 
 template <typename... Variants>
 constexpr bool IsVariant<std::variant<Variants...>> = true;
+
+// Forward declaration.
+template <typename F, typename V, typename... A, size_t... I>
+void VisitEach(F&& f, V&& v, A&&... args, std::index_sequence<I...>);
+
+template <typename F, typename V, typename... A>
+void Visit(F&& f, V&& v, A&&... args) {
+  if constexpr (IsVariant<std::decay_t<V>>) {
+    constexpr auto n = std::variant_size_v<std::decay_t<V>>;
+    VisitEach(std::forward<F>(f), std::forward<V>(v), std::forward<A>(args)...,
+              std::make_index_sequence<n>());
+  } else {
+    f(std::forward<V>(v), std::forward<A>(args)...);
+  }
+}
+
+// Helper template for Visit, needed so it can use a fold expression across
+// the variant indices.  Forward the remaining arguments to a Visit call using
+// the selected variant.
+template <typename F, typename V, typename... A, size_t... I>
+void VisitEach(F&& f, V&& v, A&&... args, std::index_sequence<I...>) {
+  static_assert(sizeof...(I) == std::variant_size_v<std::decay_t<V>>);
+  [[maybe_unused]] bool visited_one =  // Statically always true.
+      ((v.index() == I
+            // Exactly one of these Visit calls will be evaluated.
+            ? (Visit(std::forward<F>(f), std::get<I>(std::forward<V>(v)), std::forward<A>(args)...),
+               true)
+            : false) ||
+       ...);
+  ZX_DEBUG_ASSERT(visited_one);
+}
 
 }  // namespace internal
 

@@ -133,21 +133,18 @@ class RegisterBase {
 
   template <typename T>
   SelfType& ReadFrom(T* reg_io) {
-    if constexpr (internal::IsVariant<T>) {
-      std::visit([this](auto& io) { this->ReadFrom(&io); }, *reg_io);
-    } else {
-      reg_value_ = reg_io->template Read<ValueType>(reg_addr_);
-    }
+    internal::Visit([this](auto&& io) { reg_value_ = io.template Read<ValueType>(reg_addr_); },
+                    *reg_io);
     return *static_cast<SelfType*>(this);
   }
 
   template <typename T>
   SelfType& WriteTo(T* reg_io) {
-    if constexpr (internal::IsVariant<T>) {
-      std::visit([this](auto& io) { this->WriteTo(&io); }, *reg_io);
-    } else {
-      reg_io->template Write(static_cast<IntType>(reg_value_ & ~params_.rsvdz_mask), reg_addr_);
-    }
+    internal::Visit(
+        [this](auto&& io) {
+          io.template Write(static_cast<IntType>(reg_value_ & ~params_.rsvdz_mask), reg_addr_);
+        },
+        *reg_io);
     return *static_cast<SelfType*>(this);
   }
 
