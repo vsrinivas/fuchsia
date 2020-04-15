@@ -1010,7 +1010,9 @@ impl Data {
                         difference::Difference::Add(val) => ("other", val),
                         difference::Difference::Rem(val) => ("local", val),
                     };
-                    val.split("\n").map(|line| format!("{}: {:?}", prefix, line)).collect::<Vec<_>>()
+                    val.split("\n")
+                        .map(|line| format!("{}: {:?}", prefix, line))
+                        .collect::<Vec<_>>()
                 })
                 .collect::<Vec<_>>();
 

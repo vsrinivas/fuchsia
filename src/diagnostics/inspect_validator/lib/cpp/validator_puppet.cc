@@ -16,6 +16,11 @@
 
 #include <test/inspect/validate/cpp/fidl.h>
 
+#include "fuchsia/inspect/cpp/fidl.h"
+#include "lib/inspect/service/cpp/service.h"
+#include "lib/vfs/cpp/pseudo_dir.h"
+#include "lib/vfs/cpp/service.h"
+
 using fit::holds_alternative;
 using inspect::LazyNode;
 using std::get;
@@ -565,9 +570,10 @@ class Puppet : public test::inspect::validate::Validate {
  public:
   explicit Puppet(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(context)) {
     context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
+    diagnostics_directory_ = context_->outgoing()->GetOrCreateDirectory("diagnostics");
   }
 
-  void Initialize(InitializationParams params, InitializeCallback callback) {
+  void Initialize(InitializationParams params, InitializeCallback callback) override {
     if (actor_ != nullptr) {
       callback(zx::vmo(ZX_HANDLE_INVALID), TestResult::ILLEGAL);
       return;
@@ -581,7 +587,7 @@ class Puppet : public test::inspect::validate::Validate {
     }
   }
 
-  void InitializeTree(InitializationParams params, InitializeTreeCallback callback) {
+  void InitializeTree(InitializationParams params, InitializeTreeCallback callback) override {
     if (actor_ != nullptr) {
       callback(nullptr, TestResult::ILLEGAL);
       return;
@@ -594,7 +600,24 @@ class Puppet : public test::inspect::validate::Validate {
     callback(std::move(tree_ptr), TestResult::OK);
   }
 
-  void Act(Action action, ActCallback callback) {
+  void Publish(PublishCallback callback) override {
+    if (actor_ == nullptr) {
+      callback(TestResult::ILLEGAL);
+      return;
+    }
+
+    diagnostics_directory_->AddEntry(
+        fuchsia::inspect::Tree::Name_,
+        std::make_unique<vfs::Service>(inspect::MakeTreeHandler(&actor_->inspector())));
+    callback(TestResult::OK);
+  }
+
+  void Unpublish(PublishCallback callback) override {
+    diagnostics_directory_->RemoveEntry(fuchsia::inspect::Tree::Name_);
+    callback(TestResult::OK);
+  }
+
+  void Act(Action action, ActCallback callback) override {
     if (actor_ == nullptr) {
       callback(TestResult::ILLEGAL);
     } else {
@@ -602,7 +625,7 @@ class Puppet : public test::inspect::validate::Validate {
     }
   }
 
-  void ActLazy(LazyAction lazy_action, ActLazyCallback callback) {
+  void ActLazy(LazyAction lazy_action, ActLazyCallback callback) override {
     if (actor_ == nullptr) {
       callback(TestResult::ILLEGAL);
     } else {
@@ -612,6 +635,7 @@ class Puppet : public test::inspect::validate::Validate {
 
  private:
   std::unique_ptr<sys::ComponentContext> context_;
+  vfs::PseudoDir* diagnostics_directory_;
   fidl::BindingSet<test::inspect::validate::Validate> bindings_;
   fidl::InterfaceRequestHandler<fuchsia::inspect::Tree> tree_handler_;
   std::unique_ptr<Actor> actor_;
