@@ -304,7 +304,7 @@ void EthernetDevice::IrqRingUpdate() {
   }
 
   // If we have re-queued any rx buffers, poke the virtqueue to pick them up.
-  if (need_kick) {
+  if (need_kick && !rx_.NoNotify()) {
     rx_.Kick();
   }
 }

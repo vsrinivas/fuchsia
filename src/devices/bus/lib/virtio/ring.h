@@ -37,6 +37,8 @@ class Ring {
   template <typename T>
   void IrqRingUpdate(T free_chain);
 
+  bool NoNotify() { return ring_.used->flags & VRING_USED_F_NO_NOTIFY; }
+
  private:
   Device* device_ = nullptr;
 
