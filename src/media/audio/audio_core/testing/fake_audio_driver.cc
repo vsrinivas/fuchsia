@@ -160,7 +160,7 @@ void FakeAudioDriver::HandleCommandSetFormat(const audio_stream_cmd_set_format_r
   response.hdr.transaction_id = request.hdr.transaction_id;
   response.hdr.cmd = request.hdr.cmd;
   response.result = ZX_OK;
-  response.external_delay_nsec = 0;
+  response.external_delay_nsec = external_delay_.get();
 
   // Note: Upon success, a channel used to control the audio buffer will also be returned.
   zx::channel local_channel;

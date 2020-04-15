@@ -197,7 +197,24 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   const std::shared_ptr<RingBuffer>& driver_ring_buffer() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  TimelineFunction device_reference_clock_to_ring_pos_bytes() const
+  // Accessors for some of the useful timeline functions computed by the driver
+  // after streaming starts.
+  //
+  // Maps from a presentation/capture time on the reference clock to fractional
+  // frame number in the stream.  The presentation/capture time refers to the
+  // time that the sound either exits the speaker or enters the microphone.
+  const TimelineFunction& driver_ptscts_ref_clock_to_fractional_frames() const
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+
+  // Maps from a time on the reference clock to the safe read/write frame number
+  // in the stream.  The safe read/write pointer is the point in the stream
+  // which is one fifo_depth away from the interconnect entry/exit point in the
+  // stream.  This is the point at which an input stream is guaranteed to have
+  // moved its captured data from the hardware into RAM, or the point at which
+  // an output stream may have already moved data to be transmitted from RAM
+  // into the hardware.  When consuming or producing audio from an input or
+  // output stream, users must always stay ahead of this point.
+  const TimelineFunction& driver_safe_read_or_write_ref_clock_to_frames() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   ExecutionDomain& mix_domain() const { return *mix_domain_; }

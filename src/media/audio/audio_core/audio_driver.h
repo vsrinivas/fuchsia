@@ -86,11 +86,18 @@ class AudioDriver {
   // unable to figure out that the owner calling these methods is always the same as owner_.
   const std::vector<audio_stream_format_range_t>& format_ranges() const { return format_ranges_; }
   State state() const { return state_; }
+  zx::time start_time() const { return start_time_; }
   zx::duration external_delay() const { return external_delay_; }
   uint32_t fifo_depth_frames() const { return fifo_depth_frames_; }
   zx::duration fifo_depth_duration() const { return fifo_depth_duration_; }
   zx_koid_t stream_channel_koid() const { return stream_channel_koid_; }
   const HwGainState& hw_gain_state() const { return hw_gain_state_; }
+  const TimelineFunction& ptscts_ref_clock_to_fractional_frames() const {
+    return ptscts_ref_clock_to_fractional_frames_;
+  }
+  const TimelineFunction& safe_read_or_write_ref_clock_to_frames() const {
+    return safe_read_or_write_ref_clock_to_frames_;
+  }
 
   // The following properties are only safe to access after the driver is beyond the
   // MissingDriverInfo state.  After that state, these members must be treated as immutable, and the
@@ -198,7 +205,6 @@ class AudioDriver {
     return ring_buffer_;
   };
 
-  TimelineFunction clock_mono_to_ring_pos_bytes() const FXL_NO_THREAD_SAFETY_ANALYSIS;
   void StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                               zx_status_t status, const zx_packet_signal_t* signal)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
@@ -233,6 +239,7 @@ class AudioDriver {
   int32_t clock_domain_;
 
   // Configuration state.
+  zx::time start_time_;
   zx::duration external_delay_;
   zx::duration min_ring_buffer_duration_;
   uint32_t fifo_depth_frames_;
@@ -248,7 +255,22 @@ class AudioDriver {
   // allowing AudioCapturer clients to snapshot ring-buffer state during mix/resample operations.
   mutable std::mutex ring_buffer_state_lock_;
   std::shared_ptr<RingBuffer> ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
-  fbl::RefPtr<VersionedTimelineFunction> clock_mono_to_fractional_frame_;
+
+  // The timeline function which maps from either the capture time (Input) or
+  // presentation time (Output) at the speaker/microphone on the audio device's
+  // reference clock, to the fractional frame position in the stream.
+  //
+  // IOW - given a frame number in the stream, the inverse of this function can
+  // be used to map to the time (on the device's reference clock) that the frame
+  // either was captured, or will be presented.
+  fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frames_;
+
+  // Useful timeline functions which are computed after streaming starts.  See
+  // the comments for the accessors in audio_device.h for detailed descriptions.
+  TimelineFunction ptscts_ref_clock_to_fractional_frames_
+      FXL_GUARDED_BY(owner_->mix_domain().token());
+  TimelineFunction safe_read_or_write_ref_clock_to_frames_
+      FXL_GUARDED_BY(owner_->mix_domain().token());
 
   // Plug detection state.
   bool pd_enabled_ = false;

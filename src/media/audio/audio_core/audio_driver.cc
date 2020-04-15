@@ -39,14 +39,6 @@ void LogMissedCommandDeadline(zx::duration delay) {
   FX_LOGS(WARNING) << "Driver command missed deadline by " << delay.to_nsecs() << "ns";
 }
 
-TimelineFunction TransposeFractionalFramesToBytes(const Format& format,
-                                                  TimelineFunction clock_mono_to_fractional_frame) {
-  TimelineRate frac_frames_to_bytes(format.bytes_per_frame(),
-                                    FractionalFrames<int32_t>(1).raw_value());
-  return TimelineFunction::Compose(TimelineFunction(frac_frames_to_bytes),
-                                   clock_mono_to_fractional_frame);
-}
-
 }  // namespace
 
 AudioDriver::AudioDriver(AudioDevice* owner) : AudioDriver(owner, LogMissedCommandDeadline) {}
@@ -54,7 +46,7 @@ AudioDriver::AudioDriver(AudioDevice* owner) : AudioDriver(owner, LogMissedComma
 AudioDriver::AudioDriver(AudioDevice* owner, DriverTimeoutHandler timeout_handler)
     : owner_(owner),
       timeout_handler_(std::move(timeout_handler)),
-      clock_mono_to_fractional_frame_(fbl::MakeRefCounted<VersionedTimelineFunction>()) {
+      ref_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()) {
   FX_DCHECK(owner_ != nullptr);
 }
 
@@ -112,22 +104,13 @@ void AudioDriver::Cleanup() {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
     ring_buffer = std::move(ring_buffer_);
   }
-  clock_mono_to_fractional_frame_->Update(TimelineFunction());
+
+  ref_clock_to_fractional_frames_->Update({});
   ring_buffer = nullptr;
 
   stream_channel_wait_.Cancel();
   ring_buffer_channel_wait_.Cancel();
   cmd_timeout_.Cancel();
-}
-
-TimelineFunction AudioDriver::clock_mono_to_ring_pos_bytes() const {
-  auto format = GetFormat();
-  if (format) {
-    auto [clock_mono_to_fractional_frame, _] = clock_mono_to_fractional_frame_->get();
-    return TransposeFractionalFramesToBytes(*format, clock_mono_to_fractional_frame);
-  } else {
-    return TimelineFunction();
-  }
 }
 
 std::optional<Format> AudioDriver::GetFormat() const {
@@ -373,7 +356,7 @@ zx_status_t AudioDriver::Stop() {
   }
 
   // Invalidate our timeline transformation here. To outside observers, we are now stopped.
-  clock_mono_to_fractional_frame_->Update(TimelineFunction());
+  ref_clock_to_fractional_frames_->Update({});
 
   // Send the command to stop the ring buffer.
   audio_rb_cmd_start_req_t req;
@@ -905,13 +888,13 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_
     auto mapping = input ? RingBuffer::VmoMapping::kReadOnly : RingBuffer::VmoMapping::kReadWrite;
     auto endpoint = input ? RingBuffer::Endpoint::kReadable : RingBuffer::Endpoint::kWritable;
     ring_buffer_ = RingBuffer::CreateHardwareBuffer(
-        *format, clock_mono_to_fractional_frame_, std::move(rb_vmo), resp.num_ring_buffer_frames,
+        *format, ref_clock_to_fractional_frames_, std::move(rb_vmo), resp.num_ring_buffer_frames,
         mapping, endpoint, input ? fifo_depth_frames() : 0);
     if (ring_buffer_ == nullptr) {
       ShutdownSelf("Failed to allocate and map driver ring buffer", ZX_ERR_NO_MEMORY);
       return ZX_ERR_NO_MEMORY;
     }
-    FX_DCHECK(!clock_mono_to_fractional_frame_->get().first.invertible());
+    FX_DCHECK(!ref_clock_to_fractional_frames_->get().first.invertible());
   }
 
   // We are now Configured. Let our owner know about this important milestone.
@@ -936,12 +919,49 @@ zx_status_t AudioDriver::ProcessStartResponse(const audio_rb_cmd_start_resp_t& r
 
   auto format = GetFormat();
 
-  // We are almost Started, so compute the translation from clock-monotonic to ring-buffer-position
-  // (in bytes), then update the ring buffer state's transformation and bump the generation counter.
-  TimelineFunction func(0, resp.start_time,
-                        FractionalFrames<int64_t>(format->frames_per_second()).raw_value(),
-                        ZX_SEC(1));
-  clock_mono_to_fractional_frame_->Update(func);
+  // TODO(johngro) : Drivers _always_ report their start time in clock monotonic
+  // time, but we want to set up all of our transformations to be defined in our
+  // reference timeline.
+  //
+  // When we get to the point that audio devices don't always use
+  // clock_monotonic as their reference, and instead may be recovering their own
+  // reference clock, we want to come back here and make sure that we use our
+  // device's kernel clock to transform this clock monotonic start time into a
+  // reference clock start time.
+  //
+  // Note that it is not safe to assume that every time a driver starts that
+  // it's reference clock will (initially) be a clone of clock monotonic.
+  // Inputs and outputs operating in the same non-monotonic clock domain will be
+  // sharing a reference clock which may have already deviated from monotonic by
+  // the time that this driver starts.  Also, eventually drivers should be
+  // stopping when idle and starting again later when there is work to do.  This
+  // does not destroy the clock for the domain, so the second time that the
+  // driver starts, it is very likely that the driver reference clock is no
+  // longer clock monotonic.
+  start_time_ = zx::time(resp.start_time);
+
+  // We are almost Started.  Compute various useful timeline functions.
+  // See the comments for the accessors in audio_device.h for detailed
+  // descriptions.
+  zx::time first_ptscts_time = start_time_ + external_delay_;
+  uint32_t frames_per_sec = format->frames_per_second();
+  uint32_t frac_frames_per_sec = FractionalFrames<int64_t>(frames_per_sec).raw_value();
+
+  ptscts_ref_clock_to_fractional_frames_ = TimelineFunction{
+      0,                        // First fractional frame presented/captured is always 0.
+      first_ptscts_time.get(),  // First pres/cap time is the start time + the external delay.
+      frac_frames_per_sec,      // the number of fractional frames per second
+      zx::sec(1).get()          // the number of clock ticks per second
+  };
+
+  safe_read_or_write_ref_clock_to_frames_ = TimelineFunction{
+      fifo_depth_frames_,  // the first safe frame at startup is a FIFO's distance away.
+      start_time_.get(),   // the TX/RX start time.
+      frames_per_sec,      // the number of frames per second
+      zx::sec(1).get()     // the number of clock ticks per second
+  };
+
+  ref_clock_to_fractional_frames_->Update(ptscts_ref_clock_to_fractional_frames_);
 
   // We are now Started. Let our owner know about this important milestone.
   state_ = State::Started;

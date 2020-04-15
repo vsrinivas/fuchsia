@@ -22,7 +22,7 @@ class FakeAudioDevice : public AudioDevice {
                   LinkMatrix* link_matrix)
       : AudioDevice(type, threading_model, registry, link_matrix) {}
 
-  // Needed because AudioDevice is a pure virtual class
+  // Needed because AudioDevice is an abstract class
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {}
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {}
 };

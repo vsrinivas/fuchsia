@@ -251,9 +251,13 @@ const std::shared_ptr<RingBuffer>& AudioDevice::driver_ring_buffer() const {
   return driver_->ring_buffer();
 };
 
-TimelineFunction AudioDevice::device_reference_clock_to_ring_pos_bytes() const {
-  return driver_->clock_mono_to_ring_pos_bytes();
-};
+const TimelineFunction& AudioDevice::driver_ptscts_ref_clock_to_fractional_frames() const {
+  return driver()->ptscts_ref_clock_to_fractional_frames();
+}
+
+const TimelineFunction& AudioDevice::driver_safe_read_or_write_ref_clock_to_frames() const {
+  return driver()->safe_read_or_write_ref_clock_to_frames();
+}
 
 void AudioDevice::GetDeviceInfo(fuchsia::media::AudioDeviceInfo* out_info) const {
   TRACE_DURATION("audio", "AudioDevice::GetDeviceInfo");

@@ -121,16 +121,20 @@ std::optional<MixStage::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
   }
 
   FX_DCHECK(driver_ring_buffer() != nullptr);
-  const auto& clock_monotonic_to_output_frame = clock_monotonic_to_output_frame_;
-  const auto& output_frames_per_monotonic_tick = clock_monotonic_to_output_frame.rate();
+  const auto& ref_clock_to_safe_wr_frame = driver_safe_read_or_write_ref_clock_to_frames();
+  const auto& output_frames_per_reference_tick = ref_clock_to_safe_wr_frame.rate();
   const auto& rb = *driver_ring_buffer();
   uint32_t fifo_frames = driver()->fifo_depth_frames();
 
-  // output_frames_consumed is the number of frames that the audio output device has read so far.
-  // output_frames_emitted is the slightly-smaller number of frames that have physically exited
-  // the device itself (the number of frames that have "made sound" so far);
-  int64_t output_frames_consumed = clock_monotonic_to_output_frame.Apply(uptime.get());
-  int64_t output_frames_emitted = output_frames_consumed - fifo_frames;
+  // output_frames_consumed is the number of frames that the audio output
+  // device's DMA *may* have read so far.  output_frames_transmitted is the
+  // slightly-smaller number of frames that have *must* have been transmitted
+  // over the interconnect so far.  Note, this is not technically the number of
+  // frames which have made sound so far.  Once a frame has left the
+  // interconnect, it still has the device's external_delay before it will
+  // finally hit the speaker.
+  int64_t output_frames_consumed = ref_clock_to_safe_wr_frame.Apply(uptime.get());
+  int64_t output_frames_transmitted = output_frames_consumed - fifo_frames;
 
   if (output_frames_consumed >= frames_sent_) {
     if (!underflow_start_time_.get()) {
@@ -140,11 +144,11 @@ std::optional<MixStage::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
       int64_t low_water_frames_underflow = output_underflow_frames + low_water_frames_;
 
       zx::duration output_underflow_duration =
-          zx::nsec(output_frames_per_monotonic_tick.Inverse().Scale(output_underflow_frames));
+          zx::nsec(output_frames_per_reference_tick.Inverse().Scale(output_underflow_frames));
       FX_CHECK(output_underflow_duration.get() >= 0);
 
       zx::duration output_variance_from_expected_wakeup =
-          zx::nsec(output_frames_per_monotonic_tick.Inverse().Scale(low_water_frames_underflow));
+          zx::nsec(output_frames_per_reference_tick.Inverse().Scale(low_water_frames_underflow));
 
       FX_LOGS(ERROR) << "OUTPUT UNDERFLOW: Missed mix target by (worst-case, expected) = ("
                      << std::setprecision(4)
@@ -169,9 +173,10 @@ std::optional<MixStage::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
     underflow_cooldown_deadline_ = zx::deadline_after(kUnderflowCooldown);
   }
 
-  int64_t fill_target =
-      clock_monotonic_to_output_frame.Apply((uptime + kDefaultHighWaterNsec).get()) +
-      driver()->fifo_depth_frames();
+  // We want to fill up to be HighWaterNsec ahead of the current safe write
+  // pointer position.  Add HighWaterNsec to our concept of "now" and run it
+  // through our transformation to figure out what frame number this.
+  int64_t fill_target = ref_clock_to_safe_wr_frame.Apply((uptime + kDefaultHighWaterNsec).get());
 
   // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
   if (underflow_start_time_.get()) {
@@ -190,7 +195,12 @@ std::optional<MixStage::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
     }
   }
 
-  int64_t frames_in_flight = frames_sent_ - output_frames_emitted;
+  // Compute the number of frames which are currently "in flight".  We define
+  // this as the number of frames that we have rendererd into the ring buffer
+  // but which have may have not been transmitted over the output's interconnect
+  // yet.  The distance between frames_sent_ and output_frames_transmitted
+  // should give us this number.
+  int64_t frames_in_flight = frames_sent_ - output_frames_transmitted;
   FX_DCHECK((frames_in_flight >= 0) && (frames_in_flight <= rb.frames()));
   FX_DCHECK(frames_sent_ <= fill_target);
   int64_t desired_frames = fill_target - frames_sent_;
@@ -262,9 +272,10 @@ void DriverOutput::FinishMixJob(const MixStage::FrameSpan& span, float* buffer) 
 
   if (VERBOSE_TIMING_DEBUG) {
     auto now = async::Now(mix_domain().dispatcher());
-    int64_t output_frames_consumed = clock_monotonic_to_output_frame_.Apply(now.get());
-    int64_t playback_lead_start = frames_sent_ - output_frames_consumed;
-    int64_t playback_lead_end = playback_lead_start + span.length;
+    const auto& ref_clock_to_safe_wr_frame = driver_safe_read_or_write_ref_clock_to_frames();
+    int64_t output_frames_consumed = ref_clock_to_safe_wr_frame.Apply(now.get());
+    int64_t playback_lead_end = frames_sent_ - output_frames_consumed;
+    int64_t playback_lead_start = playback_lead_end - span.length;
 
     FX_LOGS(INFO) << "PLead [" << std::setw(4) << playback_lead_start << ", " << std::setw(4)
                   << playback_lead_end << "]";
@@ -297,10 +308,20 @@ void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, u
 
 void DriverOutput::ScheduleNextLowWaterWakeup() {
   TRACE_DURATION("audio", "DriverOutput::ScheduleNextLowWaterWakeup");
-  // Schedule next callback for the low water mark behind the write pointer.
-  const auto& reference_clock_to_ring_buffer_frame = clock_monotonic_to_output_frame_;
-  int64_t low_water_frames = frames_sent_ - low_water_frames_;
-  int64_t low_water_time = reference_clock_to_ring_buffer_frame.ApplyInverse(low_water_frames);
+
+  // After filling up, we are "high water frames" ahead of the safe write
+  // pointer. Compute when this will have been reduced to low_water_frames_.
+  // This is when we want to wake up and repeat the mixing cycle.
+  //
+  // frames_sent_ is the total number of frames we have ever synthesized since
+  // starting.  Subtracting low_water_frames_ from this will give us the
+  // absolute frame number at which we are only low_water_frames_ ahead of the
+  // safe write pointer.  Running this backwards through the safe write
+  // pointer's reference clock <-> frame number function will tell us when it
+  // will be time to wake up.
+  int64_t low_water_frame_number = frames_sent_ - low_water_frames_;
+  int64_t low_water_time =
+      driver_safe_read_or_write_ref_clock_to_frames().ApplyInverse(low_water_frame_number);
   SetNextSchedTime(zx::time(low_water_time));
 }
 
@@ -445,44 +466,36 @@ void DriverOutput::OnDriverStartComplete() {
     return;
   }
 
-  // Compute the transformation from clock mono to the ring buffer read position
-  // in frames, rounded up.  Then compute our low water mark (in frames) and
-  // where we want to start mixing.  Finally kick off the mixing engine by
-  // manually calling Process.
-  auto format = driver()->GetFormat();
-  FX_CHECK(format);
-
-  uint32_t bytes_per_frame = format->bytes_per_frame();
-  int64_t offset = static_cast<int64_t>(1) - bytes_per_frame;
-  const TimelineFunction bytes_to_frames(0, offset, 1, bytes_per_frame);
-  TimelineFunction t_bytes = device_reference_clock_to_ring_pos_bytes();
-
-  clock_monotonic_to_output_frame_ = TimelineFunction::Compose(bytes_to_frames, t_bytes);
-  clock_monotonic_to_output_frame_generation_.Next();
-
   // Set up the mix task in the AudioOutput.
   //
   // TODO(39886): The intermediate buffer probably does not need to be as large as the entire ring
   // buffer.  Consider limiting this to be something only slightly larger than a nominal mix job.
-  TimelineRate fractional_frames_per_frame =
-      TimelineRate(FractionalFrames<uint32_t>(1).raw_value());
-  auto reference_clock_to_fractional_frame = TimelineFunction::Compose(
-      TimelineFunction(fractional_frames_per_frame), clock_monotonic_to_output_frame_);
+  auto format = driver()->GetFormat();
+  FX_CHECK(format);
   FX_DCHECK(pipeline_config_);
   SetupMixTask(*pipeline_config_, format->channels(), driver_ring_buffer()->frames(),
-               reference_clock_to_fractional_frame);
+               driver_ptscts_ref_clock_to_fractional_frames());
 
-  const TimelineFunction& trans = clock_monotonic_to_output_frame_;
-  uint32_t fd_frames = driver()->fifo_depth_frames();
-  low_water_frames_ = fd_frames + trans.rate().Scale(kDefaultLowWaterNsec.get());
-  frames_sent_ = low_water_frames_;
+  // Compute low_water_frames_.  low_water_frames_ is minimum the number of
+  // frames ahead of the safe write position we ever want to be.  When we hit
+  // the point where we are only this number of frames ahead of the safe write
+  // position, we need to wake up and fill up to our high water mark.
+  const TimelineRate& rate = driver_safe_read_or_write_ref_clock_to_frames().rate();
+  low_water_frames_ = rate.Scale(kDefaultLowWaterNsec.get());
+
+  // We started with a buffer full of silence.  Set up our bookkeeping so we
+  // consider ourselves to have generated and sent up to our low-water mark's
+  // worth of silence already, then start to generate real frames.  This value
+  // should be the sum of the fifo frames and the low water frames.
+  int64_t fd_frames = driver()->fifo_depth_frames();
+  frames_sent_ = fd_frames + low_water_frames_;
 
   if (VERBOSE_TIMING_DEBUG) {
     FX_LOGS(INFO) << "Audio output: FIFO depth (" << fd_frames << " frames " << std::fixed
-                  << std::setprecision(3) << trans.rate().Inverse().Scale(fd_frames) / 1000000.0
-                  << " mSec) Low Water (" << low_water_frames_ << " frames " << std::fixed
-                  << std::setprecision(3)
-                  << trans.rate().Inverse().Scale(low_water_frames_) / 1000000.0 << " mSec)";
+                  << std::setprecision(3) << rate.Inverse().Scale(fd_frames) / 1000000.0
+                  << " mSec) Low Water (" << frames_sent_ << " frames " << std::fixed
+                  << std::setprecision(3) << rate.Inverse().Scale(frames_sent_) / 1000000.0
+                  << " mSec)";
   }
 
   state_ = State::Started;

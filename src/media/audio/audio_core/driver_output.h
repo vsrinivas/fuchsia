@@ -55,7 +55,7 @@ class DriverOutput : public AudioOutput {
     Shutdown,
   };
 
-  void ScheduleNextLowWaterWakeup();
+  void ScheduleNextLowWaterWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // Callbacks triggered by our driver object as it completes various
   // asynchronous tasks.
@@ -83,8 +83,6 @@ class DriverOutput : public AudioOutput {
 
   int64_t frames_sent_ = 0;
   int64_t low_water_frames_ = 0;
-  TimelineFunction clock_monotonic_to_output_frame_;
-  GenerationId clock_monotonic_to_output_frame_generation_;
   zx::time underflow_start_time_;
   zx::time underflow_cooldown_deadline_;
 

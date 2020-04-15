@@ -52,6 +52,7 @@ class FakeAudioDriver {
   void set_clock_domain(int32_t clock_domain) { clock_domain_ = clock_domain; }
   void set_plugged(bool plugged) { plugged_ = plugged; }
   void set_fifo_depth(uint32_t fifo_depth) { fifo_depth_ = fifo_depth; }
+  void set_external_delay(zx::duration external_delay) { external_delay_ = external_delay; }
 
   // |true| after an |audio_rb_cmd_start| is received, until an |audio_rb_cmd_stop| is received.
   bool is_running() const { return is_running_; }
@@ -103,6 +104,7 @@ class FakeAudioDriver {
   zx::vmo ring_buffer_;
 
   uint32_t fifo_depth_ = 0;
+  zx::duration external_delay_{zx::nsec(0)};
   bool plugged_ = true;
 
   std::optional<SelectedFormat> selected_format_;
