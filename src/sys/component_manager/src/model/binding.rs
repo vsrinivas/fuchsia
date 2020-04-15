@@ -129,6 +129,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 actions::{Action, ActionSet},
+                events::event::SyncMode,
                 hooks::{EventType, HooksRegistration},
                 model::{ComponentManagerConfig, ModelParams},
                 moniker::PartialMoniker,
@@ -234,7 +235,7 @@ mod tests {
         let events = vec![EventType::Started.into()];
         let mut event_source = builtin_environment
             .event_source_factory
-            .create_for_debug()
+            .create_for_debug(SyncMode::Sync)
             .await
             .expect("create event source");
 

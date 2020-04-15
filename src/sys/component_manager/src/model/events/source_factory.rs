@@ -72,11 +72,12 @@ impl EventSourceFactory {
     }
 
     /// Creates a debug event source.
-    pub async fn create_for_debug(&self) -> Result<EventSource, ModelError> {
+    pub async fn create_for_debug(&self, sync_mode: SyncMode) -> Result<EventSource, ModelError> {
         EventSource::new_for_debug(
             self.model.clone(),
             AbsoluteMoniker::root(),
             &self.event_registry,
+            sync_mode,
         )
         .await
     }

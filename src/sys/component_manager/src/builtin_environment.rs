@@ -20,7 +20,7 @@ use {
             binding::Binder,
             capability_routed_logger::CapabilityRoutedLogger,
             error::ModelError,
-            events::source_factory::EventSourceFactory,
+            events::{event::SyncMode, source_factory::EventSourceFactory},
             hub::Hub,
             model::{ComponentManagerConfig, Model},
             runner::Runner,
@@ -231,7 +231,7 @@ impl BuiltinEnvironment {
         // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.
         if self.is_debug {
-            let event_source = self.event_source_factory.create_for_debug().await?;
+            let event_source = self.event_source_factory.create_for_debug(SyncMode::Sync).await?;
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();
                 event_source.serve(stream);

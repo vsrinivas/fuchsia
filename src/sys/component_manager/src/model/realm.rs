@@ -935,6 +935,7 @@ pub mod tests {
         super::*,
         crate::model::{
             binding::Binder,
+            events::event::SyncMode,
             hooks::EventType,
             rights::READ_RIGHTS,
             testing::{
@@ -1321,7 +1322,7 @@ pub mod tests {
         let mut event_source = test
             .builtin_environment
             .event_source_factory
-            .create_for_debug()
+            .create_for_debug(SyncMode::Sync)
             .await
             .expect("create event source");
         let mut event_stream = event_source

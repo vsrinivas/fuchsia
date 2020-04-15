@@ -336,7 +336,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 binding::Binder,
-                events::{source::EventSource, stream::EventStream},
+                events::{event::SyncMode, source::EventSource, stream::EventStream},
                 model::ModelParams,
                 moniker::AbsoluteMoniker,
                 resolver::ResolverRegistry,
@@ -415,7 +415,7 @@ mod tests {
             } else {
                 let mut event_source = builtin_environment_inner
                     .event_source_factory
-                    .create_for_debug()
+                    .create_for_debug(SyncMode::Sync)
                     .await
                     .expect("created event source");
                 let event_stream =

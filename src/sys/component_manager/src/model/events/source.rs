@@ -143,8 +143,9 @@ impl EventSource {
         model: Weak<Model>,
         target_moniker: AbsoluteMoniker,
         registry: &Arc<EventRegistry>,
+        sync_mode: SyncMode,
     ) -> Result<Self, ModelError> {
-        let mut event_source = Self::new(model, target_moniker, registry, SyncMode::Sync).await?;
+        let mut event_source = Self::new(model, target_moniker, registry, sync_mode).await?;
         event_source.debug = true;
         Ok(event_source)
     }
