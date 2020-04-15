@@ -13,7 +13,7 @@ union PacketUser {
     4: array<int8>:32 c8;
 };
 
-// port_packet_t::type ZX_PKT_TYPE_SIGNAL_ONE and ZX_PKT_TYPE_SIGNAL_REP.
+// port_packet_t::type ZX_PKT_TYPE_SIGNAL_ONE.
 struct PacketSignal {
     signals trigger;
     signals observed;

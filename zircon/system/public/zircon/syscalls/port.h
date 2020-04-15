@@ -19,7 +19,7 @@ __BEGIN_CDECLS
 // packet types.  zx_port_packet_t::type
 #define ZX_PKT_TYPE_USER            ((uint8_t)0x00u)
 #define ZX_PKT_TYPE_SIGNAL_ONE      ((uint8_t)0x01u)
-#define ZX_PKT_TYPE_SIGNAL_REP      ((uint8_t)0x02u)
+// 0x02 was previously used for "ZX_PKT_TYPE_SIGNAL_REP".
 #define ZX_PKT_TYPE_GUEST_BELL      ((uint8_t)0x03u)
 #define ZX_PKT_TYPE_GUEST_MEM       ((uint8_t)0x04u)
 #define ZX_PKT_TYPE_GUEST_IO        ((uint8_t)0x05u)
@@ -34,7 +34,6 @@ __BEGIN_CDECLS
 
 #define ZX_PKT_IS_USER(type)          ((type) == ZX_PKT_TYPE_USER)
 #define ZX_PKT_IS_SIGNAL_ONE(type)    ((type) == ZX_PKT_TYPE_SIGNAL_ONE)
-#define ZX_PKT_IS_SIGNAL_REP(type)    ((type) == ZX_PKT_TYPE_SIGNAL_REP)
 #define ZX_PKT_IS_GUEST_BELL(type)    ((type) == ZX_PKT_TYPE_GUEST_BELL)
 #define ZX_PKT_IS_GUEST_MEM(type)     ((type) == ZX_PKT_TYPE_GUEST_MEM)
 #define ZX_PKT_IS_GUEST_IO(type)      ((type) == ZX_PKT_TYPE_GUEST_IO)
@@ -59,7 +58,7 @@ typedef union zx_packet_user {
   uint8_t c8[32];
 } zx_packet_user_t;
 
-// port_packet_t::type ZX_PKT_TYPE_SIGNAL_ONE and ZX_PKT_TYPE_SIGNAL_REP.
+// port_packet_t::type ZX_PKT_TYPE_SIGNAL_ONE.
 typedef struct zx_packet_signal {
   zx_signals_t trigger;
   zx_signals_t observed;
