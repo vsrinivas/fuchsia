@@ -114,9 +114,10 @@ class Reporter {
   void SettingCapturerMinFenceTime(const fuchsia::media::AudioCapturer& capturer,
                                    zx::duration min_fence_time);
 
-  // Logs an Underflow event to cobalt. output_duration_missed is the amount of time by which we
-  // missed a time-critical write into the output buffer.
-  void OutputUnderflow(zx::duration output_duration_missed, zx::time uptime_to_underflow);
+  // Logs an Underflow event to cobalt and inspect. output_duration_missed is the amount of time by
+  // which we missed a time-critical write into the output buffer.
+  void OutputUnderflow(const AudioDevice& device, zx::duration output_duration_missed,
+                       zx::time uptime_to_underflow);
 
  private:
   void InitInspect();
@@ -128,12 +129,14 @@ class Reporter {
       muted_ = node_.CreateUint("muted", 0);
       agc_supported_ = node_.CreateUint("agc supported", 0);
       agc_enabled_ = node_.CreateUint("agc enabled", 0);
+      underflows_ = node_.CreateUint("underflows", 0);
     }
     inspect::Node node_;
     inspect::DoubleProperty gain_db_;
     inspect::UintProperty muted_;
     inspect::UintProperty agc_supported_;
     inspect::UintProperty agc_enabled_;
+    inspect::UintProperty underflows_;
   };
 
   struct Output : public Device {

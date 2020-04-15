@@ -382,7 +382,7 @@ std::string Reporter::NextCapturerName() {
   return os.str();
 }
 
-void Reporter::OutputUnderflow(zx::duration output_underflow_duration,
+void Reporter::OutputUnderflow(const AudioDevice& device, zx::duration output_underflow_duration,
                                zx::time uptime_to_underflow) {
   // Bucket this into exponentially-increasing time since system boot.
   // By default, bucket the overflow into the last bucket
@@ -425,6 +425,14 @@ void Reporter::OutputUnderflow(zx::duration output_underflow_duration,
           FX_PLOGS(ERROR, fidl::ToUnderlying(status)) << "Cobalt logger returned an error";
         }
       });
+
+  Device* d = device.is_output() ? FindOutput(device) : nullptr;
+  if (d == nullptr) {
+    FX_LOGS(ERROR) << kDeviceNotFound;
+    return;
+  }
+
+  d->underflows_.Add(1);
 }
 
 #endif  // ENABLE_REPORTER
