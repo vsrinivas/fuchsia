@@ -283,6 +283,75 @@ func ParseImages(imgSrc io.ReadCloser, filenames []string) ([]Image, error) {
 	return imgs, nil
 }
 
+// Types to deserialize the update-mode file. NOTE: Fields must be exported for json decoding.
+// Expected form for update-mode file is:
+// {
+//   "version": "1",
+//   "content": {
+//     "mode": "normal" / "force-recovery",
+//   }
+// }
+type updateModeFileContent struct {
+	Mode string `json:"mode"`
+}
+type updateModeFile struct {
+	Version string                `json:"version"`
+	Content updateModeFileContent `json:"content"`
+}
+
+// Type to describe the supported update modes.
+// Note: exporting since this will be used in main (to be consistent with the rest of the code).
+type UpdateMode string
+
+const (
+	UpdateModeNormal        UpdateMode = "normal"
+	UpdateModeForceRecovery            = "force-recovery"
+)
+
+// We define custom error wrappers so we can test the proper error is being returned.
+type updateModeNotSupportedError UpdateMode
+
+func (e updateModeNotSupportedError) Error() string {
+	return fmt.Sprintf("unsupported update mode: %s", string(e))
+}
+
+type jsonUnmarshalError struct {
+	err error
+}
+
+func (e jsonUnmarshalError) Error() string {
+	return fmt.Sprintf("failed to unmarshal update-mode: %v", e.err)
+}
+
+// Note: exporting since this will be used in main (to be consistent with the rest of the code).
+func ParseUpdateMode(updatePkg *UpdatePackage) (UpdateMode, error) {
+	// Fall back to normal if the update-mode file does not exist.
+	// Ideally, we'd fall back if specifically given the "file not found" error,
+	// though it's unclear which error that is (syscall.ENOENT did not work).
+	modeSrc, err := updatePkg.Open("update-mode")
+	if err != nil {
+		syslog.Infof("parse_update_mode: could not open update-mode file, assuming normal system update flow.")
+		return UpdateModeNormal, nil
+	}
+	defer modeSrc.Close()
+	// Read the raw bytes.
+	b, err := ioutil.ReadAll(modeSrc)
+	if err != nil {
+		return "", fmt.Errorf("failed to read mode file: %w", err)
+	}
+	// Convert to json.
+	var updateModeFile updateModeFile
+	if err := json.Unmarshal(b, &updateModeFile); err != nil {
+		return "", jsonUnmarshalError{err}
+	}
+	// Confirm we support this mode.
+	mode := UpdateMode(updateModeFile.Content.Mode)
+	if mode != UpdateModeNormal && mode != UpdateModeForceRecovery {
+		return "", updateModeNotSupportedError(mode)
+	}
+	return mode, nil
+}
+
 func FetchPackages(pkgs []string, resolver *pkg.PackageResolverWithCtxInterface) error {
 	var errCount int
 	var firstErr error
