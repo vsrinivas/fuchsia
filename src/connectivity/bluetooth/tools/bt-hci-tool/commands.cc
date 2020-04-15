@@ -118,7 +118,7 @@ std::vector<std::string> AdvFlagsToStrings(uint8_t flags) {
 
 void DisplayAdvertisingReport(const ::bt::hci::LEAdvertisingReportData& data, int8_t rssi,
                               const std::string& name_filter, const std::string& addr_type_filter) {
-  ::bt::gap::AdvertisingDataReader reader(::bt::BufferView(data.data, data.length_data));
+  ::bt::SupplementDataReader reader(::bt::BufferView(data.data, data.length_data));
 
   // The AD fields that we'll parse out.
   uint8_t flags = 0;
@@ -126,20 +126,20 @@ void DisplayAdvertisingReport(const ::bt::hci::LEAdvertisingReportData& data, in
   int8_t tx_power_lvl;
   bool tx_power_present = false;
 
-  ::bt::gap::DataType type;
+  ::bt::DataType type;
   ::bt::BufferView adv_data_field;
   while (reader.GetNextField(&type, &adv_data_field)) {
     switch (type) {
-      case ::bt::gap::DataType::kFlags:
+      case ::bt::DataType::kFlags:
         flags = adv_data_field.data()[0];
         break;
-      case ::bt::gap::DataType::kCompleteLocalName:
+      case ::bt::DataType::kCompleteLocalName:
         complete_name = adv_data_field.AsString();
         break;
-      case ::bt::gap::DataType::kShortenedLocalName:
+      case ::bt::DataType::kShortenedLocalName:
         short_name = adv_data_field.AsString();
         break;
-      case ::bt::gap::DataType::kTxPowerLevel:
+      case ::bt::DataType::kTxPowerLevel:
         tx_power_present = true;
         tx_power_lvl = adv_data_field.data()[0];
         break;
