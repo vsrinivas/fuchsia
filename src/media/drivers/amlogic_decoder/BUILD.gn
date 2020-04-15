@@ -155,7 +155,6 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/mmio",
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/sync",
-      "//zircon/public/lib/tee-client-api",
       "//zircon/public/lib/trace-driver",
       "//zircon/public/lib/zx",
       "//zircon/system/banjo/ddk.protocol.platform.device",
@@ -163,6 +162,7 @@ if (target_cpu == "arm64") {
       "//zircon/system/banjo/ddk.protocol.tee",
       "//zircon/system/dev/lib/device-protocol-platform-device",
       "//zircon/system/fidl/fuchsia-tee",
+      "//zircon/system/ulib/tee-client-api",
     ]
     deps = [
       ":test_support",

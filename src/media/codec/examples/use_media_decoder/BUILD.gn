@@ -49,7 +49,7 @@ source_set("use_media_decoder_source_set") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/tee-client-api",
+    "//zircon/system/ulib/tee-client-api",
   ]
 }
 

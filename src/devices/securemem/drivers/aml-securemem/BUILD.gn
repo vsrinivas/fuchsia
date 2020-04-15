@@ -33,7 +33,6 @@ driver_module("aml-securemem") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
-    "//zircon/public/lib/tee-client-api-headers",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
@@ -42,6 +41,7 @@ driver_module("aml-securemem") {
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/fidl/fuchsia-tee",
     "//zircon/system/ulib/closure-queue",
+    "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
   ]
 }
 
@@ -73,7 +73,6 @@ test("aml-securemem-test") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
-    "//zircon/public/lib/tee-client-api-static",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
@@ -84,6 +83,7 @@ test("aml-securemem-test") {
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/fidl/fuchsia-tee",
     "//zircon/system/ulib/closure-queue",
+    "//zircon/system/ulib/tee-client-api:tee-client-api-static",
   ]
 
   # TODO(46354): Fix the leaks and remove this.

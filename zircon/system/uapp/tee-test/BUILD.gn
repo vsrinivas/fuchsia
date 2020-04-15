@@ -19,7 +19,7 @@ executable("tee-test") {
   sources = [ "tee-test.c" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/tee-client-api",
+    "//zircon/system/ulib/tee-client-api",
   ]
   libs = [ "zircon" ]
 }

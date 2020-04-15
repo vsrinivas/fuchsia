@@ -1,12 +1,27 @@
 [
   {
-    "label": "//zircon/system/ulib/zbi-bootfs:zbi-bootfs",
-    "name": "zbi-bootfs",
+    "label": "//zircon/system/dev/lib/pci:pci",
+    "name": "pci",
     "sdk": false
   },
   {
-    "label": "//zircon/system/dev/lib/pci:pci",
-    "name": "pci",
+    "label": "//zircon/system/ulib/tee-client-api:tee-client-api",
+    "name": "tee-client-api",
+    "sdk": false
+  },
+  {
+    "label": "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
+    "name": "tee-client-api-headers",
+    "sdk": false
+  },
+  {
+    "label": "//zircon/system/ulib/tee-client-api:tee-client-api-static",
+    "name": "tee-client-api-static",
+    "sdk": false
+  },
+  {
+    "label": "//zircon/system/ulib/zbi-bootfs:zbi-bootfs",
+    "name": "zbi-bootfs",
     "sdk": false
   }
 ]

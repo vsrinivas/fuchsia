@@ -44,7 +44,7 @@ rustc_binary("bin") {
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 
-  non_rust_deps = [ "//zircon/public/lib/tee-client-api" ]
+  non_rust_deps = [ "//zircon/system/ulib/tee-client-api" ]
 }
 
 package("kms") {

@@ -145,7 +145,6 @@ aggregate_manifest("legacy-aux") {
     "syslog",
 #------------------
 #------------------
-    "tee-client-api",
 #------------------
 #------------------
     "trace-engine",
