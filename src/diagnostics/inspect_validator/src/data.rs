@@ -9,7 +9,7 @@ use {
         DiffType,
     },
     anyhow::{bail, format_err, Error},
-    difference,
+    base64, difference,
     fuchsia_inspect::{self, format::block::ArrayFormat},
     fuchsia_inspect_node_hierarchy::{LinkNodeDisposition, NodeHierarchy, Property as iProperty},
     num_derive::{FromPrimitive, ToPrimitive},
@@ -35,7 +35,7 @@ const ROOT_NAME: &str = "root";
 ///
 /// For now, Data assumes it will not be given two sibling-nodes or
 /// properties with the same name, and does not truncate any data or names.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Data {
     nodes: HashMap<u32, Node>,
     properties: HashMap<u32, Property>,
@@ -59,7 +59,7 @@ pub struct Data {
 // A placeholder Node is placed at index 0 upon creation to hold the real Nodes and
 // properties added during scanning VMO or processing Actions.
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node {
     name: String,
     parent: u32,
@@ -67,7 +67,7 @@ pub struct Node {
     properties: HashSet<u32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Property {
     name: String,
     id: u32,
@@ -75,7 +75,7 @@ pub struct Property {
     payload: Payload,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Payload {
     String(String),
     Bytes(Vec<u8>),
@@ -87,18 +87,112 @@ enum Payload {
     UintArray(Vec<u64>, ArrayFormat),
     DoubleArray(Vec<f64>, ArrayFormat),
     Link { disposition: LinkNodeDisposition, parsed_data: Data },
+
+    // Used when parsing from JSON. We have trouble identifying numeric types and types of
+    // histograms from the output. We can use these generic types to be safe for comparison from
+    // JSON.
+    GenericNumber(String),
+    GenericArray(Vec<String>),
+    GenericHistogram(Vec<String>),
+}
+
+fn to_string<T: std::fmt::Display>(v: T) -> String {
+    format!("{}", v)
+}
+
+fn to_string_array<T: std::fmt::Display>(values: Vec<T>) -> Vec<String> {
+    values.into_iter().map(|x| to_string(x)).collect()
+}
+
+fn handle_array(values: Vec<String>, format: ArrayFormat) -> Payload {
+    match format {
+        ArrayFormat::LinearHistogram => {
+            Payload::GenericHistogram(values.into_iter().skip(2).collect())
+        }
+        ArrayFormat::ExponentialHistogram => {
+            Payload::GenericHistogram(values.into_iter().skip(3).collect())
+        }
+        _ => Payload::GenericArray(values),
+    }
+}
+
+impl Payload {
+    /// Convert this payload into a generic representation that is compatible with JSON.
+    fn to_generic(self) -> Self {
+        match self {
+            Payload::IntArray(val, format) => handle_array(to_string_array(val), format),
+            Payload::UintArray(val, format) => handle_array(to_string_array(val), format),
+            Payload::DoubleArray(val, format) => handle_array(to_string_array(val), format),
+            Payload::Bytes(val) => Payload::String(format!("b64:{}", base64::encode(&val))),
+            Payload::Int(val) => Payload::GenericNumber(to_string(val)),
+            Payload::Uint(val) => Payload::GenericNumber(to_string(val)),
+            Payload::Double(val) => Payload::GenericNumber(to_string(val)),
+            Payload::Link { disposition, parsed_data } => {
+                Payload::Link { disposition, parsed_data: parsed_data.clone_generic() }
+            }
+            val => val,
+        }
+    }
+}
+
+struct FormattedEntries {
+    nodes: Vec<String>,
+    properties: Vec<String>,
 }
 
 impl Property {
     fn to_string(&self, prefix: &str) -> String {
+        format!("{}{}: {:?}", prefix, self.name, &self.payload)
+    }
+
+    /// Formats this property and any additional properties and nodes it may contain (in the case
+    /// of links).
+    fn format_entries(&self, prefix: &str) -> FormattedEntries {
         match &self.payload {
             Payload::Link { disposition, parsed_data } => match disposition {
-                LinkNodeDisposition::Child => {
-                    format!("{} {}: {}", prefix, self.name, parsed_data.to_string_internal(true))
+                // Return a node for the child, replacing its name.
+                LinkNodeDisposition::Child => FormattedEntries {
+                    nodes: vec![format!(
+                        "{}{} ->\n{}",
+                        prefix,
+                        self.name,
+                        parsed_data.nodes[&0].to_string(&prefix, &parsed_data, true)
+                    )],
+                    properties: vec![],
+                },
+                // Return the nodes and properties (which may themselves have linked nodes) inline
+                // from this property.
+                LinkNodeDisposition::Inline => {
+                    let root = &parsed_data.nodes[&0];
+                    let mut nodes = root
+                        .children
+                        .iter()
+                        .map(|v| {
+                            parsed_data.nodes.get(v).map_or("Missing child".into(), |n| {
+                                n.to_string(&prefix, &parsed_data, false)
+                            })
+                        })
+                        .collect::<Vec<_>>();
+                    let mut properties = vec![];
+                    for FormattedEntries { nodes: mut n, properties: mut p } in
+                        root.properties.iter().map(|v| {
+                            parsed_data.properties.get(v).map_or(
+                                FormattedEntries {
+                                    nodes: vec![],
+                                    properties: vec!["Missing property".into()],
+                                },
+                                |p| p.format_entries(&prefix),
+                            )
+                        })
+                    {
+                        nodes.append(&mut n);
+                        properties.append(&mut p);
+                    }
+                    FormattedEntries { nodes, properties }
                 }
-                LinkNodeDisposition::Inline => format!("{}", parsed_data.to_string_internal(true)),
             },
-            _ => format!("{} {}: {:?}", prefix, self.name, &self.payload),
+            // Non-link property, just format as the only returned property.
+            _ => FormattedEntries { nodes: vec![], properties: vec![self.to_string(prefix)] },
         }
     }
 }
@@ -118,26 +212,32 @@ impl Node {
             );
         }
         let mut properties = vec![];
+
         for property_id in self.properties.iter() {
-            properties.push(
-                tree.properties
-                    .get(property_id)
-                    .map_or("Missing property".into(), |p| p.to_string(&sub_prefix)),
-            );
+            let FormattedEntries { nodes: mut n, properties: mut p } =
+                tree.properties.get(property_id).map_or(
+                    FormattedEntries {
+                        nodes: vec![],
+                        properties: vec!["Missing property".to_string()],
+                    },
+                    |p| p.format_entries(&sub_prefix),
+                );
+            properties.append(&mut p);
+            nodes.append(&mut n);
         }
+
         nodes.sort_unstable();
         properties.sort_unstable();
-        if self.name == ROOT_NAME && hide_root {
-            format!("{}\n{}\n", properties.join("\n"), nodes.join("\n"))
-        } else {
-            format!(
-                "{} {} ->\n{}\n{}\n",
-                prefix,
-                self.name,
-                properties.join("\n"),
-                nodes.join("\n")
-            )
+
+        let mut output_lines = vec![];
+
+        if self.name != ROOT_NAME || !hide_root {
+            output_lines.push(format!("{}{} ->", prefix, self.name));
         }
+        output_lines.append(&mut properties);
+        output_lines.append(&mut nodes);
+
+        output_lines.join("\n")
     }
 }
 
@@ -844,22 +944,48 @@ impl Data {
     // ***** Here are the functions to compare two Data (by converting to a
     // ***** fully informative string).
 
-    fn diff_string(string1: &str, string2: &str) -> String {
-        let difference::Changeset { diffs, .. } =
-            difference::Changeset::new(string1, string2, "\n");
-        let mut strings = Vec::new();
-        for diff in diffs.iter() {
-            match diff {
-                difference::Difference::Same(lines) => strings.push(format!(
-                    "\nSame:{} lines",
-                    lines.split("\n").collect::<Vec<&str>>().len()
-                )),
-                difference::Difference::Rem(lines) => strings.push(format!("\nLocal: {}", lines)),
-                difference::Difference::Add(lines) => strings.push(format!("\nOther: {}", lines)),
+    /// Make a clone of this Data with all properties replaced with their generic version.
+    fn clone_generic(&self) -> Self {
+        let mut clone = self.clone();
+
+        let mut to_remove = vec![];
+        let mut names = HashSet::new();
+
+        clone.properties = clone
+            .properties
+            .into_iter()
+            .filter_map(|(id, mut v)| {
+                // We do not support duplicate property names within a single node in our JSON
+                // output.
+                // Delete one of the nodes from the tree.
+                //
+                // Note: This can cause errors if the children do not have the same properties.
+                if !names.insert((v.parent, v.name.clone())) {
+                    to_remove.push((v.parent, id));
+                    None
+                } else {
+                    v.payload = v.payload.to_generic();
+                    Some((id, v))
+                }
+            })
+            .collect::<HashMap<u32, Property>>();
+
+        // Clean up removed properties.
+        for (parent, id) in to_remove {
+            if clone.nodes.contains_key(&parent) {
+                clone.nodes.get_mut(&parent).unwrap().properties.remove(&id);
             }
         }
-        strings.push("\n".to_owned());
-        strings.join("")
+
+        clone
+    }
+
+    /// Compare this data with data that should be equivalent but was parsed from JSON.
+    ///
+    /// This method tweaks some types to deal with JSON representation of the data, which is not as
+    /// precise as the Inspect format itself.
+    pub fn compare_to_json(&self, other: &Data, diff_type: DiffType) -> Result<(), Error> {
+        self.clone_generic().compare(other, diff_type)
     }
 
     /// Compares two in-memory Inspect trees, returning Ok(()) if they have the
@@ -868,22 +994,42 @@ impl Data {
     pub fn compare(&self, other: &Data, diff_type: DiffType) -> Result<(), Error> {
         let self_string = self.to_string();
         let other_string = other.to_string();
-        if self_string == other_string {
+
+        let difference::Changeset { diffs, distance, .. } =
+            difference::Changeset::new(&self_string, &other_string, "\n");
+
+        if distance == 0 {
             Ok(())
         } else {
-            let full_string = match diff_type {
-                DiffType::Diff => "".to_owned(),
-                DiffType::Full | DiffType::Both => {
-                    format!("-- LOCAL --\n{}\n-- OTHER --\n{}\n", self_string, other_string)
+            let diff_lines = diffs
+                .into_iter()
+                .flat_map(|diff| {
+                    let (prefix, val) = match diff {
+                        // extra space so that all ':'s in output are aligned
+                        difference::Difference::Same(val) => (" same", val),
+                        difference::Difference::Add(val) => ("other", val),
+                        difference::Difference::Rem(val) => ("local", val),
+                    };
+                    val.split("\n").map(|line| format!("{}: {:?}", prefix, line)).collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+
+            match diff_type {
+                DiffType::Full => Err(format_err!(
+                    "Trees differ:\n-- LOCAL --\n{}\n-- OTHER --\n{}",
+                    self_string,
+                    other_string
+                )),
+                DiffType::Diff => {
+                    Err(format_err!("Trees differ:\n-- DIFF --\n{}", diff_lines.join("\n")))
                 }
-            };
-            let diff_string = match diff_type {
-                DiffType::Full => "".to_owned(),
-                DiffType::Diff | DiffType::Both => {
-                    format!("-- DIFF --\n{}\n", Self::diff_string(&self_string, &other_string))
-                }
-            };
-            return Err(format_err!("Trees differ:{}{}", full_string, diff_string));
+                DiffType::Both => Err(format_err!(
+                    "Trees differ:\n-- LOCAL --\n{}\n-- OTHER --\n{}\n-- DIFF --\n{}",
+                    self_string,
+                    other_string,
+                    diff_lines.join("\n")
+                )),
+            }
         }
     }
 
@@ -937,9 +1083,22 @@ impl Data {
         Ok(())
     }
 
-    /// Return true if this data has no nodes other than root.
+    /// Return true if this data is not just an empty root node.
     pub fn is_empty(&self) -> bool {
-        return self.nodes.len() <= 1 && self.properties.len() == 0 && self.nodes.contains_key(&0);
+        if !self.nodes.contains_key(&0) {
+            // No root
+            return true;
+        }
+
+        // There are issues with displaying a tree that has no properties.
+        // TODO(fxb/49861): Support empty trees in archive.
+        if self.properties.len() == 0 {
+            return true;
+        }
+
+        // Root has no properties and any children it may have are tombstoned.
+        let root = &self.nodes[&0];
+        return root.children.is_subset(&self.tombstone_nodes) && root.properties.len() == 0;
     }
 }
 
@@ -991,16 +1150,23 @@ impl From<NodeHierarchy> for Data {
                 next_id += 1;
 
                 let (name, payload) = match property.clone() {
-                    iProperty::String(n, v) => (n, Payload::String(v)),
-                    iProperty::Bytes(n, v) => (n, Payload::Bytes(v)),
-                    iProperty::Int(n, v) => (n, Payload::Int(v)),
-                    iProperty::Uint(n, v) => (n, Payload::Uint(v)),
-                    iProperty::Double(n, v) => (n, Payload::Double(v)),
-                    iProperty::Bool(n, v) => (n, Payload::Bool(v)),
-                    iProperty::IntArray(n, v) => (n, Payload::IntArray(v.values, v.format)),
-                    iProperty::UintArray(n, v) => (n, Payload::UintArray(v.values, v.format)),
-                    iProperty::DoubleArray(n, v) => (n, Payload::DoubleArray(v.values, v.format)),
+                    iProperty::String(n, v) => (n, Payload::String(v).to_generic()),
+                    iProperty::Bytes(n, v) => (n, Payload::Bytes(v).to_generic()),
+                    iProperty::Int(n, v) => (n, Payload::Int(v).to_generic()),
+                    iProperty::Uint(n, v) => (n, Payload::Uint(v).to_generic()),
+                    iProperty::Double(n, v) => (n, Payload::Double(v).to_generic()),
+                    iProperty::Bool(n, v) => (n, Payload::Bool(v).to_generic()),
+                    iProperty::IntArray(n, v) => {
+                        (n, Payload::IntArray(v.values, v.format).to_generic())
+                    }
+                    iProperty::UintArray(n, v) => {
+                        (n, Payload::UintArray(v.values, v.format).to_generic())
+                    }
+                    iProperty::DoubleArray(n, v) => {
+                        (n, Payload::DoubleArray(v.values, v.format).to_generic())
+                    }
                 };
+
                 properties.insert(prop_id, Property { name, id: prop_id, parent: id, payload });
                 nodes.get_mut(&id).expect("parent must exist").properties.insert(prop_id);
             }
@@ -1023,45 +1189,41 @@ mod tests {
         fidl_test_inspect_validate::{Number, NumberType, ROOT_ID},
         fuchsia_inspect::{
             format::block_type::BlockType,
-            reader::{ArrayFormat as iArrayFormat, ArrayValue as iArrayValue},
+            reader::{ArrayFormat, ArrayValue as iArrayValue},
         },
     };
 
     #[test]
     fn test_basic_data_strings() -> Result<(), Error> {
         let mut info = Data::new();
-        assert_eq!(info.to_string(), " root ->\n\n\n");
+        assert_eq!(info.to_string(), "root ->");
 
         info.apply(&create_node!(parent: ROOT_ID, id: 1, name: "foo"))?;
-        assert_eq!(info.to_string(), " root ->\n\n>  foo ->\n\n\n\n");
+        assert_eq!(info.to_string(), "root ->\n> foo ->");
 
         info.apply(&delete_node!( id: 1 ))?;
-        assert_eq!(info.to_string(), " root ->\n\n\n");
+        assert_eq!(info.to_string(), "root ->");
 
         Ok(())
     }
 
-    const EXPECTED_HIERARCHY: &'static str = " root ->
->  double: Double(2.5)
->  int: Int(-5)
->  string: String(\"value\")
->  uint: Uint(10)
->  child ->
-> >  bytes: Bytes([1, 2])
-> >  grandchild ->
-> > >  double_a: DoubleArray([0.5, 1.0], Default)
-> > >  double_eh: DoubleArray([0.5, 0.5, 2.0, 1.0, 2.0, 3.0], ExponentialHistogram)
-> > >  double_lh: DoubleArray([0.5, 0.5, 1.0, 2.0, 3.0], LinearHistogram)
-> > >  int_a: IntArray([-1, -2], Default)
-> > >  int_eh: IntArray([-1, 1, 2, 1, 2, 3], ExponentialHistogram)
-> > >  int_lh: IntArray([-1, 1, 1, 2, 3], LinearHistogram)
-> > >  uint_a: UintArray([1, 2], Default)
-> > >  uint_eh: UintArray([1, 1, 2, 0, 1, 2, 3], ExponentialHistogram)
-> > >  uint_lh: UintArray([1, 1, 0, 1, 2, 3], LinearHistogram)
-
-
-
-";
+    const EXPECTED_HIERARCHY: &'static str = r#"root ->
+> double: GenericNumber("2.5")
+> int: GenericNumber("-5")
+> string: String("value")
+> uint: GenericNumber("10")
+> child ->
+> > bytes: String("b64:AQI=")
+> > grandchild ->
+> > > double_a: GenericArray(["0.5", "1"])
+> > > double_eh: GenericHistogram(["1", "2", "3"])
+> > > double_lh: GenericHistogram(["1", "2", "3"])
+> > > int_a: GenericArray(["-1", "-2"])
+> > > int_eh: GenericHistogram(["1", "2", "3"])
+> > > int_lh: GenericHistogram(["1", "2", "3"])
+> > > uint_a: GenericArray(["1", "2"])
+> > > uint_eh: GenericHistogram(["1", "2", "3"])
+> > > uint_lh: GenericHistogram(["1", "2", "3"])"#;
 
     #[test]
     fn test_parse_hierarchy() -> Result<(), Error> {
@@ -1081,53 +1243,50 @@ mod tests {
                     properties: vec![
                         iProperty::UintArray(
                             "uint_a".to_string(),
-                            iArrayValue::new(vec![1, 2], iArrayFormat::Default),
+                            iArrayValue::new(vec![1, 2], ArrayFormat::Default),
                         ),
                         iProperty::IntArray(
                             "int_a".to_string(),
-                            iArrayValue::new(vec![-1i64, -2i64], iArrayFormat::Default),
+                            iArrayValue::new(vec![-1i64, -2i64], ArrayFormat::Default),
                         ),
                         iProperty::DoubleArray(
                             "double_a".to_string(),
-                            iArrayValue::new(vec![0.5, 1.0], iArrayFormat::Default),
+                            iArrayValue::new(vec![0.5, 1.0], ArrayFormat::Default),
                         ),
                         iProperty::UintArray(
                             "uint_lh".to_string(),
-                            iArrayValue::new(vec![1, 1, 0, 1, 2, 3], iArrayFormat::LinearHistogram),
+                            iArrayValue::new(vec![1, 1, 1, 2, 3], ArrayFormat::LinearHistogram),
                         ),
                         iProperty::IntArray(
                             "int_lh".to_string(),
-                            iArrayValue::new(
-                                vec![-1i64, 1, 1, 2, 3],
-                                iArrayFormat::LinearHistogram,
-                            ),
+                            iArrayValue::new(vec![-1i64, 1, 1, 2, 3], ArrayFormat::LinearHistogram),
                         ),
                         iProperty::DoubleArray(
                             "double_lh".to_string(),
                             iArrayValue::new(
                                 vec![0.5, 0.5, 1.0, 2.0, 3.0],
-                                iArrayFormat::LinearHistogram,
+                                ArrayFormat::LinearHistogram,
                             ),
                         ),
                         iProperty::UintArray(
                             "uint_eh".to_string(),
                             iArrayValue::new(
-                                vec![1, 1, 2, 0, 1, 2, 3],
-                                iArrayFormat::ExponentialHistogram,
+                                vec![1, 1, 2, 1, 2, 3],
+                                ArrayFormat::ExponentialHistogram,
                             ),
                         ),
                         iProperty::IntArray(
                             "int_eh".to_string(),
                             iArrayValue::new(
                                 vec![-1i64, 1, 2, 1, 2, 3],
-                                iArrayFormat::ExponentialHistogram,
+                                ArrayFormat::ExponentialHistogram,
                             ),
                         ),
                         iProperty::DoubleArray(
                             "double_eh".to_string(),
                             iArrayValue::new(
                                 vec![0.5, 0.5, 2.0, 1.0, 2.0, 3.0],
-                                iArrayFormat::ExponentialHistogram,
+                                ArrayFormat::ExponentialHistogram,
                             ),
                         ),
                     ],
@@ -1166,8 +1325,8 @@ mod tests {
         info.apply(&create_string_property!(parent: 1, id: 4, name: "stringfoo", value: "foo"))?;
         assert_eq!(
             info.to_string(),
-            " root ->\n>  int-42: Int(-42)\n>  child ->\
-             \n> >  stringfoo: String(\"foo\")\n> >  grandchild ->\n\n\n\n\n"
+            "root ->\n> int-42: Int(-42)\n> child ->\
+             \n> > stringfoo: String(\"foo\")\n> > grandchild ->"
         );
 
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::UintT(1024)))?;
@@ -1264,7 +1423,7 @@ mod tests {
         info.apply(&delete_node!(id:2))?;
         assert!(!info.to_string().contains("grandchild") && info.to_string().contains("child"));
         info.apply(&delete_node!( id: 1 ))?;
-        assert_eq!(info.to_string(), " root ->\n\n\n");
+        assert_eq!(info.to_string(), "root ->");
         Ok(())
     }
 
@@ -1733,12 +1892,12 @@ mod tests {
         // Outputs 'Inline' and 'Child' dispositions differently.
         assert_eq!(
             info.to_string(),
-            " root ->\n>  child: >  child_bytes: Bytes([3, 4])\n\n\n>  inline_bytes: Bytes([3, 4])\n\n\n\n"
+            "root ->\n> inline_bytes: Bytes([3, 4])\n> child ->\n> > child_bytes: Bytes([3, 4])"
         );
 
         info.apply_lazy(&delete_lazy_node!(id: 1))?;
         // Outputs only 'Inline' lazy node since 'Child' lazy node was deleted
-        assert_eq!(info.to_string(), " root ->\n>  inline_bytes: Bytes([3, 4])\n\n\n\n");
+        assert_eq!(info.to_string(), "root ->\n> inline_bytes: Bytes([3, 4])");
 
         Ok(())
     }
@@ -1906,6 +2065,21 @@ mod tests {
         assert!(data.apply(&create_node!(parent: 0, id: 2, name: "new_root_second")).is_err());
     }
 
+    const DIFF_STRING: &'static str = r#"-- DIFF --
+ same: "root ->"
+ same: "> node ->"
+local: "> > prop1: String(\"foo\")"
+other: "> > prop1: String(\"bar\")""#;
+
+    const FULL_STRING: &'static str = r#"-- LOCAL --
+root ->
+> node ->
+> > prop1: String("foo")
+-- OTHER --
+root ->
+> node ->
+> > prop1: String("bar")"#;
+
     #[test]
     fn diff_modes_work() -> Result<(), Error> {
         let mut local = Data::new();
@@ -1914,37 +2088,27 @@ mod tests {
         local.apply(&create_string_property!(parent: 1, id: 2, name: "prop1", value: "foo"))?;
         remote.apply(&create_node!(parent: 0, id: 1, name: "node"))?;
         remote.apply(&create_string_property!(parent: 1, id: 2, name: "prop1", value: "bar"))?;
-        let diff_string = "-- DIFF --\n\nSame:3 lines\nLocal: > >  prop1: \
-             String(\"foo\")\nOther: > >  prop1: String(\"bar\")\nSame:3 lines\n\n";
-        let full_string = "-- LOCAL --\n root ->\n\n>  node ->\n> >  prop1: String(\"foo\")\
-             \n\n\n\n-- OTHER --\n root ->\n\n>  node ->\n> >  prop1: \
-             String(\"bar\")\n\n\n\n";
         match local.compare(&mut remote, DiffType::Diff) {
             Err(error) => {
                 let error_string = format!("{:?}", error);
-                assert!(error_string.contains(diff_string));
-                assert!(!error_string.contains(full_string));
+                assert_eq!("Trees differ:\n".to_string() + DIFF_STRING, error_string);
             }
             _ => return Err(format_err!("Didn't get failure")),
         }
         match local.compare(&mut remote, DiffType::Full) {
             Err(error) => {
                 let error_string = format!("{:?}", error);
-                assert!(
-                    error_string.contains(full_string),
-                    format!("\n{}\n{}\n", error_string, full_string)
-                );
-                assert!(!error_string.contains(&diff_string));
+                assert_eq!("Trees differ:\n".to_string() + FULL_STRING, error_string);
             }
             _ => return Err(format_err!("Didn't get failure")),
         }
         match local.compare(&mut remote, DiffType::Both) {
             Err(error) => {
                 let error_string = format!("{:?}", error);
-                assert!(error_string.contains(full_string), full_string);
-                eprintln!("e2: {}", error_string);
-                eprintln!("d2: {}", diff_string);
-                assert!(error_string.contains(&diff_string));
+                assert_eq!(
+                    vec!["Trees differ:", FULL_STRING, DIFF_STRING].join("\n"),
+                    error_string
+                );
             }
             _ => return Err(format_err!("Didn't get failure")),
         }

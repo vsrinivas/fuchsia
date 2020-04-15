@@ -211,21 +211,11 @@ async fn try_compare<ActionType: std::fmt::Debug>(
     action_number: i32,
     results: &results::Results,
 ) -> Result<(), Error> {
-    match puppet.read_data().await {
-        Err(e) => {
-            bail!(
-                "Puppet-read error in trial {}, step {}, action {} {:?}: {:?} ",
-                trial_name,
-                step_index,
-                action_number,
-                action,
-                e
-            );
-        }
-        Ok(puppet_data) => {
-            if let Err(e) = data.compare(&puppet_data, results.diff_type) {
+    if !data.is_empty() {
+        match puppet.read_data().await {
+            Err(e) => {
                 bail!(
-                    "Compare error in trial {}, step {}, action {}:\n{:?}:\n{} ",
+                    "Puppet-read error in trial {}, step {}, action {} {:?}: {:?} ",
                     trial_name,
                     step_index,
                     action_number,
@@ -233,21 +223,70 @@ async fn try_compare<ActionType: std::fmt::Debug>(
                     e
                 );
             }
+            Ok(puppet_data) => {
+                if let Err(e) = data.compare(&puppet_data, results.diff_type) {
+                    bail!(
+                        "Compare error in trial {}, step {}, action {}:\n{:?}:\n{} ",
+                        trial_name,
+                        step_index,
+                        action_number,
+                        action,
+                        e
+                    );
+                }
+            }
         }
-    }
-    if results.test_archive {
-        if !data.is_empty() {
-            assert_ne!(
-                0,
-                InspectDataFetcher::new()
-                    .add_selector(ComponentSelector::new(vec![
+        if results.test_archive {
+            let archive_data = match InspectDataFetcher::new()
+                .add_selector(ComponentSelector::new(vec![
+                    puppet.environment_name().to_string(),
+                    puppet.component_name(),
+                ]))
+                .add_selector(
+                    ComponentSelector::new(vec![
                         puppet.environment_name().to_string(),
                         puppet.component_name(),
-                    ]))
-                    .get()
-                    .await?
-                    .len()
-            );
+                    ])
+                    .with_tree_selector("root:DUMMY"),
+                )
+                .get()
+                .await
+            {
+                Ok(archive_data) => archive_data,
+                Err(e) => {
+                    bail!(
+                        "Archive read error in trial {}, step {}, action {}:\n{:?}:\n{} ",
+                        trial_name,
+                        step_index,
+                        action_number,
+                        action,
+                        e
+                    );
+                }
+            };
+
+            if archive_data.len() != 1 {
+                bail!(
+                    "Expected 1 component in trial {}, step {}, action {}:\n{:?}:\nfound {} ",
+                    trial_name,
+                    step_index,
+                    action_number,
+                    action,
+                    archive_data.len()
+                );
+            }
+
+            if let Err(e) = data.compare_to_json(&archive_data[0].clone().into(), results.diff_type)
+            {
+                bail!(
+                    "Archive compare error in trial {}, step {}, action {}:\n{:?}:\n{} ",
+                    trial_name,
+                    step_index,
+                    action_number,
+                    action,
+                    e
+                );
+            }
         }
     }
     Ok(())

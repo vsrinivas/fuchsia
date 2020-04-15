@@ -13,7 +13,9 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{create_request_stream, DiscoverableService},
     fidl_fuchsia_inspect::TreeMarker,
-    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io::{
+        DirectoryMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    },
     fidl_test_inspect_validate::*,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
@@ -586,7 +588,7 @@ fn make_diagnostics_dir<T: ServiceObjTrait>(fs: &mut ServiceFs<T>) -> Arc<Simple
     dir.clone().open(
         scope,
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        0,
+        MODE_TYPE_DIRECTORY,
         Path::empty(),
         server_end,
     );
@@ -607,9 +609,10 @@ async fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
+    // Set concurrent > 1, otherwise additional requests hang on the completion of the Validate
+    // service.
     const MAX_CONCURRENT: usize = 4;
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::Validate(stream)| {
-        info!("got connection");
         run_driver_service(stream, Publisher::new(dir.clone()))
             .unwrap_or_else(|e| error!("ERROR in puppet's main: {:?}", e))
     });

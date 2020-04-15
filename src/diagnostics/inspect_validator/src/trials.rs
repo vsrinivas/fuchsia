@@ -482,7 +482,7 @@ fn deletions_trial() -> Trial {
     // Action, being a FIDL struct, doesn't implement Clone, so we have to build a new
     // Action each time we want to invoke it.
     fn n1() -> Action {
-        create_node!(parent: ROOT_ID, id: 1, name: "root")
+        create_node!(parent: ROOT_ID, id: 1, name: "root_child")
     }
     fn n2() -> Action {
         create_node!(parent: 1, id: 2, name: "parent")

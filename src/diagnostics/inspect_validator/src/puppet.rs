@@ -28,7 +28,7 @@ fn make_environment_name(prefix: impl AsRef<str>) -> String {
 }
 
 pub struct Puppet {
-    vmo: Vmo,
+    pub vmo: Vmo,
     // Need to remember the connection to avoid dropping the VMO
     connection: Connection,
     name: String,
@@ -258,14 +258,14 @@ pub(crate) mod tests {
         let mut puppet = local_incomplete_puppet().await?;
         assert_eq!(puppet.vmo.get_size().unwrap(), VMO_SIZE);
         let tree = puppet.read_data().await?;
-        assert_eq!(tree.to_string(), " root ->\n\n\n".to_string());
+        assert_eq!(tree.to_string(), "root ->".to_string());
         let mut data = Data::new();
         tree.compare(&data, DiffType::Full)?;
         let mut action = create_node!(parent: ROOT_ID, id: 1, name: "child");
         puppet.apply(&mut action).await?;
         data.apply(&action)?;
         let tree = data::Scanner::try_from(&puppet.vmo)?.data();
-        assert_eq!(tree.to_string(), " root ->\n\n>  child ->\n\n\n\n".to_string());
+        assert_eq!(tree.to_string(), "root ->\n> child ->".to_string());
         tree.compare(&data, DiffType::Full)?;
         Ok(())
     }

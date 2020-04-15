@@ -748,17 +748,17 @@ mod tests {
         header.set_name_length(4);
         put_header(&header, &mut buffer, ROOT_NAME);
         copy_into(b"node", &mut buffer, ROOT_NAME * 16 + 8);
-        try_byte(&mut buffer, (16, 0), 0, Some(" root ->\n\n>  node ->\n\n\n\n"));
+        try_byte(&mut buffer, (16, 0), 0, Some("root ->\n> node ->"));
         // Mess up HEADER_MAGIC_NUMBER - it should fail to load.
         try_byte(&mut buffer, (HEADER, 7), 0, None);
         // Mess up node's parent; should disappear.
-        try_byte(&mut buffer, (ROOT, 1), 1, Some(" root ->\n\n\n"));
+        try_byte(&mut buffer, (ROOT, 1), 1, Some("root ->"));
         // Mess up root's name; should fail.
         try_byte(&mut buffer, (ROOT, 5), 1, None);
         // Mess up generation count; should fail (and not hang).
         try_byte(&mut buffer, (HEADER, 8), 1, None);
         // But an even generation count should work.
-        try_byte(&mut buffer, (HEADER, 8), 2, Some(" root ->\n\n>  node ->\n\n\n\n"));
+        try_byte(&mut buffer, (HEADER, 8), 2, Some("root ->\n> node ->"));
         // Let's give it a property.
         const NUMBER: usize = 4;
         let mut number_header = BlockHeader(0);
@@ -774,30 +774,10 @@ mod tests {
         header.set_name_length(6);
         put_header(&header, &mut buffer, NUMBER_NAME);
         copy_into(b"number", &mut buffer, NUMBER_NAME * 16 + 8);
-        try_byte(
-            &mut buffer,
-            (HEADER, 8),
-            2,
-            Some(" root ->\n\n>  node ->\n> >  number: Int(0)\n\n\n"),
-        );
-        try_byte(
-            &mut buffer,
-            (NUMBER, 1),
-            5,
-            Some(" root ->\n\n>  node ->\n> >  number: Uint(0)\n\n\n"),
-        );
-        try_byte(
-            &mut buffer,
-            (NUMBER, 1),
-            6,
-            Some(" root ->\n\n>  node ->\n> >  number: Double(0.0)\n\n\n"),
-        );
-        try_byte(
-            &mut buffer,
-            (NUMBER, 1),
-            7,
-            Some(" root ->\n\n>  node ->\n> >  number: String(\"\")\n\n\n"),
-        );
+        try_byte(&mut buffer, (HEADER, 8), 2, Some("root ->\n> node ->\n> > number: Int(0)"));
+        try_byte(&mut buffer, (NUMBER, 1), 5, Some("root ->\n> node ->\n> > number: Uint(0)"));
+        try_byte(&mut buffer, (NUMBER, 1), 6, Some("root ->\n> node ->\n> > number: Double(0.0)"));
+        try_byte(&mut buffer, (NUMBER, 1), 7, Some("root ->\n> node ->\n> > number: String(\"\")"));
         // Array block will have illegal Array Entry Type of 0.
         try_byte(&mut buffer, (NUMBER, 1), 0xb0, None);
         // 15 is an illegal block type.
@@ -812,32 +792,32 @@ mod tests {
             &mut buffer,
             (NUMBER, 8),
             0x04,
-            Some(" root ->\n\n>  node ->\n> >  number: IntArray([], Default)\n\n\n"),
+            Some("root ->\n> node ->\n> > number: IntArray([], Default)"),
         );
         try_byte(
             &mut buffer,
             (NUMBER, 8),
             0x05,
-            Some(" root ->\n\n>  node ->\n> >  number: UintArray([], Default)\n\n\n"),
+            Some("root ->\n> node ->\n> > number: UintArray([], Default)"),
         );
         try_byte(
             &mut buffer,
             (NUMBER, 8),
             0x06,
-            Some(" root ->\n\n>  node ->\n> >  number: DoubleArray([], Default)\n\n\n"),
+            Some("root ->\n> node ->\n> > number: DoubleArray([], Default)"),
         );
         // 0, 1, and 2 are legal formats.
         try_byte(
             &mut buffer,
             (NUMBER, 8),
             0x14,
-            Some(" root ->\n\n>  node ->\n> >  number: IntArray([], LinearHistogram)\n\n\n"),
+            Some("root ->\n> node ->\n> > number: IntArray([], LinearHistogram)"),
         );
         try_byte(
             &mut buffer,
             (NUMBER, 8),
             0x24,
-            Some(" root ->\n\n>  node ->\n> >  number: IntArray([], ExponentialHistogram)\n\n\n"),
+            Some("root ->\n> node ->\n> > number: IntArray([], ExponentialHistogram)"),
         );
         try_byte(&mut buffer, (NUMBER, 8), 0x34, None);
         // Let's make sure other Value block-type numbers are rejected.
@@ -848,13 +828,13 @@ mod tests {
             &mut buffer,
             (NUMBER, 16),
             42,
-            Some(" root ->\n\n>  node ->\n> >  number: IntArray([42, 0], Default)\n\n\n"),
+            Some("root ->\n> node ->\n> > number: IntArray([42, 0], Default)"),
         );
         try_byte(
             &mut buffer,
             (NUMBER, 24),
             42,
-            Some(" root ->\n\n>  node ->\n> >  number: IntArray([0, 42], Default)\n\n\n"),
+            Some("root ->\n> node ->\n> > number: IntArray([0, 42], Default)"),
         );
     }
 
@@ -1062,12 +1042,12 @@ mod tests {
         header.set_extent_next_index(0);
         put_header(&header, &mut buffer, EXTENT);
         // Let's make sure it scans.
-        try_byte(&mut buffer, (16, 0), 0, Some(" root ->\n\n>  value ->\n\n\n\n"));
+        try_byte(&mut buffer, (16, 0), 0, Some("root ->\n> value ->"));
         // Put garbage in a random FREE block body - should fail.
         // TODO(fxb/39975): Depending on the resolution of fxb/40012, uncomment or delete this test.
         //try_byte(&mut buffer, (6, 9), 42, None);
         // Put garbage in a random FREE block header - should be fine.
-        try_byte(&mut buffer, (6, 7), 42, Some(" root ->\n\n>  value ->\n\n\n\n"));
+        try_byte(&mut buffer, (6, 7), 42, Some("root ->\n> value ->"));
         // Put garbage in NAME header - should fail.
         try_byte(&mut buffer, (VALUE_NAME, 7), 42, None);
         // Put garbage in EXTENT header - should fail.
@@ -1078,12 +1058,12 @@ mod tests {
         array_subheader.set_array_entry_type(BlockType::IntValue.to_u8().unwrap());
         array_subheader.set_array_flags(ArrayFormat::Default.to_u8().unwrap());
         put_payload(&array_subheader, &mut buffer, VALUE);
-        try_byte(&mut buffer, (16, 0), 0, Some(" root ->\n>  value: IntArray([], Default)\n\n"));
+        try_byte(&mut buffer, (16, 0), 0, Some("root ->\n> value: IntArray([], Default)"));
         // Put garbage in reserved part of Array spec, should fail.
         try_byte(&mut buffer, (VALUE, 12), 42, None);
         value_header.set_block_type(BlockType::IntValue.to_u8().unwrap());
         put_header(&value_header, &mut buffer, VALUE);
         // Now the array spec is just a (large) value; it should succeed.
-        try_byte(&mut buffer, (VALUE, 12), 42, Some(" root ->\n>  value: Int(180388626436)\n\n"));
+        try_byte(&mut buffer, (VALUE, 12), 42, Some("root ->\n> value: Int(180388626436)"));
     }
 }
