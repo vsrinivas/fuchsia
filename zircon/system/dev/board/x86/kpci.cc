@@ -538,8 +538,8 @@ zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle) {
 // This pci_init initializes the kernel pci driver and is not compiled in at the same time as the
 // userspace pci driver under development.
 zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     publish_acpi_device_ctx_t* ctx) {
-  if (!ctx->found_pci) {
+                     AcpiWalker* ctx) {
+  if (!ctx->found_pci()) {
     // Report current resources to kernel PCI driver
     // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_status_t status = pci_report_current_resources(get_root_resource());
@@ -568,12 +568,12 @@ zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
     // Publish PCI root as /dev/sys/ level.
     // Only publish one PCI root device for all PCI roots
     // TODO: store context for PCI root protocol
-    zx_device_t* pcidev = publish_device(sysdev, ctx->platform_bus, object, info, "pci",
+    zx_device_t* pcidev = publish_device(sysdev, ctx->platform_bus(), object, info, "pci",
                                          ZX_PROTOCOL_PCIROOT, get_pciroot_ops());
-    ctx->found_pci = (pcidev != NULL);
+    ctx->set_found_pci(pcidev != nullptr);
   }
   // Get the PCI base bus number
-  zx_status_t status = acpi_bbn_call(object, &ctx->last_pci);
+  zx_status_t status = acpi_bbn_call(object, ctx->mutable_last_pci());
   if (status != ZX_OK) {
     zxlogf(ERROR,
            "acpi: failed to get PCI base bus number for device '%s' "
@@ -581,6 +581,6 @@ zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
            (const char*)&info->Name, status);
   }
 
-  zxlogf(TRACE, "acpi: found pci root #%u\n", ctx->last_pci);
+  zxlogf(TRACE, "acpi: found pci root #%u\n", ctx->last_pci());
   return ZX_OK;
 }

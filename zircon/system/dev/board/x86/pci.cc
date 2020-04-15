@@ -319,7 +319,7 @@ zx_status_t pci_init_bookkeeping(void) {
 }
 
 zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     publish_acpi_device_ctx_t* ctx) {
+                     AcpiWalker* ctx) {
   static bool pci_bookkeeping_initialized = false;
   zx_status_t status = ZX_OK;
 

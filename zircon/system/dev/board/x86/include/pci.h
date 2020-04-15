@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_
-#define ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_
+#ifndef ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_PCI_H_
+#define ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_PCI_H_
+
+#include <zircon/compiler.h>
+#include <zircon/syscalls/pci.h>
 
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
 #include <ddk/device.h>
 #include <ddk/protocol/pciroot.h>
-#include <zircon/compiler.h>
-#include <zircon/syscalls/pci.h>
 
 #include "acpi-private.h"
 
@@ -34,11 +35,11 @@ typedef struct pciroot_ctx {
 } pciroot_ctx_t;
 
 zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     publish_acpi_device_ctx_t* ctx);
+                     AcpiWalker* ctx);
 void register_pci_root(ACPI_HANDLE dev_obj);
 bool pci_platform_has_mcfg(void);
 
 zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size);
 zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle);
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_
+#endif  // ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_PCI_H_

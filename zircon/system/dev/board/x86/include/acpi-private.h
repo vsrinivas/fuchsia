@@ -92,12 +92,42 @@ struct acpi_device_t {
   zx_status_t AcpiOpRegisterSysmemHeapLocked(uint64_t heap, zx_handle_t handle) const;
 };
 
-struct publish_acpi_device_ctx_t {
-  zx_device_t* sys_root;
-  zx_device_t* acpi_root;
-  zx_device_t* platform_bus;
-  bool found_pci;
-  uint8_t last_pci;  // bus number of the last PCI root seen
+class AcpiWalker {
+ public:
+  AcpiWalker(zx_device_t* sys_root, zx_device_t* acpi_root, zx_device_t* platform_bus)
+      : sys_root_{sys_root},
+        acpi_root_{acpi_root},
+        platform_bus_{platform_bus},
+        found_pci_{false},
+        last_pci_{kNoLastPci} {}
+
+  zx_device_t* platform_bus() const { return platform_bus_; }
+  bool found_pci() const { return found_pci_; }
+  void set_found_pci(bool found_pci) { found_pci_ = found_pci; }
+  uint8_t last_pci() const { return last_pci_; }
+  uint8_t* mutable_last_pci() { return &last_pci_; }
+
+  ACPI_STATUS OnDescent(ACPI_HANDLE object);
+  ACPI_STATUS OnAscent(ACPI_HANDLE object) { return AE_OK; }
+
+  static ACPI_STATUS OnDescentCallback(ACPI_HANDLE object, uint32_t depth, void* context,
+                                       void** return_value) {
+    return reinterpret_cast<AcpiWalker*>(context)->OnDescent(object);
+  }
+
+  static ACPI_STATUS OnAscentCallback(ACPI_HANDLE object, uint32_t depth, void* context,
+                                      void** return_value) {
+    return reinterpret_cast<AcpiWalker*>(context)->OnAscent(object);
+  }
+
+ private:
+  zx_device_t* sys_root_;
+  zx_device_t* acpi_root_;
+  zx_device_t* platform_bus_;
+  bool found_pci_;
+  uint8_t last_pci_;  // bus number of the last PCI root seen
+
+  constexpr static auto kNoLastPci = std::numeric_limits<decltype(last_pci_)>::max();
 };
 
 struct pci_child_auxdata_ctx_t {
