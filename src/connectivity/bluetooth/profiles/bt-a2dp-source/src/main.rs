@@ -8,12 +8,11 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
-    bt_a2dp::{codec::MediaCodecConfig, media_types::*},
+    bt_a2dp::media_types::*,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
     fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_bluetooth_component::LifecycleState,
-    fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         detachable_map::{DetachableMap, DetachableWeak},
@@ -22,9 +21,8 @@ use {
     },
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
-    fuchsia_trace::{self as trace},
     fuchsia_zircon as zx,
-    futures::{self, select, AsyncWriteExt, StreamExt, TryStreamExt},
+    futures::{self, select, StreamExt, TryStreamExt},
     parking_lot::Mutex,
     std::{
         convert::{TryFrom, TryInto},
@@ -33,12 +31,12 @@ use {
 };
 
 mod encoding;
+mod media_task;
 mod pcm_audio;
 mod peer;
 mod sources;
 mod stream;
 
-use crate::encoding::{EncodedStream, RtpPacketBuilder};
 use crate::pcm_audio::PcmAudio;
 use crate::peer::Peer;
 use sources::AudioSourceType;
@@ -80,10 +78,11 @@ const AAC_SEID: u8 = 7;
 // Highest AAC bitrate we want to transmit
 const MAX_BITRATE_AAC: u32 = 250000;
 
-/// Builds the set of streams which we currently support.
-pub(crate) fn build_local_streams() -> avdtp::Result<stream::Streams> {
+/// Builds the set of streams which we currently support, streaming from the source_type given.
+fn build_local_streams(source_type: AudioSourceType) -> avdtp::Result<stream::Streams> {
     // TODO(BT-533): detect codecs, add streams for each codec
 
+    let source_task_builder = media_task::SourceTaskBuilder::new(source_type);
     let mut streams = stream::Streams::new();
 
     let sbc_codec_info = SbcCodecInfo::new(
@@ -111,7 +110,7 @@ pub(crate) fn build_local_streams() -> avdtp::Result<stream::Streams> {
         ],
     )?;
 
-    streams.insert(stream::Stream::build(sbc_endpoint));
+    streams.insert(stream::Stream::build(sbc_endpoint, source_task_builder.clone()));
     fx_vlog!(1, "SBC Stream added at SEID {}", SBC_SEID);
 
     let aac_codec_info = AacCodecInfo::new(
@@ -138,7 +137,7 @@ pub(crate) fn build_local_streams() -> avdtp::Result<stream::Streams> {
         ],
     )?;
 
-    streams.insert(stream::Stream::build(aac_endpoint));
+    streams.insert(stream::Stream::build(aac_endpoint, source_task_builder));
     fx_vlog!(1, "AAC stream added at SEID {}", AAC_SEID);
 
     Ok(streams)
@@ -146,14 +145,13 @@ pub(crate) fn build_local_streams() -> avdtp::Result<stream::Streams> {
 
 struct Peers {
     peers: DetachableMap<PeerId, Peer>,
-    source_type: AudioSourceType,
-    profile: ProfileProxy,
     streams: stream::Streams,
+    profile: ProfileProxy,
 }
 
 impl Peers {
-    fn new(source_type: AudioSourceType, profile: ProfileProxy, streams: stream::Streams) -> Self {
-        Peers { peers: DetachableMap::new(), source_type, profile, streams }
+    fn new(streams: stream::Streams, profile: ProfileProxy) -> Self {
+        Peers { peers: DetachableMap::new(), profile, streams }
     }
 
     pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<peer::Peer>> {
@@ -218,9 +216,8 @@ impl Peers {
 
     fn spawn_streaming(&mut self, id: PeerId) {
         let weak_peer = self.peers.get(&id).expect("just added");
-        let source_type = self.source_type.clone();
         fuchsia_async::spawn_local(async move {
-            if let Err(e) = start_streaming(&weak_peer, source_type).await {
+            if let Err(e) = start_streaming(&weak_peer).await {
                 fx_log_info!("Failed to stream: {:?}", e);
                 weak_peer.detach();
             }
@@ -327,10 +324,7 @@ impl<'a> SelectedStream<'a> {
     }
 }
 
-async fn start_streaming(
-    peer: &DetachableWeak<PeerId, Peer>,
-    source_type: AudioSourceType,
-) -> Result<(), anyhow::Error> {
+async fn start_streaming(peer: &DetachableWeak<PeerId, Peer>) -> Result<(), anyhow::Error> {
     let streams_fut = {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
         strong.collect_capabilities()
@@ -338,54 +332,15 @@ async fn start_streaming(
     let remote_streams = streams_fut.await?;
     let selected_stream = SelectedStream::pick(&remote_streams)?;
 
-    let start_stream_fut = {
-        let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
-        strong.start_stream(
+    let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
+    strong
+        .start_stream(
             selected_stream.seid.try_into()?,
             selected_stream.remote_stream.local_id().clone(),
             selected_stream.codec_settings.clone(),
         )
-    };
-
-    let mut media_stream = start_stream_fut.await?;
-
-    // all sinks must support these options
-    let pcm_format = PcmFormat {
-        pcm_mode: AudioPcmMode::Linear,
-        bits_per_sample: 16,
-        frames_per_second: 48000,
-        channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
-    };
-
-    let source_stream = sources::build_stream(&peer.key(), pcm_format.clone(), source_type)?;
-    let codec_config = MediaCodecConfig::try_from(&selected_stream.codec_settings)?;
-    let mut encoded_stream = EncodedStream::build(pcm_format, source_stream, &codec_config)?;
-
-    let mut builder = RtpPacketBuilder::new(
-        codec_config.frames_per_packet() as u8,
-        codec_config.rtp_frame_header().to_vec(),
-    );
-
-    trace::instant!("bt-a2dp-source", "Media:Start", trace::Scope::Thread);
-
-    while let Some(encoded) = encoded_stream.try_next().await? {
-        if let Some(packet) =
-            builder.push_frame(encoded, codec_config.pcm_frames_per_encoded_frame() as u32)?
-        {
-            trace::duration_begin!("bt-a2dp-source", "Media:PacketSent");
-
-            if let Err(e) = media_stream.write(&packet).await {
-                fx_log_info!("Failed sending packet to peer: {}", e);
-                trace::duration_end!("bt-a2dp-source", "Media:PacketSent");
-                break;
-            }
-
-            trace::duration_end!("bt-a2dp-source", "Media:PacketSent");
-        }
-    }
-
-    trace::instant!("bt-a2dp-source", "Media:Stop", trace::Scope::Thread);
-    Ok(())
+        .await
+        .map_err(Into::into)
 }
 
 /// Defines the options available from the command line
@@ -449,9 +404,8 @@ async fn main() -> Result<(), Error> {
 
     profile_svc.search(ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
 
-    let streams = build_local_streams()?;
-
-    let peers = Peers::new(opts.source, profile_svc, streams);
+    let streams = build_local_streams(opts.source)?;
+    let peers = Peers::new(streams, profile_svc);
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
@@ -532,8 +486,7 @@ mod tests {
             create_proxy_and_stream::<ConnectionReceiverMarker>()
                 .expect("ConnectionReceiver proxy should be created");
 
-        let streams = build_local_streams().expect("building streams");
-        let peers = Peers::new(AudioSourceType::BigBen, profile_proxy, streams);
+        let peers = Peers::new(stream::Streams::new(), profile_proxy);
         let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
         let handler_fut =

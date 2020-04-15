@@ -14,7 +14,7 @@ use crate::media_types::{
 
 /// Stores the media codec configuration for an A2DP stream, and provides utility for integration
 /// with Fuchsia media.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MediaCodecConfig {
     codec_type: avdtp::MediaCodecType,
     codec_extra: Vec<u8>,
