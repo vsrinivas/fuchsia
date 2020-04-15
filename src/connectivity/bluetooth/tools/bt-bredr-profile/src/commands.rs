@@ -78,7 +78,7 @@ gen_commands! {
                        \t\t'psm' is a protocol id that this service will advertise support for.\n\
                        \t\t'channel-mode' is {basic|ertm}.\n\
                        \t\t'max-rx-sdu-size' is an integer in the range 0 - 65535.\n\n\
-                       \t\tExample: add-service 25 basic 672"),
+                       \t\tExample: advertise 25 basic 672"),
         Services = ("services", [], "List registered services"),
         RemoveService = ("remove-service", ["service-id"],
                          "\n\t\tUnregister service corresponding to 'service-id'\n\

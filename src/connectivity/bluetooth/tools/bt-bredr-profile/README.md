@@ -81,11 +81,11 @@ Write data on a socket/channel.
   correspond to a connected channel listed by the `channels` command.
 - `data` is a string of characters that will be written on the channel.
 
-### add-service
+### advertise
 Targets `Profile.Advertise`.
 
-Advertises an L2CAP service with the SDP server. After adding a service,
-a notification will be printed when a peer connects to that service.
+Advertises an L2CAP service with the SDP server. After advertising, a
+notification will be printed when a peer connects to that service.
 
 #### Usage
 `advertise <psm> <channel-mode> <max-rx-sdu-size>`
