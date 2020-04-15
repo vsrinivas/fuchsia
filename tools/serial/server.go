@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"syscall"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/ring"
 )
@@ -98,7 +100,7 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 		// conn -> serial
 		go func() {
 			for {
-				if _, err := io.Copy(s.serial, conn); err != nil {
+				if _, err := io.Copy(s.serial, conn); sanitizeError(ctx, err) != nil {
 					errs <- fmt.Errorf("failed to read from the connection: %v", err)
 				}
 			}
@@ -106,7 +108,7 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 
 		// ring buffer -> conn
 		for {
-			if _, err := io.Copy(conn, rb); err != nil {
+			if _, err := io.Copy(conn, rb); sanitizeError(ctx, err) != nil {
 				errs <- fmt.Errorf("failed to copy data to the connection: %v", err)
 			}
 		}
@@ -120,7 +122,38 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 	}
 }
 
+func sanitizeError(ctx context.Context, err error) error {
+	// If the context has been canceled, no need to report any error as we
+	// would already be tearing down the server as a result.
+	if err == nil || ctx.Err() != nil {
+		return nil
+	}
+
+	oe, ok := err.(*net.OpError)
+	if !ok {
+		return err
+	}
+	se, ok := oe.Err.(*os.SyscallError)
+	if !ok {
+		return err
+	}
+
+	// Errors resulting from a closed socket connection are fine and would be
+	// spurious to report. Assuming that this is to be used on a
+	// POSIX-compliant host, we ignore read and write errors that result from
+	// such a case.
+	//
+	// POSIX documentation:
+	// https://pubs.opengroup.org/onlinepubs/9699919799/functions/recv.html
+	// https://pubs.opengroup.org/onlinepubs/9699919799/functions/send.html
+	if se.Syscall == "read" && (se.Err == syscall.ECONNRESET || se.Err == syscall.EPIPE) {
+		return nil
+	} else if se.Syscall == "write" && se.Err == syscall.EPIPE {
+		return nil
+	}
+	return err
+}
+
 type writeBufferSetter interface {
 	SetWriteBuffer(int) error
 }
-

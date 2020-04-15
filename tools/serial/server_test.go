@@ -9,10 +9,12 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"net"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 )
 
@@ -196,4 +198,72 @@ func (pe *joinedPipeEnds) Close() error {
 		return err
 	}
 	return pe.w.Close()
+}
+
+func TestErrorSanitization(t *testing.T) {
+	compare := func(actual, expected error) {
+		if actual != expected {
+			t.Errorf("expected: %v\nactual: %v", expected, actual)
+		}
+	}
+
+	t.Run("context canceled -> nil", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		compare(sanitizeError(ctx, fmt.Errorf("real error")), nil)
+	})
+
+	testCases := []struct {
+		name     string
+		input    error
+		expected error
+	}{
+		{
+			name:     "nil -> nil",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "EPIPE read -> nil",
+			input: &net.OpError{
+				Err: &os.SyscallError{
+					Syscall: "read",
+					Err:     syscall.EPIPE,
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "EPIPE write -> nil",
+			input: &net.OpError{
+				Err: &os.SyscallError{
+					Syscall: "write",
+					Err:     syscall.EPIPE,
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "ECONNRESET read -> nil",
+			input: &net.OpError{
+				Err: &os.SyscallError{
+					Syscall: "read",
+					Err:     syscall.ECONNRESET,
+				},
+			},
+			expected: nil,
+		},
+		{
+			name:     "other error -> itself",
+			input:    os.ErrNotExist,
+			expected: os.ErrNotExist,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := sanitizeError(context.Background(), tc.input)
+			compare(actual, tc.expected)
+		})
+	}
 }
