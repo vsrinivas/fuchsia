@@ -147,9 +147,6 @@ void DisplayView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentat
 }
 
 void DisplayView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
-  if (event.is_pointer() && event.pointer().phase == fuchsia::ui::input::PointerEventPhase::UP) {
-    loop_->Quit();
-  }
 }
 
 void DisplayView::OnScenicError(std::string error) { FX_LOGS(ERROR) << "Scenic Error " << error; }
