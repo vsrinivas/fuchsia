@@ -28,8 +28,8 @@ class StorageWatchdog {
   virtual zx_status_t GetFilesystemInfo(zx_handle_t directory, fuchsia_io_FilesystemInfo* out_info);
 
  private:
-  std::string path_to_watch_;
-  std::string path_to_clean_;
+  const std::string path_to_watch_;
+  const std::string path_to_clean_;
 };
 
 #endif  // SRC_SYS_APPMGR_STORAGE_WATCHDOG_H_
