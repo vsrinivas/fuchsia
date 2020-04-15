@@ -146,11 +146,10 @@ func sanitizeError(ctx context.Context, err error) error {
 	// POSIX documentation:
 	// https://pubs.opengroup.org/onlinepubs/9699919799/functions/recv.html
 	// https://pubs.opengroup.org/onlinepubs/9699919799/functions/send.html
-	if se.Syscall == "read" && (se.Err == syscall.ECONNRESET || se.Err == syscall.EPIPE) {
-		return nil
-	} else if se.Syscall == "write" && se.Err == syscall.EPIPE {
+	if (se.Syscall == "read" || se.Syscall == "write") && (se.Err == syscall.ECONNRESET || se.Err == syscall.EPIPE) {
 		return nil
 	}
+
 	return err
 }
 

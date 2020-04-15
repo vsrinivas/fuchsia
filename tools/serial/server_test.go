@@ -254,6 +254,16 @@ func TestErrorSanitization(t *testing.T) {
 			expected: nil,
 		},
 		{
+			name: "ECONNRESET write -> nil",
+			input: &net.OpError{
+				Err: &os.SyscallError{
+					Syscall: "write",
+					Err:     syscall.ECONNRESET,
+				},
+			},
+			expected: nil,
+		},
+		{
 			name:     "other error -> itself",
 			input:    os.ErrNotExist,
 			expected: os.ErrNotExist,
