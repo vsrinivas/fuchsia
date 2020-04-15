@@ -36,7 +36,8 @@ class PageWatcher {
 
   // Detaches the paged VMO from the pager and waits for the page request handler to receive a
   // ZX_PAGER_VMO_COMPLETE packet. Should be called before the associated VMO or the |PageWatcher|
-  // is destroyed. This is required to prevent use-after-frees.
+  // is destroyed. This is required to prevent the use-after-free detailed in the documentation for
+  // |vmo_attached_to_pager_|.
   //
   // TODO(rashaeqbal): Consider moving the paged VMO's |mapping_| to this class when paging is the
   // default, to directly manage the lifetime of the VMO.
@@ -69,11 +70,27 @@ class PageWatcher {
   // requests on it, and detaching it when done.
   async::PagedVmoMethod<PageWatcher, &PageWatcher::HandlePageRequest> page_request_handler_;
 
+  // Controls access to |vmo_attached_to_pager_| from all threads.
   fbl::Mutex vmo_attached_mutex_;
+  // Implements waiting on a true to false transition on |vmo_attached_to_pager_|.
   fbl::ConditionVariable vmo_attached_condvar_;
   // Used to track if the paged VMO is currently attached to the pager. If it is, the |PageWatcher|
-  // cannot be destroyed. The pager can still issue requests on its |page_request_handler_| as long
-  // as the VMO is attached, causing potential use-after-frees.
+  // cannot be destroyed. Consider a design where we did not track whether the paged VMO is attached
+  // to the pager (which, in this implementation, we do). The |page_request_handler_| could then
+  // dereference a destroyed |PageWatcher| as follows:
+  //
+  // Theoretical example of use-after-free (prevented by measures described below):
+  //
+  // 1. A page fault triggers _send_ of ZX_PAGER_VMO_READ to |page_request_handler_|.
+  // 1. Last |close()| of a Blob on main thread triggers _send_ of ZX_PAGER_VMO_COMPLETE to
+  //    |page_request_handler_|.
+  // 2. Main thread owner releases |PageWatcher|, invoking |~PageWatcher()|.
+  // 3. ZX_PAGER_VMO_READ _received_ before ZX_PAGER_VMO_COMPLETE, and |page_request_handler_|
+  //    dereferences _already freed_ |PageWatcher| to service page fault.
+  //
+  // This is scenario is prevented by invoking |DetachPagedVmoSync()| inside |~PageWatcher()|,
+  // forcing the main thread to wait for the ZX_PAGER_VMO_COMPLETE signal to be received by the
+  // pager thread before it can free the |PageWatcher|.
   bool vmo_attached_to_pager_ __TA_GUARDED(vmo_attached_mutex_) = false;
 
   // Pointer to the user pager. Required to create the paged VMO and populate its pages.

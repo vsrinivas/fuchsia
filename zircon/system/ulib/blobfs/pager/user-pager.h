@@ -59,7 +59,7 @@ class UserPager {
   async_dispatcher_t* Dispatcher() const { return pager_loop_.dispatcher(); }
 
   // Invoked by the |PageWatcher| on a read request. Reads in the requested byte range
-  // [|offset|, |offset| + |length|) for the inode associated with |map_index| into the
+  // [|offset|, |offset| + |length|) for the inode associated with |info->identifier| into the
   // |transfer_buffer_|, and then moves those pages to the destination |vmo|. If |verifier_info| is
   // not null, uses it to verify the pages prior to transferring them to the destination vmo.
   zx_status_t TransferPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
@@ -69,29 +69,36 @@ class UserPager {
   // Sets up the transfer buffer, creates the pager and starts the pager thread.
   zx_status_t InitPager();
 
-  // Protected for unit test access
+  // Protected for unit test access.
   zx::pager pager_;
 
  private:
-  // Virtual function to attach the transfer buffer to the underlying block device, so that blocks
-  // can be read into it from storage.
+  // Attaches the transfer buffer to the underlying block device, so that blocks can be read into it
+  // from storage.
   virtual zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) = 0;
 
-  // Virtual function to read data for the inode corresponding to |map_index| into the
-  // transfer buffer for the byte range specified by [|offset|, |offset| + |length|).
+  // Reads data for the inode corresponding to |info->identifier| into the transfer buffer for the
+  // byte range specified by [|offset|, |offset| + |length|).
   virtual zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
                                           UserPagerInfo* info) = 0;
 
-  // Virtual function to verify the data read in to |transfer_vmo| (i.e. the transfer buffer) via
+  // Verifies the data read in to |transfer_vmo| (i.e. the transfer buffer) via
   // |PopulateTransferVmo|. Data in the range [|offset|, |offset| + |length|) is verified using the
-  // |verifier_info| provided.
+  // |info| provided.
   virtual zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
                                         const zx::vmo& transfer_vmo, UserPagerInfo* info) = 0;
 
-  // Virtual function for aligning the requested read range to include the minimum number of nodes
-  // (per the Merkle tree) required to verify the range. The range needs to be determined before
-  // calling the user pager to populate the pages, as absent pages will cause page faults during
-  // verification on the pager thread, causing it to block against itself indefinitely.
+  // Aligns the requested read range to include the minimum number of complete data blocks, which
+  // are the smallest unit of data that can be verified via the merkle tree. The range needs to be
+  // determined before calling the user pager to populate the pages, as absent pages will cause page
+  // faults during verification on the userpager thread, causing it to block against itself
+  // indefinitely.
+  //
+  // Example:
+  //
+  //                  |...input_range...|
+  // |..data_block..|..data_block..|..data_block..|
+  //                |........output_range.........|
   virtual zx_status_t AlignForVerification(uint64_t* offset, uint64_t* length,
                                            UserPagerInfo* info) = 0;
 

@@ -12,6 +12,7 @@
 
 namespace blobfs {
 
+// Called from the blobfs main thread.
 zx_status_t PageWatcher::CreatePagedVmo(size_t vmo_size, zx::vmo* vmo_out) {
   TRACE_DURATION("blobfs", "PageWatcher::CreatePagedVmo", "vmo_size", vmo_size);
 
@@ -37,17 +38,19 @@ zx_status_t PageWatcher::CreatePagedVmo(size_t vmo_size, zx::vmo* vmo_out) {
   return ZX_OK;
 }
 
+// Called from the blobfs main thread.
 void PageWatcher::DetachPagedVmoSync() {
   TRACE_DURATION("blobfs", "PageWatcher::DetachPagedVmoSync");
 
   page_request_handler_.Detach();
-  // wait on signal from the page request handler
+  // Wait on signal from the page request handler.
   fbl::AutoLock guard(&vmo_attached_mutex_);
   while (vmo_attached_to_pager_) {
     vmo_attached_condvar_.Wait(&vmo_attached_mutex_);
   }
 }
 
+// Called from the singleton userpager thread.
 void PageWatcher::HandlePageRequest(async_dispatcher_t* dispatcher, async::PagedVmoBase* paged_vmo,
                                     zx_status_t status, const zx_packet_page_request_t* request) {
   TRACE_DURATION("blobfs", "PageWatcher::HandlePageRequest", "command", request->command, "offset",
@@ -81,6 +84,7 @@ void PageWatcher::HandlePageRequest(async_dispatcher_t* dispatcher, async::Paged
   }
 }
 
+// Called from the singleton userpager thread.
 void PageWatcher::GetPrefetchRangeInBytes(const uint64_t requested_offset,
                                           const uint64_t requested_length,
                                           uint64_t* prefetch_offset, uint64_t* prefetch_length) {
@@ -115,6 +119,8 @@ void PageWatcher::GetPrefetchRangeInBytes(const uint64_t requested_offset,
 // are:
 //   1. when the |supply_pages| syscall succeeds (look at PageSource::OnPagesSupplied()).
 //   2. when the page source is detached from the VMO.
+//
+// Called from the singleton userpager thread.
 void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length) {
   TRACE_DURATION("blobfs", "PageWatcher::PopulateAndVerifyPagesInRange", "offset", offset, "length",
                  length);
@@ -143,6 +149,7 @@ void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length
   }
 }
 
+// Called from the singleton userpager thread.
 void PageWatcher::SignalPagerDetach() {
   TRACE_DURATION("blobfs", "PageWatcher::SignalPagerDetach");
   // Reset the mapping so that future read requests on this VMO will be ignored.
