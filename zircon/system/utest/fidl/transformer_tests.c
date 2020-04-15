@@ -705,9 +705,6 @@ static bool run_fidl_transform(const fidl_type_t* v1_type, const fidl_type_t* ol
                                const uint8_t* old_bytes, uint32_t old_num_bytes) {
   BEGIN_HELPER;
 
-  // TODO(apang): Refactor this function out so that we have individual test
-  // cases for V1ToOld and OldToV1.
-
   {
     uint8_t actual_old_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     uint32_t actual_old_num_bytes;

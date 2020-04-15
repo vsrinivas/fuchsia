@@ -583,9 +583,6 @@ class TransformerBase {
     }
 
     return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "unknown type tag");
-
-    // TODO(apang): Think about putting logic for updating out_traversal_result in Copy/etc
-    // functions.
   }
 
   zx_status_t TransformHandle(const Position& position, uint32_t dst_size,
@@ -813,8 +810,6 @@ class TransformerBase {
                            out_traversal_result);
   }
 
-  // TODO(apang): Replace |known_type| & |type| parameters below with a single fit::optional<const
-  // fidl_type_t*> parameter.
   zx_status_t TransformEnvelope(bool known_type, const fidl_type_t* type, const Position& position,
                                 TraversalResult* out_traversal_result) {
     auto src_envelope = src_dst->Read<const fidl_envelope_t>(position);
@@ -879,7 +874,6 @@ class TransformerBase {
         return src_envelope->num_bytes;
       }
 
-      // TODO(apang): Add test to verify that we should _not_ FIDL_ALIGN below.
       return InlineSize(type, From(), position);
     }();
 
@@ -1265,9 +1259,6 @@ class TransformerBase {
         TRANSFORMER_ASSERT(false && "static-union data offset can only be 4 or 8", position);
     }
 
-    // TODO(apang): The code below also in TransformEnvelope(). We should
-    // refactor this method to call TransformEnvelope() if possible, instead of
-    // re-implementing parts of it here.
     const uint32_t src_field_inline_size = [&] {
       if (!src_field->type) {
         // src_field's type is either a primitive or an array of primitives,
@@ -1279,7 +1270,6 @@ class TransformerBase {
         return src_xunion->envelope.num_bytes;
       }
 
-      // TODO(apang): Add test to verify that we _should_ FIDL_ALIGN below.
       return FIDL_ALIGN(InlineSize(src_field->type, From(), position));
     }();
 
@@ -1328,16 +1318,13 @@ class TransformerBase {
   const fidl_type_t* top_level_src_type_;
 };
 
-// TODO(apang): Mark everything override
-// TODO(apang): We can remove the V1ToOld & OldToV1 classes since they only have From() and To()
-// methods now, which can be passed into the constructor of TransformerBase.
 class V1ToOld final : public TransformerBase {
  public:
   V1ToOld(SrcDst* src_dst, const fidl_type_t* top_level_src_type, DebugInfo* debug_info)
       : TransformerBase(src_dst, top_level_src_type, debug_info) {}
 
-  WireFormat From() const { return WireFormat::kV1; }
-  WireFormat To() const { return WireFormat::kOld; }
+  WireFormat From() const override { return WireFormat::kV1; }
+  WireFormat To() const override { return WireFormat::kOld; }
 };
 
 class OldToV1 final : public TransformerBase {
@@ -1346,9 +1333,8 @@ class OldToV1 final : public TransformerBase {
       : TransformerBase(src_dst, top_level_src_type, debug_info) {}
 
  private:
-  // TODO(apang): Could CRTP this.
-  WireFormat From() const { return WireFormat::kOld; }
-  WireFormat To() const { return WireFormat::kV1; }
+  WireFormat From() const override { return WireFormat::kOld; }
+  WireFormat To() const override { return WireFormat::kV1; }
 };
 
 }  // namespace

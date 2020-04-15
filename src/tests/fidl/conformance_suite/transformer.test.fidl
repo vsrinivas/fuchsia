@@ -578,6 +578,15 @@ table CompatTableString {
     1: string s;
 };
 
+union UnionOfTable {
+    // Test out-of-line sizing via a table contained inside a union.
+    1: SimpleTable t;
+};
+
+struct StructOfUnionOfTable {
+    UnionOfTable u;
+};
+
 flexible union CompatXUnion {
     1: string s; // hashed ordinal 0x5af8efa8
     2: bool b;

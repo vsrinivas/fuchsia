@@ -4802,3 +4802,51 @@ success("MixedFields") {
         ],
     },
 }
+
+success("UnionOfTable") {
+    value = StructOfUnionOfTable {
+        u: UnionOfTable {
+            t: SimpleTable {
+                x: 0x1122334455667788,
+            }
+        },
+    },
+    bytes = {
+        old = [
+            48: raw(
+                0x00, 0x00, 0x00, 0x00,  // union tag
+                0x00, 0x00, 0x00, 0x00,  // union tag (padding)
+                0x01, 0x00, 0x00, 0x00,  // vector<envelope> count
+                0x00, 0x00, 0x00, 0x00,  // vector<envelope> count (cont.)
+                0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope> presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope> presence (cont.)
+                0x08, 0x00, 0x00, 0x00,  // envelope size
+                0x00, 0x00, 0x00, 0x00,  // envelope handle count
+                0xFF, 0xFF, 0xFF, 0xFF,  // envelope presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // envelope presence (cont.)
+                0x88, 0x77, 0x66, 0x55,  // table.i value
+                0x44, 0x33, 0x22, 0x11,  // table.i value (cont.)
+            ),
+        ],
+        v1 = [
+            64: raw(
+                0x01, 0x00, 0x00, 0x00,  // union ordinal
+                0x00, 0x00, 0x00, 0x00,  // union ordinal (cont.)
+                0x28, 0x00, 0x00, 0x00,  // union size
+                0x00, 0x00, 0x00, 0x00,  // union handle count
+                0xFF, 0xFF, 0xFF, 0xFF,  // union presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // union presence (cont.)
+                0x01, 0x00, 0x00, 0x00,  // vector<envelope> count
+                0x00, 0x00, 0x00, 0x00,  // vector<envelope> count (cont.)
+                0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope> presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope> presence (cont.)
+                0x08, 0x00, 0x00, 0x00,  // envelope size
+                0x00, 0x00, 0x00, 0x00,  // envelope handle count
+                0xFF, 0xFF, 0xFF, 0xFF,  // envelope presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // envelope presence (cont.)
+                0x88, 0x77, 0x66, 0x55,  // table.i value
+                0x44, 0x33, 0x22, 0x11,  // table.i value (cont.)
+            ),
+        ],
+    },
+}
