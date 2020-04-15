@@ -205,8 +205,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		})
 	}
 
-	defer r.stopTargets(ctx, targets)
-
 	for _, t := range targets {
 		t := t
 		eg.Go(func() error {
