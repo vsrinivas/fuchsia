@@ -448,8 +448,8 @@ void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on) {
   }
 }
 
-zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx,
-                         const char* name, uint8_t* mac_addr, struct brcmf_if** if_out) {
+zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx, const char* name,
+                         uint8_t* mac_addr, struct brcmf_if** if_out) {
   struct brcmf_if* ifp;
   struct net_device* ndev;
 
@@ -475,7 +475,6 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
       return ZX_ERR_INVALID_ARGS;
     }
   }
-
 
   /* Allocate netdev, including space for private structure */
   ndev = brcmf_allocate_net_device(sizeof(*ifp), name);

@@ -270,37 +270,51 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       break;
     case BRCMF_C_SET_SSID: {
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(brcmf_join_params))) == ZX_OK) {
-        ZX_ASSERT(iface_tbl_[ifidx].ap_mode == true);
         auto join_params = (reinterpret_cast<brcmf_join_params*>(data));
-        iface_tbl_[ifidx].ap_config.ssid = join_params->ssid_le;
-        if (join_params->ssid_le.SSID_len) {
-          // non-zero SSID - assume AP start
-          ZX_ASSERT(iface_tbl_[ifidx].ap_config.ap_started == false);
-          // Indicate success to driver
-          SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr,
-                            BRCMF_EVENT_MSG_LINK);
-          iface_tbl_[ifidx].ap_config.ap_started = true;
+        if (iface_tbl_[ifidx].ap_mode == true) {
+          iface_tbl_[ifidx].ap_config.ssid = join_params->ssid_le;
+          if (join_params->ssid_le.SSID_len) {
+            // non-zero SSID - assume AP start
+            ZX_ASSERT(iface_tbl_[ifidx].ap_config.ap_started == false);
+            // Indicate success to driver
+            SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr,
+                              BRCMF_EVENT_MSG_LINK);
+            iface_tbl_[ifidx].ap_config.ap_started = true;
 
-          // Set the channel to the value specified in "chanspec" iovar
-          wlan_channel_t channel;
-          chanspec_to_channel(&d11_inf_, iface_tbl_[ifidx].chanspec, &channel);
-          hw_.SetChannel(channel);
-          // And Enable Rx
-          hw_.EnableRx();
-        } else {
-          // AP stop
-          ZX_ASSERT(iface_tbl_[ifidx].ap_config.ap_started == true);
-          // Disassoc and remove all the associated clients
-          for (auto client : iface_tbl_[ifidx].ap_config.clients) {
-            simulation::SimDisassocReqFrame disassoc_req_frame(iface_tbl_[ifidx].mac_addr, client,
-                                                               0);
-            hw_.Tx(&disassoc_req_frame);
+            // Set the channel to the value specified in "chanspec" iovar
+            wlan_channel_t channel;
+            chanspec_to_channel(&d11_inf_, iface_tbl_[ifidx].chanspec, &channel);
+            hw_.SetChannel(channel);
+            // And Enable Rx
+            hw_.EnableRx();
+          } else {
+            // AP stop
+            ZX_ASSERT(iface_tbl_[ifidx].ap_config.ap_started == true);
+            // Disassoc and remove all the associated clients
+            for (auto client : iface_tbl_[ifidx].ap_config.clients) {
+              simulation::SimDisassocReqFrame disassoc_req_frame(iface_tbl_[ifidx].mac_addr, client,
+                                                                 0);
+              hw_.Tx(&disassoc_req_frame);
+            }
+            iface_tbl_[ifidx].ap_config.clients.clear();
+            SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx);
+            iface_tbl_[ifidx].ap_config.ap_started = false;
+            iface_tbl_[ifidx].chanspec = 0;
+            BRCMF_DBG(SIM, "AP Stop processed\n");
           }
-          iface_tbl_[ifidx].ap_config.clients.clear();
-          SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx);
-          iface_tbl_[ifidx].ap_config.ap_started = false;
-          iface_tbl_[ifidx].chanspec = 0;
-          BRCMF_DBG(SIM, "AP Stop processed\n");
+        } else {
+          // When iface_tbl_[ifidx].ap_mode == false, start an association
+          ZX_ASSERT(join_params->params_le.chanspec_num == 1);
+          auto assoc_opts = std::make_unique<AssocOpts>();
+          wlan_channel_t channel;
+
+          chanspec_to_channel(&d11_inf_, join_params->params_le.chanspec_list[0], &channel);
+          memcpy(assoc_opts->bssid.byte, join_params->params_le.bssid, ETH_ALEN);
+          assoc_opts->ssid.len = join_params->ssid_le.SSID_len;
+          memcpy(assoc_opts->ssid.ssid, join_params->ssid_le.SSID, IEEE80211_MAX_SSID_LEN);
+
+          AssocInit(std::move(assoc_opts), ifidx, channel);
+          AuthStart();
         }
       }
       break;
@@ -492,6 +506,23 @@ zx_status_t SimFirmware::HandleAssocReq(uint16_t ifidx, const common::MacAddr& s
   return ZX_OK;
 }
 
+void SimFirmware::AssocInit(std::unique_ptr<AssocOpts> assoc_opts, const uint16_t ifidx,
+                            wlan_channel_t& channel) {
+  assoc_state_.ifidx = ifidx;
+  assoc_state_.state = AssocState::ASSOCIATING;
+  assoc_state_.opts = std::move(assoc_opts);
+  assoc_state_.num_attempts = 0;
+
+  // Values stored in assoc_state_ will be use in authentication step.
+  common::MacAddr srcAddr(mac_addr_);
+  common::MacAddr bssid(assoc_state_.opts->bssid);
+
+  uint16_t chanspec = channel_to_chanspec(&d11_inf_, &channel);
+  SetIFChanspec(assoc_state_.ifidx, chanspec);
+  hw_.SetChannel(channel);
+  hw_.EnableRx();
+}
+
 void SimFirmware::AssocScanResultSeen(const ScanResult& scan_result) {
   // Check ssid filter
   if (scan_state_.opts->ssid) {
@@ -522,30 +553,18 @@ void SimFirmware::AssocScanDone() {
     return;
   }
 
-  auto assoc_opts = std::make_unique<AssocOpts>();
-
   // For now, just pick the first AP. The real firmware can select based on signal strength and
   // band, but since wlanstack makes its own decision, we won't bother to model that here for now.
   ScanResult& ap = assoc_state_.scan_results.front();
 
+  auto assoc_opts = std::make_unique<AssocOpts>();
   assoc_opts->bssid = ap.bssid;
-  assoc_state_.ifidx = scan_state_.ifidx;
+  if (scan_state_.opts->ssid)
+    assoc_opts->ssid = scan_state_.opts->ssid.value();
 
+  AssocInit(std::move(assoc_opts), scan_state_.ifidx, ap.channel);
   // Send an event of the first scan result to driver when assoc scan is done.
   EscanResultSeen(ap);
-
-  assoc_state_.state = AssocState::ASSOCIATING;
-  assoc_state_.opts = std::move(assoc_opts);
-  assoc_state_.num_attempts = 0;
-
-  // Values stored in assoc_state_ will be use in authentication step.
-  common::MacAddr srcAddr(mac_addr_);
-  common::MacAddr bssid(assoc_state_.opts->bssid);
-
-  uint16_t chanspec = channel_to_chanspec(&d11_inf_, &ap.channel);
-  SetIFChanspec(assoc_state_.ifidx, chanspec);
-  hw_.SetChannel(ap.channel);
-  hw_.EnableRx();
 
   AuthStart();
 }
@@ -687,7 +706,7 @@ void SimFirmware::AssocStart() {
   // We can't use assoc_state_.opts->bssid directly because it may get free'd during TxAssocReq
   // handling if a response is sent.
   common::MacAddr bssid(assoc_state_.opts->bssid);
-  simulation::SimAssocReqFrame assoc_req_frame(srcAddr, bssid);
+  simulation::SimAssocReqFrame assoc_req_frame(srcAddr, bssid, assoc_state_.opts->ssid);
   hw_.Tx(&assoc_req_frame);
 }
 
@@ -770,10 +789,8 @@ void SimFirmware::RxAssocResp(const simulation::SimAssocRespFrame* frame) {
   if (frame->src_addr_ != assoc_state_.opts->bssid) {
     return;
   }
-
   // Response received, cancel timer
   hw_.CancelCallback(assoc_state_.assoc_timer_id);
-
   if (frame->status_ == WLAN_ASSOC_RESULT_SUCCESS) {
     // Notify the driver that association succeeded
     assoc_state_.state = AssocState::ASSOCIATED;
@@ -1075,6 +1092,7 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
     auto assoc_max_retries = static_cast<const uint32_t*>(value);
     assoc_max_retries_ = *assoc_max_retries;
   }
+
   if (!std::strcmp(name, "chanspec")) {
     if (value_len < sizeof(uint16_t)) {
       return ZX_ERR_IO;
@@ -1490,9 +1508,8 @@ void SimFirmware::RxBeacon(const wlan_channel_t& channel, const simulation::SimB
     scan_result.bss_capability.set_val(frame->capability_info_.val());
     scan_state_.opts->on_result_fn(scan_result);
     // TODO(fxb/49350): Channel switch during scanning need to be supported.
-  }
-
-  if (assoc_state_.state == AssocState::ASSOCIATED && frame->bssid_ == assoc_state_.opts->bssid) {
+  } else if (assoc_state_.state == AssocState::ASSOCIATED &&
+             frame->bssid_ == assoc_state_.opts->bssid) {
     // if we're associated with this AP, start/restart the beacon watchdog
     RestartBeaconWatchdog();
 

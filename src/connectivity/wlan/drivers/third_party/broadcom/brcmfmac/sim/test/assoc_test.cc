@@ -172,7 +172,9 @@ void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& in
   // If a handler has been installed, call it
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_REQ) {
     if (context_.on_assoc_req_callback) {
-      (*context_.on_assoc_req_callback)();
+      std::function<void()>* callback = new std::function<void()>;
+      *callback = context_.on_assoc_req_callback.value();
+      env_->ScheduleNotification(this, zx::msec(1), static_cast<void*>(callback));
     }
   }
 
@@ -190,7 +192,9 @@ void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& in
     // When we receive a authentication request, try to call the callback.
     if (auth_frame->seq_num_ == 1) {
       if (context_.on_auth_req_callback) {
-        (*context_.on_auth_req_callback)();
+        std::function<void()>* callback = new std::function<void()>;
+        *callback = context_.on_auth_req_callback.value();
+        env_->ScheduleNotification(this, zx::msec(1), static_cast<void*>(callback));
       }
       return;
     }
@@ -377,7 +381,6 @@ TEST_F(AssocTest, SsidTest) {
   ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
-  context_.bssid = wlan::common::kZeroMac;  // Use the wildcard BSSID
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
@@ -402,13 +405,10 @@ TEST_F(AssocTest, WrongIds) {
 
   // Start up fake APs
   simulation::FakeAp ap1(env_.get(), kDefaultBssid, kDefaultSsid, kWrongChannel);
-  ap1.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap1);
   simulation::FakeAp ap2(env_.get(), kWrongBssid, kDefaultSsid, kDefaultChannel);
-  ap2.EnableBeacon(zx::msec(90));
   aps_.push_back(&ap2);
   simulation::FakeAp ap3(env_.get(), kDefaultBssid, kWrongSsid, kDefaultChannel);
-  ap3.EnableBeacon(zx::msec(80));
   aps_.push_back(&ap3);
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
@@ -429,7 +429,6 @@ TEST_F(AssocTest, RepeatedAssocTest) {
 
   // Start up our fake AP
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
   // The associations at 11ms and 12ms should be immediately rejected (because there is already
@@ -455,7 +454,6 @@ TEST_F(AssocTest, ApIgnoredRequest) {
 
   // Start up fake APs
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
   aps_.push_back(&ap);
 
@@ -479,7 +477,6 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   // Start up fake APs
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
   aps_.push_back(&ap);
 
@@ -532,7 +529,6 @@ TEST_F(AssocTest, IgnoreRespMismatch) {
 
   // Start up fake AP
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
 
   // We want the association request to be ignored so we can inject responses and verify that
   // they are being ignored.
@@ -581,16 +577,6 @@ TEST_F(AssocTest, IgnoreExtraResp) {
   // Create our device instance
   Init();
 
-  // Start up fake AP
-  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
-
-  // We want the association request to be ignored so we can inject responses and verify that
-  // they are being ignored.
-  ap.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
-
-  aps_.push_back(&ap);
-
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
   context_.on_auth_req_callback = std::bind(&AssocTest::SendOpenAuthResp, this);
@@ -610,10 +596,9 @@ TEST_F(AssocTest, AssocWhileScanning) {
 
   // Start up fake AP
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
@@ -642,7 +627,6 @@ TEST_F(AssocTest, DisassocFromSelfTest) {
 
   // Start up our fake AP
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
@@ -663,7 +647,6 @@ TEST_F(AssocTest, DisassocWithoutAssocTest) {
   // Create our device instance
   Init();
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
   // Attempt to disassociate. In this case client is not associated. AP
@@ -684,7 +667,6 @@ TEST_F(AssocTest, DisassocNotSelfTest) {
 
   // Start up our fake AP
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
@@ -706,7 +688,6 @@ TEST_F(AssocTest, DisassocFromAPTest) {
 
   // Start up our fake AP
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
@@ -727,7 +708,6 @@ TEST_F(AssocTest, AssocMaxRetries) {
 
   // Start up fake APs
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
   aps_.push_back(&ap);
 
@@ -761,7 +741,6 @@ TEST_F(AssocTest, AssocMaxRetriesWhenTimedout) {
 
   // Start up fake APs
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
   aps_.push_back(&ap);
 
@@ -788,7 +767,6 @@ TEST_F(AssocTest, AssocNoRetries) {
 
   // Start up fake APs
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
   aps_.push_back(&ap);
 

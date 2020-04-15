@@ -102,7 +102,7 @@ void AssocTest::FinishAuth() {
 
 TEST_F(AssocTest, RefuseIfNotAuthenticated) {
   auto handler = new std::function<void()>;
-  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
+  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(this, zx::usec(50), static_cast<void*>(handler));
 
@@ -113,6 +113,35 @@ TEST_F(AssocTest, RefuseIfNotAuthenticated) {
   EXPECT_EQ(assoc_status_list_.size(), 0U);
 }
 
+TEST_F(AssocTest, RefusedWrongSsid) {
+  static constexpr wlan_ssid_t kWrongLenSsid = {.len = 14, .ssid = "Fuchsia Fake A"};
+  static constexpr wlan_ssid_t kWrongSsid = {.len = 15, .ssid = "Fuchsia Fake AA"};
+
+  FinishAuth();
+
+  auto handler = new std::function<void()>;
+  simulation::SimAssocReqFrame wrong_ssid_len_frame(kClientMacAddr, kApBssid, kWrongLenSsid);
+  simulation::SimAssocReqFrame wrong_ssid_frame(kClientMacAddr, kApBssid, kWrongSsid);
+
+  *handler =
+      std::bind(&simulation::Environment::Tx, &env_, &wrong_ssid_len_frame, kDefaultTxInfo, this);
+  env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
+
+  handler = new std::function<void()>;
+  *handler =
+      std::bind(&simulation::Environment::Tx, &env_, &wrong_ssid_frame, kDefaultTxInfo, this);
+  env_.ScheduleNotification(this, zx::sec(2), static_cast<void*>(handler));
+
+  env_.Run();
+
+  EXPECT_EQ(assoc_resp_count_, 2U);
+  ASSERT_EQ(assoc_status_list_.size(), (size_t)2);
+  EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED);
+  assoc_status_list_.pop_front();
+  EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED);
+  assoc_status_list_.pop_front();
+}
+
 TEST_F(AssocTest, IgnoredRequests) {
   constexpr simulation::WlanTxInfo kWrongChannelTxInfo = {
       .channel = {.primary = 10, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
@@ -121,14 +150,14 @@ TEST_F(AssocTest, IgnoredRequests) {
 
   // Schedule assoc req on different channel
   auto handler = new std::function<void()>;
-  simulation::SimAssocReqFrame wrong_chan_frame(kClientMacAddr, kApBssid);
+  simulation::SimAssocReqFrame wrong_chan_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler =
       std::bind(&simulation::Environment::Tx, &env_, &wrong_chan_frame, kWrongChannelTxInfo, this);
   env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
 
   // Schedule assoc req to different bssid
   handler = new std::function<void()>;
-  simulation::SimAssocReqFrame wrong_bssid_frame(kClientMacAddr, kWrongBssid);
+  simulation::SimAssocReqFrame wrong_bssid_frame(kClientMacAddr, kWrongBssid, kApSsid);
   *handler =
       std::bind(&simulation::Environment::Tx, &env_, &wrong_bssid_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(this, zx::sec(2), static_cast<void*>(handler));
@@ -151,7 +180,7 @@ TEST_F(AssocTest, BasicUse) {
   FinishAuth();
   // Schedule first request
   auto handler = new std::function<void()>;
-  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
+  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(this, zx::usec(50), static_cast<void*>(handler));
 
@@ -187,7 +216,7 @@ TEST_F(AssocTest, IgnoreAssociations) {
   FinishAuth();
   // Schedule assoc req
   auto handler = new std::function<void()>;
-  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
+  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
 
@@ -208,7 +237,7 @@ TEST_F(AssocTest, IgnoreAssociations) {
 TEST_F(AssocTest, RejectAssociations) {
   // Schedule first request
   auto handler = new std::function<void()>;
-  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
+  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
 
@@ -233,7 +262,7 @@ TEST_F(AssocTest, DisassocFromSta) {
   FinishAuth();
   // Schedule assoc req
   auto handler = new std::function<void()>;
-  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
+  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
 
@@ -266,7 +295,7 @@ TEST_F(AssocTest, DisassocFromAp) {
   FinishAuth();
   // Schedule assoc req
   auto handler = new std::function<void()>;
-  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
+  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
 

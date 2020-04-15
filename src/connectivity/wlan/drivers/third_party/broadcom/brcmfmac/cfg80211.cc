@@ -834,7 +834,8 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
   err = brcmf_fil_iovar_data_set(ifp, "escan", params, params_size, &fw_err);
   if (err != ZX_OK) {
     if (err == ZX_ERR_UNAVAILABLE) {
-      BRCMF_ERR("system busy : escan canceled sme state: 0x%lx\n", atomic_load(&ifp->vif->sme_state));
+      BRCMF_ERR("system busy : escan canceled sme state: 0x%lx\n",
+                atomic_load(&ifp->vif->sme_state));
     } else {
       BRCMF_ERR("escan failed: %s, fw err %s\n", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fw_err));
@@ -1370,7 +1371,7 @@ void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
 zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-  struct brcmf_ext_join_params_le join_params;
+  struct brcmf_join_params join_params;
   uint16_t chanspec;
   size_t join_params_size = 0;
   const void* ie;
@@ -1455,24 +1456,12 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   memcpy(&join_params.ssid_le.SSID, ifp->bss.ssid.data, ssid_len);
   join_params.ssid_le.SSID_len = ssid_len;
 
-  memcpy(join_params.assoc_le.bssid, ifp->bss.bssid, ETH_ALEN);
-  join_params.assoc_le.chanspec_num = 1;
-  join_params.assoc_le.chanspec_list[0] = chanspec;
-
-  join_params.scan_le.scan_type = 0;   // use default
-  join_params.scan_le.home_time = -1;  // use default
-
-  /* Increase dwell time to receive probe response or detect beacon from target AP at a noisy
-     air only during connect command. */
-  join_params.scan_le.active_time = BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS;
-  join_params.scan_le.passive_time = BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS;
-  /* To sync with presence period of VSDB GO send probe request more frequently. Probe request
-     will be stopped when it gets probe response from target AP/GO. */
-  join_params.scan_le.nprobes =
-      BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS / BRCMF_SCAN_JOIN_PROBE_INTERVAL_MS;
+  memcpy(join_params.params_le.bssid, ifp->bss.bssid, ETH_ALEN);
+  join_params.params_le.chanspec_num = 1;
+  join_params.params_le.chanspec_list[0] = chanspec;
 
   BRCMF_DBG(CONN, "Sending join request\n");
-  err = brcmf_fil_bsscfg_data_set(ifp, "join", &join_params, join_params_size);
+  err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, join_params_size, &fw_err);
   if (err != ZX_OK) {
     BRCMF_ERR("join failed (%d)\n", err);
   }
@@ -3756,7 +3745,6 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
   int32_t fw_err = 0;
 
   brcmf_clear_assoc_ies(cfg);
-
   err = brcmf_fil_iovar_data_get(ifp, "assoc_info", cfg->extra_buf, WL_ASSOC_INFO_MAX, &fw_err);
   if (err != ZX_OK) {
     BRCMF_ERR("could not get assoc info: %s, fw err %s\n", zx_status_get_string(err),
@@ -3797,7 +3785,6 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
     conn_info->resp_ie = NULL;
   }
   BRCMF_DBG(CONN, "req len (%d) resp len (%d)\n", conn_info->req_ie_len, conn_info->resp_ie_len);
-
   return err;
 }
 

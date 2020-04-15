@@ -137,7 +137,7 @@ TEST_F(AuthTest, OpenSystemIgnoreTest) {
   env_.ScheduleNotification(this, zx::sec(2), static_cast<void*>(handler));
 
   handler = new std::function<void()>;
-  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
+  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(this, zx::sec(3), static_cast<void*>(handler));
 

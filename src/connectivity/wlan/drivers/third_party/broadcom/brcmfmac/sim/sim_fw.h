@@ -99,6 +99,7 @@ class SimFirmware {
 
   struct AssocOpts {
     common::MacAddr bssid;
+    wlan_ssid_t ssid;
   };
 
  public:
@@ -273,6 +274,8 @@ class SimFirmware {
   void EscanComplete();
 
   // Association operations
+  void AssocInit(std::unique_ptr<AssocOpts> assoc_opts, const uint16_t ifidx,
+                 wlan_channel_t& channel);
   void AssocScanResultSeen(const ScanResult& scan_result);
   void AssocScanDone();
   void AuthStart();  // Scan complete, start authentication process

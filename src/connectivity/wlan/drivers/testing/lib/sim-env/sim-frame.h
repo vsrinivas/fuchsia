@@ -156,8 +156,9 @@ class SimProbeRespFrame : public SimManagementFrame {
 class SimAssocReqFrame : public SimManagementFrame {
  public:
   SimAssocReqFrame() = default;
-  explicit SimAssocReqFrame(const common::MacAddr& src, const common::MacAddr bssid)
-      : src_addr_(src), bssid_(bssid){};
+  explicit SimAssocReqFrame(const common::MacAddr& src, const common::MacAddr bssid,
+                            const wlan_ssid_t ssid)
+      : src_addr_(src), bssid_(bssid), ssid_(ssid){};
 
   ~SimAssocReqFrame() override;
 
@@ -165,6 +166,7 @@ class SimAssocReqFrame : public SimManagementFrame {
 
   common::MacAddr src_addr_;
   common::MacAddr bssid_;
+  wlan_ssid_t ssid_;
 };
 
 class SimAssocRespFrame : public SimManagementFrame {

@@ -143,7 +143,7 @@ TEST_F(RxTest, BeaconTest) {
 }
 
 TEST_F(RxTest, AssocReqTest) {
-  simulation::SimAssocReqFrame assoc_req_frame(stations_[1].mac_addr_, kDefaultBssid);
+  simulation::SimAssocReqFrame assoc_req_frame(stations_[1].mac_addr_, kDefaultBssid, kDefaultSsid);
   env_.Tx(&assoc_req_frame, kDefaultTxInfo, &stations_[1]);
   EXPECT_EQ(stations_[0].assoc_req_seen_, true);
   EXPECT_EQ(stations_[1].assoc_req_seen_, false);

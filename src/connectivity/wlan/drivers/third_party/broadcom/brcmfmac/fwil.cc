@@ -222,7 +222,6 @@ zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, const char* name, con
   uint32_t buflen;
 
   drvr->proto_block.lock();
-
   BRCMF_DBG(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
   BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, std::min<uint>(len, MAX_HEX_DUMP_LEN), "data\n");
 
@@ -243,9 +242,7 @@ zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, const char* name, voi
   struct brcmf_pub* drvr = ifp->drvr;
   zx_status_t err;
   uint32_t buflen;
-
   drvr->proto_block.lock();
-
   buflen = brcmf_create_iovar(name, data, len, (char*)drvr->proto_buf, sizeof(drvr->proto_buf));
   if (buflen) {
     err = brcmf_fil_cmd_data(ifp, BRCMF_C_GET_VAR, drvr->proto_buf, buflen, false, fwerr_ptr);

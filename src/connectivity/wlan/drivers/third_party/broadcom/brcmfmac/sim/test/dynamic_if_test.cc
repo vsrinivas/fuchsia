@@ -283,7 +283,8 @@ void DynamicIfTest::TxAssocReq() {
   sim->sim_fw->IovarsGet(softap_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr soft_ap_mac(mac_buf);
   const common::MacAddr mac(kFakeMac);
-  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac);
+  wlan_ssid_t ssid = {.len = 6, .ssid = "Sim_AP"};
+  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac, ssid);
   env_->Tx(&assoc_req_frame, kDefaultTxInfo, this);
 }
 

@@ -14,6 +14,7 @@ constexpr uint16_t kDefaultCh = 149;
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = kDefaultCh, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 const common::MacAddr kFakeMac({0xde, 0xad, 0xbe, 0xef, 0x00, 0x02});
+constexpr wlan_ssid_t kDefaultSsid = {.len = 6, .ssid = "Sim_AP"};
 
 class CreateSoftAPTest : public SimTest {
  public:
@@ -146,7 +147,7 @@ void CreateSoftAPTest::TxAssocReq() {
   sim->sim_fw->IovarsGet(softap_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr soft_ap_mac(mac_buf);
   const common::MacAddr mac(kFakeMac);
-  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac);
+  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac, kDefaultSsid);
   env_->Tx(&assoc_req_frame, tx_info_, this);
 }
 
@@ -158,7 +159,7 @@ void CreateSoftAPTest::TxDisassocReq() {
   common::MacAddr soft_ap_mac(mac_buf);
   const common::MacAddr mac(kFakeMac);
   // Associate with the SoftAP
-  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac);
+  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac, kDefaultSsid);
   env_->Tx(&assoc_req_frame, tx_info_, this);
   // Disassociate with the SoftAP
   simulation::SimDisassocReqFrame disassoc_req_frame(mac, soft_ap_mac, 0);

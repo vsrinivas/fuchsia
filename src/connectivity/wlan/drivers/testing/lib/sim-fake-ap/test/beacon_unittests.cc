@@ -271,7 +271,7 @@ void BeaconTest::AssocCallback() {
   simulation::SimAuthFrame auth_req_frame(kClientMacAddr, kDefaultBssid, 1,
                                           simulation::AUTH_TYPE_OPEN, WLAN_STATUS_CODE_SUCCESS);
   env_.Tx(&auth_req_frame, kDefaultTxInfo, this);
-  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kDefaultBssid);
+  simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kDefaultBssid, kDefaultSsid);
   env_.Tx(&assoc_req_frame, kDefaultTxInfo, this);
 }
 

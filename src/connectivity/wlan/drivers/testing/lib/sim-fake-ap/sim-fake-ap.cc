@@ -217,13 +217,18 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
 
     case SimManagementFrame::FRAME_TYPE_ASSOC_REQ: {
       auto assoc_req_frame = static_cast<const SimAssocReqFrame*>(mgmt_frame);
-
       // Ignore requests that are not for us
       if (assoc_req_frame->bssid_ != bssid_) {
         return;
       }
 
       if (assoc_handling_mode_ == ASSOC_IGNORED) {
+        return;
+      }
+
+      if ((assoc_req_frame->ssid_.len != ssid_.len) ||
+          memcmp(assoc_req_frame->ssid_.ssid, ssid_.ssid, ssid_.len)) {
+        ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED, assoc_req_frame->src_addr_);
         return;
       }
 

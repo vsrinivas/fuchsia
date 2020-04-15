@@ -55,7 +55,6 @@ static zx_status_t brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint 
   struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
   struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
   uint32_t flags;
-
   if (cmd == BRCMF_C_GET_VAR) {
     // buf starts with a NULL-terminated string
     BRCMF_DBG(BCDC, "Getting iovar '%.*s'\n", len, buf);
@@ -88,7 +87,6 @@ static zx_status_t brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint 
   if (len > BRCMF_TX_IOCTL_MAX_MSG_SIZE) {
     len = BRCMF_TX_IOCTL_MAX_MSG_SIZE;
   }
-
   /* Send request */
   return brcmf_bus_txctl(drvr->bus_if, (unsigned char*)&bcdc->msg, len);
 }
