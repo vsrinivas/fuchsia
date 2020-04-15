@@ -23,8 +23,8 @@ void arch_spin_lock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
       "cbnz    %[temp], 1b;"
       "stxr    %w[temp], %[val], [%[lock]];"
       "cbnz    %w[temp], 1b;"
-      : [ temp ] "=&r"(temp)
-      : [ lock ] "r"(&lock->value), [ val ] "r"(val)
+      : [temp] "=&r"(temp)
+      : [lock] "r"(&lock->value), [val] "r"(val)
       : "cc", "memory");
   WRITE_PERCPU_FIELD32(num_spinlocks, READ_PERCPU_FIELD32(num_spinlocks) + 1);
 }
@@ -38,8 +38,8 @@ int arch_spin_trylock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
       "cbnz    %[out], 1f;"
       "stxr    %w[out], %[val], [%[lock]];"
       "1:"
-      : [ out ] "=&r"(out)
-      : [ lock ] "r"(&lock->value), [ val ] "r"(val)
+      : [out] "=&r"(out)
+      : [lock] "r"(&lock->value), [val] "r"(val)
       : "cc", "memory");
 
   if (out == 0) {

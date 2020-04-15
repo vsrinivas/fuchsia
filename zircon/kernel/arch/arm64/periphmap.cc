@@ -5,9 +5,9 @@
 // https://opensource.org/licenses/MIT
 #include "arch/arm64/periphmap.h"
 
+#include <align.h>
 #include <lib/console.h>
 
-#include <align.h>
 #include <arch/arm64/mmu.h>
 #include <ktl/optional.h>
 #include <vm/vm.h>

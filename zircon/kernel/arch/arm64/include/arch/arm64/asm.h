@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_ASM_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_ASM_H_
 
+// clang-format off
+
 #include <asm.h>
 
 // The kernel is compiled using -ffixed-x15 so the compiler will never use

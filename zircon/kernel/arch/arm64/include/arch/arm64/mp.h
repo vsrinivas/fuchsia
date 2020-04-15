@@ -70,12 +70,12 @@ static inline uint32_t arm64_read_percpu_u32(size_t offset) {
   // mark as volatile to force a read of the field to make sure
   // the compiler always emits a read when asked and does not cache
   // a copy between
-  __asm__ volatile("ldr %w[val], [x15, %[offset]]" : [ val ] "=r"(val) : [ offset ] "Ir"(offset));
+  __asm__ volatile("ldr %w[val], [x15, %[offset]]" : [val] "=r"(val) : [offset] "Ir"(offset));
   return val;
 }
 
 static inline void arm64_write_percpu_u32(size_t offset, uint32_t val) {
-  __asm__("str %w[val], [x15, %[offset]]" ::[val] "r"(val), [ offset ] "Ir"(offset) : "memory");
+  __asm__("str %w[val], [x15, %[offset]]" ::[val] "r"(val), [offset] "Ir"(offset) : "memory");
 }
 
 static inline cpu_num_t arch_curr_cpu_num(void) {

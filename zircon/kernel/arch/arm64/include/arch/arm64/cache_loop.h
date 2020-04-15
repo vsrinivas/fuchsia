@@ -4,8 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_INCLUDE_ARCH_ARM64_CACHE_LOOP_H_
-#define ZIRCON_KERNEL_INCLUDE_ARCH_ARM64_CACHE_LOOP_H_
+#ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_CACHE_LOOP_H_
+#define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_CACHE_LOOP_H_
+
+// clang-format off
 
 #ifdef __ASSEMBLER__
 
