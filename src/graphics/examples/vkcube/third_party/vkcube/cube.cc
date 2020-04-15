@@ -61,11 +61,16 @@
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 //#define USE_YUV_TEXTURE 1
+//#define USE_SRGB 1
 
 #if USE_YUV_TEXTURE
 #define TEX_FORMAT VK_FORMAT_G8B8G8R8_422_UNORM_KHR
 #else
+#if USE_SRGB
+#define TEX_FORMAT VK_FORMAT_R8G8B8A8_SRGB
+#else
 #define TEX_FORMAT VK_FORMAT_R8G8B8A8_UNORM
+#endif
 #endif
 
 #if defined(NDEBUG) && defined(__GNUC__)
@@ -425,7 +430,11 @@ static void demo_draw_build_cmd(struct demo* demo, VkCommandBuffer cmd_buf) {
       .pInheritanceInfo = NULL,
   };
   const VkClearValue clear_values[2] = {
-      [0] = {.color.float32 = {0.2f, 0.2f, 0.2f, 0.2f}},
+#if USE_SRGB
+      [0] = {.color.float32 = {0.033f, 0.033f, 0.033f, 1.0f}},
+#else
+      [0] = {.color.float32 = {0.2f, 0.2f, 0.2f, 1.0f}},
+#endif
       [1] = {.depthStencil = {1.0f, 0}},
   };
   const VkRenderPassBeginInfo rp_begin = {
@@ -2772,13 +2781,28 @@ void demo_init_vk_swapchain(struct demo* demo) {
   // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
   // the surface has no preferred format.  Otherwise, at least one
   // supported format will be returned.
+  uint32_t surfFormatIndex = 0;
   if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) {
+#if USE_SRGB
+    demo->format = VK_FORMAT_B8G8R8A8_SRGB;
+#else
     demo->format = VK_FORMAT_B8G8R8A8_UNORM;
+#endif
   } else {
     assert(formatCount >= 1);
-    demo->format = surfFormats[0].format;
+#if USE_SRGB
+    for (i = 0; i < formatCount; ++i) {
+      if (surfFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB ||
+          surfFormats[i].format == VK_FORMAT_R8G8B8A8_SRGB) {
+        surfFormatIndex = i;
+        break;
+      }
+    }
+    assert(i < formatCount);
+#endif
+    demo->format = surfFormats[surfFormatIndex].format;
   }
-  demo->color_space = surfFormats[0].colorSpace;
+  demo->color_space = surfFormats[surfFormatIndex].colorSpace;
 
   demo->quit = false;
   demo->curFrame = 0;
