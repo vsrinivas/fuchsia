@@ -20,7 +20,7 @@ zx_library("simplehid") {
   sources = []
   public_deps = [
     # <lib/simplehid/simplehid.h> has #include <ddktl/protocol/hidbus.h>.
-    "//zircon/system/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/ddk.protocol.hidbus",
 
     # <lib/simplehid/simplehid.h> has #include <lib/zircon-internal/thread_annotations.h>.
     "//zircon/public/lib/zircon-internal",

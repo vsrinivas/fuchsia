@@ -16,6 +16,7 @@ driver_module("cypress") {
   sources = [ "cy8cmbr3108.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -25,7 +26,6 @@ driver_module("cypress") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/ulib/hid",
   ]
 }
@@ -39,6 +39,7 @@ test("cypress-touch-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
@@ -50,7 +51,6 @@ test("cypress-touch-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/dev/lib/fake-hidbus-ifc",
     "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/dev/lib/mock-hidbus-ifc",

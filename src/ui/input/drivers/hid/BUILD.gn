@@ -20,13 +20,13 @@ driver_module("hid") {
     "hid.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/banjo/ddk.protocol.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace-driver",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
@@ -42,13 +42,13 @@ test("hid-test") {
     "hid.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/banjo/ddk.protocol.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",

@@ -123,6 +123,7 @@ driver_module("platform-bus-x86") {
     ":iommu",
     ":smbios",
     "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/banjo/ddk.protocol.pciroot",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.scpi",
@@ -139,7 +140,6 @@ driver_module("platform-bus-x86") {
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/dev/lib/pci",
@@ -176,6 +176,7 @@ test("x86-battery-test") {
   configs += [ ":config" ]
   deps = [
     "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/banjo/ddk.protocol.pciroot",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.scpi",
@@ -189,7 +190,6 @@ test("x86-battery-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/dev/lib/pci",
@@ -223,6 +223,7 @@ test("x86-lid-test") {
   configs += [ ":config" ]
   deps = [
     "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -230,7 +231,6 @@ test("x86-lid-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/dev/lib/mock-hidbus-ifc",
     "//zircon/system/ulib/hid",
@@ -261,6 +261,7 @@ test("x86-pwrsrc-test") {
   configs += [ ":config" ]
   deps = [
     "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.scpi",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
@@ -269,7 +270,6 @@ test("x86-pwrsrc-test") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/ulib/hid",
@@ -374,6 +374,7 @@ test("x86-cros-ec-test") {
   configs += [ ":config" ]
   deps = [
     "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -381,7 +382,6 @@ test("x86-cros-ec-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/dev/lib/mock-hidbus-ifc",
     "//zircon/system/ulib/hid",

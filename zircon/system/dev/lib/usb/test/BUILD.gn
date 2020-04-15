@@ -62,6 +62,7 @@ test("usb-wrapper-test") {
   output_name = "usb-wrapper-test"
   sources = [ "usb-wrapper-test.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//src/devices/lib/driver",
@@ -70,7 +71,6 @@ test("usb-wrapper-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/dev/lib/fake-bti",
     "//zircon/system/dev/lib/usb",
   ]
