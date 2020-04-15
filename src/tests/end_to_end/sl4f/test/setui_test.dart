@@ -32,5 +32,9 @@ void main() {
       // If anything throws an exception then we've failed.
       await setUi.getDevNetworkOption();
     });
+    test('talks to SL4F setDevNetworkOption no reboot', () async {
+      // If anything throws an exception then we've failed.
+      await setUi.setDevNetworkOption(sl4f.NetworkOption.ethernet);
+    });
   }, timeout: _timeout);
 }

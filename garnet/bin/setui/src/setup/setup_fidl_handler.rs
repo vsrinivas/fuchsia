@@ -112,9 +112,9 @@ async fn set(
             let switchboard_client = context.switchboard_client.clone();
             if let Ok(Ok(_)) = response_rx.await {
                 if do_reboot {
-                    return Ok(());
+                    return reboot(switchboard_client).await;
                 }
-                return reboot(switchboard_client).await;
+                return Ok(());
             }
         }
     }
