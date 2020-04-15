@@ -5,6 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
+#include <lib/cmdline.h>
+#include <lib/code_patching.h>
 
 #include <arch/x86.h>
 #include <arch/x86/cpuid.h>
@@ -14,8 +16,6 @@
 #include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
-#include <lib/cmdline.h>
-#include <lib/code_patching.h>
 
 static SpinLock g_microcode_lock;
 
@@ -163,7 +163,7 @@ bool x86_intel_cpu_has_mds_taa(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
     }
   }
   bool has_tsx = cpuid->ReadFeatures().HasFeature(cpu_id::Features::HLE) ||
-    cpuid->ReadFeatures().HasFeature(cpu_id::Features::RTM);
+                 cpuid->ReadFeatures().HasFeature(cpu_id::Features::RTM);
 
   auto* const microarch_config = get_microarch_config(cpuid);
   return microarch_config->has_mds || has_tsx;
@@ -289,8 +289,8 @@ extern "C" void x86_mds_flush_select(const CodePatchInfo* patch) {
 
   extern bool g_md_clear_on_user_return;
   if (!g_md_clear_on_user_return) {
-     memset(patch->dest_addr, 0x90, kSize);
+    memset(patch->dest_addr, 0x90, kSize);
   } else {
-     // Keep the call to mds_buf_overwrite in place.
+    // Keep the call to mds_buf_overwrite in place.
   }
 }
