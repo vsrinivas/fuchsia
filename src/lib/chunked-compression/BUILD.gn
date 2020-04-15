@@ -11,6 +11,8 @@ source_set("chunked-compression") {
     "chunked-archive.h",
     "chunked-compressor.cc",
     "chunked-compressor.h",
+    "chunked-decompressor.cc",
+    "chunked-decompressor.h",
     "status.h",
   ]
   public_deps = [ "//zircon/public/lib/fbl" ]
@@ -31,6 +33,7 @@ test("chunked-compression-unittests") {
   output_name = "chunked-compression-unittests"
   sources = [
     "chunked-compressor-test.cc",
+    "chunked-decompressor-test.cc",
     "header-reader-test.cc",
     "header-writer-test.cc",
     "seek-table-test.cc",
