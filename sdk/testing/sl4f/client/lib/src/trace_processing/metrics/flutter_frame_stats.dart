@@ -173,11 +173,31 @@ _FpsResult _computeFps(Model model, Thread uiThread, Thread rasterThread) {
     ..totalDuration = totalDuration;
 }
 
+List<double> _computeFrameLatencies(Thread uiThread) {
+  return filterEventsTyped<DurationEvent>(uiThread.events,
+          category: 'flutter', name: 'vsync callback')
+      // TODO(48263): Only match "vsync callback"
+      .followedBy(filterEventsTyped<DurationEvent>(uiThread.events,
+          category: 'flutter', name: 'VsyncProcessCallback'))
+      .map((event) {
+        final followingVsync = findFollowingVsync(event);
+        if (followingVsync == null) {
+          return null;
+        } else {
+          return (followingVsync.start - event.start);
+        }
+      })
+      .where((v) => v != null)
+      .map((duration) => duration.toMillisecondsF())
+      .toList();
+}
+
 class _Results {
   String appName;
   _FpsResult fpsResult;
   List<double> frameBuildTimes;
   List<double> frameRasterizerTimes;
+  List<double> frameLatencies;
 }
 
 /// Compute frame stats metrics for all matching flutter apps in the trace. If
@@ -242,7 +262,8 @@ List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
                 category: 'flutter',
                 name: 'GPURasterizer::Draw')
             .map(getDurationInMilliseconds)
-            .toList());
+            .toList()
+        ..frameLatencies = _computeFrameLatencies(uiThread));
     }
   }
 
@@ -279,6 +300,10 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
   final results =
       _flutterFrameStats(model, flutterAppName: flutterAppName).first;
 
+  if (results.frameLatencies.isEmpty) {
+    throw ArgumentError('Computed 0 frame latency values.');
+  }
+
   return [
     TestCaseResults('${flutterAppName}_fps', Unit.framesPerSecond,
         [results.fpsResult.averageFps]),
@@ -286,6 +311,8 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
         results.frameBuildTimes),
     TestCaseResults('${flutterAppName}_frame_rasterizer_times',
         Unit.milliseconds, results.frameRasterizerTimes),
+    TestCaseResults('${flutterAppName}_frame_latencies', Unit.milliseconds,
+        results.frameLatencies),
   ];
 }
 
@@ -314,6 +341,9 @@ ${appResult.appName} Flutter Frame Stats
       ..write('\n')
       ..write('frame_rasterizer_times:\n')
       ..write(describeValues(appResult.frameRasterizerTimes, indent: 2))
+      ..write('\n')
+      ..write('frame_latencies:\n')
+      ..write(describeValues(appResult.frameLatencies, indent: 2))
       ..write('\n');
   }
 
