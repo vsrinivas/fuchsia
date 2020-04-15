@@ -120,12 +120,17 @@ class FsRecoveryTest {
     if (!WaitForDevice(path, &fd)) {
       return false;
     }
-    while (deadline.get() > 0) {
+    const zx::time absolute_deadline = zx::deadline_after(deadline);
+    for (;;) {
       fd.reset(openat(devmgr_.devfs_root().get(), path, O_RDONLY));
-      if (detect_disk_format(fd.get()) == format)
+      if (detect_disk_format(fd.get()) == format) {
         return true;
-      sleep(1);
-      deadline -= zx::duration(ZX_SEC(1));
+      }
+      zx::time next_deadline = zx::deadline_after(zx::duration(zx::sec(1)));
+      if (next_deadline > absolute_deadline) {
+        break;
+      }
+      zx::nanosleep(next_deadline);
     }
     return false;
   }
@@ -133,7 +138,7 @@ class FsRecoveryTest {
  private:
   bool WaitForDevice(const char* path, fbl::unique_fd* fd) {
     BEGIN_HELPER;
-    printf("Wait for device %s\n", path);
+    fprintf(stderr, "Wait for device %s\n", path);
     ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), path, fd), ZX_OK);
 
     ASSERT_TRUE(*fd);
@@ -160,12 +165,12 @@ bool EmptyPartitionRecoveryTest() {
 
   // First, wait for the zxcrypt partition to be formatted.
   EXPECT_TRUE(
-      recovery->WaitForDiskFormat(fvm_block_path, DISK_FORMAT_ZXCRYPT, zx::duration(ZX_SEC(3))));
+      recovery->WaitForDiskFormat(fvm_block_path, DISK_FORMAT_ZXCRYPT, zx::duration(zx::sec(3))));
 
   // Second, wait for the data partition to be formatted.
   char data_path[PATH_MAX];
   snprintf(data_path, sizeof(data_path), "%s/zxcrypt/unsealed/block", fvm_block_path);
-  EXPECT_TRUE(recovery->WaitForDiskFormat(data_path, DISK_FORMAT_MINFS, zx::duration(ZX_SEC(3))));
+  EXPECT_TRUE(recovery->WaitForDiskFormat(data_path, DISK_FORMAT_MINFS, zx::duration(zx::sec(5))));
 
   END_TEST;
 }
