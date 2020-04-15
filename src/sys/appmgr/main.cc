@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/global.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
@@ -35,6 +36,10 @@ std::vector<std::string> RootRealmServices() {
 }  // namespace
 
 int main(int argc, char** argv) {
+  // Appmgr can't connect to the logging service just yet. Fall back to stderr to not lose any logs
+  // in the meantime.
+  fx_logger_activate_fallback(fx_log_get_logger(), -1);
+
   // Wire up standard streams. This sends all stdout and stderr to the debuglog.
   // This is necessary, instead of using fuchsia.logger.LogSink, because we need
   // to get appmgr logs before v1 components are running.

@@ -39,6 +39,7 @@ class Service : public ::test::sysmgr::Interface {
 }  // namespace sysmgr
 
 int main(int argc, const char** argv) {
+  syslog::SetTags({"test_sysmgr_service"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   sysmgr::test::Service service;

@@ -23,8 +23,6 @@ namespace sysmgr {
 namespace test {
 namespace {
 
-using TestSysmgr = ::gtest::RealLoopFixture;
-
 class SimpleLogCollector : public fuchsia::logger::LogListenerSafe {
  public:
   explicit SimpleLogCollector(fidl::InterfaceRequest<fuchsia::logger::LogListenerSafe> request,
@@ -55,6 +53,35 @@ class SimpleLogCollector : public fuchsia::logger::LogListenerSafe {
   bool done_;
   fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
   std::vector<std::string> messages_;
+};
+
+class TestSysmgr : public ::gtest::RealLoopFixture {
+ protected:
+  // Verifies that messages with the given tags match |expected_patterns|.
+  void VerifyLogs(const fuchsia::logger::LogPtr& log_ptr, std::vector<std::string> tags,
+                  std::vector<std::string> expected_patterns) {
+    fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> listener_handle;
+    SimpleLogCollector collector(listener_handle.NewRequest(), dispatcher());
+    auto filter_options = fuchsia::logger::LogFilterOptions::New();
+    filter_options->tags = tags;
+
+    // FIXME(45589) can't use DumpLogs without a fence
+    log_ptr->ListenSafe(std::move(listener_handle), std::move(filter_options));
+    RunLoopUntil([&collector, &expected_patterns] {
+      return (collector.messages_.size() == expected_patterns.size());
+    });
+
+    ASSERT_EQ(expected_patterns.size(), collector.messages_.size());
+    auto expected = expected_patterns.begin();
+    auto observed = collector.messages_.begin();
+    while (expected != expected_patterns.end() || observed != collector.messages_.end()) {
+      ASSERT_THAT(*observed, ::testing::MatchesRegex(*expected));
+      expected++;
+      observed++;
+    }
+    ASSERT_EQ(expected, expected_patterns.end());
+    ASSERT_EQ(observed, collector.messages_.end());
+  }
 };
 
 TEST_F(TestSysmgr, ServiceStartup) {
@@ -96,8 +123,6 @@ TEST_F(TestSysmgr, ServiceStartup) {
   ASSERT_EQ(ZX_OK, sysmgr_svc.Connect(interface_ptr.NewRequest(dispatcher())));
 
   fuchsia::logger::LogPtr log_ptr;
-  fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> listener_handle;
-  SimpleLogCollector collector(listener_handle.NewRequest(), dispatcher());
   ASSERT_EQ(ZX_OK, sysmgr_svc.Connect(log_ptr.NewRequest(dispatcher())));
 
   interface_ptr->Ping([&](fidl::StringPtr r) {
@@ -119,27 +144,13 @@ TEST_F(TestSysmgr, ServiceStartup) {
   RunLoopUntil([&] { return received_response; });
   EXPECT_EQ(echo_msg, response);
 
-  auto filter_options = fuchsia::logger::LogFilterOptions::New();
-  std::vector<std::string> expected_patterns{
-      "test_sysmgr_service.cc\\([0-9]{1,4}\\): Entering loop.",
-      "test_sysmgr_service.cc\\([0-9]{1,4}\\): Received ping.",
-  };
-  // FIXME(45589) can't use DumpLogs without a fence
-  log_ptr->ListenSafe(std::move(listener_handle), std::move(filter_options));
-  RunLoopUntil([&collector, &expected_patterns] {
-    return (collector.messages_.size() == expected_patterns.size());
-  });
-
-  ASSERT_EQ(expected_patterns.size(), collector.messages_.size());
-  auto expected = expected_patterns.begin();
-  auto observed = collector.messages_.begin();
-  while (expected != expected_patterns.end() || observed != collector.messages_.end()) {
-    ASSERT_THAT(*observed, ::testing::MatchesRegex(*expected));
-    expected++;
-    observed++;
-  }
-  ASSERT_EQ(expected, expected_patterns.end());
-  ASSERT_EQ(observed, collector.messages_.end());
+  VerifyLogs(log_ptr, {"test_sysmgr_service"},
+             {
+                 "test_sysmgr_service.cc\\([0-9]{1,4}\\): Entering loop.",
+                 "test_sysmgr_service.cc\\([0-9]{1,4}\\): Received ping.",
+             });
+  VerifyLogs(log_ptr, {"appmgr"},
+             {"\\[INFO:log_connector_impl.cc\\([0-9]{1,4}\\)\\] Successfully set up syslog"});
 }
 
 }  // namespace
