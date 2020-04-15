@@ -11,7 +11,7 @@ that may be mapped into multiple address spaces.
 
 ## DESCRIPTION
 
-VMOs are used in by the kernel and userspace to represent both paged and physical memory.
+VMOs are used in the kernel and userspace to represent both paged and physical memory.
 They are the standard method of sharing memory between processes, as well as between the kernel and
 userspace.
 
