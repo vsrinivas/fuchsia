@@ -34,13 +34,14 @@ const (
 // TODO(fxb/48042): change all usage of sshutil to use this Client type instead
 // of ssh.Client.
 type Client struct {
+	*ssh.Client
+
 	addr         net.Addr
 	config       *ssh.ClientConfig
 	shuttingDown chan struct{}
 
 	// This mutex protects the following fields
 	mu                     sync.Mutex
-	client                 *ssh.Client
 	conn                   net.Conn
 	disconnectionListeners []chan struct{}
 }
@@ -83,9 +84,9 @@ func connect(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*Cli
 		return nil, err
 	}
 	return &Client{
+		Client:       client,
 		addr:         addr,
 		config:       config,
-		client:       client,
 		conn:         conn,
 		shuttingDown: make(chan struct{}),
 	}, nil
@@ -115,7 +116,7 @@ func (c *Client) makeSession(ctx context.Context, stdout io.Writer, stderr io.Wr
 	// prevents a long running `Run` command from blocking the keep-alive
 	// goroutine.
 	c.mu.Lock()
-	client := c.client
+	client := c.Client
 	c.mu.Unlock()
 
 	if client == nil {
@@ -196,7 +197,7 @@ func (c *Client) Close() {
 // client is disconnected.
 func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
 	c.mu.Lock()
-	if c.client == nil {
+	if c.Client == nil {
 		close(ch)
 	} else {
 		c.disconnectionListeners = append(c.disconnectionListeners, ch)
@@ -209,9 +210,9 @@ func (c *Client) disconnect() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.client != nil {
-		c.client.Close()
-		c.client = nil
+	if c.Client != nil {
+		c.Client.Close()
+		c.Client = nil
 	}
 
 	for _, listener := range c.disconnectionListeners {
@@ -235,7 +236,7 @@ func (c *Client) keepalive(ticks <-chan time.Time, timeout func() <-chan time.Ti
 	}
 	for {
 		c.mu.Lock()
-		client := c.client
+		client := c.Client
 		conn := c.conn
 		c.mu.Unlock()
 
