@@ -13,6 +13,7 @@
 #include <arch/x86.h>
 #include <arch/x86/cpuid.h>
 #include <arch/x86/cpuid_test_data.h>
+#include <arch/x86/fake_msr_access.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/hwp.h>
 #include <arch/x86/platform_access.h>
@@ -102,38 +103,6 @@ static bool test_x64_msrs_k_commands() {
 
   END_TEST;
 }
-
-class FakeMsrAccess : public MsrAccess {
- public:
-  struct FakeMsr {
-    uint32_t index;
-    uint64_t value;
-  };
-
-  uint64_t read_msr(uint32_t msr_index) override {
-    for (uint i = 0; i < msrs_.size(); i++) {
-      if (msrs_[i].index == msr_index) {
-        return msrs_[i].value;
-      }
-    }
-    DEBUG_ASSERT(0);  // Unexpected MSR read
-    return 0;
-  }
-
-  void write_msr(uint32_t msr_index, uint64_t value) override {
-    DEBUG_ASSERT(no_writes_ == false);
-    for (uint i = 0; i < msrs_.size(); i++) {
-      if (msrs_[i].index == msr_index) {
-        msrs_[i].value = value;
-        return;
-      }
-    }
-    DEBUG_ASSERT(0);  // Unexpected MSR write
-  }
-
-  ktl::array<FakeMsr, 4> msrs_;
-  bool no_writes_ = false;
-};
 
 static bool test_x64_cpu_uarch_config_selection() {
   BEGIN_TEST;
