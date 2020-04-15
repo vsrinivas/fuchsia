@@ -31,10 +31,6 @@ __BEGIN_CDECLS
 
 void tu_fatal(const char* what, zx_status_t status) __NO_RETURN;
 
-// A wrapper on zx_handle_duplicate.
-
-zx_handle_t tu_handle_duplicate(zx_handle_t handle);
-
 // Sets up and starts a new process with the given parameters.
 
 zx_handle_t tu_launch_process(zx_handle_t job, const char* name, int argc, const char* const* argv,

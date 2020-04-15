@@ -133,7 +133,9 @@ bool SuspendedRegAccessTest() {
   tu_thread_create_c11(&thread_c11, reg_access_thread_func, &arg, "reg-access thread");
   // Get our own copy of the thread handle to avoid lifetime issues of
   // thrd's copy.
-  zx_handle_t thread = tu_handle_duplicate(thrd_get_zx_handle(thread_c11));
+  zx_handle_t thread = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_handle_duplicate(thrd_get_zx_handle(thread_c11), ZX_RIGHT_SAME_RIGHTS, &thread),
+            ZX_OK);
 
   // KISS: Don't attach until the thread is up and running so we don't see
   // ZX_EXCP_THREAD_STARTING.
@@ -296,7 +298,9 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
                        "reg-access thread");
   // Get our own copy of the thread handle to avoid lifetime issues of
   // thrd's copy.
-  zx_handle_t thread = tu_handle_duplicate(thrd_get_zx_handle(thread_c11));
+  zx_handle_t thread = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_handle_duplicate(thrd_get_zx_handle(thread_c11), ZX_RIGHT_SAME_RIGHTS, &thread),
+            ZX_OK);
 
   // Busy-wait until thread is blocked inside the syscall.
   zx_info_thread_t thread_info;

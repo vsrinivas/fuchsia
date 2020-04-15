@@ -53,14 +53,6 @@ static void tu_check(const char* what, zx_status_t status) {
   }
 }
 
-zx_handle_t tu_handle_duplicate(zx_handle_t handle) {
-  zx_handle_t copy = ZX_HANDLE_INVALID;
-  zx_status_t status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &copy);
-  if (status < 0)
-    tu_fatal(__func__, status);
-  return copy;
-}
-
 // N.B. This creates a C11 thread.
 // See, e.g., musl/include/threads.h.
 

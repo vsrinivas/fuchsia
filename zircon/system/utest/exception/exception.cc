@@ -156,7 +156,9 @@ static void msg_loop(zx_handle_t channel) {
           // debugger exception channel is bound later.
           if (ensure_child_running(channel_to_thread)) {
             zx_handle_t thread_handle = thrd_get_zx_handle(thread);
-            zx_handle_t copy = tu_handle_duplicate(thread_handle);
+            zx_handle_t copy = ZX_HANDLE_INVALID;
+            zx_status_t status = zx_handle_duplicate(thread_handle, ZX_RIGHT_SAME_RIGHTS, &copy);
+            ZX_DEBUG_ASSERT(status == ZX_OK);
             send_msg_new_thread_handle(channel, copy);
           } else {
             // We could terminate the thread or some such, but the

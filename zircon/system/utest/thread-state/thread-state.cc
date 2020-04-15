@@ -473,7 +473,8 @@ static bool port_test() {
 
   zx_handle_t port;
   ASSERT_EQ(zx_port_create(0, &port), ZX_OK);
-  zx_handle_t port_dupe = tu_handle_duplicate(port);
+  zx_handle_t port_dupe = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_handle_duplicate(port, ZX_RIGHT_SAME_RIGHTS, &port_dupe), ZX_OK);
 
   send_msg_with_handles(channel, MSG_PORT_TEST, &port_dupe, 1);
 
@@ -627,7 +628,8 @@ static bool interrupt_test() {
   zx_handle_t interrupt;
   // Creating a virtual interrupt does not require a valid handle.
   ASSERT_EQ(zx_interrupt_create(ZX_HANDLE_INVALID, 0, ZX_INTERRUPT_VIRTUAL, &interrupt), ZX_OK);
-  zx_handle_t interrupt_dupe = tu_handle_duplicate(interrupt);
+  zx_handle_t interrupt_dupe = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_handle_duplicate(interrupt, ZX_RIGHT_SAME_RIGHTS, &interrupt_dupe), ZX_OK);
 
   send_msg_with_handles(channel, MSG_INTERRUPT_TEST, &interrupt_dupe, 1);
 
