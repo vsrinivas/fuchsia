@@ -10,8 +10,6 @@ group("tests") {
     "//src/devices/block/drivers/ftl/test:ftl-package",
     "//src/devices/block/drivers/fvm/test:fvm-driver-unittests-package",
     "//src/devices/block/drivers/fvm/test/integration:fvm-driver-integration-package",
-    "//src/devices/block/drivers/virtio:virtio-block-test-package",
-    "//src/devices/block/drivers/virtio:virtio-scsi-test-package",
     "//src/devices/bus/drivers/pci/test:pci-unit-package",
     "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-package",
     "//src/devices/nand/drivers/broker/test:nand-broker-package",

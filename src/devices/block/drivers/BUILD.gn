@@ -11,6 +11,6 @@ group("tests") {
     "sdhci:tests",
     "sdmmc:tests",
     "usb-mass-storage:tests",
-    "virtio:virtio-block-test-package",
+    "virtio:tests",
   ]
 }
