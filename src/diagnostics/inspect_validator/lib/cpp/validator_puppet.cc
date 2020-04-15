@@ -5,8 +5,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <lib/fit/variant.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <string>
@@ -15,10 +17,12 @@
 #include <test/inspect/validate/cpp/fidl.h>
 
 using fit::holds_alternative;
+using inspect::LazyNode;
 using std::get;
 using test::inspect::validate::Action;
 using test::inspect::validate::InitializationParams;
 using test::inspect::validate::LazyAction;
+using test::inspect::validate::LinkDisposition;
 using test::inspect::validate::NumberType;
 using test::inspect::validate::ROOT_ID;
 using test::inspect::validate::TestResult;
@@ -31,95 +35,71 @@ using Value =
                  inspect::LinearDoubleHistogram, inspect::ExponentialIntHistogram,
                  inspect::ExponentialUintHistogram, inspect::ExponentialDoubleHistogram>;
 
-class Puppet : public test::inspect::validate::Validate {
+class Actor {
  public:
-  explicit Puppet(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(context)) {
-    context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
-  }
+  Actor() : inspector_() {}
 
-  void Initialize(InitializationParams params, InitializeCallback callback) {
-    value_map_.clear();
-    inspector_ = std::make_unique<inspect::Inspector>(
-        inspect::InspectSettings{.maximum_size = params.vmoSize()});
-    if (inspector_ == nullptr || !bool(*inspector_)) {
-      callback(zx::vmo(ZX_HANDLE_INVALID), TestResult::FAILED);
-    } else {
-      callback(inspector_->DuplicateVmo(), TestResult::OK);
+  Actor(inspect::InspectSettings settings) : inspector_(settings) {}
+
+  inspect::Inspector& inspector() { return inspector_; }
+
+  TestResult Act(const Action& action) {
+    switch (action.Which()) {
+      case Action::Tag::kCreateNode:
+        return HandleCreateNode(action);
+      case Action::Tag::kDeleteNode:
+        return HandleDeleteNode(action);
+      case Action::Tag::kDeleteProperty:
+        return HandleDeleteProperty(action);
+      case Action::Tag::kCreateNumericProperty:
+        return HandleCreateNumeric(action);
+      case Action::Tag::kCreateBytesProperty:
+        return HandleCreateBytes(action);
+      case Action::Tag::kCreateStringProperty:
+        return HandleCreateString(action);
+      case Action::Tag::kCreateBoolProperty:
+        return HandleCreateBool(action);
+      case Action::Tag::kSetNumber:
+        return HandleSetNumber(action);
+      case Action::Tag::kAddNumber:
+        return HandleAddNumber(action);
+      case Action::Tag::kSubtractNumber:
+        return HandleSubtractNumber(action);
+      case Action::Tag::kSetString:
+        return HandleSetString(action);
+      case Action::Tag::kSetBytes:
+        return HandleSetBytes(action);
+      case Action::Tag::kSetBool:
+        return HandleSetBool(action);
+      case Action::Tag::kCreateArrayProperty:
+        return HandleCreateArray(action);
+      case Action::Tag::kArraySet:
+        return HandleArraySet(action);
+      case Action::Tag::kArrayAdd:
+        return HandleArrayAdd(action);
+      case Action::Tag::kArraySubtract:
+        return HandleArraySubtract(action);
+      case Action::Tag::kCreateLinearHistogram:
+        return HandleCreateLinearHistogram(action);
+      case Action::Tag::kCreateExponentialHistogram:
+        return HandleCreateExponentialHistogram(action);
+      case Action::Tag::kInsert:
+        return HandleInsert(action);
+      case Action::Tag::kInsertMultiple:
+        return HandleInsertMultiple(action);
+      default:
+        return TestResult::UNIMPLEMENTED;
     }
   }
 
-  void InitializeTree(InitializationParams params, InitializeTreeCallback callback) {
-    callback(nullptr, TestResult::UNIMPLEMENTED);
-  }
-
-  void Act(Action action, ActCallback callback) {
-    switch (action.Which()) {
-      case Action::Tag::kCreateNode:
-        callback(HandleCreateNode(action));
-        break;
-      case Action::Tag::kDeleteNode:
-        callback(HandleDeleteNode(action));
-        break;
-      case Action::Tag::kDeleteProperty:
-        callback(HandleDeleteProperty(action));
-        break;
-      case Action::Tag::kCreateNumericProperty:
-        callback(HandleCreateNumeric(action));
-        break;
-      case Action::Tag::kCreateBytesProperty:
-        callback(HandleCreateBytes(action));
-        break;
-      case Action::Tag::kCreateStringProperty:
-        callback(HandleCreateString(action));
-        break;
-      case Action::Tag::kCreateBoolProperty:
-        callback(HandleCreateBool(action));
-        break;
-      case Action::Tag::kSetNumber:
-        callback(HandleSetNumber(action));
-        break;
-      case Action::Tag::kAddNumber:
-        callback(HandleAddNumber(action));
-        break;
-      case Action::Tag::kSubtractNumber:
-        callback(HandleSubtractNumber(action));
-        break;
-      case Action::Tag::kSetString:
-        callback(HandleSetString(action));
-        break;
-      case Action::Tag::kSetBytes:
-        callback(HandleSetBytes(action));
-        break;
-      case Action::Tag::kSetBool:
-        callback(HandleSetBool(action));
-        break;
-      case Action::Tag::kCreateArrayProperty:
-        callback(HandleCreateArray(action));
-        break;
-      case Action::Tag::kArraySet:
-        callback(HandleArraySet(action));
-        break;
-      case Action::Tag::kArrayAdd:
-        callback(HandleArrayAdd(action));
-        break;
-      case Action::Tag::kArraySubtract:
-        callback(HandleArraySubtract(action));
-        break;
-      case Action::Tag::kCreateLinearHistogram:
-        callback(HandleCreateLinearHistogram(action));
-        break;
-      case Action::Tag::kCreateExponentialHistogram:
-        callback(HandleCreateExponentialHistogram(action));
-        break;
-      case Action::Tag::kInsert:
-        callback(HandleInsert(action));
-        break;
-      case Action::Tag::kInsertMultiple:
-        callback(HandleInsertMultiple(action));
-        break;
+  TestResult ActLazy(const LazyAction& lazy_action) {
+    switch (lazy_action.Which()) {
+      case LazyAction::Tag::kCreateLazyNode:
+        return HandleCreateLazyNode(lazy_action);
+      case LazyAction::Tag::kDeleteLazyNode:
+        return HandleDeleteLazyNode(lazy_action);
       default:
-        callback(TestResult::UNIMPLEMENTED);
-        break;
+        return TestResult::UNIMPLEMENTED;
     }
   }
 
@@ -140,13 +120,27 @@ class Puppet : public test::inspect::validate::Validate {
 
   inspect::Node* GetNode(uint64_t id) {
     if (id == ROOT_ID) {
-      return &inspector_->GetRoot();
+      return &inspector_.GetRoot();
     } else {
       return GetFromValueMap<inspect::Node>(id);
     }
   }
 
   bool ValueMapContains(uint64_t id) { return value_map_.find(id) != value_map_.end(); }
+
+  bool LazyChildrenMapContains(uint64_t id) {
+    return lazy_children_map_.find(id) != lazy_children_map_.end();
+  }
+
+  // Emplace all currently held Values into the underlying Inspector object.
+  // We do this so that when this instance goes of scope, the Value objects don't call their
+  // destructors.
+  void Freeze() {
+    for (auto& [k, v] : value_map_) {
+      inspector_.emplace(std::move(v));
+    }
+    value_map_.clear();
+  }
 
   TestResult HandleCreateNode(const Action& raw_action) {
     auto& action = raw_action.create_node();
@@ -522,10 +516,105 @@ class Puppet : public test::inspect::validate::Validate {
     return TestResult::OK;
   }
 
+  TestResult HandleCreateLazyNode(const LazyAction& raw_lazy_action) {
+    auto& lazy_action = raw_lazy_action.create_lazy_node();
+
+    if (LazyChildrenMapContains(lazy_action.id)) {
+      return TestResult::FAILED;
+    }
+
+    auto* parent = GetNode(lazy_action.parent);
+    if (!parent) {
+      return TestResult::FAILED;
+    }
+
+    Actor actor;
+    for (const auto& action : lazy_action.actions) {
+      actor.Act(action);
+    }
+    actor.Freeze();
+    auto cb = [clone = std::move(actor.inspector())]() { return fit::make_ok_promise(clone); };
+
+    if (lazy_action.disposition == LinkDisposition::CHILD) {
+      lazy_children_map_.emplace(lazy_action.id, parent->CreateLazyNode(lazy_action.name, cb));
+    } else {
+      lazy_children_map_.emplace(lazy_action.id, parent->CreateLazyValues(lazy_action.name, cb));
+    }
+
+    return TestResult::OK;
+  }
+
+  TestResult HandleDeleteLazyNode(const LazyAction& raw_lazy_action) {
+    auto& lazy_action = raw_lazy_action.delete_lazy_node();
+
+    if (!LazyChildrenMapContains(lazy_action.id)) {
+      return TestResult::FAILED;
+    }
+
+    lazy_children_map_.erase(lazy_action.id);
+
+    return TestResult::OK;
+  }
+
+  inspect::Inspector inspector_;
+  std::map<uint64_t, Value> value_map_;
+  std::map<uint64_t, LazyNode> lazy_children_map_;
+};
+
+class Puppet : public test::inspect::validate::Validate {
+ public:
+  explicit Puppet(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(context)) {
+    context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
+  }
+
+  void Initialize(InitializationParams params, InitializeCallback callback) {
+    if (actor_ != nullptr) {
+      callback(zx::vmo(ZX_HANDLE_INVALID), TestResult::ILLEGAL);
+      return;
+    }
+    actor_ = std::make_unique<Actor>(inspect::InspectSettings{.maximum_size = params.vmoSize()});
+
+    if (!bool(actor_->inspector())) {
+      callback(zx::vmo(ZX_HANDLE_INVALID), TestResult::FAILED);
+    } else {
+      callback(actor_->inspector().DuplicateVmo(), TestResult::OK);
+    }
+  }
+
+  void InitializeTree(InitializationParams params, InitializeTreeCallback callback) {
+    if (actor_ != nullptr) {
+      callback(nullptr, TestResult::ILLEGAL);
+      return;
+    }
+    actor_ = std::make_unique<Actor>(inspect::InspectSettings{.maximum_size = params.vmoSize()});
+
+    tree_handler_ = inspect::MakeTreeHandler(&actor_->inspector());
+    fuchsia::inspect::TreePtr tree_ptr;
+    tree_handler_(tree_ptr.NewRequest());
+    callback(std::move(tree_ptr), TestResult::OK);
+  }
+
+  void Act(Action action, ActCallback callback) {
+    if (actor_ == nullptr) {
+      callback(TestResult::ILLEGAL);
+    } else {
+      callback(actor_->Act(action));
+    }
+  }
+
+  void ActLazy(LazyAction lazy_action, ActLazyCallback callback) {
+    if (actor_ == nullptr) {
+      callback(TestResult::ILLEGAL);
+    } else {
+      callback(actor_->ActLazy(lazy_action));
+    }
+  }
+
+ private:
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<test::inspect::validate::Validate> bindings_;
-  std::map<uint64_t, Value> value_map_;
-  std::unique_ptr<inspect::Inspector> inspector_;
+  fidl::InterfaceRequestHandler<fuchsia::inspect::Tree> tree_handler_;
+  std::unique_ptr<Actor> actor_;
 };
 
 int main(int argc, const char** argv) {
