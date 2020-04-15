@@ -10,7 +10,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <iostream>  // REMOVE
 #include <memory>
 #include <string>
 #include <vector>
@@ -49,7 +48,6 @@ Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
   // We wait on one way to finish the flow, joining whichever data has been collected.
   return archive_.WaitForDone(std::move(timeout))
       .then([this](::fit::result<>& result) -> ::fit::result<AttachmentValue> {
-        std::cout << "DOME" << std::endl;  // REMOVE
         if (!result.is_ok()) {
           FX_LOGS(WARNING)
               << "Inspect data collection was interrupted - Inspect data may be partial or missing";
