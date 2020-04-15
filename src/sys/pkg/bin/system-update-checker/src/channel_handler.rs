@@ -92,7 +92,8 @@ impl ChannelHandler {
             self.warn_rate_limiter.rate_limit(|| {
                 fx_log_warn!("error getting current channel: {}", err);
             });
-            "".into()
+            // TODO: Remove this once we have channel in vbmeta (fxbug.dev/39970).
+            self.target_channel_manager.get_target_channel().unwrap_or("".to_string())
         })
     }
 }
@@ -174,7 +175,17 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_fidl_get_current_empty_string_on_error() {
+    async fn test_fidl_get_current_return_target_channel_if_current_channel_missing() {
+        let tempdir = create_info_dir_with_channel("target_channel.json");
+        let proxy = spawn_provider_handler(&tempdir);
+
+        let res = proxy.get_current().await;
+
+        assert_eq!(res.map_err(|e| e.to_string()), Ok("example".into()));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_fidl_get_current_return_empty_string_if_both_channel_missing() {
         let tempdir = TempDir::new().expect("create tempdir");
         let proxy = spawn_provider_handler(&tempdir);
 
