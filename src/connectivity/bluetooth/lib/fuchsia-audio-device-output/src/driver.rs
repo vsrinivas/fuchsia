@@ -7,10 +7,11 @@ use {
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{
+        future::{AbortHandle, Abortable},
         select,
         stream::{FusedStream, Stream},
         task::{Context, Poll},
-        Future, StreamExt,
+        Future, FutureExt, StreamExt,
     },
     parking_lot::Mutex,
     std::{convert::TryInto, pin::Pin, slice, sync::Arc},
@@ -36,18 +37,22 @@ pub struct AudioFrameStream {
     /// Minimum slice of time to deliver audio data in.
     /// This must be longer than the duration of one frame.
     min_packet_duration: zx::Duration,
+    /// Handle to remove the audio device processing future when this is dropped.
+    device_finish: AbortHandle,
 }
 
 impl AudioFrameStream {
     fn new(
         frame_vmo: Arc<Mutex<ring_buffer::FrameVmo>>,
         min_packet_duration: zx::Duration,
+        device_finish: AbortHandle,
     ) -> AudioFrameStream {
         AudioFrameStream {
             frame_vmo,
             timer: fasync::Timer::new(fasync::Time::INFINITE_PAST),
             last_frame_time: Some(fasync::Time::now()),
             min_packet_duration,
+            device_finish,
         }
     }
 }
@@ -96,6 +101,12 @@ impl Stream for AudioFrameStream {
 impl FusedStream for AudioFrameStream {
     fn is_terminated(&self) -> bool {
         false
+    }
+}
+
+impl Drop for AudioFrameStream {
+    fn drop(&mut self) {
+        self.device_finish.abort();
     }
 }
 
@@ -192,8 +203,11 @@ impl SoftPcmOutput {
         };
 
         let rb = stream.frame_vmo.clone();
-        fuchsia_async::spawn(stream.process_events());
-        Ok((client_channel, AudioFrameStream::new(rb, min_packet_duration)))
+        let device_events_fut = stream.process_events();
+        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        let device_events_fut = Abortable::new(device_events_fut, abort_registration);
+        fuchsia_async::spawn(device_events_fut.map(|_| ()));
+        Ok((client_channel, AudioFrameStream::new(rb, min_packet_duration, abort_handle)))
     }
 
     fn take_stream_requests(&self) -> RequestStream<stream::Request> {
@@ -427,6 +441,34 @@ mod tests {
             handles.push(h)
         }
         handles
+    }
+
+    #[test]
+    fn soft_pcm_audio_should_end_when_stream_dropped() {
+        let format = PcmFormat {
+            pcm_mode: AudioPcmMode::Linear,
+            bits_per_sample: 16,
+            frames_per_second: 48000,
+            channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
+        };
+
+        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let (client, frame_stream) = SoftPcmOutput::build(
+            TEST_UNIQUE_ID,
+            &"Google".to_string(),
+            &"UnitTest".to_string(),
+            TEST_CLOCK_DOMAIN,
+            format,
+            zx::Duration::from_millis(100),
+        )
+        .expect("should always build");
+
+        drop(frame_stream);
+
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future::pending::<()>()));
+
+        // The audio client should be dropped (normally this causes audio to remove the device)
+        assert_eq!(Err(zx::Status::PEER_CLOSED), client.write(&[0], &mut Vec::new()));
     }
 
     #[test]
