@@ -59,10 +59,10 @@ test("journal-unit") {
   ]
   deps = [
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/journal",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs/journal",
   ]
 
   include_dirs = [ ".." ]
@@ -72,9 +72,9 @@ source_set("fuzz-utils") {
   sources = [ "fuzzer_utils.cc" ]
   public_deps = [
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/journal",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fs/journal",
   ]
 }
 

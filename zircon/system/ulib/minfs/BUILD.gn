@@ -65,8 +65,8 @@ zx_library("minfs") {
     #"//zircon/public/lib/disk_inspector",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/journal",
     "//zircon/public/lib/transaction",
+    "//zircon/system/ulib/fs/journal",
 
     # <minfs/bcache.h> has #include <fvm/client.h>.
     "//zircon/public/lib/fvm",
@@ -74,16 +74,16 @@ zx_library("minfs") {
   ]
   deps = [
     "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/buffer",
+    "//zircon/public/lib/cksum",
     "//zircon/public/lib/disk_inspector",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/transaction",
-    "//zircon/public/lib/buffer",
     "//zircon/public/lib/operation",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/safemath",
+    "//zircon/public/lib/transaction",
+    "//zircon/public/lib/zircon-internal",
   ]
   if (is_fuchsia) {
     public_deps += [
@@ -106,11 +106,10 @@ zx_library("minfs") {
       "//zircon/public/lib/fdio-caller",
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/fidl-utils",
-      "//zircon/public/lib/journal",
       "//zircon/public/lib/fvm",
       "//zircon/public/lib/fzl",
-      "//zircon/public/lib/storage-metrics",
       "//zircon/public/lib/operation",
+      "//zircon/public/lib/storage-metrics",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/trace",
       "//zircon/public/lib/trace-engine",
@@ -119,6 +118,7 @@ zx_library("minfs") {
       "//zircon/system/fidl/fuchsia-device:llcpp",
       "//zircon/system/fidl/fuchsia-io:llcpp",
       "//zircon/system/fidl/fuchsia-minfs:llcpp",
+      "//zircon/system/ulib/fs/journal",
     ]
     sources += [
       "allocator/allocator.cc",
