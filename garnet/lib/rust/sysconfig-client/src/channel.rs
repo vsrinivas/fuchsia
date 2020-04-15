@@ -76,8 +76,8 @@ impl OtaUpdateChannelConfig {
 
 #[derive(Debug, Error)]
 pub enum ChannelConfigError {
-    #[error("IO error: {:?}", _0)]
-    IO(std::io::Error),
+    #[error("Sysconfig IO error: {:?}", _0)]
+    SysconfigIO(std::io::Error),
 
     #[error("JSON error: {:?}", _0)]
     JSON(serde_json::Error),
@@ -109,7 +109,7 @@ pub enum ChannelConfigError {
 
 impl From<std::io::Error> for ChannelConfigError {
     fn from(e: std::io::Error) -> Self {
-        ChannelConfigError::IO(e)
+        ChannelConfigError::SysconfigIO(e)
     }
 }
 
