@@ -31,7 +31,6 @@ import (
 var (
 	fuchsiaBuildDir = flag.String("fuchsia-build-dir", os.Getenv("FUCHSIA_BUILD_DIR"), "fuchsia build dir")
 	zirconBuildDir  = flag.String("zircon-build-dir", os.Getenv("ZIRCON_BUILDROOT"), "zircon build dir")
-	zirconToolsDir  = flag.String("zircon-tools-dir", os.Getenv("ZIRCON_TOOLS_DIR"), "zircon tools dir")
 
 	bootloader = flag.String("bootloader", "", "path to bootx64.efi")
 	zbi        = flag.String("zbi", "", "path to zbi (default: zircon-a from image manifests)")
@@ -119,19 +118,13 @@ func needZirconBuildDir() {
 	}
 }
 
-func needZirconToolsDir() {
-	if *zirconToolsDir == "" {
-		log.Fatalf("either pass -zircon-tools-dir or set $ZIRCON_TOOLS_DIR")
-	}
-}
-
 func main() {
 	flag.Parse()
 	tryLoadManifests()
 
 	if *bootloader == "" {
 		needZirconBuildDir()
-		*bootloader = filepath.Join(*zirconBuildDir, "efi-x64-clang/bootx64.efi")
+		*bootloader = filepath.Join(*zirconBuildDir, "efi-x64-win-clang/bootx64.efi")
 	}
 	if _, err := os.Stat(*bootloader); err != nil {
 		log.Fatalf("cannot read %q: %s", *bootloader, err)
@@ -427,7 +420,7 @@ func main() {
 
 	log.Printf("Writing EFI partition and files")
 
-	cmd := exec.Command(zirconTool("mkfs-msdosfs"),
+	cmd := exec.Command(fuchsiaTool("mkfs-msdosfs"),
 		"-@", strconv.FormatUint(efiStart, 10),
 		// XXX(raggi): mkfs-msdosfs offset gets subtracted by the tool for available
 		// size, so we have to add the offset back on to get the correct geometry.
@@ -621,19 +614,6 @@ func optimialBlockAlign(first, byteSize, logical, physical, optimal uint64) (sta
 
 	end = start + lSize
 	return
-}
-
-func zirconTool(name string) string {
-	var tool string
-	tool, _ = exec.LookPath(tool)
-	if tool == "" {
-		needZirconToolsDir()
-		tool, _ = exec.LookPath(filepath.Join(*zirconToolsDir, name))
-	}
-	if tool == "" {
-		log.Fatalf("Could not find %q, you might need to build zircon", name)
-	}
-	return tool
 }
 
 func fuchsiaTool(name string) string {
