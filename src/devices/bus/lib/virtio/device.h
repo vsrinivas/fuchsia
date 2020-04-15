@@ -9,6 +9,7 @@
 #include <threads.h>
 #include <zircon/types.h>
 
+#include <atomic>
 #include <memory>
 
 #include <ddk/device.h>
@@ -109,6 +110,8 @@ class Device {
   // This lock exists for devices to synchronize themselves, it should not be used by the base
   // device class.
   fbl::Mutex lock_;
+
+  std::atomic<bool> irq_thread_should_exit_ = false;
 };
 
 }  // namespace virtio

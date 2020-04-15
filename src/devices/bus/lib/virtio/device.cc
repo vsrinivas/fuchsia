@@ -35,7 +35,11 @@ Device::~Device() { LTRACE_ENTRY; }
 
 void Device::Unbind() { device_remove_deprecated(device_); }
 
-void Device::Release() { backend_.reset(); }
+void Device::Release() {
+  irq_thread_should_exit_.store(true, std::memory_order_release);
+  thrd_join(irq_thread_, nullptr);
+  backend_.reset();
+}
 
 void Device::IrqWorker() {
   zx_status_t rc;
@@ -70,6 +74,9 @@ void Device::IrqWorker() {
     if (irq_status & VIRTIO_ISR_DEV_CFG_INT) { /* config change */
       IrqConfigChange();
     }
+    if (irq_thread_should_exit_.load(std::memory_order_relaxed)) {
+      break;
+    }
   }
 }
 
@@ -83,7 +90,6 @@ int Device::IrqThreadEntry(void* arg) {
 
 void Device::StartIrqThread() {
   thrd_create_with_name(&irq_thread_, IrqThreadEntry, this, "virtio-irq-thread");
-  thrd_detach(irq_thread_);
 }
 
 zx_status_t Device::CopyDeviceConfig(void* _buf, size_t len) const {

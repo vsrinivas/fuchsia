@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <lib/fake-bti/bti.h>
+#include <lib/fake_ddk/fake_ddk.h>
 #include <zxtest/zxtest.h>
 
 #include "src/devices/bus/lib/virtio/backends/fake.h"
@@ -38,8 +39,10 @@ class EthernetDeviceTests : public zxtest::Test {
     backend_ = backend.get();
     zx::bti bti(ZX_HANDLE_INVALID);
     fake_bti_create(bti.reset_and_get_address());
+    ddk_ = std::make_unique<fake_ddk::Bind>();
     device_ =
-        std::make_unique<EthernetDevice>(/*parent=*/nullptr, std::move(bti), std::move(backend));
+        std::make_unique<EthernetDevice>(/*parent=*/fake_ddk::FakeParent(), std::move(bti),
+                                         std::move(backend));
     ASSERT_OK(device_->Init());
 
     ops_.status = [](void* ctx, uint32_t status) {
@@ -52,11 +55,18 @@ class EthernetDeviceTests : public zxtest::Test {
     protocol_.ctx = this;
   }
 
+  void TearDown() override {
+    device_->DdkAsyncRemove();
+    device_->DdkRelease();
+    EXPECT_TRUE(ddk_->Ok());
+  }
+
   void set_status(uint32_t status) { last_status_ = status; }
   void receive(const void* data_buffer, size_t data_size, uint32_t flags) {
     received_++;
   }
 
+  std::unique_ptr<fake_ddk::Bind> ddk_;
   std::unique_ptr<EthernetDevice> device_;
   FakeBackendForEthernetTest* backend_;
   ethernet_ifc_protocol_ops_t ops_;
