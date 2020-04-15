@@ -31,36 +31,39 @@
 // one channel for command/event flow and one for ACL data flow. The sniff channel is managed
 // separately.
 #define NUM_CHANNELS 2
-
-#define NUM_WAIT_ITEMS NUM_CHANNELS + 2  // add one for the UART write completion
+#define NUM_WAIT_ITEMS NUM_CHANNELS + 1  // add one for the wakeup event
 
 // HCI UART packet indicators
-enum {
+typedef enum {
   HCI_NONE = 0,
   HCI_COMMAND = 1,
   HCI_ACL_DATA = 2,
   HCI_SCO = 3,
   HCI_EVENT = 4,
-};
+} bt_hci_packet_indicator_t;
+
+typedef struct {
+  zx_handle_t h;
+  zx_status_t err;
+} client_channel_t;
 
 typedef struct {
   zx_device_t* zxdev;
   zx_device_t* parent;
   serial_impl_async_protocol_t serial;
-  zx_handle_t cmd_channel;
-  zx_handle_t acl_channel;
-  zx_handle_t snoop_channel;
-  zx_handle_t writeable_event;
 
-  // Signaled when a channel opens or closes
-  zx_handle_t channels_changed_evt;
+  client_channel_t cmd_channel;
+  client_channel_t acl_channel;
+  client_channel_t snoop_channel;
 
-  zx_wait_item_t wait_items[NUM_WAIT_ITEMS];
-  uint32_t wait_item_count;
+  // Signaled any time something changes that the work thread needs to know
+  // about.
+  zx_handle_t wakeup_event;
 
   thrd_t thread;
-  bool thread_running;
   atomic_bool shutting_down;
+  bool thread_running;
+  bool can_write;
 
   // type of current packet being read from the UART
   uint8_t cur_uart_packet_type;
@@ -87,68 +90,47 @@ typedef struct {
 #define ACL_PACKET_LENGTH(hci) \
   ((hci)->acl_buffer_offset > 4 ? ((hci)->acl_buffer[3] | ((hci)->acl_buffer[4] << 8)) + 5 : 0)
 
-static void channel_cleanup_locked(hci_t* hci, zx_handle_t* channel) {
-  if (*channel == ZX_HANDLE_INVALID) {
-    return;
-  }
+static void channel_init(client_channel_t* c) {
+  c->h = ZX_HANDLE_INVALID;
+  c->err = ZX_OK;
+}
 
-  zx_handle_close(*channel);
-  *channel = ZX_HANDLE_INVALID;
-  zx_object_signal(hci->channels_changed_evt, 0, ZX_EVENT_SIGNALED);
+static void channel_cleanup_locked(client_channel_t* channel) {
+  if (channel->h != ZX_HANDLE_INVALID) {
+    zx_handle_close(channel->h);
+    channel->h = ZX_HANDLE_INVALID;
+    channel->err = ZX_OK;
+  }
 }
 
 static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes, size_t length) {
-  if (hci->snoop_channel == ZX_HANDLE_INVALID)
+  if (hci->snoop_channel.h == ZX_HANDLE_INVALID) {
     return;
+  }
 
   // We tack on a flags byte to the beginning of the payload.
   uint8_t snoop_buffer[length + 1];
   snoop_buffer[0] = flags;
   memcpy(snoop_buffer + 1, bytes, length);
-  zx_status_t status = zx_channel_write(hci->snoop_channel, 0, snoop_buffer, length + 1, NULL, 0);
-  if (status < 0) {
+
+  zx_status_t status = zx_channel_write(hci->snoop_channel.h, 0, snoop_buffer, length + 1, NULL, 0);
+  if (status != ZX_OK) {
     if (status != ZX_ERR_PEER_CLOSED) {
       zxlogf(ERROR, "bt-transport-uart: failed to write to snoop channel: %s\n",
              zx_status_get_string(status));
     }
-    channel_cleanup_locked(hci, &hci->snoop_channel);
+
+    // It should be safe to clean up the channel right here as the work thread
+    // never waits on this channel from outside of the lock.
+    channel_cleanup_locked(&hci->snoop_channel);
   }
 }
 
-static void hci_build_wait_items_locked(hci_t* hci) {
-  zx_wait_item_t* items = hci->wait_items;
-  memset(items, 0, sizeof(hci->wait_items));
-  uint32_t count = 0;
-
-  if (hci->cmd_channel != ZX_HANDLE_INVALID) {
-    items[count].handle = hci->cmd_channel;
-    items[count].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    count++;
+static void hci_begin_shutdown(hci_t* hci) {
+  if (!atomic_load_explicit(&hci->shutting_down, memory_order_relaxed)) {
+    atomic_store_explicit(&hci->shutting_down, true, memory_order_relaxed);
+    device_async_remove(hci->zxdev);
   }
-
-  if (hci->acl_channel != ZX_HANDLE_INVALID) {
-    items[count].handle = hci->acl_channel;
-    items[count].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    count++;
-  }
-
-  items[count].handle = hci->writeable_event;
-  items[count].waitfor = ZX_USER_SIGNAL_0;
-  count++;
-
-  items[count].handle = hci->channels_changed_evt;
-  items[count].waitfor = ZX_EVENT_SIGNALED;
-  count++;
-
-  hci->wait_item_count = count;
-
-  zx_object_signal(hci->channels_changed_evt, ZX_EVENT_SIGNALED, 0);
-}
-
-static void hci_build_read_wait_items(hci_t* hci) {
-  mtx_lock(&hci->mutex);
-  hci_build_wait_items_locked(hci);
-  mtx_unlock(&hci->mutex);
 }
 
 static void hci_write_complete(void* context, zx_status_t status);
@@ -161,95 +143,88 @@ typedef struct hci_write_ctx {
 
 // Takes ownership of buffer.
 static void serial_write(hci_t* hci, void* buffer, size_t length) {
-  for (size_t i = 0; i < hci->wait_item_count; i++) {
-    if (hci->wait_items[i].handle == hci->writeable_event) {
-      // Re-arm wait for signal 0 which we trigger on write complete
-      hci->wait_items[i].waitfor = ZX_USER_SIGNAL_0;
-    }
-  }
+  ZX_DEBUG_ASSERT(hci->can_write);
+
+  // Create the job
   hci_write_ctx_t* op = malloc(sizeof(hci_write_ctx_t));
   op->hci = hci;
   op->buffer = buffer;
 
-  // Clear signal 0 since we can't be written to right now.
-  zx_object_signal(hci->writeable_event, ZX_USER_SIGNAL_0, 0);
+  // Clear the can_write flag.  The UART can currently only handle one in flight
+  // transaction at a time.
+  hci->can_write = false;
   serial_impl_async_write_async(&hci->serial, buffer, length, hci_write_complete, op);
 }
 
 // Returns false if there's an error while sending the packet to the hardware or
 // if the channel peer closed its endpoint.
-static void hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* item) {
-  if (item->pending & (ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED)) {
-    uint32_t length = (CMD_BUF_SIZE * sizeof(uint8_t)) - 1;
+static void hci_handle_client_channel(hci_t* hci, client_channel_t* chan, zx_signals_t pending) {
+  // Figure out which channel we are dealing with and the constants which go
+  // along with it.
+  uint32_t max_buf_size;
+  bt_hci_packet_indicator_t packet_type;
+  bt_hci_snoop_type_t snoop_type;
+
+  if (chan == &hci->cmd_channel) {
+    max_buf_size = CMD_BUF_SIZE;
+    packet_type = HCI_COMMAND;
+    snoop_type = BT_HCI_SNOOP_TYPE_CMD;
+  } else if (chan == &hci->acl_channel) {
+    max_buf_size = ACL_MAX_FRAME_SIZE;
+    packet_type = HCI_ACL_DATA;
+    snoop_type = BT_HCI_SNOOP_TYPE_ACL;
+  } else {
+    // This should never happen, we only know about two packet types currently.
+    ZX_ASSERT(false);
+    return;
+  }
+
+  // Handle the read signal first.  If we are also peer closed, we want to make
+  // sure that we have processed all of the pending messages before cleaning up.
+  if (pending & ZX_CHANNEL_READABLE) {
+    // Do not proceed if we are not allowed to write.  Let the work thread call
+    // us back again when it is safe to write.
+    if (!hci->can_write) {
+      return;
+    }
+
+    zx_status_t status;
+    uint32_t length = max_buf_size - 1;
     uint8_t* buf = malloc(length + 1);
-    zx_status_t status = zx_channel_read(item->handle, 0, buf + 1, NULL, length, 0, &length, NULL);
-    if (status < 0) {
-      if (status != ZX_ERR_PEER_CLOSED) {
-        zxlogf(ERROR, "hci_read_thread: failed to read from command channel %s\n",
-               zx_status_get_string(status));
+
+    {
+      mtx_lock(&hci->mutex);
+      status = zx_channel_read(chan->h, 0, buf + 1, NULL, length, 0, &length, NULL);
+
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "hci_read_thread: failed to read from %s channel %s\n",
+               (packet_type == HCI_COMMAND) ? "CMD" : "ACL", zx_status_get_string(status));
+        free(buf);
+        chan->err = status;
+        mtx_unlock(&hci->mutex);
+        return;
       }
-      free(buf);
-      goto fail;
+
+      buf[0] = packet_type;
+      length++;
+
+      snoop_channel_write_locked(hci, bt_hci_snoop_flags(snoop_type, false), buf + 1, length - 1);
+      mtx_unlock(&hci->mutex);
     }
 
-    buf[0] = HCI_COMMAND;
-    length++;
+    serial_write(hci, buf, length);
+  } else {
+    // IF we were not readable, then we must have been peer closed, or we should
+    // not be here.
+    ZX_DEBUG_ASSERT(pending & ZX_CHANNEL_PEER_CLOSED);
 
     mtx_lock(&hci->mutex);
-    snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_CMD, false), buf + 1,
-                               length - 1);
+    channel_cleanup_locked(&hci->cmd_channel);
     mtx_unlock(&hci->mutex);
-
-    serial_write(hci, buf, length);
   }
-
-  return;
-
-fail:
-  mtx_lock(&hci->mutex);
-  channel_cleanup_locked(hci, &hci->cmd_channel);
-  mtx_unlock(&hci->mutex);
 }
 
-static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* item) {
-  if (item->pending & (ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED)) {
-    uint32_t length = (ACL_MAX_FRAME_SIZE * sizeof(uint8_t)) - 1;
-    uint8_t* buf = malloc(length + 1);
-    zx_status_t status = zx_channel_read(item->handle, 0, buf + 1, NULL, length, 0, &length, NULL);
-    if (status < 0) {
-      zxlogf(ERROR, "hci_read_thread: failed to read from ACL channel %s\n",
-             zx_status_get_string(status));
-      free(buf);
-      goto fail;
-    }
-
-    buf[0] = HCI_ACL_DATA;
-    length++;
-
-    mtx_lock(&hci->mutex);
-    snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_ACL, false), buf + 1,
-                               length - 1);
-    mtx_unlock(&hci->mutex);
-
-    serial_write(hci, buf, length);
-  }
-
-  return;
-
-fail:
-  mtx_lock(&hci->mutex);
-  channel_cleanup_locked(hci, &hci->acl_channel);
-  mtx_unlock(&hci->mutex);
-}
-
-static void hci_handle_uart_read_events(hci_t* hci, zx_status_t uart_read_status,
-                                        const uint8_t* buf, size_t length) {
-  if (uart_read_status < 0) {
-    zxlogf(ERROR, "hci_read_thread: failed to read from ACL channel %s\n",
-           zx_status_get_string(uart_read_status));
-    goto fail;
-  }
-
+static void hci_handle_uart_read_events(hci_t* hci, const uint8_t* buf, size_t length) {
   const uint8_t* src = buf;
   const uint8_t* const end = src + length;
   uint8_t packet_type = hci->cur_uart_packet_type;
@@ -285,14 +260,28 @@ static void hci_handle_uart_read_events(hci_t* hci, zx_status_t uart_read_status
       hci->event_buffer_offset += copy;
 
       if (hci->event_buffer_offset == packet_length) {
-        // send accumulated event packet, minus the packet indicator
-        zx_status_t status = zx_channel_write(hci->cmd_channel, 0, &hci->event_buffer[1],
-                                              packet_length - 1, NULL, 0);
-        if (status < 0) {
-          zxlogf(ERROR, "bt-transport-uart: failed to write event packet: %s\n",
-                 zx_status_get_string(status));
-          goto fail;
+        // Attempt to send this packet to our cmd channel.  We are working on
+        // the callback thread from the UART, so we need to do this inside of
+        // the lock to make sure that nothing closes the channel out from under
+        // us while we try to write.  Also, if something goes wrong here, flag
+        // the channel for close and wake up the work thread.  Do not close the
+        // channel here as the work thread may just to be about to wait on it.
+        {
+          mtx_lock(&hci->mutex);
+          if (hci->cmd_channel.h != ZX_HANDLE_INVALID) {
+            // send accumulated event packet, minus the packet indicator
+            zx_status_t status = zx_channel_write(hci->cmd_channel.h, 0, &hci->event_buffer[1],
+                                                  packet_length - 1, NULL, 0);
+            if (status != ZX_OK) {
+              zxlogf(ERROR, "bt-transport-uart: failed to write CMD packet: %s\n",
+                     zx_status_get_string(status));
+              hci->cmd_channel.err = status;
+              zx_object_signal(hci->wakeup_event, 0, ZX_EVENT_SIGNALED);
+            }
+          }
+          mtx_unlock(&hci->mutex);
         }
+
         snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_EVT, true),
                                    &hci->event_buffer[1], packet_length - 1);
 
@@ -321,12 +310,23 @@ static void hci_handle_uart_read_events(hci_t* hci, zx_status_t uart_read_status
       hci->acl_buffer_offset += copy;
 
       if (hci->acl_buffer_offset == packet_length) {
-        // send accumulated ACL data packet, minus the packet indicator
-        zx_status_t status =
-            zx_channel_write(hci->acl_channel, 0, &hci->acl_buffer[1], packet_length - 1, NULL, 0);
-        if (status < 0) {
-          zxlogf(ERROR, "bt-transport-uart: failed to write ACL packet: %s\n",
-                 zx_status_get_string(status));
+        // Attempt to send accumulated ACL data packet, minus the packet
+        // indicator.  See the notes in the cmd channel section for details
+        // about error handling and why the lock is needed here
+        {
+          mtx_lock(&hci->mutex);
+          if (hci->acl_channel.h != ZX_HANDLE_INVALID) {
+            zx_status_t status = zx_channel_write(hci->acl_channel.h, 0, &hci->acl_buffer[1],
+                                                  packet_length - 1, NULL, 0);
+
+            if (status != ZX_OK) {
+              zxlogf(ERROR, "bt-transport-uart: failed to write ACL packet: %s\n",
+                     zx_status_get_string(status));
+              hci->acl_channel.err = status;
+              zx_object_signal(hci->wakeup_event, 0, ZX_EVENT_SIGNALED);
+            }
+          }
+          mtx_unlock(&hci->mutex);
         }
 
         // If the snoop channel is open then try to write the packet
@@ -342,13 +342,6 @@ static void hci_handle_uart_read_events(hci_t* hci, zx_status_t uart_read_status
   }
 
   hci->cur_uart_packet_type = packet_type;
-
-  return;
-
-fail:
-  mtx_lock(&hci->mutex);
-  channel_cleanup_locked(hci, &hci->acl_channel);
-  mtx_unlock(&hci->mutex);
 }
 
 static void hci_read_complete(void* context, zx_status_t status, const void* buffer,
@@ -360,16 +353,14 @@ static void hci_read_complete(void* context, zx_status_t status, const void* buf
     return;
   }
 
-  hci_handle_uart_read_events(context, status, buffer, length);
   if (status == ZX_OK) {
+    hci_handle_uart_read_events(context, buffer, length);
     serial_impl_async_read_async(&hci->serial, hci_read_complete, hci);
-  }
-}
-
-static void hci_begin_shutdown(hci_t* hci) {
-  if (!atomic_load_explicit(&hci->shutting_down, memory_order_relaxed)) {
-    atomic_store_explicit(&hci->shutting_down, true, memory_order_relaxed);
-    device_async_remove(hci->zxdev);
+  } else {
+    // There is not much we can do in the event of a UART read error.  Do not
+    // queue a read job and start the process of shutting down.
+    zxlogf(ERROR, "Fatal UART read error (%s), shutting down\n", zx_status_get_string(status));
+    hci_begin_shutdown(hci);
   }
 }
 
@@ -388,114 +379,137 @@ static void hci_write_complete(void* context, zx_status_t status) {
     free(op);
     return;
   }
-  // We can write now
-  zx_object_signal(op->hci->writeable_event, 0, ZX_USER_SIGNAL_0);
-  free(op);
-}
 
-static bool hci_has_read_channels_locked(hci_t* hci) {
-  // One for the signal event and one for uart socket, any additional are read channels.
-  return hci->wait_item_count > 2;
+  // We can write now.  Set the flag and poke the work thread.
+  op->hci->can_write = true;
+  zx_object_signal(op->hci->wakeup_event, 0, ZX_EVENT_SIGNALED);
+  free(op);
 }
 
 static int hci_thread(void* arg) {
   hci_t* hci = (hci_t*)arg;
+  zx_status_t status = ZX_OK;
 
-  mtx_lock(&hci->mutex);
-
-  if (!hci_has_read_channels_locked(hci)) {
-    zxlogf(ERROR, "bt-transport-uart: no channels are open - exiting\n");
-    hci->thread_running = false;
-    mtx_unlock(&hci->mutex);
-    return 0;
-  }
-
-  mtx_unlock(&hci->mutex);
   while (!atomic_load_explicit(&hci->shutting_down, memory_order_relaxed)) {
-    zx_status_t status =
-        zx_object_wait_many(hci->wait_items, hci->wait_item_count, ZX_TIME_INFINITE);
-    zx_signals_t observed;
-    // Ensure that we don't queue a write twice. After receiving a request from a client
-    // (potentially), we need to wait for the previous write to complete before queueing another
-    // one.
-    status =
-        zx_object_wait_one(hci->writeable_event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, &observed);
+    zx_wait_item_t wait_items[NUM_WAIT_ITEMS];
+    uint32_t wait_count;
+    {  // Explicit scope for lock
+      mtx_lock(&hci->mutex);
 
-    if (atomic_load_explicit(&hci->shutting_down, memory_order_relaxed)) {
-      break;
+      // Make a list of our interesting handles.  The wakeup event is always
+      // interesting and always goes in slot 0.
+      wait_items[0].handle = hci->wakeup_event;
+      wait_items[0].waitfor = ZX_EVENT_SIGNALED;
+      wait_items[0].pending = 0;
+      wait_count = 1;
+
+      // If we  have received any errors on our channels, clean them up now.
+      if (hci->cmd_channel.err != ZX_OK) {
+        channel_cleanup_locked(&hci->cmd_channel);
+      }
+
+      if (hci->acl_channel.err != ZX_OK) {
+        channel_cleanup_locked(&hci->acl_channel);
+      }
+
+      // Only wait on our channels if we can currently write to our UART
+      if (hci->can_write) {
+        if (hci->cmd_channel.h != ZX_HANDLE_INVALID) {
+          wait_items[wait_count].handle = hci->cmd_channel.h;
+          wait_items[wait_count].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+          wait_items[wait_count].pending = 0;
+          wait_count++;
+        }
+
+        if (hci->acl_channel.h != ZX_HANDLE_INVALID) {
+          wait_items[wait_count].handle = hci->acl_channel.h;
+          wait_items[wait_count].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+          wait_items[wait_count].pending = 0;
+          wait_count++;
+        }
+      }
+
+      mtx_unlock(&hci->mutex);
     }
 
-    bool is_writeable = observed & ZX_USER_SIGNAL_0;
-    if ((status < 0) || !is_writeable) {
+    // Now go ahead and do the wait.  Note, this is only safe because there are
+    // only two places where a channel gets closed.  One is in the work thread
+    // when we discover that a channel has become peer closed.  The other is
+    // when we are shutting down, in which case the thread will have been
+    // stopped before we get around to the business of closing channels.
+    status = zx_object_wait_many(wait_items, wait_count, ZX_TIME_INFINITE);
+
+    // Did we fail to wait?  This should never happen.  If it does, begin the
+    // process of shutdown.
+    if (status != ZX_OK) {
       zxlogf(ERROR, "bt-transport-uart: zx_object_wait_many failed (%s) - exiting\n",
              zx_status_get_string(status));
-      mtx_lock(&hci->mutex);
-      channel_cleanup_locked(hci, &hci->cmd_channel);
-      channel_cleanup_locked(hci, &hci->acl_channel);
-      mtx_unlock(&hci->mutex);
+      hci_begin_shutdown(hci);
       break;
     }
 
-    mtx_lock(&hci->mutex);
-    for (size_t i = 0; i < hci->wait_item_count; i++) {
-      if ((hci->wait_items[i].pending == ZX_USER_SIGNAL_0) &&
-          (hci->wait_items[i].handle == hci->writeable_event)) {
-        hci->wait_items[i].waitfor = ZX_USER_SIGNAL_1;
-      }
-    }
-    mtx_unlock(&hci->mutex);
-
-    for (unsigned i = 0; i < hci->wait_item_count; ++i) {
-      mtx_lock(&hci->mutex);
-      zx_wait_item_t item = hci->wait_items[i];
-      mtx_unlock(&hci->mutex);
-
-      if (item.handle == hci->cmd_channel) {
-        hci_handle_cmd_read_events(hci, &item);
-      } else if (item.handle == hci->acl_channel) {
-        hci_handle_acl_read_events(hci, &item);
-      }
+    // Were we poked?  There are 3 reasons that we may have been.
+    //
+    // 1) Our set of active channels may have a new member.
+    // 2) Our |can_write| status may have changed.
+    // 3) It is time to shut down.
+    //
+    // Simply reset the event and cycle through the loop.  This will take care
+    // of each of these possible cases.
+    if (wait_items[0].pending) {
+      ZX_DEBUG_ASSERT(wait_items[0].handle == hci->wakeup_event);
+      zx_object_signal(hci->wakeup_event, ZX_EVENT_SIGNALED, 0);
+      continue;
     }
 
-    // The channels might have been changed by the *_read_events, recheck the event.
-    status = zx_object_wait_one(hci->channels_changed_evt, ZX_EVENT_SIGNALED, 0u, NULL);
-    if (status == ZX_OK) {
-      hci_build_read_wait_items(hci);
+    // Process our channels now.
+    for (uint32_t i = 1; i < wait_count; ++i) {
+      // Is our channel signalled for anything we care about?
+      zx_handle_t pending = wait_items[i].pending & wait_items[i].waitfor;
+
+      if (pending) {
+        zx_handle_t handle = wait_items[i].handle;
+        if (handle == hci->cmd_channel.h) {
+          hci_handle_client_channel(hci, &hci->cmd_channel, pending);
+        } else {
+          ZX_DEBUG_ASSERT(handle == hci->acl_channel.h);
+          hci_handle_client_channel(hci, &hci->acl_channel, pending);
+        }
+      }
     }
   }
 
   zxlogf(INFO, "bt-transport-uart: thread exiting\n");
-
-  mtx_lock(&hci->mutex);
   hci->thread_running = false;
-  mtx_unlock(&hci->mutex);
-  return 0;
+  return status;
 }
 
-static zx_status_t hci_open_channel(hci_t* hci, zx_handle_t* in_channel, zx_handle_t in) {
+static zx_status_t hci_open_channel(hci_t* hci, client_channel_t* in_channel, zx_handle_t in) {
   zx_status_t result = ZX_OK;
   mtx_lock(&hci->mutex);
 
-  if (*in_channel != ZX_HANDLE_INVALID) {
+  if (in_channel->h != ZX_HANDLE_INVALID) {
     zxlogf(ERROR, "bt-transport-uart: already bound, failing\n");
     result = ZX_ERR_ALREADY_BOUND;
     goto done;
   }
 
-  *in_channel = in;
+  in_channel->h = in;
+  in_channel->err = ZX_OK;
 
   // Kick off the hci_thread if it's not already running.
   if (!hci->thread_running) {
-    hci_build_wait_items_locked(hci);
+    hci->thread_running = true;
     if (thrd_create_with_name(&hci->thread, hci_thread, hci, "bt_uart_read_thread") !=
         thrd_success) {
+      hci->thread_running = false;
       result = ZX_ERR_INTERNAL;
       goto done;
     }
-    hci->thread_running = true;
   } else {
-    // Poke the changed event to get the new channel.
-    zx_object_signal(hci->channels_changed_evt, 0, ZX_EVENT_SIGNALED);
+    // Poke the work thread to let it know that there is a new channel to
+    // service.
+    zx_object_signal(hci->wakeup_event, 0, ZX_EVENT_SIGNALED);
   }
 
 done:
@@ -510,16 +524,16 @@ static void hci_unbind(void* ctx) {
   // flight from the serial_impl are nerfed and that our thread is shut down.
   atomic_store_explicit(&hci->shutting_down, true, memory_order_relaxed);
   if (hci->thread_running) {
-    zx_object_signal(hci->writeable_event, 0, ZX_USER_SIGNAL_0);
+    zx_object_signal(hci->wakeup_event, 0, ZX_EVENT_SIGNALED);
     thrd_join(hci->thread, NULL);
   }
 
   // Close the transport channels so that the host stack is notified of device
   // removal.
   mtx_lock(&hci->mutex);
-  channel_cleanup_locked(hci, &hci->cmd_channel);
-  channel_cleanup_locked(hci, &hci->acl_channel);
-  channel_cleanup_locked(hci, &hci->snoop_channel);
+  channel_cleanup_locked(&hci->cmd_channel);
+  channel_cleanup_locked(&hci->acl_channel);
+  channel_cleanup_locked(&hci->snoop_channel);
   mtx_unlock(&hci->mutex);
 
   // Finish by making sure that all in flight transactions transactions have
@@ -532,8 +546,7 @@ static void hci_unbind(void* ctx) {
 
 static void hci_release(void* ctx) {
   hci_t* hci = ctx;
-
-  zx_handle_close(hci->writeable_event);
+  zx_handle_close(hci->wakeup_event);
   free(hci);
 }
 
@@ -594,6 +607,10 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
+  channel_init(&hci->cmd_channel);
+  channel_init(&hci->acl_channel);
+  channel_init(&hci->snoop_channel);
+
   hci->serial = serial;
   if (status != ZX_OK) {
     zxlogf(ERROR, "bt-transport-uart: serial_open_socket failed: %s\n",
@@ -601,7 +618,12 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
     goto fail;
   }
 
-  zx_event_create(0, &hci->channels_changed_evt);
+  status = zx_event_create(0, &hci->wakeup_event);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "hci_bind: zx_event_create failed\n");
+    goto fail;
+  }
+
   mtx_init(&hci->mutex, mtx_plain);
   hci->parent = parent;
   hci->cur_uart_packet_type = HCI_NONE;
@@ -618,13 +640,10 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "hci_bind: serial_get_info failed\n");
     goto fail;
   }
-  status = zx_event_create(0, &hci->writeable_event);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "hci_bind: zx_event_create failed\n");
-    goto fail;
-  }
 
-  zx_object_signal(hci->writeable_event, 0, ZX_USER_SIGNAL_0);
+  // Initially we can write to the UART
+  hci->can_write = true;
+
   if (info.serial_class != fuchsia_hardware_serial_Class_BLUETOOTH_HCI) {
     zxlogf(ERROR, "hci_bind: info.device_class != BLUETOOTH_HCI\n");
     status = ZX_ERR_INTERNAL;
