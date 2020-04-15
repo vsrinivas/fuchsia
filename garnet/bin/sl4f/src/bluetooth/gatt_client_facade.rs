@@ -390,7 +390,8 @@ impl GattClientFacade {
     pub fn update_peripheral_id(&self, id: &String, client: ClientProxy) {
         let tag = "GattClientFacade::update_peripheral_id";
         if self.inner.read().peripheral_ids.contains_key(id) {
-            fx_log_warn!(tag: &with_line!(tag), "Attempted to overwrite existing id: {}", id);
+            fx_log_warn!(tag: &with_line!(tag), "Overwriting existing id: {}", id);
+            self.inner.write().peripheral_ids.insert(id.clone(), client);
         } else {
             fx_log_info!(tag: &with_line!(tag), "Added {:?} to peripheral ids", id);
             self.inner.write().peripheral_ids.insert(id.clone(), client);
@@ -517,8 +518,8 @@ impl GattClientFacade {
             }
             Ok(x) => x,
         };
-
         let mut identifier = id.clone();
+        self.update_peripheral_id(&identifier, proxy);
         match &self.inner.read().central {
             Some(c) => {
                 let conn_opts = ConnectionOptions { bondable_mode: Some(true) };
@@ -534,7 +535,6 @@ impl GattClientFacade {
             }
             None => fx_err_and_bail!(&with_line!(tag), "No central proxy created."),
         };
-        self.update_peripheral_id(&identifier, proxy);
         Ok(())
     }
 
