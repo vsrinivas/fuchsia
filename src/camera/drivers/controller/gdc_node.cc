@@ -71,7 +71,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
     zx_device_t* device, const ddk::GdcProtocolClient& gdc, StreamCreationData* info,
     ProcessNode* parent_node, const InternalConfigNode& internal_gdc_node) {
   auto& input_buffers_hlcpp = parent_node->output_buffer_collection();
-  auto result = GetBuffers(memory_allocator, internal_gdc_node, info);
+  auto result = GetBuffers(memory_allocator, internal_gdc_node, info, kTag);
   if (result.is_error()) {
     FX_LOGST(ERROR, kTag) << "Failed to get buffers";
     return fit::error(result.error());
