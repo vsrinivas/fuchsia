@@ -82,7 +82,11 @@ func doTestReboot(ctx context.Context, device *device.Client, outputDir string) 
 	if err != nil {
 		return fmt.Errorf("unable to connect to sl4f: %s", err)
 	}
-	defer rpcClient.Close()
+	defer func() {
+		if rpcClient != nil {
+			rpcClient.Close()
+		}
+	}()
 
 	// Install version N on the device if it is not already on that version.
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
@@ -99,8 +103,17 @@ func doTestReboot(ctx context.Context, device *device.Client, outputDir string) 
 		return err
 	}
 
-	if err := device.Reboot(ctx, repo, &rpcClient); err != nil {
+	// Disconnect from sl4f since the OTA should reboot the device.
+	rpcClient.Close()
+	rpcClient = nil
+
+	if err := device.Reboot(ctx); err != nil {
 		return fmt.Errorf("error rebooting: %s", err)
+	}
+
+	rpcClient, err = device.StartRpcSession(ctx, repo)
+	if err != nil {
+		return fmt.Errorf("unable to connect to sl4f: %s", err)
 	}
 
 	return validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig)

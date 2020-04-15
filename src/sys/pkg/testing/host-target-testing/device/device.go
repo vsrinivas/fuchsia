@@ -7,7 +7,8 @@ package device
 import (
 	"bytes"
 	"context"
-	"errors"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -140,12 +141,12 @@ func (c *Client) GetSystemImageMerkle(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(merkle)), nil
 }
 
-// Reboot asks the device to reboot. It waits until the device to reconnect
+// Reboot asks the device to reboot. It waits until the device reconnects
 // before returning.
-func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
+func (c *Client) Reboot(ctx context.Context) error {
 	log.Printf("rebooting")
 
-	return c.ExpectReboot(ctx, repo, rpcClient, func() error {
+	return c.ExpectReboot(ctx, func() error {
 		// Run the reboot in the background, which gives us a chance to
 		// observe us successfully executing the reboot command.
 		cmd := []string{"dm", "reboot", "&", "exit", "0"}
@@ -209,8 +210,8 @@ func (c *Client) ReadBasePackages(ctx context.Context) (map[string]string, error
 }
 
 // TriggerSystemOTA gets the device to perform a system update, ensuring it
-// reboots as expected. rpcClient, if provided, will be used and re-connected
-func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
+// reboots as expected.
+func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository) error {
 	log.Printf("Triggering OTA")
 	startTime := time.Now()
 
@@ -224,7 +225,7 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 		return fmt.Errorf("base packages doesn't include update-bin/0 package")
 	}
 
-	return c.ExpectReboot(ctx, repo, rpcClient, func() error {
+	return c.ExpectReboot(ctx, func() error {
 		server, err := c.ServePackageRepository(ctx, repo, "trigger-ota", true)
 		if err != nil {
 			return fmt.Errorf("error setting up server: %s", err)
@@ -281,11 +282,50 @@ func (c *Client) ExpectDisconnect(ctx context.Context, f func() error) error {
 	return nil
 }
 
-func (c *Client) ExpectReboot(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client, f func() error) error {
-	if err := c.setupReboot(ctx, rpcClient); err != nil {
-		return err
+// ExpectReboot prepares a device for a reboot, runs a closure `f` that should
+// reboot the device, then finally verifies whether a reboot actually took
+// place. It does this by writing a unique value to
+// `/tmp/ota_test_should_reboot`, then executing the closure. After we
+// reconnect, we check if `/tmp/ota_test_should_reboot` exists. If not, exit
+// with `nil`. Otherwise, we failed to reboot, or some competing test is also
+// trying to reboot the device. Either way, err out.
+func (c *Client) ExpectReboot(ctx context.Context, f func() error) error {
+	// Generate a unique value.
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		return fmt.Errorf("failed to generate a unique boot number: %w", err)
 	}
 
+	// Encode the id into hex so we can write it through the shell.
+	bootID := hex.EncodeToString(b)
+
+	// Write the value to the file. Err if the file already exists by setting the
+	// noclobber setting.
+	cmd := fmt.Sprintf(
+		`(
+			set -C &&
+			PATH= echo "%s" > "%s"
+        )`, bootID, rebootCheckPath)
+	err = c.Run(ctx, strings.Fields(cmd), os.Stdout, os.Stderr)
+	if err != nil {
+		return fmt.Errorf("failed to write reboot check file: %w", err)
+	}
+
+	// As a sanity check, make sure the file actually exists and has the correct
+	// value.
+	b, err = c.ReadRemotePath(ctx, rebootCheckPath)
+	if err != nil {
+		return fmt.Errorf("failed to read reboot check file: %w", err)
+	}
+	actual := strings.TrimSpace(string(b))
+
+	if actual != bootID {
+		return fmt.Errorf("reboot check file has wrong value: expected %q, got %q", bootID, actual)
+	}
+
+	// We are finally ready to run the closure. Setup a disconnection listener,
+	// then execute the closure.
 	ch := make(chan struct{})
 	c.RegisterDisconnectListener(ch)
 
@@ -299,79 +339,44 @@ func (c *Client) ExpectReboot(ctx context.Context, repo *packages.Repository, rp
 	select {
 	case <-ch:
 	case <-ctx.Done():
-		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
+		return fmt.Errorf("device did not disconnect: %w", ctx.Err())
 	}
 
 	log.Printf("device disconnected, waiting for device to boot")
 
 	if err := c.Reconnect(ctx); err != nil {
-		return fmt.Errorf("failed to reconnect: %s", err)
+		return fmt.Errorf("failed to reconnect: %w", err)
 	}
 
-	if err := c.verifyReboot(ctx, repo, rpcClient); err != nil {
-		return fmt.Errorf("failed to verify reboot: %s", err)
+	// We reconnected to the device. Check that the reboot check file doesn't exist.
+	exists, err := c.RemoteFileExists(ctx, rebootCheckPath)
+	if err != nil {
+		return fmt.Errorf(`failed to check if "%s" exists: %w`, err)
+	}
+	if exists {
+		// The reboot file exists. This could have happened because either we
+		// didn't reboot, or some other test is also trying to reboot the
+		// device. We can distinguish the two by comparing the file contents
+		// with the bootID we wrote earlier.
+		b, err := c.ReadRemotePath(ctx, rebootCheckPath)
+		if err != nil {
+			return fmt.Errorf("failed to read reboot check file: %w", err)
+		}
+		actual := strings.TrimSpace(string(b))
+
+		// If the contents match, then we failed to reboot.
+		if actual == bootID {
+			return fmt.Errorf("reboot check file exists after reboot, device did not reboot")
+		}
+
+		return fmt.Errorf(
+			"reboot check file exists after reboot, and has unexpected value: expected %q, got %q",
+			bootID,
+			actual,
+		)
 	}
 
 	log.Printf("device rebooted")
-
-	return nil
-}
-
-func (c *Client) setupReboot(ctx context.Context, rpcClient **sl4f.Client) error {
-	if *rpcClient != nil {
-		// Write a file to /tmp that should be lost after a reboot, to
-		// ensure the device actually reboots instead of just
-		// disconnects from the network for a bit.
-		if err := (*rpcClient).FileWrite(ctx, rebootCheckPath, []byte("yes")); err != nil {
-			return fmt.Errorf("failed to write reboot check file: %s", err)
-		}
-		stat, err := (*rpcClient).PathStat(ctx, rebootCheckPath)
-		if err != nil {
-			return fmt.Errorf("failed to stat reboot check file: %s", err)
-		}
-		if expected := (sl4f.PathMetadata{Mode: 0, Size: 3}); stat != expected {
-			return fmt.Errorf("unexpected reboot check file metadata: expected %v, got %v", expected, stat)
-		}
-	}
-
-	return nil
-}
-
-func (c *Client) verifyReboot(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
-	if *rpcClient != nil {
-		// FIXME: It would make sense to be able to close the rpcClient
-		// before the reboot, but for an unknown reason, closing this
-		// session will cause the entire ssh connection to disconnect
-		// and reconnect, causing the test to assume the device
-		// rebooted and start verifying that the OTA succeeded, when,
-		// in reality, it likely hasn't finished yet.
-		(*rpcClient).Close()
-		*rpcClient = nil
-
-		var err error
-		*rpcClient, err = c.StartRpcSession(ctx, repo)
-		if err != nil {
-			// FIXME(40913): every builder should at least build
-			// sl4f as a universe package.
-			log.Printf("unable to connect to sl4f after OTA: %s", err)
-			//return fmt.Errorf("unable to connect to sl4f after OTA: %s", err)
-		}
-
-		// Make sure the device actually rebooted by verifying the
-		// reboot check file no longer exists.
-		var exists bool
-		if *rpcClient == nil {
-			exists, err = c.RemoteFileExists(ctx, rebootCheckPath)
-		} else {
-			exists, err = (*rpcClient).PathExists(ctx, rebootCheckPath)
-		}
-
-		if err != nil {
-			return fmt.Errorf("failed to stat reboot check file: %s", err)
-		} else if exists {
-			return errors.New("reboot check file exists after an OTA, device did not reboot")
-		}
-	}
 
 	return nil
 }
@@ -430,7 +435,7 @@ func (c *Client) DeleteRemotePath(ctx context.Context, path string) error {
 // RemoteFileExists checks if a file exists on the remote device.
 func (c *Client) RemoteFileExists(ctx context.Context, path string) (bool, error) {
 	var stderr bytes.Buffer
-	cmd := []string{"PATH=''", "ls", path}
+	cmd := []string{"PATH=''", "test", "-e", path}
 
 	if err := c.Run(ctx, cmd, ioutil.Discard, &stderr); err != nil {
 		if e, ok := err.(*ssh.ExitError); ok {

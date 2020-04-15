@@ -185,16 +185,14 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 
 	rpcClient, err := device.StartRpcSession(ctx, downgradeRepo)
 	if err != nil {
-		// FIXME(40913): every downgrade builder should at least build
-		// sl4f as a universe package.
-		log.Printf("unable to connect to sl4f after pave: %s", err)
-		//log.Fatalf("unable to connect to sl4f after pave: %s", err)
+		return nil, fmt.Errorf("unable to connect to sl4f after pave: %s", err)
 	}
 
 	// We always boot into the A partition after a pave.
 	expectedConfig := sl4f.ConfigurationA
 
 	if err := validateDevice(ctx, device, rpcClient, downgradeRepo, expectedSystemImageMerkle, &expectedConfig, true); err != nil {
+		rpcClient.Close()
 		return nil, err
 	}
 
@@ -263,11 +261,26 @@ func systemOTA(
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
 
-	if err := device.TriggerSystemOTA(ctx, repo, rpcClient); err != nil {
+	// Disconnect from sl4f since the OTA should reboot the device.
+	if *rpcClient != nil {
+		(*rpcClient).Close()
+		*rpcClient = nil
+	}
+
+	log.Printf("Rebooting device")
+	startTime := time.Now()
+
+	if err := device.TriggerSystemOTA(ctx, repo); err != nil {
 		return fmt.Errorf("OTA failed: %s", err)
 	}
 
-	log.Printf("OTA complete, validating device")
+	log.Printf("OTA complete in %s", time.Now().Sub(startTime))
+	log.Printf("Validating device")
+
+	*rpcClient, err = device.StartRpcSession(ctx, repo)
+	if err != nil {
+		return fmt.Errorf("unable to connect to sl4f after OTA: %s", err)
+	}
 	if err := validateDevice(ctx, device, *rpcClient, repo, expectedSystemImageMerkle, expectedConfig, checkABR); err != nil {
 		return fmt.Errorf("failed to validate after OTA: %s", err)
 	}
@@ -337,21 +350,22 @@ func otaToPackage(
 		return fmt.Errorf("failed to download OTA: %s", err)
 	}
 
-	log.Printf("Rebooting device")
-	startTime := time.Now()
-
-	if err = device.Reboot(ctx, repo, rpcClient); err != nil {
-		return fmt.Errorf("device failed to reboot after OTA applied: %s", err)
-	}
-
-	log.Printf("Reboot complete in in %s", time.Now().Sub(startTime))
-
-	log.Printf("Validating device")
-	// FIXME: See comment in device.TriggerSystemOTA()
+	// Disconnect from sl4f since the OTA should reboot the device.
 	if *rpcClient != nil {
 		(*rpcClient).Close()
 		*rpcClient = nil
 	}
+
+	log.Printf("Rebooting device")
+	startTime := time.Now()
+
+	if err = device.Reboot(ctx); err != nil {
+		return fmt.Errorf("device failed to reboot after OTA applied: %s", err)
+	}
+
+	log.Printf("Reboot complete in %s", time.Now().Sub(startTime))
+	log.Printf("Validating device")
+
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {
 		return fmt.Errorf("unable to connect to sl4f after OTA: %s", err)
