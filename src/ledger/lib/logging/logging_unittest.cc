@@ -171,7 +171,7 @@ TEST_F(LoggingDeathTest, NotReached) {
 
 TEST_F(LoggingTest, NotImplemented) {
   LEDGER_NOTIMPLEMENTED();
-  EXPECT_THAT(ReadCerr(), MatchesRegex("\\[ERROR:.*logging_unittest.cc.*\\] Not implemented. \n"));
+  EXPECT_THAT(ReadCerr(), MatchesRegex("\\[INFO:.*logging_unittest.cc.*\\] Not implemented. \n"));
 }
 
 }  // namespace

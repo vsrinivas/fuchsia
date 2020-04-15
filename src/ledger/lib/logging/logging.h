@@ -85,7 +85,7 @@ absl::LogSeverity GetLogSeverity();
 // Asserts that this code path is not reachable. This is only checked in debug mode.
 #define LEDGER_NOTREACHED() LEDGER_DCHECK(false) << "Unreachable. "
 
-// Prints an error message, but does not crash.
-#define LEDGER_NOTIMPLEMENTED() LEDGER_LOG(ERROR) << "Not implemented. "
+// Prints an info log, but does not crash.
+#define LEDGER_NOTIMPLEMENTED() LEDGER_LOG(INFO) << "Not implemented. "
 
 #endif  // SRC_LEDGER_LIB_LOGGING_LOGGING_H_
