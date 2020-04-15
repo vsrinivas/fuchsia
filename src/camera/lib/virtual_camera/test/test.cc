@@ -47,7 +47,7 @@ class VirtualCameraTest : public gtest::RealLoopFixture {
   std::unique_ptr<camera::VirtualCamera> virtual_camera_;
 };
 
-TEST_F(VirtualCameraTest, DISABLED_FramesReceived) {
+TEST_F(VirtualCameraTest, FramesReceived) {
   fuchsia::camera3::DevicePtr camera;
   SetFailOnError(camera, "Camera");
   virtual_camera_->GetHandler()(camera.NewRequest());

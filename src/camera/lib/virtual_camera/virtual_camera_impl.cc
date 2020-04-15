@@ -31,7 +31,6 @@ VirtualCameraImpl::VirtualCameraImpl() : loop_(&kAsyncLoopConfigNoAttachToCurren
 
 VirtualCameraImpl::~VirtualCameraImpl() {
   async::PostTask(loop_.dispatcher(), fit::bind_member(this, &VirtualCameraImpl::OnDestruction));
-  loop_.Quit();
   loop_.JoinThreads();
 }
 
@@ -193,7 +192,12 @@ fit::result<void, std::string> VirtualCameraImpl::CheckFrame(
 }
 
 void VirtualCameraImpl::OnDestruction() {
-  frame_waiters_.clear();
+  loop_.Quit();
+  for (auto& it : frame_waiters_) {
+    // TODO(50018): async::Wait destructor ordering edge case
+    it.second->Cancel();
+    it.second = nullptr;
+  }
   camera_ = nullptr;
 }
 
