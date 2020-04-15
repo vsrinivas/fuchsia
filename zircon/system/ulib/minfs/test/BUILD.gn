@@ -65,13 +65,13 @@ test("minfs-unit") {
     "//zircon/public/lib/disk_inspector",
     "//zircon/public/lib/fake-device",
     "//zircon/public/lib/fs-management",
-    "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-minfs:c",
+    "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/minfs",
   ]
   include_dirs = [ "//zircon/system/ulib/minfs" ]
@@ -90,10 +90,10 @@ source_set("integration-fixtures") {
   ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/minfs",
   ]
 }
@@ -134,7 +134,6 @@ test("minfs-integration") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fs-management",
-    "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -142,6 +141,7 @@ test("minfs-integration") {
     "//zircon/system/fidl/fuchsia-minfs:llcpp",
     "//zircon/system/ulib/fs-test-utils",
     "//zircon/system/ulib/fs/test/posix:posix_tests",
+    "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/minfs",
   ]
 }
@@ -175,11 +175,11 @@ test("minfs-power") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/minfs",
   ]
 }

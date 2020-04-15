@@ -117,7 +117,6 @@ test("blobfs-unit") {
     "//zircon/public/lib/fake-device",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fs-management",
-    "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/operation",
     "//zircon/public/lib/safemath",
@@ -126,6 +125,7 @@ test("blobfs-unit") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fs-test-utils",
+    "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/id_allocator",
   ]
 }
@@ -145,11 +145,11 @@ source_set("integration-fixtures") {
   deps = [
     ":test-utils",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fs-test-utils",
+    "//zircon/system/ulib/fs/test_support",
   ]
 }
 
@@ -179,7 +179,6 @@ test("blobfs-integration") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fdio-caller",
-    "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/memfs",
@@ -188,6 +187,7 @@ test("blobfs-integration") {
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fs-test-utils",
+    "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/id_allocator",
   ]
 }
