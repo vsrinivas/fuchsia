@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -41,7 +42,7 @@ namespace {
 
 // Specifies how many packets can fit in each of the receive and transmit
 // backlogs.
-const size_t kBacklog = 32;
+const size_t kBacklog = 128;
 
 // Specifies the maximum transfer unit we support and the maximum layer 1
 // Ethernet packet header length.
@@ -142,6 +143,7 @@ EthernetDevice::EthernetDevice(zx_device_t* bus_device, zx::bti bti,
       bufs_(nullptr),
       unkicked_(0),
       tx_failed_descriptor_alloc_(0),
+      unrecycled_(0),
       ifc_({nullptr, nullptr}) {}
 
 EthernetDevice::~EthernetDevice() { LTRACE_ENTRY; }
@@ -237,6 +239,7 @@ zx_status_t EthernetDevice::Init() {
 
   // Give the rx buffers to the host
   rx_.Kick();
+  tx_.SetNoInterrupt();
   return ZX_OK;
 }
 
@@ -260,6 +263,7 @@ void EthernetDevice::IrqRingUpdate() {
     if (!ifc_.ops) {
       return;
     }
+    rx_.SetNoInterrupt();
     // Ring::IrqRingUpdate will call this lambda on each rx buffer filled by
     // the underlying device since the last IRQ.
     // Thread safety analysis is explicitly disabled as clang isn't able to determine that the
@@ -289,20 +293,26 @@ void EthernetDevice::IrqRingUpdate() {
       ethernet_ifc_recv(&ifc_, data, len, 0);
       LTRACE_DO(virtio_dump_desc(desc));
       rx_.FreeDesc(id);
+      unrecycled_++;
     });
   }
 
   // Now recycle the rx buffers.  As in Init(), this means queuing a bunch of
   // "reads" from the network that will complete when packets arrive.
-  desc_t* desc = nullptr;
-  uint16_t id;
+  // Recycle when > 25% of the ring has been consumed by received packets.
   bool need_kick = false;
-  while ((desc = rx_.AllocDescChain(1, &id))) {
-    desc->len = kFrameSize;
-    rx_.SubmitChain(id);
-    need_kick = true;
+  if (unrecycled_ > kBacklog / 4) {
+    desc_t* desc = nullptr;
+    uint16_t id;
+    while ((desc = rx_.AllocDescChain(1, &id)) != nullptr) {
+      desc->len = kFrameSize;
+      rx_.SubmitChain(id);
+      need_kick = true;
+    }
+    unrecycled_ = 0;
   }
 
+  rx_.ClearNoInterrupt();
   // If we have re-queued any rx buffers, poke the virtqueue to pick them up.
   if (need_kick && !rx_.NoNotify()) {
     rx_.Kick();

@@ -38,6 +38,8 @@ class Ring {
   void IrqRingUpdate(T free_chain);
 
   bool NoNotify() { return ring_.used->flags & VRING_USED_F_NO_NOTIFY; }
+  void SetNoInterrupt() { ring_.avail->flags |= VRING_AVAIL_F_NO_INTERRUPT; }
+  void ClearNoInterrupt() { ring_.avail->flags &= ~VRING_AVAIL_F_NO_INTERRUPT; }
 
  private:
   Device* device_ = nullptr;

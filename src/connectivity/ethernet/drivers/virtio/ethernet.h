@@ -86,6 +86,8 @@ class EthernetDevice : public Device,
   size_t unkicked_ TA_GUARDED(tx_lock_);
   size_t tx_failed_descriptor_alloc_ TA_GUARDED(tx_lock_);
 
+  size_t unrecycled_;
+
   // Saved net device configuration out of the pci config BAR
   virtio_net_config_t config_ TA_GUARDED(state_lock_);
   size_t virtio_hdr_len_;
