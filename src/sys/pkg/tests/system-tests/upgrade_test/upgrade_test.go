@@ -15,6 +15,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"fuchsia.googlesource.com/host_target_testing/artifacts"
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
@@ -44,62 +45,71 @@ func TestMain(m *testing.M) {
 func TestOTA(t *testing.T) {
 	ctx := context.Background()
 
+	outputDir, cleanup, err := c.archiveConfig.OutputDir()
+	if err != nil {
+		log.Fatalf("failed to get output directory: %v", err)
+	}
+	defer cleanup()
+
 	device, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
 		log.Fatalf("failed to create ota test client: %s", err)
 	}
 	defer device.Close()
 
-	// Creating a sl4f.Client requires knowing the build currently running
-	// on the device, which not all test cases know during start. Store the
-	// one true client here, and pass around pointers to the various
-	// functions that may use it or device.Client to interact with the
-	// target. All OTA attempts must first Close and nil out an existing
-	// rpcClient and replace it with a new one after reboot. The final
-	// rpcClient, if present, will be closed by the defer here.
-	var rpcClient *sl4f.Client
+	downgradeBuild, err := c.getDowngradeBuild(ctx, outputDir)
+	if err != nil {
+		log.Fatalf("failed to get downgrade build: %v", err)
+	}
+
+	upgradeBuild, err := c.getUpgradeBuild(ctx, outputDir)
+	if err != nil {
+		log.Fatalf("failed to get upgrade build: %v", err)
+	}
+
+	rpcClient, err := initializeDevice(ctx, device, downgradeBuild)
+	if err != nil {
+		t.Fatalf("Device failed to initialize: %v", err)
+	}
 	defer func() {
 		if rpcClient != nil {
 			rpcClient.Close()
 		}
 	}()
 
-	if c.shouldRepaveDevice() {
-		rpcClient, err = paveDevice(ctx, device)
-		if err != nil {
-			log.Fatalf("failed to pave device: %s", err)
-		}
-	}
-
-	testOTAs(t, ctx, device, &rpcClient)
+	testOTAs(ctx, device, upgradeBuild, &rpcClient)
 }
 
-func testOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client) {
+func testOTAs(
+	ctx context.Context,
+	device *device.Client,
+	build artifacts.Build,
+	rpcClient **sl4f.Client,
+) {
 	for i := 1; i <= c.cycleCount; i++ {
 		log.Printf("OTA Attempt %d", i)
 
-		if err := doTestOTAs(ctx, device, rpcClient); err != nil {
+		if err := doTestOTAs(ctx, device, build, rpcClient); err != nil {
 			log.Fatalf("OTA Attempt %d failed: %s", i, err)
 		}
 	}
 }
 
-func doTestOTAs(ctx context.Context, device *device.Client, rpcClient **sl4f.Client) error {
+func doTestOTAs(
+	ctx context.Context,
+	device *device.Client,
+	build artifacts.Build,
+	rpcClient **sl4f.Client,
+) error {
 	log.Printf("Starting OTA test cycle. Time out in %s", c.cycleTimeout)
 
 	startTime := time.Now()
 	ctx, cancel := context.WithDeadline(ctx, startTime.Add(c.cycleTimeout))
 	defer cancel()
 
-	outputDir, cleanup, err := c.archiveConfig.OutputDir()
+	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get output directory: %s", err)
-	}
-	defer cleanup()
-
-	repo, err := c.getUpgradeRepository(ctx, outputDir)
-	if err != nil {
-		return fmt.Errorf("failed to get upgrade repository: %s", err)
+		return fmt.Errorf("error getting repository: %w", err)
 	}
 
 	// Install version N on the device if it is not already on that version.
@@ -139,71 +149,103 @@ func doTestOTAs(ctx context.Context, device *device.Client, rpcClient **sl4f.Cli
 	return nil
 }
 
-func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error) {
-	log.Printf("Starting to pave device. Time out in %s", c.paveTimeout)
+func initializeDevice(
+	ctx context.Context,
+	device *device.Client,
+	build artifacts.Build,
+) (*sl4f.Client, error) {
+	log.Printf("Initializing device")
 
 	startTime := time.Now()
 	ctx, cancel := context.WithDeadline(ctx, startTime.Add(c.paveTimeout))
 	defer cancel()
 
-	outputDir, cleanup, err := c.archiveConfig.OutputDir()
-	if err != nil {
-		return nil, err
-	}
-	defer cleanup()
-
-	downgradePaver, err := c.getDowngradePaver(ctx, outputDir)
-	if err != nil {
-		return nil, fmt.Errorf("error getting downgrade paver: %s", err)
-	}
-
-	downgradeRepo, err := c.getDowngradeRepository(ctx, outputDir)
+	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error etting downgrade repository: %s", err)
 	}
 
-	log.Printf("starting pave")
-
-	expectedSystemImageMerkle, err := downgradeRepo.LookupUpdateSystemImageMerkle()
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return nil, fmt.Errorf("error extracting expected system image merkle: %s", err)
+		return nil, fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
-	// Reboot the device into recovery and pave it.
-	if err := rebootToRecovery(ctx, device, downgradeRepo); err != nil {
-		return nil, fmt.Errorf("failed to reboot to recovery: %s", err)
+	if build != nil {
+		if err := paveDevice(ctx, device, build); err != nil {
+			return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
+		}
 	}
 
-	if err = downgradePaver.Pave(ctx, c.deviceConfig.DeviceName); err != nil {
-		return nil, fmt.Errorf("device failed to pave: %s", err)
+	// Creating a sl4f.Client requires knowing the build currently running
+	// on the device, which not all test cases know during start. Store the
+	// one true client here, and pass around pointers to the various
+	// functions that may use it or device.Client to interact with the
+	// target. All OTA attempts must first Close and nil out an existing
+	// rpcClient and replace it with a new one after reboot. The final
+	// rpcClient, if present, will be closed by the defer here.
+	var rpcClient *sl4f.Client
+	var expectedConfig *sl4f.Configuration
+	if build != nil {
+		rpcClient, err = device.StartRpcSession(ctx, repo)
+		if err != nil {
+			return nil, fmt.Errorf("unable to connect to sl4f after pave: %w", err)
+		}
+
+		// We always boot into the A partition after a pave.
+		config := sl4f.ConfigurationA
+		expectedConfig = &config
 	}
 
-	// Reconnect to the device.
-	if err = device.Reconnect(ctx); err != nil {
-		return nil, fmt.Errorf("device failed to connect: %s", err)
-	}
-
-	rpcClient, err := device.StartRpcSession(ctx, downgradeRepo)
-	if err != nil {
-		return nil, fmt.Errorf("unable to connect to sl4f after pave: %s", err)
-	}
-
-	// We always boot into the A partition after a pave.
-	expectedConfig := sl4f.ConfigurationA
-
-	if err := validateDevice(ctx, device, rpcClient, downgradeRepo, expectedSystemImageMerkle, &expectedConfig, true); err != nil {
+	if err := validateDevice(ctx, device, rpcClient, repo, expectedSystemImageMerkle, expectedConfig, true); err != nil {
 		rpcClient.Close()
-		return nil, err
+		return nil, fmt.Errorf("failed to validate during initialization: %w", err)
 	}
 
-	log.Printf("paving successful in %s", time.Now().Sub(startTime))
+	log.Printf("initialization successful in %s", time.Now().Sub(startTime))
 
 	return rpcClient, nil
 }
 
-func rebootToRecovery(ctx context.Context, device *device.Client, repo *packages.Repository) error {
+func paveDevice(
+	ctx context.Context,
+	device *device.Client,
+	build artifacts.Build,
+) error {
+	log.Printf("Starting to pave device")
+	startTime := time.Now()
+
+	paver, err := build.GetPaver(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting downgrade paver: %s", err)
+	}
+
+	// Reboot the device into recovery and pave it.
+	if err := rebootToRecovery(ctx, device, build); err != nil {
+		return fmt.Errorf("failed to reboot to recovery: %s", err)
+	}
+
+	if err = paver.Pave(ctx, c.deviceConfig.DeviceName); err != nil {
+		return fmt.Errorf("device failed to pave: %s", err)
+	}
+
+	// Reconnect to the device.
+	if err = device.Reconnect(ctx); err != nil {
+		return fmt.Errorf("device failed to connect: %s", err)
+	}
+
+	log.Printf("paving successful in %s", time.Now().Sub(startTime))
+
+	return nil
+}
+
+func rebootToRecovery(ctx context.Context, device *device.Client, build artifacts.Build) error {
 	if !c.otaToRecovery {
 		return device.RebootToRecovery(ctx)
+	}
+
+	repo, err := build.GetPackageRepository(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get repository: %w", err)
 	}
 
 	if err := device.DownloadOTA(ctx, repo, "fuchsia-pkg://fuchsia.com/update-to-zedboot/0"); err != nil {
@@ -395,14 +437,15 @@ func isDeviceUpToDate(ctx context.Context, device *device.Client, rpcClient *sl4
 	return expectedSystemImageMerkle == remoteSystemImageMerkle, nil
 }
 
-func determineTargetConfig(ctx context.Context, rpcClient *sl4f.Client) (*sl4f.Configuration, error) {
+func determineActiveConfig(ctx context.Context, rpcClient *sl4f.Client) (*sl4f.Configuration, error) {
 	if rpcClient == nil {
 		log.Printf("sl4f not running, cannot determine current active partition")
 		return nil, nil
 	}
+
 	activeConfig, err := rpcClient.PaverQueryActiveConfiguration(ctx)
 	if err == sl4f.ErrNotSupported {
-		log.Printf("device does not support ABR")
+		log.Printf("device does not support querying the active configuration")
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -410,8 +453,21 @@ func determineTargetConfig(ctx context.Context, rpcClient *sl4f.Client) (*sl4f.C
 
 	log.Printf("device booted to slot %s", activeConfig)
 
+	return &activeConfig, nil
+}
+
+func determineTargetConfig(ctx context.Context, rpcClient *sl4f.Client) (*sl4f.Configuration, error) {
+	activeConfig, err := determineActiveConfig(ctx, rpcClient)
+	if err != nil {
+		return nil, fmt.Errorf("could not determine target config when querying active config: %w", err)
+	}
+
+	if activeConfig == nil {
+		return nil, nil
+	}
+
 	var targetConfig sl4f.Configuration
-	if activeConfig == sl4f.ConfigurationA {
+	if *activeConfig == sl4f.ConfigurationA {
 		targetConfig = sl4f.ConfigurationB
 	} else {
 		targetConfig = sl4f.ConfigurationA

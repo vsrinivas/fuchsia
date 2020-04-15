@@ -11,7 +11,9 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
+	"fuchsia.googlesource.com/host_target_testing/artifacts"
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
 )
@@ -52,30 +54,35 @@ func TestReboot(t *testing.T) {
 	}
 	defer device.Close()
 
-	if err := paveDevice(ctx, device, outputDir); err != nil {
+	build, err := c.getBuild(ctx, outputDir)
+	if err != nil {
+		log.Fatalf("failed to get downgrade build: %v", err)
+	}
+
+	if err := initializeDevice(ctx, device, build); err != nil {
 		t.Fatalf("paving failed: %s", err)
 	}
 
-	testReboot(t, ctx, device, outputDir)
+	testReboot(ctx, device, build)
 }
 
-func testReboot(t *testing.T, ctx context.Context, device *device.Client, outputDir string) {
+func testReboot(ctx context.Context, device *device.Client, build artifacts.Build) {
 	for i := 1; i <= c.cycleCount; i++ {
 		log.Printf("Reboot Attempt %d", i)
 
-		if err := doTestReboot(ctx, device, outputDir); err != nil {
-			t.Fatalf("OTA Cycle %d timed out: %s", i, err)
+		if err := doTestReboot(ctx, device, build); err != nil {
+			log.Fatalf("OTA Cycle %d timed out: %s", i, err)
 		}
 	}
 }
 
-func doTestReboot(ctx context.Context, device *device.Client, outputDir string) error {
+func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Build) error {
 	ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
 	defer cancel()
 
-	repo, err := c.getRepository(ctx, outputDir)
+	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get repository: %w", err)
 	}
 
 	rpcClient, err := device.StartRpcSession(ctx, repo)
@@ -119,35 +126,37 @@ func doTestReboot(ctx context.Context, device *device.Client, outputDir string) 
 	return validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig)
 }
 
-func paveDevice(ctx context.Context, device *device.Client, outputDir string) error {
+func initializeDevice(
+	ctx context.Context,
+	device *device.Client,
+	build artifacts.Build,
+) error {
+	log.Printf("Initializing device")
+
 	ctx, cancel := context.WithTimeout(ctx, c.paveTimeout)
 	defer cancel()
 
-	if !c.shouldRepaveDevice() {
-		return nil
-	}
-
-	repo, err := c.getRepository(ctx, outputDir)
+	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
 		return err
 	}
 
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return fmt.Errorf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
 	// Only pave if the device is not running the expected version.
 	upToDate, err := isDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to check if up to date during initialization: %w", err)
 	}
 	if upToDate {
 		log.Printf("device already up to date")
 		return nil
 	}
 
-	paver, err := c.getPaver(ctx, outputDir)
+	paver, err := build.GetPaver(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get paver: %s", err)
 	}
@@ -170,7 +179,7 @@ func paveDevice(ctx context.Context, device *device.Client, outputDir string) er
 
 	rpcClient, err := device.StartRpcSession(ctx, repo)
 	if err != nil {
-		return fmt.Errorf("unable to connect to sl4f: %s", err)
+		return fmt.Errorf("unable to connect to sl4f: %w", err)
 	}
 	defer rpcClient.Close()
 
@@ -188,7 +197,32 @@ func paveDevice(ctx context.Context, device *device.Client, outputDir string) er
 		return err
 	}
 
-	log.Printf("paving successful")
+	return nil
+}
+
+func paveDevice(ctx context.Context, device *device.Client, build artifacts.Build) error {
+	log.Printf("paving device")
+	startTime := time.Now()
+
+	paver, err := build.GetPaver(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting downgrade paver: %s", err)
+	}
+
+	if err := device.RebootToRecovery(ctx); err != nil {
+		return fmt.Errorf("failed to reboot to recovery: %s", err)
+	}
+
+	if err = paver.Pave(ctx, c.deviceConfig.DeviceName); err != nil {
+		return fmt.Errorf("device failed to pave: %s", err)
+	}
+
+	// Reconnect to the device.
+	if err := device.Reconnect(ctx); err != nil {
+		return fmt.Errorf("device failed to connect: %s", err)
+	}
+
+	log.Printf("paving successful in %s", time.Now().Sub(startTime))
 
 	return nil
 }

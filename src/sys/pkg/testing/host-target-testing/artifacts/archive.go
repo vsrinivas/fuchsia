@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"golang.org/x/crypto/ssh"
+
 	"fuchsia.googlesource.com/host_target_testing/util"
 )
 
@@ -39,7 +41,12 @@ func (a *Archive) GetBuilder(name string) *Builder {
 }
 
 // GetBuildByID looks up a build artifact by the given id.
-func (a *Archive) GetBuildByID(ctx context.Context, id string, dir string) (*Build, error) {
+func (a *Archive) GetBuildByID(
+	ctx context.Context,
+	id string,
+	dir string,
+	publicKey ssh.PublicKey,
+) (*ArchiveBuild, error) {
 	// Make sure the build exists.
 	args := []string{"ls", "-build", id}
 	stdout, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
@@ -51,7 +58,7 @@ func (a *Archive) GetBuildByID(ctx context.Context, id string, dir string) (*Bui
 		return nil, fmt.Errorf("artifacts failed: %s", err)
 	}
 
-	return &Build{ID: id, archive: a, dir: dir}, nil
+	return &ArchiveBuild{id: id, archive: a, dir: dir, sshPublicKey: publicKey}, nil
 }
 
 // Download an artifact from the build id `buildID` named `src` and write it

@@ -9,12 +9,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/artifacts"
-	"fuchsia.googlesource.com/host_target_testing/packages"
-	"fuchsia.googlesource.com/host_target_testing/paver"
 
 	systemTestConfig "fuchsia.googlesource.com/system_tests/config"
 )
@@ -93,34 +90,11 @@ func (c *config) getBuildID(ctx context.Context) (string, error) {
 	return c.buildID, nil
 }
 
-func (c *config) getRepository(ctx context.Context, dir string) (*packages.Repository, error) {
-	buildID, err := c.getBuildID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if buildID != "" {
-		build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir)
-		if err != nil {
-			return nil, err
-		}
-
-		return build.GetPackageRepository(ctx)
-	}
-
-	if c.fuchsiaBuildDir != "" {
-		return packages.NewRepository(filepath.Join(c.fuchsiaBuildDir, "amber-files"))
-	}
-
-	return nil, fmt.Errorf("repository not specified")
-}
-
-func (c *config) getPaver(ctx context.Context, dir string) (*paver.Paver, error) {
+func (c *config) getBuild(ctx context.Context, dir string) (artifacts.Build, error) {
 	sshPrivateKey, err := c.deviceConfig.SSHPrivateKey()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get ssh key: %v", err)
 	}
-	sshPublicKey := sshPrivateKey.PublicKey()
 
 	buildID, err := c.getBuildID(ctx)
 	if err != nil {
@@ -128,21 +102,12 @@ func (c *config) getPaver(ctx context.Context, dir string) (*paver.Paver, error)
 	}
 
 	if buildID != "" {
-		build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir)
-		if err != nil {
-			return nil, err
-		}
-
-		return build.GetPaver(ctx, sshPublicKey)
+		return c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir, sshPrivateKey.PublicKey())
 	}
 
 	if c.fuchsiaBuildDir != "" {
-		return paver.NewPaver(
-				filepath.Join(c.fuchsiaBuildDir, "pave-zedboot.sh"),
-				filepath.Join(c.fuchsiaBuildDir, "pave.sh"),
-				sshPublicKey),
-			nil
+		return artifacts.NewFuchsiaDirBuild(c.fuchsiaBuildDir, sshPrivateKey.PublicKey()), nil
 	}
 
-	return nil, fmt.Errorf("paver not specified")
+	return nil, fmt.Errorf("build not specified")
 }

@@ -9,12 +9,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/artifacts"
-	"fuchsia.googlesource.com/host_target_testing/packages"
-	"fuchsia.googlesource.com/host_target_testing/paver"
 
 	systemTestConfig "fuchsia.googlesource.com/system_tests/config"
 )
@@ -86,10 +83,6 @@ func (c *config) validate() error {
 	return nil
 }
 
-func (c *config) shouldRepaveDevice() bool {
-	return c.downgradeBuildID != "" || c.downgradeBuilderName != "" || c.downgradeFuchsiaBuildDir != ""
-}
-
 func (c *config) getDowngradeBuilder() (*artifacts.Builder, error) {
 	if c.downgradeBuilderName == "" {
 		return nil, fmt.Errorf("downgrade builder not specified")
@@ -112,6 +105,29 @@ func (c *config) getDowngradeBuildID(ctx context.Context) (string, error) {
 	}
 
 	return c.downgradeBuildID, nil
+}
+
+func (c *config) getDowngradeBuild(ctx context.Context, dir string) (artifacts.Build, error) {
+	sshPrivateKey, err := c.deviceConfig.SSHPrivateKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ssh key: %v", err)
+	}
+
+	buildID, err := c.getDowngradeBuildID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if buildID != "" {
+		return c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir, sshPrivateKey.PublicKey())
+	}
+
+	if c.downgradeFuchsiaBuildDir != "" {
+		return artifacts.NewFuchsiaDirBuild(c.downgradeFuchsiaBuildDir, sshPrivateKey.PublicKey()), nil
+	}
+
+	// the downgrade build isn't required, so don't err if we can't create one.
+	return nil, nil
 }
 
 func (c *config) getUpgradeBuilder() (*artifacts.Builder, error) {
@@ -138,78 +154,19 @@ func (c *config) getUpgradeBuildID(ctx context.Context) (string, error) {
 	return c.upgradeBuildID, nil
 }
 
-func (c *config) getDowngradeRepository(ctx context.Context, dir string) (*packages.Repository, error) {
-	buildID, err := c.getDowngradeBuildID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if buildID != "" {
-		build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir)
-		if err != nil {
-			return nil, err
-		}
-
-		return build.GetPackageRepository(ctx)
-	}
-
-	if c.downgradeFuchsiaBuildDir != "" {
-		return packages.NewRepository(filepath.Join(c.downgradeFuchsiaBuildDir, "amber-files"))
-	}
-
-	return nil, fmt.Errorf("downgrade repository not specified")
-}
-
-func (c *config) getUpgradeRepository(ctx context.Context, dir string) (*packages.Repository, error) {
+func (c *config) getUpgradeBuild(ctx context.Context, dir string) (artifacts.Build, error) {
 	buildID, err := c.getUpgradeBuildID(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if buildID != "" {
-		build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir)
-		if err != nil {
-			return nil, err
-		}
-
-		return build.GetPackageRepository(ctx)
+		return c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir, nil)
 	}
 
 	if c.upgradeFuchsiaBuildDir != "" {
-		return packages.NewRepository(filepath.Join(c.upgradeFuchsiaBuildDir, "amber-files"))
+		return artifacts.NewFuchsiaDirBuild(c.upgradeFuchsiaBuildDir, nil), nil
 	}
 
-	return nil, fmt.Errorf("upgrade repository not specified")
-}
-
-func (c *config) getDowngradePaver(ctx context.Context, dir string) (*paver.Paver, error) {
-	sshPrivateKey, err := c.deviceConfig.SSHPrivateKey()
-	if err != nil {
-		return nil, err
-	}
-	sshPublicKey := sshPrivateKey.PublicKey()
-
-	buildID, err := c.getDowngradeBuildID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if buildID != "" {
-		build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir)
-		if err != nil {
-			return nil, err
-		}
-
-		return build.GetPaver(ctx, sshPublicKey)
-	}
-
-	if c.downgradeFuchsiaBuildDir != "" {
-		return paver.NewPaver(
-				filepath.Join(c.downgradeFuchsiaBuildDir, "pave-zedboot.sh"),
-				filepath.Join(c.downgradeFuchsiaBuildDir, "pave.sh"),
-				sshPublicKey),
-			nil
-	}
-
-	return nil, fmt.Errorf("downgrade paver not specified")
+	return nil, nil
 }

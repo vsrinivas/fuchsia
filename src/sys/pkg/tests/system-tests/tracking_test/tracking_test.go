@@ -131,7 +131,7 @@ func testTrackingOTAAttempt(
 	}
 	defer cleanup()
 
-	build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, outputDir)
+	build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, outputDir, nil)
 	if err != nil {
 		return fmt.Errorf("failed to find build %s: %s", buildID, err)
 	}
@@ -171,14 +171,19 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 	}
 	defer cleanup()
 
-	downgradePaver, err := c.getDowngradePaver(ctx, outputDir)
+	downgradeBuild, err := c.getDowngradeBuild(ctx, outputDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get downgrade build: %w", err)
+	}
+
+	downgradePaver, err := downgradeBuild.GetPaver(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting downgrade paver: %s", err)
 	}
 
-	downgradeRepo, err := c.getDowngradeRepository(ctx, outputDir)
+	downgradeRepo, err := downgradeBuild.GetPackageRepository(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error etting downgrade repository: %s", err)
+		return nil, fmt.Errorf("error getting downgrade repository: %w", err)
 	}
 
 	log.Printf("starting pave")
