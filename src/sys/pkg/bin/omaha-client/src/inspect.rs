@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod bounded_node;
+
 use crate::fidl::State;
 use chrono::{DateTime, Utc};
 use fuchsia_inspect::{Node, Property, StringProperty};
