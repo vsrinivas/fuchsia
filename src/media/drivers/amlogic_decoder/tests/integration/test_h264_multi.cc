@@ -397,6 +397,87 @@ class TestH264Multi {
     video->ClearDecoderInstance();
     video.reset();
   }
+
+  static void DecodeWithEos(const char* input_filename,
+                            uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH], const char* filename,
+                            bool early_eos) {
+    fxl::LogSettings settings;
+    settings.min_log_level = -10;
+    fxl::SetLogSettings(settings);
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+    TestFrameAllocator frame_allocator(video.get());
+
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
+    H264TestFrameDataProvider frame_data_provider;
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      video->SetDefaultInstance(
+          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider),
+          /*hevc=*/false);
+      frame_allocator.set_decoder(video->video_decoder());
+    }
+    // Don't use parser, because we need to be able to save and restore the read
+    // and write pointers, which can't be done if the parser is using them as
+    // well.
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, 1024 * PAGE_SIZE,
+                                                   /*is_secure=*/false));
+    uint32_t frame_count = 0;
+    std::promise<void> wait_valid;
+
+    frame_allocator.SetEosHandler([&wait_valid] { wait_valid.set_value(); });
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      frame_allocator.SetFrameReadyNotifier(
+          [&video, &frame_count, filename](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DLOG("Got frame %d\n", frame_count);
+            EXPECT_EQ(320u, frame->coded_width);
+            EXPECT_EQ(320u, frame->display_width);
+            EXPECT_EQ(192u, frame->coded_height);
+            EXPECT_EQ(180u, frame->display_height);
+            (void)filename;
+#if DUMP_VIDEO_TO_FILE
+            DumpVideoFrameToFile(frame.get(), filename);
+#endif
+            video->AssertVideoDecoderLockHeld();
+            video->video_decoder()->ReturnFrame(frame);
+          });
+
+      // Initialize must happen after InitializeStreamBuffer or else it may misparse the SPS.
+      EXPECT_EQ(ZX_OK, video->video_decoder()->Initialize());
+    }
+
+    auto input_h264 = TestSupport::LoadFirmwareFile(input_filename);
+    ASSERT_NE(nullptr, input_h264);
+    video->core()->InitializeDirectInput();
+    auto nal_units = SplitNalUnits(input_h264->ptr, input_h264->size);
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      frame_data_provider.AppendFrameData(std::move(nal_units));
+      auto multi_decoder = static_cast<H264MultiDecoder*>(video->video_decoder());
+      if (early_eos) {
+        multi_decoder->QueueInputEos();
+      }
+      multi_decoder->ReceivedNewInput();
+    }
+    auto future = wait_valid.get_future();
+    if (!early_eos) {
+      EXPECT_EQ(std::future_status::timeout, future.wait_for(std::chrono::seconds(2)));
+      EXPECT_EQ(28u, frame_count);
+
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      auto* multi_decoder = static_cast<H264MultiDecoder*>(video->video_decoder());
+      multi_decoder->QueueInputEos();
+    }
+    EXPECT_EQ(std::future_status::ready, future.wait_for(std::chrono::seconds(10)));
+
+    EXPECT_EQ(30u, frame_count);
+
+    video->ClearDecoderInstance();
+    video.reset();
+  }
 };
 
 TEST(H264Multi, DecodeBear) {
@@ -414,3 +495,13 @@ TEST(H264Multi, InitializeTwice) { TestH264Multi::TestInitializeTwice(); }
 TEST(H264Multi, DecodeMultiInstance) { TestH264Multi::DecodeMultiInstance(); }
 
 TEST(H264Multi, DecodeChangeConfig) { TestH264Multi::DecodeChangeConfig(); }
+
+TEST(H264Multi, DecodeWithEarlyEos) {
+  TestH264Multi::DecodeWithEos("video_test_data/bear.h264", bear_h264_hashes,
+                               "/tmp/bearmultih264.yuv", /*early_eos=*/true);
+}
+
+TEST(H264Multi, DecodeWithLateEos) {
+  TestH264Multi::DecodeWithEos("video_test_data/bear.h264", bear_h264_hashes,
+                               "/tmp/bearmultih264.yuv", /*early_eos=*/false);
+}

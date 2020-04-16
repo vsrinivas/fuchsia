@@ -726,6 +726,7 @@ void H264MultiDecoder::HandlePicDataDone() {
   owner_->core()->StopDecoding();
 
   currently_decoding_ = false;
+  PropagatePotentialEos();
   if (pending_config_change_) {
     StartConfigChange();
   } else {
@@ -945,6 +946,30 @@ void H264MultiDecoder::OnFatalError() {
 
 void H264MultiDecoder::ReceivedNewInput() { PumpOrReschedule(); }
 
+void H264MultiDecoder::QueueInputEos() {
+  ZX_DEBUG_ASSERT(!input_eos_queued_);
+  input_eos_queued_ = true;
+  PropagatePotentialEos();
+}
+
+void H264MultiDecoder::PropagatePotentialEos() {
+  ZX_DEBUG_ASSERT(!in_pump_decoder_);
+  if (!input_eos_queued_ || sent_output_eos_to_client_)
+    return;
+  if (current_decoder_buffer_ || frame_data_provider_->HasMoreInputData())
+    return;
+  if (!media_decoder_->Flush()) {
+    DECODE_ERROR("Flush failed");
+    return;
+  }
+  // Wait so we can be sure that OnEos happens after all existing frames are output.
+  // HandlePicDataDone will call this method again once decoding finally finishes.
+  if (currently_decoding_)
+    return;
+  sent_output_eos_to_client_ = true;
+  client_->OnEos();
+}
+
 void H264MultiDecoder::StartConfigChange() {
   ZX_DEBUG_ASSERT(pending_config_change_);
   // We shouldn't try to run this if decoding is currently ongoing, since the interrupt handlers are
@@ -1005,6 +1030,7 @@ void H264MultiDecoder::PumpDecoder() {
       auto next_decoder_buffer = frame_data_provider_->ReadMoreInputData(this);
       if (next_decoder_buffer.data.empty()) {
         DLOG("Not decoding because decoder ran out of inputs, state %d", static_cast<int>(state_));
+        PropagatePotentialEos();
         owner_->TryToReschedule();
         return;
       }

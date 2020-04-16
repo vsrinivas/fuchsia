@@ -82,6 +82,9 @@ class H264MultiDecoder : public VideoDecoder {
 
   zx_status_t InitializeBuffers();
 
+  // Signal that a the end of a stream has been reached. This will flush all frames after decoding
+  // all existing frames.
+  void QueueInputEos();
   void ReceivedNewInput();
   void FlushFrames();
   void DumpStatus();
@@ -122,9 +125,12 @@ class H264MultiDecoder : public VideoDecoder {
   void StartConfigChange();
   // Output all the frames in frames_to_output.
   void OutputReadyFrames();
+  void PropagatePotentialEos();
 
   FrameDataProvider* frame_data_provider_;
   bool fatal_error_ = false;
+  bool input_eos_queued_ = false;
+  bool sent_output_eos_to_client_ = false;
   std::unique_ptr<media::H264Decoder> media_decoder_;
   std::unique_ptr<media::DecoderBuffer> current_decoder_buffer_;
 

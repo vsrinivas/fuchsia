@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_TEST_BASIC_CLIENT_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_TEST_BASIC_CLIENT_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_BASIC_CLIENT_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_BASIC_CLIENT_H_
 
 #include "video_decoder.h"
 
@@ -17,8 +17,14 @@ class TestBasicClient : public VideoDecoder::Client {
 
   virtual ~TestBasicClient() = default;
 
-  void OnError() override { ZX_ASSERT(error_handler_); error_handler_(); }
-  void OnEos() override { ZX_ASSERT_MSG(false, "Not implemented"); }
+  void OnError() override {
+    ZX_ASSERT(error_handler_);
+    error_handler_();
+  }
+  void OnEos() override {
+    ZX_ASSERT(eos_handler_);
+    eos_handler_();
+  }
 
   bool IsOutputReady() override {
     ZX_ASSERT_MSG(false, "Not implemented");
@@ -48,10 +54,12 @@ class TestBasicClient : public VideoDecoder::Client {
   }
 
   void SetErrorHandler(fit::closure error_handler) { error_handler_ = std::move(error_handler); }
+  void SetEosHandler(fit::closure eos_handler) { eos_handler_ = std::move(eos_handler); }
 
  private:
   FrameReadyNotifier frame_ready_notifier_;
   fit::closure error_handler_;
+  fit::closure eos_handler_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_TEST_BASIC_CLIENT_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_BASIC_CLIENT_H_
