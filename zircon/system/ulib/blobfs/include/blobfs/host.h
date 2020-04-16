@@ -37,7 +37,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
-class FileSizeRecorder;
+class JsonRecorder;
 
 namespace blobfs {
 
@@ -254,10 +254,10 @@ zx_status_t blobfs_preprocess(int data_fd, bool compress, MerkleInfo* out_info);
 
 // blobfs_add_blob may be called by multiple threads to gain concurrent
 // merkle tree generation. No other methods are thread safe.
-zx_status_t blobfs_add_blob(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd);
+zx_status_t blobfs_add_blob(Blobfs* bs, JsonRecorder* json_recorder, int data_fd);
 
 // Identical to blobfs_add_blob, but uses a precomputed Merkle Tree and digest.
-zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd,
+zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, JsonRecorder* json_recorder, int data_fd,
                                         const MerkleInfo& info);
 
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,

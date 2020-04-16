@@ -15,7 +15,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <zircon/types.h>
-#include <fs-host/file_size_recorder.h>
+#include <fs-host/json_recorder.h>
 
 // The "manifest" command is only being retained here for backwards compatibility.
 // TODO(planders): Once all clients have switched create/add with --manifest, remove this command.
@@ -39,7 +39,7 @@ enum class Option {
   kOffset,
   kLength,
   kCompress,
-  kSizes,
+  kJsonOutput,
   kHelp,
 };
 
@@ -136,7 +136,7 @@ class FsCreator {
   off_t GetLength() const { return length_; }
   bool ShouldCompress() const { return compress_; }
 
-  FileSizeRecorder* size_recorder() { return &size_recorder_; }
+  JsonRecorder* json_recorder() { return &json_recorder_; }
 
   fbl::unique_fd fd_;
 
@@ -165,5 +165,5 @@ class FsCreator {
   std::mutex depfile_lock_;
   fbl::unique_fd depfile_;
 
-  FileSizeRecorder size_recorder_;
+  JsonRecorder json_recorder_;
 };

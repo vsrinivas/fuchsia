@@ -336,7 +336,7 @@ compiled_action("blob.blk") {
   visibility = [ ":*" ]
   testonly = true
   deps = [ ":blob.manifest" ]
-  blob_size_list = "$root_build_dir/blob.sizes"
+  blob_size_list = "$root_build_dir/blobs.json"
   outputs = [
     blob_image_path,
     # This should be an output too, but the generate_fvm template assumes that all
@@ -348,7 +348,7 @@ compiled_action("blob.blk") {
   tool = "//zircon/tools/blobfs"
   args = [
     "--depfile",
-    "--sizes",
+    "--json-output",
     rebase_path(blob_size_list, root_build_dir),
   ]
   if (compress_blobs) {

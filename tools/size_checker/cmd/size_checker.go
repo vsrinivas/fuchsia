@@ -13,7 +13,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -43,6 +42,13 @@ type Blob struct {
 	hash string
 }
 
+type BlobFromSizes struct {
+	SourcePath string `json:"source_path"`
+	Merkle     string `json:"merkle"`
+	Bytes      int    `json:"bytes"`
+	Size       int    `json:"size"`
+}
+
 type BlobFromJSON struct {
 	Merkle     string `json:"merkle"`
 	Path       string `json:"path"`
@@ -51,7 +57,7 @@ type BlobFromJSON struct {
 
 const (
 	MetaFar    = "meta.far"
-	BlobSizes  = "blob.sizes"
+	BlobSizes  = "blobs.json"
 	BlobList   = "gen/build/images/blob.manifest.list"
 	BlobsJSON  = "blobs.json"
 	ConfigData = "config-data"
@@ -133,7 +139,7 @@ func formatSize(s int64) string {
 	return fmt.Sprintf("%.2f GiB", size)
 }
 
-// Extract all the packages from a given blob.manifest.list and blob.sizes.
+// Extract all the packages from a given blob.manifest.list and blobs.json.
 // It also returns a map containing all blobs, with the merkle root as the key.
 func extractPackages(buildDir, blobList, blobSize string) (blobMap map[string]*Blob, packages []string, err error) {
 	blobMap = make(map[string]*Blob)
@@ -209,34 +215,29 @@ func processManifest(
 	return packages
 }
 
-// Translates blob.sizes into a map, with the key as the merkle root and the value as the size of
+// Translates blobs.json into a map, with the key as the merkle root and the value as the size of
 // that blob.
-// We expect the format of the blob.sizes to be
-// `$MERKLE_ROOT=$SIZE_IN_BYTES`
-func processBlobSizes(src string) (m map[string]int64, err error) {
+func processBlobSizes(src string) (map[string]int64, error) {
 	f, err := os.Open(src)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	return processSizes(f), nil
+	return processSizes(f)
 }
 
-// Similar to processBlobSizes, except it doesn't throw an I/O error.
-func processSizes(r io.Reader) map[string]int64 {
-	m := map[string]int64{}
-
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		temp := strings.Split(scanner.Text(), "=")
-		sz, err := strconv.ParseInt(temp[1], 10, 64)
-		if err != nil {
-			log.Fatalf("bad input to ParseInt in blob sizes: %v: %v", temp[1], err)
-		}
-		m[temp[0]] = sz
+func processSizes(r io.Reader) (map[string]int64, error) {
+	blobs := []BlobFromSizes{}
+	if err := json.NewDecoder(r).Decode(&blobs); err != nil {
+		return nil, err
 	}
-	return m
+
+	m := map[string]int64{}
+	for _, b := range blobs {
+		m[b.Merkle] = int64(b.Size)
+	}
+	return m, nil
 }
 
 // Process the packages extracted from blob.manifest.list and process the blobs.json file to build a

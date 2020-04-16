@@ -171,13 +171,12 @@ class BlobStats {
   }
 
   Future addBlobSizes(String path) async {
-    var lines = await new File(pathJoin(buildDir.path, path)).readAsLines();
-    for (var line in lines) {
-      var parts = line.split("=");
-      var hash = parts[0];
-      var blob = blobsByHash[hash];
-      if (blob != null) {
-        blob.size = int.parse(parts[1]);
+    var blobs = json
+        .decode(await new File(pathJoin(buildDir.path, path)).readAsString());
+    for (var blob in blobs) {
+      var b = blobsByHash[blob["merkle"]];
+      if (b != null) {
+        b.size = blob["size"];
       }
     }
   }
@@ -507,7 +506,7 @@ Future main(List<String> args) async {
     prefix = "${argResults[image]}_";
   }
   await stats.addManifest("${prefix}obj/build/images", "blob.manifest");
-  await stats.addBlobSizes("${prefix}blob.sizes");
+  await stats.addBlobSizes("${prefix}blobs.json");
   await stats.computePackagesInParallel(Platform.numberOfProcessors);
   stats.computeStats();
   stats.printBlobs(40);

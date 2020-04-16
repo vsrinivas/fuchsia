@@ -47,16 +47,20 @@ func Test_processSizes(t *testing.T) {
 		expected map[string]int64
 	}{
 		{
-			"One Line", strings.NewReader("foo=0"), map[string]int64{"foo": 0},
+			"One Line", strings.NewReader(`[{"source_path":"","merkle": "foo","bytes":0,"size":0}]`), map[string]int64{"foo": 0},
 		},
 		{
-			"Two Lines", strings.NewReader("foo=1\nbar=2"), map[string]int64{"foo": 1, "bar": 2},
+			"Two Lines", strings.NewReader(`[{"source_path":"","merkle": "foo","bytes":0,"size":1},{"source_path":"","merkle": "bar","bytes":0,"size":2}]`), map[string]int64{"foo": 1, "bar": 2},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if m := processSizes(test.file); !reflect.DeepEqual(m, test.expected) {
+			m, err := processSizes(test.file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(m, test.expected) {
 				t.Fatalf("processSizes(%s) = %+v; expect %+v", test.file, m, test.expected)
 			}
 		})
@@ -392,13 +396,13 @@ func Test_processInput(t *testing.T) {
 		t.Fatalf("Failed to write blob list: %v", err)
 	}
 	blobListF.Close()
-	blobSizeRelPath := "blob.sizes"
+	blobSizeRelPath := "blobs.json"
 	blobSizeF, err := os.Create(path.Join(buildDir, blobSizeRelPath))
 	if err != nil {
 		t.Fatalf("Failed to create blob size file: %v", err)
 	}
 	const singleBlobSize = 4096
-	if _, err := blobSizeF.Write([]byte(fmt.Sprintf("deadbeef=%d\nabc123=%d\n", singleBlobSize, singleBlobSize))); err != nil {
+	if _, err := blobSizeF.Write([]byte(fmt.Sprintf(`[{"source_path":"","merkle":"deadbeef","bytes":0,"size":%d},{"source_path":"","merkle":"abc123","bytes":0,"size":%d}]\n`, singleBlobSize, singleBlobSize))); err != nil {
 		t.Fatalf("Failed to write blob sizes: %v", err)
 	}
 	blobSizeF.Close()

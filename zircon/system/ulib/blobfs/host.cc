@@ -122,7 +122,7 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
 
 // Given a buffer (and pre-computed merkle tree), add the buffer as a
 // blob in Blobfs.
-zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder,
+zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_recorder,
                                                const FileMapping& mapping, const MerkleInfo& info) {
   ZX_ASSERT(mapping.length() == info.length);
   const void* data;
@@ -177,9 +177,9 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* siz
   inode->extents[0].SetLength(static_cast<BlockCountType>(inode->block_count));
   inode->extent_count = 1;
 
-  if (size_recorder) {
-    size_recorder->AppendSizeInformation(info.digest.ToString().c_str(),
-                                         kBlobfsBlockSize * inode->block_count);
+  if (json_recorder) {
+    json_recorder->Append(info.path.c_str(), info.digest.ToString().c_str(),
+                          info.length, kBlobfsBlockSize * inode->block_count);
   }
 
   if ((status = bs->WriteData(inode, info.merkle.data(), data)) != ZX_OK) {
@@ -453,7 +453,7 @@ zx_status_t blobfs_preprocess(int data_fd, bool compress, MerkleInfo* out_info) 
   return status;
 }
 
-zx_status_t blobfs_add_blob(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd) {
+zx_status_t blobfs_add_blob(Blobfs* bs, JsonRecorder* json_recorder, int data_fd) {
   FileMapping mapping;
   zx_status_t status = mapping.Map(data_fd);
   if (status != ZX_OK) {
@@ -467,10 +467,10 @@ zx_status_t blobfs_add_blob(Blobfs* bs, FileSizeRecorder* size_recorder, int dat
     return status;
   }
 
-  return blobfs_add_mapped_blob_with_merkle(bs, size_recorder, mapping, info);
+  return blobfs_add_mapped_blob_with_merkle(bs, json_recorder, mapping, info);
 }
 
-zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd,
+zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, JsonRecorder* json_recorder, int data_fd,
                                         const MerkleInfo& info) {
   FileMapping mapping;
   zx_status_t status = mapping.Map(data_fd);
@@ -478,7 +478,7 @@ zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recor
     return status;
   }
 
-  return blobfs_add_mapped_blob_with_merkle(bs, size_recorder, mapping, info);
+  return blobfs_add_mapped_blob_with_merkle(bs, json_recorder, mapping, info);
 }
 
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,

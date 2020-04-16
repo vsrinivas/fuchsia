@@ -30,7 +30,7 @@ struct {
     {"length", Option::kLength, "[bytes]", "Remaining Length",
      "Length in bytes of minfs partition"},
     {"compress", Option::kCompress, "", nullptr, "Compress files before adding them to blobfs"},
-    {"sizes", Option::kSizes, "[file]", nullptr, "Record sizes of written entries to file"},
+    {"json-output", Option::kJsonOutput, "[file]", nullptr, "Record entries to a JSON file"},
     {"help", Option::kHelp, "", nullptr, "Display this message"},
 };
 
@@ -235,7 +235,7 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
     opts[index] = {nullptr, 0, nullptr, 0};
 
     int opt_index;
-    int c = getopt_long(argc, argv, "+dro:l:cs:h", opts, &opt_index);
+    int c = getopt_long(argc, argv, "+dro:l:cj:h", opts, &opt_index);
     if (c < 0) {
       break;
     }
@@ -263,10 +263,10 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
       case 'c':
         compress_ = true;
         break;
-      case 's': {
-        const char* const sizes_file = optarg;
-        if (!size_recorder_.OpenSizeFile(sizes_file)) {
-          fprintf(stderr, "error: cannot open '%s'\n", sizes_file);
+      case 'j': {
+        const char* const json_file = optarg;
+        if (!json_recorder_.OpenFile(json_file)) {
+          fprintf(stderr, "error: cannot open '%s'\n", json_file);
           return ZX_ERR_IO;
         }
         break;

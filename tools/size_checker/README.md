@@ -24,7 +24,7 @@ The test has many hardcoded dependencies, so you only need to pass in the build 
 It expects to find the following files in the output directory:
 
 ```
-blob.sizes
+blobs.json
 gen/build/images/blob.manifest.list
 size_checker.json
 ```

@@ -18,15 +18,15 @@ zx_library("fs-host") {
   sdk = "source"
   sdk_headers = [
     "fs-host/common.h",
-    "fs-host/file_size_recorder.h",
+    "fs-host/json_recorder.h",
   ]
   host = true
   sources = [
     "common.cc",
-    "file_size_recorder.cc",
+    "json_recorder.cc",
   ]
   public_deps = [
-    # <fs-host/file_size_recorder.h> has #include <lib/zircon-internal/thread_annotations.h>.
+    # <fs-host/json_recorder.h> has #include <lib/zircon-internal/thread_annotations.h>.
     "//zircon/public/lib/zircon-internal",
   ]
   deps = [ "//zircon/public/lib/fbl" ]

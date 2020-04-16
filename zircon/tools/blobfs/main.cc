@@ -19,7 +19,7 @@
 namespace {
 
 // Add the blob described by |info| on host to the |blobfs| blobfs store.
-zx_status_t AddBlob(blobfs::Blobfs* blobfs, FileSizeRecorder* size_recorder,
+zx_status_t AddBlob(blobfs::Blobfs* blobfs, JsonRecorder* json_recorder,
                     const blobfs::MerkleInfo& info) {
   const char* path = info.path.c_str();
   fbl::unique_fd data_fd(open(path, O_RDONLY, 0644));
@@ -28,7 +28,7 @@ zx_status_t AddBlob(blobfs::Blobfs* blobfs, FileSizeRecorder* size_recorder,
     return ZX_ERR_IO;
   }
   zx_status_t status =
-      blobfs::blobfs_add_blob_with_merkle(blobfs, size_recorder, data_fd.get(), info);
+      blobfs::blobfs_add_blob_with_merkle(blobfs, json_recorder, data_fd.get(), info);
   if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
     fprintf(stderr, "blobfs: Failed to add blob '%s': %d\n", path, status);
     return status;
@@ -69,7 +69,7 @@ bool BlobfsCreator::IsOptionValid(Option option) {
     case Option::kDepfile:
     case Option::kReadonly:
     case Option::kCompress:
-    case Option::kSizes:
+    case Option::kJsonOutput:
     case Option::kHelp:
       return true;
     default:
@@ -300,7 +300,7 @@ zx_status_t BlobfsCreator::Add() {
         mtx.unlock();
 
         zx_status_t res;
-        if ((res = AddBlob(blobfs.get(), size_recorder(), merkle_list_[i])) < 0) {
+        if ((res = AddBlob(blobfs.get(), json_recorder(), merkle_list_[i])) < 0) {
           mtx.lock();
           status = res;
           mtx.unlock();
