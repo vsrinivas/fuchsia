@@ -33,7 +33,7 @@ impl log::Log for Logger {
                 .unwrap_or(String::new()),
             record.args()
         );
-        println!("{}", msg);
+        eprintln!("{}", msg);
     }
 
     fn flush(&self) {}
@@ -43,7 +43,7 @@ static LOGGER: Logger = Logger;
 
 lazy_static::lazy_static! {
     static ref START_RESULT: Result<(), log::SetLoggerError> =
-        log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Error));
+        log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Info));
 }
 
 pub fn init() -> Result<(), Error> {

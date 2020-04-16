@@ -354,7 +354,7 @@ impl<Fmt: Format> DeframerWriter<Fmt> {
         let incoming = self.deframer.incoming.take();
         log::trace!("{} poll_write: {:?}", self.deframer.id, incoming);
         match incoming {
-            Incoming::Closed => Poll::Ready(Err(format_err!("Deframer closed"))),
+            Incoming::Closed => Poll::Ready(Err(format_err!("Deframer closed during write"))),
             Incoming::Parsing { unparsed: BVec(mut unparsed), waiting_read, timeout: _ } => {
                 unparsed.extend_from_slice(bytes);
                 self.deframer.incoming.set(deframe_step(
@@ -396,7 +396,7 @@ impl<Fmt: Format> DeframerReader<Fmt> {
         let incoming = self.deframer.incoming.take();
         log::trace!("{} poll_read: {:?}", self.deframer.id, incoming);
         match incoming {
-            Incoming::Closed => Poll::Ready(Err(format_err!("Deframer closed"))),
+            Incoming::Closed => Poll::Ready(Err(format_err!("Deframer closed during read"))),
             Incoming::Queuing {
                 unframed: Some(BVec(unframed)),
                 framed,

@@ -38,13 +38,13 @@ pub(crate) async fn follow<Hdl: 'static + Proxyable>(
         log::trace!("open_transfer got {:?}", r);
         match r {
             OpenedTransfer::Fused => {
-                log::info!("[PROXY] fused after follow {:?}", transfer_key);
+                log::trace!("[PROXY] fused after follow {:?}", transfer_key);
                 assert!(initiate_transfer.await.unwrap().is_dropped());
                 Ok(())
             }
             OpenedTransfer::Remote(new_writer, new_reader, handle) => {
                 let handle = Hdl::from_fidl_handle(handle)?;
-                log::info!(
+                log::trace!(
                     "[PROXY {:?}] spawn from {:?}:{:?} for follow {:?}",
                     handle,
                     new_writer.peer_node_id(),
@@ -105,7 +105,7 @@ pub(crate) async fn initiate<Hdl: 'static + Proxyable>(
             .await?;
 
             // Send the BeginTransfer.
-            log::info!("[PROXY {:?}] Send begin transfer {:?}", proxy.hdl().hdl(), transfer_key);
+            log::trace!("[PROXY {:?}] Send begin transfer {:?}", proxy.hdl().hdl(), transfer_key);
             stream_writer.send_begin_transfer(peer_node_id, transfer_key).await?;
 
             if let Some(stream_ref_sender) = stream_ref_sender {
@@ -127,7 +127,7 @@ pub(crate) async fn initiate<Hdl: 'static + Proxyable>(
                 stream_reader.expect_ack_transfer().await?;
             }
 
-            log::info!("[PROXY {:?}] Initiated transfer complete", proxy.hdl().hdl());
+            log::trace!("[PROXY {:?}] Initiated transfer complete", proxy.hdl().hdl());
             Ok(())
         },
     )
@@ -141,13 +141,17 @@ async fn drain_handle_to_stream<Hdl: 'static + Proxyable>(
 ) -> Result<(), Error> {
     let mut message = Default::default();
     loop {
-        match hdl.read(&mut message).await {
+        let read_result = hdl.read(&mut message).await;
+        log::trace!("[PROXY {:?}] Drain stream gets {:?}", hdl.hdl(), read_result);
+        match read_result {
             Ok(()) => stream_writer.send_data(&mut message).await?,
             Err(zx_status::Status::PEER_CLOSED) => break,
             Err(x) => return Err(x.into()),
         }
     }
-    Ok(stream_writer.send_end_transfer().await?)
+    stream_writer.send_end_transfer().await?;
+    log::trace!("[PROXY {:?}] Sent end transfer", hdl.hdl());
+    Ok(())
 }
 
 async fn flush_outgoing_messages<Hdl: 'static + Proxyable>(
@@ -187,7 +191,7 @@ async fn flush_outgoing_messages<Hdl: 'static + Proxyable>(
                 // handle. We use the quic endpoint to determine behavior (such that each end makes
                 // a consistent decision) - clients start a new stream to the target, servers await
                 // that stream, and then we just need to drain messages.
-                log::info!(
+                log::trace!(
                     "[PROXY {:?}] remote is also transferring with key {:?}; this is the {:?}",
                     proxy.hdl().hdl(),
                     new_transfer_key,

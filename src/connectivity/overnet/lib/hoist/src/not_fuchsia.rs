@@ -12,11 +12,11 @@ use {
     fuchsia_zircon_status as zx_status,
     futures::prelude::*,
     overnet_core::{
-        log_errors, new_deframer, new_framer, DeframerWriter, FrameType, FramerReader,
+        new_deframer, new_framer, wait_until, DeframerWriter, FrameType, FramerReader,
         LosslessBinary, NodeId, Router, RouterOptions,
     },
     parking_lot::Mutex,
-    std::{rc::Rc, sync::Arc},
+    std::{rc::Rc, sync::Arc, time::Instant},
     tokio::{io::AsyncRead, runtime::current_thread},
 };
 
@@ -110,36 +110,17 @@ async fn write_outgoing(
     }
 }
 
-/// Retry a future until it succeeds or retries run out.
-async fn retry_with_backoff<T, E, F>(
-    mut backoff: std::time::Duration,
-    mut remaining_retries: u8,
-    f: impl Fn() -> F,
-) -> Result<T, E>
-where
-    F: futures::Future<Output = Result<T, E>>,
-    E: std::fmt::Debug,
-{
-    while remaining_retries > 1 {
-        match f().await {
-            Ok(r) => return Ok(r),
-            Err(e) => {
-                log::warn!("Operation failed: {:?} -- retrying in {:?}", e, backoff);
-                std::thread::sleep(backoff);
-                backoff *= 2;
-                remaining_retries -= 1;
-            }
-        }
-    }
-    f().await
-}
-
-async fn run_overnet_prelude() -> Result<Rc<Router>, Error> {
-    let node_id = overnet_core::generate_node_id();
-    log::trace!("Hoist node id:  {}", node_id.0);
-
+async fn run_ascendd_connection(node: Rc<Router>) -> Result<(), Error> {
     let ascendd_path = std::env::var("ASCENDD").unwrap_or(DEFAULT_ASCENDD_PATH.to_string());
-    let connection_label = std::env::var("OVERNET_CONNECTION_LABEL").ok();
+    let mut connection_label = std::env::var("OVERNET_CONNECTION_LABEL").ok();
+    if connection_label.is_none() {
+        connection_label = std::env::current_exe()
+            .ok()
+            .map(|p| format!("exe:{} pid:{}", p.display(), std::process::id()));
+    }
+    if connection_label.is_none() {
+        connection_label = Some(format!("pid:{}", std::process::id()));
+    }
 
     log::trace!("Ascendd path: {}", ascendd_path);
     log::trace!("Overnet connection label: {:?}", connection_label);
@@ -150,51 +131,116 @@ async fn run_overnet_prelude() -> Result<Rc<Router>, Error> {
     let (mut framer, outgoing_reader) = new_framer(LosslessBinary, 4096);
     let (incoming_writer, mut deframer) = new_deframer(LosslessBinary);
 
-    spawn(log_errors(read_incoming(rx_bytes, incoming_writer), "Error reading"));
-    spawn(log_errors(write_outgoing(outgoing_reader, tx_bytes), "Error writing"));
+    let _ = futures::future::try_join3(
+        read_incoming(rx_bytes, incoming_writer),
+        write_outgoing(outgoing_reader, tx_bytes),
+        async move {
+            // Send first frame
+            let mut greeting = StreamSocketGreeting {
+                magic_string: Some(ASCENDD_CLIENT_CONNECTION_STRING.to_string()),
+                node_id: Some(fidl_fuchsia_overnet_protocol::NodeId { id: node.node_id().0 }),
+                connection_label,
+            };
+            let mut bytes = Vec::new();
+            let mut handles = Vec::new();
+            fidl::encoding::Encoder::encode(&mut bytes, &mut handles, &mut greeting)?;
+            assert_eq!(handles.len(), 0);
+            framer.write(FrameType::Overnet, bytes.as_slice()).await?;
 
-    // Send first frame
-    let mut greeting = StreamSocketGreeting {
-        magic_string: Some(ASCENDD_CLIENT_CONNECTION_STRING.to_string()),
-        node_id: Some(fidl_fuchsia_overnet_protocol::NodeId { id: node_id.0 }),
-        connection_label,
-    };
-    let mut bytes = Vec::new();
-    let mut handles = Vec::new();
-    fidl::encoding::Encoder::encode(&mut bytes, &mut handles, &mut greeting)?;
-    assert_eq!(handles.len(), 0);
-    framer.write(FrameType::Overnet, bytes.as_slice()).await?;
+            log::info!("Wait for greeting & first frame write");
+            let (frame_type, mut frame) = deframer.read().await?;
+            ensure!(frame_type == Some(FrameType::Overnet), "Expect Overnet frame as first frame");
 
-    log::trace!("Wait for greeting & first frame write");
-    let (frame_type, mut frame) = deframer.read().await?;
-    ensure!(frame_type == Some(FrameType::Overnet), "Expect Overnet frame as first frame");
+            let mut greeting = StreamSocketGreeting::empty();
+            // WARNING: Since we are decoding without a transaction header, we have to
+            // provide a context manually. This could cause problems in future FIDL wire
+            // format migrations, which are driven by header flags.
+            let context = fidl::encoding::Context {};
+            fidl::encoding::Decoder::decode_with_context(
+                &context,
+                frame.as_mut(),
+                &mut [],
+                &mut greeting,
+            )?;
 
-    let mut greeting = StreamSocketGreeting::empty();
-    // WARNING: Since we are decoding without a transaction header, we have to
-    // provide a context manually. This could cause problems in future FIDL wire
-    // format migrations, which are driven by header flags.
-    let context = fidl::encoding::Context {};
-    fidl::encoding::Decoder::decode_with_context(&context, frame.as_mut(), &mut [], &mut greeting)?;
+            log::info!("Got greeting: {:?}", greeting);
+            let ascendd_node_id = match greeting {
+                StreamSocketGreeting { magic_string: None, .. } => bail!(
+                    "Required magic string '{}' not present in greeting",
+                    ASCENDD_SERVER_CONNECTION_STRING
+                ),
+                StreamSocketGreeting { magic_string: Some(ref x), .. }
+                    if x != ASCENDD_SERVER_CONNECTION_STRING =>
+                {
+                    bail!(
+                        "Expected magic string '{}' in greeting, got '{}'",
+                        ASCENDD_SERVER_CONNECTION_STRING,
+                        x
+                    )
+                }
+                StreamSocketGreeting { node_id: None, .. } => bail!("No node id in greeting"),
+                StreamSocketGreeting { node_id: Some(n), .. } => n.id,
+            };
 
-    log::trace!("Got greeting: {:?}", greeting);
-    let ascendd_node_id = match greeting {
-        StreamSocketGreeting { magic_string: None, .. } => bail!(
-            "Required magic string '{}' not present in greeting",
-            ASCENDD_SERVER_CONNECTION_STRING
-        ),
-        StreamSocketGreeting { magic_string: Some(ref x), .. }
-            if x != ASCENDD_SERVER_CONNECTION_STRING =>
-        {
-            bail!(
-                "Expected magic string '{}' in greeting, got '{}'",
-                ASCENDD_SERVER_CONNECTION_STRING,
-                x
+            let link = node.new_link(ascendd_node_id.into()).await?;
+
+            let link_receiver = link.clone();
+            let _: ((), ()) = futures::future::try_join(
+                async move {
+                    loop {
+                        let (frame_type, mut frame) = deframer.read().await?;
+                        ensure!(
+                            frame_type == Some(FrameType::Overnet),
+                            "Should only see Overnet frames"
+                        );
+                        if let Err(e) = link_receiver.received_packet(frame.as_mut_slice()).await {
+                            log::warn!("Error receiving packet: {}", e);
+                        }
+                    }
+                },
+                async move {
+                    let mut buffer = [0u8; 2048];
+                    while let Some(n) = link.next_send(&mut buffer).await? {
+                        framer.write(FrameType::Overnet, &buffer[..n]).await?;
+                    }
+                    Ok::<_, Error>(())
+                },
             )
-        }
-        StreamSocketGreeting { node_id: None, .. } => bail!("No node id in greeting"),
-        StreamSocketGreeting { node_id: Some(n), .. } => n.id,
-    };
+            .await?;
+            Ok(())
+        },
+    )
+    .await?;
+    Ok(())
+}
 
+/// Retry a future until it succeeds or retries run out.
+async fn retry_with_backoff<E, F>(
+    mut backoff: std::time::Duration,
+    max_backoff: std::time::Duration,
+    f: impl Fn() -> F,
+) where
+    F: futures::Future<Output = Result<(), E>>,
+    E: std::fmt::Debug,
+{
+    loop {
+        match f().await {
+            Ok(()) => return,
+            Err(e) => {
+                log::warn!("Operation failed: {:?} -- retrying in {:?}", e, backoff);
+                wait_until(Instant::now() + backoff).await;
+                backoff = std::cmp::min(backoff * 2, max_backoff);
+            }
+        }
+    }
+}
+
+async fn run_overnet_inner(
+    rx: Arc<Mutex<futures::channel::mpsc::UnboundedReceiver<OvernetCommand>>>,
+) -> Result<(), Error> {
+    let mut rx = rx.lock();
+    let node_id = overnet_core::generate_node_id();
+    log::trace!("Hoist node id:  {}", node_id.0);
     let node = Router::new(
         RouterOptions::new()
             .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate)
@@ -202,42 +248,15 @@ async fn run_overnet_prelude() -> Result<Rc<Router>, Error> {
             .set_quic_server_key_file(hard_coded_server_key()?)
             .set_quic_server_cert_file(hard_coded_server_cert()?),
     )?;
-    let link = node.new_link(ascendd_node_id.into()).await?;
 
-    let link_receiver = link.clone();
-    spawn(log_errors(
-        async move {
-            loop {
-                let (frame_type, mut frame) = deframer.read().await?;
-                ensure!(frame_type == Some(FrameType::Overnet), "Should only see Overnet frames");
-                if let Err(e) = link_receiver.received_packet(frame.as_mut_slice()).await {
-                    log::warn!("Error receiving packet: {}", e);
-                }
-            }
-        },
-        "Error decoding frames",
-    ));
-
-    spawn(log_errors(
-        async move {
-            let mut buffer = [0u8; 2048];
-            while let Some(n) = link.next_send(&mut buffer).await? {
-                framer.write(FrameType::Overnet, &buffer[..n]).await?;
-            }
-            Ok(())
-        },
-        "Error sending frames",
-    ));
-
-    Ok(node)
-}
-
-async fn run_overnet_inner(
-    rx: Arc<Mutex<futures::channel::mpsc::UnboundedReceiver<OvernetCommand>>>,
-) -> Result<(), Error> {
-    let mut rx = rx.lock();
-    let node =
-        retry_with_backoff(std::time::Duration::from_millis(100), 5, run_overnet_prelude).await?;
+    {
+        let node = node.clone();
+        spawn(retry_with_backoff(
+            std::time::Duration::from_millis(100),
+            std::time::Duration::from_secs(3),
+            move || run_ascendd_connection(node.clone()),
+        ));
+    }
 
     // Run application loop
     loop {

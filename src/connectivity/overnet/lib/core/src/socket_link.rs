@@ -62,16 +62,13 @@ async fn run_socket_link(
     };
     let (mut framer, mut framer_read) = new_framer(make_format(), 4096);
     let (mut deframer_write, mut deframer) = new_deframer(make_format());
-    spawn(log_errors(
+    let _: ((), (), ()) = futures::future::try_join3(
         async move {
             loop {
                 let msg = framer_read.read().await?;
                 tx_bytes.write(&msg).await?;
             }
         },
-        "socket write failed",
-    ));
-    spawn(log_errors(
         async move {
             let mut buf = [0u8; 4096];
             loop {
@@ -79,75 +76,76 @@ async fn run_socket_link(
                 deframer_write.write(&buf[..n]).await?;
             }
         },
-        "socket read failed",
-    ));
-
-    let mut greeting = StreamSocketGreeting {
-        magic_string: Some(GREETING_STRING.to_string()),
-        node_id: Some(node_id.into()),
-        connection_label,
-    };
-    framer
-        .write(
-            FrameType::Overnet,
-            encode_fidl(&mut greeting).context("encoding greeting")?.as_slice(),
-        )
-        .await
-        .context("queue greeting")?;
-    log::trace!("[HS:{}] Wrote greeting: {:?}", handshake_id, greeting);
-
-    // Wait for first frame
-    let (frame_type, mut greeting_bytes) = deframer.read().await?;
-    if frame_type != Some(FrameType::Overnet) {
-        bail!("Expected Overnet frame, got {:?}", frame_type);
-    }
-    let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())
-        .context("decoding greeting")?;
-    log::trace!("[HS:{}] Got greeting: {:?}", handshake_id, greeting);
-    let node_id = match greeting {
-        StreamSocketGreeting { magic_string: None, .. } => {
-            return Err(anyhow::format_err!(
-                "Required magic string '{}' not present in greeting",
-                GREETING_STRING
-            ))
-        }
-        StreamSocketGreeting { magic_string: Some(ref x), .. } if x != GREETING_STRING => {
-            return Err(anyhow::format_err!(
-                "Expected magic string '{}' in greeting, got '{}'",
-                GREETING_STRING,
-                x
-            ))
-        }
-        StreamSocketGreeting { node_id: None, .. } => {
-            return Err(anyhow::format_err!("No node id in greeting"))
-        }
-        StreamSocketGreeting { node_id: Some(n), .. } => n.id,
-    };
-
-    log::trace!("[HS:{}] Handshake complete, creating link", handshake_id);
-    let link_sender = node.new_link(node_id.into()).await.context("creating link")?;
-    let link_receiver = link_sender.clone();
-
-    log::trace!("[HS:{}] Running link", handshake_id);
-    spawn(log_errors(
         async move {
-            loop {
-                let (frame_type, mut frame) = deframer.read().await?;
-                if frame_type != Some(FrameType::Overnet) {
-                    continue;
-                }
-                if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
-                    log::warn!("[HS:{}] Error reading packet: {:?}", handshake_id, err);
-                }
+            let mut greeting = StreamSocketGreeting {
+                magic_string: Some(GREETING_STRING.to_string()),
+                node_id: Some(node_id.into()),
+                connection_label,
+            };
+            framer
+                .write(
+                    FrameType::Overnet,
+                    encode_fidl(&mut greeting).context("encoding greeting")?.as_slice(),
+                )
+                .await
+                .context("queue greeting")?;
+            log::info!("[HS:{}] Wrote greeting: {:?}", handshake_id, greeting);
+            // Wait for first frame
+            let (frame_type, mut greeting_bytes) = deframer.read().await?;
+            if frame_type != Some(FrameType::Overnet) {
+                bail!("Expected Overnet frame, got {:?}", frame_type);
             }
+            let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())
+                .context("decoding greeting")?;
+            log::info!("[HS:{}] Got greeting: {:?}", handshake_id, greeting);
+            let node_id = match greeting {
+                StreamSocketGreeting { magic_string: None, .. } => {
+                    return Err(anyhow::format_err!(
+                        "Required magic string '{}' not present in greeting",
+                        GREETING_STRING
+                    ))
+                }
+                StreamSocketGreeting { magic_string: Some(ref x), .. } if x != GREETING_STRING => {
+                    return Err(anyhow::format_err!(
+                        "Expected magic string '{}' in greeting, got '{}'",
+                        GREETING_STRING,
+                        x
+                    ))
+                }
+                StreamSocketGreeting { node_id: None, .. } => {
+                    return Err(anyhow::format_err!("No node id in greeting"))
+                }
+                StreamSocketGreeting { node_id: Some(n), .. } => n.id,
+            };
+            log::info!("[HS:{}] Handshake complete, creating link", handshake_id);
+            let link_sender = node.new_link(node_id.into()).await.context("creating link")?;
+            let link_receiver = link_sender.clone();
+            log::info!("[HS:{}] Running link", handshake_id);
+            let _: ((), ()) = futures::future::try_join(
+                async move {
+                    loop {
+                        let (frame_type, mut frame) = deframer.read().await?;
+                        if frame_type != Some(FrameType::Overnet) {
+                            continue;
+                        }
+                        if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
+                            log::warn!("[HS:{}] Error reading packet: {:?}", handshake_id, err);
+                        }
+                    }
+                },
+                async move {
+                    let mut buf = [0u8; 4096];
+                    while let Some(n) = link_sender.next_send(&mut buf).await? {
+                        framer.write(FrameType::Overnet, &buf[..n]).await?;
+                    }
+                    Ok::<_, Error>(())
+                },
+            )
+            .await?;
+            Ok(())
         },
-        "socket link deframer failed",
-    ));
-
-    let mut buf = [0u8; 4096];
-    while let Some(n) = link_sender.next_send(&mut buf).await? {
-        framer.write(FrameType::Overnet, &buf[..n]).await?;
-    }
+    )
+    .await?;
 
     Ok(())
 }

@@ -119,8 +119,10 @@ pub(crate) fn spawn_main_loop<Hdl: 'static + Proxyable>(
                 async {
                     if !stream_reader.is_initiator() {
                         stream_reader.expect_hello().await?;
+                        log::trace!("[PROXY {:?}] got hello", proxy.hdl().hdl());
                     } else {
                         stream_writer.send_hello().await?;
+                        log::trace!("[PROXY {:?}] sent hello", proxy.hdl().hdl());
                     }
                     Ok::<(), Error>(())
                 },
@@ -132,7 +134,7 @@ pub(crate) fn spawn_main_loop<Hdl: 'static + Proxyable>(
                 },
             )
             .await?;
-            log::info!("[PROXY {:?}] entering main loop", proxy.hdl().hdl());
+            log::trace!("[PROXY {:?}] entering main loop", proxy.hdl().hdl());
             futures::future::try_join(
                 stream_to_handle(proxy.clone(), initiate_transfer, stream_reader, tx_join),
                 handle_to_stream(proxy, stream_writer, rx_join),
@@ -160,7 +162,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
         match r {
             Ok(()) => stream.send_data(&mut message).await?,
             Err(zx_status::Status::PEER_CLOSED) => {
-                log::info!("[PROXY {:?}] handle closed normally", proxy.hdl().hdl());
+                log::trace!("[PROXY {:?}] handle closed normally", proxy.hdl().hdl());
                 stream.send_shutdown(Ok(())).await?;
                 return Ok(());
             }
@@ -178,7 +180,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             stream_ref_sender,
             stream_reader,
         }) => {
-            log::info!("[PROXY {:?}] finish main loop and initiate transfer", proxy.hdl().hdl(),);
+            log::trace!("[PROXY {:?}] finish main loop and initiate transfer", proxy.hdl().hdl(),);
             xfer::initiate(
                 proxy,
                 paired_handle,
@@ -195,7 +197,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             transfer_key,
             stream_reader,
         }) => {
-            log::info!(
+            log::trace!(
                 "[PROXY {:?}] finish main loop and follow {:?}",
                 proxy.hdl().hdl(),
                 transfer_key
@@ -211,7 +213,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             .await
         }
         Ok(FinishProxyLoopAction::Shutdown { result, stream_reader }) => {
-            log::info!(
+            log::trace!(
                 "[PROXY {:?}] finish main loop and shutdown; result={:?}",
                 proxy.hdl().hdl(),
                 result
@@ -239,7 +241,9 @@ async fn drain<Hdl: 'static + Proxyable>(
     mut drain_stream: StreamReader<Hdl::Message>,
 ) -> Result<(), Error> {
     loop {
-        match drain_stream.next().await? {
+        let frame = drain_stream.next().await?;
+        log::trace!("[PROXY {:?}] drain gets {:?}", proxy.hdl().hdl(), frame);
+        match frame {
             Frame::Data(message) => proxy.write_to_handle(message).await?,
             Frame::EndTransfer => break,
             Frame::BeginTransfer(_, _) => bail!("BeginTransfer on drain stream"),
