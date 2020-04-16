@@ -2,22 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! fuchsia.IO UTIL-ity library
+//!
+//! This crate provides various helper functions for iteracting with
+//! `fidl_fuchsia_io::{DirectoryProxy, FileProxy, NodeProxy}` objects.
+//!
+//! Functions in the top-level module are deprecated. New uses of `io_util` should use the
+//! `directory`, `file`, or `node` modules instead.
+//!
+//! Functions that contain `in_namespace` in their name operate on absolute paths in the process's
+//! current namespace and utilize a blocking `fdio` call to open the proxy.
+
 use {
     anyhow::{format_err, Error},
-    fdio,
-    fidl::endpoints::Proxy,
-    fidl::endpoints::{create_proxy, ServerEnd},
+    fidl::endpoints::{create_proxy, Proxy, ServerEnd},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MAX_BUF, MODE_TYPE_DIRECTORY,
-        MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_TRUNCATE,
+        DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MODE_TYPE_DIRECTORY,
+        OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
     },
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     std::path::{Component, Path},
 };
+
+pub mod directory;
+pub mod file;
+pub mod node;
 
 // Reexported from fidl_fuchsia_io for convenience
 pub const OPEN_RIGHT_READABLE: u32 = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
 pub const OPEN_RIGHT_WRITABLE: u32 = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
+pub const OPEN_RIGHT_EXECUTABLE: u32 = fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE;
 
 /// open_node will return a NodeProxy opened to the node at the given path relative to the
 /// given directory, or return an error if no such node exists (or some other FIDL error was
@@ -28,17 +42,9 @@ pub fn open_node<'a>(
     flags: u32,
     mode: u32,
 ) -> Result<NodeProxy, Error> {
-    if path.is_absolute() {
-        return Err(format_err!("path must be relative"));
-    }
-    let path = path.to_str().ok_or(format_err!("path contains invalid UTF-8"))?;
-    if path.is_empty() {
-        return Err(format_err!("path must not be empty"));
-    }
-
-    let (new_node, server_end) = create_proxy()?;
-    dir.open(flags, mode, path, server_end)?;
-    Ok(new_node)
+    let path = check_path(path)?;
+    let node = directory::open_node_no_describe(dir, path, flags, mode)?;
+    Ok(node)
 }
 
 /// open_directory will open a NodeProxy at the given path relative to the given directory, and
@@ -48,7 +54,9 @@ pub fn open_directory<'a>(
     path: &'a Path,
     flags: u32,
 ) -> Result<DirectoryProxy, Error> {
-    node_to_directory(open_node(dir, path, flags | OPEN_FLAG_DIRECTORY, MODE_TYPE_DIRECTORY)?)
+    let path = check_path(path)?;
+    let node = directory::open_directory_no_describe(dir, path, flags)?;
+    Ok(node)
 }
 
 /// open_file will open a NodeProxy at the given path relative to the given directory, and convert
@@ -58,9 +66,14 @@ pub fn open_file<'a>(
     path: &'a Path,
     flags: u32,
 ) -> Result<FileProxy, Error> {
-    node_to_file(open_node(dir, path, flags, MODE_TYPE_FILE)?)
+    let path = check_path(path)?;
+    let node = directory::open_file_no_describe(dir, path, flags)?;
+    Ok(node)
 }
 
+/// # Panics
+///
+/// Panics if any path component of `path` is not a valid utf-8 encoded string.
 pub fn create_sub_directories(
     root_dir: &DirectoryProxy,
     path: &Path,
@@ -104,81 +117,58 @@ pub fn connect_in_namespace(
     server_chan: zx::Channel,
     flags: u32,
 ) -> Result<(), zx::Status> {
-    let namespace = fdio::Namespace::installed()?;
-    namespace.connect(path, flags, server_chan)?;
-    Ok(())
+    node::connect_in_namespace(path, flags, server_chan)
 }
 
 /// open_node_in_namespace will return a NodeProxy to the given path by using the default namespace
 /// stored in fdio. The path argument must be an absolute path.
 pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, Error> {
-    let (proxy_chan, server_end) = zx::Channel::create()
-        .map_err(|status| format_err!("zx::Channel::create error: {}", status))?;
-
-    connect_in_namespace(path, server_end, flags)?;
-
-    return Ok(NodeProxy::new(fasync::Channel::from_channel(proxy_chan)?));
+    let node = node::open_in_namespace(path, flags)?;
+    Ok(node)
 }
 
 /// open_directory_in_namespace will open a NodeProxy to the given path and convert it into a
 /// DirectoryProxy. The path argument must be an absolute path.
 pub fn open_directory_in_namespace(path: &str, flags: u32) -> Result<DirectoryProxy, Error> {
-    node_to_directory(open_node_in_namespace(path, flags | OPEN_FLAG_DIRECTORY)?)
+    let node = directory::open_in_namespace(path, flags)?;
+    Ok(node)
 }
 
 /// open_file_in_namespace will open a NodeProxy to the given path and convert it into a FileProxy.
 /// The path argument must be an absolute path.
 pub fn open_file_in_namespace(path: &str, flags: u32) -> Result<FileProxy, Error> {
-    node_to_file(open_node_in_namespace(path, flags)?)
+    let node = file::open_in_namespace(path, flags)?;
+    Ok(node)
 }
 
 pub async fn read_file_bytes(file: &FileProxy) -> Result<Vec<u8>, Error> {
-    let mut out = Vec::new();
-    loop {
-        let (status, mut bytes) = file.read(MAX_BUF).await.map_err(|e| Error::from(e))?;
-        zx::Status::ok(status).map_err(|s| format_err!("failed to read file: {}", s))?;
-
-        if bytes.is_empty() {
-            break;
-        }
-        out.append(&mut bytes);
-    }
-    Ok(out)
+    let bytes = file::read(file).await?;
+    Ok(bytes)
 }
 
 pub async fn read_file(file: &FileProxy) -> Result<String, Error> {
-    let bytes = read_file_bytes(file).await?;
-    let out = String::from_utf8(bytes).map_err(|e| Error::from(e))?;
-    Ok(out)
+    let string = file::read_to_string(file).await?;
+    Ok(string)
 }
 
 /// Write the given bytes into a file open for writing.
-pub async fn write_file_bytes(file: &FileProxy, mut data: &[u8]) -> Result<(), Error> {
-    while data.len() > 0 {
-        let (status, bytes_written) = file
-            .write(&data[..std::cmp::min(MAX_BUF as usize, data.len())])
-            .await
-            .map_err(|e| Error::from(e))?;
-        zx::Status::ok(status).map_err(|s| format_err!("failed to write file: {}", s))?;
-
-        data = &data[bytes_written as usize..];
-    }
+pub async fn write_file_bytes(file: &FileProxy, data: &[u8]) -> Result<(), Error> {
+    file::write(file, data).await?;
     Ok(())
 }
 
 /// Write the given string as UTF-8 bytes into a file open for writing.
 pub async fn write_file(file: &FileProxy, data: &str) -> Result<(), Error> {
-    write_file_bytes(file, data.as_bytes()).await
+    file::write(file, data).await?;
+    Ok(())
 }
 
 /// Write the given bytes into a file at `path`. The path must be an absolute path.
 /// * If the file already exists, replaces existing contents.
 /// * If the file does not exist, creates the file.
 pub async fn write_path_bytes(path: &str, data: &[u8]) -> Result<(), Error> {
-    let file =
-        open_file_in_namespace(path, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_TRUNCATE)
-            .map_err(|e| format_err!("failed to open file: {}", e))?;
-    write_file_bytes(&file, data).await.map_err(|e| format_err!("failed to write file: {}", e))
+    file::write_in_namespace(path, data).await?;
+    Ok(())
 }
 
 /// node_to_directory will convert the given NodeProxy into a DirectoryProxy. This is unsafe if the
@@ -198,9 +188,8 @@ pub fn node_to_file(node: NodeProxy) -> Result<FileProxy, Error> {
 /// clone_directory will create a clone of the given DirectoryProxy by calling its clone function.
 /// This function will not block.
 pub fn clone_directory(dir: &DirectoryProxy, flags: u32) -> Result<DirectoryProxy, Error> {
-    let (node_clone, server_end) = create_proxy()?;
-    dir.clone(flags, server_end)?;
-    node_to_directory(node_clone)
+    let node = directory::clone_no_describe(dir, Some(flags))?;
+    Ok(node)
 }
 
 /// canonicalize_path will remove a leading `/` if it exists, since it's always unnecessary and in
@@ -213,6 +202,19 @@ pub fn canonicalize_path(path: &str) -> &str {
         return &path[1..];
     }
     path
+}
+
+/// Verifies path is relative, utf-8, and non-empty.
+fn check_path<'a>(path: &'a Path) -> Result<&'a str, Error> {
+    if path.is_absolute() {
+        return Err(format_err!("path must be relative"));
+    }
+    let path = path.to_str().ok_or(format_err!("path contains invalid UTF-8"))?;
+    if path.is_empty() {
+        return Err(format_err!("path must not be empty"));
+    }
+
+    Ok(path)
 }
 
 #[cfg(test)]

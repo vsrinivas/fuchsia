@@ -7,8 +7,8 @@
 use {
     fidl_fuchsia_io::{
         MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
-        OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
+        OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
 };
@@ -45,6 +45,10 @@ pub fn new_connection_validate_flags(
 
     if flags & OPEN_FLAG_DIRECTORY != 0 {
         return Err(Status::NOT_DIR);
+    }
+
+    if flags & OPEN_FLAG_NOT_DIRECTORY != 0 {
+        flags &= !OPEN_FLAG_NOT_DIRECTORY;
     }
 
     // For files OPEN_FLAG_POSIX is just ignored, as it has meaning only for directories.

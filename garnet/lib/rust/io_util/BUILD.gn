@@ -15,6 +15,8 @@ rustc_library("io_util") {
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
@@ -28,6 +30,17 @@ rustc_library("io_util") {
 
 test_package("io_util_tests") {
   deps = [ ":io_util_test" ]
+
+  resources = [
+    {
+      path = "data/file"
+      dest = "file"
+    },
+    {
+      path = "data/file"
+      dest = "subdir/subdir-file"
+    },
+  ]
 
   tests = [
     {

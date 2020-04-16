@@ -589,25 +589,23 @@ mod tests {
             let (launcher_proxy, _server_end) = create_proxy::<fproc::LauncherMarker>()?;
             let ns = setup_namespace(false, vec!["/pkg"])?;
 
-            assert_eq!(
-                configure_launcher(LauncherConfigArgs {
-                    bin_path: "bin/path",
-                    name: "name",
-                    args: None,
-                    ns: ns,
-                    job: None,
-                    handle_infos: None,
-                    name_infos: None,
-                    environs: None,
-                    launcher: &launcher_proxy,
-                })
-                .await,
-                Err(LaunchError::LoadingExecutable(
-                    "A FIDL client encountered an IO error writing a \
-                 request into a channel: PEER_CLOSED"
-                        .to_owned()
-                )),
-            );
+            match configure_launcher(LauncherConfigArgs {
+                bin_path: "bin/path",
+                name: "name",
+                args: None,
+                ns: ns,
+                job: None,
+                handle_infos: None,
+                name_infos: None,
+                environs: None,
+                launcher: &launcher_proxy,
+            })
+            .await
+            .expect_err("should error out")
+            {
+                LaunchError::LoadingExecutable(_) => {}
+                e => panic!("Expected LoadingExecutable error, got {:?}", e),
+            }
             Ok(())
         }
 
