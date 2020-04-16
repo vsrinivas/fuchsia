@@ -73,11 +73,13 @@ bool FuchsiaFileSystem::GetDirectoryContents(DetachedPath path,
   }
   // Remove the current directory string from the result.
   auto it = std::find(dir_contents->begin(), dir_contents->end(), convert::ToString(kCurrentPath));
-  // TODO(fxb/XXX): this should never happen, revert to a DCHECK once bug is fixed.
-  if (it == dir_contents->end()) {
-    return false;
+  if (it != dir_contents->end()) {
+    dir_contents->erase(it);
+  } else {
+    // NOTE(https://fxbug.dev/50008): if the directory has been removed concurrently, POSIX mandates
+    // an empty list of contents, not even containing the dot directory.
+    LEDGER_DCHECK(dir_contents->empty());
   }
-  dir_contents->erase(it);
   return true;
 }
 
