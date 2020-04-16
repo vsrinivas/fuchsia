@@ -152,7 +152,7 @@ bool SuspendedRegAccessTest() {
   while (true) {
     zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
     ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_OK);
-    ASSERT_TRUE(wait_thread_suspended(self_proc, thread, port));
+    ASSERT_TRUE(wait_thread_state(self_proc, thread, port, ZX_THREAD_SUSPENDED));
 
     read_inferior_gregs(thread, &regs);
     test_reg = regs.REG_ACCESS_TEST_REG;
@@ -160,8 +160,10 @@ bool SuspendedRegAccessTest() {
     if (test_reg == reg_access_initial_value)
       break;  // Keep thread suspended.
 
-    // Resume and try again.
+    // Resume and try again. Wait for the thread to actually resume before trying again to avoid
+    // race conditions on notifications about thread state transitions.
     zx_handle_close(suspend_token);
+    ASSERT_TRUE(wait_thread_state(self_proc, thread, port, ZX_THREAD_RUNNING));
   }
 
   uint64_t pc_value = extract_pc_reg(&regs);
@@ -323,8 +325,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
 
   zx_handle_t token;
   ASSERT_EQ(zx_task_suspend_token(thread, &token), ZX_OK);
-
-  ASSERT_TRUE(wait_thread_suspended(self_proc, thread, port));
+  ASSERT_TRUE(wait_thread_state(self_proc, thread, port, ZX_THREAD_SUSPENDED));
 
   zx_thread_state_general_regs_t regs;
   read_inferior_gregs(thread, &regs);

@@ -254,49 +254,39 @@ bool read_packet(zx_handle_t port, zx_port_packet_t* packet) {
   END_HELPER;
 }
 
-// Wait for the thread to suspend
-// We could get a thread exit report from a previous test, so
-// we need to handle that, but no other exceptions are expected.
-//
-// The thread is assumed to be wait-async'd on |port|. While we could just
-// wait on the |thread| for the appropriate signal, the signal will also be
-// sent to |port| which our caller would then have to deal with. Keep things
-// simpler by doing all waiting via |port|. It also makes us exercise doing
-// things this way, which is generally what debuggers will do.
-
-bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t port) {
+bool wait_thread_state(zx_handle_t proc, zx_handle_t thread, zx_handle_t port,
+                       zx_signals_t wait_until) {
   BEGIN_HELPER;
 
   zx_koid_t tid = tu_get_koid(thread);
 
+  // The input state we're looking for must be one of the signals we're waiting for. More signals
+  // can be added later if needed.
   zx_signals_t signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
-  tu_object_wait_async(thread, port, signals);
+  ASSERT_TRUE(signals & wait_until);
 
+  tu_object_wait_async(thread, port, signals);
   while (true) {
     zx_port_packet_t packet;
     zx_status_t status = zx_port_wait(port, zx_deadline_after(ZX_SEC(1)), &packet);
     if (status == ZX_ERR_TIMED_OUT) {
-      // This shouldn't really happen unless the system is really loaded.
-      // Just flag it and try again. The watchdog will catch failures.
-      unittest_printf("%s: timed out???\n", __func__);
+      // This shouldn't really happen unless the system is really loaded. Just flag it and try
+      // again. The watchdog will catch failures.
+      unittest_printf("%s timed out waiting for thread state.\n", __func__);
       continue;
     }
     ASSERT_EQ(status, ZX_OK);
     if (packet.key == tid) {
-      if (packet.signal.observed & ZX_THREAD_SUSPENDED)
+      if (packet.signal.observed & wait_until)
         break;
-      ASSERT_TRUE(packet.signal.observed & ZX_THREAD_RUNNING);
       tu_object_wait_async(thread, port, signals);
     }
 
-    // No action necessary if the packet was an exit exception from a
-    // previous test, the channel has already been closed so we just needed
-    // to pop the packet out of the port.
+    // No action necessary if the packet was an exit exception from a previous test, the channel has
+    // already been closed so we just needed to pop the packet out of the port.
   }
 
-  // Verify thread is suspended
   zx_info_thread_t info = tu_thread_get_info(thread);
-  ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
   ASSERT_EQ(info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_NONE);
 
   END_HELPER;

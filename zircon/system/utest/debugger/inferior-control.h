@@ -85,7 +85,15 @@ bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior);
 
 bool read_packet(zx_handle_t port, zx_port_packet_t* packet);
 
-bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t port);
+// Blocks using the given port until the process/thread is in the given state. This function can
+// wait for TERMINATED, RUNNING, or SUSPENDED states. The thread is assumed to be wait-async'd on
+// the given port. Returns true on success.
+//
+// For code that transitions between states multiple times, be sure to wait for each transition
+// before doing the next one. Otherwise there can be races in delivering the notifications on the
+// port and the actual thread state.
+bool wait_thread_state(zx_handle_t proc, zx_handle_t thread, zx_handle_t port,
+                       zx_signals_t wait_until);
 
 bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info,
                            zx::exception exception);
