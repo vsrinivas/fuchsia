@@ -88,6 +88,7 @@ impl ClientImpl {
     }
 
     async fn process_request(
+        setting_type: SettingType,
         controller: &BoxedController,
         request: SettingRequest,
     ) -> SettingResponseResult {
@@ -95,7 +96,7 @@ impl ClientImpl {
         match result {
             Some(response_result) => response_result,
             None => Err(SwitchboardError::UnimplementedRequest {
-                setting_type: SettingType::Intl,
+                setting_type: setting_type,
                 request: request,
             }),
         }
@@ -119,13 +120,15 @@ impl ClientImpl {
             // Process MessageHub requests
             fasync::spawn(async move {
                 while let Ok(event) = receptor.watch().await {
+                    let setting_type = client.lock().await.setting_type;
                     match event {
                         MessageEvent::Message(
                             Payload::Command(Command::HandleRequest(request)),
                             client,
-                        ) => {
-                            reply(client, Self::process_request(&controller, request.clone()).await)
-                        }
+                        ) => reply(
+                            client,
+                            Self::process_request(setting_type, &controller, request.clone()).await,
+                        ),
                         MessageEvent::Message(Payload::Command(Command::ChangeState(state)), _) => {
                             match state {
                                 State::Listen => {

@@ -7,7 +7,7 @@ use {
     crate::internal::handler::{
         create_message_hub as create_setting_handler_message_hub, Address, Payload,
     },
-    crate::message::base::{Audience, MessengerType},
+    crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::registry::base::{Command, ContextBuilder, HandlerId, State},
     crate::registry::device_storage::testing::*,
     crate::registry::setting_handler::{
@@ -16,7 +16,8 @@ use {
         BoxedController, ClientImpl, ClientProxy, ControllerError, GenerateController, Handler,
     },
     crate::switchboard::base::{
-        DoNotDisturbInfo, SettingRequest, SettingResponseResult, SettingType,
+        get_all_setting_types, DoNotDisturbInfo, SettingRequest, SettingResponseResult,
+        SettingType, SwitchboardError,
     },
     crate::{Environment, EnvironmentBuilder},
     anyhow::Error,
@@ -235,4 +236,71 @@ async fn test_event_propagation() {
         .ack();
 
     assert_eq!(Some(State::EndListen), event_rx.next().await);
+}
+
+/// Empty controller that handles no commands or events.
+/// TODO(fxb/50217): Clean up test controllers.
+struct StubController {}
+
+impl StubController {
+    pub fn create_generator() -> GenerateController {
+        Box::new(move |_| {
+            Box::pin(async move { Ok(Box::new(StubController {}) as BoxedController) })
+        })
+    }
+}
+
+#[async_trait]
+impl controller::Handle for StubController {
+    async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+        return None;
+    }
+
+    async fn change_state(&mut self, _: State) {}
+}
+
+/// Ensures that the correct unimplemented error is returned when the controller
+/// doesn't properly handle a given command.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_unimplemented_error() {
+    for setting_type in get_all_setting_types() {
+        let factory = create_setting_handler_message_hub();
+        let handler_id: HandlerId = 3;
+
+        let (messenger, _) =
+            factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+        let (handler_messenger, handler_receptor) =
+            factory.create(MessengerType::Addressable(Address::Handler(handler_id))).await.unwrap();
+        let context = ContextBuilder::new(
+            setting_type,
+            InMemoryStorageFactory::create(),
+            handler_messenger,
+            handler_receptor,
+        )
+        .build();
+
+        assert!(ClientImpl::create(context, StubController::create_generator()).await.is_ok());
+
+        let mut receptor = messenger
+            .message(
+                Payload::Command(Command::HandleRequest(SettingRequest::Get)),
+                Audience::Address(Address::Handler(handler_id)),
+            )
+            .send();
+
+        while let Ok(message_event) = receptor.watch().await {
+            if let MessageEvent::Message(incoming_payload, _) = message_event {
+                if let Payload::Result(Err(SwitchboardError::UnimplementedRequest {
+                    setting_type: incoming_type,
+                    request: _,
+                })) = incoming_payload
+                {
+                    assert_eq!(incoming_type, setting_type);
+                    return;
+                } else {
+                    panic!("should have received a result");
+                }
+            }
+        }
+    }
 }
