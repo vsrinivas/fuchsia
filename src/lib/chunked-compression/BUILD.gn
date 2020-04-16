@@ -13,7 +13,11 @@ source_set("chunked-compression") {
     "chunked-compressor.h",
     "chunked-decompressor.cc",
     "chunked-decompressor.h",
+    "compression-params.cc",
+    "compression-params.h",
     "status.h",
+    "streaming-chunked-compressor.cc",
+    "streaming-chunked-compressor.h",
   ]
   public_deps = [ "//zircon/public/lib/fbl" ]
   deps = [
@@ -37,6 +41,7 @@ test("chunked-compression-unittests") {
     "header-reader-test.cc",
     "header-writer-test.cc",
     "seek-table-test.cc",
+    "streaming-chunked-compressor-test.cc",
     "test-utils.cc",
     "test-utils.h",
   ]
