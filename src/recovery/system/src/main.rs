@@ -2,14 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context as _, Error};
+use anyhow::Error;
 use carnelian::{
     color::Color,
-    drawing::{FontDescription, FontFace, Paint},
-    measure_text, Canvas, IntSize, MappingPixelSink, PixelSink, Point, Rect, Size,
+    drawing::{FontFace, GlyphMap, Text},
+    make_message,
+    render::{
+        BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear,
+        RenderExt, Style,
+    },
+    App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Message,
+    Point, RenderOptions, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
 };
 use fuchsia_async as fasync;
-use fuchsia_framebuffer::{Config, FrameBuffer, FrameUsage, PixelFormat};
+use fuchsia_zircon::{AsHandleRef, Event, Signals};
 use futures::StreamExt;
 
 mod setup;
@@ -21,178 +27,213 @@ mod storage;
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
 
-struct RecoveryUI<'a, T: PixelSink> {
-    flusher: Box<dyn Flusher>,
+enum RecoveryMessages {
+    EventReceived,
+}
+
+struct RecoveryAppAssistant {
+    app_context: AppContext,
+}
+
+impl RecoveryAppAssistant {
+    pub fn new(app_context: &AppContext) -> Self {
+        Self { app_context: app_context.clone() }
+    }
+}
+
+impl AppAssistant for RecoveryAppAssistant {
+    fn setup(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn create_view_assistant_render(
+        &mut self,
+        view_key: ViewKey,
+    ) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(RecoveryViewAssistant::new(
+            &self.app_context,
+            view_key,
+            "Fuchsia System Recovery",
+            "Waiting...",
+        )?))
+    }
+
+    fn get_mode(&self) -> ViewMode {
+        ViewMode::Render(RenderOptions::default())
+    }
+}
+
+struct RecoveryViewAssistant<'a> {
     face: FontFace<'a>,
-    canvas: Canvas<T>,
-    config: Config,
-    text_size: u32,
+    bg_color: Color,
+    composition: Composition,
+    glyphs: GlyphMap,
+    heading: String,
+    heading_label: Option<Text>,
+    body: String,
+    body_label: Option<Text>,
 }
 
-trait Flusher {
-    fn flush(&mut self);
-}
+impl<'a> RecoveryViewAssistant<'a> {
+    fn new(
+        app_context: &AppContext,
+        view_key: ViewKey,
+        heading: &str,
+        body: &str,
+    ) -> Result<RecoveryViewAssistant<'a>, Error> {
+        let mut receiver = setup::start_server()?;
+        let local_app_context = app_context.clone();
+        let f = async move {
+            while let Some(_event) = receiver.next().await {
+                println!("recovery: received request");
+                local_app_context
+                    .queue_message(view_key, make_message(RecoveryMessages::EventReceived));
+            }
+        };
 
-struct FrameBufferFlusher {
-    framebuffer: FrameBuffer,
-    image_id: u64,
-}
+        fasync::spawn_local(f);
 
-impl<'a> Flusher for FrameBufferFlusher {
-    fn flush(&mut self) {
-        self.framebuffer.flush_frame(self.image_id).expect("flush frame");
+        let bg_color = Color { r: 255, g: 0, b: 255, a: 255 };
+        let composition = Composition::new(bg_color);
+        let face = FontFace::new(FONT_DATA)?;
+
+        Ok(RecoveryViewAssistant {
+            face,
+            bg_color,
+            composition,
+            glyphs: GlyphMap::new(),
+            heading: heading.to_string(),
+            heading_label: None,
+            body: body.to_string(),
+            body_label: None,
+        })
     }
 }
 
-impl<'a, T: PixelSink> RecoveryUI<'a, T> {
-    fn draw(&mut self, heading: &str, body: &str) {
-        let r = Rect::new(
-            Point::new(0.0, 0.0),
-            Size::new(self.config.width as f32, self.config.height as f32),
+impl ViewAssistant for RecoveryViewAssistant<'_> {
+    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn render(
+        &mut self,
+        render_context: &mut RenderContext,
+        ready_event: Event,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
+        let text_size = context.size.height / 12.0;
+
+        let fg_color = Color { r: 255, g: 255, b: 255, a: 255 };
+
+        self.heading_label = Some(Text::new(
+            render_context,
+            &self.heading,
+            text_size,
+            100,
+            &self.face,
+            &mut self.glyphs,
+        ));
+
+        let heading_label = self.heading_label.as_ref().expect("label");
+        let heading_label_size = heading_label.bounding_box.size;
+        let heading_label_offet = Point::new(
+            (context.size.width / 2.0) - (heading_label_size.width / 2.0),
+            (context.size.height / 4.0) - (heading_label_size.height / 2.0),
         );
 
-        let bg = Color { r: 255, g: 0, b: 255, a: 255 };
-        self.canvas.fill_rect(&r, bg);
+        let heading_label_offet = heading_label_offet.to_i32().to_vector();
 
-        let mut font_description =
-            FontDescription { baseline: 0, face: &mut self.face, size: self.text_size };
-        let size = measure_text(heading, &mut font_description);
-        let paint = Paint { fg: Color { r: 255, g: 255, b: 255, a: 255 }, bg: bg };
-        self.canvas.fill_text(
-            heading,
-            Point::new(
-                (self.config.width / 2) as f32 - (size.width / 2.0),
-                (self.config.height / 4) as f32 - (size.height / 2.0),
-            ),
-            &mut font_description,
-            &paint,
+        let heading_label_layer = Layer {
+            raster: heading_label.raster.clone().translate(heading_label_offet),
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(fg_color),
+                blend_mode: BlendMode::Over,
+            },
+        };
+
+        self.body_label = Some(Text::new(
+            render_context,
+            &self.body,
+            text_size,
+            100,
+            &self.face,
+            &mut self.glyphs,
+        ));
+
+        let body_label = self.body_label.as_ref().expect("body_label");
+        let body_label_size = body_label.bounding_box.size;
+        let body_label_offet = Point::new(
+            (context.size.width / 2.0) - (body_label_size.width / 2.0),
+            (context.size.height * 0.75) - (body_label_size.height / 2.0),
         );
 
-        let size = measure_text(body, &mut font_description);
+        let body_label_offet = body_label_offet.to_i32().to_vector();
 
-        self.canvas.fill_text(
-            body,
-            Point::new(
-                (self.config.width / 2) as f32 - (size.width / 2.0),
-                (self.config.height / 2) as f32 + (self.config.height / 4) as f32
-                    - (size.height / 2.0),
-            ),
-            &mut font_description,
-            &paint,
+        let body_label_layer = Layer {
+            raster: body_label.raster.clone().translate(body_label_offet),
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(fg_color),
+                blend_mode: BlendMode::Over,
+            },
+        };
+
+        self.composition.replace(
+            ..,
+            std::iter::once(heading_label_layer).chain(std::iter::once(body_label_layer)),
         );
-        self.flusher.flush();
+
+        let image = render_context.get_current_image(context);
+        let ext =
+            RenderExt { pre_clear: Some(PreClear { color: self.bg_color }), ..Default::default() };
+        render_context.render(&self.composition, None, image, &ext);
+        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        Ok(())
+    }
+
+    fn handle_message(&mut self, message: Message) {
+        if let Some(message) = message.downcast_ref::<RecoveryMessages>() {
+            match message {
+                RecoveryMessages::EventReceived => {
+                    self.body = "Got event".to_string();
+                }
+            }
+        }
     }
 }
 
-async fn run<'a>(ui: &'a mut RecoveryUI<'a, MappingPixelSink>) -> Result<(), Error> {
-    ui.draw("Fuchsia System Recovery", "Waiting...");
+fn make_app_assistant_fut(
+    app_context: &AppContext,
+) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
+    let f = async move {
+        let assistant = Box::new(RecoveryAppAssistant::new(app_context));
+        Ok::<AppAssistantPtr, Error>(assistant)
+    };
+    Box::pin(f)
+}
 
-    let mut receiver = setup::start_server()?;
-    while let Some(_event) = receiver.next().await {
-        println!("recovery: received request");
-        ui.draw("Fuchsia System Recovery", "Got event");
-    }
-
-    Ok(())
+pub fn make_app_assistant() -> AssistantCreatorFunc {
+    Box::new(make_app_assistant_fut)
 }
 
 fn main() -> Result<(), Error> {
     println!("recovery: started");
-
-    let mut executor = fasync::Executor::new().context("Failed to create executor")?;
-
-    executor.run_singlethreaded(async {
-        let mut fb = FrameBuffer::new(FrameUsage::Cpu, None, None)
-            .await
-            .context("Failed to create framebuffer")?;
-        let config = fb.get_config();
-        if config.format != PixelFormat::Argb8888
-            && config.format != PixelFormat::Rgb565
-            && config.format != PixelFormat::RgbX888
-        {
-            return Err(format_err!("Unsupported pixel format {:#?}", config.format));
-        }
-
-        let display_size = IntSize::new(config.width as i32, config.height as i32);
-
-        fb.allocate_frames(1, config.format).await?;
-        // The framebuffer library doesn't get a correct value for 'stride' until
-        // allocating the first frame. Calling get_config again to get accurate config
-        let config = fb.get_config();
-        fb.present_first_frame(None, true)?;
-
-        let face = FontFace::new(FONT_DATA).unwrap();
-
-        let image_id = fb.get_first_frame_id();
-        let frame = fb.get_frame_mut(image_id);
-
-        let canvas = Canvas::new(
-            display_size,
-            MappingPixelSink::new(&frame.mapping),
-            config.linear_stride_bytes() as u32,
-            config.pixel_size_bytes,
-            frame.image_id,
-            0,
-        );
-        let fbf = FrameBufferFlusher { framebuffer: fb, image_id };
-        let mut ui = RecoveryUI {
-            flusher: Box::new(fbf),
-            face: face,
-            canvas,
-            config,
-            text_size: config.height / 12,
-        };
-        run(&mut ui).await?;
-        Ok::<(), Error>(())
-    })?;
-
-    unreachable!();
+    App::run(make_app_assistant())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Flusher, RecoveryUI, FONT_DATA};
-    use carnelian::{drawing::FontFace, Canvas, IntSize, PixelSink};
-    use fuchsia_framebuffer::{Config, PixelFormat};
-
-    #[derive(Clone)]
-    struct TestPixelSink {}
-
-    impl PixelSink for TestPixelSink {
-        fn write_pixel_at_offset(&mut self, _offset: usize, _value: &[u8]) {}
-    }
-
-    struct TestFlusher {}
-    impl Flusher for TestFlusher {
-        fn flush(&mut self) {}
-    }
+    use super::make_app_assistant;
+    use carnelian::App;
 
     #[test]
-    fn test_draw() {
-        const WIDTH: i32 = 800;
-        const HEIGHT: i32 = 600;
-        let face = FontFace::new(FONT_DATA).unwrap();
-        let sink = TestPixelSink {};
-        let flusher = Box::new(TestFlusher {});
-        let config = Config {
-            display_id: 0,
-            width: WIDTH as u32,
-            height: HEIGHT as u32,
-            refresh_rate_e2: 6000,
-            linear_stride_bytes: (WIDTH * 4) as u32,
-            format: PixelFormat::Argb8888,
-            pixel_size_bytes: 4,
-        };
-        let canvas = Canvas::new(
-            IntSize::new(WIDTH, HEIGHT),
-            sink,
-            config.linear_stride_bytes() as u32,
-            config.pixel_size_bytes,
-            0,
-            0,
-        );
-
-        let mut ui = RecoveryUI { flusher: flusher, face: face, canvas, config, text_size: 24 };
-        ui.draw("Heading", "Body");
+    fn test_ui() -> std::result::Result<(), anyhow::Error> {
+        let assistant = make_app_assistant();
+        App::test(assistant)
     }
 }

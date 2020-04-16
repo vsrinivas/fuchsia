@@ -451,11 +451,14 @@ impl App {
     /// be used to create a single new view for testing. The test will run until the
     /// first update call, or until a five second timeout. The Result returned is the
     /// result of the test, an Ok(()) result means the test passed.
-    pub fn test(assistant: AppAssistantPtr) -> Result<(), Error> {
+    pub fn test(assistant_creator_func: AssistantCreatorFunc) -> Result<(), Error> {
         let mut executor = fasync::Executor::new().context("Error creating executor")?;
         let presenter = connect_to_service::<PresenterMarker>()?;
         let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
         let f = async {
+            let app_context = AppContext { sender: internal_sender.clone() };
+            let assistant_creator = assistant_creator_func(&app_context);
+            let assistant = assistant_creator.await?;
             let mut token = ViewTokenPair::new().context("ViewTokenPair::new")?;
             let mut app = App::new(Some(internal_sender));
             let mut frame_count = 0;

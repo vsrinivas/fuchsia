@@ -1,14 +1,25 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
     "program": {
         "binary": "test/system_recovery_bin_test"
     },
     "sandbox": {
         "dev": [
-            "class/block"
+            "class/block",
+            "class/display-controller"
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.sys.Environment"
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

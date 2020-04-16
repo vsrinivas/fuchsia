@@ -91,7 +91,7 @@ test_package("system_recovery_tests") {
   tests = [
     {
       name = "system_recovery_bin_test"
-      environments = basic_envs
+      environments = [ nuc_env ]
     },
   ]
 }

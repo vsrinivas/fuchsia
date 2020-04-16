@@ -33,7 +33,7 @@ test_package("recovery_integration_test") {
   tests = [
     {
       name = "recovery_integration_test"
-      environments = basic_envs
+      environments = [ nuc_env ]
     },
   ]
 }
