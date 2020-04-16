@@ -16,6 +16,7 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
 	"fuchsia.googlesource.com/system_tests/pave"
+	"fuchsia.googlesource.com/system_tests/script"
 )
 
 var c *config
@@ -123,7 +124,15 @@ func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Bu
 		return fmt.Errorf("unable to connect to sl4f: %s", err)
 	}
 
-	return validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig)
+	if err := validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig); err != nil {
+		return fmt.Errorf("failed to validate device: %s", err)
+	}
+
+	if err := script.RunScript(ctx, device, repo, &rpcClient, c.afterTestScript); err != nil {
+		return fmt.Errorf("failed to run after-test-script: %w", err)
+	}
+
+	return nil
 }
 
 func initializeDevice(
@@ -139,6 +148,10 @@ func initializeDevice(
 	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
 		return err
+	}
+
+	if err := script.RunScript(ctx, device, repo, nil, c.beforeInitScript); err != nil {
+		return fmt.Errorf("failed to run before-init-script: %w", err)
 	}
 
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
@@ -178,6 +191,10 @@ func initializeDevice(
 
 	if err := validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig); err != nil {
 		return err
+	}
+
+	if err := script.RunScript(ctx, device, repo, &rpcClient, c.afterInitScript); err != nil {
+		return fmt.Errorf("failed to run after-init-script: %w", err)
 	}
 
 	return nil

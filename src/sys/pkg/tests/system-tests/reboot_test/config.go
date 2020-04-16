@@ -17,16 +17,19 @@ import (
 )
 
 type config struct {
-	archiveConfig   *systemTestConfig.ArchiveConfig
-	deviceConfig    *systemTestConfig.DeviceConfig
-	otaToRecovery   bool
-	packagesPath    string
-	builderName     string
-	buildID         string
-	fuchsiaBuildDir string
-	paveTimeout     time.Duration
-	cycleCount      int
-	cycleTimeout    time.Duration
+	archiveConfig    *systemTestConfig.ArchiveConfig
+	deviceConfig     *systemTestConfig.DeviceConfig
+	otaToRecovery    bool
+	packagesPath     string
+	builderName      string
+	buildID          string
+	fuchsiaBuildDir  string
+	paveTimeout      time.Duration
+	cycleCount       int
+	cycleTimeout     time.Duration
+	beforeInitScript string
+	afterInitScript  string
+	afterTestScript  string
 }
 
 func newConfig(fs *flag.FlagSet) (*config, error) {
@@ -42,6 +45,9 @@ func newConfig(fs *flag.FlagSet) (*config, error) {
 	fs.BoolVar(&c.otaToRecovery, "ota-to-recovery", false, "downgrade with an OTA instead of rebooting to recovery")
 	fs.DurationVar(&c.paveTimeout, "pave-timeout", 5*time.Minute, "Err if a pave takes longer than this time (default 5 minutes)")
 	fs.DurationVar(&c.cycleTimeout, "cycle-timeout", 5*time.Minute, "Err if a test cycle takes longer than this time (default is 5 minutes)")
+	fs.StringVar(&c.beforeInitScript, "before-init-script", "", "Run this script before initializing device for testing")
+	fs.StringVar(&c.afterInitScript, "after-init-script", "", "Run this script after initializing device for testing")
+	fs.StringVar(&c.afterTestScript, "after-test-script", "", "Run this script after a test step")
 
 	return c, nil
 }
@@ -62,10 +68,6 @@ func (c *config) validate() error {
 	}
 
 	return nil
-}
-
-func (c *config) shouldRepaveDevice() bool {
-	return c.buildID != "" || c.builderName != "" || c.fuchsiaBuildDir != ""
 }
 
 func (c *config) getBuilder() (*artifacts.Builder, error) {

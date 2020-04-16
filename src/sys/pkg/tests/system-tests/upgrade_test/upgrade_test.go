@@ -18,6 +18,7 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
 	"fuchsia.googlesource.com/system_tests/pave"
+	"fuchsia.googlesource.com/system_tests/script"
 )
 
 var c *config
@@ -169,6 +170,10 @@ func initializeDevice(
 		return nil, fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
+	if err := script.RunScript(ctx, device, repo, nil, c.beforeInitScript); err != nil {
+		return nil, fmt.Errorf("failed to run before-init-script: %w", err)
+	}
+
 	if build != nil {
 		if err := pave.PaveDevice(ctx, device, build, c.otaToRecovery); err != nil {
 			return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
@@ -198,6 +203,10 @@ func initializeDevice(
 	if err := validateDevice(ctx, device, rpcClient, repo, expectedSystemImageMerkle, expectedConfig, true); err != nil {
 		rpcClient.Close()
 		return nil, fmt.Errorf("failed to validate during initialization: %w", err)
+	}
+
+	if err := script.RunScript(ctx, device, repo, &rpcClient, c.afterInitScript); err != nil {
+		return nil, fmt.Errorf("failed to run after-init-script: %w", err)
 	}
 
 	log.Printf("initialization successful in %s", time.Now().Sub(startTime))
@@ -261,6 +270,10 @@ func systemOTA(
 	}
 	if err := validateDevice(ctx, device, *rpcClient, repo, expectedSystemImageMerkle, expectedConfig, checkABR); err != nil {
 		return fmt.Errorf("failed to validate after OTA: %s", err)
+	}
+
+	if err := script.RunScript(ctx, device, repo, rpcClient, c.afterTestScript); err != nil {
+		return fmt.Errorf("failed to run test script after OTA: %w", err)
 	}
 
 	return nil
@@ -351,6 +364,11 @@ func otaToPackage(
 	if err := validateDevice(ctx, device, *rpcClient, repo, expectedSystemImageMerkle, expectedConfig, checkABR); err != nil {
 		return fmt.Errorf("failed to validate after OTA: %s", err)
 	}
+
+	if err := script.RunScript(ctx, device, repo, rpcClient, c.afterTestScript); err != nil {
+		return fmt.Errorf("failed to run test script after OTA: %w", err)
+	}
+
 	return nil
 }
 
