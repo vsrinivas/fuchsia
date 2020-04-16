@@ -8,6 +8,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
             "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider",

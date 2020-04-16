@@ -27,6 +27,12 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
     WEAVE_ERROR err = WEAVE_NO_ERROR;
     nl::Weave::WeaveMessageLayer::InitContext initContext;
 
+    err = ConfigurationMgr().Init();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "Configuration manager init failed: " << ErrorStr(err);
+      return err;
+    }
+
     err = system_layer_.Init(nullptr);
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "System layer init failed: " << ErrorStr(err);
@@ -84,6 +90,12 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
     err = FabricProvisioningSvr().Init();
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "FabricProvisioningSvr init failed: " << ErrorStr(err);
+      return err;
+    }
+
+    err = ConfigurationMgr().GetDeviceId(fabric_state_.LocalNodeId);
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "GetDeviceId failed " << ErrorStr(err);
       return err;
     }
 

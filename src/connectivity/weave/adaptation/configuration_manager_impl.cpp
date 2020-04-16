@@ -14,8 +14,14 @@
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.ipp>
 // clang-format on
 
+#include <fuchsia/factory/cpp/fidl.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/logger.h>
 #include <net/ethernet.h>
 #include <src/lib/fxl/logging.h>
+#include <src/lib/fsl/vmo/file.h>
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace nl {
 namespace Weave {
@@ -36,10 +42,13 @@ GroupKeyStoreImpl gGroupKeyStore;
 
 // Store path and keys for static device information.
 constexpr char kDeviceInfoStorePath[] = "/config/data/device_info.json";
+constexpr char kDeviceInfoConfigKey_DeviceId[] = "device-id";
+constexpr char kDeviceInfoConfigKey_DeviceIdPath[] = "device-id-path";
 constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
 constexpr char kDeviceInfoConfigKey_VendorId[] = "vendor-id";
-
+// Maximum number of chars in hex for a uint64_t
+constexpr int kWeaveDeviceIdMaxLength = 16+1;
 }  // unnamed namespace
 
 /* Singleton instance of the ConfigurationManager implementation object for the Fuchsia. */
@@ -66,6 +75,8 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
       << "Failed to connect to hwinfo device service.";
   FXL_CHECK(context_->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
       << "Failed to connect to weave factory data manager service.";
+  FXL_CHECK(context_->svc()->Connect(factory_store_provider_.NewRequest()) == ZX_OK)
+      << "Failed to connect to factory store";
 
   err = EnvironmentConfig::Init();
   if (err != WEAVE_NO_ERROR) {
@@ -73,12 +84,12 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
   }
 
   err = GetAndStoreHWInfo();
-  if (err != WEAVE_NO_ERROR) {
+  if (err != WEAVE_NO_ERROR && err != WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     return err;
   }
 
   err = ConfigurationManagerImpl::GetAndStorePairingCode();
-  if (err != WEAVE_NO_ERROR) {
+  if (err != WEAVE_NO_ERROR && err != WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     return err;
   }
 
@@ -145,6 +156,89 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetFirmwareRevision(char* buf, size_t buf
                                                            size_t& out_len) {
   return device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_FirmwareRevision, buf, buf_size,
                                           &out_len);
+}
+
+zx_status_t ConfigurationManagerImpl::ReadFactoryFile(const char* filename,
+                                                      char* output) {
+  zx_status_t status;
+  int weave_dir_fd;
+  status = fdio_fd_create(factory_directory_.Unbind().TakeChannel().release(), &weave_dir_fd);
+  if (status != ZX_OK || weave_dir_fd <= 0) {
+    FX_LOGS(ERROR) << "Failed to open factory store";
+    return status;
+  }
+
+  // Grab the fd of the corresponding file path and validate.
+  int weave_file = openat(weave_dir_fd, filename, O_RDONLY);
+  if (weave_file <= 0) {
+    FX_LOGS(ERROR) << "Failed to open " << filename << ": " << strerror(errno);
+    return ZX_ERR_IO;
+  }
+
+  // Copy the contents of the file into a large-enough string, then resize.
+  int size = read(weave_file, output, kWeaveDeviceIdMaxLength);
+  if (size <= 0) {
+    FX_LOGS(ERROR) << "Failed to read from file: " << strerror(errno);
+    close(weave_file);
+    return ZX_ERR_IO;
+  }
+
+  close(weave_file);
+  return status;
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::_GetDeviceId(uint64_t& device_id) {
+  WEAVE_ERROR err = ReadConfigValue(kConfigKey_MfrDeviceId, device_id);
+  if (err == WEAVE_NO_ERROR) {
+    return WEAVE_NO_ERROR;
+  }
+
+  err = device_info_->ReadConfigValue(kDeviceInfoConfigKey_DeviceId, &device_id);
+
+  if (err == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
+    // config data not found, lets check for a file path.
+    char path[PATH_MAX] = {'\0'};
+    size_t out_size;
+    err = device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_DeviceIdPath, path, sizeof(path),
+                                                  &out_size);
+    if (err == WEAVE_NO_ERROR) {
+      err = GetDeviceIdFromFactory(path, &device_id);
+      FXL_CHECK(err == WEAVE_NO_ERROR) << "Failed getting device id from factory at path: "<< path;
+      StoreManufacturerDeviceId(device_id);
+      return err;
+    }
+  }
+
+  return WEAVE_NO_ERROR;
+}
+
+zx_status_t ConfigurationManagerImpl::GetDeviceIdFromFactory(const char* path,
+                                                             uint64_t* factory_device_id) {
+  zx_status_t status;
+  char output[kWeaveDeviceIdMaxLength] = {'\0'};
+
+  FXL_CHECK(factory_store_provider_->GetFactoryStore(factory_directory_.NewRequest()) == ZX_OK)
+      << "Failed to get factory store";
+
+  status = ReadFactoryFile(path, output);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "ReadFactoryfile failed " << status;
+    return status;
+  }
+
+  if (output[0] == '\0') {
+    FX_LOGS(ERROR) << "Factory file output string is empty";
+    return ZX_ERR_IO;
+  }
+
+  *factory_device_id = strtoull(output, NULL, 16);
+
+  if (errno == ERANGE) {
+    FX_LOGS(ERROR) << "strtoull failed: " << strerror(errno);
+    return ZX_ERR_IO;
+  }
+
+  return ZX_OK;
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetPrimaryWiFiMACAddress(uint8_t* buf) {

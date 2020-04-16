@@ -9,6 +9,7 @@
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.h>
 // clang-format on
 
+#include <fuchsia/factory/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/weave/cpp/fidl.h>
 #include <fuchsia/wlan/device/service/cpp/fidl.h>
@@ -51,9 +52,9 @@ class ConfigurationManagerImpl final
   WEAVE_ERROR _GetProductId(uint16_t& product_id);
   WEAVE_ERROR _GetFirmwareRevision(char* buf, size_t buf_size, size_t& out_len);
   WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* buf);
+  WEAVE_ERROR _GetDeviceId(uint64_t& device_id);
 
   ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase* _GetGroupKeyStore(void);
-
   bool _CanFactoryReset(void);
   void _InitiateFactoryReset(void);
 
@@ -70,11 +71,16 @@ class ConfigurationManagerImpl final
 
   static ConfigurationManagerImpl sInstance;
 
+  zx_status_t ReadFactoryFile(const char* filename, char* output);
+  zx_status_t GetDeviceIdFromFactory(const char* path, uint64_t* factory_device_id);
+
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_;
   fuchsia::weave::FactoryDataManagerSyncPtr weave_factory_data_manager_;
   fuchsia::wlan::device::service::DeviceServiceSyncPtr wlan_device_service_;
   std::unique_ptr<Internal::WeaveConfigReader> device_info_;
+  fuchsia::factory::WeaveFactoryStoreProviderSyncPtr factory_store_provider_;
+  fuchsia::io::DirectorySyncPtr factory_directory_;
 
   WEAVE_ERROR GetAndStoreHWInfo();
   WEAVE_ERROR GetAndStorePairingCode();

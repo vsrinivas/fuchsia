@@ -34,11 +34,13 @@ openweave_adaptation_layer("adaptation") {
   deps = [ "//src/lib/syslog/cpp" ]
   public_configs = [ ":adaptation_config" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.factory",
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.weave",
     "//sdk/fidl/fuchsia.wlan.device.service",
     "//sdk/lib/sys/cpp",
     "//src/lib/files",
+    "//src/lib/fsl",
     "//src/lib/json_parser",
     "//third_party/modp_b64",
     "//third_party/openweave-core",

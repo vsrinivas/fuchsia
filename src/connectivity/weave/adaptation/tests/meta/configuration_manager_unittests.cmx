@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.FactoryItems"
+            ]
+         }
+    },
     "program": {
         "binary": "test/configuration_manager_unittests"
     },
@@ -8,8 +15,10 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
             "fuchsia.logger.LogSink",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.wlan.device.service.DeviceService"
         ]
