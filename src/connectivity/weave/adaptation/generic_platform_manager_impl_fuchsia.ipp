@@ -45,7 +45,7 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
-    err = fabric_state_.Init();
+    err = fabric_state_.Init(ConfigurationMgr().GetGroupKeyStore());
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "FabricState init failed: " << ErrorStr(err);
       return err;
