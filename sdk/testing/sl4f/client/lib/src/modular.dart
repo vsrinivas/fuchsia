@@ -35,7 +35,7 @@ class Modular {
 
   /// Kill Basemgr.
   ///
-  /// This is equivalent to sessionctl shutdown_basemgr.
+  /// This is equivalent to basemgr_launcher shutdown.
   Future<String> killBasemgr() async =>
       await _request('basemgr_facade.KillBasemgr');
 
