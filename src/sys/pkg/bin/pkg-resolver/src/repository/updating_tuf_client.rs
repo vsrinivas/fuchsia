@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_pkg_ext::MirrorConfig,
     fuchsia_async as fasync,
     fuchsia_hyper::HyperConnector,
-    fuchsia_inspect::{self as inspect},
+    fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_contrib::inspectable::InspectableDebugString,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
@@ -74,7 +74,28 @@ struct UpdatingTufClientInspectState {
     /// Count of the number of times this repository was successfully updated.
     updated_count: inspect_util::Counter,
 
+    /// Version of the active timestamp file, or 0 if unknown.
+    timestamp_version: inspect::UintProperty,
+
+    /// Version of the active snapshot file, or 0 if unknown.
+    snapshot_version: inspect::UintProperty,
+
+    /// Version of the active targets file, or 0 if unknown.
+    targets_version: inspect::UintProperty,
+
     _node: inspect::Node,
+}
+
+/// Result of updating metadata if stale.
+pub enum UpdateResult {
+    /// Metadata update was skipped because it was not stale.
+    Deferred,
+
+    /// Local metadata is up to date with the remote.
+    UpToDate,
+
+    /// Some metadata was updated.
+    Updated,
 }
 
 impl<L> UpdatingTufClient<L>
@@ -116,6 +137,9 @@ where
                     "update_check_success_count",
                 ),
                 updated_count: inspect_util::Counter::new(&node, "updated_count"),
+                timestamp_version: node.create_uint("timestamp_version", 0),
+                snapshot_version: node.create_uint("snapshot_version", 0),
+                targets_version: node.create_uint("targets_version", 0),
                 _node: node,
             },
         }));
@@ -151,12 +175,27 @@ where
         self.client.fetch_target_description(target).await
     }
 
-    pub async fn update_if_stale(&mut self) -> Result<(), TufError> {
+    /// Updates the tuf client metadata if it is considered to be stale, returning whether or not
+    /// updates were performed.
+    pub async fn update_if_stale(&mut self) -> Result<UpdateResult, TufError> {
         if self.is_stale() {
-            self.update().await.map(|_| ())
+            if self.update().await? {
+                Ok(UpdateResult::Updated)
+            } else {
+                Ok(UpdateResult::UpToDate)
+            }
         } else {
-            Ok(())
+            Ok(UpdateResult::Deferred)
         }
+    }
+
+    /// Provides the current known metadata versions (timestamp, snapshot, targets).
+    pub fn metadata_versions(&self) -> (Option<u32>, Option<u32>, Option<u32>) {
+        (
+            self.client.timestamp_version(),
+            self.client.snapshot_version(),
+            self.client.targets_version(),
+        )
     }
 
     fn is_stale(&self) -> bool {
@@ -172,6 +211,9 @@ where
 
     async fn update(&mut self) -> Result<bool, TufError> {
         let res = self.client.update().await;
+        self.inspect.timestamp_version.set(self.client.timestamp_version().unwrap_or(0).into());
+        self.inspect.snapshot_version.set(self.client.snapshot_version().unwrap_or(0).into());
+        self.inspect.targets_version.set(self.client.targets_version().unwrap_or(0).into());
         if let Ok(update_occurred) = &res {
             self.last_update_successfully_checked_time.get_mut().replace(clock::now());
             self.inspect.update_check_success_count.increment();

@@ -13,7 +13,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_hyper::HyperConnector,
     fuchsia_inspect::{self as inspect, Property},
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::lock::Mutex as AsyncMutex,
     hyper_rustls::HttpsConnector,
@@ -30,6 +30,7 @@ use {
 };
 
 mod updating_tuf_client;
+use updating_tuf_client::UpdateResult;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CustomTargetMetadata {
@@ -167,14 +168,19 @@ impl Repository {
         target_path: &TargetPath,
     ) -> Result<CustomTargetMetadata, MerkleForError> {
         let mut updating_client = self.updating_client.lock().await;
-        updating_client.update_if_stale().await.or_else(|e| match e {
-            TufError::NotFound => Err(MerkleForError::NotFound),
-            other => {
+        match updating_client.update_if_stale().await {
+            Ok(UpdateResult::Deferred) => fx_log_info!("skipping TUF metadata update"),
+            Ok(UpdateResult::UpToDate) => fx_log_info!("local TUF metadata in sync with remote"),
+            Ok(UpdateResult::Updated) => fx_log_info!(
+                "updated local TUF metadata: {:?}",
+                updating_client.metadata_versions()
+            ),
+            Err(TufError::NotFound) => return Err(MerkleForError::NotFound),
+            Err(other) => {
                 fx_log_err!("failed to update with TUF error {:?}", other);
                 // TODO(43646) Should this bubble up a MerkleForError::TufError(other)?
-                Ok(())
             }
-        })?;
+        }
 
         let description =
             updating_client.fetch_target_description(&target_path).await.map_err(|e| match e {
@@ -495,6 +501,9 @@ mod inspect_tests {
                         update_check_failure_count: 0u64,
                         last_update_successfully_checked_time: "None",
                         updated_count: 0u64,
+                        timestamp_version: 0u64,
+                        snapshot_version: 0u64,
+                        targets_version: 0u64,
                     }
                 }
             }
@@ -545,6 +554,9 @@ mod inspect_tests {
                         update_check_failure_count: 0u64,
                         last_update_successfully_checked_time: "Some(Time(0))",
                         updated_count: 1u64,
+                        timestamp_version: 2u64,
+                        snapshot_version: 2u64,
+                        targets_version: 2u64,
                     }
                 }
             }
@@ -604,6 +616,9 @@ mod inspect_tests {
                         update_check_failure_count: 0u64,
                         last_update_successfully_checked_time: "Some(Time(0))",
                         updated_count: 1u64,
+                        timestamp_version: 2u64,
+                        snapshot_version: 2u64,
+                        targets_version: 2u64,
                         "auto_client" : {
                             connect_failure_count: 0u64,
                             connect_success_count: 1u64,
