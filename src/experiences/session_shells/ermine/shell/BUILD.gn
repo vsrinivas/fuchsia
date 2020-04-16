@@ -47,8 +47,8 @@ flutter_app("ermine") {
     "src/models/topbar_model.dart",
     "src/utils/crash.dart",
     "src/utils/elevations.dart",
-    "src/utils/styles.dart",
     "src/utils/presenter.dart",
+    "src/utils/styles.dart",
     "src/utils/suggestion.dart",
     "src/utils/suggestions.dart",
     "src/utils/utils.dart",
@@ -150,9 +150,7 @@ static_icu_data("time_zone_list") {
 config_data("ermine_fonts") {
   for_pkg = "fonts"
 
-  sources = [
-    "fonts/manifest.json",
-  ]
+  sources = [ "fonts/manifest.json" ]
 
   sources += rebase_path([
                            "RobotoMono-Light.ttf",
@@ -162,9 +160,7 @@ config_data("ermine_fonts") {
                          "",
                          "//prebuilt/third_party/fonts/robotomono/")
 
-  outputs = [
-    "fonts/{{source_file_part}}",
-  ]
+  outputs = [ "fonts/{{source_file_part}}" ]
 }
 
 flutter_test("ermine_unittests") {
@@ -173,6 +169,7 @@ flutter_test("ermine_unittests") {
     "app_widget_test.dart",
     "ask_model_test.dart",
     "ask_widget_test.dart",
+    "clusters_model_test.dart",
     "crash_test.dart",
     "ermine_story_test.dart",
     "ermine_test.dart",
@@ -190,7 +187,5 @@ flutter_test("ermine_unittests") {
 
 config_data("services_config") {
   for_pkg = "sysmgr"
-  sources = [
-    rebase_path("config/ermine_services.config"),
-  ]
+  sources = [ rebase_path("config/ermine_services.config") ]
 }

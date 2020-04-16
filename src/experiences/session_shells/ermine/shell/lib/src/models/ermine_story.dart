@@ -14,8 +14,7 @@ import '../utils/presenter.dart';
 import '../utils/suggestion.dart';
 
 /// A function which can be used to launch the suggestion.
-@visibleForTesting
-typedef LaunchFunction = Future<void> Function(
+typedef LaunchSuggestion = Future<void> Function(
     Suggestion, ElementControllerProxy);
 
 /// Defines a class to represent a story in ermine.
@@ -47,10 +46,11 @@ class ErmineStory {
     Suggestion suggestion,
     ValueChanged<ErmineStory> onDelete,
     ValueChanged<ErmineStory> onChange,
-    LaunchFunction launchFunction = ErmineStory.launchSuggestion,
+    LaunchSuggestion launchSuggestion,
   }) {
     final elementController = ElementControllerProxy();
-    launchFunction(suggestion, elementController);
+    launchSuggestion ??= ErmineStory.launchSuggestion;
+    launchSuggestion(suggestion, elementController);
     return ErmineStory(
       id: suggestion.id,
       title: suggestion.title,

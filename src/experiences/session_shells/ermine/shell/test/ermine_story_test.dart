@@ -16,7 +16,7 @@ void main() {
     final suggestion = Suggestion(id: 'id', title: 'title', url: 'url');
     final story = ErmineStory.fromSuggestion(
       suggestion: suggestion,
-      launchFunction: (_, __) async {},
+      launchSuggestion: (_, __) async {},
     );
 
     expect(story.id, 'id');
@@ -28,7 +28,7 @@ void main() {
     final suggestion = Suggestion(id: 'id', title: 'title', url: 'url');
     ErmineStory.fromSuggestion(
       suggestion: suggestion,
-      launchFunction: (s, _) async => completer.complete(s.id == 'id'),
+      launchSuggestion: (s, _) async => completer.complete(s.id == 'id'),
     );
     expect(await completer.future, true);
   });

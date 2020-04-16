@@ -100,12 +100,14 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
   /// Creates and adds a [Story] to the current cluster given it's [StoryInfo],
   /// [SessionShell] and [StoryController]. Returns the created instance.
   @override
-  void storySuggested(Suggestion suggestion) {
+  void storySuggested(Suggestion suggestion,
+      [LaunchSuggestion launchSuggestion]) {
     assert(!_storyToCluster.containsKey(suggestion.id));
     final story = ErmineStory.fromSuggestion(
       suggestion: suggestion,
       onDelete: storyDeleted,
       onChange: storyChanged,
+      launchSuggestion: launchSuggestion,
     );
     _addErmineStory(story);
   }
