@@ -66,7 +66,7 @@ protocol ContentDecryptionModule {
     ///   session later (if persistent).
     CreateLicenseSession(LicenseSessionType session_type,
                          request<LicenseSession> license_session)
-        -> (string session_id);
+        -> (SessionId session_id);
 
     /// Loads an existing session from storage using the given `session_id`.
     ///
@@ -76,7 +76,7 @@ protocol ContentDecryptionModule {
     ///   loaded from storage.
     /// + request `license_session` the server endpoint of the
     ///   [`LicenseSession`].
-    LoadLicenseSession(string session_id,
+    LoadLicenseSession(SessionId session_id,
                        request<LicenseSession> license_session);
 
     /// Creates a Decryptor [`fuchsia.media/StreamProcessor`] to be used to
@@ -102,7 +102,7 @@ protocol ContentDecryptionModule {
     ///   such as "1.2" or "2.0".
     /// - response `key_status` a field indicating what the status of a
     ///   hypothetical key would be for this device if one could be licensed.
-    GetKeyStatusForHdcpVersion(string hdcp_version) -> (KeyStatus key_status);
+    GetKeyStatusForHdcpVersion(HdcpVersion hdcp_version) -> (KeyStatus key_status);
 
     /// Queries for the list of supported encryption schemes.
     ///
@@ -110,9 +110,9 @@ protocol ContentDecryptionModule {
     /// `ContentDecryptionModule` supports, such as 'cenc' or 'cbcs'. If the
     /// implementation supports passing unencrypted frames through decryption
     /// prior to license arrival, it should also report
-    /// `fuchsia.media.UNECNRYPTED` as a supported scheme.
+    /// `fuchsia.media.UNENCRYPTED` as a supported scheme.
     ///
     /// - response `encryption_schemes` a list of the supported encryption
     ///   schemes.
-    GetSupportedEncryptionSchemes() -> (vector<string> encryption_schemes);
+    GetSupportedEncryptionSchemes() -> (vector<EncryptionScheme>:MAX encryption_schemes);
 };

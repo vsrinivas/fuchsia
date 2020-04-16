@@ -1,7 +1,8 @@
 {
-  "fidl/fuchsia.media.drm/content_decryption.fidl": "b9e4d778cc09fca029ab8cae518ec820",
+  "fidl/fuchsia.media.drm/content_decryption.fidl": "9e9648a1df252b95e408fb043c61e454",
   "fidl/fuchsia.media.drm/error.fidl": "737e90542397d56785f307062a4e28dd",
-  "fidl/fuchsia.media.drm/license_session.fidl": "c055dabddbbb0ef01b9ee591932d505a",
+  "fidl/fuchsia.media.drm/license_session.fidl": "2b1a80107649573bf8ccbedc8a7e9587",
   "fidl/fuchsia.media.drm/provisioning.fidl": "3cbf9edff5475ab6799d1493efb348ac",
-  "fidl/fuchsia.media.drm/services.fidl": "48d03b61ec498fa5bb262ddc4f10110f"
+  "fidl/fuchsia.media.drm/services.fidl": "48d03b61ec498fa5bb262ddc4f10110f",
+  "fidl/fuchsia.media.drm/types.fidl": "dc43a9d4ca0bbe3d776025b4069b1156"
 }

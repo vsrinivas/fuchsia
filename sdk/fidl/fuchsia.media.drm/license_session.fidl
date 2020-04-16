@@ -9,10 +9,10 @@ using fuchsia.mem;
 
 // Common initialization data formats. These are defined as strings rather than
 // enums so as to not limit the types a ContentDecryptionModule may support.
-const string LICENSE_INIT_DATA_TYPE_CENC = "cenc";
-const string LICENSE_INIT_DATA_TYPE_KEYIDS = "keyids";
-const string LICENSE_INIT_DATA_TYPE_WEBM = "webm";
-const string LICENSE_INIT_DATA_TYPE_HLS = "hls";
+const LicenseInitDataType LICENSE_INIT_DATA_TYPE_CENC = "cenc";
+const LicenseInitDataType LICENSE_INIT_DATA_TYPE_KEYIDS = "keyids";
+const LicenseInitDataType LICENSE_INIT_DATA_TYPE_WEBM = "webm";
+const LicenseInitDataType LICENSE_INIT_DATA_TYPE_HLS = "hls";
 
 enum LicenseSessionType {
     /// A session for which the license, keys, and record of the session are not
@@ -37,7 +37,7 @@ struct LicenseInitData {
     /// The type is a string that indicates the format of the accompanying init
     /// data. Common types include "cenc", "keyids", "webm", and "hls". CDMs may
     /// also define their own.
-    string type;
+    LicenseInitDataType type;
     bytes data;
 };
 
@@ -149,5 +149,5 @@ protocol LicenseSession {
     ///
     /// - response `key_states` a list of the key_ids and their related
     ///   [`KeyStatusCode`]s
-    -> OnKeyStatesChanged(vector<KeyState> key_states);
+    -> OnKeyStatesChanged(vector<KeyState>:MAX key_states);
 };

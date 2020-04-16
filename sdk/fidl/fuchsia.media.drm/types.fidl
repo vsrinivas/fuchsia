@@ -1,0 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.drm;
+
+using fuchsia.media;
+
+const uint32 MAX_SESSION_ID_SIZE = 512;
+const uint32 MAX_LICENSE_INIT_DATA_TYPE_SIZE = 100;
+const uint32 MAX_HDCP_VERSION_SIZE = 16;
+
+using SessionId = string:MAX_SESSION_ID_SIZE;
+using LicenseInitDataType = string:MAX_LICENSE_INIT_DATA_TYPE_SIZE;
+using HdcpVersion = string:MAX_HDCP_VERSION_SIZE;
+using EncryptionScheme = fuchsia.media.EncryptionScheme;

@@ -8,6 +8,7 @@ using fuchsia.sysmem;
 
 const uint32 MAX_KEY_ID_SIZE = 16;
 const uint32 MAX_INIT_VECTOR_SIZE = 16;
+const uint32 MAX_ENCRYPTION_SCHEME_SIZE = 100;
 
 /// Value
 ///
@@ -344,6 +345,7 @@ union VideoFormat {
 // media file format files. These are defined as strings rather than enums so as
 // to not limit the encryption schemes that an implementation supports to the
 // constants that are defined here.
+using EncryptionScheme = string:MAX_ENCRYPTION_SCHEME_SIZE;
 const string ENCRYPTION_SCHEME_UNENCRYPTED = "unencrypted";
 const string ENCRYPTION_SCHEME_CENC = "cenc";
 const string ENCRYPTION_SCHEME_CBC1 = "cbc1";
