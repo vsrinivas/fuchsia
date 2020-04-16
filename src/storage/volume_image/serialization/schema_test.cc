@@ -4,8 +4,7 @@
 
 #include "schema.h"
 
-#include <gtest/gtest.h>
-
+#include "gtest/gtest.h"
 #include "rapidjson/schema.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/json_parser/rapidjson_validation.h"

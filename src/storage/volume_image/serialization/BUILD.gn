@@ -3,7 +3,7 @@
 # found in the LICENSE file
 
 config("schema_path") {
-  if (!is_fuchsia) {
+  if (is_host) {
     defines = [ "STORAGE_VOLUME_IMAGE_SCHEMA_PATH=\"schema/\"" ]
   } else {
     defines = [ "STORAGE_VOLUME_IMAGE_SCHEMA_PATH=\"pkg/data/schema/\"" ]
@@ -24,23 +24,33 @@ source_set("schema") {
   public = [ "schema.h" ]
 
   configs += [ ":schema_path" ]
+  deps = [ "//src/storage/volume_image/utils:path" ]
 
-  if (!is_fuchsia) {
+  if (is_host) {
     deps += [ ":schema_json" ]
     metadata = {
-      runtime_deps = get_target_outputs(":copy")
+      runtime_deps = get_target_outputs(":schema_json")
     }
   }
 }
 
-executable("serialization-test") {
+source_set("schema-test") {
   testonly = true
   sources = [ "schema_test.cc" ]
   deps = [
     ":schema",
-    "//src/lib/fxl/test:gtest_main",
     "//src/lib/json_parser",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fdio",
   ]
+
+  if (is_host) {
+    metadata = {
+      test_runtime_deps = get_target_outputs(":schema_json")
+    }
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":schema-test" ]
 }

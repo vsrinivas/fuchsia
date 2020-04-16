@@ -12,5 +12,6 @@ group("tests") {
     "blobfs-corrupt:tests",
     "conformance:tests",
     "ext4:tests",
+    "volume_image:tests",
   ]
 }

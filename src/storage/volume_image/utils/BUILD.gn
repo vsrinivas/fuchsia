@@ -22,15 +22,22 @@ source_set("guid-test") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/gpt",
   ]
+
+  # This double checks that the resulting guids are compatible with our existing guids.
+  # Because gpt is fuchsia only, this is required.
+  if (is_fuchsia) {
+    sources += [ "guid_test_fuchsia.cc" ]
+    deps += [ "//zircon/public/lib/gpt" ]
+  }
 }
 
-executable("utils-test") {
+source_set("path") {
+  sources = [ "path.cc" ]
+  public = [ "path.h" ]
+}
+
+group("tests") {
   testonly = true
-  deps = [
-    ":guid-test",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ ":guid-test" ]
 }

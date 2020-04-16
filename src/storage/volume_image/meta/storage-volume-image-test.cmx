@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/storage-volume-image-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

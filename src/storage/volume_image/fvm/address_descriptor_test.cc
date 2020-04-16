@@ -61,6 +61,7 @@ TEST(AddressDescriptorTest, SerializeReturnsSchemaValidData) {
       {.source = 20, .target = 30, .count = 10},
   });
   auto schema_json = GetSchema(Schema::kAddressDescriptor);
+  ASSERT_FALSE(schema_json.empty());
 
   json_parser::JSONParser parser;
   auto result = descriptor.Serialize();

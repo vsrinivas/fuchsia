@@ -128,7 +128,10 @@ fit::result<std::string, std::string> Guid::ToString(fbl::Span<const uint8_t> gu
       out_guid[2 * current_byte + current_section + 1] = GetHex(low);
       current_byte++;
     }
-    out_guid[2 * (section.start + section.length) + current_section] = kSeparator;
+    // We dont need a separator after last section.
+    if (current_section < kGuidSections.size() - 1) {
+      out_guid[2 * (section.start + section.length) + current_section] = kSeparator;
+    }
     current_section++;
   }
   return fit::ok(std::string(out_guid.data(), out_guid.size()));

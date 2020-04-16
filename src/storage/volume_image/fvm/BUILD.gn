@@ -12,16 +12,19 @@ source_set("address-descriptor") {
   deps = [ "//third_party/rapidjson" ]
 }
 
-executable("fvm-test") {
+source_set("fvm-test") {
   testonly = true
   sources = [ "address_descriptor_test.cc" ]
   deps = [
     ":address-descriptor",
-    "//src/lib/fxl/test:gtest_main",
     "//src/lib/json_parser",
     "//src/storage/volume_image/serialization:schema",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fdio",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fvm-test" ]
 }

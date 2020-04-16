@@ -32,6 +32,7 @@ TEST(VolumeDescriptorTest, SerializeReturnsSchemaValidData) {
   descriptor.options = {Option::kNone};
   descriptor.encryption = EncryptionType::kZxcrypt;
   auto schema_json = GetSchema(Schema::kVolumeDescriptor);
+  ASSERT_FALSE(schema_json.empty());
 
   json_parser::JSONParser parser;
   auto result = descriptor.Serialize();

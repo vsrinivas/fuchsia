@@ -8,9 +8,7 @@
 #include <string>
 #include <string_view>
 
-#include <gpt/gpt.h>
-#include <gpt/guid.h>
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 
 namespace storage::volume_image {
 namespace {
@@ -69,18 +67,6 @@ TEST(GuidTest, FromStringIsReverseOperationOfToString) {
                                                       0x0C, 0x0D, 0xE,  0x0F};
   auto guid_result = Guid::FromString(Guid::ToString(kGuid).value()).value();
   EXPECT_EQ(kGuid, guid_result);
-}
-
-TEST(GuidTest, KnownGuidsMatch) {
-  std::array<uint8_t, kGuidLength> known_guid;
-  for (const auto& known_guid_property : gpt::KnownGuid()) {
-    memcpy(known_guid.data(), known_guid_property.guid(), kGuidLength);
-    EXPECT_EQ(
-        known_guid,
-        Guid::FromString(fbl::Span<const char>(known_guid_property.str(), kGuidStrLength)).value());
-    EXPECT_EQ(std::string(known_guid_property.str(), kGuidStrLength),
-              Guid::ToString(known_guid).value());
-  }
 }
 
 }  // namespace

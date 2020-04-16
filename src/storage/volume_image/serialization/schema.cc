@@ -9,6 +9,8 @@
 #include <streambuf>
 #include <string>
 
+#include "src/storage/volume_image/utils/path.h"
+
 namespace storage::volume_image {
 
 // Path to where the schema leaves. Left to be injected by a compile time definition.
@@ -16,16 +18,17 @@ static constexpr char kPath[] = STORAGE_VOLUME_IMAGE_SCHEMA_PATH;
 
 std::string GetSchema(Schema schema) {
   std::ifstream file;
+  std::string base_path = GetBasePath();
 
   switch (schema) {
     case Schema::kVolumeDescriptor:
-      file.open(std::string(kPath).append("volume_descriptor.schema.json"));
+      file.open(base_path.append(kPath).append("volume_descriptor.schema.json"));
       return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
     case Schema::kAddressDescriptor:
-      file.open(std::string(kPath).append("address_descriptor.schema.json"));
+      file.open(base_path.append(kPath).append("address_descriptor.schema.json"));
       return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
     case Schema::kVolumeImage:
-      file.open(std::string(kPath).append("volume_image.schema.json"));
+      file.open(base_path.append(kPath).append("volume_image.schema.json"));
       return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
     default:
       return std::string();
