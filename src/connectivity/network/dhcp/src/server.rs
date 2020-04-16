@@ -238,12 +238,18 @@ impl Server {
                     // When client's message has unspecified `giaddr`, 'ciaddr' with
                     // broadcast bit is not set, we broadcast the response on the subnet.
                     //
+                    // Notice according to RFC 2131, Page 36, `yiaddr` in client request
+                    // is always unspecified, so don't rely on that.
+                    //
+                    // See https://tools.ietf.org/html/rfc2131#page-37
+                    //
                     // Desired Implementation =>
                     // Message should be unicast to client's mac address specified in `chaddr`.
                     //
                     // See https://tools.ietf.org/html/rfc2131#section-4.1 Page 22, Paragraph 4.
-                    MessageType::DHCPDISCOVER => Some(Ipv4Addr::BROADCAST),
-                    MessageType::DHCPREQUEST | MessageType::DHCPINFORM => Some(client_msg.yiaddr),
+                    MessageType::DHCPDISCOVER
+                    | MessageType::DHCPREQUEST
+                    | MessageType::DHCPINFORM => Some(Ipv4Addr::BROADCAST),
                     MessageType::DHCPACK
                     | MessageType::DHCPNAK
                     | MessageType::DHCPOFFER
@@ -2047,11 +2053,9 @@ pub mod tests {
         let mut expected_ack = new_test_ack(&req, &server);
         expected_ack.yiaddr = init_reboot_client_ip;
 
-        let expected_dest = req.yiaddr;
-
         assert_eq!(
             server.dispatch(req),
-            Ok(ServerAction::SendResponse(expected_ack, Some(expected_dest)))
+            Ok(ServerAction::SendResponse(expected_ack, Some(Ipv4Addr::BROADCAST)))
         );
         Ok(())
     }
