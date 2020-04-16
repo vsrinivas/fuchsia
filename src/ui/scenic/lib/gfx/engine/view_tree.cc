@@ -13,7 +13,6 @@
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
-
 namespace scenic_impl::gfx {
 
 namespace {
@@ -91,6 +90,29 @@ std::optional<zx_koid_t> ViewTree::ConnectedViewRefKoidOf(SessionId session_id) 
 
 bool ViewTree::IsTracked(zx_koid_t koid) const { return IsValid(koid) && nodes_.count(koid) > 0; }
 
+bool ViewTree::IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) const {
+  FXL_DCHECK(IsTracked(descendant_koid)) << "precondition";
+  FXL_DCHECK(IsTracked(ancestor_koid)) << "precondition";
+
+  zx_koid_t parent_koid = ZX_KOID_INVALID;
+  if (const auto ptr = std::get_if<AttachNode>(&nodes_.at(descendant_koid))) {
+    parent_koid = ptr->parent;
+  } else if (const auto ptr = std::get_if<RefNode>(&nodes_.at(descendant_koid))) {
+    parent_koid = ptr->parent;
+  } else {
+    FXL_NOTREACHED() << "invariant: child/parent types are known";
+    return false;  // Impossible.
+  }
+
+  if (!IsTracked(parent_koid))
+    return false;  // Does not reach ancestor;
+
+  if (parent_koid == ancestor_koid)
+    return true;  // Parent is ancestor. Base case.
+
+  return IsDescendant(parent_koid, ancestor_koid);  // Recursive.
+}
+
 bool ViewTree::IsConnected(zx_koid_t koid) const {
   FXL_DCHECK(IsTracked(koid)) << "precondition";
 
@@ -98,21 +120,9 @@ bool ViewTree::IsConnected(zx_koid_t koid) const {
     return false;  // No connectivity, base case.
 
   if (koid == root_)
-    return true;  // Trivial connectivity, base case.
+    return true;  // koid is the root and therefore connected.
 
-  if (const auto ptr = std::get_if<AttachNode>(&nodes_.at(koid))) {
-    if (!IsTracked(ptr->parent))
-      return false;  // Does not reach root.
-    if (const auto parent_ptr = std::get_if<RefNode>(&nodes_.at(ptr->parent)))
-      return IsConnected(ptr->parent);  // Recursive.
-  } else if (const auto ptr = std::get_if<RefNode>(&nodes_.at(koid))) {
-    if (!IsTracked(ptr->parent))
-      return false;  // Does not reach root.
-    if (const auto parent_ptr = std::get_if<AttachNode>(&nodes_.at(ptr->parent)))
-      return IsConnected(ptr->parent);  // Recursive.
-  }
-  FXL_NOTREACHED() << "invariant: child/parent types are known and correctly alternate";
-  return false;  // Impossible.
+  return IsDescendant(koid, root_);
 }
 
 bool ViewTree::IsRefNode(zx_koid_t koid) const {

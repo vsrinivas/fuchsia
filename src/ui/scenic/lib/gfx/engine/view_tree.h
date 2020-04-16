@@ -137,9 +137,17 @@ class ViewTree {
   // Return true if koid is (1) valid and (2) exists in nodes_ map.
   bool IsTracked(zx_koid_t koid) const;
 
+  // Given a node's KOID, return true if it transitively connects to node with |ancestor_koid| via
+  // parent references.
+  // Pre: |descendant_koid| is valid and exists in nodes_ map
+  // Pre: |ancestor_koid| is valid and exists in nodes_ map
+  // Invariant: each valid parent reference exists in nodes_ map
+  // - This operation is O(N) in the depth of the view tree.
+  bool IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) const;
+
   // Given a node's KOID, return true if it transitively connects to root_.
   // Pre: koid exists in nodes_ map
-  // Invariant: each parent reference exists in nodes_ map
+  // Invariant: each valid parent reference exists in nodes_ map
   // - This operation is O(N) in the depth of the view tree.
   bool IsConnected(zx_koid_t koid) const;
 

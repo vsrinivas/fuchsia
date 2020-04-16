@@ -455,6 +455,81 @@ TEST(ViewTreePrimitive, MakeGlobalRoot) {
   EXPECT_TRUE(tree.focus_chain().empty());
 }
 
+// Perform descendant checks on the following view tree.
+// Note how a_3/v_3 is disconnected from the scene.
+//         scene
+//        /    \
+//      a_1    a_2
+//       |      |
+//      v_1    v_2
+//              X
+//             a_3
+//              |
+//             v_3
+TEST(ViewTreePrimitive, IsDescendant) {
+  ViewTree tree{};
+  EventReporterWeakPtr no_reporter{};
+
+  // Tree setup
+  scenic::ViewRefPair scene_pair = scenic::ViewRefPair::New();
+  zx_koid_t scene_koid = ExtractKoid(scene_pair.view_ref);
+  tree.NewRefNode(std::move(scene_pair.view_ref), no_reporter, MayReceiveFocus(),
+                  NoGlobalTransform(), DummyAddAnnotation(), kOne);
+  tree.MakeGlobalRoot(scene_koid);
+
+  // Koid is not descendant of itself.
+  EXPECT_FALSE(tree.IsDescendant(scene_koid, scene_koid));
+
+  zx_koid_t attach_koid_1 = 1111u;
+  tree.NewAttachNode(attach_koid_1);
+  tree.ConnectToParent(attach_koid_1, scene_koid);
+  EXPECT_TRUE(tree.IsDescendant(attach_koid_1, scene_koid));
+
+  scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
+  zx_koid_t view_koid_1 = ExtractKoid(view_pair.view_ref);
+  tree.NewRefNode(std::move(view_pair.view_ref), no_reporter, MayReceiveFocus(),
+                  NoGlobalTransform(), DummyAddAnnotation(), kTwo);
+  tree.ConnectToParent(view_koid_1, attach_koid_1);
+  // Should be descendent of scene (root), but not of itself or its descendant.
+  EXPECT_TRUE(tree.IsDescendant(attach_koid_1, scene_koid));
+  EXPECT_FALSE(tree.IsDescendant(attach_koid_1, attach_koid_1));
+  EXPECT_FALSE(tree.IsDescendant(attach_koid_1, view_koid_1));
+  EXPECT_TRUE(tree.IsDescendant(view_koid_1, attach_koid_1));
+
+  zx_koid_t attach_koid_2 = 2222u;
+  tree.NewAttachNode(attach_koid_2);
+  tree.ConnectToParent(attach_koid_2, scene_koid);
+
+  scenic::ViewRefPair view_pair_2 = scenic::ViewRefPair::New();
+  zx_koid_t view_koid_2 = ExtractKoid(view_pair_2.view_ref);
+  tree.NewRefNode(std::move(view_pair_2.view_ref), no_reporter, MayReceiveFocus(),
+                  NoGlobalTransform(), DummyAddAnnotation(), kThree);
+  tree.ConnectToParent(view_koid_2, attach_koid_2);
+
+  // Should be descendant of a_2 and scene, but not of a_1.
+  EXPECT_TRUE(tree.IsDescendant(view_koid_2, scene_koid));
+  EXPECT_TRUE(tree.IsDescendant(view_koid_2, attach_koid_2));
+  EXPECT_FALSE(tree.IsDescendant(view_koid_2, attach_koid_1));
+  tree.DisconnectFromParent(view_koid_2);
+  // After disconnect it shouldn't be the descendant of anything.
+  EXPECT_FALSE(tree.IsDescendant(view_koid_2, scene_koid));
+  EXPECT_FALSE(tree.IsDescendant(view_koid_2, attach_koid_2));
+  EXPECT_FALSE(tree.IsDescendant(view_koid_2, attach_koid_1));
+
+  zx_koid_t attach_koid_3 = 3u;
+  tree.NewAttachNode(attach_koid_3);
+  // Do not connect to anything!
+
+  scenic::ViewRefPair view_pair_3 = scenic::ViewRefPair::New();
+  zx_koid_t view_koid_3 = ExtractKoid(view_pair_3.view_ref);
+  tree.NewRefNode(std::move(view_pair_3.view_ref), no_reporter, MayReceiveFocus(),
+                  NoGlobalTransform(), DummyAddAnnotation(), kFive);
+  tree.ConnectToParent(view_koid_3, attach_koid_3);
+
+  EXPECT_TRUE(tree.IsDescendant(view_koid_3, attach_koid_3));
+  EXPECT_FALSE(tree.IsDescendant(view_koid_3, scene_koid));
+}
+
 TEST(ViewTreePrimitive, IsConnected) {
   ViewTree tree{};
   EventReporterWeakPtr no_reporter{};
