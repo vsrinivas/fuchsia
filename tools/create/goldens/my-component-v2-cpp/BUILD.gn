@@ -1,4 +1,4 @@
-# Copyright {{COPYRIGHT_YEAR}} The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -10,7 +10,7 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-group("{{PROJECT_NAME}}") {
+group("my-component-v2-cpp") {
   testonly = true
   public_deps = [
     ":pkg",
@@ -20,20 +20,20 @@ group("{{PROJECT_NAME}}") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":{{PROJECT_NAME}}-tests" ]
+  public_deps = [ ":my-component-v2-cpp-tests" ]
 }
 
 source_set("lib") {
   sources = [
-    "{{PROJECT_NAME}}.cc",
-    "{{PROJECT_NAME}}.h",
+    "my-component-v2-cpp.cc",
+    "my-component-v2-cpp.h",
   ]
 
   public_deps = [ "//zircon/public/lib/async-cpp" ]
 }
 
 executable("bin") {
-  output_name = "{{PROJECT_NAME}}"
+  output_name = "my-component-v2-cpp"
 
   sources = [ "main.cc" ]
 
@@ -46,10 +46,10 @@ executable("bin") {
 }
 
 executable("unittests") {
-  output_name = "{{PROJECT_NAME}}_unittests"
+  output_name = "my-component-v2-cpp_unittests"
   testonly = true
 
-  sources = [ "{{PROJECT_NAME}}_test.cc" ]
+  sources = [ "my-component-v2-cpp_test.cc" ]
 
   deps = [
     ":lib",
@@ -62,34 +62,34 @@ executable("unittests") {
 }
 
 package("pkg") {
-  package_name = "{{PROJECT_NAME}}"
+  package_name = "my-component-v2-cpp"
 
   deps = [ ":bin" ]
 
   binaries = [
     {
-      name = "{{PROJECT_NAME}}"
+      name = "my-component-v2-cpp"
     },
   ]
 
   meta = [
     # Compile the package's CML manifest.
     # The resulting component manifest can be referenced through the URL
-    # fuchsia-pkg://fuchsia.com/{{PROJECT_NAME}}#meta/{{PROJECT_NAME}}.cm.
+    # fuchsia-pkg://fuchsia.com/my-component-v2-cpp#meta/my-component-v2-cpp.cm.
     {
-      path = rebase_path("meta/{{PROJECT_NAME}}.cml")
-      dest = "{{PROJECT_NAME}}.cm"
+      path = rebase_path("meta/my-component-v2-cpp.cml")
+      dest = "my-component-v2-cpp.cm"
     },
   ]
 }
 
-# Run with `fx test {{PROJECT_NAME}}-tests`.
-test_package("{{PROJECT_NAME}}-tests") {
+# Run with `fx test my-component-v2-cpp-tests`.
+test_package("my-component-v2-cpp-tests") {
   deps = [ ":unittests" ]
 
   v2_tests = [
     {
-      name = "{{PROJECT_NAME}}_unittests"
+      name = "my-component-v2-cpp_unittests"
       environments = basic_envs
     },
   ]

@@ -1,8 +1,8 @@
-// Copyright {{COPYRIGHT_YEAR}} The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// {{PROJECT_NAME}} test component manifest.
+// my-component-v2-cpp test component manifest.
 // For information on manifest format and features,
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
 //
@@ -11,7 +11,7 @@
 // If something is broken, consider authoring a fix.
 {
     program: {
-        binary: "test/{{PROJECT_NAME}}_unittests",
+        binary: "test/my-component-v2-cpp_unittests",
     },
     use: [
         { runner: "gtest_runner" },

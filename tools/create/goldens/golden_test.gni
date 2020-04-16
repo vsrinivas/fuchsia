@@ -1,0 +1,145 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/testing/test_spec.gni")
+
+# Defines a golden test for `fx create`.
+#
+# Generates a test project with the same name as the target name,
+# and compares the output with a golden project.
+#
+# Parameters
+#
+#   project_type (required)
+#     The type of project to create. See `fx create --help`.
+#
+#   language (required)
+#     The programming language to use when generating the project.
+#
+#   golden_files (required)
+#     The list of all files in the golden project. These will be compared against
+#     the output of running the `fx create` tool.
+#
+# Example of usage:
+#
+#   golden_test("my-component-v2-cpp") {
+#     project_type = "component-v2"
+#     language = "cpp"
+#     golden_files = [
+#       "my-component-v2-cpp/BUILD.gn",
+#       "my-component-v2-cpp/main.cc",
+#       # ...
+#     ]
+#   }
+#
+template("golden_test") {
+  forward_variables_from(invoker,
+                         [
+                           "project_type",
+                           "language",
+                         ])
+  assert(defined(project_type), "project_type is required")
+  assert(defined(language), "language is required")
+  assert(defined(invoker.golden_files), "golden_files is required")
+
+  test_dir = "${target_gen_dir}/${target_name}"
+
+  # Copy golden files to the out directory so that the test can have access to them.
+  target_copy_goldens = "${target_name}_copy_goldens"
+  copy(target_copy_goldens) {
+    sources = invoker.golden_files
+    outputs = [ "${test_dir}/{{source_target_relative}}" ]
+  }
+
+  # Write the list of golden files to a JSON file. GN is not hermetic, so the test script needs
+  # to know which files are part of the test.
+  target_goldens_json = "${target_name}_goldens_json"
+  generated_file(target_goldens_json) {
+    outputs = [ "${test_dir}/goldens.json" ]
+    contents = rebase_path(get_target_outputs(":${target_copy_goldens}"),
+                           root_build_dir)
+    deps = [ ":${target_copy_goldens}" ]
+    output_conversion = "json"
+
+    # Include the golden files as test dependencies.
+    # Automated infrastructure only makes available what has been explicitly marked as a
+    # test dependency.
+    metadata = {
+      test_runtime_deps =
+          get_target_outputs(":${target_copy_goldens}") + outputs
+    }
+  }
+
+  # Copy the test script, into this test's gen directory, making it easier to
+  # find the .deps.json file relatively.
+  target_test_script = "${target_name}_test_script"
+  copy(target_test_script) {
+    sources = [ "//tools/create/goldens/test_script.py" ]
+    outputs = [ "${test_dir}/test_script.py" ]
+
+    # The test script invokes the create tool.
+    deps = [
+      ":${target_goldens_json}",
+      "//tools/create:install",
+    ]
+
+    # Include the test script as a test dependency.
+    # Automated infrastructure only makes available what has been explicitly marked as a
+    # test dependency.
+    metadata = {
+      test_runtime_deps = outputs + [ "${host_tools_dir}/create" ]
+    }
+  }
+
+  # Get the path to the test script, relative to the root fuchsia directory.
+  test_exec = "${test_dir}/test_script.py"
+
+  # Build the test command.
+  test_command = []
+
+  # The command starts with path to the executable, relative to the root build directory.
+  test_command += [ rebase_path(test_exec, root_build_dir) ]
+
+  # The first argument is the path to the `fx create` binary, relative to the root build directory.
+  test_command += [ rebase_path("${host_tools_dir}/create", root_build_dir) ]
+
+  # The next argument is the path to the generated runtime dependecy JSON file. This includes
+  # all files visible to the test. These include the golden project files.
+  test_command += [ rebase_path("${test_dir}/goldens.json", root_build_dir) ]
+
+  # `fx create` arguments.
+  test_command += [
+    project_type,
+    target_name,
+    "--lang",
+    language,
+    "--override-project-path",
+    rebase_path(".", "//"),  # Strips the path to the directory of the currently
+                             # executing BUILD.gn file of the // prefix
+    "--override-copyright-year",  # Keeps tests hermetic. Don't want tests
+                                  # failing in the new year.
+    "2020",
+    "--silent",
+  ]
+
+  # Generate a test target, so that this test can be executed with `fx test`.
+  test_name = target_name
+  target_test_spec = "${target_name}_spec"
+  test_spec(target_test_spec) {
+    name = test_name
+    target = test_name
+    path = test_exec  # contrary to the docs, path IS required in CQ
+    command = test_command
+    deps = [ ":${target_test_script}" ]
+  }
+
+  group(test_name) {
+    testonly = true
+    deps = [
+      ":${target_test_script}",
+      ":${target_test_spec}",
+    ]
+  }
+}

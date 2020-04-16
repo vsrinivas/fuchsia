@@ -3,6 +3,16 @@
 The `fx create` command generates scaffolding for new projects. See `fx create --help` for
 usage details.
 
+## Running tests
+
+The tests should be included in the build along with the `//tools/create` target.
+
+* Run all tests: `fx test //tools/create`
+* Run only golden tests: `fx test //tools/create/goldens`
+
+The golden projects have their unit tests run as well. To only run host tests,
+pass the `--host` flag to `fx test`.
+
 ## Adding a new project type
 
 1. Add a new directory with the project type name under `//tools/create/templates/`.
@@ -13,6 +23,13 @@ usage details.
 3. Edit the `templates` target in `//tools/create/templates/BUILD.gn` to include all your new
    template files.
 4. Add the project type to the help doc-string in `CreateArgs` in `//tools/create/src/main.rs`.
+5. Create a golden project in `//tools/create/goldens`.
+    * Use the `fx create` command to create a golden project, using the `--override-copyright-year 2020`
+      flag. This makes sure that tests don't start failing in 2021+.
+6. Add a test target to `//tools/create/goldens/BUILD.gn`.
+    * See the existing tests for examples. Use the template in `//tools/create/goldens/golden_test.gni`.
+    * The test will generate a project and compare it with your golden project.
+    * Execute the test with `fx test //tools/create/goldens`.
 
 ## Templates
 

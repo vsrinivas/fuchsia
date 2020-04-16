@@ -1,8 +1,8 @@
-// Copyright {{COPYRIGHT_YEAR}} The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// {{PROJECT_NAME}} test component manifest.
+// my-component-v2-rust test component manifest.
 // For information on manifest format and features,
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
 //
@@ -14,7 +14,7 @@
         // Run the Rust test adapter, which will configure the environment
         // and execute the test binary.
         binary: "bin/rust_test_adapter",
-        args: [ "/pkg/test/{{PROJECT_NAME}}_test" ],
+        args: [ "/pkg/test/my-component-v2-rust_test" ],
     },
     use: [
         // Use the built-in ELF runner to run Rust binaries.

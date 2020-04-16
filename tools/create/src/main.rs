@@ -49,48 +49,82 @@ fn main() -> Result<(), anyhow::Error> {
     project.write(&tmp_out_path)?;
 
     // Rename the temp directory project to the final location.
-    let dest_project_path = env::current_dir()?.join(&args.project_name);
-    fs::rename(&tmp_out_path, &dest_project_path)?;
+    let dest_project_path = args.absolute_project_path()?;
+    fs::rename(&tmp_out_path, &dest_project_path)
+        .map_err(|_| anyhow!("destination directory is not empty: {:?}", &dest_project_path))?;
 
-    println!("Project created at {}.", dest_project_path.to_string_lossy());
+    if !args.silent {
+        println!("Project created at {}.", dest_project_path.to_string_lossy());
 
-    // Find the parent BUILD.gn file and suggest adding the test target.
-    let parent_build =
-        dest_project_path.parent().map(|p| p.join("BUILD.gn")).filter(|b| b.exists());
-    if let Some(parent_build) = parent_build {
-        println!(
-            "{}note:{} Don't forget to include the {}{}:tests{} GN target in the parent {}tests{} target ({}).",
-            color::Fg(color::Yellow), color::Fg(color::Reset),
-            style::Bold, &args.project_name, style::Reset,
-            style::Bold, style::Reset,
-            parent_build.to_string_lossy()
-        );
+        // Find the parent BUILD.gn file and suggest adding the test target.
+        let parent_build =
+            dest_project_path.parent().map(|p| p.join("BUILD.gn")).filter(|b| b.exists());
+        if let Some(parent_build) = parent_build {
+            println!(
+                "{}note:{} Don't forget to include the {}{}:tests{} GN target in the parent {}tests{} target ({}).",
+                color::Fg(color::Yellow), color::Fg(color::Reset),
+                style::Bold, &args.project_name, style::Reset,
+                style::Bold, style::Reset,
+                parent_build.to_string_lossy()
+            );
+        }
     }
 
     Ok(())
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "fx-create", about = "Creates scaffolding for new projects.")]
+#[structopt(name = "fx-create", about = "Creates scaffolding for new projects.", version = "0.1")]
+#[structopt(rename_all = "kebab")]
 struct CreateArgs {
     /// The type of project to create.
     ///
     /// This can be one of:
     ///
     /// - component-v2: A V2 component launched with Component Manager,
-    #[structopt(name = "project-type")]
     project_type: String,
 
     /// The name of the new project.
     ///
     /// This will be the name of the GN target and directory for the project.
     /// The name should not contain any underscores.
-    #[structopt(name = "project-name")]
     project_name: String,
 
     /// The programming language.
     #[structopt(short, long)]
     lang: Language,
+
+    /// Destination directory of new project (default current working directory).
+    #[structopt(long)]
+    dest: Option<PathBuf>,
+
+    /// Override for the project include path. For testing.
+    #[structopt(long)]
+    override_project_path: Option<PathBuf>,
+
+    /// Override the copyright year. For testing.
+    #[structopt(long)]
+    override_copyright_year: Option<u32>,
+
+    /// When set, does not emit anything to stdout.
+    #[structopt(long)]
+    silent: bool,
+}
+
+impl CreateArgs {
+    /// Returns the absolute path to the new project.
+    fn absolute_project_path(&self) -> io::Result<PathBuf> {
+        let parent_dir = if let Some(dest) = self.dest.as_ref() {
+            if dest.is_absolute() {
+                dest.clone()
+            } else {
+                env::current_dir()?.join(dest)
+            }
+        } else {
+            env::current_dir()?
+        };
+        Ok(parent_dir.join(&self.project_name))
+    }
 }
 
 /// Supported languages for project creation.
@@ -170,24 +204,35 @@ struct TemplateArgs {
 impl TemplateArgs {
     /// Build TemplateArgs from the program args and environment.
     fn from_create_args(create_args: &CreateArgs) -> Result<Self, anyhow::Error> {
+        let project_path = if let Some(override_project_path) = &create_args.override_project_path {
+            override_project_path.join(&create_args.project_name)
+        } else {
+            let absolute_project_path = create_args.absolute_project_path()?;
+            let fuchsia_root = util::get_fuchsia_root()?;
+            absolute_project_path
+                .strip_prefix(&fuchsia_root)
+                .map_err(|_| {
+                    anyhow!(
+                        "current working directory must be a descendant of FUCHSIA_DIR ({:?})",
+                        &fuchsia_root
+                    )
+                })?
+                .to_path_buf()
+        };
+
+        let copyright_year = if let Some(year) = &create_args.override_copyright_year {
+            year.to_string()
+        } else {
+            Utc::now().year().to_string()
+        };
+
         Ok(TemplateArgs {
-            copyright_year: Utc::now().year().to_string(),
+            copyright_year,
             project_name: create_args.project_name.clone(),
-            project_path: {
-                let absolute_project_path = env::current_dir()?.join(&create_args.project_name);
-                let fuchsia_root = util::get_fuchsia_root()?;
-                absolute_project_path
-                    .strip_prefix(&fuchsia_root)
-                    .map_err(|_| {
-                        anyhow!(
-                            "current working directory must be a descendant of FUCHSIA_DIR ({:?})",
-                            &fuchsia_root
-                        )
-                    })?
-                    .to_str()
-                    .ok_or_else(|| anyhow!("invalid path {:?}", &absolute_project_path))?
-                    .to_string()
-            },
+            project_path: project_path
+                .to_str()
+                .ok_or_else(|| anyhow!("invalid path {:?}", &project_path))?
+                .to_string(),
             project_type: create_args.project_type.clone(),
         })
     }

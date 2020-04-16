@@ -1,8 +1,8 @@
-// Copyright {{COPYRIGHT_YEAR}} The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// {{PROJECT_NAME}} component manifest.
+// my-component-v2-cpp component manifest.
 // For information on manifest format and features,
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
 
@@ -12,7 +12,7 @@
 {
     // The binary to run for this component.
     program: {
-        binary: "bin/{{PROJECT_NAME}}",
+        binary: "bin/my-component-v2-cpp",
     },
 
     // Capabilities used by this component.

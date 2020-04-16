@@ -1,0 +1,54 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//tools/create/goldens/golden_test.gni")
+
+group("goldens") {
+  testonly = true
+  public_deps = [
+    ":tests",
+    "my-component-v2-cpp",
+    "my-component-v2-rust",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":my-component-v2-cpp($host_toolchain)",
+    ":my-component-v2-rust($host_toolchain)",
+    "my-component-v2-cpp:tests",
+    "my-component-v2-rust:tests",
+  ]
+}
+
+# Create a C++ v2 component project named `my-component-v2-cpp` and
+# compare its file contents to the golden project of the same name.
+golden_test("my-component-v2-cpp") {
+  project_type = "component-v2"
+  language = "cpp"
+  golden_files = [
+    "my-component-v2-cpp/BUILD.gn",
+    "my-component-v2-cpp/my-component-v2-cpp.cc",
+    "my-component-v2-cpp/my-component-v2-cpp.h",
+    "my-component-v2-cpp/my-component-v2-cpp_test.cc",
+    "my-component-v2-cpp/main.cc",
+    "my-component-v2-cpp/meta/my-component-v2-cpp.cml",
+    "my-component-v2-cpp/meta/my-component-v2-cpp_unittests.cml",
+  ]
+}
+
+# Create a Rust v2 component project named `my-component-v2-rust` and
+# compare its file contents to the golden project of the same name.
+golden_test("my-component-v2-rust") {
+  project_type = "component-v2"
+  language = "rust"
+  golden_files = [
+    "my-component-v2-rust/BUILD.gn",
+    "my-component-v2-rust/src/main.rs",
+    "my-component-v2-rust/meta/my-component-v2-rust.cml",
+    "my-component-v2-rust/meta/my-component-v2-rust_test.cml",
+  ]
+}
