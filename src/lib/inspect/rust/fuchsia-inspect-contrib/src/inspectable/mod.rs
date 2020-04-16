@@ -5,7 +5,7 @@
 use {
     core::ops::{Deref, DerefMut},
     derivative::Derivative,
-    fuchsia_inspect::{Node, Property, StringProperty},
+    fuchsia_inspect::{Node, Property, StringProperty, UintProperty},
     std::{borrow::Borrow, collections::HashSet},
 };
 
@@ -175,6 +175,25 @@ where
 
 pub type InspectableDebugString<V> = Inspectable<V, InspectableDebugStringWatcher>;
 
+/// Exports via an Inspect `UintProperty` a `u64`. Useful because the wrapped `u64`
+/// value can be read.
+#[derive(Debug)]
+pub struct InspectableU64Watcher {
+    uint_property: UintProperty,
+}
+
+impl Watch<u64> for InspectableU64Watcher {
+    fn new(value: &u64, node: &Node, name: impl AsRef<str>) -> Self {
+        Self { uint_property: node.create_uint(name, *value) }
+    }
+
+    fn watch(&mut self, value: &u64) {
+        self.uint_property.set(*value);
+    }
+}
+
+pub type InspectableU64 = Inspectable<u64, InspectableU64Watcher>;
+
 #[cfg(test)]
 mod test {
     use {
@@ -341,6 +360,40 @@ mod test_inspectable_debug_string {
             inspector,
             root: {
                 "test-property": "[0, 1]"
+            }
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_inspectable_u64 {
+    use super::*;
+    use fuchsia_inspect::assert_inspect_tree;
+
+    #[test]
+    fn test_initialization() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let _inspectable = InspectableU64::new(0, inspector.root(), "test-property");
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                "test-property": 0u64,
+            }
+        );
+    }
+
+    #[test]
+    fn test_watcher() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let mut inspectable = InspectableU64::new(0, inspector.root(), "test-property");
+
+        *inspectable.get_mut() += 1;
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                "test-property": 1u64,
             }
         );
     }
