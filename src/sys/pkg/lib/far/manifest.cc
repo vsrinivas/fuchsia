@@ -16,7 +16,7 @@ namespace archive {
 bool ReadManifest(fxl::StringView path, ArchiveWriter* writer) {
   std::string manifest;
   if (!files::ReadFileToString(path.ToString(), &manifest)) {
-    fprintf(stderr, "error: Faile to read '%s'\n", path.ToString().c_str());
+    fprintf(stderr, "error: Fail to read '%s'\n", path.ToString().c_str());
     return false;
   }
 

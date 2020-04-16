@@ -67,8 +67,10 @@ int Create(const fxl::CommandLine& command_line) {
   }
   fbl::unique_fd fd(open(archive_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
                          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH));
-  if (!fd.is_valid())
+  if (!fd.is_valid()) {
+    fprintf(stderr, "error: unable to open file: %s\n", archive_path.c_str());
     return -1;
+  }
   return writer.Write(fd.get()) ? 0 : -1;
 }
 
@@ -78,8 +80,10 @@ int List(const fxl::CommandLine& command_line) {
     return -1;
 
   fbl::unique_fd fd(open(archive_path.c_str(), O_RDONLY));
-  if (!fd.is_valid())
+  if (!fd.is_valid()) {
+    fprintf(stderr, "error: unable to open file: %s\n", archive_path.c_str());
     return -1;
+  }
   archive::ArchiveReader reader(std::move(fd));
   if (!reader.Read())
     return -1;
@@ -99,8 +103,10 @@ int Extract(const fxl::CommandLine& command_line) {
     return -1;
 
   fbl::unique_fd fd(open(archive_path.c_str(), O_RDONLY));
-  if (!fd.is_valid())
+  if (!fd.is_valid()) {
+    fprintf(stderr, "error: unable to open file: %s\n", archive_path.c_str());
     return -1;
+  }
   archive::ArchiveReader reader(std::move(fd));
   if (!reader.Read())
     return -1;
@@ -123,8 +129,10 @@ int ExtractFile(const fxl::CommandLine& command_line) {
     return -1;
 
   fbl::unique_fd fd(open(archive_path.c_str(), O_RDONLY));
-  if (!fd.is_valid())
+  if (!fd.is_valid()) {
+    fprintf(stderr, "error: unable to open file: %s\n", archive_path.c_str());
     return -1;
+  }
   archive::ArchiveReader reader(std::move(fd));
   if (!reader.Read())
     return -1;
@@ -143,8 +151,10 @@ int Cat(const fxl::CommandLine& command_line) {
     return -1;
 
   fbl::unique_fd fd(open(archive_path.c_str(), O_RDONLY));
-  if (!fd.is_valid())
+  if (!fd.is_valid()) {
+    fprintf(stderr, "error: unable to open file: %s\n", archive_path.c_str());
     return -1;
+  }
   archive::ArchiveReader reader(std::move(fd));
   if (!reader.Read())
     return -1;
