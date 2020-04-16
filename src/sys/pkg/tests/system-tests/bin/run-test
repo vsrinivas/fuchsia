@@ -112,7 +112,7 @@ fi
 args=( tmux new-session )
 
 if [[ ! -z "$SESSION_NAME" ]]; then
-  args+=( -d "$SESSION_NAME" )
+  args+=( -s "$SESSION_NAME" )
 fi
 
 device_args=()
@@ -153,6 +153,8 @@ fi
 
 # Capture the log files if requested.
 if [[ ! -z "$LOG_DIR" ]]; then
+  mkdir -p "$LOG_DIR"
+
   concat=">"
   if [[ "$APPEND" -eq 1 ]]; then
     concat=">>"
