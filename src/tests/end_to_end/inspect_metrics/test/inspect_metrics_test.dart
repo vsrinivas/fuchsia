@@ -53,9 +53,12 @@ void main() {
 
     // The following paths are used by reader code in b/152262213. Please notify if the paths are moved.
     // There should be plan on how to move the path for the reader side to work before and after the move.
-    await _validateNode(inspect,
+    // Refer to design doc in go/fuchsia-metrics-to-inspect-design.
+    await _validateNode(
+        inspect,
         'archivist.cmx:root/data_stats/global_data/global_data/cache:size');
-    await _validateNode(inspect,
+    await _validateNode(
+        inspect,
         'archivist.cmx:root/data_stats/global_data/stats:used_bytes');
   },
       // This is a large test that waits for the DUT to come up.
