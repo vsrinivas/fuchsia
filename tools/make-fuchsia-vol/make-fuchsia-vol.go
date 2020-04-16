@@ -505,6 +505,13 @@ func partitionCopy(f *os.File, start, size int64, path string) {
 		log.Fatalf("partition copy failed for input: %s: %s", path, err)
 	}
 	defer input.Close()
+	input_info, err := input.Stat()
+	if err != nil {
+		log.Fatalf("stat failed for input: %s: %s", path, err)
+	}
+	if input_info.Size() > size {
+		log.Printf("WARNING: %s is larger than the provided ABR size", path)
+	}
 	r := io.LimitReader(input, size)
 	if _, err := f.Seek(start, os.SEEK_SET); err != nil {
 		log.Fatalf("partition copy failed for input: %s: %s", path, err)
