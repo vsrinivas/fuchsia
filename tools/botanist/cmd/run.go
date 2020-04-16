@@ -310,6 +310,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 
 		if r.repoURL != "" {
 			if err := botanist.AddPackageRepository(ctx, client, config, r.repoURL, r.blobURL); err != nil {
+				logger.Errorf(ctx, "failed to set up a package repository: %v", err)
 				return err
 			}
 		}
