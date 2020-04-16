@@ -187,7 +187,7 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
   state_ = State::kAddressProbeInProgress;
 
   RegisterHostName(host_name);
-  std::cerr << "mDNS: Verifying uniqueness of host name " << host_full_name_ << "\n";
+  std::cout << "mDNS: Verifying uniqueness of host name " << host_full_name_ << "\n";
 
   // Create an address prober to look for host name conflicts. The address
   // prober removes itself immediately before it calls the callback.
@@ -195,7 +195,7 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
     FX_DCHECK(agents_.empty());
 
     if (!successful) {
-      std::cerr << "mDNS: Another host is using name " << host_full_name_ << "\n";
+      std::cout << "mDNS: Another host is using name " << host_full_name_ << "\n";
       OnHostNameConflict();
       return;
     }
@@ -217,7 +217,7 @@ void Mdns::RegisterHostName(const std::string& host_name) {
 }
 
 void Mdns::OnReady() {
-  std::cerr << "mDNS: Using unique host name " << host_full_name_ << "\n";
+  std::cout << "mDNS: Using unique host name " << host_full_name_ << "\n";
 
   // Start all the agents.
   state_ = State::kActive;

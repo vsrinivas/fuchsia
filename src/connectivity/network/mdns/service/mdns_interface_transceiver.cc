@@ -55,7 +55,7 @@ bool MdnsInterfaceTransceiver::Start(const MdnsAddresses& addresses,
 
   addresses_ = &addresses;
 
-  std::cerr << "Starting mDNS on interface " << name_ << " " << address_ << " using port "
+  std::cout << "Starting mDNS on interface " << name_ << " " << address_ << " using port "
             << addresses.port() << "\n";
 
   socket_fd_ = fbl::unique_fd(socket(address_.family(), SOCK_DGRAM, 0));
