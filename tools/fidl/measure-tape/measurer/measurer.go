@@ -54,16 +54,27 @@ type MeasuringTape struct {
 	// hasHandles indicates whether this measuring tape may have a handle.
 	hasHandles bool
 
+	// hasOutOfLine indicates whether this measuring tape may have out-of-line data.
+	hasOutOfLine bool
+
+	// inlineNumHandles indicates the number of inline handles, and can only be
+	// used as an upper bound for measuring tapes which are inline only i.e.
+	// `hasOutOfLine` is `false`
+	inlineNumHandles int
+
 	// - struct: struct members
 	// - table: table members indexed by ordinal, so that max_set_ordinal * envelope can be calculated
 	// - union: union members, only one selected
 	members []measuringTapeMember
 
-	// nullable for strings, and ...
+	// nullable for strings, unions, structs
 	nullable bool
 
-	// elementCount for arrays.
+	// elementCount for arrays
 	elementCount int
+
+	// elementMt for arrays
+	elementMt *MeasuringTape
 }
 
 type measuringTapeMember struct {
@@ -101,15 +112,22 @@ func (m *Measurer) createMeasuringTape(kd keyedDecl) (*MeasuringTape, error) {
 	case fidlir.Union:
 		tape, err = m.createUnionMeasuringTape(decl)
 	case primitiveDecl:
-		tape = &MeasuringTape{kind: kPrimitive}
+		tape = &MeasuringTape{
+			kind:           kPrimitive,
+			inlineNumBytes: decl.size,
+		}
 	case handleDecl:
 		tape = &MeasuringTape{
-			kind:       kHandle,
-			hasHandles: true,
+			kind:             kHandle,
+			hasHandles:       true,
+			inlineNumBytes:   toSize(fidlir.Uint32),
+			inlineNumHandles: 1,
 		}
 	case stringDecl:
 		tape = &MeasuringTape{
-			kind: kString,
+			kind:           kString,
+			inlineNumBytes: 16, // sizeof(fidl_string_t)
+			hasOutOfLine:   true,
 		}
 	case vectorDecl:
 		tape = &MeasuringTape{
@@ -117,10 +135,18 @@ func (m *Measurer) createMeasuringTape(kd keyedDecl) (*MeasuringTape, error) {
 			// TODO(fxb/49480): Support measuring vectors.
 		}
 	case arrayDecl:
+		elementMt, err := m.createMeasuringTape(decl.elementDecl)
+		if err != nil {
+			return nil, err
+		}
 		tape = &MeasuringTape{
-			kind:         kArray,
-			elementCount: decl.elementCount,
-			// TODO(fxb/49480): Support measuring arrays.
+			kind:             kArray,
+			hasHandles:       elementMt.hasHandles,
+			elementCount:     decl.elementCount,
+			elementMt:        elementMt,
+			inlineNumBytes:   decl.elementCount * elementMt.inlineNumBytes,
+			hasOutOfLine:     elementMt.hasOutOfLine,
+			inlineNumHandles: decl.elementCount * elementMt.inlineNumHandles,
 		}
 	default:
 		log.Panicf("unexpected decl, was %+v", kd.decl)
@@ -152,12 +178,14 @@ func (m *Measurer) createStructMeasuringTape(decl fidlir.Struct) (*MeasuringTape
 		})
 	}
 	return &MeasuringTape{
-		kind:           kStruct,
-		name:           fidlcommon.MustReadName(string(decl.Name)),
-		decl:           decl,
-		inlineNumBytes: decl.TypeShapeV1.InlineSize,
-		members:        membersMt,
-		hasHandles:     decl.TypeShapeV1.MaxHandles != 0,
+		kind:             kStruct,
+		name:             fidlcommon.MustReadName(string(decl.Name)),
+		decl:             decl,
+		inlineNumBytes:   decl.TypeShapeV1.InlineSize,
+		members:          membersMt,
+		hasHandles:       decl.TypeShapeV1.MaxHandles != 0,
+		hasOutOfLine:     decl.TypeShapeV1.Depth > 0,
+		inlineNumHandles: decl.TypeShapeV1.MaxHandles,
 	}, nil
 }
 
@@ -176,11 +204,13 @@ func (m *Measurer) createTableMeasuringTape(decl fidlir.Table) (*MeasuringTape, 
 		})
 	}
 	return &MeasuringTape{
-		kind:       kTable,
-		name:       fidlcommon.MustReadName(string(decl.Name)),
-		decl:       decl,
-		members:    membersMt,
-		hasHandles: decl.TypeShapeV1.MaxHandles != 0,
+		kind:           kTable,
+		name:           fidlcommon.MustReadName(string(decl.Name)),
+		decl:           decl,
+		members:        membersMt,
+		hasHandles:     decl.TypeShapeV1.MaxHandles != 0,
+		hasOutOfLine:   true,
+		inlineNumBytes: 16, // sizeof(fidl_vector_t)
 	}, nil
 }
 
@@ -201,10 +231,12 @@ func (m *Measurer) createUnionMeasuringTape(decl fidlir.Union) (*MeasuringTape, 
 		})
 	}
 	return &MeasuringTape{
-		kind:       kUnion,
-		name:       fidlcommon.MustReadName(string(decl.Name)),
-		decl:       decl,
-		members:    membersMt,
-		hasHandles: decl.TypeShapeV1.MaxHandles != 0,
+		kind:           kUnion,
+		name:           fidlcommon.MustReadName(string(decl.Name)),
+		decl:           decl,
+		members:        membersMt,
+		hasHandles:     decl.TypeShapeV1.MaxHandles != 0,
+		hasOutOfLine:   true,
+		inlineNumBytes: 24, // sizeof(fidl_xunion_t)
 	}, nil
 }

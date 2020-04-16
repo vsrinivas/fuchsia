@@ -730,12 +730,6 @@ class MeasuringTape {
   }
   
   void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK& value) {
-    // TODO: arrays are not measured yet.
-    MaxOut();
-    // TODO: arrays are not measured yet.
-    MaxOut();
-    // TODO: arrays are not measured yet.
-    MaxOut();
   }
   
   void Measure(const ::fuchsia::ui::gfx::SetDisplayRotationCmdHACK& value) {
@@ -1373,8 +1367,6 @@ class MeasuringTape {
   }
   
   void MeasureOutOfLine(const ::fuchsia::ui::gfx::mat4& value) {
-    // TODO: arrays are not measured yet.
-    MaxOut();
   }
   
   void Measure(const ::fuchsia::ui::gfx::ColorRgb& value) {

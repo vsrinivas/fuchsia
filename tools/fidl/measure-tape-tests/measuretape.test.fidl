@@ -4,26 +4,55 @@
 
 library measuretape;
 
+// 24 bytes + selected member size
 union TopLevelUnion {
     1: uint64 primitive;
     2: handle handle;
     3: StructWithString struct_with_string;
     4: StructWithOptString struct_with_opt_string;
     5: Table table;
+    6: array<byte>:12 array_of_twelve_bytes;
+    7: array<string>:3 array_of_three_strings;
+    8: array<handle>:3 array_of_three_handles;
+    9: array<Table>:2 array_of_two_tables;
+    10: array<Union>:2 array_of_two_unions;
+    11: StructWithTwoArrays struct_with_two_arrays;
+    12: array<StructWithHandle>:3 array_of_three_structs_with_handles;
 };
 
+// 16 bytes + FIDL_ALIGN(string length)
 struct StructWithString {
     string string;
 };
 
+// 16 bytes + FIDL_ALIGN(string length)
 struct StructWithOptString {
     string? opt_string;
 };
 
+// 16 bytes + max_set_ordinal * 16 + sum of all set members
 table Table {
     5: uint32 primitive;
     2: reserved;
     1: reserved;
     3: string string;
     4: handle handle;
+};
+
+// 24 bytes + selected member size
+union Union {
+    1: uint64 primitive;
+};
+
+// 64 bytes, i.e. 12 + 4 (padding) + 3 * 16
+struct StructWithTwoArrays {
+    array<byte>:12 array_of_twelve_bytes;
+    array<string>:3 array_of_three_strings;
+};
+
+// 9 bytes
+struct StructWithHandle {
+    uint8 tiny1;
+    handle<vmo> vmo;
+    uint8 tiny2;
 };

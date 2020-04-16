@@ -287,6 +287,7 @@ const (
 	_ fieldKind = iota
 	directAccessField
 	throughAccessorField
+	localVar
 )
 
 type derefOp int
@@ -296,18 +297,6 @@ const (
 	directDeref
 	pointerDeref
 )
-
-func (fieldMode fieldKind) String() string {
-	switch fieldMode {
-	case directAccessField:
-		return ""
-	case throughAccessorField:
-		return "()"
-	default:
-		log.Panic("incorrect fieldKind")
-		return ""
-	}
-}
 
 func (op derefOp) String() string {
 	switch op {
@@ -323,13 +312,27 @@ func (op derefOp) String() string {
 
 func (member *measuringTapeMember) guardNullableAccess(p *Printer, fieldMode fieldKind, fn func(derefOp)) {
 	if member.mt.nullable {
-		p.writef("if (value.%s%s) {\n", fieldMode, fidlcommon.ToSnakeCase(member.name))
+		p.writef("if (%s) {\n", member.accessor(fieldMode))
 		p.indent(func() {
 			fn(pointerDeref)
 		})
 		p.writef("}\n")
 	} else {
 		fn(directDeref)
+	}
+}
+
+func (member *measuringTapeMember) accessor(fieldMode fieldKind) string {
+	switch fieldMode {
+	case directAccessField:
+		return fmt.Sprintf("value.%s", fidlcommon.ToSnakeCase(member.name))
+	case throughAccessorField:
+		return fmt.Sprintf("value.%s()", fidlcommon.ToSnakeCase(member.name))
+	case localVar:
+		return member.name
+	default:
+		log.Panic("incorrect fieldKind")
+		return ""
 	}
 }
 
@@ -340,17 +343,32 @@ func (member *measuringTapeMember) writeInvoke(p *Printer, mode invokeKind, fiel
 			p.writef("num_bytes_ += sizeof(fidl_string_t);\n")
 		}
 		member.guardNullableAccess(p, fieldMode, func(op derefOp) {
-			p.writef("num_bytes_ += FIDL_ALIGN(value.%s%s%slength());\n",
-				fidlcommon.ToSnakeCase(member.name), fieldMode, op)
+			p.writef("num_bytes_ += FIDL_ALIGN(%s%slength());\n",
+				member.accessor(fieldMode), op)
 		})
 	case kVector:
 		// TODO(fxb/49480): Support measuring vectors.
 		p.writef("// TODO: vectors are not measured yet.\n")
 		p.writef("MaxOut();\n")
 	case kArray:
-		// TODO(fxb/49480): Support measuring arrays.
-		p.writef("// TODO: arrays are not measured yet.\n")
-		p.writef("MaxOut();\n")
+		if mode == inlineAndOutOfLine {
+			p.writef("num_bytes_ += FIDL_ALIGN(%d);\n", member.mt.inlineNumBytes)
+			if member.mt.elementMt.kind == kHandle || (!member.mt.hasOutOfLine && member.mt.hasHandles) {
+				// TODO(fxb/49488): Conditionally increase for nullable handles.
+				p.writef("num_handles_ += %d;\n", member.mt.inlineNumHandles)
+			}
+		}
+		if member.mt.hasOutOfLine {
+			memberMt := measuringTapeMember{
+				name: fmt.Sprintf("%s_elem", member.name),
+				mt:   member.mt.elementMt,
+			}
+			p.writef("for (const auto& %s : %s) {\n", memberMt.name, member.accessor(fieldMode))
+			p.indent(func() {
+				memberMt.writeInvoke(p, outOfLineOnly, localVar)
+			})
+			p.writef("}\n")
+		}
 	case kPrimitive:
 		if mode == inlineAndOutOfLine {
 			p.writef("num_bytes_ += 8;\n")
@@ -366,9 +384,9 @@ func (member *measuringTapeMember) writeInvoke(p *Printer, mode invokeKind, fiel
 		member.guardNullableAccess(p, fieldMode, func(_ derefOp) {
 			switch mode {
 			case inlineAndOutOfLine:
-				p.writef("Measure(value.%s%s);\n", fidlcommon.ToSnakeCase(member.name), fieldMode)
+				p.writef("Measure(%s);\n", member.accessor(fieldMode))
 			case outOfLineOnly:
-				p.writef("MeasureOutOfLine(value.%s%s);\n", fidlcommon.ToSnakeCase(member.name), fieldMode)
+				p.writef("MeasureOutOfLine(%s);\n", member.accessor(fieldMode))
 			}
 		})
 	}

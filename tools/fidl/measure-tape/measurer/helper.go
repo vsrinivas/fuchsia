@@ -5,6 +5,7 @@
 package measurer
 
 import (
+	"fmt"
 	"log"
 
 	fidlcommon "fidl/compiler/backend/common"
@@ -17,7 +18,9 @@ type keyedDecl struct {
 	decl     interface{}
 }
 
-type primitiveDecl struct{}
+type primitiveDecl struct {
+	size int
+}
 type handleDecl struct{}
 type vectorDecl struct {
 	elementDecl keyedDecl
@@ -31,11 +34,12 @@ type arrayDecl struct {
 func (m *Measurer) toDecl(typ fidlir.Type) keyedDecl {
 	switch typ.Kind {
 	case fidlir.ArrayType:
-		// TODO(fxb/49480): Support measuring arrays.
-		return keyedDecl{key: "", decl: arrayDecl{
-			elementCount: *typ.ElementCount,
-			elementDecl:  m.toDecl(*typ.ElementType),
-		}}
+		return keyedDecl{
+			decl: arrayDecl{
+				elementCount: *typ.ElementCount,
+				elementDecl:  m.toDecl(*typ.ElementType),
+			},
+		}
 	case fidlir.VectorType:
 		// TODO(fxb/49480): Support measuring vectors.
 		return keyedDecl{key: "", decl: vectorDecl{
@@ -43,7 +47,6 @@ func (m *Measurer) toDecl(typ fidlir.Type) keyedDecl {
 		}}
 	case fidlir.StringType:
 		return keyedDecl{
-			key:      "",
 			nullable: typ.Nullable,
 			decl:     stringDecl{},
 		}
@@ -51,12 +54,13 @@ func (m *Measurer) toDecl(typ fidlir.Type) keyedDecl {
 		fallthrough
 	case fidlir.RequestType:
 		return keyedDecl{
-			key:      "",
 			decl:     handleDecl{},
 			nullable: typ.Nullable,
 		}
 	case fidlir.PrimitiveType:
-		return keyedDecl{key: "", decl: primitiveDecl{}}
+		return keyedDecl{
+			decl: primitiveDecl{size: toSize(typ.PrimitiveSubtype)},
+		}
 	case fidlir.IdentifierType:
 		kd, ok := m.lookup(fidlcommon.MustReadName(string(typ.Identifier)))
 		if !ok {
@@ -93,12 +97,18 @@ func (m *Measurer) lookup(name fidlcommon.Name) (keyedDecl, bool) {
 	}
 	for _, decl := range root.Enums {
 		if name := string(decl.Name); name == fqn {
-			return keyedDecl{key: fqn, decl: primitiveDecl{}}, true
+			return keyedDecl{
+				key:  fqn,
+				decl: primitiveDecl{size: toSize(decl.Type)},
+			}, true
 		}
 	}
 	for _, decl := range root.Bits {
 		if name := string(decl.Name); name == fqn {
-			return keyedDecl{key: fqn, decl: primitiveDecl{}}, true
+			return keyedDecl{
+				key:  fqn,
+				decl: primitiveDecl{size: toSize(decl.Type.PrimitiveSubtype)},
+			}, true
 		}
 	}
 	for _, decl := range root.Interfaces {
@@ -107,4 +117,20 @@ func (m *Measurer) lookup(name fidlcommon.Name) (keyedDecl, bool) {
 		}
 	}
 	return keyedDecl{}, false
+}
+
+func toSize(subtype fidlir.PrimitiveSubtype) int {
+	switch subtype {
+	case fidlir.Bool, fidlir.Int8, fidlir.Uint8:
+		return 1
+	case fidlir.Int16, fidlir.Uint16:
+		return 2
+	case fidlir.Int32, fidlir.Uint32, fidlir.Float32:
+		return 4
+	case fidlir.Int64, fidlir.Uint64, fidlir.Float64:
+		return 8
+	default:
+		panic(fmt.Sprintf("unknown subtype: %v", subtype))
+		return 0
+	}
 }

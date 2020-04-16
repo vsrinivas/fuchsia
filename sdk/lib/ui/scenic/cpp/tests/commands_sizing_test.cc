@@ -122,19 +122,18 @@ TEST(CommandsSizingTest, CreateResourceCmdWithViewArgs3WithDebugName) {
 }
 
 TEST(CommandsSizingTest, CreateResourceCmdWithSetStereoCameraProjectionCmd) {
-  // SetStereoCameraProjectionCmd contains an array, which are not yet sized.
-  // Instead, we max out to failsafe to flush early.
+  // SetStereoCameraProjectionCmd 144, i.e. 4 + 68 + 68 aligned to 8
   ::fuchsia::ui::gfx::SetStereoCameraProjectionCmd stereo_camera_projection_cmd;
 
-  ::fuchsia::ui::gfx::Command gfx_cmd; // maxed out
+  ::fuchsia::ui::gfx::Command gfx_cmd; // 24 + 144
   gfx_cmd.set_set_stereo_camera_projection(std::move(stereo_camera_projection_cmd));
 
-  ::fuchsia::ui::scenic::Command cmd; // maxed out
+  ::fuchsia::ui::scenic::Command cmd; // 24 + 24 + 144
   cmd.set_gfx(std::move(gfx_cmd));
 
   auto size = Measure(cmd);
-  EXPECT_EQ(size.num_bytes, ZX_CHANNEL_MAX_MSG_BYTES);
-  EXPECT_EQ(size.num_handles, ZX_CHANNEL_MAX_MSG_HANDLES);
+  EXPECT_EQ(size.num_bytes, 192);
+  EXPECT_EQ(size.num_handles, 0);
 }
 
 }  // scenic
