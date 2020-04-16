@@ -74,8 +74,10 @@ ThreadController::ContinueOp StepThreadController::GetContinueOp() {
 
   // The stack shouldn't be empty when stepping in a range, give up if it is.
   const auto& stack = thread()->GetStack();
-  if (stack.empty())
+  if (stack.empty()) {
+    Log("Declaring synthetic stop due to empty stack.");
     return ContinueOp::SyntheticStop();
+  }
 
   // Check for inlines. This case will likely have an empty address range so the inline check needs
   // to be done before checking for empty ranges below.
@@ -83,8 +85,10 @@ ThreadController::ContinueOp StepThreadController::GetContinueOp() {
   // GetContinueOp() should not modify thread state, so we need to return whether we want to modify
   // the inline stack. Returning SyntheticStop here will schedule a call OnThreadStop with a
   // synthetic exception. The inline stack should actually be modified at that point.
-  if (TrySteppingIntoInline(StepIntoInline::kQuery))
+  if (TrySteppingIntoInline(StepIntoInline::kQuery)) {
+    Log("Declaring synthetic stop due to inline.");
     return ContinueOp::SyntheticStop();
+  }
 
   // An empty range means to step by instruction.
   if (current_ranges_.empty())
@@ -104,9 +108,12 @@ ThreadController::ContinueOp StepThreadController::GetContinueOp() {
 ThreadController::StopOp StepThreadController::OnThreadStop(
     debug_ipc::ExceptionType stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+  Log("StepThreadController::OnThreadStop");
   Stack& stack = thread()->GetStack();
-  if (stack.empty())
+  if (stack.empty()) {
+    Log("StepThreadController unexpected");
     return kUnexpected;  // Agent sent bad state, give up trying to step.
+  }
 
   if (finish_unsymolized_function_) {
     Log("Trying to step out of unsymbolized function.");
@@ -135,6 +142,32 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
       Log("Not our exception type, stop is somebody else's.");
       return kUnexpected;
     }
+  }
+
+  if (stop_type == debug_ipc::ExceptionType::kSynthetic ||
+      stop_type == debug_ipc::ExceptionType::kNone) {
+    // Handle virtually stepping into inline functions by modifying the hidden ambiguous inline
+    // frame count.
+    //
+    // This should happen for synthetic stops because modifying the hide count is an alternative to
+    // actually stepping the CPU. Doing this after a real step will modify the stack for the *next*
+    // instruction (like doing "step into" twice in the case of ambiguous inline frames).
+    if (TrySteppingIntoInline(StepIntoInline::kCommit))
+      return kStopDone;
+
+    if (stop_type == debug_ipc::ExceptionType::kSynthetic) {
+      // In every case where GetContinueOp() returns SyntheticStop, this controller should do
+      // something. Otherwise there will be an infinite loop since GetContinueOp() will presumably
+      // return the same thing given the same conditions.
+      //
+      // This condition prevents the loop if such a case were to occur. If this assertion hits,
+      // GetContinueOp() needs to agree with this function on what to do in the synthetic case.
+      FXL_NOTREACHED();
+      return kStopDone;
+    }
+    // In the ExceptionType::kNone case, it's normal we didn't do anything if there are no inline
+    // routines. This will happen when this controller is used as a sub controller for e.g. the
+    // "step over" controller. GetContinueOp() has not been called to classify.
   }
 
   const Frame* top_frame = stack[0];
@@ -197,31 +230,15 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     }
   }
 
-  if (stop_type == debug_ipc::ExceptionType::kSynthetic ||
-      stop_type == debug_ipc::ExceptionType::kNone) {
-    // Handle virtually stepping into inline functions by modifying the hidden ambiguous inline
-    // frame count.
-    //
-    // This should only happen for synthetic stops because modifying the hide count is an
-    // alternative to actually stepping the CPU. Doing this after a real step will modify the stack
-    // for the *next* instruction (like doing "step into" twice in the case of ambiguous inline
-    // frames).
-    //
-    // On the other hand, this check should happen after the other types of range checking in case
-    // the thread is still in range.
-    if (TrySteppingIntoInline(StepIntoInline::kCommit))
-      return kStopDone;
-  } else {
-    // Just completed a true step. It may have landed at an ambiguous inline location. When
-    // line stepping from an outer frame into a newer inline, always go into exactly one frame. This
-    // corresponds to executing instructions on the line before the inline call, and then stopping
-    // at the first instruction of the inline call.
-    //
-    // Need to reset the hide count before doing this because we just stepped *to* the ambiguous
-    // location and want to have our default to be to stay in the same (outermost) frame.
-    stack.SetHideAmbiguousInlineFrameCount(stack.GetAmbiguousInlineFrameCount());
-    TrySteppingIntoInline(StepIntoInline::kCommit);
-  }
+  // Just completed a true step. It may have landed at an ambiguous inline location. When
+  // line stepping from an outer frame into a newer inline, always go into exactly one frame. This
+  // corresponds to executing instructions on the line before the inline call, and then stopping
+  // at the first instruction of the inline call.
+  //
+  // Need to reset the hide count before doing this because we just stepped *to* the ambiguous
+  // location and want to have our default to be to stay in the same (outermost) frame.
+  stack.SetHideAmbiguousInlineFrameCount(stack.GetAmbiguousInlineFrameCount());
+  TrySteppingIntoInline(StepIntoInline::kCommit);
   return kStopDone;
 }
 
