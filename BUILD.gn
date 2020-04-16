@@ -668,7 +668,6 @@ group("additional_universe_packages") {
   testonly = true
   visibility = [ "//build/images:universe_packages" ]
   public_deps = universe_package_labels
-  assert_no_deps = [ "//build/validate:cfv2_tag" ]
 }
 
 group("recovery_image") {
