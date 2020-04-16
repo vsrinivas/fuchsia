@@ -21,7 +21,7 @@ namespace stubs {
 template <typename Interface, typename TestBase>
 class SingleBindingFidlServer : public TestBase {
  public:
-  ::fidl::InterfaceRequestHandler<Interface> GetHandler() {
+  virtual ::fidl::InterfaceRequestHandler<Interface> GetHandler() {
     return [this](::fidl::InterfaceRequest<Interface> request) {
       binding_ = std::make_unique<::fidl::Binding<Interface>>(this, std::move(request));
     };
@@ -51,7 +51,7 @@ class SingleBindingFidlServer : public TestBase {
 template <typename Interface, typename TestBase>
 class MultiBindingFidlServer : public TestBase {
  public:
-  ::fidl::InterfaceRequestHandler<Interface> GetHandler() {
+  virtual ::fidl::InterfaceRequestHandler<Interface> GetHandler() {
     return [this](::fidl::InterfaceRequest<Interface> request) {
       bindings_.AddBinding(this, std::move(request));
     };

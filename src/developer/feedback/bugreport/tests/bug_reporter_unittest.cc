@@ -53,8 +53,7 @@ class BugReporterTest : public gtest::TestLoopFixture {
   std::string bugreport_path_;
 
  private:
-  // TODO(49481): Change this to DataProviderBase once DataProviderStubs have been refactored.
-  std::unique_ptr<stubs::DataProviderBundleAttachment> data_provider_server_;
+  std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
   files::ScopedTempDir tmp_dir_;
 };
 

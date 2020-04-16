@@ -61,7 +61,15 @@ void DataProviderReturnsNoData::GetData(GetDataCallback callback) {
   callback(::fit::error(ZX_ERR_INTERNAL));
 }
 
-void DataProviderNeverReturning::GetData(GetDataCallback callback) {}
+DataProviderTracksNumConnections::~DataProviderTracksNumConnections() {
+  FX_CHECK(expected_num_connections_ == num_connections_)
+      << "Expected " << expected_num_connections_ << " connections\n"
+      << "Made " << num_connections_ << " connections";
+}
+
+void DataProviderTracksNumConnections::GetData(GetDataCallback callback) {
+  callback(::fit::error(ZX_ERR_INTERNAL));
+}
 
 void DataProviderBundleAttachment::GetData(GetDataCallback callback) {
   callback(::fit::ok(

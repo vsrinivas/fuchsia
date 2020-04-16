@@ -21,52 +21,16 @@
 namespace feedback {
 namespace stubs {
 
-// TODO(49481): Clean up DataProvider stubs to use STUB_FIDL_SERVER(fuchsia::feedback,
-// DataProvider).
-class DataProviderBase : public fuchsia::feedback::testing::DataProvider_TestBase {
- public:
-  ::fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
-    return [this](::fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
-      total_num_connections_++;
-      binding_ = std::make_unique<::fidl::Binding<fuchsia::feedback::DataProvider>>(
-          this, std::move(request));
-    };
-  }
-
-  // |fuchsia::feedback::testing::DataProvider_TestBase|
-  void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
-  }
-
-  uint64_t total_num_connections() { return total_num_connections_; }
-  bool is_bound() { return binding_->is_bound(); }
-  void CloseConnection() { binding_->Close(ZX_ERR_PEER_CLOSED); }
-
- private:
-  std::unique_ptr<::fidl::Binding<fuchsia::feedback::DataProvider>> binding_;
-  uint64_t total_num_connections_ = 0;
-};
+using DataProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, DataProvider);
 
 class DataProvider : public DataProviderBase {
  public:
-  DataProvider()
-      : DataProvider(/*annotations=*/
-                     {
-                         {"feedback.annotation.1.key", "feedback.annotation.1.value"},
-                         {"feedback.annotation.2.key", "feedback.annotation.2.value"},
-                     },
-                     "feedback.attachment.bundle.key") {}
-
   DataProvider(const std::map<std::string, std::string>& annotations,
                const std::string& attachment_bundle_key)
       : annotations_(annotations), attachment_bundle_key_(attachment_bundle_key) {}
 
   // |fuchsia::feedback::DataProvider|
   void GetData(GetDataCallback callback) override;
-
-  const std::map<std::string, std::string>& annotations() { return annotations_; }
-  bool has_attachment_bundle_key() { return !attachment_bundle_key_.empty(); }
-  const std::string& attachment_bundle_key() { return attachment_bundle_key_; }
 
  protected:
   const std::map<std::string, std::string> annotations_;
@@ -75,8 +39,8 @@ class DataProvider : public DataProviderBase {
 
 class DataProviderReturnsNoAnnotation : public DataProvider {
  public:
-  DataProviderReturnsNoAnnotation()
-      : DataProvider(/*annotations=*/{}, "feedback.attachment.bundle.key") {}
+  DataProviderReturnsNoAnnotation(const std::string& attachment_bundle_key)
+      : DataProvider(/*annotations=*/{}, attachment_bundle_key) {}
 
   // |fuchsia::feedback::DataProvider|
   void GetData(GetDataCallback callback) override;
@@ -84,43 +48,49 @@ class DataProviderReturnsNoAnnotation : public DataProvider {
 
 class DataProviderReturnsNoAttachment : public DataProvider {
  public:
-  DataProviderReturnsNoAttachment()
-      : DataProvider(
-            /*annotations=*/
-            {
-                {"feedback.annotation.1.key", "feedback.annotation.1.value"},
-                {"feedback.annotation.2.key", "feedback.annotation.2.value"},
-            },
-            /*attachment_bundle_key=*/"") {}
+  DataProviderReturnsNoAttachment(const std::map<std::string, std::string>& annotations)
+      : DataProvider(annotations, /*attachment_bundle_key=*/"") {}
 
   // |fuchsia::feedback::DataProvider|
   void GetData(GetDataCallback callback) override;
 };
 
-class DataProviderReturnsNoData : public DataProvider {
+class DataProviderReturnsNoData : public DataProviderBase {
  public:
-  DataProviderReturnsNoData()
-      : DataProvider(
-            /*annotations=*/{},
-            /*attachment_bundle_key=*/"") {}
-
   // |fuchsia::feedback::DataProvider|
   void GetData(GetDataCallback callback) override;
 };
 
-class DataProviderNeverReturning : public DataProvider {
+class DataProviderTracksNumConnections : public DataProviderBase {
  public:
-  DataProviderNeverReturning()
-      : DataProvider(
-            /*annotations=*/{},
-            /*attachment_bundle_key=*/"") {}
+  DataProviderTracksNumConnections(size_t expected_num_connections)
+      : expected_num_connections_(expected_num_connections) {}
+  ~DataProviderTracksNumConnections();
+
+  ::fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() override {
+    return [this](::fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
+      ++num_connections_;
+      binding().reset(
+          new ::fidl::Binding<fuchsia::feedback::DataProvider>(this, std::move(request)));
+    };
+  }
 
   // |fuchsia::feedback::DataProvider|
   void GetData(GetDataCallback callback) override;
+
+ private:
+  const size_t expected_num_connections_;
+
+  size_t num_connections_ = 0;
 };
 
-class DataProviderBundleAttachment
-    : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, DataProvider) {
+class DataProviderNeverReturning : public DataProviderBase {
+ public:
+  // |fuchsia::feedback::DataProvider|
+  STUB_METHOD_DOES_NOT_RETURN(GetData, GetDataCallback);
+};
+
+class DataProviderBundleAttachment : public DataProviderBase {
  public:
   DataProviderBundleAttachment(fuchsia::feedback::Attachment attachment_bundle)
       : attachment_bundle_(std::move(attachment_bundle)) {}
