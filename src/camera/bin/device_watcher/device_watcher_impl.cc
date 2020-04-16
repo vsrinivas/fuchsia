@@ -127,7 +127,10 @@ void DeviceWatcherImpl::OnNewRequest(
     FX_PLOGS(ERROR, result.error());
     return;
   }
-  clients_[client_id_next_] = result.take_value();
+  auto client = result.take_value();
+  async::PostTask(loop_.dispatcher(),
+                  [this, client = client.get()]() { client->UpdateDevices(devices_); });
+  clients_[client_id_next_] = std::move(client);
   FX_LOGS(DEBUG) << "DeviceWatcher client " << client_id_next_ << " connected.";
   ++client_id_next_;
 }
@@ -150,6 +153,9 @@ DeviceWatcherImpl::Client::Create(DeviceWatcherImpl& watcher, ClientId id,
 
   client->binding_.set_error_handler([client = client.get()](zx_status_t status) {
     FX_PLOGS(DEBUG, status) << "DeviceWatcher client " << client->id_ << " disconnected.";
+    status = async::PostTask(client->watcher_.loop_.dispatcher(),
+                             [client] { client->watcher_.clients_.erase(client->id_); });
+    ZX_ASSERT(status == ZX_OK);
   });
 
   return fit::ok(std::move(client));

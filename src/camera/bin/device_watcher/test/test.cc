@@ -92,6 +92,27 @@ TEST_F(DeviceWatcherTest, WatchDevicesFindsCameras) {
     }
   }
   ASSERT_EQ(cameras.size(), kExpectedCameras);
+
+  // Ensure that a second watcher client is given the same cameras.
+  fuchsia::camera3::DeviceWatcherPtr watcher2;
+  ASSERT_EQ(context_->svc()->Connect(watcher2.NewRequest()), ZX_OK);
+  watcher2.set_error_handler(
+      [](zx_status_t status) { ADD_FAILURE() << "DeviceWatcher server disconnected: " << status; });
+  while (!HasFailure() && !cameras.empty()) {
+    bool watch_devices_returned = false;
+    watcher2->WatchDevices([&](std::vector<fuchsia::camera3::WatchDevicesEvent> events) {
+      for (auto& event : events) {
+        ASSERT_TRUE(event.is_added());
+        auto it = cameras.find(event.added());
+        ASSERT_NE(it, cameras.end());
+        cameras.erase(it);
+      }
+      watch_devices_returned = true;
+    });
+    while (!HasFailure() && !watch_devices_returned) {
+      RunLoopUntilIdle();
+    }
+  }
 }
 
 TEST_F(DeviceWatcherTest, InstanceLaunches) {
