@@ -301,12 +301,11 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
 
     /* shared output code */
   _output_string:
-    string_len = strlen(s);
-
-    // In the event of a field width smaller than the length, we need to
-    // truncate the width to fit. This only applies to %s.
     if (flags & FIELDWIDTHFLAG) {
-      string_len = ktl::min(string_len, static_cast<size_t>(format_num));
+      // Don't look past the specified length; the string can be unterminated.
+      string_len = strnlen(s, static_cast<size_t>(format_num));
+    } else {
+      string_len = strlen(s);
     }
 
     if (flags & LEFTFORMATFLAG) {
