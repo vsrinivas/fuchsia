@@ -22,6 +22,7 @@ source_set("sysmem_common_srcs") {
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.sysmem",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -34,7 +35,6 @@ source_set("sysmem_common_srcs") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/ulib/closure-queue",
@@ -94,6 +94,7 @@ test("sysmem-unittest") {
   deps = [
     ":sysmem_common_srcs",
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.sysmem",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -106,7 +107,6 @@ test("sysmem-unittest") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/dev/lib/fake-bti",
     "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/fidl/fuchsia-sysmem:c",

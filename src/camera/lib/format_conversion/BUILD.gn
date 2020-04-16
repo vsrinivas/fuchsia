@@ -9,10 +9,10 @@ source_set("format_conversion") {
   ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
     "//zircon/public/lib/fzl",
-    "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/ulib/image-format",
   ]
 }

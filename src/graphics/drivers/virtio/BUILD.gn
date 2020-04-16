@@ -12,9 +12,9 @@ source_set("gpu_lib") {
   sources = [ "gpu.cc" ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.display.controller",
+    "//sdk/banjo/ddk.protocol.sysmem",
     "//src/devices/bus/lib/virtio",
     "//zircon/public/lib/ddktl",
-    "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/ulib/image-format",
   ]
