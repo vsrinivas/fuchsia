@@ -53,8 +53,8 @@ pub enum Error {
     ResolverDependencyCycle,
     #[error("a dependency cycle exists between offer declarations")]
     OfferDependencyCycle,
-    #[error("{0} \"{1}\"path overlaps with {2} \"{3}\"")]
-    InvalidPathOverlap(DeclField, String, DeclField, String),
+    #[error("{} \"{}\" path overlaps with {} \"{}\"", decl, path, other_decl, other_path)]
+    InvalidPathOverlap { decl: DeclField, path: String, other_decl: DeclField, other_path: String },
 }
 
 impl Error {
@@ -172,17 +172,17 @@ impl Error {
     }
 
     pub fn invalid_path_overlap(
-        decl_a: impl Into<String>,
-        path_a: impl Into<String>,
-        decl_b: impl Into<String>,
-        path_b: impl Into<String>,
+        decl: impl Into<String>,
+        path: impl Into<String>,
+        other_decl: impl Into<String>,
+        other_path: impl Into<String>,
     ) -> Self {
-        Error::InvalidPathOverlap(
-            DeclField { decl: decl_a.into(), field: "target_path".to_string() },
-            path_a.into(),
-            DeclField { decl: decl_b.into(), field: "target_path".to_string() },
-            path_b.into(),
-        )
+        Error::InvalidPathOverlap {
+            decl: DeclField { decl: decl.into(), field: "target_path".to_string() },
+            path: path.into(),
+            other_decl: DeclField { decl: other_decl.into(), field: "target_path".to_string() },
+            other_path: other_path.into(),
+        }
     }
 }
 
@@ -2097,10 +2097,12 @@ mod tests {
             },
             results = vec![
                 Err(ErrorList::new(vec![
-                    Error::invalid_path_overlap("UseDirectoryDecl", "/foo/bar/baz", "UseDirectoryDecl", "/foo/bar"),
+                    Error::invalid_path_overlap(
+                        "UseDirectoryDecl", "/foo/bar/baz", "UseDirectoryDecl", "/foo/bar"),
                 ])),
                 Err(ErrorList::new(vec![
-                    Error::invalid_path_overlap("UseDirectoryDecl", "/foo/bar", "UseDirectoryDecl", "/foo/bar/baz"),
+                    Error::invalid_path_overlap(
+                        "UseDirectoryDecl", "/foo/bar", "UseDirectoryDecl", "/foo/bar/baz"),
                 ])),
             ],
         },
@@ -2125,10 +2127,12 @@ mod tests {
             },
             results = vec![
                 Err(ErrorList::new(vec![
-                    Error::invalid_path_overlap("UseProtocolDecl", "/foo/bar/fuchsia.2", "UseDirectoryDecl", "/foo/bar"),
+                    Error::invalid_path_overlap(
+                        "UseProtocolDecl", "/foo/bar/fuchsia.2", "UseDirectoryDecl", "/foo/bar"),
                 ])),
                 Err(ErrorList::new(vec![
-                    Error::invalid_path_overlap("UseDirectoryDecl", "/foo/bar", "UseProtocolDecl", "/foo/bar/fuchsia.2"),
+                    Error::invalid_path_overlap(
+                        "UseDirectoryDecl", "/foo/bar", "UseProtocolDecl", "/foo/bar/fuchsia.2"),
                 ])),
             ],
         },
@@ -2153,10 +2157,12 @@ mod tests {
             },
             results = vec![
                 Err(ErrorList::new(vec![
-                    Error::invalid_path_overlap("UseServiceDecl", "/foo/bar/baz/fuchsia.logger.Log", "UseDirectoryDecl", "/foo/bar"),
+                    Error::invalid_path_overlap(
+                        "UseServiceDecl", "/foo/bar/baz/fuchsia.logger.Log", "UseDirectoryDecl", "/foo/bar"),
                 ])),
                 Err(ErrorList::new(vec![
-                    Error::invalid_path_overlap("UseDirectoryDecl", "/foo/bar", "UseServiceDecl", "/foo/bar/baz/fuchsia.logger.Log"),
+                    Error::invalid_path_overlap(
+                        "UseDirectoryDecl", "/foo/bar", "UseServiceDecl", "/foo/bar/baz/fuchsia.logger.Log"),
                 ])),
             ],
         },
