@@ -88,6 +88,8 @@ struct udp_hdr {
 #define ICMP6_ECHO_REQUEST 128
 #define ICMP6_ECHO_REPLY 129
 
+#define ICMP6_NDP_R_ADVERTISE 134
+
 #define ICMP6_NDP_N_SOLICIT 135
 #define ICMP6_NDP_N_ADVERTISE 136
 
@@ -150,6 +152,8 @@ void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport);
 
 unsigned ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length);
+
+void send_router_advertisement(void);
 
 // NOTES
 //

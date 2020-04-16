@@ -15,6 +15,14 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
+declare_args() {
+  netsvc_extra_defines = []
+}
+
+config("netsvc_config") {
+  defines = netsvc_extra_defines
+}
+
 executable("netsvc") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -47,6 +55,7 @@ executable("netsvc") {
     # netsvc launches /boot/bin/sh for netruncmd.
     "//zircon/third_party/uapp/dash",
   ]
+  configs += [ ":netsvc_config" ]
 }
 
 executable("device-name-provider") {

@@ -23,6 +23,10 @@
 #include "netboot.h"
 #include "tftp.h"
 
+#ifndef ENABLE_SLAAC
+#define ENABLE_SLAAC 1
+#endif
+
 static bool g_netbootloader = false;
 
 // When false (default), will only respond to a limited number of commands.
@@ -148,6 +152,9 @@ int main(int argc, char** argv) {
 
       zx_time_t now = zx::clock::get_monotonic().get();
       if (now > advertise_next_timeout) {
+#if ENABLE_SLAAC
+        send_router_advertisement();
+#endif
         netboot_advertise(g_nodename);
         advertise_next_timeout = zx_deadline_after(ZX_SEC(1));
       }

@@ -34,6 +34,29 @@ const ip6_addr_t ip6_ll_all_nodes = {
 // is distinct from traffic from Fuchsia's netstack service.
 #define INET6_COEXIST_WITH_NETSTACK 1
 
+// Convert MAC Address to IPv6 Unique Local Address.
+void ula6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
+  uint8_t* ip = _ip->u8;
+  const uint8_t* mac = _mac->x;
+  memset(ip, 0, sizeof(ip6_addr_t));
+
+  ip[0] = 0xFD;
+  ip[1] = mac[1];
+  ip[2] = mac[2];
+  ip[3] = mac[3];
+  ip[4] = mac[4];
+  ip[5] = mac[5];
+
+  // We leave byte-0 out above because it is the least unique but we want
+  // it just in case by some slight chance there are two NICs with the other
+  // bytes matching.
+  ip[13] = mac[0];
+  // We need these down here to keep us matching the snmaddr.
+  ip[13] = mac[3];
+  ip[14] = mac[4];
+  ip[15] = mac[5];
+}
+
 // Convert MAC Address to IPv6 Link Local Address
 // aa:bb:cc:dd:ee:ff => FF80::aabb:ccFF:FEdd:eeff
 // bit 2 (U/L) of the mac is inverted
@@ -91,6 +114,7 @@ void multicast_from_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip6) {
 // ip6 stack configuration
 static mac_addr_t ll_mac_addr;
 static ip6_addr_t ll_ip6_addr;
+static ip6_addr_t ula_ip6_addr;
 static mac_addr_t snm_mac_addr;
 static ip6_addr_t snm_ip6_addr;
 
@@ -127,6 +151,7 @@ void ip6_init(void* macaddr, bool quiet) {
 
   // save our ethernet MAC and synthesize link layer addresses
   memcpy(&ll_mac_addr, macaddr, 6);
+  ula6addr_from_mac(&ula_ip6_addr, &ll_mac_addr);
   ll6addr_from_mac(&ll_ip6_addr, &ll_mac_addr);
   snmaddr_from_mac(&snm_ip6_addr, &ll_mac_addr);
   multicast_from_ip6(&snm_mac_addr, &snm_ip6_addr);
@@ -139,7 +164,8 @@ void ip6_init(void* macaddr, bool quiet) {
   if (!quiet) {
     printf("macaddr: %02x:%02x:%02x:%02x:%02x:%02x\n", ll_mac_addr.x[0], ll_mac_addr.x[1],
            ll_mac_addr.x[2], ll_mac_addr.x[3], ll_mac_addr.x[4], ll_mac_addr.x[5]);
-    printf("ip6addr: %s\n", ip6toa(tmp, &ll_ip6_addr));
+    printf("ip6addr (LL) : %s\n", ip6toa(tmp, &ll_ip6_addr));
+    printf("ip6addr (ULA): %s\n", ip6toa(tmp, &ula_ip6_addr));
     printf("snmaddr: %s\n", ip6toa(tmp, &snm_ip6_addr));
   }
 }
@@ -200,7 +226,7 @@ typedef struct {
   uint8_t data[0];
 } udp_pkt_t;
 
-static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* daddr, size_t length, uint8_t type) {
+static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* saddr, const ip6_addr_t* daddr, size_t length, uint8_t type) {
   mac_addr_t dmac;
 
   if (resolve_ip6(&dmac, daddr))
@@ -217,7 +243,7 @@ static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* daddr, size_t length, uint8
   p->ip6.length = htons(length);
   p->ip6.next_header = type;
   p->ip6.hop_limit = 255;
-  p->ip6.src = ll_ip6_addr;
+  p->ip6.src = *saddr;
   p->ip6.dst = *daddr;
 
   return 0;
@@ -236,7 +262,10 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
   if (status != ZX_OK) {
     return status;
   }
-  if (ip6_setup((void*)p, daddr, length, HDR_UDP)) {
+
+  const bool ula = (*daddr).u8[0] == ula_ip6_addr.u8[0];
+  const ip6_addr_t* const saddr = ula ? &ula_ip6_addr : &ll_ip6_addr;
+  if (ip6_setup((void*)p, saddr, daddr, length, HDR_UDP)) {
     eth_put_buffer(ethbuf);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -254,7 +283,7 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
 
 #define ICMP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN)
 
-static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t* daddr,
+static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t* saddr, const ip6_addr_t* daddr,
                               bool block) {
   if (length > ICMP6_MAX_PAYLOAD)
     return ZX_ERR_INVALID_ARGS;
@@ -266,7 +295,7 @@ static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t*
   if (status != ZX_OK) {
     return status;
   }
-  if (ip6_setup(p, daddr, length, HDR_ICMP6)) {
+  if (ip6_setup(p, saddr, daddr, length, HDR_ICMP6)) {
     eth_put_buffer(ethbuf);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -288,6 +317,53 @@ static void report_bad_packet(ip6_addr_t* ip6_addr, const char* msg) {
   }
 }
 #endif
+
+// This is the cornerstone of SLAAC networking. This will have connected clients
+// add an ipv6 address that can talk to our ULA address.
+void send_router_advertisement() {
+  // This struct is not a generic advert packet, it is specific to sending a
+  // single prefix, if you want to do more look at the spec and extend.
+  static struct {
+    icmp6_hdr_t hdr;
+    uint8_t hop_limit; // 0 means this router has no opinion.
+    uint8_t autoconf_flags;
+    uint16_t router_lifetime_ms; // 0 means don't use this router.
+    uint32_t reachable_time_ms; // 0 means this router has no opinion.
+    uint32_t retransmit_timer_ms; // 0 means this router has no opinion.
+    uint8_t option_type; // We are using a prefix option of 3
+    uint8_t option_length; // length is units of 8 bytes (for some reason).
+    uint8_t prefix_length; // valid bits of prefix.
+    uint8_t prefix_flags;
+    uint32_t prefix_lifetime_s;
+    uint32_t prefix_pref_lifetime_s;
+    uint32_t reserved ;
+    uint8_t prefix[16]; // prefix for all devices on this link to communicate.
+  } __attribute__((packed)) msg;
+
+  memset(&msg, 0, sizeof(msg));
+
+  msg.hdr.type = ICMP6_NDP_R_ADVERTISE;
+  msg.hdr.code = 0;
+  msg.hdr.checksum = 0;
+  msg.option_type = 3; // Prefix option.
+  msg.option_length = 4; // From spec, length is in 64bit units.
+  msg.prefix_length = 64; // 64 leading bits of address are all we care about.
+  msg.prefix_flags = 0b11000000; // valid on this link and used for autoconf.
+  msg.prefix_lifetime_s = 0xFFFFFFFF; // valid while this link is up.
+  msg.prefix_pref_lifetime_s = 0xFFFFFFFF; // preferred while this link is up.
+
+  // Copy first 8 bytes (64bits) as our prefix, rest will be 0.
+  memcpy(msg.prefix, &ula_ip6_addr, 8);
+
+  // We need to send this on the link-local address because nothing is talking
+  // to the ula address yet.
+  zx_status_t status = icmp6_send(&msg, sizeof(msg), (void*)&ll_ip6_addr, (void*)&ip6_ll_all_nodes, false);
+  if (status == ZX_ERR_SHOULD_WAIT) {
+    printf("inet6: No buffers available, dropping RA\n");
+  } else if (status < 0) {
+    printf("inet6: Failed to send RA (err = %d)\n", status);
+  }
+}
 
 void _udp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
   udp_hdr_t* udp = _data;
@@ -359,7 +435,8 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
       return;
     }
 #if !INET6_COEXIST_WITH_NETSTACK
-    if (!ip6_addr_eq((ip6_addr_t*)ndp->target, &ll_ip6_addr)) {
+    if (!ip6_addr_eq((ip6_addr_t*)ndp->target, &ll_ip6_addr) &&
+        !ip6_addr_eq((ip6_addr_t*)ndp->target, &ula_ip6_addr)) {
       char src_addr_str[IP6TOAMAX];
       char dst_addr_str[IP6TOAMAX];
       ip6toa(src_addr_str, &ip->src);
@@ -373,16 +450,21 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
     msg.hdr.code = 0;
     msg.hdr.checksum = 0;
     msg.hdr.flags = 0x60;  // (S)olicited and (O)verride flags
-    memcpy(msg.hdr.target, &ll_ip6_addr, sizeof(ip6_addr_t));
+    memcpy(msg.hdr.target, ndp->target, sizeof(ip6_addr_t));
     msg.opt[0] = NDP_N_TGT_LL_ADDR;
     msg.opt[1] = 1;
     memcpy(msg.opt + 2, &ll_mac_addr, ETH_ADDR_LEN);
 
-    status = icmp6_send(&msg, sizeof(msg), (void*)&ip->src, false);
+    // If the target was on the ula network, respond from it.
+    // Otherwise respond from the ll address.
+    const bool ula = ndp->target[0] == ula_ip6_addr.u8[0];
+    const ip6_addr_t* const saddr = ula ? &ula_ip6_addr : &ll_ip6_addr;
+
+    status = icmp6_send(&msg, sizeof(msg), saddr, (void*)&ip->src, false);
   } else if (icmp->type == ICMP6_ECHO_REQUEST) {
     icmp->checksum = 0;
     icmp->type = ICMP6_ECHO_REPLY;
-    status = icmp6_send(_data, len, (void*)&ip->src, false);
+    status = icmp6_send(_data, len, (void*)&ip->dst, (void*)&ip->src, false);
   } else {
     // Ignore
     return;
@@ -468,10 +550,9 @@ void eth_recv(void* _data, size_t len) {
 
   // ignore any trailing data in the ethernet frame
   len = n;
-
   // require that we are the destination
   if (!ip6_addr_eq(&ll_ip6_addr, &ip->dst) && !ip6_addr_eq(&snm_ip6_addr, &ip->dst) &&
-      !ip6_addr_eq(&ip6_ll_all_nodes, &ip->dst)) {
+      !ip6_addr_eq(&ip6_ll_all_nodes, &ip->dst) && !ip6_addr_eq(&ula_ip6_addr, &ip->dst)) {
     return;
   }
 
