@@ -21,19 +21,18 @@ zx_status_t zx_object_wait_one(zx_handle_t handle,
 
 ## DESCRIPTION
 
-`zx_object_wait_one()` is a blocking syscall which causes the caller to
-wait until either the *deadline* passes or the object to which *handle* refers
-asserts at least one of the specified *signals*. If the object is already
-asserting at least one of the specified *signals*, the wait ends immediately
-with **ZX_OK**.
+`zx_object_wait_one()` is a blocking syscall which causes the caller to wait
+until either the *deadline* passes or the object to which *handle* refers
+asserts at least one [signal][signals] specified by the bitmask *signals*. If
+the object is already asserting at least one of the specified *signals*, the
+wait ends immediately with **ZX_OK**.
 
-Upon return, if non-NULL, *observed* is a bitmap of *all* of the
-signals which were observed asserted on that object while waiting.
-
-The *observed* signals may not reflect the actual state of the object's
-signals if the state of the object was modified by another thread or
-process.  (For example, a Channel ceases asserting **ZX_CHANNEL_READABLE**
-once the last message in its queue is read).
+Upon return, if non-NULL, *observed* is a bitmap of *all* of the signals
+asserted on the object. If one of the specified *signals* was asserted,
+*observed* will be the set of signals asserted at the moment the specified
+signal was first asserted. Otherwise, if *deadline* passes or *handle* is
+closed, *observed* will contain the state of the object's signals at the time
+the `zx_object_wait_one` syscall completed.
 
 The *deadline* parameter specifies a deadline with respect to
 **ZX_CLOCK_MONOTONIC** and will be automatically adjusted according to the job's
@@ -76,11 +75,17 @@ not be waited upon.
 **ZX_ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on
 (for example, a Port handle).
 
+## NOTES
+
+See [signals] for more information about signals and their terminology.
+
 ## SEE ALSO
 
  - [timer slack](/docs/concepts/kernel/timer_slack.md)
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_many()`]
+
+[signals]: /docs/concepts/kernel/signals.md
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 

@@ -23,22 +23,23 @@ zx_status_t zx_object_wait_async(zx_handle_t handle,
 ## DESCRIPTION
 
 `zx_object_wait_async()` is a non-blocking syscall which causes packets to be
-enqueued on *port* when the specified condition is met.
-Use [`zx_port_wait()`] to retrieve the packets.
+enqueued on *port* when the object specified by *handle* has one or more of the
+specified [signals] asserted. Use [`zx_port_wait()`] to retrieve the packets.
 
 *handle* points to the object that is to be watched for changes and must be a waitable object.
 
 The *options* argument can be 0 or it can be ZX_WAIT_ASYNC_TIMESTAMP which causes
 the system to capture a timestamp when the wait triggered.
 
-The *signals* argument indicates which signals on the object specified by *handle*
-will cause a packet to be enqueued, and if **any** of those signals are asserted when
-`zx_object_wait_async()` is called, or become asserted afterwards, a packet will be
-enqueued on *port* containing all of the currently-asserted signals (not just the ones
-listed in the *signals* argument).  Once a packet has been enqueued the asynchronous
-waiting ends.  No further packets will be enqueued. Note that signals are OR'd
-into the state maintained by the port thus you may see any combination of
-requested signals when [`zx_port_wait()`] returns.
+The *signals* argument is a bitmask indicating which [signals] on the object
+specified by *handle* will cause a packet to be enqueued. If **any** of those
+signals are asserted when `zx_object_wait_async()` is called or become asserted
+afterwards, a packet will be enqueued on *port* containing all of the
+currently-asserted signals (not just the ones listed in the *signals* argument).
+Once a packet has been enqueued the asynchronous waiting ends. No further
+packets will be enqueued. Note that signals are OR'd into the state maintained
+by the port thus you may see any combination of requested signals when
+[`zx_port_wait()`] returns.
 
 [`zx_port_cancel()`] will terminate the operation and if a packet was
 in the queue on behalf of the operation, that packet will be removed from the queue.
@@ -99,7 +100,7 @@ In a future build this error will no longer occur.
 
 ## NOTES
 
-See [signals](/docs/concepts/kernel/signals.md) for more information about signals and their terminology.
+See [signals] for more information about signals and their terminology.
 
 ## SEE ALSO
 
@@ -108,6 +109,8 @@ See [signals](/docs/concepts/kernel/signals.md) for more information about signa
  - [`zx_port_cancel()`]
  - [`zx_port_queue()`]
  - [`zx_port_wait()`]
+
+[signals]: /docs/concepts/kernel/signals.md
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 

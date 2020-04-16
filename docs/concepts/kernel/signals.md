@@ -3,13 +3,13 @@
 ## Introduction
 
 A signal is a single bit of information that waitable zircon kernel objects expose to
-applications.  Each object can expose one or more signals; some are generic and some
-are specific to the type of object.
+applications.  Each object can expose one or more signals, most of which are specific
+to the type of object.
 
 For example, the signal **ZX_CHANNEL_READABLE** indicates "this channel endpoint has
 messages to read", and **ZX_PROCESS_TERMINATED** indicates "this process stopped running."
 
-The signals for an object are stored in a uint32 bitmask, and their values (which are
+The signals for an object are stored in a `uint32` bitmask, and their values (which are
 object-specific) are defined in the header[`zircon/types.h`](/zircon/system/public/zircon/types.h).
 The typedef `zx_signals_t` is used to refer to signal bitmasks in syscalls and other APIs.
 
@@ -37,13 +37,18 @@ The syscalls [`zx_object_wait_one()`], [`zx_object_wait_many()`], and
 [`zx_object_wait_async()`], in combination with a Port, can be used to wait for
 specified signals on one or more objects.
 
-## Common Signals
+If multiple threads are operating on an object, the results of these syscalls
+may already be out of date by the time the calling thread actually acts on them.
+For example, a thread waiting on a Channel for the **ZX_CHANNEL_READABLE**
+signal may wake from a [`zx_object_wait_one()`] syscall only to find that there
+are no pending messages, because another thread has already read it.
 
-### ZX_SIGNAL_HANDLE_CLOSED
+## Synthetic Signals
 
-This synthetic signal only exists in the results of [`zx_object_wait_one()`]
-or [`zx_object_wait_many()`] and indicates that a handle that was
-being waited upon has been been closed causing the wait operation to be aborted.
+The signal `ZX_SIGNAL_HANDLE_CLOSED` is a synthetic signal only exists in the
+results of [`zx_object_wait_one()`] or [`zx_object_wait_many()`] and indicates
+that a handle that was being waited upon has been been closed causing the wait
+operation to be aborted.
 
 This signal can only be obtained as a result of the above two wait calls when the wait itself
 returns with **ZX_ERR_CANCELED**.

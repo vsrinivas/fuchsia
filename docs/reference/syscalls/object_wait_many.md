@@ -20,11 +20,11 @@ zx_status_t zx_object_wait_many(zx_wait_item_t* items,
 
 ## DESCRIPTION
 
-`zx_object_wait_many()` is a blocking syscall which causes the caller to
-wait until either the *deadline* passes or at least one of the specified
-signals is asserted by the object to which the associated handle refers.
-If an object is already asserting at least one of the specified signals,
-the wait ends immediately with **ZX_OK**.
+`zx_object_wait_many()` is a blocking syscall which causes the caller to wait
+until either the *deadline* passes or at least one object referred to in
+*items* has a specified [signal][signals] asserted. If an object is already
+asserting at least one of the specified signals, the wait ends immediately with
+**ZX_OK**.
 
 ```
 typedef struct {
@@ -36,6 +36,9 @@ typedef struct {
 
 The caller must provide *count* `zx_wait_item_t`s in the *items* array,
 containing the handle and signals bitmask to wait for for each item.
+Each item should contain a valid *handle* referring to an object to
+wait for, and a bitmask *waitfor* indicating which signals should wake
+the calling thread.
 
 The *deadline* parameter specifies a deadline with respect to
 **ZX_CLOCK_MONOTONIC** and will be automatically adjusted according to the job's
@@ -44,11 +47,6 @@ forever.
 
 Upon return, the *pending* field of *items* is filled with bitmaps indicating
 which signals are pending for each item.
-
-The *pending* signals in *items* may not reflect the actual state of the object's
-signals if the state of the object was modified by another thread or
-process.  (For example, a Channel ceases asserting **ZX_CHANNEL_READABLE**
-once the last message in its queue is read).
 
 The maximum number of items that may be waited upon is **ZX_WAIT_MANY_MAX_ITEMS**,
 which is 64.  To wait on more objects at once use [Ports](/docs/reference/kernel_objects/port.md).
@@ -102,11 +100,17 @@ In a future build this error will no longer occur.
 
 *pending* more properly should be called *observed*.
 
+## NOTES
+
+See [signals] for more information about signals and their terminology.
+
 ## SEE ALSO
 
  - [timer slack](/docs/concepts/kernel/timer_slack.md)
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_one()`]
+
+[signals]: /docs/concepts/kernel/signals.md
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
