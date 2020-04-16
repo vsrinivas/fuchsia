@@ -1,5 +1,10 @@
 [
   {
+    "label": "//zircon/system/ulib/fidl-utils:fidl-utils",
+    "name": "fidl-utils",
+    "sdk": false
+  },
+  {
     "label": "//zircon/system/dev/lib/pci:pci",
     "name": "pci",
     "sdk": false

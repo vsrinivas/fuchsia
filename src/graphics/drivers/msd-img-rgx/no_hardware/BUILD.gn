@@ -34,7 +34,7 @@ source_set("driver_sources") {
     "//third_party/imgtec-pvr-rgx-km:src_no_hardware",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fidl-utils",
+    "//zircon/system/ulib/fidl-utils",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

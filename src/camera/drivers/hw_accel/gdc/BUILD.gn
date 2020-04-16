@@ -26,7 +26,6 @@ driver_module("gdc-driver") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
@@ -40,6 +39,7 @@ driver_module("gdc-driver") {
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
   ]
 

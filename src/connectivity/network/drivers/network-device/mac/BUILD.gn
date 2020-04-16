@@ -19,8 +19,8 @@ ddk_source_split("mac") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fidl-utils",
   ]
 
   # TODO(44349): UBSan has found an instance of undefined behavior in this target.

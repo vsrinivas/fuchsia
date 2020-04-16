@@ -29,7 +29,6 @@ driver_module("optee") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/region-alloc",
@@ -42,6 +41,7 @@ driver_module("optee") {
     "//zircon/system/fidl/fuchsia-hardware-tee:llcpp",
     "//zircon/system/fidl/fuchsia-tee:llcpp",
     "//zircon/system/fidl/fuchsia-tee-manager:llcpp",
+    "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
   ]
 }
@@ -78,7 +78,6 @@ test("optee-message-test") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
@@ -88,6 +87,7 @@ test("optee-message-test") {
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-hardware-tee:llcpp",
     "//zircon/system/fidl/fuchsia-tee:llcpp",
+    "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
   ]
 }

@@ -21,11 +21,11 @@ driver_module("max98927") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/fidl/fuchsia-hardware-audiocodec:c",
+    "//zircon/system/ulib/fidl-utils",
   ]
 }
 

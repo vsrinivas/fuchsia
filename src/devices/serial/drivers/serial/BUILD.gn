@@ -28,9 +28,9 @@ source_set("common") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fidl-utils",
   ]
 }
 

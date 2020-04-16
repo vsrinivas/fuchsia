@@ -25,12 +25,12 @@ driver_module("aml-thermal-s912") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/ulib/fidl-utils",
   ]
 }
 
@@ -52,7 +52,6 @@ test("aml-thermal-s912-test") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
@@ -62,6 +61,7 @@ test("aml-thermal-s912-test") {
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/fake_ddk",
+    "//zircon/system/ulib/fidl-utils",
   ]
 }
 

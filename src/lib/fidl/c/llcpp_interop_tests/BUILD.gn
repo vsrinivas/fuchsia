@@ -32,9 +32,9 @@ executable("bin") {
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fidl-llcpp",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fidl-utils",
   ]
 }
 

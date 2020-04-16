@@ -27,7 +27,7 @@ source_set("stream_server") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/system/ulib/fidl-utils",
   ]
 }

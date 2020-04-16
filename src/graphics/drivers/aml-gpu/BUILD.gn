@@ -21,7 +21,6 @@ source_set("sources") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.gpio",
@@ -30,6 +29,7 @@ source_set("sources") {
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
+    "//zircon/system/ulib/fidl-utils",
   ]
 }
 

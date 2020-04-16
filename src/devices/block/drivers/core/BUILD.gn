@@ -66,7 +66,6 @@ source_set("shared") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/storage-metrics",
     "//zircon/public/lib/sync",
@@ -77,6 +76,7 @@ source_set("shared") {
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
     "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
+    "//zircon/system/ulib/fidl-utils",
   ]
 }
 

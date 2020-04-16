@@ -24,7 +24,6 @@ executable("test") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
@@ -40,6 +39,7 @@ executable("test") {
     "//zircon/system/dev/lib/fake-bti",
     "//zircon/system/dev/lib/mock-mmio-reg",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
   ]
 }

@@ -30,9 +30,9 @@ ddk_source_split("device") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/fidl-utils",
   ]
 }
 

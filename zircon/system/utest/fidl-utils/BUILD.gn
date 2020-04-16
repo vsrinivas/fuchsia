@@ -29,8 +29,8 @@ test("fidl-utils") {
   sources = [ "binding_tests.cc" ]
   deps = [
     ":fidl.test.fidlutils_c",
-    "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/unittest",
+    "//zircon/system/ulib/fidl-utils",
   ]
 }
 
