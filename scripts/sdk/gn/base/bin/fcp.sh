@@ -17,17 +17,27 @@ source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
 FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 
+DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
+DEFAULT_NAME_HELP=""
+if [[ "${DEVICE_NAME_FILTER}" != "" ]]; then
+  DEFAULT_NAME_HELP="The default device name is ${DEVICE_NAME_FILTER}."
+fi
+DEVICE_IP="$(get-fuchsia-property device-ip)"
+DEFAULT_IP_HELP=""
+if [[ "${DEVICE_IP}" != "" ]]; then
+  DEFAULT_IP_HELP="The default IP address is ${DEVICE_IP}."
+fi
 function usage {
   cat << EOF
 usage: fcp.sh [(--device-name <device hostname> | --device-ip <device ip-addr>)]  [--private-key <identity file>] [(--to-target|--to-host)] SRC... DST
     Copies a file from the host to the target device, or vice versa.
 
   --device-name <device hostname>
-      Connects to a device by looking up the given device hostname.
+      Connects to a device by looking up the given device hostname. ${DEFAULT_NAME_HELP}
   --device-ip <device ipaddr>
       Connects to a device by using the provided IP address, cannot use with --device-name.
       If neither --device-name nor --device-ip are given, the connection is attempted to the
-      first device detected.
+      first device detected. ${DEFAULT_IP_HELP}
   --private-key <identity file>
       Uses additional private key when using ssh to access the device.
   --to-target
@@ -38,8 +48,6 @@ EOF
 }
 
 PRIVATE_KEY_FILE=""
-DEVICE_NAME_FILTER=""
-DEVICE_IP=""
 TO_TARGET=true
 
 # Process all the args except the last two.
@@ -115,8 +123,12 @@ fi
 
 # Pass in commands in batch mode from stdin
 sftp_cmd+=( "-b" "-" )
-# sftp needs the [] around the ip address, which is different than ssh.
-sftp_cmd+=( "[${target_addr}]" )
+# sftp needs the [] around the ipv6 address, which is different than ssh.
+if [[ "${target_addr}" =~ : ]]; then
+  sftp_cmd+=( "[${target_addr}]" )
+else
+  sftp_cmd+=( "${target_addr}" )
+fi
 
 if [[ "${TO_TARGET}" = "true" ]]; then
   (

@@ -81,9 +81,27 @@ get \"/config/build-info/version\" \"version.txt\""
   gn-test-check-mock-args _ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig" -i "other_key_file.txt"  _ANY_ _ANY_ \[fe80::c0ff:eec0:ffee%coffee\]
 }
 
+TEST_fcp_with_props() {
+  setup_sftp
+  setup_device_finder
+  
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh" set device-ip "192.1.1.2"
+
+ # Run command.
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fcp.sh"  version.txt /tmp/version.txt
+
+  # Verify that sftp was run correctly.
+  # shellcheck disable=SC1090
+  source "${PATH_DIR_FOR_TEST}/sftp.mock_state"
+
+  gn-test-check-mock-args _ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig"  _ANY_ _ANY_ 192.1.1.2
+
+}
+
 # Test initialization.
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
+  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fcp.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
