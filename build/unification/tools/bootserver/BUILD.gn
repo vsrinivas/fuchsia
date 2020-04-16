@@ -6,5 +6,5 @@ import("//build/config/fuchsia/zircon.gni")
 
 # This alias is used to soft-transition references to the tool.
 group("host") {
-  public_deps = [  "//zircon/public/tool/bootserver($host_toolchain)" ]
+  public_deps = [  "//zircon/tools/bootserver($host_toolchain)" ]
 }

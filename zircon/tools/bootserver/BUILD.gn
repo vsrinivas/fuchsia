@@ -2,11 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_host_tool("bootserver") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+import("//build/cpp/sdk_executable.gni")
+
+sdk_executable("bootserver") {
+  category = "partner"
   sources = [
     "bootserver.c",
     "netboot.c",
     "tftp.c",
   ]
-  deps = [ "$zx/system/ulib/tftp" ]
+  deps = [ "//zircon/public/lib/tftp" ]
 }

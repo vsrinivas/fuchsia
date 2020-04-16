@@ -63,11 +63,22 @@ if (is_linux) {
     }
   }
 
-  copy("copy_bootserver_tools") {
+  host_out_dir = get_label_info("//bogus($host_toolchain)", "root_out_dir")
+
+  copy("copy_bootserver") {
+    visibility = [ ":*" ]
+
+    sources = [ "$host_out_dir/bootserver" ]
+
+    outputs = [ "$root_out_dir/test_data/bootserver_tools/bootserver" ]
+
+    deps = [ "//zircon/tools/bootserver($host_toolchain)" ]
+  }
+
+  copy("copy_other_tools") {
     visibility = [ ":*" ]
 
     sources = [
-      "$zircon_root_build_dir/tools/bootserver",
       "$zircon_root_build_dir/tools/netls",
       "testdata/fake_firmware",
     ]
@@ -76,7 +87,10 @@ if (is_linux) {
   }
 
   group("bootserver_user_tools") {
-    deps = [ ":copy_bootserver_tools" ]
+    deps = [
+      ":copy_bootserver",
+      ":copy_other_tools",
+    ]
 
     metadata = {
       test_runtime_deps = [

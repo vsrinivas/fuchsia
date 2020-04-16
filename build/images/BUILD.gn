@@ -1982,14 +1982,16 @@ action("ids.txt") {
 }
 
 group("bootserver") {
-  deps = [ "//zircon/public/tool/bootserver($host_toolchain)" ]
+  deps = [ "//zircon/tools/bootserver($host_toolchain)" ]
+
+  host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
 
   metadata = {
     images = [
       {
         archive = true
         name = "bootserver"
-        path = rebase_path("$zircon_tools_dir/bootserver", root_build_dir)
+        path = rebase_path("$host_out_dir/bootserver", root_build_dir)
         type = "exe.$host_platform"
       },
     ]

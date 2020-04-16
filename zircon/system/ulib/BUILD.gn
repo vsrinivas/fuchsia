@@ -631,6 +631,9 @@ group("ulib-host") {
     "storage/operation",
 #------------------
 #------------------
+    "tftp",
+#------------------
+#------------------
     "trace-engine:trace-engine-headers-for-reader",
 #------------------
 #------------------
