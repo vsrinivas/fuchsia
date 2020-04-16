@@ -181,8 +181,12 @@ void AmlogicVideo::ClearDecoderInstance() {
 }
 
 void AmlogicVideo::RemoveDecoder(VideoDecoder* decoder) {
-  DLOG("Removing decoder: %p", decoder);
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
+  RemoveDecoderLocked(decoder);
+}
+
+void AmlogicVideo::RemoveDecoderLocked(VideoDecoder* decoder) {
+  DLOG("Removing decoder: %p", decoder);
   if (current_instance_ && current_instance_->decoder() == decoder) {
     current_instance_.reset();
     video_decoder_ = nullptr;

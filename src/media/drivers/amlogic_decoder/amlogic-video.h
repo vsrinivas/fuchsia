@@ -115,6 +115,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // mode. This will stop and power off the core if the decoder is currently
   // running.
   void RemoveDecoder(VideoDecoder* decoder);
+  void RemoveDecoderLocked(VideoDecoder* decoder) __TA_REQUIRES(video_decoder_lock_);
 
   [[nodiscard]] zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure);
   [[nodiscard]] zx_status_t InitializeEsParser();

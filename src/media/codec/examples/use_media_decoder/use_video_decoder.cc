@@ -113,6 +113,8 @@ struct __attribute__((__packed__)) IvfFrameHeader {
 
 enum class Format {
   kH264,
+  // This uses the multi-instance h.264 decoder.
+  kH264Multi,
   kVp9,
 };
 
@@ -430,6 +432,10 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
       mime_type = "video/h264";
       break;
 
+    case Format::kH264Multi:
+      mime_type = "video/h264-multi";
+      break;
+
     case Format::kVp9:
       mime_type = "video/vp9";
       break;
@@ -495,6 +501,7 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
         for (uint32_t loop_ordinal = 0; loop_ordinal < loop_stream_count; loop_ordinal++) {
           switch (format) {
             case Format::kH264:
+            case Format::kH264Multi:
               frames_queued = QueueH264Frames(&codec_client, in_stream, stream_lifetime_ordinal,
                                               input_frame_pts_counter, copier, test_params);
               break;
@@ -848,6 +855,10 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
 
 void use_h264_decoder(UseVideoDecoderParams params) {
   use_video_decoder(Format::kH264, std::move(params));
+}
+
+void use_h264_multi_decoder(UseVideoDecoderParams params) {
+  use_video_decoder(Format::kH264Multi, std::move(params));
 }
 
 void use_vp9_decoder(UseVideoDecoderParams params) {

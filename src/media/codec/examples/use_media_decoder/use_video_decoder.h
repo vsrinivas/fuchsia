@@ -174,6 +174,9 @@ struct UseVideoDecoderParams {
 //
 void use_h264_decoder(UseVideoDecoderParams params);
 
+// The same as use_h264_decoder, but use the multi-instance decoder driver.
+void use_h264_multi_decoder(UseVideoDecoderParams params);
+
 // The same as use_h264_decoder, but for a VP9 file wrapped in an IVF container.
 void use_vp9_decoder(UseVideoDecoderParams params);
 

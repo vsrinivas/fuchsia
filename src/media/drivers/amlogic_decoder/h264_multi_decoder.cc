@@ -865,7 +865,7 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
                            std::move(uv_canvas), create_result.take_value()}));
   }
   waiting_for_surfaces_ = false;
-  PumpOrReschedule();
+  // Caller should trigger a PumpOrReschedule at this point.
 }
 
 void H264MultiDecoder::SubmitFrameMetadata(ReferenceFrame* reference_frame,

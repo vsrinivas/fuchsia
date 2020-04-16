@@ -66,6 +66,11 @@ class TestH264Multi {
           /*hevc=*/false);
       frame_allocator.set_decoder(video->video_decoder());
     }
+
+    frame_allocator.set_pump_function([&video]() {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      static_cast<H264MultiDecoder*>(video->video_decoder())->PumpOrReschedule();
+    });
     // Don't use parser, because we need to be able to save and restore the read
     // and write pointers, which can't be done if the parser is using them as
     // well.
@@ -210,6 +215,10 @@ class TestH264Multi {
       auto decoder = std::make_unique<H264MultiDecoder>(video.get(), client.get(), provider.get());
       decoder_ptrs.push_back(decoder.get());
       client->set_decoder(decoder.get());
+      client->set_pump_function([&video, &decoder_ptrs, i]() {
+        std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+        decoder_ptrs[i]->PumpOrReschedule();
+      });
       clients.push_back(std::move(client));
       providers.push_back(std::move(provider));
       EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
@@ -323,6 +332,10 @@ class TestH264Multi {
           /*hevc=*/false);
       frame_allocator.set_decoder(video->video_decoder());
     }
+    frame_allocator.set_pump_function([&video]() {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      static_cast<H264MultiDecoder*>(video->video_decoder())->PumpOrReschedule();
+    });
     // Don't use parser, because we need to be able to save and restore the read
     // and write pointers, which can't be done if the parser is using them as
     // well.
@@ -418,6 +431,10 @@ class TestH264Multi {
           /*hevc=*/false);
       frame_allocator.set_decoder(video->video_decoder());
     }
+    frame_allocator.set_pump_function([&video]() {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      static_cast<H264MultiDecoder*>(video->video_decoder())->PumpOrReschedule();
+    });
     // Don't use parser, because we need to be able to save and restore the read
     // and write pointers, which can't be done if the parser is using them as
     // well.

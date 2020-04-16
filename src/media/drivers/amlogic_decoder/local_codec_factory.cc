@@ -11,6 +11,7 @@
 #include <optional>
 
 #include "codec_adapter_h264.h"
+#include "codec_adapter_h264_multi.h"
 #include "codec_adapter_mpeg2.h"
 #include "codec_adapter_vp9.h"
 #include "device_ctx.h"
@@ -112,6 +113,32 @@ const CodecAdapterFactory kCodecFactories[] = {
         true,
         [](std::mutex& lock, CodecAdapterEvents* events, DeviceCtx* device) {
           return std::make_unique<CodecAdapterVp9>(lock, events, device);
+        },
+    },
+    {
+        true,  // is_enabled
+        fuchsia::mediacodec::CodecDescription{
+            .codec_type = fuchsia::mediacodec::CodecType::DECODER,
+            // TODO(dustingreen): See TODO comments on this field in
+            // codec_common.fidl.
+            .mime_type = "video/h264-multi",
+
+            // TODO(dustingreen): Determine which of these can safely indicate
+            // more capability.
+            .can_stream_bytes_input = false,
+            .can_find_start = false,
+            .can_re_sync = false,
+            .will_report_all_detected_errors = false,
+
+            .is_hw = true,
+
+            // TODO(dustingreen): Determine if this claim of "true" is actually
+            // the case.
+            .split_header_handling = true,
+        },
+        true,
+        [](std::mutex& lock, CodecAdapterEvents* events, DeviceCtx* device) {
+          return std::make_unique<CodecAdapterH264Multi>(lock, events, device);
         },
     },
 };

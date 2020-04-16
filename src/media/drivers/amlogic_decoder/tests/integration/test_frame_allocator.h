@@ -7,6 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fit/function.h>
 
 #include <random>
 
@@ -26,6 +27,7 @@ class TestFrameAllocator : public TestBasicClient {
   void set_decoder(VideoDecoder* decoder) { decoder_ = decoder; }
 
   void set_use_minimum_frame_count(bool use_minimum) { use_minimum_frame_count_ = use_minimum; }
+  void set_pump_function(fit::closure pump_function) { pump_function_ = std::move(pump_function); }
 
   zx_status_t InitializeFrames(zx::bti bti, uint32_t min_frame_count, uint32_t max_frame_count,
                                uint32_t coded_width, uint32_t coded_height, uint32_t stride,
@@ -70,8 +72,13 @@ class TestFrameAllocator : public TestBasicClient {
         });
       }
       next_non_codec_buffer_lifetime_ordinal_++;
-      std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
-      decoder_->InitializedFrames(std::move(frames), coded_width, coded_height, stride);
+      {
+        std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+        decoder_->InitializedFrames(std::move(frames), coded_width, coded_height, stride);
+      }
+      if (pump_function_) {
+        pump_function_();
+      }
     });
     return ZX_OK;
   }
@@ -84,6 +91,7 @@ class TestFrameAllocator : public TestBasicClient {
   std::random_device rd_;
   std::mt19937 prng_;
   bool use_minimum_frame_count_ = false;
+  fit::closure pump_function_;
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_

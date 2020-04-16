@@ -73,6 +73,7 @@ class H264MultiDecoder : public VideoDecoder {
   void HandleInterrupt() override;
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
   void CallErrorHandler() override;
+  // PumpOrReschedule must be called after InitializedFrames to get the decoder to continue.
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
                          uint32_t stride) override;
   [[nodiscard]] bool CanBeSwappedIn() override;
@@ -88,6 +89,8 @@ class H264MultiDecoder : public VideoDecoder {
   void ReceivedNewInput();
   void FlushFrames();
   void DumpStatus();
+  // Try to pump the decoder, rescheduling it if it isn't currently scheduled in.
+  void PumpOrReschedule();
 
   // For use by MultiAccelerator.
   void SubmitDataToHardware(const uint8_t* data, size_t length);
@@ -120,8 +123,6 @@ class H264MultiDecoder : public VideoDecoder {
   void PumpDecoder();
   void InitializeRefPics(const std::vector<std::shared_ptr<media::H264Picture>>& ref_pic_list,
                          uint32_t reg_offset);
-  // Try to pump the decoder, rescheduling it if it isn't currently scheduled in.
-  void PumpOrReschedule();
   void StartConfigChange();
   // Output all the frames in frames_to_output.
   void OutputReadyFrames();
