@@ -15,6 +15,14 @@ void TestLifecycleDriverChild::DdkRelease() {
   __UNUSED bool dummy = Release();
 }
 
+void TestLifecycleDriverChild::AsyncRemove(fit::function<void()> callback) {
+  async_remove_ = true;
+  unbind_callback_ = std::move(callback);
+  DdkAsyncRemove();
+}
+
+void TestLifecycleDriverChild::CompleteUnbind() { unbind_txn_->Reply(); }
+
 zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent, bool complete_init,
                                              zx_status_t init_status,
                                              fbl::RefPtr<TestLifecycleDriverChild>* out_device) {
@@ -37,6 +45,10 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent, bool complete_
   return ZX_OK;
 }
 
+zx_status_t TestLifecycleDriverChild::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
+  return (new InstanceDevice(zxdev()))->Add(dev_out);
+}
+
 void TestLifecycleDriverChild::DdkInit(ddk::InitTxn txn) {
   if (complete_init_) {
     txn.Reply(init_status_);
@@ -48,6 +60,11 @@ void TestLifecycleDriverChild::DdkInit(ddk::InitTxn txn) {
 
 void TestLifecycleDriverChild::DdkUnbindNew(ddk::UnbindTxn txn) {
   ZX_ASSERT(!init_txn_);
+  if (async_remove_) {
+    unbind_txn_ = std::move(txn);
+    (*unbind_callback_)();
+    return;
+  }
   txn.Reply();
 }
 

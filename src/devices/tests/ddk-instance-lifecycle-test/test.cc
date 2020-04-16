@@ -54,8 +54,8 @@ class InstanceLifecycleTest : public zxtest::Test {
   enum class Event { Open, Close, Unbind, Release };
 
   // Remove the parent, and then close the instance
-  void VerifyPostOpenLifecycleViaRemoveAndClose(const zx::channel& lifecycle_chan,
-                                                zx::channel instance_client);
+  void VerifyPostOpenLifecycleViaRemove(const zx::channel& lifecycle_chan,
+                                        zx::channel instance_client);
 
   // Close the instance
   void VerifyPostOpenLifecycleViaClose(const zx::channel& lifecycle_chan,
@@ -99,8 +99,8 @@ void InstanceLifecycleTest::WaitForEvent(const zx::channel& channel, Event event
   ASSERT_OK(Lifecycle::Call::HandleEvents(zx::unowned_channel(channel), std::move(event_handlers)));
 }
 
-void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemoveAndClose(
-    const zx::channel& lifecycle_chan, zx::channel instance_client) {
+void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(const zx::channel& lifecycle_chan,
+                                                             zx::channel instance_client) {
   ASSERT_NO_FATAL_FAILURES(WaitForEvent(lifecycle_chan, Event::Open));
 
   zx::channel instance_lifecycle_chan, remote;
@@ -122,15 +122,8 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemoveAndClose(
     ASSERT_OK(result.status());
   }
 
-  // We should see the unbind from the device, but nothing on the instance yet.
-  // The device also should not yet be released, since the instance has a reference
-  // to it.
+  // We should see unbind, followed by close, then release.
   ASSERT_NO_FATAL_FAILURES(WaitForEvent(lifecycle_chan, Event::Unbind));
-  ASSERT_FALSE(AreEventsPending(lifecycle_chan));
-  ASSERT_FALSE(AreEventsPending(instance_lifecycle_chan));
-
-  // Close the connection to the instance.
-  instance_client.reset();
   ASSERT_NO_FATAL_FAILURES(WaitForEvent(instance_lifecycle_chan, Event::Close));
   ASSERT_NO_FATAL_FAILURES(WaitForEvent(instance_lifecycle_chan, Event::Release));
   ASSERT_NO_FATAL_FAILURES(WaitForEvent(lifecycle_chan, Event::Release));
@@ -229,7 +222,7 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientRemoveAndClose) {
   }
 
   ASSERT_NO_FATAL_FAILURES(
-      VerifyPostOpenLifecycleViaRemoveAndClose(lifecycle_chan, std::move(instance_client)));
+      VerifyPostOpenLifecycleViaRemove(lifecycle_chan, std::move(instance_client)));
 }
 
 // Test the lifecycle of an instance device that's obtained via device_add
@@ -247,7 +240,7 @@ TEST_F(InstanceLifecycleTest, PipelinedClientRemoveAndClose) {
   ASSERT_FALSE(result->result.is_err());
 
   ASSERT_NO_FATAL_FAILURES(
-      VerifyPostOpenLifecycleViaRemoveAndClose(lifecycle_chan, std::move(instance_client)));
+      VerifyPostOpenLifecycleViaRemove(lifecycle_chan, std::move(instance_client)));
 }
 
 }  // namespace

@@ -145,6 +145,23 @@ zx_status_t zx_device::SetPerformanceStates(
   return ZX_OK;
 }
 
+void zx_device::CloseAllConnections() {
+  for (auto& child : children) {
+    if (child.flags & DEV_FLAG_INSTANCE) {
+      child.CloseAllConnections();
+    }
+  }
+  // Posted to the main event loop to synchronize with any other calls that may manipulate
+  // the state of this Vnode (such as dev->vnode being reset by DevfsVnode::Close or
+  // DriverHostContext::DriverManagerRemove)
+  async::PostTask(internal::ContextForApi()->loop().dispatcher(),
+                  [dev = fbl::RefPtr<zx_device>(this)] {
+                    if (dev->vnode) {
+                      dev->driver_host_context_->vfs()->CloseAllConnectionsForVnode(*dev->vnode);
+                    }
+                  });
+}
+
 zx_status_t zx_device::SetSystemPowerStateMapping(const SystemPowerStateMapping& mapping) {
   for (size_t i = 0; i < mapping.size(); i++) {
     auto info = &mapping[i];
@@ -233,6 +250,13 @@ fbl::RefPtr<zx_device> zx_device::GetDeviceFromLocalId(uint64_t local_id) {
     return nullptr;
   }
   return fbl::RefPtr(&*itr);
+}
+
+bool zx_device::Unbound() {
+  if (flags & DEV_FLAG_INSTANCE) {
+    return parent->Unbound();
+  }
+  return flags & DEV_FLAG_UNBOUND;
 }
 
 bool zx_device::has_composite() { return !!composite_; }

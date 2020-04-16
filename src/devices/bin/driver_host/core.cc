@@ -669,6 +669,7 @@ void DriverHostContext::DeviceUnbindReply(const fbl::RefPtr<zx_device_t>& dev) {
   printf("device: %p(%s): sending unbind completed\n", dev.get(), dev->name);
 #endif
   if (dev->unbind_cb) {
+    dev->CloseAllConnections();
     dev->unbind_cb(ZX_OK);
   } else {
     ZX_PANIC("device: %p(%s): cannot reply to unbind, no callback set, flags are 0x%x\n", dev.get(),

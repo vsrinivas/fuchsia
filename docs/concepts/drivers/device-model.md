@@ -205,8 +205,14 @@ by `device_add()` and running the device's `release()` hook.
 
 When the `unbind()` method is invoked, this signals to the driver it should start
 shutting the device down, and call `device_unbind_reply()` once it has finished unbinding.
+Unbind also acts as a hard barrier for FIDL transactions.
+The DDK will not permit any new FIDL transactions or connections
+to be created when Unbind is called. Drivers are responsible
+for closing or replying to any outstanding transactions in their
+unbind hook if they handle FIDL messages.
 This is an optional hook. If it is not implemented, it is treated as `device_unbind_reply()`
-was called immediately.
+was called immediately. When device_unbind_reply is called,
+all FIDL connections will be terminated.
 
 Since a child device may have work in progress when its `unbind()` method is
 called, it's possible that the parent device (which already completed

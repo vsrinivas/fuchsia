@@ -15,12 +15,19 @@ protocol TestDevice {
     /// Removes the child device of the given |id|.
     RemoveChild(uint64 child_id) -> () error zx.status;
 
+    /// Asynchronously removes a child device.
+    /// The remove must be completed with CompleteUnbind.
+    AsyncRemoveChild(uint64 child_id) -> () error zx.status;
+
     /// Replies to the child init hook.
     /// Returns an error if the child has no pending init.
     CompleteChildInit(uint64 child_id) -> () error zx.status;
 
     /// Registers the client for device lifecycle events.
     SubscribeToLifecycle(request<Lifecycle> client) -> () error zx.status;
+
+    /// Finishes an unbind started by AsyncRemoveChild.
+    CompleteUnbind(uint64 child_id) -> () error zx.status;
 };
 
 protocol Lifecycle {

@@ -11,6 +11,9 @@
 
 zx_status_t DevfsVnode::Open(fs::Vnode::ValidatedOptions options,
                              fbl::RefPtr<Vnode>* out_redirect) {
+  if (dev_->Unbound()) {
+    return ZX_ERR_IO_NOT_PRESENT;
+  }
   fbl::RefPtr<zx_device_t> new_dev;
   zx_status_t status = device_open(dev_, &new_dev, options->ToIoV1Flags());
   if (status != ZX_OK) {
@@ -59,6 +62,10 @@ zx_status_t DevfsVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::R
 }
 
 void DevfsVnode::HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) {
+  if (dev_->Unbound()) {
+    txn->Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
   bool dispatched = llcpp::fuchsia::device::Controller::TryDispatch(this, msg, txn);
   if (dispatched) {
     return;
@@ -73,9 +80,15 @@ void DevfsVnode::HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn
 }
 
 zx_status_t DevfsVnode::Read(void* data, size_t len, size_t off, size_t* out_actual) {
+  if (dev_->Unbound()) {
+    return ZX_ERR_IO_NOT_PRESENT;
+  }
   return dev_->ReadOp(data, len, off, out_actual);
 }
 zx_status_t DevfsVnode::Write(const void* data, size_t len, size_t off, size_t* out_actual) {
+  if (dev_->Unbound()) {
+    return ZX_ERR_IO_NOT_PRESENT;
+  }
   return dev_->WriteOp(data, len, off, out_actual);
 }
 

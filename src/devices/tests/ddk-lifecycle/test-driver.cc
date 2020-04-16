@@ -45,6 +45,8 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
   void AddChild(bool complete_init, int32_t init_status,
                 AddChildCompleter::Sync completer) override;
   void RemoveChild(uint64_t child_id, RemoveChildCompleter::Sync completer) override;
+  void AsyncRemoveChild(uint64_t child_id, AsyncRemoveChildCompleter::Sync completer) override;
+  void CompleteUnbind(uint64_t child_id, CompleteUnbindCompleter::Sync completer) override;
   void CompleteChildInit(uint64_t child_id, CompleteChildInitCompleter::Sync completer) override;
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -108,6 +110,39 @@ void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync co
     return;
   }
   completer.ReplySuccess();
+}
+
+void TestLifecycleDriver::AsyncRemoveChild(uint64_t id, AsyncRemoveChildCompleter::Sync completer) {
+  bool found = false;
+  for (auto& child : children_) {
+    if (zxdev_to_id(child->zxdev()) == id) {
+      // We will remove it from our |children_| vector when we get the child pre-release callback.
+      child->AsyncRemove(
+          [completion = completer.ToAsync()]() mutable { completion.ReplySuccess(); });
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    zxlogf(ERROR, "Could not find child: id %lu\n", id);
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+}
+
+void TestLifecycleDriver::CompleteUnbind(uint64_t child_id,
+                                         CompleteUnbindCompleter::Sync completer) {
+  for (auto& child : children_) {
+    if (zxdev_to_id(child->zxdev()) == child_id) {
+      // We will remove it from our |children_| vector when we get the child pre-release callback.
+      child->CompleteUnbind();
+      completer.ReplySuccess();
+      return;
+    }
+  }
+  zxlogf(ERROR, "Could not find child: id %lu\n", child_id);
+  completer.ReplyError(ZX_ERR_NOT_FOUND);
+  return;
 }
 
 void TestLifecycleDriver::CompleteChildInit(uint64_t id,

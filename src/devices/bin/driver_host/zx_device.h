@@ -99,6 +99,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   // the DriverHostContext in main() (having essentially a static lifetime).
   static zx_status_t Create(DriverHostContext* ctx, fbl::RefPtr<zx_device>* out_dev);
 
+  void CloseAllConnections();
+
   void InitOp() {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("init", &trace_label));
@@ -332,6 +334,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     get_trace_label(tag, &name);
     return AsyncTrace(category, name.data());
   }
+
+  bool Unbound();
 
   DriverHostContext* driver_host_context() const { return driver_host_context_; };
 

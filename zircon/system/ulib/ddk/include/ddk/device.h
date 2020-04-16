@@ -191,13 +191,18 @@ typedef struct zx_protocol_device {
   // (cause IO to error out, etc), and call **device_unbind_reply()** on itself when ready.
   // See the docs for **device_unbind_reply()** for important semantics.
   //
-  // The driver must continue to handle all device hooks until the **release** hook
-  // is invoked.
+  // The driver must continue to handle all device hooks except for message, open, read, and write
+  // until the **release** hook is invoked.
+  //
+  // Prior to unbind being called, the DDK will suspend processing of all FIDL messages and new
+  // connections will be disallowed at this point. A device driver is responsible for ensuring that
+  // any pending FIDL transactions are replied to or closed prior to replying to unbind. A device
+  // which handles asynchronous FIDL messages *must* implement this hook.
   //
   // **Note:** This hook will not be called for a **device instance**.
   //
-  // This is an optional hook. The default implementation will be a hook that replies
-  // immediately with **device_unbind_reply()**.
+  // This is an optional hook (except for drivers that implement message). The default
+  // implementation will be a hook that replies immediately with **device_unbind_reply()**.
   //
   // This hook will be called from the devhost's main thread. It will be executed sometime
   // after any of the following events occuring: **device_async_remove()** is invoked on the
