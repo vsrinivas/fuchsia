@@ -47,7 +47,6 @@ group("fidl") {
     "fuchsia-hardware-block",
 #------------------
 #------------------
-    "fuchsia-hardware-block-encrypted",
 #------------------
 #------------------
     "fuchsia-hardware-block-partition",
