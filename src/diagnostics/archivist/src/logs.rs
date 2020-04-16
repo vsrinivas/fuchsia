@@ -190,7 +190,8 @@ impl LogManager {
                     self.ingest_message(log_msg, stats::LogSource::LogSink).await;
                 }
                 Err(e) => {
-                    warn!("log stream errored: {:?}", e);
+                    self.inner.lock().await.stats.record_closed_stream();
+                    warn!("closing socket from {:?} due to error: {}", log_stream.source(), e);
                     return;
                 }
             }
@@ -340,11 +341,13 @@ mod tests {
                     total_logs: 5u64,
                     kernel_logs: 0u64,
                     logsink_logs: 5u64,
-                    verbose_logs: 0u64,
+                    trace_logs: 0u64,
+                    debug_logs: 0u64,
                     info_logs: 2u64,
                     warning_logs: 2u64,
                     error_logs: 1u64,
                     fatal_logs: 0u64,
+                    closed_streams: 0u64,
                     unattributed_log_sinks: 1u64,
                     buffer_stats: {
                         rolled_out_entries: 0u64,
@@ -572,11 +575,13 @@ mod tests {
                     total_logs: 3u64,
                     kernel_logs: 3u64,
                     logsink_logs: 0u64,
-                    verbose_logs: 0u64,
+                    trace_logs: 0u64,
+                    debug_logs: 0u64,
                     info_logs: 3u64,
                     warning_logs: 0u64,
                     error_logs: 0u64,
                     fatal_logs: 0u64,
+                    closed_streams: 0u64,
                     unattributed_log_sinks: 0u64,
                 }
             }

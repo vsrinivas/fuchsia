@@ -4,10 +4,10 @@
 use super::buffer::Accounted;
 use super::error::StreamError;
 use byteorder::{ByteOrder, LittleEndian};
-use fidl_fuchsia_logger::LogMessage;
+use fidl_fuchsia_logger::{LogLevelFilter, LogMessage};
 use fuchsia_zircon as zx;
 use libc::{c_char, c_int};
-use std::{mem, str};
+use std::{convert::TryFrom, mem, str};
 
 pub const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
 pub const MIN_PACKET_SIZE: usize = METADATA_SIZE + 1;
@@ -25,7 +25,7 @@ pub struct Message {
     pub size: usize,
 
     /// Message severity reported by the writer.
-    pub severity: fx_log_severity_t,
+    pub severity: Severity,
 
     /// Timestamp reported by the writer.
     pub time: zx::Time,
@@ -72,7 +72,10 @@ impl Message {
         let pid = LittleEndian::read_u64(&bytes[..8]);
         let tid = LittleEndian::read_u64(&bytes[8..16]);
         let time = zx::Time::from_nanos(LittleEndian::read_i64(&bytes[16..24]));
-        let severity = LittleEndian::read_i32(&bytes[24..28]);
+
+        let raw_severity = LittleEndian::read_i32(&bytes[24..28]);
+        let severity = Severity::try_from(raw_severity)?;
+
         let dropped_logs = LittleEndian::read_u32(&bytes[28..METADATA_SIZE]) as usize;
 
         // start reading tags after the header
@@ -130,7 +133,7 @@ impl Message {
             pid: self.pid,
             tid: self.tid,
             time: self.time.into_nanos(),
-            severity: self.severity,
+            severity: self.severity.for_listener(),
             dropped_logs: self.dropped_logs as _,
             tags: self.tags.clone(),
             msg: self.contents.clone(),
@@ -138,8 +141,64 @@ impl Message {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[repr(u8)]
+pub enum Severity {
+    // giving these variants concrete discriminants creates a straightforward derived Ord impl
+    // TODO(fxrev.dev/375515) use the new constants defined in FIDL
+    Trace = 0x10,
+    Debug = 0x20,
+    Info = 0x30,
+    Warn = 0x40,
+    Error = 0x50,
+    Fatal = 0x60,
+}
+
+impl Severity {
+    fn for_listener(self) -> fx_log_severity_t {
+        match self {
+            // TODO(fxrev.dev/375515) update these to match new constants
+            Severity::Trace => -2,
+            Severity::Debug => -1,
+            Severity::Info => LogLevelFilter::Info as _,
+            Severity::Warn => LogLevelFilter::Warn as _,
+            Severity::Error => LogLevelFilter::Error as _,
+            Severity::Fatal => LogLevelFilter::Fatal as _,
+        }
+    }
+}
+
+impl TryFrom<fx_log_severity_t> for Severity {
+    type Error = StreamError;
+
+    fn try_from(raw: fx_log_severity_t) -> Result<Self, StreamError> {
+        if let Some(filter) = LogLevelFilter::from_primitive(raw as i8) {
+            Ok(Severity::from(filter))
+        } else if -10 <= raw && raw <= -2 {
+            // legacy values supported for high "verbosity" in our c++ frontends
+            // see //src/diagnostics/archivist/tests/logs/cpp/logs_tests.cc for examples
+            Ok(Severity::Trace)
+        } else {
+            Err(StreamError::InvalidSeverity { provided: raw })
+        }
+    }
+}
+
+impl From<LogLevelFilter> for Severity {
+    fn from(filter: LogLevelFilter) -> Self {
+        match filter {
+            // None here == -1, which is one level below Info==0
+            LogLevelFilter::None => Severity::Debug,
+            LogLevelFilter::Info => Severity::Info,
+            LogLevelFilter::Warn => Severity::Warn,
+            LogLevelFilter::Error => Severity::Error,
+            LogLevelFilter::Fatal => Severity::Fatal,
+        }
+    }
+}
+
 #[allow(non_camel_case_types)]
-type fx_log_severity_t = c_int;
+pub(super) type fx_log_severity_t = c_int;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
@@ -308,7 +367,7 @@ mod tests {
                 pid: packet.metadata.pid,
                 tid: packet.metadata.tid,
                 time: zx::Time::from_nanos(packet.metadata.time),
-                severity: packet.metadata.severity,
+                severity: Severity::Debug,
                 dropped_logs: packet.metadata.dropped_logs as usize,
                 tags: vec![String::from("AAAAAAAAAAA")],
                 contents: String::from("BBBBB"),
@@ -373,7 +432,7 @@ mod tests {
                 pid: packet.metadata.pid,
                 tid: packet.metadata.tid,
                 time: zx::Time::from_nanos(packet.metadata.time),
-                severity: packet.metadata.severity,
+                severity: Severity::Debug,
                 dropped_logs: packet.metadata.dropped_logs as usize,
                 tags: vec![String::from("AAAAAAAAAAA"), String::from("BBBBB")],
                 contents: String::from("CCCCC"),
@@ -414,7 +473,7 @@ mod tests {
             pid: packet.metadata.pid,
             tid: packet.metadata.tid,
             time: zx::Time::from_nanos(packet.metadata.time),
-            severity: packet.metadata.severity,
+            severity: Severity::Debug,
             dropped_logs: packet.metadata.dropped_logs as usize,
             contents: String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap(),
             tags: (0..MAX_TAGS as _)
@@ -462,7 +521,7 @@ mod tests {
                 pid: packet.metadata.pid,
                 tid: packet.metadata.tid,
                 time: zx::Time::from_nanos(packet.metadata.time),
-                severity: packet.metadata.severity,
+                severity: Severity::Debug,
                 dropped_logs: packet.metadata.dropped_logs as usize,
                 tags: (0..MAX_TAGS as _)
                     .map(|tag_num| String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2])
@@ -491,7 +550,7 @@ mod tests {
                 pid: packet.metadata.pid,
                 tid: packet.metadata.tid,
                 time: zx::Time::from_nanos(packet.metadata.time),
-                severity: packet.metadata.severity,
+                severity: Severity::Debug,
                 dropped_logs: packet.metadata.dropped_logs as usize,
                 tags: vec![],
                 contents: String::from("AA"),

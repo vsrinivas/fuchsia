@@ -16,7 +16,6 @@ use std::pin::Pin;
 
 #[must_use = "don't drop logs on the floor please!"]
 pub struct LogMessageSocket {
-    #[allow(unused)]
     source: SourceIdentity,
     socket: fasync::Socket,
     buffer: [u8; MAX_DATAGRAM_LEN],
@@ -30,6 +29,11 @@ impl LogMessageSocket {
             buffer: [0; MAX_DATAGRAM_LEN],
             source,
         })
+    }
+
+    /// What we know of the identity of the writer of these logs.
+    pub fn source(&self) -> &SourceIdentity {
+        &self.source
     }
 }
 
@@ -47,7 +51,7 @@ impl Stream for LogMessageSocket {
 
 #[cfg(test)]
 mod tests {
-    use super::super::message::{fx_log_packet_t, Message, METADATA_SIZE};
+    use super::super::message::{fx_log_packet_t, Message, Severity, METADATA_SIZE};
     use super::*;
 
     use fuchsia_async::DurationExt;
@@ -76,7 +80,7 @@ mod tests {
             pid: packet.metadata.pid as _,
             tid: packet.metadata.tid as _,
             time: zx::Time::from_nanos(packet.metadata.time),
-            severity: packet.metadata.severity,
+            severity: Severity::Info,
             dropped_logs: packet.metadata.dropped_logs as usize,
             tags: Vec::with_capacity(1),
             contents: String::from("BBBBB"),

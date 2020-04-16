@@ -3,7 +3,7 @@
 
 use thiserror::Error;
 
-use super::message::{MAX_TAGS, MAX_TAG_LEN, MIN_PACKET_SIZE};
+use super::message::{fx_log_severity_t, MAX_TAGS, MAX_TAG_LEN, MIN_PACKET_SIZE};
 
 #[derive(Debug, Error)]
 pub enum StreamError {
@@ -21,6 +21,9 @@ pub enum StreamError {
 
     #[error("incorrect or corrupt metadata indicates to read past end of buffer")]
     OutOfBounds,
+
+    #[error("invalid or corrupt severity received: {provided}")]
+    InvalidSeverity { provided: fx_log_severity_t },
 
     #[error("string with invalid UTF-8 encoding: {source:?}")]
     InvalidString {
@@ -49,6 +52,7 @@ impl PartialEq for StreamError {
                 index == i2 && len == l2
             }
             (OutOfBounds, OutOfBounds) => true,
+            (InvalidSeverity { provided }, InvalidSeverity { provided: p2 }) => provided == p2,
             (InvalidString { source }, InvalidString { source: s2 }) => source == s2,
             (Io { source }, Io { source: s2 }) => source.kind() == s2.kind(),
             _ => false,

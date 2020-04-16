@@ -1,15 +1,18 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use super::{super::message::Message, ListenerError};
+use super::{
+    super::message::{Message, Severity},
+    ListenerError,
+};
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter};
-use std::collections::HashSet;
+use std::{collections::HashSet, convert::TryFrom};
 
 /// Controls whether messages are seen by a given `Listener`. Created from
 /// `fidl_fuchsia_logger::LogFilterOptions`.
 pub(super) struct MessageFilter {
     /// Only send messages of greater or equal severity to this value.
-    min_severity: Option<i32>,
+    min_severity: Option<Severity>,
 
     /// Only send messages that purport to come from this PID.
     pid: Option<u64>,
@@ -55,9 +58,10 @@ impl MessageFilter {
             }
 
             if options.verbosity > 0 {
-                this.min_severity = Some(-(options.verbosity as i32))
+                let verbosity = options.verbosity as i32;
+                this.min_severity = Some(Severity::try_from(-verbosity)?);
             } else if options.min_severity != LogLevelFilter::None {
-                this.min_severity = Some(options.min_severity as i32)
+                this.min_severity = Some(Severity::from(options.min_severity));
             }
         }
 

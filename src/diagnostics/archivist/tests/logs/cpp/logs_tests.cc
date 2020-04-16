@@ -141,9 +141,12 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
 
   ASSERT_EQ(sorted_by_severity.size(), severities_in_use.size());
   for (auto i = 0ul; i < logs.size(); i++) {
+    // anything at -2 or below gets rewritten to TRACE
+    auto expected_severity = std::max(severities_in_use[i], -2);
+
     ASSERT_EQ(sorted_by_severity[i].tags.size(), 1u);
     EXPECT_EQ(sorted_by_severity[i].tags[0], tag);
-    EXPECT_EQ(sorted_by_severity[i].severity, severities_in_use[i]);
+    EXPECT_EQ(sorted_by_severity[i].severity, expected_severity);
     EXPECT_EQ(sorted_by_severity[i].pid, pid);
     EXPECT_THAT(sorted_by_severity[i].msg, testing::EndsWith(message));
   }

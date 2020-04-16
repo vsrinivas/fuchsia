@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::message::Message;
-use fidl_fuchsia_logger::LogLevelFilter;
+use super::message::{Message, Severity};
 use fuchsia_inspect::{self as inspect, NumericProperty};
 
 /// Structure that holds stats for the log manager.
@@ -12,11 +11,13 @@ pub(super) struct LogManagerStats {
     total_logs: inspect::UintProperty,
     kernel_logs: inspect::UintProperty,
     logsink_logs: inspect::UintProperty,
-    verbose_logs: inspect::UintProperty,
+    trace_logs: inspect::UintProperty,
+    debug_logs: inspect::UintProperty,
     info_logs: inspect::UintProperty,
     warning_logs: inspect::UintProperty,
     error_logs: inspect::UintProperty,
     fatal_logs: inspect::UintProperty,
+    closed_streams: inspect::UintProperty,
     unattributed_log_sinks: inspect::UintProperty,
 }
 
@@ -26,11 +27,13 @@ impl LogManagerStats {
         let total_logs = node.create_uint("total_logs", 0);
         let kernel_logs = node.create_uint("kernel_logs", 0);
         let logsink_logs = node.create_uint("logsink_logs", 0);
-        let verbose_logs = node.create_uint("verbose_logs", 0);
+        let trace_logs = node.create_uint("trace_logs", 0);
+        let debug_logs = node.create_uint("debug_logs", 0);
         let info_logs = node.create_uint("info_logs", 0);
         let warning_logs = node.create_uint("warning_logs", 0);
         let error_logs = node.create_uint("error_logs", 0);
         let fatal_logs = node.create_uint("fatal_logs", 0);
+        let closed_streams = node.create_uint("closed_streams", 0);
         let unattributed_log_sinks = node.create_uint("unattributed_log_sinks", 0);
 
         Self {
@@ -38,11 +41,13 @@ impl LogManagerStats {
             kernel_logs,
             logsink_logs,
             total_logs,
-            verbose_logs,
+            trace_logs,
+            debug_logs,
             info_logs,
             warning_logs,
             error_logs,
             fatal_logs,
+            closed_streams,
             unattributed_log_sinks,
         }
     }
@@ -60,23 +65,19 @@ impl LogManagerStats {
                 self.logsink_logs.add(1);
             }
         }
-        match LogLevelFilter::from_primitive(msg.severity as i8) {
-            Some(LogLevelFilter::Info) => {
-                self.info_logs.add(1);
-            }
-            Some(LogLevelFilter::Warn) => {
-                self.warning_logs.add(1);
-            }
-            Some(LogLevelFilter::Error) => {
-                self.error_logs.add(1);
-            }
-            Some(LogLevelFilter::Fatal) => {
-                self.fatal_logs.add(1);
-            }
-            _ => {
-                self.verbose_logs.add(1);
-            }
+        match msg.severity {
+            Severity::Trace => self.trace_logs.add(1),
+            Severity::Debug => self.debug_logs.add(1),
+            Severity::Info => self.info_logs.add(1),
+            Severity::Warn => self.warning_logs.add(1),
+            Severity::Error => self.error_logs.add(1),
+            Severity::Fatal => self.fatal_logs.add(1),
         }
+    }
+
+    /// Record that we rejected a message.
+    pub fn record_closed_stream(&self) {
+        self.closed_streams.add(1);
     }
 
     /// Record an unattributed log message.

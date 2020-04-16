@@ -121,4 +121,10 @@ pub enum ListenerError {
 
     #[error("couldn't create LogListenerProxy")]
     CreatingListenerProxy { source: fidl::Error },
+
+    #[error("couldn't decode value: {source}")]
+    Decode {
+        #[from]
+        source: super::error::StreamError,
+    },
 }

@@ -4,10 +4,9 @@
 
 // Read debug logs, convert them to LogMessages and serve them.
 
-use super::message::{Message, METADATA_SIZE};
+use super::message::{Message, Severity, METADATA_SIZE};
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
-use fidl_fuchsia_logger::{self, LogLevelFilter};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::stream::{unfold, Stream, TryStreamExt};
@@ -129,7 +128,7 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
         time,
         pid,
         tid,
-        severity: LogLevelFilter::Info as _,
+        severity: Severity::Info,
         dropped_logs: 0,
         tags: vec![String::from("klog")],
         contents,
@@ -247,7 +246,7 @@ pub mod tests {
                 pid: klog.pid,
                 tid: klog.tid,
                 time: zx::Time::from_nanos(klog.timestamp),
-                severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
+                severity: Severity::Info,
                 dropped_logs: 0,
                 tags: vec![String::from("klog")],
                 contents: String::from("test log"),
@@ -264,7 +263,7 @@ pub mod tests {
                 pid: klog.pid,
                 tid: klog.tid,
                 time: zx::Time::from_nanos(klog.timestamp),
-                severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
+                severity: Severity::Info,
                 dropped_logs: 0,
                 tags: vec![String::from("klog")],
                 contents: String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32])
@@ -282,7 +281,7 @@ pub mod tests {
                 pid: klog.pid,
                 tid: klog.tid,
                 time: zx::Time::from_nanos(klog.timestamp),
-                severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,
+                severity: Severity::Info,
                 dropped_logs: 0,
                 tags: vec![String::from("klog")],
                 contents: String::from_utf8(vec![]).unwrap(),
@@ -317,7 +316,7 @@ pub mod tests {
                 pid: klog.pid,
                 tid: klog.tid,
                 time: zx::Time::from_nanos(klog.timestamp),
-                severity: LogLevelFilter::Info as _,
+                severity: Severity::Info,
                 dropped_logs: 0,
                 tags: vec![String::from("klog")],
                 contents: String::from("test log"),
