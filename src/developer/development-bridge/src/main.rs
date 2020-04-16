@@ -6,7 +6,7 @@
 use {
     crate::args::{Ffx, Subcommand, TestCommand},
     crate::config::command::exec_config,
-    crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT},
+    crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT, SOCKET},
     anyhow::{anyhow, format_err, Context, Error},
     ffx_daemon::{is_daemon_running, start as start_daemon},
     fidl::endpoints::{create_proxy, ServiceMarker},
@@ -356,6 +356,12 @@ where
         }
     }
 
+    pub async fn quit(&mut self) -> Result<(), Error> {
+        self.daemon_proxy.quit().await?;
+        println!("Killed daemon.");
+        Ok(())
+    }
+
     async fn spawn_daemon() -> Result<(), Error> {
         Command::new(env::current_exe().unwrap()).arg(DAEMON).spawn()?;
         Ok(())
@@ -393,6 +399,15 @@ async fn async_main() -> Result<(), Error> {
         }
         Subcommand::RunComponent(c) => {
             match Cli::new(writer).await?.run_component(c.url, &c.args).await {
+                Ok(r) => {}
+                Err(e) => {
+                    println!("ERROR: {:?}", e);
+                }
+            }
+            Ok(())
+        }
+        Subcommand::Quit(_) => {
+            match Cli::new(writer).await?.quit().await {
                 Ok(r) => {}
                 Err(e) => {
                     println!("ERROR: {:?}", e);

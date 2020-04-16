@@ -4,13 +4,13 @@
 
 use crate::constants::SOCKET;
 use std::io::{Read, Write};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_overnet::MeshControllerProxyInterface;
 use futures::io::{AsyncReadExt, AsyncWriteExt};
 
-pub async fn start_ascendd() {
+pub async fn start_ascendd() -> Child {
     log::info!("Starting ascendd");
     hoist::spawn(async move {
         ascendd_lib::run_ascendd(ascendd_lib::Opt {
@@ -21,7 +21,7 @@ pub async fn start_ascendd() {
         .unwrap();
     });
     log::info!("Connecting to target");
-    let process = Command::new("fx")
+    let mut process = Command::new("fx")
         .arg("shell")
         .arg("onet")
         .arg("host-pipe")
@@ -35,16 +35,18 @@ pub async fn start_ascendd() {
     );
     futures::future::try_join(
         copy_target_stdout_to_pipe(
-            process.stdout.expect("unable to get stdout from target pipe"),
+            process.stdout.take().expect("unable to get stdout from target pipe"),
             pipe_tx,
         ),
         copy_pipe_to_target_stdin(
             pipe_rx,
-            process.stdin.expect("unable to get stdin from target pipe"),
+            process.stdin.take().expect("unable to get stdin from target pipe"),
         ),
     )
     .await
     .unwrap();
+
+    return process;
 }
 
 pub fn overnet_pipe() -> Result<fidl::AsyncSocket, Error> {

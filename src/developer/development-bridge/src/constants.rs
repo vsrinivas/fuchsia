@@ -5,7 +5,12 @@
 
 use std::time::Duration;
 
+#[cfg(not(test))]
 pub const SOCKET: &str = "/tmp/ascendd";
+
+#[cfg(test)]
+pub const SOCKET: &str = "/tmp/ascendd_for_testing_only";
+
 pub const DAEMON: &str = "daemon";
 pub const ASCENDD: &str = "ascendd";
 pub const CONFIG_JSON_FILE: &str = "ffx_config.json";

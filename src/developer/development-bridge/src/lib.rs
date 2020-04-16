@@ -21,7 +21,8 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     hoist::spawn,
-    std::process::Command,
+    std::cell::RefCell,
+    std::process::{Child, Command},
     std::rc::Rc,
     std::sync::Arc,
     std::time::Duration,
@@ -69,10 +70,11 @@ pub struct Daemon {
     target_collection: GuardedTargetCollection,
 
     discovered_target_hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
+    ascendd_child: Rc<RefCell<Option<Child>>>,
 }
 
 impl Daemon {
-    pub async fn new() -> Result<Daemon, Error> {
+    pub async fn new(ascendd_child: Option<Child>) -> Result<Daemon, Error> {
         log::info!("Starting daemon overnet server");
         let (tx, rx) = mpsc::unbounded::<Target>();
         let target_collection = Arc::new(Mutex::new(TargetCollection::new()));
@@ -83,9 +85,11 @@ impl Daemon {
             Arc::clone(&discovered_target_hooks),
         );
         Daemon::spawn_onet_discovery(Arc::clone(&target_collection));
+        let r = Rc::new(RefCell::new(ascendd_child));
         let mut d = Daemon {
             target_collection: Arc::clone(&target_collection),
             discovered_target_hooks: Arc::clone(&discovered_target_hooks),
+            ascendd_child: r.clone(),
         };
         d.register_hook(RCSActivatorHook::default()).await;
 
@@ -128,7 +132,10 @@ impl Daemon {
         });
     }
 
-    pub fn new_with_rx(rx: mpsc::UnboundedReceiver<Target>) -> Daemon {
+    pub fn new_with_rx(
+        rx: mpsc::UnboundedReceiver<Target>,
+        ascendd_child: Option<Child>,
+    ) -> Daemon {
         let target_collection = Arc::new(Mutex::new(TargetCollection::new()));
         let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
         Daemon::spawn_receiver_loop(
@@ -136,7 +143,8 @@ impl Daemon {
             Arc::clone(&target_collection),
             Arc::clone(&discovered_target_hooks),
         );
-        Daemon { target_collection, discovered_target_hooks }
+        let r = Rc::new(RefCell::new(ascendd_child));
+        Daemon { target_collection, discovered_target_hooks, ascendd_child: r.clone() }
     }
 
     pub async fn handle_requests_from_stream(
@@ -307,6 +315,27 @@ impl Daemon {
                 };
                 responder.send(response.as_ref()).context("error sending response")?;
             }
+            DaemonRequest::Quit { responder } => {
+                if !quiet {
+                    log::info!("Received quit request.");
+                }
+                responder.send(true).context("error sending response")?;
+
+                task::sleep(std::time::Duration::from_millis(10)).await;
+
+                match std::fs::remove_file(SOCKET) {
+                    Ok(()) => {}
+                    Err(e) => log::error!("failed to remove socket file: {}", e),
+                }
+
+                let c = self.ascendd_child.clone();
+                let mut child = c.borrow_mut();
+                if child.is_some() {
+                    child.as_mut().unwrap().kill()?;
+                }
+
+                std::process::exit(0);
+            }
             DaemonRequest::LaunchSuite { test_url, suite, controller, responder } => {
                 if !quiet {
                     log::info!("Received launch suite request for '{:?}'", test_url);
@@ -399,8 +428,8 @@ pub async fn start() -> Result<(), Error> {
     if is_daemon_running() {
         return Ok(());
     }
-    onet::start_ascendd().await;
-    let daemon = Daemon::new().await?;
+    let child = onet::start_ascendd().await;
+    let daemon = Daemon::new(Some(child)).await?;
     exec_server(daemon, true).await
 }
 
@@ -467,7 +496,7 @@ mod test {
         let (target_in, target_out) = mpsc::unbounded::<Target>();
         let (target_ready_channel_in, target_ready_channel_out) = mpsc::unbounded::<bool>();
         spawn(async move {
-            let mut d = Daemon::new_with_rx(target_out);
+            let mut d = Daemon::new_with_rx(target_out, None);
             d.register_hook(TestHookFakeRCS::new(target_ready_channel_in)).await;
             d.handle_requests_from_stream(stream, false)
                 .await
@@ -594,6 +623,27 @@ mod test {
         Ok(())
     }
 
+    #[test]
+    fn test_quit() -> Result<(), Error> {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+
+        if std::path::Path::new(SOCKET).is_file() {
+            std::fs::remove_file(SOCKET).unwrap();
+        }
+
+        hoist::run(async move {
+            let mut _ctrl = spawn_daemon_server_with_fake_target(stream).await;
+            let r = daemon_proxy.quit().await.unwrap();
+
+            assert!(r);
+
+            assert!(!std::path::Path::new(SOCKET).is_file());
+        });
+
+        Ok(())
+    }
+
     struct TestHookFirst {
         callbacks_done: mpsc::UnboundedSender<bool>,
     }
@@ -626,7 +676,7 @@ mod test {
         hoist::run(async move {
             let (tx_from_callback, mut rx_from_callback) = mpsc::unbounded::<bool>();
             let (tx, rx) = mpsc::unbounded::<Target>();
-            let mut daemon = Daemon::new_with_rx(rx);
+            let mut daemon = Daemon::new_with_rx(rx, None);
             daemon.register_hook(TestHookFirst { callbacks_done: tx_from_callback.clone() }).await;
             daemon.register_hook(TestHookSecond { callbacks_done: tx_from_callback }).await;
             tx.unbounded_send(Target::new("nothin", Utc::now())).unwrap();

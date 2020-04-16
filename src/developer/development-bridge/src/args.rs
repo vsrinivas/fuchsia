@@ -62,6 +62,10 @@ pub struct RunComponentCommand {
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "quit", description = "kills a running daemon")]
+pub struct QuitCommand {}
+
+#[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
 pub enum Subcommand {
     Daemon(DaemonCommand),
@@ -70,6 +74,7 @@ pub enum Subcommand {
     RunComponent(RunComponentCommand),
     Config(ConfigCommand),
     Test(TestCommand),
+    Quit(QuitCommand),
 }
 
 #[cfg(test)]
