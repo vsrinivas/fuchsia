@@ -1,4 +1,4 @@
-# Fuchsia Package URLs
+# Fuchsia package URLs
 
 Fuchsia software, including system components and third-party components, is
 distributed in the form of packages.  These packages are signed in such a way
@@ -29,13 +29,13 @@ using **fuchsia-pkg** URLs.
    authenticity independently of how the contents were actually obtained given a
    package URL (even offline).
 
-## Non-Goals
+## Non-goals
 
  * Establish a cryptographically strong association between a package URL itself
    and its repository's chain of trust, enabling proof of authenticity given
    nothing but the URL.
 
-## Identifying Repositories, Packages, and Resources
+## Identifying repositories, packages, and resources
 
 This section describes the various characteristics used to identity
 repositories, packages and resources.
@@ -49,15 +49,15 @@ Consequently, we may eschew concerns related to localization of names.
 
 [TUF Specification]: https://github.com/theupdateframework/specification/blob/master/tuf-spec.md#4-document-formats
 
-## Repository Identity
+## Repository identity
 
-### Repository Root Verification (Known Sources)
+### Repository root verification (known sources)
 
 The repository's root role (a quorum of one or more public/private key pairs)
 establishes a chain of trust such that package authenticity, integrity, and
 freshness can be verified cryptographically.  The root role signs keys for more
 limited roles which are then used to sign package metadata and the targets
-themselves.  See [here][TUF Security] and [here][TUF METADATA] for more details.
+themselves. See [here][TUF Security] and [here][TUF METADATA] for more details.
 
 To verify that a package is authentic, we must also verify that the repository
 from which it is being downloaded is authentic.  This will be implemented by
@@ -67,7 +67,7 @@ device.  Packages from unknown sources will be rejected.
 [TUF Security]: https://theupdateframework.github.io/security.html
 [TUF Metadata]: https://theupdateframework.github.io/metadata.html
 
-### Repository Hostname
+### Repository hostname
 
 The package URL contains a repository [hostname] to identify the package's
 source.  Per [RFC 1123] and [RFC 5890], a hostname is a sequence of dot
@@ -86,9 +86,9 @@ total maximum length of a hostname is 253 characters including the dots.
  * `fuchsia.com`
  * `mycorp.com`
 
-## Package Identity
+## Package identity
 
-### Package Name {:package-name}
+### Package name {#package-name}
 
 A package name is a symbolic label which identifies a logical collection of
 software artifacts (files), independent of any particular variant or revision
@@ -111,7 +111,7 @@ if they have the same name.
  * `fuchsia-fonts`
  * `mycorp-product`
 
-### Package Variant
+### Package variant
 
 A package variant is a symbolic label for a sequence of package updates.
 Different variants of the same package may receive different updates, at
@@ -139,7 +139,7 @@ sequence of updates.
 This two-level scheme of package name and variant increases the overall
 flexibility of the package identification system.
 
-### Package Hash
+### Package hash
 
 A package hash is the [merkleroot] of the package's meta.far.  Because the
 package's metadata encodes the content addresses of the package's files, any
@@ -157,9 +157,9 @@ of the following latin-1 characters: digits (`0` to `9`) and lower-case letters
 
 [merkleroot]: /docs/concepts/storage/merkleroot.md
 
-## Resource Identity
+## Resource identity
 
-### Resource Paths {:resource-paths}
+### Resource paths {#resource-paths}
 
 A resource path is a UTF-8 string which identifies a resource within a package.
 This is a file path, consisting of a sequence of single `/` delimited
@@ -183,7 +183,7 @@ Per [RFC 3986], resource paths are percent-encoded when they appear in URLs.
 [Fuchsia filesystem paths]: /docs/concepts/framework/namespaces.md#object-relative-path-expressions
 [RFC 3986]: https://tools.ietf.org/html/rfc3986#page-11
 
-## The fuchsia-pkg URL Scheme
+## The fuchsia-pkg URL scheme
 
 The **fuchsia-pkg** URL scheme combines the preceding identifying
 characteristics to establish a means for referring to a repository, a package,
