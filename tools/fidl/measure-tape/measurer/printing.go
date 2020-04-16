@@ -8,57 +8,112 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"regexp"
+	"sort"
 	"strings"
+	"text/template"
 
 	fidlcommon "fidl/compiler/backend/common"
 )
 
 type Printer struct {
-	buf     *bytes.Buffer
-	level   int
-	toPrint []*MeasuringTape
-	done    map[*MeasuringTape]bool
+	m            *Measurer
+	hIncludePath string
+	buf          *bytes.Buffer
+	level        int
+	toPrint      []*MeasuringTape
+	done         map[*MeasuringTape]bool
 }
 
-func NewPrinter(mt *MeasuringTape, buf *bytes.Buffer) *Printer {
+func NewPrinter(m *Measurer, mt *MeasuringTape, hIncludePath string, buf *bytes.Buffer) *Printer {
 	return &Printer{
-		buf:     buf,
-		level:   1,
-		toPrint: []*MeasuringTape{mt},
-		done:    make(map[*MeasuringTape]bool),
+		m:            m,
+		hIncludePath: hIncludePath,
+		buf:          buf,
+		level:        1,
+		toPrint:      []*MeasuringTape{mt},
+		done:         make(map[*MeasuringTape]bool),
 	}
 }
 
-const topOfFile = `// Copyright 2020 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+type tmplParams struct {
+	HeaderTag              string
+	HIncludePath           string
+	Namespaces             []string
+	LibraryNameWithSlashes string
+	TargetType             string
+	CcIncludes             []string
+}
 
-// File is automatically generated; do not modify.
+func (params tmplParams) RevNamespaces() []string {
+	rev := make([]string, len(params.Namespaces), len(params.Namespaces))
+	for i, j := 0, len(params.Namespaces)-1; i < len(params.Namespaces); i, j = i+1, j-1 {
+		rev[i] = params.Namespaces[j]
+	}
+	return rev
+}
+
+var header = template.Must(template.New("tmpls").Parse(
+	`// File is automatically generated; do not modify.
 // See tools/fidl/measure-tape/README.md
 
-#include <lib/ui/scenic/cpp/commands_sizing.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/images/cpp/fidl.h>
+#ifndef {{ .HeaderTag }}
+#define {{ .HeaderTag }}
+
+#include <{{ .LibraryNameWithSlashes }}/cpp/fidl.h>
+
+{{ range .Namespaces }}
+namespace {{ . }} {
+{{- end}}
+
+struct Size {
+  explicit Size(int64_t num_bytes, int64_t num_handles)
+    : num_bytes(num_bytes), num_handles(num_handles) {}
+
+  const int64_t num_bytes;
+  const int64_t num_handles;
+};
+
+// Helper function to measure {{ .TargetType }}.
+//
+// In most cases, the size returned is a precise size. Otherwise, the size
+// returned is a safe upper-bound.
+Size Measure(const {{ .TargetType }}& value);
+
+{{ range .RevNamespaces }}
+}  // {{ . }}
+{{- end}}
+
+#endif  // {{ .HeaderTag }}
+`))
+
+var ccTop = template.Must(template.New("tmpls").Parse(
+	`// File is automatically generated; do not modify.
+// See tools/fidl/measure-tape/README.md
+
+#include <{{ .HIncludePath }}>
+{{ range .CcIncludes }}
+{{ . }}
+{{- end }}
 #include <zircon/types.h>
 
-namespace scenic {
+{{ range .Namespaces }}
+namespace {{ . }} {
+{{- end}}
 
 namespace {
 
 class MeasuringTape {
  public:
   MeasuringTape() = default;
-`
+`))
 
-const bottomOfFile = `
-  CommandSize Done() {
+var ccBottom = template.Must(template.New("tmpls").Parse(`
+  Size Done() {
     if (maxed_out_) {
-      return CommandSize(ZX_CHANNEL_MAX_MSG_BYTES, ZX_CHANNEL_MAX_MSG_HANDLES);
+      return Size(ZX_CHANNEL_MAX_MSG_BYTES, ZX_CHANNEL_MAX_MSG_HANDLES);
     }
-    return CommandSize(num_bytes_, num_handles_);
+    return Size(num_bytes_, num_handles_);
   }
 
 private:
@@ -71,17 +126,63 @@ private:
 
 }  // namespace
 
-CommandSize MeasureCommand(const fuchsia::ui::scenic::Command& command) {
+Size Measure(const {{ .TargetType }}& value) {
   MeasuringTape tape;
-  tape.Measure(command);
+  tape.Measure(value);
   return tape.Done();
 }
 
-}  // namespace scenic
-`
+{{ range .RevNamespaces }}
+}  // {{ . }}
+{{- end}}
+`))
 
-func (p *Printer) Write() {
-	p.buf.WriteString(topOfFile)
+var pathSeparators = regexp.MustCompile("[/_.-]")
+
+func (p *Printer) newTmplParams() tmplParams {
+	if len(p.toPrint) != 1 {
+		panic("bug: should only invoke this before generation")
+	}
+
+	targetMt := p.toPrint[0]
+
+	namespaces := []string{"measure_tape"}
+	namespaces = append(namespaces, targetMt.name.LibraryName().Parts()...)
+
+	headerTagParts := pathSeparators.Split(p.hIncludePath, -1)
+	for i, part := range headerTagParts {
+		headerTagParts[i] = strings.ToUpper(part)
+	}
+	headerTagParts = append(headerTagParts, "")
+	headerTag := strings.Join(headerTagParts, "_")
+
+	return tmplParams{
+		HeaderTag:              headerTag,
+		HIncludePath:           p.hIncludePath,
+		LibraryNameWithSlashes: strings.Join(targetMt.name.LibraryName().Parts(), "/"),
+		TargetType:             targetMt.nameToType(),
+		Namespaces:             namespaces,
+	}
+}
+
+func (p *Printer) WriteH() {
+	if err := header.Execute(p.buf, p.newTmplParams()); err != nil {
+		panic(err.Error())
+	}
+}
+
+func (p *Printer) WriteCc() {
+	params := p.newTmplParams()
+	for libraryName := range p.m.roots {
+		params.CcIncludes = append(params.CcIncludes,
+			fmt.Sprintf("#include <%s/cpp/fidl.h>", strings.Join(libraryName.Parts(), "/")))
+	}
+	sort.Strings(params.CcIncludes)
+
+	if err := ccTop.Execute(p.buf, params); err != nil {
+		panic(err.Error())
+	}
+
 	p.buf.WriteString("\n")
 	for len(p.toPrint) != 0 {
 		mt, remaining := p.toPrint[0], p.toPrint[1:]
@@ -93,7 +194,10 @@ func (p *Printer) Write() {
 		mt.write(p)
 		p.writef("\n")
 	}
-	p.buf.WriteString(bottomOfFile)
+
+	if err := ccBottom.Execute(p.buf, params); err != nil {
+		panic(err.Error())
+	}
 }
 
 const indent = "  "
@@ -237,7 +341,7 @@ func (member *measuringTapeMember) writeInvoke(p *Printer, mode invokeKind, fiel
 		}
 		member.guardNullableAccess(p, fieldMode, func(op derefOp) {
 			p.writef("num_bytes_ += FIDL_ALIGN(value.%s%s%slength());\n",
-				fieldMode, fidlcommon.ToSnakeCase(member.name), op)
+				fidlcommon.ToSnakeCase(member.name), fieldMode, op)
 		})
 	case kVector:
 		// TODO(fxb/49480): Support measuring vectors.
@@ -298,18 +402,18 @@ func (mt *MeasuringTape) writeUnionOutOfLine(p *Printer) {
 func (mt *MeasuringTape) writeTableOutOfLine(p *Printer) {
 	p.writef("int32_t max_ordinal = 0;\n")
 	for _, member := range mt.members {
-		p.writef("if (has_%s()) {\n", fidlcommon.ToSnakeCase(member.name))
+		p.writef("if (value.has_%s()) {\n", fidlcommon.ToSnakeCase(member.name))
 		p.indent(func() {
 			member.writeInvoke(p, inlineAndOutOfLine, throughAccessorField)
 			p.writef("max_ordinal = %d;\n", member.ordinal)
 		})
 		p.writef("}\n")
 	}
-	p.writef("num_bytes += sizeof(fidl_envelope_t) * max_ordinal;\n")
+	p.writef("num_bytes_ += sizeof(fidl_envelope_t) * max_ordinal;\n")
 }
 
 func (mt *MeasuringTape) nameToType() string {
-	return fmt.Sprintf("%s::%s", strings.Join(mt.name.LibraryNameParts(), "::"), mt.name.DeclarationName())
+	return fmt.Sprintf("::%s::%s", strings.Join(mt.name.LibraryName().Parts(), "::"), mt.name.DeclarationName())
 }
 
 func (mt *MeasuringTape) memberNameToUnionTag(memberName string) string {

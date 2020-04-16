@@ -1,0 +1,88 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/fidl/toolchain.gni")
+
+# Declares a Measure Tape.
+#
+# This target generates an HLCPP measuring tape for one or multiple target types.
+#
+# Parameters
+#
+#   fidls (required)
+#     A list of GN depedencies. All those depedencies must be `fidl` targets.
+#
+#   target_type (required)
+#     The fully qualified FIDL type for which to generate a measuring tape.
+template("measure_tape") {
+  assert(defined(invoker.fidls))
+  assert(defined(invoker.target_type))
+
+  # targets
+  fidl_targets = invoker.fidls
+  source_set_target_name = target_name
+  config_target_name = "${target_name}_config"
+  gen_target_name = "${target_name}_gen"
+
+  out_cc = "${target_gen_dir}/measure_tape/hlcpp/${target_name}.cc"
+  out_h = "${target_gen_dir}/measure_tape/hlcpp/${target_name}.h"
+
+  # arguments for code generation tool
+  gen_args = [
+    "--target-type",
+    invoker.target_type,
+    "--out-cc",
+    rebase_path(out_cc),
+    "--out-h",
+    rebase_path(out_h),
+    "--h-include-path",
+    "measure_tape/hlcpp/${target_name}.h",
+  ]
+  foreach(fidl, invoker.fidls) {
+    fidl_target =
+        get_label_info(fidl, "label_no_toolchain") + "($fidl_toolchain)"
+    json_file = get_label_info(fidl_target, "target_gen_dir") + "/" +
+                get_label_info(fidl_target, "name") + ".fidl.json"
+    gen_args += [
+      "--json",
+      rebase_path(json_file, root_build_dir),
+    ]
+  }
+
+  # source set configuration to support `#include <...>`
+  config(config_target_name) {
+    include_dirs = [ target_gen_dir ]
+  }
+
+  # source set consisting of the two generated files
+  source_set(source_set_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "defines",
+                             "testonly",
+                             "visibility",
+                           ])
+    sources = [
+      out_cc,
+      out_h,
+    ]
+    deps = [ ":$gen_target_name" ]
+    public_deps = fidl_targets
+    public_configs = [ ":$config_target_name" ]
+  }
+
+  # code generation
+  compiled_action(gen_target_name) {
+    tool = "//tools/fidl/measure-tape"
+
+    args = gen_args
+    outputs = [
+      out_cc,
+      out_h,
+    ]
+    deps = fidl_targets
+    forward_variables_from(invoker, [ "testonly" ])
+  }
+}

@@ -71,8 +71,12 @@ compiled_action("gen_command_sizing") {
     rebase_path(
         "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.ui.views/fuchsia.ui.views.fidl.json",
         root_build_dir),
-    "--measure",
+    "--target-type",
     "fuchsia.ui.scenic/Command",
+    "--out-h",
+    rebase_path("commands_sizing.h"),
+    "--h-include-path",
+    "lib/ui/scenic/cpp/commands_sizing.h",
     "--out-cc",
     rebase_path("commands_sizing.cc"),
     "--only-check-to-file",

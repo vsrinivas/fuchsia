@@ -1,6 +1,6 @@
 {
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/commands.h": "b6f059762c967e5617731490f5233384",
-  "pkg/scenic_cpp/include/lib/ui/scenic/cpp/commands_sizing.h": "887343454d64be88aba210581cb8968d",
+  "pkg/scenic_cpp/include/lib/ui/scenic/cpp/commands_sizing.h": "526c49f90ad2ad811cae93881f614082",
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/id.h": "4442d6e024bba018b7a8038d0a069713",
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/resources.h": "9d49aff1e1599d717c2e38f86446cfc6",
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/session.h": "1ca049cc6e3831e198a1bcebecbe76e2",

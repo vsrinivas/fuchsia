@@ -79,7 +79,7 @@ void Session::Enqueue(fuchsia::ui::input::Command command) {
 }
 
 void Session::Enqueue(fuchsia::ui::scenic::Command command) {
-  auto size = MeasureCommand(command);
+  auto size = measure_tape::fuchsia::ui::scenic::Measure(command);
 
   // If we would go over caps by adding this command, flush the commands we have
   // accumulated so far.

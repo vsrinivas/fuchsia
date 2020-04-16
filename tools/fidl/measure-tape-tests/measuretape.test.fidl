@@ -1,0 +1,29 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library measuretape;
+
+union TopLevelUnion {
+    1: uint64 primitive;
+    2: handle handle;
+    3: StructWithString struct_with_string;
+    4: StructWithOptString struct_with_opt_string;
+    5: Table table;
+};
+
+struct StructWithString {
+    string string;
+};
+
+struct StructWithOptString {
+    string? opt_string;
+};
+
+table Table {
+    5: uint32 primitive;
+    2: reserved;
+    1: reserved;
+    3: string string;
+    4: handle handle;
+};

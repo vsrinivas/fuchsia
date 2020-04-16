@@ -13,17 +13,17 @@ import (
 )
 
 type Measurer struct {
-	roots map[string]fidlir.Root
+	roots map[fidlcommon.LibraryName]fidlir.Root
 	tapes map[string]*MeasuringTape
 }
 
 func NewMeasurer(roots []fidlir.Root) *Measurer {
 	m := &Measurer{
-		roots: make(map[string]fidlir.Root),
+		roots: make(map[fidlcommon.LibraryName]fidlir.Root),
 		tapes: make(map[string]*MeasuringTape),
 	}
 	for _, root := range roots {
-		m.roots[string(root.Name)] = root
+		m.roots[fidlcommon.MustReadLibraryName(string(root.Name))] = root
 	}
 	return m
 }
