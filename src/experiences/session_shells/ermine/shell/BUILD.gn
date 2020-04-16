@@ -176,6 +176,8 @@ flutter_test("ermine_unittests") {
     "crash_test.dart",
     "ermine_story_test.dart",
     "ermine_test.dart",
+    "status_model_test.dart",
+    "topbar_model_test.dart",
   ]
 
   deps = [

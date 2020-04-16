@@ -16,27 +16,28 @@ import '../utils/utils.dart';
 class StatusModel implements Inspectable {
   /// The [GlobalKey] associated with [Status] widget.
   final GlobalKey key = GlobalKey(debugLabel: 'status');
-  UiStream brightness;
-  UiStream memory;
-  UiStream battery;
-  UiStream volume;
-  UiStream bluetooth;
-  UiStream datetime;
-  UiStream timezone;
-  final StartupContext startupContext;
+  final UiStream brightness;
+  final UiStream memory;
+  final UiStream battery;
+  final UiStream volume;
+  final UiStream bluetooth;
+  final UiStream datetime;
+  final UiStream timezone;
   final AdministratorProxy deviceManager;
   final VoidCallback logout;
   final ValueNotifier<UiStream> detailNotifier = ValueNotifier<UiStream>(null);
 
-  StatusModel({this.startupContext, this.deviceManager, this.logout}) {
-    datetime = UiStream(Datetime());
-    timezone = UiStream(TimeZone.fromStartupContext(startupContext));
-    brightness = UiStream(Brightness.fromStartupContext(startupContext));
-    memory = UiStream(Memory.fromStartupContext(startupContext));
-    battery = UiStream(Battery.fromStartupContext(startupContext));
-    volume = UiStream(Volume.fromStartupContext(startupContext));
-    bluetooth = UiStream(Bluetooth.fromStartupContext(startupContext));
-  }
+  StatusModel({
+    this.datetime,
+    this.timezone,
+    this.brightness,
+    this.memory,
+    this.battery,
+    this.volume,
+    this.bluetooth,
+    this.deviceManager,
+    this.logout,
+  });
 
   factory StatusModel.fromStartupContext(
       StartupContext startupContext, VoidCallback logout) {
@@ -44,7 +45,13 @@ class StatusModel implements Inspectable {
     startupContext.incoming.connectToService(deviceManager);
 
     return StatusModel(
-      startupContext: startupContext,
+      datetime: UiStream(Datetime()),
+      timezone: UiStream(TimeZone.fromStartupContext(startupContext)),
+      brightness: UiStream(Brightness.fromStartupContext(startupContext)),
+      memory: UiStream(Memory.fromStartupContext(startupContext)),
+      battery: UiStream(Battery.fromStartupContext(startupContext)),
+      volume: UiStream(Volume.fromStartupContext(startupContext)),
+      bluetooth: UiStream(Bluetooth.fromStartupContext(startupContext)),
       deviceManager: deviceManager,
       logout: logout,
     );
@@ -56,9 +63,9 @@ class StatusModel implements Inspectable {
     memory.dispose();
     battery.dispose();
     volume.dispose();
-    battery.dispose();
     datetime.dispose();
     timezone.dispose();
+    bluetooth.dispose();
   }
 
   UiStream get detailStream => detailNotifier.value;
