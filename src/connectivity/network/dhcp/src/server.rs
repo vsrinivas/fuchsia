@@ -1157,6 +1157,24 @@ pub mod tests {
         }
     }
 
+    fn get_router(server: &Server) -> Result<Vec<Ipv4Addr>, ProtocolError> {
+        let code = OptionCode::Router;
+        match server.options_repo.get(&code) {
+            Some(DhcpOption::Router(router)) => Some(router.clone()),
+            option => panic!("unexpected entry {} => {:?}", &code, option),
+        }
+        .ok_or(ProtocolError::MissingOption(code))
+    }
+
+    fn get_dns_server(server: &Server) -> Result<Vec<Ipv4Addr>, ProtocolError> {
+        let code = OptionCode::DomainNameServer;
+        match server.options_repo.get(&code) {
+            Some(DhcpOption::DomainNameServer(dns_server)) => Some(dns_server.clone()),
+            option => panic!("unexpected entry {} => {:?}", &code, option),
+        }
+        .ok_or(ProtocolError::MissingOption(code))
+    }
+
     async fn new_test_minimal_server() -> Result<Server, Error> {
         let mut server = Server::new_test_server().await.context("failed to instantiate server")?;
 
@@ -1473,16 +1491,8 @@ pub mod tests {
         server.pool.available_addrs.insert(offer_ip);
 
         let server_id = server.params.server_ips.first().unwrap();
-        let router = match server.options_repo.get(&OptionCode::Router) {
-            Some(DhcpOption::Router(router)) => Some(router.clone()),
-            _ => None,
-        }
-        .ok_or(ProtocolError::MissingOption(OptionCode::Router))?;
-        let dns_server = match server.options_repo.get(&OptionCode::DomainNameServer) {
-            Some(DhcpOption::DomainNameServer(dns_server)) => Some(dns_server.clone()),
-            _ => None,
-        }
-        .ok_or(ProtocolError::MissingOption(OptionCode::DomainNameServer))?;
+        let router = get_router(&server)?;
+        let dns_server = get_dns_server(&server)?;
         let expected_client_config = CachedConfig::new(
             offer_ip,
             vec![
@@ -1835,16 +1845,8 @@ pub mod tests {
         req.ciaddr = requested_ip;
 
         let server_id = server.params.server_ips.first().unwrap();
-        let router = match server.options_repo.get(&OptionCode::Router) {
-            Some(DhcpOption::Router(router)) => Some(router.clone()),
-            _ => None,
-        }
-        .ok_or(ProtocolError::MissingOption(OptionCode::Router))?;
-        let dns_server = match server.options_repo.get(&OptionCode::DomainNameServer) {
-            Some(DhcpOption::DomainNameServer(dns_server)) => Some(dns_server.clone()),
-            _ => None,
-        }
-        .ok_or(ProtocolError::MissingOption(OptionCode::DomainNameServer))?;
+        let router = get_router(&server)?;
+        let dns_server = get_dns_server(&server)?;
         server.cache.insert(
             req.chaddr,
             CachedConfig::new(
@@ -2020,16 +2022,8 @@ pub mod tests {
         req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
 
         let server_id = server.params.server_ips.first().unwrap();
-        let router = match server.options_repo.get(&OptionCode::Router) {
-            Some(DhcpOption::Router(router)) => Some(router.clone()),
-            _ => None,
-        }
-        .ok_or(ProtocolError::MissingOption(OptionCode::Router))?;
-        let dns_server = match server.options_repo.get(&OptionCode::DomainNameServer) {
-            Some(DhcpOption::DomainNameServer(dns_server)) => Some(dns_server.clone()),
-            _ => None,
-        }
-        .ok_or(ProtocolError::MissingOption(OptionCode::DomainNameServer))?;
+        let router = get_router(&server)?;
+        let dns_server = get_dns_server(&server)?;
         server.cache.insert(
             req.chaddr,
             CachedConfig::new(
@@ -2219,16 +2213,8 @@ pub mod tests {
         req.ciaddr = bound_client_ip;
 
         let server_id = server.params.server_ips.first().unwrap();
-        let router = match server.options_repo.get(&OptionCode::Router) {
-            Some(DhcpOption::Router(router)) => Some(router.clone()),
-            _ => None,
-        }
-        .ok_or(ProtocolError::MissingOption(OptionCode::Router))?;
-        let dns_server = match server.options_repo.get(&OptionCode::DomainNameServer) {
-            Some(DhcpOption::DomainNameServer(dns_server)) => Some(dns_server.clone()),
-            _ => None,
-        }
-        .ok_or(ProtocolError::MissingOption(OptionCode::DomainNameServer))?;
+        let router = get_router(&server)?;
+        let dns_server = get_dns_server(&server)?;
         server.cache.insert(
             req.chaddr,
             CachedConfig::new(
