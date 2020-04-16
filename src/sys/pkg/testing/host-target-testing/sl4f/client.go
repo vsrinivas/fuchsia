@@ -149,7 +149,7 @@ func (c *Client) call(ctx context.Context, method string, params interface{}, re
 		return err
 	}
 
-	req, err := http.NewRequest("GET", c.url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "GET", c.url, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}

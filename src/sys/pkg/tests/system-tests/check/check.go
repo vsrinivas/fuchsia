@@ -13,8 +13,8 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
 )
 
-// IsDeviceUpToDate checks if the device's /syste/meta matches running the
-// expected system image merkle.
+// IsDeviceUpToDate checks if the device's /system/meta matches the expected
+// system image merkle.
 func IsDeviceUpToDate(
 	ctx context.Context,
 	device *device.Client,
@@ -128,11 +128,11 @@ func ValidateDevice(
 	// FIXME(40913): every builder should at least build sl4f as a universe package.
 	if rpcClient == nil {
 		if err := device.ValidateStaticPackages(ctx); err != nil {
-			return fmt.Errorf("failed to validate static packages: %w", err)
+			return fmt.Errorf("failed to validate static packages without sl4f: %w", err)
 		}
 	} else {
 		if err := rpcClient.ValidateStaticPackages(ctx); err != nil {
-			return fmt.Errorf("failed to validate static packages: %w", err)
+			return fmt.Errorf("failed to validate static packages with sl4f: %w", err)
 		}
 
 		if err := CheckABRConfig(ctx, rpcClient, expectedConfig); err != nil {

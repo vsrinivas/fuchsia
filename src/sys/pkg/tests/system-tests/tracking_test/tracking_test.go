@@ -16,6 +16,7 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
+	"fuchsia.googlesource.com/host_target_testing/util"
 	"fuchsia.googlesource.com/system_tests/check"
 	"fuchsia.googlesource.com/system_tests/pave"
 	"golang.org/x/crypto/ssh"
@@ -66,10 +67,15 @@ func TestOTA(t *testing.T) {
 	}()
 
 	if c.shouldRepaveDevice() {
-		rpcClient, err = paveDevice(ctx, device)
-		if err != nil {
-			t.Fatalf("failed to pave device: %s", err)
+		ch := make(chan *sl4f.Client, 1)
+		if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
+			rpcClient, err = paveDevice(ctx, device)
+			ch <- rpcClient
+			return err
+		}); err != nil {
+			t.Fatalf("Failed to initialize device: %v", err)
 		}
+		rpcClient = <-ch
 	}
 
 	testTrackingOTAs(t, ctx, device, &rpcClient)
@@ -103,7 +109,9 @@ func testTrackingOTAs(t *testing.T, ctx context.Context, device *device.Client, 
 		}
 		log.Printf("Tracking Test Attempt %d upgrading from build %s to build %s", attempt, lastBuildID, buildID)
 
-		if err := testTrackingOTAAttempt(ctx, device, rpcClient, buildID, checkABR); err != nil {
+		if err := util.RunWithTimeout(ctx, c.cycleTimeout, func() error {
+			return testTrackingOTAAttempt(ctx, device, rpcClient, buildID, checkABR)
+		}); err != nil {
 			t.Fatalf("Tracking Test Attempt %d failed: %s", attempt, err)
 		}
 
@@ -123,9 +131,6 @@ func testTrackingOTAAttempt(
 	buildID string,
 	checkABR bool,
 ) error {
-	ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
-	defer cancel()
-
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
 		return fmt.Errorf("failed to get output directory: %s", err)
@@ -163,9 +168,6 @@ func testTrackingOTAAttempt(
 }
 
 func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error) {
-	ctx, cancel := context.WithTimeout(ctx, c.paveTimeout)
-	defer cancel()
-
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
 		return nil, err

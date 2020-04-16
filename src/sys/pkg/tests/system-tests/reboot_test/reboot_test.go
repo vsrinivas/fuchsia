@@ -15,6 +15,7 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/artifacts"
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
+	"fuchsia.googlesource.com/host_target_testing/util"
 	"fuchsia.googlesource.com/system_tests/check"
 	"fuchsia.googlesource.com/system_tests/pave"
 	"fuchsia.googlesource.com/system_tests/script"
@@ -61,8 +62,10 @@ func TestReboot(t *testing.T) {
 		log.Fatalf("failed to get downgrade build: %v", err)
 	}
 
-	if err := initializeDevice(ctx, device, build); err != nil {
-		t.Fatalf("paving failed: %s", err)
+	if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
+		return initializeDevice(ctx, device, build)
+	}); err != nil {
+		log.Fatalf("initialization failed: %v", err)
 	}
 
 	testReboot(ctx, device, build)
@@ -72,16 +75,18 @@ func testReboot(ctx context.Context, device *device.Client, build artifacts.Buil
 	for i := 1; i <= c.cycleCount; i++ {
 		log.Printf("Reboot Attempt %d", i)
 
-		if err := doTestReboot(ctx, device, build); err != nil {
-			log.Fatalf("OTA Cycle %d timed out: %s", i, err)
+		// Protect against the test stalling out by wrapping it in a closure,
+		// setting a timeout on the context, and running the actual test in a
+		// closure.
+		if err := util.RunWithTimeout(ctx, c.cycleTimeout, func() error {
+			return doTestReboot(ctx, device, build)
+		}); err != nil {
+			log.Fatalf("Reboot Cycle %d failed: %v", i, err)
 		}
 	}
 }
 
 func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Build) error {
-	ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
-	defer cancel()
-
 	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to get repository: %w", err)
@@ -156,9 +161,6 @@ func initializeDevice(
 	build artifacts.Build,
 ) error {
 	log.Printf("Initializing device")
-
-	ctx, cancel := context.WithTimeout(ctx, c.paveTimeout)
-	defer cancel()
 
 	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {

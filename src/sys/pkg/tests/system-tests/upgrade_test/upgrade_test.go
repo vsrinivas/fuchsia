@@ -17,6 +17,7 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
+	"fuchsia.googlesource.com/host_target_testing/util"
 	"fuchsia.googlesource.com/system_tests/check"
 	"fuchsia.googlesource.com/system_tests/pave"
 	"fuchsia.googlesource.com/system_tests/script"
@@ -68,10 +69,16 @@ func TestOTA(t *testing.T) {
 		log.Fatalf("failed to get upgrade build: %v", err)
 	}
 
-	rpcClient, err := initializeDevice(ctx, device, downgradeBuild)
-	if err != nil {
+	ch := make(chan *sl4f.Client, 1)
+	if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
+		rpcClient, err := initializeDevice(ctx, device, downgradeBuild)
+		ch <- rpcClient
+		return err
+	}); err != nil {
 		t.Fatalf("Device failed to initialize: %v", err)
 	}
+
+	rpcClient := <-ch
 	defer func() {
 		if rpcClient != nil {
 			rpcClient.Close()
@@ -90,7 +97,9 @@ func testOTAs(
 	for i := 1; i <= c.cycleCount; i++ {
 		log.Printf("OTA Attempt %d", i)
 
-		if err := doTestOTAs(ctx, device, build, rpcClient); err != nil {
+		if err := util.RunWithTimeout(ctx, c.cycleTimeout, func() error {
+			return doTestOTAs(ctx, device, build, rpcClient)
+		}); err != nil {
 			log.Fatalf("OTA Attempt %d failed: %s", i, err)
 		}
 	}
@@ -105,8 +114,6 @@ func doTestOTAs(
 	log.Printf("Starting OTA test cycle. Time out in %s", c.cycleTimeout)
 
 	startTime := time.Now()
-	ctx, cancel := context.WithDeadline(ctx, startTime.Add(c.cycleTimeout))
-	defer cancel()
 
 	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
@@ -158,8 +165,6 @@ func initializeDevice(
 	log.Printf("Initializing device")
 
 	startTime := time.Now()
-	ctx, cancel := context.WithDeadline(ctx, startTime.Add(c.paveTimeout))
-	defer cancel()
 
 	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {

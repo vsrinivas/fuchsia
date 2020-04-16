@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // RunCommand executes a command on the host and returns the stdout and stderr
@@ -152,4 +153,28 @@ func AtomicallyWriteFile(path string, mode os.FileMode, writeFileFunc func(*os.F
 	tmpfile = nil
 
 	return nil
+}
+
+// RunWithTimeout runs a closure to completion, or returns an error if it times
+// out.
+func RunWithTimeout(ctx context.Context, timeout time.Duration, f func() error) error {
+	return RunWithDeadline(ctx, time.Now().Add(timeout), f)
+}
+
+// RunWithDeadline runs a closure to runs the closure in a goroutine
+func RunWithDeadline(ctx context.Context, deadline time.Time, f func() error) error {
+	ctx, cancel := context.WithDeadline(ctx, deadline)
+	defer cancel()
+
+	ch := make(chan error, 1)
+	go func() {
+		ch <- f()
+	}()
+
+	select {
+	case err := <-ch:
+		return err
+	case <-ctx.Done():
+		return fmt.Errorf("Function timed out: %w", ctx.Err())
+	}
 }
