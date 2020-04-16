@@ -87,10 +87,8 @@ struct HelloReply {
   // This number is ASCII for "zxdbIPC>".
   static constexpr uint64_t kStreamSignature = 0x7a7864624950433e;
 
-  static constexpr uint32_t kCurrentVersion = 1;
-
   uint64_t signature = kStreamSignature;
-  uint32_t version = kCurrentVersion;
+  uint32_t version = kProtocolVersion;
   Arch arch = Arch::kUnknown;
 };
 

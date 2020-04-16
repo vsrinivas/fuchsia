@@ -21,7 +21,6 @@ namespace debug_ipc {
 constexpr uint32_t MsgHeader::kSerializedHeaderSize;
 
 constexpr uint64_t HelloReply::kStreamSignature;
-constexpr uint32_t HelloReply::kCurrentVersion;
 
 const char* MsgHeader::TypeToString(MsgHeader::Type type) {
   switch (type) {

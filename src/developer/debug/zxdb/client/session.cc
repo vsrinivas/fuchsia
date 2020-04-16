@@ -732,13 +732,16 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
   }
 
   // Version check.
-  if (reply.version != debug_ipc::HelloReply::kCurrentVersion) {
+  if (reply.version != debug_ipc::kProtocolVersion) {
     if (callback) {
       callback(
-          Err(fxl::StringPrintf("Protocol version mismatch. The target system debug agent reports "
-                                "version %" PRIu32 " but this client expects version %" PRIu32 ".",
-                                reply.version, debug_ipc::HelloReply::kCurrentVersion)));
+          Err("ERROR: The IPC version of the debug_agent on the system (v%u) doesn't match\n"
+              "the zxdb frontend's IPC version (v%u). Make sure everything is up-to-date.\n"
+              "\n"
+              "Closing connection.",
+              reply.version, debug_ipc::kProtocolVersion));
     }
+    return;
   }
 
   // Initialize arch-specific stuff.
