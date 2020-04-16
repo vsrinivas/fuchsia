@@ -194,51 +194,6 @@ async fn plug_unplug_durability() -> Result<()> {
 
 #[fasync::run_singlethreaded]
 #[test]
-async fn default_change_upon_removal() -> Result<()> {
-    let env = Environment::new()?;
-
-    // Enumerator for on_device_added event stream.
-    let enumerator = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
-    let mut device_adds = enumerator.take_event_stream().try_filter_map(move |e| {
-        future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_added(e)))
-    });
-
-    // Configure and add an input device that can notify audio_core when un/plugged
-    let mut expected_id_bytes: [u8; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-    let device = InputProxy::connect(&env)?;
-    device.set_unique_id(&mut expected_id_bytes)?;
-    device.set_plug_properties(
-        /*plug_change_time=*/ 0, /*plugged=*/ true, /*hardwired=*/ false,
-        /*can_notify=*/ true,
-    )?;
-
-    // Wait for device to be added and signaled.
-    device.add()?;
-    let device_info = device_adds.try_next().await?.expect("");
-
-    // Enumerator for on_default_device_changed event stream.
-    let enumerator2 = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
-    let mut default_changes = enumerator2.take_event_stream().try_filter_map(move |e| {
-        future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_default_device_changed(e)))
-    });
-
-    // Wait for device to become the new default.
-    let (old_token, device_token) = default_changes.try_next().await?.expect("");
-    assert_eq!(old_token, 0);
-    assert_eq!(device_token, device_info.token_id);
-
-    drop(device);
-
-    // After device drop, wait for signal that default has moved device => 0.
-    let (old_token, new_token) = default_changes.try_next().await?.expect("");
-    assert_eq!(old_token, device_token);
-    assert_eq!(new_token, 0);
-
-    Ok(())
-}
-
-#[fasync::run_singlethreaded]
-#[test]
 async fn many_devices() -> Result<()> {
     use std::collections::{HashMap, HashSet};
 
