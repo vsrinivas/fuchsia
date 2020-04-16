@@ -9,23 +9,33 @@
 
 #include "src/graphics/tests/common/utils.h"
 
+#include "vulkan/vulkan.hpp"
+
 VulkanContext::VulkanContext(const vk::InstanceCreateInfo &instance_info,
                              size_t physical_device_index, const vk::DeviceCreateInfo &device_info,
                              const vk::DeviceQueueCreateInfo &queue_info,
                              const vk::QueueFlagBits &queue_flag_bits,
                              vk::Optional<const vk::AllocationCallbacks> allocator)
-    : initialized_(false),
-      instance_info_(instance_info),
+    : instance_info_(instance_info),
       physical_device_index_(physical_device_index),
-      device_info_(device_info),
-      queue_info_(queue_info),
-      queue_flag_bits_(queue_flag_bits),
       queue_family_index_(kInvalidQueueFamily),
+      queue_flag_bits_(queue_flag_bits),
+      queue_info_(queue_info),
+      device_info_(device_info),
       allocator_(allocator) {}
 
-bool VulkanContext::Init() {
-  if (initialized_) {
-    RTN_MSG(false, "Attempt to re-initialize VulkanContext.\n");
+VulkanContext::VulkanContext(size_t physical_device_index, const vk::QueueFlagBits &queue_flag_bits,
+                             vk::Optional<const vk::AllocationCallbacks> allocator)
+    : physical_device_index_(physical_device_index),
+      queue_family_index_(kInvalidQueueFamily),
+      queue_flag_bits_(queue_flag_bits),
+      queue_info_(vk::DeviceQueueCreateFlags(), queue_family_index_, 1 /* queueCount */,
+                  &queue_priority_),
+      allocator_(allocator) {}
+
+bool VulkanContext::InitInstance() {
+  if (instance_initialized_) {
+    RTN_MSG(false, "Instance is already initialized.\n");
   }
   vk::ResultValue<vk::UniqueInstance> rv_instance(vk::Result::eNotReady, vk::UniqueInstance{});
   if (allocator_) {
@@ -48,7 +58,17 @@ bool VulkanContext::Init() {
     RTN_MSG(false, "VK Error: 0x%x - Create instance.\n", rv_instance.result);
   }
   instance_ = std::move(rv_instance.value);
+  instance_initialized_ = true;
+  return true;
+}
 
+bool VulkanContext::InitQueueFamily() {
+  if (!instance_initialized_) {
+    RTN_MSG(false, "Instance must be initialized before queue family.\n");
+  }
+  if (queue_family_initialized_) {
+    RTN_MSG(false, "Queue family is already initialized.\n");
+  }
   auto [r_physical_devices, physical_devices] = instance_->enumeratePhysicalDevices();
   if (vk::Result::eSuccess != r_physical_devices || physical_devices.empty()) {
     RTN_MSG(false, "VK Error: 0x%x - No physical device found.\n", r_physical_devices);
@@ -66,10 +86,20 @@ bool VulkanContext::Init() {
 
   if (static_cast<size_t>(queue_family_index_) == queue_families.size()) {
     queue_family_index_ = kInvalidQueueFamily;
-    RTN_MSG(false, "Couldn't find an appropriate queue.\n");
+    RTN_MSG(false, "Couldn't find an appropriate queue family.\n");
   }
-
   queue_info_.queueFamilyIndex = queue_family_index_;
+  queue_family_initialized_ = true;
+  return true;
+}
+
+bool VulkanContext::InitDevice() {
+  if (!queue_family_initialized_) {
+    RTN_MSG(false, "Queue family must be initialized before device.\n");
+  }
+  if (device_initialized_) {
+    RTN_MSG(false, "Device is already initialized.\n");
+  }
   vk::ResultValue<vk::UniqueDevice> rv_device(vk::Result::eNotReady, vk::UniqueDevice{});
   if (allocator_) {
     rv_device = physical_device_.createDeviceUnique(device_info_, allocator_);
@@ -81,9 +111,92 @@ bool VulkanContext::Init() {
   }
   device_ = std::move(rv_device.value);
   queue_ = device_->getQueue(queue_family_index_, 0);
+  device_initialized_ = true;
+  return true;
+}
 
+bool VulkanContext::Init() {
+  if (initialized_ || instance_initialized_ || device_initialized_ || queue_family_initialized_) {
+    RTN_MSG(false, "Attempt to re-initialize VulkanContext.\n");
+  }
+  if (!InitInstance()) {
+    RTN_MSG(false, "Unable to initialize instance.\n");
+  }
+  if (!InitQueueFamily()) {
+    RTN_MSG(false, "Unable to initialize queue family.\n");
+  }
+  if (!InitDevice()) {
+    RTN_MSG(false, "Unable to initialize device.\n");
+  }
   initialized_ = true;
   return true;
+}
+
+bool VulkanContext::set_instance_info(const vk::InstanceCreateInfo &instance_info) {
+  if (instance_initialized_) {
+    RTN_MSG(false, "set_instance_info ignored.  Instance is already initialized.\n");
+  }
+  instance_info_ = instance_info;
+  return true;
+}
+
+bool VulkanContext::set_device_info(const vk::DeviceCreateInfo &device_info) {
+  if (device_initialized_) {
+    RTN_MSG(false, "set_device_info ignored.  Device is already initialized.\n");
+  }
+  device_info_ = device_info;
+  return true;
+}
+
+bool VulkanContext::set_queue_info(const vk::DeviceQueueCreateInfo &queue_info) {
+  if (queue_family_initialized_) {
+    RTN_MSG(false, "set_queue_info ignored.  Queue family is already initialized.\n");
+  }
+  queue_info_ = queue_info;
+  return true;
+}
+
+bool VulkanContext::set_queue_flag_bits(const vk::QueueFlagBits &queue_flag_bits) {
+  if (queue_family_initialized_) {
+    RTN_MSG(false, "set_queue_flag_bits ignored. Queue family is already initialized.\n");
+  }
+  queue_flag_bits_ = queue_flag_bits;
+  return true;
+}
+
+const vk::UniqueInstance &VulkanContext::instance() const {
+  if (!instance_initialized_) {
+    assert(false && "Instance is not initialized.\n");
+  }
+  return instance_;
+}
+
+const vk::PhysicalDevice &VulkanContext::physical_device() const {
+  if (!queue_family_initialized_) {
+    assert(false && "Queue family is not initialized.\n");
+  }
+  return physical_device_;
+}
+
+int VulkanContext::queue_family_index() const {
+  if (!queue_family_initialized_) {
+    assert(false && "Queue family is not initialized.\n");
+  }
+  return queue_family_index_;
+}
+
+const vk::UniqueDevice &VulkanContext::device() const {
+  if (!device_initialized_) {
+    assert(false && "Device is not initialized.\n");
+  }
+  return device_;
+}
+
+const vk::Queue &VulkanContext::queue() const {
+  if (!device_initialized_) {
+    assert(false && "Device is not initialized.\n");
+  }
+  return queue_;
 }
 
 VulkanContext::Builder::Builder()

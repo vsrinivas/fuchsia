@@ -16,6 +16,7 @@
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "gtest/gtest.h"
 #include "src/graphics/tests/common/utils.h"
+#include "src/graphics/tests/common/vulkan_context.h"
 
 namespace {
 
@@ -65,7 +66,7 @@ class VulkanTest {
   bool Initialize();
   bool Exec(VkFormat format, uint32_t width, bool direct, bool linear,
             bool repeat_constraints_as_non_protected,
-            const std::vector<fuchsia::sysmem::ImageFormatConstraints>& format_constraints =
+            const std::vector<fuchsia::sysmem::ImageFormatConstraints> &format_constraints =
                 std::vector<fuchsia::sysmem::ImageFormatConstraints>());
   bool ExecBuffer(uint32_t size);
 
@@ -75,18 +76,14 @@ class VulkanTest {
  private:
   bool InitVulkan();
   bool InitImage();
+  bool InitFunctions();
 
   bool is_initialized_ = false;
   bool use_protected_memory_ = false;
   bool device_supports_protected_memory_ = false;
-  VkInstance vk_instance_{};
-  VkPhysicalDevice vk_physical_device_{};
-  VkDevice vk_device_{};
-  VkQueue vk_queue_{};
+  std::unique_ptr<VulkanContext> ctx_;
   VkImage vk_image_{};
   VkDeviceMemory vk_device_memory_{};
-  VkCommandPool vk_command_pool_{};
-  VkCommandBuffer vk_command_buffer_{};
   PFN_vkCreateBufferCollectionFUCHSIA vkCreateBufferCollectionFUCHSIA_;
   PFN_vkSetBufferCollectionConstraintsFUCHSIA vkSetBufferCollectionConstraintsFUCHSIA_;
   PFN_vkSetBufferCollectionBufferConstraintsFUCHSIA vkSetBufferCollectionBufferConstraintsFUCHSIA_;
@@ -95,26 +92,14 @@ class VulkanTest {
 };
 
 VulkanTest::~VulkanTest() {
-  if (vk_command_pool_) {
-    vkDestroyCommandPool(vk_device_, vk_command_pool_, nullptr);
-    vk_command_pool_ = VK_NULL_HANDLE;
-    vk_command_buffer_ = VK_NULL_HANDLE;
-  }
+  const vk::Device &device = *ctx_->device();
   if (vk_image_) {
-    vkDestroyImage(vk_device_, vk_image_, nullptr);
+    vkDestroyImage(device, vk_image_, nullptr);
     vk_image_ = VK_NULL_HANDLE;
   }
   if (vk_device_memory_) {
-    vkFreeMemory(vk_device_, vk_device_memory_, nullptr);
+    vkFreeMemory(device, vk_device_memory_, nullptr);
     vk_device_memory_ = VK_NULL_HANDLE;
-  }
-  if (vk_device_) {
-    vkDestroyDevice(vk_device_, nullptr);
-    vk_device_ = VK_NULL_HANDLE;
-  }
-  if (vk_instance_) {
-    vkDestroyInstance(vk_instance_, nullptr);
-    vk_instance_ = VK_NULL_HANDLE;
   }
 }
 
@@ -124,7 +109,7 @@ bool VulkanTest::Initialize() {
   }
 
   if (!InitVulkan()) {
-    RTN_MSG(false, "Failed to initialize Vulkan");
+    RTN_MSG(false, "InitVulkan failed.\n");
   }
 
   is_initialized_ = true;
@@ -133,154 +118,87 @@ bool VulkanTest::Initialize() {
 }
 
 bool VulkanTest::InitVulkan() {
-  VkApplicationInfo app_info = {
-      .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-      .pNext = nullptr,
-      .pApplicationName = "vkext",
-      .applicationVersion = 0,
-      .pEngineName = nullptr,
-      .engineVersion = 0,
-      .apiVersion = VK_API_VERSION_1_1,
-  };
-
-  std::vector<const char*> enabled_extensions{};
-  VkInstanceCreateInfo create_info{
-      VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,  // VkStructureType             sType;
-      nullptr,                                 // const void*                 pNext;
-      0,                                       // VkInstanceCreateFlags       flags;
-      &app_info,                               // const VkApplicationInfo*    pApplicationInfo;
-      0,                                       // uint32_t                    enabledLayerCount;
-      nullptr,                                 // const char* const*          ppEnabledLayerNames;
-      static_cast<uint32_t>(enabled_extensions.size()),
-      enabled_extensions.data(),
-  };
-  VkAllocationCallbacks* allocation_callbacks = nullptr;
-  VkResult result;
-
-  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &vk_instance_)) !=
-      VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateInstance failed %d\n", result);
+  constexpr size_t kPhysicalDeviceIndex = 0;
+  vk::ApplicationInfo app_info;
+  app_info.pApplicationName = "vkext";
+  app_info.apiVersion = VK_API_VERSION_1_1;
+  vk::InstanceCreateInfo instance_info;
+  instance_info.pApplicationInfo = &app_info;
+  ctx_ = std::make_unique<VulkanContext>(kPhysicalDeviceIndex);
+  ctx_->set_instance_info(instance_info);
+  if (!ctx_->InitInstance()) {
+    return false;
+  }
+  if (!ctx_->InitQueueFamily()) {
+    return false;
   }
 
-  uint32_t physical_device_count;
-  if ((result = vkEnumeratePhysicalDevices(vk_instance_, &physical_device_count, nullptr)) !=
-      VK_SUCCESS) {
-    RTN_MSG(false, "vkEnumeratePhysicalDevices failed %d\n", result);
-  }
-
-  if (physical_device_count < 1) {
-    RTN_MSG(false, "Unexpected physical_device_count %d\n", physical_device_count);
-  }
-
-  std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
-  if ((result = vkEnumeratePhysicalDevices(vk_instance_, &physical_device_count,
-                                           physical_devices.data())) != VK_SUCCESS) {
-    RTN_MSG(false, "vkEnumeratePhysicalDevices failed %d\n", result);
-  }
-
-  uint32_t queue_family_count;
-  vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
-
-  if (queue_family_count < 1) {
-    RTN_MSG(false, "Invalid queue_family_count %d\n", queue_family_count);
-  }
-
-  std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
-  vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count,
-                                           queue_family_properties.data());
-
-  int32_t queue_family_index = -1;
-  for (uint32_t i = 0; i < queue_family_count; i++) {
-    if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-      queue_family_index = i;
-      break;
+  // Set |device_supports_protected_memory_| flag.
+  vk::PhysicalDeviceProtectedMemoryFeatures protected_memory(VK_TRUE);
+  vk::PhysicalDeviceProperties physical_device_properties;
+  ctx_->physical_device().getProperties(&physical_device_properties);
+  if (VK_VERSION_MAJOR(physical_device_properties.apiVersion) != 1 ||
+      VK_VERSION_MINOR(physical_device_properties.apiVersion) > 0) {
+    vk::PhysicalDeviceFeatures2 features2;
+    features2.pNext = &protected_memory;
+    ctx_->physical_device().getFeatures2(&features2);
+    if (protected_memory.protectedMemory) {
+      device_supports_protected_memory_ = true;
     }
   }
 
-  if (queue_family_index < 0) {
-    RTN_MSG(false, "Couldn't find an appropriate queue");
+  std::vector<const char *> enabled_device_extensions{VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME};
+  vk::DeviceCreateInfo device_info;
+  device_info.pNext = device_supports_protected_memory_ ? &protected_memory : nullptr;
+  device_info.pQueueCreateInfos = &ctx_->queue_info();
+  device_info.queueCreateInfoCount = 1;
+  device_info.enabledExtensionCount = static_cast<uint32_t>(enabled_device_extensions.size());
+  device_info.ppEnabledExtensionNames = enabled_device_extensions.data();
+
+  ctx_->set_device_info(device_info);
+  if (!ctx_->InitDevice()) {
+    return false;
   }
 
-  float queue_priorities[1] = {0.0};
-
-  VkDeviceQueueCreateInfo queue_create_info = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                                               .pNext = nullptr,
-                                               .flags = 0,
-                                               .queueFamilyIndex = 0,
-                                               .queueCount = 1,
-                                               .pQueuePriorities = queue_priorities};
-
-  VkPhysicalDeviceProtectedMemoryFeatures protected_memory = {
-      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
-      .pNext = nullptr,
-      .protectedMemory = VK_TRUE,
-  };
-  {
-    VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(physical_devices[0], &properties);
-    if (VK_VERSION_MAJOR(properties.apiVersion) != 1 ||
-        VK_VERSION_MINOR(properties.apiVersion) > 0) {
-      VkPhysicalDeviceFeatures2 features = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-                                            .pNext = &protected_memory};
-      vkGetPhysicalDeviceFeatures2(physical_devices[0], &features);
-      if (protected_memory.protectedMemory) {
-        device_supports_protected_memory_ = true;
-      }
-    }
-  }
-  std::vector<const char*> enabled_device_extensions{VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME};
-  VkDeviceCreateInfo createInfo = {
-      .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-      .pNext = device_supports_protected_memory_ ? &protected_memory : nullptr,
-      .flags = 0,
-      .queueCreateInfoCount = 1,
-      .pQueueCreateInfos = &queue_create_info,
-      .enabledLayerCount = 0,
-      .ppEnabledLayerNames = nullptr,
-      .enabledExtensionCount = static_cast<uint32_t>(enabled_device_extensions.size()),
-      .ppEnabledExtensionNames = enabled_device_extensions.data(),
-      .pEnabledFeatures = nullptr};
-  VkDevice vkdevice;
-
-  if ((result = vkCreateDevice(physical_devices[0], &createInfo, nullptr /* allocationcallbacks */,
-                               &vkdevice)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateDevice failed: %d\n", result);
+  if (!InitFunctions()) {
+    return false;
   }
 
-  vk_physical_device_ = physical_devices[0];
-  vk_device_ = vkdevice;
+  return true;
+}
 
-  vkGetDeviceQueue(vkdevice, queue_family_index, 0, &vk_queue_);
-
+bool VulkanTest::InitFunctions() {
+  const vk::UniqueDevice &device = ctx_->device();
   vkCreateBufferCollectionFUCHSIA_ = reinterpret_cast<PFN_vkCreateBufferCollectionFUCHSIA>(
-      vkGetDeviceProcAddr(vk_device_, "vkCreateBufferCollectionFUCHSIA"));
+      device->getProcAddr("vkCreateBufferCollectionFUCHSIA"));
   if (!vkCreateBufferCollectionFUCHSIA_) {
     RTN_MSG(false, "No vkCreateBufferCollectionFUCHSIA");
   }
 
   vkDestroyBufferCollectionFUCHSIA_ = reinterpret_cast<PFN_vkDestroyBufferCollectionFUCHSIA>(
-      vkGetDeviceProcAddr(vk_device_, "vkDestroyBufferCollectionFUCHSIA"));
+      device->getProcAddr("vkDestroyBufferCollectionFUCHSIA"));
   if (!vkDestroyBufferCollectionFUCHSIA_) {
     RTN_MSG(false, "No vkDestroyBufferCollectionFUCHSIA");
   }
 
   vkSetBufferCollectionConstraintsFUCHSIA_ =
       reinterpret_cast<PFN_vkSetBufferCollectionConstraintsFUCHSIA>(
-          vkGetDeviceProcAddr(vk_device_, "vkSetBufferCollectionConstraintsFUCHSIA"));
+          device->getProcAddr("vkSetBufferCollectionConstraintsFUCHSIA"));
   if (!vkSetBufferCollectionConstraintsFUCHSIA_) {
     RTN_MSG(false, "No vkSetBufferCollectionConstraintsFUCHSIA");
   }
 
   vkSetBufferCollectionBufferConstraintsFUCHSIA_ =
       reinterpret_cast<PFN_vkSetBufferCollectionBufferConstraintsFUCHSIA>(
-          vkGetDeviceProcAddr(vk_device_, "vkSetBufferCollectionBufferConstraintsFUCHSIA"));
+          device->getProcAddr("vkSetBufferCollectionBufferConstraintsFUCHSIA"));
   if (!vkSetBufferCollectionBufferConstraintsFUCHSIA_) {
     RTN_MSG(false, "No vkSetBufferCollectionBufferConstraintsFUCHSIA");
   }
 
   vkGetBufferCollectionPropertiesFUCHSIA_ =
       reinterpret_cast<PFN_vkGetBufferCollectionPropertiesFUCHSIA>(
-          vkGetDeviceProcAddr(vk_device_, "vkGetBufferCollectionPropertiesFUCHSIA"));
+          device->getProcAddr("vkGetBufferCollectionPropertiesFUCHSIA"));
+
   if (!vkGetBufferCollectionPropertiesFUCHSIA_) {
     RTN_MSG(false, "No vkGetBufferCollectionPropertiesFUCHSIA_");
   }
@@ -291,7 +209,8 @@ bool VulkanTest::InitVulkan() {
 bool VulkanTest::Exec(
     VkFormat format, uint32_t width, bool direct, bool linear,
     bool repeat_constraints_as_non_protected,
-    const std::vector<fuchsia::sysmem::ImageFormatConstraints>& format_constraints) {
+    const std::vector<fuchsia::sysmem::ImageFormatConstraints> &format_constraints) {
+  const vk::Device &device = *ctx_->device();
   VkResult result;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
@@ -337,12 +256,12 @@ bool VulkanTest::Exec(
         .pNext = nullptr,
         .collectionToken = repeat_token.Unbind().TakeChannel().release(),
     };
-    result = vkCreateBufferCollectionFUCHSIA_(vk_device_, &import_info, nullptr,
-                                              &non_protected_collection);
+    result =
+        vkCreateBufferCollectionFUCHSIA_(device, &import_info, nullptr, &non_protected_collection);
     if (result != VK_SUCCESS) {
       RTN_MSG(false, "Failed to create buffer collection: %d\n", result);
     }
-    result = vkSetBufferCollectionConstraintsFUCHSIA_(vk_device_, non_protected_collection,
+    result = vkSetBufferCollectionConstraintsFUCHSIA_(device, non_protected_collection,
                                                       &image_create_info);
     if (result != VK_SUCCESS) {
       RTN_MSG(false, "Failed to set buffer constraints: %d\n", result);
@@ -357,12 +276,12 @@ bool VulkanTest::Exec(
       .collectionToken = vulkan_token.Unbind().TakeChannel().release(),
   };
   VkBufferCollectionFUCHSIA collection;
-  result = vkCreateBufferCollectionFUCHSIA_(vk_device_, &import_info, nullptr, &collection);
+  result = vkCreateBufferCollectionFUCHSIA_(device, &import_info, nullptr, &collection);
   if (result != VK_SUCCESS) {
     RTN_MSG(false, "Failed to create buffer collection: %d\n", result);
   }
 
-  result = vkSetBufferCollectionConstraintsFUCHSIA_(vk_device_, collection, &image_create_info);
+  result = vkSetBufferCollectionConstraintsFUCHSIA_(device, collection, &image_create_info);
 
   if (result != VK_SUCCESS) {
     RTN_MSG(false, "Failed to set buffer constraints: %d\n", result);
@@ -433,7 +352,7 @@ bool VulkanTest::Exec(
         .imageFormatSize = static_cast<uint32_t>(encoded_data.size())};
     image_create_info.pNext = &image_format_fuchsia;
 
-    result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_);
+    result = vkCreateImage(device, &image_create_info, nullptr, &vk_image_);
     if (result != VK_SUCCESS) {
       RTN_MSG(false, "vkCreateImage failed: %d\n", result);
     }
@@ -453,7 +372,7 @@ bool VulkanTest::Exec(
     }
     image_create_info.pNext = &image_format_fuchsia;
 
-    result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_);
+    result = vkCreateImage(device, &image_create_info, nullptr, &vk_image_);
     if (result != VK_SUCCESS) {
       RTN_MSG(false, "vkCreateImage failed: %d\n", result);
     }
@@ -467,7 +386,7 @@ bool VulkanTest::Exec(
         .mipLevel = 0,
         .arrayLayer = 0};
     VkSubresourceLayout layout;
-    vkGetImageSubresourceLayout(vk_device_, vk_image_, &subresource, &layout);
+    vkGetImageSubresourceLayout(device, vk_image_, &subresource, &layout);
 
     VkDeviceSize min_bytes_per_pixel = is_yuv ? 1 : 4;
     EXPECT_LE(min_bytes_per_pixel * width, layout.rowPitch);
@@ -478,11 +397,11 @@ bool VulkanTest::Exec(
     VkImageSubresource subresource = {
         .aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT, .mipLevel = 0, .arrayLayer = 0};
     VkSubresourceLayout b_layout;
-    vkGetImageSubresourceLayout(vk_device_, vk_image_, &subresource, &b_layout);
+    vkGetImageSubresourceLayout(device, vk_image_, &subresource, &b_layout);
 
     subresource.aspectMask = VK_IMAGE_ASPECT_PLANE_2_BIT;
     VkSubresourceLayout r_layout;
-    vkGetImageSubresourceLayout(vk_device_, vk_image_, &subresource, &r_layout);
+    vkGetImageSubresourceLayout(device, vk_image_, &subresource, &r_layout);
 
     // I420 has the U plane (mapped to B) before the V plane (mapped to R)
     EXPECT_LT(b_layout.offset, r_layout.offset);
@@ -490,7 +409,7 @@ bool VulkanTest::Exec(
 
   if (!direct) {
     VkMemoryRequirements memory_reqs;
-    vkGetImageMemoryRequirements(vk_device_, vk_image_, &memory_reqs);
+    vkGetImageMemoryRequirements(device, vk_image_, &memory_reqs);
     // Use first supported type
     uint32_t memory_type = __builtin_ctz(memory_reqs.memoryTypeBits);
 
@@ -511,21 +430,21 @@ bool VulkanTest::Exec(
         .memoryTypeIndex = memory_type,
     };
 
-    if ((result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_)) !=
+    if ((result = vkAllocateMemory(device, &alloc_info, nullptr, &vk_device_memory_)) !=
         VK_SUCCESS) {
       RTN_MSG(false, "vkAllocateMemory failed");
     }
 
-    result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, 0);
+    result = vkBindImageMemory(device, vk_image_, vk_device_memory_, 0);
     if (result != VK_SUCCESS) {
       RTN_MSG(false, "vkBindImageMemory failed");
     }
   } else {
     VkMemoryRequirements requirements;
-    vkGetImageMemoryRequirements(vk_device_, vk_image_, &requirements);
+    vkGetImageMemoryRequirements(device, vk_image_, &requirements);
     VkBufferCollectionPropertiesFUCHSIA properties = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA};
-    result = vkGetBufferCollectionPropertiesFUCHSIA_(vk_device_, collection, &properties);
+    result = vkGetBufferCollectionPropertiesFUCHSIA_(device, collection, &properties);
     if (result != VK_SUCCESS) {
       RTN_MSG(false, "vkBindImageMemory failed");
     }
@@ -536,7 +455,7 @@ bool VulkanTest::Exec(
     uint32_t memory_type = __builtin_ctz(viable_memory_types);
 
     VkPhysicalDeviceMemoryProperties memory_properties;
-    vkGetPhysicalDeviceMemoryProperties(vk_physical_device_, &memory_properties);
+    vkGetPhysicalDeviceMemoryProperties(ctx_->physical_device(), &memory_properties);
 
     EXPECT_LT(memory_type, memory_properties.memoryTypeCount);
     if (use_protected_memory_) {
@@ -565,20 +484,20 @@ bool VulkanTest::Exec(
     alloc_info.allocationSize = requirements.size;
     alloc_info.memoryTypeIndex = memory_type;
 
-    result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_);
+    result = vkAllocateMemory(device, &alloc_info, nullptr, &vk_device_memory_);
     if (result != VK_SUCCESS) {
       RTN_MSG(false, "vkCreateImage failed: %d\n", result);
     }
 
-    result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, 0u);
+    result = vkBindImageMemory(device, vk_image_, vk_device_memory_, 0u);
     if (result != VK_SUCCESS) {
       RTN_MSG(false, "vkCreateImage failed: %d\n", result);
     }
   }
 
-  vkDestroyBufferCollectionFUCHSIA_(vk_device_, collection, nullptr);
+  vkDestroyBufferCollectionFUCHSIA_(device, collection, nullptr);
   if (repeat_constraints_as_non_protected) {
-    vkDestroyBufferCollectionFUCHSIA_(vk_device_, non_protected_collection, nullptr);
+    vkDestroyBufferCollectionFUCHSIA_(device, non_protected_collection, nullptr);
   }
 
   return true;
@@ -586,6 +505,7 @@ bool VulkanTest::Exec(
 
 bool VulkanTest::ExecBuffer(uint32_t size) {
   VkResult result;
+  const vk::Device &device = *ctx_->device();
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
                                             sysmem_allocator.NewRequest().TakeChannel().release());
@@ -625,7 +545,7 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
       .collectionToken = vulkan_token.Unbind().TakeChannel().release(),
   };
   VkBufferCollectionFUCHSIA collection;
-  result = vkCreateBufferCollectionFUCHSIA_(vk_device_, &import_info, nullptr, &collection);
+  result = vkCreateBufferCollectionFUCHSIA_(device, &import_info, nullptr, &collection);
   if (result != VK_SUCCESS) {
     RTN_MSG(false, "Failed to import buffer collection: %d\n", result);
   }
@@ -638,7 +558,7 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
       .minCount = 2,
   };
 
-  result = vkSetBufferCollectionBufferConstraintsFUCHSIA_(vk_device_, collection, &constraints);
+  result = vkSetBufferCollectionBufferConstraintsFUCHSIA_(device, collection, &constraints);
 
   if (result != VK_SUCCESS) {
     RTN_MSG(false, "Failed to set buffer constraints: %d\n", result);
@@ -679,16 +599,16 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
 
   VkBuffer buffer;
 
-  result = vkCreateBuffer(vk_device_, &buffer_create_info, nullptr, &buffer);
+  result = vkCreateBuffer(device, &buffer_create_info, nullptr, &buffer);
   if (result != VK_SUCCESS) {
     RTN_MSG(false, "vkCreateBuffer failed: %d\n", result);
   }
 
   VkMemoryRequirements requirements;
-  vkGetBufferMemoryRequirements(vk_device_, buffer, &requirements);
+  vkGetBufferMemoryRequirements(device, buffer, &requirements);
   VkBufferCollectionPropertiesFUCHSIA properties = {
       .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA};
-  result = vkGetBufferCollectionPropertiesFUCHSIA_(vk_device_, collection, &properties);
+  result = vkGetBufferCollectionPropertiesFUCHSIA_(device, collection, &properties);
   if (result != VK_SUCCESS) {
     RTN_MSG(false, "vkGetBufferCollectionProperties failed");
   }
@@ -698,7 +618,7 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
   EXPECT_NE(0u, viable_memory_types);
   uint32_t memory_type = __builtin_ctz(viable_memory_types);
   VkPhysicalDeviceMemoryProperties memory_properties;
-  vkGetPhysicalDeviceMemoryProperties(vk_physical_device_, &memory_properties);
+  vkGetPhysicalDeviceMemoryProperties(ctx_->physical_device(), &memory_properties);
 
   EXPECT_LT(memory_type, memory_properties.memoryTypeCount);
   if (use_protected_memory_) {
@@ -727,19 +647,19 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
   alloc_info.allocationSize = requirements.size;
   alloc_info.memoryTypeIndex = memory_type;
 
-  result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_);
+  result = vkAllocateMemory(device, &alloc_info, nullptr, &vk_device_memory_);
   if (result != VK_SUCCESS) {
     RTN_MSG(false, "vkBindBufferMemory failed: %d\n", result);
   }
 
-  result = vkBindBufferMemory(vk_device_, buffer, vk_device_memory_, 0u);
+  result = vkBindBufferMemory(device, buffer, vk_device_memory_, 0u);
   if (result != VK_SUCCESS) {
     RTN_MSG(false, "vkBindBufferMemory failed: %d\n", result);
   }
 
-  vkDestroyBuffer(vk_device_, buffer, nullptr);
+  vkDestroyBuffer(device, buffer, nullptr);
 
-  vkDestroyBufferCollectionFUCHSIA_(vk_device_, collection, nullptr);
+  vkDestroyBufferCollectionFUCHSIA_(device, collection, nullptr);
 
   return true;
 }

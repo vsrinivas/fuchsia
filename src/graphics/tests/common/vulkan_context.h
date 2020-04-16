@@ -10,6 +10,40 @@
 
 #include <vulkan/vulkan.hpp>
 
+//
+// VulkanContext is a convenience class for handling boilerplate vulkan setup code.
+// It creates / encapsulates vulkan:
+//   - instance
+//   - physical device
+//   - queue family
+//   - device
+//   - queue
+//
+// VulkanContext leverages hpp to have smart pointer semantics for simplified vulkan
+// resource allocation and free.
+//
+// There are 2 canonical usage modalities expected for VulkanContext:
+//
+// (1) the simplest mode is to pair VulkanContext with its nested Builder class
+// to selectively modify the required vulkan "CreateInfo" structs during
+// construction.  E.g. to create an std::unique_ptr<VulkanContext> setting the instance
+// CreateInfo and the queue flag bits:
+//
+//   auto ctx = VulkanContext::Builder{}.set_instance_info(info).set_queue_flag_bits(bits).Unique();
+//
+// (2) the second construction mode is for more sophisticated construction where more fine
+// grained control is required during construction.  There are three primary piecewise construction
+// phases that must be done in order:
+//
+//    - InitInstance()
+//    - InitQueueFamily()
+//    - InitDevice()
+//
+// For example, the device CreateInfo structure may need to be customized
+// (e.g. to specify protected memory) before calling InitDevice(), and those modifications require
+// access to the physical device chosen in the pair of calls to InitInstance() and
+// InitQueueFamily().
+//
 class VulkanContext {
  public:
   class Builder;
@@ -21,34 +55,55 @@ class VulkanContext {
                 const vk::QueueFlagBits &queue_flag_bits = vk::QueueFlagBits::eGraphics,
                 vk::Optional<const vk::AllocationCallbacks> allocator = nullptr);
 
-  bool Init();
+  explicit VulkanContext(size_t physical_device_index,
+                         const vk::QueueFlagBits &queue_flag_bits = vk::QueueFlagBits::eGraphics,
+                         vk::Optional<const vk::AllocationCallbacks> allocator = nullptr);
 
-  const vk::UniqueInstance &instance() const { return instance_; }
-  const vk::PhysicalDevice &physical_device() const { return physical_device_; }
-  const vk::UniqueDevice &device() const { return device_; }
-  const vk::Queue &queue() const { return queue_; }
-  int queue_family_index() const { return queue_family_index_; }
+  bool Init();
+  bool InitInstance();
+  bool InitQueueFamily();
+  bool InitDevice();
+
+  bool set_instance_info(const vk::InstanceCreateInfo &instance_info);
+  bool set_device_info(const vk::DeviceCreateInfo &device_info);
+  bool set_queue_info(const vk::DeviceQueueCreateInfo &queue_info);
+  bool set_queue_flag_bits(const vk::QueueFlagBits &queue_flag_bits);
+
+  const vk::InstanceCreateInfo &instance_info() const { return instance_info_; }
+  const vk::DeviceCreateInfo &device_info() const { return device_info_; }
+  const vk::DeviceQueueCreateInfo &queue_info() const { return queue_info_; }
+
+  const vk::UniqueInstance &instance() const;
+  const vk::PhysicalDevice &physical_device() const;
+  const vk::UniqueDevice &device() const;
+  const vk::Queue &queue() const;
+  int queue_family_index() const;
   const vk::QueueFlagBits &queue_flag_bits() const { return queue_flag_bits_; }
 
  private:
   FRIEND_TEST(VkContext, Unique);
 
-  bool initialized_;
+  bool initialized_ = false;
+  bool instance_initialized_ = false;
+  bool queue_family_initialized_ = false;
+  bool device_initialized_ = false;
 
+  // These ivars are listed in order of their use in initialization.
   vk::UniqueInstance instance_;
   vk::InstanceCreateInfo instance_info_;
 
   vk::PhysicalDevice physical_device_;
   size_t physical_device_index_;
 
-  vk::UniqueDevice device_;
-  vk::DeviceCreateInfo device_info_;
-
-  vk::Queue queue_;
+  float queue_priority_ = 0.0f;
+  int queue_family_index_;
+  vk::QueueFlagBits queue_flag_bits_;
   vk::DeviceQueueCreateInfo queue_info_;
 
-  vk::QueueFlagBits queue_flag_bits_;
-  int queue_family_index_;
+  vk::DeviceCreateInfo device_info_;
+  vk::UniqueDevice device_;
+
+  vk::Queue queue_;
 
   vk::Optional<const vk::AllocationCallbacks> allocator_;
 };
