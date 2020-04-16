@@ -82,6 +82,7 @@ func CheckABRConfig(
 ) error {
 	if expectedConfig == nil {
 		log.Printf("no configuration expected, so not checking ABR configuration")
+		return nil
 	}
 
 	if rpcClient == nil {
@@ -94,6 +95,7 @@ func CheckABRConfig(
 	if err != nil {
 		return fmt.Errorf("unable to determine active boot configuration: %w", err)
 	}
+
 	if activeConfig == nil {
 		return fmt.Errorf("expected device to boot from slot %q, got <nil>", *expectedConfig)
 	} else if *activeConfig != *expectedConfig {
