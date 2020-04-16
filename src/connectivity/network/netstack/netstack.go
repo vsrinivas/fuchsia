@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 	"time"
 
@@ -246,6 +247,8 @@ type Netstack struct {
 
 	stack      *stack.Stack
 	routeTable routes.RouteTable
+
+	dispatcher *dispatch.Dispatcher
 
 	mu struct {
 		sync.Mutex

@@ -18,6 +18,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 	"time"
 
@@ -240,6 +241,14 @@ func Main() {
 		syslog.Fatalf("loopback: %s", err)
 	}
 
+	{
+		dispatcher, err := dispatch.NewDispatcher()
+		if err != nil {
+			syslog.Fatalf("could not initialize dispatcher: %s", err)
+		}
+		ns.dispatcher = dispatcher
+	}
+
 	var posixSocketProviderService socket.ProviderService
 
 	socketProviderImpl := providerImpl{ns: ns}
@@ -292,7 +301,7 @@ func Main() {
 			ns: ns,
 		}},
 		func(s fidl.Stub, c zx.Channel) error {
-			k, err := ns.netstackService.BindingSet.Add(s, c, nil)
+			k, err := ns.netstackService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			if err != nil {
 				syslog.Fatalf("%v", err)
 			}
@@ -330,7 +339,7 @@ func Main() {
 		name.LookupAdminName,
 		&name.LookupAdminWithCtxStub{Impl: &nameLookupAdminImpl{ns: ns}},
 		func(s fidl.Stub, c zx.Channel) error {
-			_, err := nameLookupAdminService.BindingSet.Add(s, c, nil)
+			_, err := nameLookupAdminService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			return err
 		},
 	)
@@ -342,7 +351,7 @@ func Main() {
 			ns: ns,
 		}},
 		func(s fidl.Stub, c zx.Channel) error {
-			_, err := stackService.BindingSet.Add(s, c, nil)
+			_, err := stackService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			return err
 		},
 	)
@@ -352,7 +361,7 @@ func Main() {
 		stack.LogName,
 		&stack.LogWithCtxStub{Impl: &logImpl{logger: l}},
 		func(s fidl.Stub, c zx.Channel) error {
-			_, err := logService.BindingSet.Add(s, c, nil)
+			_, err := logService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			return err
 		})
 
@@ -361,7 +370,7 @@ func Main() {
 		net.NameLookupName,
 		&net.NameLookupWithCtxStub{Impl: &nameLookupImpl{dnsClient: ns.dnsClient}},
 		func(s fidl.Stub, c zx.Channel) error {
-			_, err := nameLookupService.BindingSet.Add(s, c, nil)
+			_, err := nameLookupService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			return err
 		},
 	)
@@ -370,7 +379,7 @@ func Main() {
 		socket.ProviderName,
 		&socket.ProviderWithCtxStub{Impl: &socketProviderImpl},
 		func(s fidl.Stub, c zx.Channel) error {
-			_, err := posixSocketProviderService.BindingSet.Add(s, c, nil)
+			_, err := posixSocketProviderService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			return err
 		},
 	)
@@ -399,10 +408,16 @@ func Main() {
 	for i := 0; i < runtime.NumCPU(); i++ {
 		wg.Add(1)
 		go func() {
-			fidl.Serve()
+			ns.dispatcher.Serve()
 			wg.Done()
 		}()
 	}
+	// ensure that the default FIDL dispatcher is served.
+	wg.Add(1)
+	go func() {
+		fidl.Serve()
+		wg.Done()
+	}()
 	wg.Wait()
 }
 

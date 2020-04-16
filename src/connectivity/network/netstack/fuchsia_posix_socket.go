@@ -885,7 +885,9 @@ func (s *datagramSocketImpl) Clone(_ fidl.Context, flags uint32, object io.NodeW
 	{
 		sCopy := *s
 		s := &sCopy
-		bindingKey, err := s.service.AddWithCtx(s, object.Channel, func(error) { s.close() })
+		bindingKey, err := s.service.AddToDispatcher(&socket.DatagramSocketWithCtxStub{
+			Impl: s,
+		}, object.Channel, s.ns.dispatcher, func(error) { s.close() })
 		sCopy.bindingKey = bindingKey
 
 		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpointWithEvent, clones, flags, bindingKey, err)
@@ -1036,7 +1038,9 @@ func (s *streamSocketImpl) Clone(_ fidl.Context, flags uint32, object io.NodeWit
 	{
 		sCopy := *s
 		s := &sCopy
-		bindingKey, err := s.service.AddWithCtx(s, object.Channel, func(error) { s.close() })
+		bindingKey, err := s.service.AddToDispatcher(&socket.StreamSocketWithCtxStub{
+			Impl: s,
+		}, object.Channel, s.ns.dispatcher, func(error) { s.close() })
 		sCopy.bindingKey = bindingKey
 
 		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpointWithSocket, clones, flags, bindingKey, err)

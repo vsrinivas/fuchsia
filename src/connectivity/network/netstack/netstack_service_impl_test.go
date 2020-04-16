@@ -9,6 +9,7 @@ import (
 	"netstack/fidlconv"
 	"sync"
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 	"testing"
 
@@ -36,30 +37,26 @@ func toIpAddress(addr net.IP) netfidl.IpAddress {
 
 // ifconfig route add 1.2.3.4/14 gateway 9.8.7.6 iface lo
 
-func MakeNetstackService() netstackImpl {
-	return netstackImpl{
-		ns: &Netstack{
-			stack: stack.New(stack.Options{}),
-		},
-	}
-}
-
-var fidlOnce sync.Once
-
-// ensureFIDL ensures that a single goroutine servicing the FIDL dispatcher is
-// running. This is useful for tests that require FIDL dispatch to be running
-// but wish to avoid N goroutines being created when `go test` is run with
-// `--test.count N`.
-func ensureFIDL() {
-	fidlOnce.Do(func() { go fidl.Serve() })
-}
-
 func TestRouteTableTransactions(t *testing.T) {
-	ensureFIDL()
 	t.Run("no contentions", func(t *testing.T) {
 		// Create a basic netstack instance with a single interface. We need at
 		// least one interface in order to add routes.
 		netstackServiceImpl := netstackImpl{ns: newNetstack(t)}
+		dispatcher, err := dispatch.NewDispatcher()
+		if err != nil {
+			t.Fatalf("can't create dispatcher: %s", err)
+		}
+		netstackServiceImpl.ns.dispatcher = dispatcher
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			dispatcher.Serve()
+			wg.Done()
+		}()
+		defer func() {
+			dispatcher.Close()
+			wg.Wait()
+		}()
 		eth := deviceForAddEth(ethernet.Info{}, t)
 		ifs, err := netstackServiceImpl.ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: "testdevice"}, &eth)
 		if err != nil {
@@ -145,7 +142,26 @@ func TestRouteTableTransactions(t *testing.T) {
 	})
 
 	t.Run("contentions", func(t *testing.T) {
-		netstackServiceImpl := MakeNetstackService()
+		dispatcher, err := dispatch.NewDispatcher()
+		if err != nil {
+			t.Fatalf("can't create dispatcher: %s", err)
+		}
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			dispatcher.Serve()
+			wg.Done()
+		}()
+		defer func() {
+			dispatcher.Close()
+			wg.Wait()
+		}()
+		netstackServiceImpl := netstackImpl{
+			ns: &Netstack{
+				stack:      stack.New(stack.Options{}),
+				dispatcher: dispatcher,
+			},
+		}
 		{
 			req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 			AssertNoError(t, err)

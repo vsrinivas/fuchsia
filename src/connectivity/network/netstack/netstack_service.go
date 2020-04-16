@@ -262,12 +262,12 @@ func (ni *netstackImpl) StartRouteTableTransaction(_ fidl.Context, req netstack.
 		ni.ns.mu.transactionRequest = &req
 	}
 	var routeTableService netstack.RouteTableTransactionService
-	transaction := routeTableTransactionImpl{ni: ni}
+	transaction := netstack.RouteTableTransactionWithCtxStub{Impl: &routeTableTransactionImpl{ni: ni}}
 	// We don't use the error handler to free the channel because it's
 	// possible that the peer closes the channel before our service has
 	// finished processing.
 	c := req.Channel
-	_, err := routeTableService.AddWithCtx(&transaction, c, nil)
+	_, err := routeTableService.AddToDispatcher(&transaction, c, ni.ns.dispatcher, nil)
 	if err != nil {
 		return int32(zx.ErrShouldWait), err
 	}
