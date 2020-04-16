@@ -6,6 +6,9 @@
 
 //! Typesafe wrappers around an "update" package.
 
+mod image;
+
+pub use crate::image::OpenImageError;
 use fidl_fuchsia_io::DirectoryProxy;
 
 /// An open handle to an "update" package.
@@ -18,6 +21,11 @@ impl UpdatePackage {
     /// Creates a new [`UpdatePackage`] with the given proxy.
     pub fn new(proxy: DirectoryProxy) -> Self {
         Self { proxy }
+    }
+
+    /// Opens the image with the given `name` as a resizable VMO buffer.
+    pub async fn open_image(&self, name: &str) -> Result<fidl_fuchsia_mem::Buffer, OpenImageError> {
+        image::open(&self.proxy, name).await
     }
 }
 
