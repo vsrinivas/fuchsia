@@ -15,6 +15,7 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/artifacts"
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
+	"fuchsia.googlesource.com/system_tests/check"
 	"fuchsia.googlesource.com/system_tests/pave"
 	"fuchsia.googlesource.com/system_tests/script"
 )
@@ -102,12 +103,19 @@ func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Bu
 		return fmt.Errorf("error extracting expected system image merkle: %s", err)
 	}
 
-	expectedConfig, err := determineActiveConfig(ctx, rpcClient)
+	expectedConfig, err := check.DetermineActiveABRConfig(ctx, rpcClient)
 	if err != nil {
 		return fmt.Errorf("error determining target config: %s", err)
 	}
 
-	if err := validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig); err != nil {
+	if err := check.ValidateDevice(
+		ctx,
+		device,
+		rpcClient,
+		expectedSystemImageMerkle,
+		expectedConfig,
+		false,
+	); err != nil {
 		return err
 	}
 
@@ -124,7 +132,14 @@ func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Bu
 		return fmt.Errorf("unable to connect to sl4f: %s", err)
 	}
 
-	if err := validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig); err != nil {
+	if err := check.ValidateDevice(
+		ctx,
+		device,
+		rpcClient,
+		expectedSystemImageMerkle,
+		expectedConfig,
+		false,
+	); err != nil {
 		return fmt.Errorf("failed to validate device: %s", err)
 	}
 
@@ -160,7 +175,7 @@ func initializeDevice(
 	}
 
 	// Only pave if the device is not running the expected version.
-	upToDate, err := isDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
+	upToDate, err := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
 	if err != nil {
 		return fmt.Errorf("failed to check if up to date during initialization: %w", err)
 	}
@@ -180,7 +195,7 @@ func initializeDevice(
 	defer rpcClient.Close()
 
 	// Check if we support ABR. If so, we always boot into A after a pave.
-	expectedConfig, err := determineActiveConfig(ctx, rpcClient)
+	expectedConfig, err := check.DetermineActiveABRConfig(ctx, rpcClient)
 	if err != nil {
 		return err
 	}
@@ -189,75 +204,19 @@ func initializeDevice(
 		expectedConfig = &config
 	}
 
-	if err := validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig); err != nil {
+	if err := check.ValidateDevice(
+		ctx,
+		device,
+		rpcClient,
+		expectedSystemImageMerkle,
+		expectedConfig,
+		false,
+	); err != nil {
 		return err
 	}
 
 	if err := script.RunScript(ctx, device, repo, &rpcClient, c.afterInitScript); err != nil {
 		return fmt.Errorf("failed to run after-init-script: %w", err)
-	}
-
-	return nil
-}
-
-func isDeviceUpToDate(ctx context.Context, device *device.Client, expectedSystemImageMerkle string) (bool, error) {
-	// Get the device's current /system/meta. Error out if it is the same
-	// version we are about to OTA to.
-	remoteSystemImageMerkle, err := device.GetSystemImageMerkle(ctx)
-	if err != nil {
-		return false, err
-	}
-	log.Printf("current system image merkle: %q", remoteSystemImageMerkle)
-	log.Printf("upgrading to system image merkle: %q", expectedSystemImageMerkle)
-
-	return expectedSystemImageMerkle == remoteSystemImageMerkle, nil
-}
-
-func determineActiveConfig(ctx context.Context, rpcClient *sl4f.Client) (*sl4f.Configuration, error) {
-	activeConfig, err := rpcClient.PaverQueryActiveConfiguration(ctx)
-	if err == sl4f.ErrNotSupported {
-		log.Printf("device does not support querying the active configuration")
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	log.Printf("device booted to slot %s", activeConfig)
-
-	return &activeConfig, nil
-}
-
-func validateDevice(
-	ctx context.Context,
-	device *device.Client,
-	rpcClient *sl4f.Client,
-	expectedSystemImageMerkle string,
-	expectedConfig *sl4f.Configuration,
-) error {
-	// At the this point the system should have been updated to the target
-	// system version. Confirm the update by fetching the device's current
-	// /system/meta, and making sure it is the correct version.
-	upToDate, err := isDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
-	if err != nil {
-		return err
-	}
-	if !upToDate {
-		return fmt.Errorf("system version failed to update to %q", expectedSystemImageMerkle)
-	}
-
-	// Make sure the device doesn't have any broken static packages.
-	if err := rpcClient.ValidateStaticPackages(ctx); err != nil {
-		return err
-	}
-
-	// Ensure the device is booting from the expected boot slot
-	activeConfig, err := determineActiveConfig(ctx, rpcClient)
-	if err != nil {
-		return fmt.Errorf("unable to determine active boot configuration: %s", err)
-	}
-
-	if expectedConfig != nil && activeConfig != nil && *activeConfig != *expectedConfig {
-		return fmt.Errorf("expected device to boot from slot %s, got %s", *expectedConfig, *activeConfig)
 	}
 
 	return nil
