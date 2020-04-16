@@ -52,6 +52,8 @@
 #include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
 #include "src/ui/scenic/lib/gfx/util/wrap.h"
 
+#include <glm/ext.hpp>
+
 namespace scenic_impl {
 namespace gfx {
 
@@ -422,7 +424,7 @@ bool GfxCommandApplier::ApplySetViewHolderBoundsColor(
   float blue = static_cast<float>(color.blue) / 255.f;
 
   if (auto view_holder = session->resources()->FindResource<ViewHolder>(command.view_holder_id)) {
-    view_holder->set_bounds_color(glm::vec4(red, green, blue, 1));
+    view_holder->set_bounds_color(glm::convertSRGBToLinear(glm::vec4(red, green, blue, 1)));
     return true;
   }
   return false;
@@ -645,7 +647,8 @@ bool GfxCommandApplier::ApplySetColorCmd(Session* session, fuchsia::ui::gfx::Set
     float green = static_cast<float>(color.green) / 255.f;
     float blue = static_cast<float>(color.blue) / 255.f;
     float alpha = static_cast<float>(color.alpha) / 255.f;
-    material->SetColor(red, green, blue, alpha);
+    auto value = glm::convertSRGBToLinear(glm::vec4(red, green, blue, alpha));
+    material->SetColor(value.r, value.g, value.b, value.a);
     return true;
   }
   return false;

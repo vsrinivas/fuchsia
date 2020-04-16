@@ -95,7 +95,7 @@ VK_TEST_F(SnapshotterTest, Creation) {
 
     EXPECT_EQ(snapshot::Material_Color, child->material_type());
     auto color = static_cast<const snapshot::Color*>(child->material());
-    EXPECT_EQ(1.0f, color->red());
+    EXPECT_EQ(255, static_cast<uint8_t>(color->red() * 255.f + 0.5f));
   });
 
   escher->vk_device().waitIdle();

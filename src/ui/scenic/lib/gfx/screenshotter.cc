@@ -105,7 +105,7 @@ std::vector<uint8_t> rotate_img_vec(const std::vector<uint8_t>& imgvec, uint32_t
 
 // If this changes, or if we must determine this dynamically, look for other places
 // that the same constant is used to see if they must also be changed.
-constexpr vk::Format kScenicScreenshotFormat = vk::Format::eB8G8R8A8Unorm;
+constexpr vk::Format kScenicScreenshotFormat = vk::Format::eB8G8R8A8Srgb;
 
 constexpr uint32_t kBytesPerPixel = 4u;
 

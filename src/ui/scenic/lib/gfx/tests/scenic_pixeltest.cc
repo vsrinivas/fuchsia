@@ -141,6 +141,7 @@ TEST_F(ScenicPixelTest, NV12Texture) {
   static const uint8_t kYValue = 110;
   static const uint8_t kUValue = 192;
   static const uint8_t kVValue = 192;
+  const scenic::Color kBgraColor = {0xF1, 0x87, 0xFA, 0xFF};
 
   // Set all the Y pixels at full res.
   for (uint32_t i = 0; i < num_pixels; ++i) {
@@ -164,11 +165,8 @@ TEST_F(ScenicPixelTest, NV12Texture) {
   // more meaningful failure.
   std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
 
-  uint8_t bgra[4];
-  yuv::YuvToBgra(kYValue, kUValue, kVValue, bgra);
-  scenic::Color color(bgra[2], bgra[1], bgra[0], bgra[3]);
-  EXPECT_GT(histogram[color], 0u);
-  histogram.erase(color);
+  EXPECT_GT(histogram[kBgraColor], 0u);
+  histogram.erase(kBgraColor);
 
   // This assert is written this way so that, when it fails, it prints out all
   // the unexpected colors
@@ -567,7 +565,7 @@ INSTANTIATE_TEST_SUITE_P(
     Opacity, ParameterizedOpacityPixelTest,
     ::testing::Values(
         OpacityTestParams{.opacity = 0.0f, .expected_color = {0xff, 0x00, 0xf0, 0xff}},
-        OpacityTestParams{.opacity = 0.5f, .expected_color = {0x80, 0x80, 0x80, 0xff}},
+        OpacityTestParams{.opacity = 0.5f, .expected_color = {0xbb, 0xbb, 0xb1, 0xff}},
         OpacityTestParams{.opacity = 1.0f, .expected_color = {0x00, 0xff, 0x0f, 0xff}}));
 
 TEST_F(ScenicPixelTest, ViewBoundClipping) {

@@ -77,8 +77,11 @@ VK_TEST_F(ViewClippingTest, SetBoundsRenderingTest) {
   ViewHolder* view_holder = FindResource<ViewHolder>(view_holder_id).get();
   EXPECT_TRUE(view_holder);
 
-  glm::vec4 color = view_holder->bounds_color() * 255.f;
-  EXPECT_EQ(color, glm::vec4(255, 0, 255, 255));
+  glm::vec4 color = view_holder->bounds_color();
+  EXPECT_EQ(static_cast<uint8_t>(color.r * 255.f + 0.5f), 255);
+  EXPECT_EQ(static_cast<uint8_t>(color.g * 255.f + 0.5f), 0);
+  EXPECT_EQ(static_cast<uint8_t>(color.b * 255.f + 0.5f), 255);
+  EXPECT_EQ(static_cast<uint8_t>(color.a * 255.f + 0.5f), 255);
 }
 
 // This first unit test checks to see if a view holder

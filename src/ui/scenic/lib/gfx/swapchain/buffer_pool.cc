@@ -104,7 +104,7 @@ static vk::ImageUsageFlags GetFramebufferImageUsage() {
 
 static vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {
   // TODO(42571): replace this with information extracted from fuchsia.hardware.display APIs.
-  return vk::Format::eB8G8R8A8Unorm;
+  return vk::Format::eB8G8R8A8Srgb;
 }
 
 // Create a number of synced tokens that can be imported into collections.

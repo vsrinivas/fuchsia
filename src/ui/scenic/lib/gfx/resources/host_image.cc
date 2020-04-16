@@ -38,7 +38,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
                         const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
                         ErrorReporter* error_reporter) {
   // No matter what the incoming format, the gpu format will be BGRA:
-  vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Unorm;
+  vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Srgb;
   size_t pixel_alignment = images::MaxSampleAlignment(image_info.pixel_format);
 
   if (image_info.width <= 0) {

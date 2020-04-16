@@ -33,7 +33,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   size_t pixel_alignment;
   switch (image_info.pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
-      pixel_format = vk::Format::eB8G8R8A8Unorm;
+      pixel_format = vk::Format::eB8G8R8A8Srgb;
       bytes_per_pixel = 4u;
       pixel_alignment = 4u;
       break;

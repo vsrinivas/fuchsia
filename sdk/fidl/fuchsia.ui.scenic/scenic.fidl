@@ -9,7 +9,9 @@ using fuchsia.mem;
 using fuchsia.ui.gfx;
 using fuchsia.ui.views;
 
-/// Scenic.TakeScreenshot() returns a raw BGRA formatted image in this struct.
+/// Scenic.TakeScreenshot() returns a raw BGRA formatted image in
+/// sRGB color space and with a non-linear transfer function in this
+/// struct.
 struct ScreenshotData {
     fuchsia.images.ImageInfo info;
     fuchsia.mem.Buffer data;

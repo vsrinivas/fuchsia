@@ -27,6 +27,7 @@ struct mat4 {
     array<float32>:16 matrix;
 };
 
+/// sRGB color space and nonlinear transfer function.
 // TODO(SCN-238): use float32s instead of uint8.
 struct ColorRgba {
     uint8 red;
@@ -64,16 +65,16 @@ struct FactoredTransform {
 };
 
 union Value {
-     1: float32 vector1;
-     2: vec2 vector2;
-     3: vec3 vector3;
-     4: vec4 vector4;
-     5: mat4 matrix4x4;
-     6: ColorRgba color_rgba;
-     7: ColorRgb color_rgb;
+    1: float32 vector1;
+    2: vec2 vector2;
+    3: vec3 vector3;
+    4: vec4 vector4;
+    5: mat4 matrix4x4;
+    6: ColorRgba color_rgba;
+    7: ColorRgb color_rgb;
     /// Degrees of counter-clockwise rotation in the XY plane.
-     8: float32 degrees;
-     9: Quaternion quaternion;
+    8: float32 degrees;
+    9: Quaternion quaternion;
     10: FactoredTransform transform;
     /// ID of a value-producing resource (an animation or an expression).
     /// The type of this value matches the type produced by the named resource.
