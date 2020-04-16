@@ -61,6 +61,7 @@ class H264MultiDecoder : public VideoDecoder {
     // Called with the video_decoder_lock held.
     virtual DataInput ReadMoreInputData(H264MultiDecoder* decoder) = 0;
     virtual bool HasMoreInputData() = 0;
+    virtual void AsyncResetStreamAfterCurrentFrame() = 0;
   };
 
   H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* frame_data_provider);
@@ -80,6 +81,7 @@ class H264MultiDecoder : public VideoDecoder {
   [[nodiscard]] bool CanBeSwappedOut() const override;
   void SetSwappedOut() override;
   void SwappedIn() override;
+  void OnSignaledWatchdog() override;
 
   zx_status_t InitializeBuffers();
 
@@ -121,12 +123,13 @@ class H264MultiDecoder : public VideoDecoder {
   void HandlePicDataDone();
   void OnFatalError();
   void PumpDecoder();
-  void InitializeRefPics(const std::vector<std::shared_ptr<media::H264Picture>>& ref_pic_list,
+  bool InitializeRefPics(const std::vector<std::shared_ptr<media::H264Picture>>& ref_pic_list,
                          uint32_t reg_offset);
   void StartConfigChange();
   // Output all the frames in frames_to_output.
   void OutputReadyFrames();
   void PropagatePotentialEos();
+  void HandleHardwareError();
 
   FrameDataProvider* frame_data_provider_;
   bool fatal_error_ = false;

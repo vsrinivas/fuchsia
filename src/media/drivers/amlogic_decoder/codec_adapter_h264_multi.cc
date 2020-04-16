@@ -220,22 +220,23 @@ void CodecAdapterH264Multi::CoreCodecQueueInputEndOfStream() {
 // TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
 // creating as much stuff for each stream.
 void CodecAdapterH264Multi::CoreCodecStopStream() {
-  std::list<CodecInputItem> leftover_input_items;
-  // TODO: start cancellation of input processing before acquiring decoder lock, in case decoder is
-  // stuck decoding and is trying to use onCoreCodecResetStreamAfterCurrentFrame().
-  {
-    // Grab the decoder lock to try to ensure no more items are processed after this point.
-    std::unique_lock<std::mutex> decoder_lock(*video_->video_decoder_lock());
-    {  // scope lock
-      std::lock_guard<std::mutex> lock(lock_);
-      leftover_input_items = std::move(input_queue_);
-    }
-  }
-
+  std::list<CodecInputItem> leftover_input_items = CoreCodecStopStreamInternal();
   for (auto& input_item : leftover_input_items) {
     if (input_item.is_packet()) {
       events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
     }
+  }
+}
+
+// TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
+// creating as much stuff for each stream.
+std::list<CodecInputItem> CodecAdapterH264Multi::CoreCodecStopStreamInternal() {
+  std::list<CodecInputItem> leftover_input_items;
+  // TODO: start cancellation of input processing before acquiring decoder lock, in case decoder is
+  // stuck decoding and is trying to use onCoreCodecResetStreamAfterCurrentFrame().
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    leftover_input_items = std::move(input_queue_);
   }
 
   LOG(TRACE, "RemoveDecoder()...");
@@ -245,6 +246,7 @@ void CodecAdapterH264Multi::CoreCodecStopStream() {
     decoder_ = nullptr;
   }
   LOG(TRACE, "RemoveDecoder() done.");
+  return leftover_input_items;
 }
 
 void CodecAdapterH264Multi::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
@@ -739,6 +741,7 @@ H264MultiDecoder::DataInput CodecAdapterH264Multi::ReadMoreInputData(H264MultiDe
 
     if (item.is_end_of_stream()) {
       decoder_->QueueInputEos();
+      is_input_end_of_stream_queued_to_core_ = true;
       return result;
     }
 
@@ -879,7 +882,7 @@ std::vector<uint8_t> CodecAdapterH264Multi::ParseAndDeliverCodecOobBytes() {
         if (offset + 2 > oob->size()) {
           LOG(ERROR, "offset + 2 > oob->size()");
           OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
-          return accumulation;
+          return {};
         }
         uint32_t pps_length = (*oob)[offset] * 256 + (*oob)[offset + 1];
         if (offset + 2 + pps_length > oob->size()) {
@@ -1081,6 +1084,64 @@ zx_status_t CodecAdapterH264Multi::InitializeFrames(::zx::bti bti, uint32_t min_
   events_->onCoreCodecMidStreamOutputConstraintsChange(true);
 
   return ZX_OK;
+}
+
+void CodecAdapterH264Multi::AsyncResetStreamAfterCurrentFrame() {
+  LOG(ERROR, "async reset stream (after current frame) triggered");
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    // The current stream is temporarily failed, until CoreCodecResetStreamAfterCurrentFrame() soon
+    // on the StreamControl thread.  This prevents ReadMoreInputData() from queueing any more input
+    // data after any currently-running iteration.
+    //
+    // While Vp9Decoder::needs_more_input_data() may already be returning false which may serve a
+    // similar purpose depending on how/when Vp9Decoder calls this method, it's nice to directly
+    // mute queing any more input in this layer.
+    is_stream_failed_ = true;
+  }  // ~lock
+  events_->onCoreCodecResetStreamAfterCurrentFrame();
+}
+
+void CodecAdapterH264Multi::CoreCodecResetStreamAfterCurrentFrame() {
+  // Currently this takes ~20-40ms per reset.  We might be able to improve the performance by having
+  // a stop that doesn't deallocate followed by a start that doesn't allocate, but since we'll
+  // fairly soon only be using this method during watchdog processing, it's not worth optimizing for
+  // the temporary time interval during which we might potentially use this on multiple
+  // non-keyframes in a row before a keyframe, only in the case of protected input.
+  //
+  // If we were to optimize in that way, it'd increase the complexity of init and de-init code.  The
+  // current way we use that code exactly the same way for reset as for init and de-init, which is
+  // good from a test coverage point of view.
+
+  // This fences and quiesces the input processing thread, and the current StreamControl thread is
+  // the only other thread that modifies is_input_end_of_stream_queued_to_core_, so we know
+  // is_input_end_of_stream_queued_to_core_ won't be changing.
+  LOG(TRACE, "before CoreCodecStopStreamInternal()");
+  std::list<CodecInputItem> input_items = CoreCodecStopStreamInternal();
+  auto return_any_input_items = fit::defer([this, &input_items] {
+    for (auto& input_item : input_items) {
+      if (input_item.is_packet()) {
+        events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
+      }
+    }
+  });
+
+  if (is_input_end_of_stream_queued_to_core_) {
+    // We don't handle this corner case of a corner case.  Fail the stream instead.
+    events_->onCoreCodecFailStream(fuchsia::media::StreamError::EOS_PROCESSING);
+    return;
+  }
+
+  LOG(TRACE, "after stop; before CoreCodecStartStream()");
+
+  CoreCodecStartStream();
+
+  LOG(TRACE, "re-queueing items...");
+  while (!input_items.empty()) {
+    QueueInputItem(std::move(input_items.front()));
+    input_items.pop_front();
+  }
+  LOG(TRACE, "done re-queueing items.");
 }
 
 void CodecAdapterH264Multi::OnCoreCodecFailStream(fuchsia::media::StreamError error) {

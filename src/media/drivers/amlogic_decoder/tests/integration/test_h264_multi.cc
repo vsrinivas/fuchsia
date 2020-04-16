@@ -39,6 +39,7 @@ class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvid
     return result;
   }
   bool HasMoreInputData() override { return !frame_data_.empty(); }
+  void AsyncResetStreamAfterCurrentFrame() override { EXPECT_TRUE(false); }
 
  private:
   std::list<std::vector<uint8_t>> frame_data_;

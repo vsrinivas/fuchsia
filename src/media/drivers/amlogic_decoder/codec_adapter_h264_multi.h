@@ -60,6 +60,7 @@ class CodecAdapterH264Multi : public CodecAdapter,
       uint64_t new_output_format_details_version_ordinal) override;
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
+  void CoreCodecResetStreamAfterCurrentFrame() override;
 
   // VideoDecoder::Client implementation;
   void OnError() override;
@@ -80,6 +81,7 @@ class CodecAdapterH264Multi : public CodecAdapter,
   // H264MultiDecoder::FrameDataProvider implementation.
   H264MultiDecoder::DataInput ReadMoreInputData(H264MultiDecoder* decoder) override;
   bool HasMoreInputData() override;
+  void AsyncResetStreamAfterCurrentFrame() override;
 
  private:
   void QueueInputItem(CodecInputItem input_item);
@@ -106,6 +108,7 @@ class CodecAdapterH264Multi : public CodecAdapter,
 
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);
   CodecPacket* GetFreePacket();
+  std::list<CodecInputItem> CoreCodecStopStreamInternal();
 
   bool IsPortSecureRequired(CodecPort port);
   bool IsPortSecurePermitted(CodecPort port);
@@ -168,6 +171,8 @@ class CodecAdapterH264Multi : public CodecAdapter,
   bool is_input_end_of_stream_queued_ = false;
 
   bool is_stream_failed_ = false;
+
+  bool is_input_end_of_stream_queued_to_core_ = false;
 
   CodecAdapterH264Multi() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterH264Multi);

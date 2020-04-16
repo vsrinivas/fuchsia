@@ -259,12 +259,18 @@ package("h264_decoder_fuzzer_test") {
 
   deps = [
     "//src/media/codec/examples/use_media_decoder:h264_decoder_fuzzer_test",
+    "//src/media/codec/examples/use_media_decoder:h264_multi_decoder_fuzzer_test",
   ]
 
   meta = [
     {
       path = rebase_path("use_media_decoder/meta/h264_decoder_fuzzer_test.cmx")
       dest = "h264_decoder_fuzzer_test.cmx"
+    },
+    {
+      path = rebase_path(
+              "use_media_decoder/meta/h264_multi_decoder_fuzzer_test.cmx")
+      dest = "h264_multi_decoder_fuzzer_test.cmx"
     },
   ]
 
@@ -278,6 +284,16 @@ package("h264_decoder_fuzzer_test") {
         vim2_env,
         sherlock_env,
         qemu_env,
+      ]
+    },
+    {
+      # Should pass when run on VIM2, sherlock.
+      name = "h264_multi_decoder_fuzzer_test"
+
+      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+      environments = [
+        vim2_env,
+        sherlock_env,
       ]
     },
   ]

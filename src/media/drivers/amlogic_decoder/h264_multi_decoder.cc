@@ -15,6 +15,7 @@
 #include "media/gpu/h264_decoder.h"
 #include "registers.h"
 #include "util.h"
+#include "watchdog.h"
 
 namespace {
 // See VLD_PADDING_SIZE.
@@ -216,6 +217,12 @@ enum H264Status {
   // Out of input data, so get more.
   kH264DataRequest = 0x12,
 
+  // The firmware detected the hardware timed out while attempting to decode.
+  kH264DecodeTimeout = 0x21,
+
+  // kH264ActionSearchHead wasn't able to find a frame to decode.
+  kH264SearchBufempty = 0x22,
+
   // Initialize the current set of reference frames and output buffer to be
   // decoded into.
   kH264SliceHeadDone = 0x1,
@@ -232,6 +239,7 @@ H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvid
 
 H264MultiDecoder::~H264MultiDecoder() {
   if (owner_->IsDecoderCurrent(this)) {
+    owner_->watchdog()->Cancel();
     owner_->core()->StopDecoding();
     owner_->core()->WaitForIdle();
   }
@@ -478,6 +486,7 @@ void H264MultiDecoder::StartFrameDecode() {
   }
   DpbStatusReg::Get().FromValue(kH264ActionSearchHead).WriteTo(owner_->dosbus());
   state_ = DecoderState::kRunning;
+  owner_->watchdog()->Start();
 }
 
 void H264MultiDecoder::ConfigureDpb() {
@@ -538,7 +547,7 @@ struct HardwareRenderParams {
   }
 };
 
-void H264MultiDecoder::InitializeRefPics(
+bool H264MultiDecoder::InitializeRefPics(
     const std::vector<std::shared_ptr<media::H264Picture>>& ref_pic_list, uint32_t reg_offset) {
   uint32_t ref_list[8] = {};
   ZX_DEBUG_ASSERT(ref_pic_list.size() <= sizeof(ref_list));
@@ -551,7 +560,11 @@ void H264MultiDecoder::InitializeRefPics(
     if (!amlogic_picture)
       continue;
     auto internal_picture = amlogic_picture->internal_picture.lock();
-    ZX_DEBUG_ASSERT(internal_picture);
+    if (!internal_picture) {
+      DECODE_ERROR("InitializeRefPics reg_offset %d missing internal picture %d", reg_offset, i);
+      frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
+      return false;
+    }
 
     // Offset into AncNCanvasAddr registers.
     uint32_t canvas_index = internal_picture->index;
@@ -567,10 +580,12 @@ void H264MultiDecoder::InitializeRefPics(
   for (uint32_t reg_value : ref_list) {
     H264BufferInfoData::Get().FromValue(reg_value).WriteTo(owner_->dosbus());
   }
+  return true;
 }
 
 void H264MultiDecoder::HandleSliceHeadDone() {
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
+  owner_->watchdog()->Cancel();
   // Setup reference frames and output buffers before decoding.
   HardwareRenderParams params;
   params.ReadFromLmem(&*lmem_);
@@ -587,7 +602,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   current_frame_ = current_metadata_frame_;
   if (slice_data_list_.empty()) {
     DECODE_ERROR("No slice data for frame");
-    OnFatalError();
+    frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
     return;
   }
   SliceData slice_data = std::move(slice_data_list_.front());
@@ -595,7 +610,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   auto poc = poc_.ComputePicOrderCnt(&slice_data.sps, slice_data.header);
   if (!poc) {
     DECODE_ERROR("No poc");
-    OnFatalError();
+    frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
     return;
   }
 
@@ -653,8 +668,10 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     H264BufferInfoData::Get().FromValue(video_frames_[i]->info1).WriteTo(owner_->dosbus());
     H264BufferInfoData::Get().FromValue(video_frames_[i]->info2).WriteTo(owner_->dosbus());
   }
-  InitializeRefPics(slice_data.ref_pic_list0, 0);
-  InitializeRefPics(slice_data.ref_pic_list1, 8);
+  if (!InitializeRefPics(slice_data.ref_pic_list0, 0))
+    return;
+  if (!InitializeRefPics(slice_data.ref_pic_list1, 8))
+    return;
 
   // Wait for the hardware to finish processing its current mbs.
   if (!SpinWaitForRegister(std::chrono::milliseconds(100), [&] {
@@ -684,7 +701,11 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     auto* amlogic_picture = static_cast<AmlogicH264Picture*>(slice_data.ref_pic_list1[0].get());
     if (amlogic_picture) {
       auto internal_picture = amlogic_picture->internal_picture.lock();
-      ZX_DEBUG_ASSERT(internal_picture);
+      if (!internal_picture) {
+        DECODE_ERROR("Co-mb read buffer nonexistent");
+        frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
+        return;
+      }
       uint32_t read_addr =
           truncate_to_32(internal_picture->reference_mv_buffer.phys_base()) + mv_byte_offset;
       ZX_DEBUG_ASSERT(read_addr % 8 == 0);
@@ -696,6 +717,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     DpbStatusReg::Get().FromValue(kH264ActionDecodeNewpic).WriteTo(owner_->dosbus());
   else
     DpbStatusReg::Get().FromValue(kH264ActionDecodeSlice).WriteTo(owner_->dosbus());
+  owner_->watchdog()->Start();
 }
 
 void H264MultiDecoder::FlushFrames() {
@@ -716,6 +738,7 @@ void H264MultiDecoder::DumpStatus() {
 
 void H264MultiDecoder::HandlePicDataDone() {
   ZX_DEBUG_ASSERT(current_frame_);
+  owner_->watchdog()->Cancel();
   // TODO(fxb/13483): Get PTS
   current_frame_ = nullptr;
   current_metadata_frame_ = nullptr;
@@ -745,6 +768,15 @@ void H264MultiDecoder::OutputReadyFrames() {
   }
 }
 
+void H264MultiDecoder::HandleHardwareError() {
+  owner_->watchdog()->Cancel();
+  owner_->core()->StopDecoding();
+  // We need to reset the hardware here or for some malformed hardware streams (e.g.
+  // bear_h264[638] = 44) the CPU will hang when trying to isolate VDEC1 power on shutdown.
+  ResetHardware();
+  frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
+}
+
 void H264MultiDecoder::HandleInterrupt() {
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   // Clear interrupt
@@ -759,6 +791,7 @@ void H264MultiDecoder::HandleInterrupt() {
     }
     case kH264DataRequest:
       DECODE_ERROR("Got unhandled data request");
+      HandleHardwareError();
       break;
     case kH264SliceHeadDone: {
       HandleSliceHeadDone();
@@ -768,6 +801,14 @@ void H264MultiDecoder::HandleInterrupt() {
       HandlePicDataDone();
       break;
     }
+    case kH264SearchBufempty:
+      DECODE_ERROR("Decoder got kH264SearchBufempty");
+      HandleHardwareError();
+      break;
+    case kH264DecodeTimeout:
+      DECODE_ERROR("Decoder got kH264DecodeTimeout");
+      HandleHardwareError();
+      break;
   }
 }
 
@@ -937,6 +978,11 @@ void H264MultiDecoder::SetSwappedOut() {
 
 void H264MultiDecoder::SwappedIn() { PumpDecoder(); }
 
+void H264MultiDecoder::OnSignaledWatchdog() {
+  DECODE_ERROR("Hit watchdog");
+  HandleHardwareError();
+}
+
 void H264MultiDecoder::OnFatalError() {
   if (!fatal_error_) {
     fatal_error_ = true;
@@ -1052,7 +1098,7 @@ void H264MultiDecoder::PumpDecoder() {
       owner_->TryToReschedule();
       return;
     } else if (res == media::AcceleratedVideoDecoder::kDecodeError) {
-      OnFatalError();
+      frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
       owner_->TryToReschedule();
       return;
     } else if (res == media::AcceleratedVideoDecoder::kTryAgain) {

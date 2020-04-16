@@ -223,6 +223,16 @@ test("h264_decoder_fuzzer_test") {
   deps = [ ":decoder_fuzzer" ]
 }
 
+test("h264_multi_decoder_fuzzer_test") {
+  testonly = true
+
+  output_name = "h264_multi_decoder_fuzzer_test"
+
+  sources = [ "test/h264_multi_decoder_fuzzer_test.cc" ]
+
+  deps = [ ":decoder_fuzzer" ]
+}
+
 test("vp9_decoder_fuzzer_test") {
   testonly = true
 
