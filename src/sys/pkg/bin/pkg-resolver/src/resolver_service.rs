@@ -29,6 +29,7 @@ use {
     futures::{future::Future, stream::TryStreamExt as _},
     parking_lot::RwLock,
     std::sync::Arc,
+    std::time::Instant,
     system_image::CachePackages,
 };
 
@@ -71,11 +72,13 @@ pub async fn run_resolver_service(
     package_fetcher: Arc<PackageFetcher>,
     system_cache_list: Arc<CachePackages>,
     stream: PackageResolverRequestStream,
+    cobalt_sender: CobaltSender,
 ) -> Result<(), Error> {
     stream
         .map_err(anyhow::Error::new)
         .try_for_each_concurrent(None, |event| {
             async {
+                let mut cobalt_sender = cobalt_sender.clone();
                 match event {
                     PackageResolverRequest::Resolve {
                         package_url,
@@ -88,10 +91,28 @@ pub async fn run_resolver_service(
                         if !selectors.is_empty() {
                             fx_log_warn!("resolve does not support selectors yet");
                         }
+                        let start_time = Instant::now();
+
                         let status = resolve(&cache, &package_fetcher, package_url, dir).await;
+
+                        cobalt_sender.log_elapsed_time(
+                            metrics::RESOLVE_DURATION_METRIC_ID,
+                            (
+                                match status {
+                                    Ok(_) => metrics::ResolveDurationMetricDimensionResult::Success,
+                                    Err(_) => {
+                                        metrics::ResolveDurationMetricDimensionResult::Failure
+                                    }
+                                },
+                                metrics::ResolveDurationMetricDimensionResolverType::Regular,
+                            ),
+                            Instant::now().duration_since(start_time).as_micros() as i64,
+                        );
+
                         responder.send(Status::from(status).into_raw())?;
                         Ok(())
                     }
+
                     PackageResolverRequest::GetHash { package_url, responder } => {
                         match get_hash(
                             &rewriter,
@@ -271,6 +292,7 @@ async fn resolve(
     let queued_fetch = package_fetcher.push(pkg_url.clone(), ());
     let merkle_or_status = queued_fetch.await.expect("expected queue to be open");
     trace::duration_end!("app", "resolve", "status" => merkle_or_status.err().unwrap_or(Status::OK).to_string().as_str());
+
     match merkle_or_status {
         Ok(merkle) => {
             let selectors = vec![];
@@ -294,12 +316,15 @@ pub async fn run_font_resolver_service(
     stream
         .map_err(anyhow::Error::new)
         .try_for_each_concurrent(None, |event| async {
+            let mut cobalt_sender = cobalt_sender.clone();
             let FontResolverRequest::Resolve {
                 package_url,
                 update_policy: _,
                 directory_request,
                 responder,
             } = event;
+
+            let start_time = Instant::now();
 
             let status = resolve_font(
                 &font_package_manager,
@@ -310,8 +335,20 @@ pub async fn run_font_resolver_service(
                 cobalt_sender.clone(),
             )
             .await;
-            responder.send(Status::from(status).into_raw())?;
 
+            cobalt_sender.log_elapsed_time(
+                metrics::RESOLVE_DURATION_METRIC_ID,
+                (
+                    match status {
+                        Ok(_) => metrics::ResolveDurationMetricDimensionResult::Success,
+                        Err(_) => metrics::ResolveDurationMetricDimensionResult::Failure,
+                    },
+                    metrics::ResolveDurationMetricDimensionResolverType::Font,
+                ),
+                Instant::now().duration_since(start_time).as_micros() as i64,
+            );
+
+            responder.send(Status::from(status).into_raw())?;
             Ok(())
         })
         .await

@@ -150,6 +150,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         let rewrite_manager = Arc::clone(&rewrite_manager);
         let package_fetcher = Arc::clone(&package_fetcher);
         let system_cache_list = Arc::clone(&system_cache_list);
+        let cobalt_sender = cobalt_sender.clone();
         move |stream| {
             fasync::spawn_local(
                 resolver_service::run_resolver_service(
@@ -159,6 +160,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
                     Arc::clone(&package_fetcher),
                     Arc::clone(&system_cache_list),
                     stream,
+                    cobalt_sender.clone(),
                 )
                 .unwrap_or_else(|e| fx_log_err!("failed to spawn_local {:?}", e)),
             )
