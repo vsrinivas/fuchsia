@@ -5,9 +5,11 @@
 use {
     directed_graph::DirectedGraph,
     fidl_fuchsia_sys2 as fsys,
+    itertools::Itertools,
     std::{
         collections::{HashMap, HashSet},
         error, fmt,
+        path::Path,
     },
     thiserror::Error,
 };
@@ -16,7 +18,7 @@ const MAX_PATH_LENGTH: usize = 1024;
 const MAX_NAME_LENGTH: usize = 100;
 const MAX_URL_LENGTH: usize = 4096;
 
-/// Enum type that can represent any error encountered durlng validation.
+/// Enum type that can represent any error encountered during validation.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("{} missing {}", .0.decl, .0.field)]
@@ -51,6 +53,8 @@ pub enum Error {
     ResolverDependencyCycle,
     #[error("a dependency cycle exists between offer declarations")]
     OfferDependencyCycle,
+    #[error("{0} \"{1}\"path overlaps with {2} \"{3}\"")]
+    InvalidPathOverlap(DeclField, String, DeclField, String),
 }
 
 impl Error {
@@ -165,6 +169,20 @@ impl Error {
 
     pub fn offer_dependency_cycle() -> Self {
         Error::OfferDependencyCycle
+    }
+
+    pub fn invalid_path_overlap(
+        decl_a: impl Into<String>,
+        path_a: impl Into<String>,
+        decl_b: impl Into<String>,
+        path_b: impl Into<String>,
+    ) -> Self {
+        Error::InvalidPathOverlap(
+            DeclField { decl: decl_a.into(), field: "target_path".to_string() },
+            path_a.into(),
+            DeclField { decl: decl_b.into(), field: "target_path".to_string() },
+            path_b.into(),
+        )
     }
 }
 
@@ -473,9 +491,16 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    /// Validates that Service, Protocol and Directory target paths differ.
+    /// Validates that paths-based capabilities (service, directory, protocol)
+    /// are different and not prefixes of each other.
     fn validate_use_paths(&mut self, uses: &[fsys::UseDecl]) {
-        let mut used_ids = HashMap::new();
+        #[derive(Debug, PartialEq, Clone, Copy)]
+        struct PathCapability<'a> {
+            decl: &'a str,
+            dir: &'a Path,
+            use_: &'a fsys::UseDecl,
+        };
+        let mut used_paths = HashMap::new();
         for use_ in uses.iter() {
             match use_ {
                 fsys::UseDecl::Service(fsys::UseServiceDecl {
@@ -488,18 +513,66 @@ impl<'a> ValidationContext<'a> {
                     target_path: Some(path),
                     ..
                 }) => {
-                    let decl = match use_ {
-                        fsys::UseDecl::Service(_) => "UseServiceDecl",
-                        fsys::UseDecl::Protocol(_) => "UseProtocolDecl",
-                        fsys::UseDecl::Directory(_) => "UseDirectoryDecl",
+                    let capability = match use_ {
+                        fsys::UseDecl::Service(_) => {
+                            let dir = match Path::new(path).parent() {
+                                Some(p) => p,
+                                None => continue, // Invalid path, validated elsewhere
+                            };
+                            PathCapability { decl: "UseServiceDecl", dir, use_ }
+                        }
+                        fsys::UseDecl::Protocol(_) => {
+                            let dir = match Path::new(path).parent() {
+                                Some(p) => p,
+                                None => continue, // Invalid path, validated elsewhere
+                            };
+                            PathCapability { decl: "UseProtocolDecl", dir, use_ }
+                        }
+                        fsys::UseDecl::Directory(_) => {
+                            PathCapability { decl: "UseDirectoryDecl", dir: Path::new(path), use_ }
+                        }
                         _ => unreachable!(),
                     };
-                    if used_ids.insert(path, use_).is_some() {
+                    if used_paths.insert(path, capability).is_some() {
                         // Disallow multiple capabilities for the same path.
-                        self.errors.push(Error::duplicate_field(decl, "path", path));
+                        self.errors.push(Error::duplicate_field(capability.decl, "path", path));
                     }
                 }
                 _ => {}
+            }
+        }
+        for ((&path_a, capability_a), (&path_b, capability_b)) in
+            used_paths.iter().tuple_combinations()
+        {
+            if match (capability_a.use_, capability_b.use_) {
+                // Directories can't be the same or partially overlap.
+                (fsys::UseDecl::Directory(_), fsys::UseDecl::Directory(_)) => {
+                    capability_b.dir == capability_a.dir
+                        || capability_b.dir.starts_with(capability_a.dir)
+                        || capability_a.dir.starts_with(capability_b.dir)
+                }
+
+                // Protocols and Services can't overlap with Directories.
+                (_, fsys::UseDecl::Directory(_)) | (fsys::UseDecl::Directory(_), _) => {
+                    capability_b.dir == capability_a.dir
+                        || capability_b.dir.starts_with(capability_a.dir)
+                        || capability_a.dir.starts_with(capability_b.dir)
+                }
+
+                // Protocols and Services containing directories may be same, but
+                // partial overlap is disallowed.
+                (_, _) => {
+                    capability_b.dir != capability_a.dir
+                        && (capability_b.dir.starts_with(capability_a.dir)
+                            || capability_a.dir.starts_with(capability_b.dir))
+                }
+            } {
+                self.errors.push(Error::invalid_path_overlap(
+                    capability_a.decl,
+                    path_a,
+                    capability_b.decl,
+                    path_b,
+                ));
             }
         }
     }
@@ -1696,6 +1769,21 @@ mod tests {
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     }
 
+    fn validate_test_any_result(input: ComponentDecl, expected_res: Vec<Result<(), ErrorList>>) {
+        let res = format!("{:?}", validate(&input));
+        let expected_res_debug = format!("{:?}", expected_res);
+
+        let matched_exp =
+            expected_res.into_iter().find(|expected| res == format!("{:?}", expected));
+
+        assert!(
+            matched_exp.is_some(),
+            "assertion failed: Expected one of:\n{:?}\nActual:\n{:?}",
+            expected_res_debug,
+            res
+        );
+    }
+
     fn check_test<F>(check_fn: F, input: &str, expected_res: Result<(), ErrorList>)
     where
         F: FnOnce(Option<&String>, &str, &str, &mut Vec<Error>) -> bool,
@@ -1772,6 +1860,24 @@ mod tests {
                 #[test]
                 fn $test_name() {
                     validate_test($input, $result);
+                }
+            )+
+        }
+    }
+
+    macro_rules! test_validate_any_result {
+        (
+            $(
+                $test_name:ident => {
+                    input = $input:expr,
+                    results = $results:expr,
+                },
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    validate_test_any_result($input, $results);
                 }
             )+
         }
@@ -1967,6 +2073,95 @@ mod tests {
         },
     }
 
+    test_validate_any_result! {
+        test_validate_use_disallows_nested_dirs => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/abc".to_string()),
+                        target_path: Some("/foo/bar".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                    }),
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/abc".to_string()),
+                        target_path: Some("/foo/bar/baz".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                    }),
+                ]);
+                decl
+            },
+            results = vec![
+                Err(ErrorList::new(vec![
+                    Error::invalid_path_overlap("UseDirectoryDecl", "/foo/bar/baz", "UseDirectoryDecl", "/foo/bar"),
+                ])),
+                Err(ErrorList::new(vec![
+                    Error::invalid_path_overlap("UseDirectoryDecl", "/foo/bar", "UseDirectoryDecl", "/foo/bar/baz"),
+                ])),
+            ],
+        },
+        test_validate_use_disallows_common_prefixes_protocol => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/abc".to_string()),
+                        target_path: Some("/foo/bar".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                    }),
+                    UseDecl::Protocol(UseProtocolDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/crow".to_string()),
+                        target_path: Some("/foo/bar/fuchsia.2".to_string()),
+                    }),
+                ]);
+                decl
+            },
+            results = vec![
+                Err(ErrorList::new(vec![
+                    Error::invalid_path_overlap("UseProtocolDecl", "/foo/bar/fuchsia.2", "UseDirectoryDecl", "/foo/bar"),
+                ])),
+                Err(ErrorList::new(vec![
+                    Error::invalid_path_overlap("UseDirectoryDecl", "/foo/bar", "UseProtocolDecl", "/foo/bar/fuchsia.2"),
+                ])),
+            ],
+        },
+        test_validate_use_disallows_common_prefixes_service => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/abc".to_string()),
+                        target_path: Some("/foo/bar".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_path: Some("/space".to_string()),
+                        target_path: Some("/foo/bar/baz/fuchsia.logger.Log".to_string()),
+                    }),
+                ]);
+                decl
+            },
+            results = vec![
+                Err(ErrorList::new(vec![
+                    Error::invalid_path_overlap("UseServiceDecl", "/foo/bar/baz/fuchsia.logger.Log", "UseDirectoryDecl", "/foo/bar"),
+                ])),
+                Err(ErrorList::new(vec![
+                    Error::invalid_path_overlap("UseDirectoryDecl", "/foo/bar", "UseServiceDecl", "/foo/bar/baz/fuchsia.logger.Log"),
+                ])),
+            ],
+        },
+    }
+
     test_validate! {
         // uses
         test_validate_uses_empty => {
@@ -2129,17 +2324,17 @@ mod tests {
                     UseDecl::Service(UseServiceDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
-                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                        target_path: Some(format!("/s/{}", "b".repeat(1024))),
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
-                        target_path: Some(format!("/{}", "c".repeat(1024))),
+                        target_path: Some(format!("/p/{}", "c".repeat(1024))),
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
-                        target_path: Some(format!("/{}", "d".repeat(1024))),
+                        target_path: Some(format!("/d/{}", "d".repeat(1024))),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
