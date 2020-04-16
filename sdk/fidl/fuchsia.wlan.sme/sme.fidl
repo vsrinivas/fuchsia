@@ -134,9 +134,20 @@ enum StartApResultCode {
     DFS_UNSUPPORTED = 7;
 };
 
+struct Ap {
+    vector<uint8>:32 ssid;
+    uint8 channel;
+    uint16 num_clients;
+};
+
+struct ApStatusResponse {
+    Ap? running_ap;
+};
+
 protocol ApSme {
     Start(ApConfig config) -> (StartApResultCode code);
     Stop() -> ();
+    Status() -> (ApStatusResponse resp);
 };
 
 struct MeshConfig {

@@ -24,6 +24,7 @@ use {
     },
     anyhow::format_err,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
+    fidl_fuchsia_wlan_sme as fidl_sme,
     futures::channel::{mpsc, oneshot},
     log::{debug, error, info, warn},
     std::collections::HashMap,
@@ -66,6 +67,7 @@ enum State {
         rates: Vec<SupportedRate>,
         responder: Responder<StartResult>,
         start_timeout: EventId,
+        op_radio_cfg: OpRadioConfig,
     },
     Started {
         bss: InfraBss,
@@ -85,6 +87,7 @@ struct InfraBss {
     rates: Vec<SupportedRate>,
     clients: HashMap<MacAddr, RemoteClient>,
     aid_map: aid::Map,
+    op_radio_cfg: OpRadioConfig,
     ctx: Context,
 }
 
@@ -192,6 +195,7 @@ impl ApSme {
                     rates,
                     responder,
                     start_timeout,
+                    op_radio_cfg: op,
                 }
             },
             s @ State::Starting { .. } => {
@@ -246,6 +250,19 @@ impl ApSme {
         });
         receiver
     }
+
+    pub fn get_running_ap(&self) -> Option<fidl_sme::Ap> {
+        match self.state.as_ref() {
+            Some(State::Started { bss: InfraBss { ssid, op_radio_cfg, clients, .. } }) => {
+                Some(fidl_sme::Ap {
+                    ssid: ssid.to_vec(),
+                    channel: op_radio_cfg.chan.primary,
+                    num_clients: clients.len() as u16,
+                })
+            }
+            _ => None,
+        }
+    }
 }
 
 /// Adapt user-providing operation condition to underlying device capabilities.
@@ -287,10 +304,18 @@ impl super::Station for ApSme {
                 rates,
                 responder,
                 start_timeout,
+                op_radio_cfg,
             } => match event {
-                MlmeEvent::StartConf { resp } => {
-                    handle_start_conf(resp, ctx, ssid, rsn_cfg, capabilities, rates, responder)
-                }
+                MlmeEvent::StartConf { resp } => handle_start_conf(
+                    resp,
+                    ctx,
+                    ssid,
+                    rsn_cfg,
+                    capabilities,
+                    rates,
+                    op_radio_cfg,
+                    responder,
+                ),
                 _ => {
                     warn!("received MlmeEvent while ApSme is starting {:?}", event);
                     State::Starting {
@@ -301,6 +326,7 @@ impl super::Station for ApSme {
                         rates,
                         responder,
                         start_timeout,
+                        op_radio_cfg,
                     }
                 }
             },
@@ -345,6 +371,7 @@ impl super::Station for ApSme {
                 rates,
                 ssid,
                 rsn_cfg,
+                op_radio_cfg,
             } => match timed_event.event {
                 Event::Sme { event } => match event {
                     SmeEvent::StartTimeout if start_timeout == timed_event.id => {
@@ -360,6 +387,7 @@ impl super::Station for ApSme {
                         rates,
                         ssid,
                         rsn_cfg,
+                        op_radio_cfg,
                     },
                 },
                 _ => State::Starting {
@@ -370,6 +398,7 @@ impl super::Station for ApSme {
                     rates,
                     ssid,
                     rsn_cfg,
+                    op_radio_cfg,
                 },
             },
             State::Started { ref mut bss } => {
@@ -402,6 +431,7 @@ fn handle_start_conf(
     rsn_cfg: Option<RsnCfg>,
     capabilities: mac::CapabilityInfo,
     rates: Vec<SupportedRate>,
+    op_radio_cfg: OpRadioConfig,
     responder: Responder<StartResult>,
 ) -> State {
     match conf.result_code {
@@ -415,6 +445,7 @@ fn handle_start_conf(
                     aid_map: aid::Map::default(),
                     capabilities,
                     rates,
+                    op_radio_cfg,
                     ctx,
                 },
             }
@@ -703,6 +734,13 @@ mod tests {
         });
     }
 
+    // Check status when sme is idle
+    #[test]
+    fn status_when_sme_is_idle() {
+        let (sme, _, _) = create_sme();
+        assert_eq!(None, sme.get_running_ap());
+    }
+
     #[test]
     fn ap_starts_success() {
         let (mut sme, mut mlme_stream, _) = create_sme();
@@ -729,6 +767,27 @@ mod tests {
         assert_eq!(Ok(Some(StartResult::Success)), receiver.try_recv());
     }
 
+    // Check status when Ap starting and started
+    #[test]
+    fn ap_starts_success_get_running_ap() {
+        let (mut sme, mut mlme_stream, _) = create_sme();
+        let mut receiver = sme.on_start_command(unprotected_config());
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Start(_start_req))) => {});
+        // status should be Starting
+        assert_eq!(None, sme.get_running_ap());
+        assert_eq!(Ok(None), receiver.try_recv());
+        sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
+        assert_eq!(Ok(Some(StartResult::Success)), receiver.try_recv());
+        assert_eq!(
+            Some(fidl_sme::Ap {
+                ssid: SSID.to_vec(),
+                channel: unprotected_config().radio_cfg.primary_chan.unwrap(),
+                num_clients: 0,
+            }),
+            sme.get_running_ap()
+        );
+    }
+
     #[test]
     fn ap_starts_timeout() {
         let (mut sme, _, mut time_stream) = create_sme();
@@ -738,6 +797,8 @@ mod tests {
         sme.on_timeout(event);
 
         assert_eq!(Ok(Some(StartResult::TimedOut)), receiver.try_recv());
+        // Check status
+        assert_eq!(None, sme.get_running_ap());
     }
 
     #[test]
@@ -747,6 +808,8 @@ mod tests {
 
         sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::NotSupported));
         assert_eq!(Ok(Some(StartResult::InternalError)), receiver.try_recv());
+        // Check status
+        assert_eq!(None, sme.get_running_ap());
     }
 
     #[test]
@@ -797,6 +860,15 @@ mod tests {
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
         client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
 
+        // Check status
+        assert_eq!(
+            Some(fidl_sme::Ap {
+                ssid: SSID.to_vec(),
+                channel: unprotected_config().radio_cfg.primary_chan.unwrap(),
+                num_clients: 1,
+            }),
+            sme.get_running_ap()
+        );
         let mut receiver = sme.on_stop_command();
         assert_variant!(
         mlme_stream.try_next(),
@@ -809,6 +881,9 @@ mod tests {
             assert_eq!(stop_req.ssid, SSID.to_vec());
         });
         assert_eq!(Ok(Some(())), receiver.try_recv());
+
+        // Check status
+        assert_eq!(None, sme.get_running_ap());
     }
 
     #[test]

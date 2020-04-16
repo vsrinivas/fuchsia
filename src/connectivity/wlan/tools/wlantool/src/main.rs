@@ -4,6 +4,7 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
+use fidl_fuchsia_wlan_device::MacRole;
 use fidl_fuchsia_wlan_device_service::{
     self as wlan_service, DeviceServiceMarker, DeviceServiceProxy, QueryIfaceResponse,
 };
@@ -55,12 +56,10 @@ fn main() -> Result<(), Error> {
             Opt::Client(opts::ClientCmd::Scan(cmd)) | Opt::Scan(cmd) => {
                 do_client_scan(cmd, wlan_svc).await
             }
-            Opt::Client(opts::ClientCmd::Status(cmd)) | Opt::Status(cmd) => {
-                do_client_status(cmd, wlan_svc).await
-            }
             Opt::Ap(cmd) => do_ap(cmd, wlan_svc).await,
             Opt::Mesh(cmd) => do_mesh(cmd, wlan_svc).await,
             Opt::Rsn(cmd) => do_rsn(cmd).await,
+            Opt::Status(cmd) => do_status(cmd, wlan_svc).await,
         }
     };
     exec.run_singlethreaded(fut)
@@ -198,6 +197,7 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
                 }
             }
         },
+        opts::IfaceCmd::Status(cmd) => do_status(cmd, wlan_svc).await?,
     }
     Ok(())
 }
@@ -263,25 +263,67 @@ async fn do_client_scan(cmd: opts::ClientScanCmd, wlan_svc: WlanSvc) -> Result<(
     handle_scan_transaction(local).await
 }
 
-async fn do_client_status(cmd: opts::ClientStatusCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
-    let opts::ClientStatusCmd { iface_id } = cmd;
-    let sme = get_client_sme(wlan_svc, iface_id).await?;
-    let st = sme.status().await?;
-    match st.connected_to {
-        Some(bss) => {
+async fn print_iface_status(iface_id: u16, wlan_svc: WlanSvc) -> Result<(), Error> {
+    let (status, resp) = wlan_svc.query_iface(iface_id).await.context("querying iface info")?;
+
+    zx::Status::ok(status)?;
+    if resp.is_none() {
+        return Err(format_err!("No response"));
+    }
+    match resp.unwrap().role {
+        MacRole::Client => {
+            let sme = get_client_sme(wlan_svc, iface_id).await?;
+            let st = sme.status().await?;
+            match st.connected_to {
+                Some(bss) => {
+                    println!(
+                        "Iface {}: Connected to '{}' (bssid {}) channel: {} rssi: {}dBm snr: {}dB",
+                        iface_id,
+                        String::from_utf8_lossy(&bss.ssid),
+                        MacAddr(bss.bssid),
+                        bss.channel,
+                        bss.rx_dbm,
+                        bss.snr_db,
+                    );
+                }
+                None => println!("Iface {}: Not connected to a network", iface_id),
+            }
+            if !st.connecting_to_ssid.is_empty() {
+                println!("Connecting to '{}'", String::from_utf8_lossy(&st.connecting_to_ssid));
+            }
+        }
+        MacRole::Ap => {
+            let sme = get_ap_sme(wlan_svc, iface_id).await?;
+            let status = sme.status().await?;
             println!(
-                "Connected to '{}' (bssid {}) channel: {} rssi: {}dBm snr: {}dB",
-                String::from_utf8_lossy(&bss.ssid),
-                MacAddr(bss.bssid),
-                bss.channel,
-                bss.rx_dbm,
-                bss.snr_db,
+                "Iface {}: Running AP: {:?}",
+                iface_id,
+                status.running_ap.map(|ap| {
+                    format!(
+                        "ssid: {}, channel: {}, clients: {}",
+                        String::from_utf8_lossy(&ap.ssid),
+                        ap.channel,
+                        ap.num_clients
+                    )
+                })
             );
         }
-        None => println!("Not connected to a network"),
+        MacRole::Mesh => println!("Iface {}: Mesh not supported", iface_id),
     }
-    if !st.connecting_to_ssid.is_empty() {
-        println!("Connecting to '{}'", String::from_utf8_lossy(&st.connecting_to_ssid));
+    Ok(())
+}
+
+async fn do_status(cmd: opts::IfaceStatusCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
+    let ids = get_iface_ids(wlan_svc.clone(), cmd.iface_id).await?;
+
+    if ids.len() == 0 {
+        return Err(format_err!("No iface found"));
+    }
+    for iface_id in ids {
+        if let Err(e) = print_iface_status(iface_id, wlan_svc.clone()).await {
+            println!("Iface {}: Error querying status: {}", iface_id, e);
+            continue;
+        }
     }
     Ok(())
 }

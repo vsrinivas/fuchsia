@@ -101,7 +101,7 @@ pub enum Opt {
     #[structopt(name = "scan")]
     Scan(ClientScanCmd),
     #[structopt(name = "status")]
-    Status(ClientStatusCmd),
+    Status(IfaceStatusCmd),
 
     #[structopt(name = "ap")]
     /// commands for AP stations
@@ -185,6 +185,8 @@ pub enum IfaceCmd {
     Stats { iface_id: Option<u16> },
     #[structopt(name = "minstrel")]
     Minstrel(MinstrelCmd),
+    #[structopt(name = "status")]
+    Status(IfaceStatusCmd),
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -256,9 +258,9 @@ pub struct ClientScanCmd {
 }
 
 #[derive(StructOpt, Clone, Debug)]
-pub struct ClientStatusCmd {
-    #[structopt(short = "i", long = "iface", default_value = "0")]
-    pub iface_id: u16,
+pub struct IfaceStatusCmd {
+    #[structopt(short = "i", long = "iface")]
+    pub iface_id: Option<u16>,
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -269,8 +271,6 @@ pub enum ClientCmd {
     Connect(ClientConnectCmd),
     #[structopt(name = "disconnect")]
     Disconnect(ClientDisconnectCmd),
-    #[structopt(name = "status")]
-    Status(ClientStatusCmd),
 }
 
 #[derive(StructOpt, Clone, Debug)]
