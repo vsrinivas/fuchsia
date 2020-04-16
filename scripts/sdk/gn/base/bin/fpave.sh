@@ -17,8 +17,13 @@ source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
 FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
-FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
-DEVICE_NAME_FILTER=""
+
+DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
+
+FUCHSIA_BUCKET="$(get-fuchsia-property bucket)"
+if [[ "${FUCHSIA_BUCKET}" == "" ]]; then
+  FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
+fi
 
 IMAGE_NAME="$(get-fuchsia-property image)"
 if [[ "${IMAGE_NAME}" == "" ]]; then
@@ -40,6 +45,9 @@ function usage {
   echo "    Uses additional private key when using ssh to access the device."
   echo "  [--device-name <device hostname>]"
   echo "    Only paves a device with the given device hostname."
+  if [[ "${DEVICE_NAME_FILTER}" != "" ]]; then
+    echo "    Defaults to ${DEVICE_NAME_FILTER}."
+  fi
   echo "  [--prepare]"
   echo "    Downloads any dependencies but does not pave to a device."
   echo "  [--zedboot]"

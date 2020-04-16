@@ -8,8 +8,6 @@
 
 set -e
 
-FPAVE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh"
-
 # Sets up an ssh mock binary on the $PATH of any subshells and creates a stub
 # authorized_keys.
 set_up_ssh() {
@@ -36,11 +34,18 @@ while (("$#")); do
     echo fe80::c0ff:eec0:ffee%coffee coffee-coffee-coffee-coffee
     exit
     ;;
+  *)
+    last_arg="$1"
+    ;;
   esac
   shift
 done
 
-echo fe80::c0ff:eec0:ffee%coffee
+if [[ "${last_arg}" == "custom-device-name" ]]; then
+  echo "fe80:cccc:cccc:cccc%dev"
+else
+  echo "fe80::c0ff:eec0:ffee%coffee"
+fi
 EOF
 }
 
@@ -226,10 +231,32 @@ TEST_fpave_default_keys() {
   gn-test-check-mock-args "${expected_args[@]}"
 }
 
+TEST_fpave_with_props() {
+  set_up_ssh
+  set_up_device_finder
+  set_up_gsutil
+  set_up_sdk_stubs
+
+  BT_EXPECT "${FCONFIG_CMD}" set device-name "custom-device-name"
+  BT_EXPECT "${FCONFIG_CMD}" set bucket "other"
+  BT_EXPECT "${FCONFIG_CMD}" set image "image4"
+
+  BT_EXPECT "${FPAVE_CMD}" > "${BT_TEMP_DIR}/fpave_with_props_log.txt" 2>&1
+
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
+  expected_args=("${BT_TEMP_DIR}/isolated_path_for/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" fe80:cccc:cccc:cccc%dev "dm" reboot-recovery )
+  gn-test-check-mock-args "${expected_args[@]}"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${FUCHSIA_WORK_DIR}/image/image.md5" "8890373976687374912_image4.tgz"
+
+}
+
 # shellcheck disable=SC2034
 # Test initialization.
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fpave.sh
+  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )
@@ -245,7 +272,10 @@ BT_MOCKED_TOOLS=(
 BT_SET_UP() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
-  
+
+  FPAVE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh"
+  FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
+
   # Make "home" directory in the test dir so the paths are stable."
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
