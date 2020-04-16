@@ -5,6 +5,7 @@
 #include "fidl/error_reporter.h"
 
 #include <cassert>
+#include <sstream>
 
 #include "fidl/token.h"
 
@@ -26,12 +27,17 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
 }
 
 std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
-                   std::string_view message, size_t squiggle_size) {
+                   std::string_view message, bool color, size_t squiggle_size) {
+  const std::string_view bold       = color ? "\033[1m"    : "";
+  const std::string_view bold_red   = color ? "\033[1;31m" : "";
+  const std::string_view bold_green = color ? "\033[1;32m" : "";
+  const std::string_view reset      = color ? "\033[0m"    : "";
+
   if (!span) {
-    std::string error = qualifier;
-    error.append(": ");
-    error.append(message);
-    return error;
+    std::stringstream error;
+    error << bold_red << qualifier << ": " << reset;
+    error << bold << message << reset;
+    return error.str();
   }
 
   SourceFile::Position position;
@@ -56,18 +62,15 @@ std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
     squiggle.resize(line_size);
   }
 
+  std::stringstream error;
   // Many editors and IDEs recognize errors in the form of
   // filename:linenumber:column: error: descriptive-test-here\n
-  std::string error = span->position_str();
-  error.append(": ");
-  error.append(qualifier);
-  error.append(": ");
-  error.append(message);
-  error.push_back('\n');
-  error.append(surrounding_line);
-  error.push_back('\n');
-  error.append(squiggle);
-  return error;
+  error << bold << span->position_str() << ": " << reset;
+  error << bold_red << qualifier << ": " << reset;
+  error << bold << message << reset;
+  error << '\n' << surrounding_line << '\n';
+  error << bold_green << squiggle << reset;
+  return error.str();
 }
 
 void ErrorReporter::AddError(std::unique_ptr<BaseError> err) {
@@ -104,12 +107,13 @@ void ErrorReporter::ReportWarning(std::unique_ptr<BaseError> warn) {
 void ErrorReporter::PrintReports() {
   for (const auto& error : errors_) {
     size_t squiggle_size = error->span ? error->span.value().data().size() : 0;
-    auto error_str = Format("error", error->span, error->Format(), squiggle_size);
+    auto error_str = Format("error", error->span, error->Format(), enable_color_, squiggle_size);
     fprintf(stderr, "%s\n", error_str.c_str());
   }
   for (const auto& warning : warnings_) {
     size_t squiggle_size = warning->span ? warning->span.value().data().size() : 0;
-    auto warning_str = Format("warning", warning->span, warning->Format(), squiggle_size);
+    auto warning_str = Format("warning", warning->span, warning->Format(),
+                              enable_color_, squiggle_size);
     fprintf(stderr, "%s\n", warning_str.c_str());
   }
 }

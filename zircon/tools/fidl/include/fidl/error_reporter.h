@@ -26,11 +26,12 @@ using errors::ErrorDef;
 std::string MakeSquiggle(const std::string& surrounding_line, int column);
 
 std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
-                   std::string_view message, size_t squiggle_size = 0u);
+                   std::string_view message, bool color, size_t squiggle_size = 0u);
 
 class ErrorReporter {
  public:
-  ErrorReporter(bool warnings_as_errors = false) : warnings_as_errors_(warnings_as_errors) {}
+  ErrorReporter(bool warnings_as_errors = false, bool enable_color = false)
+    : warnings_as_errors_(warnings_as_errors), enable_color_(enable_color) {}
 
   // Enables temporarily muting reporting.
   enum class ReportingMode {
@@ -128,6 +129,7 @@ class ErrorReporter {
 
   ReportingMode mode_ = ReportingMode::kReport;
   bool warnings_as_errors_;
+  bool enable_color_;
   std::vector<std::unique_ptr<BaseError>> warnings_;
   std::vector<std::unique_ptr<BaseError>> errors_;
 };

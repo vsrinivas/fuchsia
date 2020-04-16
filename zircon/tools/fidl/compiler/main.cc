@@ -8,11 +8,13 @@
 #include <sys/stat.h>
 
 #include <cstdarg>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <string>
+#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -359,7 +361,8 @@ int main(int argc, char* argv[]) {
   }
 
   // Ready. Set. Go.
-  fidl::ErrorReporter error_reporter(warnings_as_errors);
+  bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
+  fidl::ErrorReporter error_reporter(warnings_as_errors, enable_color);
   auto typespace = fidl::flat::Typespace::RootTypes(&error_reporter);
   auto status = compile(&error_reporter, &typespace, library_name, std::move(outputs),
                         source_managers, std::move(experimental_flags));
