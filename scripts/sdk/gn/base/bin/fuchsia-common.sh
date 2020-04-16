@@ -7,9 +7,11 @@
 # this line.
 
 # Force all pipes to return any non-zero error code instead of just the last
-set -o pipefail
+set -e -o pipefail
 
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+
+
 DEFAULT_FUCHSIA_BUCKET="fuchsia"
 SSH_BIN="$(command -v ssh)"
 FUCHSIA_PROPERTY_NAMES=(
@@ -40,11 +42,15 @@ function get-fuchsia-sdk-dir {
 # Returns the data directory for the fuchsia sdk.
 # This directory is expected to be per-developer, not checked into source code revision systems,
 # and is used to store device images and packages and related data items.
+# The default is $HOME/.fuchsia. This can be overridden by setting the environment variable
+# FUCHSIA_SDK_DATA_DIR.
 function get-fuchsia-sdk-data-dir {
-  local data_dir
-  data_dir="$(get-fuchsia-sdk-dir)/images"
-  if [[ -d "${data_dir}" ]]; then
-    mkdir -p "${data_dir}"
+  local data_dir="${FUCHSIA_SDK_DATA_DIR:-}"
+  if [[ -z "${data_dir}" ]]; then
+    data_dir="${HOME}/.fuchsia"
+    if [[ ! -d "${data_dir}" ]]; then
+      mkdir -p "${data_dir}"
+    fi
   fi
   echo "${data_dir}"
 }
@@ -96,7 +102,7 @@ function get-fuchsia-property {
 }
 
 function ssh-cmd {
-  check-ssh-config
+  check-fuchsia-ssh-config
   "${SSH_BIN}" -F "$(get-fuchsia-sshconfig-file)" "$@"
 }
 
@@ -290,7 +296,7 @@ function kill-running-pm {
   return 0
 }
 
-function check-ssh-config {
+function check-fuchsia-ssh-config {
   # This function creates the ssh keys needed to
   # work with devices running Fuchsia. There are two parts, the keys and the config.
   #
@@ -315,7 +321,7 @@ function check-ssh-config {
   local authfile="${ssh_dir}/authorized_keys"
   local keyfile="${ssh_dir}/pkey"
   local sshconfig_file
-  sshconfig_file="$(get-fuchsia-sshconfig-file)"
+  sshconfig_file="$(get-fuchsia-sdk-data-dir)/sshconfig"
 
   if [[ -e "${authfile}" && -e "${keyfile}" ]]; then
     if grep "${keyfile}" "${sshconfig_file}" > /dev/null 2>&1; then
@@ -385,9 +391,11 @@ EOF
 }
 
 function get-fuchsia-auth-keys-file {
+  check-fuchsia-ssh-config
   echo "$(get-fuchsia-sdk-data-dir)/.ssh/authorized_keys"
 }
 
 function get-fuchsia-sshconfig-file {
+  check-fuchsia-ssh-config
   echo "$(get-fuchsia-sdk-data-dir)/sshconfig"
 }

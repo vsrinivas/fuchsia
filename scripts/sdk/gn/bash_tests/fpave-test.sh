@@ -237,15 +237,20 @@ BT_FILE_DEPS=(
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/bin/gsutil
   scripts/sdk/gn/base/tools/bootserver
-  scripts/sdk/gn/base/images/image/pave.sh
+  test-home/.fuchsia/image/pave.sh
   scripts/sdk/gn/base/tools/device-finder
   isolated_path_for/ssh
 )
 
 BT_SET_UP() {
-  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+  
+  # Make "home" directory in the test dir so the paths are stable."
+  mkdir -p "${BT_TEMP_DIR}/test-home"
+  export HOME="${BT_TEMP_DIR}/test-home"
+  FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
+
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/testdata"
   tar czf "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" -C "${FUCHSIA_WORK_DIR}/image"  "."
 }

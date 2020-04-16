@@ -46,10 +46,25 @@ EOF
   mkdir -p  "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta"
   cp "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/meta/manifest.json" "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta/manifest.json"
 
+  # Make "home" directory in the test dir so the paths are stable."
+  mkdir -p "${BT_TEMP_DIR}/test-home"
+  export HOME="${BT_TEMP_DIR}/test-home"
+  FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
+
   # Source the library file.
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fuchsia-common.sh"
-  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+}
+
+TEST_data-dir-by-env() {
+  # Tests that the data directory can be overridden by using the FUCHSIA_SDK_DATA_DIR varable.
+  export FUCHSIA_SDK_DATA_DIR="${BT_TEMP_DIR}/data-dir-by-env"
+  mkdir -p "${FUCHSIA_SDK_DATA_DIR}"
+
+    BT_ASSERT_FUNCTION_EXISTS get-fuchsia-sshconfig-file
+  FILE_LOCATION="$(get-fuchsia-sshconfig-file)"
+  BT_EXPECT_EQ "${FILE_LOCATION}" "${FUCHSIA_SDK_DATA_DIR}/sshconfig"
+
 }
 
 TEST_fx-warn() {
@@ -74,6 +89,7 @@ TEST_ssh-cmd() {
       echo "$@"
 EOF
     ssh-cmd remote-host ls -l > /dev/null
+    BT_EXPECT_GOOD_STATUS $?
     # shellcheck disable=SC1090
     source "${BT_TEMP_DIR}/${MOCKED_SSH_BIN}.mock_state"
     EXPECTED_SSH_CMD_LINE=("${BT_TEMP_DIR}/${MOCKED_SSH_BIN}" "-F" "${FUCHSIA_WORK_DIR}/sshconfig" "remote-host" "ls" "-l")

@@ -151,6 +151,10 @@ BT_INIT_TEMP_DIR() {
 BT_SET_UP() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+
+  # Make "home" directory in the test dir so the paths are stable."
+  mkdir -p "${BT_TEMP_DIR}/test-home"
+  export HOME="${BT_TEMP_DIR}/test-home"
 }
 
 BT_RUN_TESTS "$@"

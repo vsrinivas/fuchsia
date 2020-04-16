@@ -89,7 +89,6 @@ rm "${TEMP_ENSURE}"
 export FDT_TOOLCHAIN="GN"
 FDT_GN_SSH="$(command -v ssh)"
 export FDT_GN_SSH
-check-ssh-config
 FDT_SSH_CONFIG="$(get-fuchsia-sshconfig-file)"
 export FDT_SSH_CONFIG
 FDT_GN_DEVFIND="$(get-fuchsia-sdk-dir)/tools/device-finder"

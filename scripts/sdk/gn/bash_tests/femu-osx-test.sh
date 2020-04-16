@@ -8,9 +8,6 @@
 # but just make sure that the arguments and dependencies are as correct as possible.
 
 set -e
-SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
-# shellcheck disable=SC1090
-source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 # Initialize variables that need to be set before BT_SET_UP()
 
@@ -158,7 +155,8 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/images/emulator/aemu-"${PLATFORM}"-"${AEMU_LABEL}"/emulator
+  test-home/.fuchsia/emulator/aemu-linux-amd64-"${AEMU_LABEL}"/emulator
+  test-home/.fuchsia/emulator/aemu-mac-amd64-"${AEMU_LABEL}"/emulator
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/tools/zbi
@@ -173,7 +171,14 @@ BT_MOCKED_TOOLS=(
 )
 
 BT_SET_UP() {
-  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
+
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+  
+  # Make "home" directory in the test dir so the paths are stable."
+  mkdir -p "${BT_TEMP_DIR}/test-home"
+  export HOME="${BT_TEMP_DIR}/test-home"
+  FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
 
   # We change the PATH to override the stat command, but need a reference to it
   if ! STAT_PATH="$(type -p stat)"; then

@@ -9,7 +9,7 @@ err_print() {
   stty sane
 }
 trap 'err_print $0:$LINENO' ERR
-set -e
+set -eu
 
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
@@ -19,6 +19,7 @@ IMAGE_NAME="qemu-x64"
 VER_AEMU="$(cat "${SCRIPT_SRC_DIR}/aemu.version")"
 VER_GRPCWEBPROXY="$(cat "${SCRIPT_SRC_DIR}/grpcwebproxy.version")"
 ENABLE_GRPCWEBPROXY=0
+PREBUILT_GRPCWEBPROXY_DIR=""
 
 # Export variables needed here but also in femu.sh
 FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
@@ -129,7 +130,6 @@ esac
 shift
 done
 
-check-ssh-config
 if [[ "${AUTH_KEYS_FILE}" != "" ]]; then
   auth_keys_file="${AUTH_KEYS_FILE}"
 else
@@ -179,4 +179,8 @@ source "${SCRIPT_SRC_DIR}/fx-image-common.sh"
 echo "Setting writable permissions on $FUCHSIA_BUILD_DIR/$IMAGE_FVM_RAW"
 chmod u+w "$FUCHSIA_BUILD_DIR/$IMAGE_FVM_RAW"
 
-"${SCRIPT_SRC_DIR}/devshell/emu" -k "${auth_keys_file}" "${EMU_ARGS[@]}"
+if (( "${#EMU_ARGS[@]}" )); then
+  "${SCRIPT_SRC_DIR}/devshell/emu" -k "${auth_keys_file}" "${EMU_ARGS[@]}"
+else
+  "${SCRIPT_SRC_DIR}/devshell/emu" -k "${auth_keys_file}"
+fi

@@ -186,7 +186,6 @@ if [[ "${PREPARE_ONLY}" == "yes" ]]; then
   exit 0
 fi
 
-check-ssh-config
 SSH_ARGS=()
 
 if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then

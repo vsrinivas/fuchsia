@@ -193,10 +193,10 @@ BT_FILE_DEPS=(
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
   # mock both mac and linux so the test runs successfully on both.
-  scripts/sdk/gn/base/images/emulator/aemu-linux-amd64-"${AEMU_LABEL}"/emulator
-  scripts/sdk/gn/base/images/emulator/aemu-mac-amd64-"${AEMU_LABEL}"/emulator
-  scripts/sdk/gn/base/images/emulator/grpcwebproxy-mac-amd64-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
-  scripts/sdk/gn/base/images/emulator/grpcwebproxy-linux-amd64-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
+  test-home/.fuchsia/emulator/aemu-linux-amd64-"${AEMU_LABEL}"/emulator
+  test-home/.fuchsia/emulator/aemu-mac-amd64-"${AEMU_LABEL}"/emulator
+  test-home/.fuchsia/emulator/grpcwebproxy-mac-amd64-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
+  test-home/.fuchsia/emulator/grpcwebproxy-linux-amd64-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/tools/zbi
@@ -209,9 +209,13 @@ BT_MOCKED_TOOLS=(
 )
 
 BT_SET_UP() {
-  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+  
+  # Make "home" directory in the test dir so the paths are stable."
+  mkdir -p "${BT_TEMP_DIR}/test-home"
+  export HOME="${BT_TEMP_DIR}/test-home"
+  FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
 
   if is-mac; then
     PLATFORM="mac-amd64"

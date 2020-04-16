@@ -108,7 +108,6 @@ else
 fi
 
 # Build the command line
-check-ssh-config
 sftp_cmd=( "sftp" "-F" "$(get-fuchsia-sshconfig-file)")
 if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
   sftp_cmd+=( "-i" "${PRIVATE_KEY_FILE}")

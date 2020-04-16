@@ -66,14 +66,18 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/images/fuchsia_devtools-"${DEVTOOLS_LABEL}"/system_monitor/linux/system_monitor
+  test-home/.fuchsia/fuchsia_devtools-"${DEVTOOLS_LABEL}"/system_monitor/linux/system_monitor
   scripts/sdk/gn/base/bin/cipd
 )
 
 BT_SET_UP() {
-  FUCHSIA_WORK_DIR="${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+  
+  # Make "home" directory in the test dir so the paths are stable."
+  mkdir -p "${BT_TEMP_DIR}/test-home"
+  export HOME="${BT_TEMP_DIR}/test-home"
+  FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
 }
 
 BT_INIT_TEMP_DIR() {
