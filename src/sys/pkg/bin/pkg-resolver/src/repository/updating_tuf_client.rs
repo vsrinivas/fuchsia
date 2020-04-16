@@ -74,6 +74,9 @@ struct UpdatingTufClientInspectState {
     /// Count of the number of times this repository was successfully updated.
     updated_count: inspect_util::Counter,
 
+    /// Version of the active root file.
+    root_version: inspect::UintProperty,
+
     /// Version of the active timestamp file, or 0 if unknown.
     timestamp_version: inspect::UintProperty,
 
@@ -98,6 +101,14 @@ pub enum UpdateResult {
     Updated,
 }
 
+#[derive(Debug)]
+pub struct RepoVersions {
+    root: u32,
+    timestamp: Option<u32>,
+    snapshot: Option<u32>,
+    targets: Option<u32>,
+}
+
 impl<L> UpdatingTufClient<L>
 where
     L: RepositoryStorage<Json> + RepositoryProvider<Json> + 'static,
@@ -119,6 +130,7 @@ where
         } else {
             (None, None)
         };
+        let root_version = client.root_version();
         let ret = Arc::new(AsyncMutex::new(Self {
             client,
             last_update_successfully_checked_time: InspectableDebugString::new(
@@ -137,6 +149,7 @@ where
                     "update_check_success_count",
                 ),
                 updated_count: inspect_util::Counter::new(&node, "updated_count"),
+                root_version: node.create_uint("root_version", root_version.into()),
                 timestamp_version: node.create_uint("timestamp_version", 0),
                 snapshot_version: node.create_uint("snapshot_version", 0),
                 targets_version: node.create_uint("targets_version", 0),
@@ -189,13 +202,14 @@ where
         }
     }
 
-    /// Provides the current known metadata versions (timestamp, snapshot, targets).
-    pub fn metadata_versions(&self) -> (Option<u32>, Option<u32>, Option<u32>) {
-        (
-            self.client.timestamp_version(),
-            self.client.snapshot_version(),
-            self.client.targets_version(),
-        )
+    /// Provides the current known metadata versions.
+    pub fn metadata_versions(&self) -> RepoVersions {
+        RepoVersions {
+            root: self.client.root_version(),
+            timestamp: self.client.timestamp_version(),
+            snapshot: self.client.snapshot_version(),
+            targets: self.client.targets_version(),
+        }
     }
 
     fn is_stale(&self) -> bool {
@@ -211,6 +225,7 @@ where
 
     async fn update(&mut self) -> Result<bool, TufError> {
         let res = self.client.update().await;
+        self.inspect.root_version.set(self.client.root_version().into());
         self.inspect.timestamp_version.set(self.client.timestamp_version().unwrap_or(0).into());
         self.inspect.snapshot_version.set(self.client.snapshot_version().unwrap_or(0).into());
         self.inspect.targets_version.set(self.client.targets_version().unwrap_or(0).into());
