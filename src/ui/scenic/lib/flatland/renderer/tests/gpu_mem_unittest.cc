@@ -49,6 +49,13 @@ void SetClientConstraints(fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
   status = buffer_collection->SetConstraints(true, constraints);
   EXPECT_EQ(status, ZX_OK);
 
+  // Have the client wait for allocation.
+  zx_status_t allocation_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(allocation_status, ZX_OK);
+
   status = buffer_collection->Close();
   EXPECT_EQ(status, ZX_OK);
 }
@@ -84,20 +91,28 @@ VK_TEST_F(MemoryTest, SimpleTest) {
       escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined);
 
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-  SetClientConstraints(sysmem_allocator_.get(), std::move(tokens.local_token), kImageCount, kWidth,
-                       kHeight);
 
   auto result =
       flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(result.is_ok());
   auto collection = std::move(result.value());
 
-  auto vk_collection = CreateVulkanCollection(vk_device, vk_loader, collection.GenerateToken());
+  // Set vulkan constraints.
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
+  zx_status_t status = tokens.local_token->Duplicate(std::numeric_limits<uint32_t>::max(),
+                                                     vulkan_token.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  auto vk_collection = CreateVulkanCollection(vk_device, vk_loader, std::move(vulkan_token));
   EXPECT_EQ(
       vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info, vk_loader),
       vk::Result::eSuccess);
 
-  EXPECT_TRUE(collection.WaitUntilAllocated());
+  // Set client constraints and wait for allocation.
+  SetClientConstraints(sysmem_allocator_.get(), std::move(tokens.local_token), kImageCount, kWidth,
+                       kHeight);
+
+  // Server collection should be allocated now.
+  EXPECT_TRUE(collection.BuffersAreAllocated());
 
   for (uint32_t i = 0; i < kImageCount; i++) {
     auto gpu_info = flatland::GpuImageInfo::New(vk_device, vk_loader, collection.GetSysmemInfo(),
@@ -131,15 +146,19 @@ VK_TEST_F(MemoryTest, OutOfBoundsTest) {
   EXPECT_TRUE(result.is_ok());
   auto collection = std::move(result.value());
 
-  SetClientConstraints(sysmem_allocator_.get(), std::move(tokens.local_token), kImageCount, kWidth,
-                       kHeight);
-
-  auto vk_collection = CreateVulkanCollection(vk_device, vk_loader, collection.GenerateToken());
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
+  zx_status_t status = tokens.local_token->Duplicate(std::numeric_limits<uint32_t>::max(),
+                                                     vulkan_token.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  auto vk_collection = CreateVulkanCollection(vk_device, vk_loader, std::move(vulkan_token));
   EXPECT_EQ(
       vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info, vk_loader),
       vk::Result::eSuccess);
 
-  EXPECT_TRUE(collection.WaitUntilAllocated());
+  SetClientConstraints(sysmem_allocator_.get(), std::move(tokens.local_token), kImageCount, kWidth,
+                       kHeight);
+
+  EXPECT_TRUE(collection.BuffersAreAllocated());
 
   // This should fail however, as the index is beyond bounds.
   auto gpu_info =
@@ -168,6 +187,25 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
 
   // First create the pair of sysmem tokens, one for the client, one for the server.
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+
+  // Create the buffer collection struct and set the server-side vulkan constraints.
+  flatland::BufferCollectionInfo server_collection;
+  vk::BufferCollectionFUCHSIA vk_collection;
+  {
+    auto result =
+        flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
+    EXPECT_TRUE(result.is_ok());
+    server_collection = std::move(result.value());
+
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
+    zx_status_t status = tokens.local_token->Duplicate(std::numeric_limits<uint32_t>::max(),
+                                                       vulkan_token.NewRequest());
+    EXPECT_EQ(status, ZX_OK);
+    vk_collection = CreateVulkanCollection(vk_device, vk_loader, std::move(vulkan_token));
+    EXPECT_EQ(vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info,
+                                                              vk_loader),
+              vk::Result::eSuccess);
+  }
 
   // Create a client-side handle to the buffer collection and set the client constraints.
   fuchsia::sysmem::BufferCollectionSyncPtr client_collection;
@@ -202,25 +240,7 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
     EXPECT_EQ(status, ZX_OK);
   }
 
-  // Create the buffer collection struct and set the server-side vulkan constraints.
-  flatland::BufferCollectionInfo server_collection;
-  vk::BufferCollectionFUCHSIA vk_collection;
-  {
-    auto result =
-        flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
-    EXPECT_TRUE(result.is_ok());
-    server_collection = std::move(result.value());
-
-    vk_collection = CreateVulkanCollection(vk_device, vk_loader, server_collection.GenerateToken());
-    EXPECT_EQ(vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info,
-                                                              vk_loader),
-              vk::Result::eSuccess);
-
-    // Both client and server have set constraints, so this should not block.
-    EXPECT_TRUE(server_collection.WaitUntilAllocated());
-  }
-
-  // Have the client also wait for buffers allocated so it can populate its information
+  // Have the client wait for buffers allocated so it can populate its information
   // struct with the vmo data.
   fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info = {};
   {
@@ -230,6 +250,10 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
     EXPECT_EQ(status, ZX_OK);
     EXPECT_EQ(allocation_status, ZX_OK);
   }
+
+  // Have the server also check allocation. Both client and server have set constraints, so this
+  // should be true.
+  EXPECT_TRUE(server_collection.BuffersAreAllocated());
 
   // Get a raw pointer from the client collection's vmo and write several values to it.
   uint8_t* vmo_host;

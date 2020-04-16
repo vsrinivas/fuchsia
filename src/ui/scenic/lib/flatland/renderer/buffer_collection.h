@@ -10,6 +10,8 @@
 
 #include <memory>
 
+#include "src/lib/fxl/logging.h"
+
 namespace flatland {
 
 using BufferCollectionHandle = fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>;
@@ -20,9 +22,9 @@ class BufferCollectionInfo {
  public:
   // Creates a new |BufferCollectionInfo| instance. The return value is null if the buffer was
   // not created successfully. This function sets the server-side sysmem image constraints.
-  // TODO(48210): Make this an asynchronous call.
-  // This operation is thread-safe as long as we do not use the same sysmem_allocator
-  // across different threads simultaneously.
+  //
+  // TODO(48210): Make this an asynchronous call. This function is currently thread safe as
+  // Allocator_Sync pointers are thread safe, but if this becomes async it may become unsafe.
   static fitx::result<fitx::failed, BufferCollectionInfo> New(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       BufferCollectionHandle buffer_collection_token);
@@ -31,44 +33,33 @@ class BufferCollectionInfo {
   // be created via a call to |New|.
   BufferCollectionInfo() = default;
 
-  // Generates a token that is returned to the client, who can then use it to add additional
-  // constraints on the collection. This must not be called after calling |WaitUntilAllocated|.
-  BufferCollectionHandle GenerateToken() const;
-
   // This BufferCollectionInfo may not be allocated due to the fact that it may not necessarily
-  // have all constraints set from every client with a token. As a result, this function waits on
-  // all constraints to be set before returning, which may result in a hang. This is not meant to
-  // be called on the render thread, however, but instead on the same thread as the Flatland
-  // instance which called it, so that rendering of other instances is not impacted.
-  //
-  // Once this function successfully completes, no new tokens can be generated with a call to
-  // GenerateToken() and no new constraints can be set.
+  // have all constraints set from every client with a token. This function will return false if
+  // that is the case and true if the buffer collection has actually been allocated. Additionally,
+  // if this function returns true, the client will be able to access the sysmem information of
+  // the collection via a call to GetSysmemInfo(). Once this function returns true, it won't ever
+  // return |false| again.
   //
   // This function is thread-safe because |buffer_collection_ptr_|, which is a
   // SynchronousInterfacePtr, is thread-safe. This function will return false if the buffers are not
   // able to be constructed, for example if there are incompatible constraints that are set on the
   // server and client.
-  bool WaitUntilAllocated();
+  bool BuffersAreAllocated();
 
-  // Points to BufferCollection FIDL interface used to communicate with Sysmem.
-  const fuchsia::sysmem::BufferCollectionSyncPtr& GetSyncPtr() const {
-    return buffer_collection_ptr_;
-  }
-
-  // Info describing |buffer_collection_ptr|.
+  // Info describing |buffer_collection_ptr|. Do not call this until after verifying the allocation
+  // status of the buffer collection with BuffersAreAllocated().
   const fuchsia::sysmem::BufferCollectionInfo_2& GetSysmemInfo() const {
+    // DCHECK if the struct is uninitialized.
+    FXL_DCHECK(buffer_collection_info_.buffer_count >= 1);
     return buffer_collection_info_;
   }
 
  private:
-  BufferCollectionInfo(fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_ptr,
-                       fuchsia::sysmem::BufferCollectionTokenSyncPtr constraint_token)
-      : buffer_collection_ptr_(std::move(buffer_collection_ptr)),
-        constraint_token_(std::move(constraint_token)) {}
+  BufferCollectionInfo(fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_ptr)
+      : buffer_collection_ptr_(std::move(buffer_collection_ptr)) {}
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_ptr_;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info_;
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr constraint_token_;
 };
 
 }  // namespace flatland

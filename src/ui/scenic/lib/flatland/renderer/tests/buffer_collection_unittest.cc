@@ -20,10 +20,6 @@ TEST_F(BufferCollectionTest, CreateCollectionTest) {
   auto result =
       flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(result.is_ok());
-
-  auto collection = std::move(result.value());
-  EXPECT_TRUE(collection.GetSyncPtr());
-  EXPECT_TRUE(collection.GetSyncPtr().is_bound());
 }
 
 // This test ensures that the buffer collection can still be allocated even if the server
@@ -40,8 +36,9 @@ TEST_F(BufferCollectionTest, AllocationWithoutExtraConstraints) {
   EXPECT_TRUE(result.is_ok());
 
   auto collection = std::move(result.value());
-  EXPECT_TRUE(collection.GetSyncPtr());
-  EXPECT_TRUE(collection.GetSyncPtr().is_bound());
+
+  // Client hasn't set their constraints yet, so this should be false.
+  EXPECT_FALSE(collection.BuffersAreAllocated());
 
   {
     const uint32_t kWidth = 32;
@@ -77,11 +74,20 @@ TEST_F(BufferCollectionTest, AllocationWithoutExtraConstraints) {
     status = buffer_collection->SetConstraints(true, constraints);
     EXPECT_EQ(status, ZX_OK);
 
+    // Have the client wait for allocation.
+    zx_status_t allocation_status = ZX_OK;
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+    status =
+        buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+
     status = buffer_collection->Close();
     EXPECT_EQ(status, ZX_OK);
   }
 
-  EXPECT_TRUE(collection.WaitUntilAllocated());
+  // Checking allocation on the server should return true.
+  EXPECT_TRUE(collection.BuffersAreAllocated());
 }
 
 // Check to make sure |CreateBufferCollectionAndSetConstraints| returns false if
@@ -123,8 +129,6 @@ TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
   EXPECT_TRUE(result.is_ok());
 
   auto collection = std::move(result.value());
-  EXPECT_TRUE(collection.GetSyncPtr());
-  EXPECT_TRUE(collection.GetSyncPtr().is_bound());
 
   // Create a client-side handle to the buffer collection and set the client
   // constraints. We set it to have a max of zero buffers and to not use
@@ -165,10 +169,20 @@ TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
     image_constraints.max_bytes_per_row = 0x0;
     status = client_collection->SetConstraints(true, constraints);
     EXPECT_EQ(status, ZX_OK);
+
+    // Have the client wait for allocation.
+    zx_status_t allocation_status = ZX_OK;
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+    status =
+        client_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+
+    // Sysmem reports the error here through |status|.
+    EXPECT_NE(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
   }
 
   // This should fail as sysmem won't be able to allocate anything.
-  EXPECT_FALSE(collection.WaitUntilAllocated());
+  EXPECT_FALSE(collection.BuffersAreAllocated());
 }
 
 }  // namespace test

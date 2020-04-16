@@ -4,8 +4,6 @@
 
 #include "src/ui/scenic/lib/flatland/renderer/buffer_collection.h"
 
-#include "src/lib/fxl/logging.h"
-
 #include <lib/zx/status.h>
 #include <zircon/errors.h>
 
@@ -25,23 +23,12 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   // so we do not do any error checking at this stage.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token = buffer_collection_token.BindSync();
 
-  // Create an extra constraint token that will be kept around as a class member in the event that
-  // a client of this class wants to create their own additional constraints.
-  // Only log an error here if duplicating the token fails, but allow |BindSharedCollection| and
-  // |Sync| below to do the error handling if a failure occurs.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr constraint_token;
-  zx_status_t status =
-      local_token->Duplicate(std::numeric_limits<uint32_t>::max(), constraint_token.NewRequest());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not generate constraint token for buffer.";
-  }
-
   // Use local token to create a BufferCollection and then sync. We can trust
   // |buffer_collection->Sync()| to tell us if we have a bad or malicious channel. So if this call
   // passes, then we know we have a valid BufferCollection.
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   sysmem_allocator->BindSharedCollection(std::move(local_token), buffer_collection.NewRequest());
-  status = buffer_collection->Sync();
+  zx_status_t status = buffer_collection->Sync();
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Could not bind buffer collection.";
     return fitx::failed();
@@ -61,42 +48,35 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   // failure occurs now, then that is some underlying issue unrelated to user input.
   FXL_DCHECK(status == ZX_OK) << "Could not set constraints on buffer collection.";
 
-  return fitx::ok(BufferCollectionInfo(std::move(buffer_collection), std::move(constraint_token)));
+  return fitx::ok(BufferCollectionInfo(std::move(buffer_collection)));
 }
 
-BufferCollectionHandle BufferCollectionInfo::GenerateToken() const {
-  FXL_DCHECK(constraint_token_)
-      << "The buffer collection is already allocated. It can no longer generate any new tokens.";
-
-  BufferCollectionHandle result;
-  zx_status_t status =
-      constraint_token_->Duplicate(std::numeric_limits<uint32_t>::max(), result.NewRequest());
-  FXL_DCHECK(status == ZX_OK) << "Could not generate a new token for the buffer.";
-  return result;
-}
-
-bool BufferCollectionInfo::WaitUntilAllocated() {
-  // Wait for the buffers to be allocated before adding the first Image.
+bool BufferCollectionInfo::BuffersAreAllocated() {
+  // If the buffer_collection_info_ struct is already populated, then we know the
+  // collection is allocated and we can skip over this code.
   if (!buffer_collection_info_.buffer_count) {
-    // Close out the constraint token we've been keeping around for clients
-    // to set additional constraints with. The buffer collection cannot
-    // complete its allocation as long as there exist open tokens that have
-    // not had constraints set on them.
-    constraint_token_->Close();
-    constraint_token_ = nullptr;
-
-    // We should wait for buffers to be allocated and then to be sure, check that
-    // they have actually been allocated.
+    // Check to see if the buffers are allocated and return false if not.
     zx_status_t allocation_status = ZX_OK;
-    zx_status_t status = buffer_collection_ptr_->WaitForBuffersAllocated(&allocation_status,
-                                                                         &buffer_collection_info_);
-
+    zx_status_t status = buffer_collection_ptr_->CheckBuffersAllocated(&allocation_status);
     if (status != ZX_OK || allocation_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not allocate buffers for collection.";
+      FXL_LOG(ERROR) << "Collection was not allocated.";
       return false;
     }
 
+    // We still have to call WaitForBuffersAllocated() here in order to fill in
+    // the data for buffer_collection_info_. This won't block, since we've already
+    // guaranteed that the collection is allocated above.
+    status = buffer_collection_ptr_->WaitForBuffersAllocated(&allocation_status,
+                                                             &buffer_collection_info_);
+    // Failures here would be an issue with sysmem, and so we DCHECK.
+    FXL_DCHECK(allocation_status == ZX_OK);
+    FXL_DCHECK(status == ZX_OK);
+
+    // Perform a DCHECK here as well to insure the collection has at least one vmo, because
+    // it shouldn't have been able to be allocated with less than that.
     FXL_DCHECK(buffer_collection_info_.buffer_count > 0);
+
+    // Tag the vmos as being a part of flatland.
     for (uint32_t i = 0; i < buffer_collection_info_.buffer_count; ++i) {
       static const char* kVmoName = "FlatlandImageMemory";
       buffer_collection_info_.buffers[i].vmo.set_property(ZX_PROP_NAME, kVmoName, strlen(kVmoName));
