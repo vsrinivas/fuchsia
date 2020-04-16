@@ -23,6 +23,7 @@ void OutputSink::AddOutputBuffer(const CodecBuffer* output_buffer) {
   ZX_DEBUG_ASSERT(output_buffer);
 
   free_output_buffers_.Push(std::move(output_buffer));
+  buffer_count_++;
 }
 
 OutputSink::Status OutputSink::NextOutputBlock(
@@ -92,6 +93,10 @@ OutputSink::Status OutputSink::SendCurrentPacket() {
   return kOk;
 }
 
+bool OutputSink::HasPendingPacket() { return current_packet_ != nullptr; }
+
+uint32_t OutputSink::OutputBufferCount() { return buffer_count_; }
+
 OutputSink::Status OutputSink::SetNewPacketForWrite(size_t write_size) {
   auto maybe_buffer = free_output_buffers_.WaitForElement();
   if (!maybe_buffer) {
@@ -125,4 +130,7 @@ void OutputSink::StopAllWaits() {
 void OutputSink::Reset(bool keep_data) {
   free_output_buffers_.Reset(keep_data);
   free_output_packets_.Reset(keep_data);
+  if (!keep_data) {
+    buffer_count_ = 0;
+  }
 }

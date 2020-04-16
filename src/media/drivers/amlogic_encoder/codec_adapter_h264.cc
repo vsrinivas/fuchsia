@@ -11,9 +11,14 @@
 #include "src/media/drivers/amlogic_encoder/device_ctx.h"
 #include "src/media/drivers/amlogic_encoder/macros.h"
 
-constexpr uint32_t kOutputPerPacketBufferBytesMin = 512 * 1024;
-// This is an arbitrary cap for now.
-constexpr uint32_t kOutputPerPacketBufferBytesMax = 4 * 1024 * 1024;
+// TODO(afoxley) adjust to higher value when we get real data flowing
+constexpr uint32_t kOutputBufferMinSizeBytes = 4096;
+constexpr uint32_t kOutputBufferMaxSizeBytes = 4096;
+constexpr uint32_t kOutputMinBufferCountForCamping = 1;
+// constexpr uint32_t kOutputMinBufferCountForDedicatedSlack = 1;
+constexpr uint32_t kOutputMaxBufferCount = 0;  // unbounded
+constexpr uint32_t kInputMinBufferCountForCamping = 1;
+constexpr uint32_t kInputMaxBufferCount = 0;  // unbounded
 
 CodecAdapterH264::CodecAdapterH264(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                                    DeviceCtx* device)
@@ -32,10 +37,11 @@ bool CodecAdapterH264::IsCoreCodecRequiringOutputConfigForFormatDetection() { re
 
 bool CodecAdapterH264::IsCoreCodecMappedBufferUseful(CodecPort port) {
   if (port == kInputPort) {
-    return true;
-  } else {
-    ZX_DEBUG_ASSERT(port == kOutputPort);
     return false;
+  } else {
+    // we likely want to be able to copy the encoded output to support sending a NAL across multiple
+    // output packets, with each new NAL starting a fresh packet so it gets a place to put its PTS
+    return true;
   }
 }
 
@@ -45,6 +51,7 @@ zx::unowned_bti CodecAdapterH264::CoreCodecBti() { return zx::unowned_bti(device
 
 void CodecAdapterH264::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
+  ZX_DEBUG_ASSERT(!output_sink_);
   zx_status_t result = input_processing_loop_.StartThread(
       "CodecAdapterH264::input_processing_thread_", &input_processing_thread_);
   if (result != ZX_OK) {
@@ -56,6 +63,15 @@ void CodecAdapterH264::CoreCodecInit(
   initial_input_format_details_ = fidl::Clone(initial_input_format_details);
   latest_input_format_details_ = fidl::Clone(initial_input_format_details);
 
+  output_sink_.emplace(/*sender=*/
+                       [this](CodecPacket* output_packet) {
+                         events_->onCoreCodecOutputPacket(output_packet,
+                                                          /*error_detected_before=*/false,
+                                                          /*error_detected_during=*/false);
+                         return OutputSink::kSuccess;
+                       },
+                       /*writer_thread=*/input_processing_thread_);
+
   result = device_->EncoderInit(initial_input_format_details_);
   if (result != ZX_OK) {
     events_->onCoreCodecFailCodec("In CodecAdapterH264::CoreCodecInit(), EncoderInit failed");
@@ -64,16 +80,9 @@ void CodecAdapterH264::CoreCodecInit(
 }
 
 void CodecAdapterH264::CoreCodecStartStream() {
-  zx_status_t status;
-
-  {  // scope lock
-    std::lock_guard<std::mutex> lock(lock_);
-    status = device_->StartEncoder();
-    if (status != ZX_OK) {
-      events_->onCoreCodecFailCodec("StartStream() failed");
-      return;
-    }
-  }  // ~lock
+  ZX_DEBUG_ASSERT(!output_sink_->HasPendingPacket());
+  // The keep_data true keeps any free buffers and free packets.
+  output_sink_->Reset(/*keep_data=*/true);
 }
 
 void CodecAdapterH264::CoreCodecQueueInputFormatDetails(
@@ -115,6 +124,8 @@ void CodecAdapterH264::CoreCodecStopStream() {
     is_cancelling_input_processing_ = true;
   }
 
+  output_sink_->StopAllWaits();
+
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     std::condition_variable stop_input_processing_condition;
@@ -130,7 +141,7 @@ void CodecAdapterH264::CoreCodecStopStream() {
       }  // ~lock
       for (auto& input_item : leftover_input_items) {
         if (input_item.is_packet()) {
-          events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
+          events_->onCoreCodecInputPacketDone(input_item.packet());
         }
       }
       stop_input_processing_condition.notify_all();
@@ -143,7 +154,6 @@ void CodecAdapterH264::CoreCodecStopStream() {
 
   // Stop processing queued frames.
   device_->StopEncoder();
-  device_->WaitForIdle();
 }
 
 void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
@@ -153,57 +163,15 @@ void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buf
   } else if (port == kOutputPort) {
     const char* kOutputBufferName = "H264OutputBuffer";
     buffer->vmo().set_property(ZX_PROP_NAME, kOutputBufferName, strlen(kOutputBufferName));
+    staged_buffers_.Push(buffer);
   }
-  if (port != kOutputPort) {
-    return;
-  }
-  ZX_DEBUG_ASSERT(port == kOutputPort);
-  all_output_buffers_.push_back(buffer);
 }
 
 void CodecAdapterH264::CoreCodecConfigureBuffers(
-    CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {
-  if (port != kOutputPort) {
-    return;
-  }
-  ZX_DEBUG_ASSERT(port == kOutputPort);
-  // output
-
-  ZX_DEBUG_ASSERT(all_output_packets_.empty());
-  ZX_DEBUG_ASSERT(free_output_packets_.empty());
-  ZX_DEBUG_ASSERT(!all_output_buffers_.empty());
-  ZX_DEBUG_ASSERT(all_output_buffers_.size() == packets.size());
-  for (auto& packet : packets) {
-    all_output_packets_.push_back(packet.get());
-    free_output_packets_.push_back(packet.get()->packet_index());
-  }
-}
+    CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {}
 
 void CodecAdapterH264::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
-  if (packet->is_new()) {
-    packet->SetIsNew(false);
-    return;
-  }
-  ZX_DEBUG_ASSERT(!packet->is_new());
-
-  // A recycled packet will have a buffer set because the packet is in-flight
-  // until put on the free list, and has a buffer associated while in-flight.
-  const CodecBuffer* buffer = packet->buffer();
-  ZX_DEBUG_ASSERT(buffer);
-
-  // Getting the buffer is all we needed the packet for.  The packet won't get
-  // re-used until it goes back on the free list below.
-  packet->SetBuffer(nullptr);
-
-  {  // scope lock
-    std::lock_guard<std::mutex> lock(lock_);
-    free_output_packets_.push_back(packet->packet_index());
-  }  // ~lock
-
-  // Recycle can happen while stopped, but this CodecAdapater has no way yet
-  // to return frames while stopped, or to re-use buffers/frames across a
-  // stream switch.  Any new stream will request allocation of new frames.
-  device_->ReturnBuffer(buffer);
+  output_sink_->AddOutputPacket(packet);
 }
 
 void CodecAdapterH264::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
@@ -218,22 +186,21 @@ void CodecAdapterH264::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
     ZX_ASSERT(input_queue_.empty());
   } else {
     ZX_DEBUG_ASSERT(port == kOutputPort);
-
-    // The old all_output_buffers_ are no longer valid.
-    all_output_buffers_.clear();
-    all_output_packets_.clear();
-    free_output_packets_.clear();
+    output_sink_->Reset();
   }
-  buffer_settings_[port].reset();
 }
 
 std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
 CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
     uint64_t stream_lifetime_ordinal, uint64_t new_output_buffer_constraints_version_ordinal,
     bool buffer_constraints_action_required) {
-  constexpr uint32_t kDefaultPacketCountForClient = 2;
-
-  uint32_t per_packet_buffer_bytes = kOutputPerPacketBufferBytesMax;
+  // sysmem constraints take priority over StreamOutputConstraints so just use some defaults that
+  // pass checks here
+  constexpr uint32_t kDefaultPacketCountForClient = 1;
+  constexpr uint32_t kDefaultPacketCountForServer = 1;
+  constexpr uint32_t kRecommendedMaxPacketCount = std::numeric_limits<uint32_t>::max();
+  constexpr uint32_t kServerMaxPacketCount = std::numeric_limits<uint32_t>::max();
+  constexpr uint32_t kClientMaxPacketCount = std::numeric_limits<uint32_t>::max();
 
   std::unique_ptr<fuchsia::media::StreamOutputConstraints> config =
       std::make_unique<fuchsia::media::StreamOutputConstraints>();
@@ -253,32 +220,21 @@ CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
   // 0 is intentionally invalid - the client must fill out this field.
   default_settings->set_buffer_lifetime_ordinal(0)
       .set_buffer_constraints_version_ordinal(new_output_buffer_constraints_version_ordinal)
-      .set_packet_count_for_server(min_buffer_count_[kOutputPort])
+      .set_packet_count_for_server(kDefaultPacketCountForServer)
       .set_packet_count_for_client(kDefaultPacketCountForClient)
-      // Packed NV12 (no extra padding, min UV offset, min stride).
-      .set_per_packet_buffer_bytes(per_packet_buffer_bytes)
+      .set_per_packet_buffer_bytes(kOutputBufferMinSizeBytes)
       .set_single_buffer_mode(false);
 
   // For the moment, let's tell the client to allocate this exact size.
-  constraints->set_per_packet_buffer_bytes_min(per_packet_buffer_bytes)
-      .set_per_packet_buffer_bytes_recommended(per_packet_buffer_bytes)
-      .set_per_packet_buffer_bytes_max(per_packet_buffer_bytes)
-
-      // The hardware only needs min_buffer_count_ buffers - more aren't better.
-      .set_packet_count_for_server_min(min_buffer_count_[kOutputPort])
-      .set_packet_count_for_server_recommended(min_buffer_count_[kOutputPort])
-      .set_packet_count_for_server_recommended_max(min_buffer_count_[kOutputPort])
-      .set_packet_count_for_server_max(min_buffer_count_[kOutputPort])
-      .set_packet_count_for_client_min(0);
-
-  // Ensure that if the client allocates its max + the server max that it won't go over the hardware
-  // limit (max_buffer_count).
-  if (max_buffer_count_[kOutputPort] <= min_buffer_count_[kOutputPort]) {
-    events_->onCoreCodecFailCodec("Impossible for client to satisfy buffer counts");
-    return nullptr;
-  }
-  constraints->set_packet_count_for_client_max(max_buffer_count_[kOutputPort] -
-                                               min_buffer_count_[kOutputPort]);
+  constraints->set_per_packet_buffer_bytes_min(kOutputBufferMinSizeBytes)
+      .set_per_packet_buffer_bytes_recommended(kOutputBufferMinSizeBytes)
+      .set_per_packet_buffer_bytes_max(kOutputBufferMaxSizeBytes)
+      .set_packet_count_for_server_min(kDefaultPacketCountForServer)
+      .set_packet_count_for_server_recommended(kDefaultPacketCountForServer)
+      .set_packet_count_for_server_recommended_max(kRecommendedMaxPacketCount)
+      .set_packet_count_for_server_max(kServerMaxPacketCount)
+      .set_packet_count_for_client_min(0)
+      .set_packet_count_for_client_max(kClientMaxPacketCount);
 
   // False because it's not required and not encouraged for a video encoder
   // output to allow single buffer mode.
@@ -316,36 +272,19 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
 
-  // The CodecImpl already checked that these are set and that they're
-  // consistent with packet count constraints.
-  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
-  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-
   if (port == kInputPort) {
-    // We don't override CoreCodecBuildNewInputConstraints() for now, so pick these up from what was
-    // set by default implementation of CoreCodecBuildNewInputConstraints().
-    min_buffer_count_[kInputPort] = stream_buffer_constraints.packet_count_for_server_min();
-    max_buffer_count_[kInputPort] = stream_buffer_constraints.packet_count_for_server_max();
+    result.min_buffer_count_for_camping = kInputMinBufferCountForCamping;
+    result.max_buffer_count = kInputMaxBufferCount;
+  } else {
+    result.min_buffer_count_for_camping = kOutputMinBufferCountForCamping;
+    result.max_buffer_count = kOutputMaxBufferCount;
   }
-
-  ZX_DEBUG_ASSERT(min_buffer_count_[port] != 0);
-  ZX_DEBUG_ASSERT(max_buffer_count_[port] != 0);
-
-  result.min_buffer_count_for_camping = min_buffer_count_[port];
-
-  // Some slack is nice overall, but avoid having each participant ask for
-  // dedicated slack.  Using sysmem the client will ask for it's own buffers for
-  // camping and any slack, so the codec doesn't need to ask for any extra on
-  // behalf of the client.
-  ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
-  ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
-  result.max_buffer_count = max_buffer_count_[port];
 
   uint32_t per_packet_buffer_bytes_min;
   uint32_t per_packet_buffer_bytes_max;
   if (port == kOutputPort) {
-    per_packet_buffer_bytes_min = kOutputPerPacketBufferBytesMin;
-    per_packet_buffer_bytes_max = kOutputPerPacketBufferBytesMax;
+    per_packet_buffer_bytes_min = kOutputBufferMinSizeBytes;
+    per_packet_buffer_bytes_max = kOutputBufferMaxSizeBytes;
   } else {
     ZX_DEBUG_ASSERT(port == kInputPort);
     // NV12, based on min stride.
@@ -449,7 +388,6 @@ void CodecAdapterH264::CoreCodecSetBufferCollectionInfo(
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
                     fuchsia::sysmem::PixelFormatType::NV12);
   }
-  buffer_settings_[port].emplace(buffer_collection_info.settings);
 }
 
 fuchsia::media::StreamOutputFormat CodecAdapterH264::CoreCodecGetOutputFormat(
@@ -463,32 +401,22 @@ fuchsia::media::StreamOutputFormat CodecAdapterH264::CoreCodecGetOutputFormat(
 
   fuchsia::media::VideoFormat video_format;
 
+  auto compressed_format = fuchsia::media::VideoCompressedFormat();
+  compressed_format.set_temp_field_todo_remove(0);
+  video_format.set_compressed(std::move(compressed_format));
+
   result.mutable_format_details()->mutable_domain()->set_video(std::move(video_format));
 
   return result;
 }
 
-void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigPrepare() {
-  // For this adapter, the core codec just needs us to get new frame buffers
-  // set up, so nothing to do here.
-  //
-  // CoreCodecEnsureBuffersNotConfigured() will run soon.
-}
+void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigPrepare() {}
 
 void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigFinish() {
-  // Now that the client has configured output buffers, hand them to encoder.
-
-  std::vector<const CodecBuffer*> buffers;
-  {  // scope lock
-    std::lock_guard<std::mutex> lock(lock_);
-    for (uint32_t i = 0; i < all_output_buffers_.size(); i++) {
-      ZX_DEBUG_ASSERT(all_output_buffers_[i]->index() == i);
-      ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index() == i);
-      buffers.push_back(all_output_buffers_[i]);
-    }
-  }  // ~lock
-
-  device_->SetOutputBuffers(std::move(buffers));
+  std::optional<const CodecBuffer*> staged_buffer;
+  while ((staged_buffer = staged_buffers_.Pop())) {
+    output_sink_->AddOutputBuffer(*staged_buffer);
+  }
 }
 
 void CodecAdapterH264::CoreCodecSetSecureMemoryMode(
@@ -539,6 +467,12 @@ void CodecAdapterH264::ProcessInput() {
     is_process_input_queued_ = false;
   }  // ~lock
 
+  auto status = device_->EnsureHwInited();
+  if (status != ZX_OK) {
+    LOG(ERROR, "failed to init hw");
+    return;
+  }
+
   while (true) {
     CodecInputItem item = DequeueInputItem();
 
@@ -551,27 +485,63 @@ void CodecAdapterH264::ProcessInput() {
 
       // TODO(afoxley) handle setting up new encode params here
       device_->SetEncodeParams(std::move(format_details));
+
+      if (output_sink_->OutputBufferCount() < kOutputMinBufferCountForCamping) {
+        // Currently, this will only run if output buffers aren't presently configured.  In future,
+        // new encode params may imply a need to re-configure output buffers that are already
+        // configured but too small or too few in number for higher output bitrate.
+        events_->onCoreCodecMidStreamOutputConstraintsChange(
+            /*output_re_config_required=*/true);
+      }
       continue;
     }
 
     if (item.is_end_of_stream()) {
+      // TODO(afoxley) possibly redundant with Flush at end of function
+      output_sink_->Flush();
       events_->onCoreCodecOutputEndOfStream(/*error_detected_before=*/false);
       continue;
     }
 
-    ZX_DEBUG_ASSERT(item.is_packet());
+    auto return_packet =
+        fit::defer([this, &item] { events_->onCoreCodecInputPacketDone(item.packet()); });
 
-    uint8_t* data = item.packet()->buffer()->base() + item.packet()->start_offset();
-    uint32_t len = item.packet()->valid_length_bytes();
-
-    device_->EncodeFrame(item.packet()->buffer(), data, len);
-
-    events_->onCoreCodecInputPacketDone(item.packet());
-    // At this point CodecInputItem is holding a packet pointer which may get
-    // re-used in a new CodecInputItem, but that's ok since CodecInputItem is
-    // going away here.
+    // errors are logged and handled closer to source in callback
     //
-    // ~item
+    // TODO(afoxley) We may need to have the hardware encode into a large-ish output buffer then
+    // break it up into smaller sub-NAL chunks for sending to output. This means adjusting the
+    // output chunk size passed in here.
+    (void)output_sink_->NextOutputBlock(
+        kOutputBufferMinSizeBytes, std::nullopt,
+        [this,
+         &item](OutputSink::OutputBlock output_block) -> std::pair<size_t, OutputSink::UserStatus> {
+          if (device_->SetInputBuffer(item.packet()->buffer()) != ZX_OK) {
+            events_->onCoreCodecFailCodec("Failed to setup input buffer");
+            return {0, OutputSink::kError};
+          }
+
+          // input frames are expected to start at buffer offset 0
+          if (item.packet()->start_offset()) {
+            events_->onCoreCodecFailCodec("Input has offset");
+            return {0, OutputSink::kError};
+          }
+
+          device_->SetOutputBuffer(output_block.buffer);
+          uint32_t output_len = 0;
+          auto status = device_->EncodeFrame(&output_len);
+
+          if (status != ZX_OK) {
+            ENCODE_ERROR("Encoding failed: %d", status);
+            events_->onCoreCodecFailCodec("Encoding failed: %d", status);
+            // TODO(afoxley) soft reset?
+            return {0, OutputSink::kError};
+          }
+
+          return {output_len, OutputSink::kSuccess};
+        });
+
+    // force one packet per buffer
+    output_sink_->Flush();
   }
 }
 
@@ -581,15 +551,4 @@ void CodecAdapterH264::OnCoreCodecFailStream(fuchsia::media::StreamError error) 
     is_stream_failed_ = true;
   }
   events_->onCoreCodecFailStream(error);
-}
-
-CodecPacket* CodecAdapterH264::GetFreePacket() {
-  std::lock_guard<std::mutex> lock(lock_);
-  // The h264 decoder won't repeatedly output a buffer multiple times
-  // concurrently, so a free buffer (for which the caller needs a packet)
-  // implies a free packet.
-  ZX_DEBUG_ASSERT(!free_output_packets_.empty());
-  uint32_t free_index = free_output_packets_.back();
-  free_output_packets_.pop_back();
-  return all_output_packets_[free_index];
 }

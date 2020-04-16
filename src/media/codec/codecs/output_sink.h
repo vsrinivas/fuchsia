@@ -113,6 +113,12 @@ class OutputSink {
   // This call is allowed from any thread.
   void Reset(bool keep_data = false);
 
+  // Returns whether any packet data has been queued but not sent
+  bool HasPendingPacket();
+
+  // Returns the count of added output buffers
+  uint32_t OutputBufferCount();
+
  private:
   bool CurrentPacketHasRoomFor(size_t write_size);
 
@@ -126,6 +132,7 @@ class OutputSink {
   BlockingMpscQueue<CodecPacket*> free_output_packets_;
   BlockingMpscQueue<const CodecBuffer*> free_output_buffers_;
 
+  uint32_t buffer_count_;
   CodecPacket* current_packet_ = nullptr;
 };
 

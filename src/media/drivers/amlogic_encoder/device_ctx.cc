@@ -367,6 +367,80 @@ zx_status_t DeviceCtx::BufferAlloc() {
   return ZX_OK;
 }
 
+zx_status_t DeviceCtx::SetInputBuffer(const CodecBuffer* buffer) {
+  HcodecQdctMbStartPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
+  HcodecQdctMbEndPtr::Get()
+      .FromValue(buffer->physical_base() + buffer->size() - 1)
+      .WriteTo(&dosbus_);
+  HcodecQdctMbWrPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
+  HcodecQdctMbRdPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
+  HcodecQdctMbBuff::Get().FromValue(0).WriteTo(&dosbus_);
+
+  input_y_canvas_.Reset();
+  input_uv_canvas_.Reset();
+
+  uint32_t canvas_h = fbl::round_up(encoder_height_, kCanvasMinHeightAlignment);
+  uint32_t canvas_w = fbl::round_up(encoder_width_, kCanvasMinWidthAlignment);
+
+  zx::vmo dup_vmo;
+  auto status = buffer->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // TODO(afoxley) We could pre-setup these canvas handles in BufferCollection setup. Need to decide
+  // on a reasonable limit for encoder canvas usage.
+  status = CanvasConfig(dup_vmo.get(), canvas_w, canvas_h, /*offset=*/0, &input_y_canvas_,
+                        CANVAS_FLAGS_READ);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = buffer->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = CanvasConfig(dup_vmo.get(), canvas_w, canvas_h / 2, /*offset=*/canvas_w * canvas_h,
+                        &input_uv_canvas_, CANVAS_FLAGS_READ);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  input_canvas_ids_ = ((input_uv_canvas_.id()) << 8) | input_y_canvas_.id();
+  input_format_ = InputFormat::kNv12;
+  noise_reduction_ = NoiseReductionMode::kSNROnly;
+
+  return ZX_OK;
+}
+
+void DeviceCtx::SetOutputBuffer(const CodecBuffer* buffer) {
+  HcodecVlcVbMemCtl::Get()
+      .FromValue(0)
+      .set_bit_31(1)
+      .set_bits_30_24(0x3f)
+      .set_bits_23_16(0x20)
+      .set_bits_1_0(0x2)
+      .WriteTo(&dosbus_);
+
+  HcodecVlcVbStartPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
+  HcodecVlcVbWrPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
+  HcodecVlcVbSwRdPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
+  HcodecVlcVbEndPtr::Get()
+      .FromValue(buffer->physical_base() + buffer->size() - 1)
+      .WriteTo(&dosbus_);
+
+  // TODO(afoxley) Ask amlogic what these bits do.
+  HcodecVlcVbControl::Get().FromValue(0).set_bit_0(1).WriteTo(&dosbus_);
+  HcodecVlcVbControl::Get()
+      .FromValue(0)
+      .set_bit_14(0)
+      .set_bits_5_3(0x7)
+      .set_bit_1(1)
+      .set_bit_0(0)
+      .WriteTo(&dosbus_);
+}
+
 zx_status_t DeviceCtx::PowerOn() {
   // ungate dos clk
   // TODO(45193) shared with vdec
@@ -566,7 +640,18 @@ zx_status_t DeviceCtx::EncoderInit(const fuchsia::media::FormatDetails& format_d
     return status;
   }
 
-  status = LoadFirmware();
+  needs_reset_ = true;
+  return ZX_OK;
+}
+
+zx_status_t DeviceCtx::EnsureHwInited() {
+  if (!needs_reset_) {
+    return ZX_OK;
+  }
+
+  needs_reset_ = false;
+
+  auto status = LoadFirmware();
   if (status != ZX_OK) {
     return status;
   }
@@ -578,15 +663,19 @@ zx_status_t DeviceCtx::EncoderInit(const fuchsia::media::FormatDetails& format_d
   return ZX_OK;
 }
 
-zx_status_t DeviceCtx::StartEncoder() { return ZX_OK; }
-
 zx_status_t DeviceCtx::StopEncoder() { return ZX_OK; }
-zx_status_t DeviceCtx::WaitForIdle() { return ZX_OK; }
-zx_status_t DeviceCtx::EncodeFrame(const CodecBuffer* buffer, uint8_t* data, uint32_t len) {
+
+zx_status_t DeviceCtx::EncodeFrame(uint32_t* output_len) {
+  // TODO(afoxley)
+  // -config hw for encoding and start
+  //  -if buffer is in CPU domain, flush cache on it
+  //  -invalidate output buffer as well
+  // -wait for interrupt
+  // -check status and read output bytes
+  //  -cache invalidate output buffer
+  *output_len = 0;
   return ZX_OK;
 }
-void DeviceCtx::ReturnBuffer(const CodecBuffer* buffer) {}
-void DeviceCtx::SetOutputBuffers(std::vector<const CodecBuffer*> buffers) {}
 
 void DeviceCtx::SetEncodeParams(fuchsia::media::FormatDetails format_details) {}
 

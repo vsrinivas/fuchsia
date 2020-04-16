@@ -13,7 +13,7 @@ use std::rc::Rc;
 use stream_processor_test::*;
 
 #[test]
-fn h264_stream_init() -> Result<()> {
+fn h264_stream_output_generated() -> Result<()> {
     let test_case = H264EncoderTestCase {
         input_format: sysmem::ImageFormat2 {
             pixel_format: sysmem::PixelFormat {
@@ -21,18 +21,18 @@ fn h264_stream_init() -> Result<()> {
                 has_format_modifier: false,
                 format_modifier: sysmem::FormatModifier { value: 0 },
             },
-            coded_width: 16,
-            coded_height: 16,
-            bytes_per_row: 16,
-            display_width: 16,
-            display_height: 12,
+            coded_width: 32,
+            coded_height: 32,
+            bytes_per_row: 32,
+            display_width: 32,
+            display_height: 32,
             layers: 0,
             color_space: sysmem::ColorSpace { type_: sysmem::ColorSpaceType::Rec709 },
             has_pixel_aspect_ratio: false,
             pixel_aspect_ratio_width: 0,
             pixel_aspect_ratio_height: 0,
         },
-        num_frames: 0,
+        num_frames: 1,
         settings: Rc::new(move || -> EncoderSettings {
             EncoderSettings::H264(H264EncoderSettings {})
         }),

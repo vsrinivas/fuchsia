@@ -13,6 +13,8 @@
 
 #include <fbl/macros.h>
 
+#include "src/media/codec/codecs/output_sink.h"
+
 struct CodecFrame;
 class DeviceCtx;
 struct VideoFrame;
@@ -62,17 +64,13 @@ class CodecAdapterH264 : public CodecAdapter {
   void QueueInputItem(CodecInputItem input_item);
   CodecInputItem DequeueInputItem();
   void ProcessInput();
-  bool ParseAndDeliverCodecOobBytes();
 
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);
-  CodecPacket* GetFreePacket();
 
   DeviceCtx* device_ = nullptr;
 
   fuchsia::media::FormatDetails initial_input_format_details_;
   fuchsia::media::FormatDetails latest_input_format_details_;
-
-  std::optional<fuchsia::sysmem::SingleBufferSettings> buffer_settings_[kPortCount];
 
   // Only StreamControl ever adds anything to input_queue_.  Only
   // processing_thread_ ever removes anything from input_queue_, including when
@@ -81,23 +79,21 @@ class CodecAdapterH264 : public CodecAdapter {
   thrd_t input_processing_thread_ = 0;
   bool is_process_input_queued_ = false;
 
+  std::optional<OutputSink> output_sink_;
+
+  // Buffers the user is in the process of adding.
+  // TODO(afoxley): Remove when manual buffer additions are removed in favor
+  // of sysmem.
+  MpscQueue<const CodecBuffer*> staged_buffers_;
+
   // Skip any further processing in ProcessInput().
   bool is_cancelling_input_processing_ = false;
 
-  std::vector<const CodecBuffer*> all_output_buffers_;
-  std::vector<CodecPacket*> all_output_packets_;
-  std::vector<uint32_t> free_output_packets_;
-
-  uint32_t min_buffer_count_[kPortCount] = {};
-  uint32_t max_buffer_count_[kPortCount] = {};
   uint32_t width_ = 0;
   uint32_t height_ = 0;
   uint32_t min_stride_ = 0;
-  uint32_t display_width_ = 0;
-  uint32_t display_height_ = 0;
 
   bool is_input_end_of_stream_queued_ = false;
-
   bool is_stream_failed_ = false;
 
   CodecAdapterH264() = delete;

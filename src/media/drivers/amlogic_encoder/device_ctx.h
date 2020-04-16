@@ -41,6 +41,17 @@
 constexpr uint32_t kCanvasMinWidthAlignment = 32;
 constexpr uint32_t kCanvasMinHeightAlignment = 16;
 
+enum InputFormat {
+  kNv12 = 3,
+};
+
+enum NoiseReductionMode {
+  kDisabled = 0,
+  kSNROnly = 1,
+  kTNROnly = 2,
+  k3DNR = 3,
+};
+
 enum class SocType {
   kUnknown,
   // These should be ordered from oldest to newest.
@@ -103,14 +114,15 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   // instead of InterfacePtr so that the caller can bind to the dispatcher.
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> ConnectToSysmem();
 
-  // encoder control, runs on input processing thread
+  // encoder control
   zx_status_t EncoderInit(const fuchsia::media::FormatDetails& format_details);
-  zx_status_t StartEncoder();
+
+  zx_status_t EnsureHwInited();
   zx_status_t StopEncoder();
-  zx_status_t WaitForIdle();
-  zx_status_t EncodeFrame(const CodecBuffer* buffer, uint8_t* data, uint32_t len);
-  void ReturnBuffer(const CodecBuffer* buffer);
-  void SetOutputBuffers(std::vector<const CodecBuffer*> buffers);
+
+  zx_status_t SetInputBuffer(const CodecBuffer* buffer);
+  void SetOutputBuffer(const CodecBuffer* buffer);
+  zx_status_t EncodeFrame(uint32_t* output_len);
 
   // TODO(afoxley), this should likely take some encoder specific info struct. The intention is to
   // support quality adjustments on the fly.
@@ -119,7 +131,6 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
  private:
   void ShutDown();
 
-  zx_status_t EnsureHwInited();
   zx_status_t PowerOn();
   void InterruptInit();
   zx_status_t BufferAlloc();
@@ -131,7 +142,8 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   zx_status_t CanvasConfig(zx_handle_t vmo, uint32_t height, uint32_t bytes_per_row,
                            uint32_t offset, ScopedCanvasId* canvas_id_out, uint32_t alloc_flag);
 
-zx_status_t CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* y_canvas, ScopedCanvasId* uv_canvas, uint32_t* packed_canvas_ids);
+  zx_status_t CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* y_canvas,
+                                  ScopedCanvasId* uv_canvas, uint32_t* packed_canvas_ids);
 
   ddk::PDevProtocolClient pdev_;
   ddk::AmlogicCanvasProtocolClient canvas_;
@@ -146,6 +158,7 @@ zx_status_t CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* y_canvas, S
   zx::vmo firmware_vmo_;
   uintptr_t firmware_ptr_ = 0;
   uint64_t firmware_size_ = 0;
+  bool needs_reset_ = false;
 
   EncoderStatus hw_status_;
 
@@ -180,6 +193,8 @@ zx_status_t CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* y_canvas, S
   uint32_t frame_number_ = 0;
   // reset to 0 for IDR and imcrement by 2 for NON-IDR
   uint32_t pic_order_cnt_lsb_ = 0;
+  NoiseReductionMode noise_reduction_;
+  InputFormat input_format_;
 
   ScopedCanvasId input_y_canvas_;
   ScopedCanvasId input_uv_canvas_;
@@ -189,6 +204,7 @@ zx_status_t CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* y_canvas, S
   ScopedCanvasId dec1_uv_canvas_;
   uint32_t dblk_buf_canvas_;
   uint32_t ref_buf_canvas_;
+  uint32_t input_canvas_ids_;
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_ENCODER_DEVICE_CTX_H_

@@ -35,6 +35,7 @@ if (target_cpu == "arm64") {
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/fidl/cpp",
       "//src/devices/lib/driver",
+      "//src/media/codec/codecs:output_sink",
       "//src/media/lib/codec_impl",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/async-loop-cpp",
