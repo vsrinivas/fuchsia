@@ -10,6 +10,7 @@ use crate::{
 use omaha_client::{
     clock,
     common::{AppSet, ProtocolState, UpdateCheckSchedule},
+    protocol::response::Response,
     state_machine::{update_check, InstallProgress, State, StateMachineEvent, UpdateCheckError},
     storage::Storage,
 };
@@ -66,6 +67,7 @@ where
             StateMachineEvent::InstallProgressChange(progress) => {
                 self.on_progress_change(progress).await
             }
+            StateMachineEvent::OmahaServerResponse(response) => self.on_omaha_response(response),
         }
     }
 
@@ -109,6 +111,10 @@ where
 
     async fn on_progress_change(&mut self, progress: InstallProgress) {
         FidlServer::on_progress_change(Rc::clone(&self.fidl_server), progress).await
+    }
+
+    fn on_omaha_response(&mut self, _response: Response) {
+        // TODO(50039): cache target version
     }
 }
 

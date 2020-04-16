@@ -5,6 +5,7 @@
 use crate::{
     common::{ProtocolState, UpdateCheckSchedule},
     installer::ProgressObserver,
+    protocol::response::Response,
     state_machine::{update_check, State, UpdateCheckError},
 };
 use futures::{channel::mpsc, future::BoxFuture, prelude::*};
@@ -17,6 +18,7 @@ pub enum StateMachineEvent {
     ProtocolStateChange(ProtocolState),
     UpdateCheckResult(Result<update_check::Response, UpdateCheckError>),
     InstallProgressChange(InstallProgress),
+    OmahaServerResponse(Response),
 }
 
 #[derive(Debug)]

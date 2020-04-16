@@ -712,6 +712,8 @@ where
 
         info!("result: {:?}", response);
 
+        co.yield_(StateMachineEvent::OmahaServerResponse(response.clone())).await;
+
         let statuses = Self::get_app_update_statuses(&response);
         for (app_id, status) in &statuses {
             // TODO:  Report or metric statuses other than 'no-update' and 'ok'
@@ -1113,7 +1115,7 @@ mod tests {
         },
         metrics::{MockMetricsReporter, StubMetricsReporter},
         policy::{MockPolicyEngine, StubPolicyEngine},
-        protocol::Cohort,
+        protocol::{response, Cohort},
         storage::MemStorage,
     };
     use anyhow::anyhow;
@@ -1715,6 +1717,52 @@ mod tests {
                 ProtocolState { consecutive_failed_update_checks: 1, ..ProtocolState::default() };
 
             assert_eq!(actual_protocol_states, vec![expected_protocol_state]);
+        });
+    }
+
+    #[test]
+    fn test_observe_omaha_server_response() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "cohort": "1",
+                "cohortname": "stable-channel",
+                "updatecheck": {
+                  "status": "noupdate"
+                }
+              }]
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let expected_omaha_response = response::parse_json_response(&response).unwrap();
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+
+            let actual_omaha_response = StateMachineBuilder::new(
+                StubPolicyEngine,
+                http,
+                StubInstaller::default(),
+                StubTimer,
+                StubMetricsReporter,
+                Rc::new(Mutex::new(StubStorage)),
+                config,
+                make_test_app_set(),
+            )
+            .oneshot_check(CheckOptions::default())
+            .await
+            .filter_map(|event| {
+                future::ready(match event {
+                    StateMachineEvent::OmahaServerResponse(response) => Some(response),
+                    _ => None,
+                })
+            })
+            .collect::<Vec<response::Response>>()
+            .await;
+
+            assert_eq!(actual_omaha_response, vec![expected_omaha_response]);
         });
     }
 
