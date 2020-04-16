@@ -1737,6 +1737,12 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:16
 
 From //src/connectivity/network/netcfg/BUILD.gn:12
 
+### netsvc_extra_defines
+
+**Current value (from the default):** `[]`
+
+From //zircon/system/core/netsvc/BUILD.gn:19
+
 ### omaha_app_id
 Default app id will always return no update.
 
@@ -2454,19 +2460,6 @@ Fuchsia SDK
 **Current value (from the default):** `false`
 
 From //build/fuchsia/sdk.gni:8
-
-### v2_components_allowed_in_cache
-Used to specify the v2 components which are allowed in cache or universe.
-There are some v2 components that _need_ to be in universe (for example, components that
-are testonly). Also, there are some v2 components which may safely be in universe because
-they are run by a component_manager that's under appmgr.
-Regardless, these do not seem to be causing any issues, so we'll allowlist them for now
-to prevent us from having to temporarily make big changes to the state of the world.
-TODO(46491) remove allowlist and cfv2 tag once CFv2 uses pkg-resolver to launch components.
-
-**Current value (from the default):** `["test_manager_envelope.cm", "test_manager.cm", "memfs.cm", "remote-control.cm", "gtest_runner.cm", "rust-test-runner.cm", "a11y_manager.cm", "a11y_tts_log_engine.cm"]`
-
-From //build/allowlist_v2.gni:13
 
 ### vbmeta_a_partition
 
