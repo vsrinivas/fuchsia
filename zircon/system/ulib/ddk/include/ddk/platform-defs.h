@@ -265,7 +265,7 @@ __BEGIN_CDECLS
 
 // ARM
 #define PDEV_VID_ARM                18
-#define PDEV_PID_ISP                1
+#define PDEV_PID_ARM_ISP            1
 #define PDEV_PID_GDC                2
 #define PDEV_PID_GE2D               4
 // TODO(CAM-138): This is a temporary hack. Remove when new driver validated.
