@@ -16,6 +16,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"time"
 
@@ -234,6 +235,14 @@ func runTest(ctx context.Context, test build.Test, t tester) (*testrunner.TestRe
 	name := test.Path
 	if test.OS == "fuchsia" {
 		name = test.PackageURL
+	}
+
+	// If test is a multiplier test, the name should end in a number.
+	// Re-append that to the result name.
+	re := regexp.MustCompile(`\([0-9]*\)`)
+	index := re.FindString(test.Name)
+	if index != "" {
+		name += "-" + index
 	}
 
 	// Record the test details in the summary.
