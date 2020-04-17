@@ -178,6 +178,7 @@ fn derive_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Error> {
     let update_stmts = unit_fields.iter().map(|f| f.update_stmt());
 
     Ok(quote! {
+        #[derive(Default)]
         struct #inspect_data_ident {
             #(#struct_decls,)*
             _inspect_node: ::fuchsia_inspect::Node,

@@ -4,8 +4,9 @@
 
 #![cfg(test)]
 
+use core::fmt;
 use fuchsia_inspect::{assert_inspect_tree, Inspector};
-use fuchsia_inspect_derive::Unit;
+use fuchsia_inspect_derive::{IDebug, IValue, Unit};
 use serde::Serialize;
 
 // TODO(49049): Add negative tests when compile failure tests are possible.
@@ -28,6 +29,12 @@ struct Yakling {
     age: u8,
 }
 
+#[derive(Debug)]
+enum Horse {
+    Arabian,
+    Icelandic,
+}
+
 #[derive(Unit, Default)]
 struct BasicTypes {
     t_u8: u8,
@@ -47,8 +54,23 @@ struct BasicTypes {
     t_vec_u8: Vec<u8>,
 }
 
+// Compile test to check that derive of Default and Debug works with IOwned wrappers
+#[derive(Default, Debug)]
+struct _Composite {
+    name: IValue<String>,
+    age: IDebug<u8>,
+}
+
+// Display cannot be derived with std, so we require that the fields are `Display` instead.
+// This is important so that 3p crates such as `Derivative` can auto-derive `Display`.
+impl fmt::Display for _Composite {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "name: {}, age: {}", self.name, self.age)
+    }
+}
+
 #[test]
-fn primitive() {
+fn unit_primitive() {
     let inspector = Inspector::new();
     let root = inspector.root();
     let mut num = 127i8;
@@ -62,7 +84,7 @@ fn primitive() {
 }
 
 #[test]
-fn flat() {
+fn unit_flat() {
     let inspector = Inspector::new();
     let root = inspector.root();
     let mut yakling = Yakling { name: "Lil Sebastian".to_string(), age: 5 };
@@ -81,7 +103,7 @@ fn flat() {
 }
 
 #[test]
-fn nested() {
+fn unit_nested() {
     let inspector = Inspector::new();
     let root = inspector.root();
     let mut yak = Yak {
@@ -120,7 +142,7 @@ fn nested() {
 }
 
 #[test]
-fn basic_types() {
+fn unit_basic_types() {
     let inspector = Inspector::new();
     let root = inspector.root();
     let mut basic = BasicTypes::default();
@@ -170,4 +192,122 @@ fn basic_types() {
     });
     std::mem::drop(basic_data);
     assert_inspect_tree!(inspector, root: {});
+}
+
+#[test]
+fn ivalue_primitive() {
+    let inspector = Inspector::new();
+    let root = inspector.root();
+    let mut num = IValue::attached(126i8, &root, "num");
+    assert_inspect_tree!(inspector, root: { num: 126i64 });
+
+    // Modifying num should change its value but not update inspect
+    *num += 1;
+    assert_eq!(*num, 127);
+    assert_inspect_tree!(inspector, root: { num: 126i64 });
+
+    // Now update inspect
+    num.iupdate();
+    assert_inspect_tree!(inspector, root: { num: 127i64 });
+    num.iset(-128);
+    assert_eq!(*num, -128);
+    assert_inspect_tree!(inspector, root: { num: -128i64 });
+    std::mem::drop(num);
+    assert_inspect_tree!(inspector, root: {});
+}
+
+#[test]
+fn ivalue_nested() {
+    let inspector = Inspector::new();
+    let root = inspector.root();
+    let yak_base = Yak {
+        name: "Big Sebastian".to_string(),
+        age: 25,
+        credit_card_no: "12345678".to_string(),
+        yakling: Yakling { name: "Lil Sebastian".to_string(), age: 2 },
+    };
+    let mut yak = IValue::attached(yak_base, &root, "my_yak");
+    assert_inspect_tree!(inspector, root: {
+        my_yak: {
+            name: "Big Sebastian",
+            age: 25i64,
+            yakling: {
+                name: "Lil Sebastian",
+                age: 2u64,
+            },
+        }
+    });
+    yak.yakling.age += 1; // Happy bday, Lil Sebastian
+    yak.name = "Big Sebastian Sr.".to_string();
+    yak.credit_card_no = "1234".to_string();
+    yak.iupdate();
+    assert_inspect_tree!(inspector, root: {
+        my_yak: {
+            name: "Big Sebastian Sr.",
+            age: 25i64,
+            yakling: {
+                name: "Lil Sebastian",
+                age: 3u64,
+            },
+        }
+    });
+    std::mem::drop(yak);
+    assert_inspect_tree!(inspector, root: {});
+}
+
+#[test]
+fn idebug_enum() {
+    let inspector = Inspector::new();
+    let root = inspector.root();
+    let mut horse = IDebug::attached(Horse::Arabian, &root, "horse");
+    assert_inspect_tree!(inspector, root: { horse: "Arabian" });
+    *horse = Horse::Icelandic;
+    horse.iupdate();
+    assert_inspect_tree!(inspector, root: { horse: "Icelandic" });
+    std::mem::drop(horse);
+    assert_inspect_tree!(inspector, root: {});
+}
+
+#[test]
+fn iowned_new() {
+    let mut v = IValue::new(1u64);
+    assert_eq!(*v, 1u64);
+    v.iset(2);
+    assert_eq!(*v, 2u64);
+    let mut d = IDebug::new(1u64);
+    assert_eq!(*d, 1u64);
+    d.iset(2);
+    assert_eq!(*d, 2u64);
+}
+
+#[test]
+fn iowned_default() {
+    let v: IValue<u16> = IValue::default();
+    assert_eq!(*v, 0u16);
+    let d: IDebug<String> = IDebug::default();
+    assert_eq!(d.as_str(), "");
+}
+
+#[test]
+fn iowned_debug() {
+    let mut v = IValue::new(1337u64);
+    assert_eq!(format!("{:?}", v).as_str(), "1337");
+    v.iset(1338);
+    assert_eq!(format!("{:?}", v).as_str(), "1338");
+    let mut d = IDebug::new("hello".to_string());
+    assert_eq!(format!("{:?}", d).as_str(), "\"hello\"");
+    d.iset("hello, world".to_string());
+    assert_eq!(format!("{:?}", d).as_str(), "\"hello, world\"");
+}
+
+#[test]
+fn iowned_display() {
+    let mut v = IValue::new(1337u64);
+    assert_eq!(format!("{}", v).as_str(), "1337");
+    v.iset(1338);
+    assert_eq!(format!("{}", v).as_str(), "1338");
+    let mut d = IDebug::new("hello".to_string());
+    assert_eq!(format!("{}", d).as_str(), "hello");
+    d.iset("hello, world".to_string());
+    assert_eq!(format!("{}", d).as_str(), "hello, world");
 }
