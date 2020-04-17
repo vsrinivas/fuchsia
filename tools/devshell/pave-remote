@@ -72,8 +72,8 @@ if [[ -z "${dir}" ]]; then
   fi
 fi
 
-ssh "${host}" "cd ${dir} && ./.jiri_root/bin/fx build build-archive.tar" || exit $?
-build_dir=$(ssh "${host}" "cd ${dir} && ./.jiri_root/bin/fx get-build-dir")
+ssh "${host}" FUCHSIA_DIR="\"${dir}\"" "\"${dir}\"/.jiri_root/bin/fx build build-archive.tar" || exit $?
+build_dir=$(ssh "${host}" FUCHSIA_DIR="\"${dir}\"" "\"${dir}\"/.jiri_root/bin/fx get-build-dir")
 
 rsync -z -P "${host}":"${build_dir}/build-archive.tar" out/build-archive.tar
 
