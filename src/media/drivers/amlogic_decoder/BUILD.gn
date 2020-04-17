@@ -208,6 +208,7 @@ if (target_cpu == "arm64") {
   copy("test_files") {
     sources = [
       "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
+      "//garnet/test_data/media/third_party/chromium_media_test_data/red-green.h264",
       "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.h264",
       "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9",
       "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9_2",
@@ -271,6 +272,9 @@ if (target_cpu == "arm64") {
         },
         {
           name = "firmware/video_test_data/bear.h264"
+        },
+        {
+          name = "firmware/video_test_data/red-green.h264"
         },
         {
           name = "firmware/video_test_data/test-25fps.h264"

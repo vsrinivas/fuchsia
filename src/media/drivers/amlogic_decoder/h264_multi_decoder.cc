@@ -1089,10 +1089,15 @@ void H264MultiDecoder::StartConfigChange() {
   uint32_t coded_width = media_decoder_->GetPicSize().width();
   uint32_t coded_height = media_decoder_->GetPicSize().height();
   uint32_t stride = fbl::round_up(coded_width, 32u);
-  // TODO(fxb/13483): Plumb SAR through somehow.
   bool has_sar = false;
   uint32_t sar_width = 1;
   uint32_t sar_height = 1;
+  auto sar_size = media_decoder_->GetSarSize();
+  if (sar_size.width() > 0 && sar_size.height() > 0) {
+    has_sar = true;
+    sar_width = sar_size.width();
+    sar_height = sar_size.height();
+  }
   client_->InitializeFrames(std::move(bti), min_frame_count, max_frame_count, coded_width,
                             coded_height, stride, display_width_, display_height_, has_sar,
                             sar_width, sar_height);

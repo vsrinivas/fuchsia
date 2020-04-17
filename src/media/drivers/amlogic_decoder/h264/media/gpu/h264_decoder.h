@@ -156,6 +156,7 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
   VideoCodecProfile GetProfile() const override;
   size_t GetRequiredNumOfPictures() const override;
   size_t GetNumReferenceFrames() const override;
+  gfx::Size GetSarSize() const { return sar_size_; }
 
   // Return true if we need to start a new picture.
   static bool IsNewPrimaryCodedPicture(const H264Picture* curr_pic,
@@ -342,6 +343,8 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
   gfx::Size pic_size_;
   // Output visible cropping rect.
   gfx::Rect visible_rect_;
+
+  gfx::Size sar_size_{-1, -1};
 
   // Profile of input bitstream.
   VideoCodecProfile profile_;

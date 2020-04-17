@@ -28,6 +28,7 @@ class TestFrameAllocator : public TestBasicClient {
 
   void set_use_minimum_frame_count(bool use_minimum) { use_minimum_frame_count_ = use_minimum; }
   void set_pump_function(fit::closure pump_function) { pump_function_ = std::move(pump_function); }
+  bool has_sar() const { return has_sar_; }
 
   zx_status_t InitializeFrames(zx::bti bti, uint32_t min_frame_count, uint32_t max_frame_count,
                                uint32_t coded_width, uint32_t coded_height, uint32_t stride,
@@ -36,6 +37,7 @@ class TestFrameAllocator : public TestBasicClient {
     // Ensure client is allowed to allocate at least 2 frames for itself.
     constexpr uint32_t kMinFramesForClient = 2;
     EXPECT_LE(min_frame_count + kMinFramesForClient, max_frame_count);
+    has_sar_ = has_sar;
     // Post to other thread so that we initialize the frames in a different callstack.
     async::PostTask(loop_.dispatcher(), [this, bti = std::move(bti), min_frame_count,
                                          max_frame_count, coded_width, coded_height, stride]() {
@@ -92,6 +94,7 @@ class TestFrameAllocator : public TestBasicClient {
   std::mt19937 prng_;
   bool use_minimum_frame_count_ = false;
   fit::closure pump_function_;
+  bool has_sar_ = false;
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_

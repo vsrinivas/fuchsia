@@ -1095,10 +1095,12 @@ bool H264Decoder::ProcessSPS(int sps_id, bool* need_new_buffers) {
     return false;
   }
 
+  gfx::Size sar_size(sps->sar_width, sps->sar_height);
+
   VideoCodecProfile new_profile =
       H264Parser::ProfileIDCToVideoCodecProfile(sps->profile_idc);
   if (pic_size_ != new_pic_size || dpb_.max_num_pics() != max_dpb_size ||
-      profile_ != new_profile) {
+      profile_ != new_profile || sar_size != sar_size_) {
     if (!Flush())
       return false;
 #if CHROMIUM_CODE
@@ -1109,6 +1111,7 @@ bool H264Decoder::ProcessSPS(int sps_id, bool* need_new_buffers) {
     *need_new_buffers = true;
     profile_ = new_profile;
     pic_size_ = new_pic_size;
+    sar_size_ = sar_size;
     dpb_.set_max_num_pics(max_dpb_size);
   }
 

@@ -48,9 +48,18 @@ class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvid
 
 class TestH264Multi {
  public:
-  static void DecodeSetStream(const char* input_filename,
-                              uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH], const char* filename,
-                              bool use_parser) {
+  struct VideoInfo {
+    const char* input_filename;
+    uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH];
+    const char* filename;
+    uint32_t coded_width;
+    uint32_t coded_height;
+    uint32_t display_width;
+    uint32_t display_height;
+    uint32_t expected_frame_count;
+    bool has_sar;
+  };
+  static void DecodeSetStream(const VideoInfo& data, bool use_parser) {
     fxl::LogSettings settings;
     settings.min_log_level = -10;
     fxl::SetLogSettings(settings);
@@ -85,24 +94,18 @@ class TestH264Multi {
     std::set<uint64_t> received_pts_set;
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
-      frame_allocator.SetFrameReadyNotifier([&video, &frame_count, &wait_valid, input_filename,
-                                             filename, input_hashes,
-                                             &received_pts_set](std::shared_ptr<VideoFrame> frame) {
+      frame_allocator.SetFrameReadyNotifier([&video, &frame_count, &wait_valid, &data,
+                                             &received_pts_set,
+                                             &frame_allocator](std::shared_ptr<VideoFrame> frame) {
         ++frame_count;
         DLOG("Got frame %d\n", frame_count);
-        EXPECT_EQ(320u, frame->coded_width);
-        EXPECT_EQ(320u, frame->display_width);
-        bool is_bear = input_filename == std::string("video_test_data/bear.h264");
-        if (is_bear) {
-          EXPECT_EQ(192u, frame->coded_height);
-          EXPECT_EQ(180u, frame->display_height);
-        } else {
-          EXPECT_EQ(240u, frame->coded_height);
-          EXPECT_EQ(240u, frame->display_height);
-        }
-        (void)filename;
+        EXPECT_EQ(data.coded_width, frame->coded_width);
+        EXPECT_EQ(data.display_width, frame->display_width);
+        EXPECT_EQ(data.coded_height, frame->coded_height);
+        EXPECT_EQ(data.display_height, frame->display_height);
+        bool is_bear = data.input_filename == std::string("video_test_data/bear.h264");
 #if DUMP_VIDEO_TO_FILE
-        DumpVideoFrameToFile(frame.get(), filename);
+        DumpVideoFrameToFile(frame.get(), data.filename);
 #endif
         io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
         io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
@@ -118,10 +121,12 @@ class TestH264Multi {
           }
         }
 
-        uint8_t md[SHA256_DIGEST_LENGTH];
-        HashFrame(frame.get(), md);
-        EXPECT_EQ(0, memcmp(md, input_hashes[frame_count - 1], sizeof(md)))
-            << "Incorrect hash for frame " << frame_count << ": " << StringifyHash(md);
+        if (data.input_hashes) {
+          uint8_t md[SHA256_DIGEST_LENGTH];
+          HashFrame(frame.get(), md);
+          EXPECT_EQ(0, memcmp(md, data.input_hashes[frame_count - 1], sizeof(md)))
+              << "Incorrect hash for frame " << frame_count << ": " << StringifyHash(md);
+        }
 
         EXPECT_TRUE(frame->has_pts);
         // The "pts" assigned in the TestFrameDataProvider goes in decode order, so we need to allow
@@ -131,10 +136,11 @@ class TestH264Multi {
         EXPECT_EQ(0u, received_pts_set.count(frame->pts));
         received_pts_set.insert(frame->pts);
 
+        EXPECT_EQ(data.has_sar, frame_allocator.has_sar());
+
         video->AssertVideoDecoderLockHeld();
         video->video_decoder()->ReturnFrame(frame);
-        uint32_t expected_frame_count = is_bear ? 26 : 240;
-        if (frame_count == expected_frame_count) {
+        if (frame_count == data.expected_frame_count) {
           wait_valid.set_value();
         }
       });
@@ -143,7 +149,7 @@ class TestH264Multi {
       EXPECT_EQ(ZX_OK, video->video_decoder()->Initialize());
     }
 
-    auto input_h264 = TestSupport::LoadFirmwareFile(input_filename);
+    auto input_h264 = TestSupport::LoadFirmwareFile(data.input_filename);
     ASSERT_NE(nullptr, input_h264);
     video->core()->InitializeDirectInput();
     auto nal_units = SplitNalUnits(input_h264->ptr, input_h264->size);
@@ -161,7 +167,7 @@ class TestH264Multi {
       multi_decoder->DumpStatus();
     }
 
-    EXPECT_LE(26u, frame_count);
+    EXPECT_LE(data.expected_frame_count, frame_count);
 
     video->ClearDecoderInstance();
     video.reset();
@@ -605,19 +611,53 @@ class TestH264Multi {
   }
 };
 
+static TestH264Multi::VideoInfo bear_data = {
+    .input_filename = "video_test_data/bear.h264",
+    .input_hashes = bear_h264_hashes,
+    .filename = "/tmp/bearmultih264.yuv",
+    .coded_width = 320,
+    .coded_height = 192,
+    .display_width = 320,
+    .display_height = 180,
+    .expected_frame_count = 28,
+    .has_sar = false,
+};
 TEST(H264Multi, DecodeBear) {
-  TestH264Multi::DecodeSetStream("video_test_data/bear.h264", bear_h264_hashes,
-                                 "/tmp/bearmultih264.yuv", /*use_parser=*/false);
+  TestH264Multi::DecodeSetStream(bear_data,
+                                 /*use_parser=*/false);
 }
 
 TEST(H264Multi, DecodeBearParser) {
-  TestH264Multi::DecodeSetStream("video_test_data/bear.h264", bear_h264_hashes,
-                                 "/tmp/bearmultih264.yuv", /*use_parser=*/true);
+  TestH264Multi::DecodeSetStream(bear_data,
+                                 /*use_parser=*/true);
 }
 
 TEST(H264Multi, Decode25fps) {
-  TestH264Multi::DecodeSetStream("video_test_data/test-25fps.h264", test_25fps_h264_hashes,
-                                 "/tmp/test25fpsmultih264.yuv", /*use_parser=*/false);
+  TestH264Multi::VideoInfo data = {.input_filename = "video_test_data/test-25fps.h264",
+                                   .input_hashes = test_25fps_h264_hashes,
+                                   .filename = "/tmp/test25fpsmultih264.yuv",
+                                   .coded_width = 320,
+                                   .coded_height = 240,
+                                   .display_width = 320,
+                                   .display_height = 240,
+                                   .expected_frame_count = 240,
+                                   .has_sar = false};
+  TestH264Multi::DecodeSetStream(data,
+                                 /*use_parser=*/false);
+}
+
+TEST(H264Multi, DecodeWithSar) {
+  TestH264Multi::VideoInfo data = {.input_filename = "video_test_data/red-green.h264",
+                                   .input_hashes = nullptr,
+                                   .filename = "/tmp/red-greenmultih264.yuv",
+                                   .coded_width = 80,
+                                   .coded_height = 128,
+                                   .display_width = 80,
+                                   .display_height = 128,
+                                   .expected_frame_count = 28,
+                                   .has_sar = true};
+  TestH264Multi::DecodeSetStream(data,
+                                 /*use_parser=*/false);
 }
 TEST(H264Multi, DecodeBearUnsplit) {
   TestH264Multi::DecodeUnsplit("video_test_data/bear.h264", bear_h264_hashes,
