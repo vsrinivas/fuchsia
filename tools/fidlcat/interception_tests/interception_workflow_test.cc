@@ -400,6 +400,7 @@ void InterceptionWorkflowTest::PerformFunctionTest(ProcessController* controller
     if (syscall->name() == syscall_name) {
       dispatcher->DecodeSyscall(&controller->workflow().thread_observer(), threads_[tid],
                                 syscall.get());
+      break;
     }
   }
 

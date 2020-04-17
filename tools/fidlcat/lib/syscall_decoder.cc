@@ -349,8 +349,12 @@ void SyscallDecoder::UseInputs() {
   }
 
   if (syscall_->return_type() == SyscallReturnType::kNoReturn) {
-    // We don't expect the syscall to return and it doesn't have any output.
-    use_->SyscallOutputsDecoded(this);
+    // We already called Continue in StepToReturnAddress. We don't want to call it twice. We set
+    // aborted_ to avoid that.
+    aborted_ = true;
+    // We don't expect the syscall to return and it doesn't have any output. We can now destroy
+    // the decoder.
+    Destroy();
   }
 }
 

@@ -72,8 +72,7 @@ void InterceptingThreadObserver::OnThreadStopped(zxdb::Thread* thread, const zxd
     zxdb::BreakpointSettings settings = bp_ptr->GetSettings();
     if (settings.locations.size() == 1u &&
         settings.locations[0].type == zxdb::InputLocation::Type::kName &&
-        settings.locations[0].name.components().size() == 1u &&
-        settings.locations[0].name.components()[0].special() == zxdb::SpecialIdentifier::kPlt) {
+        settings.locations[0].name.components().size() == 1u) {
       threads_in_error_.erase(thread->GetKoid());
       for (auto& syscall : workflow_->syscall_decoder_dispatcher()->syscalls()) {
         // Compare against the syscall->name() which is the syscall name not including the $plt
