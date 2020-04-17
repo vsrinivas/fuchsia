@@ -2,20 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 # Metrics which depend on cobalt only.
 zx_library("metrics-cobalt") {
   sdk = "source"
-  sdk_headers = [
-    "fs/metrics/cobalt_metrics.h",
-  ]
+  sdk_headers = [ "fs/metrics/cobalt_metrics.h" ]
   sources = [ "cobalt_metrics.cc" ]
   public_deps = [
-    "$zx/system/ulib/cobalt-client:headers",
-    "$zx/system/ulib/fbl:headers",
+    "//zircon/public/lib/cobalt-client",
+    "//zircon/public/lib/fbl",
   ]
   deps = [
-    "$zx/system/ulib/cobalt-client",
-    "$zx/system/ulib/fbl",
+    "//zircon/public/lib/cobalt-client",
+    "//zircon/public/lib/fbl",
   ]
 }
 
@@ -33,38 +43,36 @@ zx_library("metrics-inspect") {
   ]
   sources = [ "histograms.cc" ]
   public_deps = [
-    "$zx/system/ulib/fbl:headers",
-    "$zx/system/ulib/fzl:headers",
-    "$zx/system/ulib/inspect:headers",
-    "$zx/system/ulib/zx:headers",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/inspect",
+    "//zircon/public/lib/zx",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/inspect",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/inspect",
+    "//zircon/public/lib/zx",
   ]
-  configs += [ "$zx/public/gn/config:Wno-unused-function" ]
+  configs += [ "//build/config:Wno-unused-function" ]
 }
 
 # Helper library that uses both cobalt and inspect to record metrics.
 # TODO(ZX-3150): Remove once inspect broker service is complete.
 zx_library("metrics-composite-latency-event") {
   sdk = "source"
-  sdk_headers = [
-    "fs/metrics/composite_latency_event.h",
-  ]
+  sdk_headers = [ "fs/metrics/composite_latency_event.h" ]
   sources = [ "composite_latency_event.cc" ]
   public_deps = [
-    "$zx/system/ulib/cobalt-client:headers",
-    "$zx/system/ulib/fs/metrics:metrics-cobalt.headers",
-    "$zx/system/ulib/fs/metrics:metrics-inspect.headers",
+    ":metrics-cobalt",
+    ":metrics-inspect",
+    "//zircon/public/lib/cobalt-client",
   ]
   deps = [
-    "$zx/system/ulib/cobalt-client",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fs/metrics:metrics-cobalt",
-    "$zx/system/ulib/fs/metrics:metrics-inspect",
+    ":metrics-cobalt",
+    ":metrics-inspect",
+    "//zircon/public/lib/cobalt-client",
+    "//zircon/public/lib/fbl",
   ]
 }
 

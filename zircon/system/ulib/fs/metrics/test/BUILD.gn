@@ -36,11 +36,11 @@ test("metrics-composite-latency-event") {
   deps = [
     "//zircon/public/lib/cobalt-client",
     "//zircon/public/lib/in-memory-logger",
-    "//zircon/public/lib/metrics-cobalt",
-    "//zircon/public/lib/metrics-composite-latency-event",
-    "//zircon/public/lib/metrics-inspect",
     "//zircon/public/lib/inspect",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs/metrics:metrics-cobalt",
+    "//zircon/system/ulib/fs/metrics:metrics-composite-latency-event",
+    "//zircon/system/ulib/fs/metrics:metrics-inspect",
   ]
 }
 
@@ -68,10 +68,10 @@ test("metrics-inspect") {
 
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/metrics-inspect",
     "//zircon/public/lib/inspect",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs/metrics:metrics-inspect",
   ]
 }
 
@@ -96,9 +96,9 @@ test("metrics-cobalt") {
   deps = [
     "//zircon/public/lib/cobalt-client",
     "//zircon/public/lib/in-memory-logger",
-    "//zircon/public/lib/metrics-cobalt",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs/metrics:metrics-cobalt",
   ]
 }
 
