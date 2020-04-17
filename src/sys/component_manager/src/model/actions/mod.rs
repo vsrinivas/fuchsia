@@ -221,7 +221,8 @@ async fn do_mark_deleting(realm: Arc<Realm>, moniker: ChildMoniker) -> Result<()
         state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
     };
     if let Some(child_realm) = child_realm {
-        let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::MarkedForDestruction);
+        let event =
+            Event::new(child_realm.abs_moniker.clone(), Ok(EventPayload::MarkedForDestruction));
         child_realm.hooks.dispatch(&event).await?;
         let mut state = realm.lock_state().await;
         let state = state.as_mut().expect("do_mark_deleting: not resolved");
@@ -249,7 +250,7 @@ async fn do_delete_child(realm: Arc<Realm>, moniker: ChildMoniker) -> Result<(),
             let mut state = realm.lock_state().await;
             state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
         }
-        let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::Destroyed);
+        let event = Event::new(child_realm.abs_moniker.clone(), Ok(EventPayload::Destroyed));
         child_realm.hooks.dispatch(&event).await?;
     }
 
@@ -1525,7 +1526,7 @@ pub mod tests {
         #[async_trait]
         impl Hook for StopErrorHook {
             async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-                if let EventPayload::Stopped = event.payload {
+                if let Ok(EventPayload::Stopped) = event.result {
                     self.on_shutdown_instance_async(&event.target_moniker).await?;
                 }
                 Ok(())
@@ -2232,7 +2233,7 @@ pub mod tests {
         #[async_trait]
         impl Hook for DestroyErrorHook {
             async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-                if let EventPayload::Destroyed = event.payload {
+                if let Ok(EventPayload::Destroyed) = event.result {
                     self.on_destroyed_async(&event.target_moniker).await?;
                 }
                 Ok(())

@@ -159,12 +159,12 @@ impl EventSourceFactory {
 #[async_trait]
 impl Hook for EventSourceFactory {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        match &event.payload {
-            EventPayload::CapabilityRouted {
+        match &event.result {
+            Ok(EventPayload::CapabilityRouted {
                 source:
                     CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
                 capability_provider,
-            } => {
+            }) => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_scoped_framework_capability_routed_async(
@@ -175,10 +175,10 @@ impl Hook for EventSourceFactory {
                     )
                     .await?;
             }
-            EventPayload::Destroyed => {
+            Ok(EventPayload::Destroyed) => {
                 self.on_destroyed_async(&event.target_moniker).await;
             }
-            EventPayload::Resolved { decl } => {
+            Ok(EventPayload::Resolved { decl }) => {
                 self.on_resolved_async(&event.target_moniker, decl).await?;
             }
             _ => {}
@@ -210,7 +210,7 @@ mod tests {
             }))
             .build();
         let event =
-            Event::new(target_moniker.clone(), EventPayload::Resolved { decl: decl.clone() });
+            Event::new(target_moniker.clone(), Ok(EventPayload::Resolved { decl: decl.clone() }));
         hooks.dispatch(&event).await
     }
 
@@ -218,7 +218,7 @@ mod tests {
         hooks: &Hooks,
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let event = Event::new(target_moniker.clone(), EventPayload::Destroyed);
+        let event = Event::new(target_moniker.clone(), Ok(EventPayload::Destroyed));
         hooks.dispatch(&event).await
     }
 

@@ -192,10 +192,10 @@ pub async fn open_capability_at_source(
     let capability_provider = Arc::new(Mutex::new(get_default_provider(&source)));
     let event = Event::new(
         target_realm.abs_moniker.clone(),
-        EventPayload::CapabilityRouted {
+        Ok(EventPayload::CapabilityRouted {
             source: source.clone(),
             capability_provider: capability_provider.clone(),
-        },
+        }),
     );
 
     // This hack changes the flags for a scoped framework service

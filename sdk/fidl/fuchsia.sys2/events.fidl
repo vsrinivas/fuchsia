@@ -15,6 +15,9 @@ const uint64 MAX_NUM_EVENTS_RECEIVED = 8;
 /// This value is currently set arbitrarily.
 const uint64 MAX_CAPABILITY_ID_LENGTH = 50;
 
+/// The maximum string length of an error description.
+const uint64 MAX_ERROR_DESCRIPTION_LENGTH = 100;
+
 /// These EventTypes are used for the EventStream protocol.
 /// They are FIDL versions of the EventType enum in hooks.rs and have
 /// the same meaning.
@@ -76,6 +79,25 @@ table ComponentCapability {
     1: string:fuchsia.component.MAX_MONIKER_LENGTH source_moniker;
 };
 
+/// Describes the result of a state transition.
+flexible union EventResult {
+    /// The payload of the event if the state transition described by the event
+    /// succeeds.
+    1: EventPayload payload;
+
+    /// The error that caused the state transition described by the event to
+    /// fail.
+    2: EventError error;
+};
+
+/// Corresponds to an error that occurred during a state transition.
+table EventError {
+    /// A string describing the error that occurred.
+    /// TODO(fxb/49792): We should be sending structured errors, and not simply strings.
+    /// This is a placeholder pending further internal component manager refactors.
+    1: string:MAX_ERROR_DESCRIPTION_LENGTH description;
+};
+
 /// Encapsulates additional data/protocols for some event types.
 table EventPayload {
     /// Payload for CapabilityReady events
@@ -123,7 +145,7 @@ table Event {
     3: Handler handler;
 
     /// Optional payload for some event types
-    4: EventPayload event_payload;
+    4: EventResult event_result;
 };
 
 /// Subscribe to events in component manager.

@@ -10,7 +10,6 @@ use {
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
         realm::{ExecutionState, Realm, Runtime, WeakRealm},
-        resolver::Resolver,
         routing_facade::RoutingFacade,
     },
     cm_rust::data,
@@ -37,16 +36,7 @@ pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
     }
 
     // Resolve the component.
-    let component = realm.environment.resolve(&realm.component_url).await?;
-    let resolved_url = component.resolved_url.ok_or(ModelError::ComponentInvalid)?;
-    let package = component.package;
-
-    let decl = {
-        realm.populate_decl(component.decl.ok_or(ModelError::ComponentInvalid)?).await?;
-        let state = realm.lock_state().await;
-        let state = state.as_ref().unwrap();
-        state.decl().clone()
-    };
+    let component = realm.resolve().await?;
 
     // Find the runner to use.
     let runner = realm.resolve_runner().await.map_err(|e| {
@@ -55,20 +45,25 @@ pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
     })?;
 
     // Generate the Runtime which will be set in the Execution.
-    let (pending_runtime, start_info, controller_server) =
-        make_execution_runtime(realm.as_weak(), resolved_url.clone(), package, &decl).await?;
+    let (pending_runtime, start_info, controller_server) = make_execution_runtime(
+        realm.as_weak(),
+        component.resolved_url.clone(),
+        component.package,
+        &component.decl,
+    )
+    .await?;
 
     // Invoke the BeforeStart hook.
     {
         let routing_facade = RoutingFacade::new();
         let event = Event::new(
             realm.abs_moniker.clone(),
-            EventPayload::Started {
+            Ok(EventPayload::Started {
                 component_url: realm.component_url.clone(),
                 runtime: RuntimeInfo::from_runtime(&pending_runtime),
-                component_decl: decl.clone(),
+                component_decl: component.decl.clone(),
                 routing_facade,
-            },
+            }),
         );
         realm.hooks.dispatch(&event).await?;
     }

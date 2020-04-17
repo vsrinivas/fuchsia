@@ -258,20 +258,20 @@ impl TestHook {
 #[async_trait]
 impl Hook for TestHook {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        match &event.payload {
-            EventPayload::Destroyed => {
+        match &event.result {
+            Ok(EventPayload::Destroyed) => {
                 self.on_destroyed_async(&event.target_moniker).await?;
             }
-            EventPayload::Discovered { .. } => {
+            Ok(EventPayload::Discovered { .. }) => {
                 self.create_instance_if_necessary(&event.target_moniker).await?;
             }
-            EventPayload::MarkedForDestruction => {
+            Ok(EventPayload::MarkedForDestruction) => {
                 self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
-            EventPayload::Started { .. } => {
+            Ok(EventPayload::Started { .. }) => {
                 self.on_started_async(&event.target_moniker).await?;
             }
-            EventPayload::Stopped => {
+            Ok(EventPayload::Stopped) => {
                 self.on_stopped_async(&event.target_moniker).await?;
             }
             _ => (),
@@ -323,10 +323,10 @@ impl HubInjectionTestHook {
 #[async_trait]
 impl Hook for HubInjectionTestHook {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let EventPayload::CapabilityRouted {
+        if let Ok(EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
             capability_provider,
-        } = &event.payload
+        }) = &event.result
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self

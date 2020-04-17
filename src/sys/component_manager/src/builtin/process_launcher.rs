@@ -267,10 +267,10 @@ impl ProcessLauncher {
 #[async_trait]
 impl Hook for ProcessLauncher {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let EventPayload::CapabilityRouted {
+        if let Ok(EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, scope_moniker: None },
             capability_provider,
-        } = &event.payload
+        }) = &event.result
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
@@ -379,10 +379,10 @@ mod tests {
 
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::CapabilityRouted {
+            Ok(EventPayload::CapabilityRouted {
                 source,
                 capability_provider: capability_provider.clone(),
-            },
+            }),
         );
         hooks.dispatch(&event).await?;
 

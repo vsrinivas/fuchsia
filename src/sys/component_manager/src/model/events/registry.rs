@@ -10,7 +10,7 @@ use {
             event::SyncMode,
             stream::EventStream,
         },
-        hooks::{Event as ComponentEvent, EventType, Hook, HooksRegistration},
+        hooks::{Event as ComponentEvent, EventType, HasEventType, Hook, HooksRegistration},
     },
     async_trait::async_trait,
     cm_rust::CapabilityName,
@@ -75,7 +75,7 @@ impl EventRegistry {
         // Neither task can make progress.
         let dispatchers = {
             let mut dispatcher_map = self.dispatcher_map.lock().await;
-            if let Some(dispatchers) = dispatcher_map.get_mut(&event.payload.type_().into()) {
+            if let Some(dispatchers) = dispatcher_map.get_mut(&event.event_type().into()) {
                 let mut strong_dispatchers = vec![];
                 dispatchers.retain(|dispatcher| {
                     if let Some(dispatcher) = dispatcher.upgrade() {
@@ -155,16 +155,29 @@ mod tests {
     use {
         super::*,
         crate::model::{
-            hooks::{Event as ComponentEvent, EventPayload},
+            hooks::{Event as ComponentEvent, EventError, EventPayload},
             moniker::AbsoluteMoniker,
         },
+        matches::assert_matches,
     };
 
     async fn dispatch_fake_event(registry: &EventRegistry) -> Result<(), ModelError> {
         let root_component_url = "test:///root".to_string();
         let event = ComponentEvent::new(
             AbsoluteMoniker::root(),
-            EventPayload::Discovered { component_url: root_component_url },
+            Ok(EventPayload::Discovered { component_url: root_component_url }),
+        );
+        registry.dispatch(&event).await
+    }
+
+    async fn dispatch_error_event(registry: &EventRegistry) -> Result<(), ModelError> {
+        let root = AbsoluteMoniker::root();
+        let event = ComponentEvent::new(
+            root.clone(),
+            Err(EventError::new(
+                &ModelError::instance_not_found(root.clone()),
+                EventType::Resolved,
+            )),
         );
         registry.dispatch(&event).await
     }
@@ -220,5 +233,37 @@ mod tests {
 
         dispatch_fake_event(&event_registry).await.unwrap();
         assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn event_error_dispatch() {
+        let event_registry = EventRegistry::new();
+
+        assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Resolved).await);
+
+        let mut event_stream = event_registry
+            .subscribe(
+                &SyncMode::Async,
+                vec![RoutedEvent {
+                    source_name: EventType::Resolved.into(),
+                    scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root())],
+                }],
+            )
+            .await;
+
+        assert_eq!(1, event_registry.dispatchers_per_event_type(EventType::Resolved).await);
+
+        dispatch_error_event(&event_registry).await.unwrap();
+
+        let event = event_stream.next().await.map(|e| e.event).unwrap();
+
+        // Verify that we received the event error.
+        assert_matches!(
+            event.result,
+            Err(EventError {
+                source: ModelError::InstanceNotFound { .. },
+                event_type: EventType::Resolved,
+            })
+        );
     }
 }

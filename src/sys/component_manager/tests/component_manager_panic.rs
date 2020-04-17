@@ -12,6 +12,12 @@ async fn test() -> Result<(), Error> {
         BlackBoxTest::default("fuchsia-pkg://fuchsia.com/component_manager#bin/component_manager")
             .await?;
 
+    let event_source = test.connect_to_event_source().await?;
+
+    // Errors during manifest resolution also block progress. `start_component_tree` resumes the
+    // task attempting to start the root component.
+    event_source.start_component_tree().await?;
+
     // We expect that component manager will crash since the root component
     // manifest is invalid.
     let exit_status = test.component_manager_app.wait().await?;

@@ -584,8 +584,8 @@ impl Hub {
 #[async_trait]
 impl Hook for Hub {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        match &event.payload {
-            EventPayload::CapabilityRouted { source, capability_provider } => {
+        match &event.result {
+            Ok(EventPayload::CapabilityRouted { source, capability_provider }) => {
                 self.on_capability_routed_async(
                     &event.target_moniker,
                     source.clone(),
@@ -593,16 +593,21 @@ impl Hook for Hub {
                 )
                 .await?;
             }
-            EventPayload::Destroyed => {
+            Ok(EventPayload::Destroyed) => {
                 self.on_destroyed_async(&event.target_moniker).await?;
             }
-            EventPayload::Discovered { component_url } => {
+            Ok(EventPayload::Discovered { component_url }) => {
                 self.on_discovered_async(&event.target_moniker, component_url.to_string()).await?;
             }
-            EventPayload::MarkedForDestruction => {
+            Ok(EventPayload::MarkedForDestruction) => {
                 self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
-            EventPayload::Started { component_url, runtime, component_decl, routing_facade } => {
+            Ok(EventPayload::Started {
+                component_url,
+                runtime,
+                component_decl,
+                routing_facade,
+            }) => {
                 self.on_started_async(
                     &event.target_moniker,
                     component_url.clone(),
@@ -612,7 +617,7 @@ impl Hook for Hub {
                 )
                 .await?;
             }
-            EventPayload::Stopped => {
+            Ok(EventPayload::Stopped) => {
                 self.on_stopped_async(&event.target_moniker).await?;
             }
             _ => {}

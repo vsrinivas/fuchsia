@@ -105,7 +105,10 @@ rustc_test("component_manager_panic_test_bin") {
     ":test_utils_lib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:matches",
   ]
 }
 

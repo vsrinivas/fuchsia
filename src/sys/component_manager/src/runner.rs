@@ -45,10 +45,10 @@ impl BuiltinRunner {
 #[async_trait]
 impl Hook for BuiltinRunner {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let EventPayload::CapabilityRouted {
+        if let Ok(EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, scope_moniker: None },
             capability_provider,
-        } = &event.payload
+        }) = &event.result
         {
             // If we are being asked about the runner capability we own, pass a
             // copy back to the caller.
@@ -148,13 +148,13 @@ mod tests {
         hooks
             .dispatch(&Event::new(
                 AbsoluteMoniker::root(),
-                EventPayload::CapabilityRouted {
+                Ok(EventPayload::CapabilityRouted {
                     source: CapabilitySource::Framework {
                         capability: FrameworkCapability::Runner("elf".into()),
                         scope_moniker: None,
                     },
                     capability_provider: provider_result.clone(),
-                },
+                }),
             ))
             .await?;
         let provider = provider_result.lock().await.take().expect("did not get runner cap");

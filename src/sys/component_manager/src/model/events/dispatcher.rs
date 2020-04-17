@@ -8,7 +8,7 @@ use {
             event::{Event, SyncMode},
             filter::EventFilter,
         },
-        hooks::{Event as ComponentEvent, EventPayload},
+        hooks::{Event as ComponentEvent, EventPayload, HasEventType},
         moniker::AbsoluteMoniker,
     },
     anyhow::Error,
@@ -71,7 +71,7 @@ impl EventDispatcher {
         let scope_moniker = maybe_scope.unwrap().moniker.clone();
 
         trace::duration!("component_manager", "events:send");
-        let event_type = format!("{:?}", event.payload.type_());
+        let event_type = format!("{:?}", event.event_type());
         let target_moniker = event.target_moniker.to_string();
         trace::flow_begin!(
             "component_manager",
@@ -94,8 +94,8 @@ impl EventDispatcher {
     }
 
     fn find_scope(&self, event: &ComponentEvent) -> Option<&ScopeMetadata> {
-        let filterable_fields = match &event.payload {
-            EventPayload::CapabilityReady { path, .. } => Some(hashmap! {
+        let filterable_fields = match &event.result {
+            Ok(EventPayload::CapabilityReady { path, .. }) => Some(hashmap! {
                 "path".to_string() => DictionaryValue::Str(path.into())
             }),
             _ => None,

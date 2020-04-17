@@ -32,6 +32,10 @@ use {
 /// |string_name| is the name of the event on snake_case format, not capitalized.
 macro_rules! events {
     ([$($(#[$description:meta])* ($name:ident, $string_name:ident),)*]) => {
+        pub trait HasEventType {
+            fn event_type(&self) -> EventType;
+        }
+
         #[derive(Clone, Debug, Eq, PartialEq, Hash)]
         pub enum EventType {
             $(
@@ -93,8 +97,8 @@ macro_rules! events {
             }
         }
 
-        impl EventPayload {
-            pub fn type_(&self) -> EventType {
+        impl HasEventType for EventPayload {
+            fn event_type(&self) -> EventType {
                 match self {
                     $(
                         EventPayload::$name { .. } => EventType::$name,
@@ -133,6 +137,26 @@ events!([
 impl Into<CapabilityName> for EventType {
     fn into(self) -> CapabilityName {
         self.to_string().into()
+    }
+}
+
+/// Holds the `source` error that caused the transition corresponding to `event_type`
+/// to fail.
+#[derive(Debug, Clone)]
+pub struct EventError {
+    pub source: ModelError,
+    pub event_type: EventType,
+}
+
+impl EventError {
+    pub fn new(err: &ModelError, event_type: EventType) -> Self {
+        Self { source: err.clone(), event_type }
+    }
+}
+
+impl HasEventType for EventError {
+    fn event_type(&self) -> EventType {
+        self.event_type.clone()
     }
 }
 
@@ -225,7 +249,7 @@ fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
 impl fmt::Debug for EventPayload {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let mut formatter = fmt.debug_struct("EventPayload");
-        formatter.field("type", &self.type_());
+        formatter.field("type", &self.event_type());
         match self {
             EventPayload::CapabilityReady { path, .. } => formatter.field("path", &path).finish(),
             EventPayload::CapabilityRouted { source: capability, .. } => {
@@ -245,6 +269,8 @@ impl fmt::Debug for EventPayload {
     }
 }
 
+pub type EventResult = Result<EventPayload, EventError>;
+
 #[derive(Clone, Debug)]
 pub struct Event {
     /// Each event has a unique 64-bit integer assigned to it
@@ -253,15 +279,30 @@ pub struct Event {
     /// Moniker of realm that this event applies to
     pub target_moniker: AbsoluteMoniker,
 
-    /// Payload of the event
-    pub payload: EventPayload,
+    /// Result of the event
+    pub result: EventResult,
 }
 
 impl Event {
-    pub fn new(target_moniker: AbsoluteMoniker, payload: EventPayload) -> Self {
+    pub fn new(target_moniker: AbsoluteMoniker, result: EventResult) -> Self {
         // Generate a random 64-bit integer to identify this event
         let id = random::<u64>();
-        Self { id, target_moniker, payload }
+        Self { id, target_moniker, result }
+    }
+}
+
+impl HasEventType for Result<EventPayload, EventError> {
+    fn event_type(&self) -> EventType {
+        match self {
+            Ok(payload) => payload.event_type(),
+            Err(error) => error.event_type(),
+        }
+    }
+}
+
+impl HasEventType for Event {
+    fn event_type(&self) -> EventType {
+        self.result.event_type()
     }
 }
 
@@ -297,7 +338,7 @@ impl Hooks {
     pub fn dispatch<'a>(&'a self, event: &'a Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             // Trace event dispatch
-            let event_type = format!("{:?}", event.payload.type_());
+            let event_type = format!("{:?}", event.event_type());
             let target_moniker = event.target_moniker.to_string();
             trace::duration!(
                 "component_manager",
@@ -318,7 +359,7 @@ impl Hooks {
                 // to worry about that here.
                 let mut strong_hooks = vec![];
                 let mut hooks_map = self.hooks_map.lock().await;
-                if let Some(hooks) = hooks_map.get_mut(&event.payload.type_()) {
+                if let Some(hooks) = hooks_map.get_mut(&event.event_type()) {
                     hooks.retain(|hook| {
                         if let Some(callback) = hook.callback.upgrade() {
                             strong_hooks
@@ -372,7 +413,7 @@ struct StrongHookEntry {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::sync::Arc};
+    use {super::*, matches::assert_matches, std::sync::Arc};
 
     #[derive(Clone)]
     struct EventLog {
@@ -398,23 +439,54 @@ mod tests {
         name: String,
         logger: Option<EventLog>,
         call_count: Mutex<i32>,
+        last_error: Mutex<Option<ModelError>>,
     }
 
     impl CallCounter {
         pub fn new(name: &str, logger: Option<EventLog>) -> Arc<Self> {
-            Arc::new(Self { name: name.to_string(), logger, call_count: Mutex::new(0) })
+            Arc::new(Self {
+                name: name.to_string(),
+                logger,
+                call_count: Mutex::new(0),
+                last_error: Mutex::new(None),
+            })
         }
 
         pub async fn count(&self) -> i32 {
             *self.call_count.lock().await
         }
 
-        async fn on_discovered_async(&self) -> Result<(), ModelError> {
+        pub async fn last_error(&self) -> Option<ModelError> {
+            let last_error = self.last_error.lock().await;
+            last_error.as_ref().map(|err| err.clone())
+        }
+
+        async fn on_event(&self, event: &Event) -> Result<(), ModelError> {
             let mut call_count = self.call_count.lock().await;
             *call_count += 1;
             if let Some(logger) = &self.logger {
-                let fut = logger.append(format!("{}::OnDiscovered", self.name));
-                fut.await;
+                match &event.result {
+                    Ok(_) => {
+                        logger
+                            .append(format!(
+                                "[{}] Ok: {}",
+                                self.name,
+                                event.event_type().to_string()
+                            ))
+                            .await;
+                    }
+                    Err(error) => {
+                        logger
+                            .append(format!(
+                                "[{}] Err: {}",
+                                self.name,
+                                event.event_type().to_string()
+                            ))
+                            .await;
+                        let mut last_error = self.last_error.lock().await;
+                        *last_error = Some(error.source.clone());
+                    }
+                }
             }
             Ok(())
         }
@@ -423,10 +495,7 @@ mod tests {
     #[async_trait]
     impl Hook for CallCounter {
         async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-            if let EventPayload::Discovered { .. } = event.payload {
-                self.on_discovered_async().await?;
-            }
-            Ok(())
+            self.on_event(event).await
         }
     }
 
@@ -461,7 +530,7 @@ mod tests {
         let root_component_url = "test:///root".to_string();
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::Discovered { component_url: root_component_url },
+            Ok(EventPayload::Discovered { component_url: root_component_url }),
         );
         hooks.dispatch(&event).await.expect("Unable to call hooks.");
         assert_eq!(1, call_counter.count().await);
@@ -498,7 +567,7 @@ mod tests {
         let root_component_url = "test:///root".to_string();
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::Discovered { component_url: root_component_url },
+            Ok(EventPayload::Discovered { component_url: root_component_url }),
         );
         child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
         // parent_call_counter gets informed of the event on child_hooks even though it has
@@ -518,11 +587,45 @@ mod tests {
         // ChildCallCounter should be called before ParentCallCounter.
         assert_eq!(
             log(vec![
-                "ChildCallCounter::OnDiscovered",
-                "ParentCallCounter::OnDiscovered",
-                "ParentCallCounter::OnDiscovered",
+                "[ChildCallCounter] Ok: discovered",
+                "[ParentCallCounter] Ok: discovered",
+                "[ParentCallCounter] Ok: discovered",
             ]),
             event_log.get().await
         );
+    }
+
+    // This test verifies that a hook can receive errors.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn error_event() {
+        // CallCounter counts the number of DynamicChildAdded events it receives.
+        // It should only ever receive one.
+        let event_log = EventLog::new();
+        let call_counter = CallCounter::new("CallCounter", Some(event_log.clone()));
+        let hooks = Hooks::new(None);
+
+        // Attempt to install CallCounter twice.
+        hooks
+            .install(vec![HooksRegistration::new(
+                "CallCounter",
+                vec![EventType::Resolved],
+                Arc::downgrade(&call_counter) as Weak<dyn Hook>,
+            )])
+            .await;
+
+        let root = AbsoluteMoniker::root();
+        let event = Event::new(
+            root.clone(),
+            Err(EventError::new(
+                &ModelError::instance_not_found(root.clone()),
+                EventType::Resolved,
+            )),
+        );
+        hooks.dispatch(&event).await.expect("Unable to call hooks.");
+        assert_eq!(1, call_counter.count().await);
+
+        assert_eq!(log(vec!["[CallCounter] Err: resolved",]), event_log.get().await);
+
+        assert_matches!(call_counter.last_error().await, Some(ModelError::InstanceNotFound { .. }));
     }
 }

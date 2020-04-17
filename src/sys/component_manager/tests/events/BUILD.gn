@@ -72,6 +72,7 @@ test_package("events_integration_test") {
     "components:nested_reporter_bin",
     "components:realm_offered_bin",
     "components:realm_offered_nested",
+    "components:resolved_error_reporter_bin",
     "components:stub_component_bin",
     "//examples/components/routing/echo_server",
   ]
@@ -96,6 +97,10 @@ test_package("events_integration_test") {
     {
       path = rebase_path("components/nested/meta/reporter.cml")
       dest = "nested_reporter.cm"
+    },
+    {
+      path = rebase_path("components/resolved_error/meta/reporter.cml")
+      dest = "resolved_error_reporter.cm"
     },
     {
       path = rebase_path("components/scoped/meta/echo_realm.cml")
@@ -172,6 +177,9 @@ test_package("events_integration_test") {
     },
     {
       name = "nested_reporter"
+    },
+    {
+      name = "resolved_error_reporter"
     },
     {
       name = "scoped_echo_client"

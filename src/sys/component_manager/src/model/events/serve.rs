@@ -12,7 +12,7 @@ use {
                 source::EventSource,
                 stream::EventStream,
             },
-            hooks::EventPayload,
+            hooks::{EventError, EventPayload, EventResult, HasEventType},
             moniker::{AbsoluteMoniker, RelativeMoniker},
         },
     },
@@ -92,17 +92,20 @@ async fn serve_event_stream(
     Ok(())
 }
 
-fn maybe_create_event_payload(
+fn maybe_create_event_result(
     scope: &AbsoluteMoniker,
-    event_payload: &EventPayload,
-) -> Result<Option<fsys::EventPayload>, fidl::Error> {
-    match event_payload {
-        EventPayload::CapabilityReady { path, node } => {
+    event_result: &EventResult,
+) -> Result<Option<fsys::EventResult>, fidl::Error> {
+    match event_result {
+        Ok(EventPayload::CapabilityReady { path, node }) => {
             maybe_create_capability_ready_payload(path.to_string(), node)
         }
-        EventPayload::CapabilityRouted { source, capability_provider, .. } => {
+        Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
             Ok(maybe_create_capability_routed_payload(scope, source, capability_provider.clone()))
         }
+        Err(EventError { source, .. }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
+            description: Some(format!("{}", source)),
+        }))),
         _ => Ok(None),
     }
 }
@@ -110,7 +113,7 @@ fn maybe_create_event_payload(
 fn maybe_create_capability_ready_payload(
     path: String,
     node: &NodeProxy,
-) -> Result<Option<fsys::EventPayload>, fidl::Error> {
+) -> Result<Option<fsys::EventResult>, fidl::Error> {
     let (node_clone, server_end) = fidl::endpoints::create_proxy()?;
     node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)?;
     let node_client_end = node_clone
@@ -119,14 +122,17 @@ fn maybe_create_capability_ready_payload(
         .into_zx_channel()
         .into();
     let payload = fsys::CapabilityReadyPayload { path: Some(path), node: Some(node_client_end) };
-    Ok(Some(fsys::EventPayload { capability_ready: Some(payload), ..fsys::EventPayload::empty() }))
+    Ok(Some(fsys::EventResult::Payload(fsys::EventPayload {
+        capability_ready: Some(payload),
+        ..fsys::EventPayload::empty()
+    })))
 }
 
 fn maybe_create_capability_routed_payload(
     scope: &AbsoluteMoniker,
     source: &CapabilitySource,
     capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
-) -> Option<fsys::EventPayload> {
+) -> Option<fsys::EventResult> {
     let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
 
     // Runners are special. They do not have a path, so their name is the capability ID.
@@ -164,19 +170,22 @@ fn maybe_create_capability_routed_payload(
     });
 
     let routing_payload = Some(fsys::RoutingPayload { routing_protocol, capability_id, source });
-    Some(fsys::EventPayload { routing_payload, ..fsys::EventPayload::empty() })
+    Some(fsys::EventResult::Payload(fsys::EventPayload {
+        routing_payload,
+        ..fsys::EventPayload::empty()
+    }))
 }
 
 /// Creates the basic FIDL Event object containing the event type, target_realm
 /// and basic handler for resumption.
 fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
-    let event_type = Some(event.event.payload.type_().into());
+    let event_type = Some(event.event.event_type().into());
     let target_relative_moniker =
         RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
     let target_moniker = Some(target_relative_moniker.to_string());
-    let event_payload = maybe_create_event_payload(&event.scope_moniker, &event.event.payload)?;
+    let event_result = maybe_create_event_result(&event.scope_moniker, &event.event.result)?;
     let handler = maybe_serve_handler_async(event);
-    Ok(fsys::Event { event_type, target_moniker, handler, event_payload })
+    Ok(fsys::Event { event_type, target_moniker, handler, event_result })
 }
 
 /// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.

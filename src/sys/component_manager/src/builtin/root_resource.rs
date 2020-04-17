@@ -73,10 +73,10 @@ impl BuiltinCapability for RootResource {
 #[async_trait]
 impl Hook for RootResource {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let EventPayload::CapabilityRouted {
+        if let Ok(EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, scope_moniker: None },
             capability_provider,
-        } = &event.payload
+        }) = &event.result
         {
             let mut provider = capability_provider.lock().await;
             *provider = self.on_framework_capability_routed(&capability, provider.take()).await?;
@@ -110,7 +110,7 @@ mod tests {
 
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::CapabilityRouted { source, capability_provider: provider.clone() },
+            Ok(EventPayload::CapabilityRouted { source, capability_provider: provider.clone() }),
         );
         hooks.dispatch(&event).await?;
 

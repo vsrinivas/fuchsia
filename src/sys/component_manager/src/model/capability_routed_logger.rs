@@ -57,8 +57,9 @@ impl CapabilityRoutedLogger {
 #[async_trait]
 impl Hook for CapabilityRoutedLogger {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        match &event.payload {
-            EventPayload::CapabilityRouted { source, .. } => {
+        // TODO(fxb/49787): Report failed routing with advice on how to resolve the issue.
+        match &event.result {
+            Ok(EventPayload::CapabilityRouted { source, .. }) => {
                 self.on_capability_routed_async(&event.target_moniker, &source).await?;
             }
             _ => {}

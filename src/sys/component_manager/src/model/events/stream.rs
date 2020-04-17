@@ -8,7 +8,7 @@ use {
             dispatcher::{EventDispatcher, ScopeMetadata},
             event::{Event, SyncMode},
         },
-        hooks::EventType,
+        hooks::{EventType, HasEventType},
         moniker::AbsoluteMoniker,
     },
     fuchsia_trace as trace,
@@ -57,7 +57,7 @@ impl EventStream {
         expected_moniker: AbsoluteMoniker,
     ) -> Option<Event> {
         while let Some(event) = self.next().await {
-            let actual_event_type = event.event.payload.type_();
+            let actual_event_type = event.event.event_type();
             if expected_moniker == event.event.target_moniker
                 && expected_event_type == actual_event_type
             {

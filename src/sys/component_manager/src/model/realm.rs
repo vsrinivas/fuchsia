@@ -9,7 +9,7 @@ use {
         environment::Environment,
         error::ModelError,
         exposed_dir::ExposedDir,
-        hooks::{Event, EventPayload, Hooks},
+        hooks::{Event, EventError, EventPayload, EventType, Hooks},
         moniker::{AbsoluteMoniker, ChildMoniker, InstanceId, PartialMoniker},
         namespace::IncomingNamespace,
         resolver::Resolver,
@@ -39,6 +39,16 @@ use {
     },
     vfs::path::Path,
 };
+
+/// A returned type corresponding to a resolved component manifest.
+pub struct Component {
+    /// The URL of the resolved component.
+    pub resolved_url: String,
+    /// The declaration of the resolved manifest.
+    pub decl: ComponentDecl,
+    /// The package that this resolved component belongs to.
+    pub package: Option<fsys::Package>,
+}
 
 /// A wrapper for a weak reference to `Realm`. Provides the absolute moniker of the
 /// realm, which is useful for error reporting if the original `Realm` has been destroyed.
@@ -155,55 +165,91 @@ impl Realm {
             }
             // Drop the lock before doing the work to resolve the state.
         }
-        let component = self.environment.resolve(&self.component_url).await?;
-        self.populate_decl(component.decl.ok_or(ModelError::ComponentInvalid)?).await?;
+        self.resolve().await?;
         Ok(MutexGuard::map(self.state.lock().await, |s| s.as_mut().unwrap()))
     }
 
+    /// Resolves the component declaration and creates a new populated `RealmState` as necessary.
+    /// A `Resolved` event is dispatched if a new `RealmState` is created or an error occurs.
+    pub async fn resolve(self: &Arc<Self>) -> Result<Component, ModelError> {
+        let component =
+            self.environment.resolve(&self.component_url).await.map_err(|err| err.into());
+        self.populate_decl(component).await
+    }
+
     /// Populates the component declaration of this realm's Instance using the provided
-    /// `component_decl` if not already populated.
-    pub async fn populate_decl(
+    /// `component` if not already populated.
+    async fn populate_decl(
         self: &Arc<Self>,
-        component_decl: fsys::ComponentDecl,
-    ) -> Result<(), ModelError> {
-        let decl: ComponentDecl = component_decl
-            .try_into()
-            .map_err(|e| ModelError::manifest_invalid(self.component_url.clone(), e))?;
-        let new_realm_state = {
-            let mut state = self.lock_state().await;
-            if state.is_none() {
-                *state = Some(RealmState::new(self, &decl).await?);
-                true
-            } else {
-                false
-            }
-        };
+        component: Result<fsys::Component, ModelError>,
+    ) -> Result<Component, ModelError> {
+        let result = async move {
+            let component = component?;
+            let decl = component.decl.ok_or(ModelError::ComponentInvalid)?;
+            let decl = decl
+                .try_into()
+                .map_err(|e| ModelError::manifest_invalid(self.component_url.clone(), e))?;
+
+            let created_new_realm_state = {
+                let mut state = self.lock_state().await;
+                if state.is_none() {
+                    *state = Some(RealmState::new(self, &decl).await?);
+                    true
+                } else {
+                    false
+                }
+            };
+
+            let component = Component {
+                resolved_url: component.resolved_url.ok_or(ModelError::ComponentInvalid)?,
+                decl,
+                package: component.package,
+            };
+            Ok((created_new_realm_state, component))
+        }
+        .await;
+
         // If a `RealmState` was installed in this call, first dispatch
         // `Resolved` for the component itself and then dispatch
         // `Discovered` for every static child that was discovered in the
         // manifest.
-        if new_realm_state {
-            if self.parent.is_none() {
+        match result {
+            Ok((false, component)) => {
+                return Ok(component);
+            }
+            Ok((true, component)) => {
+                if self.parent.is_none() {
+                    let event = Event::new(
+                        self.abs_moniker.clone(),
+                        Ok(EventPayload::Discovered { component_url: self.component_url.clone() }),
+                    );
+                    self.hooks.dispatch(&event).await?;
+                }
                 let event = Event::new(
                     self.abs_moniker.clone(),
-                    EventPayload::Discovered { component_url: self.component_url.clone() },
+                    Ok(EventPayload::Resolved { decl: component.decl.clone() }),
                 );
                 self.hooks.dispatch(&event).await?;
+                for child in component.decl.children.iter() {
+                    let child_moniker = ChildMoniker::new(child.name.clone(), None, 0);
+                    let child_abs_moniker = self.abs_moniker.child(child_moniker);
+                    let event = Event::new(
+                        child_abs_moniker,
+                        Ok(EventPayload::Discovered { component_url: child.url.clone() }),
+                    );
+                    self.hooks.dispatch(&event).await?;
+                }
+                return Ok(component);
             }
-            let event =
-                Event::new(self.abs_moniker.clone(), EventPayload::Resolved { decl: decl.clone() });
-            self.hooks.dispatch(&event).await?;
-            for child in decl.children.iter() {
-                let child_moniker = ChildMoniker::new(child.name.clone(), None, 0);
-                let child_abs_moniker = self.abs_moniker.child(child_moniker);
+            Err(e) => {
                 let event = Event::new(
-                    child_abs_moniker,
-                    EventPayload::Discovered { component_url: child.url.clone() },
+                    self.abs_moniker.clone(),
+                    Err(EventError::new(&e, EventType::Resolved)),
                 );
                 self.hooks.dispatch(&event).await?;
+                return Err(e);
             }
         }
-        Ok(())
     }
 
     /// Resolves and populates this component's meta directory handle if it has not been done so
@@ -339,7 +385,7 @@ impl Realm {
         // Call hooks outside of lock
         let event = Event::new(
             child_realm.abs_moniker.clone(),
-            EventPayload::Discovered { component_url: child_realm.component_url.clone() },
+            Ok(EventPayload::Discovered { component_url: child_realm.component_url.clone() }),
         );
         self.hooks.dispatch(&event).await?;
         Ok(())
@@ -402,7 +448,7 @@ impl Realm {
         // destroyed.
         self.destroy_transient_children().await?;
         if was_running {
-            let event = Event::new(self.abs_moniker.clone(), EventPayload::Stopped);
+            let event = Event::new(self.abs_moniker.clone(), Ok(EventPayload::Stopped));
             self.hooks.dispatch(&event).await?;
         }
         Ok(())
@@ -1336,8 +1382,8 @@ pub mod tests {
             event_stream.wait_until(EventType::CapabilityReady, vec![].into()).await.unwrap().event;
 
         assert_eq!(event.target_moniker, AbsoluteMoniker::root());
-        match event.payload {
-            EventPayload::CapabilityReady { path, .. } => {
+        match event.result {
+            Ok(EventPayload::CapabilityReady { path, .. }) => {
                 assert_eq!(path, "/diagnostics");
             }
             payload => panic!("Expected capability ready. Got: {:?}", payload),

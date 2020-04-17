@@ -766,10 +766,10 @@ mod connect_tests {
 
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::CapabilityRouted {
+            Ok(EventPayload::CapabilityRouted {
                 source,
                 capability_provider: capability_provider.clone(),
-            },
+            }),
         );
         hooks.dispatch(&event).await?;
 

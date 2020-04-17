@@ -104,8 +104,10 @@ impl EventSource {
                             .await
                             .expect("Type mismatch");
 
-                        if event.capability_id == injector.capability_path() {
-                            event.inject(injector.clone()).await.expect("injection failed");
+                        if let Ok(payload) = &event.result {
+                            if payload.capability_id == injector.capability_path() {
+                                event.inject(injector.clone()).await.expect("injection failed");
+                            }
                         }
 
                         event.resume().await.expect("resumption failed");
@@ -139,8 +141,13 @@ impl EventSource {
                             .await
                             .expect("Type mismatch");
 
-                        if event.capability_id == interposer.capability_path() {
-                            event.interpose(interposer.clone()).await.expect("injection failed");
+                        if let Ok(payload) = &event.result {
+                            if payload.capability_id == interposer.capability_path() {
+                                event
+                                    .interpose(interposer.clone())
+                                    .await
+                                    .expect("injection failed");
+                            }
                         }
 
                         event.resume().await.expect("resumption failed");
@@ -275,10 +282,12 @@ impl EventStream {
                     EventMatcher::new().expect_moniker(expected_target_moniker),
                 )
                 .await?;
-            if expected_capability_id == event.capability_id {
-                match event.source {
-                    fsys::CapabilitySource::Component(_) => return Ok(event),
-                    _ => {}
+            if let Ok(payload) = &event.result {
+                if expected_capability_id == payload.capability_id {
+                    match payload.source {
+                        fsys::CapabilitySource::Component(_) => return Ok(event),
+                        _ => {}
+                    }
                 }
             }
             event.resume().await?;
@@ -303,15 +312,19 @@ impl EventStream {
 
             // If the capability ID matches and the capability source is framework
             // with a matching optional scope moniker, then return the event.
-            if expected_capability_id == event.capability_id {
-                match &event.source {
-                    fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
-                        scope_moniker,
-                        ..
-                    }) if scope_moniker.as_ref().map(|s| s.as_str()) == expected_scope_moniker => {
-                        return Ok(event)
+            if let Ok(payload) = &event.result {
+                if expected_capability_id == payload.capability_id {
+                    match &payload.source {
+                        fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
+                            scope_moniker,
+                            ..
+                        }) if scope_moniker.as_ref().map(|s| s.as_str())
+                            == expected_scope_moniker =>
+                        {
+                            return Ok(event)
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 }
             }
 
@@ -448,15 +461,17 @@ pub trait Interposer: Send + Sync {
 /// A protocol that allows routing capabilities over FIDL.
 #[async_trait]
 pub trait RoutingProtocol {
-    fn protocol_proxy(&self) -> fsys::RoutingProtocolProxy;
+    fn protocol_proxy(&self) -> Option<fsys::RoutingProtocolProxy>;
 
     #[must_use = "futures do nothing unless you await on them!"]
     async fn set_provider(
         &self,
         client_end: ClientEnd<fsys::CapabilityProviderMarker>,
     ) -> Result<(), fidl::Error> {
-        let proxy = self.protocol_proxy();
-        proxy.set_provider(client_end).await
+        if let Some(proxy) = self.protocol_proxy() {
+            return proxy.set_provider(client_end).await;
+        }
+        Ok(())
     }
 
     /// Set an Injector for the given capability.
@@ -492,7 +507,10 @@ pub trait RoutingProtocol {
         });
 
         // Send the client end of the CapabilityProvider protocol
-        self.protocol_proxy().set_provider(provider_client_end).await
+        if let Some(protocol_proxy) = self.protocol_proxy() {
+            return protocol_proxy.set_provider(provider_client_end).await;
+        }
+        Ok(())
     }
 
     /// Set an Interposer for the given capability.
@@ -536,7 +554,10 @@ pub trait RoutingProtocol {
 
         // Replace the existing provider and open it with the
         // server end of the Interposer <---> Server channel.
-        self.protocol_proxy().replace_and_open(provider_client_end, server_end).await
+        if let Some(protocol_proxy) = self.protocol_proxy() {
+            return protocol_proxy.replace_and_open(provider_client_end, server_end).await;
+        }
+        Ok(())
     }
 }
 
@@ -649,7 +670,12 @@ impl TryFrom<&fsys::Event> for EventMatcher {
         let target_moniker = Some(
             event.target_moniker.as_ref().ok_or_else(|| format_err!("No target moniker"))?.clone(),
         );
-        let capability_id = if let Some(event_payload) = event.event_payload.as_ref() {
+        let payload = match &event.event_result {
+            Some(fsys::EventResult::Payload(p)) => Some(p),
+            _ => None,
+        };
+
+        let capability_id = if let Some(event_payload) = payload {
             event_payload
                 .routing_payload
                 .as_ref()
@@ -723,6 +749,11 @@ impl Drop for EventLog {
     }
 }
 
+#[derive(Debug)]
+pub struct EventError {
+    pub description: String,
+}
+
 /// The macro defined below will automatically create event classes corresponding
 /// to their events.fidl and hooks.rs counterparts. Every event class implements
 /// the Event and Handler traits. These minimum requirements allow every event to
@@ -743,7 +774,8 @@ macro_rules! create_event {
         event_type: $event_type:ident,
         event_name: $event_name:ident,
         payload: {
-            name: $payload_name:ident,
+            struct_name: $payload_struct_name:ident,
+            field_name: $payload_name:ident,
             data: {$(
                 {
                     name: $data_name:ident,
@@ -758,11 +790,21 @@ macro_rules! create_event {
             )*},
         }
     ) => {
+        pub struct $payload_struct_name {
+            $(pub $protocol_name: $protocol_ty,)*
+            $(pub $data_name: $data_ty,)*
+        }
+
         pub struct $event_type {
             target_moniker: String,
             handler: Option<fsys::HandlerProxy>,
-            $(pub $protocol_name: $protocol_ty,)*
-            $(pub $data_name: $data_ty,)*
+            pub result: Result<$payload_struct_name, EventError>,
+        }
+
+        impl $event_type {
+            pub fn unwrap_payload<'a>(&'a self) -> &'a $payload_struct_name {
+                self.result.as_ref().unwrap()
+            }
         }
 
         impl Event for $event_type {
@@ -790,28 +832,38 @@ macro_rules! create_event {
                 let handler = event.handler.map(|h| h.into_proxy()).transpose()?;
 
                 // Extract the payload from the Event object.
-                let event_payload = event.event_payload.ok_or(
-                    format_err!("Missing event_payload from Event object")
-                )?;
-                let $payload_name = event_payload.$payload_name.ok_or(
-                    format_err!("Missing $payload_name from EventPayload object")
-                )?;
+                let result = match event.event_result {
+                    Some(fsys::EventResult::Payload(payload)) => {
+                        let $payload_name = payload.$payload_name.ok_or(
+                            format_err!("Missing $payload_name from EventPayload object")
+                        )?;
 
-                // Extract the additional data from the Payload object.
-                $(
-                    let $data_name: $data_ty = $payload_name.$data_name.ok_or(
-                        format_err!("Missing $data_name from $payload_name object")
-                    )?;
-                )*
+                        // Extract the additional data from the Payload object.
+                        $(
+                            let $data_name: $data_ty = $payload_name.$data_name.ok_or(
+                                format_err!("Missing $data_name from $payload_name object")
+                            )?;
+                        )*
 
-                // Extract the additional protocols from the Payload object.
-                $(
-                    let $protocol_name: $protocol_ty = $payload_name.$protocol_name.ok_or(
-                        format_err!("Missing $protocol_name from $payload_name object")
-                    )?.into_proxy()?;
-                )*
+                        // Extract the additional protocols from the Payload object.
+                        $(
+                            let $protocol_name: $protocol_ty = $payload_name.$protocol_name.ok_or(
+                                format_err!("Missing $protocol_name from $payload_name object")
+                            )?.into_proxy()?;
+                        )*
 
-                Ok($event_type { target_moniker, handler, $($data_name,)* $($protocol_name,)* })
+                        let payload = $payload_struct_name { $($data_name,)* $($protocol_name,)* };
+                        Ok(Ok(payload))
+                    },
+                    Some(fsys::EventResult::Error(err)) => {
+                        Ok(Err(EventError { description: err.description.ok_or(
+                                format_err!("Missing error description"))? }))
+                    },
+                    None => Err(format_err!("Missing event_result from Event object")),
+                    _ => Err(format_err!("Unexpected event result")),
+                }?;
+
+                Ok($event_type { target_moniker, handler,  result })
             }
         }
 
@@ -825,6 +877,7 @@ macro_rules! create_event {
         pub struct $event_type {
             target_moniker: String,
             handler: Option<fsys::HandlerProxy>,
+            pub error: Option<EventError>,
         }
 
         impl Event for $event_type {
@@ -836,7 +889,7 @@ macro_rules! create_event {
             }
 
             fn from_fidl(event: fsys::Event) -> Result<Self, Error> {
-                // Event type in event must match what is expected
+                // ent type in event must match what is expected
                 let event_type = event.event_type.ok_or(
                     format_err!("Missing event_type from Event object")
                 )?;
@@ -851,12 +904,16 @@ macro_rules! create_event {
 
                 let handler = event.handler.map(|h| h.into_proxy()).transpose()?;
 
-                // There should be no payload for this event
-                if event.event_payload.is_some() {
-                    return Err(format_err!("Unexpected event payload"));
-                }
+                let error = match event.event_result {
+                    Some(fsys::EventResult::Error(p)) => Ok(Some(EventError { description: p.description.ok_or(
+                                format_err!("Missing error description"))? })),
+                    None => Ok(None),
+                    _ => Err(format_err!("Unexpected event result")),
+                }?;
 
-                Ok($event_type { target_moniker, handler, })
+
+
+                Ok($event_type { target_moniker, handler, error })
             }
         }
 
@@ -879,7 +936,8 @@ create_event!(
     event_type: CapabilityReady,
     event_name: capability_ready,
     payload: {
-        name: capability_ready,
+        struct_name: CapabilityReadyPayload,
+        field_name: capability_ready,
         data: {
             {
                 name: path,
@@ -898,7 +956,8 @@ create_event!(
     event_type: CapabilityRouted,
     event_name: capability_routed,
     payload: {
-        name: routing_payload,
+        struct_name: RoutingPayload,
+        field_name: routing_payload,
         data: {
             {
                 name: source,
@@ -919,7 +978,7 @@ create_event!(
 );
 
 impl RoutingProtocol for CapabilityRouted {
-    fn protocol_proxy(&self) -> fsys::RoutingProtocolProxy {
-        self.routing_protocol.clone()
+    fn protocol_proxy(&self) -> Option<fsys::RoutingProtocolProxy> {
+        self.result.as_ref().ok().map(|payload| payload.routing_protocol.clone())
     }
 }

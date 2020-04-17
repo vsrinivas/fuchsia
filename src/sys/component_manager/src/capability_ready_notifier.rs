@@ -148,7 +148,7 @@ impl CapabilityReadyNotifier {
                 ModelError::open_directory_error(target_moniker.clone(), canonicalized_path)
             })?;
 
-        let event = Event::new(target_moniker, EventPayload::CapabilityReady { path, node });
+        let event = Event::new(target_moniker, Ok(EventPayload::CapabilityReady { path, node }));
         realm.hooks.dispatch(&event).await?;
 
         Ok(())
@@ -158,8 +158,8 @@ impl CapabilityReadyNotifier {
 #[async_trait]
 impl Hook for CapabilityReadyNotifier {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        match &event.payload {
-            EventPayload::Started { runtime, component_decl, .. } => {
+        match &event.result {
+            Ok(EventPayload::Started { runtime, component_decl, .. }) => {
                 let expose_decls = component_decl.get_self_capabilities_exposed_to_framework();
                 if expose_decls.is_empty() {
                     return Ok(());

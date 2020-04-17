@@ -297,3 +297,24 @@ async fn event_capability_ready() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn resolved_error_test() -> Result<(), Error> {
+    let test = BlackBoxTest::default(
+        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/resolved_error_reporter.cm",
+    )
+    .await?;
+
+    let event_source = test.connect_to_event_source().await?;
+
+    let (capability, mut echo_rx) = EchoCapability::new();
+    let injector = event_source.install_injector(capability).await?;
+
+    event_source.start_component_tree().await?;
+
+    let message = echo_rx.next().await.map(|m| m.message).unwrap();
+    assert_eq!("ERROR", message);
+    injector.abort();
+
+    Ok(())
+}

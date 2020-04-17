@@ -91,21 +91,21 @@ impl WorkScheduler {
 #[async_trait]
 impl Hook for WorkScheduler {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        match &event.payload {
-            EventPayload::CapabilityRouted {
+        match &event.result {
+            Ok(EventPayload::CapabilityRouted {
                 source: CapabilitySource::Framework { capability, scope_moniker: None },
                 capability_provider,
-            } => {
+            }) => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_framework_capability_routed_async(&capability, capability_provider.take())
                     .await?;
             }
-            EventPayload::CapabilityRouted {
+            Ok(EventPayload::CapabilityRouted {
                 source:
                     CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
                 capability_provider,
-            } => {
+            }) => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_scoped_framework_capability_routed_async(
@@ -115,7 +115,7 @@ impl Hook for WorkScheduler {
                     )
                     .await?;
             }
-            EventPayload::Resolved { decl } => {
+            Ok(EventPayload::Resolved { decl }) => {
                 self.try_add_realm_as_worker(&event.target_moniker, &decl).await;
             }
             _ => {}

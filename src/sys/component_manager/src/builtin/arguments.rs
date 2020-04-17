@@ -154,10 +154,10 @@ impl BuiltinCapability for Arguments {
 #[async_trait]
 impl Hook for Arguments {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let EventPayload::CapabilityRouted {
+        if let Ok(EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, scope_moniker: None },
             capability_provider,
-        } = &event.payload
+        }) = &event.result
         {
             let mut provider = capability_provider.lock().await;
             *provider = self.on_framework_capability_routed(&capability, provider.take()).await?;
