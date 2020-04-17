@@ -6,13 +6,12 @@ library fuchsia.feedback;
 
 /// Registers data useful to attach in feedback reports (crash, user feedback or bug reports).
 ///
-/// This can be used by components to augment the data attached to feedback reports. This is
-/// useful for component-specific data in certain products that is not exposed to the rest of the
-/// system and that the Feedback service already fetches.
+/// This can be used by components to augment the data attached to all feedback reports. By default
+/// the Feedback service attaches data exposed to the platform. This protocol is  useful for data
+/// known by certain components in certain products, but that is not exposed to the platform.
 ///
-/// The epitaph ZX_ERR_INVALID_ARGS indicates that the client is attempting to update platform
-/// data that are attached by default in feedback reports. The client should use a different
-/// namespace or data keys.
+/// The epitaph ZX_ERR_INVALID_ARGS indicates that the client is sending invalid requests. See
+/// below for each request why they might be invalid.
 ///
 /// The epitaph ZX_ERR_NO_RESOURCES indicates that the server can no longer store additional
 /// component data and will not service new connections.
@@ -27,27 +26,27 @@ protocol ComponentDataRegister {
     /// For instance, assuming these are the data already held by the server (from previous calls
     /// to Upsert()):
     /// {
-    ///   "chromium": { # namespace
+    ///   "bar": { # namespace
     ///     "channel": "stable",
     ///   },
-    ///   "build": { # namespace
+    ///   "foo": { # namespace
     ///     "version": "0.2",
     ///   },
     /// }
     ///
     /// then Upsert({
-    ///   "namespace": "chromium",
+    ///   "namespace": "bar",
     ///   "annotations": [
     ///     "version": "1.2.3.45",
     ///     "channel": "beta",
     ///   ]
     /// }) would result in the server now holding:
     /// {
-    ///   "chromium": { # namespace
+    ///   "bar": { # namespace
     ///     "channel": "beta", # updated
     ///     "version": "1.2.3.45" # inserted
     ///   },
-    ///   "build": { # namespace
+    ///   "foo": { # namespace
     ///     "version": "0.2", # untouched
     ///   },
     /// }
@@ -60,19 +59,31 @@ protocol ComponentDataRegister {
 const uint32 MAX_NAMESPACE_LENGTH = 32;
 const uint32 MAX_NUM_ANNOTATIONS_PER_NAMESPACE = 16;
 
-/// Component-specific data to attach to feedback reports.
+/// Data known to a component, but not exposed to the platform, to attach to feedback reports.
 table ComponentData {
-    /// The top-level namespace associated with the data, e.g., "chromium" or "build":
-    /// * intended to group related data together and reduce key collisions across namespaces
-    /// * prefixed to every data key passed within that namespace
-    ///
-    /// Multiple clients may share the same namespace, e.g., there could be multiple Chromium
-    /// components that want to expose Chromium-related data and they would all use "chromium".
+    /// The top-level namespace associated with the data:
+    /// * Is intended to group related data together and reduce data key collisions across
+    ///   namespaces.
+    /// * May be shared by multiple clients, e.g., there could be multiple clients within the same
+    ///   component or across components that want to expose related data and they would all use
+    ///   the same namespace.
+    /// * Will be prefixed to every data key passed within that namespace in all feedback reports,
+    ///   e.g., the annotation "version" would appear as "foo.version" in all feedback reports if
+    ///   the namespace is "foo".
+    /// * Must match [a-z\-]+, i.e. only lowercase letters and hyphens or this will result in a
+    ///   ZX_ERR_INVALID_ARGS epitaph.
+    /// * Must not match a reserved namespace used internally for platform data, e.g., "build", or
+    ///   this will result in a ZX_ERR_INVALID_ARGS epitaph. The list of reserved namespaces is
+    ///   internal and subject to change for now.
     1: string:MAX_NAMESPACE_LENGTH namespace;
 
     /// A vector of key-value string pairs, e.g., `<"version", "1.2.3.45">`.
     ///
-    /// Keys should be unique as only the latest value for a given key in the vector will be
-    /// considered.
+    /// Keys:
+    /// * Should be unique as only the latest value for a given key in the vector will be
+    ///   considered.
+    /// * Must match [a-z\-\.]+, i.e. only lowercase letters, hyphens and periods. Use periods for
+    ///   sub-namespacing, e.g., "build.label" and "build.type", so that related annotations are
+    ///   grouped together (here related to "build") when sorted lexicographically.
     2: vector<Annotation>:MAX_NUM_ANNOTATIONS_PER_NAMESPACE annotations;
 };
