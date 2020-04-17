@@ -41,8 +41,8 @@ class ResponseContext : private list_node_t {
 };
 
 // Base LLCPP client class supporting use with a multithreaded asynchronous dispatcher, safe error
-// handling and unbinding, and asynchronous transaction tracking. Users of generated client classes
-// derived from `ClientBase` should only be aware of the public APIs.
+// handling and unbinding, and asynchronous transaction tracking. Users should not directly interact
+// with this class.
 class ClientBase {
  public:
   // Generated client dispatch function. If the ResponseContext* is non-null, the message is a
@@ -72,6 +72,10 @@ class ClientBase {
   // Asynchronously unbind the channel from the dispatcher. on_unbound will be invoked on a
   // dispatcher thread if provided.
   void Unbind();
+
+  // Must only be called from the message handler on a dispatcher thread having received an epitaph
+  // from the server. Like Unbind(), except that the epitaph is forwarded to on_unbound.
+  void Close(zx_status_t epitaph);
 
   // Stores the given asynchronous transaction response context, setting the txid field.
   void PrepareAsyncTxn(ResponseContext* context);

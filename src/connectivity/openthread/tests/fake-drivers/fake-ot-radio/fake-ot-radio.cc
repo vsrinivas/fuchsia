@@ -54,7 +54,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dis
                                                          zx::channel channel) {
   ot_radio_obj_.fidl_channel_ = zx::unowned_channel(channel);
   fidl::OnUnboundFn<LowpanSpinelDeviceFidlImpl> on_unbound =
-      [](LowpanSpinelDeviceFidlImpl* server, fidl::UnboundReason, zx::channel channel) {
+      [](LowpanSpinelDeviceFidlImpl* server, fidl::UnboundReason, zx_status_t, zx::channel) {
         server->ot_radio_obj_.fidl_channel_ = zx::unowned_channel(ZX_HANDLE_INVALID);
         server->ot_radio_obj_.fidl_impl_obj_.release();
       };

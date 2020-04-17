@@ -187,7 +187,8 @@ zx_status_t Session::Bind(zx::channel channel) {
   auto result =
       fidl::AsyncBind(dispatcher_, std::move(channel), this,
                       fidl::OnUnboundFn<Session>(
-                          [](Session* self, fidl::UnboundReason reason, zx::channel channel) {
+                          [](Session* self, fidl::UnboundReason reason, zx_status_t,
+                             zx::channel channel) {
                             self->OnUnbind(reason, std::move(channel));
                           }));
   if (result.is_ok()) {
@@ -217,6 +218,7 @@ void Session::OnUnbind(fidl::UnboundReason reason, zx::channel channel) {
       // Store the channel to send an epitaph once the session is destroyed.
       control_channel_ = std::move(channel);
       break;
+    case fidl::UnboundReason::kClose:
     case fidl::UnboundReason::kPeerClosed:
       break;
   }

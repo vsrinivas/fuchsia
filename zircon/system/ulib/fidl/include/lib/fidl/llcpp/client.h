@@ -10,7 +10,7 @@
 namespace fidl {
 
 // Invoked from a dispatcher thread after the channel is unbound.
-using OnClientUnboundFn = fit::callback<void(UnboundReason, zx::channel)>;
+using OnClientUnboundFn = fit::callback<void(UnboundReason, zx_status_t, zx::channel)>;
 
 template <typename Client>
 class ClientPtr final {
@@ -48,8 +48,9 @@ class ClientPtr final {
     ZX_ASSERT(!binding_);
     binding_ = std::make_unique<internal::ClientBase>(
         std::move(client_end), dispatcher,
-        [fn = std::move(on_unbound)](void*, UnboundReason reason, zx::channel channel) mutable {
-          fn(reason, std::move(channel));
+        [fn = std::move(on_unbound)](void*, UnboundReason reason, zx_status_t status,
+                                     zx::channel channel) mutable {
+          fn(reason, status, std::move(channel));
         });
     client_ = std::make_unique<Client>(binding_.get(), std::move(handlers));
     return binding_->Bind();

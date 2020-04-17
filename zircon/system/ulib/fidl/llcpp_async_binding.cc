@@ -40,27 +40,24 @@ AsyncBinding::~AsyncBinding() {
   }
 }
 
-void AsyncBinding::OnUnbind(zx_status_t epitaph, UnboundReason reason) {
+void AsyncBinding::OnUnbind(zx_status_t status, UnboundReason reason) {
   ZX_ASSERT(keep_alive_);
   // Move the internal reference into this scope.
   auto binding = std::move(keep_alive_);
 
-  bool send_epitaph = false;
   {
     std::scoped_lock lock(lock_);
     // Indicate that no other thread should wait for unbind.
     unbind_ = true;
-    // Determine the epitaph and whether to send it.
-    if (reason == UnboundReason::kInternalError || epitaph_.send) {
-      send_epitaph = is_server_;
-      if (epitaph_.status != ZX_OK)
-        epitaph = epitaph_.status;
+
+    // If the peer was not closed, and the user invoked Close() or there was a dispatch error,
+    // overwrite the unbound reason and recover the epitaph or error status. Note that
+    // UnboundReason::kUnbind is simply the default value for unbind_info_.reason.
+    if (reason != UnboundReason::kPeerClosed && unbind_info_.reason != UnboundReason::kUnbind) {
+      reason = unbind_info_.reason;
+      status = unbind_info_.status;
     }
   }
-
-  // Update the reason on a peer closed status.
-  if (epitaph == ZX_ERR_PEER_CLOSED)
-    reason = UnboundReason::kPeerClosed;
 
   // Store the error handler and interface pointers before the binding is deleted.
   auto on_unbound_fn = std::move(on_unbound_fn_);
@@ -70,13 +67,13 @@ void AsyncBinding::OnUnbind(zx_status_t epitaph, UnboundReason reason) {
   auto channel = WaitForDelete(std::move(binding));
 
   // If required, send the epitaph.
-  if (send_epitaph && channel) {
-    fidl_epitaph_write(channel.get(), epitaph);
+  if (channel && reason == UnboundReason::kClose) {
+    status = fidl_epitaph_write(channel.get(), status);
   }
 
   // Execute the unbound hook if specified.
   if (on_unbound_fn) {
-    on_unbound_fn(intf, reason, std::move(channel));
+    on_unbound_fn(intf, reason, status, std::move(channel));
   }
 
   // With no unbound callback, we close the channel here.
@@ -121,8 +118,7 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
       return OnDispatchError(status);
   } else {
     ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
-    // No epitaph triggered by error due to a PEER_CLOSED.
-    OnUnbind(ZX_OK, UnboundReason::kPeerClosed);
+    OnUnbind(ZX_ERR_PEER_CLOSED, UnboundReason::kPeerClosed);
   }
 }
 
@@ -142,8 +138,8 @@ zx_status_t AsyncBinding::EnableNextDispatch() {
   if (unbind_)
     return ZX_ERR_CANCELED;
   auto status = async_begin_wait(dispatcher_, &wait_);
-  if (status != ZX_OK)
-    epitaph_ = {epitaph_.status == ZX_OK ? status : epitaph_.status, true};
+  if (status != ZX_OK && unbind_info_.status == ZX_OK)
+    unbind_info_ = {UnboundReason::kInternalError, status};
   return status;
 }
 
@@ -162,8 +158,8 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
     unbind_ = true;  // Indicate that waits should no longer be added to the dispatcher.
     // Attempt to cancel the current wait. On failure, a dispatcher thread will invoke OnUnbind().
     if (async_cancel_wait(dispatcher_, &wait_) != ZX_OK) {
-      if (epitaph)
-        epitaph_ = {*epitaph, true};  // Store the epitaph in binding state.
+      if (epitaph)  // Store the epitaph in binding state.
+        unbind_info_ = {is_server_ ? UnboundReason::kClose : UnboundReason::kPeerClosed, *epitaph};
       return;
     }
   }
@@ -174,18 +170,30 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
   auto on_unbound_fn = std::move(on_unbound_fn_);
   auto* intf = interface_;
   auto* dispatcher = dispatcher_;
-  bool peer_closed = epitaph && *epitaph == ZX_ERR_PEER_CLOSED;
+  UnboundReason reason = UnboundReason::kUnbind;
+  if (epitaph) {
+    // For a client binding, epitaph is only non-null when the epitaph message is received. As this
+    // function will have been invoked from the message handler, the async_cancel_wait() above will
+    // necessarily fail. As such, this code should only be executed on a server binding.
+    ZX_ASSERT(is_server_);
+
+    // TODO(madhaviyengar): Once Transaction::Reply() returns a status instead of invoking Close(),
+    // reason should only ever be UnboundReason::kClose.
+    reason = *epitaph == ZX_ERR_PEER_CLOSED ? UnboundReason::kPeerClosed : UnboundReason::kClose;
+  }
+
   // Wait for deletion and take the channel. This will only wait on internal code which will not
   // block indefinitely.
   auto channel = WaitForDelete(std::move(binding));
 
-  // If required, send the epitaph.
-  if (channel && epitaph) {
-    fidl_epitaph_write(channel.get(), *epitaph);
-  }
+  // If required, send the epitaph. UnboundReason::kClose is passed to the channel unbound hook
+  // indicating that the epitaph was sent as well as the return status of the send.
+  if (channel && reason == UnboundReason::kClose)
+    *epitaph = fidl_epitaph_write(channel.get(), *epitaph);
 
   if (!on_unbound_fn)
     return;  // channel goes out of scope here and gets closed.
+
   // Send the error handler as part of a new task on the dispatcher. This avoids nesting user code
   // in the same thread context which could cause deadlock.
   auto task = new UnboundTask{
@@ -193,7 +201,8 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
       .on_unbound_fn = std::move(on_unbound_fn),
       .intf = intf,
       .channel = std::move(channel),
-      .reason = peer_closed ? UnboundReason::kPeerClosed : UnboundReason::kUnbind};
+      .status = epitaph ? *epitaph : ZX_OK,
+      .reason = reason};
   ZX_ASSERT(async_post_task(dispatcher, &task->task) == ZX_OK);
 }
 

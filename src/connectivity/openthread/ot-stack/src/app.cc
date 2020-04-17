@@ -26,7 +26,8 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher
                                                   const char* service_name,
                                                   zx_handle_t service_request) {
   fidl::OnUnboundFn<OtStackApp::LowpanSpinelDeviceFidlImpl> on_unbound =
-      [](LowpanSpinelDeviceFidlImpl* server, fidl::UnboundReason reason, zx::channel channel) {
+      [](LowpanSpinelDeviceFidlImpl* server, fidl::UnboundReason reason, zx_status_t,
+         zx::channel channel) {
         server->app_.RemoveFidlRequestHandler(channel.get(), reason);
       };
   fidl::AsyncBind(dispatcher, zx::channel(service_request), this, std::move(on_unbound));

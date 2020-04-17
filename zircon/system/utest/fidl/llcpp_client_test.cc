@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/txn_header.h>
+#include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -76,6 +75,11 @@ class TestClient final {
     if (!hdr->txid != !context) {
       return ZX_OK;  // This is a failure, but let the test continue.
     }
+    // On epitaph, invoke Close() on the binding.
+    if (hdr->ordinal == kFidlOrdinalEpitaph) {
+      binding_->Close(reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
+      return ZX_OK;
+    }
     std::unique_lock lock(lock_);
     if (hdr->txid) {
       auto txid_it = txids_.find(hdr->txid);
@@ -112,8 +116,10 @@ TEST(ClientBaseTestCase, AsyncTxn) {
 
   sync_completion_t unbound;
   ClientPtr<TestClient> client;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
+                                     zx::channel channel) {
                                    EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
+                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    EXPECT_EQ(0, client->GetTxidCount());
                                    sync_completion_signal(&unbound);
@@ -144,8 +150,10 @@ TEST(ClientBaseTestCase, ParallelAsyncTxns) {
 
   sync_completion_t unbound;
   ClientPtr<TestClient> client;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
+                                     zx::channel channel) {
                                    EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
+                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    EXPECT_EQ(0, client->GetTxidCount());
                                    sync_completion_signal(&unbound);
@@ -202,8 +210,10 @@ TEST(ClientBaseTestCase, UnknownResponseTxid) {
 
   sync_completion_t unbound;
   ClientPtr<TestClient> client;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
+                                     zx::channel channel) {
                                    EXPECT_EQ(fidl::UnboundReason::kInternalError, reason);
+                                   EXPECT_EQ(ZX_ERR_NOT_FOUND, status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    EXPECT_EQ(0, client->GetTxidCount());
                                    sync_completion_signal(&unbound);
@@ -230,8 +240,9 @@ TEST(ClientBaseTestCase, Events) {
 
   sync_completion_t unbound;
   ClientPtr<TestClient> client;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status, zx::channel channel) {
                                    EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
+                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    EXPECT_EQ(10, client->GetEventCount());  // Expect 10 events.
                                    sync_completion_signal(&unbound);
@@ -264,8 +275,10 @@ TEST(ClientBaseTestCase, Unbind) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
+                                     zx::channel channel) {
                                    EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
+                                   EXPECT_OK(status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    sync_completion_signal(&unbound);
                                  };
@@ -285,8 +298,10 @@ TEST(ClientBaseTestCase, UnbindOnDestroy) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
+                                     zx::channel channel) {
                                    EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
+                                   EXPECT_OK(status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    sync_completion_signal(&unbound);
                                  };
@@ -307,8 +322,10 @@ TEST(ClientBaseTestCase, BindingRefPreventsUnbind) {
   zx_handle_t local_handle = local.get();
 
   sync_completion_t unbound;
-  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx::channel channel) {
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
+                                     zx::channel channel) {
                                    EXPECT_EQ(fidl::UnboundReason::kUnbind, reason);
+                                   EXPECT_OK(status);
                                    EXPECT_EQ(local_handle, channel.get());
                                    sync_completion_signal(&unbound);
                                  };
@@ -353,6 +370,53 @@ TEST(ClientBaseTestCase, ReleaseOutstandingTxnsOnDestroy) {
   // Delete the client and ensure that the response context is deleted.
   delete client;
   EXPECT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+}
+
+TEST(ClientBaseTestCase, Epitaph) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  zx_handle_t local_handle = local.get();
+
+  sync_completion_t unbound;
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
+                                     zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
+                                   EXPECT_EQ(ZX_ERR_BAD_STATE, status);
+                                   EXPECT_EQ(local_handle, channel.get());
+                                   sync_completion_signal(&unbound);
+                                 };
+  ClientPtr<TestClient> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
+
+  // Send an epitaph and wait for on_unbound to run.
+  ASSERT_OK(fidl_epitaph_write(remote.get(), ZX_ERR_BAD_STATE));
+  EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+}
+
+TEST(ClientBaseTestCase, PeerClosedNoEpitaph) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  zx_handle_t local_handle = local.get();
+
+  sync_completion_t unbound;
+  OnClientUnboundFn on_unbound = [&](UnboundReason reason, zx_status_t status,
+                                     zx::channel channel) {
+                                   EXPECT_EQ(fidl::UnboundReason::kPeerClosed, reason);
+                                   // No epitaph is equivalent to ZX_ERR_PEER_CLOSED epitaph.
+                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+                                   EXPECT_EQ(local_handle, channel.get());
+                                   sync_completion_signal(&unbound);
+                                 };
+  ClientPtr<TestClient> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
+
+  // Close the server end and wait for on_unbound to run.
+  remote.reset();
+  EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
 }  // namespace

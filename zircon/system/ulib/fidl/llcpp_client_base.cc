@@ -35,6 +35,11 @@ void ClientBase::Unbind() {
     binding->Unbind(std::move(binding));
 }
 
+void ClientBase::Close(zx_status_t epitaph) {
+  if (auto binding = binding_.lock())
+    binding->Close(std::move(binding), epitaph);
+}
+
 ClientBase::ClientBase(zx::channel channel, async_dispatcher_t* dispatcher,
                        TypeErasedOnUnboundFn on_unbound)
     : binding_(AsyncBinding::CreateClientBinding(dispatcher, std::move(channel),

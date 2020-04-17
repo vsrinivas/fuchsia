@@ -871,8 +871,8 @@ zx_status_t DeviceInterface::Binding::Bind(DeviceInterface* interface, zx::chann
   auto* binding_ptr = binding.get();
   auto result = fidl::AsyncBind(interface->dispatcher_, std::move(channel), interface,
                                 fidl::OnUnboundFn<DeviceInterface>(
-                                    [binding_ptr](DeviceInterface* interface,
-                                                  fidl::UnboundReason reason, zx::channel channel) {
+                                    [binding_ptr](DeviceInterface* interface, fidl::UnboundReason,
+                                                  zx_status_t, zx::channel) {
                                       bool bindings_empty;
                                       interface->teardown_lock_.Acquire();
                                       {

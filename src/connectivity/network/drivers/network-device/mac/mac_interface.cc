@@ -247,8 +247,8 @@ zx_status_t MacClientInstance::Bind(async_dispatcher_t* dispatcher, zx::channel 
   auto result = fidl::AsyncBind(
       dispatcher, std::move(req), this,
       fidl::OnUnboundFn<MacClientInstance>(
-          [](MacClientInstance* client_instance, fidl::UnboundReason _reason,
-             zx::channel _channel) { client_instance->parent_->CloseClient(client_instance); }));
+          [](MacClientInstance* client_instance, fidl::UnboundReason, zx_status_t, zx::channel)
+              { client_instance->parent_->CloseClient(client_instance); }));
   if (result.is_ok()) {
     binding_ = result.take_value();
     return ZX_OK;
