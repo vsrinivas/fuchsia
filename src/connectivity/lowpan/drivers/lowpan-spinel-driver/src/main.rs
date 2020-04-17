@@ -2,10 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! LoWPAN Driver for Spinel
+//! LoWPAN Spinel Driver
+
+#![warn(rust_2018_idioms)]
+#![warn(clippy::all)]
 
 use anyhow::{Context as _, Error};
 use fuchsia_async as fasync;
+
+mod flow_window;
+mod spinel;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
