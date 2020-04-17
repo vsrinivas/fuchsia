@@ -38,9 +38,14 @@ class MsdVslContext {
 
   bool MapRingbuffer(Ringbuffer* ringbuffer);
 
+  void Kill();
+
+  bool killed() { return killed_; }
+
  private:
   std::weak_ptr<MsdVslConnection> connection_;
   std::shared_ptr<AddressSpace> address_space_;
+  bool killed_ = false;
 };
 
 class MsdVslAbiContext : public msd_context_t {

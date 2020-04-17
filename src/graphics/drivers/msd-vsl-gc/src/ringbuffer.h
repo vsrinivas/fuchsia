@@ -33,6 +33,11 @@ class Ringbuffer : public magma::Ringbuffer<GpuMapping> {
   // from the ringbuffer before trying again.
   bool ReserveContiguous(uint32_t want_bytes);
 
+  void Reset() {
+    update_head(0);
+    update_tail(0);
+  }
+
   friend class RingbufferTest;
   friend class RingbufferTest_OffsetPopulatedHeadBeforeTail_Test;
   friend class RingbufferTest_OffsetPopulatedTailBeforeHead_Test;

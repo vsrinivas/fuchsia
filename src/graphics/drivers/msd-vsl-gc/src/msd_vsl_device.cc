@@ -149,20 +149,20 @@ bool MsdVslDevice::Init(void* device_handle) {
 
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
-  Reset();
-  if (!HardwareInit()) {
-    return DRETF(false, "Failed to initialize hardware");
-  }
-
-  return true;
-}
-
-bool MsdVslDevice::HardwareInit() {
   interrupt_ = platform_device_->RegisterInterrupt(kInterruptIndex);
   if (!interrupt_) {
     return DRETF(false, "Failed to register interrupt");
   }
 
+  page_table_slot_allocator_ = std::make_unique<PageTableSlotAllocator>(page_table_arrays_->size());
+
+  HardwareReset();
+  HardwareInit();
+
+  return true;
+}
+
+void MsdVslDevice::HardwareInit() {
   {
     auto reg = registers::IrqEnable::Get().FromValue(~0);
     reg.WriteTo(register_io_.get());
@@ -175,9 +175,60 @@ bool MsdVslDevice::HardwareInit() {
   }
 
   page_table_arrays_->HardwareInit(register_io_.get());
+}
 
-  page_table_slot_allocator_ = std::make_unique<PageTableSlotAllocator>(page_table_arrays_->size());
-  return true;
+void MsdVslDevice::KillCurrentContext() {
+  // Get the context of the batch with the lowest sequence number.
+  uint32_t min_seq = UINT_MAX;
+  std::shared_ptr<MsdVslContext> context_to_kill;
+  for (unsigned int i = 0; i < kNumEvents; i++) {
+    if (events_[i].allocated) {
+      uint32_t seq_num = events_[i].mapped_batch->GetSequenceNumber();
+      if (seq_num < min_seq) {
+        min_seq = seq_num;
+        context_to_kill = events_[i].mapped_batch->GetContext().lock();
+      }
+    }
+  }
+  if (context_to_kill) {
+    context_to_kill->Kill();
+  }
+}
+
+void MsdVslDevice::Reset() {
+  HardwareReset();
+
+  // Save the pending batches that have been posted to the ringbuffer.
+  std::vector<DeferredRequest> pending_batches;
+  for (unsigned int i = 0; i < kNumEvents; i++) {
+    if (events_[i].allocated) {
+      auto context = events_[i].mapped_batch->GetContext().lock();
+      if (context && !context->killed()) {
+        // Since we are going to reset the hardware state, the TLB should be invalidated.
+        // |SubmitCommandBuffer| will determine if flushing is required when switching address
+        // spaces.
+        pending_batches.emplace_back(
+            DeferredRequest{std::move(events_[i].mapped_batch), false /* do_flush */});
+      }
+      CompleteInterruptEvent(i);
+    }
+  }
+
+  // Ensure the batches will be requeued in the same order.
+  std::sort(pending_batches.begin(), pending_batches.end(),
+            [](const DeferredRequest& a, const DeferredRequest& b) {
+              return a.batch->GetSequenceNumber() < b.batch->GetSequenceNumber();
+            });
+
+  // Prepend these batches to the backlog, which is processed before the device request list.
+  request_backlog_.insert(request_backlog_.begin(),
+                          std::make_move_iterator(pending_batches.begin()),
+                          std::make_move_iterator(pending_batches.end()));
+
+  ringbuffer_->Reset();
+  configured_address_space_ = nullptr;
+
+  HardwareInit();
 }
 
 void MsdVslDevice::DisableInterrupts() {
@@ -342,6 +393,11 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
   }
   interrupt_->Complete();
 
+  if (mmu_exception) {
+    KillCurrentContext();
+    Reset();
+  }
+
   ProcessRequestBacklog();
 
   return MAGMA_STATUS_OK;
@@ -460,8 +516,8 @@ bool MsdVslDevice::CompleteInterruptEvent(uint32_t event_id) {
   return true;
 }
 
-void MsdVslDevice::Reset() {
-  DLOG("Reset start");
+void MsdVslDevice::HardwareReset() {
+  DLOG("HardwareReset start");
 
   auto clock_control = registers::ClockControl::Get().FromValue(0);
   clock_control.isolate_gpu().set(1);
@@ -487,7 +543,7 @@ void MsdVslDevice::Reset() {
     MAGMA_LOG(WARNING, "Gpu reset: failed to idle");
   }
 
-  DLOG("Reset complete");
+  DLOG("HardwareReset complete");
 }
 
 bool MsdVslDevice::IsIdle() {
@@ -767,6 +823,9 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<MsdVslContext> context,
                                        uint32_t address_space_index, bool do_flush,
                                        std::unique_ptr<MappedBatch> mapped_batch,
                                        uint32_t event_id) {
+  if (context->killed()) {
+    return DRETF(false, "Context killed");
+  }
   // Check if we have loaded an address space and enabled the MMU.
   if (!page_table_arrays_->IsEnabled(register_io())) {
     if (!LoadInitialAddressSpace(context, address_space_index)) {

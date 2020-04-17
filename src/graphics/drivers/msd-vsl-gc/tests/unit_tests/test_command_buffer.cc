@@ -75,32 +75,45 @@ void TestCommandBuffer::CreateAndPrepareBatch(std::shared_ptr<MsdVslContext> con
 
 void TestCommandBuffer::CreateAndSubmitBuffer(std::shared_ptr<MsdVslContext> context,
                                               const BufferDesc& buffer_desc,
+                                              std::shared_ptr<magma::PlatformSemaphore> signal,
+                                              std::optional<uint32_t> fault_addr,
                                               std::shared_ptr<MsdVslBuffer>* out_buffer) {
   std::shared_ptr<MsdVslBuffer> buffer;
   ASSERT_NO_FATAL_FAILURE(CreateAndMapBuffer(
       context, buffer_desc.buffer_size, buffer_desc.map_page_count, buffer_desc.gpu_addr, &buffer));
 
-  // Write a WAIT command at offset |kBatchOffset|.
-  WriteWaitCommand(buffer, buffer_desc.batch_offset);
-
-  // Submit the batch and verify we get a completion event.
-  auto semaphore = magma::PlatformSemaphore::Create();
-  ASSERT_NE(semaphore, nullptr);
+  if (fault_addr.has_value()) {
+    constexpr uint32_t prefetch = 16;  // arbitrary
+    WriteLinkCommand(buffer, buffer_desc.batch_offset, prefetch, fault_addr.value());
+  } else {
+    // Write a WAIT command at offset |kBatchOffset|.
+    WriteWaitCommand(buffer, buffer_desc.batch_offset);
+  }
 
   std::unique_ptr<CommandBuffer> batch;
   ASSERT_NO_FATAL_FAILURE(CreateAndPrepareBatch(context, buffer, buffer_desc.data_size,
-                                                buffer_desc.batch_offset, semaphore->Clone(),
-                                                &batch));
+                                                buffer_desc.batch_offset, signal, &batch));
   ASSERT_TRUE(batch->IsValidBatchBuffer());
 
   ASSERT_TRUE(context->SubmitBatch(std::move(batch)).ok());
 
-  constexpr uint64_t kTimeoutMs = 1000;
-  ASSERT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());
-
   if (out_buffer) {
     *out_buffer = buffer;
   }
+}
+
+void TestCommandBuffer::CreateAndSubmitBuffer(std::shared_ptr<MsdVslContext> context,
+                                              const BufferDesc& buffer_desc,
+                                              std::shared_ptr<MsdVslBuffer>* out_buffer) {
+  // Submit the batch and verify we get a completion event.
+  auto semaphore = magma::PlatformSemaphore::Create();
+  ASSERT_NE(semaphore, nullptr);
+
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(context, buffer_desc, semaphore->Clone(),
+                                                std::optional<uint32_t>{} /* fault_addr */,
+                                                out_buffer));
+  constexpr uint64_t kTimeoutMs = 1000;
+  ASSERT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());
 }
 
 void TestCommandBuffer::WriteWaitCommand(std::shared_ptr<MsdVslBuffer> buffer, uint32_t offset) {
@@ -108,6 +121,15 @@ void TestCommandBuffer::WriteWaitCommand(std::shared_ptr<MsdVslBuffer> buffer, u
   ASSERT_TRUE(buffer->platform_buffer()->MapCpu(reinterpret_cast<void**>(&cmd_ptr)));
   BufferWriter buf_writer(cmd_ptr, buffer->platform_buffer()->size(), offset);
   MiWait::write(&buf_writer);
+  ASSERT_TRUE(buffer->platform_buffer()->UnmapCpu());
+}
+
+void TestCommandBuffer::WriteLinkCommand(std::shared_ptr<MsdVslBuffer> buffer, uint32_t offset,
+                                         uint32_t prefetch, uint32_t gpu_addr) {
+  uint32_t* cmd_ptr;
+  ASSERT_TRUE(buffer->platform_buffer()->MapCpu(reinterpret_cast<void**>(&cmd_ptr)));
+  BufferWriter buf_writer(cmd_ptr, buffer->platform_buffer()->size(), offset);
+  MiLink::write(&buf_writer, prefetch, gpu_addr);
   ASSERT_TRUE(buffer->platform_buffer()->UnmapCpu());
 }
 

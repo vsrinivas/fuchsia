@@ -41,6 +41,7 @@ source_set("hardware_tests") {
     "test_device_dump.cc",
     "test_events.cc",
     "test_exec.cc",
+    "test_fault_recovery.cc",
     "test_memory_write.cc",
   ]
 

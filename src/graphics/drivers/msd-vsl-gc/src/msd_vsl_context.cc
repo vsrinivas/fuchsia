@@ -102,6 +102,17 @@ bool MsdVslContext::MapRingbuffer(Ringbuffer* ringbuffer) {
   return res;
 }
 
+void MsdVslContext::Kill() {
+  if (killed_) {
+    return;
+  }
+  killed_ = true;
+  auto connection = connection_.lock();
+  if (connection) {
+    connection->SendContextKilled();
+  }
+}
+
 void msd_context_destroy(msd_context_t* abi_context) { delete MsdVslAbiContext::cast(abi_context); }
 
 magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64_t commands_size,

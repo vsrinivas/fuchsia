@@ -120,7 +120,11 @@ class MsdVslDevice : public msd_device_t,
   DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
 
   bool Init(void* device_handle);
-  bool HardwareInit();
+  void HardwareInit();
+  void HardwareReset();
+  // Kills the context of the batch currently being executed.
+  void KillCurrentContext();
+  // Moves pending batches to the backlog and resets the hardware and driver state.
   void Reset();
   void DisableInterrupts();
 
@@ -272,6 +276,8 @@ class MsdVslDevice : public msd_device_t,
   friend class TestEvents_Submit_Test;
   friend class TestEvents_WriteSameEvent_Test;
   friend class TestEvents_WriteUnorderedEventIds_Test;
+  friend class TestFaultRecovery_ManyBatches_Test;
+  friend class TestFaultRecovery_MultipleContexts_Test;
   friend class MsdVslDeviceTest_FetchEngineDma_Test;
   friend class MsdVslDeviceTest_LoadAddressSpace_Test;
   friend class MsdVslDeviceTest_RingbufferCanHoldMaxEvents_Test;

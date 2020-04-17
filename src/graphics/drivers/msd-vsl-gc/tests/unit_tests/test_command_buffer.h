@@ -88,6 +88,16 @@ class TestCommandBuffer : public ::testing::Test {
                              std::unique_ptr<CommandBuffer>* out_batch);
 
   // Creates a buffer from |buffer_desc|, writes a test instruction to it and
+  // submits it as a command buffer.
+  // |signal| is an optional semaphore that will be passed as a signal semaphore for the batch.
+  // If |fault_addr| is populated, the submitted buffer will contain faulting instructions.
+  // If |out_buffer| is non-null, it will be populated with the created buffer.
+  void CreateAndSubmitBuffer(std::shared_ptr<MsdVslContext> context, const BufferDesc& buffer_desc,
+                             std::shared_ptr<magma::PlatformSemaphore> signal,
+                             std::optional<uint32_t> fault_addr,
+                             std::shared_ptr<MsdVslBuffer>* out_buffer = nullptr);
+
+  // Creates a buffer from |buffer_desc|, writes a test instruction to it and
   // submits it as a command buffer. This will wait for execution to complete.
   // If |out_buffer| is non-null, it will be populated with the created buffer.
   void CreateAndSubmitBuffer(std::shared_ptr<MsdVslContext> context, const BufferDesc& buffer_desc,
@@ -95,6 +105,10 @@ class TestCommandBuffer : public ::testing::Test {
 
   // Writes a single WAIT command in |buf| at |offset|.
   void WriteWaitCommand(std::shared_ptr<MsdVslBuffer> buf, uint32_t offset);
+
+  // Writes a single LINK command in |buf| at |offset|.
+  void WriteLinkCommand(std::shared_ptr<MsdVslBuffer> buffer, uint32_t offset, uint32_t prefetch,
+                        uint32_t gpu_addr);
 
   void DropDefaultClient() { client_ = nullptr; }
 
