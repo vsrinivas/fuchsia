@@ -41,6 +41,7 @@ zx_library("as370") {
     "syn-audio-out.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.shareddma",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -49,6 +50,5 @@ zx_library("as370") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.shareddma",
   ]
 }
