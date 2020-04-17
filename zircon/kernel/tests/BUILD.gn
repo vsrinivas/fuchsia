@@ -29,6 +29,7 @@ source_set("tests") {
     "pow2_tests.cc",
     "preempt_disable_tests.cc",
     "printf_tests.cc",
+    "relaxed_atomic_tests.cc",
     "resource_tests.cc",
     "sleep_tests.cc",
     "span_tests.cc",
