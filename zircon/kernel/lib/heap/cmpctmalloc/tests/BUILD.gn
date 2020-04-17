@@ -19,7 +19,10 @@ import("//build/test.gni")
 if (is_host) {
   test("tests") {
     output_name = "cmpctmalloc_test"
-    sources = [ "cmpctmalloc_test.cc" ]
+    sources = [
+      "cmpctmalloc_test.cc",
+      "page_manager.cc",
+    ]
     deps = [
       "//zircon/public/lib/cmpctmalloc",
       "//zircon/public/lib/zxtest",

@@ -26,6 +26,10 @@ struct TheHeapLock {
 };
 #endif
 
+// The maximum size that |cmpct_alloc| can allocate. Any larger of a size would
+// yield a nullptr.
+extern const size_t kHeapMaxAllocSize;
+
 void* cmpct_alloc(size_t) TA_EXCL(TheHeapLock::Get());
 void* cmpct_realloc(void*, size_t) TA_EXCL(TheHeapLock::Get());
 void cmpct_free(void*) TA_EXCL(TheHeapLock::Get());

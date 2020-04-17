@@ -821,13 +821,16 @@ static void cmpct_test_return_to_os(void) TA_EXCL(TheHeapLock::Get()) {
  *
  ****************************************************/
 
+// Factors in the header for an allocation.
+const size_t kHeapMaxAllocSize = HEAP_LARGE_ALLOC_BYTES - sizeof(header_t);
+
 void* cmpct_alloc(size_t size) {
   if (size == 0u) {
     return NULL;
   }
 
   // Large allocations are no longer allowed. See ZX-1318 for details.
-  if (size > (HEAP_LARGE_ALLOC_BYTES - sizeof(header_t))) {
+  if (size > kHeapMaxAllocSize) {
     return NULL;
   }
 
