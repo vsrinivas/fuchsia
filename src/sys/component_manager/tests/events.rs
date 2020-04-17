@@ -9,6 +9,7 @@ use {
     fidl::Channel,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::{connect_channel_to_service, connect_to_service},
+    fuchsia_zircon as zx,
     futures::{
         channel::oneshot,
         future::{AbortHandle, Abortable, BoxFuture, TryFutureExt},
@@ -384,6 +385,7 @@ pub trait Event: Handler {
     const NAME: &'static str;
 
     fn target_moniker(&self) -> &str;
+    fn timestamp(&self) -> zx::Time;
     fn from_fidl(event: fsys::Event) -> Result<Self, Error>;
 }
 
@@ -798,6 +800,7 @@ macro_rules! create_event {
         pub struct $event_type {
             target_moniker: String,
             handler: Option<fsys::HandlerProxy>,
+            timestamp: zx::Time,
             pub result: Result<$payload_struct_name, EventError>,
         }
 
@@ -815,6 +818,10 @@ macro_rules! create_event {
                 &self.target_moniker
             }
 
+            fn timestamp(&self) -> zx::Time {
+                self.timestamp
+            }
+
             fn from_fidl(event: fsys::Event) -> Result<Self, Error> {
                 // Event type in event must match what is expected
                 let event_type = event.event_type.ok_or(
@@ -828,6 +835,10 @@ macro_rules! create_event {
                 let target_moniker = event.target_moniker.ok_or(
                     format_err!("Missing target_moniker from Event object")
                 )?;
+
+                let timestamp = zx::Time::from_nanos(event.timestamp.ok_or(
+                    format_err!("Missing timestamp from the Event object")
+                )?);
 
                 let handler = event.handler.map(|h| h.into_proxy()).transpose()?;
 
@@ -863,7 +874,7 @@ macro_rules! create_event {
                     _ => Err(format_err!("Unexpected event result")),
                 }?;
 
-                Ok($event_type { target_moniker, handler,  result })
+                Ok($event_type { target_moniker, handler,  timestamp, result })
             }
         }
 
@@ -876,6 +887,7 @@ macro_rules! create_event {
     ($event_type:ident, $event_name:ident) => {
         pub struct $event_type {
             target_moniker: String,
+            timestamp: zx::Time,
             handler: Option<fsys::HandlerProxy>,
             pub error: Option<EventError>,
         }
@@ -888,6 +900,10 @@ macro_rules! create_event {
                 &self.target_moniker
             }
 
+            fn timestamp(&self) -> zx::Time {
+                self.timestamp
+            }
+
             fn from_fidl(event: fsys::Event) -> Result<Self, Error> {
                 // ent type in event must match what is expected
                 let event_type = event.event_type.ok_or(
@@ -895,8 +911,13 @@ macro_rules! create_event {
                 )?;
 
                 if event_type != Self::TYPE {
-                    return Err(format_err!("Incorrect event type. Expected: {:?}. Got: {:?}", Self::TYPE, event_type));
+                    return Err(format_err!(
+                        "Incorrect event type. Expected: {:?}. Got: {:?}", Self::TYPE, event_type));
                 }
+
+                let timestamp = zx::Time::from_nanos(event.timestamp.ok_or(
+                    format_err!("Missing timestamp from the Event object")
+                )?);
 
                 let target_moniker = event.target_moniker.ok_or(
                     format_err!("Missing target_moniker from Event object")
@@ -913,7 +934,7 @@ macro_rules! create_event {
 
 
 
-                Ok($event_type { target_moniker, handler, error })
+                Ok($event_type { target_moniker, handler, error, timestamp })
             }
         }
 

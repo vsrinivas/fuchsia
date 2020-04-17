@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     echo_factory_interposer::EchoFactoryInterposer,
     echo_interposer::EchoInterposer,
-    fuchsia_async as fasync,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::StreamExt,
     test_utils_lib::{echo_capability::EchoCapability, events::*, test_utils::*},
 };
@@ -229,6 +229,16 @@ async fn chained_interposer_test() -> Result<(), Error> {
     Ok(())
 }
 
+async fn expect_and_get_timestamp<T: Event>(
+    event_stream: &mut EventStream,
+    moniker: &str,
+) -> Result<zx::Time, Error> {
+    let event = event_stream.expect_exact::<T>(EventMatcher::new().expect_moniker(moniker)).await?;
+    let timestamp = event.timestamp();
+    event.resume().await?;
+    Ok(timestamp)
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn event_dispatch_order_test() -> Result<(), Error> {
     let test = BlackBoxTest::default(
@@ -244,26 +254,15 @@ async fn event_dispatch_order_test() -> Result<(), Error> {
     // "Discovered" is the first stage of a component's lifecycle so it must
     // be dispatched before "Resolved". Also, a child is not discovered until
     // the parent is resolved and its manifest is processed.
-    event_stream
-        .expect_exact::<Discovered>(EventMatcher::new().expect_moniker("."))
-        .await?
-        .resume()
-        .await?;
-    event_stream
-        .expect_exact::<Resolved>(EventMatcher::new().expect_moniker("."))
-        .await?
-        .resume()
-        .await?;
-    event_stream
-        .expect_exact::<Discovered>(EventMatcher::new().expect_moniker("./child:0"))
-        .await?
-        .resume()
-        .await?;
-    event_stream
-        .expect_exact::<Resolved>(EventMatcher::new().expect_moniker("./child:0"))
-        .await?
-        .resume()
-        .await?;
+    let timestamp_a = expect_and_get_timestamp::<Discovered>(&mut event_stream, ".").await?;
+    let timestamp_b = expect_and_get_timestamp::<Resolved>(&mut event_stream, ".").await?;
+    let timestamp_c =
+        expect_and_get_timestamp::<Discovered>(&mut event_stream, "./child:0").await?;
+    let timestamp_d = expect_and_get_timestamp::<Resolved>(&mut event_stream, "./child:0").await?;
+
+    assert!(timestamp_a < timestamp_b);
+    assert!(timestamp_b < timestamp_c);
+    assert!(timestamp_c < timestamp_d);
 
     Ok(())
 }

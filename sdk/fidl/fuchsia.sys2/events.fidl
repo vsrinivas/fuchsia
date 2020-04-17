@@ -6,6 +6,7 @@ library fuchsia.sys2;
 
 using fuchsia.component;
 using fuchsia.io;
+using zx;
 
 /// The maximum number of event types that a receiver can listen to.
 /// This capacity should match the actual number of event types.
@@ -146,6 +147,9 @@ table Event {
 
     /// Optional payload for some event types
     4: EventResult event_result;
+
+    /// Time when the event occurred.
+    5: zx.time timestamp;
 };
 
 /// Subscribe to events in component manager.

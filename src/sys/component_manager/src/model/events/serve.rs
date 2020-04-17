@@ -180,12 +180,13 @@ fn maybe_create_capability_routed_payload(
 /// and basic handler for resumption.
 fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
     let event_type = Some(event.event.event_type().into());
+    let timestamp = Some(event.event.timestamp.into_nanos());
     let target_relative_moniker =
         RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
     let target_moniker = Some(target_relative_moniker.to_string());
     let event_result = maybe_create_event_result(&event.scope_moniker, &event.event.result)?;
     let handler = maybe_serve_handler_async(event);
-    Ok(fsys::Event { event_type, target_moniker, handler, event_result })
+    Ok(fsys::Event { event_type, target_moniker, handler, event_result, timestamp })
 }
 
 /// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.

@@ -56,7 +56,7 @@ pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
     // Invoke the BeforeStart hook.
     {
         let routing_facade = RoutingFacade::new();
-        let event = Event::new(
+        let event = Event::new_with_timestamp(
             realm.abs_moniker.clone(),
             Ok(EventPayload::Started {
                 component_url: realm.component_url.clone(),
@@ -64,6 +64,7 @@ pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
                 component_decl: component.decl.clone(),
                 routing_facade,
             }),
+            pending_runtime.timestamp,
         );
         realm.hooks.dispatch(&event).await?;
     }

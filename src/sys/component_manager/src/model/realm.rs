@@ -619,6 +619,7 @@ pub struct ExecutionState {
     /// True if the component instance has shut down. This means that the component is stopped
     /// and cannot be restarted.
     shut_down: bool,
+
     /// Runtime support for the component. From component manager's point of view, the component
     /// instance is running iff this field is set.
     pub runtime: Option<Runtime>,
@@ -838,16 +839,24 @@ impl RealmState {
 pub struct Runtime {
     /// The resolved component URL returned by the resolver.
     pub resolved_url: String,
+
     /// Holder for objects related to the component's incoming namespace.
     pub namespace: Option<IncomingNamespace>,
+
     /// A client handle to the component instance's outgoing directory.
     pub outgoing_dir: Option<DirectoryProxy>,
+
     /// A client handle to the component instance's runtime directory hosted by the runner.
     pub runtime_dir: Option<DirectoryProxy>,
+
     /// Hosts a directory mapping the component's exposed capabilities.
     pub exposed_dir: ExposedDir,
-    /// Used to interact with the Runner to influence the component's execution
+
+    /// Used to interact with the Runner to influence the component's execution.
     pub controller: Option<fcrunner::ComponentControllerProxy>,
+
+    /// Approximates when the component was started.
+    pub timestamp: zx::Time,
 }
 
 #[derive(Debug, PartialEq)]
@@ -895,7 +904,16 @@ impl Runtime {
         exposed_dir: ExposedDir,
         controller: Option<fcrunner::ComponentControllerProxy>,
     ) -> Result<Self, ModelError> {
-        Ok(Runtime { resolved_url, namespace, outgoing_dir, runtime_dir, exposed_dir, controller })
+        let timestamp = zx::Time::get(zx::ClockId::Monotonic);
+        Ok(Runtime {
+            resolved_url,
+            namespace,
+            outgoing_dir,
+            runtime_dir,
+            exposed_dir,
+            controller,
+            timestamp,
+        })
     }
 
     pub async fn wait_on_channel_close(&mut self) {
@@ -1020,7 +1038,7 @@ pub mod tests {
         super::*,
         crate::model::{
             binding::Binder,
-            events::event::SyncMode,
+            events::{event::SyncMode, stream::EventStream},
             hooks::EventType,
             rights::READ_RIGHTS,
             testing::{
@@ -1538,5 +1556,53 @@ pub mod tests {
             }
             payload => panic!("Expected capability ready. Got: {:?}", payload),
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn started_event_timestamp_matches_realm() {
+        let test =
+            RoutingTest::new("root", vec![("root", ComponentDeclBuilder::new().build())]).await;
+
+        let mut event_source = test
+            .builtin_environment
+            .event_source_factory
+            .create_for_debug(SyncMode::Sync)
+            .await
+            .expect("create event source");
+        let mut event_stream = event_source
+            .subscribe(vec![
+                EventType::Discovered.into(),
+                EventType::Resolved.into(),
+                EventType::Started.into(),
+            ])
+            .await
+            .expect("subscribe to event stream");
+        event_source.start_component_tree().await;
+
+        let model = test.model.clone();
+        let (f, bind_handle) =
+            async move { model.bind(&vec![].into()).await.expect("failed to bind") }
+                .remote_handle();
+        fasync::spawn(f);
+        let discovered_timestamp =
+            wait_until_event_get_timestamp(&mut event_stream, EventType::Discovered).await;
+        let resolved_timestamp =
+            wait_until_event_get_timestamp(&mut event_stream, EventType::Resolved).await;
+        let started_timestamp =
+            wait_until_event_get_timestamp(&mut event_stream, EventType::Started).await;
+
+        assert!(discovered_timestamp < resolved_timestamp);
+        assert!(resolved_timestamp < started_timestamp);
+
+        let realm = bind_handle.await;
+        let realm_timestamp = realm.lock_execution().await.runtime.as_ref().unwrap().timestamp;
+        assert_eq!(realm_timestamp, started_timestamp);
+    }
+
+    async fn wait_until_event_get_timestamp(
+        event_stream: &mut EventStream,
+        event_type: EventType,
+    ) -> zx::Time {
+        event_stream.wait_until(event_type, vec![].into()).await.unwrap().event.timestamp.clone()
     }
 }

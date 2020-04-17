@@ -14,7 +14,7 @@ use {
     async_trait::async_trait,
     cm_rust::{CapabilityName, ComponentDecl},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeProxy},
-    fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace,
+    fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex},
     io_util,
     rand::random,
@@ -281,13 +281,25 @@ pub struct Event {
 
     /// Result of the event
     pub result: EventResult,
+
+    /// Time when this event was created
+    pub timestamp: zx::Time,
 }
 
 impl Event {
     pub fn new(target_moniker: AbsoluteMoniker, result: EventResult) -> Self {
+        let timestamp = zx::Time::get(zx::ClockId::Monotonic);
+        Self::new_with_timestamp(target_moniker, result, timestamp)
+    }
+
+    pub fn new_with_timestamp(
+        target_moniker: AbsoluteMoniker,
+        result: EventResult,
+        timestamp: zx::Time,
+    ) -> Self {
         // Generate a random 64-bit integer to identify this event
         let id = random::<u64>();
-        Self { id, target_moniker, result }
+        Self { id, target_moniker, result, timestamp }
     }
 }
 
