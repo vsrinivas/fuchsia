@@ -134,6 +134,8 @@ class Imx227Device : public DeviceType,
   // Other
   zx_status_t InitPdev();
   zx_status_t InitSensor(uint8_t idx) __TA_REQUIRES(lock_);
+  void HwInit() __TA_REQUIRES(lock_);
+  void HwDeInit() __TA_REQUIRES(lock_);
   void ShutDown();
   bool ValidateSensorID() __TA_REQUIRES(lock_);
 

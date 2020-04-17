@@ -42,6 +42,8 @@ constexpr uint32_t kDGainPrecision = 8;
 constexpr int32_t kLog2GainShift = 18;
 constexpr int32_t kSensorExpNumber = 1;
 constexpr uint32_t kMasterClock = 288000000;
+constexpr uint32_t kMaxIntegrationTime =
+    0x15BC;  // Max allowed for 30fps = 2782 (dec)=0x0ADE (hex) 15fps = 5564 (dec)=0x15BC (hex).
 
 }  // namespace
 
@@ -170,8 +172,7 @@ zx_status_t Imx227Device::InitSensor(uint8_t idx) {
   return ZX_OK;
 }
 
-zx_status_t Imx227Device::CameraSensorInit() {
-  std::lock_guard guard(lock_);
+void Imx227Device::HwInit() {
   // Power up sequence. Reference: Page 51- IMX227-0AQH5-C datasheet.
   gpio_vana_enable_.Write(1);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
@@ -185,11 +186,26 @@ zx_status_t Imx227Device::CameraSensorInit() {
 
   gpio_cam_rst_.Write(0);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+}
 
-  // Get Sensor ID to validate initialization sequence.
-  if (!ValidateSensorID()) {
-    return ZX_ERR_INTERNAL;
-  }
+void Imx227Device::HwDeInit() {
+  gpio_cam_rst_.Write(1);
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+
+  clk24_.Disable();
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+
+  gpio_vdig_enable_.Write(0);
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+
+  gpio_vana_enable_.Write(0);
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+}
+
+zx_status_t Imx227Device::CameraSensorInit() {
+  std::lock_guard guard(lock_);
+
+  HwInit();
 
   // Initialize Sensor Context.
   ctx_.seq_width = 1;
@@ -214,10 +230,7 @@ zx_status_t Imx227Device::CameraSensorInit() {
 
 void Imx227Device::CameraSensorDeInit() {
   std::lock_guard guard(lock_);
-
   mipi_.DeInit();
-  // Enable 24M clock for sensor.
-  clk24_.Disable();
   // Reference code has it, mostly likely needed for the clock to
   // stabalize. No other way of knowing for sure if sensor is now off.
   zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
@@ -239,7 +252,6 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* ou
                                                         size_t modes_count,
                                                         size_t* out_modes_actual) {
   std::lock_guard guard(lock_);
-
   if (out_modes_list == nullptr || out_modes_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -256,6 +268,8 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* ou
 zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
   std::lock_guard guard(lock_);
   zxlogf(TRACE, "%s IMX227 Camera Sensor Mode Set request to %d\n", __func__, mode);
+
+  HwInit();
 
   // Get Sensor ID to see if sensor is initialized.
   if (!IsSensorInitialized() || !ValidateSensorID()) {
@@ -286,7 +300,7 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
   ctx_.param.active.height = supported_modes[mode].resolution.height;
   ctx_.HMAX = Read16(kLineLengthPckReg);
   ctx_.VMAX = Read16(kFrameLengthLinesReg);
-  ctx_.int_max = 0x0ADE;  // Max allowed for 30fps = 2782 (dec), 0x0ADE (hex)
+  ctx_.int_max = kMaxIntegrationTime;
   ctx_.int_time_min = 1;
   ctx_.int_time_limit = ctx_.int_max;
   ctx_.param.total.height = ctx_.VMAX;
@@ -328,12 +342,12 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
   adap_info.resolution.height = supported_modes[mode].resolution.height;
   adap_info.path = MIPI_PATH_PATH0;
   adap_info.mode = MIPI_MODES_DIR_MODE;
-  return mipi_.Init(&mipi_info, &adap_info);
+  auto status = mipi_.Init(&mipi_info, &adap_info);
+  return status;
 }
 
 zx_status_t Imx227Device::CameraSensorStartStreaming() {
   std::lock_guard guard(lock_);
-
   if (!IsSensorInitialized() || ctx_.streaming_flag) {
     return ZX_ERR_BAD_STATE;
   }
@@ -345,12 +359,12 @@ zx_status_t Imx227Device::CameraSensorStartStreaming() {
 
 zx_status_t Imx227Device::CameraSensorStopStreaming() {
   std::lock_guard guard(lock_);
-
   if (!IsSensorInitialized() || !ctx_.streaming_flag) {
     return ZX_ERR_BAD_STATE;
   }
   ctx_.streaming_flag = 0;
   Write8(kModeSelectReg, 0x00);
+  HwDeInit();
   return ZX_OK;
 }
 
