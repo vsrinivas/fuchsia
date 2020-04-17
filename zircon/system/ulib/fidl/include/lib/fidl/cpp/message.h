@@ -176,7 +176,6 @@ class Message {
  private:
   BytePart bytes_;
   HandlePart handles_;
-  std::vector<uint8_t> allocated_buffer;
 };
 
 }  // namespace fidl
