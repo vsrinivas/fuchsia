@@ -30,21 +30,37 @@ if (is_linux) {
     }
   }
 
+  net_tools = [
+    "netaddr",
+    "netcp",
+    "netls",
+    "netruncmd",
+  ]
   copy("copy_netsvc_tools") {
     visibility = [ ":*" ]
-
-    sources = [
-      "$zircon_root_build_dir/tools/loglistener",
-      "$zircon_root_build_dir/tools/netaddr",
-      "$zircon_root_build_dir/tools/netcp",
-      "$zircon_root_build_dir/tools/netls",
-      "$zircon_root_build_dir/tools/netruncmd",
-    ]
+    sources = []
     outputs = [ "$root_out_dir/test_data/limited_netsvc/{{source_file_part}}" ]
+    deps = []
+
+    foreach(tool, net_tools) {
+      sources += [ "$host_out_dir/$tool" ]
+      deps += [ "//zircon/tools/netprotocol:$tool($host_toolchain)" ]
+    }
+  }
+
+  copy("copy_loglistener") {
+    visibility = [ ":*" ]
+
+    sources = [ "$zircon_root_build_dir/tools/loglistener" ]
+
+    outputs = [ "$root_out_dir/test_data/limited_netsvc/loglistener" ]
   }
 
   group("netsvc_user_tools") {
-    deps = [ ":copy_netsvc_tools" ]
+    deps = [
+      ":copy_loglistener",
+      ":copy_netsvc_tools",
+    ]
 
     metadata = {
       test_runtime_deps = [

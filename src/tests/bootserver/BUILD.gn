@@ -75,21 +75,28 @@ if (is_linux) {
     deps = [ "//zircon/tools/bootserver($host_toolchain)" ]
   }
 
-  copy("copy_other_tools") {
+  copy("copy_netls") {
     visibility = [ ":*" ]
 
-    sources = [
-      "$zircon_root_build_dir/tools/netls",
-      "testdata/fake_firmware",
-    ]
-    outputs =
-        [ "$root_out_dir/test_data/bootserver_tools/{{source_file_part}}" ]
+    sources = [ "$host_out_dir/netls" ]
+
+    outputs = [ "$root_out_dir/test_data/bootserver_tools/netls" ]
+
+    deps = [ "//zircon/tools/netprotocol:netls($host_toolchain)" ]
+  }
+
+  copy("copy_fake_firmware") {
+    visibility = [ ":*" ]
+
+    sources = [ "testdata/fake_firmware" ]
+    outputs = [ "$root_out_dir/test_data/bootserver_tools/fake_firmware" ]
   }
 
   group("bootserver_user_tools") {
     deps = [
       ":copy_bootserver",
-      ":copy_other_tools",
+      ":copy_fake_firmware",
+      ":copy_netls",
     ]
 
     metadata = {

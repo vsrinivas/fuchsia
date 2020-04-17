@@ -2,6 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
 group("netprotocol") {
   deps = [
     ":netaddr",
@@ -13,27 +20,28 @@ group("netprotocol") {
 
 source_set("common") {
   sources = [ "netprotocol.c" ]
+  deps = [ "//zircon/system/public" ]
 }
 
-zx_host_tool("netruncmd") {
+executable("netruncmd") {
   sources = [ "netruncmd.c" ]
   deps = [ ":common" ]
 }
 
-zx_host_tool("netcp") {
+executable("netcp") {
   sources = [ "netcp.c" ]
   deps = [
     ":common",
-    "$zx/system/ulib/tftp",
+    "//zircon/public/lib/tftp",
   ]
 }
 
-zx_host_tool("netls") {
+executable("netls") {
   sources = [ "netls.c" ]
   deps = [ ":common" ]
 }
 
-zx_host_tool("netaddr") {
+executable("netaddr") {
   sources = [ "netaddr.c" ]
   deps = [ ":common" ]
 }

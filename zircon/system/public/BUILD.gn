@@ -12,6 +12,7 @@ config("public_config") {
 # These headers are exported for use in building non-fuchsia-host binaries.
 source_set("public") {
   public = [
+    "zircon/boot/netboot.h",
     "zircon/compiler.h",
     "zircon/errors.h",
     "zircon/limits.h",

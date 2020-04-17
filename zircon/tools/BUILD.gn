@@ -39,7 +39,6 @@ foreach(host, standard_build_hosts) {
       "loglistener",
       "lz4",
       "merkleroot",
-      "netprotocol",
       "zbi",
     ]
     if (os == "linux") {
