@@ -63,9 +63,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                   fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
                   fuchsia::ui::views::ViewToken view_token) override;
 
-  // Completes any deferred initialization steps from Initialize().
-  void MaybeFinishInitialization();
-
   // |Sessionmgr|
   void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
                         SwapSessionShellCallback callback) override;
@@ -210,11 +207,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   class SwapSessionShellOperation;
 
   OperationQueue operation_queue_;
-
-  // Part of Initialize() that is deferred until the first environment service
-  // request is received from the session shell, in order to accelerate the
-  // startup of session shell.
-  fit::function<void()> deferred_initialization_cb_;
 
   // Set to |true| when sessionmgr starts its terminating sequence;  this flag
   // can be used to determine whether to reject vending FIDL services.

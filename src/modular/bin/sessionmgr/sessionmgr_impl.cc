@@ -170,29 +170,13 @@ void SessionmgrImpl::Initialize(
   InitializeSessionShell(std::move(session_shell_config), std::move(view_token));
   InitializeIntlPropertyProvider();
 
-  // The final stages of initialization are deferred until after the Session Shell
-  // has started and requests one of its dependency services.
-  deferred_initialization_cb_ = [this, session_shell_url = session_shell_config.url,
-                                 story_shell_config = std::move(story_shell_config),
-                                 use_session_shell_for_story_shell_factory]() mutable {
-    FX_LOGS(INFO) << "SessionmgrImpl::Initialize() finishing initialization.";
+  InitializeLedger();
 
-    InitializeLedger();
-
-    InitializeModular(std::move(session_shell_url), std::move(story_shell_config),
-                      use_session_shell_for_story_shell_factory);
-    ConnectSessionShellToStoryProvider();
-    OnTerminate([this](fit::function<void()> cont) { TerminateSessionShell(std::move(cont)); });
-    ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToSessionMgr);
-  };
-}
-
-void SessionmgrImpl::MaybeFinishInitialization() {
-  if (!deferred_initialization_cb_)
-    return;
-
-  auto cb = std::move(deferred_initialization_cb_);
-  cb();
+  InitializeModular(session_shell_config.url, std::move(story_shell_config),
+                    use_session_shell_for_story_shell_factory);
+  ConnectSessionShellToStoryProvider();
+  OnTerminate([this](fit::function<void()> cont) { TerminateSessionShell(std::move(cont)); });
+  ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToSessionMgr);
 }
 
 void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
@@ -501,7 +485,6 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
     if (terminating_) {
       return;
     }
-    MaybeFinishInitialization();
     session_shell_context_bindings_.AddBinding(this, std::move(request));
   });
 
@@ -510,7 +493,6 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
     if (terminating_) {
       return;
     }
-    MaybeFinishInitialization();
     session_shell_component_context_impl_->Connect(std::move(request));
   });
 
@@ -519,7 +501,6 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
     if (terminating_) {
       return;
     }
-    MaybeFinishInitialization();
     puppet_master_impl_->Connect(std::move(request));
   });
 
