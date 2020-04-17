@@ -13,6 +13,7 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
+    "//src/connectivity/lowpan/lib/spinel_pack",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

@@ -5,5 +5,11 @@
 pub mod device_client;
 pub use device_client::*;
 
+pub mod enums;
+pub use enums::*;
+
+pub mod types;
+pub use types::*;
+
 #[cfg(test)]
 pub mod mock;

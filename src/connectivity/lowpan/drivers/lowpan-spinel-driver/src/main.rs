@@ -10,6 +10,10 @@
 use anyhow::{Context as _, Error};
 use fuchsia_async as fasync;
 
+// NOTE: This line is a hack to work around some issues
+//       with respect to external rust crates.
+use spinel_pack::{self as spinel_pack};
+
 mod flow_window;
 mod spinel;
 
