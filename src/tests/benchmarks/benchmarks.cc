@@ -89,6 +89,11 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
                                           out_file);
   }
 
+  {
+    benchmarks_runner->AddLibPerfTestBenchmark(
+        "fuchsia.fidl_microbenchmarks", "/bin/llcpp_fidl_benchmarks", std::vector<std::string>());
+  }
+
   // TODO(PT-181, PT-182): The following input latency benchmarks do not make
   // an effort to close the graphics application being benchmarked at exit
   // (the app will continue to run even after the benchmark driver process has

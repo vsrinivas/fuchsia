@@ -27,9 +27,18 @@ void main() {
     await helper.processResults(resultsFile);
   }, timeout: Timeout.none);
 
+  test('llcpp_fidl_microbenchmarks', () async {
+    final helper = await PerfTestHelper.make();
+    const resultsFile = '/tmp/perf_results_llcpp.json';
+    final result = await helper.sl4fDriver.ssh
+        .run('/bin/llcpp_fidl_benchmarks -p --out $resultsFile');
+    expect(result.exitCode, equals(0));
+    await helper.processResults(resultsFile);
+  }, timeout: Timeout.none);
+
   test('rust_fidl_microbenchmarks', () async {
     final helper = await PerfTestHelper.make();
-    const resultsFile = '/tmp/perf_results.json';
+    const resultsFile = '/tmp/perf_results_rust.json';
     final result = await helper.sl4fDriver.ssh
         .run('/bin/rust_fidl_benchmarks $resultsFile');
     expect(result.exitCode, equals(0));
