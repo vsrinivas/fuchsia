@@ -284,7 +284,7 @@ void App::InitializeServices() {
 
     // Add Color Transform Handler.
     color_transform_handler_ = std::make_unique<ColorTransformHandler>(
-        *component_context_.get(), compositor_->id(), session_.get());
+        component_context_.get(), compositor_->id(), session_.get());
 
     // If a11y tried to register a Focuser while Scenic wasn't ready yet, bind the request now.
     if (deferred_a11y_focuser_binding_) {

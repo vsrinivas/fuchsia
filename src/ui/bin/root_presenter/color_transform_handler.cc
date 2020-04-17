@@ -14,25 +14,34 @@ namespace root_presenter {
 const std::array<float, 3> kColorAdjustmentPostoffsets = {0, 0, 0};
 const std::array<float, 3> kColorAdjustmentPreoffsets = {0, 0, 0};
 
-ColorTransformHandler::ColorTransformHandler(sys::ComponentContext& component_context,
+ColorTransformHandler::ColorTransformHandler(sys::ComponentContext* component_context,
                                              scenic::ResourceId compositor_id,
                                              scenic::Session* session)
     : ColorTransformHandler(component_context, compositor_id, session, ColorTransformState()) {}
 
-ColorTransformHandler::ColorTransformHandler(sys::ComponentContext& component_context,
+ColorTransformHandler::ColorTransformHandler(sys::ComponentContext* component_context,
                                              scenic::ResourceId compositor_id,
                                              scenic::Session* session, ColorTransformState state)
-    : session_(session),
+    : component_context_(component_context),
+      session_(session),
       compositor_id_(compositor_id),
       color_transform_handler_bindings_(this),
       color_transform_state_(state) {
-  component_context.svc()->Connect(color_transform_manager_.NewRequest());
+  FXL_DCHECK(component_context_);
+  FXL_DCHECK(session_);
+  component_context->svc()->Connect(color_transform_manager_.NewRequest());
   color_transform_manager_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "Unable to connect to ColorTransformManager" << zx_status_get_string(status);
   });
   fidl::InterfaceHandle<fuchsia::accessibility::ColorTransformHandler> handle;
   color_transform_handler_bindings_.Bind(handle.NewRequest());
   color_transform_manager_->RegisterColorTransformHandler(std::move(handle));
+  component_context->outgoing()->AddPublicService(color_adjustment_bindings_.GetHandler(this));
+}
+
+ColorTransformHandler::~ColorTransformHandler() {
+  component_context_->outgoing()
+      ->RemovePublicService<fuchsia::ui::brightness::ColorAdjustmentHandler>();
 }
 
 void ColorTransformHandler::SetColorTransformConfiguration(

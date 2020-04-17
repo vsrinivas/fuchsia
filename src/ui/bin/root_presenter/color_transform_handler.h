@@ -51,14 +51,14 @@ class ColorTransformState {
 class ColorTransformHandler : public fuchsia::accessibility::ColorTransformHandler,
                               public fuchsia::ui::brightness::ColorAdjustmentHandler {
  public:
-  explicit ColorTransformHandler(sys::ComponentContext& component_context,
+  explicit ColorTransformHandler(sys::ComponentContext* component_context,
                                  scenic::ResourceId compositor_id, scenic::Session* session);
 
-  explicit ColorTransformHandler(sys::ComponentContext& component_context,
+  explicit ColorTransformHandler(sys::ComponentContext* component_context,
                                  scenic::ResourceId compositor_id, scenic::Session* session,
                                  ColorTransformState state);
 
-  ~ColorTransformHandler() = default;
+  ~ColorTransformHandler();
 
   // SetColorTransformConfiguration is called (typically by Accessibility Manager) to request a
   // change in color transform.
@@ -82,9 +82,11 @@ class ColorTransformHandler : public fuchsia::accessibility::ColorTransformHandl
       fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK* display_color_conversion_cmd,
       const std::array<float, 9> color_transform_matrix);
 
-  scenic::Session* session_;  // No ownership.
+  sys::ComponentContext* const component_context_ = nullptr;
+  scenic::Session* session_ = nullptr;  // No ownership.
   const scenic::ResourceId compositor_id_;
   fidl::Binding<fuchsia::accessibility::ColorTransformHandler> color_transform_handler_bindings_;
+  fidl::BindingSet<fuchsia::ui::brightness::ColorAdjustmentHandler> color_adjustment_bindings_;
   fuchsia::accessibility::ColorTransformPtr color_transform_manager_;
   ColorTransformState color_transform_state_;
 };

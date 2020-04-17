@@ -71,7 +71,7 @@ class ColorTransformHandlerTest : public gtest::TestLoopFixture {
 TEST_F(ColorTransformHandlerTest, VerifyA11yColorTransform) {
   // Create ColorTransformHandler.
   color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(*context_provider_.context(), id, session_.get());
+      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
   RunLoopUntilIdle();
 
   // Change settings.
@@ -97,7 +97,7 @@ TEST_F(ColorTransformHandlerTest, VerifyA11yColorTransform) {
 TEST_F(ColorTransformHandlerTest, A11yMissingMatrix) {
   // Create ColorTransformHandler.
   color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(*context_provider_.context(), id, session_.get());
+      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
   RunLoopUntilIdle();
 
   // Change settings.
@@ -118,7 +118,7 @@ TEST_F(ColorTransformHandlerTest, A11yMissingMatrix) {
 TEST_F(ColorTransformHandlerTest, VerifyColorAdjustment) {
   // Create ColorTransformHandler.
   color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(*context_provider_.context(), id, session_.get());
+      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
   RunLoopUntilIdle();
 
   // Change color adjustment via brightness.
@@ -141,7 +141,7 @@ TEST_F(ColorTransformHandlerTest, VerifyColorAdjustment) {
 TEST_F(ColorTransformHandlerTest, VerifyColorAdjustmentNoOpWithA11y) {
   // Create ColorTransformHandler.
   color_transform_handler_ = std::make_unique<ColorTransformHandler>(
-      *context_provider_.context(), id, session_.get(),
+      context_provider_.context(), id, session_.get(),
       ColorTransformState(/* color_inversion_enabled */ false,
                           fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY));
   RunLoopUntilIdle();
@@ -161,7 +161,7 @@ TEST_F(ColorTransformHandlerTest, VerifyColorAdjustmentNoOpWithA11y) {
 TEST_F(ColorTransformHandlerTest, BrightnessMissingMatrix) {
   // Create ColorTransformHandler.
   color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(*context_provider_.context(), id, session_.get());
+      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
   RunLoopUntilIdle();
 
   // Change color adjustment via brightness.
@@ -172,6 +172,18 @@ TEST_F(ColorTransformHandlerTest, BrightnessMissingMatrix) {
 
   // Verify that fake scenic was not called.
   ASSERT_FALSE(fake_session_->PresentWasCalled());
+}
+
+// Makes sure that color adjustment service is available.
+TEST_F(ColorTransformHandlerTest, OffersColorAdjustment) {
+  color_transform_handler_ =
+      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  RunLoopUntilIdle();
+
+  fuchsia::ui::brightness::ColorAdjustmentHandlerPtr color_adjustment_ptr;
+  context_provider_.ConnectToPublicService(color_adjustment_ptr.NewRequest());
+  RunLoopUntilIdle();
+  ASSERT_TRUE(color_adjustment_ptr.is_bound());
 }
 
 }  // namespace testing
