@@ -98,6 +98,34 @@ TEST_F(LoggingFixture, Log) {
 #endif
 }
 
+TEST_F(LoggingFixture, LogFirstN) {
+  constexpr int kLimit = 5;
+  constexpr int kCycles = 20;
+  constexpr const char* kLogMessage = "Hello";
+  static_assert(kCycles > kLimit);
+
+  LogSettings new_settings;
+  EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
+  files::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
+  SetLogSettings(new_settings);
+
+  for (int i = 0; i < kCycles; ++i) {
+    FXL_LOG_FIRST_N(ERROR, kLimit) << kLogMessage;
+  }
+
+  std::string log;
+  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
+
+  int count = 0;
+  size_t pos = 0;
+  while ((pos = log.find(kLogMessage, pos)) != std::string::npos) {
+    ++count;
+    ++pos;
+  }
+  EXPECT_EQ(kLimit, count);
+}
+
 TEST_F(LoggingFixture, DVLogNoMinLevel) {
   LogSettings new_settings;
   EXPECT_EQ(LOG_INFO, new_settings.min_log_level);

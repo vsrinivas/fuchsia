@@ -124,6 +124,11 @@ LogMessage::~LogMessage() {
     BreakDebugger();
 }
 
+bool LogFirstNState::ShouldLog(uint32_t n) {
+  const uint32_t counter_value = counter_.fetch_add(1, std::memory_order_relaxed);
+  return counter_value < n;
+}
+
 int GetVlogVerbosity() { return std::max(-1, LOG_INFO - GetMinLogLevel()); }
 
 bool ShouldCreateLogMessage(LogSeverity severity) { return severity >= GetMinLogLevel(); }

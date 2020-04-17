@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_LOGGING_H_
-#define LIB_FXL_LOGGING_H_
+#ifndef SRC_LIB_FXL_LOGGING_H_
+#define SRC_LIB_FXL_LOGGING_H_
 
 #if defined(__Fuchsia__)
 #include <zircon/types.h>
@@ -47,6 +47,15 @@ class FXL_EXPORT LogMessage {
   FXL_DISALLOW_COPY_AND_ASSIGN(LogMessage);
 };
 
+// LogFirstNState is used by the macro FXL_LOG_FIRST_N below.
+class FXL_EXPORT LogFirstNState {
+ public:
+  bool ShouldLog(uint32_t n);
+
+ private:
+  std::atomic<uint32_t> counter_{0};
+};
+
 // Gets the FXL_VLOG default verbosity level.
 FXL_EXPORT int GetVlogVerbosity();
 
@@ -79,6 +88,26 @@ FXL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
   FXL_LAZY_STREAM(FXL_LOG_STREAM_STATUS(severity, status), FXL_LOG_IS_ON(severity))
 #endif
 
+// Writes a message to the global logger, the first |n| times that any callsite
+// of this macro is invoked. |n| should be a positive integer literal.
+// |severity| is one of INFO, WARNING, ERROR, FATAL
+//
+// Implementation notes:
+// The outer for loop is a trick to allow us to introduce a new scope and
+// introduce the variable |do_log| into that scope. It executes exactly once.
+//
+// The inner for loop is a trick to allow us to introduce a new scope and
+// introduce the static variable |internal_state| into that new scope. It
+// executes either zero or one times.
+//
+// C++ does not allow us to introduce two new variables into a single for loop
+// scope and we need |do_log| so that the inner for loop doesn't execute twice.
+#define FXL_LOG_FIRST_N(severity, n)                                                         \
+  for (bool do_log = true; do_log; do_log = false)                                           \
+    for (static ::fxl::LogFirstNState internal_state; do_log && internal_state.ShouldLog(n); \
+         do_log = false)                                                                     \
+  FXL_LOG(severity)
+
 #define FXL_CHECK(condition)                                                                    \
   FXL_LAZY_STREAM(::fxl::LogMessage(::fxl::LOG_FATAL, __FILE__, __LINE__, #condition).stream(), \
                   !(condition))
@@ -106,4 +135,4 @@ FXL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
 
 #define FXL_NOTIMPLEMENTED() FXL_LOG(ERROR) << "Not implemented in: " << __PRETTY_FUNCTION__
 
-#endif  // LIB_FXL_LOGGING_H_
+#endif  // SRC_LIB_FXL_LOGGING_H_
