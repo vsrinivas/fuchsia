@@ -204,6 +204,8 @@ struct MEDIA_EXPORT H264SPS {
 
   int chroma_array_type;
 
+  std::vector<uint8_t> raw_data;
+
   // Get corresponding SPS |level_idc| and |constraint_set3_flag| value from
   // requested |profile| and |level| (see Spec A.3.1).
   static void GetLevelConfigFromProfileLevel(VideoCodecProfile profile,
@@ -253,6 +255,7 @@ struct MEDIA_EXPORT H264PPS {
   int scaling_list8x8[6][kH264ScalingList8x8Length];
 
   int second_chroma_qp_index_offset;
+  std::vector<uint8_t> raw_data;
 };
 
 struct MEDIA_EXPORT H264ModificationOfPicNum {

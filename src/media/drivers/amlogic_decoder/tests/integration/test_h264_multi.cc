@@ -167,6 +167,106 @@ class TestH264Multi {
     video.reset();
   }
 
+  static void DecodeUnsplit(const char* input_filename,
+                            uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH], const char* filename) {
+    fxl::LogSettings settings;
+    settings.min_log_level = -10;
+    fxl::SetLogSettings(settings);
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+    TestFrameAllocator frame_allocator(video.get());
+
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
+    H264TestFrameDataProvider frame_data_provider;
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      video->SetDefaultInstance(std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator,
+                                                                   &frame_data_provider, false),
+                                /*hevc=*/false);
+      frame_allocator.set_decoder(video->video_decoder());
+    }
+
+    frame_allocator.set_pump_function([&video]() {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      static_cast<H264MultiDecoder*>(video->video_decoder())->PumpOrReschedule();
+    });
+    // Don't use parser, because we need to be able to save and restore the read
+    // and write pointers, which can't be done if the parser is using them as
+    // well.
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, 1024 * PAGE_SIZE,
+                                                   /*is_secure=*/false));
+    uint32_t frame_count = 0;
+    std::promise<void> wait_valid;
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      frame_allocator.SetFrameReadyNotifier([&video, &frame_count, &wait_valid, input_filename,
+                                             filename,
+                                             input_hashes](std::shared_ptr<VideoFrame> frame) {
+        ++frame_count;
+        DLOG("Got frame %d\n", frame_count);
+        EXPECT_EQ(320u, frame->coded_width);
+        EXPECT_EQ(320u, frame->display_width);
+        bool is_bear = input_filename == std::string("video_test_data/bear.h264");
+        if (is_bear) {
+          EXPECT_EQ(192u, frame->coded_height);
+          EXPECT_EQ(180u, frame->display_height);
+        } else {
+          EXPECT_EQ(240u, frame->coded_height);
+          EXPECT_EQ(240u, frame->display_height);
+        }
+        (void)filename;
+#if DUMP_VIDEO_TO_FILE
+        DumpVideoFrameToFile(frame.get(), filename);
+#endif
+
+        uint8_t md[SHA256_DIGEST_LENGTH];
+        HashFrame(frame.get(), md);
+        EXPECT_EQ(0, memcmp(md, input_hashes[frame_count - 1], sizeof(md)))
+            << "Incorrect hash for frame " << frame_count << ": " << StringifyHash(md);
+
+        video->AssertVideoDecoderLockHeld();
+        video->video_decoder()->ReturnFrame(frame);
+        uint32_t expected_frame_count = is_bear ? 26 : 240;
+        if (frame_count == expected_frame_count) {
+          wait_valid.set_value();
+        }
+      });
+
+      // Initialize must happen after InitializeStreamBuffer or else it may misparse the SPS.
+      EXPECT_EQ(ZX_OK, video->video_decoder()->Initialize());
+    }
+
+    auto input_h264 = TestSupport::LoadFirmwareFile(input_filename);
+    ASSERT_NE(nullptr, input_h264);
+    video->core()->InitializeDirectInput();
+    auto nal_units = SplitNalUnits(input_h264->ptr, input_h264->size);
+    std::vector<std::vector<uint8_t>> full_data;
+    full_data.emplace_back(
+        std::vector<uint8_t>(input_h264->ptr, input_h264->ptr + input_h264->size));
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      frame_data_provider.AppendFrameData(full_data);
+      auto multi_decoder = static_cast<H264MultiDecoder*>(video->video_decoder());
+      multi_decoder->ReceivedNewInput();
+    }
+    EXPECT_EQ(std::future_status::ready,
+              wait_valid.get_future().wait_for(std::chrono::seconds(10)));
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      auto multi_decoder = static_cast<H264MultiDecoder*>(video->video_decoder());
+      multi_decoder->DumpStatus();
+    }
+
+    // Try to make sure no more frames are decoded.
+    zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
+
+    EXPECT_EQ(28u, frame_count);
+
+    video->ClearDecoderInstance();
+    video.reset();
+  }
+
   static void TestInitializeTwice() {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
@@ -518,6 +618,10 @@ TEST(H264Multi, DecodeBearParser) {
 TEST(H264Multi, Decode25fps) {
   TestH264Multi::DecodeSetStream("video_test_data/test-25fps.h264", test_25fps_h264_hashes,
                                  "/tmp/test25fpsmultih264.yuv", /*use_parser=*/false);
+}
+TEST(H264Multi, DecodeBearUnsplit) {
+  TestH264Multi::DecodeUnsplit("video_test_data/bear.h264", bear_h264_hashes,
+                               "/tmp/bearmultih264.yuv");
 }
 
 TEST(H264Multi, InitializeTwice) { TestH264Multi::TestInitializeTwice(); }

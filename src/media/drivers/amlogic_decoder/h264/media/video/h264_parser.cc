@@ -1136,6 +1136,8 @@ H264Parser::Result H264Parser::ParseSPS(int* sps_id) {
 
   // If an SPS with the same id already exists, replace it.
   *sps_id = sps->seq_parameter_set_id;
+  sps->raw_data = std::vector<uint8_t>(previous_nalu_range_.start(0),
+                                       previous_nalu_range_.end(0));
   active_SPSes_[*sps_id] = std::move(sps);
 
   return kOk;
@@ -1211,6 +1213,8 @@ H264Parser::Result H264Parser::ParsePPS(int* pps_id) {
 
   // If a PPS with the same id already exists, replace it.
   *pps_id = pps->pic_parameter_set_id;
+  pps->raw_data = std::vector<uint8_t>(previous_nalu_range_.start(0),
+                                       previous_nalu_range_.end(0));
   active_PPSes_[*pps_id] = std::move(pps);
 
   return kOk;

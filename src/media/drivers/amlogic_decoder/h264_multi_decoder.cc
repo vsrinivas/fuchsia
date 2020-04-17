@@ -62,6 +62,11 @@ class MultiAccelerator : public media::H264Decoder::H264Accelerator {
     auto ref_pic = static_cast<AmlogicH264Picture*>(pic.get())->internal_picture.lock();
     if (!ref_pic)
       return Status::kFail;
+    constexpr uint8_t kHeader[] = {0, 0, 1};
+    owner_->SubmitDataToHardware(kHeader, sizeof(kHeader));
+    owner_->SubmitDataToHardware(sps->raw_data.data(), sps->raw_data.size());
+    owner_->SubmitDataToHardware(kHeader, sizeof(kHeader));
+    owner_->SubmitDataToHardware(pps->raw_data.data(), pps->raw_data.size());
     current_sps_ = *sps;
     owner_->SubmitFrameMetadata(ref_pic.get(), sps, pps, dpb);
     return Status::kOk;
@@ -1131,13 +1136,6 @@ void H264MultiDecoder::PumpDecoder() {
         id_to_pts_map_[next_pts_id_] = next_decoder_buffer.pts.value();
       }
       media_decoder_->SetStream(next_pts_id_++, *current_decoder_buffer_);
-
-      uint32_t nal_unit_type = GetNalUnitType(fbl::Span<const uint8_t>(
-          current_decoder_buffer_->data(), current_decoder_buffer_->data_size()));
-      constexpr uint32_t kSpsNalUnitType = 7;
-      constexpr uint32_t kPpsNalUnitType = 8;
-      if (nal_unit_type == kSpsNalUnitType || nal_unit_type == kPpsNalUnitType)
-        SubmitDataToHardware(current_decoder_buffer_->data(), current_decoder_buffer_->data_size());
     } else if (res == media::AcceleratedVideoDecoder::kRanOutOfSurfaces) {
       waiting_for_surfaces_ = true;
       owner_->TryToReschedule();
