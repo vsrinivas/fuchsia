@@ -163,6 +163,8 @@ Vp9Decoder::Vp9Decoder(Owner* owner, Client* client, InputType input_type,
     : VideoDecoder(owner, client, is_secure),
       input_type_(input_type),
       use_compressed_output_(use_compressed_output) {
+  constexpr uint32_t kStreamOffsetBitWidth = 32;
+  pts_manager_->SetLookupBitWidth(kStreamOffsetBitWidth);
   // Compressed output buffers can't yet be allocated in secure memory.
   assert(!is_secure || !use_compressed_output_);
   InitializeLoopFilterData();
@@ -1030,6 +1032,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   // frame was decoded is ignored.
   uint32_t stream_offset = HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
 
+  // PtsManager does bit-extension to 64 bit stream offset.
   PtsManager::LookupResult result = pts_manager_->Lookup(stream_offset);
   DLOG("stream_offset (show existing): 0x%x has_pts: %u pts: %lu", stream_offset, result.has_pts(),
        result.pts());
@@ -1151,6 +1154,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   // bits.
   uint32_t stream_offset = HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
 
+  // PtsManager does bit-extension to 64 bit stream offset.
   PtsManager::LookupResult result = pts_manager_->Lookup(stream_offset);
   DLOG("stream_offset (prepare new): 0x%x has_pts: %u pts: %lu", stream_offset, result.has_pts(),
        result.pts());

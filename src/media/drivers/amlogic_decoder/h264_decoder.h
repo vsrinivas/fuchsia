@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_H264_DECODER_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_H264_DECODER_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_DECODER_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_DECODER_H_
 
 #include <vector>
 
@@ -25,7 +25,10 @@ class H264Decoder : public VideoDecoder {
   };
 
   H264Decoder(Owner* owner, Client* client, bool is_secure)
-      : VideoDecoder(owner, client, is_secure) {}
+      : VideoDecoder(owner, client, is_secure) {
+    constexpr uint32_t kStreamOffsetBitWidth = 28;
+    pts_manager_->SetLookupBitWidth(kStreamOffsetBitWidth);
+  }
 
   ~H264Decoder() override;
 
@@ -76,4 +79,4 @@ class H264Decoder : public VideoDecoder {
   std::vector<std::shared_ptr<VideoFrame>> returned_frames_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_H264_DECODER_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_DECODER_H_

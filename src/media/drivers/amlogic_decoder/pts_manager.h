@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_PTS_MANAGER_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_PTS_MANAGER_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PTS_MANAGER_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PTS_MANAGER_H_
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -14,6 +14,7 @@
 
 class PtsManager {
  public:
+  static constexpr uint32_t kMaxEntriesToKeep = 100;
   class LookupResult {
    public:
     // Outside of PtsManager, can only be copied, not created from scratch and
@@ -51,6 +52,8 @@ class PtsManager {
     const uint64_t pts_ = 0;
   };
 
+  void SetLookupBitWidth(uint32_t lookup_bit_width);
+
   // Offset is the byte offset into the stream of the beginning of the frame.
   void InsertPts(uint64_t offset, bool has_pts, uint64_t pts);
 
@@ -63,9 +66,15 @@ class PtsManager {
   const LookupResult Lookup(uint64_t offset);
 
  private:
+  // The last inserted offset is offset_to_result_.rbegin()->first, unless empty() in which case
+  // logically 0.
+  uint64_t GetLastInsertedOffset() __TA_REQUIRES(lock_);
+
   std::mutex lock_;
+  __TA_GUARDED(lock_)
+  uint32_t lookup_bit_width_ = 64;
   __TA_GUARDED(lock_)
   std::map<uint64_t, LookupResult> offset_to_result_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_PTS_MANAGER_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PTS_MANAGER_H_

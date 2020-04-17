@@ -164,6 +164,8 @@ class CodecAdapterVp9 : public CodecAdapter,
   // so far that the amlogic firmware will accumulate and stamp on output
   // frames.  This counts all bytes delivered to the amlogic firmware, including
   // start code bytes.
+  //
+  // The SW keeps uint64_t on input, but the HW has only 32 bits available.
   uint64_t parsed_video_size_ = 0;
   bool is_input_end_of_stream_queued_to_core_ = false;
   // For now, this is only ever true for non-DRM streams.  For now, for DRM streams, this stays

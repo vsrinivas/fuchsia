@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -154,6 +154,9 @@ class CodecAdapterH264 : public CodecAdapter, public VideoDecoder::Client {
   // so far that the amlogic firmware will accumulate and stamp on output
   // frames.  This counts all bytes delivered to the amlogic firmware, including
   // start code bytes.
+  //
+  // The SW keeps a uint64_t for input, but the HW has 28 bits available for
+  // each output frame.  PtsManager does bit extension.
   uint64_t parsed_video_size_ = 0;
   // If true, the core codec will need the oob_bytes info, if any.  The
   // core codec in this case wants the info in annex B form in-band, not
@@ -181,4 +184,4 @@ class CodecAdapterH264 : public CodecAdapter, public VideoDecoder::Client {
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdapterH264);
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_
