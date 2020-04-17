@@ -12,15 +12,11 @@ test_package("audio_pipeline_tests") {
     {
       name = "audio_pipeline_tests"
 
-      #TODO(49469): Re-enable when sherlock flakes are fixed.
-      envs = extended_hardware_envs
-      envs -= [ sherlock_env ]
-
       # This (effectively real-time) test must be run on a true hardware-based target.
       # By specifying 'extended_hardware_envs' instead of 'hardware_envs', we allow these tests to
       # run on the VIM2 platform, where our audio driver for the HDMI-based audio output does not
       # yet generate position notifications.
-      environments = envs
+      environments = extended_hardware_envs
     },
   ]
 }
