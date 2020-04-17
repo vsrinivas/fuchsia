@@ -191,7 +191,10 @@ package("use-h264-multi-decoder-stream-switching-test") {
 package("use_h264_decoder_secure_output_test") {
   testonly = true
 
-  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_output_test" ]
+  deps = [
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_output_test",
+    "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_secure_output_test",
+  ]
 
   meta = [
     {
@@ -199,12 +202,26 @@ package("use_h264_decoder_secure_output_test") {
               "use_media_decoder/meta/use_h264_decoder_secure_output_test.cmx")
       dest = "use_h264_decoder_secure_output_test.cmx"
     },
+    {
+      path = rebase_path(
+              "use_media_decoder/meta/use_h264_multi_decoder_secure_output_test.cmx")
+      dest = "use_h264_multi_decoder_secure_output_test.cmx"
+    },
   ]
 
   tests = [
     {
       # Should pass when run on astro.
       name = "use_h264_decoder_secure_output_test"
+
+      environments = [
+        astro_env,
+        sherlock_env,
+      ]
+    },
+    {
+      # Should pass when run on astro.
+      name = "use_h264_multi_decoder_secure_output_test"
 
       environments = [
         astro_env,

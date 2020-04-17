@@ -232,10 +232,12 @@ enum H264Status {
   kH264PicDataDone = 0x2,
 };
 
-H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* provider)
-    : VideoDecoder(owner, client, /*is_secure=*/false), frame_data_provider_(provider) {
+H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* provider,
+                                   bool is_secure)
+    : VideoDecoder(owner, client, is_secure), frame_data_provider_(provider) {
   media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<MultiAccelerator>(this),
                                                         media::H264PROFILE_HIGH);
+  use_parser_ = is_secure;
 }
 
 H264MultiDecoder::~H264MultiDecoder() {
@@ -369,10 +371,6 @@ void H264MultiDecoder::ResetHardware() {
 zx_status_t H264MultiDecoder::InitializeHardware() {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kSwappedOut);
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
-  if (is_secure()) {
-    DECODE_ERROR("is_secure() == true not yet supported by H264MultiDecoder");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
   zx_status_t status =
       owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kVdec, is_secure());
   if (status != ZX_OK)
@@ -946,7 +944,7 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length) 
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   if (use_parser_) {
     zx_status_t status =
-        owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser, false);
+        owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser, is_secure_);
     if (status != ZX_OK) {
       LOG(ERROR, "video_->SetProtected(kParser) failed - status: %d", status);
       OnFatalError();
@@ -1169,4 +1167,8 @@ std::shared_ptr<H264MultiDecoder::ReferenceFrame> H264MultiDecoder::GetUnusedRef
     }
   }
   return nullptr;
+}
+
+zx_status_t H264MultiDecoder::SetupProtection() {
+  return owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kVdec, is_secure());
 }

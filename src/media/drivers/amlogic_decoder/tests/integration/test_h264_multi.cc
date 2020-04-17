@@ -63,8 +63,8 @@ class TestH264Multi {
     H264TestFrameDataProvider frame_data_provider;
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
-      auto decoder =
-          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider);
+      auto decoder = std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator,
+                                                        &frame_data_provider, /*is_secure=*/false);
       decoder->set_use_parser(use_parser);
       video->SetDefaultInstance(std::move(decoder),
                                 /*hevc=*/false);
@@ -179,7 +179,8 @@ class TestH264Multi {
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       video->SetDefaultInstance(
-          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider),
+          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider,
+                                             /*is_secure=*/false),
           /*hevc=*/false);
       frame_allocator.set_decoder(video->video_decoder());
     }
@@ -216,7 +217,8 @@ class TestH264Multi {
       auto client = std::make_unique<TestFrameAllocator>(video.get());
       auto provider = std::make_unique<H264TestFrameDataProvider>();
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
-      auto decoder = std::make_unique<H264MultiDecoder>(video.get(), client.get(), provider.get());
+      auto decoder = std::make_unique<H264MultiDecoder>(video.get(), client.get(), provider.get(),
+                                                        /*is_secure=*/false);
       decoder_ptrs.push_back(decoder.get());
       client->set_decoder(decoder.get());
       client->set_pump_function([&video, &decoder_ptrs, i]() {
@@ -332,7 +334,8 @@ class TestH264Multi {
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       video->SetDefaultInstance(
-          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider),
+          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider,
+                                             /*is_secure=*/false),
           /*hevc=*/false);
       frame_allocator.set_decoder(video->video_decoder());
     }
@@ -431,7 +434,8 @@ class TestH264Multi {
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
       video->SetDefaultInstance(
-          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider),
+          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider,
+                                             /*is_secure=*/false),
           /*hevc=*/false);
       frame_allocator.set_decoder(video->video_decoder());
     }

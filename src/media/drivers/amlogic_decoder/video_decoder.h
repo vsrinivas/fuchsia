@@ -164,6 +164,8 @@ class VideoDecoder {
   // Returns true if the decoder is at a place where it can be swapped out.
   virtual bool __WARN_UNUSED_RESULT CanBeSwappedOut() const { return false; }
   virtual void OnSignaledWatchdog() {}
+  // Initialize hardware protection.
+  virtual zx_status_t SetupProtection() { return ZX_ERR_NOT_SUPPORTED; }
 
   virtual ~VideoDecoder() {}
 

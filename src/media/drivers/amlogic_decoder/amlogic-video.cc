@@ -510,6 +510,14 @@ void AmlogicVideo::SwapInCurrentInstance() {
   DLOG("Swapping in %p", video_decoder_);
   stream_buffer_ = current_instance_->stream_buffer();
   core()->PowerOn();
+  {
+    zx_status_t status = video_decoder_->SetupProtection();
+    if (status != ZX_OK) {
+      DECODE_ERROR("Failed to setup protection: %d", status);
+      PowerOffForError();
+      return;
+    }
+  }
   if (!current_instance_->input_context()) {
     InitializeStreamInput(false);
     core_->InitializeDirectInput();

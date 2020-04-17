@@ -169,7 +169,7 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
   // The output port is the one we really care about for is_secure of the
   // decoder, since the HW can read from secure or non-secure even when in
   // secure mode, but can only write to secure memory when in secure mode.
-  auto decoder = std::make_unique<H264MultiDecoder>(video_, this, this);
+  auto decoder = std::make_unique<H264MultiDecoder>(video_, this, this, IsOutputSecure());
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
@@ -182,8 +182,8 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
         std::make_unique<DecoderInstance>(std::move(decoder), video_->vdec1_core());
     StreamBuffer* buffer = decoder_instance->stream_buffer();
     video_->AddNewDecoderInstance(std::move(decoder_instance));
-    if (video_->AllocateStreamBuffer(buffer, PAGE_SIZE * 1024, /*use_parser=*/false,
-                                     /*is_secure=*/false) != ZX_OK) {
+    if (video_->AllocateStreamBuffer(buffer, PAGE_SIZE * 1024, /*use_parser=*/IsOutputSecure(),
+                                     IsOutputSecure()) != ZX_OK) {
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;
     }

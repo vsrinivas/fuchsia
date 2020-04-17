@@ -1678,3 +1678,7 @@ void Vp9Decoder::OnSignaledWatchdog() {
   state_ = DecoderState::kFailed;
   frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
 }
+
+zx_status_t Vp9Decoder::SetupProtection() {
+  return owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kHevc, is_secure());
+}

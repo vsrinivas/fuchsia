@@ -64,7 +64,8 @@ class H264MultiDecoder : public VideoDecoder {
     virtual void AsyncResetStreamAfterCurrentFrame() = 0;
   };
 
-  H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* frame_data_provider);
+  H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* frame_data_provider,
+                   bool is_secure);
   H264MultiDecoder(const H264MultiDecoder&) = delete;
 
   ~H264MultiDecoder() override;
@@ -82,6 +83,7 @@ class H264MultiDecoder : public VideoDecoder {
   void SetSwappedOut() override;
   void SwappedIn() override;
   void OnSignaledWatchdog() override;
+  zx_status_t SetupProtection() override;
 
   zx_status_t InitializeBuffers();
 

@@ -110,6 +110,7 @@ class Vp9Decoder : public VideoDecoder {
   void SetSwappedOut() override { state_ = DecoderState::kSwappedOut; }
   void SwappedIn() override { frame_data_provider_->ReadMoreInputDataFromReschedule(this); }
   void OnSignaledWatchdog() override;
+  zx_status_t SetupProtection() override;
 
   void SetFrameDataProvider(FrameDataProvider* provider) { frame_data_provider_ = provider; }
   void UpdateDecodeSize(uint32_t size);
