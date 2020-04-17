@@ -130,7 +130,7 @@ class Device : public fbl::RefCounted<Device>,
   };
 
   struct AllDevicesNode {
-    static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
+    static fbl::DoublyLinkedListNodeState<fbl::RefPtr<Device>>& node_state(Device& obj) {
       return obj.all_devices_node_;
     }
   };
@@ -574,7 +574,7 @@ class Device : public fbl::RefCounted<Device>,
   fbl::DoublyLinkedList<std::unique_ptr<Metadata>, Metadata::Node> metadata_;
 
   // listnode for this device in the all devices list
-  fbl::DoublyLinkedListNodeState<Device*> all_devices_node_;
+  fbl::DoublyLinkedListNodeState<fbl::RefPtr<Device>> all_devices_node_;
 
   // listnode for this device in its devhost's list-of-devices
   fbl::DoublyLinkedListNodeState<Device*> devhost_node_;
