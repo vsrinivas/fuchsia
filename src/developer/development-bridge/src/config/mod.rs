@@ -28,3 +28,15 @@ pub fn get_config_with_build_dir(
     let config = load_config_from_environment(&env, build_dir)?;
     Ok(config.get(name))
 }
+
+pub fn get_config_str(name: &str, default: &str) -> String {
+    get_config(name)
+        .unwrap_or(Some(Value::String(default.to_string())))
+        .map_or(default.to_string(), |v| v.as_str().unwrap_or(default).to_string())
+}
+
+pub fn get_config_bool(name: &str, default: bool) -> bool {
+    get_config(name)
+        .unwrap_or(Some(Value::Bool(default)))
+        .map_or(default, |v| v.as_bool().unwrap_or(default))
+}

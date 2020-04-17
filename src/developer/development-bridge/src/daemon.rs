@@ -5,7 +5,10 @@
 use {
     crate::constants::{MAX_RETRY_COUNT, RETRY_DELAY, SOCKET},
     crate::discovery::{TargetFinder, TargetFinderConfig},
+    crate::logger::setup_logger,
     crate::mdns::MdnsTargetFinder,
+    crate::ok_or_continue,
+    crate::onet,
     crate::target::{RCSConnection, Target, TargetCollection},
     anyhow::{anyhow, Context, Error},
     async_std::task,
@@ -27,14 +30,6 @@ use {
     std::sync::Arc,
     std::time::Duration,
 };
-
-mod constants;
-mod discovery;
-mod mdns;
-mod net;
-mod onet;
-mod target;
-mod util;
 
 /// A locked TargetCollection that has been acquired via the Mutex::lock fn.
 pub type GuardedTargetCollection = Arc<Mutex<TargetCollection>>;
@@ -428,6 +423,7 @@ pub async fn start() -> Result<(), Error> {
     if is_daemon_running() {
         return Ok(());
     }
+    setup_logger("ffx.daemon");
     let child = onet::start_ascendd().await;
     let daemon = Daemon::new(Some(child)).await?;
     exec_server(daemon, true).await

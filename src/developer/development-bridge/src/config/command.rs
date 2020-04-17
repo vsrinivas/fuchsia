@@ -9,6 +9,7 @@ use {
     },
     crate::config::configuration::{Config, ConfigLevel, FileBackedConfig},
     crate::config::environment::Environment,
+    crate::constants::{LOG_DIR, SSH_PRIV, SSH_PUB},
     anyhow::{anyhow, Error},
     serde_json::Value,
     std::{
@@ -16,7 +17,7 @@ use {
         env,
         fs::{File, OpenOptions},
         io::{stdout, Write},
-        path::PathBuf,
+        path::{Path, PathBuf},
     },
 };
 
@@ -44,10 +45,33 @@ fn save_config_from_environment(
 }
 
 fn find_ssh_keys(key: &str) -> Option<Value> {
-    let k = if key == "ssh-pub" { "authorized-keys" } else { "pkey" };
-    std::env::var("FUCHSIA_DIR")
-        .ok()
-        .map(|s| Value::String(String::from(format!("{}/.ssh/{}", s, k))))
+    let k = if key == SSH_PUB { "authorized_keys" } else { "pkey" };
+    match std::env::var("FUCHSIA_DIR") {
+        Ok(r) => {
+            if Path::new(&r).exists() {
+                return Some(Value::String(String::from(format!("{}/.ssh/{}", r, k))));
+            }
+        }
+        Err(_) => {
+            if key != SSH_PUB {
+                return None;
+            }
+        }
+    }
+    match std::env::var("HOME") {
+        Ok(r) => {
+            if Path::new(&r).exists() {
+                Some(Value::String(String::from(format!("{}/.ssh/id_rsa.pub", r))))
+            } else {
+                None
+            }
+        }
+        Err(_) => None,
+    }
+}
+
+fn find_log_dir(_: &str) -> Option<Value> {
+    env::var("HOME").or_else(|_| env::var("HOMEPATH")).map_or(None, |v| Some(Value::String(v)))
 }
 
 pub fn load_config_from_environment(
@@ -64,8 +88,9 @@ pub fn load_config_from_environment(
         None => Box::new(FileBackedConfig::load(&env.defaults, &env.global, &None, &env.user)?),
     };
 
-    config.data.heuristics.insert("ssh-pub", find_ssh_keys);
-    config.data.heuristics.insert("ssh-priv", find_ssh_keys);
+    config.data.heuristics.insert(SSH_PUB, find_ssh_keys);
+    config.data.heuristics.insert(SSH_PRIV, find_ssh_keys);
+    config.data.heuristics.insert(LOG_DIR, find_log_dir);
     Ok(config)
 }
 
@@ -169,5 +194,37 @@ fn exec_env(env_command: EnvCommand) -> Result<(), Error> {
             }
         },
         None => Err(anyhow!("Missing flags.  Try `ffx config env help`")),
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// tests
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn clear_environment_variables(vars: Vec<&str>) {
+        vars.iter().for_each(std::env::remove_var);
+    }
+
+    #[test]
+    fn test_find_log_dir() {
+        let unused = "unused";
+        clear_environment_variables(vec!["HOMEPATH", "HOME"]);
+        let no_log_dir = find_log_dir(unused);
+        assert!(no_log_dir.is_none());
+
+        let home_path_str = "/home_path";
+        std::env::set_var("HOMEPATH", home_path_str);
+        let home_path = find_log_dir(unused);
+        assert!(home_path.is_some());
+        assert_eq!(home_path, Some(Value::String(home_path_str.to_string())));
+
+        let home_str = "/home";
+        std::env::set_var("HOME", home_str);
+        let home = find_log_dir(unused);
+        assert!(home.is_some());
+        assert_eq!(home, Some(Value::String(home_str.to_string())));
     }
 }

@@ -29,7 +29,6 @@ pub const ASCENDD_SERVER_CONNECTION_STRING: &str = "ASCENDD_SERVER_CONNECTION_ST
 pub const DEFAULT_ASCENDD_PATH: &str = "/tmp/ascendd";
 
 pub fn run<R>(f: impl Future<Output = R> + 'static) -> R {
-    crate::logger::init().expect("Failed to create logger");
     overnet_core::run(f)
 }
 

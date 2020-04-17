@@ -14,6 +14,9 @@ pub const SOCKET: &str = "/tmp/ascendd_for_testing_only";
 pub const DAEMON: &str = "daemon";
 pub const ASCENDD: &str = "ascendd";
 pub const CONFIG_JSON_FILE: &str = "ffx_config.json";
+pub const LOG_DIR: &str = "log-dir";
+pub const SSH_PUB: &str = "ssh-pub";
+pub const SSH_PRIV: &str = "ssh-priv";
 
 pub const MAX_RETRY_COUNT: u32 = 30;
 // Number of retry attempts after which we'll try to auto-start RCS.

@@ -7,8 +7,9 @@ use {
     crate::args::{Ffx, Subcommand, TestCommand},
     crate::config::command::exec_config,
     crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT, SOCKET},
+    crate::daemon::{is_daemon_running, start as start_daemon},
+    crate::logger::setup_logger,
     anyhow::{anyhow, format_err, Context, Error},
-    ffx_daemon::{is_daemon_running, start as start_daemon},
     fidl::endpoints::{create_proxy, ServiceMarker},
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_developer_remotecontrol::{ComponentControllerEvent, ComponentControllerMarker},
@@ -28,6 +29,14 @@ use {
 mod args;
 mod config;
 mod constants;
+mod daemon;
+mod discovery;
+mod logger;
+mod mdns;
+mod net;
+mod onet;
+mod target;
+mod util;
 
 // Cli
 pub struct Cli<W: Write + Sync> {
@@ -40,6 +49,7 @@ where
     W: Write + Sync,
 {
     pub async fn new(writer: W) -> Result<Self, Error> {
+        setup_logger("ffx");
         let mut peer_id = Cli::<W>::find_daemon().await?;
         let daemon_proxy = Cli::<W>::create_daemon_proxy(&mut peer_id).await?;
         Ok(Self { daemon_proxy, writer })

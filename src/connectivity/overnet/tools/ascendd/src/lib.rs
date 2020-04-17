@@ -139,7 +139,6 @@ pub async fn run_ascendd(opt: Opt) -> Result<(), Error> {
     let sockpath = sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
 
     log::info!("[log] starting ascendd");
-    hoist::logger::init()?;
     let _ = std::fs::remove_file(&sockpath);
 
     let incoming = tokio::net::UnixListener::bind(&sockpath)?.incoming();
