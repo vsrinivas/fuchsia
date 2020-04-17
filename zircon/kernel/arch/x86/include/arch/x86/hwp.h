@@ -9,7 +9,29 @@
 
 #include <arch/x86/cpuid.h>
 #include <arch/x86/platform_access.h>
+#include <ktl/optional.h>
 
-void x86_intel_hwp_init(const cpu_id::CpuId*, MsrAccess*);
+namespace x86 {
 
-#endif
+enum class IntelHwpPolicy {
+  // Use BIOS-specified settings if available, falling back to balanced.
+  kBiosSpecified,
+
+  // Use high performance, balanaced, or low-power policies respectively.
+  kPerformance,
+  kBalanced,
+  kPowerSave,
+
+  // Use settings that give predictable performance, such as is required
+  // for benchmarking.
+  kStablePerformance,
+};
+
+// Initialise the Intel HWP on the current CPU.
+//
+// If HWP is not supported on the current CPU, no action will be taken.
+void IntelHwpInit(const cpu_id::CpuId*, MsrAccess*, IntelHwpPolicy);
+
+}  // namespace x86
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_HWP_H_

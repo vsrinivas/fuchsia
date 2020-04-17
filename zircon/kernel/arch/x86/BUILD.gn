@@ -205,6 +205,7 @@ source_set("syscall") {
 
 source_set("tests") {
   sources = [
+    "hwp_tests.cc",
     "idle_states_test.cc",
     "mmu_tests.cc",
     "platform_tests.cc",
