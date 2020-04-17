@@ -35,6 +35,7 @@ group("core") {
     "bin/amber:pkgfs",
     "bin/pkg-cache",
     "bin/pkg-resolver",
+    "bin/system-updater",
   ]
 }
 

@@ -24,6 +24,7 @@ group("tests") {
     "pkgfs:tests",
     "pm:tests",
     "system-update-checker:tests",
+    "system-updater:tests",
     "update:tests",
   ]
 }

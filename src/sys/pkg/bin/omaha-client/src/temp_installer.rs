@@ -70,11 +70,12 @@ impl Installer for FuchsiaInstaller {
         info!("starting system_updater");
         let system_updater = async move {
             AppBuilder::new("fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx")
-                .arg("-initiator")
+                .arg("--initiator")
                 .arg(initiator)
-                .arg("-update")
+                .arg("--update")
                 .arg(url)
-                .arg("-reboot=false")
+                .arg("--reboot")
+                .arg("false")
                 .status(&self.launcher)?
                 .await?
                 .ok()
@@ -167,13 +168,12 @@ mod tests {
                 assert_eq!(url, "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx");
                 assert_eq!(
                     arguments,
-                    Some(vec![
-                        "-initiator".to_string(),
-                        "manual".to_string(),
-                        "-update".to_string(),
-                        TEST_URL.to_string(),
-                        "-reboot=false".to_string()
-                    ])
+                    Some(
+                        vec!["--initiator", "manual", "--update", TEST_URL, "--reboot", "false",]
+                            .iter()
+                            .map(|s| s.to_string())
+                            .collect()
+                    )
                 );
                 let (_stream, handle) = controller.into_stream_and_control_handle().unwrap();
                 handle.send_on_terminated(exit_code, TerminationReason::Exited).unwrap();

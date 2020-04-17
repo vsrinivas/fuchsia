@@ -7,6 +7,7 @@ package system_updater
 import (
 	"flag"
 	"fmt"
+	"strconv"
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
@@ -255,12 +256,15 @@ func Main() {
 
 	metrics.Register(ctx)
 
+	// Can't use a bool var since not allowed in the argument scheme we want (--foo bar).
+	var rebootString string
+
 	flag.Var(&InitiatorValue{&initiator}, "initiator", "what started this update: manual or automatic")
 	start := flag.Int64("start", time.Now().UnixNano(), "start time of update attempt, as unix nanosecond timestamp")
 	flag.StringVar(&sourceVersion, "source", "", "current OS version")
 	flag.StringVar(&targetVersion, "target", "", "target OS version")
 	flag.StringVar(&updateURL, "update", "fuchsia-pkg://fuchsia.com/update", "update package URL")
-	flag.BoolVar(&reboot, "reboot", true, "if true, reboot the system after successful OTA")
+	flag.StringVar(&rebootString, "reboot", "true", "if true, reboot the system after successful OTA")
 	flag.Parse()
 
 	if len(flag.Args()) != 0 {
@@ -268,6 +272,14 @@ func Main() {
 	}
 
 	startTime = time.Unix(0, *start)
+
+	// Verify the bool string is actually a bool.
+	var e error
+	reboot, e = strconv.ParseBool(rebootString)
+	if e != nil {
+		fmt.Printf("Unable to parse reboot string: [%v]. Assuming reboot=true", e)
+		reboot = true
+	}
 
 	if err := run(ctx); err != nil {
 		syslog.Fatalf("%s", err)

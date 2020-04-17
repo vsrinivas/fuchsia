@@ -178,12 +178,21 @@ async fn apply_system_update_impl<'a>(
     fx_log_info!("starting system_updater");
     let fut = component_runner.run_until_exit(
         get_system_updater_resource_url(file_system)?,
-        Some(vec![
-            format!("-initiator={}", initiator),
-            format!("-start={}", time_source.get_nanos()),
-            format!("-source={}", current_system_image),
-            format!("-target={}", latest_system_image),
-        ]),
+        Some(
+            vec![
+                "--initiator",
+                &format!("{}", initiator),
+                "--start",
+                &format!("{}", time_source.get_nanos()),
+                "--source",
+                &format!("{}", current_system_image),
+                "--target",
+                &format!("{}", latest_system_image),
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
+        ),
     );
     fut.await?;
     Err(ErrorKind::SystemUpdaterFinished)?
@@ -372,12 +381,21 @@ mod test_apply_system_update_impl {
             component_runner.captured_args,
             vec![Args {
                 url: expected_url,
-                arguments: Some(vec![
-                    format!("-initiator={}", Initiator::Manual),
-                    format!("-start={}", 0),
-                    format!("-source={}", std::iter::repeat('0').take(64).collect::<String>()),
-                    format!("-target={}", std::iter::repeat("01").take(32).collect::<String>()),
-                ])
+                arguments: Some(
+                    vec![
+                        "--initiator",
+                        &format!("{}", Initiator::Manual),
+                        "--start",
+                        &format!("{}", 0),
+                        "--source",
+                        &format!("{}", std::iter::repeat('0').take(64).collect::<String>()),
+                        "--target",
+                        &format!("{}", std::iter::repeat("01").take(32).collect::<String>()),
+                    ]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect()
+                )
             }]
         );
     }
@@ -414,11 +432,18 @@ mod test_apply_system_update_impl {
                 vec![Args {
                     url: SYSTEM_UPDATER_RESOURCE_URL.to_string(),
                     arguments: Some(vec![
-                        format!("-initiator={}", initiator),
-                        format!("-start={}", start_time),
-                        format!("-source={}", source_merkle.to_lowercase()),
-                        format!("-target={}", target_merkle.to_lowercase()),
-                    ])
+                        "--initiator",
+                        &format!("{}",initiator),
+                        "--start",
+                        &format!("{}",start_time),
+                        "--source",
+                        &source_merkle.to_lowercase(),
+                        "--target",
+                        &target_merkle.to_lowercase()
+                    ]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect())
                 }]
             );
         }

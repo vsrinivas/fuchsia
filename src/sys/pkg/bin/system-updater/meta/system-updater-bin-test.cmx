@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/system-updater-bin-test"
+    }
+}
