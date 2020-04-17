@@ -4,9 +4,8 @@
 
 use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{
-    ActionSender, Address, Audience, CreateMessengerResult, Fingerprint, Message, MessageAction,
-    MessageError, MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType,
-    Payload,
+    ActionSender, Address, Audience, CreateMessengerResult, Message, MessageAction, MessageError,
+    MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType, Payload,
 };
 use crate::message::beacon::Beacon;
 use crate::message::message_builder::MessageBuilder;
@@ -59,23 +58,23 @@ impl<P: Payload + 'static, A: Address + 'static> MessengerClient<P, A> {
 /// clients. They can only be created through a MessageHub.
 #[derive(Clone, Debug)]
 pub struct Messenger<P: Payload + 'static, A: Address + 'static> {
-    fingerprint: Fingerprint<A>,
+    id: MessengerId,
     action_tx: ActionSender<P, A>,
     messenger_type: MessengerType<A>,
 }
 
 impl<P: Payload + 'static, A: Address + 'static> Messenger<P, A> {
     pub(super) fn new(
-        fingerprint: Fingerprint<A>,
+        id: MessengerId,
         action_tx: ActionSender<P, A>,
         messenger_type: MessengerType<A>,
     ) -> Messenger<P, A> {
-        Messenger { fingerprint: fingerprint, action_tx: action_tx, messenger_type: messenger_type }
+        Messenger { id: id, action_tx: action_tx, messenger_type: messenger_type }
     }
 
     /// Returns the identification for this Messenger.
     pub(super) fn get_id(&self) -> MessengerId {
-        self.fingerprint.id.clone()
+        self.id
     }
 
     /// Returns the type of the Messenger.
@@ -93,6 +92,6 @@ impl<P: Payload + 'static, A: Address + 'static> Messenger<P, A> {
     /// method to be used for immediate actions (forwarding, observing) and
     /// deferred actions as well (sending, replying).
     pub(super) fn transmit(&self, action: MessageAction<P, A>, beacon: Option<Beacon<P, A>>) {
-        self.action_tx.unbounded_send((self.fingerprint.clone(), action, beacon)).ok();
+        self.action_tx.unbounded_send((self.id, action, beacon)).ok();
     }
 }
