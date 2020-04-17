@@ -5,7 +5,7 @@
 use crate::agent::base::{Agent, Invocation, Lifespan};
 use crate::agent::volume_change_earcons_handler::VolumeChangeEarconsHandler;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{ListenSession, SettingType, SwitchboardError};
+use crate::switchboard::base::{ListenSession, SettingType, SwitchboardClient, SwitchboardError};
 
 use anyhow::{Context, Error};
 use fidl::endpoints::create_request_stream;
@@ -84,66 +84,66 @@ async fn reply(invocation: Invocation, result: Result<(), Error>) {
 impl Agent for EarconsAgent {
     fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error> {
         // Only process service lifespans.
-        if invocation.context.lifespan != Lifespan::Service {
-            return Ok(false);
-        }
+        if let Lifespan::Service(context) = invocation.lifespan.clone() {
+            let priority_stream_playing = self.priority_stream_playing.clone();
+            let service_context = invocation.service_context.clone();
+            let return_invocation = invocation.clone();
+            let sound_player_connection = self.sound_player_connection.clone();
+            let sound_player_added_files: Arc<Mutex<HashSet<&str>>> =
+                Arc::new(Mutex::new(HashSet::new()));
+            let listen_session_holder = Arc::new(Mutex::new(SwitchboardListenSessionHolder::new()));
 
-        let priority_stream_playing = self.priority_stream_playing.clone();
-        let service_context = invocation.context.service_context.clone();
-        let return_invocation = invocation.clone();
-        let sound_player_connection = self.sound_player_connection.clone();
-        let sound_player_added_files: Arc<Mutex<HashSet<&str>>> =
-            Arc::new(Mutex::new(HashSet::new()));
-        let listen_session_holder = Arc::new(Mutex::new(SwitchboardListenSessionHolder::new()));
+            let common_earcons_params = CommonEarconsParams {
+                listen_session_holder: listen_session_holder.clone(),
+                priority_stream_playing: priority_stream_playing.clone(),
+                service_context: service_context.clone(),
+                sound_player_added_files: sound_player_added_files.clone(),
+                sound_player_connection: sound_player_connection.clone(),
+            };
 
-        let common_earcons_params = CommonEarconsParams {
-            listen_session_holder: listen_session_holder.clone(),
-            priority_stream_playing: priority_stream_playing.clone(),
-            service_context: service_context.clone(),
-            sound_player_added_files: sound_player_added_files.clone(),
-            sound_player_connection: sound_player_connection.clone(),
-        };
+            let volume_change_handler =
+                VolumeChangeEarconsHandler::new(common_earcons_params.clone());
+            let volume_change_handler_clone = volume_change_handler.clone();
 
-        let volume_change_handler = VolumeChangeEarconsHandler::new(common_earcons_params.clone());
-        let volume_change_handler_clone = volume_change_handler.clone();
-
-        fasync::spawn(async move {
-            volume_change_handler_clone.watch_last_volume_button_event();
-
-            // Watch the background usage to determine whether another stream is currently active
-            // that overrides the earcons.
             fasync::spawn(async move {
-                match watch_background_usage(&service_context, priority_stream_playing).await {
-                    Ok(_) => {}
-                    Err(err) => fx_log_err!("Failed while watching background usage: {}", err),
-                };
+                volume_change_handler_clone.watch_last_volume_button_event();
+
+                // Watch the background usage to determine whether another stream is currently active
+                // that overrides the earcons.
+                fasync::spawn(async move {
+                    match watch_background_usage(&service_context, priority_stream_playing).await {
+                        Ok(_) => {}
+                        Err(err) => fx_log_err!("Failed while watching background usage: {}", err),
+                    };
+                });
+
+                // Listen on the switchboard for the events that should trigger earcons to be played.
+                listen_to_audio_events(
+                    context.switchboard_client.clone(),
+                    volume_change_handler.clone(),
+                    common_earcons_params.clone(),
+                )
+                .await;
+
+                reply(return_invocation, Ok(())).await;
             });
 
-            // Listen on the switchboard for the events that should trigger earcons to be played.
-            listen_to_audio_events(
-                invocation,
-                volume_change_handler.clone(),
-                common_earcons_params.clone(),
-            )
-            .await;
-
-            reply(return_invocation, Ok(())).await;
-        });
-
-        return Ok(true);
+            return Ok(true);
+        } else {
+            return Ok(false);
+        }
     }
 }
 
 // Listen to all the events on the switchboard that come through on the Audio setting
 // type. Make corresponding requests on the corresponding handlers to get the necessary state.
 async fn listen_to_audio_events(
-    invocation: Invocation,
+    client: SwitchboardClient,
     volume_change_handler: VolumeChangeEarconsHandler,
     common_earcons_params: CommonEarconsParams,
 ) {
-    let switchboard_client = invocation.context.switchboard_client.clone();
     let common_earcons_params_clone = common_earcons_params.clone();
-    let listen_result = switchboard_client
+    let listen_result = client
         .clone()
         .listen(
             SettingType::Audio,
@@ -154,7 +154,7 @@ async fn listen_to_audio_events(
                     common_earcons_params.sound_player_connection.clone(),
                 );
 
-                volume_change_handler.get_volume_info(switchboard_client.clone(), setting);
+                volume_change_handler.get_volume_info(client.clone(), setting);
             }),
         )
         .await;

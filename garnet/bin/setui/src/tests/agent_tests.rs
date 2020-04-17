@@ -22,6 +22,12 @@ use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_agent_test_environment";
 
+#[derive(PartialEq, Clone)]
+enum LifespanTarget {
+    Initialization,
+    Service,
+}
+
 /// Agent provides a test agent to interact with the authority impl. It is
 /// instantiated with an id that can be used to identify it when returned by
 /// other parts of the code. Additionally, the last invocation is stored so that
@@ -34,15 +40,24 @@ const ENV_NAME: &str = "settings_service_agent_test_environment";
 /// continue_invocation.
 struct TestAgent {
     id: u32,
-    lifespan: Lifespan,
+    lifespan_target: LifespanTarget,
     last_invocation: Option<Invocation>,
     callback: Option<UnboundedSender<(u32, Invocation)>>,
 }
 
 impl Agent for TestAgent {
     fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error> {
-        if invocation.context.lifespan != self.lifespan {
-            return Ok(false);
+        match invocation.lifespan.clone() {
+            Lifespan::Initialization(_) => {
+                if self.lifespan_target != LifespanTarget::Initialization {
+                    return Ok(false);
+                }
+            }
+            Lifespan::Service(_) => {
+                if self.lifespan_target != LifespanTarget::Service {
+                    return Ok(false);
+                }
+            }
         }
 
         self.last_invocation = Some(invocation.clone());
@@ -67,11 +82,11 @@ impl TestAgent {
     // reference to this agent.
     pub fn create(
         id: u32,
-        lifespan: Lifespan,
+        lifespan_target: LifespanTarget,
         authority: &mut dyn Authority,
         callback: UnboundedSender<(u32, Invocation)>,
     ) -> Result<Arc<Mutex<TestAgent>>, Error> {
-        let agent = TestAgent::new(id, lifespan, Some(callback));
+        let agent = TestAgent::new(id, lifespan_target, Some(callback));
 
         if !authority.register(agent.clone()).is_ok() {
             return Err(format_err!("could not register"));
@@ -82,13 +97,13 @@ impl TestAgent {
 
     pub fn new(
         id: u32,
-        lifespan: Lifespan,
+        lifespan_target: LifespanTarget,
         callback: Option<UnboundedSender<(u32, Invocation)>>,
     ) -> Arc<Mutex<TestAgent>> {
         return Arc::new(Mutex::new(TestAgent {
             id: id,
             last_invocation: None,
-            lifespan: lifespan,
+            lifespan_target: lifespan_target,
             callback: callback,
         }));
     }
@@ -117,11 +132,11 @@ async fn test_environment_startup() {
 
     let service_agent_id = 2;
     let (service_tx, mut service_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
-    let service_agent = TestAgent::new(service_agent_id, Lifespan::Service, Some(service_tx));
+    let service_agent = TestAgent::new(service_agent_id, LifespanTarget::Service, Some(service_tx));
 
     let environment = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .agents(&[
-            TestAgent::new(startup_agent_id, Lifespan::Initialization, Some(startup_tx)),
+            TestAgent::new(startup_agent_id, LifespanTarget::Initialization, Some(startup_tx)),
             service_agent.clone(),
         ])
         .settings(&[SettingType::Display])
@@ -163,13 +178,14 @@ async fn test_sequential() {
     let service_context = ServiceContext::create(None);
 
     // Create a number of agents.
-    let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
+    let agent_ids = create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone());
 
     // Execute the lifespan sequentially.
     let completion_ack = authority.execute_lifespan(
-        Lifespan::Initialization,
-        HashSet::new(),
-        switchboard_client,
+        Lifespan::Initialization(InitializationContext::new(
+            switchboard_client.clone(),
+            HashSet::new(),
+        )),
         service_context,
         true,
     );
@@ -212,13 +228,14 @@ async fn test_simultaneous() {
         SwitchboardImpl::create(messenger_factory, inspect_node).await.unwrap();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
-    let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
+    let agent_ids = create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone());
 
     // Execute lifespan non-sequentially.
     let completion_ack = authority.execute_lifespan(
-        Lifespan::Initialization,
-        HashSet::new(),
-        switchboard_client,
+        Lifespan::Initialization(InitializationContext::new(
+            switchboard_client.clone(),
+            HashSet::new(),
+        )),
         service_context,
         false,
     );
@@ -263,20 +280,22 @@ async fn test_err_handling() {
     let mut rng = rand::thread_rng();
 
     let agent_1_id =
-        TestAgent::create(rng.gen(), Lifespan::Initialization, &mut authority, tx.clone())
+        TestAgent::create(rng.gen(), LifespanTarget::Initialization, &mut authority, tx.clone())
             .unwrap()
             .lock()
             .await
             .id();
 
     let agent2_lock =
-        TestAgent::create(rng.gen(), Lifespan::Initialization, &mut authority, tx.clone()).unwrap();
+        TestAgent::create(rng.gen(), LifespanTarget::Initialization, &mut authority, tx.clone())
+            .unwrap();
 
     // Execute lifespan sequentially
     let completion_ack = authority.execute_lifespan(
-        Lifespan::Initialization,
-        HashSet::new(),
-        switchboard_client,
+        Lifespan::Initialization(InitializationContext::new(
+            switchboard_client.clone(),
+            HashSet::new(),
+        )),
         service_context,
         true,
     );
@@ -319,7 +338,7 @@ async fn test_available_components() {
     let mut rng = rand::thread_rng();
 
     let agent_id =
-        TestAgent::create(rng.gen(), Lifespan::Initialization, &mut authority, tx.clone())
+        TestAgent::create(rng.gen(), LifespanTarget::Initialization, &mut authority, tx.clone())
             .unwrap()
             .lock()
             .await
@@ -332,9 +351,10 @@ async fn test_available_components() {
 
     // Execute lifespan sequentially
     let _ = authority.execute_lifespan(
-        Lifespan::Initialization,
-        available_components.clone(),
-        switchboard_client.clone(),
+        Lifespan::Initialization(InitializationContext::new(
+            switchboard_client.clone(),
+            available_components.clone(),
+        )),
         service_context,
         true,
     );
@@ -342,7 +362,11 @@ async fn test_available_components() {
     // Ensure the first agent received an invocation and verify components match
     if let Some((id, invocation)) = rx.next().await {
         assert_eq!(agent_id, id);
-        assert_eq!(available_components, invocation.context.available_components);
+        if let Lifespan::Initialization(context) = invocation.lifespan {
+            assert_eq!(available_components, context.available_components);
+        } else {
+            panic!("should have encountered initialization lifespan");
+        }
     } else {
         panic!("did not receive expected response from agent");
     }
@@ -350,7 +374,7 @@ async fn test_available_components() {
 
 fn create_agents(
     count: u32,
-    lifespan: Lifespan,
+    lifespan_target: LifespanTarget,
     authority: &mut dyn Authority,
     sender: UnboundedSender<(u32, Invocation)>,
 ) -> Vec<u32> {
@@ -360,7 +384,7 @@ fn create_agents(
     for _i in 0..count {
         let id = rng.gen();
         return_agents.push(id);
-        assert!(TestAgent::create(id, lifespan, authority, sender.clone()).is_ok())
+        assert!(TestAgent::create(id, lifespan_target.clone(), authority, sender.clone()).is_ok())
     }
 
     return return_agents;

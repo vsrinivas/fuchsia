@@ -23,16 +23,34 @@ pub type AgentHandle = Arc<Mutex<dyn Agent + Send + Sync>>;
 /// The scope of an agent's life. Initialization components should
 /// only run at the beginning of the service. Service components follow
 /// initialization and run for the duration of the service.
-#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
+#[derive(Clone)]
 pub enum Lifespan {
-    Initialization,
-    Service,
+    Initialization(InitializationContext),
+    Service(RunContext),
+}
+
+#[derive(Clone)]
+pub struct InitializationContext {
+    pub available_components: HashSet<SettingType>,
+    pub switchboard_client: SwitchboardClient,
+}
+
+impl InitializationContext {
+    pub fn new(switchboard_client: SwitchboardClient, components: HashSet<SettingType>) -> Self {
+        Self { available_components: components, switchboard_client: switchboard_client }
+    }
+}
+
+#[derive(Clone)]
+pub struct RunContext {
+    pub switchboard_client: SwitchboardClient,
 }
 
 /// Struct of information passed to the agent during each invocation.
 #[derive(Clone)]
 pub struct Invocation {
-    pub context: InvocationContext,
+    pub lifespan: Lifespan,
+    pub service_context: ServiceContextHandle,
     pub ack_sender: Arc<Mutex<Option<Sender<InvocationAck>>>>,
 }
 
@@ -48,14 +66,6 @@ impl Invocation {
             }
         }
     }
-}
-
-#[derive(Clone)]
-pub struct InvocationContext {
-    pub lifespan: Lifespan,
-    pub available_components: HashSet<SettingType>,
-    pub service_context: ServiceContextHandle,
-    pub switchboard_client: SwitchboardClient,
 }
 
 pub trait Agent: Debug {

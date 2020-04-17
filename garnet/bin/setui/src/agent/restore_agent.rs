@@ -28,34 +28,31 @@ async fn reply(invocation: Invocation, result: Result<(), Error>) {
 impl Agent for RestoreAgent {
     fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error> {
         // Only process initialization lifespans.
-        if invocation.context.lifespan != Lifespan::Initialization {
+        if let Lifespan::Initialization(context) = invocation.lifespan.clone() {
+            fasync::spawn(async move {
+                for component in context.available_components {
+                    if let Ok(result_rx) =
+                        context.switchboard_client.request(component, SettingRequest::Restore).await
+                    {
+                        if result_rx.await.is_err() {
+                            fx_log_err!("could not restore the following setting:{:?}", component);
+                        }
+                    } else {
+                        reply(
+                            invocation,
+                            Err(anyhow::format_err!("could not request restore from component")),
+                        )
+                        .await;
+                        return;
+                    }
+                }
+
+                reply(invocation, Ok(())).await;
+            });
+
+            return Ok(true);
+        } else {
             return Ok(false);
         }
-
-        fasync::spawn(async move {
-            for component in invocation.context.clone().available_components {
-                if let Ok(result_rx) = invocation
-                    .context
-                    .switchboard_client
-                    .request(component, SettingRequest::Restore)
-                    .await
-                {
-                    if result_rx.await.is_err() {
-                        fx_log_err!("could not restore the following setting:{:?}", component);
-                    }
-                } else {
-                    reply(
-                        invocation,
-                        Err(anyhow::format_err!("could not request restore from component")),
-                    )
-                    .await;
-                    return;
-                }
-            }
-
-            reply(invocation, Ok(())).await;
-        });
-
-        return Ok(true);
     }
 }

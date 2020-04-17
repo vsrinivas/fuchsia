@@ -5,11 +5,9 @@
 use crate::agent::base::*;
 
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{SettingType, SwitchboardClient};
 use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
-use std::collections::HashSet;
 use std::sync::Arc;
 
 type AckReceiver = futures::channel::oneshot::Receiver<Result<(), Error>>;
@@ -48,8 +46,6 @@ impl AuthorityImpl {
     pub fn execute_lifespan(
         &self,
         lifespan: Lifespan,
-        available_components: HashSet<SettingType>,
-        switchboard_client: SwitchboardClient,
         service_context: ServiceContextHandle,
         sequential: bool,
     ) -> futures::channel::oneshot::Receiver<Result<(), Error>> {
@@ -62,18 +58,12 @@ impl AuthorityImpl {
             let mut pending_acks = Vec::new();
 
             for agent in agents {
-                let invocation_context = InvocationContext {
-                    lifespan: lifespan,
-                    available_components: available_components.clone(),
-                    service_context: service_context.clone(),
-                    switchboard_client: switchboard_client.clone(),
-                };
-
                 // Create ack channel.
                 let (response_tx, response_rx) =
                     futures::channel::oneshot::channel::<Result<(), Error>>();
                 match agent.lock().await.invoke(Invocation {
-                    context: invocation_context,
+                    lifespan: lifespan.clone(),
+                    service_context: service_context.clone(),
                     ack_sender: Arc::new(Mutex::new(Some(response_tx))),
                 }) {
                     Ok(handled) => {

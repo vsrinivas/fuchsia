@@ -7,7 +7,7 @@ use {
     crate::accessibility::spawn_accessibility_fidl_handler,
     crate::account::account_controller::AccountController,
     crate::agent::authority_impl::AuthorityImpl,
-    crate::agent::base::{AgentHandle, Authority, Lifespan},
+    crate::agent::base::{AgentHandle, Authority, InitializationContext, Lifespan, RunContext},
     crate::audio::audio_controller::AudioController,
     crate::audio::spawn_audio_fidl_handler,
     crate::device::device_controller::DeviceController,
@@ -455,9 +455,10 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         // Execute initialization agents sequentially
         if let Ok(Ok(())) = agent_authority
             .execute_lifespan(
-                Lifespan::Initialization,
-                components.clone(),
-                switchboard_client_clone.clone(),
+                Lifespan::Initialization(InitializationContext {
+                    available_components: components.clone(),
+                    switchboard_client: switchboard_client_clone.clone(),
+                }),
                 service_context_handle.clone(),
                 true,
             )
@@ -471,9 +472,9 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         // Execute service agents concurrently
         agent_authority
             .execute_lifespan(
-                Lifespan::Service,
-                components.clone(),
-                switchboard_client_clone.clone(),
+                Lifespan::Service(RunContext {
+                    switchboard_client: switchboard_client_clone.clone(),
+                }),
                 service_context_handle.clone(),
                 false,
             )
