@@ -308,7 +308,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 			"-output-dir", outputDir,
 			"@" + covFile.Name(),
 		}}
-		data, err = showCmd.Run(ctx)
+		data, err := showCmd.Run(ctx)
 		if err != nil {
 			return fmt.Errorf("%v:\n%s", err, string(data))
 		}
@@ -321,6 +321,13 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 			return fmt.Errorf("creating export dir %s: %w", reportDir, err)
 		}
 
+		stderrFilename := filepath.Join(tempDir, "llvm-cov.stderr.log")
+		stderrFile, err := os.Create(stderrFilename)
+		if err != nil {
+			return fmt.Errorf("creating export %q: %w", stderrFilename, err)
+		}
+		defer stderrFile.Close()
+
 		// Export data in machine readable format.
 		var b bytes.Buffer
 		cmd := exec.Command(llvmCov, []string{
@@ -331,8 +338,14 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 			"@" + covFile.Name(),
 		}...)
 		cmd.Stdout = &b
+		cmd.Stderr = stderrFile
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to export: %w", err)
+		}
+
+		coverageFilename := filepath.Join(tempDir, "coverage.json")
+		if err := ioutil.WriteFile(coverageFilename, b.Bytes(), 0644); err != nil {
+			return fmt.Errorf("writing coverage %q: %w", coverageFilename, err)
 		}
 
 		var export llvm.Export
