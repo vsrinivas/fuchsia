@@ -16,6 +16,7 @@ driver_module("ot-radio") {
 
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.spi",
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp",
     "//src/connectivity/openthread/third_party",
     "//src/devices/lib/driver",
@@ -31,7 +32,6 @@ driver_module("ot-radio") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.spi",
     "//zircon/system/ulib/driver-unit-test",
   ]
 

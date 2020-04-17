@@ -4,5 +4,5 @@
 
 source_set("spinel-framer") {
   sources = [ "spinel_framer.cc" ]
-  deps = [ "//zircon/system/banjo/ddk.protocol.spi" ]
+  deps = [ "//sdk/banjo/ddk.protocol.spi" ]
 }
