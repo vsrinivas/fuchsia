@@ -125,6 +125,32 @@ fuchsia::ui::views::ViewToken SemanticsIntegrationTest::CreatePresentationViewTo
   return std::move(view_token);
 }
 
+const Node* SemanticsIntegrationTest::FindNodeWithLabel(const Node* node, zx_koid_t view_ref_koid,
+                                                        std::string label) {
+  if (!node) {
+    return nullptr;
+  }
+
+  if (node->has_attributes() && node->attributes().has_label() &&
+      node->attributes().label() == label) {
+    return node;
+  }
+
+  if (!node->has_child_ids()) {
+    return nullptr;
+  }
+  for (const auto& child_id : node->child_ids()) {
+    const auto* child = view_manager()->GetSemanticNode(view_ref_koid, child_id);
+    FX_DCHECK(child);
+    auto result = FindNodeWithLabel(child, view_ref_koid, label);
+    if (result != nullptr) {
+      return result;
+    }
+  }
+
+  return nullptr;
+}
+
 zx_koid_t SemanticsIntegrationTest::WaitForKoid() {
   // There are a few alternatives as to how to do this, of which tapping and intercepting is one.
   //

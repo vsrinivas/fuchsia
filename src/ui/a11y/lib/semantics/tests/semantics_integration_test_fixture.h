@@ -17,6 +17,8 @@
 
 namespace accessibility_test {
 
+using fuchsia::accessibility::semantics::Node;
+
 // Test fixture that sets up an owned instance of semantics manager to run against.
 //
 // It publishes a SemanticsManager service in the test environment to allow components
@@ -39,6 +41,10 @@ class SemanticsIntegrationTest : public sys::testing::TestWithEnvironment {
   sys::testing::EnclosingEnvironment* environment() { return environment_.get(); }
 
   fuchsia::ui::views::ViewToken CreatePresentationViewToken();
+
+  // Recursively traverses the node hierarchy, rooted at |node|, to find the first descendant
+  // with |label|.
+  const Node* FindNodeWithLabel(const Node* node, zx_koid_t view_ref_koid, std::string label);
 
   // Runs the event loop and sends taps on the center of the screen until a view ref KOID is
   // registered. May return ZX_KOID_INVALID if no KOID is intercepted after repeated attempts.

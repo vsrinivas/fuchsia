@@ -49,25 +49,30 @@ TEST_F(FlutterSemanticsTests, StaticSemantics) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] {
         auto node = view_manager()->GetSemanticNode(view_ref_koid, 0u);
-        return node != nullptr;
+        return node != nullptr && node->has_attributes() && node->attributes().has_label();
       },
       kTimeout))
       << "No root node found.";
 
-  auto node = view_manager()->GetSemanticNode(view_ref_koid, 0u);
-
-  ASSERT_TRUE(node);
-  ASSERT_TRUE(node->has_attributes());
-  ASSERT_TRUE(node->attributes().has_label());
-
-  // TODO: more assertions
-  //
-  // Semantic tree a11y-demo:
+  // Verify semantic tree for a11y-demo:
   // ID: 0 Label:
   //   ID: 1 Label:Blue tapped 0 times
   //   ID: 2 Label:Yellow tapped 0 times
   //   ID: 3 Label:Blue
   //   ID: 4 Label:Yellow
+
+  auto root = view_manager()->GetSemanticNode(view_ref_koid, 0u);
+  auto node = FindNodeWithLabel(root, view_ref_koid, "Blue tapped 0 times");
+  ASSERT_TRUE(node);
+
+  node = FindNodeWithLabel(root, view_ref_koid, "Yellow tapped 0 times");
+  ASSERT_TRUE(node);
+
+  node = FindNodeWithLabel(root, view_ref_koid, "Blue");
+  ASSERT_TRUE(node);
+
+  node = FindNodeWithLabel(root, view_ref_koid, "Yellow");
+  ASSERT_TRUE(node);
 }
 
 }  // namespace

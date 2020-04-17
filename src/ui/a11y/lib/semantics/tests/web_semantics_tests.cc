@@ -73,22 +73,20 @@ TEST_F(WebSemanticsTest, StaticSemantics) {
       kTimeout))
       << "No root node found.";
 
-  auto node = view_manager()->GetSemanticNode(view_ref_koid, 0u);
-
-  ASSERT_TRUE(node);
-  ASSERT_TRUE(node->has_attributes());
-  ASSERT_TRUE(node->attributes().has_label());
-  EXPECT_EQ(node->attributes().label(), "Say something. Anything.");
-
-  // TODO: more assertions
-  //
-  // Example semantic tree for static.html:
+  // Verify semantic tree for static.html:
   /*
-  ID: 0 Label:Say something. Anything.
-    ID: 7 Label:no label
-        ID: 8 Label:Test 1 2 3...
-            ID: 17 Label:Test 1 2 3...
+  0 Label:Say something. Anything.
+    ID: 5 Label:no label
+        ID: 6 Label:Test 1 2 3...
+            ID: 10 Label:Test 1 2 3...
   */
+
+  auto root = view_manager()->GetSemanticNode(view_ref_koid, 0u);
+  auto node = FindNodeWithLabel(root, view_ref_koid, "Say something. Anything.");
+  ASSERT_TRUE(node);
+
+  node = FindNodeWithLabel(root, view_ref_koid, "Test 1 2 3...");
+  ASSERT_TRUE(node);
 }
 
 }  // namespace
