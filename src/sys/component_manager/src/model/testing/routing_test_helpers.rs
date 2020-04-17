@@ -683,7 +683,7 @@ pub mod capability_util {
         let meta_dir_res = realm.resolve_meta_dir().await;
         match (meta_dir_res, should_succeed) {
             (Ok(Some(meta_dir)), true) => write_hippo_file_to_directory(&meta_dir, true).await,
-            (Err(ModelError::CapabilityDiscoveryError { .. }), false) => (),
+            (Err(ModelError::RoutingError { .. }), false) => (),
             (Err(ModelError::StorageError { .. }), false) => (),
             (Ok(Some(_)), false) => panic!("meta dir present when usage was expected to fail"),
             (Ok(None), true) => panic!("meta dir missing when usage was expected to succeed"),

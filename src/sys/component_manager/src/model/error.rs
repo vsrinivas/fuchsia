@@ -9,6 +9,7 @@ use {
         moniker::{AbsoluteMoniker, PartialMoniker},
         resolver::ResolverError,
         rights::RightsError,
+        routing::RoutingError,
         runner::RunnerError,
         storage::StorageError,
     },
@@ -54,24 +55,26 @@ pub enum ModelError {
     },
     #[error("The model is not available")]
     ModelNotAvailable,
-    #[error("namespace creation failed: {}", err)]
+    #[error("Namespace creation failed: {}", err)]
     NamespaceCreationFailed {
         #[source]
         err: ClonableError,
     },
-    #[error("resolver error: {}", err)]
+    #[error("Resolver error: {}", err)]
     ResolverError {
         #[source]
         err: ResolverError,
     },
-    #[error("runner error: {}", err)]
+    #[error("Routing error: {}", err)]
+    RoutingError {
+        #[source]
+        err: RoutingError,
+    },
+    #[error("Runner error: {}", err)]
     RunnerError {
         #[source]
         err: RunnerError,
     },
-    // TODO: Spin this off into RoutingError and define concrete subtypes.
-    #[error("{}", detail)]
-    CapabilityDiscoveryError { detail: String },
     #[error("storage error: {}", err)]
     StorageError {
         #[source]
@@ -148,10 +151,6 @@ impl ModelError {
         ModelError::ManifestInvalid { url: url.into(), err: err.into().into() }
     }
 
-    pub fn capability_discovery_error(detail: impl Into<String>) -> ModelError {
-        ModelError::CapabilityDiscoveryError { detail: detail.into().into() }
-    }
-
     pub fn add_entry_error(moniker: AbsoluteMoniker, entry_name: impl Into<String>) -> ModelError {
         ModelError::AddEntryError { moniker, entry_name: entry_name.into() }
     }
@@ -177,6 +176,12 @@ impl From<RightsError> for ModelError {
 impl From<ResolverError> for ModelError {
     fn from(err: ResolverError) -> Self {
         ModelError::ResolverError { err }
+    }
+}
+
+impl From<RoutingError> for ModelError {
+    fn from(err: RoutingError) -> Self {
+        ModelError::RoutingError { err }
     }
 }
 

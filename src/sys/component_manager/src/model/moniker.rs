@@ -322,6 +322,29 @@ impl fmt::Display for AbsoluteMoniker {
     }
 }
 
+/// One of:
+/// - An absolute moniker
+/// - A marker representing component manager's realm
+#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+pub enum ExtendedMoniker {
+    ComponentInstance(AbsoluteMoniker),
+    ComponentManager,
+}
+
+impl fmt::Display for ExtendedMoniker {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ComponentInstance(m) => {
+                write!(f, "{}", m)?;
+            }
+            Self::ComponentManager => {
+                write!(f, "<component_manager>")?;
+            }
+        }
+        Ok(())
+    }
+}
+
 /// A relative moniker describes the identity of a component instance in terms of its path
 /// relative to another (unspecified) component in the component instance tree.
 ///

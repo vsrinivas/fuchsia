@@ -59,8 +59,8 @@ impl IncomingNamespace {
         Ok(Self { package_dir, dir_abort_handles: vec![] })
     }
 
-    /// In addition to populating a Vec<fcrunner::ComponentNamespaceEntry>, `populate` will start serving and install
-    /// handles to pseudo directories.
+    /// In addition to populating a Vec<fcrunner::ComponentNamespaceEntry>, `populate` will start
+    /// serving and install handles to pseudo directories.
     pub async fn populate<'a>(
         &'a mut self,
         realm: WeakRealm,
@@ -210,10 +210,11 @@ impl IncomingNamespace {
             if let Err(e) = res {
                 let cap = ComponentCapability::Use(use_);
                 error!(
-                    "Failed to route directory `{}` from component `{}`: {}",
+                    "Failed to route `{}` `{}` from component `{}`: {}",
+                    cap.type_name(),
                     cap.source_id(),
                     &target_realm.abs_moniker,
-                    e
+                    Self::routing_err_str(e),
                 );
             }
         };
@@ -288,7 +289,7 @@ impl IncomingNamespace {
                             "Failed to route protocol `{}` from component `{}`: {}",
                             cap.source_id(),
                             &target_realm.abs_moniker,
-                            e
+                            Self::routing_err_str(e),
                         );
                     }
                 });
@@ -332,5 +333,14 @@ impl IncomingNamespace {
             });
         }
         Ok(())
+    }
+
+    /// Formats `err` as a `String`, but elides the type if the error is a `RoutingError`, the
+    /// common case.
+    fn routing_err_str(err: ModelError) -> String {
+        match err {
+            ModelError::RoutingError { err } => format!("{}", err),
+            _ => format!("{}", err),
+        }
     }
 }

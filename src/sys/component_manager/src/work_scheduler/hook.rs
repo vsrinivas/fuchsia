@@ -9,6 +9,7 @@ use {
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
+            routing::RoutingError,
         },
         work_scheduler::work_scheduler::{
             WorkScheduler, WORK_SCHEDULER_CAPABILITY_PATH, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
@@ -72,10 +73,11 @@ impl WorkScheduler {
                 // Only clients that expose the Worker protocol to the framework can
                 // use WorkScheduler.
                 if !self.verify_worker_exposed_to_framework(&scope_moniker).await {
-                    return Err(ModelError::capability_discovery_error(format!(
-                        "Component `{}` does not expose Worker to framework",
-                        scope_moniker
-                    )));
+                    return Err(RoutingError::used_expose_not_found(
+                        &scope_moniker,
+                        capability_path.to_string(),
+                    )
+                    .into());
                 }
 
                 Ok(Some(

@@ -5,6 +5,7 @@
 use {
     cm_fidl_validator, cm_types, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_sys2 as fsys,
+    lazy_static::lazy_static,
     std::collections::HashMap,
     std::convert::{From, TryFrom, TryInto},
     std::fmt,
@@ -14,6 +15,12 @@ use {
 };
 
 pub mod data;
+
+lazy_static! {
+    static ref DATA_TYPENAME: CapabilityName = CapabilityName("Data".to_string());
+    static ref CACHE_TYPENAME: CapabilityName = CapabilityName("Cache".to_string());
+    static ref META_TYPENAME: CapabilityName = CapabilityName("Meta".to_string());
+}
 
 /// Converts a fidl object into its corresponding native representation.
 pub trait FidlIntoNative<T> {
@@ -949,6 +956,14 @@ impl UseStorageDecl {
         }
     }
 
+    pub fn type_name(&self) -> &CapabilityName {
+        match self {
+            Self::Data(_) => &DATA_TYPENAME,
+            Self::Cache(_) => &CACHE_TYPENAME,
+            Self::Meta => &META_TYPENAME,
+        }
+    }
+
     pub fn path<'a>(&'a self) -> Option<&'a CapabilityPath> {
         match self {
             UseStorageDecl::Data(p) => Some(p),
@@ -1012,6 +1027,14 @@ impl OfferStorageDecl {
             OfferStorageDecl::Data(..) => fsys::StorageType::Data,
             OfferStorageDecl::Cache(..) => fsys::StorageType::Cache,
             OfferStorageDecl::Meta(..) => fsys::StorageType::Meta,
+        }
+    }
+
+    pub fn type_name(&self) -> &CapabilityName {
+        match self {
+            Self::Data(_) => &DATA_TYPENAME,
+            Self::Cache(_) => &CACHE_TYPENAME,
+            Self::Meta(_) => &META_TYPENAME,
         }
     }
 

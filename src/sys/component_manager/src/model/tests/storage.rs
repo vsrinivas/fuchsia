@@ -18,7 +18,7 @@ use {
 ///
 /// a: has storage decl with name "mystorage" with a source of realm at path /data
 /// a: offers cache storage to b from "mystorage"
-/// b: uses cache storage as /storage
+/// b: uses cache storage as /storage.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn storage_dir_from_cm_namespace() {
     let components = vec![

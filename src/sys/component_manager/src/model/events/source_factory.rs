@@ -109,10 +109,8 @@ impl EventSourceFactory {
                 if let Some(event_source) = event_source_registry.get(&target_moniker) {
                     Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>))
                 } else {
-                    return Err(ModelError::capability_discovery_error(format!(
-                        "Unable to find EventSource in registry for {}",
-                        target_moniker
-                    )));
+                    // Evidently the component was destroyed.
+                    return Err(ModelError::instance_not_found(target_moniker.clone()));
                 }
             }
             (c, _) => return Ok(c),

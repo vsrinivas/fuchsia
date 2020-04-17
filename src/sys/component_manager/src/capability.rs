@@ -179,7 +179,9 @@ impl FrameworkCapability {
             OfferDecl::Event(e) if e.source == OfferEventSource::Framework => {
                 Ok(FrameworkCapability::Event(e.source_name.clone()))
             }
-            _ => Err(Error::InvalidScopedFrameworkCapability {}),
+            _ => {
+                return Err(Error::InvalidScopedFrameworkCapability {});
+            }
         }
     }
 
@@ -232,6 +234,40 @@ pub enum ComponentCapability {
 }
 
 impl ComponentCapability {
+    /// Returns a name for the capability type.
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            ComponentCapability::Use(use_) => match use_ {
+                UseDecl::Protocol(_) => "protocol",
+                UseDecl::Directory(_) => "directory",
+                UseDecl::Service(_) => "service",
+                UseDecl::Storage(_) => "storage",
+                UseDecl::Runner(_) => "runner",
+                UseDecl::Event(_) => "event",
+            },
+            ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
+                match expose {
+                    ExposeDecl::Protocol(_) => "protocol",
+                    ExposeDecl::Directory(_) => "directory",
+                    ExposeDecl::Service(_) => "service",
+                    ExposeDecl::Runner(_) => "runner",
+                    ExposeDecl::Resolver(_) => "resolver",
+                }
+            }
+            ComponentCapability::Offer(offer) => match offer {
+                OfferDecl::Protocol(_) => "protocol",
+                OfferDecl::Directory(_) => "directory",
+                OfferDecl::Service(_) => "service",
+                OfferDecl::Storage(_) => "storage",
+                OfferDecl::Runner(_) => "runner",
+                OfferDecl::Resolver(_) => "resolver",
+                OfferDecl::Event(_) => "event",
+            },
+            ComponentCapability::Storage(_) => "storage",
+            ComponentCapability::Runner(_) => "runner",
+        }
+    }
+
     /// Returns the source path of the capability, if one exists.
     pub fn source_path(&self) -> Option<&CapabilityPath> {
         match self {
@@ -286,6 +322,8 @@ impl ComponentCapability {
             ComponentCapability::Offer(OfferDecl::Event(OfferEventDecl {
                 source_name, ..
             })) => Some(source_name),
+            ComponentCapability::Use(UseDecl::Storage(d)) => Some(d.type_name()),
+            ComponentCapability::Offer(OfferDecl::Storage(d)) => Some(d.type_name()),
             _ => None,
         }
     }
