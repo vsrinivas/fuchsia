@@ -27,10 +27,11 @@
 
 namespace {
 
-using chunked_compression::ChunkedArchiveHeader;
 using chunked_compression::ChunkedCompressor;
 using chunked_compression::ChunkedDecompressor;
 using chunked_compression::CompressionParams;
+using chunked_compression::HeaderReader;
+using chunked_compression::SeekTable;
 using chunked_compression::StreamingChunkedCompressor;
 
 constexpr const char kAnsiUpLine[] = "\33[A";
@@ -78,12 +79,13 @@ class ProgressWriter {
 };
 
 void usage(const char* fname) {
-  fprintf(stderr, "Usage: %s [--level #] [--stream] [d | c] source dest\n", fname);
+  fprintf(stderr, "Usage: %s [--level #] [--stream] [--checksum] [d | c] source dest\n", fname);
   fprintf(stderr,
           "\
   c: Compress source, writing to dest.\n\
   d: Decompress source, writing to dest.\n\
-  --stream: Use stream compression\n\
+  --stream: (compression only) Use stream compression\n\
+  --checksum: (compression only) Include a per-frame checksum\n\
   --level #: Compression level\n");
 }
 
@@ -168,8 +170,9 @@ int OpenAndMapForReading(const char* file, fbl::unique_fd* out_fd, const uint8_t
 }
 
 // Reads |sz| bytes from |src| and compresses it, writing the output to |dst_file|.
-int Compress(const uint8_t* src, size_t sz, const char* dst_file, int level) {
+int Compress(const uint8_t* src, size_t sz, const char* dst_file, int level, bool checksum) {
   CompressionParams params;
+  params.frame_checksum = checksum;
   params.compression_level = level;
   params.chunk_size = CompressionParams::ChunkSizeForInputSize(sz);
   ChunkedCompressor compressor(params);
@@ -203,8 +206,10 @@ int Compress(const uint8_t* src, size_t sz, const char* dst_file, int level) {
 
 // Reads |sz| bytes from |src_fd| and compresses it using a streaming compressor, writing the output
 // to |dst_file|.
-int CompressStream(fbl::unique_fd src_fd, size_t sz, const char* dst_file, int level) {
+int CompressStream(fbl::unique_fd src_fd, size_t sz, const char* dst_file, int level,
+                   bool checksum) {
   CompressionParams params;
+  params.frame_checksum = checksum;
   params.compression_level = level;
   params.chunk_size = CompressionParams::ChunkSizeForInputSize(sz);
   StreamingChunkedCompressor compressor(params);
@@ -268,12 +273,13 @@ int CompressStream(fbl::unique_fd src_fd, size_t sz, const char* dst_file, int l
 
 // Reads |sz| bytes from |src| and decompresses them, writing the results to |dst_file|.
 int Decompress(const uint8_t* src, size_t sz, const char* dst_file) {
-  ChunkedArchiveHeader header;
-  if ((ChunkedArchiveHeader::Parse(src, sz, &header)) != chunked_compression::kStatusOk) {
+  SeekTable table;
+  HeaderReader reader;
+  if ((reader.Parse(src, sz, sz, &table)) != chunked_compression::kStatusOk) {
     fprintf(stderr, "Failed to parse input file\n");
     return 1;
   }
-  size_t output_size = ChunkedDecompressor::ComputeOutputSize(header);
+  size_t output_size = ChunkedDecompressor::ComputeOutputSize(table);
 
   fbl::unique_fd dst_fd;
   uint8_t* write_buf;
@@ -283,7 +289,7 @@ int Decompress(const uint8_t* src, size_t sz, const char* dst_file) {
 
   ChunkedDecompressor decompressor;
   size_t bytes_written;
-  if (decompressor.Decompress(header, src, sz, write_buf, output_size, &bytes_written) !=
+  if (decompressor.Decompress(table, src, sz, write_buf, output_size, &bytes_written) !=
       chunked_compression::kStatusOk) {
     return 1;
   }
@@ -296,15 +302,17 @@ int Decompress(const uint8_t* src, size_t sz, const char* dst_file) {
 }  // namespace
 
 int main(int argc, char* const* argv) {
+  bool checksum = false;
   bool stream = false;
   int level = CompressionParams::DefaultCompressionLevel();
   while (1) {
     static struct option opts[] = {
         {"stream", no_argument, nullptr, 's'},
         {"level", required_argument, nullptr, 'l'},
+        {"checksum", no_argument, nullptr, 'c'},
         {nullptr, 0, nullptr, 0},
     };
-    int c = getopt_long(argc, argv, "sl:", opts, nullptr);
+    int c = getopt_long(argc, argv, "sl:c", opts, nullptr);
 
     if (c < 0) {
       break;
@@ -328,6 +336,10 @@ int main(int argc, char* const* argv) {
       }
       case 's': {
         stream = true;
+        break;
+      }
+      case 'c': {
+        checksum = true;
         break;
       }
       default:
@@ -373,8 +385,11 @@ int main(int argc, char* const* argv) {
         fprintf(stderr, "Failed to open '%s'.\n", input_file);
         return 1;
       }
-      return CompressStream(std::move(fd), GetFileSize(input_file), output_file, level);
+      return CompressStream(std::move(fd), GetFileSize(input_file), output_file, level, checksum);
     }
+  }
+  if (checksum && mode == Mode::DECOMPRESS) {
+    printf("Ignoring --checksum flag for decompression\n");
   }
 
   fbl::unique_fd src_fd;
@@ -384,6 +399,6 @@ int main(int argc, char* const* argv) {
     return 1;
   }
 
-  return mode == Mode::COMPRESS ? Compress(src_data, src_size, output_file, level)
+  return mode == Mode::COMPRESS ? Compress(src_data, src_size, output_file, level, checksum)
                                 : Decompress(src_data, src_size, output_file);
 }

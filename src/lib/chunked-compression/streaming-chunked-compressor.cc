@@ -90,6 +90,13 @@ Status StreamingChunkedCompressor::Init(size_t data_len, void* dst, size_t dst_l
     FXL_LOG(ERROR) << "Failed to init stream";
     return kStatusErrInternal;
   }
+  if (params_.frame_checksum) {
+    r = ZSTD_CCtx_setParameter(context_->inner_, ZSTD_c_checksumFlag, 1);
+    if (ZSTD_isError(r)) {
+      FXL_LOG(ERROR) << "Failed to init stream";
+      return kStatusErrInternal;
+    }
+  }
 
   compressed_output_ = static_cast<uint8_t*>(dst);
   compressed_output_len_ = dst_len;

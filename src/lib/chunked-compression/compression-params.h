@@ -26,6 +26,10 @@ struct CompressionParams {
   // MinChunkSize() <= chunk_size <= MaxChunkSize()
   size_t chunk_size = MinChunkSize();
 
+  // Whether to include a per-frame checksum.
+  // Each frame is independently validated with its checksum when decompressed.
+  bool frame_checksum = false;
+
   static int DefaultCompressionLevel();
   static int MinCompressionLevel();
   static int MaxCompressionLevel();

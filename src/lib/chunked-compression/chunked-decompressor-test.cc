@@ -147,7 +147,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_MultiFrame_Zeroes) {
   size_t frame_length = table.Entries()[0].compressed_size;
 
   size_t bytes_written;
-  ASSERT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length, out_buf.get(),
+  EXPECT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length, out_buf.get(),
                                          out_buf.size(), &bytes_written),
             kStatusOk);
 
@@ -157,7 +157,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_MultiFrame_Zeroes) {
   // Frame 1
   frame_start = compressed_data.get() + table.Entries()[1].compressed_offset;
   frame_length = table.Entries()[1].compressed_size;
-  ASSERT_EQ(decompressor.DecompressFrame(table, 1, frame_start, frame_length, out_buf.get(),
+  EXPECT_EQ(decompressor.DecompressFrame(table, 1, frame_start, frame_length, out_buf.get(),
                                          out_buf.size(), &bytes_written),
             kStatusOk);
 
@@ -167,7 +167,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_MultiFrame_Zeroes) {
   // Frame 2
   frame_start = compressed_data.get() + table.Entries()[2].compressed_offset;
   frame_length = table.Entries()[2].compressed_size;
-  ASSERT_EQ(decompressor.DecompressFrame(table, 2, frame_start, frame_length, out_buf.get(),
+  EXPECT_EQ(decompressor.DecompressFrame(table, 2, frame_start, frame_length, out_buf.get(),
                                          out_buf.size(), &bytes_written),
             kStatusOk);
 
@@ -201,7 +201,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_MultiFrame_Random) {
   size_t frame_length = table.Entries()[0].compressed_size;
 
   size_t bytes_written;
-  ASSERT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length, out_buf.get(),
+  EXPECT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length, out_buf.get(),
                                          out_buf.size(), &bytes_written),
             kStatusOk);
 
@@ -211,7 +211,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_MultiFrame_Random) {
   // Frame 1
   frame_start = compressed_data.get() + table.Entries()[1].compressed_offset;
   frame_length = table.Entries()[1].compressed_size;
-  ASSERT_EQ(decompressor.DecompressFrame(table, 1, frame_start, frame_length, out_buf.get(),
+  EXPECT_EQ(decompressor.DecompressFrame(table, 1, frame_start, frame_length, out_buf.get(),
                                          out_buf.size(), &bytes_written),
             kStatusOk);
 
@@ -221,7 +221,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_MultiFrame_Random) {
   // Frame 2
   frame_start = compressed_data.get() + table.Entries()[2].compressed_offset;
   frame_length = table.Entries()[2].compressed_size;
-  ASSERT_EQ(decompressor.DecompressFrame(table, 2, frame_start, frame_length, out_buf.get(),
+  EXPECT_EQ(decompressor.DecompressFrame(table, 2, frame_start, frame_length, out_buf.get(),
                                          out_buf.size(), &bytes_written),
             kStatusOk);
 
@@ -254,7 +254,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_BadFrameNumber) {
   size_t frame_length = table.Entries()[0].compressed_size;
 
   size_t bytes_written;
-  ASSERT_EQ(decompressor.DecompressFrame(table, 3, frame_start, frame_length, out_buf.get(),
+  EXPECT_EQ(decompressor.DecompressFrame(table, 3, frame_start, frame_length, out_buf.get(),
                                          out_buf.size(), &bytes_written),
             kStatusErrInvalidArgs);
 }
@@ -285,13 +285,15 @@ TEST(ChunkedDecompressorTest, DecompressFrame_BadOffset) {
 
   size_t bytes_written;
   // Starting at 1 byte past the actual frame start.
-  ASSERT_EQ(decompressor.DecompressFrame(table, 0, frame_start + 1, frame_length, out_buf.get(),
+  // This looks like a corrupt frame to the decompressor.
+  EXPECT_EQ(decompressor.DecompressFrame(table, 0, frame_start + 1, frame_length, out_buf.get(),
                                          out_buf.size(), &bytes_written),
-            kStatusErrInternal);
+            kStatusErrIoDataIntegrity);
   // Starting at 1 byte before the actual frame start.
-  ASSERT_EQ(decompressor.DecompressFrame(table, 0, frame_start - 1, frame_length, out_buf.get(),
+  // This looks like a corrupt frame to the decompressor.
+  EXPECT_EQ(decompressor.DecompressFrame(table, 0, frame_start - 1, frame_length, out_buf.get(),
                                          out_buf.size(), &bytes_written),
-            kStatusErrInternal);
+            kStatusErrIoDataIntegrity);
 }
 
 TEST(ChunkedDecompressorTest, DecompressFrame_SmallBuffer) {
@@ -320,13 +322,155 @@ TEST(ChunkedDecompressorTest, DecompressFrame_SmallBuffer) {
 
   size_t bytes_written;
   // Compressed buffer 1 byte too small
-  ASSERT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length - 1, out_buf.get(),
+  EXPECT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length - 1, out_buf.get(),
                                          out_buf.size(), &bytes_written),
             kStatusErrBufferTooSmall);
   // Decompressed buffer 1 byte too small
-  ASSERT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length, out_buf.get(),
+  EXPECT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length, out_buf.get(),
                                          out_buf.size() - 1, &bytes_written),
             kStatusErrBufferTooSmall);
+}
+
+TEST(ChunkedDecompressorTest, DecompressFrame_CorruptFirstByteInFrame_Checksum) {
+  size_t chunk_size = CompressionParams::MinChunkSize();
+  // 2 data frames
+  size_t len = (2 * chunk_size);
+  fbl::Array<uint8_t> data(new uint8_t[len], len);
+  RandomFill(data.get(), len);
+
+  CompressionParams params;
+  params.frame_checksum = true;
+  ChunkedCompressor compressor(params);
+
+  size_t compressed_limit = compressor.ComputeOutputSizeLimit(len);
+  fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
+  size_t compressed_len;
+  ASSERT_EQ(compressor.Compress(data.get(), len, compressed_data.get(), compressed_limit,
+                                &compressed_len),
+            kStatusOk);
+  ASSERT_LE(compressed_len, compressed_limit);
+
+  fbl::Array<uint8_t> out_buf(new uint8_t[chunk_size], chunk_size);
+
+  SeekTable table;
+  HeaderReader reader;
+  ASSERT_OK(reader.Parse(compressed_data.get(), compressed_len, compressed_len, &table));
+
+  ChunkedDecompressor decompressor;
+
+  uint8_t* frame_start = compressed_data.get() + table.Entries()[0].compressed_offset;
+  size_t frame_length = table.Entries()[0].compressed_size;
+
+  // Invert the first byte of the first frame.
+  frame_start[0] ^= 0xff;
+
+  size_t bytes_written;
+  EXPECT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length, out_buf.get(),
+                                         out_buf.size(), &bytes_written),
+            kStatusErrIoDataIntegrity);
+
+  frame_start = compressed_data.get() + table.Entries()[1].compressed_offset;
+  frame_length = table.Entries()[1].compressed_size;
+
+  // Second frame still decompresses.
+  EXPECT_EQ(decompressor.DecompressFrame(table, 1, frame_start, frame_length, out_buf.get(),
+                                         out_buf.size(), &bytes_written),
+            kStatusOk);
+}
+
+TEST(ChunkedDecompressorTest, DecompressFrame_CorruptLastByteInFrame_Checksum) {
+  size_t chunk_size = CompressionParams::MinChunkSize();
+  // 2 data frames
+  size_t len = (2 * chunk_size);
+  fbl::Array<uint8_t> data(new uint8_t[len], len);
+  RandomFill(data.get(), len);
+
+  CompressionParams params;
+  params.frame_checksum = true;
+  ChunkedCompressor compressor(params);
+
+  size_t compressed_limit = compressor.ComputeOutputSizeLimit(len);
+  fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
+  size_t compressed_len;
+  ASSERT_EQ(compressor.Compress(data.get(), len, compressed_data.get(), compressed_limit,
+                                &compressed_len),
+            kStatusOk);
+  ASSERT_LE(compressed_len, compressed_limit);
+
+  fbl::Array<uint8_t> out_buf(new uint8_t[chunk_size], chunk_size);
+
+  SeekTable table;
+  HeaderReader reader;
+  ASSERT_OK(reader.Parse(compressed_data.get(), compressed_len, compressed_len, &table));
+
+  ChunkedDecompressor decompressor;
+
+  uint8_t* frame_start = compressed_data.get() + table.Entries()[0].compressed_offset;
+  size_t frame_length = table.Entries()[0].compressed_size;
+
+  // Invert the last byte of the first frame.
+  frame_start[frame_length - 1] ^= 0xff;
+
+  size_t bytes_written;
+  EXPECT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length, out_buf.get(),
+                                         out_buf.size(), &bytes_written),
+            kStatusErrIoDataIntegrity);
+
+  frame_start = compressed_data.get() + table.Entries()[1].compressed_offset;
+  frame_length = table.Entries()[1].compressed_size;
+
+  // Second frame still decompresses.
+  EXPECT_EQ(decompressor.DecompressFrame(table, 1, frame_start, frame_length, out_buf.get(),
+                                         out_buf.size(), &bytes_written),
+            kStatusOk);
+}
+
+TEST(ChunkedDecompressorTest, DecompressFrame_CorruptFirstByteInFrame_NoChecksum) {
+  size_t chunk_size = CompressionParams::MinChunkSize();
+  // 2 data frames
+  size_t len = (2 * chunk_size);
+  fbl::Array<uint8_t> data(new uint8_t[len], len);
+  RandomFill(data.get(), len);
+
+  CompressionParams params;
+  ChunkedCompressor compressor(params);
+
+  size_t compressed_limit = compressor.ComputeOutputSizeLimit(len);
+  fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
+  size_t compressed_len;
+  ASSERT_EQ(compressor.Compress(data.get(), len, compressed_data.get(), compressed_limit,
+                                &compressed_len),
+            kStatusOk);
+  ASSERT_LE(compressed_len, compressed_limit);
+
+  fbl::Array<uint8_t> out_buf(new uint8_t[chunk_size], chunk_size);
+
+  SeekTable table;
+  HeaderReader reader;
+  ASSERT_OK(reader.Parse(compressed_data.get(), compressed_len, compressed_len, &table));
+
+  ChunkedDecompressor decompressor;
+
+  uint8_t* frame_start = compressed_data.get() + table.Entries()[0].compressed_offset;
+  size_t frame_length = table.Entries()[0].compressed_size;
+
+  // Invert the first byte of the first frame.
+  frame_start[0] ^= 0xff;
+
+  size_t bytes_written;
+  // Even though we have no checksum, this should always be detected as corruption, because
+  // ZSTD will not be able to interpret the frame header.
+  EXPECT_EQ(decompressor.DecompressFrame(table, 0, frame_start, frame_length, out_buf.get(),
+                                         out_buf.size(), &bytes_written),
+            kStatusErrIoDataIntegrity);
+
+  frame_start = compressed_data.get() + table.Entries()[1].compressed_offset;
+  frame_length = table.Entries()[1].compressed_size;
+
+  // Second frame still decompresses.
+  EXPECT_EQ(decompressor.DecompressFrame(table, 1, frame_start, frame_length, out_buf.get(),
+                                         out_buf.size(), &bytes_written),
+            kStatusOk);
 }
 
 }  // namespace chunked_compression

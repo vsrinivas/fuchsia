@@ -8,8 +8,19 @@
 #include <src/lib/chunked-compression/status.h>
 #include <src/lib/fxl/logging.h>
 #include <zstd/zstd.h>
+#include <zstd/zstd_errors.h>
 
 namespace chunked_compression {
+
+namespace {
+
+// Returns whether |error_code| indicates a likely data corruption.
+bool LikelyCorrupton(ZSTD_ErrorCode error_code) {
+  return (error_code == ZSTD_error_checksum_wrong || error_code == ZSTD_error_corruption_detected ||
+          error_code == ZSTD_error_prefix_unknown);
+}
+
+}  // namespace
 
 struct ChunkedDecompressor::DecompressionContext {
   DecompressionContext() = default;
@@ -75,8 +86,8 @@ Status ChunkedDecompressor::Decompress(const SeekTable& table, const void* data,
 
 Status ChunkedDecompressor::DecompressFrame(const SeekTable& table, unsigned frame_num,
                                             const void* compressed_buffer,
-                                            size_t compressed_buffer_len, void* dst,
-                                            size_t dst_len, size_t* bytes_written_out) {
+                                            size_t compressed_buffer_len, void* dst, size_t dst_len,
+                                            size_t* bytes_written_out) {
   if (frame_num >= table.Entries().size()) {
     return kStatusErrInvalidArgs;
   }
@@ -89,6 +100,9 @@ Status ChunkedDecompressor::DecompressFrame(const SeekTable& table, unsigned fra
                                                  compressed_buffer, entry.compressed_size);
   if (ZSTD_isError(decompressed_size)) {
     FXL_LOG(ERROR) << "Decompression failed: " << ZSTD_getErrorName(decompressed_size);
+    if (LikelyCorrupton(ZSTD_getErrorCode(decompressed_size))) {
+      return kStatusErrIoDataIntegrity;
+    }
     return kStatusErrInternal;
   }
 
