@@ -86,9 +86,13 @@ func (r *SSHRunner) run(ctx context.Context, command []string, stdout, stderr io
 	if runErr == nil {
 		return nil
 	}
-	logger.Infof(ctx, "attempting to close SSH session due to: %v", runErr)
+
+	if ctx.Err() == nil {
+		logger.Errorf(ctx, "error running command, will close ssh session: %v", runErr)
+	}
+
 	if err := session.Signal(ssh.SIGKILL); err != nil {
-		logger.Errorf(ctx, "failed to send KILL signal over SSH session: %v", err)
+		logger.Errorf(ctx, "failed to send KILL signal while cleaning up SSH session: %v", err)
 	}
 	if err := session.Close(); err != nil {
 		logger.Errorf(ctx, "failed to close SSH session: %v", err)
