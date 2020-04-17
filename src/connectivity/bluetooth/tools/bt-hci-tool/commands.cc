@@ -104,15 +104,15 @@ std::string BdAddrTypeToString(::bt::hci::LEAddressType type) {
 // elsewhere.
 std::vector<std::string> AdvFlagsToStrings(uint8_t flags) {
   std::vector<std::string> flags_list;
-  if (flags & ::bt::gap::AdvFlag::kLELimitedDiscoverableMode)
+  if (flags & ::bt::AdvFlag::kLELimitedDiscoverableMode)
     flags_list.push_back("limited-discoverable");
-  if (flags & ::bt::gap::AdvFlag::kLEGeneralDiscoverableMode)
+  if (flags & ::bt::AdvFlag::kLEGeneralDiscoverableMode)
     flags_list.push_back("general-discoverable");
-  if (flags & ::bt::gap::AdvFlag::kBREDRNotSupported)
+  if (flags & ::bt::AdvFlag::kBREDRNotSupported)
     flags_list.push_back("bredr-not-supported");
-  if (flags & ::bt::gap::AdvFlag::kSimultaneousLEAndBREDRController)
+  if (flags & ::bt::AdvFlag::kSimultaneousLEAndBREDRController)
     flags_list.push_back("le-and-bredr-controller");
-  if (flags & ::bt::gap::AdvFlag::kSimultaneousLEAndBREDRHost)
+  if (flags & ::bt::AdvFlag::kSimultaneousLEAndBREDRHost)
     flags_list.push_back("le-and-bredr-host");
   return flags_list;
 }
