@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <optional>
+#include <string_view>
 
 #include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
@@ -32,7 +33,7 @@ class BlockDevice final : public BlockDeviceInterface {
   bool Netbooting() final;
   zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) final;
   zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final;
-  zx_status_t AttachDriver(const fbl::StringPiece& driver) final;
+  zx_status_t AttachDriver(const std::string_view& driver) final;
   zx_status_t UnsealZxcrypt() final;
   zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final;
   zx_status_t FormatZxcrypt() final;

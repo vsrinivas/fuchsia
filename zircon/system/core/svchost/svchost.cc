@@ -34,6 +34,8 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <string_view>
+
 #include <crashsvc/crashsvc.h>
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
@@ -238,7 +240,7 @@ static constexpr const char* devmgr_services[] = {
 // relay the underlying request to the connected service channel.
 class ServiceProxy : public fs::Service {
  public:
-  ServiceProxy(zx::unowned_channel svc, fbl::StringPiece svc_name)
+  ServiceProxy(zx::unowned_channel svc, std::string_view svc_name)
       : Service([this](zx::channel request) {
           return fdio_service_connect_at(svc_->get(), svc_name_.data(), request.release());
         }),

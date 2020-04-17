@@ -24,6 +24,7 @@
 #include <zircon/syscalls.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -183,7 +184,7 @@ zx_status_t FsManager::Initialize() {
     return status;
   }
   for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
-    auto open_result = root_vfs_->Open(global_root_, fbl::StringPiece(kMountPoints[n]),
+    auto open_result = root_vfs_->Open(global_root_, std::string_view(kMountPoints[n]),
                                        fs::VnodeConnectionOptions::ReadWrite().set_create(),
                                        fs::Rights::ReadWrite(), S_IFDIR);
     if (open_result.is_error()) {

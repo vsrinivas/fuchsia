@@ -5,6 +5,7 @@
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
+
 #include <zxtest/zxtest.h>
 
 #include "block-device-interface.h"
@@ -30,7 +31,7 @@ class MockBlockDevice : public devmgr::BlockDeviceInterface {
   zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) override {
     ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
-  zx_status_t AttachDriver(const fbl::StringPiece& driver) override {
+  zx_status_t AttachDriver(const std::string_view& driver) override {
     ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
   zx_status_t UnsealZxcrypt() override {
@@ -110,7 +111,7 @@ TEST(AddDeviceTestCase, AddGPTDevice) {
   class GptDevice : public MockBlockDevice {
    public:
     disk_format_t GetFormat() final { return DISK_FORMAT_GPT; }
-    zx_status_t AttachDriver(const fbl::StringPiece& driver) final {
+    zx_status_t AttachDriver(const std::string_view& driver) final {
       EXPECT_STR_EQ(devmgr::kGPTDriverPath, driver.data());
       attached = true;
       return ZX_OK;
@@ -127,7 +128,7 @@ TEST(AddDeviceTestCase, AddFVMDevice) {
   class FvmDevice : public MockBlockDevice {
    public:
     disk_format_t GetFormat() final { return DISK_FORMAT_FVM; }
-    zx_status_t AttachDriver(const fbl::StringPiece& driver) final {
+    zx_status_t AttachDriver(const std::string_view& driver) final {
       EXPECT_STR_EQ(devmgr::kFVMDriverPath, driver.data());
       attached = true;
       return ZX_OK;
@@ -144,7 +145,7 @@ TEST(AddDeviceTestCase, AddMBRDevice) {
   class MbrDevice : public MockBlockDevice {
    public:
     disk_format_t GetFormat() final { return DISK_FORMAT_MBR; }
-    zx_status_t AttachDriver(const fbl::StringPiece& driver) final {
+    zx_status_t AttachDriver(const std::string_view& driver) final {
       EXPECT_STR_EQ(devmgr::kMBRDriverPath, driver.data());
       attached = true;
       return ZX_OK;
@@ -368,7 +369,7 @@ TEST(AddDeviceTestCase, AddUnknownFormatZxcryptDevice) {
       return ZX_OK;
     }
     void SetFormat(disk_format_t f) final { format = f; }
-    zx_status_t AttachDriver(const fbl::StringPiece& driver) final {
+    zx_status_t AttachDriver(const std::string_view& driver) final {
       EXPECT_STR_EQ(devmgr::kZxcryptDriverPath, driver.data());
       return ZX_OK;
     }
@@ -397,7 +398,7 @@ TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
       *out_info = info;
       return ZX_OK;
     }
-    zx_status_t AttachDriver(const fbl::StringPiece& driver) final {
+    zx_status_t AttachDriver(const std::string_view& driver) final {
       EXPECT_STR_EQ(devmgr::kBootpartDriverPath, driver.data());
       return ZX_OK;
     }

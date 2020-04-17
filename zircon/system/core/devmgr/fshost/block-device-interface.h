@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <string_view>
 
 #include <fbl/string_piece.h>
 #include <fs-management/mount.h>
@@ -57,7 +58,7 @@ class BlockDeviceInterface {
   // Attempts to directly bind a driver to the device. This is typically used
   // by partition drivers, which may be loaded on top of a device exposing the
   // block interface.
-  virtual zx_status_t AttachDriver(const fbl::StringPiece& driver) = 0;
+  virtual zx_status_t AttachDriver(const std::string_view& driver) = 0;
 
   // Unseals the underlying zxcrypt volume.
   virtual zx_status_t UnsealZxcrypt() = 0;

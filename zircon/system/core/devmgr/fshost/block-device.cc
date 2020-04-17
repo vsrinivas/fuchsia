@@ -128,7 +128,7 @@ zx_status_t BlockDevice::GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_
   return call_status;
 }
 
-zx_status_t BlockDevice::AttachDriver(const fbl::StringPiece& driver) {
+zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
   printf("fshost: Binding: %.*s\n", static_cast<int>(driver.length()), driver.data());
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
   zx_status_t call_status = ZX_OK;
@@ -200,12 +200,12 @@ zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
   if (call_status != ZX_OK) {
     return call_status;
   }
-  const fbl::StringPiece kZxcryptPath("/zxcrypt/unsealed/block");
+  const std::string_view kZxcryptPath("/zxcrypt/unsealed/block");
   if (path_len < kZxcryptPath.length()) {
     *is_unsealed_zxcrypt = false;
   } else {
     *is_unsealed_zxcrypt =
-        fbl::StringPiece(path.begin() + path_len - kZxcryptPath.length()).compare(kZxcryptPath) ==
+        std::string_view(path.begin() + path_len - kZxcryptPath.length()).compare(kZxcryptPath) ==
         0;
   }
   return ZX_OK;
@@ -260,7 +260,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
         fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
         return status;
       }
-      status = minfs::Fsck(std::move(bc), minfs::FsckOptions{ .repair = true });
+      status = minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true});
 
       if (status != ZX_OK) {
         mounter_->mutable_metrics()->LogMinfsCorruption();

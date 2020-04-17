@@ -13,6 +13,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -206,7 +207,7 @@ zx_status_t BootfsService::PublishUnownedVmo(const char* path, const zx::vmo& vm
       if (path[0] == 0) {
         return ZX_ERR_INVALID_ARGS;
       }
-      return vfs_->CreateFromVmo(vnb.get(), fbl::StringPiece(path, strlen(path)), vmo.get(), off,
+      return vfs_->CreateFromVmo(vnb.get(), std::string_view(path, strlen(path)), vmo.get(), off,
                                  len);
     } else {
       if (nextpath == path) {
@@ -214,9 +215,9 @@ zx_status_t BootfsService::PublishUnownedVmo(const char* path, const zx::vmo& vm
       }
 
       fbl::RefPtr<fs::Vnode> out;
-      zx_status_t status = vnb->Lookup(&out, fbl::StringPiece(path, nextpath - path));
+      zx_status_t status = vnb->Lookup(&out, std::string_view(path, nextpath - path));
       if (status == ZX_ERR_NOT_FOUND) {
-        status = vnb->Create(&out, fbl::StringPiece(path, nextpath - path), S_IFDIR);
+        status = vnb->Create(&out, std::string_view(path, nextpath - path), S_IFDIR);
       }
       if (status != ZX_OK) {
         return status;
