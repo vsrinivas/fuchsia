@@ -46,9 +46,16 @@ pvr)
     msd_img_rgx_integration_tests \
     msd_img_rgx_no_hardware_integration_tests
   ;;
+vsi|vsl)
+  fx-command-run test --no-build --simple -o \
+    magma_unit_tests \
+    msd_vsl_gc_nonhardware_tests \
+    magma_abi_conformance_tests \
+    test-magma-vsi-exec
+  ;;
 *)
   echo >&2 "unknown gpu: $1"
-  echo >&2 "usage: $0 [intel|mali|pvr]"
+  echo >&2 "usage: $0 [intel|mali|pvr|vsi]"
   exit 1
   ;;
 esac

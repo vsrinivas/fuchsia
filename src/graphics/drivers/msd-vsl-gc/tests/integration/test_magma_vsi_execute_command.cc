@@ -54,8 +54,8 @@ class MagmaExecuteMsdVsi : public testing::Test {
     EXPECT_EQ(actual_size, size);
     EXPECT_NE(etna_buffer->magma_buffer_, 0ul);
 
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_set_cache_policy(etna_buffer->magma_buffer_, MAGMA_CACHE_POLICY_UNCACHED));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_set_cache_policy(etna_buffer->magma_buffer_,
+                                                      MAGMA_CACHE_POLICY_WRITE_COMBINING));
 
     if (MAGMA_STATUS_OK != magma_map(magma_vsi_.GetConnection(), etna_buffer->magma_buffer_,
                                      &etna_buffer->cpu_address_))
