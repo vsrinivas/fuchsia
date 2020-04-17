@@ -10,6 +10,7 @@ source_set("renderer") {
     "buffer_collection.h",
     "gpu_mem.cc",
     "gpu_mem.h",
+    "renderer.h",
   ]
 
   public_deps = [ "//zircon/public/lib/zxc" ]
