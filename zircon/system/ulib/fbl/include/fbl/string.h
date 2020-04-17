@@ -10,6 +10,7 @@
 #include <fbl/string_piece.h>
 #include <fbl/string_traits.h>
 #include <initializer_list>
+#include <string_view>
 #include <type_traits>
 #include <zircon/compiler.h>
 
@@ -213,6 +214,11 @@ class __OWNER(char) String {
   // The string piece does not take ownership of the data so the string
   // must outlast the string piece.
   StringPiece ToStringPiece() const { return StringPiece(data(), length()); }
+
+  // Create a std::string_view backed by the string.
+  // The view does not take ownership of the data so the string
+  // must outlast the std::string_view.
+  operator std::string_view() const { return { data(), length() }; }
 
   // Concatenates the specified strings.
   static String Concat(std::initializer_list<String> strings);

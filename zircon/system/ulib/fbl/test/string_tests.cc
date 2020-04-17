@@ -587,6 +587,22 @@ TEST(StringTest, ToString) {
   }
 }
 
+TEST(StringTest, ToStringPiece) {
+  {
+    fbl::String empty;
+    std::string_view view(empty);
+    EXPECT_EQ(empty.data(), view.data());
+    EXPECT_EQ(0u, view.length());
+  }
+
+  {
+    fbl::String str("abc");
+    std::string_view view(str);
+    EXPECT_EQ(str.data(), view.data());
+    EXPECT_EQ(3u, view.length());
+  }
+}
+
 TEST(StringTest, Swap) {
   fbl::String empty;
   fbl::String abc("abc");
