@@ -67,6 +67,7 @@ group("omaha-client") {
   public_deps = [
     "bin/omaha-client",
     "bin/omaha-client:omaha-client-config",
+    "bin/omaha-client:omaha-client-sysmgr-config",
   ]
 }
 
