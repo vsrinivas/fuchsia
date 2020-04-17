@@ -392,6 +392,7 @@ int main(int argc, const char** argv) {
   };
 
   loop.Run();
+  loop.ResetQuit();
 
   // make sure timeout is not executed after test finishes.
   if (timeout_task && timeout_task->is_pending()) {
@@ -399,24 +400,23 @@ int main(int argc, const char** argv) {
   }
 
   // Wait and process all messages in the queue.
-  loop.ResetQuit();
   loop.RunUntilIdle();
 
   if (observer_svc) {
     ZX_ASSERT(enclosing_env);
     ZX_ASSERT(log_collector);
-    enclosing_env->Kill([&loop]() {
-      loop.Quit();
-      loop.ResetQuit();
-    });
+    enclosing_env->Kill([&loop]() { loop.Quit(); });
 
     loop.Run();
+    loop.ResetQuit();
 
     // collect all logs
     log_collector->NotifyOnUnBind([&loop]() { loop.Quit(); });
+
     auto observer_ptr = observer_svc->Connect<fuchsia::diagnostics::test::Controller>();
     observer_ptr->Stop();
     loop.Run();
+    loop.ResetQuit();
   }
 
   return ret_code;

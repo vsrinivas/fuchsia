@@ -242,6 +242,12 @@ void run_logging_component(std::string log_level, std::string* output) {
       << err_msg;
   zx_signals_t signal;
   process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &signal);
+  zx_info_process_t process_info;
+  ASSERT_EQ(
+      process.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), nullptr, nullptr),
+      ZX_OK);
+
+  ASSERT_EQ(process_info.return_code, 0);
 
   char buf[4096] = {0};
 
@@ -252,7 +258,7 @@ void run_logging_component(std::string log_level, std::string* output) {
   *output = std::string(buf);
 }
 
-TEST_F(RunFixture, DISABLED_TestIsolatedLogsWithDefaultSeverity) {
+TEST_F(RunFixture, TestIsolatedLogsWithDefaultSeverity) {
   std::string got;
   run_logging_component("", &got);
   EXPECT_EQ(got.find("VLOG(1): my debug message."), std::string::npos) << "got: " << got;
@@ -260,7 +266,7 @@ TEST_F(RunFixture, DISABLED_TestIsolatedLogsWithDefaultSeverity) {
   EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
 }
 
-TEST_F(RunFixture, DISABLED_TestIsolatedLogsWithHigherSeverity) {
+TEST_F(RunFixture, TestIsolatedLogsWithHigherSeverity) {
   std::string got;
   run_logging_component("WARN", &got);
   EXPECT_EQ(got.find("VLOG(1): my debug message."), std::string::npos) << "got: " << got;
@@ -268,7 +274,7 @@ TEST_F(RunFixture, DISABLED_TestIsolatedLogsWithHigherSeverity) {
   EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
 }
 
-TEST_F(RunFixture, DISABLED_TestIsolatedLogsWithLowerSeverity) {
+TEST_F(RunFixture, TestIsolatedLogsWithLowerSeverity) {
   std::string got;
   run_logging_component("DEBUG", &got);
   EXPECT_NE(got.find("VLOG(1): my debug message."), std::string::npos) << "got: " << got;
