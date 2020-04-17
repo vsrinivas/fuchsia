@@ -132,17 +132,24 @@ func run(ctx *context.Context) (err error) {
 		return fmt.Errorf("failed to validate update package: %s", err)
 	}
 
-	phase = metrics.PhasePackageDownload
-	if err := FetchPackages(pkgs, resolver); err != nil {
-		return fmt.Errorf("failed getting packages: %s", err)
+	updateMode, err := ParseUpdateMode(updatePkg)
+	if err != nil {
+		return fmt.Errorf("failed to parse update mode: %s", err)
 	}
 
-	if err := ValidateImgs(imgs, updatePkg); err != nil {
+	phase = metrics.PhasePackageDownload
+	if updateMode == UpdateModeNormal {
+		if err := FetchPackages(pkgs, resolver); err != nil {
+			return fmt.Errorf("failed getting packages: %s", err)
+		}
+	}
+
+	if err := ValidateImgs(imgs, updatePkg, updateMode); err != nil {
 		return fmt.Errorf("failed to validate imgs: %s", err)
 	}
 
 	phase = metrics.PhaseImageWrite
-	if err := WriteImgs(dataSink, bootManager, imgs, updatePkg); err != nil {
+	if err := WriteImgs(dataSink, bootManager, imgs, updatePkg, updateMode); err != nil {
 		return fmt.Errorf("error writing image file: %s", err)
 	}
 
@@ -178,7 +185,7 @@ func run(ctx *context.Context) (err error) {
 		syslog.Errorf("error writing update history: %s", err)
 	}
 
-	if reboot {
+	if reboot || updateMode == UpdateModeForceRecovery {
 		syslog.Infof("system update complete, rebooting...")
 		SendReboot()
 	} else {

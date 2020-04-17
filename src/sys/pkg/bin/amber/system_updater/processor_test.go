@@ -258,3 +258,66 @@ func TestParseUpdateMode(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateImages(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		images     []Image
+		updateMode UpdateMode
+		wantError  bool
+	}{
+		{
+			name:       "success normal update package has zbi",
+			images:     []Image{{Name: "zbi"}},
+			updateMode: UpdateModeNormal,
+			wantError:  false,
+		},
+		{
+			name:       "success force-recovery update package does not have zbi",
+			images:     []Image{},
+			updateMode: UpdateModeForceRecovery,
+			wantError:  false,
+		},
+		{
+			name:       "failure normal update package does not have zbi",
+			images:     []Image{},
+			updateMode: UpdateModeNormal,
+			wantError:  true,
+		},
+		{
+			name:       "failure force-recovery update package has zbi",
+			images:     []Image{{Name: "zbi"}},
+			updateMode: UpdateModeForceRecovery,
+			wantError:  true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Generate update package based on test inputs.
+			dirPath, err := ioutil.TempDir("", "update")
+			if err != nil {
+				t.Fatalf("Unable to create tempdir for update package: %v", err)
+			}
+			defer os.RemoveAll(dirPath)
+			if err := ioutil.WriteFile(filepath.Join(dirPath, "update-mode"), []byte(genValidUpdateModeJson(string(tc.updateMode))), 0666); err != nil {
+				t.Fatalf("Unable to write update-mode file to tempdir: %v", err)
+			}
+			for _, img := range tc.images {
+				if err := ioutil.WriteFile(filepath.Join(dirPath, img.Name), []byte(""), 0666); err != nil {
+					t.Fatalf("Unable to write image file to tempdir: %v", err)
+				}
+			}
+
+			dir, err := os.Open(dirPath)
+			if err != nil {
+				t.Fatalf("Unable to open tempdir: %v", err)
+			}
+			updatePackage := UpdatePackage{dir}
+
+			// Assert expected result.
+			if err := ValidateImgs(tc.images, &updatePackage, tc.updateMode); (err == nil) == tc.wantError {
+				t.Fatalf("ValidateImages() got err [%v] want err? %t", err, tc.wantError)
+			}
+
+		})
+	}
+}

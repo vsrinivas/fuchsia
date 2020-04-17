@@ -20,6 +20,7 @@ use {
     futures::prelude::*,
     parking_lot::Mutex,
     pretty_assertions::assert_eq,
+    serde_json::json,
     std::{
         collections::HashMap,
         convert::TryInto,
@@ -343,6 +344,7 @@ enum PaverEvent {
     WriteFirmware { firmware_type: String, payload: Vec<u8> },
     QueryActiveConfiguration,
     SetConfigurationActive { configuration: paver::Configuration },
+    SetConfigurationUnbootable { configuration: paver::Configuration },
 }
 
 struct MockPaverServiceBuilder {
@@ -479,6 +481,15 @@ impl MockPaverService {
                 }
                 paver::BootManagerRequest::SetConfigurationActive { configuration, responder } => {
                     let event = PaverEvent::SetConfigurationActive { configuration };
+                    let status = (*self.call_hook)(&event);
+                    self.events.lock().push(event);
+                    responder.send(status.into_raw()).expect("paver response to send");
+                }
+                paver::BootManagerRequest::SetConfigurationUnbootable {
+                    configuration,
+                    responder,
+                } => {
+                    let event = PaverEvent::SetConfigurationUnbootable { configuration };
                     let status = (*self.call_hook)(&event);
                     self.events.lock().push(event);
                     responder.send(status.into_raw()).expect("paver response to send");
@@ -749,6 +760,16 @@ impl OtaMetrics {
     }
 }
 
+fn force_recovery_json() -> String {
+    json!({
+      "version": "1",
+      "content": {
+        "mode": "force-recovery",
+      }
+    })
+    .to_string()
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn test_system_update() {
     let mut env = TestEnv::new();
@@ -793,6 +814,51 @@ async fn test_system_update() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_system_update_force_recovery() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file("packages","fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296")
+        .add_file("update-mode", &force_recovery_json());
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect("run system_updater");
+
+    assert_eq!(*env.resolver.resolved_urls.lock(), vec!["fuchsia-pkg://fuchsia.com/update",]);
+
+    let loggers = env.logger_factory.loggers.lock().clone();
+    assert_eq!(loggers.len(), 1);
+    let logger = loggers.into_iter().next().unwrap();
+    assert_eq!(
+        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
+            target: "m3rk13".into(),
+        }
+    );
+
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::SetConfigurationUnbootable { configuration: paver::Configuration::A },
+            PaverEvent::SetConfigurationUnbootable { configuration: paver::Configuration::B },
+        ]
+    );
+    assert_eq!(*env.space_service.called.lock(), 1);
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_packages_json_takes_precedence() {
     let mut env = TestEnv::new();
 
@@ -803,7 +869,7 @@ async fn test_packages_json_takes_precedence() {
         )
         .add_file(
             "packages.json",
-            &serde_json::json!({
+            &json!({
               "version": 1,
               "content": [
                 "fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
@@ -840,15 +906,14 @@ async fn test_metrics_report_untrusted_tuf_repo() {
     env.register_package("update", "upd4t3")
         .add_file(
             "packages.json",
-            "
-          {
-            \"version\": 1,
-            \"content\": [
-              \"fuchsia-pkg://non-existent-repo.com/amber/0?hash=abcdef\",
-              \"fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789\"
+            &json!({
+              "version": 1,
+              "content": [
+                "fuchsia-pkg://non-existent-repo.com/amber/0?hash=abcdef",
+                "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789",
               ]
-          }
-        ",
+            })
+            .to_string(),
         )
         .add_file("zbi", "fake zbi");
 
@@ -924,6 +989,26 @@ async fn test_system_update_no_reboot() {
 
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 0);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_system_update_force_recovery_reboots_regardless_of_reboot_arg() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file("packages", "")
+        .add_file("update-mode", &force_recovery_json());
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: Some(false),
+    })
+    .await
+    .expect("run system_updater");
+
+    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1005,7 +1090,7 @@ async fn test_failing_package_fetch() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_requires_zbi() {
+async fn test_normal_requires_zbi() {
     let mut env = TestEnv::new();
 
     env.register_package("update", "upd4t3")
@@ -1014,6 +1099,32 @@ async fn test_requires_zbi() {
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
         )
         .add_file("bootloader", "new bootloader");
+
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+        })
+        .await;
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+
+    assert_eq!(*env.space_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_force_recovery_rejects_zbi() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("update-mode", &force_recovery_json())
+        .add_file("bootloader", "new bootloader")
+        .add_file("zbi", "fake zbi");
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {

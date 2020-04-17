@@ -423,8 +423,7 @@ func ValidateUpdatePackage(updatePkg *UpdatePackage) error {
 	return nil
 }
 
-func ValidateImgs(imgs []Image, updatePkg *UpdatePackage) error {
-	// Require a 'zbi' or 'zbi.signed' partition in the update package.
+func ValidateImgs(imgs []Image, updatePkg *UpdatePackage, updateMode UpdateMode) error {
 	found := false
 	for _, img := range []string{"zbi", "zbi.signed"} {
 		if _, err := updatePkg.Stat(img); err == nil {
@@ -433,16 +432,21 @@ func ValidateImgs(imgs []Image, updatePkg *UpdatePackage) error {
 		}
 	}
 
-	if !found {
-		return fmt.Errorf("parser: missing 'zbi' or 'zbi.signed'")
+	// Update package with normal mode should have a `zbi` or `zbi.signed`.
+	if updateMode == UpdateModeNormal && !found {
+		return fmt.Errorf("parser: missing 'zbi' or 'zbi.signed', this is required in normal update mode")
+	}
+
+	// Update package with force-recovery mode should NOT have a `zbi` nor `zbi.signed`.
+	if updateMode == UpdateModeForceRecovery && found {
+		return fmt.Errorf("parser: contains 'zbi' or 'zbi.signed', this is not allowed in force-recovery update mode")
 	}
 
 	return nil
 }
 
-func WriteImgs(dataSink *paver.DataSinkWithCtxInterface, bootManager *paver.BootManagerWithCtxInterface, imgs []Image, updatePkg *UpdatePackage) error {
+func WriteImgs(dataSink *paver.DataSinkWithCtxInterface, bootManager *paver.BootManagerWithCtxInterface, imgs []Image, updatePkg *UpdatePackage, updateMode UpdateMode) error {
 	syslog.Infof("Writing images %+v from update package", imgs)
-
 	activeConfig, err := queryActiveConfig(bootManager)
 	if err != nil {
 		return fmt.Errorf("querying target config: %v", err)
@@ -468,9 +472,15 @@ func WriteImgs(dataSink *paver.DataSinkWithCtxInterface, bootManager *paver.Boot
 		}
 	}
 
-	if targetConfig != nil {
+	if updateMode == UpdateModeNormal && targetConfig != nil {
 		if err := setConfigurationActive(bootManager, *targetConfig); err != nil {
 			return err
+		}
+	} else if updateMode == UpdateModeForceRecovery {
+		for _, config := range []paver.Configuration{paver.ConfigurationA, paver.ConfigurationB} {
+			if err := setConfigurationUnbootable(bootManager, config); err != nil {
+				return fmt.Errorf("failed to set configuration unbootable: %v", err)
+			}
 		}
 	}
 
@@ -537,6 +547,20 @@ func calculateTargetConfig(activeConfig paver.Configuration) (*paver.Configurati
 func setConfigurationActive(bootManager *paver.BootManagerWithCtxInterface, targetConfig paver.Configuration) error {
 	syslog.Infof("img_writer: setting configuration %s active", targetConfig)
 	status, err := bootManager.SetConfigurationActive(fidl.Background(), targetConfig)
+	if err != nil {
+		return err
+	}
+	statusErr := zx.Status(status)
+	if statusErr != zx.ErrOk {
+		return &zx.Error{Status: statusErr}
+	}
+
+	return nil
+}
+
+func setConfigurationUnbootable(bootManager *paver.BootManagerWithCtxInterface, targetConfig paver.Configuration) error {
+	syslog.Infof("img_writer: setting configuration %s unbootable", targetConfig)
+	status, err := bootManager.SetConfigurationUnbootable(fidl.Background(), targetConfig)
 	if err != nil {
 		return err
 	}
