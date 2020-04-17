@@ -24,6 +24,7 @@ driver_module("aml-securemem") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/ddk.protocol.tee",
     "//sdk/fidl/fuchsia.hardware.securemem:fuchsia.hardware.securemem_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/async-cpp",
@@ -36,7 +37,6 @@ driver_module("aml-securemem") {
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.tee",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/fidl/fuchsia-tee",
@@ -66,6 +66,7 @@ test("aml-securemem-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/ddk.protocol.tee",
     "//sdk/fidl/fuchsia.hardware.securemem:fuchsia.hardware.securemem_llcpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -76,7 +77,6 @@ test("aml-securemem-test") {
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.tee",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/lib/fake-bti",
     "//zircon/system/dev/lib/fake_ddk",

@@ -25,6 +25,7 @@ driver_module("optee") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/ddk.protocol.tee",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -36,7 +37,6 @@ driver_module("optee") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.tee",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-hardware-tee:llcpp",
     "//zircon/system/fidl/fuchsia-tee:llcpp",
@@ -74,6 +74,7 @@ test("optee-message-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/banjo/ddk.protocol.tee",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -83,7 +84,6 @@ test("optee-message-test") {
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.tee",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-hardware-tee:llcpp",
     "//zircon/system/fidl/fuchsia-tee:llcpp",
