@@ -743,15 +743,14 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
     if (pic_info.eos())
       hit_eos = true;
 
-    // TODO(dustingreen): We'll need to bit-extend (nearest wins to allow for
-    // re-ordering) this value to uint64_t, so that PTSs for frames after 4GiB
-    // still work.
     uint32_t stream_byte_offset = pic_info.stream_offset();
     stream_byte_offset |=
         ((AvScratch::Get(0xa + i / 2).ReadFrom(owner_->dosbus()).reg_value() >> ((i % 2) * 16)) &
          0xffff)
         << 16;
-
+    // At this point, it may seem like stream_byte_offset is 32 bits, but it's actually only 28
+    // bits (checked on astro).  In any case we need 64 bit offset, and pts_manager_ knows how to
+    // bit-extend.
     PtsManager::LookupResult pts_result = pts_manager_->Lookup(stream_byte_offset);
     video_frames_[buffer_index].frame->has_pts = pts_result.has_pts();
     video_frames_[buffer_index].frame->pts = pts_result.pts();

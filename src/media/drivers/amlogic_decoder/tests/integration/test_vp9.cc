@@ -305,7 +305,7 @@ class TestVP9 {
     // order to finish.
     auto parser = std::async([&video, &test_ivf]() {
       auto aml_data = ConvertIvfToAmlVFrames(test_ivf->ptr, test_ivf->size);
-      uint32_t stream_offset = 0;
+      uint64_t stream_offset = 0;
       for (auto& data : aml_data) {
         video->pts_manager()->InsertPts(stream_offset, true, data.presentation_timestamp);
         EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(data.data.data(), data.data.size()));
