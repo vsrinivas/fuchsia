@@ -238,7 +238,7 @@ fit::promise<void> AudioDevice::Shutdown() {
 
 bool AudioDevice::UpdatePlugState(bool plugged, zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDevice::UpdatePlugState");
-  if ((plugged != plugged_) && (plug_time >= plug_time_) && !is_shutting_down()) {
+  if ((plugged != plugged_) && (plug_time >= plug_time_)) {
     plugged_ = plugged;
     plug_time_ = plug_time;
     return true;

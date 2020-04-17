@@ -135,20 +135,16 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
   }
 
   OnPlugStateChanged(device, device->plugged(), device->plug_time());
-  UpdateDefaultDevice(device->is_input());
 }
 
 void AudioDeviceManager::RemoveDevice(const std::shared_ptr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::RemoveDevice");
   FX_DCHECK(device != nullptr);
 
-  REPORT(RemovingDevice(*device));
-
   // If device was active: reset the default (based on most-recently-plugged).
-  if (device->activated()) {
-    OnDeviceUnplugged(device, device->plug_time());
-  }
+  OnPlugStateChanged(device, false, device->plug_time());
 
+  REPORT(RemovingDevice(*device));
   device->Shutdown();
 
   auto& device_set = device->activated() ? devices_ : devices_pending_init_;

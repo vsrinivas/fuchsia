@@ -130,7 +130,7 @@ async fn plug_unplug_durability() -> Result<()> {
     });
 
     // Configure and add an input device that can notify audio_core when un/plugged
-    let mut expected_id1_bytes: [u8; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+    let mut expected_id1_bytes: [u8; 16] = [0, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
     let device1 = InputProxy::connect(&env)?;
     device1.set_unique_id(&mut expected_id1_bytes)?;
     device1.set_plug_properties(
@@ -148,7 +148,7 @@ async fn plug_unplug_durability() -> Result<()> {
     assert_eq!(new_token, device1_info.token_id);
 
     // Configure/add another (unique) input device that notifies audio_core when un/plugged
-    let mut expected_id2_bytes: [u8; 16] = [1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+    let mut expected_id2_bytes: [u8; 16] = [1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
     let device2 = InputProxy::connect(&env)?;
     device2.set_unique_id(&mut expected_id2_bytes)?;
     device2.set_plug_properties(0, true, false, true)?;
@@ -188,6 +188,104 @@ async fn plug_unplug_durability() -> Result<()> {
         assert_eq!(old_token, device1_info.token_id);
         assert_eq!(new_token, device2_info.token_id);
     }
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn default_change_upon_remove_input() -> Result<()> {
+    let env = Environment::new()?;
+
+    // Enumerator for on_device_added event stream.
+    let enumerator = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
+    let mut device_adds = enumerator.take_event_stream().try_filter_map(move |e| {
+        future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_added(e)))
+    });
+
+    // Enumerator for on_default_device_changed event stream.
+    let enumerator2 = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
+    let mut default_changes = enumerator2.take_event_stream().try_filter_map(move |e| {
+        future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_default_device_changed(e)))
+    });
+
+    // Configure and add a unique input device that can notify audio_core when un/plugged
+    let mut expected_id_bytes: [u8; 16] = [2, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+    let virtual_device = InputProxy::connect(&env)?;
+    virtual_device.set_unique_id(&mut expected_id_bytes)?;
+    let now = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+    virtual_device.set_plug_properties(now, true, false, true)?;
+
+    // Wait for device to be added and signaled.
+    virtual_device.add()?;
+    let device = device_adds.try_next().await?.expect("Waiting for DeviceAdded");
+    assert!(device.is_input);
+    let expected_id = hex::encode(expected_id_bytes);
+    assert_eq!(device.unique_id, expected_id);
+    assert!(!device.is_default);
+
+    // Wait for device to become the new default.
+    let (old_default_token, new_default_token) =
+        default_changes.try_next().await?.expect("Waiting for DefaultChanged");
+    assert_eq!(old_default_token, 0);
+    assert_eq!(new_default_token, device.token_id);
+
+    drop(virtual_device);
+
+    // After device drop, wait for signal that default has moved device => 0.
+    let (old_default_token, new_default_token) =
+        default_changes.try_next().await?.expect("Waiting for DefaultChanged #2");
+    assert_eq!(old_default_token, device.token_id);
+    assert_eq!(new_default_token, 0);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn default_change_upon_remove_output() -> Result<()> {
+    let env = Environment::new()?;
+
+    // Enumerator for on_device_added event stream.
+    let enumerator = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
+    let mut device_adds = enumerator.take_event_stream().try_filter_map(move |e| {
+        future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_added(e)))
+    });
+
+    // Enumerator for on_default_device_changed event stream.
+    let enumerator2 = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
+    let mut default_changes = enumerator2.take_event_stream().try_filter_map(move |e| {
+        future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_default_device_changed(e)))
+    });
+
+    // Configure and add a unique output device that can notify audio_core when un/plugged
+    let mut expected_id_bytes: [u8; 16] = [3, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+    let virtual_device = OutputProxy::connect(&env)?;
+    virtual_device.set_unique_id(&mut expected_id_bytes)?;
+    let now = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+    virtual_device.set_plug_properties(now, true, false, true)?;
+
+    virtual_device.add()?;
+    // Wait for device to be added and signaled.
+    let device = device_adds.try_next().await?.expect("Waiting for DeviceAdded");
+    assert!(!device.is_input);
+    let expected_id = hex::encode(expected_id_bytes);
+    assert_eq!(device.unique_id, expected_id);
+    assert!(!device.is_default);
+
+    // Wait for device to become the new default.
+    let (old_default_token, new_default_token) =
+        default_changes.try_next().await?.expect("Waiting for DefaultChanged");
+    assert_eq!(old_default_token, 0);
+    assert_eq!(new_default_token, device.token_id);
+
+    drop(virtual_device);
+
+    // After device drop, wait for signal that default has moved device => 0.
+    let (old_default_token, new_default_token) =
+        default_changes.try_next().await?.expect("Waiting for DefaultChanged #2");
+    assert_eq!(old_default_token, device.token_id);
+    assert_eq!(new_default_token, 0);
 
     Ok(())
 }
