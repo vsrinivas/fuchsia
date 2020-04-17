@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <ktl/string_view.h>
+
 #include "tests.h"
 
 // Checks that vsnprintf() gives the expected string as output.
@@ -118,6 +120,10 @@ static bool printf_tests() {
   EXPECT_TRUE(test_printf("      test", "%010s", "test"));
   EXPECT_TRUE(test_printf("test      ", "%-10s", "test"));
   EXPECT_TRUE(test_printf("test      ", "%-010s", "test"));
+
+  EXPECT_TRUE(test_printf("test", "%V", "test"sv));
+  EXPECT_TRUE(test_printf("test", "%V", "testlonger"sv.substr(0, 4)));
+  EXPECT_TRUE(test_printf("test", "%.*V", 4, "testlonger"sv));
 
   END_TEST;
 }

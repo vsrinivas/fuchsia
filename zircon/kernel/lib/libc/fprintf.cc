@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include <ktl/algorithm.h>
+#include <ktl/string_view.h>
 
 #define LONGFLAG 0x00000001
 #define LONGLONGFLAG 0x00000002
@@ -196,6 +197,24 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
           s = "<null>";
         flags &= ~LEADZEROFLAG; /* doesn't make sense for strings */
         goto _output_string;
+      case 'V': {
+        // string_view is "POD enough".
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-pod-varargs"
+#endif
+        ktl::string_view sv = va_arg(ap, ktl::string_view);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+        s = sv.data();
+        string_len = sv.size();
+        if (flags & FIELDWIDTHFLAG) {
+          string_len = ktl::min(string_len, static_cast<size_t>(format_num));
+        }
+        flags &= ~LEADZEROFLAG;  // Doesn't make sense for strings.
+        goto _output_string_with_len;
+      }
       case '-':
         flags |= LEFTFORMATFLAG;
         goto next_format;
@@ -307,6 +326,7 @@ int vfprintf(FILE *out, const char *fmt, va_list ap) {
     } else {
       string_len = strlen(s);
     }
+  _output_string_with_len:
 
     if (flags & LEFTFORMATFLAG) {
       /* left justify the text */
