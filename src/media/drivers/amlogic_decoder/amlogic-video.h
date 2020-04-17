@@ -120,7 +120,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   [[nodiscard]] zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure);
   [[nodiscard]] zx_status_t InitializeEsParser();
 
-  [[nodiscard]] Parser* parser() { return parser_.get(); }
+  [[nodiscard]] Parser* parser() override { return parser_.get(); }
 
   void UngateParserClock();
   void GateParserClock();
@@ -131,7 +131,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   [[nodiscard]] uint32_t GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offset);
 
   // Similar to GetStreamBufferEmptySpaceAfterOffset, but uses the current core write offset.
-  [[nodiscard]] uint32_t GetStreamBufferEmptySpace();
+  [[nodiscard]] uint32_t GetStreamBufferEmptySpace() override;
 
   [[nodiscard]] DecoderCore* hevc_core() const { return hevc_core_.get(); }
   [[nodiscard]] DecoderCore* vdec1_core() const { return vdec1_core_.get(); }
@@ -149,7 +149,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   [[nodiscard]] VideoDecoder* video_decoder() __TA_REQUIRES(video_decoder_lock_) {
     return video_decoder_;
   }
-  [[nodiscard]] DecoderInstance* current_instance() __TA_REQUIRES(video_decoder_lock_) {
+  [[nodiscard]] DecoderInstance* current_instance() override __TA_REQUIRES(video_decoder_lock_) {
     return current_instance_.get();
   }
 

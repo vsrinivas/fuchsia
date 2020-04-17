@@ -105,6 +105,7 @@ class H264MultiDecoder : public VideoDecoder {
   bool currently_decoding() { return currently_decoding_; }
 
   void* SecondaryFirmwareVirtualAddressForTesting() { return secondary_firmware_->virt_base(); }
+  void set_use_parser(bool use_parser) { use_parser_ = use_parser; }
 
  private:
   enum class DecoderState {
@@ -135,6 +136,8 @@ class H264MultiDecoder : public VideoDecoder {
   bool fatal_error_ = false;
   bool input_eos_queued_ = false;
   bool sent_output_eos_to_client_ = false;
+  bool use_parser_ = false;
+
   std::unique_ptr<media::H264Decoder> media_decoder_;
   std::unique_ptr<media::DecoderBuffer> current_decoder_buffer_;
 

@@ -49,7 +49,8 @@ class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvid
 class TestH264Multi {
  public:
   static void DecodeSetStream(const char* input_filename,
-                              uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH], const char* filename) {
+                              uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH], const char* filename,
+                              bool use_parser) {
     fxl::LogSettings settings;
     settings.min_log_level = -10;
     fxl::SetLogSettings(settings);
@@ -62,9 +63,11 @@ class TestH264Multi {
     H264TestFrameDataProvider frame_data_provider;
     {
       std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
-      video->SetDefaultInstance(
-          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider),
-          /*hevc=*/false);
+      auto decoder =
+          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider);
+      decoder->set_use_parser(use_parser);
+      video->SetDefaultInstance(std::move(decoder),
+                                /*hevc=*/false);
       frame_allocator.set_decoder(video->video_decoder());
     }
 
@@ -75,7 +78,7 @@ class TestH264Multi {
     // Don't use parser, because we need to be able to save and restore the read
     // and write pointers, which can't be done if the parser is using them as
     // well.
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, 1024 * PAGE_SIZE,
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(use_parser, 1024 * PAGE_SIZE,
                                                    /*is_secure=*/false));
     uint32_t frame_count = 0;
     std::promise<void> wait_valid;
@@ -500,12 +503,17 @@ class TestH264Multi {
 
 TEST(H264Multi, DecodeBear) {
   TestH264Multi::DecodeSetStream("video_test_data/bear.h264", bear_h264_hashes,
-                                 "/tmp/bearmultih264.yuv");
+                                 "/tmp/bearmultih264.yuv", /*use_parser=*/false);
+}
+
+TEST(H264Multi, DecodeBearParser) {
+  TestH264Multi::DecodeSetStream("video_test_data/bear.h264", bear_h264_hashes,
+                                 "/tmp/bearmultih264.yuv", /*use_parser=*/true);
 }
 
 TEST(H264Multi, Decode25fps) {
   TestH264Multi::DecodeSetStream("video_test_data/test-25fps.h264", test_25fps_h264_hashes,
-                                 "/tmp/test25fpsmultih264.yuv");
+                                 "/tmp/test25fpsmultih264.yuv", /*use_parser=*/false);
 }
 
 TEST(H264Multi, InitializeTwice) { TestH264Multi::TestInitializeTwice(); }

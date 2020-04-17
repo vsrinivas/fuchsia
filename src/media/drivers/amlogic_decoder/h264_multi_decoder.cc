@@ -13,6 +13,7 @@
 #include "h264_utils.h"
 #include "media/base/decoder_buffer.h"
 #include "media/gpu/h264_decoder.h"
+#include "parser.h"
 #include "registers.h"
 #include "util.h"
 #include "watchdog.h"
@@ -943,10 +944,56 @@ void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame, uint32_t pts
 
 void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length) {
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
-  zx_status_t status = owner_->ProcessVideoNoParser(data, length);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to write video");
-    OnFatalError();
+  if (use_parser_) {
+    zx_status_t status =
+        owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser, false);
+    if (status != ZX_OK) {
+      LOG(ERROR, "video_->SetProtected(kParser) failed - status: %d", status);
+      OnFatalError();
+      return;
+    }
+    // Pass nullptr because we'll handle syncing updates manually.
+    status = owner_->parser()->InitializeEsParser(nullptr);
+    if (status != ZX_OK) {
+      DECODE_ERROR("InitializeEsParser failed - status: %d", status);
+      OnFatalError();
+      return;
+    }
+    if (length > owner_->GetStreamBufferEmptySpace()) {
+      // We don't want the parser to hang waiting for output buffer space, since new space will
+      // never be released to it since we need to manually update the read pointer. TODO(fxb/13483):
+      // Handle copying only as much as can fit and waiting for kH264DataRequest to continue
+      // copying the remainder.
+      DECODE_ERROR("Empty space in stream buffer %d too small for video data (%lu)",
+                   owner_->GetStreamBufferEmptySpace(), length);
+      OnFatalError();
+      return;
+    }
+    owner_->parser()->SyncFromDecoderInstance(owner_->current_instance());
+
+    // TODO call ParseVideoPhyiscal when input buffers are physically contiguous, which will be true
+    // when DRM L1.
+    status = owner_->parser()->ParseVideo(data, length);
+    if (status != ZX_OK) {
+      DECODE_ERROR("Parsing video failed - status: %d", status);
+      OnFatalError();
+      return;
+    }
+    status = owner_->parser()->WaitForParsingCompleted(ZX_SEC(10));
+    if (status != ZX_OK) {
+      DECODE_ERROR("Parsing video timed out - status: %d", status);
+      owner_->parser()->CancelParsing();
+      OnFatalError();
+      return;
+    }
+
+    owner_->parser()->SyncToDecoderInstance(owner_->current_instance());
+  } else {
+    zx_status_t status = owner_->ProcessVideoNoParser(data, length);
+    if (status != ZX_OK) {
+      DECODE_ERROR("Failed to write video");
+      OnFatalError();
+    }
   }
 }
 bool H264MultiDecoder::CanBeSwappedIn() {

@@ -61,6 +61,8 @@ class CanvasEntry {
 };
 
 class CodecPacket;
+class DecoderInstance;
+class Parser;
 class Watchdog;
 
 class VideoDecoder {
@@ -90,6 +92,14 @@ class VideoDecoder {
         io_buffer_t* io_buffer, uint32_t offset, uint32_t width, uint32_t height, uint32_t wrap,
         uint32_t blockmode) = 0;
     virtual __WARN_UNUSED_RESULT DecoderCore* core() = 0;
+    [[nodiscard]] virtual Parser* parser() {
+      ZX_PANIC("not yet implemented by subclass");
+      return nullptr;
+    }
+    [[nodiscard]] virtual DecoderInstance* current_instance() {
+      ZX_PANIC("not yet implemented by subclass");
+      return nullptr;
+    }
     virtual __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                                               uint32_t alignment_log2,
                                                               uint32_t flags, const char* name) = 0;
@@ -108,6 +118,10 @@ class VideoDecoder {
     [[nodiscard]] virtual zx_status_t ProcessVideoNoParser(const void* data, uint32_t len,
                                                            uint32_t* written_out = nullptr) {
       return ZX_OK;
+    }
+    [[nodiscard]] virtual uint32_t GetStreamBufferEmptySpace() {
+      ZX_PANIC("not yet implemented by subclass");
+      return 0;
     }
   };
 
