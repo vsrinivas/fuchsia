@@ -225,6 +225,11 @@ func (n *ndpDispatcher) OnRecursiveDNSServerOption(nicID tcpip.NICID, addrs []tc
 	n.addEvent(&ndpRecursiveDNSServerEvent{nicID: nicID, addrs: addrs, lifetime: lifetime})
 }
 
+// OnDNSSearchListOption implements stack.NDPDispatcher.OnDNSSearchListOption.
+func (n *ndpDispatcher) OnDNSSearchListOption(nicID tcpip.NICID, domainNames []string, lifetime time.Duration) {
+	syslog.Infof("ndp: OnDNSSearchListOption(%d, %s, %s)", nicID, domainNames, lifetime)
+}
+
 // OnDHCPv6Configuration implements stack.NDPDispatcher.OnDHCPv6Configuration.
 func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration stack.DHCPv6ConfigurationFromNDPRA) {
 	syslog.Infof("ndp: OnDHCPv6Configuration(%d, %d)", nicID, configuration)
@@ -393,6 +398,7 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 			// after popping, then we know that all events in the queue (before taking
 			// the lock) have been handled.
 			n.mu.Lock()
+			n.mu.events[0] = nil
 			n.mu.events = n.mu.events[1:]
 			eventsLeft := len(n.mu.events)
 			n.mu.Unlock()
