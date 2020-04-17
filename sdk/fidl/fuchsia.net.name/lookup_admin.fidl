@@ -13,7 +13,8 @@ protocol LookupAdmin {
     /// Sets the default DNS servers to `servers`.
     /// + request `servers` The list of servers to use for domain name resolution, in priority
     /// order. An empty list means no default servers will be used. Only valid unicast addresses
-    /// will be accepted.
+    /// will be accepted. Servers obtained at runtime via DHCP or NDP will be preferred over the
+    /// ones specified here.
     /// * error Returns `ZX_ERR_INVALID_ARGS` if any of the provided addresses does not meet the
     /// conditions above.
     SetDefaultDnsServers(vector<fuchsia.net.IpAddress>:256 servers) -> () error zx.status;
