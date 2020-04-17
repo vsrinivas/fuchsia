@@ -22,6 +22,22 @@ uint64_t MakeHwpRequest(uint8_t min_perf, uint8_t max_perf, uint8_t desired_perf
          (static_cast<uint64_t>(desired_perf) << 16ull) | (static_cast<uint64_t>(epp) << 24ull);
 }
 
+bool TestParsePolicy() {
+  BEGIN_TEST;
+
+  // Valid parse.
+  auto parsed_policy = IntelHwpParsePolicy("bios-specified");
+  ASSERT_TRUE(parsed_policy.has_value());
+  EXPECT_EQ(parsed_policy.value(), IntelHwpPolicy::kBiosSpecified);
+
+  // Invalid parses.
+  EXPECT_TRUE(!IntelHwpParsePolicy("").has_value());
+  EXPECT_TRUE(!IntelHwpParsePolicy("invalid").has_value());
+  EXPECT_TRUE(!IntelHwpParsePolicy("\n").has_value());
+
+  END_TEST;
+}
+
 bool TestNoCpuSupport() {
   BEGIN_TEST;
 
@@ -116,6 +132,7 @@ static bool TestUseStablePerformancePolicy() {
 }  // namespace x86
 
 UNITTEST_START_TESTCASE(x86_hwp_tests)
+UNITTEST("TestParsePolicy", x86::TestParsePolicy)
 UNITTEST("TestNoCpuSupport", x86::TestNoCpuSupport)
 UNITTEST("TestUseBiosValues", x86::TestUseBiosValues)
 UNITTEST("TestPerformancePolicy", x86::TestUsePerformancePolicy)

@@ -21,6 +21,7 @@
 #include <kernel/mp.h>
 #include <kernel/spinlock.h>
 #include <ktl/optional.h>
+#include <ktl/string_view.h>
 
 DECLARE_SINGLETON_MUTEX(hwp_lock);
 
@@ -113,6 +114,25 @@ uint64_t MakeHwpRequest(PerformanceLevel min_perf, PerformanceLevel max_perf,
 }
 
 }  // namespace
+
+ktl::optional<IntelHwpPolicy> IntelHwpParsePolicy(ktl::string_view s) {
+  static const constexpr struct IntelHwpPolicyName {
+    IntelHwpPolicy policy;
+    ktl::string_view name;
+  } kHwpPolicyNames[] = {
+      {IntelHwpPolicy::kBiosSpecified, "bios-specified"sv},
+      {IntelHwpPolicy::kPerformance, "performance"sv},
+      {IntelHwpPolicy::kBalanced, "balanced"sv},
+      {IntelHwpPolicy::kPowerSave, "power-save"sv},
+      {IntelHwpPolicy::kStablePerformance, "stable-performance"sv},
+  };
+  for (const IntelHwpPolicyName item : kHwpPolicyNames) {
+    if (s == item.name) {
+      return item.policy;
+    }
+  }
+  return ktl::nullopt;
+}
 
 void IntelHwpInit(const cpu_id::CpuId* cpuid, MsrAccess* msr, IntelHwpPolicy policy) {
   // Ensure we have HWP on this CPU.

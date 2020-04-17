@@ -433,6 +433,24 @@ This option only affects x86 systems.
 This settings enables HWP (hardware P-states) on supported chips. This feature
 lets Intel CPUs automatically scale their own clock speed. Defaults to true.
 
+## kernel\.x86\.hwp_policy=\<string\>
+
+Set a power/performance tradeoff policy of the CPU. x86 CPUs with HWP
+(hardware P-state) support can be configured to autonomusly scale their
+frequency to favour different policies.
+
+Currently supported policies are:
+
+*   `bios-specified`: (default) Use the power/performance tradeoff policy
+    specified in firmware/BIOS settings. If no policy is available, falls back
+    to `balanced`.
+*   `performance`: Maximise performance.
+*   `balanced`: Balance performance / power savings.
+*   `power-save`: Reduce power usage, at the cost of lower performance.
+*   `stable-performance`: Use settings that keep system performance consistent.
+    This may be useful for benchmarking, for example, where keeping performance
+    predictable is more important than maximising performance.
+
 ## kernel.x86.pti.enable=\<int>
 
 Page table isolation configures user page tables to not have kernel text or

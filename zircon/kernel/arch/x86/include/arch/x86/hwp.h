@@ -10,6 +10,7 @@
 #include <arch/x86/cpuid.h>
 #include <arch/x86/platform_access.h>
 #include <ktl/optional.h>
+#include <ktl/string_view.h>
 
 namespace x86 {
 
@@ -26,6 +27,9 @@ enum class IntelHwpPolicy {
   // for benchmarking.
   kStablePerformance,
 };
+
+// Parse a string as an HWP policy.
+ktl::optional<IntelHwpPolicy> IntelHwpParsePolicy(ktl::string_view s);
 
 // Initialise the Intel HWP on the current CPU.
 //
