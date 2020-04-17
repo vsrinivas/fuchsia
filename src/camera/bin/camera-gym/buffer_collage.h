@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_EXAMPLES_CAMERA_TOOL_BUFFER_COLLAGE_H_
-#define SRC_CAMERA_EXAMPLES_CAMERA_TOOL_BUFFER_COLLAGE_H_
+#ifndef SRC_CAMERA_BIN_CAMERA_GYM_BUFFER_COLLAGE_H_
+#define SRC_CAMERA_BIN_CAMERA_GYM_BUFFER_COLLAGE_H_
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -33,16 +35,19 @@ struct CollectionView {
 // This class takes ownership of the display and presents the contents of buffer collections in a
 // grid pattern. Unless otherwise noted, public methods are thread-safe and private methods must
 // only be called from the loop's thread.
-class BufferCollage {
+class BufferCollage : public fuchsia::ui::app::ViewProvider {
  public:
-  ~BufferCollage();
+  ~BufferCollage() override;
 
   // Creates a new BufferCollage instance using the provided interface handles. After returning, if
   // the instance stops running, either due to an error or explicit action, |stop_callback| is
   // invoked exactly once if non-null.
   static fit::result<std::unique_ptr<BufferCollage>, zx_status_t> Create(
-      fuchsia::ui::policy::PresenterHandle presenter, fuchsia::ui::scenic::ScenicHandle scenic,
-      fuchsia::sysmem::AllocatorHandle allocator, fit::closure stop_callback = nullptr);
+      fuchsia::ui::scenic::ScenicHandle scenic, fuchsia::sysmem::AllocatorHandle allocator,
+      fit::closure stop_callback = nullptr);
+
+  // Returns the view request handler.
+  fidl::InterfaceRequestHandler<fuchsia::ui::app::ViewProvider> GetHandler();
 
   // Registers a new buffer collection and adds it to the view, updating the layout of existing
   // collections to fit. Returns an id representing the collection.
@@ -63,6 +68,9 @@ class BufferCollage {
  private:
   BufferCollage();
 
+  // Requests a new view.
+  void OnNewRequest(fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request);
+
   // Disconnects all channels, quits the loop, and calls the stop callback.
   void Stop();
 
@@ -81,13 +89,18 @@ class BufferCollage {
   void OnScenicError(zx_status_t status);
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
 
+  // |fuchsia::ui::app::ViewProvider|
+  void CreateView(zx::eventpair view_token,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
+
   async::Loop loop_;
-  fuchsia::ui::policy::PresenterPtr presenter_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::sysmem::AllocatorPtr allocator_;
   fit::closure stop_callback_;
   std::unique_ptr<scenic::Session> session_;
   std::unique_ptr<scenic::View> view_;
+  fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;
   std::optional<fuchsia::ui::gfx::BoundingBox> view_extents_;
   std::map<uint32_t, CollectionView> collection_views_;
   uint32_t next_collection_id_ = 1;
@@ -95,4 +108,4 @@ class BufferCollage {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_EXAMPLES_CAMERA_TOOL_BUFFER_COLLAGE_H_
+#endif  // SRC_CAMERA_BIN_CAMERA_GYM_BUFFER_COLLAGE_H_

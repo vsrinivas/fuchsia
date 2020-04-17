@@ -24,8 +24,9 @@ group("service") {
     "//src/camera/bin/device_watcher",
   ]
 }
+
+# Add targets here that are useful for general development.
 group("tools") {
-  deps = [ "//src/camera/examples/camera_tool" ]
 }
 
 group("tests") {

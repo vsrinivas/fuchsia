@@ -1,7 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "src/camera/examples/camera_tool/buffer_collage.h"
+
+#include "src/camera/bin/camera-gym/buffer_collage.h"
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -16,6 +17,7 @@
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
@@ -42,7 +44,8 @@ fit::result<zx::event, zx_status_t> MakeEventBridge(async_dispatcher_t* dispatch
   auto wait = std::make_shared<async::Wait>(waiter_event.get(), ZX_EVENT_SIGNALED);
   wait->set_handler(
       [wait, waiter_event = std::move(waiter_event), eventpair = std::move(eventpair)](
-          async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) mutable {
+          async_dispatcher_t* /*unused*/, async::Wait* /*unused*/, zx_status_t /*unused*/,
+          const zx_packet_signal_t* /*unused*/) mutable {
         // Close the waiter along with its captures.
         wait = nullptr;
       });
@@ -54,10 +57,14 @@ fit::result<zx::event, zx_status_t> MakeEventBridge(async_dispatcher_t* dispatch
   return fit::ok(std::move(caller_event));
 }
 
-BufferCollage::BufferCollage() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-  SetStopOnError(presenter_);
+BufferCollage::BufferCollage()
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), view_provider_binding_(this) {
   SetStopOnError(scenic_);
   SetStopOnError(allocator_);
+  view_provider_binding_.set_error_handler([this](zx_status_t status) {
+    FX_PLOGS(INFO, status) << "ViewProvider client disconnected.";
+    view_provider_binding_.Unbind();
+  });
 }
 
 BufferCollage::~BufferCollage() {
@@ -68,51 +75,43 @@ BufferCollage::~BufferCollage() {
 }
 
 fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
-    fuchsia::ui::policy::PresenterHandle presenter, fuchsia::ui::scenic::ScenicHandle scenic,
-    fuchsia::sysmem::AllocatorHandle allocator, fit::closure stop_callback) {
-  auto displayer = std::unique_ptr<BufferCollage>(new BufferCollage);
+    fuchsia::ui::scenic::ScenicHandle scenic, fuchsia::sysmem::AllocatorHandle allocator,
+    fit::closure stop_callback) {
+  auto collage = std::unique_ptr<BufferCollage>(new BufferCollage);
 
   // Bind interface handles and save the stop callback.
-  zx_status_t status =
-      displayer->presenter_.Bind(std::move(presenter), displayer->loop_.dispatcher());
+  zx_status_t status = collage->scenic_.Bind(std::move(scenic), collage->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);
   }
-  status = displayer->scenic_.Bind(std::move(scenic), displayer->loop_.dispatcher());
+  status = collage->allocator_.Bind(std::move(allocator), collage->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);
   }
-  status = displayer->allocator_.Bind(std::move(allocator), displayer->loop_.dispatcher());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    return fit::error(status);
-  }
-  displayer->stop_callback_ = std::move(stop_callback);
+  collage->stop_callback_ = std::move(stop_callback);
 
   // Create a scenic session and set its event handlers.
-  displayer->session_ =
-      std::make_unique<scenic::Session>(displayer->scenic_.get(), displayer->loop_.dispatcher());
-  displayer->session_->set_error_handler(
-      fit::bind_member(displayer.get(), &BufferCollage::OnScenicError));
-  displayer->session_->set_event_handler(
-      fit::bind_member(displayer.get(), &BufferCollage::OnScenicEvent));
-
-  // Create and present a scenic view.
-  auto tokens = scenic::NewViewTokenPair();
-  displayer->view_ = std::make_unique<scenic::View>(displayer->session_.get(),
-                                                    std::move(tokens.first), "BufferCollage");
-  displayer->presenter_->PresentOrReplaceView(std::move(tokens.second), nullptr);
+  collage->session_ =
+      std::make_unique<scenic::Session>(collage->scenic_.get(), collage->loop_.dispatcher());
+  collage->session_->set_error_handler(
+      fit::bind_member(collage.get(), &BufferCollage::OnScenicError));
+  collage->session_->set_event_handler(
+      fit::bind_member(collage.get(), &BufferCollage::OnScenicEvent));
 
   // Start a thread and begin processing messages.
-  status = displayer->loop_.StartThread("BufferCollage Loop");
+  status = collage->loop_.StartThread("BufferCollage Loop");
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);
   }
 
-  return fit::ok(std::move(displayer));
+  return fit::ok(std::move(collage));
+}
+
+fidl::InterfaceRequestHandler<fuchsia::ui::app::ViewProvider> BufferCollage::GetHandler() {
+  return fit::bind_member(this, &BufferCollage::OnNewRequest);
 }
 
 fit::promise<uint32_t> BufferCollage::AddCollection(
@@ -232,8 +231,21 @@ void BufferCollage::PostShowBuffer(uint32_t collection_id, uint32_t buffer_index
   });
 }
 
+void BufferCollage::OnNewRequest(fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
+  if (view_provider_binding_.is_bound()) {
+    FX_LOGS(ERROR) << "Camera Gym only supports one view provider instance.";
+    request.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+
+  view_provider_binding_.Bind(std::move(request), loop_.dispatcher());
+}
+
 void BufferCollage::Stop() {
-  presenter_ = nullptr;
+  if (view_provider_binding_.is_bound()) {
+    FX_LOGS(WARNING) << "Collage closing view channel due to server error.";
+    view_provider_binding_.Close(ZX_ERR_INTERNAL);
+  }
   scenic_ = nullptr;
   allocator_ = nullptr;
   view_ = nullptr;
@@ -310,7 +322,7 @@ static std::tuple<float, float> GetCenter(uint32_t index, uint32_t n) {
   float x = (col + 0.5f) / cols;
   // Center-align the last row if it is not fully filled.
   if (row == rows - 1) {
-    x += (rows * cols - n) * 0.5f / cols;
+    x += static_cast<float>(rows * cols - n) * 0.5f / cols;
   }
   return {x, y};
 }
@@ -358,7 +370,10 @@ void BufferCollage::UpdateLayout() {
     view.node->SetMaterial(*view.material);
     auto [x, y] = GetCenter(index++, collection_views_.size());
     view.node->SetTranslation(view_width * x, view_height * y, 0);
-    view_->AddChild(*view.node);
+    // TODO(msandy): Track hidden nodes.
+    if (view_) {
+      view_->AddChild(*view.node);
+    }
   }
   session_->Present(zx::clock::get_monotonic(), [](fuchsia::images::PresentationInfo info) {});
 }
@@ -381,6 +396,21 @@ void BufferCollage::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events
       UpdateLayout();
     }
   }
+}
+
+void BufferCollage::CreateView(
+    zx::eventpair view_token,
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
+  if (view_) {
+    FX_LOGS(ERROR) << "Clients may only call this method once per view provider lifetime.";
+    view_provider_binding_.Close(ZX_ERR_BAD_STATE);
+    Stop();
+    return;
+  }
+  view_ = std::make_unique<scenic::View>(session_.get(), scenic::ToViewToken(std::move(view_token)),
+                                         "Camera Gym");
+  UpdateLayout();
 }
 
 }  // namespace camera
