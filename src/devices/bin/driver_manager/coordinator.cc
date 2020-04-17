@@ -96,13 +96,13 @@ std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> ConnectToFshostAdminS
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
     log(ERROR, "driver_manager: Failed connect to fshost admin, failed to create channel: %s\n",
-           zx_status_get_string(status));
+        zx_status_get_string(status));
     return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
   }
   status = fdio_service_connect(kFshostAdminPath, remote.release());
   if (status != ZX_OK) {
     log(ERROR, "driver_manager: Failed to connect to fuchsia.fshost.Admin: %s\n",
-           zx_status_get_string(status));
+        zx_status_get_string(status));
     return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
   }
   return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(std::move(local));
@@ -156,7 +156,8 @@ void Coordinator::ShutdownFilesystems() {
   }
   auto result = fshost_admin_client_->Shutdown();
   if (result.status() != ZX_OK) {
-    log(ERROR, "driver_manager: Failed to cause VFS exit: %s\n", zx_status_get_string(result.status()));
+    log(ERROR, "driver_manager: Failed to cause VFS exit: %s\n",
+        zx_status_get_string(result.status()));
     return;
   }
 
@@ -464,7 +465,7 @@ static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector
   return ZX_OK;
 }
 
-zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost** out) {
+zx_status_t Coordinator::NewDevhost(const char* name, Devhost** out) {
   auto dh = std::make_unique<Devhost>();
   if (dh == nullptr) {
     return ZX_ERR_NO_MEMORY;
@@ -519,11 +520,6 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
   }
   launched_first_devhost_ = true;
 
-  if (parent) {
-    dh->set_parent(parent);
-    dh->parent()->AddRef();
-    dh->parent()->children().push_back(dh.get());
-  }
   devhosts_.push_back(dh.get());
 
   log(DEVLC, "driver_manager: new host %p\n", dh.get());
@@ -538,12 +534,6 @@ void Coordinator::ReleaseDevhost(Devhost* dh) {
     return;
   }
   log(INFO, "driver_manager: destroy host %p\n", dh);
-  Devhost* parent = dh->parent();
-  if (parent != nullptr) {
-    dh->parent()->children().erase(*dh);
-    dh->set_parent(nullptr);
-    ReleaseDevhost(parent);
-  }
   devhosts_.erase(*dh);
   zx_handle_close(dh->hrpc());
   dh->proc()->kill();
@@ -1219,7 +1209,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
       }
     }
     if (target_devhost == nullptr) {
-      if ((r = NewDevhost(devhostname, dev->host(), &target_devhost)) < 0) {
+      if ((r = NewDevhost(devhostname, &target_devhost)) < 0) {
         log(ERROR, "driver_manager: NewDevhost: %d\n", r);
         return r;
       }

@@ -360,7 +360,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode> devices_;
 
   // All DevHosts
-  fbl::DoublyLinkedList<Devhost*, Devhost::AllDevhostsNode> devhosts_;
+  fbl::DoublyLinkedList<Devhost*> devhosts_;
 
   // All composite devices
   fbl::DoublyLinkedList<std::unique_ptr<CompositeDevice>, CompositeDevice::Node> composite_devices_;
@@ -409,7 +409,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   std::unique_ptr<Driver> ValidateDriver(std::unique_ptr<Driver> drv);
 
-  zx_status_t NewDevhost(const char* name, Devhost* parent, Devhost** out);
+  zx_status_t NewDevhost(const char* name, Devhost** out);
 
   zx_status_t BindDriver(Driver* drv) {
     return BindDriver(drv, fit::bind_member(this, &Coordinator::AttemptBind));

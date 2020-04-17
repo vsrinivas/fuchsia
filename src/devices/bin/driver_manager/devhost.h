@@ -16,21 +16,11 @@
 
 class Device;
 
-class Devhost {
+class Devhost : public fbl::DoublyLinkedListable<Devhost*> {
  public:
   enum Flags : uint32_t {
     kDying = 1 << 0,
     kSuspend = 1 << 1,
-  };
-
-  struct AllDevhostsNode {
-    static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(Devhost& obj) { return obj.anode_; }
-  };
-  struct SuspendNode {
-    static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(Devhost& obj) { return obj.snode_; }
-  };
-  struct Node {
-    static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(Devhost& obj) { return obj.node_; }
   };
 
   zx_handle_t hrpc() const { return hrpc_; }
@@ -41,10 +31,7 @@ class Devhost {
   void set_koid(zx_koid_t koid) { koid_ = koid; }
   // Note: this is a non-const reference to make |= etc. ergonomic.
   uint32_t& flags() { return flags_; }
-  Devhost* parent() const { return parent_; }
-  void set_parent(Devhost* parent) { parent_ = parent; }
   fbl::DoublyLinkedList<Device*, Device::DevhostNode>& devices() { return devices_; }
-  fbl::DoublyLinkedList<Devhost*, Node>& children() { return children_; }
 
   // Returns a device id that will be unique within this devhost.
   uint64_t new_device_id() { return next_device_id_++; }
@@ -65,7 +52,6 @@ class Devhost {
   zx_koid_t koid_ = 0;
   mutable int32_t refcount_ = 0;
   uint32_t flags_ = 0;
-  Devhost* parent_ = nullptr;
 
   // The next ID to be allocated to a device in this devhost.  Skip 0 to make
   // an uninitialized value more obvious.
@@ -73,18 +59,6 @@ class Devhost {
 
   // list of all devices on this devhost
   fbl::DoublyLinkedList<Device*, Device::DevhostNode> devices_;
-
-  // listnode for this devhost in the all devhosts list
-  fbl::DoublyLinkedListNodeState<Devhost*> anode_;
-
-  // listnode for this devhost in the order-to-suspend list
-  fbl::DoublyLinkedListNodeState<Devhost*> snode_;
-
-  // listnode for this devhost in its parent devhost's list-of-children
-  fbl::DoublyLinkedListNodeState<Devhost*> node_;
-
-  // list of all child devhosts of this devhost
-  fbl::DoublyLinkedList<Devhost*, Node> children_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DEVHOST_H_
