@@ -107,6 +107,20 @@ func TestRunTest(t *testing.T) {
 				Result: runtests.TestSuccess,
 			},
 		},
+		{
+			name: "non-multiplier test",
+			test: build.Test{
+				Name:       "bar(2)test",
+				Path:       "/foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			},
+			testErr: nil,
+			expectedResult: &testrunner.TestResult{
+				Name:   "fuchsia-pkg://foo/bar",
+				Result: runtests.TestSuccess,
+			},
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

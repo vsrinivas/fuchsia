@@ -239,7 +239,7 @@ func runTest(ctx context.Context, test build.Test, t tester) (*testrunner.TestRe
 
 	// If test is a multiplier test, the name should end in a number.
 	// Re-append that to the result name.
-	re := regexp.MustCompile(`\([0-9]*\)`)
+	re := regexp.MustCompile(`\([0-9]+\)$`)
 	index := re.FindString(test.Name)
 	if index != "" {
 		name += "-" + index
