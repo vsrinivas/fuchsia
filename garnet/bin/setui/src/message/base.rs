@@ -92,6 +92,8 @@ pub enum MessengerType<A: Address + 'static> {
     /// are able to send and reply to messages, but the main purpose is to observe
     /// messages.
     Broker,
+    /// A messenger that cannot be reached by an address.
+    Unbound,
 }
 
 /// MessageType captures details about the Message's source.

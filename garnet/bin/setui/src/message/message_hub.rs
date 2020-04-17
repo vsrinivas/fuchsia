@@ -297,6 +297,9 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                     MessengerType::Addressable(address) => {
                         self.addresses.insert(address, id);
                     }
+                    MessengerType::Unbound => {
+                        // We do not track Unbounded messengers.
+                    }
                 }
                 responder.send(Ok((MessengerClient::new(messenger, fuse.clone()), receptor))).ok();
             }
@@ -314,6 +317,9 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                     }
                     MessengerType::Addressable(address) => {
                         self.addresses.remove(&address);
+                    }
+                    MessengerType::Unbound => {
+                        // no special cleanup needed for Unbounded messengers.
                     }
                 }
             }

@@ -302,6 +302,7 @@ async fn test_messenger_behavior() {
     // Run tests twice to ensure no one instance leads to a deadlock.
     for _ in 0..2 {
         verify_messenger_behavior(MessengerType::Broker).await;
+        verify_messenger_behavior(MessengerType::Unbound).await;
         verify_messenger_behavior(MessengerType::Addressable(TestAddress::Foo(2))).await;
     }
 }
