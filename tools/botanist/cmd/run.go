@@ -199,7 +199,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		defer l.Close()
 		eg.Go(func() error {
 			if err := s.Run(ctx, l); err != nil && ctx.Err() == nil {
-				return err
+				return fmt.Errorf("serial server error: %w", err)
 			}
 			return nil
 		})
@@ -216,7 +216,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 	eg.Go(func() error {
 		if err := r.startTargets(ctx, targets); err != nil {
-			return err
+			return fmt.Errorf("start target error: %w", err)
 		}
 		// Cancel context and stop targets to finish other goroutines in group so that if err = nil,
 		// we can return a nil error without waiting for other goroutines.
@@ -259,7 +259,6 @@ func (r *RunCommand) stopTargets(ctx context.Context, targets []Target) {
 		wg.Add(1)
 		go func(t Target) {
 			defer wg.Done()
-			logger.Debugf(ctx, "stopping or rebooting the node %q\n", t.Nodename())
 			if err := t.Stop(ctx); err == target.ErrUnimplemented {
 				t.Restart(ctx)
 			}

@@ -312,7 +312,11 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	t.process = cmd.Process
 
 	go func() {
-		t.c <- cmd.Wait()
+		err := cmd.Wait()
+		if err != nil {
+			err = fmt.Errorf("QEMU invocation error: %w", err)
+		}
+		t.c <- err
 		os.RemoveAll(workdir)
 	}()
 	return nil
