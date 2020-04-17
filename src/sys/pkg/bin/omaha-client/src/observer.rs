@@ -18,6 +18,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::SystemTime;
 
+mod platform;
+
 pub struct FuchsiaObserver<ST, SM>
 where
     ST: Storage,

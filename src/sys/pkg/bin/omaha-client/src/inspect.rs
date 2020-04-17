@@ -16,6 +16,8 @@ use omaha_client::{
 use std::collections::VecDeque;
 use std::time::SystemTime;
 
+pub use bounded_node::BoundedNode;
+
 pub struct ConfigurationNode {
     _node: Node,
     updater: UpdaterNode,

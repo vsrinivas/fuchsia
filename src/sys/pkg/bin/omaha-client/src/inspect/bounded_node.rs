@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(dead_code)] // TODO(50039) Use this.
+
 use {
     fuchsia_inspect::{Node, NumericProperty as _, Property as _, UintProperty},
     fuchsia_inspect_contrib::inspectable::InspectableU64,
@@ -49,7 +51,7 @@ use {
 ///     }
 /// )
 /// ```
-#[allow(dead_code)] // TODO(50038) Use this.
+#[derive(Debug)]
 pub struct BoundedNode<V> {
     node: Node,
     children_node: Node,
@@ -61,7 +63,6 @@ pub struct BoundedNode<V> {
 
 impl<V> BoundedNode<V> {
     /// Creates a `BoundedNode`. `BoundedNode`s with `capacity` zero do not store any `V`s.
-    #[allow(dead_code)] // TODO(50038) Use this.
     pub fn from_node_and_capacity(node: Node, capacity: usize) -> Self {
         node.record_uint("capacity", capacity as u64);
         let children_node = node.create_child("children");
@@ -73,7 +74,6 @@ impl<V> BoundedNode<V> {
     /// Push a child `Node` to the exported Inspect tree. `f` is called with the new `Node` and
     /// returns a type `V` that should contain that `Node` and any other desired Inspect objects.
     /// Drops oldest child `Node` if `capacity` would be exceeded.
-    #[allow(dead_code)] // TODO(50038) Use this.
     pub fn push(&mut self, f: impl FnOnce(Node) -> V) {
         if self.capacity == 0 {
             // Increment `begin` first so the valid range is always empty.
