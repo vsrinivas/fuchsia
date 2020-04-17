@@ -67,8 +67,8 @@ class RebootLogHandlerTest : public UnitTestFixture,
     executor_.schedule_task(
         feedback::HandleRebootLog(reboot_log_path_, dispatcher(), services())
             .then([&result](::fit::result<void>& res) { result = std::move(res); }));
-    // TODO(fxb/46216): remove delay.
-    RunLoopFor(zx::sec(30));
+    // TODO(fxb/46216, fxb/48485): remove delay.
+    RunLoopFor(zx::sec(90));
     return result;
   }
 
