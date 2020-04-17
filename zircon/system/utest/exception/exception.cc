@@ -66,12 +66,14 @@ static void crash_me() {
 static void send_msg_new_thread_handle(zx_handle_t handle, zx_handle_t thread) {
   // Note: The handle is transferred to the receiver.
   uint64_t data = MSG_AUX_THREAD_HANDLE;
-  tu_channel_write(handle, 0, &data, sizeof(data), &thread, 1);
+  zx_status_t status = zx_channel_write(handle, 0, &data, sizeof(data), &thread, 1);
+  ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 static void send_msg(zx_handle_t handle, message msg) {
   uint64_t data = msg;
-  tu_channel_write(handle, 0, &data, sizeof(data), NULL, 0);
+  zx_status_t status = zx_channel_write(handle, 0, &data, sizeof(data), NULL, 0);
+  ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 static bool recv_msg(zx_handle_t handle, message* msg) {
@@ -82,8 +84,9 @@ static bool recv_msg(zx_handle_t handle, message* msg) {
     return false;
   }
 
-  tu_channel_read(handle, 0, &data, &num_bytes, NULL, 0);
-  if (num_bytes != sizeof(data)) {
+  zx_status_t status =
+      zx_channel_read(handle, 0, &data, nullptr, num_bytes, 0, &num_bytes, nullptr);
+  if (status != ZX_OK || num_bytes != sizeof(data)) {
     return false;
   }
 
@@ -98,7 +101,9 @@ static void recv_msg_new_thread_handle(zx_handle_t handle, zx_handle_t* thread) 
   ASSERT_TRUE(tu_channel_wait_readable(handle), "peer closed while trying to read message");
 
   uint32_t num_handles = 1;
-  tu_channel_read(handle, 0, &data, &num_bytes, thread, &num_handles);
+  zx_status_t status =
+      zx_channel_read(handle, 0, &data, thread, num_bytes, num_handles, &num_bytes, &num_handles);
+  ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(num_bytes, sizeof(data));
   ASSERT_EQ(num_handles, 1u);
 
@@ -146,7 +151,8 @@ static void msg_loop(zx_handle_t channel) {
             return;
           }
           zx_handle_t channel_from_thread;
-          tu_channel_create(&channel_to_thread, &channel_from_thread);
+          zx_status_t status = zx_channel_create(0, &channel_to_thread, &channel_from_thread);
+          ZX_DEBUG_ASSERT(status == ZX_OK);
           thrd_t thread;
           tu_thread_create_c11(&thread, thread_func, (void*)(uintptr_t)channel_from_thread,
                                "msg-loop-subthread");
@@ -201,7 +207,8 @@ static void __NO_RETURN test_child() {
 
 static springboard_t* setup_test_child(zx_handle_t job, const char* arg, zx_handle_t* out_channel) {
   zx_handle_t our_channel, their_channel;
-  tu_channel_create(&our_channel, &their_channel);
+  zx_status_t status = zx_channel_create(0, &our_channel, &their_channel);
+  ZX_DEBUG_ASSERT(status == ZX_OK);
   const char* test_child_path = program_path;
   const char* const argv[] = {
       test_child_path,
@@ -253,8 +260,9 @@ zx::exception ReadException(const zx::channel& channel,
     return zx::exception();
   }
 
-  tu_channel_read(channel.get(), 0, &info, &num_bytes, exception.reset_and_get_address(),
-                  &num_handles);
+  status = zx_channel_read(channel.get(), 0, &info, exception.reset_and_get_address(), num_bytes,
+                           num_handles, &num_bytes, &num_handles);
+  EXPECT_EQ(status, ZX_OK);
   if (!exception.is_valid()) {
     EXPECT_TRUE(exception.is_valid());
     return zx::exception();

@@ -85,30 +85,6 @@ zx_status_t tu_wait(uint32_t num_objects, const zx_handle_t* handles, const zx_s
   return status;
 }
 
-void tu_channel_create(zx_handle_t* handle0, zx_handle_t* handle1) {
-  zx_handle_t handles[2];
-  zx_status_t status = zx_channel_create(0, &handles[0], &handles[1]);
-  if (status < 0)
-    tu_fatal(__func__, status);
-  *handle0 = handles[0];
-  *handle1 = handles[1];
-}
-
-void tu_channel_write(zx_handle_t handle, uint32_t flags, const void* bytes, uint32_t num_bytes,
-                      const zx_handle_t* handles, uint32_t num_handles) {
-  zx_status_t status = zx_channel_write(handle, flags, bytes, num_bytes, handles, num_handles);
-  if (status < 0)
-    tu_fatal(__func__, status);
-}
-
-void tu_channel_read(zx_handle_t handle, uint32_t flags, void* bytes, uint32_t* num_bytes,
-                     zx_handle_t* handles, uint32_t* num_handles) {
-  zx_status_t status = zx_channel_read(handle, flags, bytes, handles, num_bytes ? *num_bytes : 0,
-                                       num_handles ? *num_handles : 0, num_bytes, num_handles);
-  if (status < 0)
-    tu_fatal(__func__, status);
-}
-
 bool tu_channel_wait_readable(zx_handle_t channel) {
   zx_signals_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
   zx_signals_t pending;
@@ -372,22 +348,6 @@ size_t tu_process_get_threads(zx_handle_t process, zx_koid_t* threads, size_t ma
   return num_threads;
 }
 
-zx_handle_t tu_job_create(zx_handle_t job) {
-  zx_handle_t child_job;
-  zx_status_t status = zx_job_create(job, 0, &child_job);
-  if (status < 0)
-    tu_fatal(__func__, status);
-  return child_job;
-}
-
-zx_handle_t tu_io_port_create(void) {
-  zx_handle_t handle;
-  zx_status_t status = zx_port_create(0, &handle);
-  if (status < 0)
-    tu_fatal(__func__, status);
-  return handle;
-}
-
 zx_handle_t tu_create_exception_channel(zx_handle_t task, uint32_t options) {
   zx_handle_t channel = ZX_HANDLE_INVALID;
   zx_status_t status = zx_task_create_exception_channel(task, options, &channel);
@@ -400,7 +360,10 @@ tu_exception_t tu_read_exception(zx_handle_t channel) {
   tu_exception_t exception;
   uint32_t num_bytes = sizeof(exception.info);
   uint32_t num_handles = 1;
-  tu_channel_read(channel, 0, &exception.info, &num_bytes, &exception.exception, &num_handles);
+  zx_status_t status = zx_channel_read(channel, 0, &exception.info, &exception.exception, num_bytes,
+                                       num_handles, nullptr, nullptr);
+  if (status < 0)
+    tu_fatal(__func__, status);
   return exception;
 }
 
@@ -503,12 +466,6 @@ uint32_t tu_thread_get_state(zx_handle_t thread) {
 bool tu_thread_is_dying_or_dead(zx_handle_t thread) {
   zx_info_thread_t info = tu_thread_get_info(thread);
   return (info.state == ZX_THREAD_STATE_DYING || info.state == ZX_THREAD_STATE_DEAD);
-}
-
-void tu_task_kill(zx_handle_t task) {
-  zx_status_t status = zx_task_kill(task);
-  if (status < 0)
-    tu_fatal("zx_task_kill", status);
 }
 
 const char* tu_exception_to_string(uint32_t exception) {

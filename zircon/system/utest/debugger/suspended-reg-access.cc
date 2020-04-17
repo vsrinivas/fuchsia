@@ -129,7 +129,7 @@ bool SuspendedRegAccessTest() {
   suspended_reg_access_arg_t arg = {};
   arg.initial_value = reg_access_initial_value;
   zx_handle_t channel;
-  tu_channel_create(&channel, &arg.channel);
+  ASSERT_EQ(zx_channel_create(0, &channel, &arg.channel), ZX_OK);
   tu_thread_create_c11(&thread_c11, reg_access_thread_func, &arg, "reg-access thread");
   // Get our own copy of the thread handle to avoid lifetime issues of
   // thrd's copy.
@@ -141,7 +141,8 @@ bool SuspendedRegAccessTest() {
   // ZX_EXCP_THREAD_STARTING.
   ASSERT_TRUE(recv_simple_response(channel, RESP_PONG), "");
 
-  zx_handle_t port = tu_io_port_create();
+  zx_handle_t port = ZX_HANDLE_INVALID;
+  EXPECT_EQ(zx_port_create(0, &port), ZX_OK);
 
   // Keep looping until we know the thread is stopped in the assembler.
   // This is the only place we can guarantee particular registers have
@@ -289,7 +290,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
 
   zx_handle_t syscall_handle;
   if (do_channel_call) {
-    tu_channel_create(&arg.syscall_handle, &syscall_handle);
+    ASSERT_EQ(zx_channel_create(0, &arg.syscall_handle, &syscall_handle), ZX_OK);
   } else {
     ASSERT_EQ(zx_event_create(0u, &syscall_handle), ZX_OK);
     arg.syscall_handle = syscall_handle;
@@ -321,7 +322,8 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
     EXPECT_TRUE(tu_channel_wait_readable(syscall_handle));
   }
 
-  zx_handle_t port = tu_io_port_create();
+  zx_handle_t port = ZX_HANDLE_INVALID;
+  EXPECT_EQ(zx_port_create(0, &port), ZX_OK);
 
   zx_handle_t token;
   ASSERT_EQ(zx_task_suspend_token(thread, &token), ZX_OK);
@@ -524,7 +526,8 @@ bool SuspendedInExceptionRegAccessTest() {
   // Defer attaching until after the inferior is running to test
   // attach_inferior's recording of existing threads. If that fails
   // it won't see thread suspended/running messages from the thread.
-  zx_handle_t port = tu_io_port_create();
+  zx_handle_t port = ZX_HANDLE_INVALID;
+  EXPECT_EQ(zx_port_create(0, &port), ZX_OK);
   size_t max_threads = 10;
   inferior_data_t* inferior_data = attach_inferior(inferior, port, max_threads);
   thrd_t wait_inf_thread =

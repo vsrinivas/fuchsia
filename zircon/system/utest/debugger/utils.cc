@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "utils.h"
+
 #include <elf.h>
 #include <inttypes.h>
 #include <link.h>
@@ -9,10 +11,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <fbl/algorithm.h>
-#include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -21,7 +19,9 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
 
-#include "utils.h"
+#include <fbl/algorithm.h>
+#include <test-utils/test-utils.h>
+#include <unittest/unittest.h>
 
 // argv[0]
 const char* g_program_path;
@@ -73,30 +73,47 @@ uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop) {
   return value;
 }
 
-void send_request(zx_handle_t handle, const request_message_t& rqst) {
+// These return "bool" because they use ASSERT_*.
+
+bool send_request(zx_handle_t handle, const request_message_t& rqst) {
+  BEGIN_HELPER;
   unittest_printf("sending request %d on handle %u\n", rqst.type, handle);
-  tu_channel_write(handle, 0, &rqst, sizeof(rqst), NULL, 0);
+  zx_status_t status = zx_channel_write(handle, 0, &rqst, sizeof(rqst), NULL, 0);
+  ASSERT_EQ(status, ZX_OK);
+  END_HELPER;
 }
 
-void send_simple_request(zx_handle_t handle, request_t type) {
+bool send_simple_request(zx_handle_t handle, request_t type) {
+  BEGIN_HELPER;
   unittest_printf("sending request %d on handle %u\n", type, handle);
-  tu_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
+  zx_status_t status = zx_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
+  ASSERT_EQ(status, ZX_OK);
+  END_HELPER;
 }
 
-void send_response(zx_handle_t handle, const response_message_t& resp) {
+bool send_response(zx_handle_t handle, const response_message_t& resp) {
+  BEGIN_HELPER;
   unittest_printf("sending response %d on handle %u\n", resp.type, handle);
-  tu_channel_write(handle, 0, &resp, sizeof(resp), NULL, 0);
+  zx_status_t status = zx_channel_write(handle, 0, &resp, sizeof(resp), NULL, 0);
+  ASSERT_EQ(status, ZX_OK);
+  END_HELPER;
 }
 
-void send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
+bool send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
                                zx_handle_t resp_handle) {
+  BEGIN_HELPER;
   unittest_printf("sending response %d on handle %u\n", resp.type, handle);
-  tu_channel_write(handle, 0, &resp, sizeof(resp), &resp_handle, 1);
+  zx_status_t status = zx_channel_write(handle, 0, &resp, sizeof(resp), &resp_handle, 1);
+  ASSERT_EQ(status, ZX_OK);
+  END_HELPER;
 }
 
-void send_simple_response(zx_handle_t handle, response_t type) {
+bool send_simple_response(zx_handle_t handle, response_t type) {
+  BEGIN_HELPER;
   unittest_printf("sending response %d on handle %u\n", type, handle);
-  tu_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
+  zx_status_t status = zx_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
+  ASSERT_EQ(status, ZX_OK);
+  END_HELPER;
 }
 
 // This returns "bool" because it uses ASSERT_*.
@@ -109,7 +126,8 @@ bool recv_request(zx_handle_t handle, request_message_t* rqst) {
   ASSERT_TRUE(tu_channel_wait_readable(handle), "peer closed while trying to read message");
 
   uint32_t num_bytes = sizeof(*rqst);
-  tu_channel_read(handle, 0, rqst, &num_bytes, NULL, NULL);
+  zx_status_t status = zx_channel_read(handle, 0, rqst, nullptr, num_bytes, 0, &num_bytes, nullptr);
+  ASSERT_EQ(status, ZX_OK);
   ASSERT_LE(num_bytes, sizeof(*rqst), "unexpected request size");
 
   END_HELPER;
@@ -127,7 +145,9 @@ bool recv_response(zx_handle_t handle, response_message_t* resp) {
   uint32_t num_bytes = sizeof(*resp);
   zx_handle_t resp_handle = ZX_HANDLE_INVALID;
   uint32_t num_handles = 1;
-  tu_channel_read(handle, 0, resp, &num_bytes, &resp_handle, &num_handles);
+  zx_status_t status = zx_channel_read(handle, 0, resp, &resp_handle, num_bytes, num_handles,
+                                       &num_bytes, &num_handles);
+  ASSERT_EQ(status, ZX_OK);
   ASSERT_LE(num_bytes, sizeof(*resp), "unexpected response size");
   if (num_handles > 0) {
     EXPECT_EQ(num_handles, 1, "");

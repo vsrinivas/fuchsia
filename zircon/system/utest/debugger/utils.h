@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UTEST_DEBUGGER_UTILS_H_
+#define ZIRCON_SYSTEM_UTEST_DEBUGGER_UTILS_H_
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
@@ -82,16 +82,16 @@ void set_uint64(char* buf, uint64_t value);
 
 uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop);
 
-void send_request(zx_handle_t handle, const request_message_t& rqst);
+bool send_request(zx_handle_t handle, const request_message_t& rqst);
 
-void send_simple_request(zx_handle_t handle, request_t rqst);
+bool send_simple_request(zx_handle_t handle, request_t rqst);
 
-void send_response(zx_handle_t handle, const response_message_t& resp);
+bool send_response(zx_handle_t handle, const response_message_t& resp);
 
-void send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
+bool send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
                                zx_handle_t resp_handle);
 
-void send_simple_response(zx_handle_t handle, response_t resp);
+bool send_simple_response(zx_handle_t handle, response_t resp);
 
 bool recv_request(zx_handle_t handle, request_message_t* rqst);
 
@@ -117,3 +117,5 @@ bool get_inferior_load_addrs(zx_handle_t channel, zx_vaddr_t* libc_load_addr,
 
 // Return libc's entry point as found in its in-process ELF header.
 zx_vaddr_t get_libc_entry_point();
+
+#endif  // ZIRCON_SYSTEM_UTEST_DEBUGGER_UTILS_H_

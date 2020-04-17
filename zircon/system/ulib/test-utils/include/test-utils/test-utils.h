@@ -82,20 +82,6 @@ void tu_thread_create_c11(thrd_t* thread, thrd_start_t entry, void* arg, const c
 zx_status_t tu_wait(uint32_t num_objects, const zx_handle_t* handles, const zx_signals_t* signals,
                     zx_signals_t* pending);
 
-// A wrapper on zx_channel_create.
-
-void tu_channel_create(zx_handle_t* handle0, zx_handle_t* handle1);
-
-// A wrapper on zx_channel_write.
-
-void tu_channel_write(zx_handle_t handle, uint32_t flags, const void* bytes, uint32_t num_bytes,
-                      const zx_handle_t* handles, uint32_t num_handles);
-
-// A wrapper on zx_channel_read.
-
-void tu_channel_read(zx_handle_t handle, uint32_t flags, void* bytes, uint32_t* num_bytes,
-                     zx_handle_t* handles, uint32_t* num_handles);
-
 // Wait for |channel| to be readable.
 // Returns true if the channel is readable, and false if the peer has closed its end.
 // Note: This waits "forever", and relies on the watchdog to catch hung tests.
@@ -130,14 +116,6 @@ zx_handle_t tu_process_get_thread(zx_handle_t process, zx_koid_t tid);
 // See discussion of ZX_INFO_PROCESS_THREADS in object_get_info.md.
 
 size_t tu_process_get_threads(zx_handle_t process, zx_koid_t* threads, size_t max_threads);
-
-// Create a child job of |job|.
-
-zx_handle_t tu_job_create(zx_handle_t job);
-
-// Create an io port.
-
-zx_handle_t tu_io_port_create(void);
 
 // Creates an exception channel for |task| which is a job, process, or thread.
 
@@ -196,10 +174,6 @@ uint32_t tu_thread_get_state(zx_handle_t thread);
 // Return true if |thread| is dying or dead.
 
 bool tu_thread_is_dying_or_dead(zx_handle_t thread);
-
-// Kill |task|.
-
-void tu_task_kill(zx_handle_t task);
 
 // Set the scaling factor for timeouts.
 // The default is 1. A value of 2 waits twice as long, and so on.

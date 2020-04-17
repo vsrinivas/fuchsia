@@ -62,7 +62,8 @@ bool SuspendOnStartTest() {
 
   // Attach to the inferior now because we want to see thread starting
   // exceptions.
-  zx_handle_t port = tu_io_port_create();
+  zx_handle_t port = ZX_HANDLE_INVALID;
+  EXPECT_EQ(zx_port_create(0, &port), ZX_OK);
   size_t max_threads = 2;
   inferior_data_t* inferior_data = attach_inferior(inferior, port, max_threads);
 

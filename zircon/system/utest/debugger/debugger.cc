@@ -134,7 +134,8 @@ bool DebuggerTest() {
   std::atomic<int> segv_count;
 
   expect_debugger_attached_eq(inferior, false, "debugger should not appear attached");
-  zx_handle_t port = tu_io_port_create();
+  zx_handle_t port = ZX_HANDLE_INVALID;
+  EXPECT_EQ(zx_port_create(0, &port), ZX_OK);
   size_t max_threads = 10;
   inferior_data_t* inferior_data = attach_inferior(inferior, port, max_threads);
   thrd_t wait_inf_thread =
@@ -180,7 +181,8 @@ bool DebuggerThreadListTest() {
   if (!setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel))
     return false;
 
-  zx_handle_t port = tu_io_port_create();
+  zx_handle_t port = ZX_HANDLE_INVALID;
+  EXPECT_EQ(zx_port_create(0, &port), ZX_OK);
   size_t max_threads = 10;
   inferior_data_t* inferior_data = attach_inferior(inferior, port, max_threads);
   thrd_t wait_inf_thread =

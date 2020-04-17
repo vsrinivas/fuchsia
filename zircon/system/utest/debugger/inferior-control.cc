@@ -111,7 +111,7 @@ bool setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_i
   BEGIN_HELPER;
 
   zx_handle_t channel1, channel2;
-  tu_channel_create(&channel1, &channel2);
+  ASSERT_EQ(zx_channel_create(0, &channel1, &channel2), ZX_OK);
 
   const char verbosity_string[] = {'v', '=', static_cast<char>(utest_verbosity_level + '0'), '\0'};
   const char* test_child_path = g_program_path;

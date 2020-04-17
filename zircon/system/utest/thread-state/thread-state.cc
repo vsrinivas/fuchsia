@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -72,7 +73,9 @@ static void send_msg_with_handles(zx_handle_t channel, MessageType type,
                                   zx_handle_t* optional_handles, uint32_t num_handles) {
   uint32_t data = type;
   unittest_printf("sending message %d on handle %u, with %u handles\n", type, channel, num_handles);
-  tu_channel_write(channel, 0, &data, sizeof(data), optional_handles, num_handles);
+  zx_status_t status =
+      zx_channel_write(channel, 0, &data, sizeof(data), optional_handles, num_handles);
+  ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 static void send_msg(zx_handle_t channel, MessageType type) {
@@ -90,7 +93,12 @@ static bool recv_msg(zx_handle_t channel, Message* msg) {
   uint32_t data;
   uint32_t num_bytes = sizeof(data);
   msg->num_handles = MAX_NUM_MSG_HANDLES;
-  tu_channel_read(channel, 0, &data, &num_bytes, &msg->handles[0], &msg->num_handles);
+  zx_status_t status = zx_channel_read(channel, 0, &data, &msg->handles[0], num_bytes,
+                                       msg->num_handles, &num_bytes, &msg->num_handles);
+  if (status != ZX_OK) {
+    unittest_printf("ERROR: failed to read message: %s\n", zx_status_get_string(status));
+    return false;
+  }
   if (num_bytes != sizeof(data)) {
     unittest_printf("ERROR: unexpected message size, %u != %zu\n", num_bytes, sizeof(data));
     return false;
@@ -369,7 +377,8 @@ static void __NO_RETURN test_child(void) {
 static springboard_t* setup_test_child(zx_handle_t job, const char* arg, zx_handle_t* out_channel) {
   unittest_printf("Starting test child %s.\n", arg);
   zx_handle_t our_channel, their_channel;
-  tu_channel_create(&our_channel, &their_channel);
+  zx_status_t status = zx_channel_create(0, &our_channel, &their_channel);
+  ZX_DEBUG_ASSERT(status == ZX_OK);
   const char* test_child_path = program_path;
   const char verbosity_string[] = {'v', '=', static_cast<char>(utest_verbosity_level + '0'), '\0'};
   const char* const argv[] = {
@@ -418,9 +427,11 @@ static void wait_thread_blocked(zx_handle_t thread, uint32_t reason) {
 
 // Terminate |process| by killing it and wait for it to exit.
 
-static void terminate_process(zx_handle_t process) {
-  tu_task_kill(process);
+static bool terminate_process(zx_handle_t process) {
+  zx_status_t status = zx_task_kill(process);
+  ASSERT_EQ(status, ZX_OK);
   tu_process_wait_signaled(process);
+  return true;
 }
 
 static bool sleeping_test() {
