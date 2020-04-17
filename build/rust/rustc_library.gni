@@ -130,6 +130,10 @@ template("rustc_library") {
     crate_name = crate_name
     output_name = crate_name
 
+    if (unknown_wasm32_toolchain == current_toolchain) {
+      crate_type = "cdylib"
+    }
+
     configs = []
     configs = invoker.configs
 

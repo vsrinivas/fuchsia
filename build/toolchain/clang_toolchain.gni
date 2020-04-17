@@ -197,7 +197,7 @@ template("clang_toolchain") {
         # TODO: see the comment below
         command += "mkdir -p {{output_dir}}/exe.unstripped && "
       }
-      if (invoker.toolchain_cpu == "wasm") {
+      if (invoker.toolchain_cpu == "wasm32") {
         # default_output_extension doesn't work on binaries
         unstripped_outfile = "$unstripped_outfile.wasm"
       }
@@ -282,7 +282,13 @@ template("clang_toolchain") {
       description = "RUST {{output}}"
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
-      default_output_extension = ".so"
+      if (invoker.toolchain_os == "mac") {
+        default_output_extension = ".dylib"
+      } else if (invoker.toolchain_cpu == "wasm32") {
+        default_output_extension = ".wasm"
+      } else {
+        default_output_extension = ".so"
+      }
       output_prefix = "lib"
     }
 
@@ -310,6 +316,7 @@ template("clang_toolchain") {
       } else {
         default_output_extension = ".so"
       }
+
       output_prefix = "lib"
       outputs = [ outfile ]
 
