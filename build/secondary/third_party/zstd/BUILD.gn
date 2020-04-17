@@ -40,6 +40,7 @@ config("zstd_include") {
 static_library("zstd") {
   public = [
     "//build/secondary/third_party/zstd/include/zstd/zstd.h",
+    "//build/secondary/third_party/zstd/include/zstd/zstd_errors.h",
   ]
 
   sources = [
@@ -94,9 +95,7 @@ config("zstd_seekable_public_config") {
 }
 
 static_library("zstdseek") {
-  public = [
-    "//build/secondary/third_party/zstd/include/zstd/zstd_seekable.h",
-  ]
+  public = [ "//build/secondary/third_party/zstd/include/zstd/zstd_seekable.h" ]
 
   sources = [
     "contrib/seekable_format/zstdseek_compress.c",
