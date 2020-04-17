@@ -51,9 +51,11 @@ if (is_linux) {
   copy("copy_loglistener") {
     visibility = [ ":*" ]
 
-    sources = [ "$zircon_root_build_dir/tools/loglistener" ]
+    sources = [ "$host_out_dir/loglistener" ]
 
     outputs = [ "$root_out_dir/test_data/limited_netsvc/loglistener" ]
+
+    deps = [ "//zircon/tools/loglistener($host_toolchain)" ]
   }
 
   group("netsvc_user_tools") {
