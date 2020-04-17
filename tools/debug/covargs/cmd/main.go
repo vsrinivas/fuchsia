@@ -353,12 +353,12 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 			}
 		}
 
-		report, err := covargs.GenerateReport(&export, basePath, mapping)
+		files, err := covargs.ConvertFiles(&export, basePath, mapping)
 		if err != nil {
-			return fmt.Errorf("failed to generate coverage report: %w", err)
+			return fmt.Errorf("failed to convert files: %w", err)
 		}
 
-		if _, err := covargs.SaveReport(report, shardSize, reportDir); err != nil {
+		if _, err := covargs.SaveReport(files, shardSize, reportDir); err != nil {
 			return fmt.Errorf("failed to save report: %w", err)
 		}
 	}

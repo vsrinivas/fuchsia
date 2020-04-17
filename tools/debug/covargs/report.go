@@ -6,13 +6,13 @@ package covargs
 
 import (
 	"compress/zlib"
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
 	"sort"
 
-	"github.com/golang/protobuf/jsonpb"
 	"go.fuchsia.dev/fuchsia/tools/debug/covargs/api/llvm"
 	"go.fuchsia.dev/fuchsia/tools/debug/covargs/api/third_party/codecoverage"
 )
@@ -214,9 +214,96 @@ func convertFile(file llvm.File, base string, mapping *DiffMapping) (*codecovera
 	}, nil
 }
 
-// GenerateReport converts the data in LLVM coverage JSON format into the
+func mergeSummaries(summaries ...[]*codecoverage.Metric) []*codecoverage.Metric {
+	s := []*codecoverage.Metric{
+		{
+			Name:    "function",
+			Covered: 0,
+			Total:   0,
+		},
+		{
+			Name:    "region",
+			Covered: 0,
+			Total:   0,
+		},
+		{
+			Name:    "line",
+			Covered: 0,
+			Total:   0,
+		},
+	}
+	d := map[string]int{}
+	for i, m := range s {
+		d[m.Name] = i
+	}
+	for _, m := range summaries {
+		if m != nil {
+			for _, n := range m {
+				s[d[n.Name]].Covered += n.Covered
+				s[d[n.Name]].Total += n.Total
+			}
+		}
+	}
+	return s
+}
+
+// ComputeSummaries calculates aggregate summaries for all directories.
+func ComputeSummaries(files []*codecoverage.File) ([]*codecoverage.GroupCoverageSummary, []*codecoverage.Metric) {
+	summaries := map[string][]*codecoverage.Metric{}
+	for _, f := range files {
+		// We can't use filepath.Dir and filepath.Base because they normalize '//'.
+		dir, _ := filepath.Split(f.Path)
+		for dir != "//" {
+			// In the coverage data format, dirs end with '/' except for root.
+			summaries[dir] = mergeSummaries(summaries[dir], f.Summaries)
+			dir, _ = filepath.Split(dir[:len(dir)-1])
+		}
+		summaries["//"] = mergeSummaries(summaries["//"], f.Summaries)
+	}
+
+	fileSummaries := map[string][]*codecoverage.CoverageSummary{}
+	for _, f := range files {
+		dir, file := filepath.Split(f.Path)
+		fileSummaries[dir] = append(fileSummaries[dir], &codecoverage.CoverageSummary{
+			Name:      file,
+			Path:      f.Path,
+			Summaries: f.Summaries,
+		})
+	}
+
+	dirSummaries := map[string][]*codecoverage.CoverageSummary{}
+	for p, s := range summaries {
+		if p == "//" {
+			continue
+		}
+		// The path already ends with '/' so we have to omit it.
+		dir, file := filepath.Split(p[:len(p)-1])
+		dirSummaries[dir] = append(dirSummaries[dir], &codecoverage.CoverageSummary{
+			Name:      file + "/",
+			Path:      p,
+			Summaries: s,
+		})
+	}
+
+	var groupSummaries []*codecoverage.GroupCoverageSummary
+	for p, s := range summaries {
+		groupSummaries = append(groupSummaries, &codecoverage.GroupCoverageSummary{
+			Path:      p,
+			Dirs:      dirSummaries[p],
+			Files:     fileSummaries[p],
+			Summaries: s,
+		})
+	}
+	sort.Slice(groupSummaries, func(i, j int) bool {
+		return groupSummaries[i].Path < groupSummaries[j].Path
+	})
+
+	return groupSummaries, summaries["//"]
+}
+
+// ConvertFiles converts the data in LLVM coverage JSON format into the
 // compressed coverage format used by Chromium coverage service.
-func GenerateReport(export *llvm.Export, base string, mapping *DiffMapping) (*codecoverage.CoverageReport, error) {
+func ConvertFiles(export *llvm.Export, base string, mapping *DiffMapping) ([]*codecoverage.File, error) {
 	var files []*codecoverage.File
 	for _, d := range export.Data {
 		// TODO(phosek): Use goroutines to process files in parallel.
@@ -228,7 +315,7 @@ func GenerateReport(export *llvm.Export, base string, mapping *DiffMapping) (*co
 			files = append(files, file)
 		}
 	}
-	return &codecoverage.CoverageReport{Files: files}, nil
+	return files, nil
 }
 
 func saveReport(report *codecoverage.CoverageReport, filename string) error {
@@ -239,8 +326,7 @@ func saveReport(report *codecoverage.CoverageReport, filename string) error {
 	defer f.Close()
 	w := zlib.NewWriter(f)
 	defer w.Close()
-	m := &jsonpb.Marshaler{}
-	if err := m.Marshal(w, report); err != nil {
+	if err := json.NewEncoder(f).Encode(report); err != nil {
 		return fmt.Errorf("cannot marshal report: %w", err)
 	}
 	return nil
@@ -248,8 +334,13 @@ func saveReport(report *codecoverage.CoverageReport, filename string) error {
 
 // SaveReport saves compresses coverage data to disk, optionally sharding the
 // data into multiple files each of the same size.
-func SaveReport(report *codecoverage.CoverageReport, shardSize int, dir string) (*codecoverage.CoverageReport, error) {
-	if numFiles := len(report.Files); numFiles > shardSize {
+func SaveReport(files []*codecoverage.File, shardSize int, dir string) (*codecoverage.CoverageReport, error) {
+	dirs, summaries := ComputeSummaries(files)
+	report := &codecoverage.CoverageReport{
+		Dirs:      dirs,
+		Summaries: summaries,
+	}
+	if numFiles := len(files); numFiles > shardSize {
 		const filename = "files%0*d.json.gz"
 		numShards := int(math.Ceil(float64(numFiles) / float64(shardSize)))
 		width := 1 + int(math.Log10(float64(numShards)))
@@ -261,7 +352,7 @@ func SaveReport(report *codecoverage.CoverageReport, shardSize int, dir string) 
 			if to > numFiles {
 				to = numFiles
 			}
-			report := codecoverage.CoverageReport{Files: report.Files[from:to]}
+			report := codecoverage.CoverageReport{Files: files[from:to]}
 			filename := fmt.Sprintf(filename, width, i+1)
 			if err := saveReport(&report, filepath.Join(dir, filename)); err != nil {
 				return nil, fmt.Errorf("failed to save report %q: %w", filename, err)
@@ -269,6 +360,8 @@ func SaveReport(report *codecoverage.CoverageReport, shardSize int, dir string) 
 			fileShards[i] = filename
 		}
 		report.FileShards = fileShards
+	} else {
+		report.Files = files
 	}
 	const filename = "all.json.gz"
 	if err := saveReport(report, filepath.Join(dir, filename)); err != nil {

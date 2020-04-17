@@ -116,11 +116,10 @@ message Metric {
 
 // Represents the code coverage info of a single source file.
 message File {
+  reserved 2;
+
   // Source absolute path to the file, e.g. '//base/file.cc'.
   string path = 1;
-
-  // The total number of lines in the file.
-  int32 total_lines = 2;
 
   // The code coverage info of the lines in the file.
   // If a line is not executable or not instrumented to collect coverage info,
