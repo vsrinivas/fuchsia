@@ -194,6 +194,10 @@ uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
   // Let caller-provided in_stream drive how far ahead we peek.  If it's not far
   // enough to find a start code or the EOS, then we'll error out.
   uint32_t max_peek_bytes = in_stream->max_peek_bytes();
+  // default -1
+  int64_t input_stop_stream_after_frame_ordinal =
+      test_params->input_stop_stream_after_frame_ordinal;
+  int64_t stream_frame_ordinal = 0;
   while (true) {
     // Until clang-tidy correctly interprets Exit(), this "= 0" satisfies it.
     size_t start_code_size_bytes = 0;
@@ -250,6 +254,11 @@ uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
     VLOGF("TossPeekedBytes()...");
     in_stream->TossPeekedBytes(start_code_size_bytes + nal_length);
     VLOGF("TossPeekedBytes() done");
+
+    if (stream_frame_ordinal == input_stop_stream_after_frame_ordinal) {
+      break;
+    }
+    stream_frame_ordinal++;
   }
 
   return input_pts_counter - input_pts_counter_start;
@@ -380,7 +389,10 @@ uint64_t QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
     }
   }
   ZX_DEBUG_ASSERT(!remaining_header_length);
-  uint32_t frame_index = 0;
+  // default -1
+  int64_t input_stop_stream_after_frame_ordinal =
+      test_params->input_stop_stream_after_frame_ordinal;
+  int64_t stream_frame_ordinal = 0;
   while (true) {
     IvfFrameHeader frame_header;
     status = in_stream->ReadBytesComplete(sizeof(frame_header), &actual_bytes_read,
@@ -395,13 +407,18 @@ uint64_t QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
       Exit("Frame header truncated.");
     }
     ZX_DEBUG_ASSERT(actual_bytes_read == sizeof(frame_header));
-    LOGF("input frame_index: %u input_pts_counter: %" PRIu64 " frame_header.size_bytes: %u",
-         frame_index, input_pts_counter, frame_header.size_bytes);
-    frame_index++;
+    LOGF("input stream_frame_ordinal: %" PRId64 " input_pts_counter: %" PRIu64
+         " frame_header.size_bytes: %u",
+         stream_frame_ordinal, input_pts_counter, frame_header.size_bytes);
     if (!queue_access_unit(frame_header.size_bytes)) {
       // can be fine in case of vp9 input fuzzing test
       break;
     }
+
+    if (stream_frame_ordinal == input_stop_stream_after_frame_ordinal) {
+      break;
+    }
+    stream_frame_ordinal++;
   }
 
   return input_pts_counter - input_pts_counter_start;

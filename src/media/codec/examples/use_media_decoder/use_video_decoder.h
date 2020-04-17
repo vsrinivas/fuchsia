@@ -91,6 +91,9 @@ struct UseVideoDecoderTestParams final {
   // have not been validated.
   mutable uint64_t magic_validated_ = 0;
 
+  // By default, the stream doesn't stop early.
+  int64_t input_stop_stream_after_frame_ordinal = -1;
+
   // The first output frame timestamp_ish that's expected on output.  PTS values before this are not
   // expected.
   //
