@@ -10,6 +10,8 @@ if (host_toolchain == current_toolchain) {
   copy("templates") {
     # All template files available to fx create.
     sources = [
+      "_copyright.tmpl",
+      "_generated.tmpl",
       "component-v2/BUILD.gn.tmpl-cpp",
       "component-v2/BUILD.gn.tmpl-rust",
       "component-v2/main.cc.tmpl-cpp",

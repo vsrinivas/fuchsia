@@ -19,7 +19,7 @@ pass the `--host` flag to `fx test`.
 2. Populate the directory with the intended project structure
     * Name all template files with the `.tmpl` extension or `.tmpl-<lang>` for
       language-specific template files.
-    * Use `$` in a file/directory name to substitute the user's `PROJECT_NAME`.
+    * Use `{{PROJECT_NAME}}` in a file/directory name to substitute the user's `PROJECT_NAME`.
 3. Edit the `templates` target in `//tools/create/templates/BUILD.gn` to include all your new
    template files.
 4. Add the project type to the help doc-string in `CreateArgs` in `//tools/create/src/main.rs`.
@@ -51,6 +51,26 @@ Multiple languages can be supported in the same template directory. For instance
 `component-v2` command supports `cpp` and `rust` languages by having both a `BUILD.gn.tmpl-cpp`
 and `BUILD.gn.tmpl-rust` file.
 
+Partial templates are fragments of template files that can be included by other templates.
+Partial templates begin with `_` and can be included in a template with the `{{>name_of_partial}}`
+without the leading `_`.
+
+Only partial templates at the root or within the project type directory being executed are
+available to a template.
+
+E.g. file layout:
+
+* `templates/`
+  - `_copyright.tmpl`
+  - `component-v1/`
+    * `_header.tmpl`
+  - `component-v2/`
+    * `_common.tmpl`
+
+When creating a project of type `component-v1`, the partial templates `_copyright.tmpl` and
+`component-v1/_header.tmpl` are visible and can be executed with `{{>copyright}}` and
+`{{>component-v1/header}}`.
+
 ### Variables
 
 The template expansion uses [handlebars] syntax. Expand a variable with the syntax `{{VAR_NAME}}`.
@@ -61,6 +81,7 @@ The available variable names are:
 * `PROJECT_NAME`: The user-specified project name,
 * `PROJECT_PATH`: The path from the fuchsia root directory to the new project,
 * `PROJECT_TYPE`: The project-type as specified on the command line, e.g: 'component-v2'.
+* `TEMPLATE_PATH`: The path to the source template being executed.
 
 Path names are also treated as template strings and can contain [handlebars] syntax.
 
@@ -84,6 +105,6 @@ The available helper functions are:
 #### Adding a new helper
 
 To make a new helper function accessible to templates, follow instructions in
-`//tools/create/src/tmpl_helpers.rs`.
+`//tools/create/src/template_helpers.rs`.
 
 [handlebars]: https://docs.rs/handlebars

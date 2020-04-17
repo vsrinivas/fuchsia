@@ -1,6 +1,4 @@
-// Copyright {{COPYRIGHT_YEAR}} The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+{{>copyright comment="//"}}
 
 #ifndef {{screaming_snake_case PROJECT_PATH}}_{{screaming_snake_case PROJECT_NAME}}_H_
 #define {{screaming_snake_case PROJECT_PATH}}_{{screaming_snake_case PROJECT_NAME}}_H_
