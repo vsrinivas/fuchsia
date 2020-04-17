@@ -16,4 +16,9 @@ pub mod earcons_agent;
 pub mod restore_agent;
 
 /// Earcons handlers.
+pub mod bluetooth_earcons_handler;
 pub mod volume_change_earcons_handler;
+
+/// Earcons utilities.
+pub mod earcons_sound_ids;
+pub mod earcons_utils;

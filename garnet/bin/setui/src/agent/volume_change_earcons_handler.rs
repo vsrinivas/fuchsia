@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::earcons_agent::CommonEarconsParams;
-use crate::audio::play_sound;
+use crate::agent::earcons_agent::{connect_to_sound_player, CommonEarconsParams};
+use crate::agent::earcons_sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
+use crate::agent::earcons_utils::play_sound;
 use crate::input::monitor_media_buttons;
 use crate::switchboard::base::{
     AudioStreamType, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
@@ -174,6 +175,13 @@ async fn handle_volume_request(
 ///
 /// The parameters are packaged together. See [VolumeChangeParams].
 async fn play_media_volume_sound(volume: Option<f32>, common_earcons_params: CommonEarconsParams) {
+    // Connect to the SoundPlayer if not already connected.
+    connect_to_sound_player(
+        common_earcons_params.service_context.clone(),
+        common_earcons_params.sound_player_connection.clone(),
+    )
+    .await;
+
     let sound_player_connection_clone = common_earcons_params.sound_player_connection.clone();
     let sound_player_connection = sound_player_connection_clone.lock().await;
     let priority_stream_playing = common_earcons_params.priority_stream_playing;
@@ -191,7 +199,7 @@ async fn play_media_volume_sound(volume: Option<f32>, common_earcons_params: Com
             play_sound(
                 &sound_player_proxy,
                 VOLUME_MAX_FILE_PATH,
-                0,
+                VOLUME_MAX_SOUND_ID,
                 sound_player_added_files.clone(),
             )
             .await
@@ -200,7 +208,7 @@ async fn play_media_volume_sound(volume: Option<f32>, common_earcons_params: Com
             play_sound(
                 &sound_player_proxy,
                 VOLUME_CHANGED_FILE_PATH,
-                1,
+                VOLUME_CHANGED_SOUND_ID,
                 sound_player_added_files.clone(),
             )
             .await

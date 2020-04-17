@@ -12,6 +12,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.bluetooth.sys.Access",
             "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.device.manager.Administrator",
             "fuchsia.devicesettings.DeviceSettingsManager",

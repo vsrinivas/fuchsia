@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::agent::base::{Agent, Invocation, Lifespan};
+use crate::agent::bluetooth_earcons_handler::watch_bluetooth_connections;
 use crate::agent::volume_change_earcons_handler::VolumeChangeEarconsHandler;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{ListenSession, SettingType, SwitchboardClient, SwitchboardError};
@@ -105,6 +106,7 @@ impl Agent for EarconsAgent {
                 VolumeChangeEarconsHandler::new(common_earcons_params.clone());
             let volume_change_handler_clone = volume_change_handler.clone();
 
+            let common_earcons_params_clone = common_earcons_params.clone();
             fasync::spawn(async move {
                 volume_change_handler_clone.watch_last_volume_button_event();
 
@@ -124,6 +126,13 @@ impl Agent for EarconsAgent {
                     common_earcons_params.clone(),
                 )
                 .await;
+
+                // Watch for bluetooth connections and play sounds on change.
+                let bluetooth_connection_active = Arc::new(AtomicBool::new(true));
+                watch_bluetooth_connections(
+                    common_earcons_params_clone.clone(),
+                    bluetooth_connection_active,
+                );
 
                 reply(return_invocation, Ok(())).await;
             });
@@ -148,12 +157,6 @@ async fn listen_to_audio_events(
         .listen(
             SettingType::Audio,
             Arc::new(move |setting| {
-                // Connect to the SoundPlayer the first time an earcons event occurs.
-                connect_to_sound_player(
-                    common_earcons_params.service_context.clone(),
-                    common_earcons_params.sound_player_connection.clone(),
-                );
-
                 volume_change_handler.get_volume_info(client.clone(), setting);
             }),
         )
@@ -214,26 +217,24 @@ async fn watch_background_usage(
 
 /// Establish a connection to the sound player and return the proxy representing the service.
 /// Will not do anything if the sound player connection is already established.
-fn connect_to_sound_player(
+pub async fn connect_to_sound_player(
     service_context_handle: ServiceContextHandle,
     sound_player_connection: Arc<Mutex<Option<PlayerProxy>>>,
 ) {
-    fasync::spawn(async move {
-        let mut sound_player_connection_lock = sound_player_connection.lock().await;
-        if sound_player_connection_lock.is_none() {
-            *sound_player_connection_lock = match service_context_handle
-                .lock()
-                .await
-                .connect::<PlayerMarker>()
-                .await
-                .context("Connecting to fuchsia.media.sounds.Player")
-            {
-                Ok(result) => Some(result),
-                Err(e) => {
-                    fx_log_err!("Failed to connect to fuchsia.media.sounds.Player: {}", e);
-                    None
-                }
+    let mut sound_player_connection_lock = sound_player_connection.lock().await;
+    if sound_player_connection_lock.is_none() {
+        *sound_player_connection_lock = match service_context_handle
+            .lock()
+            .await
+            .connect::<PlayerMarker>()
+            .await
+            .context("Connecting to fuchsia.media.sounds.Player")
+        {
+            Ok(result) => Some(result),
+            Err(e) => {
+                fx_log_err!("Failed to connect to fuchsia.media.sounds.Player: {}", e);
+                None
             }
         }
-    });
+    }
 }

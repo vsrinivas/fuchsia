@@ -28,7 +28,7 @@ use {
     std::sync::Arc,
 };
 
-const ENV_NAME: &str = "earcons_agent_test_environment";
+const ENV_NAME: &str = "volume_change_earcons_test_environment";
 const INITIAL_VOLUME_LEVEL: f32 = 0.5;
 const CHANGED_VOLUME_LEVEL_2: f32 = 0.8;
 const MAX_VOLUME_LEVEL: f32 = 1.0;

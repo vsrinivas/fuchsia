@@ -5,10 +5,10 @@
 mod accessibility_tests;
 mod agent_tests;
 mod audio_tests;
+mod bluetooth_earcons_tests;
 mod device_tests;
 mod display_tests;
 mod do_not_disturb_tests;
-mod earcons_agent_tests;
 mod fakes;
 mod hanging_get_tests;
 mod input_tests;
@@ -24,3 +24,4 @@ mod setting_handler_tests;
 mod setui_tests;
 mod setup_tests;
 mod system_tests;
+mod volume_change_earcons_tests;

@@ -8,6 +8,8 @@ use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_media_sounds::{PlayerMarker, PlayerRequest};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
+use futures::channel::mpsc::UnboundedSender;
+use futures::lock::Mutex;
 use futures::TryStreamExt;
 use parking_lot::RwLock;
 use std::collections::HashMap;
@@ -22,6 +24,9 @@ pub struct SoundPlayerService {
 
     // Represents the sounds that were played. Stores the id to AudioRenderUsage it was played on.
     sound_mappings: Arc<RwLock<HashMap<u32, AudioRenderUsage>>>,
+
+    // The listeners to notify that a sound was played.
+    sound_played_listeners: Arc<Mutex<Vec<UnboundedSender<Result<(), Error>>>>>,
 }
 
 impl SoundPlayerService {
@@ -29,6 +34,7 @@ impl SoundPlayerService {
         Self {
             play_counts: Arc::new(RwLock::new(HashMap::new())),
             sound_mappings: Arc::new(RwLock::new(HashMap::new())),
+            sound_played_listeners: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -52,6 +58,11 @@ impl SoundPlayerService {
             Some(&val) => Some(val),
         }
     }
+
+    // Add a listener to notify when a sound is played.
+    pub async fn add_sound_played_listener(&self, responder: UnboundedSender<Result<(), Error>>) {
+        self.sound_played_listeners.lock().await.push(responder);
+    }
 }
 
 impl Service for SoundPlayerService {
@@ -68,6 +79,7 @@ impl Service for SoundPlayerService {
 
         let sound_mappings_clone = self.sound_mappings.clone();
         let play_counts_clone = self.play_counts.clone();
+        let sound_played_listeners = self.sound_played_listeners.clone();
 
         fasync::spawn(async move {
             while let Some(req) = player_stream.try_next().await.unwrap() {
@@ -79,6 +91,9 @@ impl Service for SoundPlayerService {
                     PlayerRequest::PlaySound { id, usage, responder } => {
                         sound_mappings_clone.write().insert(id, usage);
                         play_counts_clone.write().entry(id).and_modify(|count| *count += 1);
+                        for listener in sound_played_listeners.lock().await.iter() {
+                            listener.unbounded_send(Ok(())).ok();
+                        }
                         responder.send(&mut Ok(())).unwrap();
                     }
                     _ => {}

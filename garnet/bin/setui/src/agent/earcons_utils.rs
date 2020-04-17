@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
@@ -57,7 +57,9 @@ pub async fn play_sound<'a>(
     }
 
     match sound_player_proxy.play_sound(id, AudioRenderUsage::Media).await {
-        Ok(_) => fx_log_info!("[earcons] Played sound {}", file_name),
+        Ok(_) => {
+            // TODO(fxb/50246): Add inspect logging.
+        }
         Err(e) => fx_log_err!("[earcons] Unable to Play sound from Player: {}", e),
     };
     Ok(())

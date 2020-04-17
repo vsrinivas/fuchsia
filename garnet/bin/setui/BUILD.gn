@@ -25,6 +25,8 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
@@ -91,6 +93,8 @@ config_data("tests_config") {
   for_pkg = "setui_service_tests"
   sources = [
     "src/tests/testdata/audio_config_data.json",
+    "src/tests/testdata/bluetooth-connected.wav",
+    "src/tests/testdata/bluetooth-disconnected.wav",
     "src/tests/testdata/fake_config_data.json",
     "src/tests/testdata/fake_invalid_config_data.json",
     "src/tests/testdata/service_configuration.json",

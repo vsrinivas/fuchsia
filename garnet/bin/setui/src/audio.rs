@@ -4,11 +4,9 @@
 
 pub use self::audio_default_settings::default_audio_info;
 pub use self::audio_fidl_handler::spawn_audio_fidl_handler;
-pub use self::earcons_utils::play_sound;
 pub use self::stream_volume_control::StreamVolumeControl;
 
 pub mod audio_controller;
 mod audio_default_settings;
 mod audio_fidl_handler;
-mod earcons_utils;
 mod stream_volume_control;
