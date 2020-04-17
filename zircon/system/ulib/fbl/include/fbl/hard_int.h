@@ -15,8 +15,8 @@
 // HardInt is the same size as the underlying integral type.
 
 // Example:
-//     DEFINE_HARD_INT_TYPE(Celsius, uint64_t);
-//     DEFINE_HARD_INT_TYPE(Fahrenheit, uint64_t);
+//     DEFINE_HARD_INT(Celsius, uint64_t)
+//     DEFINE_HARD_INT(Fahrenheit, uint64_t)
 //     ...
 //     Celsius c1(40);
 //     Celsius c2(100);
