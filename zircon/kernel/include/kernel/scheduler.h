@@ -19,6 +19,7 @@
 #include <kernel/scheduler_state.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
+#include <lib/relaxed_atomic.h>
 
 // Forward declaration.
 struct percpu;
@@ -57,6 +58,10 @@ class Scheduler {
 
   // Returns the number of the CPU this scheduler instance is associated with.
   cpu_num_t this_cpu() const { return this_cpu_; }
+
+  zx_duration_t predicted_queue_time_ns() const {
+    return total_expected_runtime_ns_.load().raw_value();
+  }
 
  private:
   // Allow percpu to init our cpu number.
@@ -333,8 +338,7 @@ class Scheduler {
   // The sum of the expected runtimes of all active threads on this CPU. This
   // value is an estimate of the average queuimg time for this CPU, given the
   // current set of active threads.
-  TA_GUARDED(thread_lock)
-  SchedDuration total_expected_runtime_ns_{0};
+  RelaxedAtomic<SchedDuration> total_expected_runtime_ns_{SchedNs(0)};
 
   // The sum of the worst case utilization of all active deadline threads on
   // this CPU.

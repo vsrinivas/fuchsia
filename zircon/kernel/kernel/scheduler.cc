@@ -190,7 +190,7 @@ void Scheduler::Dump() {
          " ema=%" PRId64 " deadline_utilization=%" PRId64 "\n",
          static_cast<uint32_t>(weight_total_.raw_value()), runnable_fair_task_count_,
          runnable_deadline_task_count_, virtual_time_.raw_value(),
-         scheduling_period_grans_.raw_value(), total_expected_runtime_ns_.raw_value(),
+         scheduling_period_grans_.raw_value(), total_expected_runtime_ns_.load().raw_value(),
          total_deadline_utilization_.raw_value());
 
   if (active_thread_ != nullptr) {
@@ -598,25 +598,26 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
 
   const auto compare_fair = [](Scheduler* const queue_a,
                                Scheduler* const queue_b) TA_REQ(thread_lock) {
-    if (queue_a->total_expected_runtime_ns_ == queue_b->total_expected_runtime_ns_) {
+    if (queue_a->total_expected_runtime_ns_.load() == queue_b->total_expected_runtime_ns_.load()) {
       return queue_a->total_deadline_utilization_ < queue_b->total_deadline_utilization_;
     }
-    return queue_a->total_expected_runtime_ns_ < queue_b->total_expected_runtime_ns_;
+    return queue_a->total_expected_runtime_ns_.load() < queue_b->total_expected_runtime_ns_.load();
   };
   const auto is_idle_fair = [](Scheduler* const queue) TA_REQ(thread_lock) {
-    return queue->total_expected_runtime_ns_ == SchedDuration{0};
+    return queue->total_expected_runtime_ns_.load() == SchedDuration{0};
   };
 
   const auto compare_deadline = [](Scheduler* const queue_a,
                                    Scheduler* const queue_b) TA_REQ(thread_lock) {
     if (queue_a->total_deadline_utilization_ == queue_b->total_deadline_utilization_) {
-      return queue_a->total_expected_runtime_ns_ < queue_b->total_expected_runtime_ns_;
+      return queue_a->total_expected_runtime_ns_.load() <
+          queue_b->total_expected_runtime_ns_.load();
     }
     return queue_a->total_deadline_utilization_ < queue_b->total_deadline_utilization_;
   };
   const auto is_idle_deadline = [](Scheduler* const queue) TA_REQ(thread_lock) {
     return queue->total_deadline_utilization_ == SchedUtilization{0} &&
-           queue->total_expected_runtime_ns_ == SchedDuration{0};
+           queue->total_expected_runtime_ns_.load() == SchedDuration{0};
   };
 
   const auto compare = IsFairThread(thread) ? compare_fair : compare_deadline;
@@ -766,9 +767,9 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     current_state->expected_runtime_ns_ += clamped_ns;
 
     // Adjust the aggregate value by the same amount.
-    total_expected_runtime_ns_ += clamped_ns;
+    total_expected_runtime_ns_ = total_expected_runtime_ns_.load() + clamped_ns;
 
-    update_ema_trace.End(Round<uint64_t>(total_expected_runtime_ns_),
+    update_ema_trace.End(Round<uint64_t>(total_expected_runtime_ns_.load()),
                          Round<uint64_t>(total_deadline_utilization_));
   }
 
@@ -1095,8 +1096,8 @@ void Scheduler::Insert(SchedTime now, Thread* thread) {
     // CPU to the one this scheduler instance services.
     state->curr_cpu_ = this_cpu();
 
-    total_expected_runtime_ns_ += state->expected_runtime_ns_;
-    DEBUG_ASSERT(total_expected_runtime_ns_ >= SchedDuration{0});
+    total_expected_runtime_ns_ = total_expected_runtime_ns_.load() + state->expected_runtime_ns_;
+    DEBUG_ASSERT(total_expected_runtime_ns_.load() >= SchedDuration{0});
 
     if (IsFairThread(thread)) {
       runnable_fair_task_count_++;
@@ -1131,8 +1132,9 @@ void Scheduler::Remove(Thread* thread) {
   if (state->OnRemove()) {
     state->curr_cpu_ = INVALID_CPU;
 
-    total_expected_runtime_ns_ -= state->expected_runtime_ns_;
-    DEBUG_ASSERT(total_expected_runtime_ns_ >= SchedDuration{0});
+
+    total_expected_runtime_ns_ = total_expected_runtime_ns_.load() - state->expected_runtime_ns_;
+    DEBUG_ASSERT(total_expected_runtime_ns_.load() >= SchedDuration{0});
 
     if (IsFairThread(thread)) {
       DEBUG_ASSERT(runnable_fair_task_count_ > 0);
