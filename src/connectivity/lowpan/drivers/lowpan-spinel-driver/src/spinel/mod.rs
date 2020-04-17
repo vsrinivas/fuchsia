@@ -5,6 +5,12 @@
 pub mod device_client;
 pub use device_client::*;
 
+pub mod request_tracker;
+pub use request_tracker::*;
+
+pub mod response_handler;
+pub use response_handler::*;
+
 pub mod enums;
 pub use enums::*;
 
