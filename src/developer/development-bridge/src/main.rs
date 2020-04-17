@@ -198,10 +198,18 @@ where
             });
         }
 
-        let _result = self
+        match self
             .daemon_proxy
             .start_component(&url, &mut args.iter().map(|s| s.as_str()), sout, serr, server_end)
-            .await?;
+            .await?
+        {
+            Ok(_) => {}
+            Err(e) => {
+                return Err(anyhow!(
+                    "Error starting component. Ensure there is a target connected with `ffx list`"
+                ));
+            }
+        };
         term_thread.join().unwrap();
 
         Ok(())
