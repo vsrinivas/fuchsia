@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.diagnostics") {
+  sdk_category = "partner"
+  api = "fuchsia.diagnostics.api"
   sources = [
     "format.fidl",
     "reader.fidl",

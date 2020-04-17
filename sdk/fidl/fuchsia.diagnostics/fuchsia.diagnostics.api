@@ -1,0 +1,5 @@
+{
+  "fidl/fuchsia.diagnostics/format.fidl": "323e4615e5304ddd062a70df5971ccfa",
+  "fidl/fuchsia.diagnostics/reader.fidl": "fd00d3b8ec7690d3fddc8ce30378b658",
+  "fidl/fuchsia.diagnostics/selector.fidl": "3dcfcfeac8fca8fc45943218acdf70cb"
+}
