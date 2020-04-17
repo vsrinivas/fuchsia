@@ -295,3 +295,62 @@ async fn test_beacon_error() {
     )
     .await;
 }
+
+/// Verifies observers can participate in messaging.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_messenger_behavior() {
+    // Run tests twice to ensure no one instance leads to a deadlock.
+    for _ in 0..2 {
+        verify_messenger_behavior(MessengerType::Broker).await;
+        verify_messenger_behavior(MessengerType::Addressable(TestAddress::Foo(2))).await;
+    }
+}
+
+async fn verify_messenger_behavior(messenger_type: MessengerType<TestAddress>) {
+    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+
+    // Messenger to receive message.
+    let (target_client, mut target_receptor) =
+        messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
+
+    // Author Messenger.
+    let (test_client, mut test_receptor) = messenger_factory.create(messenger_type).await.unwrap();
+
+    // Send top level message from the Messenger.
+    let mut reply_receptor =
+        test_client.message(ORIGINAL, Audience::Address(TestAddress::Foo(1))).send();
+
+    let captured_signature = Arc::new(Mutex::new(None));
+
+    // Verify target messenger received message and capture Signature.
+    {
+        let captured_signature = captured_signature.clone();
+        verify_payload(
+            ORIGINAL,
+            &mut target_receptor,
+            Some(Box::new(move |client| -> BoxFuture<'_, ()> {
+                let captured_signature = captured_signature.clone();
+                Box::pin(async move {
+                    let captured_signature = captured_signature.clone();
+                    let mut author = captured_signature.lock().await;
+                    *author = Some(client.get_author());
+                    client.reply(REPLY).send().ack();
+                    ()
+                })
+            })),
+        )
+        .await;
+    }
+
+    // Verify messenger received reply on the message receptor.
+    verify_payload(REPLY, &mut reply_receptor, None).await;
+
+    let messenger_signature =
+        captured_signature.lock().await.take().expect("signature should be populated");
+
+    // Send top level message to Messenger.
+    target_client.message(ORIGINAL, Audience::Messenger(messenger_signature)).send().ack();
+
+    // Verify Messenger received message.
+    verify_payload(ORIGINAL, &mut test_receptor, None).await;
+}
