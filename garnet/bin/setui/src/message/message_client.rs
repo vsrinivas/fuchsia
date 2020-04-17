@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::message::action_fuse::{ActionFuse, ActionFuseHandle};
-use crate::message::base::{Address, Message, MessageType, Payload};
+use crate::message::base::{Address, Message, MessageType, Payload, Signature};
 use crate::message::beacon::Beacon;
 use crate::message::message_builder::MessageBuilder;
 use crate::message::messenger::Messenger;
@@ -36,6 +36,13 @@ impl<P: Payload + 'static, A: Address + 'static> MessageClient<P, A> {
                 fuse_messenger_clone.forward(fuse_message_clone.clone(), None);
             })),
         }
+    }
+
+    /// Returns the Signature of the original author of the associated Message.
+    /// This value can be used to communicate with the author at top-level
+    /// communication.
+    pub fn get_author(&self) -> Signature<A> {
+        self.message.get_author()
     }
 
     /// Returns the payload associated with the associated Message.

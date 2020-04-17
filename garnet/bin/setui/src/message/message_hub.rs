@@ -4,8 +4,9 @@
 
 use crate::message::action_fuse::ActionFuse;
 use crate::message::base::{
-    ActionSender, Address, Audience, DeliveryStatus, Message, MessageAction, MessageError,
-    MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType, Payload,
+    ActionSender, Address, Audience, DeliveryStatus, Fingerprint, Message, MessageAction,
+    MessageError, MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType,
+    Payload, Signature,
 };
 use crate::message::beacon::Beacon;
 use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
@@ -44,7 +45,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     /// Returns a new MessageHub for the given types.
     pub fn create() -> MessengerFactory<P, A> {
         let (action_tx, mut action_rx) = futures::channel::mpsc::unbounded::<(
-            MessengerId,
+            Fingerprint<A>,
             MessageAction<P, A>,
             Option<Beacon<P, A>>,
         )>();
@@ -74,8 +75,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
             let hub_clone = hub.clone();
             // Spawn a separate thread to service any request to this instance.
             fasync::spawn(async move {
-                while let Some((id, action, beacon)) = action_rx.next().await {
-                    hub_clone.lock().await.process_request(id, action, beacon).await;
+                while let Some((fingerprint, action, beacon)) = action_rx.next().await {
+                    hub_clone.lock().await.process_request(fingerprint, action, beacon).await;
                 }
             });
         }
@@ -86,6 +87,16 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     // Determines whether the beacon belongs to a broker.
     async fn is_broker(&self, beacon: Beacon<P, A>) -> bool {
         self.brokers.contains(&beacon.get_messenger_id())
+    }
+
+    // Derives the underlying MessengerId from a Signature.
+    fn resolve_messenger_id(&self, signature: &Signature<A>) -> MessengerId {
+        match signature {
+            Signature::Anonymous(id) => *id,
+            Signature::Address(address) => {
+                *self.addresses.get(&address).expect("signature should be valid")
+            }
+        }
     }
 
     /// Internally routes a message to the next appropriate receiver. New messages
@@ -137,17 +148,27 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
             }
         } else if let Some(beacon) = self.beacons.get(&sender_id) {
             let mut target_messengers = vec![];
+            let author_id = self.resolve_messenger_id(&message.get_author());
+
+            // The author cannot participate as a broker.
+            let mut valid_brokers = self.brokers.clone();
+            let broker_to_remove =
+                valid_brokers.iter().enumerate().find(|(_i, elem)| **elem == author_id);
+            if let Some((i, _elem)) = broker_to_remove {
+                valid_brokers.remove(i);
+            }
+
             // If the message is not a reply, determine if the current sender is a broker.
             // In the case of a broker, the message should be forwarded to the next
             // broker.
-            if self.is_broker(beacon.clone()).await {
-                if let Some(index) = self.brokers.iter().position(|&id| id == sender_id) {
-                    if index < self.brokers.len() - 1 {
+            if valid_brokers.contains(&beacon.get_messenger_id()) {
+                if let Some(index) = valid_brokers.iter().position(|&id| id == sender_id) {
+                    if index < valid_brokers.len() - 1 {
                         // Add the next broker
-                        target_messengers.push(self.brokers[index + 1].clone());
+                        target_messengers.push(valid_brokers[index + 1].clone());
                     }
                 }
-            } else if let Some(broker) = self.brokers.first() {
+            } else if let Some(broker) = valid_brokers.first() {
                 target_messengers.push(broker.clone());
             }
 
@@ -163,6 +184,23 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                                 // This error will occur if the sender specifies a non-existent
                                 // address.
                                 message.report_status(DeliveryStatus::Undeliverable).await;
+                            }
+                        }
+                        Audience::Messenger(signature) => {
+                            match signature {
+                                Signature::Address(address) => {
+                                    if let Some(messenger_id) = self.addresses.get(&address) {
+                                        target_messengers.push(messenger_id.clone());
+                                        require_delivery = true;
+                                    } else {
+                                        // This error will occur if the sender specifies a non-existent
+                                        // address.
+                                        message.report_status(DeliveryStatus::Undeliverable).await;
+                                    }
+                                }
+                                Signature::Anonymous(id) => {
+                                    target_messengers.push(id);
+                                }
                             }
                         }
                         Audience::Broadcast => {
@@ -214,7 +252,9 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     async fn process_messenger_request(&mut self, action: MessengerAction<P, A>) {
         match action {
             MessengerAction::Create(messenger_type, responder) => {
+                let mut optional_address = None;
                 if let MessengerType::Addressable(address) = messenger_type.clone() {
+                    optional_address = Some(address.clone());
                     if self.addresses.contains_key(&address) {
                         responder
                             .send(Err(MessageError::AddressConflict { address: address }))
@@ -224,8 +264,17 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 }
 
                 let id = self.next_id;
+                let signature = if let Some(address) = optional_address {
+                    Signature::Address(address)
+                } else {
+                    Signature::Anonymous(id)
+                };
 
-                let messenger = Messenger::new(id, self.action_tx.clone(), messenger_type.clone());
+                let messenger = Messenger::new(
+                    Fingerprint { id: id, signature: signature },
+                    self.action_tx.clone(),
+                    messenger_type.clone(),
+                );
 
                 let messenger_clone = messenger.clone();
                 let messenger_tx_clone = self.messenger_tx.clone();
@@ -274,7 +323,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     // Translates messenger requests into actions upon the MessageHub.
     async fn process_request(
         &self,
-        messenger_id: MessengerId,
+        fingerprint: Fingerprint<A>,
         action: MessageAction<P, A>,
         beacon: Option<Beacon<P, A>>,
     ) {
@@ -282,11 +331,11 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
 
         match action {
             MessageAction::Send(payload, message_type) => {
-                message = Some(Message::new(payload, message_type));
+                message = Some(Message::new(fingerprint.clone(), payload, message_type));
             }
             MessageAction::Forward(mut forwarded_message) => {
                 message = Some(forwarded_message.clone());
-                if let Some(beacon) = self.beacons.get(&messenger_id) {
+                if let Some(beacon) = self.beacons.get(&fingerprint.id) {
                     match forwarded_message.clone().get_message_type() {
                         MessageType::Origin(_) => {
                             // Ignore forward requests from leafs in broadcast.
@@ -297,7 +346,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                         MessageType::Reply(source) => {
                             if let Some(recipient) = source.get_return_path().last() {
                                 // If the reply recipient drops the message, do not forward.
-                                if recipient.get_messenger_id() == messenger_id {
+                                if recipient.get_messenger_id() == fingerprint.id {
                                     return;
                                 }
                             } else {
@@ -321,7 +370,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 outgoing_message.add_participant(handle);
             }
 
-            self.send_to_next(messenger_id, outgoing_message).await;
+            self.send_to_next(fingerprint.id, outgoing_message).await;
         }
     }
 }

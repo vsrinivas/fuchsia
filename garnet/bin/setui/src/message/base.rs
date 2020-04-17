@@ -61,6 +61,25 @@ pub enum Audience<A> {
     Broadcast,
     // The messenger at the specified address.
     Address(A),
+    // The messenger with the specified signature.
+    Messenger(Signature<A>),
+}
+
+/// An identifier that can be used to send messages directly to a Messenger.
+/// Included with Message instances.
+#[derive(Clone, Debug)]
+pub enum Signature<A> {
+    // Messenger at a given address.
+    Address(A),
+
+    // The messenger cannot be directly addressed.
+    Anonymous(MessengerId),
+}
+
+#[derive(Clone, Debug)]
+pub struct Fingerprint<A> {
+    pub id: MessengerId,
+    pub signature: Signature<A>,
 }
 
 /// The messengers that can participate in messaging
@@ -90,6 +109,7 @@ pub enum MessageType<P: Payload + 'static, A: Address + 'static> {
 /// not associated with a particular Messenger instance.
 #[derive(Clone, Debug)]
 pub struct Message<P: Payload + 'static, A: Address + 'static> {
+    author: Fingerprint<A>,
     payload: P,
     message_type: MessageType<P, A>,
     // The return path is generated while the message is passed from messenger
@@ -102,13 +122,26 @@ pub struct Message<P: Payload + 'static, A: Address + 'static> {
 
 impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
     /// Returns a new Message instance. Only the MessageHub can mint new messages.
-    pub(super) fn new(payload: P, message_type: MessageType<P, A>) -> Message<P, A> {
-        Message { payload: payload, message_type: message_type, return_path: vec![] }
+    pub(super) fn new(
+        author: Fingerprint<A>,
+        payload: P,
+        message_type: MessageType<P, A>,
+    ) -> Message<P, A> {
+        Message {
+            author: author,
+            payload: payload,
+            message_type: message_type,
+            return_path: vec![],
+        }
     }
 
     /// Adds an entity to be notified on any replies.
     pub(super) fn add_participant(&mut self, participant: Beacon<P, A>) {
         self.return_path.insert(0, participant);
+    }
+
+    pub fn get_author(&self) -> Signature<A> {
+        self.author.signature.clone()
     }
 
     /// Returns the list of participants for the reply return path.
@@ -137,7 +170,7 @@ impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
 /// Type definition for a sender handed by the MessageHub to messengers to
 /// send actions.
 pub(super) type ActionSender<P, A> =
-    UnboundedSender<(MessengerId, MessageAction<P, A>, Option<Beacon<P, A>>)>;
+    UnboundedSender<(Fingerprint<A>, MessageAction<P, A>, Option<Beacon<P, A>>)>;
 
 /// An internal identifier used by the MessageHub to identify messengers.
 pub(super) type MessengerId = usize;
