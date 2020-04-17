@@ -83,6 +83,7 @@ group("package_deps") {
     "//src/lib/inspect/rust/fuchsia-inspect:benchmarks",
     "//src/tests/benchmarks:kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl/go:go-fidl-benchmarks",
+    "//src/tests/benchmarks/fidl/hlcpp:hlcpp-fidl-benchmarks",
     "//src/tests/benchmarks/fidl/rust:rust-fidl-benchmarks",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",
     "//third_party/iperf",
