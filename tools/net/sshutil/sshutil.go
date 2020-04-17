@@ -85,12 +85,25 @@ func ConnectDeprecated(ctx context.Context, raddr net.Addr, config *ssh.ClientCo
 
 	var client *ssh.Client
 	// TODO: figure out optimal backoff time and number of retries
-	if err := retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, time.Minute), func() error {
+	connectTimeout := time.Minute
+	startTime := time.Now()
+	if err := retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, connectTimeout), func() error {
 		var err error
 		client, err = dialWithTimeout(network, raddr.String(), config, totalDialTimeout)
 		return err
 	}, nil); err != nil {
-		return nil, fmt.Errorf("%w: cannot connect to address %q: %v", ConnectionError, raddr, err)
+		var netErr net.Error
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			// The exact time at which the timeout triggers is nondeterministic;
+			// it'll be somewhere between `connectTimeout` and
+			// `connectTimeout + totalDialTimeout`. So we measure the duration
+			// to improve accuracy.
+			duration := time.Now().Sub(startTime).Truncate(time.Second)
+			err = fmt.Errorf("%w: timed out trying to connect to ssh after %v", ConnectionError, duration)
+		} else {
+			err = fmt.Errorf("%w: cannot connect to address %q: %v", ConnectionError, raddr, err)
+		}
+		return nil, err
 	}
 
 	return client, nil
