@@ -27,7 +27,8 @@ void RandomFill(uint8_t* data, size_t len) {
 }  // namespace
 
 TEST(ChunkedDecompressorTest, Decompress_EmptyArchive) {
-  fbl::Array<uint8_t> buf(new uint8_t[16], 16);
+  srand(zxtest::Runner::GetInstance()->random_seed());
+  fbl::Array<uint8_t> buf(new uint8_t[kChunkArchiveMinHeaderSize], kChunkArchiveMinHeaderSize);
   HeaderWriter writer(buf.get(), buf.size(), 0);
   ASSERT_EQ(writer.Finalize(), kStatusOk);
 
@@ -40,6 +41,7 @@ TEST(ChunkedDecompressorTest, Decompress_EmptyArchive) {
 }
 
 TEST(ChunkedDecompressorTest, Decompress_SingleFrame_Zeroes) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   size_t len = 8192ul;
   fbl::Array<uint8_t> data(new uint8_t[len], len);
   memset(data.get(), 0x00, len);
@@ -60,6 +62,7 @@ TEST(ChunkedDecompressorTest, Decompress_SingleFrame_Zeroes) {
 }
 
 TEST(ChunkedDecompressorTest, Decompress_SingleFrame_Random) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   size_t len = 8192ul;
   fbl::Array<uint8_t> data(new uint8_t[len], len);
   RandomFill(data.get(), len);
@@ -80,6 +83,7 @@ TEST(ChunkedDecompressorTest, Decompress_SingleFrame_Random) {
 }
 
 TEST(ChunkedDecompressorTest, Decompress_MultiFrame_Zeroes) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   // 3 data frames, last one partial
   size_t len = (2 * CompressionParams::MinChunkSize()) + 42ul;
   fbl::Array<uint8_t> data(new uint8_t[len], len);
@@ -101,6 +105,7 @@ TEST(ChunkedDecompressorTest, Decompress_MultiFrame_Zeroes) {
 }
 
 TEST(ChunkedDecompressorTest, Decompress_MultiFrame_Random) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   // 3 data frames, last one partial
   size_t len = (2 * CompressionParams::MinChunkSize()) + 42ul;
   fbl::Array<uint8_t> data(new uint8_t[len], len);
@@ -122,6 +127,7 @@ TEST(ChunkedDecompressorTest, Decompress_MultiFrame_Random) {
 }
 
 TEST(ChunkedDecompressorTest, DecompressFrame_MultiFrame_Zeroes) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   size_t chunk_size = CompressionParams::MinChunkSize();
   // 3 data frames, last one partial
   size_t len = (2 * chunk_size) + 42ul;
@@ -176,6 +182,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_MultiFrame_Zeroes) {
 }
 
 TEST(ChunkedDecompressorTest, DecompressFrame_MultiFrame_Random) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   size_t chunk_size = CompressionParams::MinChunkSize();
   // 3 data frames, last one partial
   size_t len = (2 * chunk_size) + 42ul;
@@ -230,6 +237,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_MultiFrame_Random) {
 }
 
 TEST(ChunkedDecompressorTest, DecompressFrame_BadFrameNumber) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   size_t chunk_size = CompressionParams::MinChunkSize();
   // 3 data frames, last one partial
   size_t len = (2 * chunk_size) + 42ul;
@@ -260,6 +268,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_BadFrameNumber) {
 }
 
 TEST(ChunkedDecompressorTest, DecompressFrame_BadOffset) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   size_t chunk_size = CompressionParams::MinChunkSize();
   // 3 data frames, last one partial
   size_t len = (2 * chunk_size) + 42ul;
@@ -297,6 +306,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_BadOffset) {
 }
 
 TEST(ChunkedDecompressorTest, DecompressFrame_SmallBuffer) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   size_t chunk_size = CompressionParams::MinChunkSize();
   // 3 data frames, last one partial
   size_t len = (2 * chunk_size) + 42ul;
@@ -332,6 +342,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_SmallBuffer) {
 }
 
 TEST(ChunkedDecompressorTest, DecompressFrame_CorruptFirstByteInFrame_Checksum) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   size_t chunk_size = CompressionParams::MinChunkSize();
   // 2 data frames
   size_t len = (2 * chunk_size);
@@ -379,6 +390,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_CorruptFirstByteInFrame_Checksum) 
 }
 
 TEST(ChunkedDecompressorTest, DecompressFrame_CorruptLastByteInFrame_Checksum) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   size_t chunk_size = CompressionParams::MinChunkSize();
   // 2 data frames
   size_t len = (2 * chunk_size);
@@ -426,6 +438,7 @@ TEST(ChunkedDecompressorTest, DecompressFrame_CorruptLastByteInFrame_Checksum) {
 }
 
 TEST(ChunkedDecompressorTest, DecompressFrame_CorruptFirstByteInFrame_NoChecksum) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
   size_t chunk_size = CompressionParams::MinChunkSize();
   // 2 data frames
   size_t len = (2 * chunk_size);
@@ -471,6 +484,40 @@ TEST(ChunkedDecompressorTest, DecompressFrame_CorruptFirstByteInFrame_NoChecksum
   EXPECT_EQ(decompressor.DecompressFrame(table, 1, frame_start, frame_length, out_buf.get(),
                                          out_buf.size(), &bytes_written),
             kStatusOk);
+}
+
+TEST(ChunkedDecompressorTest, Decompress_CorruptHeader) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
+  size_t chunk_size = CompressionParams::MinChunkSize();
+  // 2 data frames
+  size_t len = (2 * chunk_size);
+  fbl::Array<uint8_t> data(new uint8_t[len], len);
+  RandomFill(data.get(), len);
+
+  CompressionParams params;
+  ChunkedCompressor compressor(params);
+
+  size_t compressed_limit = compressor.ComputeOutputSizeLimit(len);
+  fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
+  size_t compressed_len;
+  ASSERT_EQ(compressor.Compress(data.get(), len, compressed_data.get(), compressed_limit,
+                                &compressed_len),
+            kStatusOk);
+  ASSERT_LE(compressed_len, compressed_limit);
+
+  // Invert a random byte in the header.
+  size_t header_len = HeaderWriter::MetadataSizeForNumFrames(2);
+  compressed_data[rand() % header_len] ^= 0xff;
+
+  fbl::Array<uint8_t> out_buf(new uint8_t[chunk_size], chunk_size);
+
+  SeekTable table;
+  HeaderReader reader;
+  // We check for *inequality* with kStatusOk, because some types of corruptions may be
+  // signalled differently. (For example if the number of frames reported by the header was
+  // corrupted, the library can't distinguish between the client passing too small of a header,
+  // or the header being corrupted).
+  EXPECT_NE(reader.Parse(compressed_data.get(), compressed_len, compressed_len, &table), kStatusOk);
 }
 
 }  // namespace chunked_compression

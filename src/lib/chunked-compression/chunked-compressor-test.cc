@@ -72,8 +72,8 @@ TEST(ChunkedCompressorTest, Compress_Zeroes_Short) {
   EXPECT_EQ(entry.decompressed_offset, 0ul);
   EXPECT_EQ(entry.decompressed_size, len);
   // Chunk spans all of the output data, too.
-  // Starts after the header, which is Magic + Reserved + SeekTableCount + SeekTable
-  EXPECT_EQ(entry.compressed_offset, 48ul);
+  // Starts after the header.
+  EXPECT_EQ(entry.compressed_offset, 64ul);
   EXPECT_EQ(entry.compressed_offset + entry.compressed_size, compressed_len);
 }
 
@@ -98,8 +98,8 @@ TEST(ChunkedCompressorTest, Compress_Random_Short) {
   EXPECT_EQ(entry.decompressed_offset, 0ul);
   EXPECT_EQ(entry.decompressed_size, len);
   // Chunk spans all of the output data, too.
-  // Starts after the header, which is Magic + Reserved + SeekTableCount + SeekTable
-  EXPECT_EQ(entry.compressed_offset, 48ul);
+  // Starts after the header.
+  EXPECT_EQ(entry.compressed_offset, 64ul);
   EXPECT_EQ(entry.compressed_offset + entry.compressed_size, compressed_len);
 }
 
@@ -191,8 +191,8 @@ TEST(ChunkedCompressorTest, Compress_ReuseCompressor) {
     EXPECT_EQ(entry.decompressed_offset, 0ul);
     EXPECT_EQ(entry.decompressed_size, len);
     // Chunk spans all of the output data, too.
-    // Starts after the header, which is Magic + Reserved + SeekTableCount + SeekTable
-    EXPECT_EQ(entry.compressed_offset, 48ul);
+    // Starts after the header.
+    EXPECT_EQ(entry.compressed_offset, 64ul);
     EXPECT_EQ(entry.compressed_offset + entry.compressed_size, compressed_len);
   }
   {
@@ -218,8 +218,8 @@ TEST(ChunkedCompressorTest, Compress_ReuseCompressor) {
     // Chunk spans all of the input data
     EXPECT_EQ(entry.decompressed_offset, 0ul);
     EXPECT_EQ(entry.decompressed_size, len);
-    // Starts after the header, which is Magic + Reserved + SeekTableCount + SeekTable
-    EXPECT_EQ(entry.compressed_offset, 48ul);
+    // Starts after the header.
+    EXPECT_EQ(entry.compressed_offset, 64ul);
     EXPECT_EQ(entry.compressed_offset + entry.compressed_size, compressed_len);
   }
 }

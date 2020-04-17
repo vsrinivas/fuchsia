@@ -15,7 +15,8 @@
 namespace chunked_compression {
 
 TEST(HeaderWriter, ZeroState) {
-  fbl::Array<uint8_t> buf(new uint8_t[16], 16);
+  size_t sz = kChunkArchiveMinHeaderSize;
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   HeaderWriter writer(buf.get(), buf.size(), 0);
 
   ASSERT_EQ(writer.Finalize(), kStatusOk);
@@ -25,47 +26,48 @@ TEST(HeaderWriter, ZeroState) {
   ASSERT_EQ(reader.Parse(buf.get(), buf.size(), buf.size(), &header), kStatusOk);
   EXPECT_EQ(header.DecompressedSize(), 0ul);
   EXPECT_EQ(header.Entries().size(), 0ul);
-  // Headers occupies a minimum of 16 bytes.
-  EXPECT_EQ(header.CompressedSize(), 16ul);
-  EXPECT_EQ(header.SerializedHeaderSize(), 16ul);
+  EXPECT_EQ(header.CompressedSize(), sz);
+  EXPECT_EQ(header.SerializedHeaderSize(), sz);
 }
 
 TEST(HeaderWriter, OneEntry) {
-  fbl::Array<uint8_t> buf(new uint8_t[48], 48);
+  size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   HeaderWriter writer(buf.get(), buf.size(), 1);
 
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 256ul,
-                .compressed_offset = 48ul,
-                .compressed_size = 112ul,
+                .compressed_offset = sz,
+                .compressed_size = 100,
             }),
             kStatusOk);
   ASSERT_EQ(writer.Finalize(), kStatusOk);
 
   SeekTable header;
   HeaderReader reader;
-  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 160ul, &header), kStatusOk);
-  EXPECT_EQ(header.CompressedSize(), 160ul);
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), sz + 100, &header), kStatusOk);
+  EXPECT_EQ(header.CompressedSize(), sz + 100);
   EXPECT_EQ(header.DecompressedSize(), 256ul);
-  EXPECT_EQ(header.SerializedHeaderSize(), 48ul);
+  EXPECT_EQ(header.SerializedHeaderSize(), sz);
   ASSERT_EQ(header.Entries().size(), 1ul);
 
   const SeekTableEntry& entry = header.Entries()[0];
   ASSERT_EQ(entry.decompressed_offset, 0ul);
   ASSERT_EQ(entry.decompressed_size, 256ul);
-  ASSERT_EQ(entry.compressed_offset, 48ul);
-  ASSERT_EQ(entry.compressed_size, 112ul);
+  ASSERT_EQ(entry.compressed_offset, sz);
+  ASSERT_EQ(entry.compressed_size, 100ul);
 }
 
 TEST(HeaderWriter, TwoEntries) {
-  fbl::Array<uint8_t> buf(new uint8_t[80], 80);
+  size_t sz = kChunkArchiveMinHeaderSize + 2 * sizeof(SeekTableEntry);
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   HeaderWriter writer(buf.get(), buf.size(), 2);
 
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 256ul,
-                .compressed_offset = 80ul,
+                .compressed_offset = sz,
                 .compressed_size = 120ul,
             }),
             kStatusOk);
@@ -86,13 +88,13 @@ TEST(HeaderWriter, TwoEntries) {
   // Compressed size should be the end of the last frame.
   EXPECT_EQ(header.CompressedSize(), 2040ul);
   EXPECT_EQ(header.DecompressedSize(), 356ul);
-  EXPECT_EQ(header.SerializedHeaderSize(), 80ul);
+  EXPECT_EQ(header.SerializedHeaderSize(), sz);
   ASSERT_EQ(header.Entries().size(), 2ul);
 
   const SeekTableEntry& entry1 = header.Entries()[0];
   ASSERT_EQ(entry1.decompressed_offset, 0ul);
   ASSERT_EQ(entry1.decompressed_size, 256ul);
-  ASSERT_EQ(entry1.compressed_offset, 80ul);
+  ASSERT_EQ(entry1.compressed_offset, sz);
   ASSERT_EQ(entry1.compressed_size, 120ul);
   const SeekTableEntry& entry2 = header.Entries()[1];
   ASSERT_EQ(entry2.decompressed_offset, 256ul);
@@ -102,20 +104,22 @@ TEST(HeaderWriter, TwoEntries) {
 }
 
 TEST(HeaderWriter, FinalizeCalledEarly) {
-  fbl::Array<uint8_t> buf(new uint8_t[48], 48);
+  size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   HeaderWriter writer(buf.get(), buf.size(), 1);
 
   ASSERT_EQ(writer.Finalize(), kStatusErrBadState);
 }
 
 TEST(HeaderWriter, TooManyEntriesWritten) {
-  fbl::Array<uint8_t> buf(new uint8_t[48], 48);
+  size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   HeaderWriter writer(buf.get(), buf.size(), 1);
 
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 256ul,
-                .compressed_offset = 48ul,
+                .compressed_offset = sz,
                 .compressed_size = 112ul,
             }),
             kStatusOk);
@@ -131,36 +135,39 @@ TEST(HeaderWriter, TooManyEntriesWritten) {
 // Write_Invalid_I* tests verify the invariants documented in the header during writing.
 
 TEST(HeaderWriter, Write_Invalid_I0_DecompressedDataStartsAbove0) {
-  fbl::Array<uint8_t> buf(new uint8_t[48], 48);
+  size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   HeaderWriter writer(buf.get(), buf.size(), 1);
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 1ul,
                 .decompressed_size = 255ul,
-                .compressed_offset = 48ul,
+                .compressed_offset = sz,
                 .compressed_size = 112ul,
             }),
             kStatusErrInvalidArgs);
 }
 
 TEST(HeaderWriter, Write_Invalid_I1_CompressedDataOverlapsHeader) {
-  fbl::Array<uint8_t> buf(new uint8_t[48], 48);
+  size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   HeaderWriter writer(buf.get(), buf.size(), 1);
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 256ul,
-                .compressed_offset = 47ul,
+                .compressed_offset = sz - 1ul,
                 .compressed_size = 112ul,
             }),
             kStatusErrInvalidArgs);
 }
 
 TEST(HeaderWriter, Write_Invalid_I2_NonContigDecompressedFrames) {
-  fbl::Array<uint8_t> buf(new uint8_t[80], 80);
+  size_t sz = kChunkArchiveMinHeaderSize + 2 * sizeof(SeekTableEntry);
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   HeaderWriter writer(buf.get(), buf.size(), 2);
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 256ul,
-                .compressed_offset = 80ul,
+                .compressed_offset = sz,
                 .compressed_size = 2ul,
             }),
             kStatusOk);
@@ -168,40 +175,42 @@ TEST(HeaderWriter, Write_Invalid_I2_NonContigDecompressedFrames) {
                 // Gap between frames
                 .decompressed_offset = 257ul,
                 .decompressed_size = 99ul,
-                .compressed_offset = 82ul,
+                .compressed_offset = sz + 2ul,
                 .compressed_size = 10ul,
             }),
             kStatusErrInvalidArgs);
 }
 
 TEST(HeaderWriter, Write_Invalid_I3_NonMonotonicCompressedFrames) {
-  fbl::Array<uint8_t> buf(new uint8_t[80], 80);
+  size_t sz = kChunkArchiveMinHeaderSize + 2 * sizeof(SeekTableEntry);
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   HeaderWriter writer(buf.get(), buf.size(), 2);
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 256ul,
-                .compressed_offset = 80ul,
-                .compressed_size = 20ul,
+                .compressed_offset = sz,
+                .compressed_size = 100ul,
             }),
             kStatusOk);
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 256ul,
                 .decompressed_size = 100ul,
-                .compressed_offset = 99ul,
+                .compressed_offset = sz + 99ul,
                 .compressed_size = 2ul,
             }),
             kStatusErrInvalidArgs);
 }
 
 TEST(HeaderWriter, Write_Invalid_I4_ZeroLengthFrames) {
-  fbl::Array<uint8_t> buf(new uint8_t[80], 80);
-  HeaderWriter writer(buf.get(), buf.size(), 2);
+  size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
+  HeaderWriter writer(buf.get(), buf.size(), 1);
 
   // Decompressed frame
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 0ul,
-                .compressed_offset = 48ul,
+                .compressed_offset = sz,
                 .compressed_size = 52ul,
             }),
             kStatusErrInvalidArgs);
@@ -210,7 +219,7 @@ TEST(HeaderWriter, Write_Invalid_I4_ZeroLengthFrames) {
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 256ul,
-                .compressed_offset = 48ul,
+                .compressed_offset = sz,
                 .compressed_size = 0ul,
             }),
             kStatusErrInvalidArgs);

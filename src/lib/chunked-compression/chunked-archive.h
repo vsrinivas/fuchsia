@@ -22,22 +22,30 @@
 // The header describes the format of the archive and contains the Seek Table which maps the
 // compressed frames to decompressed space.
 //
+// This header describes *Version 2* of the format. All other versions are unsupported.
+//
 //       0     1     2     3     4     5     6     7
 //    +-----+-----+-----+-----+-----+-----+-----+-----+
 //  0 |                 Magic Number                  |
 //    +-----+-----+-----+-----+-----+-----+-----+-----+
 //  8 |  Version  |  Reserved |       Num Frames      |  // Reserved bytes must be zero.
 //    +-----+-----+-----+-----+-----+-----+-----+-----+
-// 16 |                                               |
-// 24 |                   Seek Table                  |
-// 32 |                     Entry                     |
-// 48 |                                               |
+// 16 |    Header CRC32       |        Reserved       |  // Reserved bytes must be zero.
+//    +-----+-----+-----+-----+-----+-----+-----+-----+
+// 24 |                    Reserved                   |  // Reserved bytes must be zero.
+//    +-----+-----+-----+-----+-----+-----+-----+-----+
+// 32 |                                               |
+// 40 |                   Seek Table                  |
+// 48 |                     Entry                     |
+// 56 |                                               |
 //    +-----+-----+-----+-----+-----+-----+-----+-----+
 // .. |                                               |
 // .. |                   Seek Table                  |
 // .. |                     Entry                     |
 // .. |                                               |
 //    +-----+-----+-----+-----+-----+-----+-----+-----+
+//
+// The Header CRC32 is computed based on the entire header including each Seek Table Entry.
 //
 // ### Seek Table
 //
@@ -79,32 +87,47 @@
 
 namespace chunked_compression {
 
-using ArchiveMagicType = uint64_t;
 using ArchiveVersionType = uint16_t;
 using ChunkCountType = uint32_t;
 
-constexpr ArchiveMagicType kChunkedCompressionArchiveMagic = 0x60427041'62407140;
-constexpr ArchiveVersionType kVersion = 1u;
+// The magic number is an arbitrary unique value used to identify files as being of this format.  It
+// can be derived as follows:
+//
+//   sha256sum <<< "Fuchsia is a vivid purplish red color" | head -c16
+//
+constexpr size_t kArchiveMagicLength = sizeof(uint64_t);
+constexpr uint8_t kChunkArchiveMagic[kArchiveMagicLength] = {
+    0x46, 0x9b, 0x78, 0xef, 0x0f, 0xd0, 0xb2, 0x03,
+};
+constexpr ArchiveVersionType kVersion = 2u;
 
 constexpr ChunkCountType kChunkArchiveMaxFrames = UINT32_MAX;
 
 constexpr size_t kChunkArchiveMagicOffset = 0ul;
 constexpr size_t kChunkArchiveVersionOffset = 8ul;
-constexpr size_t kChunkArchiveReservedOffset = 10ul;
+constexpr size_t kChunkArchiveReserved1Offset = 10ul;
 constexpr size_t kChunkArchiveNumChunksOffset = 12ul;
-constexpr size_t kChunkArchiveSeekTableOffset = 16ul;
+constexpr size_t kChunkArchiveHeaderCrc32Offset = 16ul;
+constexpr size_t kChunkArchiveReserved2Offset = 20ul;
+constexpr size_t kChunkArchiveSeekTableOffset = 32ul;
 
 constexpr size_t kChunkArchiveMinHeaderSize = kChunkArchiveSeekTableOffset;
 
 static_assert(kChunkArchiveMagicOffset == 0ul, "Breaking change to archive format");
-static_assert(kChunkArchiveVersionOffset == kChunkArchiveMagicOffset + sizeof(ArchiveMagicType),
+static_assert(kChunkArchiveVersionOffset == kChunkArchiveMagicOffset + kArchiveMagicLength,
               "Breaking change to archive format");
-static_assert(kChunkArchiveReservedOffset ==
+static_assert(kChunkArchiveReserved1Offset ==
                   kChunkArchiveVersionOffset + sizeof(ArchiveVersionType),
               "Breaking change to archive format");
-static_assert(kChunkArchiveNumChunksOffset == kChunkArchiveReservedOffset + sizeof(uint16_t),
+static_assert(kChunkArchiveNumChunksOffset == kChunkArchiveReserved1Offset + sizeof(uint16_t),
               "Breaking change to archive format");
-static_assert(kChunkArchiveSeekTableOffset == kChunkArchiveNumChunksOffset + sizeof(ChunkCountType),
+static_assert(kChunkArchiveHeaderCrc32Offset ==
+                  kChunkArchiveNumChunksOffset + sizeof(ChunkCountType),
+              "Breaking change to archive format");
+static_assert(kChunkArchiveReserved2Offset == kChunkArchiveHeaderCrc32Offset + sizeof(uint32_t),
+              "Breaking change to archive format");
+static_assert(kChunkArchiveSeekTableOffset ==
+                  kChunkArchiveReserved2Offset + sizeof(uint32_t) + sizeof(uint64_t),
               "Breaking change to archive format");
 
 // A single entry into the seek table. Describes where an extent of decompressed
@@ -177,6 +200,7 @@ class HeaderReader {
  private:
   static Status CheckMagic(const uint8_t* data, size_t len);
   static Status CheckVersion(const uint8_t* data, size_t len);
+  static Status CheckChecksum(const uint8_t* data, size_t len);
   static Status GetNumChunks(const uint8_t* data, size_t len, ChunkCountType* num_chunks_out);
   static Status ParseSeekTable(const uint8_t* data, size_t len, size_t file_length,
                                fbl::Array<SeekTableEntry>* entries_out);
@@ -186,6 +210,9 @@ class HeaderReader {
   // (Ideally this would be a std::optional<const T&>, but optional references are not legal.)
   static Status CheckSeekTableEntry(const SeekTableEntry& entry, const SeekTableEntry* prev,
                                     size_t header_end, size_t file_length);
+
+  // Computes the CRC32 checksum for |header|.
+  static uint32_t ComputeChecksum(const uint8_t* header, size_t header_length);
 };
 
 // HeaderWriter writes chunked archive headers to a target buffer.
@@ -225,6 +252,7 @@ class HeaderWriter {
 
  private:
   uint8_t* const dst_;
+  size_t dst_length_;
   SeekTableEntry* entries_;
   unsigned current_frame_ = 0;
   ChunkCountType num_frames_;

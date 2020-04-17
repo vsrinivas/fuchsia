@@ -18,19 +18,17 @@ TEST(HeaderReader, ZeroState) {
   SeekTable header;
   EXPECT_EQ(header.DecompressedSize(), 0ul);
   EXPECT_EQ(header.Entries().size(), 0ul);
-  // Headers occupies a minimum of 16 bytes.
-  EXPECT_EQ(header.CompressedSize(), 16ul);
-  EXPECT_EQ(header.SerializedHeaderSize(), 16ul);
+  EXPECT_EQ(header.CompressedSize(), kChunkArchiveMinHeaderSize);
+  EXPECT_EQ(header.SerializedHeaderSize(), kChunkArchiveMinHeaderSize);
 }
 
 TEST(HeaderReader, Parse_BadArgs) {
   HeaderReader reader;
   SeekTable header;
   ASSERT_EQ(reader.Parse(nullptr, 0ul, 0ul, &header), kStatusErrInvalidArgs);
-  uint8_t buf[15];
-  ASSERT_EQ(reader.Parse(buf, sizeof(buf), sizeof(buf), &header), kStatusErrBufferTooSmall);
-  uint8_t buf2[16];
-  ASSERT_EQ(reader.Parse(buf2, sizeof(buf2), sizeof(buf2), nullptr), kStatusErrInvalidArgs);
+  uint8_t buf[kChunkArchiveMinHeaderSize];
+  ASSERT_EQ(reader.Parse(buf, sizeof(buf) - 1, sizeof(buf) - 1, &header), kStatusErrBufferTooSmall);
+  ASSERT_EQ(reader.Parse(buf, sizeof(buf), sizeof(buf), nullptr), kStatusErrInvalidArgs);
 }
 
 TEST(HeaderReader, Parse_Empty) {
@@ -42,9 +40,8 @@ TEST(HeaderReader, Parse_Empty) {
 
   EXPECT_EQ(header.DecompressedSize(), 0ul);
   EXPECT_EQ(header.Entries().size(), 0ul);
-  // Headers occupies a minimum of 16 bytes.
-  EXPECT_EQ(header.CompressedSize(), 16ul);
-  EXPECT_EQ(header.SerializedHeaderSize(), 16ul);
+  EXPECT_EQ(header.CompressedSize(), kChunkArchiveMinHeaderSize);
+  EXPECT_EQ(header.SerializedHeaderSize(), kChunkArchiveMinHeaderSize);
 }
 
 TEST(HeaderReader, Parse_OneEntry) {
@@ -52,23 +49,23 @@ TEST(HeaderReader, Parse_OneEntry) {
   fbl::Array<uint8_t> buf = CreateHeader({{
       .decompressed_offset = 0ul,
       .decompressed_size = 256ul,
-      .compressed_offset = 48ul,
-      .compressed_size = 112ul,
+      .compressed_offset = 100ul,
+      .compressed_size = 100ul,
   }});
 
   SeekTable header;
-  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 160ul, &header), kStatusOk);
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 200ul, &header), kStatusOk);
 
-  EXPECT_EQ(header.CompressedSize(), 160ul);
+  EXPECT_EQ(header.CompressedSize(), 200ul);
   EXPECT_EQ(header.DecompressedSize(), 256ul);
-  EXPECT_EQ(header.SerializedHeaderSize(), 48ul);
+  EXPECT_EQ(header.SerializedHeaderSize(), buf.size());
   ASSERT_EQ(header.Entries().size(), 1ul);
 
   const SeekTableEntry& entry = header.Entries()[0];
   ASSERT_EQ(entry.decompressed_offset, 0ul);
   ASSERT_EQ(entry.decompressed_size, 256ul);
-  ASSERT_EQ(entry.compressed_offset, 48ul);
-  ASSERT_EQ(entry.compressed_size, 112ul);
+  ASSERT_EQ(entry.compressed_offset, 100ul);
+  ASSERT_EQ(entry.compressed_size, 100ul);
 }
 
 TEST(HeaderReader, Parse_TwoEntries) {
@@ -77,8 +74,8 @@ TEST(HeaderReader, Parse_TwoEntries) {
       CreateHeader({{
                         .decompressed_offset = 0ul,
                         .decompressed_size = 256ul,
-                        .compressed_offset = 80ul,
-                        .compressed_size = 120ul,
+                        .compressed_offset = 200ul,
+                        .compressed_size = 10ul,
                     },
                     {
                         .decompressed_offset = 256ul,
@@ -94,14 +91,14 @@ TEST(HeaderReader, Parse_TwoEntries) {
   // Compressed size should be the end of the last frame.
   EXPECT_EQ(header.CompressedSize(), 2040ul);
   EXPECT_EQ(header.DecompressedSize(), 356ul);
-  EXPECT_EQ(header.SerializedHeaderSize(), 80ul);
+  EXPECT_EQ(header.SerializedHeaderSize(), buf.size());
   ASSERT_EQ(header.Entries().size(), 2ul);
 
   const SeekTableEntry& entry1 = header.Entries()[0];
   ASSERT_EQ(entry1.decompressed_offset, 0ul);
   ASSERT_EQ(entry1.decompressed_size, 256ul);
-  ASSERT_EQ(entry1.compressed_offset, 80ul);
-  ASSERT_EQ(entry1.compressed_size, 120ul);
+  ASSERT_EQ(entry1.compressed_offset, 200ul);
+  ASSERT_EQ(entry1.compressed_size, 10ul);
   const SeekTableEntry& entry2 = header.Entries()[1];
   ASSERT_EQ(entry2.decompressed_offset, 256ul);
   ASSERT_EQ(entry2.decompressed_size, 100ul);
@@ -122,10 +119,27 @@ TEST(HeaderReader, Parse_BadMagic) {
 TEST(HeaderReader, Parse_BadVersion) {
   HeaderReader reader;
   fbl::Array<uint8_t> buf = CreateHeader();
-  reinterpret_cast<ArchiveVersionType*>(buf.get() + kChunkArchiveVersionOffset)[0] = 2u;
+  reinterpret_cast<ArchiveVersionType*>(buf.get() + kChunkArchiveVersionOffset)[0] = 3u;
 
   SeekTable header;
   ASSERT_EQ(reader.Parse(buf.get(), buf.size(), buf.size(), &header), kStatusErrInvalidArgs);
+}
+
+TEST(HeaderReader, Parse_CorruptSeekTableEntry) {
+  HeaderReader reader;
+  fbl::Array<uint8_t> buf = CreateHeader({{
+      .decompressed_offset = 0ul,
+      .decompressed_size = 256ul,
+      .compressed_offset = 200ul,
+      .compressed_size = 10ul,
+  }});
+  SeekTableEntry* table =
+      reinterpret_cast<SeekTableEntry*>(buf.get() + kChunkArchiveSeekTableOffset);
+  table[0].decompressed_size += 1;
+
+  // The checksum should prevent this from parsing.
+  SeekTable header;
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), buf.size(), &header), kStatusErrIoDataIntegrity);
 }
 
 // Parse_Invalid_I* tests verify the invariants documented in the header during parsing.
@@ -135,12 +149,12 @@ TEST(HeaderReader, Parse_Invalid_I0_DecompressedDataStartsAbove0) {
   fbl::Array<uint8_t> buf = CreateHeader({{
       .decompressed_offset = 1ul,
       .decompressed_size = 255ul,
-      .compressed_offset = 48ul,
-      .compressed_size = 112ul,
+      .compressed_offset = 100ul,
+      .compressed_size = 100ul,
   }});
 
   SeekTable header;
-  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 160ul, &header), kStatusErrIoDataIntegrity);
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 200ul, &header), kStatusErrIoDataIntegrity);
 }
 
 TEST(HeaderReader, Parse_Invalid_I1_CompressedDataOverlapsHeader) {
@@ -148,9 +162,8 @@ TEST(HeaderReader, Parse_Invalid_I1_CompressedDataOverlapsHeader) {
   fbl::Array<uint8_t> buf = CreateHeader({{
       .decompressed_offset = 0ul,
       .decompressed_size = 256ul,
-      // Header ends at byte 48
       .compressed_offset = 47ul,
-      .compressed_size = 112ul,
+      .compressed_size = 113ul,
   }});
 
   SeekTable header;
@@ -162,35 +175,35 @@ TEST(HeaderReader, Parse_Invalid_I2_NonContigDecompressedFrames) {
   fbl::Array<uint8_t> buf = CreateHeader({{
                                               .decompressed_offset = 0ul,
                                               .decompressed_size = 256ul,
-                                              .compressed_offset = 80ul,
+                                              .compressed_offset = 100ul,
                                               .compressed_size = 2ul,
                                           },
                                           {
                                               // Gap between frames
                                               .decompressed_offset = 257ul,
                                               .decompressed_size = 99ul,
-                                              .compressed_offset = 82ul,
+                                              .compressed_offset = 102ul,
                                               .compressed_size = 18ul,
                                           }});
 
   SeekTable header;
-  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 100ul, &header), kStatusErrIoDataIntegrity);
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 120ul, &header), kStatusErrIoDataIntegrity);
 
   buf = CreateHeader({{
                           .decompressed_offset = 0ul,
                           .decompressed_size = 256ul,
-                          .compressed_offset = 80ul,
+                          .compressed_offset = 100ul,
                           .compressed_size = 2ul,
                       },
                       {
                           // Overlap between frames
                           .decompressed_offset = 255ul,
                           .decompressed_size = 101ul,
-                          .compressed_offset = 82ul,
-                          .compressed_size = 100ul,
+                          .compressed_offset = 102ul,
+                          .compressed_size = 18ul,
                       }});
 
-  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 100ul, &header), kStatusErrIoDataIntegrity);
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 120ul, &header), kStatusErrIoDataIntegrity);
 }
 
 TEST(HeaderReader, Parse_Invalid_I3_OverlappingCompressedFrames) {
@@ -198,19 +211,19 @@ TEST(HeaderReader, Parse_Invalid_I3_OverlappingCompressedFrames) {
   fbl::Array<uint8_t> buf = CreateHeader({{
                                               .decompressed_offset = 0ul,
                                               .decompressed_size = 256ul,
-                                              .compressed_offset = 80ul,
+                                              .compressed_offset = 100ul,
                                               .compressed_size = 20ul,
                                           },
                                           {
                                               .decompressed_offset = 256ul,
                                               .decompressed_size = 100ul,
                                               // Overlap between frames
-                                              .compressed_offset = 99ul,
+                                              .compressed_offset = 119ul,
                                               .compressed_size = 2ul,
                                           }});
 
   SeekTable header;
-  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 101ul, &header), kStatusErrIoDataIntegrity);
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 121ul, &header), kStatusErrIoDataIntegrity);
 }
 
 TEST(HeaderReader, Parse_Invalid_I4_ZeroLengthFrames) {
@@ -219,22 +232,22 @@ TEST(HeaderReader, Parse_Invalid_I4_ZeroLengthFrames) {
       .decompressed_offset = 0ul,
       // Zero-length decompressed frame
       .decompressed_size = 0ul,
-      .compressed_offset = 48ul,
-      .compressed_size = 52ul,
+      .compressed_offset = 100ul,
+      .compressed_size = 40ul,
   }});
 
   SeekTable header;
-  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 100ul, &header), kStatusErrIoDataIntegrity);
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 140ul, &header), kStatusErrIoDataIntegrity);
 
   buf = CreateHeader({{
       .decompressed_offset = 0ul,
       .decompressed_size = 100ul,
-      .compressed_offset = 48ul,
+      .compressed_offset = 100ul,
       // Zero-length compressed frame
       .compressed_size = 0ul,
   }});
 
-  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 48ul, &header), kStatusErrIoDataIntegrity);
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 100ul, &header), kStatusErrIoDataIntegrity);
 }
 
 TEST(HeaderReader, Parse_Invalid_I5_CompressedFrameExceedsFile) {
@@ -242,13 +255,13 @@ TEST(HeaderReader, Parse_Invalid_I5_CompressedFrameExceedsFile) {
   fbl::Array<uint8_t> buf = CreateHeader({{
       .decompressed_offset = 0ul,
       .decompressed_size = 256ul,
-      .compressed_offset = 48ul,
-      .compressed_size = 52ul,
+      .compressed_offset = 100ul,
+      .compressed_size = 60ul,
   }});
 
   SeekTable header;
-  // File claims to be 50 bytes long, but the compressed frame goes from [48, 100)
-  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 90ul, &header), kStatusErrIoDataIntegrity);
+  // File claims to be 120 bytes long, but the compressed frame goes from [100, 160))
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 120ul, &header), kStatusErrIoDataIntegrity);
 }
 
 }  // namespace chunked_compression

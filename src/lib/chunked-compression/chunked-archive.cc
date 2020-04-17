@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/cksum.h>
+#include <string.h>
 #include <zircon/compiler.h>
 
 #include <fbl/array.h>
@@ -69,23 +71,41 @@ std::optional<unsigned> SeekTable::EntryForDecompressedOffset(size_t offset) con
 
 // HeaderReader
 
-Status HeaderReader::Parse(const void* data, size_t len, size_t file_length, SeekTable* out) {
-  if (!data || !out) {
+Status HeaderReader::Parse(const void* void_data, size_t len, size_t file_length, SeekTable* out) {
+  if (!void_data || !out) {
     return kStatusErrInvalidArgs;
   } else if (len < kChunkArchiveMinHeaderSize) {
     return kStatusErrBufferTooSmall;
   } else if (file_length < len) {
     return kStatusErrInvalidArgs;
   }
+  const uint8_t* data = static_cast<const uint8_t *>(void_data);
   Status status;
-  if ((status = CheckMagic(static_cast<const uint8_t*>(data), len)) != kStatusOk) {
+  if ((status = CheckMagic(data, len)) != kStatusOk) {
     return status;
-  } else if ((status = CheckVersion(static_cast<const uint8_t*>(data), len)) != kStatusOk) {
+  } else if ((status = CheckVersion(data, len)) != kStatusOk) {
+    return status;
+  }
+  ChunkCountType num_chunks;
+  if ((status = GetNumChunks(data, len, &num_chunks)) != kStatusOk) {
+    return status;
+  }
+  size_t expected_header_length =
+      kChunkArchiveSeekTableOffset + (num_chunks * sizeof(SeekTableEntry));
+  if (expected_header_length > len) {
+    // Note that we can't distinguish between two cases:
+    // - The client passed a truncated buffer.
+    // - The num_chunks field was corrupted.
+    // The second case will be caught by the checksum, so assume that the former case applies here.
+    return kStatusErrBufferTooSmall;
+  }
+  // IMPORTANT: New fields should be parsed after the checksum is verified.
+  // (The magic and num_chunks fields are necessary to parse first, so they are exceptions.)
+  if ((status = CheckChecksum(data, expected_header_length)) != kStatusOk) {
     return status;
   }
   fbl::Array<SeekTableEntry> table;
-  if ((status = ParseSeekTable(static_cast<const uint8_t*>(data), len, file_length, &table)) !=
-      kStatusOk) {
+  if ((status = ParseSeekTable(data, len, file_length, &table)) != kStatusOk) {
     return status;
   }
 
@@ -95,19 +115,21 @@ Status HeaderReader::Parse(const void* data, size_t len, size_t file_length, See
 }
 
 Status HeaderReader::CheckMagic(const uint8_t* data, size_t len) {
-  if (len < sizeof(ArchiveMagicType)) {
-    return kStatusErrIoDataIntegrity;
+  if (len < kArchiveMagicLength) {
+    return kStatusErrBufferTooSmall;
   }
   // In practice the magic is always at the start of the header, but for consistency with other
   // accesses we offset |data| by |kChunkArchiveMagicOffset|.
-  const ArchiveMagicType& magic =
-      reinterpret_cast<const ArchiveMagicType*>(data + kChunkArchiveMagicOffset)[0];
-  return magic == kChunkedCompressionArchiveMagic ? kStatusOk : kStatusErrIoDataIntegrity;
+  if (memcmp(data + kChunkArchiveMagicOffset, kChunkArchiveMagic, kArchiveMagicLength)) {
+    FXL_LOG(ERROR) << "File magic doesn't match.";
+    return kStatusErrIoDataIntegrity;
+  }
+  return kStatusOk;
 }
 
 Status HeaderReader::CheckVersion(const uint8_t* data, size_t len) {
-  if (len < sizeof(ArchiveVersionType)) {
-    return kStatusErrIoDataIntegrity;
+  if (len < kChunkArchiveVersionOffset + sizeof(ArchiveVersionType)) {
+    return kStatusErrBufferTooSmall;
   }
   const ArchiveVersionType& version =
       reinterpret_cast<const ArchiveVersionType*>(data + kChunkArchiveVersionOffset)[0];
@@ -118,9 +140,22 @@ Status HeaderReader::CheckVersion(const uint8_t* data, size_t len) {
   return kStatusOk;
 }
 
+Status HeaderReader::CheckChecksum(const uint8_t* data, size_t len) {
+  if (len < kChunkArchiveHeaderCrc32Offset + sizeof(uint32_t)) {
+    return kStatusErrBufferTooSmall;
+  }
+  uint32_t crc = reinterpret_cast<const uint32_t*>(data + kChunkArchiveHeaderCrc32Offset)[0];
+  uint32_t expected_crc = ComputeChecksum(data, len);
+  if (crc != expected_crc) {
+    FXL_LOG(ERROR) << "Bad archive checksum";
+    return kStatusErrIoDataIntegrity;
+  }
+  return kStatusOk;
+}
+
 Status HeaderReader::GetNumChunks(const uint8_t* data, size_t len, ChunkCountType* num_chunks_out) {
   if (len < kChunkArchiveNumChunksOffset + sizeof(ChunkCountType)) {
-    return kStatusErrIoDataIntegrity;
+    return kStatusErrBufferTooSmall;
   }
   *num_chunks_out = reinterpret_cast<const ChunkCountType*>(data + kChunkArchiveNumChunksOffset)[0];
   return kStatusOk;
@@ -211,14 +246,30 @@ Status HeaderReader::CheckSeekTableEntry(const SeekTableEntry& entry, const Seek
   return kStatusOk;
 }
 
+uint32_t HeaderReader::ComputeChecksum(const uint8_t* header, size_t header_length) {
+  constexpr size_t kOffsetAfterChecksum = kChunkArchiveHeaderCrc32Offset + sizeof(uint32_t);
+  ZX_DEBUG_ASSERT(kOffsetAfterChecksum < header_length);
+
+  // Independently compute a checksum for the bytes before and after the CRC32 slot, using the first
+  // as a seed for the second to combine them.
+  constexpr uint32_t seed = 0u;
+  uint32_t first_crc = crc32(seed, header, kChunkArchiveHeaderCrc32Offset);
+  uint32_t crc =
+      crc32(first_crc, header + kOffsetAfterChecksum, header_length - kOffsetAfterChecksum);
+  return crc;
+}
+
 // HeaderWriter
 
 HeaderWriter::HeaderWriter(void* dst, size_t dst_len, size_t num_frames)
     : dst_(static_cast<uint8_t*>(dst)) {
   ZX_ASSERT(num_frames < kChunkArchiveMaxFrames);
-  ZX_ASSERT(dst_len >= kChunkArchiveSeekTableOffset + (num_frames * sizeof(SeekTableEntry)));
   num_frames_ = static_cast<ChunkCountType>(num_frames);
   entries_ = reinterpret_cast<SeekTableEntry*>(dst_ + kChunkArchiveSeekTableOffset);
+
+  dst_length_ = MetadataSizeForNumFrames(num_frames);
+  ZX_DEBUG_ASSERT(dst_len >= dst_length_);
+  bzero(dst_, dst_length_);
 }
 
 Status HeaderWriter::AddEntry(const SeekTableEntry& entry) {
@@ -248,11 +299,13 @@ Status HeaderWriter::Finalize() {
 
   // In practice the magic is always at the start of the header, but for consistency with other
   // accesses we offset |data| by |kChunkArchiveMagicOffset|.
-  reinterpret_cast<ArchiveMagicType*>(dst_ + kChunkArchiveMagicOffset)[0] =
-      kChunkedCompressionArchiveMagic;
+  memcpy(dst_, kChunkArchiveMagic, kArchiveMagicLength);
   reinterpret_cast<ArchiveVersionType*>(dst_ + kChunkArchiveVersionOffset)[0] = kVersion;
-  reinterpret_cast<uint16_t*>(dst_ + kChunkArchiveReservedOffset)[0] = 0u;
   reinterpret_cast<ChunkCountType*>(dst_ + kChunkArchiveNumChunksOffset)[0] = num_frames_;
+
+  // Always compute checkum last.
+  reinterpret_cast<uint32_t*>(dst_ + kChunkArchiveHeaderCrc32Offset)[0] =
+      HeaderReader::ComputeChecksum(dst_, dst_length_);
 
   return kStatusOk;
 }

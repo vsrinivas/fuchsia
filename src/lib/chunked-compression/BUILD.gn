@@ -24,6 +24,7 @@ source_set("chunked-compression") {
   deps = [
     "//src/lib/fxl",
     "//third_party/zstd",
+    "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
   ]
 
@@ -61,6 +62,7 @@ test("chunked-compression-unittests") {
   ]
   deps = [
     ":chunked-compression",
+    "//zircon/public/lib/cksum",
     "//zircon/public/lib/zxtest",
   ]
 }

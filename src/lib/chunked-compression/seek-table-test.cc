@@ -20,8 +20,8 @@ TEST(SeekTable, EntryForCompressedOffset) {
       CreateHeader({{
                         .decompressed_offset = 0ul,
                         .decompressed_size = 256ul,
-                        .compressed_offset = 80ul,
-                        .compressed_size = 120ul,
+                        .compressed_offset = 100,
+                        .compressed_size = 100ul,
                     },
                     {
                         .decompressed_offset = 256ul,
@@ -33,8 +33,8 @@ TEST(SeekTable, EntryForCompressedOffset) {
   SeekTable header;
   ASSERT_EQ(reader.Parse(buf.get(), buf.size(), 2040ul, &header), kStatusOk);
 
-  EXPECT_EQ(header.EntryForCompressedOffset(79ul), std::nullopt);
-  EXPECT_EQ(header.EntryForCompressedOffset(80ul), std::optional<unsigned>(0));
+  EXPECT_EQ(header.EntryForCompressedOffset(99ul), std::nullopt);
+  EXPECT_EQ(header.EntryForCompressedOffset(100ul), std::optional<unsigned>(0));
   EXPECT_EQ(header.EntryForCompressedOffset(199ul), std::optional<unsigned>(0));
   EXPECT_EQ(header.EntryForCompressedOffset(200ul), std::nullopt);
   EXPECT_EQ(header.EntryForCompressedOffset(1999ul), std::nullopt);
@@ -49,8 +49,8 @@ TEST(SeekTable, EntryForDecompressedOffset) {
       CreateHeader({{
                         .decompressed_offset = 0ul,
                         .decompressed_size = 256ul,
-                        .compressed_offset = 80ul,
-                        .compressed_size = 120ul,
+                        .compressed_offset = 100ul,
+                        .compressed_size = 100ul,
                     },
                     {
                         .decompressed_offset = 256ul,
