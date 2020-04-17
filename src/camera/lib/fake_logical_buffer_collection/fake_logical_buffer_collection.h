@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_CAMERA_MANAGER2_TEST_FAKE_LOGICAL_BUFFER_COLLECTION_H_
-#define SRC_CAMERA_CAMERA_MANAGER2_TEST_FAKE_LOGICAL_BUFFER_COLLECTION_H_
+#ifndef SRC_CAMERA_LIB_FAKE_LOGICAL_BUFFER_COLLECTION_FAKE_LOGICAL_BUFFER_COLLECTION_H_
+#define SRC_CAMERA_LIB_FAKE_LOGICAL_BUFFER_COLLECTION_FAKE_LOGICAL_BUFFER_COLLECTION_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -55,4 +55,4 @@ class FakeLogicalBufferCollection : public fuchsia::sysmem::BufferCollection {
 };
 }  // namespace camera
 
-#endif  // SRC_CAMERA_CAMERA_MANAGER2_TEST_FAKE_LOGICAL_BUFFER_COLLECTION_H_
+#endif  // SRC_CAMERA_LIB_FAKE_LOGICAL_BUFFER_COLLECTION_FAKE_LOGICAL_BUFFER_COLLECTION_H_

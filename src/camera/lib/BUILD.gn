@@ -12,6 +12,7 @@ group("lib") {
   deps = [
     "fake_camera",
     "fake_legacy_stream",
+    "fake_logical_buffer_collection",
     "fake_stream",
     "format_conversion",
     "image_writer",

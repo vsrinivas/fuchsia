@@ -21,7 +21,6 @@ class StreamProvider {
   enum class Source {
     ISP,
     CONTROLLER,
-    MANAGER,
     NUM_SOURCES,
   };
   virtual ~StreamProvider() = default;

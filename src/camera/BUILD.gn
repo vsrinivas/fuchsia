@@ -10,7 +10,6 @@ import("//build/testing/environments.gni")
 group("camera") {
   testonly = true
   deps = [
-    ":camera_manager",
     ":tools",
     "bin",
     "calibration",
@@ -25,12 +24,6 @@ group("service") {
     "//src/camera/bin/device_watcher",
   ]
 }
-
-# DEPRECATED
-group("camera_manager") {
-  public_deps = [ "//src/camera/camera_manager2" ]
-}
-
 group("tools") {
   deps = [ "//src/camera/examples/camera_tool" ]
 }
@@ -44,7 +37,6 @@ group("tests") {
   deps = [
     ":camera_tests",
     "bin",
-    "camera_manager2:tests",
     "examples/camera_display",
   ]
 }
@@ -55,10 +47,6 @@ test_package("camera_tests") {
     "//src/camera/bin/device_watcher/test",
     "//src/camera/calibration/algorithms/test",
     "//src/camera/calibration/factory_protocol/test",
-    "//src/camera/camera_manager2/test:buffer_leak_test",
-    "//src/camera/camera_manager2/test:camera-manager-test",
-    "//src/camera/camera_manager2/test:camera_plug_detector_test",
-    "//src/camera/camera_manager2/test:video_device_client_test",
     "//src/camera/drivers/controller/configs/sherlock/test",
     "//src/camera/drivers/controller/test",
     "//src/camera/drivers/hw_accel/gdc/test",
@@ -159,16 +147,6 @@ test_package("camera_tests") {
       environments = basic_envs
     },
     {
-      name = "camera-manager-test"
-      manifest = "camera_manager2/test/meta/camera_manager_test.cmx"
-      environments = [ sherlock_env ]
-    },
-    {
-      name = "camera_plug_detector_test"
-      manifest = "camera_manager2/test/meta/camera_plug_detector_test.cmx"
-      environments = basic_envs
-    },
-    {
       name = "stream_utils_test"
       manifest = "lib/stream_utils/test/meta/stream_utils_test.cmx"
       environments = basic_envs
@@ -179,19 +157,9 @@ test_package("camera_tests") {
       environments = [ sherlock_env ]
     },
     {
-      name = "video_device_client_test"
-      manifest = "camera_manager2/test/meta/video_device_client_test.cmx"
-      environments = basic_envs
-    },
-    {
       name = "fake_legacy_stream_test"
       manifest = "lib/fake_legacy_stream/test/test.cmx"
       environments = basic_envs
-    },
-    {
-      name = "buffer_leak_test"
-      manifest = "camera_manager2/test/meta/buffer_leak_test.cmx"
-      environments = [ sherlock_env ]
     },
     {
       name = "factory_protocol_test"

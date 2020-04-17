@@ -59,11 +59,6 @@ class StreamProviderTest : public testing::TestWithParam<StreamProvider::Source>
  protected:
   StreamProviderTest()
       : loop_(&kAsyncLoopConfigAttachToCurrentThread), trace_provider_(loop_.dispatcher()) {}
-  ~StreamProviderTest() override {
-    if (GetParam() == StreamProvider::Source::MANAGER) {
-      ++g_gtest_iteration;
-    }
-  }
 
   virtual void SetUp() override {
     if (g_gtest_iteration > 0) {
@@ -218,14 +213,10 @@ static std::string ParamToString(testing::TestParamInfo<StreamProvider::Source> 
       return "ISP";
     case StreamProvider::Source::CONTROLLER:
       return "CONTROLLER";
-    case StreamProvider::Source::MANAGER:
-      return "MANAGER";
     default:
       return "UNKNOWN";
   }
 }
 
 INSTANTIATE_TEST_SUITE_P(StreamProviderTestSuite, StreamProviderTest,
-                         testing::Values(StreamProvider::Source::CONTROLLER,
-                                         StreamProvider::Source::MANAGER),
-                         ParamToString);
+                         testing::Values(StreamProvider::Source::CONTROLLER), ParamToString);

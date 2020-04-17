@@ -8,8 +8,6 @@ source_set("stream_provider") {
     "controller_stream_provider.h",
     "isp_stream_provider.cc",
     "isp_stream_provider.h",
-    "manager_stream_provider.cc",
-    "manager_stream_provider.h",
     "stream_provider.cc",
   ]
 

@@ -6,7 +6,6 @@
 
 #include "controller_stream_provider.h"
 #include "isp_stream_provider.h"
-#include "manager_stream_provider.h"
 
 std::unique_ptr<StreamProvider> StreamProvider::Create(Source source) {
   switch (source) {
@@ -14,8 +13,6 @@ std::unique_ptr<StreamProvider> StreamProvider::Create(Source source) {
       return IspStreamProvider::Create();
     case Source::CONTROLLER:
       return ControllerStreamProvider::Create();
-    case Source::MANAGER:
-      return ManagerStreamProvider::Create();
     default:
       return nullptr;
   }
