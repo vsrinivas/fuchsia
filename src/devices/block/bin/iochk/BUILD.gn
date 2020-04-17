@@ -18,6 +18,7 @@ executable("iochk") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "iochk.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_c",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -27,7 +28,6 @@ executable("iochk") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
-    "//zircon/system/fidl/fuchsia-hardware-skipblock:c",
   ]
 }
 

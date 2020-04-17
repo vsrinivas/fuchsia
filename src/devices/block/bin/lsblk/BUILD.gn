@@ -18,6 +18,7 @@ executable("lsblk") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -30,7 +31,6 @@ executable("lsblk") {
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-skipblock:llcpp",
   ]
 }
 

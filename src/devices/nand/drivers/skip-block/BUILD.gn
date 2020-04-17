@@ -35,12 +35,12 @@ source_set("common") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.badblock",
     "//sdk/banjo/ddk.protocol.nand",
+    "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/dev/lib/dev-operation",
-    "//zircon/system/fidl/fuchsia-hardware-skipblock:llcpp",
   ]
 }
 
