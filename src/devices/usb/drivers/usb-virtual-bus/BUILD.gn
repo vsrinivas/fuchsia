@@ -23,6 +23,7 @@ driver_module("usb-virtual-bus") {
     "//sdk/banjo/ddk.protocol.usb.function",
     "//sdk/banjo/ddk.protocol.usb.hci",
     "//sdk/banjo/ddk.protocol.usb.hub",
+    "//sdk/banjo/ddk.protocol.usb.modeswitch",
     "//sdk/banjo/ddk.protocol.usb.request",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -31,7 +32,6 @@ driver_module("usb-virtual-bus") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.usb.modeswitch",
     "//zircon/system/dev/lib/usb",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
   ]
