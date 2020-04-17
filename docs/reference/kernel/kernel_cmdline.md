@@ -60,11 +60,6 @@ if an RTC is present, the RTC clock will be sanitized to at least this time.
 If this option is set to true driver_manager will launch the shell if
 kernel.shell has not already been launched. Defaults to false.
 
-## cpu\.hwp=\<bool\>
-
-This settings enables HWP (hardware P-states) on supported chips. This feature
-lets Intel CPUs automatically scale their own clock speed. Defaults to false.
-
 ## devmgr\.require-system=\<bool\>
 
 Instructs the devmgr that a /system volume is required. Without this, devmgr
@@ -432,6 +427,11 @@ If set, disable all speculative execution information leak mitigations.
 If clear, the per-mitigation defaults will be used.
 
 This option only affects x86 systems.
+
+## kernel\.x86\.hwp=\<bool\>
+
+This settings enables HWP (hardware P-states) on supported chips. This feature
+lets Intel CPUs automatically scale their own clock speed. Defaults to true.
 
 ## kernel.x86.pti.enable=\<int>
 

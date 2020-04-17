@@ -229,7 +229,7 @@ void x86_cpu_feature_late_init(void) {
   }
 
   // Set up hardware-controlled performance states.
-  if (gCmdline.GetBool("cpu.hwp", /*default_value=*/true)) {
+  if (gCmdline.GetBool("kernel.x86.hwp", /*default_value=*/true)) {
     x86_intel_hwp_init(&cpuid, &msr);
   }
 
