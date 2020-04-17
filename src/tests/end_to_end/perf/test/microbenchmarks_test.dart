@@ -29,8 +29,14 @@ void main() {
     // process run.)
     const int processRuns = 6;
 
+    // Pass "--runs" to reduce the number of within-process iterations of
+    // each test case.  This reduces the overall time taken and reduces the
+    // chance that this invocation hits Infra Swarming tasks' IO timeout
+    // (swarming_io_timeout_secs -- the amount of time that a task is
+    // allowed to run without producing log output).
     final result = await helper.sl4fDriver.ssh
-        .run('/bin/fuchsia_microbenchmarks -p --quiet --out $resultsFile');
+        .run('/bin/fuchsia_microbenchmarks -p --quiet --runs 500'
+            ' --out $resultsFile');
     expect(result.exitCode, equals(0));
     // This makes the results visible to both perfcompare and Catapult.
     await helper.processResults(resultsFile);
