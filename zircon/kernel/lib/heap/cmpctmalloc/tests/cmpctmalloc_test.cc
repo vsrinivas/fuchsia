@@ -9,9 +9,15 @@
 #include <lib/heap.h>
 #include <lib/zircon-internal/align.h>
 
+#include <algorithm>
+#include <random>
+#include <vector>
+
 #include <zxtest/zxtest.h>
 
 #include "page_manager.h"
+
+constexpr uint32_t kRandomSeed = 101;
 
 //
 // Heap implementation.
@@ -26,6 +32,51 @@ void heap_page_free(void* ptr, size_t pages) {
   ZX_ASSERT(page_manager != nullptr);
   page_manager->FreePages(ptr, pages);
 }
+
+// A convenience class that allows us to allocate memory of random sizes, and
+// then free that memory in various orders.
+class RandomAllocator {
+ public:
+  enum FreeOrder {
+    kChronological = 0,
+    kReverseChronological = 1,
+    kRandom = 2,
+  };
+
+  RandomAllocator() : generator_(kRandomSeed), distribution_(1, kHeapMaxAllocSize) {}
+  ~RandomAllocator() { ZX_ASSERT(allocated_.empty()); }
+
+  void Allocate(size_t num) {
+    for (size_t i = 0; i < num; i++) {
+      void* p = cmpct_alloc(distribution_(generator_));
+      ASSERT_NOT_NULL(p);
+      EXPECT_TRUE(ZX_IS_ALIGNED(p, HEAP_DEFAULT_ALIGNMENT));
+      allocated_.push_back(p);
+    }
+  }
+
+  void Free(FreeOrder order) {
+    switch (order) {
+      case FreeOrder::kChronological:
+        break;
+      case FreeOrder::kReverseChronological:
+        std::reverse(allocated_.begin(), allocated_.end());
+        break;
+      case FreeOrder::kRandom:
+        std::shuffle(allocated_.begin(), allocated_.end(), generator_);
+        break;
+    }
+    for (void* p : allocated_) {
+      cmpct_free(p);
+    }
+    allocated_.clear();
+  }
+
+ private:
+  std::default_random_engine generator_;
+  std::uniform_int_distribution<size_t> distribution_;
+  std::vector<void*> allocated_;
+};
 
 class CmpctmallocTest : public zxtest::Test {
  public:
@@ -44,24 +95,26 @@ TEST_F(CmpctmallocTest, ZeroAllocIsNull) { EXPECT_NULL(cmpct_alloc(0)); }
 
 TEST_F(CmpctmallocTest, NullCanBeFreed) { cmpct_free(nullptr); }
 
-// TODO(fxbug.dev/49123): Replace this test case with a more robust series of
-// cases in which we pseudorandomly generate sizes of memory to allocate, which
-// are then freed in three ways: allocation order, reverse-allocation order, and
-// a pseudorandom order (e.g., by reusing the initial seed).
 TEST_F(CmpctmallocTest, CanAllocAndFree) {
-  for (int i = 1; (1 << i) < kHeapMaxAllocSize; ++i) {
-    void* addr = cmpct_alloc(1 << i);
-    ASSERT_NOT_NULL(addr);
-    EXPECT_TRUE(ZX_IS_ALIGNED(addr, HEAP_DEFAULT_ALIGNMENT));
-    cmpct_free(addr);
+  RandomAllocator::FreeOrder orders[] = {
+      RandomAllocator::FreeOrder::kChronological,
+      RandomAllocator::FreeOrder::kReverseChronological,
+      RandomAllocator::FreeOrder::kRandom,
+  };
+  for (const auto& order : orders) {
+    RandomAllocator ra;
+    // TODO(fxbug.dev/49123): Rephrase as allocating until N requests are made
+    // of the page manager.
+    ra.Allocate(100);
+    ra.Free(order);
   }
 }
 
 TEST_F(CmpctmallocTest, LargeAllocsAreNull) {
-  void* addr = cmpct_alloc(kHeapMaxAllocSize);
-  EXPECT_NOT_NULL(addr);
-  addr = cmpct_alloc(kHeapMaxAllocSize + 1);
-  EXPECT_NULL(addr);
+  void* p = cmpct_alloc(kHeapMaxAllocSize);
+  EXPECT_NOT_NULL(p);
+  p = cmpct_alloc(kHeapMaxAllocSize + 1);
+  EXPECT_NULL(p);
 }
 
 // TODO(fxbug.dev/49123): Add two test cases for coverage of the behavior of
