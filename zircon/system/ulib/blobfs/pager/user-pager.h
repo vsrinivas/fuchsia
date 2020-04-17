@@ -14,7 +14,10 @@
 #include <lib/async/dispatcher.h>
 #include <lib/zx/pager.h>
 
+#include <memory>
+
 #include "../blob-verifier.h"
+#include "../compression/seekable-decompressor.h"
 
 namespace blobfs {
 
@@ -23,7 +26,7 @@ namespace blobfs {
 struct UserPagerInfo {
   // Unique identifier used by UserPager to identify the data source on the underlying block
   // device.
-  uint32_t identifier = 0;
+  uint32_t identifier;
   // Block offset (in bytes) the data starts at. Used to inform the UserPager of the offset it
   // should start issuing reads from.
   uint64_t data_start_bytes = 0;
@@ -32,6 +35,9 @@ struct UserPagerInfo {
   // Used to verify the pages as they are read in.
   // TODO(44742): Make BlobVerifier movable, unwrap from unique_ptr.
   std::unique_ptr<BlobVerifier> verifier;
+  // An optional decompressor which should be applied to the raw bytes received from the disk.
+  // If unset, the data is assumed to be uncompressed and is not modified.
+  std::unique_ptr<SeekableDecompressor> decompressor;
 };
 
 // The size of a transfer buffer for reading from storage.
@@ -43,6 +49,16 @@ struct UserPagerInfo {
 // 256 MB; but the size is arbitrary, since pages will become decommitted as they are moved to
 // destination VMOS.
 constexpr uint64_t kTransferBufferSize = 256 * (1 << 20);
+
+// The size of a transfer buffer for reading from storage.
+//
+// The decision to use a single global transfer buffer is arbitrary; a pool of them could also be
+// available in the future for more fine-grained access. Moreover, the blobfs pager uses a single
+// thread at the moment, so a global buffer should be sufficient.
+//
+// 256 MB; but the size is arbitrary, since pages will become decommitted as they are moved to
+// destination VMOS.
+constexpr uint64_t kDecompressionBufferSize = 256 * (1 << 20);
 
 // Abstract class that encapsulates a user pager, its associated thread and transfer buffer. The
 // child class will need to define the interface required to populate the transfer buffer with
@@ -77,7 +93,7 @@ class UserPager {
     uint64_t offset;
     uint64_t length;
   };
-  // Returns a range which covers [offset, offset+length), adjusted for read-ahead and alignment.
+  // Returns a range which covers [offset, offset+length), adjusted for alignment.
   //
   // The returned range will have the following guarantees:
   //  - The range will contain [offset, offset+length).
@@ -93,8 +109,17 @@ class UserPager {
   //                  |...input_range...|
   // |..data_block..|..data_block..|..data_block..|
   //                |........output_range.........|
+  ReadRange AlignReadRange(UserPagerInfo* info, uint64_t offset, uint64_t length);
+  // Returns a range at least as big as AlignReadRange(), extended by an implementation defined
+  // read-ahead algorithm.
+  //
+  // The same alignment guarantees for AlignReadRange() apply.
   ReadRange ExtendReadRange(UserPagerInfo* info, uint64_t offset, uint64_t length);
 
+  zx_status_t TransferCompressedPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
+                                           UserPagerInfo* info);
+  zx_status_t TransferUncompressedPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
+                                             UserPagerInfo* info);
   // Attaches the transfer buffer to the underlying block device, so that blocks can be read into it
   // from storage.
   virtual zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) = 0;
@@ -115,6 +140,11 @@ class UserPager {
   // calling |zx_pager_supply_pages|. Map this only when an explicit address is required, e.g. for
   // verification, and unmap it immediately after.
   zx::vmo transfer_buffer_;
+
+  // Scratch buffer for decompression.
+  // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
+  // calling |zx_pager_supply_pages|.
+  zx::vmo decompression_buffer_;
 
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);

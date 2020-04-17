@@ -144,7 +144,10 @@ class BlobLoaderTest : public zxtest::Test {
 
   BlobLoader CreateLoader(UserPager* pager) {
     auto* fs_ptr = fs_.get();
-    return BlobLoader(fs_ptr, fs_ptr, fs_->GetNodeFinder(), pager, fs_->Metrics());
+    BlobLoader loader;
+    EXPECT_OK(BlobLoader::Create(fs_ptr, fs_ptr, fs_->GetNodeFinder(), pager, fs_->Metrics(),
+                                 &loader));
+    return loader;
   }
 
   // Sync waits for blobfs to sync with the underlying block device.
@@ -287,7 +290,7 @@ void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
 
 // TODO(44820): Enable when compressed, pageable blobs are supported.
 // TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
-// TEST_F(ChunkCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
+TEST_F(ChunkCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
 
 void DoTest_LargeBlob(BlobLoaderTest* test) {
@@ -378,7 +381,7 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
 
 // TODO(44820): Enable when compressed, pageable blobs are supported.
 // TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
-// TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
+TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
 
 void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
@@ -413,9 +416,9 @@ void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
 // TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
 //   DoTest_Paged_LargeBlob_NonAlignedLength(this);
 // }
-// TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
-//   DoTest_Paged_LargeBlob_NonAlignedLength(this);
-// }
+TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
+  DoTest_Paged_LargeBlob_NonAlignedLength(this);
+}
 TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
   DoTest_Paged_LargeBlob_NonAlignedLength(this);
 }

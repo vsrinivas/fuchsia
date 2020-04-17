@@ -13,21 +13,26 @@
 #include <cstdint>
 #include <memory>
 
+#include <blobfs/compression-algorithm.h>
 #include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
+#include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "blob-verifier.h"
+#include "compression/blob-compressor.h"
+#include "compression/chunked.h"
 #include "pager/page-watcher.h"
 #include "pager/user-pager.h"
 
 namespace blobfs {
 namespace {
 
-constexpr uint64_t kPagedVmoSize = 10 * ZX_PAGE_SIZE;
+// Relatively large blobs are used to exercise paging multi-frame compressed blobs.
+constexpr uint64_t kPagedVmoSize = 100 * ZX_PAGE_SIZE;
 // kBlobSize is intentionally not page-aligned to exercise edge cases.
 constexpr uint64_t kBlobSize = kPagedVmoSize - 42;
 constexpr uint64_t kNumReadRequests = 100;
@@ -36,39 +41,13 @@ constexpr uint64_t kNumThreads = 10;
 // Like a Blob w.r.t. the pager - creates a VMO linked to the pager and issues reads on it.
 class MockBlob {
  public:
-  MockBlob(char identifier, UserPager* pager, BlobfsMetrics* metrics) : identifier_(identifier) {
-    char data[kBlobSize];
-    memset(data, identifier, kBlobSize);
-
-    size_t tree_len;
-    Digest root;
-    ASSERT_OK(
-        digest::MerkleTreeCreator::Create(data, kBlobSize, &merkle_tree_, &tree_len, &root));
-
-    std::unique_ptr<BlobVerifier> verifier;
-    ASSERT_OK(BlobVerifier::Create(std::move(root), metrics, merkle_tree_.get(), tree_len,
-                                   kBlobSize, &verifier));
-
-    UserPagerInfo pager_info;
-    pager_info.verifier = std::move(verifier);
-    pager_info.identifier = identifier_;
-    pager_info.data_length_bytes = kBlobSize;
-
-    page_watcher_ = std::make_unique<PageWatcher>(pager, std::move(pager_info));
-
-    ASSERT_OK(page_watcher_->CreatePagedVmo(kPagedVmoSize, &vmo_));
-
-    // Make sure the vmo is valid and of the desired size.
-    ASSERT_TRUE(vmo_.is_valid());
-    uint64_t vmo_size;
-    ASSERT_OK(vmo_.get_size(&vmo_size));
-    ASSERT_EQ(vmo_size, kPagedVmoSize);
-
-    // Make sure the vmo is pager-backed.
-    zx_info_vmo_t info;
-    ASSERT_OK(vmo_.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
-    ASSERT_NE(info.flags & ZX_INFO_VMO_PAGER_BACKED, 0);
-  }
+  MockBlob(char identifier, zx::vmo vmo, fbl::Array<uint8_t> raw_data,
+           std::unique_ptr<PageWatcher> watcher, std::unique_ptr<uint8_t[]> merkle_tree)
+      : identifier_(identifier),
+        vmo_(std::move(vmo)),
+        raw_data_(std::move(raw_data)),
+        page_watcher_(std::move(watcher)),
+        merkle_tree_(std::move(merkle_tree)) {}
 
   ~MockBlob() { page_watcher_->DetachPagedVmoSync(); }
 
@@ -81,29 +60,126 @@ class MockBlob {
   }
 
   void Read(uint64_t offset, uint64_t length) {
-    char buf[length];
-    ASSERT_OK(vmo_.read(buf, offset, length));
+    fbl::Array<char> buf(new char[length], length);
+    ASSERT_OK(vmo_.read(buf.get(), offset, length));
 
+    length = fbl::min(length, kBlobSize - offset);
     if (length > 0) {
-      char comp[length];
-      memset(comp, identifier_, length);
+      fbl::Array<char> comp(new char[length], length);
+      memset(comp.get(), identifier_, length);
       // Make sure we got back the expected bytes.
-      ASSERT_EQ(memcmp(comp, buf, length), 0);
+      ASSERT_EQ(memcmp(comp.get(), buf.get(), length), 0);
     }
   }
 
+  // Access the data as it would be physically stored on-disk.
+  const uint8_t* raw_data() const { return raw_data_.data(); }
+
  private:
-  zx::vmo vmo_;
-  std::unique_ptr<PageWatcher> page_watcher_;
   char identifier_;
+  zx::vmo vmo_;
+  fbl::Array<uint8_t> raw_data_;
+  std::unique_ptr<PageWatcher> page_watcher_;
   std::unique_ptr<uint8_t[]> merkle_tree_;
+};
+
+class MockBlobFactory {
+ public:
+  explicit MockBlobFactory(UserPager* pager) : pager_(pager) {}
+
+  std::unique_ptr<MockBlob> CreateBlob(char identifier, CompressionAlgorithm algorithm) {
+    fbl::Array<uint8_t> data(new uint8_t[kBlobSize], kBlobSize);
+    memset(data.get(), identifier, kBlobSize);
+
+    // Generate the merkle tree based on the uncompressed contents (i.e. |data|).
+    size_t tree_len;
+    Digest root;
+    std::unique_ptr<uint8_t[]> merkle_tree;
+    EXPECT_OK(
+        digest::MerkleTreeCreator::Create(data.get(), kBlobSize, &merkle_tree, &tree_len, &root));
+
+    std::unique_ptr<BlobVerifier> verifier;
+    EXPECT_OK(BlobVerifier::Create(std::move(root), &metrics_, merkle_tree.get(), tree_len,
+                                   kBlobSize, &verifier));
+
+    // Generate the contents as they would be stored on disk. (This includes compression if
+    // applicable)
+    fbl::Array<uint8_t> raw_data = GenerateData(data.get(), kBlobSize, algorithm);
+
+    UserPagerInfo pager_info;
+    pager_info.verifier = std::move(verifier);
+    pager_info.identifier = identifier;
+    pager_info.data_length_bytes = kBlobSize;
+    pager_info.decompressor = CreateDecompressor(raw_data, kBlobSize, algorithm);
+
+    auto page_watcher = std::make_unique<PageWatcher>(pager_, std::move(pager_info));
+
+    zx::vmo vmo;
+    EXPECT_OK(page_watcher->CreatePagedVmo(kPagedVmoSize, &vmo));
+
+    // Make sure the vmo is valid and of the desired size.
+    EXPECT_TRUE(vmo.is_valid());
+    uint64_t vmo_size;
+    EXPECT_OK(vmo.get_size(&vmo_size));
+    EXPECT_EQ(vmo_size, kPagedVmoSize);
+
+    // Make sure the vmo is pager-backed.
+    zx_info_vmo_t info;
+    EXPECT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_NE(info.flags & ZX_INFO_VMO_PAGER_BACKED, 0);
+
+    return std::make_unique<MockBlob>(identifier, std::move(vmo), std::move(raw_data),
+                                      std::move(page_watcher), std::move(merkle_tree));
+  }
+
+ private:
+  fbl::Array<uint8_t> GenerateData(const uint8_t* input, size_t len,
+                                   CompressionAlgorithm algorithm) {
+    if (algorithm == CompressionAlgorithm::UNCOMPRESSED) {
+      fbl::Array<uint8_t> out(new uint8_t[len], len);
+      memcpy(out.data(), input, len);
+      return out;
+    }
+    std::optional<BlobCompressor> compressor = BlobCompressor::Create(algorithm, len);
+    EXPECT_TRUE(compressor);
+    EXPECT_OK(compressor->Update(input, len));
+    EXPECT_OK(compressor->End());
+    size_t out_size = compressor->Size();
+    fbl::Array<uint8_t> out(new uint8_t[out_size], out_size);
+    memcpy(out.data(), compressor->Data(), out_size);
+    return out;
+  }
+
+  std::unique_ptr<SeekableDecompressor> CreateDecompressor(const fbl::Array<uint8_t>& data,
+                                                           size_t blob_size,
+                                                           CompressionAlgorithm algorithm) {
+    if (algorithm == CompressionAlgorithm::UNCOMPRESSED) {
+      return nullptr;
+    } else if (algorithm != CompressionAlgorithm::CHUNKED) {
+      // Other compression algorithms do not support paging.
+      EXPECT_TRUE(false);
+    }
+    std::unique_ptr<SeekableDecompressor> decompressor;
+    EXPECT_OK(SeekableChunkedDecompressor::CreateDecompressor(data.get(), data.size(), blob_size,
+                                                              &decompressor));
+    return decompressor;
+  }
+
+  BlobfsMetrics metrics_;
+  UserPager* pager_;
 };
 
 // Mock user pager. Defines the UserPager interface such that the result of reads on distinct
 // mock blobs can be verified.
 class MockPager : public UserPager {
  public:
-  MockPager() { InitPager(); }
+  MockPager() : factory_(this) { InitPager(); }
+
+  MockBlob* CreateBlob(char identifier, CompressionAlgorithm algorithm) {
+    EXPECT_EQ(blob_registry_.find(identifier), blob_registry_.end());
+    blob_registry_[identifier] = factory_.CreateBlob(identifier, algorithm);
+    return blob_registry_[identifier].get();
+  }
 
  private:
   zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) override {
@@ -112,16 +188,15 @@ class MockPager : public UserPager {
   }
 
   zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) override {
+    char identifier = static_cast<char>(info->identifier);
+    EXPECT_NE(blob_registry_.find(identifier), blob_registry_.end());
+    const MockBlob& blob = *blob_registry_[identifier];
+    EXPECT_EQ(offset % kBlobfsBlockSize, 0);
+    EXPECT_LE(offset + length, info->data_length_bytes);
     // Fill the transfer buffer with the blob's identifier character, to service page requests. The
     // identifier helps us distinguish between blobs.
-    char text[kBlobfsBlockSize];
-    memset(text, static_cast<char>(info->identifier), kBlobfsBlockSize);
-    for (uint32_t i = 0; i < length; i += kBlobfsBlockSize) {
-      zx_status_t status = vmo_->write(text, i, kBlobfsBlockSize);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
+    EXPECT_OK(vmo_->write(blob.raw_data() + offset, 0, length));
+    length = fbl::min(length, kBlobSize - offset);
     return ZX_OK;
   }
 
@@ -138,6 +213,8 @@ class MockPager : public UserPager {
     return info->verifier->VerifyPartial(mapping.start(), length, offset);
   }
 
+  std::map<char, std::unique_ptr<MockBlob>> blob_registry_;
+  MockBlobFactory factory_;
   zx::unowned_vmo vmo_;
 };
 
@@ -145,20 +222,20 @@ class BlobfsPagerTest : public zxtest::Test {
  public:
   void SetUp() override { pager_ = std::make_unique<MockPager>(); }
 
-  std::unique_ptr<MockBlob> CreateBlob(char identifier = 'z') {
-    return std::make_unique<MockBlob>(identifier, pager_.get(), &metrics_);
+  MockBlob* CreateBlob(char identifier = 'z',
+                       CompressionAlgorithm algorithm = CompressionAlgorithm::UNCOMPRESSED) {
+    return pager_->CreateBlob(identifier, algorithm);
   }
 
   void ResetPager() { pager_.reset(); }
 
  private:
   std::unique_ptr<MockPager> pager_;
-  BlobfsMetrics metrics_;
 };
 
 void GetRandomOffsetAndLength(unsigned int* seed, uint64_t* offset, uint64_t* length) {
-  *offset = rand_r(seed) % kPagedVmoSize;
-  *length = 1 + (rand_r(seed) % (kPagedVmoSize - *offset));
+  *offset = rand_r(seed) % kBlobSize;
+  *length = 1 + (rand_r(seed) % (kBlobSize - *offset));
 }
 
 struct ReadBlobFnArgs {
@@ -178,7 +255,7 @@ int ReadBlobFn(void* args) {
   return 0;
 }
 
-TEST_F(BlobfsPagerTest, CreateBlob) { auto blob = CreateBlob(); }
+TEST_F(BlobfsPagerTest, CreateBlob) { CreateBlob(); }
 
 TEST_F(BlobfsPagerTest, ReadSequential) {
   auto blob = CreateBlob();
@@ -197,14 +274,32 @@ TEST_F(BlobfsPagerTest, ReadRandom) {
   }
 }
 
+TEST_F(BlobfsPagerTest, ReadSequential_ZstdChunked) {
+  auto blob = CreateBlob('x', CompressionAlgorithm::CHUNKED);
+  blob->Read(0, kPagedVmoSize);
+  // Issue a repeated read on the same range.
+  blob->Read(0, kPagedVmoSize);
+}
+
+TEST_F(BlobfsPagerTest, ReadRandom_ZstdChunked) {
+  auto blob = CreateBlob('x', CompressionAlgorithm::CHUNKED);
+  uint64_t offset, length;
+  unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
+  for (uint64_t i = 0; i < kNumReadRequests; i++) {
+    GetRandomOffsetAndLength(&seed, &offset, &length);
+    blob->Read(offset, length);
+  }
+}
+
 TEST_F(BlobfsPagerTest, CreateMultipleBlobs) {
-  auto blob1 = CreateBlob();
-  auto blob2 = CreateBlob();
-  auto blob3 = CreateBlob();
+  CreateBlob('x');
+  CreateBlob('y', CompressionAlgorithm::CHUNKED);
+  CreateBlob('z');
 }
 
 TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobs) {
-  std::unique_ptr<MockBlob> blobs[3] = {CreateBlob('x'), CreateBlob('y'), CreateBlob('z')};
+  MockBlob* blobs[3] = {CreateBlob('x'), CreateBlob('y', CompressionAlgorithm::CHUNKED),
+                        CreateBlob('z')};
 
   uint64_t offset, length;
   unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
@@ -222,7 +317,26 @@ TEST_F(BlobfsPagerTest, ReadRandomMultithreaded) {
 
   // All the threads will issue reads on the same blob.
   for (uint64_t i = 0; i < kNumThreads; i++) {
-    args[i].blob = blob.get();
+    args[i].blob = blob;
+    args[i].seed = static_cast<unsigned int>(i);
+    ASSERT_EQ(thrd_create(&threads[i], ReadBlobFn, &args[i]), thrd_success);
+  }
+
+  for (uint64_t i = 0; i < kNumThreads; i++) {
+    int res;
+    ASSERT_EQ(thrd_join(threads[i], &res), thrd_success);
+    ASSERT_EQ(res, 0);
+  }
+}
+
+TEST_F(BlobfsPagerTest, ReadRandomMultithreaded_ZstdChunked) {
+  auto blob = CreateBlob('x', CompressionAlgorithm::CHUNKED);
+  std::array<thrd_t, kNumThreads> threads;
+  std::array<ReadBlobFnArgs, kNumThreads> args;
+
+  // All the threads will issue reads on the same blob.
+  for (uint64_t i = 0; i < kNumThreads; i++) {
+    args[i].blob = blob;
     args[i].seed = static_cast<unsigned int>(i);
     ASSERT_EQ(thrd_create(&threads[i], ReadBlobFn, &args[i]), thrd_success);
   }
@@ -236,13 +350,14 @@ TEST_F(BlobfsPagerTest, ReadRandomMultithreaded) {
 
 TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobsMultithreaded) {
   constexpr uint64_t kNumBlobs = 3;
-  std::unique_ptr<MockBlob> blobs[kNumBlobs] = {CreateBlob('x'), CreateBlob('y'), CreateBlob('z')};
+  MockBlob* blobs[3] = {CreateBlob('x'), CreateBlob('y', CompressionAlgorithm::CHUNKED),
+                        CreateBlob('z')};
   std::array<thrd_t, kNumBlobs> threads;
   std::array<ReadBlobFnArgs, kNumThreads> args;
 
   // Each thread will issue reads on a different blob.
   for (uint64_t i = 0; i < kNumBlobs; i++) {
-    args[i].blob = blobs[i].get();
+    args[i].blob = blobs[i];
     args[i].seed = static_cast<unsigned int>(i);
     ASSERT_EQ(thrd_create(&threads[i], ReadBlobFn, &args[i]), thrd_success);
   }
@@ -262,6 +377,14 @@ TEST_F(BlobfsPagerTest, CommitRange_ExactLength) {
   blob->CommitRange(0, kBlobSize);
 }
 
+TEST_F(BlobfsPagerTest, CommitRange_ExactLength_ZstdChunked) {
+  auto blob = CreateBlob('x', CompressionAlgorithm::CHUNKED);
+  // Attempt to commit the entire blob. The zx_vmo_op_range(ZX_VMO_OP_COMMIT) call will return
+  // successfully iff the entire range was mapped by the pager; it will hang if the pager only maps
+  // in a subset of the range.
+  blob->CommitRange(0, kBlobSize);
+}
+
 TEST_F(BlobfsPagerTest, CommitRange_PageRoundedLength) {
   auto blob = CreateBlob();
   // Attempt to commit the entire blob. The zx_vmo_op_range(ZX_VMO_OP_COMMIT) call will return
@@ -270,8 +393,17 @@ TEST_F(BlobfsPagerTest, CommitRange_PageRoundedLength) {
   blob->CommitRange(0, kPagedVmoSize);
 }
 
+TEST_F(BlobfsPagerTest, CommitRange_PageRoundedLength_ZstdChunked) {
+  auto blob = CreateBlob('x', CompressionAlgorithm::CHUNKED);
+  // Attempt to commit the entire blob. The zx_vmo_op_range(ZX_VMO_OP_COMMIT) call will return
+  // successfully iff the entire range was mapped by the pager; it will hang if the pager only maps
+  // in a subset of the range.
+  blob->CommitRange(0, kPagedVmoSize);
+}
+
 TEST_F(BlobfsPagerTest, AsyncLoopShutdown) {
-  auto blob = CreateBlob();
+  CreateBlob('x');
+  CreateBlob('y', CompressionAlgorithm::CHUNKED);
   // Verify that we can exit cleanly if the UserPager (and its member async loop) is destroyed.
   ResetPager();
 }

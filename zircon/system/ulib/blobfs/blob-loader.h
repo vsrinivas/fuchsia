@@ -17,6 +17,7 @@
 #include <fbl/macros.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "compression/seekable-decompressor.h"
 #include "iterator/block-iterator-provider.h"
 #include "metrics.h"
 #include "pager/page-watcher.h"
@@ -29,14 +30,20 @@ namespace blobfs {
 class BlobLoader {
  public:
   BlobLoader() = default;
-  BlobLoader(
+  BlobLoader(BlobLoader&& o) = default;
+  BlobLoader& operator=(BlobLoader&& o) = default;
+
+  // Creates a BlobLoader, assigning the loader to |out|.
+  static zx_status_t Create(
       TransactionManager* txn_manager,
       BlockIteratorProvider* block_iter_provider,
       NodeFinder* node_finder,
       UserPager* pager,
-      BlobfsMetrics* metrics);
-  BlobLoader(BlobLoader&& o) = default;
-  BlobLoader& operator=(BlobLoader&& o) = default;
+      BlobfsMetrics* metrics,
+      BlobLoader* out);
+
+  // Resets the BlobLoader, freeing any owned resources. Calls to LoadBlob* will fail after this.
+  void Reset();
 
   // Loads the merkle tree and data for the blob with index |node_index|.
   //
@@ -69,6 +76,14 @@ class BlobLoader {
                             fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out);
 
  private:
+  BlobLoader(
+      TransactionManager* txn_manager,
+      BlockIteratorProvider* block_iter_provider,
+      NodeFinder* node_finder,
+      UserPager* pager,
+      BlobfsMetrics* metrics,
+      fzl::OwnedVmoMapper scratch_vmo,
+      storage::OwnedVmoid scratch_vmoid);
 
   // Loads the merkle tree from disk and initializes a VMO mapping and BlobVerifier with the
   // contents. (Small blobs may have no stored tree, in which case |vmo_out| is not mapped but
@@ -76,6 +91,9 @@ class BlobLoader {
   zx_status_t InitMerkleVerifier(uint32_t node_index, const Inode& inode,
                                  fzl::OwnedVmoMapper* vmo_out,
                                  std::unique_ptr<BlobVerifier>* verifier_out);
+  zx_status_t InitDecompressor(uint32_t node_index, const Inode& inode,
+                               const BlobVerifier& verifier,
+                               std::unique_ptr<SeekableDecompressor>* decompressor_out);
   zx_status_t LoadMerkle(uint32_t node_index, const Inode& inode,
                          const fzl::OwnedVmoMapper& vmo) const;
   zx_status_t LoadData(uint32_t node_index, const Inode& inode,
@@ -91,6 +109,8 @@ class BlobLoader {
   NodeFinder* node_finder_;
   UserPager* pager_;
   BlobfsMetrics* metrics_;
+  fzl::OwnedVmoMapper scratch_vmo_;
+  storage::OwnedVmoid scratch_vmoid_;
 
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlobLoader);
 };

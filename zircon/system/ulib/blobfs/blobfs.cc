@@ -283,7 +283,11 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
                 CompressionAlgorithmToString(fs->write_compression_algorithm_));
 
   auto* fs_ptr = fs.get();
-  fs->loader_ = BlobLoader(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs_ptr, fs->Metrics());
+  if ((status = BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs_ptr, fs->Metrics(),
+                                   &fs->loader_)) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to initialize loader\n");
+    return status;
+  }
 
   *out = std::move(fs);
   return ZX_OK;
@@ -684,6 +688,10 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
     vnode->CloneWatcherTeardown();
   });
+
+  // Reset loader_ now, since it has internally allocated buffers attached to the FIFO it needs to
+  // detach.
+  loader_.Reset();
 
   // Write the clean bit.
   if (writability_ == Writability::Writable) {

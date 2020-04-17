@@ -23,6 +23,7 @@ group("test") {
   testonly = true
   deps = [
     ":blobfs-integration",
+    ":blobfs-integration-chunk-compressed-paged",
     ":blobfs-integration-paged",
     ":blobfs-unit",
     ":large-test",
@@ -36,12 +37,16 @@ group("large-test") {
   testonly = true
   deps = [
     ":blobfs-large-integration-fragmentation",
+    ":blobfs-large-integration-fragmentation-chunk-compressed-paged",
     ":blobfs-large-integration-fragmentation-paged",
     ":blobfs-large-integration-no-space",
+    ":blobfs-large-integration-no-space-chunk-compressed-paged",
     ":blobfs-large-integration-no-space-paged",
     ":blobfs-large-integration-short",
+    ":blobfs-large-integration-short-chunk-compressed-paged",
     ":blobfs-large-integration-short-paged",
     ":blobfs-large-integration-use-second-bitmap",
+    ":blobfs-large-integration-use-second-bitmap-chunk-compressed-paged",
     ":blobfs-large-integration-use-second-bitmap-paged",
   ]
 }
@@ -247,6 +252,26 @@ test("blobfs-integration-paged") {
   ]
 }
 
+test("blobfs-integration-chunk-compressed-paged") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+  if (configs + fdio_config - fdio_config != configs) {
+    configs -= fdio_config
+  }
+  test_group = "fs"
+  sources = [
+    "integration/blobfs_integration_chunk_compressed_paged_main.cc",
+    "integration/launch.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 fuzzer("zstd-fuzzer") {
   sources = [ "zstd-fuzzer.cc" ]
   deps = [
@@ -306,4 +331,8 @@ migrated_manifest("blobfs-integration-manifest") {
 
 migrated_manifest("blobfs-integration-paged-manifest") {
   deps = [ ":blobfs-integration-paged" ]
+}
+
+migrated_manifest("blobfs-integration-chunk-compressed-paged-manifest") {
+  deps = [ ":blobfs-integration-chunk-compressed-paged" ]
 }
