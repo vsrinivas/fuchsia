@@ -290,14 +290,11 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 		if err != nil {
 			return err
 		}
-		defer func() {
-			// TODO(olivernewman): Don't try to close the client if the command
-			// exited because the client was closed by an ssh keep-alive
-			// failure.
-			if err := client.Close(); err != nil {
-				logger.Errorf(ctx, "failed to close SSH client: %v", err)
-			}
-		}()
+		// This should generally only fail if the client has already closed by
+		// the keep-alive goroutine, in which case this will return an error
+		// that we can safely ignore.
+		defer client.Close()
+
 		subprocessEnv["FUCHSIA_SSH_KEY"] = t.SSHKey()
 
 		ip, err := t.IPv4Addr()
