@@ -110,4 +110,13 @@ typedef struct wifi_config {
   cc_entry_t cc_table[MAX_CC_TABLE_ENTRIES];
 } wifi_config_t;
 
+// Fragment indices for the composite device.
+enum {
+  BRCMF_FRAGMENT_SDIO_FN1,
+  BRCMF_FRAGMENT_SDIO_FN2,
+  BRCMF_FRAGMENT_OOB_GPIO,
+  BRCMF_FRAGMENT_DEBUG_GPIO,
+  BRCMF_FRAGMENT_COUNT,
+};
+
 #endif  // ZIRCON_SYSTEM_DEV_LIB_BROADCOM_INCLUDE_WIFI_WIFI_CONFIG_H_
