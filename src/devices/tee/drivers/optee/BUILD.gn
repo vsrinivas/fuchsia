@@ -24,6 +24,7 @@ driver_module("optee") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/banjo/ddk.protocol.tee",
     "//src/devices/lib/driver",
@@ -36,7 +37,6 @@ driver_module("optee") {
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-hardware-tee:llcpp",
     "//zircon/system/fidl/fuchsia-tee:llcpp",

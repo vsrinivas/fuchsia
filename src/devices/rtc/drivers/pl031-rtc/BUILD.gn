@@ -13,9 +13,9 @@ driver_module("pl031-rtc") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "pl031-rtc.c" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//zircon/public/lib/ddk",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/ulib/rtc",
   ]

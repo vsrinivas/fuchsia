@@ -31,6 +31,7 @@ driver_module("platform-bus") {
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.iommu",
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//src/devices/lib/driver",
@@ -42,7 +43,6 @@ driver_module("platform-bus") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
   ]
@@ -58,6 +58,7 @@ driver_module("platform-bus.proxy") {
   }
   sources = [ "platform-proxy.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -65,7 +66,6 @@ driver_module("platform-bus.proxy") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
 }
 

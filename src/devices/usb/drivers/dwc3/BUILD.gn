@@ -24,6 +24,7 @@ driver_module("dwc3") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.dci",
     "//sdk/banjo/ddk.protocol.usb.modeswitch",
@@ -37,7 +38,6 @@ driver_module("dwc3") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/lib/usb",
   ]

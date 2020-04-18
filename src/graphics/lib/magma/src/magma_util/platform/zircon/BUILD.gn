@@ -65,13 +65,13 @@ entry_deps = [
   "..:trace",
   "..:trace_provider",
   "..:trace_provider_with_fdio",
+  "//sdk/banjo/ddk.protocol.platform.device",
   "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
   "//src/devices/lib/driver",
   "//src/graphics/lib/magma/src/magma_util:macros",
   "//src/graphics/lib/magma/src/sys_driver",
   "//zircon/public/lib/ddk",
   "//zircon/public/lib/zx",
-  "//zircon/system/banjo/ddk.protocol.platform.device",
 ]
 
 source_set("entry") {
@@ -106,8 +106,8 @@ source_set("device") {
 
   public_deps = [
     "//sdk/banjo/ddk.protocol.pci",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//zircon/public/lib/ddk",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
 
   deps = [

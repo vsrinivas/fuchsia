@@ -30,6 +30,7 @@ if (target_cpu == "arm64") {
     public_deps = [
       "//sdk/banjo/ddk.protocol.amlogiccanvas",
       "//sdk/banjo/ddk.protocol.composite",
+      "//sdk/banjo/ddk.protocol.platform.device",
       "//sdk/banjo/ddk.protocol.sysmem",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_c",
       "//sdk/fidl/fuchsia.mediacodec",
@@ -47,7 +48,6 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/mmio",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
-      "//zircon/system/banjo/ddk.protocol.platform.device",
       "//zircon/system/dev/lib/device-protocol-pdev",
       "//zircon/system/dev/lib/device-protocol-platform-device",
       "//zircon/system/ulib/fidl-utils",

@@ -13,6 +13,7 @@ driver_module("aml-usb-phy-v2") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-usb-phy.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.usb.phy",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -21,7 +22,6 @@ driver_module("aml-usb-phy-v2") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
   ]

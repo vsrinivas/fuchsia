@@ -47,9 +47,9 @@ test("goldfish-unittests") {
   ]
   deps = [
     ":common",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/lib/fake_ddk",

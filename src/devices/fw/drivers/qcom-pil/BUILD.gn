@@ -17,6 +17,7 @@ driver_module("qcom-pil") {
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -24,7 +25,6 @@ driver_module("qcom-pil") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/lib/qcom",

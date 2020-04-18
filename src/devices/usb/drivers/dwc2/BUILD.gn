@@ -14,6 +14,7 @@ driver_module("dwc2") {
   sources = [ "dwc2.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.dci",
     "//sdk/banjo/ddk.protocol.usb.phy",
@@ -28,7 +29,6 @@ driver_module("dwc2") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/usb",
   ]

@@ -37,6 +37,7 @@ driver_module("hikey960") {
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.iommu",
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.usb.modeswitch",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -44,7 +45,6 @@ driver_module("hikey960") {
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/hi3660",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
@@ -65,12 +65,12 @@ driver_module("hi3660-i2c-test") {
   # TODO: testonly = true
   sources = [ "hikey960-i2c-test.c" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
 }
 

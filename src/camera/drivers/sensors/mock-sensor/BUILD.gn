@@ -15,10 +15,10 @@ driver_module("mock-sensor-driver") {
 
   deps = [
     "//sdk/banjo/ddk.protocol.camerasensor",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/fake_ddk",
   ]
 

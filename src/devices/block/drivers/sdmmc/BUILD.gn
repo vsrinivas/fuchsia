@@ -24,6 +24,7 @@ driver_module("sdmmc") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.block.partition",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sdio",
     "//sdk/banjo/ddk.protocol.sdmmc",
     "//sdk/fidl/fuchsia.hardware.sdio:llcpp",
@@ -38,7 +39,6 @@ driver_module("sdmmc") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/dev-operation",
   ]
 }
@@ -58,6 +58,7 @@ test("sdmmc-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.block.partition",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sdio",
     "//sdk/banjo/ddk.protocol.sdmmc",
     "//sdk/fidl/fuchsia.hardware.sdio:llcpp",
@@ -72,7 +73,6 @@ test("sdmmc-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/dev-operation",
     "//zircon/system/dev/lib/fake_ddk",
   ]

@@ -18,12 +18,12 @@ driver_module("hi3660-gpio") {
   deps = [
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/gpio/drivers/pl061",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/lib/hi3660",
   ]

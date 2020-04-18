@@ -15,12 +15,12 @@ driver_module("hisi3660") {
   deps = [
     "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/clk/hisi-lib",
     "//zircon/system/dev/lib/hi3660",
   ]

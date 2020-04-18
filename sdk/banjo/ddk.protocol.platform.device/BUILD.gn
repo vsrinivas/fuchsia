@@ -4,10 +4,7 @@
 
 import("//build/banjo/banjo.gni")
 
-banjo("ddk.protocol.platform.bus") {
-  sources = [ "platform-bus.banjo" ]
-  deps = [
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.driver",
-  ]
+banjo("ddk.protocol.platform.device") {
+  sources = [ "platform-device.banjo" ]
+  deps = [ "//zircon/system/banjo/ddk.driver" ]
 }

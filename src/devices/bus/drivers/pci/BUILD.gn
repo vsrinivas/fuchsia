@@ -102,12 +102,12 @@ if (enable_user_pci) {
     deps = [
       "//sdk/banjo/ddk.protocol.pci",
       "//sdk/banjo/ddk.protocol.pciroot",
+      "//sdk/banjo/ddk.protocol.platform.device",
       "//sdk/banjo/ddk.protocol.sysmem",
       "//src/devices/lib/driver",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/ddktl",
       "//zircon/public/lib/fidl",
-      "//zircon/system/banjo/ddk.protocol.platform.device",
     ]
   }
 
@@ -123,11 +123,11 @@ if (enable_user_pci) {
     deps = [
       "//sdk/banjo/ddk.protocol.pci",
       "//sdk/banjo/ddk.protocol.pciroot",
+      "//sdk/banjo/ddk.protocol.platform.device",
       "//sdk/banjo/ddk.protocol.sysmem",
       "//src/devices/lib/driver",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/ddktl",
-      "//zircon/system/banjo/ddk.protocol.platform.device",
     ]
   }
 }

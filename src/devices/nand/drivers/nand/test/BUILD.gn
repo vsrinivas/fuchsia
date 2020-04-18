@@ -42,6 +42,7 @@ source_set("common") {
   sources = [ "../nand.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.nand",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.rawnand",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -50,7 +51,6 @@ source_set("common") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/dev-operation",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
   ]

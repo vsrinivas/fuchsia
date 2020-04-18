@@ -38,12 +38,12 @@ driver_module("gauss") {
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.iommu",
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/pci/designware",
     "//zircon/system/fidl/fuchsia-sysmem:c",
@@ -61,12 +61,12 @@ driver_module("gauss-i2c-test") {
   }
   sources = [ "gauss-i2c-test.c" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
 }
 
