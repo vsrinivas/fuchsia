@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/restricted-build-info"
+    },
+    "sandbox": {
+        "features": [
+            "build-info"
+        ]
+    }
+}

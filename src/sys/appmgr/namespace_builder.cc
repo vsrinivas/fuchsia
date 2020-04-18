@@ -28,6 +28,7 @@ namespace fio = ::llcpp::fuchsia::io;
 constexpr char kDeprecatedDataName[] = "deprecated-data";
 constexpr char kBlockedDataName[] = "data";
 
+constexpr char kBuildInfoAllowList[] = "allowlist/build_info.txt";
 constexpr char kGlobalDataAllowList[] = "allowlist/global_data.txt";
 
 NamespaceBuilder::~NamespaceBuilder() = default;
@@ -137,9 +138,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
   }
 
   for (const auto& feature : sandbox.features()) {
-    if (feature == "build-info") {
-      PushDirectoryFromPathAs("/pkgfs/packages/build-info/0/data", "/config/build-info");
-    } else if (feature == "root-ssl-certificates") {
+    if (feature == "root-ssl-certificates") {
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
     } else if (feature == "deprecated-shell") {
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
@@ -168,22 +167,30 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       PushDirectoryFromPathAs(isolated_temp_path_factory(), "/tmp");
     } else if (feature == "hub") {
       AddHub(hub_directory_factory);
-    }
-  }
-
-  if (sandbox.HasFeature("global-data")) {
-    AllowList global_data_allowlist(appmgr_config_dir_, kGlobalDataAllowList);
-    FuchsiaPkgUrl pkg_url;
-    if (pkg_url.Parse(ns_id) && global_data_allowlist.IsAllowed(pkg_url)) {
-      PushDirectoryFromPathAsWithPermissions("/data", "/global_data",
-                                             fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_POSIX |
-                                                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_ADMIN);
-      PushDirectoryFromPathAsWithPermissions("/tmp", "/global_tmp",
-                                             fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_POSIX |
-                                                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_ADMIN);
-    } else {
-      FXL_LOG(WARNING) << "Component " << ns_id
-                       << " is not allowed to use global-data. Blocked by allowlist.";
+    // Begin allowlisted namespace features
+    } else if (feature == "build-info") {
+      // fxb/50308
+      AllowList build_info_allowlist(appmgr_config_dir_, kBuildInfoAllowList);
+      FuchsiaPkgUrl pkg_url;
+      if (pkg_url.Parse(ns_id) && !build_info_allowlist.IsAllowed(pkg_url)) {
+        FXL_LOG(WARNING) << "Component " << ns_id
+                         << " is not allowlisted to use build-info. See fxb/50308.";
+      }
+      PushDirectoryFromPathAs("/pkgfs/packages/build-info/0/data", "/config/build-info");
+    } else if (feature == "global-data") {
+      AllowList global_data_allowlist(appmgr_config_dir_, kGlobalDataAllowList);
+      FuchsiaPkgUrl pkg_url;
+      if (pkg_url.Parse(ns_id) && global_data_allowlist.IsAllowed(pkg_url)) {
+        PushDirectoryFromPathAsWithPermissions("/data", "/global_data",
+                                               fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_POSIX |
+                                                   fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_ADMIN);
+        PushDirectoryFromPathAsWithPermissions("/tmp", "/global_tmp",
+                                               fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_POSIX |
+                                                   fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_ADMIN);
+      } else {
+        FXL_LOG(WARNING) << "Component " << ns_id
+                         << " is not allowed to use global-data. Blocked by allowlist.";
+      }
     }
   }
 

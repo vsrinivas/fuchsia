@@ -1,11 +1,8 @@
 {
     "program": {
-        "binary": "test/build_info_tests"
+        "binary": "test/no-build-info"
     },
     "sandbox": {
-        "features": [
-            "build-info"
-        ],
         "services": [
             "fuchsia.sys.Environment"
         ]
