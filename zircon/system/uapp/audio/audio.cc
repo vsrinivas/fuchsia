@@ -24,7 +24,10 @@
 
 static constexpr float DEFAULT_PLUG_MONITOR_DURATION = 10.0f;
 static constexpr float MIN_PLUG_MONITOR_DURATION = 0.5f;
+static constexpr float MIN_PLAY_AMPLITUDE = 0.1f;
+static constexpr float MAX_PLAY_AMPLITUDE = 1.0f;
 static constexpr float DEFAULT_PLAY_DURATION = 1.5f;
+static constexpr float DEFAULT_PLAY_AMPLITUDE = MAX_PLAY_AMPLITUDE;
 static constexpr float MIN_PLAY_DURATION = 0.001f;
 static constexpr float DEFAULT_TONE_FREQ = 440.0f;
 static constexpr float MIN_TONE_FREQ = 15.0f;
@@ -91,16 +94,20 @@ void usage(const char* prog_name) {
          "         floored at %u mSec\n",
          DEFAULT_PLUG_MONITOR_DURATION,
          static_cast<int>(MIN_PLUG_MONITOR_DURATION * 1000));
-  printf("tone   : Params : [<freq>] [<duration>]\n"
+  printf("tone   : Params : [<freq>] [<duration>] [<amplitude>]\n"
          "         Play a sinusoidal tone of the specified frequency for the\n"
          "         specified duration.  Frequency is clamped on the range\n"
          "         [%.1f, %.1f] Hz.  Duration is given in seconds and floored\n"
-         "         at %d mSec.  Default is %.1f Hz for %.1f seconds\n",
+         "         at %d mSec.  Default is %.1f Hz for %.1f seconds\n"
+         "         Output will be scaled by specified amplitude if provided.\n"
+         "         Amplitude will be clamped between %.1f and %.1f\n",
           MIN_TONE_FREQ,
           MAX_TONE_FREQ,
           static_cast<int>(MIN_PLAY_DURATION * 1000),
           DEFAULT_TONE_FREQ,
-          DEFAULT_PLAY_DURATION);
+          DEFAULT_PLAY_DURATION,
+          MIN_PLAY_AMPLITUDE,
+          DEFAULT_PLAY_AMPLITUDE);
   printf("noise  : Params : [<duration>]\n"
          "         Play pseudo-white noise for the specified duration.  Duration is\n"
          "         given in seconds and floored at %d mSec.  Default is %.1f seconds\n",
@@ -429,6 +436,7 @@ int main(int argc, const char** argv) {
 
   float tone_freq = 440.0;
   float duration;
+  float amplitude = DEFAULT_PLAY_AMPLITUDE;
   const char* wav_filename = nullptr;
   float target_gain = -100.0;
   bool enb_agc = false;
@@ -490,8 +498,16 @@ int main(int argc, const char** argv) {
           }
           arg++;
         }
-
+        if (arg < argc) {
+          if (sscanf(argv[arg], "%f", &amplitude) != 1) {
+            printf("Failed to parse playback amplitude \"%s\"\n", argv[arg]);
+            return -1;
+          }
+          arg++;
+        }
         duration = fbl::max(duration, MIN_PLAY_DURATION);
+        amplitude = fbl::min(amplitude, MAX_PLAY_AMPLITUDE);
+        amplitude = fbl::max(amplitude, MIN_PLAY_AMPLITUDE);
       }
       break;
 
@@ -565,13 +581,15 @@ int main(int argc, const char** argv) {
       }
 
       SineSource sine_source;
-      res = sine_source.Init(tone_freq, 1.0, duration, frame_rate, channels, active, sample_format);
+      res = sine_source.Init(tone_freq, amplitude, duration, frame_rate, channels, active,
+                             sample_format);
       if (res != ZX_OK) {
         printf("Failed to initialize sine wav generator (res %d)\n", res);
         return res;
       }
 
-      printf("Playing %.2f Hz tone for %.2f seconds\n", tone_freq, duration);
+      printf("Playing %.2f Hz tone for %.2f seconds at %.2f amplitude\n", tone_freq, duration,
+             amplitude);
       return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(sine_source);
     }
 
