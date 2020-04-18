@@ -993,5 +993,6 @@ group("deprecated_package_underscore") {
     "//topaz/shell/story_shell_labs:story_shell_labs_pkg",
     "//topaz/tests/benchmarks/input_latency:topaz_input_latency_benchmarks",
     "//topaz/tests/benchmarks:topaz_benchmarks",
+    "//topaz/tests/dart_fidl_benchmarks:dart_fidl_benchmarks_pkg",
   ]
 }

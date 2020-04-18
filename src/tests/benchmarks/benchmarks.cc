@@ -93,6 +93,12 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
     benchmarks_runner->AddLibPerfTestBenchmark(
         "fuchsia.fidl_microbenchmarks", "/bin/llcpp_fidl_benchmarks", std::vector<std::string>());
   }
+  {
+    constexpr const char* kLabel = "fuchsia.fidl_roundtrip_microbenchmarks";
+    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
+    benchmarks_runner->AddCustomBenchmark("fidl_roundtrip",
+                                          {"/bin/roundtrip_fidl_benchmarks", out_file}, out_file);
+  }
 
   // TODO(PT-181, PT-182): The following input latency benchmarks do not make
   // an effort to close the graphics application being benchmarked at exit

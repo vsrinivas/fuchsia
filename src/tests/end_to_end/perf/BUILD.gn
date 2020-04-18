@@ -23,6 +23,7 @@ test_list = [
   "netstack_iperf_test",
   "rust_inspect_benchmarks_test",
   "tspec_example_test",
+  "fidl_roundtrip_test",
 ]
 foreach(target_name, test_list) {
   dart_test(target_name) {
@@ -96,6 +97,9 @@ group("package_deps") {
     "//src/ui/tools:present_view",
     "//third_party/sbase:date",
     "//third_party/sbase:sleep",
+
+    # These are used by the FIDL round trip benchmarks
+    "//src/tests/benchmarks/fidl/roundtrip",
 
     # These are used by the test runner in src/tests/benchmarks/,
     # used by the peridot-perf and fuchsia-perfcompare builders.
