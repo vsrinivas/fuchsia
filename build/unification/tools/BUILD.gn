@@ -19,4 +19,7 @@ group("tools") {
     "//zircon/tools/netprotocol($host_toolchain)",
     "//zircon/tools/xdc-server($host_toolchain)",
   ]
+  if (host_os == "linux") {
+    deps += [ "//zircon/tools/mtd-redundant-storage($host_toolchain)" ]
+  }
 }

@@ -40,9 +40,6 @@ foreach(host, standard_build_hosts) {
       "merkleroot",
       "zbi",
     ]
-    if (os == "linux") {
-      deps += [ "mtd-redundant-storage" ]
-    }
   }
 }
 
