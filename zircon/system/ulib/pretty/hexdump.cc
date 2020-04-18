@@ -16,7 +16,7 @@
 void hexdump_stdio_printf(void* printf_arg, const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  vfprintf(printf_arg, fmt, args);
+  vfprintf(static_cast<FILE*>(printf_arg), fmt, args);
   va_end(args);
 }
 

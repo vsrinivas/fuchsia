@@ -28,7 +28,7 @@ char* format_size_fixed(char* str, size_t str_size, size_t bytes, char unit) {
   size_t orig_bytes = bytes;
 retry:;
   int ui = 0;
-  uint16_t r = 0;
+  unsigned int r = 0;
   bool whole = true;
   // If we have a fixed (non-zero) unit, divide until we hit it.
   //

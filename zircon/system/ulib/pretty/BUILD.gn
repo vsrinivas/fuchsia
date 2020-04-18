@@ -11,9 +11,9 @@ zx_library("pretty") {
   kernel = true
   host = true
   static = true
-  sources = [ "sizes.c" ]
+  sources = [ "sizes.cc" ]
   if (!is_kernel) {
-    sources += [ "hexdump.c" ]
+    sources += [ "hexdump.cc" ]
   }
-  deps = ["$zx/system/ulib/zircon-internal:headers"]
+  deps = [ "$zx/system/ulib/zircon-internal:headers" ]
 }
