@@ -4,4 +4,4 @@
 
 #include "main.h"
 
-int main(int argc, char** argv) { internal::main(argc, argv); }
+int main(int argc, char** argv) { return internal::main(argc, argv); }
