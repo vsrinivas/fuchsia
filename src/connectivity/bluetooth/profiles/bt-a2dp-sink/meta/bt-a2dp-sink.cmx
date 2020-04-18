@@ -13,7 +13,8 @@
             "fuchsia.media.SessionAudioConsumerFactory",
             "fuchsia.media.sessions2.Publisher",
             "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

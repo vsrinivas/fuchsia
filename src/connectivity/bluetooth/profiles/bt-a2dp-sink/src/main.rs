@@ -26,6 +26,7 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_inspect_contrib::nodes::ManagedNode,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
+    fuchsia_trace::{self as trace},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self as mpsc, Receiver, Sender},
@@ -316,6 +317,9 @@ async fn decode_media_stream(
         }
     };
 
+    trace::instant!("bt-a2dp-sink", "Media:Start", trace::Scope::Thread);
+
+    let mut packet_count: u64 = 0;
     let start_time = zx::Time::get(zx::ClockId::Monotonic);
     inspect.stream_started();
     loop {
@@ -332,6 +336,12 @@ async fn decode_media_stream(
                     }
                     Some(Ok(packet)) => packet,
                 };
+
+                packet_count += 1;
+
+                // link incoming and outgoing flows togther with shared duration event
+                trace::duration!("bt-a2dp-sink", "ProfilePacket received");
+                trace::flow_end!("bluetooth", "ProfilePacket", packet_count);
 
                 if let Err(e) = player.push_payload(&pkt.as_slice()).await {
                     fx_log_info!("can't push packet: {:?}", e);
@@ -376,6 +386,7 @@ async fn decode_media_stream(
         &codec_config.codec_type(),
         (end_time - start_time).into_seconds(),
     );
+    trace::instant!("bt-a2dp-sink", "Media:Stop", trace::Scope::Thread);
 }
 
 fn report_stream_metrics(
@@ -508,6 +519,7 @@ async fn main() -> Result<(), Error> {
     let opts: Opt = argh::from_env();
 
     fuchsia_syslog::init_with_tags(&["a2dp-sink"]).expect("Can't init logger");
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 

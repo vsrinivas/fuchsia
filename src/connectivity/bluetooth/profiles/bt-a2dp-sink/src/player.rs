@@ -16,6 +16,7 @@ use {
     },
     fuchsia_audio_codec::StreamProcessor,
     fuchsia_syslog::fx_log_info,
+    fuchsia_trace::{self as trace},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{io::AsyncWriteExt, select, stream::pending, FutureExt, Stream, StreamExt},
 };
@@ -43,6 +44,7 @@ pub struct Player {
     last_seq_played: u16,
     decoder: Option<StreamProcessor>,
     decoded_stream: DecodedStream,
+    tx_count: u64,
 }
 
 pub enum PlayerEvent {
@@ -215,6 +217,7 @@ impl Player {
             last_seq_played: 0,
             decoder,
             decoded_stream,
+            tx_count: 0,
         };
 
         // wait for initial event
@@ -248,6 +251,7 @@ impl Player {
     /// Accepts a payload which may contain multiple frames and breaks it into
     /// frames and sends it to media.
     pub async fn push_payload(&mut self, payload: &[u8]) -> Result<(), Error> {
+        trace::duration_begin!("bt-a2dp-sink", "Media:PacketReceived");
         let rtp = RtpHeader::new(payload)?;
 
         let seq = rtp.sequence_number();
@@ -271,6 +275,7 @@ impl Player {
                         self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
                         Err(e)
                     })?;
+                    trace::instant!("bt-a2dp-sink", "SBC frame", trace::Scope::Thread);
                     if offset + len > payload.len() {
                         self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
                         return Err(format_err!("Ran out of buffer for SBC frame"));
@@ -305,7 +310,9 @@ impl Player {
         // Flush the decoder if we have one.
         self.decoder
             .as_mut()
-            .map_or(Ok(()), |d| d.flush().map_err(|e| format_err!("failed flush: {:?}", e)))
+            .map_or(Ok(()), |d| d.flush().map_err(|e| format_err!("failed flush: {:?}", e)))?;
+        trace::duration_end!("bt-a2dp-sink", "Media:PacketReceived");
+        Ok(())
     }
 
     /// Push an encoded media frame into the buffer and signal that it's there to media.
@@ -314,6 +321,11 @@ impl Player {
             self.stream_sink.end_of_stream()?;
             return Err(format_err!("frame is too large for buffer"));
         }
+
+        trace::duration!("bt-a2dp-sink", "Media:PacketSent");
+
+        self.tx_count += 1;
+        trace::flow_begin!("stream-sink", "SendPacket", self.tx_count);
 
         if self.current_offset + frame.len() > self.buffer_len {
             self.current_offset = 0;
