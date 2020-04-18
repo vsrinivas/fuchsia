@@ -32,3 +32,32 @@ test_package("test-magma-vsi-exec") {
     },
   ]
 }
+
+test("msd_vsl_gc_integration_tests") {
+  sources = [ "test_vsl_query.cc" ]
+
+  deps = [
+    "//src/graphics/drivers/msd-vsl-gc/include",
+    "//src/graphics/lib/magma/src/libmagma",
+    "//src/graphics/lib/magma/tests/helper:test_device_helper",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+test_package("msd-vsl-gc-integration-tests") {
+  deps = [ ":msd_vsl_gc_integration_tests" ]
+
+  tests = [
+    {
+      name = "msd_vsl_gc_integration_tests"
+    },
+  ]
+}
+
+group("integration") {
+  testonly = true
+  deps = [
+    ":msd-vsl-gc-integration-tests",
+    ":test-magma-vsi-exec",
+  ]
+}

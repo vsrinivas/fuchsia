@@ -9,6 +9,7 @@
 
 #include <fbl/auto_call.h>
 
+#include "address_space_layout.h"
 #include "command_buffer.h"
 #include "instructions.h"
 #include "magma_util/macros.h"
@@ -143,7 +144,7 @@ bool MsdVslDevice::Init(void* device_handle) {
   if (!page_table_arrays_)
     return DRETF(false, "failed to create page table arrays");
 
-  auto buffer = MsdVslBuffer::Create(kRingbufferSizeInPages * magma::page_size(), "ring-buffer");
+  auto buffer = MsdVslBuffer::Create(AddressSpaceLayout::ringbuffer_size(), "ring-buffer");
   buffer->platform_buffer()->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED);
   ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer), 0 /* start_offset */);
 
@@ -1046,8 +1047,7 @@ void msd_device_destroy(msd_device_t* device) { delete MsdVslDevice::cast(device
 magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out) {
   switch (id) {
     case MAGMA_QUERY_VENDOR_ID:
-      // VK_VENDOR_ID_VIV
-      *value_out = 0x10001;
+      *value_out = MAGMA_VENDOR_ID_VSL;
       return MAGMA_STATUS_OK;
 
     case MAGMA_QUERY_DEVICE_ID:
@@ -1056,6 +1056,15 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
 
     case MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED:
       *value_out = 0;
+      return MAGMA_STATUS_OK;
+
+    case kMsdVslVendorQueryClientGpuAddrRange:
+      uint32_t size_in_pages = AddressSpaceLayout::client_gpu_addr_size() / magma::page_size();
+      DASSERT(size_in_pages * magma::page_size() == AddressSpaceLayout::client_gpu_addr_size());
+      uint32_t base_in_pages = AddressSpaceLayout::client_gpu_addr_base() / magma::page_size();
+      DASSERT(base_in_pages * magma::page_size() == AddressSpaceLayout::client_gpu_addr_base());
+      *value_out =
+          static_cast<uint64_t>(base_in_pages) | (static_cast<uint64_t>(size_in_pages) << 32);
       return MAGMA_STATUS_OK;
   }
   return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);

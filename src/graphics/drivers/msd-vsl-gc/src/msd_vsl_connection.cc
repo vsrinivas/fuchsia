@@ -34,6 +34,7 @@ magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
 
 magma::Status MsdVslConnection::MapBufferGpu(std::shared_ptr<MsdVslBuffer> buffer, uint64_t gpu_va,
                                              uint64_t page_offset, uint64_t page_count) {
+  // TODO(fxb/47800): ensure clients cannot map / unmap at the ringbuffer gpu address.
   std::shared_ptr<GpuMapping> mapping;
   magma::Status status = AddressSpace::MapBufferGpu(address_space(), buffer, gpu_va, page_offset,
                                                     page_count, &mapping);

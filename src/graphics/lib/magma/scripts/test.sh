@@ -51,7 +51,8 @@ vsi|vsl)
     magma_unit_tests \
     msd_vsl_gc_nonhardware_tests \
     magma_abi_conformance_tests \
-    test-magma-vsi-exec
+    msd-vsl-gc-integration-tests \
+    test-magma-vsi-exec \
   ;;
 *)
   echo >&2 "unknown gpu: $1"

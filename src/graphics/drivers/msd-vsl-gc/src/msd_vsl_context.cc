@@ -4,11 +4,9 @@
 
 #include "msd_vsl_context.h"
 
+#include "address_space_layout.h"
 #include "command_buffer.h"
 #include "msd_vsl_semaphore.h"
-
-// TODO(fxb/47800): ensure clients cannot map / unmap at the ringbuffer gpu address.
-static constexpr uint32_t kRingbufferGpuAddr = 0x0;
 
 // static
 std::shared_ptr<MsdVslContext> MsdVslContext::Create(std::weak_ptr<MsdVslConnection> connection,
@@ -95,9 +93,12 @@ bool MsdVslContext::MapRingbuffer(Ringbuffer* ringbuffer) {
     // Already mapped.
     return true;
   }
-  bool res = ringbuffer->MultiMap(exec_address_space(), kRingbufferGpuAddr);
+
+  gpu_addr = AddressSpaceLayout::system_gpu_addr_base();
+  // TODO(fxb/50307): ringbuffer should be mapped read-only
+  bool res = ringbuffer->MultiMap(exec_address_space(), gpu_addr);
   if (res) {
-    exec_address_space()->SetRingbufferGpuAddress(kRingbufferGpuAddr);
+    exec_address_space()->SetRingbufferGpuAddress(gpu_addr);
   }
   return res;
 }

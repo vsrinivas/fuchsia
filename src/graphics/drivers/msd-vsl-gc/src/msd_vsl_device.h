@@ -81,7 +81,6 @@ class MsdVslDevice : public msd_device_t,
   }
 
  private:
-  static constexpr uint32_t kRingbufferSizeInPages = 1;
   // Number of new commands added to the ringbuffer for each submitted batch:
   // EVENT, WAIT, LINK
   static constexpr uint32_t kRbInstructionsPerBatch = 3;
