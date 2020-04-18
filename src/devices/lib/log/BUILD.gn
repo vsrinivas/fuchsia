@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("log") {
+  visibility = [ "//src/devices/bin/*" ]
+
+  sources = [
+    "log.cc",
+    "log.h",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/system/fidl/fuchsia-boot:llcpp",
+  ]
+
+  public_deps = [ "//zircon/public/lib/syslog" ]
+}
