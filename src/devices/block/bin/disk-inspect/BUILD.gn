@@ -18,9 +18,9 @@ executable("disk-inspect") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
-    "//zircon/public/lib/disk_inspector",
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:llcpp",
+    "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/minfs",
   ]
 }

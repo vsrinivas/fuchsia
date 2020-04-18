@@ -2,51 +2,87 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("disk_inspector") {
-  sdk = "source"
-  sdk_headers = [
-    "disk_inspector/inspector_transaction_handler.h",
-    "disk_inspector/command_handler.h",
-    "disk_inspector/command.h",
-    "disk_inspector/common_types.h",
-    "disk_inspector/disk_inspector.h",
-    "disk_inspector/disk_obj.h",
-    "disk_inspector/disk_struct.h",
-    "disk_inspector/supported_types.h",
-    "disk_inspector/type_utils.h",
-    "disk_inspector/buffer_factory.h",
-    "disk_inspector/vmo_buffer_factory.h",
-    "disk_inspector/loader.h",
-  ]
-  static = true
-  sources = [
-    "command.cc",
-    "disk_inspector.cc",
-    "disk_struct.cc",
-    "loader.cc",
-    "vmo_buffer_factory.cc",
-  ]
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
 
-  public_deps = [ "$zx/system/ulib/fbl:headers" ]
-  deps = [ "$zx/system/ulib/fbl" ]
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
 
-  if (is_fuchsia) {
-    sources += [ "inspector_transaction_handler.cc" ]
+import("//build/unification/zx_library.gni")
 
-    public_deps += [
-      "$zx/system/ulib/block-client:headers",
-      "$zx/system/ulib/fit:headers",
-      "$zx/system/ulib/fs:headers",
-      "$zx/system/ulib/fs/transaction:headers",
-      "$zx/system/ulib/storage/buffer:headers",
+if (is_fuchsia) {
+  zx_library("disk_inspector") {
+    sdk = "source"
+    sdk_headers = [
+      "disk_inspector/inspector_transaction_handler.h",
+      "disk_inspector/command_handler.h",
+      "disk_inspector/command.h",
+      "disk_inspector/common_types.h",
+      "disk_inspector/disk_inspector.h",
+      "disk_inspector/disk_obj.h",
+      "disk_inspector/disk_struct.h",
+      "disk_inspector/supported_types.h",
+      "disk_inspector/type_utils.h",
+      "disk_inspector/buffer_factory.h",
+      "disk_inspector/vmo_buffer_factory.h",
+      "disk_inspector/loader.h",
+    ]
+    static = true
+    sources = [
+      "command.cc",
+      "disk_inspector.cc",
+      "disk_struct.cc",
+      "loader.cc",
+      "vmo_buffer_factory.cc",
     ]
 
-    deps += [
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fit",
-      "$zx/system/ulib/storage/operation",
-      "$zx/system/ulib/zircon",
-      "$zx/third_party/ulib/safemath",
+    public_deps = [ "//zircon/public/lib/fbl" ]
+    deps = [ "//zircon/public/lib/fbl" ]
+
+    if (is_fuchsia) {
+      sources += [ "inspector_transaction_handler.cc" ]
+
+      public_deps += [
+        "//zircon/public/lib/block-client",
+        "//zircon/public/lib/buffer",
+        "//zircon/public/lib/fit",
+        "//zircon/public/lib/fs",
+        "//zircon/public/lib/transaction",
+      ]
+
+      deps += [
+        "//zircon/public/lib/fdio",
+        "//zircon/public/lib/fit",
+        "//zircon/public/lib/operation",
+        "//zircon/public/lib/safemath",
+      ]
+    }
+  }
+} else {
+  config("headers_config") {
+    include_dirs = [ "include" ]
+  }
+
+  source_set("disk_inspector") {
+    public = [
+      "include/disk_inspector/inspector_transaction_handler.h",
+      "include/disk_inspector/command_handler.h",
+      "include/disk_inspector/command.h",
+      "include/disk_inspector/common_types.h",
+      "include/disk_inspector/disk_inspector.h",
+      "include/disk_inspector/disk_obj.h",
+      "include/disk_inspector/disk_struct.h",
+      "include/disk_inspector/supported_types.h",
+      "include/disk_inspector/type_utils.h",
+      "include/disk_inspector/buffer_factory.h",
+      "include/disk_inspector/vmo_buffer_factory.h",
+      "include/disk_inspector/loader.h",
     ]
+
+    public_configs = [ ":headers_config" ]
   }
 }

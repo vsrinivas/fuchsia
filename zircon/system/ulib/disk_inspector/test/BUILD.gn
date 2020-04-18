@@ -48,14 +48,14 @@ test("disk_inspector_unit") {
   deps = [
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/buffer",
-    "//zircon/public/lib/disk_inspector",
     "//zircon/public/lib/fake-device",
     "//zircon/public/lib/operation",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/fs/test_support",
   ]
-  include_dirs = [ "//zircon/public/lib/disk_inspector" ]
+  include_dirs = [ "//zircon/system/ulib/disk_inspector" ]
 }
 
 migrated_manifest("disk_inspector_unit-manifest") {
