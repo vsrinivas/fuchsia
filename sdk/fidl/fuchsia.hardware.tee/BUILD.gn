@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_library("fuchsia-hardware-tee") {
+fidl("fuchsia.hardware.tee") {
   sources = [ "device_connector.fidl" ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-tee",
-    "$zx/system/fidl/fuchsia-tee-manager",
+    "//zircon/system/fidl/fuchsia-tee",
+    "//zircon/system/fidl/fuchsia-tee-manager",
   ]
 }
