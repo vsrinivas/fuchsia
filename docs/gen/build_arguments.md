@@ -441,7 +441,7 @@ Path to Clang lib directory.
 
 **Current value (from the default):** `"../build/prebuilt/third_party/clang/linux-x64/lib"`
 
-From //build/images/manifest.gni:18
+From //build/images/manifest.gni:9
 
 ### clang_prefix
 The default clang toolchain provided by the prebuilt. This variable is
@@ -536,13 +536,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/ea4af71c2ac7a2daa50e4d22bc48270b1a66c83a/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/4cb79941fcd4bfe6877e8d061aea5b6ab5901271/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/ea4af71c2ac7a2daa50e4d22bc48270b1a66c83a/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/4cb79941fcd4bfe6877e8d061aea5b6ab5901271/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -624,7 +624,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/b69a3658244a1f0aadfacc0842d333f6458d97bb/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -639,7 +639,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/b69a3658244a1f0aadfacc0842d333f6458d97bb/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -689,7 +689,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/b69a3658244a1f0aadfacc0842d333f6458d97bb/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -937,7 +937,7 @@ Extra args to globally apply to the manifest generation script.
 
 **Current value (from the default):** `[]`
 
-From //build/images/manifest.gni:21
+From //build/images/manifest.gni:12
 
 ### extra_package_labels
 
@@ -986,7 +986,7 @@ From //build/unification/images/BUILD.gn:14
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/b69a3658244a1f0aadfacc0842d333f6458d97bb/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1001,14 +1001,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/b69a3658244a1f0aadfacc0842d333f6458d97bb/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/b69a3658244a1f0aadfacc0842d333f6458d97bb/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -2220,14 +2220,6 @@ Number of parallel ThinLTO jobs.
 **Current value (from the default):** `8`
 
 From //build/config/lto/config.gni:13
-
-### toolchain_manifests
-Manifest files describing target libraries from toolchains.
-Can be either // source paths or absolute system paths.
-
-**Current value (from the default):** `["/b/s/w/ir/k/prebuilt/third_party/clang/linux-x64/lib/aarch64-fuchsia.manifest"]`
-
-From //build/images/manifest.gni:10
 
 ### toolchain_variant
 *This should never be set as a build argument.*
