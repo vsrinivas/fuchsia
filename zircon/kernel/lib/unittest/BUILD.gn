@@ -17,5 +17,8 @@ zx_library("unittest") {
     # <lib/unittest/user_memory.h> has #include <lib/crypto/prng.h>.
     "$zx/kernel/vm:headers",
   ]
-  deps = [ "$zx/kernel/lib/console" ]
+  deps = [
+    "$zx/kernel/lib/console",
+    "$zx/system/ulib/pretty",
+  ]
 }

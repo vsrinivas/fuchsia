@@ -23,6 +23,7 @@
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
+#include <pretty/hexdump.h>
 
 #include "tests.h"
 

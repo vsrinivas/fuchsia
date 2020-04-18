@@ -133,6 +133,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/object",
       "$zx/kernel/vm",
       "$zx/system/ulib/bitmap",
+      "$zx/system/ulib/pretty",
     ]
   }
 }

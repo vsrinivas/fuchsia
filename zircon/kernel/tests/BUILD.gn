@@ -54,6 +54,7 @@ source_set("tests") {
     "$zx/kernel/lib/unittest",
     "$zx/kernel/object",
     "$zx/system/ulib/affine",
+    "$zx/system/ulib/pretty",
     "$zx/system/ulib/zx",
   ]
 }

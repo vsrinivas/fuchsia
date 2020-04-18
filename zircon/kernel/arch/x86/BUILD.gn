@@ -159,6 +159,7 @@ zx_library("x86") {
     "$zx/kernel/object",
     "$zx/kernel/platform/pc",
     "$zx/system/ulib/bitmap",
+    "$zx/system/ulib/pretty",
     "cpuid",
   ]
   public_deps = [

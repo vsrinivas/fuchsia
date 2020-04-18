@@ -12,6 +12,7 @@
 
 #include <dev/pci_config.h>
 #include <fbl/alloc_checker.h>
+#include <pretty/hexdump.h>
 
 #define LOCAL_TRACE 0
 

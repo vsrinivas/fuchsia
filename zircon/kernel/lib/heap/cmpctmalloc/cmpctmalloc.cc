@@ -17,6 +17,7 @@
 #include <zircon/limits.h>
 
 #include <fbl/algorithm.h>
+#include <pretty/hexdump.h>
 
 // Malloc implementation tuned for space.
 //

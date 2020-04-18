@@ -9,7 +9,10 @@ zx_library("cmpctmalloc") {
   host = true
 
   sources = [ "cmpctmalloc.cc" ]
-  deps = [ "$zx/system/ulib/fbl" ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/pretty",
+  ]
   include_dirs = [ "include/lib" ]
 
   if (is_host) {

@@ -11,6 +11,7 @@
 #include <platform.h>
 #include <sys/types.h>
 
+#include <pretty/hexdump.h>
 #include <vm/physmap.h>
 
 namespace {
@@ -55,7 +56,7 @@ static void DumpPageAndPanic(vm_page_t* page) {
   printf("pmm checker found unexpected pattern in page at %p\n", kvaddr);
   printf("dump of page follows\n");
   hexdump8(kvaddr, PAGE_SIZE);
-  panic("pmm corruption suspected\n" );
+  panic("pmm corruption suspected\n");
 }
 
 void PmmChecker::AssertPattern(vm_page_t* page) {

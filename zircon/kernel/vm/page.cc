@@ -14,6 +14,7 @@
 #include <trace.h>
 
 #include <kernel/percpu.h>
+#include <pretty/hexdump.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>

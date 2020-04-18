@@ -22,6 +22,7 @@
 #include <arch/user_copy.h>
 #include <kernel/interrupt.h>
 #include <kernel/thread.h>
+#include <pretty/hexdump.h>
 #include <vm/fault.h>
 #include <vm/vm.h>
 

@@ -29,6 +29,7 @@ zx_library("pcie") {
     "$zx/kernel/lib/kpci",
     "$zx/kernel/lib/ktl",
     "$zx/kernel/vm:headers",
+    "$zx/system/ulib/pretty",
     "$zx/system/ulib/region-alloc",
   ]
   public_deps = [

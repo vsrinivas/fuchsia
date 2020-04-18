@@ -18,6 +18,7 @@
 
 #include <arch/ops.h>
 #include <fbl/algorithm.h>
+#include <pretty/hexdump.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 

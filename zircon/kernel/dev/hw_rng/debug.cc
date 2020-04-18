@@ -11,6 +11,7 @@
 
 #include <dev/hw_rng.h>
 #include <fbl/algorithm.h>
+#include <pretty/hexdump.h>
 
 static int cmd_rng32(int argc, const cmd_args* argv, uint32_t flags) {
   uint32_t val;

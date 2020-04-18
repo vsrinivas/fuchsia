@@ -52,6 +52,7 @@
 #include <lockdep/lockdep.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
+#include <pretty/hexdump.h>
 #include <vm/kstack.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
