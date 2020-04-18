@@ -384,19 +384,10 @@ aggregate_manifest("migrated-image") {
     "//src/media/audio/drivers/alc5663:alc5663-manifest",
     "//src/media/audio/drivers/astro-pdm-input:astro-pdm-input-manifest",
     "//src/media/audio/drivers/astro-tdm-output:astro-tdm-output-manifest",
-    "//src/media/audio/drivers/codecs/max98373:max98373-manifest",
-    "//src/media/audio/drivers/codecs/tas5782:tas5782-manifest",
-    "//src/media/audio/drivers/codecs/tas5805:tas5805-manifest",
-    "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec-manifest",
-    "//src/media/audio/drivers/max98927:max98927-manifest",
     "//src/media/audio/drivers/usb-audio:usb-audio-manifest",
     "//src/ui/backlight/bin/backlight:backlight-manifest",
-    "//src/ui/backlight/drivers/sg-micro:sg-micro-manifest",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-manifest",
     "//src/ui/input/bin/hid:hid-manifest",
-    "//src/ui/input/drivers/bma253:bma253-manifest",
-    "//src/ui/input/drivers/cypress:cypress-manifest",
-    "//src/ui/input/drivers/focaltech:focaltech-manifest",
     "//src/ui/input/drivers/goodix:goodix-manifest",
     "//src/ui/input/drivers/hid-buttons:hid-buttons-manifest",
     "//src/ui/input/drivers/hid:hid-manifest",
@@ -407,8 +398,6 @@ aggregate_manifest("migrated-image") {
     "//src/ui/input/drivers/usb-hid:usb-hid-manifest",
     "//src/ui/input/drivers/usb-hid:usb-hid-manifest",
     "//src/ui/light/drivers/aml-light:aml-light-manifest",
-    "//src/ui/light/drivers/gpio-light:gpio-light-manifest",
-    "//src/ui/light/drivers/lp50xx-light:lp50xx-light-manifest",
     "//zircon/system/core/bootsvc:bin-manifest",
     "//zircon/system/core/console:console-manifest",
     "//zircon/system/core/devmgr/fragment:fragment-manifest",
@@ -473,24 +462,7 @@ aggregate_manifest("migrated-image") {
   ]
 
   if (target_cpu == "arm64") {
-    deps += [
-      "//zircon/system/dev/board/as370:as370-manifest",
-      "//zircon/system/dev/board/astro:astro-manifest",
-      "//zircon/system/dev/board/c18:c18-manifest",
-      "//zircon/system/dev/board/gauss:gauss-i2c-test-manifest",
-      "//zircon/system/dev/board/gauss:gauss-manifest",
-      "//zircon/system/dev/board/hikey960:hi3660-i2c-test-manifest",
-      "//zircon/system/dev/board/hikey960:hikey960-manifest",
-      "//zircon/system/dev/board/luis:luis-manifest",
-      "//zircon/system/dev/board/msm8998:msm8998-manifest",
-      "//zircon/system/dev/board/msm8x53-som:msm8x53-som-manifest",
-      "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-manifest",
-      "//zircon/system/dev/board/nelson:nelson-manifest",
-      "//zircon/system/dev/board/qemu-arm64:qemu-arm64-manifest",
-      "//zircon/system/dev/board/sherlock:sherlock-manifest",
-      "//zircon/system/dev/board/vim2:vim2-manifest",
-      "//zircon/system/dev/board/vim3:vim3-manifest",
-    ]
+    deps += [ "//zircon/system/dev/board/astro:astro-manifest" ]
   } else if (target_cpu == "x64") {
     deps += [
       "//src/connectivity/ethernet/drivers/intel-ethernet:intel-ethernet-manifest",
@@ -558,18 +530,29 @@ aggregate_manifest("migrated-image") {
       "//src/graphics/drivers/virtio:virtio_gpu-manifest",
       "//src/media/audio/drivers/as370-pdm-input:as370-pdm-input-manifest",
       "//src/media/audio/drivers/as370-tdm-output:as370-tdm-output-manifest",
+      "//src/media/audio/drivers/codecs/max98373:max98373-manifest",
+      "//src/media/audio/drivers/codecs/tas5782:tas5782-manifest",
+      "//src/media/audio/drivers/codecs/tas5805:tas5805-manifest",
       "//src/media/audio/drivers/gauss-pdm-input:gauss-pdm-input-manifest",
       "//src/media/audio/drivers/gauss-tdm:gauss-tdm-manifest",
       "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec-manifest",
       "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec-manifest",
+      "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec-manifest",
       "//src/media/audio/drivers/intel-hda/controller:intel-hda-manifest",
+      "//src/media/audio/drivers/max98927:max98927-manifest",
       "//src/media/audio/drivers/mt8167-tdm-input:mt8167-tdm-input-manifest",
       "//src/media/audio/drivers/mt8167-tdm-output:mt8167-tdm-output-manifest",
       "//src/media/audio/drivers/nelson-pdm-input:nelson-pdm-input-manifest",
       "//src/media/audio/drivers/nelson-tdm-output:nelson-tdm-output-manifest",
       "//src/media/audio/drivers/sherlock-pdm-input:sherlock-pdm-input-manifest",
       "//src/media/audio/drivers/sherlock-tdm-output:sherlock-tdm-output-manifest",
+      "//src/ui/backlight/drivers/sg-micro:sg-micro-manifest",
+      "//src/ui/input/drivers/bma253:bma253-manifest",
+      "//src/ui/input/drivers/cypress:cypress-manifest",
+      "//src/ui/input/drivers/focaltech:focaltech-manifest",
       "//src/ui/input/drivers/virtio:virtio_input-manifest",
+      "//src/ui/light/drivers/gpio-light:gpio-light-manifest",
+      "//src/ui/light/drivers/lp50xx-light:lp50xx-light-manifest",
       "//zircon/system/dev/board/qemu-arm64:qemu-arm64-manifest",
       "//zircon/system/uapp/audio:test-manifest",
       "//zircon/system/ulib/ddktl/test:ddktl-test-manifest",
@@ -588,6 +571,26 @@ aggregate_manifest("migrated-image") {
       "//zircon/system/utest/platform-bus:test-pwm-manifest",
       "//zircon/system/utest/platform-bus:test-spi-manifest",
     ]
+
+    if (target_cpu == "arm64") {
+      deps += [
+        "//zircon/system/dev/board/as370:as370-manifest",
+        "//zircon/system/dev/board/c18:c18-manifest",
+        "//zircon/system/dev/board/gauss:gauss-i2c-test-manifest",
+        "//zircon/system/dev/board/gauss:gauss-manifest",
+        "//zircon/system/dev/board/hikey960:hi3660-i2c-test-manifest",
+        "//zircon/system/dev/board/hikey960:hikey960-manifest",
+        "//zircon/system/dev/board/luis:luis-manifest",
+        "//zircon/system/dev/board/msm8998:msm8998-manifest",
+        "//zircon/system/dev/board/msm8x53-som:msm8x53-som-manifest",
+        "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-manifest",
+        "//zircon/system/dev/board/nelson:nelson-manifest",
+        "//zircon/system/dev/board/qemu-arm64:qemu-arm64-manifest",
+        "//zircon/system/dev/board/sherlock:sherlock-manifest",
+        "//zircon/system/dev/board/vim2:vim2-manifest",
+        "//zircon/system/dev/board/vim3:vim3-manifest",
+      ]
+    }
   }
 }
 
