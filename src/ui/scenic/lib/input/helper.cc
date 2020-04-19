@@ -78,5 +78,76 @@ PointerEvent BuildLocalPointerEvent(const PointerEvent& pointer_event, const glm
                                 TransformPointerCoords(PointerCoords(pointer_event), transform));
 }
 
+trace_flow_id_t PointerTraceHACK(float fa, float fb) {
+  uint32_t ia, ib;
+  memcpy(&ia, &fa, sizeof(uint32_t));
+  memcpy(&ib, &fb, sizeof(uint32_t));
+  return (((uint64_t)ia) << 32) | ib;
+}
+
+std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t trace_id) {
+  float fhigh, flow;
+  const uint32_t ihigh = (uint32_t)(trace_id >> 32);
+  const uint32_t ilow = (uint32_t)trace_id;
+  memcpy(&fhigh, &ihigh, sizeof(uint32_t));
+  memcpy(&flow, &ilow, sizeof(uint32_t));
+  return {fhigh, flow};
+}
+
+std::vector<PointerEvent> PointerFlowEventToGfxPointerEvent(
+    const fuchsia::ui::pointerflow::Event& event, uint32_t device_id) {
+  PointerEvent pointer_event;
+  pointer_event.type = fuchsia::ui::input::PointerEventType::TOUCH;
+  pointer_event.device_id = device_id;
+
+  pointer_event.event_time = event.timestamp();
+  pointer_event.pointer_id = event.pointer_id();
+  pointer_event.x = event.position_x();
+  pointer_event.y = event.position_y();
+
+  if (event.has_trace_flow_id()) {
+    const auto [high, low] = ReversePointerTraceHACK(event.trace_flow_id());
+    pointer_event.radius_minor = low;   // Lower 32 bits.
+    pointer_event.radius_major = high;  // Upper 32 bits.
+  }
+
+  std::vector<fuchsia::ui::input::PointerEvent> events;
+  switch (event.phase()) {
+    case fuchsia::ui::input3::PointerEventPhase::ADD: {
+      PointerEvent down;
+      fidl::Clone(pointer_event, &down);
+      pointer_event.phase = fuchsia::ui::input::PointerEventPhase::ADD;
+      down.phase = fuchsia::ui::input::PointerEventPhase::DOWN;
+      events.emplace_back(std::move(pointer_event));
+      events.emplace_back(std::move(down));
+      break;
+    }
+    case fuchsia::ui::input3::PointerEventPhase::CHANGE: {
+      pointer_event.phase = fuchsia::ui::input::PointerEventPhase::MOVE;
+      events.emplace_back(std::move(pointer_event));
+      break;
+    }
+    case fuchsia::ui::input3::PointerEventPhase::REMOVE: {
+      PointerEvent up;
+      fidl::Clone(pointer_event, &up);
+      up.phase = fuchsia::ui::input::PointerEventPhase::UP;
+      pointer_event.phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
+      events.emplace_back(std::move(up));
+      events.emplace_back(std::move(pointer_event));
+      break;
+    }
+    case fuchsia::ui::input3::PointerEventPhase::CANCEL: {
+      pointer_event.phase = fuchsia::ui::input::PointerEventPhase::CANCEL;
+      events.emplace_back(std::move(pointer_event));
+      break;
+    }
+    default:
+      FXL_CHECK(false) << "unknown phase";
+      break;
+  }
+
+  return events;
+}
+
 }  // namespace input
 }  // namespace scenic_impl

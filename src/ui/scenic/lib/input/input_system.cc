@@ -32,15 +32,6 @@ using fuchsia::ui::input::SendPointerInputCmd;
 
 namespace {
 
-// TODO(SCN-1278): Remove this.
-// Turn two floats (high bits, low bits) into a 64-bit uint.
-trace_flow_id_t PointerTraceHACK(float fa, float fb) {
-  uint32_t ia, ib;
-  memcpy(&ia, &fa, sizeof(uint32_t));
-  memcpy(&ib, &fb, sizeof(uint32_t));
-  return (((uint64_t)ia) << 32) | ib;
-}
-
 gfx::LayerStackPtr GetLayerStack(const gfx::SceneGraph& scene_graph, GlobalId compositor_id) {
   gfx::CompositorWeakPtr compositor = scene_graph.GetCompositor(compositor_id);
   FXL_DCHECK(compositor) << "No compositor, violated invariant.";
