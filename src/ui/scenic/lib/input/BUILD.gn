@@ -6,6 +6,8 @@ source_set("input") {
   sources = [
     "helper.cc",
     "helper.h",
+    "injector.cc",
+    "injector.h",
     "input_command_dispatcher.cc",
     "input_command_dispatcher.h",
     "input_system.cc",

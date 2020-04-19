@@ -14,6 +14,7 @@
 #include <map>
 #include <optional>
 
+#include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
@@ -153,35 +154,6 @@ class InputSystem : public System,
                                                   GlobalId compositor_id) const;
 
  private:
-  using InjectorId = uint64_t;
-  class Injector : public fuchsia::ui::pointerflow::Injector {
-   public:
-    Injector(InjectorId id, fuchsia::ui::pointerflow::DispatchPolicy policy, uint32_t device_id,
-             fuchsia::ui::input3::PointerDeviceType device_type,
-             fuchsia::ui::views::ViewRef context, fuchsia::ui::views::ViewRef target,
-             fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector);
-
-    // |fuchsia::ui::pointerflow::Injector|
-    void Inject(::std::vector<fuchsia::ui::pointerflow::Event> events,
-                InjectCallback callback) override;
-
-    fidl::Binding<fuchsia::ui::pointerflow::Injector> binding_;
-
-    // TODO: Make member variables private when they're being accessed and no longer giving "unused
-    // variable" errors.
-
-    // Scenic-internal identifier.
-    const InjectorId id_;
-
-    // Client defined data.
-    const fuchsia::ui::pointerflow::DispatchPolicy dispatch_policy_;
-    const uint32_t device_id_;
-    const fuchsia::ui::input3::PointerDeviceType device_type_;
-
-    const fuchsia::ui::views::ViewRef context_;
-    const fuchsia::ui::views::ViewRef target_;
-  };
-
   InjectorId last_injector_id_ = 0;
 
   std::map<InjectorId, Injector> injectors_;

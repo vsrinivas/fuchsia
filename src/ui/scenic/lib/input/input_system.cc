@@ -175,43 +175,18 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
   }
 
   const InjectorId id = ++last_injector_id_;
-  const auto [it, success] = injectors_.try_emplace(
-      id, id, config.dispatch_policy(), config.device_config().device_id(),
-      config.device_config().device_type(), std::move(config.mutable_context()->view()),
-      std::move(config.mutable_target()->view()), std::move(injector));
+  InjectorSettings settings{.dispatch_policy = config.dispatch_policy(),
+                            .device_id = config.device_config().device_id(),
+                            .device_type = config.device_config().device_type(),
+                            .context_koid = context_koid,
+                            .target_koid = target_koid};
+  const auto [it, success] =
+      injectors_.try_emplace(id, id, std::move(settings), std::move(injector));
   FXL_CHECK(success) << "Injector already exists.";
 
   // Remove the injector if the channel has an error.
-  injectors_.at(id).binding_.set_error_handler(
-      [this, id](zx_status_t status) { injectors_.erase(id); });
+  injectors_.at(id).set_error_handler([this, id](zx_status_t status) { injectors_.erase(id); });
 
-  callback();
-
-  FXL_LOG(INFO) << "InjectorRegistry::Register : Registered new injector with Device Id: "
-                << injectors_.at(id).device_id_
-                << " Device Type: " << static_cast<uint32_t>(injectors_.at(id).device_type_)
-                << " Dispatch Policy: " << static_cast<uint32_t>(injectors_.at(id).dispatch_policy_)
-                << " Context koid: " << context_koid << " and Target koid: " << target_koid;
-}
-
-InputSystem::Injector::Injector(InjectorId id,
-                                fuchsia::ui::pointerflow::DispatchPolicy dispatch_policy,
-                                uint32_t device_id,
-                                fuchsia::ui::input3::PointerDeviceType device_type,
-                                fuchsia::ui::views::ViewRef context,
-                                fuchsia::ui::views::ViewRef target,
-                                fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector)
-    : binding_(this, std::move(injector)),
-      id_(id),
-      dispatch_policy_(dispatch_policy),
-      device_id_(device_id),
-      device_type_(device_type),
-      context_(std::move(context)),
-      target_(std::move(target)) {}
-
-void InputSystem::Injector::Inject(::std::vector<fuchsia::ui::pointerflow::Event> events,
-                                   InjectCallback callback) {
-  FXL_LOG(ERROR) << "Injector::Inject New injection API not yet implemented.";
   callback();
 }
 
