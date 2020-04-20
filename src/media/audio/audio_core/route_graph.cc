@@ -156,7 +156,7 @@ void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingP
     return;
   }
 
-  if (link_matrix_.AreLinked(*it->second.ref, *target.device)) {
+  if (link_matrix_.AreLinked(*target.device, *it->second.ref)) {
     return;
   }
 
