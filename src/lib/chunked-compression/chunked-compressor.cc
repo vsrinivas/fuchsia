@@ -21,18 +21,15 @@ ChunkedCompressor::~ChunkedCompressor() {}
 Status ChunkedCompressor::CompressBytes(const void* data, size_t data_len,
                                         fbl::Array<uint8_t>* compressed_data_out,
                                         size_t* bytes_written_out) {
-  ChunkedCompressor compressor;
-  size_t out_len = compressor.ComputeOutputSizeLimit(data_len);
+  CompressionParams params;
+  ChunkedCompressor compressor(params);
+  size_t out_len = params.ComputeOutputSizeLimit(data_len);
   fbl::Array<uint8_t> buf(new uint8_t[out_len], out_len);
   Status status = compressor.Compress(data, data_len, buf.get(), out_len, bytes_written_out);
   if (status == kStatusOk) {
     *compressed_data_out = std::move(buf);
   }
   return status;
-}
-
-size_t ChunkedCompressor::ComputeOutputSizeLimit(size_t len) {
-  return inner_.ComputeOutputSizeLimit(len);
 }
 
 Status ChunkedCompressor::Compress(const void* data, size_t data_len, void* dst, size_t dst_len,

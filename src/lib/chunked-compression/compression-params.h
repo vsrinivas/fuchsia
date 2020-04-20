@@ -18,6 +18,10 @@ struct CompressionParams {
   // Validates the configured parameters.
   bool IsValid();
 
+  // Returns the minimum size that a buffer must be to hold the result of compressing |len| bytes,
+  // given the configured parameters.
+  size_t ComputeOutputSizeLimit(size_t len);
+
   // How aggressively to compress.
   // MinCompressionLevel() <= compression_level <= MaxCompressionLevel()
   int compression_level = DefaultCompressionLevel();

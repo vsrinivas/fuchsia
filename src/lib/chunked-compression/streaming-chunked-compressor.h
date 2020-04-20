@@ -49,7 +49,7 @@ class StreamingChunkedCompressor {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(StreamingChunkedCompressor);
 
   // Returns the minimum size that a buffer must be to hold the result of compressing |len| bytes.
-  size_t ComputeOutputSizeLimit(size_t len);
+  size_t ComputeOutputSizeLimit(size_t len) { return params_.ComputeOutputSizeLimit(len); }
 
   // Initializes the compressor to prepare to recieve |data_len| bytes of input data.
   //

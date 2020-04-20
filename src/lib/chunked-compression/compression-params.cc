@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <src/lib/chunked-compression/chunked-archive.h>
 #include <src/lib/chunked-compression/compression-params.h>
 #include <zstd/zstd.h>
 
@@ -10,6 +11,16 @@ namespace chunked_compression {
 bool CompressionParams::IsValid() {
   return MinCompressionLevel() <= compression_level && compression_level <= MaxCompressionLevel() &&
          MinChunkSize() <= chunk_size && chunk_size <= MaxChunkSize();
+}
+
+size_t CompressionParams::ComputeOutputSizeLimit(size_t len) {
+  if (len == 0) {
+    return 0ul;
+  }
+  const size_t num_frames = HeaderWriter::NumFramesForDataSize(len, chunk_size);
+  size_t size = HeaderWriter::MetadataSizeForNumFrames(num_frames);
+  size += (ZSTD_compressBound(chunk_size) * num_frames);
+  return size;
 }
 
 int CompressionParams::DefaultCompressionLevel() { return 3; }

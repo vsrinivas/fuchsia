@@ -29,14 +29,14 @@ void RandomFill(uint8_t* data, size_t len) {
 }  // namespace
 
 TEST(ChunkedCompressorTest, ComputeOutputSizeLimit_Zero) {
-  ChunkedCompressor compressor;
-  ASSERT_EQ(compressor.ComputeOutputSizeLimit(0u), 0ul);
+  CompressionParams params;
+  ASSERT_EQ(params.ComputeOutputSizeLimit(0u), 0ul);
 }
 
 TEST(ChunkedCompressorTest, ComputeOutputSizeLimit_Minimum) {
-  ChunkedCompressor compressor;
+  CompressionParams params;
   // There should always be enough bytes for at least the metadata and one seek table entry.
-  ASSERT_GE(compressor.ComputeOutputSizeLimit(1u),
+  ASSERT_GE(params.ComputeOutputSizeLimit(1u),
             kChunkArchiveSeekTableOffset + sizeof(SeekTableEntry));
 }
 
@@ -166,14 +166,15 @@ TEST(ChunkedCompressorTest, Compress_Random_Long) {
 }
 
 TEST(ChunkedCompressorTest, Compress_ReuseCompressor) {
-  ChunkedCompressor compressor;
+  CompressionParams params;
+  ChunkedCompressor compressor(params);
 
   {
     size_t len = 8192ul;
     fbl::Array<uint8_t> data(new uint8_t[len], len);
     memset(data.get(), 0x00, len);
 
-    size_t compressed_limit = compressor.ComputeOutputSizeLimit(len);
+    size_t compressed_limit = params.ComputeOutputSizeLimit(len);
     fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
     size_t compressed_len;
     ASSERT_EQ(compressor.Compress(data.get(), len, compressed_data.get(), compressed_data.size(),
@@ -201,7 +202,7 @@ TEST(ChunkedCompressorTest, Compress_ReuseCompressor) {
     // Set with different input data.
     memset(data.get(), 0xac, len);
 
-    size_t compressed_limit = compressor.ComputeOutputSizeLimit(len);
+    size_t compressed_limit = params.ComputeOutputSizeLimit(len);
     fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
     size_t compressed_len;
     ASSERT_EQ(compressor.Compress(data.get(), len, compressed_data.get(), compressed_data.size(),

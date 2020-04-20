@@ -175,8 +175,8 @@ int Compress(const uint8_t* src, size_t sz, const char* dst_file, int level, boo
   params.frame_checksum = checksum;
   params.compression_level = level;
   params.chunk_size = CompressionParams::ChunkSizeForInputSize(sz);
+  size_t output_limit = params.ComputeOutputSizeLimit(sz);
   ChunkedCompressor compressor(params);
-  size_t output_limit = compressor.ComputeOutputSizeLimit(sz);
 
   fbl::unique_fd dst_fd;
   uint8_t* write_buf;
@@ -212,8 +212,8 @@ int CompressStream(fbl::unique_fd src_fd, size_t sz, const char* dst_file, int l
   params.frame_checksum = checksum;
   params.compression_level = level;
   params.chunk_size = CompressionParams::ChunkSizeForInputSize(sz);
+  size_t output_limit = params.ComputeOutputSizeLimit(sz);
   StreamingChunkedCompressor compressor(params);
-  size_t output_limit = compressor.ComputeOutputSizeLimit(sz);
 
   fbl::unique_fd dst_fd;
   uint8_t* write_buf;

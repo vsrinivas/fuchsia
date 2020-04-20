@@ -68,16 +68,6 @@ void StreamingChunkedCompressor::MoveFrom(StreamingChunkedCompressor&& o) {
   context_ = std::move(o.context_);
 }
 
-size_t StreamingChunkedCompressor::ComputeOutputSizeLimit(size_t len) {
-  if (len == 0) {
-    return 0ul;
-  }
-  const size_t num_frames = HeaderWriter::NumFramesForDataSize(len, params_.chunk_size);
-  size_t size = HeaderWriter::MetadataSizeForNumFrames(num_frames);
-  size += (ZSTD_compressBound(params_.chunk_size) * num_frames);
-  return size;
-}
-
 Status StreamingChunkedCompressor::Init(size_t data_len, void* dst, size_t dst_len) {
   size_t num_frames = HeaderWriter::NumFramesForDataSize(data_len, params_.chunk_size);
   size_t metadata_size = HeaderWriter::MetadataSizeForNumFrames(num_frames);

@@ -31,7 +31,7 @@ class ChunkedCompressor {
                               fbl::Array<uint8_t>* compressed_data_out, size_t* bytes_written_out);
 
   // Returns the minimum size that a buffer must be to hold the result of compressing |len| bytes.
-  size_t ComputeOutputSizeLimit(size_t len);
+  size_t ComputeOutputSizeLimit(size_t len) { return inner_.ComputeOutputSizeLimit(len); }
 
   // Reads from |data| and writes the compressed representation to |dst|.
   // |dst_len| must be at least |ComputeOutputSizeLimit(data_len)| bytes long.
