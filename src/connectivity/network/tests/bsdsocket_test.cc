@@ -452,12 +452,12 @@ TEST_P(SocketOptsTest, CheckSkipECN) {
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   int expect = static_cast<uint8_t>(set);
   if (IsTCP()
-#ifdef __linux__
+#if defined(__linux__)
       // gvisor-netstack`s implemention of setsockopt(..IPV6_TCLASS..)
       // clears the ECN bits from the TCLASS value. This keeps gvisor
       // in parity with the Linux test-hosts that run a custom kernel.
       // But that is not the behavior of vanilla Linux kernels.
-      // This ifdef can be removed when we migrate away from gvisor-netstack.
+      // This #if can be removed when we migrate away from gvisor-netstack.
       && !IsIPv6()
 #endif
   ) {
@@ -1172,6 +1172,65 @@ TEST(NetStreamTest, ConnectTwice) {
 
   ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
   ASSERT_EQ(close(client.release()), 0) << strerror(errno);
+}
+
+void TestHangupDuringConnect(void (*hangup)(fbl::unique_fd*)) {
+  fbl::unique_fd client, listener;
+  ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
+  ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr_in = {
+      .sin_family = AF_INET,
+      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+  };
+  auto addr = reinterpret_cast<struct sockaddr*>(&addr_in);
+  socklen_t addr_len = sizeof(addr_in);
+
+  ASSERT_EQ(bind(listener.get(), addr, addr_len), 0) << strerror(errno);
+  {
+    socklen_t addr_len_in = addr_len;
+    ASSERT_EQ(getsockname(listener.get(), addr, &addr_len), 0) << strerror(errno);
+    EXPECT_EQ(addr_len, addr_len_in);
+  }
+  ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+
+  // Connect asynchronously and immediately hang up the listener.
+
+  ASSERT_EQ(connect(client.get(), addr, addr_len), -1);
+  ASSERT_EQ(errno, EINPROGRESS) << strerror(errno);
+
+  ASSERT_NO_FATAL_FAILURE(hangup(&listener));
+
+  // Wait for the connection to close.
+  {
+    struct pollfd pfd = {};
+    pfd.fd = client.get();
+    pfd.events = POLLIN;
+
+    int poll_result = poll(&pfd, 1, kTimeout);
+    if (poll_result == 0) {
+      FAIL() << "poll timed out";
+    }
+    ASSERT_EQ(poll_result, 1) << strerror(errno);
+  }
+
+  ASSERT_EQ(close(client.release()), 0) << strerror(errno);
+}
+
+TEST(NetStreamTest, CloseDuringConnect) {
+  TestHangupDuringConnect([](fbl::unique_fd* listener) {
+    ASSERT_EQ(close(listener->release()), 0) << strerror(errno);
+  });
+}
+
+TEST(NetStreamTest, ShutdownDuringConnect) {
+#if !defined(__linux__)
+  GTEST_SKIP() << "TODO(fxbug.dev/35594): shutdown doesn't work on listeners";
+#endif
+  TestHangupDuringConnect([](fbl::unique_fd* listener) {
+    ASSERT_EQ(shutdown(listener->get(), SHUT_RD), 0) << strerror(errno);
+  });
 }
 
 TEST(LocalhostTest, GetAddrInfo) {
