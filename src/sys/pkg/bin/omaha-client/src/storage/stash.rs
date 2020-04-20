@@ -5,7 +5,7 @@
 use omaha_client::storage::Storage;
 
 use fidl::endpoints::create_proxy;
-use fidl_fuchsia_stash::{StoreAccessorMarker, StoreAccessorProxy, StoreMarker, Value};
+use fidl_fuchsia_stash::{Store2Marker, StoreAccessorMarker, StoreAccessorProxy, Value};
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use log::{error, warn};
@@ -60,7 +60,7 @@ impl Stash {
     }
 
     async fn new_proxy(identity: &str) -> Result<StoreAccessorProxy> {
-        let stash_svc = fuchsia_component::client::connect_to_service::<StoreMarker>()?;
+        let stash_svc = fuchsia_component::client::connect_to_service::<Store2Marker>()?;
         stash_svc.identify(identity)?;
 
         let (proxy, server_end) = create_proxy::<StoreAccessorMarker>()?;

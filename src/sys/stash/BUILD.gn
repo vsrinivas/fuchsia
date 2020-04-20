@@ -60,6 +60,10 @@ package("pkg") {
       dest = "stash.cmx"
     },
     {
+      path = rebase_path("meta/stash2.cmx")
+      dest = "stash2.cmx"
+    },
+    {
       path = rebase_path("meta/stash_secure.cmx")
       dest = "stash_secure.cmx"
     },

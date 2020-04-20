@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx",
+                "fuchsia.stash.Store2": "fuchsia-pkg://fuchsia.com/stash#meta/stash2.cmx",
                 "fuchsia.update.channelcontrol.ChannelControl": "fuchsia-pkg://fuchsia.com/fake-channel-control#meta/fake-channel-control.cmx"
             }
         }
@@ -17,7 +17,7 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.stash.Store",
+            "fuchsia.stash.Store2",
             "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
