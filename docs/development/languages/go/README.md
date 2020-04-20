@@ -1,4 +1,4 @@
 Go
 ==
 
-- [Syslog API](syslog.md)
+- [Logging](logging.md)

@@ -4,5 +4,5 @@
 toc:
 - title: "Overview"
   path: /docs/development/languages/go
-- title: "Syslog"
-  path: /docs/development/languages/go/syslog.md
+- title: "Logging"
+  path: /docs/development/languages/go/logging.md

@@ -20,8 +20,8 @@ toc:
   path: /docs/development/languages/c-cpp/library_restrictions.md
 - title: "Testing FAQ"
   path: /docs/development/languages/c-cpp/testing_faq.md
-- title: "Syslog"
-  path: /docs/development/languages/c-cpp/syslog.md
+- title: "Logging"
+  path: /docs/development/languages/c-cpp/logging.md
 - title: "Perftest micro-benchmark library"
   path: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/perftest/README.md
 - title: "C++ in Zircon"

@@ -44,6 +44,9 @@ toc:
 - title: "Test"
   section:
   - include: /docs/development/testing/_toc.yaml
+- title: "Log"
+  section:
+  - include: /docs/development/logs/_toc.yaml
 - title: "Benchmark"
   section:
   - include: /docs/development/benchmarking/_toc.yaml

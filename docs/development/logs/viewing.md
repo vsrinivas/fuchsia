@@ -1,0 +1,109 @@
+# Viewing logs
+
+Logs are primarily consumed in either an interactive ("online") context with a live device, or in an
+"offline" context with logs collected from past execution of a device.
+
+## Online
+
+Because there are two buffers which store logs, there are two main ways to view them when you have a
+live device. For more information about where logs are stored on-device, see [Concepts: Storage].
+
+### syslog and kernel log
+
+During development, running `fx log` is a good default to see all logs. This script connects to the
+target device with SSH and runs the [`log_listener`] program, printing every message from the system
+log. This includes those [forwarded from the klog].
+
+[`log_listener`] receives logs through the [`fuchsia.logger.Log`] and
+[`fuchsia.logger.LogListenerSafe`] protocols.
+
+#### Format
+
+[`log_listener`] emits lines in this format by default:
+
+```
+[seconds.nanos][pid][tid][tags] LEVEL: message
+```
+
+The timestamp is from the monotonic clock by default.
+
+If the message "something happened" is written at WARN level by my-component.cmx from process=1902
+and thread=1904 at time=278.14, the default output would be:
+
+```
+[278.14][1902][1904][my-component.cmx] WARN: something happened
+```
+
+With a running device available, run `fx log -h` to see the options for modifying the output format.
+
+#### `fx test`
+
+Under the hood, `fx test` calls `run-test-component` which collects isolated `stdout`, `stderr`, and
+`LogSink` connections from test components, printing the output inline and preventing them showing
+up in the global log buffers.
+
+For tests that are not yet components no interception of logs is performed.
+
+### kernel log only
+
+The klog is [printed over the kernel console] and serial.
+
+It's also [forwarded over UDP by netsvc], which is what's printed when you run `fx klog`. Running
+`fx klog` in a background terminal can be a good way to capture logs if your SSH session fails, or
+as a backup if there are other issues with running `fx log`.
+
+#### Format
+
+The kernel log's dumper emits lines in the format:
+
+```
+[timestamp] pid:tid> message
+```
+
+The timestamp is from the monotonic clock. It is formatted with 5 digits (leading zeroes) for
+seconds and three digits for milliseconds (trailing zeroes).
+
+Process and thread koids are written with 5 digits each (leading zeroes).
+
+If the message "something happened" is written from process=1902 and thread=1904 at time=278.14, the
+resulting output would be:
+
+```
+[00278.140] 01902:01904> something happened
+```
+
+## Offline: CQ/GI
+
+When running tests, an infra bot invokes [botanist] which collects several output streams to be
+presented in the web UI. The `stdout` & `stderr` of botanist are what's presented in the "swarming task
+UI".
+
+For individual test components botanist invokes [testrunner] and collects that output separately. It
+is this output that can be seen after a failing test, with a link named `stdio`. Most tests that
+testrunner invokes run `run-test-component` via SSH to the target device. This collects all of the
+stdio and logs from the test environment and prints them inline.
+
+### syslog.txt
+
+Provided with the `-syslog` argument, botanist runs `log_listener` on the target device and saves
+that output to syslog.txt. This is comparable to running `fx log --raw` at a development machine.
+
+### symbolized_log
+
+This log aggregates:
+
+* swarming task output
+* kernel log from netsvc (equivalent to `fx klog`)
+* `stdout` and `stderr` of testrunner's SSH sessions
+
+This aggregate log is run through the equivalent of `fx symbolize` before upload.
+
+[Concepts: Storage]: /docs/development/logs/concepts.md#storage
+[forwarded from the klog]: /docs/development/logs/recording.md#forwarding-klog-to-syslog
+[`log_listener`]: /garnet/bin/log_listener/README.md
+[`fuchsia.logger.Log`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#Log
+[`fuchsia.logger.LogListenerSafe`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogListenerSafe
+[printed over the kernel console]: /zircon/kernel/lib/debuglog/debuglog.cc
+[forwarded over UDP by netsvc]: /zircon/system/core/netsvc/debuglog.cc
+[botanist]: /tools/botanist/cmd/main.go
+[testrunner]: /tools/testing/testrunner/cmd/main.go

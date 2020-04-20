@@ -127,7 +127,7 @@ Googler-only channels, see [go/fuchsia-rust-googlers].
 - [Unsafe code](unsafe.md)
 - [Unstable features](unstable.md)
 - [Rust FIDL server/client tutorial][fidl-tutorial]
-- [Syslog API](syslog.md)
+- [Logging](logging.md)
 - [Add logging to hello world](add-logging.md)
 
 

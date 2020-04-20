@@ -8,8 +8,8 @@ toc:
   path: /docs/development/languages/rust/crates.md
 - title: "Rust editor configurations"
   path: /docs/development/languages/rust/editors.md
-- title: "Syslog"
-  path: /docs/development/languages/rust/syslog.md
+- title: "Logging"
+  path: /docs/development/languages/rust/logging.md
 - title: "Testing Rust Code"
   path: /docs/development/languages/rust/testing.md
 - title: "Measuring Rust Binary Bloat"

@@ -1,88 +1,93 @@
-# Logging
+# Logging in Dart
 
+Dart programs on Fuchsia generally write log messages with the `lib.logging` package, consuming and
+initializing it through the `fuchsia_logger` package.
 
-It is highly recommended that you use `lib.logging` package when you want to add
-logging statements to your Dart package.
+See the [language agnostic logging docs](/docs/development/logs/concepts.md) for more information
+about recording and viewing logs.
 
-Include the `fuchsia_logger`, which wraps `lib.logging`, package in your
-BUILD.gn target as a dependency:
+## Requirements
+
+### GN dependency
+
+The necessary packages can be included with an addtion to `deps` in `BUILD.gn`:
 
 ```
 deps = [
-  ...
-   "//topaz/public/dart/fuchsia_logger",
-  ...
+  "//topaz/public/dart/fuchsia_logger",
 ]
 ```
 
-In the .cmx file the `fuchsia.logger.LogSink` needs to be added to the sandbox:
+The `fuchsia_logger` package also provides Dart's `lib.logging`.
+
+See [Dart: Overview][dart-dev] for more information about building Dart within Fuchsia.
+
+### Sandbox dependency
+
+In order to connect to a diagnostics service, `fuchsia.logger.LogSink` must be in the sandbox
+of the connecting component's [`.cmx` file]:
 
 ```
 {
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink",
-            ...
-        ]
-    }
+  "sandbox": {
+    "services": [
+      "fuchsia.logger.LogSink"
+    ]
+  }
 }
 ```
 
+The syslog library will fallback to `stderr` if the `LogSink` connection fails.
 
-In the main function of your Dart / Flutter app, call the `setupLogger()`
-function to make sure logs appear in the Fuchsia console in the desired format.
+## Initialization
+
+In your main function, call the `setupLogger()` function to initialize logging:
 
 ```dart
 import 'package:fuchsia_logger/logger.dart';
 
 main() {
-  setupLogger();
+  // process name will be used if no name is provided here
+  setupLogger(name: 'my-component');
 }
 ```
 
-After setting this up, you can call one of the following log methods to add log
-statements to your code:
+### Configure severity
+
+By default only messages with `INFO` severity or higher are printed. Severity level can be adjusted
+by providing the `level` parameter in the `setupLogger()` call.
+
+For example, to make all log messages appear in [`fx log`]:
+
+```dart
+setupLogger(name: 'noisy-component', level: Level.ALL);
+```
+
+## Recording messages
+
+The `log` object is a [Logger] instance.
 
 ```dart
 import 'package:fuchsia_logger/logger.dart';
 
-
-// add logging statements somewhere in your code as follows:
-log.info('hello world!');
+log.finest('quietest');      // maps to TRACE
+log.finer('also quietest');  // maps to TRACE also
+log.fine('quiet');           // maps to DEBUG
+log.info('hello world!');    // maps to INFO
+log.warning('uhhh');         // maps to WARN
+log.severe('oh no!');        // maps to ERROR
+log.shout('this is fatal.'); // maps to FATAL
 ```
 
-The `log` object is a [Logger][logger-doc] instance.
+## Standard streams
 
+`print` goes to standard out (`stdout`).
 
-## Log Levels
+See [`stdout` & `stderr`] in the language-agnostic logging docs for details on the routing of stdio
+streams in the system.
 
-The log methods are named after the supported log levels. To list the log
-methods in descending order of severity:
-
-```dart
-    log.shout()    // maps to LOG_FATAL in FXL.
-    log.severe()   // maps to LOG_ERROR in FXL.
-    log.warning()  // maps to LOG_WARNING in FXL.
-    log.info()     // maps to LOG_INFO in FXL.
-    log.fine()     // maps to VLOG(1) in FXL.
-    log.finer()    // maps to VLOG(2) in FXL.
-    log.finest()   // maps to VLOG(3) in FXL.
-```
-
-By default, all the logs of which level is INFO or higher will be shown in the
-console. Because of this, Dart / Flutter app developers are highly encouraged to
-use `log.fine()` for their typical logging statements for development purposes.
-
-Currently, the log level should be adjusted in individual Dart apps by providing
-the `level` parameter in the `setupLogger()` call. For example:
-
-```dart
-setupLogger(level: Level.ALL);
-```
-
-will make all log statements appear in the console.  The console is visible by
-running [`fx syslog`][getting_logs].
-
-
-[logger-doc]: https://pub.dev/documentation/logging/latest/logging/Logger-class.html
-[getting_logs]: /docs/development/build/fx.md#getting_logs
+[Logger]: https://pub.dev/documentation/logging/latest/logging/Logger-class.html
+[`fx log`]: /docs/development/logs/viewing.md
+[dart-dev]: /docs/development/languages/dart/README.md
+[`.cmx` file]: /docs/concepts/storage/component_manifest.md
+[`stdout` & `stderr`]: /docs/development/logs/recording.md#stdout-stderr
