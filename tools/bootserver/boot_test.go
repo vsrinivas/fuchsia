@@ -6,8 +6,12 @@ package bootserver
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -57,4 +61,149 @@ func TestDownloadImagesToDir(t *testing.T) {
 			t.Errorf("incorrect size: expected: %d, actual: %d", img.Size, len(content))
 		}
 	}
+}
+
+// A mock tftp.Client that supports setting expectations on Write() calls.
+type mockTftpClient struct {
+	// Testing class to mark any failures.
+	t *testing.T
+
+	// Expected files that should be written (in order), with the error to
+	// return from the corresponding call to Write().
+	expectedWrites []expectedWrite
+}
+
+type expectedWrite struct {
+	// FTP filename to expect.
+	filename string
+
+	// Error to return from Write().
+	ret error
+}
+
+func (c *mockTftpClient) Read(_ context.Context, _ string) (*bytes.Reader, error) {
+	c.t.Fatal("Unexpected call to mockTftpClient.Read()")
+	panic("notreached")
+}
+
+func (c *mockTftpClient) RemoteAddr() *net.UDPAddr {
+	c.t.Fatal("Unexpected call to mockTftpClient.RemoteAddr()")
+	panic("notreached")
+}
+
+func (c *mockTftpClient) Write(_ context.Context, filename string, _ io.ReaderAt, _ int64) error {
+	if len(c.expectedWrites) == 0 {
+		c.t.Fatalf("No writes expected but got %q", filename)
+		panic("notreached")
+	}
+
+	expected := c.expectedWrites[0]
+	if expected.filename != filename {
+		c.t.Fatalf("Expected %q but got %q", expected.filename, filename)
+		panic("notreached")
+	}
+
+	c.expectedWrites = c.expectedWrites[1:]
+	return expected.ret
+}
+
+// Creates a test Image with the given bootserver arg and small contents.
+func testImage(arg string) Image {
+	return Image{
+		Reader: bytes.NewReader([]byte(fmt.Sprintf("image contents for %q arg", arg))),
+		Args:   []string{arg},
+	}
+}
+
+// Creates Images based on imageArgs, then calls transferImages() and verifies
+// that the expected writes were called.
+func validateTransferImages(t *testing.T, imageArgs []string, expectedWrites []expectedWrite) {
+	// Convert the bootserver args to test Images, contents don't matter.
+	images := []Image{}
+	for _, arg := range imageArgs {
+		images = append(images, testImage(arg))
+	}
+	client := mockTftpClient{t, expectedWrites}
+
+	_, err := transferImages(context.Background(), &client, images, nil, nil)
+	if err != nil {
+		t.Errorf("transferImages() failed: %v", err)
+	}
+
+	// Make sure all the expected writes were consumed.
+	if len(client.expectedWrites) > 0 {
+		t.Errorf("Expected writes were never made: %+v\n", client.expectedWrites)
+	}
+}
+
+func TestTransferImagesZirconA(t *testing.T) {
+	validateTransferImages(
+		t,
+		[]string{"--zircona"},
+		[]expectedWrite{{filename: "<<image>>zircona.img"}},
+	)
+}
+
+func TestTransferImagesUntypedFirmware(t *testing.T) {
+	validateTransferImages(
+		t,
+		[]string{"--firmware"},
+		[]expectedWrite{{filename: "<<image>>firmware_"}},
+	)
+}
+
+func TestTransferImagesUntypedFirmwareTrailingDash(t *testing.T) {
+	validateTransferImages(
+		t,
+		[]string{"--firmware-"},
+		[]expectedWrite{{filename: "<<image>>firmware_"}},
+	)
+}
+
+func TestTransferImagesTypedFirmware(t *testing.T) {
+	validateTransferImages(
+		t,
+		[]string{"--firmware-foo"},
+		[]expectedWrite{{filename: "<<image>>firmware_foo"}},
+	)
+}
+
+func TestTransferImagesOrdering(t *testing.T) {
+	validateTransferImages(
+		t,
+		[]string{
+			"--vbmetab",
+			"--zircona",
+			"--firmware-foo",
+			"--vbmetaa",
+			"--firmware",
+			"--zirconb",
+		},
+		[]expectedWrite{
+			{filename: "<<image>>firmware_"},
+			{filename: "<<image>>firmware_foo"},
+			{filename: "<<image>>zircona.img"},
+			{filename: "<<image>>zirconb.img"},
+			{filename: "<<image>>vbmetaa.img"},
+			{filename: "<<image>>vbmetab.img"},
+		},
+	)
+}
+
+func TestTransferImagesSkipFirmwareFailure(t *testing.T) {
+	// Transfer should skip a failed firmware write and continue to send
+	// the remaining images.
+	validateTransferImages(
+		t,
+		[]string{
+			"--firmware",
+			"--zircona",
+			"--zirconb",
+		},
+		[]expectedWrite{
+			{filename: "<<image>>firmware_", ret: errors.New("expected failure")},
+			{filename: "<<image>>zircona.img"},
+			{filename: "<<image>>zirconb.img"},
+		},
+	)
 }

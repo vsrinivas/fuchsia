@@ -19,6 +19,14 @@ func TestPopulateReaders(t *testing.T) {
 		Name: "bootloader",
 		Args: []string{"--bootloader"},
 	}
+	firmwareImage := bootserver.Image{
+		Name: "firmware",
+		Args: []string{"--firmware"},
+	}
+	firmware2Image := bootserver.Image{
+		Name: "firmware_2",
+		Args: []string{"--firmware-2"},
+	}
 	vbmetaRImage := bootserver.Image{
 		Name: "zedboot.vbmeta",
 		Args: []string{"--vbmetar"},
@@ -28,14 +36,14 @@ func TestPopulateReaders(t *testing.T) {
 		Args: []string{"--zirconr"},
 	}
 
-	allImgs := []bootserver.Image{bootloaderImage, vbmetaRImage, zedbootImage}
+	allImgs := []bootserver.Image{bootloaderImage, firmwareImage, firmware2Image, vbmetaRImage, zedbootImage}
 
 	tests := []struct {
 		name                 string
 		existingImageIndexes []int
 		expectErr            bool
 	}{
-		{"PopulateAllReaders", []int{0, 1, 2}, false},
+		{"PopulateAllReaders", []int{0, 1, 2, 3, 4}, false},
 		{"FileNotFound", []int{0}, true},
 	}
 

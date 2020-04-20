@@ -170,6 +170,14 @@ func getImages(ctx context.Context) ([]bootserver.Image, func() error, error) {
 			Args: []string{"--bootloader"},
 		})
 	}
+	for _, fw := range firmware {
+		imgs = append(imgs, bootserver.Image{
+			// Trailing delimiter is OK for untyped images.
+			Name: "img_firmware_" + fw.fwType,
+			Path: fw.value,
+			Args: []string{"--firmware-" + fw.fwType},
+		})
+	}
 	if fvm != "" {
 		imgs = append(imgs, bootserver.Image{
 			Name: "blk_storage-sparse",

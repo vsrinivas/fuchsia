@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,6 +33,7 @@ const (
 	bootloaderNetsvcName     = "<<image>>bootloader.img"
 	cmdlineNetsvcName        = "<<netboot>>cmdline"
 	efiNetsvcName            = "<<image>>efi.img"
+	firmwareNetsvcPrefix     = "<<image>>firmware_"
 	fvmNetsvcName            = "<<image>>sparse.fvm"
 	kerncNetsvcName          = "<<image>>kernc.img"
 	kernelNetsvcName         = "<<netboot>>kernel.bin"
@@ -44,10 +46,11 @@ const (
 )
 
 // Maps bootserver argument to a corresponding netsvc name.
-var bootserverArgToName = map[string]string{
+var bootserverArgToNameMap = map[string]string{
 	"--boot":       kernelNetsvcName,
 	"--bootloader": bootloaderNetsvcName,
 	"--efi":        efiNetsvcName,
+	"--firmware":   firmwareNetsvcPrefix,
 	"--fvm":        fvmNetsvcName,
 	"--kernc":      kerncNetsvcName,
 	"--vbmetaa":    vbmetaANetsvcName,
@@ -58,23 +61,53 @@ var bootserverArgToName = map[string]string{
 	"--zirconr":    zirconRNetsvcName,
 }
 
+func bootserverArgToName(arg string) (string, bool) {
+	// Check for a typed firmware arg "--firmare-<type>".
+	if strings.HasPrefix(arg, "--firmware-") {
+		fwType := strings.TrimPrefix(arg, "--firmware-")
+		return firmwareNetsvcPrefix + fwType, true
+	}
+
+	name, exists := bootserverArgToNameMap[arg]
+	return name, exists
+}
+
 // Maps netsvc name to the index at which the corresponding file should be transferred if
 // present. The indices correspond to the ordering given in
 // https://go.fuchsia.dev/zircon/+/master/system/host/bootserver/bootserver.c
-var transferOrder = map[string]int{
+var transferOrderMap = map[string]int{
 	cmdlineNetsvcName:        1,
 	fvmNetsvcName:            2,
 	bootloaderNetsvcName:     3,
-	efiNetsvcName:            4,
-	kerncNetsvcName:          5,
-	zirconANetsvcName:        6,
-	zirconBNetsvcName:        7,
-	zirconRNetsvcName:        8,
-	vbmetaANetsvcName:        9,
-	vbmetaBNetsvcName:        10,
-	vbmetaRNetsvcName:        11,
-	authorizedKeysNetsvcName: 12,
-	kernelNetsvcName:         13,
+	firmwareNetsvcPrefix:     4,
+	efiNetsvcName:            5,
+	kerncNetsvcName:          6,
+	zirconANetsvcName:        7,
+	zirconBNetsvcName:        8,
+	zirconRNetsvcName:        9,
+	vbmetaANetsvcName:        10,
+	vbmetaBNetsvcName:        11,
+	vbmetaRNetsvcName:        12,
+	authorizedKeysNetsvcName: 13,
+	kernelNetsvcName:         14,
+}
+
+func transferOrder(name string) (int, bool) {
+	// Ordering doesn't matter among different types of firmware, they can
+	// all use the same index.
+	if strings.HasPrefix(name, firmwareNetsvcPrefix) {
+		name = firmwareNetsvcPrefix
+	}
+
+	index, exists := transferOrderMap[name]
+	return index, exists
+}
+
+// Returns true if this image is OK to skip on error rather than failing out.
+// Sometimes this is necessary in order to be able to write to an older netsvc
+// which may not know about newer image types.
+func skipOnTransferError(name string) bool {
+	return strings.HasPrefix(name, firmwareNetsvcPrefix)
 }
 
 func downloadImagesToDir(dir string, imgs []Image) ([]Image, func() error, error) {
@@ -152,8 +185,9 @@ func downloadAndOpenImage(dest string, img Image) (*os.File, error) {
 	return os.Open(dest)
 }
 
-// Boot prepares and boots a device at the given IP address.
-func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, signers []ssh.Signer) error {
+// Prepares and transfers images to the given client.
+// Returns whether the images contained a RAM kernel or not, or error on failure.
+func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, signers []ssh.Signer) (bool, error) {
 	var files []*netsvcFile
 	if len(cmdlineArgs) > 0 {
 		var buf bytes.Buffer
@@ -163,7 +197,7 @@ func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string
 		reader := bytes.NewReader(buf.Bytes())
 		cmdlineFile, err := newNetsvcFile(cmdlineNetsvcName, reader, reader.Size())
 		if err != nil {
-			return err
+			return false, err
 		}
 		files = append(files, cmdlineFile)
 	}
@@ -172,24 +206,24 @@ func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string
 	// TODO(ihuh): We should enable this step as a command line option.
 	workdir, err := ioutil.TempDir("", "working-dir")
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer os.RemoveAll(workdir)
 	imgs, closeFunc, err := downloadImagesToDir(workdir, imgs)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer closeFunc()
 
 	for _, img := range imgs {
 		for _, arg := range img.Args {
-			name, ok := bootserverArgToName[arg]
+			name, ok := bootserverArgToName(arg)
 			if !ok {
-				return fmt.Errorf("unrecognized bootserver argument found: %s", arg)
+				return false, fmt.Errorf("unrecognized bootserver argument found: %s", arg)
 			}
 			imgFile, err := newNetsvcFile(name, img.Reader, img.Size)
 			if err != nil {
-				return err
+				return false, err
 			}
 			files = append(files, imgFile)
 		}
@@ -205,26 +239,42 @@ func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string
 		reader := bytes.NewReader(authorizedKeys)
 		authorizedKeysFile, err := newNetsvcFile(authorizedKeysNetsvcName, reader, reader.Size())
 		if err != nil {
-			return err
+			return false, err
 		}
 		files = append(files, authorizedKeysFile)
 	}
 
 	sort.Slice(files, func(i, j int) bool {
+		// Firmware files share an index. Functionally the order doesn't matter
+		// but it makes test verification a lot simpler if we apply a fixed
+		// ordering, so sort equal index files by name.
+		if files[i].index == files[j].index {
+			return files[i].name < files[j].name
+		}
 		return files[i].index < files[j].index
 	})
 
 	if len(files) == 0 {
-		return errors.New("no files to transfer")
+		return false, errors.New("no files to transfer")
 	}
 	if err := transfer(ctx, t, files); err != nil {
-		return err
+		return false, err
 	}
 
 	// If we do not load a kernel into RAM, then we reboot back into the first kernel
 	// partition; else we boot directly from RAM.
 	// TODO(ZX-2069): Eventually, no such kernel should be present.
 	hasRAMKernel := files[len(files)-1].name == kernelNetsvcName
+	return hasRAMKernel, err
+}
+
+// Boot prepares and boots a device at the given IP address.
+func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, signers []ssh.Signer) error {
+	hasRAMKernel, err := transferImages(ctx, t, imgs, cmdlineArgs, signers)
+	if err != nil {
+		return err
+	}
+
 	n := netboot.NewClient(time.Second)
 	if hasRAMKernel {
 		// Try to send the boot command a few times, as there's no ack, so it's
@@ -245,7 +295,7 @@ type netsvcFile struct {
 }
 
 func newNetsvcFile(name string, reader io.ReaderAt, size int64) (*netsvcFile, error) {
-	idx, ok := transferOrder[name]
+	idx, ok := transferOrder(name)
 	if !ok {
 		return nil, fmt.Errorf("unrecognized name: %s", name)
 	}
@@ -282,8 +332,12 @@ func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 					time.Sleep(time.Second)
 					continue
 				default:
-					log.Printf("failed to send %s; starting from the top: %v\n", f.name, err)
-					return err
+					if skipOnTransferError(f.name) {
+						log.Printf("failed to send %s; skipping and continuing: %v\n", f.name, err)
+					} else {
+						log.Printf("failed to send %s; starting from the top: %v\n", f.name, err)
+						return err
+					}
 				}
 				break
 			}
