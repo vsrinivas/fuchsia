@@ -19,6 +19,7 @@ use {
     fuchsia_trace::{self as trace},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{io::AsyncWriteExt, select, stream::pending, FutureExt, Stream, StreamExt},
+    std::convert::TryInto,
 };
 
 use crate::latm::AudioMuxElement;
@@ -230,22 +231,13 @@ impl Player {
         Ok(player)
     }
 
-    /// Interpret the first four octets of the slice in `bytes` as a little-endian  u32
-    /// Panics if the slice is not at least four octets.
-    fn as_u32_le(bytes: &[u8]) -> u32 {
-        ((bytes[3] as u32) << 24)
-            + ((bytes[2] as u32) << 16)
-            + ((bytes[1] as u32) << 8)
-            + ((bytes[0] as u32) << 0)
-    }
-
     /// Given a buffer with an SBC frame at the start, find the length of the
     /// SBC frame.
     fn find_sbc_frame_len(buf: &[u8]) -> Result<usize, Error> {
         if buf.len() < 4 {
             return Err(format_err!("Buffer too short for header"));
         }
-        SbcHeader(Player::as_u32_le(&buf[0..4])).frame_length()
+        SbcHeader(u32::from_le_bytes(buf[0..4].try_into()?)).frame_length()
     }
 
     /// Accepts a payload which may contain multiple frames and breaks it into
@@ -419,7 +411,7 @@ mod tests {
         // 44.1, 16 blocks, Joint Stereo, Loudness, 8 subbands, 53 bitpool (Android P)
         let header1 = [0x9c, 0xBD, 0x35, 0xA2];
         const HEADER1_FRAMELEN: usize = 119;
-        let head = SbcHeader(Player::as_u32_le(&header1));
+        let head = SbcHeader(u32::from_le_bytes(header1));
         assert!(head.has_syncword());
         assert_eq!(16, head.blocks());
         assert_eq!(ChannelMode::JointStereo, head.channel_mode());
@@ -434,7 +426,7 @@ mod tests {
         // 44.1, 16 blocks, Stereo, Loudness, 8 subbands, 53 bitpool (OS X)
         let header2 = [0x9c, 0xB9, 0x35, 0xA2];
         const HEADER2_FRAMELEN: usize = 118;
-        let head = SbcHeader(Player::as_u32_le(&header2));
+        let head = SbcHeader(u32::from_le_bytes(header2));
         assert!(head.has_syncword());
         assert_eq!(16, head.blocks());
         assert_eq!(ChannelMode::Stereo, head.channel_mode());
@@ -756,18 +748,5 @@ mod tests {
         ];
 
         push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
-    }
-
-    #[test]
-    #[should_panic(expected = "out of bounds")]
-    fn test_as_u32_le_len() {
-        let _ = Player::as_u32_le(&[0, 1, 2]);
-    }
-
-    #[test]
-    fn test_as_u32_le() {
-        assert_eq!(1, Player::as_u32_le(&[1, 0, 0, 0]));
-        assert_eq!(0xff00ff00, Player::as_u32_le(&[0, 0xff, 0, 0xff]));
-        assert_eq!(0xffffffff, Player::as_u32_le(&[0xff, 0xff, 0xff, 0xff]));
     }
 }
