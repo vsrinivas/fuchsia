@@ -86,8 +86,14 @@ impl EventLoop {
 
         let streams = device.take_event_streams();
         let (event_send, event_recv) = futures::channel::mpsc::unbounded::<Event>();
-        let fidl_worker = crate::fidl_worker::FidlWorker;
-        let _ = fidl_worker.spawn(event_send.clone());
+        if cfg!(test) {
+            // Network Manager's FIDL is currently disabled. We may eventually
+            // remove the support for it from the codebase entirely, but for the
+            // time being, we would still like to exercise the functionality
+            // during testing to avoid bitrot.
+            let fidl_worker = crate::fidl_worker::FidlWorker;
+            let _ = fidl_worker.spawn(event_send.clone());
+        }
         let overnet_worker = crate::overnet_worker::OvernetWorker;
         let _r = overnet_worker.spawn(event_send.clone());
         let event_worker = crate::event_worker::EventWorker;
