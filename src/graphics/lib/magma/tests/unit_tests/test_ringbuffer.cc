@@ -36,18 +36,25 @@ class TestRingbuffer : public ::testing::Test {
 
 TEST_F(TestRingbuffer, CreateAndDestroy) {
   const uint32_t kMagmaPageSize = magma::page_size();
-  const uint32_t kStartOffset = kMagmaPageSize - 10;
-  auto ringbuffer = std::make_unique<Ringbuffer>(
-      magma::PlatformBuffer::Create(kMagmaPageSize, "test"), kStartOffset);
+  auto ringbuffer =
+      std::make_unique<Ringbuffer>(magma::PlatformBuffer::Create(kMagmaPageSize, "test"));
+
   EXPECT_EQ(ringbuffer->size(), kMagmaPageSize);
+  EXPECT_EQ(ringbuffer->head(), 0u);
+  EXPECT_EQ(ringbuffer->tail(), 0u);
+
+  const uint32_t kStartOffset = kMagmaPageSize - 12;
+  ringbuffer->Reset(kStartOffset);
+
   EXPECT_EQ(ringbuffer->head(), kStartOffset);
+  EXPECT_EQ(ringbuffer->tail(), kStartOffset);
   EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
 }
 
 TEST_F(TestRingbuffer, Write) {
   const uint32_t kMagmaPageSize = magma::page_size();
   auto ringbuffer =
-      std::make_unique<Ringbuffer>(magma::PlatformBuffer::Create(kMagmaPageSize, "test"), 0);
+      std::make_unique<Ringbuffer>(magma::PlatformBuffer::Create(kMagmaPageSize, "test"));
   EXPECT_EQ(ringbuffer->size(), kMagmaPageSize);
   EXPECT_EQ(ringbuffer->head(), 0u);
 
@@ -87,7 +94,7 @@ TEST_F(TestRingbuffer, Write) {
 TEST_F(TestRingbuffer, MultipleAddressSpaces) {
   const uint32_t kMagmaPageSize = magma::page_size();
   auto ringbuffer =
-      std::make_unique<Ringbuffer>(magma::PlatformBuffer::Create(kMagmaPageSize, "test"), 0);
+      std::make_unique<Ringbuffer>(magma::PlatformBuffer::Create(kMagmaPageSize, "test"));
 
   auto owner = std::make_unique<AddressSpaceOwner>();
   auto address_space = std::make_shared<NonAllocatingAddressSpace>(owner.get(), UINT32_MAX);

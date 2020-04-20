@@ -40,7 +40,7 @@ class TestContext {
     ASSERT_NE(buffer, nullptr);
     auto expected_buffer = buffer.get();
 
-    auto ringbuffer = std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"), 0);
+    auto ringbuffer = std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
     ASSERT_NE(ringbuffer, nullptr);
     auto expected_ringbuffer = ringbuffer.get();
 
@@ -58,7 +58,7 @@ class TestContext {
     std::unique_ptr<MsdIntelContext> context;
 
     std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
-    auto ringbuffer = std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"), 0);
+    auto ringbuffer = std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
 
     auto address_space_owner = std::make_unique<AddressSpaceOwner>();
     auto address_space = std::make_shared<AllocatingAddressSpace>(
@@ -97,7 +97,7 @@ class TestContext {
 
     std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
 
-    auto ringbuffer = std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"), 0);
+    auto ringbuffer = std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
 
     auto address_space_owner = std::make_unique<AddressSpaceOwner>();
     auto address_space = std::make_shared<AllocatingAddressSpace>(

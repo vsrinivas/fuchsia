@@ -146,7 +146,7 @@ bool MsdVslDevice::Init(void* device_handle) {
 
   auto buffer = MsdVslBuffer::Create(AddressSpaceLayout::ringbuffer_size(), "ring-buffer");
   buffer->platform_buffer()->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED);
-  ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer), 0 /* start_offset */);
+  ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer));
 
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
@@ -226,7 +226,7 @@ void MsdVslDevice::Reset() {
                           std::make_move_iterator(pending_batches.begin()),
                           std::make_move_iterator(pending_batches.end()));
 
-  ringbuffer_->Reset();
+  ringbuffer_->Reset(0);
   configured_address_space_ = nullptr;
 
   HardwareInit();

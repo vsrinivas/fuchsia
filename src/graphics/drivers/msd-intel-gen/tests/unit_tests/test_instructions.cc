@@ -29,7 +29,7 @@ class TestInstructions {
   };
 
   TestInstructions() {
-    ringbuffer_ = std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"), 0);
+    ringbuffer_ = std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
     address_space_owner_ = std::make_unique<AddressSpaceOwner>();
     address_space_ = std::make_shared<AllocatingAddressSpace>(address_space_owner_.get(), 0x10000,
                                                               ringbuffer_->size());

@@ -11,8 +11,8 @@
 
 class Ringbuffer : public magma::Ringbuffer<GpuMapping> {
  public:
-  Ringbuffer(std::unique_ptr<MsdVslBuffer>&& buffer, uint32_t start_offset)
-      : magma::Ringbuffer<GpuMapping>(std::move(buffer), start_offset) {}
+  Ringbuffer(std::unique_ptr<MsdVslBuffer>&& buffer)
+      : magma::Ringbuffer<GpuMapping>(std::move(buffer)) {}
 
   // Returns whether |offset| points to a currently stored value in the ringbuffer.
   bool IsOffsetPopulated(uint32_t offset);
@@ -32,11 +32,6 @@ class Ringbuffer : public magma::Ringbuffer<GpuMapping> {
   // If false, the caller should wait for an existing event to be removed
   // from the ringbuffer before trying again.
   bool ReserveContiguous(uint32_t want_bytes);
-
-  void Reset() {
-    update_head(0);
-    update_tail(0);
-  }
 
   friend class RingbufferTest;
   friend class RingbufferTest_OffsetPopulatedHeadBeforeTail_Test;

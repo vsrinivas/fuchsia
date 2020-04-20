@@ -20,7 +20,7 @@ namespace magma {
 template <typename GpuMapping>
 class Ringbuffer : public InstructionWriter {
  public:
-  Ringbuffer(std::unique_ptr<typename GpuMapping::BufferType>&& buffer, uint32_t start_offset);
+  Ringbuffer(std::unique_ptr<typename GpuMapping::BufferType>&& buffer);
 
   uint64_t size() { return size_; }
 
@@ -33,6 +33,13 @@ class Ringbuffer : public InstructionWriter {
     DASSERT(head < size_);
     DLOG("updating head 0x%x", head);
     head_ = head;
+  }
+
+  void Reset(uint32_t offset) {
+    DASSERT((offset & (sizeof(*vaddr_) - 1)) == 0);
+    DASSERT(offset < size_);
+    update_head(offset);
+    update_tail(offset);
   }
 
   void Write32(uint32_t value) override;
@@ -66,14 +73,12 @@ class Ringbuffer : public InstructionWriter {
 };
 
 template <typename GpuMapping>
-Ringbuffer<GpuMapping>::Ringbuffer(std::unique_ptr<typename GpuMapping::BufferType>&& buffer,
-                                   uint32_t start_offset)
+Ringbuffer<GpuMapping>::Ringbuffer(std::unique_ptr<typename GpuMapping::BufferType>&& buffer)
     : buffer_(std::move(buffer)) {
   size_ = BufferAccessor<typename GpuMapping::BufferType>::platform_buffer(buffer_.get())->size();
   DASSERT(magma::is_page_aligned(size_));
 
-  DASSERT(size_ > start_offset);
-  tail_ = start_offset;
+  tail_ = 0;
   head_ = tail_;
 }
 

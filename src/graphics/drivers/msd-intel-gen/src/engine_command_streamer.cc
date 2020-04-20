@@ -37,8 +37,9 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const {
     return DRETF(false, "couldn't create context buffer");
 
   const uint32_t kRingbufferSize = 32 * magma::page_size();
-  auto ringbuffer = std::make_unique<Ringbuffer>(
-      MsdIntelBuffer::Create(kRingbufferSize, "ring-buffer"), kRingbufferSize - magma::page_size());
+  auto ringbuffer =
+      std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(kRingbufferSize, "ring-buffer"));
+  ringbuffer->Reset(kRingbufferSize - magma::page_size());
 
   if (!InitContextBuffer(context_buffer.get(), ringbuffer.get(),
                          context->exec_address_space().get()))

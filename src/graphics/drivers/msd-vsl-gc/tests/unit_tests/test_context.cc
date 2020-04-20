@@ -83,8 +83,7 @@ class TestMsdVslContext : public ::testing::Test {
     // Buffers are not submitted to hardware, so we just need a mock ringbuffer that the
     // context can map.
     const uint32_t kRingbufferSize = magma::page_size();
-    ringbuffer_ = std::make_unique<Ringbuffer>(MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"),
-                                               0 /* start_offset */);
+    ringbuffer_ = std::make_unique<Ringbuffer>(MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"));
     EXPECT_NE(ringbuffer_, nullptr);
 
     context_ = MsdVslContext::Create(connection_, address_space_, ringbuffer_.get());

@@ -151,7 +151,7 @@ bool MsdQcomDevice::InitRingbuffer() {
     if (!buffer)
       return DRETF(false, "Failed to create ringbuffer");
 
-    ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer), 0);
+    ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer));
   }
 
   DASSERT(address_space_);

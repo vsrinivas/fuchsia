@@ -28,8 +28,8 @@ class RingbufferTest : public ::testing::Test {
 
 TEST_F(RingbufferTest, Map) {
   const uint32_t kRingbufferSize = magma::page_size();
-  auto ringbuffer = std::make_unique<Ringbuffer>(
-      MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"), 0 /* start_offset */);
+  auto ringbuffer =
+      std::make_unique<Ringbuffer>(MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"));
   EXPECT_NE(ringbuffer, nullptr);
 
   MockAddressSpaceOwner owner;
@@ -44,10 +44,9 @@ TEST_F(RingbufferTest, Map) {
 
 TEST_F(RingbufferTest, OffsetPopulatedEmpty) {
   const uint32_t kRingbufferSize = 4096;
-  const uint32_t kStartOffset = 0;
 
-  auto ringbuffer = std::make_unique<Ringbuffer>(
-      MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"), kStartOffset);
+  auto ringbuffer =
+      std::make_unique<Ringbuffer>(MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"));
   ASSERT_NE(ringbuffer, nullptr);
 
   EXPECT_FALSE(ringbuffer->IsOffsetPopulated(0));
@@ -56,11 +55,13 @@ TEST_F(RingbufferTest, OffsetPopulatedEmpty) {
 
 TEST_F(RingbufferTest, OffsetPopulatedHeadBeforeTail) {
   const uint32_t kRingbufferSize = 4096;
-  const uint32_t kStartOffset = 40;
 
-  auto ringbuffer = std::make_unique<Ringbuffer>(
-      MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"), kStartOffset);
+  auto ringbuffer =
+      std::make_unique<Ringbuffer>(MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"));
   ASSERT_NE(ringbuffer, nullptr);
+
+  const uint32_t kStartOffset = 40;
+  ringbuffer->Reset(kStartOffset);
 
   ringbuffer->update_tail(100);
 
@@ -73,11 +74,13 @@ TEST_F(RingbufferTest, OffsetPopulatedHeadBeforeTail) {
 
 TEST_F(RingbufferTest, OffsetPopulatedTailBeforeHead) {
   const uint32_t kRingbufferSize = 4096;
-  const uint32_t kStartOffset = 4000;
 
-  auto ringbuffer = std::make_unique<Ringbuffer>(
-      MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"), kStartOffset);
+  auto ringbuffer =
+      std::make_unique<Ringbuffer>(MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"));
   ASSERT_NE(ringbuffer, nullptr);
+
+  const uint32_t kStartOffset = 4000;
+  ringbuffer->Reset(kStartOffset);
 
   ringbuffer->update_tail(100);
 
@@ -94,10 +97,9 @@ TEST_F(RingbufferTest, OffsetPopulatedTailBeforeHead) {
 
 TEST_F(RingbufferTest, ReserveContiguous) {
   const uint32_t kRingbufferSize = magma::page_size();
-  const uint32_t kStartOffset = 0;
 
-  auto ringbuffer = std::make_unique<Ringbuffer>(
-      MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"), kStartOffset);
+  auto ringbuffer =
+      std::make_unique<Ringbuffer>(MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"));
   EXPECT_NE(ringbuffer, nullptr);
 
   MockAddressSpaceOwner owner;
