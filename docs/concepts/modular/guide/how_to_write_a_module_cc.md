@@ -53,8 +53,8 @@ TODO: Update guide to explain view connections.
 
 ### Connecting to `SimpleAgent`
 
-In order to provide `SimpleAgent` with a message queue `SimpleModule` first
-needs to connect to the agent. See the instructions in (how to write an agent)[how_to_write_an_agent_cc.md]
+See [how to write an agent](how_to_write_an_agent_cc.md) to learn how to connect
+to a service provided by an Agent.
 
 ### Running the Module
 
