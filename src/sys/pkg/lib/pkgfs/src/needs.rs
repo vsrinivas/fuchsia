@@ -5,7 +5,6 @@
 //! Typesafe wrappers around the /pkgfs/needs filesystem.
 
 use {
-    crate::iou,
     fidl_fuchsia_io::DirectoryProxy,
     fuchsia_merkle::{Hash, ParseHashError},
     fuchsia_zircon::Status,
@@ -18,7 +17,7 @@ use {
 #[allow(missing_docs)]
 pub enum ListNeedsError {
     #[error("while opening needs dir: {}", _0)]
-    OpenDir(iou::OpenError),
+    OpenDir(io_util::node::OpenError),
 
     #[error("while listing needs dir: {}", _0)]
     ReadDir(files_async::Error),
@@ -35,15 +34,18 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, anyhow::Error> {
-        let proxy = iou::open_directory_from_namespace("/pkgfs/needs")?;
+    pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
+        let proxy = io_util::directory::open_in_namespace(
+            "/pkgfs/needs",
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        )?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, anyhow::Error> {
+    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
-            proxy: iou::open_directory_no_describe(
+            proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "needs",
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
@@ -92,9 +94,9 @@ async fn enumerate_needs_dir(
     let path = format!("packages/{}", pkg_merkle);
     let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
 
-    let needs_dir = match iou::open_directory(pkgfs_needs, &path, flags).await {
+    let needs_dir = match io_util::directory::open_directory(pkgfs_needs, &path, flags).await {
         Ok(dir) => dir,
-        Err(iou::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(HashSet::new()),
+        Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(HashSet::new()),
         Err(e) => return Err(ListNeedsError::OpenDir(e)),
     };
 

@@ -4,7 +4,7 @@
 
 //! Typesafe wrappers around the /pkgfs/system filesystem.
 
-use {crate::iou, anyhow::anyhow, fidl_fuchsia_io::DirectoryProxy, std::fs, thiserror::Error};
+use {anyhow::anyhow, fidl_fuchsia_io::DirectoryProxy, std::fs, thiserror::Error};
 
 /// An error encountered while opening the system image.
 #[derive(Debug, Error)]
@@ -14,7 +14,7 @@ pub enum SystemImageFileOpenError {
     NotFound,
 
     #[error("while opening the file: {0}")]
-    Io(iou::OpenError),
+    Io(io_util::node::OpenError),
 
     #[error("unexpected error: {0}")]
     Other(anyhow::Error),
@@ -28,14 +28,19 @@ pub struct Client {
 
 impl Client {
     /// Returns a `Client` connected to pkgfs from the current component's namespace.
-    pub fn open_from_namespace() -> Result<Self, anyhow::Error> {
-        Ok(Self { proxy: iou::open_directory_from_namespace("/pkgfs/system")? })
+    pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
+        Ok(Self {
+            proxy: io_util::directory::open_in_namespace(
+                "/pkgfs/system",
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            )?,
+        })
     }
 
     /// Returns a `Client` connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, anyhow::Error> {
+    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, io_util::node::OpenError> {
         Ok(Self {
-            proxy: iou::open_directory_no_describe(
+            proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "system",
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
@@ -45,14 +50,15 @@ impl Client {
 
     /// Open a file from the system_image package wrapped by this `Client`.
     pub async fn open_file(&self, path: &str) -> Result<fs::File, SystemImageFileOpenError> {
-        let file_proxy = iou::open_file(&self.proxy, path, fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .await
-            .map_err(|e| match e {
-                iou::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND) => {
-                    SystemImageFileOpenError::NotFound
-                }
-                other => SystemImageFileOpenError::Io(other),
-            })?;
+        let file_proxy =
+            io_util::directory::open_file(&self.proxy, path, fidl_fuchsia_io::OPEN_RIGHT_READABLE)
+                .await
+                .map_err(|e| match e {
+                    io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND) => {
+                        SystemImageFileOpenError::NotFound
+                    }
+                    other => SystemImageFileOpenError::Io(other),
+                })?;
         fdio::create_fd(
             file_proxy
                 .into_channel()

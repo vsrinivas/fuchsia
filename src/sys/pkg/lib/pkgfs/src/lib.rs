@@ -6,8 +6,8 @@
 
 //! Typesafe wrappers around the /pkgfs filesystem.
 
-mod iou;
-pub use iou::{NodeKind, OpenError};
+/// Re-exports of wrapped types from io_util.
+pub use io_util::node::{Kind, OpenError};
 
 pub mod control;
 pub mod install;

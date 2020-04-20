@@ -5,10 +5,7 @@
 //! Typesafe wrappers around the /pkgfs/versions filesystem.
 
 use {
-    crate::{iou, package},
-    fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_merkle::Hash,
-    fuchsia_zircon::Status,
+    crate::package, fidl_fuchsia_io::DirectoryProxy, fuchsia_merkle::Hash, fuchsia_zircon::Status,
 };
 
 /// An open handle to /pkgfs/versions
@@ -19,15 +16,18 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, anyhow::Error> {
-        let proxy = iou::open_directory_from_namespace("/pkgfs/versions")?;
+    pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
+        let proxy = io_util::directory::open_in_namespace(
+            "/pkgfs/versions",
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        )?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, anyhow::Error> {
+    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
-            proxy: iou::open_directory_no_describe(
+            proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "versions",
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
@@ -42,12 +42,15 @@ impl Client {
     ) -> Result<package::Directory, package::OpenError> {
         // TODO(37858) allow opening as executable too
         let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
-        let dir = iou::open_directory(&self.proxy, &meta_far_merkle.to_string(), flags)
-            .await
-            .map_err(|e| match e {
-                iou::OpenError::OpenError(Status::NOT_FOUND) => package::OpenError::NotFound,
-                other => package::OpenError::Io(other),
-            })?;
+        let dir =
+            io_util::directory::open_directory(&self.proxy, &meta_far_merkle.to_string(), flags)
+                .await
+                .map_err(|e| match e {
+                    io_util::node::OpenError::OpenError(Status::NOT_FOUND) => {
+                        package::OpenError::NotFound
+                    }
+                    other => package::OpenError::Io(other),
+                })?;
 
         Ok(package::Directory::new(dir))
     }

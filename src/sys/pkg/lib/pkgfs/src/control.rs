@@ -4,7 +4,7 @@
 
 //! Typesafe wrappers around the /pkgfs/ctl filesystem.
 
-use {crate::iou, fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon::Status, thiserror::Error};
+use {fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon::Status, thiserror::Error};
 
 /// An error encountered while garbage collecting blobs
 #[derive(Debug, Error)]
@@ -25,15 +25,18 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, anyhow::Error> {
-        let proxy = iou::open_directory_from_namespace("/pkgfs/ctl")?;
+    pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
+        let proxy = io_util::directory::open_in_namespace(
+            "/pkgfs/ctl",
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+        )?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, anyhow::Error> {
+    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
-            proxy: iou::open_directory_no_describe(
+            proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "ctl",
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,

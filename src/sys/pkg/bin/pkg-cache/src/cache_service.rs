@@ -101,19 +101,19 @@ async fn open<'a>(
         fx_log_warn!("resolve does not support selectors yet");
     }
 
-    let res = async {
-        let pkg = pkgfs_versions.open_package(&meta_far_blob_id.into()).await?;
-        pkg.reopen(dir_request).await
-    };
+    let pkg =
+        pkgfs_versions.open_package(&meta_far_blob_id.into()).await.map_err(|err| match err {
+            pkgfs::package::OpenError::NotFound => Status::NOT_FOUND,
+            err => {
+                fx_log_err!("error opening {}: {:?}", meta_far_blob_id, err);
+                Status::INTERNAL
+            }
+        })?;
 
-    match res.await {
-        Ok(_) => Ok(()),
-        Err(pkgfs::package::OpenError::NotFound) => Err(Status::NOT_FOUND),
-        Err(err) => {
-            fx_log_err!("error opening {}: {:?}", meta_far_blob_id, err);
-            Err(Status::INTERNAL)
-        }
-    }
+    pkg.reopen(dir_request).map_err(|err| {
+        fx_log_err!("error opening {}: {:?}", meta_far_blob_id, err);
+        Status::INTERNAL
+    })
 }
 
 /// Serves the `PackageIndexIteratorRequest` with `LIST_CHUNK_SIZE` entries per request.
