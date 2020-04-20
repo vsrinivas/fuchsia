@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -406,7 +407,9 @@ thrd_t start_wait_inf_thread(inferior_data_t* inferior_data,
   args->handler_arg = handler_arg;
 
   thrd_t wait_inferior_thread;
-  tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func, args, "wait-inf thread");
+  int ret = thrd_create_with_name(&wait_inferior_thread, wait_inferior_thread_func, args,
+                                  "wait-inf thread");
+  ZX_DEBUG_ASSERT(ret == thrd_success);
   return wait_inferior_thread;
 }
 

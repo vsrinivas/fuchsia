@@ -113,7 +113,8 @@ bool msg_loop(zx_handle_t channel) {
           // For our purposes, we don't need to track the threads.
           // They'll be terminated when the process exits.
           thrd_t thread;
-          tu_thread_create_c11(&thread, func, &extra_thread_count, "extra-thread");
+          int ret = thrd_create_with_name(&thread, func, &extra_thread_count, "extra-thread");
+          ASSERT_EQ(ret, thrd_success);
         }
         // Wait for all threads to be started.
         // Each will require an ZX_EXCP_THREAD_STARTING exchange with the "debugger".
@@ -290,8 +291,8 @@ int test_dyn_break_on_load() {
 
   // Re-Enable the property so that there are not exceptions triggered.
   break_on_load = 1;
-  status = zx_object_set_property(self_handle, ZX_PROP_PROCESS_BREAK_ON_LOAD,
-                                  &break_on_load, sizeof(break_on_load));
+  status = zx_object_set_property(self_handle, ZX_PROP_PROCESS_BREAK_ON_LOAD, &break_on_load,
+                                  sizeof(break_on_load));
   ASSERT_EQ(status, ZX_OK);
 
   // Load a .so several times. These should trigger an exception.

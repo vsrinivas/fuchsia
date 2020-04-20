@@ -213,7 +213,9 @@ bool DebuggerThreadListTest() {
   for (uint32_t i = 0; i < num_threads; ++i) {
     zx_koid_t koid = threads[i];
     unittest_printf("Looking up thread %llu\n", (long long)koid);
-    zx_handle_t thread = tu_get_thread(inferior, koid);
+    zx_handle_t thread = ZX_HANDLE_INVALID;
+    status = zx_object_get_child(inferior, koid, ZX_RIGHT_SAME_RIGHTS, &thread);
+    EXPECT_EQ(status, ZX_OK, "zx_object_get_child failed");
     zx_info_handle_basic_t info;
     status = zx_object_get_info(thread, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
     EXPECT_EQ(status, ZX_OK, "zx_object_get_info failed");

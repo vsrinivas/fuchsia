@@ -130,7 +130,8 @@ bool SuspendedRegAccessTest() {
   arg.initial_value = reg_access_initial_value;
   zx_handle_t channel;
   ASSERT_EQ(zx_channel_create(0, &channel, &arg.channel), ZX_OK);
-  tu_thread_create_c11(&thread_c11, reg_access_thread_func, &arg, "reg-access thread");
+  int ret = thrd_create_with_name(&thread_c11, reg_access_thread_func, &arg, "reg-access thread");
+  ASSERT_EQ(ret, thrd_success);
   // Get our own copy of the thread handle to avoid lifetime issues of
   // thrd's copy.
   zx_handle_t thread = ZX_HANDLE_INVALID;
@@ -297,8 +298,9 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
   }
 
   thrd_t thread_c11;
-  tu_thread_create_c11(&thread_c11, suspended_in_syscall_reg_access_thread_func, &arg,
-                       "reg-access thread");
+  int ret = thrd_create_with_name(&thread_c11, suspended_in_syscall_reg_access_thread_func, &arg,
+                                  "reg-access thread");
+  ASSERT_EQ(ret, thrd_success);
   // Get our own copy of the thread handle to avoid lifetime issues of
   // thrd's copy.
   zx_handle_t thread = ZX_HANDLE_INVALID;

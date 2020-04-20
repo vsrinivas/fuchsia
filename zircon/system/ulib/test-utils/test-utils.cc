@@ -53,24 +53,6 @@ static void tu_check(const char* what, zx_status_t status) {
   }
 }
 
-// N.B. This creates a C11 thread.
-// See, e.g., musl/include/threads.h.
-
-void tu_thread_create_c11(thrd_t* t, thrd_start_t entry, void* arg, const char* name) {
-  int ret = thrd_create_with_name(t, entry, arg, name);
-  if (ret != thrd_success) {
-    // tu_fatal takes zx_status_t values.
-    // The translation doesn't have to be perfect.
-    switch (ret) {
-      case thrd_nomem:
-        tu_fatal(__func__, ZX_ERR_NO_MEMORY);
-      default:
-        tu_fatal(__func__, ZX_ERR_BAD_STATE);
-    }
-    __UNREACHABLE;
-  }
-}
-
 zx_status_t tu_wait(uint32_t num_objects, const zx_handle_t* handles, const zx_signals_t* signals,
                     zx_signals_t* pending) {
   zx_wait_item_t items[num_objects];
@@ -442,14 +424,6 @@ zx_koid_t tu_get_related_koid(zx_handle_t handle) {
   return info.related_koid;
 }
 
-zx_handle_t tu_get_thread(zx_handle_t proc, zx_koid_t tid) {
-  zx_handle_t thread;
-  zx_status_t status = zx_object_get_child(proc, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
-  if (status != ZX_OK)
-    tu_fatal(__func__, status);
-  return thread;
-}
-
 zx_info_thread_t tu_thread_get_info(zx_handle_t thread) {
   zx_info_thread_t info;
   zx_status_t status = zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
@@ -461,11 +435,6 @@ zx_info_thread_t tu_thread_get_info(zx_handle_t thread) {
 uint32_t tu_thread_get_state(zx_handle_t thread) {
   zx_info_thread_t info = tu_thread_get_info(thread);
   return info.state;
-}
-
-bool tu_thread_is_dying_or_dead(zx_handle_t thread) {
-  zx_info_thread_t info = tu_thread_get_info(thread);
-  return (info.state == ZX_THREAD_STATE_DYING || info.state == ZX_THREAD_STATE_DEAD);
 }
 
 const char* tu_exception_to_string(uint32_t exception) {

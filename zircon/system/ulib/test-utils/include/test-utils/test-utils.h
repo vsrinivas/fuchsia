@@ -72,10 +72,6 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
 
 zx_handle_t tu_launch_fini(springboard_t* sb);
 
-// A wrapper on C11 thrd_create.
-
-void tu_thread_create_c11(thrd_t* thread, thrd_start_t entry, void* arg, const char* name);
-
 // A wrapper on zx_object_wait_many that can be easier to call.
 // |num_objects| is the number of elements in |handles,signals,pending|.
 
@@ -159,10 +155,6 @@ zx_koid_t tu_get_koid(zx_handle_t handle);
 
 zx_koid_t tu_get_related_koid(zx_handle_t handle);
 
-// Return a handle of thread |tid|.
-
-zx_handle_t tu_get_thread(zx_handle_t proc, zx_koid_t tid);
-
 // Return zx_info_thread_t of |thread|.
 
 zx_info_thread_t tu_thread_get_info(zx_handle_t thread);
@@ -170,10 +162,6 @@ zx_info_thread_t tu_thread_get_info(zx_handle_t thread);
 // Return the state of |thread|, one of ZX_THREAD_STATE_*.
 
 uint32_t tu_thread_get_state(zx_handle_t thread);
-
-// Return true if |thread| is dying or dead.
-
-bool tu_thread_is_dying_or_dead(zx_handle_t thread);
 
 // Set the scaling factor for timeouts.
 // The default is 1. A value of 2 waits twice as long, and so on.

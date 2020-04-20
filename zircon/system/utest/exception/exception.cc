@@ -154,8 +154,9 @@ static void msg_loop(zx_handle_t channel) {
           zx_status_t status = zx_channel_create(0, &channel_to_thread, &channel_from_thread);
           ZX_DEBUG_ASSERT(status == ZX_OK);
           thrd_t thread;
-          tu_thread_create_c11(&thread, thread_func, (void*)(uintptr_t)channel_from_thread,
-                               "msg-loop-subthread");
+          int ret = thrd_create_with_name(
+              &thread, thread_func, (void*)(uintptr_t)channel_from_thread, "msg-loop-subthread");
+          ZX_DEBUG_ASSERT(ret == thrd_success);
           // Make sure the new thread is up and running before sending
           // its handle back: this removes potential problems like
           // needing to handle ZX_EXCP_THREAD_STARTING exceptions if the
