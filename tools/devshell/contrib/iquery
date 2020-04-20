@@ -74,6 +74,10 @@ find_target="/hub"
 # Find all the available services.
 find="$(fx-command-exec shell iquery --find "${find_target}")"
 
+# Find all targets in devfs
+devfs_target="/dev/diagnostics"
+find+=$'\n'"$(fx-command-exec shell iquery --find "${devfs_target}")"
+
 # Check if we want the system objects
 if [[ "${system_objects}" = "false" ]]; then
   find="$(echo "${find}" | grep -v "system_objects$")"
