@@ -1,4 +1,4 @@
-# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/docs/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
@@ -40,6 +40,9 @@ toc:
 - title: "Develop using the SDK"
   section:
   - include: /docs/development/sdk/_toc.yaml
+- title: "Languages"
+  section:
+  - include: /docs/development/languages/_toc.yaml
 - heading: "Test and debug"
 - title: "Test"
   section:
@@ -64,9 +67,6 @@ toc:
   section:
   - include: /docs/development/prebuilt_packages/_toc.yaml
 - heading: "Others"
-- title: "Languages"
-  section:
-  - include: /docs/development/languages/_toc.yaml
 - title: "Internationalization"
   section:
   - include: /docs/development/internationalization/_toc.yaml

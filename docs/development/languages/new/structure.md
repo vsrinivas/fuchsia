@@ -92,7 +92,7 @@ the language runtime.
 The [FIDL compiler](/zircon/tools/fidl/)
 has a single frontend that is used for all languages and multiple backends that
 support a diverse assortment of languages. The frontend produces a
-[JSON intermediate format](/docs/development/languages/fidl/reference/json-ir.md)
+[JSON intermediate format][json-ir]
 that is consumed by the language-specific backends.
 
 You should create a new backend for the FIDL compiler for your language. The
@@ -108,9 +108,9 @@ The generated FIDL code varies substantially from one language to another.
 Typically the generated code will contain the following types of code:
 
 * Data structure definitions that represent the data structures defined in the
-  [FIDL language](/docs/development/languages/fidl/reference/language.md).
+  [FIDL language][fidl-language].
 * A codec that can serialize and deserialize these data structure into and from
-  the [FIDL wire format](/docs/development/languages/fidl/reference/wire-format/README.md).
+  the [FIDL wire format][fidl-wire-format].
 * Stub objects that represent the server end of a FIDL protocol. Typically,
   stub object have a *dispatch* method that deserializes a message read from a
   Zircon channel and perform an indirect jump into an implementation of the
@@ -174,3 +174,8 @@ Typically, languages have a tiny library that layers on top of the async library
 to perform asynchronous waits on file descriptors. This library typically
 provides a less error-prone interface that abstracts these "unsafe" FDIO
 functions.
+
+<!-- xrefs -->
+[json-ir]: /docs/reference/fidl/language/json-ir.md
+[fidl-language]: /docs/reference/fidl/language/language.md
+[fidl-wire-format]: /docs/reference/fidl/language/wire-format

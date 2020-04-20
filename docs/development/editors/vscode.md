@@ -54,4 +54,4 @@ Each language may require extra configuration. See more for
 * [Rust](/docs/development/languages/rust/editors.md#visual-studio-code)
 * [Dart](/docs/development/languages/dart/ides.md#visual-studio-code)
 * [C/C++](/docs/development/languages/c-cpp/editors.md#visual-studio-code)
-* [FIDL](/docs/development/languages/fidl/reference/editors.md#visual-studio-code)
+* [FIDL](/docs/development/languages/fidl/guides/editors.md#visual-studio-code)

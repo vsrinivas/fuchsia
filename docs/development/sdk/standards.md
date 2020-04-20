@@ -160,4 +160,4 @@ Fuchsia SDK. Clients of the Fuchsia SDK should not declare names in the top-leve
 `fuchsia` namespace.
 
 [Fuchsia API Council]: /docs/concepts/api/council.md
-[FIDL API style rubric]: /docs/development/languages/fidl/style.md
+[FIDL API style rubric]: /docs/development/languages/fidl/guides/style.md

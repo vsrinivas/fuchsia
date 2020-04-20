@@ -8,7 +8,7 @@ This section presents techniques, best practices, and general advice about
 defining protocols in the [Fuchsia Interface Definition
 Language](/docs/development/languages/fidl/README.md).
 
-See also the [FIDL Style Guide](/docs/development/languages/fidl/style.md).
+See also the [FIDL Style Guide](/docs/development/languages/fidl/guides/style.md).
 
 ### Protocols not objects
 
@@ -1426,5 +1426,5 @@ interact with a potentially large set of logical objects through a single
 protocol.
 
 <!-- xrefs -->
-[ftp-025]: /docs/development/languages/fidl/reference/ftp/ftp-025.md
+[ftp-025]: /docs/concepts/fidl/ftp/ftp-025.md
 [locale-passing-example]: /garnet/examples/intl/wisdom/

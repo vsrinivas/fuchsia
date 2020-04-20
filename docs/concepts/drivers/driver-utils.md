@@ -56,7 +56,7 @@ when their driver performs a `DdkAdd()` (for C++ drivers) operation.
 Existing utilities like `spiutil` make use of currently existing FIDL APIs. To
 extend the functionality exported by an exisiting driver, the FIDL API the
 existing driver exports can be extended/evolved by following
-[Considerations when changing FIDL source](/docs/development/languages/fidl/how-to/abi-compat.md#considerations_when_changing_fidl_source).
+[Considerations when changing FIDL source][abi-compat].
 In cases when there is no existing FIDL API, you need to add new FIDL files to
 a folder within [/sdk/fidl](/sdk/fidl).
 
@@ -87,8 +87,8 @@ class SpiChild : public SpiChildType,
 To implement the Fuchsia application that would communicate with the device,
 call into the FIDL API. For this utilize the FIDL bindings for your language of
 choice, for C++:
-* [LLCPP](/docs/development/languages/fidl/tutorial/tutorial-llcpp.md).
-* [HLCPP](/docs/development/languages/fidl/tutorial/tutorial-cpp.md).
+* [LLCPP](/docs/development/languages/fidl/tutorials/tutorial-llcpp.md).
+* [HLCPP](/docs/development/languages/fidl/tutorials/tutorial-hlcpp.md).
 
 For example for I2C in [i2cutil](/src/devices/i2c/bin) using LLCPP we have:
 
@@ -98,3 +98,6 @@ auto read = client.Transfer(...);
 ```
 
 This calls the `Transfer()` method to write and read from an I2C device.
+
+<!-- xrefs -->
+[abi-compat]: /docs/development/languages/fidl/guides/abi-compat.md#considerations_when_changing_fidl_source

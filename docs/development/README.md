@@ -111,6 +111,6 @@ This section covers Fuchsia-wide conventions and best practices.
 [imx8mevk]: /docs/development/hardware/imx8mevk.md "iMX8M EVK"
 [hikey960]: /docs/development/hardware/hikey960.md "HiKey960 (96boards.org)"
 [intel-nuc]: /docs/development/hardware/intel_nuc.md "Intel NUC"
-[fidl-style]: /docs/development/languages/fidl/style.md
+[fidl-style]: /docs/development/languages/fidl/guides/style.md
 [fidl-api]: /docs/concepts/api/fidl.md
 [usb-descriptors-endpoints]: /docs/development/drivers/usb/getting_descriptors_and_endpoints.md

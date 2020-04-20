@@ -16,3 +16,9 @@ toc:
 - title: "Tracing"
   section:
   - include: /docs/reference/tracing/_toc.yaml
+- title: "FIDL language"
+  section:
+  - include: /docs/reference/fidl/language/_toc.yaml
+- title: "FIDL bindings"
+  section:
+  - include: /docs/reference/fidl/bindings/_toc.yaml

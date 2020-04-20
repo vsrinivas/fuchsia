@@ -4,6 +4,8 @@
 toc:
 - title: "Contributing to Zircon"
   path: /docs/community/contribute/contributing_to_zircon.md
+- title: "Contributing to FIDL"
+  path: /docs/community/contribute/contributing_to_fidl.md
 - title: "Documentation"
   section:
   - include: /docs/community/contribute/docs/_toc.yaml

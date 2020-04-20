@@ -36,7 +36,7 @@ responsibilities by:
 
 *   Providing client libraries that implement functionality common across
 sessions.
-*   Building components that expose said libraries as [FIDL](/docs/development/languages/fidl/intro/README.md)
+*   Building components that expose said libraries as [FIDL](/docs/concepts/fidl/overview.md)
 protocols, for sessions not written in languages supported by client libraries.
 *   Defining FIDL protocols to standardize communication between sessions and
 components that are present on a wide range of products.

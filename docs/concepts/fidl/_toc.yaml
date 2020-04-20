@@ -1,0 +1,9 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /docs/concepts/fidl/overview.md
+- title: "Language tuning proposals"
+  section:
+  - include: /docs/concepts/fidl/ftp/_toc.yaml

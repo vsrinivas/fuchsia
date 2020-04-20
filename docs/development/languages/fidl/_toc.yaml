@@ -4,31 +4,35 @@
 toc:
 - title: "Overview"
   path: /docs/development/languages/fidl
-- title: "Introduction"
-  path: /docs/development/languages/fidl/intro/README.md
+- title: "Developer Guide"
+  section:
+  - title: "Running FIDL"
+    path: /docs/development/languages/fidl/guides/cli.md
+  - title: "Style Guide"
+    path: /docs/development/languages/fidl/guides/style.md
+  - title: "Designing APIs"
+    path: /docs/development/languages/fidl/guides/api-design.md
+  - title: "Evolving APIs"
+    path: /docs/development/languages/fidl/guides/abi-compat.md
+  - title: "Maxing Out Pagination"
+    path: /docs/development/languages/fidl/guides/max-out-pagination.md
+  - title: "Picking Between C, LLCPP, and HLCPP Bindings"
+    path: /docs/development/languages/fidl/guides/c-family-comparison.md
+  - title: "Editor Support"
+    path: /docs/development/languages/fidl/guides/editors.md
 - title: "Tutorials"
-  path: /docs/development/languages/fidl/tutorial
-- title: "Reference"
   section:
-  - include: /docs/development/languages/fidl/reference/_toc.yaml
-- title: "How To"
-  section:
-  - include: /docs/development/languages/fidl/how-to/_toc.yaml
-- title: "Supported languages"
-  section:
-  - title: "Comparison of C, Low-Level C++, and High-Level C++ Language Bindings"
-    path: /docs/development/languages/fidl/tutorial/c-family-comparison.md
-  - title: "C tutorial"
-    path: /docs/development/languages/fidl/tutorial/tutorial-c.md
-  - title: "C++ tutorial"
-    path: /docs/development/languages/fidl/tutorial/tutorial-cpp.md
-  - title: "Low-level C++ tutorial"
-    path: /docs/development/languages/fidl/tutorial/tutorial-llcpp.md
-  - title: "Dart"
-    path:  /docs/development/languages/fidl/tutorial/tutorial-dart.md
+  - title: "Overview"
+    path: /docs/development/languages/fidl/tutorials/overview.md
+  - title: "HLCPP"
+    path: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
+  - title: "LLCPP"
+    path: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
   - title: "Rust"
-    path:  /docs/development/languages/fidl/tutorial/tutorial-rust.md
-- title: "Style guide"
-  path: /docs/development/languages/fidl/style.md
-- title: "Contributing"
-  path: /docs/development/languages/fidl/CONTRIBUTING.md
+    path: /docs/development/languages/fidl/tutorials/tutorial-rust.md
+  - title: "Dart"
+    path: /docs/development/languages/fidl/tutorials/tutorial-dart.md
+  - title: "Go"
+    path: /docs/development/languages/fidl/tutorials/tutorial-go.md
+  - title: "C"
+    path: /docs/development/languages/fidl/tutorials/tutorial-c.md
