@@ -187,32 +187,6 @@ class Bl2PartitionClient final : public SkipBlockPartitionClient {
   static constexpr size_t kBl2Size = 64 * 1024;
 };
 
-class AstroBootloaderPartitionClient final : public PartitionClient {
- public:
-  explicit AstroBootloaderPartitionClient(std::unique_ptr<PartitionClient> bl2,
-                                          std::unique_ptr<PartitionClient> tpl)
-      : bl2_(std::move(bl2)), tpl_(std::move(tpl)) {}
-
-  zx_status_t GetBlockSize(size_t* out_size) final;
-  zx_status_t GetPartitionSize(size_t* out_size) final;
-  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx_status_t Trim() final;
-  zx_status_t Flush() final;
-  zx::channel GetChannel() final;
-  fbl::unique_fd block_fd() final;
-
-  // No copy, no move.
-  AstroBootloaderPartitionClient(const AstroBootloaderPartitionClient&) = delete;
-  AstroBootloaderPartitionClient& operator=(const AstroBootloaderPartitionClient&) = delete;
-  AstroBootloaderPartitionClient(AstroBootloaderPartitionClient&&) = delete;
-  AstroBootloaderPartitionClient& operator=(AstroBootloaderPartitionClient&&) = delete;
-
- private:
-  std::unique_ptr<PartitionClient> bl2_;
-  std::unique_ptr<PartitionClient> tpl_;
-};
-
 class SherlockBootloaderPartitionClient final : public PartitionClient {
  public:
   explicit SherlockBootloaderPartitionClient(zx::channel partition)

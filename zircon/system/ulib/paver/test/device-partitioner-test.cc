@@ -22,6 +22,7 @@
 
 #include <array>
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/auto_call.h>
@@ -169,6 +170,27 @@ constexpr fuchsia_hardware_nand_RamNandInfo kNandInfo = {
     .export_nand_config = true,
     .export_partition_map = true,
 };
+
+// Returns the start address of the given partition in |mapper|, or nullptr if
+// the partition doesn't exist in |nand_info|.
+uint8_t* PartitionStart(const fzl::VmoMapper& mapper,
+                        const fuchsia_hardware_nand_RamNandInfo& nand_info,
+                        const std::array<uint8_t, GPT_GUID_LEN> guid) {
+  const auto& map = nand_info.partition_map;
+  const auto* partitions_begin = map.partitions;
+  const auto* partitions_end = &map.partitions[map.partition_count];
+
+  const auto* part = std::find_if(partitions_begin, partitions_end,
+                                  [&guid](const fuchsia_hardware_nand_Partition& p) {
+                                    return memcmp(p.type_guid, guid.data(), guid.size()) == 0;
+                                  });
+  if (part == partitions_end) {
+    return nullptr;
+  }
+
+  return reinterpret_cast<uint8_t*>(mapper.start()) +
+         (part->first_block * kPageSize * kPagesPerBlock);
+}
 
 struct PartitionDescription {
   const char* name;
@@ -1209,6 +1231,8 @@ TEST(AstroPartitionerTests, FindPartitionTest) {
 
   std::unique_ptr<paver::PartitionClient> partition;
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader), &partition));
+  ASSERT_OK(
+      partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader, "bl2"), &partition));
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA), &partition));
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB), &partition));
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR), &partition));
@@ -1228,6 +1252,7 @@ TEST(AstroPartitionerTests, SupportsPartition) {
   ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
 
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader, "bl2")));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1243,7 +1268,58 @@ TEST(AstroPartitionerTests, SupportsPartition) {
 
   // Unsupported content type.
   EXPECT_FALSE(
+      partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader, "unknown")));
+  EXPECT_FALSE(
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA, "foo_type")));
+}
+
+// Gets a PartitionClient for the given |spec| and writes |contents| padded to
+// the partition's block size.
+//
+// Call with ASSERT_NO_FATAL_FAILURES.
+void WritePartition(const paver::DevicePartitioner* partitioner, const PartitionSpec& spec,
+                    std::string_view contents) {
+  std::unique_ptr<paver::PartitionClient> partition;
+  ASSERT_OK(partitioner->FindPartition(spec, &partition));
+
+  size_t block_size = 0;
+  ASSERT_OK(partition->GetBlockSize(&block_size));
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(block_size, ZX_VMO_RESIZABLE, &vmo));
+  ASSERT_OK(vmo.write(contents.data(), 0, contents.size()));
+  ASSERT_OK(partition->Write(vmo, block_size));
+}
+
+TEST(AstroPartitionerTests, BootloaderTplTest) {
+  std::unique_ptr<SkipBlockDevice> device;
+  SkipBlockDevice::Create(kNandInfo, &device);
+
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
+
+  ASSERT_NO_FATAL_FAILURES(
+      WritePartition(partitioner.get(), PartitionSpec(paver::Partition::kBootloader), "abcd1234"));
+
+  const uint8_t* tpl_partition = PartitionStart(device->mapper(), kNandInfo, GUID_BOOTLOADER_VALUE);
+  ASSERT_NOT_NULL(tpl_partition);
+  ASSERT_EQ(0, memcmp("abcd1234", tpl_partition, 8));
+}
+
+TEST(AstroPartitionerTests, BootloaderBl2Test) {
+  std::unique_ptr<SkipBlockDevice> device;
+  SkipBlockDevice::Create(kNandInfo, &device);
+
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
+
+  ASSERT_NO_FATAL_FAILURES(WritePartition(
+      partitioner.get(), PartitionSpec(paver::Partition::kBootloader, "bl2"), "123xyz"));
+
+  const uint8_t* bl2_partition = PartitionStart(device->mapper(), kNandInfo, GUID_BL2_VALUE);
+  ASSERT_NOT_NULL(bl2_partition);
+  // Special BL2 handling - image contents start at offset 4096 (page 1 on Astro).
+  ASSERT_EQ(0, memcmp("123xyz", bl2_partition + 4096, 6));
 }
 
 class As370PartitionerTests : public zxtest::Test {

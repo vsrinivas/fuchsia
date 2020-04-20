@@ -44,11 +44,18 @@ namespace partition = ::llcpp::fuchsia::hardware::block::partition;
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
-constexpr uint32_t kBootloaderFirstBlock = 4;
+constexpr std::string_view kFirmwareTypeBootloader("");
+constexpr std::string_view kFirmwareTypeBl2("bl2");
+constexpr std::string_view kFirmwareTypeUnsupported("unsupported_type");
 
-// Currently our Astro implementation only supports the default empty type.
-constexpr std::string_view kSupportedFirmwareType("");
-constexpr std::string_view kUnsupportedFirmwareType("unsupported_type");
+// BL2 images must be exactly this size.
+constexpr size_t kBl2ImageSize = 0x10000;
+// Make sure we can use our page-based APIs to work with the BL2 image.
+static_assert(kBl2ImageSize % kPageSize == 0);
+constexpr size_t kBl2ImagePages = kBl2ImageSize / kPageSize;
+
+constexpr uint32_t kBootloaderFirstBlock = 4;
+constexpr uint32_t kBl2FirstBlock = 39;
 
 constexpr fuchsia_hardware_nand_RamNandInfo
     kNandInfo =
@@ -150,7 +157,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                             {
                                 .type_guid = GUID_BL2_VALUE,
                                 .unique_guid = {},
-                                .first_block = 39,
+                                .first_block = kBl2FirstBlock,
                                 .last_block = 39,
                                 .copy_count = 0,
                                 .copy_byte_offset = 0,
@@ -331,39 +338,45 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
 
   using PaverServiceTest::ValidateWritten;
 
-  void ValidateWritten(uint32_t block, size_t num_blocks) {
-    const uint8_t* start =
-        static_cast<uint8_t*>(device_->mapper().start()) + (block * kSkipBlockSize);
-    for (size_t i = 0; i < kSkipBlockSize * num_blocks; i++) {
-      ASSERT_EQ(start[i], 0x4a, "i = %zu", i);
+  // Checks that the device mapper contains |expected| at each byte in the given
+  // range. Uses ASSERT_EQ() per-byte to give a helperful message on failure.
+  void AssertContents(size_t offset, size_t length, uint8_t expected) {
+    const uint8_t* contents = static_cast<uint8_t*>(device_->mapper().start()) + offset;
+    for (size_t i = 0; i < length; i++) {
+      ASSERT_EQ(expected, contents[i], "i = %zu", i);
     }
+  }
+
+  void ValidateWritten(uint32_t block, size_t num_blocks) {
+    AssertContents(block * kSkipBlockSize, num_blocks * kSkipBlockSize, 0x4A);
   }
 
   void ValidateUnwritten(uint32_t block, size_t num_blocks) {
-    const uint8_t* start =
-        static_cast<uint8_t*>(device_->mapper().start()) + (block * kSkipBlockSize);
-    for (size_t i = 0; i < kSkipBlockSize * num_blocks; i++) {
-      ASSERT_EQ(start[i], 0xff, "i = %zu", i);
-    }
+    AssertContents(block * kSkipBlockSize, num_blocks * kSkipBlockSize, 0xFF);
   }
 
   void ValidateWrittenPages(uint32_t page, size_t num_pages) {
-    const uint8_t* start = static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
-    for (size_t i = 0; i < kPageSize * num_pages; i++) {
-      ASSERT_EQ(start[i], 0x4a, "i = %zu", i);
-    }
+    AssertContents(page * kPageSize, num_pages * kPageSize, 0x4A);
   }
 
   void ValidateUnwrittenPages(uint32_t page, size_t num_pages) {
-    const uint8_t* start = static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
-    for (size_t i = 0; i < kPageSize * num_pages; i++) {
-      ASSERT_EQ(start[i], 0xff, "i = %zu", i);
-    }
+    AssertContents(page * kPageSize, num_pages * kPageSize, 0xFF);
+  }
+
+  void ValidateWrittenBytes(size_t offset, size_t num_bytes) {
+    AssertContents(offset, num_bytes, 0x4A);
+  }
+
+  void ValidateUnwrittenBytes(size_t offset, size_t num_bytes) {
+    AssertContents(offset, num_bytes, 0xFF);
   }
 
   void WriteData(uint32_t page, size_t num_pages, uint8_t data) {
-    uint8_t* start = static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
-    memset(start, data, kPageSize * num_pages);
+    WriteDataBytes(page * kPageSize, num_pages * kPageSize, data);
+  }
+
+  void WriteDataBytes(uint32_t start, size_t num_bytes, uint8_t data) {
+    memset(static_cast<uint8_t*>(device_->mapper().start()) + start, data, num_bytes);
   }
 
   std::optional<::llcpp::fuchsia::paver::BootManager::SyncClient> boot_manager_;
@@ -785,11 +798,32 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmware) {
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   auto result =
-      data_sink_->WriteFirmware(fidl::unowned_str(kSupportedFirmwareType), std::move(payload));
+      data_sink_->WriteFirmware(fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_OK(result->result.status());
   ValidateWritten(kBootloaderFirstBlock, 4);
+}
+
+TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2) {
+  // BL2 special handling: we should always leave the first 4096 bytes intact.
+  constexpr size_t kBl2StartByte = kBl2FirstBlock * kPageSize * kPagesPerBlock;
+  constexpr size_t kBl2SkipLength = 4096;
+
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
+
+  ::llcpp::fuchsia::mem::Buffer payload;
+  CreatePayload(kBl2ImagePages, &payload);
+
+  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  auto result = data_sink_->WriteFirmware(fidl::unowned_str(kFirmwareTypeBl2), std::move(payload));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_status());
+  ASSERT_OK(result->result.status());
+
+  AssertContents(kBl2StartByte, kBl2SkipLength, 0xC6);
+  ValidateWrittenBytes(kBl2StartByte + kBl2SkipLength, kBl2ImageSize);
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
@@ -800,11 +834,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   auto result =
-      data_sink_->WriteFirmware(fidl::unowned_str(kUnsupportedFirmwareType), std::move(payload));
+      data_sink_->WriteFirmware(fidl::unowned_str(kFirmwareTypeUnsupported), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_unsupported_type());
   ASSERT_TRUE(result->result.unsupported_type());
   ValidateUnwritten(kBootloaderFirstBlock, 4);
+  ValidateUnwritten(kBl2FirstBlock, 1);
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
@@ -819,7 +854,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   auto result =
-      data_sink_->WriteFirmware(fidl::unowned_str(kSupportedFirmwareType), std::move(payload));
+      data_sink_->WriteFirmware(fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
   ASSERT_NOT_OK(result->result.status());
@@ -924,14 +959,10 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
   ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(5 * kPagesPerBlock, &payload);
-  constexpr uint32_t kTplMagic = 0x4C4D4140;
-  ASSERT_OK(payload.vmo.write(&kTplMagic, 16, sizeof(kTplMagic)));
+  CreatePayload(4 * kPagesPerBlock - 1, &payload);
 
-  payload.size = 4 * kPagesPerBlock - 1;
   WriteData(4 * kPagesPerBlock, 4 * kPagesPerBlock - 1, 0x4a);
   WriteData(8 * kPagesPerBlock - 1, 1, 0xff);
-  WriteData(39 * kPagesPerBlock, 1, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   auto result = data_sink_->WriteBootloader(std::move(payload));

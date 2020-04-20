@@ -471,7 +471,7 @@ const char* PartitionName(Partition type) {
 }
 
 fbl::String PartitionSpec::ToString() const {
-  if (content_type.data() == nullptr) {
+  if (content_type.empty()) {
     return PartitionName(partition);
   }
   return fbl::StringPrintf("%s (%.*s)", PartitionName(partition),
@@ -1926,10 +1926,22 @@ zx_status_t AstroPartitioner::Initialize(fbl::unique_fd devfs_root,
   return ZX_OK;
 }
 
+// Astro bootloader types:
+//
+// -- default --
+// The TPL bootloader image.
+//
+// Initially we only supported updating the TPL bootloader, so for backwards
+// compatibility this must be the default type.
+//
+// -- "bl2" --
+// The BL2 bootloader image.
+//
+// It's easier to provide the two images separately since on Astro they live
+// in different partitions, rather than having to split a combined image.
 bool AstroPartitioner::SupportsPartition(const PartitionSpec& spec) const {
-  // TODO(35747): add support for new bootloader content_type to differentiate
-  // between BL2 and TPL images.
   const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloader),
+                                           PartitionSpec(paver::Partition::kBootloader, "bl2"),
                                            PartitionSpec(paver::Partition::kZirconA),
                                            PartitionSpec(paver::Partition::kZirconB),
                                            PartitionSpec(paver::Partition::kZirconR),
@@ -1963,23 +1975,27 @@ zx_status_t AstroPartitioner::FindPartition(const PartitionSpec& spec,
 
   switch (spec.partition) {
     case Partition::kBootloader: {
-      const uint8_t bl2_type[GPT_GUID_LEN] = GUID_BL2_VALUE;
-      std::unique_ptr<PartitionClient> bl2_skip_block;
-      if (auto status = skip_block_->FindPartition(bl2_type, &bl2_skip_block); status != ZX_OK) {
-        return status;
-      }
-      // Upgrade this into a more specialized partition client.
-      auto bl2 = std::make_unique<Bl2PartitionClient>(bl2_skip_block->GetChannel());
+      if (spec.content_type.empty()) {
+        // Default type = TPL.
+        const uint8_t tpl_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
+        return skip_block_->FindPartition(tpl_type, out_partition);
+      } else if (spec.content_type == "bl2") {
+        const uint8_t bl2_type[GPT_GUID_LEN] = GUID_BL2_VALUE;
+        std::unique_ptr<PartitionClient> bl2_skip_block;
+        if (auto status = skip_block_->FindPartition(bl2_type, &bl2_skip_block); status != ZX_OK) {
+          return status;
+        }
 
-      const uint8_t tpl_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
-      std::unique_ptr<PartitionClient> tpl;
-      if (auto status = skip_block_->FindPartition(tpl_type, &tpl); status != ZX_OK) {
-        return status;
+        // Upgrade this into a more specialized partition client for custom
+        // handling required by BL2.
+        *out_partition = std::make_unique<Bl2PartitionClient>(bl2_skip_block->GetChannel());
+        return ZX_OK;
       }
 
-      *out_partition =
-          std::make_unique<AstroBootloaderPartitionClient>(std::move(bl2), std::move(tpl));
-      return ZX_OK;
+      // If we get here, we must have added another type to SupportsPartition()
+      // without actually implementing it.
+      ERROR("Unimplemeneted partition '%s'\n", spec.ToString().c_str());
+      return ZX_ERR_INTERNAL;
     }
     case Partition::kZirconA: {
       const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
