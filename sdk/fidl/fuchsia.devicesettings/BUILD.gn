@@ -21,6 +21,7 @@ fidl("fuchsia.devicesettings") {
     "//garnet/bin/setui_client/*",
     "//garnet/go/src/device_settings/*",
     "//src/connectivity/network/testing/netemul/*",
+    "//src/experiences/settings/lib/settings/*",
     "//src/modular/bin/basemgr/*",
     "//src/modular/bin/basemgr_launcher/*",
     "//src/modular/lib/modular_test_harness/*",
