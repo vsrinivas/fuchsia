@@ -208,6 +208,7 @@ def match_sentence_form(sentence, arg_names):
         'ZX_OBJ_TYPE_IOMMU',
         'ZX_OBJ_TYPE_JOB',
         'ZX_OBJ_TYPE_LOG',
+        'ZX_OBJ_TYPE_MSI',
         'ZX_OBJ_TYPE_PAGER',
         'ZX_OBJ_TYPE_PCI_DEVICE',
         'ZX_OBJ_TYPE_PMT',
