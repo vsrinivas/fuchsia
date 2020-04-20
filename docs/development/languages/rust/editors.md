@@ -1,17 +1,34 @@
-# Rust Editor Configuration
+# Rust editor configuration
 
-## Shared setup
+As there is no specific editor for Rust development on Fuchsia, `vim` and `VS Code` are the
+most popular options. However, documentation for setting up any editor is welcome in this document.
+
+## Native code completion setup
+[rust-analyzer](https://rust-analyzer.github.io/) is a [Language Server Protocol](https://microsoft.github.io/language-server-protocol/)
+implementation for Rust. This is the recommended workflow and will work with minimal editor setup.
+
+`rust-analyzer` uses a file in the `out/` directory called `rust-project.json` that is
+generated based on the build graph at `gn gen` time. A symlink to the `rust-project.json` is located
+in the root directory of the Fuchsia tree.
+
+## Alternative setup with Cargo.toml files
+This is a volunteer maintaned workflow that exits because many tools in the Rust ecosystem assume
+cargo integration. GN and Cargo have some design mismatches that may result in manual tweaks
+being needed for the generated Cargo.tomls.
 
 ### Generating Cargo.toml files for use by editors {#generating-cargo-toml}
 
-Many editors require Cargo.toml files in order to understand how your Rust
-project is structured. These files can be generated using the following
-commands, where `//garnet/foo/path/to/target:label` is the GN target that
-you want to work on:
+Generate the cargo files based on the build graph of GN. This adds a few seconds at `gn gen` time.
+```sh
+fx set --cargo-toml-gen <normal fx commands>
+```
+
+Most editors require the Cargo.toml file to be in a location that is adjacent to the `src/` directory.
+Symlinks to these files can be generated using the following commands, where
+`//garnet/foo/path/to/target:label` is the GN target that you want to work on:
 
 ```sh
-you@computer:/path/to/fuchsia $ fx build garnet/foo/path/to/target:some_label
-you@computer:/path/to/fuchsia $ fx gen-cargo garnet/foo/path/to/target:some_label
+fx gen-cargo garnet/foo/path/to/target:some_label
 ```
 
 Note that this label must point to a `rustc_...` GN template, not a Fuchsia package or other GN
@@ -46,7 +63,7 @@ Some plugins require a `.cargo/config` file to allow cargo to operate correctly 
     # https://fuchsia.googlesource.com/fargo/#creating-a-cargo_config
     ```
 
-## Intellij
+## Intellij (Custom code completion)
 
 See instructions on [the Intellij Rust site](https://intellij-rust.github.io/).
 Finally, follow the steps above to generate a Cargo.toml file for use by Intellij.
@@ -60,7 +77,24 @@ for instructions on making it work better with Rust.
 
 ## Visual Studio Code {#visual-studio-code}
 
-The VS Code plugin uses the RLS (Rust language server) so you'll need to first
+### rust-analyzer (Supported workflow)
+To install the rust-analyzer plugin for VSCode, see [VS Code](https://rust-analyzer.github.io/manual.html#vs-code).
+
+Once you have installed the rust-analyzer plugin, add the following configurations to your `settings.json` file:
+
+Note: To access the VS Code settings, click the **Code** menu, then **Preferences**, then **Settings**.
+Scroll and click on **Edit in settings.json**.
+
+```javascript
+{
+  // disable cargo-watch
+  "rust-analyzer.cargo-watch.enable": false,
+  // disable cargo check on save
+  "rust-analyzer.cargo-watch.allTargets": false,
+}
+```
+
+### RLS (Alternative setup with Cargo)
 [install rustup](https://rustup.rs/). Next, install [this VS Code plugin].
 You need to configure `rustup` to use the Fuchsia Rust toolchain.
 Run this command from your Fuchsia source code root directory.
@@ -229,7 +263,7 @@ have two choices for the language server, pick one:
 
 1. rust-analyzer (recommended): Follow the [rust-analyzer setup instructions]
 (https://github.com/rust-analyzer/rust-analyzer/tree/master/docs/user) for Sublime.
-2. RLS (easy to set up): Just enable `rls` in the `LSP: Enable Language Server` options from
+2. RLS: Just enable `rls` in the `LSP: Enable Language Server` options from
 the Sublime command palette.
 
 #### Usage

@@ -50,7 +50,11 @@ function fx-gen {
     (
       set -ex
       cd "${FUCHSIA_DIR}"
-      fx-gn gen --check --ide=json --export-compile-commands=default "${FUCHSIA_BUILD_DIR}"
+      fx-gn gen --check --export-rust-project --export-compile-commands=default "${FUCHSIA_BUILD_DIR}"
+      # symlink rust-project.json to root of project
+      if [[ -f "${FUCHSIA_BUILD_DIR}/rust-project.json" ]]; then
+        ln -f -s "${FUCHSIA_BUILD_DIR}/rust-project.json" rust-project.json
+      fi
     ) || return 1
 }
 

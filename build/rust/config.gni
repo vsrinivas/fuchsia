@@ -12,6 +12,9 @@ if (is_mac) {
   import("//build/config/mac/mac_sdk.gni")
 }
 
+default_rust_sysroot =
+    rebase_path("//prebuilt/third_party/rust/${host_platform}", root_build_dir)
+
 default_rustc_prefix =
     rebase_path("//prebuilt/third_party/rust/${host_platform}/bin",
                 root_build_dir)
@@ -20,6 +23,10 @@ declare_args() {
   # Sets a custom base directory for `rustc` and `cargo`.
   # This can be used to test custom Rust toolchains.
   rustc_prefix = default_rustc_prefix
+
+  # Sets a custom base directory for where rust tooling
+  # looks for the standard library
+  rust_sysroot = default_rust_sysroot
 
   # Sets the default LTO type for rustc bulids.
   rust_lto = ""

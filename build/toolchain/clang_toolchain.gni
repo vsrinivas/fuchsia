@@ -235,6 +235,7 @@ template("clang_toolchain") {
               " -entry \".debug=$unstripped_outfile\""
         }
       }
+      rust_sysroot = "$rust_sysroot"
     }
 
     tool("rust_rlib") {
@@ -248,6 +249,7 @@ template("clang_toolchain") {
           [ "{{output_dir}}/lib{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
       default_output_extension = ".rlib"
+      rust_sysroot = "$rust_sysroot"
     }
 
     tool("rust_staticlib") {
@@ -271,6 +273,7 @@ template("clang_toolchain") {
       default_output_dir = "{{target_out_dir}}"
       default_output_extension = ".a"
       output_prefix = "lib"
+      rust_sysroot = "$rust_sysroot"
     }
 
     tool("rust_cdylib") {
@@ -290,6 +293,7 @@ template("clang_toolchain") {
         default_output_extension = ".so"
       }
       output_prefix = "lib"
+      rust_sysroot = "$rust_sysroot"
     }
 
     tool("rust_dylib") {
@@ -345,6 +349,7 @@ template("clang_toolchain") {
               " -entry \".debug=$unstripped_outfile\""
         }
       }
+      rust_sysroot = "$rust_sysroot"
     }
 
     tool("rust_macro") {
@@ -362,6 +367,7 @@ template("clang_toolchain") {
         default_output_extension = ".so"
       }
       output_prefix = "lib"
+      rust_sysroot = "$rust_sysroot"
     }
 
     tool("alink") {
