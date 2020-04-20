@@ -37,7 +37,30 @@ source_set("path") {
   public = [ "path.h" ]
 }
 
+source_set("extent") {
+  sources = [ "extent.cc" ]
+  public = [ "extent.h" ]
+  public_deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("extent-test") {
+  testonly = true
+  sources = [ "extent_test.cc" ]
+  deps = [
+    ":extent",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":guid-test" ]
+  deps = [
+    ":extent-test",
+    ":guid-test",
+  ]
 }
