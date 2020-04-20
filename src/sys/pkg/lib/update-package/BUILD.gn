@@ -27,10 +27,11 @@ rustc_library("update-package") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:tempfile",
   ]
 }
 
-unittest_package("update-package-tests") {
+test_package("update-package-tests") {
   deps = [ ":update-package_test" ]
 
   tests = [
