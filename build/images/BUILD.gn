@@ -1133,6 +1133,19 @@ generate_fvm("fvm.blob.sparse.blk") {
 
   metadata = {
     image_paths = [ "IMAGE_FVM_BLOB_SPARSE=$rebased_fvm_blob_sparse_blk_path" ]
+
+    if (include_fvm_blob_sparse) {
+      images = [
+        {
+          # Hack: Infra expects bootserver_pave to be present
+          # in the GN graph for this image to be built.
+          bootserver_pave = []
+          name = "fvm.blob.sparse"
+          path = rebased_fvm_blob_sparse_blk_path
+          type = "blk"
+        },
+      ]
+    }
   }
 }
 default_image_deps += [ ":fvm.blob.sparse.blk" ]
