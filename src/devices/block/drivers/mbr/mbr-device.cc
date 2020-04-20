@@ -185,10 +185,7 @@ zx_status_t MbrDevice::BlockPartitionGetName(char* out_name, size_t capacity) {
   return ZX_OK;
 }
 
-void MbrDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
-  sync_completion_wait(&bind_completed_, ZX_TIME_INFINITE);
-  txn.Reply();
-}
+void MbrDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void MbrDevice::DdkRelease() { delete this; }
 
@@ -285,8 +282,6 @@ zx_status_t MbrDevice::Bind(std::unique_ptr<MbrDevice> device) {
     return status;
   }
 
-  sync_completion_signal(device->bind_completion());
-
   // devmgr owns the device now that it's bound
   __UNUSED auto* dummy = device.release();
 
@@ -319,43 +314,17 @@ zx_status_t CreateAndBind(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t CreateAndBindAsync(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "mbr: Asynchronously reading MBR\n");
-  thrd_t t;
-  struct ThreadArgs {
-    void* ctx;
-    zx_device_t* parent;
-  };
-  ThreadArgs* args = new ThreadArgs;
-  args->ctx = ctx;
-  args->parent = parent;
-  auto ret = thrd_create_with_name(
-      &t,
-      [](void* arg) {
-        auto* args = static_cast<ThreadArgs*>(arg);
-        zx_status_t status = CreateAndBind(args->ctx, args->parent);
-        delete args;
-        return status;
-      },
-      static_cast<void*>(args), "mbr-init");
-  if (ret != thrd_success) {
-    return thrd_status_to_zx_status(ret);
-  }
-  thrd_detach(t);
-  return ZX_OK;
-}
+}  // namespace
 
-zx_driver_ops_t DriverOps = []() {
+zx_driver_ops_t MbrDriverOps = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = CreateAndBindAsync;
+  ops.bind = CreateAndBind;
   return ops;
 }();
 
-}  // namespace
-
 // clang-format off
-ZIRCON_DRIVER_BEGIN(mbr, DriverOps, "zircon", "0.1", 2)
+ZIRCON_DRIVER_BEGIN(mbr, MbrDriverOps, "zircon", "0.1", 2)
     BI_ABORT_IF_AUTOBIND,
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
 ZIRCON_DRIVER_END(mbr)

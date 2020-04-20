@@ -40,8 +40,7 @@ class MbrDevice final : public DeviceType,
         parent_protocol_(parent),
         partition_(entry),
         info_(info),
-        block_op_size_(block_op_size),
-        bind_completed_() {
+        block_op_size_(block_op_size) {
     ZX_ASSERT(info.block_count == entry.num_sectors);
   }
 
@@ -60,8 +59,6 @@ class MbrDevice final : public DeviceType,
   // If the bind succeeds, ownership of |device| is transferred to the DDK;
   // |device| is deallocated otherwise.
   static zx_status_t Bind(std::unique_ptr<MbrDevice> device);
-
-  sync_completion_t* bind_completion() { return &bind_completed_; }
 
   // DDK mixin implementation.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -89,10 +86,11 @@ class MbrDevice final : public DeviceType,
 
   block_info_t info_;
   size_t block_op_size_;
-
-  sync_completion_t bind_completed_;
 };
 
 }  // namespace mbr
+
+// Exposed for testing.
+extern zx_driver_ops_t MbrDriverOps;
 
 #endif  // SRC_DEVICES_BLOCK_DRIVERS_MBR_MBR_DEVICE_H_

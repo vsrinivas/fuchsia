@@ -138,4 +138,11 @@ TEST_F(MbrDeviceTest, DdkLifecycle) {
   device1->DdkRelease();
 }
 
+TEST(Bind, UnsupportedProtocol) {
+  fake_ddk::Bind ddk;
+
+  auto bind_result = MbrDriverOps.bind(nullptr, fake_ddk::kFakeParent);
+  ASSERT_EQ(bind_result, ZX_ERR_NOT_SUPPORTED);
+}
+
 }  // namespace mbr
