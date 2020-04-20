@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_MBR_MBR_TEST_DATA_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_MBR_MBR_TEST_DATA_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_MBR_MBR_TEST_DATA_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_MBR_MBR_TEST_DATA_H_
 
 #include <inttypes.h>
 
@@ -89,4 +89,4 @@ static constexpr uint8_t kFuchsiaSysPartitionEntry[16] = {
     0x00, 0x00, 0x01, 0x01, 0xea, 0x3f, 0x20, 0x0a, 0x00, 0x08, 0x00, 0x00, 0x00, 0x50, 0x00, 0x00,
 };
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_MBR_MBR_TEST_DATA_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_MBR_MBR_TEST_DATA_H_
