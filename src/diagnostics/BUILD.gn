@@ -3,8 +3,11 @@
 # found in the LICENSE file.
 
 group("diagnostics") {
+  testonly = true
   deps = [
+    ":tests",
     "archivist",
+    "config",
     "examples",
   ]
 }

@@ -1,0 +1,20 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/diagnostics/triage/build/triage_config_test.gni")
+
+group("triage") {
+  testonly = true
+  deps = [ ":tests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":triage_configs_test($host_toolchain)" ]
+}
+
+triage_config_test("triage_configs_test") {
+  sources = [ "disk.triage" ]
+  source_dir = "."
+}
