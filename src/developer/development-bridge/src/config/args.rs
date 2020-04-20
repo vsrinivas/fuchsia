@@ -177,7 +177,7 @@ mod tests {
             )
         }
 
-        let mut levels = [
+        let levels = [
             ("build", ConfigLevel::Build),
             ("user", ConfigLevel::User),
             ("global", ConfigLevel::Global),

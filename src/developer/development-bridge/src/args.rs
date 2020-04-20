@@ -7,6 +7,10 @@ use {crate::config::args::ConfigCommand, argh::FromArgs};
 #[derive(FromArgs, Debug, PartialEq)]
 /// Fuchsia Development Bridge
 pub struct Ffx {
+    #[argh(option)]
+    /// configuration information
+    pub config: Option<String>,
+
     #[argh(subcommand)]
     pub subcommand: Subcommand,
 }
@@ -88,6 +92,7 @@ mod tests {
             assert_eq!(
                 Ffx::from_args(CMD_NAME, args),
                 Ok(Ffx {
+                    config: None,
                     subcommand: Subcommand::Echo(EchoCommand {
                         text: Some(expected_echo.to_string()),
                     })
@@ -105,7 +110,7 @@ mod tests {
         fn check(args: &[&str]) {
             assert_eq!(
                 Ffx::from_args(CMD_NAME, args),
-                Ok(Ffx { subcommand: Subcommand::Daemon(DaemonCommand {}) })
+                Ok(Ffx { config: None, subcommand: Subcommand::Daemon(DaemonCommand {}) })
             )
         }
 
@@ -117,7 +122,10 @@ mod tests {
         fn check(args: &[&str], nodename: String) {
             assert_eq!(
                 Ffx::from_args(CMD_NAME, args),
-                Ok(Ffx { subcommand: Subcommand::List(ListCommand { nodename: Some(nodename) }) })
+                Ok(Ffx {
+                    config: None,
+                    subcommand: Subcommand::List(ListCommand { nodename: Some(nodename) })
+                })
             )
         }
 
@@ -131,6 +139,7 @@ mod tests {
             assert_eq!(
                 Ffx::from_args(CMD_NAME, args),
                 Ok(Ffx {
+                    config: None,
                     subcommand: Subcommand::RunComponent(RunComponentCommand {
                         url: expected_url,
                         args: expected_args,

@@ -1,7 +1,6 @@
 use {
     crate::config::{get_config_bool, get_config_str},
     crate::constants::{LOG_DIR, LOG_ENABLED},
-    serde_json::Value,
     simplelog::{
         CombinedLogger, Config, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
     },

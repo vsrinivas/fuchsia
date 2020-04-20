@@ -4,8 +4,8 @@
 
 use {
     crate::config::args::{
-        ConfigCommand, EnvAccessCommand, EnvCommand, EnvGetCommand, EnvSetCommand, GetCommand,
-        RemoveCommand, SetCommand, SubCommand,
+        ConfigCommand, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand, RemoveCommand,
+        SetCommand, SubCommand,
     },
     crate::config::configuration::{Config, ConfigLevel},
     crate::config::environment::Environment,
@@ -13,17 +13,16 @@ use {
     anyhow::{anyhow, Error},
     serde_json::Value,
     std::collections::HashMap,
-    std::io::{self, Write},
+    std::io::Write,
 };
 
-pub fn exec_config<W: Write + Sync>(config: ConfigCommand, mut writer: W) -> Result<(), Error> {
+pub fn exec_config<W: Write + Sync>(config: ConfigCommand, writer: W) -> Result<(), Error> {
     match config.sub {
         SubCommand::Env(env) => exec_env(env, writer),
         SubCommand::Get(get) => exec_get(get, writer),
-        SubCommand::Set(set) => exec_set(set, writer),
-        SubCommand::Remove(remove) => exec_remove(remove, writer),
-    };
-    Ok(())
+        SubCommand::Set(set) => exec_set(set),
+        SubCommand::Remove(remove) => exec_remove(remove),
+    }
 }
 
 fn exec_get<W: Write + Sync>(get: GetCommand, mut writer: W) -> Result<(), Error> {
@@ -31,13 +30,13 @@ fn exec_get<W: Write + Sync>(get: GetCommand, mut writer: W) -> Result<(), Error
     let env = Environment::load(&file)?;
     let config = load_config_from_environment(&env, &get.build_dir)?;
     match config.get(&get.name) {
-        Some(v) => writeln!(writer, "{}: {}", get.name, v),
-        None => writeln!(writer, "{}: none", get.name),
+        Some(v) => writeln!(writer, "{}: {}", get.name, v)?,
+        None => writeln!(writer, "{}: none", get.name)?,
     };
     Ok(())
 }
 
-fn exec_set<W: Write + Sync>(set: SetCommand, mut writer: W) -> Result<(), Error> {
+fn exec_set(set: SetCommand) -> Result<(), Error> {
     let file = find_env_file()?;
     let env = Environment::load(&file)?;
     let mut config = load_config_from_environment(&env, &set.build_dir)?;
@@ -45,20 +44,15 @@ fn exec_set<W: Write + Sync>(set: SetCommand, mut writer: W) -> Result<(), Error
     save_config_from_environment(&env, &mut config, set.build_dir)
 }
 
-fn exec_remove<W: Write + Sync>(set: RemoveCommand, mut writer: W) -> Result<(), Error> {
+fn exec_remove(set: RemoveCommand) -> Result<(), Error> {
     let file = find_env_file()?;
     let env = Environment::load(&file)?;
     let mut config = load_config_from_environment(&env, &set.build_dir)?;
-    config.remove(&set.level, &set.name);
+    config.remove(&set.level, &set.name)?;
     save_config_from_environment(&env, &mut config, set.build_dir)
 }
 
-fn exec_env_set<W: Write + Sync>(
-    env: &mut Environment,
-    s: EnvSetCommand,
-    file: String,
-    mut writer: W,
-) -> Result<(), Error> {
+fn exec_env_set(env: &mut Environment, s: EnvSetCommand, file: String) -> Result<(), Error> {
     match s.level {
         ConfigLevel::User => match env.user.as_mut() {
             Some(v) => *v = s.file,
@@ -94,9 +88,9 @@ fn exec_env<W: Write + Sync>(env_command: EnvCommand, mut writer: W) -> Result<(
     let mut env = Environment::load(&file)?;
     match env_command.access {
         Some(a) => match a {
-            EnvAccessCommand::Set(s) => exec_env_set(&mut env, s, file, writer),
+            EnvAccessCommand::Set(s) => exec_env_set(&mut env, s, file),
             EnvAccessCommand::Get(g) => {
-                writeln!(writer, "{}", env.display(&g.level));
+                writeln!(writer, "{}", env.display(&g.level))?;
                 Ok(())
             }
         },

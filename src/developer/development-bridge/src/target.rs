@@ -63,6 +63,8 @@ impl RCSConnection {
         Ok(Self { proxy, overnet_id: id.clone() })
     }
 
+    // For testing.
+    #[cfg(test)]
     pub fn new_with_proxy(proxy: RemoteControlProxy, id: &NodeId) -> Self {
         Self { proxy, overnet_id: id.clone() }
     }

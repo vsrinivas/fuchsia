@@ -224,6 +224,7 @@ pub struct HeuristicConfig {
     data: PersistentConfig,
     pub heuristics: HashMap<&'static str, Heuristic>,
     pub environment_variables: HashMap<&'static str, Vec<&'static str>>,
+    pub runtime_config: HashMap<String, String>,
 }
 
 impl HeuristicConfig {
@@ -237,6 +238,7 @@ impl HeuristicConfig {
             data: PersistentConfig::load(defaults, global, build, user)?,
             heuristics: HashMap::new(),
             environment_variables: HashMap::new(),
+            runtime_config: HashMap::new(),
         })
     }
 
@@ -253,22 +255,26 @@ impl HeuristicConfig {
 impl Config for HeuristicConfig {
     fn get(&self, key: &str) -> Option<Value> {
         // Check for configuration in this order:
-        // 1. Environment Variables
-        // 2. Configuration Files
-        // 3. Heuristics (Methods that can guess from the environment)
-        match self.environment_variables.get(key) {
-            Some(vars) => vars
-                .iter()
-                .map(|var| std::env::var(var).map_or(None, |v| Some(Value::String(v))))
-                .find(|val| val.is_some())
-                .flatten(),
-            None => None,
-        }
-        .or(self.data.get(key))
-        .or(match self.heuristics.get(key) {
-            Some(r) => r(key),
-            None => None,
-        })
+        // 1. Runtime Configuration (set by the command line)
+        // 2. Environment Variables
+        // 3. Configuration Files
+        // 4. Heuristics (Methods that can guess from the environment)
+        self.runtime_config
+            .get(key)
+            .map(|s| Value::String(s.to_string()))
+            .or(match self.environment_variables.get(key) {
+                Some(vars) => vars
+                    .iter()
+                    .map(|var| std::env::var(var).map_or(None, |v| Some(Value::String(v))))
+                    .find(|val| val.is_some())
+                    .flatten(),
+                None => None,
+            })
+            .or(self.data.get(key))
+            .or(match self.heuristics.get(key) {
+                Some(r) => r(key),
+                None => None,
+            })
     }
 
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {
@@ -526,7 +532,7 @@ mod test {
             global: Some(serde_json::from_str(GLOBAL)?),
             defaults: Some(serde_json::from_str(DEFAULTS)?),
         };
-        test.set(&ConfigLevel::User, "name", Value::String(String::from("user-test")));
+        test.set(&ConfigLevel::User, "name", Value::String(String::from("user-test")))?;
         let value = test.get("name");
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("user-test")));
@@ -538,19 +544,19 @@ mod test {
         let mut test = PriorityConfig { user: None, build: None, global: None, defaults: None };
         let value_none = test.get("name");
         assert!(value_none.is_none());
-        test.set(&ConfigLevel::Defaults, "name", Value::String(String::from("defaults")));
+        test.set(&ConfigLevel::Defaults, "name", Value::String(String::from("defaults")))?;
         let value_defaults = test.get("name");
         assert!(value_defaults.is_some());
         assert_eq!(value_defaults.unwrap(), Value::String(String::from("defaults")));
-        test.set(&ConfigLevel::Global, "name", Value::String(String::from("global")));
+        test.set(&ConfigLevel::Global, "name", Value::String(String::from("global")))?;
         let value_global = test.get("name");
         assert!(value_global.is_some());
         assert_eq!(value_global.unwrap(), Value::String(String::from("global")));
-        test.set(&ConfigLevel::Build, "name", Value::String(String::from("build")));
+        test.set(&ConfigLevel::Build, "name", Value::String(String::from("build")))?;
         let value_build = test.get("name");
         assert!(value_build.is_some());
         assert_eq!(value_build.unwrap(), Value::String(String::from("build")));
-        test.set(&ConfigLevel::User, "name", Value::String(String::from("user")));
+        test.set(&ConfigLevel::User, "name", Value::String(String::from("user")))?;
         let value_user = test.get("name");
         assert!(value_user.is_some());
         assert_eq!(value_user.unwrap(), Value::String(String::from("user")));
@@ -657,22 +663,33 @@ mod test {
         assert!(not_missing_value.is_some());
         assert_eq!(not_missing_value.unwrap(), Value::String(String::from("test ssh keys")));
 
-        let env_missing_value = heuristic_config.get("env-dep");
+        let environment_dependent_key = "env-dep";
+        let env_missing_value = heuristic_config.get(environment_dependent_key);
         assert!(env_missing_value.is_none());
 
-        heuristic_config
-            .environment_variables
-            .insert("env-dep", vec!["test-not-set", "ffx_test_env_var", "test-also-not-set"]);
+        heuristic_config.environment_variables.insert(
+            environment_dependent_key,
+            vec!["test-not-set", "ffx_test_env_var", "test-also-not-set"],
+        );
 
-        let env_still_missing_value = heuristic_config.get("env-dep");
+        let env_still_missing_value = heuristic_config.get(environment_dependent_key);
         assert!(env_still_missing_value.is_none());
 
         let test = "test-value";
         std::env::set_var("ffx_test_env_var", test);
 
-        let env_not_missing_value = heuristic_config.get("env-dep");
+        let env_not_missing_value = heuristic_config.get(environment_dependent_key);
         assert!(env_not_missing_value.is_some());
         assert_eq!(env_not_missing_value.unwrap(), Value::String(String::from(test)));
+
+        let overridden_test = "override".to_string();
+        heuristic_config
+            .runtime_config
+            .insert(environment_dependent_key.to_string(), overridden_test.clone());
+
+        let overridden_value = heuristic_config.get(environment_dependent_key);
+        assert!(overridden_value.is_some());
+        assert_eq!(overridden_value.unwrap(), Value::String(String::from(overridden_test)));
 
         let mut user_file_out = String::new();
         let mut build_file_out = String::new();

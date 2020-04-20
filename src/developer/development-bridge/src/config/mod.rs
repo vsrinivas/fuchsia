@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::args::Ffx,
     crate::config::configuration::Config,
     crate::config::configuration::FileBackedConfig,
     crate::config::environment::Environment,
@@ -10,10 +11,9 @@ use {
     anyhow::{anyhow, Error},
     serde_json::Value,
     std::{
-        collections::HashMap,
         env,
-        fs::{File, OpenOptions},
-        io::{stdout, Write},
+        fs::File,
+        io::Write,
         path::{Path, PathBuf},
     },
 };
@@ -74,7 +74,7 @@ pub(crate) fn find_env_file() -> Result<String, Error> {
 
     if !env_path.is_file() {
         log::debug!("initializing environment {}", env_path.display());
-        init_env_file(&env_path);
+        init_env_file(&env_path)?;
     }
     match env_path.to_str() {
         Some(f) => Ok(String::from(f)),
@@ -112,6 +112,16 @@ pub(crate) fn load_config_from_environment(
     config.data.environment_variables.insert(LOG_DIR, vec!["FFX_LOG_DIR", "HOME", "HOMEPATH"]);
     config.data.environment_variables.insert(LOG_ENABLED, vec!["FFX_LOG_ENABLED"]);
 
+    let cli: Ffx = argh::from_env();
+    match cli.config {
+        Some(config_str) => config_str.split(',').for_each(|c| {
+            let s: Vec<&str> = c.trim().split('=').collect();
+            if s.len() == 2 {
+                config.data.runtime_config.insert(s[0].to_string(), s[1].to_string());
+            }
+        }),
+        _ => {}
+    };
     Ok(config)
 }
 

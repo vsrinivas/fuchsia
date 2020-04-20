@@ -127,6 +127,7 @@ impl Daemon {
         });
     }
 
+    #[cfg(test)]
     pub fn new_with_rx(
         rx: mpsc::UnboundedReceiver<Target>,
         ascendd_child: Option<Child>,

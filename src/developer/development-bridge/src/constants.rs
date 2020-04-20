@@ -13,11 +13,13 @@ pub const SOCKET: &str = "/tmp/ascendd_for_testing_only";
 
 pub const DAEMON: &str = "daemon";
 pub const ASCENDD: &str = "ascendd";
-pub const CONFIG_JSON_FILE: &str = "ffx_config.json";
+// Config keys
 pub const LOG_DIR: &str = "log-dir";
 pub const LOG_ENABLED: &str = "log-enabled";
 pub const SSH_PUB: &str = "ssh-pub";
 pub const SSH_PRIV: &str = "ssh-priv";
+
+// Environment file that keeps track of configuration files
 pub const ENV_FILE: &str = ".ffx_env";
 
 pub const MAX_RETRY_COUNT: u32 = 30;

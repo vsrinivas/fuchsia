@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(unused)]
 use {
     crate::args::{Ffx, Subcommand, TestCommand},
     crate::config::command::exec_config,
-    crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT, SOCKET},
+    crate::constants::{DAEMON, MAX_RETRY_COUNT},
     crate::daemon::{is_daemon_running, start as start_daemon},
     crate::logger::setup_logger,
     anyhow::{anyhow, format_err, Context, Error},
@@ -16,7 +15,7 @@ use {
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     fidl_fuchsia_test::{CaseIteratorMarker, Invocation, SuiteProxy},
-    futures::{channel::mpsc, FutureExt, StreamExt, TryStreamExt},
+    futures::{channel::mpsc, FutureExt, StreamExt},
     regex::Regex,
     signal_hook,
     std::env,
@@ -25,6 +24,9 @@ use {
     std::sync::{Arc, Mutex},
     test_executor::{run_and_collect_results_for_invocations as run_tests, TestEvent, TestResult},
 };
+
+#[allow(unused_imports)]
+use futures::TryStreamExt;
 
 mod args;
 mod config;
@@ -140,10 +142,10 @@ where
 
         // This is only necessary until Overnet correctly handle setup for passed channels.
         // TODO(jwing) remove this once that is finished.
-        proxy.ping();
+        let _ = proxy.ping();
 
         // TODO(fxb/49063): Can't use the self.writer in these threads due to static lifetime.
-        let out_thread = std::thread::spawn(move || loop {
+        let _out_thread = std::thread::spawn(move || loop {
             let mut buf = [0u8; 128];
             let n = cout.read(&mut buf).or::<usize>(Ok(0usize)).unwrap();
             if n > 0 {
@@ -151,7 +153,7 @@ where
             }
         });
 
-        let err_thread = std::thread::spawn(move || loop {
+        let _err_thread = std::thread::spawn(move || loop {
             let mut buf = [0u8; 128];
             let n = cerr.read(&mut buf).or::<usize>(Ok(0usize)).unwrap();
             if n > 0 {
@@ -187,7 +189,7 @@ where
                 let mut kill_started = arc_mut.lock().unwrap();
                 if !*kill_started {
                     println!("\nCaught interrupt, killing remote component.");
-                    proxy.kill();
+                    let _ = proxy.kill();
                     *kill_started = true;
                 } else {
                     // If for some reason the kill signal hangs, we want to give the user
@@ -195,7 +197,7 @@ where
                     println!("Received second interrupt. Forcing exit...");
                     std::process::exit(0);
                 }
-            });
+            })?;
         }
 
         match self
@@ -204,7 +206,7 @@ where
             .await?
         {
             Ok(_) => {}
-            Err(e) => {
+            Err(_) => {
                 return Err(anyhow!(
                     "Error starting component. Ensure there is a target connected with `ffx list`"
                 ));
@@ -239,11 +241,11 @@ where
             if cases.is_empty() {
                 return Ok(());
             }
-            writeln!(self.writer, "Tests in suite {}:\n", suite_url);
+            writeln!(self.writer, "Tests in suite {}:\n", suite_url)?;
             for case in cases {
                 match case.name {
-                    Some(n) => writeln!(self.writer, "{}", n),
-                    None => writeln!(self.writer, "<No name>"),
+                    Some(n) => writeln!(self.writer, "{}", n)?,
+                    None => writeln!(self.writer, "<No name>")?,
                 };
             }
         }
@@ -269,7 +271,7 @@ where
                 let test_case_name = case.name.unwrap();
                 match &test_selector {
                     Some(s) => {
-                        if (s.is_match(&test_case_name)) {
+                        if s.is_match(&test_case_name) {
                             invocations.push(Invocation { name: Some(test_case_name), tag: None });
                         }
                     }
@@ -297,7 +299,7 @@ where
         };
 
         log::info!("launching test suite {}", suite_url);
-        writeln!(self.writer, "*** Launching {} ***", suite_url);
+        writeln!(self.writer, "*** Launching {} ***", suite_url)?;
 
         self.daemon_proxy
             .launch_suite(&suite_url, suite_server_end, controller_server_end)
@@ -308,18 +310,18 @@ where
         log::info!("launched suite, getting tests");
         let (sender, recv) = mpsc::channel(1);
 
-        writeln!(self.writer, "Getting tests...");
+        writeln!(self.writer, "Getting tests...")?;
         let invocations = self.get_invocations(&suite_proxy, &test_selector).await?;
-        if (invocations.is_empty()) {
+        if invocations.is_empty() {
             match tests {
                 Some(test_selector) => {
-                    writeln!(self.writer, "No test cases match {}", test_selector)
+                    writeln!(self.writer, "No test cases match {}", test_selector)?
                 }
-                None => writeln!(self.writer, "No tests cases found in suite {}", suite_url),
+                None => writeln!(self.writer, "No tests cases found in suite {}", suite_url)?,
             };
             return Ok(());
         }
-        writeln!(self.writer, "Running tests...");
+        writeln!(self.writer, "Running tests...")?;
         let (remote, test_fut) =
             run_tests(suite_proxy, sender, suite_url.to_string(), invocations).remote_handle();
         hoist::spawn(remote);
@@ -329,7 +331,7 @@ where
         if !successful_completion {
             return Err(anyhow!("Test run finished prematurely. Something went wrong."));
         }
-        writeln!(self.writer, "*** Finished {} ***", suite_url);
+        writeln!(self.writer, "*** Finished {} ***", suite_url)?;
         Ok(())
     }
 
@@ -341,21 +343,27 @@ where
                     let logs = msg.split("\n");
                     for log in logs {
                         if log.len() > 0 {
-                            writeln!(self.writer, "{}: {}", test_case_name, log.to_string());
+                            writeln!(self.writer, "{}: {}", test_case_name, log.to_string())
+                                .expect("writing to output")
                         }
                     }
                 }
                 TestEvent::TestCaseStarted { test_case_name } => {
-                    writeln!(self.writer, "[RUNNING]\t{}", test_case_name);
+                    writeln!(self.writer, "[RUNNING]\t{}", test_case_name)
+                        .expect("writing to output");
                 }
                 TestEvent::TestCaseFinished { test_case_name, result } => {
                     match result {
-                        TestResult::Passed => writeln!(self.writer, "[PASSED]\t{}", test_case_name),
-                        TestResult::Failed => writeln!(self.writer, "[FAILED]\t{}", test_case_name),
+                        TestResult::Passed => writeln!(self.writer, "[PASSED]\t{}", test_case_name)
+                            .expect("writing to output"),
+                        TestResult::Failed => writeln!(self.writer, "[FAILED]\t{}", test_case_name)
+                            .expect("writing to output"),
                         TestResult::Skipped => {
                             writeln!(self.writer, "[SKIPPED]\t{}", test_case_name)
+                                .expect("writing to output")
                         }
-                        TestResult::Error => writeln!(self.writer, "[ERROR]\t{}", test_case_name),
+                        TestResult::Error => writeln!(self.writer, "[ERROR]\t{}", test_case_name)
+                            .expect("writing to output"),
                     };
                 }
                 TestEvent::Finish => {
@@ -367,7 +375,7 @@ where
     }
 
     pub async fn test(&mut self, test: TestCommand) -> Result<(), Error> {
-        if (test.list) {
+        if test.list {
             self.get_tests(&test.url).await
         } else {
             self.run_tests(&test.url, &test.tests).await
@@ -417,7 +425,7 @@ async fn async_main() -> Result<(), Error> {
         }
         Subcommand::RunComponent(c) => {
             match Cli::new(writer).await?.run_component(c.url, &c.args).await {
-                Ok(r) => {}
+                Ok(_) => {}
                 Err(e) => {
                     println!("ERROR: {:?}", e);
                 }
@@ -426,7 +434,7 @@ async fn async_main() -> Result<(), Error> {
         }
         Subcommand::Quit(_) => {
             match Cli::new(writer).await?.quit().await {
-                Ok(r) => {}
+                Ok(_) => {}
                 Err(e) => {
                     println!("ERROR: {:?}", e);
                 }
@@ -473,7 +481,7 @@ mod test {
         hoist::spawn(async move {
             while let Ok(Some(CaseIteratorRequest::GetNext { responder })) = stream.try_next().await
             {
-                responder.send(&mut iter.by_ref().take(50));
+                responder.send(&mut iter.by_ref().take(50)).unwrap();
             }
         });
     }
@@ -508,7 +516,7 @@ mod test {
                                 )
                                 .context("Cannot send on_test_case_started")
                                 .unwrap();
-                            log.write(b"Test log message\n");
+                            log.write(b"Test log message\n").unwrap();
                             case_listener
                                 .finished(Result_ { status: Some(Status::Passed) })
                                 .context("Cannot send finished")
@@ -537,8 +545,8 @@ mod test {
                         let _ = responder.send(value.as_ref());
                     }
                     Some(DaemonRequest::StartComponent {
-                        component_url,
-                        args,
+                        component_url: _,
+                        args: _,
                         component_stdout: _,
                         component_stderr: _,
                         controller: _,
@@ -546,7 +554,12 @@ mod test {
                     }) => {
                         let _ = responder.send(&mut Ok(()));
                     }
-                    Some(DaemonRequest::LaunchSuite { test_url, suite, controller, responder }) => {
+                    Some(DaemonRequest::LaunchSuite {
+                        test_url: _,
+                        suite,
+                        controller: _,
+                        responder,
+                    }) => {
                         let suite_request_stream = suite.into_stream().unwrap();
                         spawn_fake_suite_server(suite_request_stream, num_tests);
                         let _ = responder.send(&mut Ok(()));
@@ -578,22 +591,15 @@ mod test {
         let mut output = String::new();
         let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
         let args = vec!["test1".to_string(), "test2".to_string()];
-        let (daemon_proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>()?;
-        let (_, server_end) = create_proxy::<ComponentControllerMarker>()?;
-        let (sout, _) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
-        let (serr, _) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
         hoist::run(async move {
             let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
             // There isn't a lot we can test here right now since this method has an empty response.
             // We just check for an Ok(()) and leave it to a real integration to test behavior.
-            let response = Cli::new_with_proxy(setup_fake_daemon_service(), writer)
+            Cli::new_with_proxy(setup_fake_daemon_service(), writer)
                 .run_component(url.to_string(), &args)
                 .await
                 .unwrap();
         });
-
         Ok(())
     }
 
