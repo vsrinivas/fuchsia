@@ -307,13 +307,15 @@ void EngineRenderer::WarmPipelineCache(std::set<vk::Format> framebuffer_formats)
   config.msaa_sample_count = 1;
   config.depth_stencil_format = depth_stencil_format_;
 
-  // Generate the list of immutable samples for all of the YUV types that we expect to see.
-  const std::vector<vk::Format> immutable_sampler_formats{vk::Format::eG8B8G8R8422Unorm,
-                                                          vk::Format::eG8B8R82Plane420Unorm};
   std::vector<escher::SamplerPtr> immutable_samplers;
-  for (auto fmt : immutable_sampler_formats) {
-    immutable_samplers.push_back(
-        escher_->sampler_cache()->ObtainYuvSampler(fmt, vk::Filter::eLinear));
+  if (escher_->allow_ycbcr()) {
+    // Generate the list of immutable samples for all of the YUV types that we expect to see.
+    const std::vector<vk::Format> immutable_sampler_formats{vk::Format::eG8B8G8R8422Unorm,
+                                                            vk::Format::eG8B8R82Plane420Unorm};
+    for (auto fmt : immutable_sampler_formats) {
+      immutable_samplers.push_back(
+          escher_->sampler_cache()->ObtainYuvSampler(fmt, vk::Filter::eLinear));
+    }
   }
 
   framebuffer_formats.insert(kIntermediateLayerFormat);
