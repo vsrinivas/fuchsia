@@ -266,10 +266,12 @@ void CodecFactoryApp::ProcessDiscoveryQueue() {
     FX_DCHECK(front->driver_codec_list.has_value());
 
     for (auto& codec_description : front->driver_codec_list.value()) {
-      FX_LOGS(INFO) << "registering - codec_type: "
-                    << fidl::ToUnderlying(codec_description.codec_type)
-                    << " mime_type: " << codec_description.mime_type
-                    << " device_path: " << front->device_path;
+      FX_LOGS(INFO) << "Registering "
+                    << (codec_description.codec_type == fuchsia::mediacodec::CodecType::DECODER
+                            ? "decoder"
+                            : "encoder")
+                    << ", mime_type: " << codec_description.mime_type
+                    << ", device_path: " << front->device_path;
       hw_codecs_.emplace_front(std::make_unique<CodecListEntry>(CodecListEntry{
           .description = std::move(codec_description),
           // shared_ptr<>
