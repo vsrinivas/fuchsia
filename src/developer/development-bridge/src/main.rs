@@ -434,7 +434,7 @@ async fn async_main() -> Result<(), Error> {
             Ok(())
         }
         Subcommand::Daemon(_) => start_daemon().await,
-        Subcommand::Config(c) => exec_config(c),
+        Subcommand::Config(c) => exec_config(c, writer),
         Subcommand::Test(t) => {
             match Cli::new(writer).await.unwrap().test(t).await {
                 Ok(_) => {

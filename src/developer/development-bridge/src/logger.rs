@@ -1,5 +1,6 @@
 use {
     crate::config::{get_config_bool, get_config_str},
+    crate::constants::{LOG_DIR, LOG_ENABLED},
     serde_json::Value,
     simplelog::{
         CombinedLogger, Config, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
@@ -16,7 +17,7 @@ fn debug_config() -> Config {
 
 fn log_location(name: &str) -> String {
     let log_file = format!("{}.log", name);
-    let mut log_dir = get_config_str("log-dir", "");
+    let mut log_dir = get_config_str(LOG_DIR, "");
     if log_dir.len() > 0 && !log_dir.ends_with(std::path::MAIN_SEPARATOR) {
         log_dir = format!("{}{}", log_dir, std::path::MAIN_SEPARATOR);
     }
@@ -24,7 +25,7 @@ fn log_location(name: &str) -> String {
 }
 
 fn is_enabled() -> bool {
-    get_config_bool("log-enabled", false)
+    get_config_bool(LOG_ENABLED, false)
 }
 
 pub(crate) fn setup_logger(name: &str) {

@@ -24,7 +24,7 @@ pub trait Config {
     fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error>;
 }
 
-struct ConfigData {
+struct PriorityConfig {
     defaults: Option<Value>,
     build: Option<Value>,
     global: Option<Value>,
@@ -33,7 +33,7 @@ struct ConfigData {
 
 struct PriorityConfigIterator<'a> {
     curr: Option<ConfigLevel>,
-    config: &'a ConfigData,
+    config: &'a PriorityConfig,
 }
 
 impl<'a> Iterator for PriorityConfigIterator<'a> {
@@ -64,13 +64,13 @@ impl<'a> Iterator for PriorityConfigIterator<'a> {
     }
 }
 
-impl ConfigData {
+impl PriorityConfig {
     fn iter(&self) -> PriorityConfigIterator<'_> {
         PriorityConfigIterator { curr: None, config: self }
     }
 }
 
-impl Config for ConfigData {
+impl Config for PriorityConfig {
     fn get(&self, key: &str) -> Option<Value> {
         self.iter()
             .filter(|c| c.is_some())
@@ -135,7 +135,7 @@ impl Config for ConfigData {
 }
 
 struct PersistentConfig {
-    data: ConfigData,
+    data: PriorityConfig,
 }
 
 impl PersistentConfig {
@@ -146,7 +146,7 @@ impl PersistentConfig {
         user: Option<R>,
     ) -> Result<Self, Error> {
         Ok(PersistentConfig {
-            data: ConfigData {
+            data: PriorityConfig {
                 user: PersistentConfig::open(user)?,
                 build: PersistentConfig::open(build)?,
                 global: PersistentConfig::open(global)?,
@@ -223,6 +223,7 @@ type Heuristic = fn(key: &str) -> Option<Value>;
 pub struct HeuristicConfig {
     data: PersistentConfig,
     pub heuristics: HashMap<&'static str, Heuristic>,
+    pub environment_variables: HashMap<&'static str, Vec<&'static str>>,
 }
 
 impl HeuristicConfig {
@@ -235,6 +236,7 @@ impl HeuristicConfig {
         Ok(Self {
             data: PersistentConfig::load(defaults, global, build, user)?,
             heuristics: HashMap::new(),
+            environment_variables: HashMap::new(),
         })
     }
 
@@ -250,7 +252,20 @@ impl HeuristicConfig {
 
 impl Config for HeuristicConfig {
     fn get(&self, key: &str) -> Option<Value> {
-        self.data.get(key).or_else(|| match self.heuristics.get(key) {
+        // Check for configuration in this order:
+        // 1. Environment Variables
+        // 2. Configuration Files
+        // 3. Heuristics (Methods that can guess from the environment)
+        match self.environment_variables.get(key) {
+            Some(vars) => vars
+                .iter()
+                .map(|var| std::env::var(var).map_or(None, |v| Some(Value::String(v))))
+                .find(|val| val.is_some())
+                .flatten(),
+            None => None,
+        }
+        .or(self.data.get(key))
+        .or(match self.heuristics.get(key) {
             Some(r) => r(key),
             None => None,
         })
@@ -390,7 +405,7 @@ mod test {
 
     #[test]
     fn test_priority_iterator() -> Result<(), Error> {
-        let test = ConfigData {
+        let test = PriorityConfig {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -408,7 +423,7 @@ mod test {
 
     #[test]
     fn test_priority_iterator_with_nones() -> Result<(), Error> {
-        let test = ConfigData {
+        let test = PriorityConfig {
             user: Some(serde_json::from_str(USER)?),
             build: None,
             global: None,
@@ -426,7 +441,7 @@ mod test {
 
     #[test]
     fn test_get() -> Result<(), Error> {
-        let test = ConfigData {
+        let test = PriorityConfig {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -437,7 +452,7 @@ mod test {
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("User")));
 
-        let test_build = ConfigData {
+        let test_build = PriorityConfig {
             user: None,
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -448,7 +463,7 @@ mod test {
         assert!(value_build.is_some());
         assert_eq!(value_build.unwrap(), Value::String(String::from("Build")));
 
-        let test_global = ConfigData {
+        let test_global = PriorityConfig {
             user: None,
             build: None,
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -459,7 +474,7 @@ mod test {
         assert!(value_global.is_some());
         assert_eq!(value_global.unwrap(), Value::String(String::from("Global")));
 
-        let test_defaults = ConfigData {
+        let test_defaults = PriorityConfig {
             user: None,
             build: None,
             global: None,
@@ -470,7 +485,7 @@ mod test {
         assert!(value_defaults.is_some());
         assert_eq!(value_defaults.unwrap(), Value::String(String::from("Defaults")));
 
-        let test_none = ConfigData { user: None, build: None, global: None, defaults: None };
+        let test_none = PriorityConfig { user: None, build: None, global: None, defaults: None };
 
         let value_none = test_none.get("name");
         assert!(value_none.is_none());
@@ -479,7 +494,7 @@ mod test {
 
     #[test]
     fn test_set_non_map_value() -> Result<(), Error> {
-        let mut test = ConfigData {
+        let mut test = PriorityConfig {
             user: Some(serde_json::from_str(ERROR)?),
             build: None,
             global: None,
@@ -492,7 +507,7 @@ mod test {
 
     #[test]
     fn test_get_nonexistent_config() -> Result<(), Error> {
-        let test = ConfigData {
+        let test = PriorityConfig {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -505,7 +520,7 @@ mod test {
 
     #[test]
     fn test_set() -> Result<(), Error> {
-        let mut test = ConfigData {
+        let mut test = PriorityConfig {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -520,7 +535,7 @@ mod test {
 
     #[test]
     fn test_set_build_from_none() -> Result<(), Error> {
-        let mut test = ConfigData { user: None, build: None, global: None, defaults: None };
+        let mut test = PriorityConfig { user: None, build: None, global: None, defaults: None };
         let value_none = test.get("name");
         assert!(value_none.is_none());
         test.set(&ConfigLevel::Defaults, "name", Value::String(String::from("defaults")));
@@ -544,7 +559,7 @@ mod test {
 
     #[test]
     fn test_remove() -> Result<(), Error> {
-        let mut test = ConfigData {
+        let mut test = PriorityConfig {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -641,6 +656,23 @@ mod test {
         let not_missing_value = heuristic_config.get("ssh-keys");
         assert!(not_missing_value.is_some());
         assert_eq!(not_missing_value.unwrap(), Value::String(String::from("test ssh keys")));
+
+        let env_missing_value = heuristic_config.get("env-dep");
+        assert!(env_missing_value.is_none());
+
+        heuristic_config
+            .environment_variables
+            .insert("env-dep", vec!["test-not-set", "ffx_test_env_var", "test-also-not-set"]);
+
+        let env_still_missing_value = heuristic_config.get("env-dep");
+        assert!(env_still_missing_value.is_none());
+
+        let test = "test-value";
+        std::env::set_var("ffx_test_env_var", test);
+
+        let env_not_missing_value = heuristic_config.get("env-dep");
+        assert!(env_not_missing_value.is_some());
+        assert_eq!(env_not_missing_value.unwrap(), Value::String(String::from(test)));
 
         let mut user_file_out = String::new();
         let mut build_file_out = String::new();
