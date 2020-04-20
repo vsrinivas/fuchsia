@@ -197,7 +197,7 @@ zx_status_t Device::ParseCapabilities() {
       case Capability::Id::kAdvancedFeatures:
       case Capability::Id::kEnhancedAllocation:
       case Capability::Id::kFlatteningPortalBridge:
-        caps_.list.push_back(std::make_unique<Capability>(Capability(hdr.id, cap_offset)));
+        caps_.list.push_back(std::make_unique<Capability>(hdr.id, cap_offset));
         break;
     }
 
@@ -280,8 +280,7 @@ zx_status_t Device::ParseExtendedCapabilities() {
       case ExtCapability::Id::kPhysicalLayer32:
       case ExtCapability::Id::kAlternateProtocol:
       case ExtCapability::Id::kSystemFirmwareIntermediary:
-        caps_.ext_list.push_back(
-            std::make_unique<ExtCapability>(ExtCapability(hdr.id, hdr.version, cap_offset)));
+        caps_.ext_list.push_back(std::make_unique<ExtCapability>(hdr.id, hdr.version, cap_offset));
         break;
     }
 
