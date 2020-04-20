@@ -48,8 +48,7 @@ class MediaApp {
 
   void set_num_channels(uint32_t num_channels) { num_channels_ = num_channels; }
   void set_frame_rate(uint32_t frame_rate) { frame_rate_ = frame_rate; }
-  void set_int16_format(bool use_int16) { use_int16_ = use_int16; }
-  void set_int24_format(bool use_int24) { use_int24_ = use_int24; }
+  void set_sample_format(fuchsia::media::AudioSampleFormat format) { sample_format_ = format; }
 
   void set_output_type(OutputSignalType output_type) { output_signal_type_ = output_type; }
   void set_usage(fuchsia::media::AudioRenderUsage usage) { usage_ = usage; }
@@ -148,8 +147,7 @@ class MediaApp {
 
   uint32_t num_channels_;
   uint32_t frame_rate_;
-  bool use_int16_ = false;
-  bool use_int24_ = false;
+  fuchsia::media::AudioSampleFormat sample_format_ = fuchsia::media::AudioSampleFormat::FLOAT;
   uint32_t sample_size_;
   uint32_t frame_size_;
 

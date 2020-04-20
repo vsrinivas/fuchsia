@@ -197,11 +197,11 @@ int main(int argc, const char** argv) {
       usage(argv[0]);
       return 0;
     }
-    media_app.set_int16_format(true);
+    media_app.set_sample_format(fuchsia::media::AudioSampleFormat::SIGNED_16);
   }
 
   if (command_line.HasOption(kInt24FormatSwitch)) {
-    media_app.set_int24_format(true);
+    media_app.set_sample_format(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32);
   }
 
   if (command_line.HasOption(kRenderUsageSwitch)) {
