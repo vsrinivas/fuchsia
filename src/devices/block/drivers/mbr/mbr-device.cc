@@ -242,6 +242,12 @@ zx_status_t MbrDevice::Create(zx_device_t* parent,
       continue;
     }
 
+    if (entry.type == kPartitionTypeGptProtective && i == 0) {
+      // If the first partition on the disk has type '0xee', this MBR is not a real MBR,
+      // and we should refuse to bind to it.
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     zxlogf(INFO, "mbr: found partition, entry = %d, type = 0x%02X, start = %u, length = 0x%X\n",
            i + 1, entry.type, entry.start_sector_lba, entry.num_sectors);
 

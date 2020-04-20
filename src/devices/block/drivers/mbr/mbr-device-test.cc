@@ -33,7 +33,7 @@ const block_info_t kInfo = {kBlockCnt, kBlockSz, BLOCK_MAX_TRANSFER_UNBOUNDED, 0
 
 class FakeBlockDevice : public ddk::BlockProtocol<FakeBlockDevice> {
  public:
-  FakeBlockDevice() : proto_({&block_protocol_ops_, this}) {}
+  FakeBlockDevice() : proto_({&block_protocol_ops_, this}), mbr_{kFuchsiaMbr} {}
 
   block_protocol_t* proto() { return &proto_; }
 
@@ -48,8 +48,7 @@ class FakeBlockDevice : public ddk::BlockProtocol<FakeBlockDevice> {
         // Reading from header
         uint64_t vmo_addr = operation->rw.offset_vmo * kBlockSz;
         off_t off = operation->rw.offset_dev * kBlockSz;
-        zx_vmo_write(operation->rw.vmo, kFuchsiaMbr + off, vmo_addr,
-                     operation->rw.length * kBlockSz);
+        zx_vmo_write(operation->rw.vmo, mbr_ + off, vmo_addr, operation->rw.length * kBlockSz);
       } else {
       }
     } else if (operation->rw.command == BLOCK_OP_WRITE) {
@@ -59,8 +58,11 @@ class FakeBlockDevice : public ddk::BlockProtocol<FakeBlockDevice> {
     completion_cb(cookie, ZX_OK, operation);
   }
 
+  void SetMbr(const uint8_t* new_mbr) { mbr_ = new_mbr; }
+
  private:
   block_protocol_t proto_;
+  const uint8_t* mbr_;
 };
 
 }  // namespace
@@ -84,7 +86,7 @@ class MbrDeviceTest : public zxtest::Test {
 
   fake_ddk::Bind ddk_;
 
- private:
+ protected:
   FakeBlockDevice fake_block_device_;
 };
 
@@ -111,6 +113,14 @@ TEST_F(MbrDeviceTest, DeviceCreation) {
     uint8_t expected_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
   }
+}
+
+TEST_F(MbrDeviceTest, DeviceCreationProtectiveMbr) {
+  fake_block_device_.SetMbr(kProtectiveMbr);
+  Init();
+
+  fbl::Vector<std::unique_ptr<MbrDevice>> devices;
+  ASSERT_EQ(MbrDevice::Create(fake_ddk::kFakeParent, &devices), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(MbrDeviceTest, DdkLifecycle) {
