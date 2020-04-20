@@ -11,6 +11,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <sys/stat.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/time.h>
@@ -20,6 +21,10 @@
 
 namespace monitor {
 
+// Called from the main dispatcher thread, which is also the provider_dispatcher_ thread.
+// Sets up another thread "memory-pressure-loop", which waits on memory pressure level changes from
+// the kernel. If a change is observed, this thread posts tasks to the main thread i.e. the
+// provider_dispatcher_ thread (which also handles registration and deletion of watchers).
 Pressure::Pressure(bool watch_for_changes, sys::ComponentContext* context,
                    async_dispatcher_t* dispatcher)
     : provider_dispatcher_(dispatcher) {
@@ -37,6 +42,7 @@ Pressure::Pressure(bool watch_for_changes, sys::ComponentContext* context,
   }
 }
 
+// Called from the main dispatcher thread.
 zx_status_t Pressure::InitMemPressureEvents() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
@@ -88,12 +94,14 @@ zx_status_t Pressure::InitMemPressureEvents() {
   return ZX_OK;
 }
 
+// Called from the memory-pressure-loop thread.
 void Pressure::WatchForChanges() {
   WaitOnLevelChange();
 
   watch_task_.Post(loop_.dispatcher());
 }
 
+// Called from the memory-pressure-loop thread.
 void Pressure::WaitOnLevelChange() {
   // Wait on all events the first time around.
   size_t num_wait_items = (level_ == Level::kNumLevels) ? Level::kNumLevels : Level::kNumLevels - 1;
@@ -117,6 +125,7 @@ void Pressure::WaitOnLevelChange() {
   }
 }
 
+// Called from the memory-pressure-loop thread.
 void Pressure::OnLevelChanged(zx_handle_t handle) {
   Level old_level = level_;
   for (size_t i = 0; i < Level::kNumLevels; i++) {
@@ -133,32 +142,68 @@ void Pressure::OnLevelChanged(zx_handle_t handle) {
   }
 }
 
+// Called from the provider_dispatcher_ thread.
 void Pressure::PostLevelChange() {
   Level level_to_send = level_;
   // TODO(rashaeqbal): Throttle notifications to prevent thrashing.
   for (auto& watcher : watchers_) {
-    // Notify the watcher only if we received a response for the previous change.
-    if (watcher.response_received) {
-      NotifyWatcher(watcher, level_to_send);
+    // Notify the watcher only if we received a response for the previous level change, i.e. there
+    // is no pending callback.
+    if (!watcher->pending_callback) {
+      watcher->pending_callback = true;
+      NotifyWatcher(watcher.get(), level_to_send);
     }
   }
 }
 
-void Pressure::NotifyWatcher(WatcherState& watcher, Level level) {
-  watcher.level_sent = level;
-  watcher.response_received = false;
+// Called from the provider_dispatcher_ thread.
+void Pressure::NotifyWatcher(WatcherState* watcher, Level level) {
+  // We should already have set |pending_callback| when the notification (call to NotifyWatcher())
+  // was posted, to prevent removing |WatcherState| from |watchers_| in the error handler.
+  ZX_DEBUG_ASSERT(watcher->pending_callback);
 
-  watcher.proxy->OnLevelChanged(ConvertLevel(level), [&watcher, this]() {
-    watcher.response_received = true;
-    Level current_level = level_;
-    // The watcher might have missed a level change if it occurred before this callback. If the
-    // level has changed, notify the watcher.
-    if (watcher.level_sent != current_level) {
-      async::PostTask(provider_dispatcher_, [&]() { NotifyWatcher(watcher, current_level); });
-    }
-  });
+  // We should not be notifying a watcher if |needs_free| is set - indicating that a delayed free is
+  // required. This can only happen if there was a pending callback when we tried to release the
+  // watcher. No new notifications can be sent out while there is a pending callback. And when the
+  // callback is invoked, the |WatcherState| is removed from the |watchers_| vector, so we won't
+  // post any new notifications after that.
+  ZX_DEBUG_ASSERT(!watcher->needs_free);
+
+  watcher->level_sent = level;
+  watcher->proxy->OnLevelChanged(ConvertLevel(level),
+                                 [watcher, this]() { OnLevelChangedCallback(watcher); });
 }
 
+// Called from the provider_dispatcher_ thread.
+void Pressure::OnLevelChangedCallback(WatcherState* watcher) {
+  watcher->pending_callback = false;
+
+  // The error handler invoked ReleaseWatcher(), but we could not free the |WatcherState| because of
+  // this outstanding callback. It is safe to free the watcher now. There are no more outstanding
+  // callbacks, and no new notifications (since a new notification is posted only if there is no
+  // pending callback).
+  if (watcher->needs_free) {
+    ReleaseWatcher(watcher->proxy.get());
+    return;
+  }
+
+  Level current_level = level_;
+  // The watcher might have missed a level change if it occurred before this callback. If the
+  // level has changed, notify the watcher.
+  if (watcher->level_sent != current_level) {
+    // Set |pending_callback| to true here before posting the NotifyWatcher() call. This ensures
+    // that if ReleaseWatcher() is called (via the error handler) after we post the call, but before
+    // we dispatch it, we don't access a freed |WatcherState*| in the NotifyWatcher() call.
+    // ReleaseWatcher() will find |pending_callback| set, hence delay freeing the watcher and set
+    // |needs_free| to true. NotifyWatcher() will operate on a valid |WatcherState*|, the next
+    // callback will find |needs_free| set and free the watcher.
+    watcher->pending_callback = true;
+    async::PostTask(provider_dispatcher_,
+                    [watcher, current_level, this]() { NotifyWatcher(watcher, current_level); });
+  }
+}
+
+// Called from the provider_dispatcher_ thread.
 void Pressure::RegisterWatcher(fidl::InterfaceHandle<fuchsia::memorypressure::Watcher> watcher) {
   fuchsia::memorypressure::WatcherPtr watcher_proxy = watcher.Bind();
   fuchsia::memorypressure::Watcher* proxy_raw_ptr = watcher_proxy.get();
@@ -166,17 +211,39 @@ void Pressure::RegisterWatcher(fidl::InterfaceHandle<fuchsia::memorypressure::Wa
       [this, proxy_raw_ptr](zx_status_t status) { ReleaseWatcher(proxy_raw_ptr); });
 
   Level current_level = level_;
-  watchers_.push_back({std::move(watcher_proxy), current_level, false});
+  watchers_.emplace_back(std::make_unique<WatcherState>(
+      WatcherState{std::move(watcher_proxy), current_level, false, false}));
 
-  // Return current level.
-  NotifyWatcher(watchers_.back(), current_level);
+  // Set |pending_callback| and notify the current level.
+  watchers_.back()->pending_callback = true;
+  NotifyWatcher(watchers_.back().get(), current_level);
 }
 
+// Called from the provider_dispatcher_ thread.
 void Pressure::ReleaseWatcher(fuchsia::memorypressure::Watcher* watcher) {
-  auto predicate = [watcher](const auto& target) { return target.proxy.get() == watcher; };
-  watchers_.erase(std::remove_if(watchers_.begin(), watchers_.end(), predicate));
+  auto predicate = [watcher](const auto& target) { return target->proxy.get() == watcher; };
+  auto watcher_to_free = std::find_if(watchers_.begin(), watchers_.end(), predicate);
+  if (watcher_to_free == watchers_.end()) {
+    // Not found.
+    return;
+  }
+
+  // There is a pending callback, which also means that the Watcher (client) holds a reference to
+  // the |WatcherState| unique pointer (the callback captures a raw pointer - |WatcherState*|).
+  // Freeing it now can lead to a use-after-free. Set |needs_free| to indicate that we need a
+  // delayed free, when the pending callback is executed.
+  //
+  // NOTE: It is possible that a Watcher exits (closes its connection) and never invokes the
+  // callback. In that case, we will never be able to free the corresponding |WatcherState|, which
+  // is fine, since this is the only way we can safeguard against a use-after-free.
+  if ((*watcher_to_free)->pending_callback) {
+    (*watcher_to_free)->needs_free = true;
+  } else {
+    watchers_.erase(watcher_to_free);
+  }
 }
 
+// Helper function. Has no thread affinity.
 fuchsia::memorypressure::Level Pressure::ConvertLevel(Level level) {
   switch (level) {
     case Level::kCritical:

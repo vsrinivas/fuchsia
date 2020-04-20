@@ -34,7 +34,13 @@ class PressureFidlUnitTest : public gtest::TestLoopFixture {
     pressure_.WaitOnLevelChange();
   }
 
-  void VerifyNoWatchers() { EXPECT_EQ(pressure_.watchers_.size(), 0ul); }
+  int GetWatcherCount() { return pressure_.watchers_.size(); }
+
+  void ReleaseWatchers() {
+    for (auto &w : pressure_.watchers_) {
+      pressure_.ReleaseWatcher(w->proxy.get());
+    }
+  }
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
@@ -59,8 +65,9 @@ class PressureWatcherForTest : public fmp::Watcher {
 
   void Respond() { stashed_cb_(); }
 
-  void AddBinding(fidl::InterfaceRequest<Watcher> request) {
-    bindings_.AddBinding(this, std::move(request));
+  void Register(fmp::ProviderPtr provider) {
+    bindings_.AddBinding(this, watcher_ptr_.NewRequest());
+    provider->RegisterWatcher(watcher_ptr_.Unbind());
   }
 
   int NumChanges() const { return changes_; }
@@ -69,6 +76,7 @@ class PressureWatcherForTest : public fmp::Watcher {
   fidl::BindingSet<Watcher> bindings_;
   int changes_ = 0;
   bool send_responses_;
+  fmp::WatcherPtr watcher_ptr_;
   OnLevelChangedCallback stashed_cb_;
 };
 
@@ -77,12 +85,11 @@ TEST_F(PressureFidlUnitTest, Watcher) {
   // remaining.
   {
     PressureWatcherForTest watcher(true);
-    fmp::WatcherPtr watcher_ptr;
-    watcher.AddBinding(watcher_ptr.NewRequest());
 
     // Registering the watcher should call OnLevelChanged().
-    Provider()->RegisterWatcher(watcher_ptr.Unbind());
+    watcher.Register(Provider());
     RunLoopUntilIdle();
+    ASSERT_EQ(GetWatcherCount(), 1);
     ASSERT_EQ(watcher.NumChanges(), 1);
 
     // Trigger first pressure level change, causing another call to OnLevelChanged().
@@ -92,16 +99,15 @@ TEST_F(PressureFidlUnitTest, Watcher) {
   }
 
   RunLoopUntilIdle();
-  VerifyNoWatchers();
+  ASSERT_EQ(GetWatcherCount(), 0);
 }
 
 TEST_F(PressureFidlUnitTest, NoResponse) {
   PressureWatcherForTest watcher(false);
-  fmp::WatcherPtr watcher_ptr;
-  watcher.AddBinding(watcher_ptr.NewRequest());
 
-  Provider()->RegisterWatcher(watcher_ptr.Unbind());
+  watcher.Register(Provider());
   RunLoopUntilIdle();
+  ASSERT_EQ(GetWatcherCount(), 1);
   ASSERT_EQ(watcher.NumChanges(), 1);
 
   // This should not trigger a new notification as the watcher has not responded to the last one.
@@ -112,11 +118,10 @@ TEST_F(PressureFidlUnitTest, NoResponse) {
 
 TEST_F(PressureFidlUnitTest, DelayedResponse) {
   PressureWatcherForTest watcher(false);
-  fmp::WatcherPtr watcher_ptr;
-  watcher.AddBinding(watcher_ptr.NewRequest());
 
-  Provider()->RegisterWatcher(watcher_ptr.Unbind());
+  watcher.Register(Provider());
   RunLoopUntilIdle();
+  ASSERT_EQ(GetWatcherCount(), 1);
   ASSERT_EQ(watcher.NumChanges(), 1);
 
   // This should not trigger a new notification as the watcher has not responded to the last one.
@@ -128,6 +133,149 @@ TEST_F(PressureFidlUnitTest, DelayedResponse) {
   watcher.Respond();
   RunLoopUntilIdle();
   ASSERT_EQ(watcher.NumChanges(), 2);
+}
+
+TEST_F(PressureFidlUnitTest, MultipleWatchers) {
+  // Scoped so that the Watcher gets deleted. We can then verify that the Provider has no watchers
+  // remaining.
+  {
+    PressureWatcherForTest watcher1(true);
+    PressureWatcherForTest watcher2(true);
+
+    // Registering the watchers should call OnLevelChanged().
+    watcher1.Register(Provider());
+    watcher2.Register(Provider());
+    RunLoopUntilIdle();
+    ASSERT_EQ(GetWatcherCount(), 2);
+    ASSERT_EQ(watcher1.NumChanges(), 1);
+    ASSERT_EQ(watcher2.NumChanges(), 1);
+
+    // Trigger first pressure level change, causing another call to OnLevelChanged().
+    InitialLevel();
+    RunLoopUntilIdle();
+    ASSERT_EQ(watcher1.NumChanges(), 2);
+    ASSERT_EQ(watcher2.NumChanges(), 2);
+  }
+
+  RunLoopUntilIdle();
+  ASSERT_EQ(GetWatcherCount(), 0);
+}
+
+TEST_F(PressureFidlUnitTest, MultipleWatchersNoResponse) {
+  PressureWatcherForTest watcher1(false);
+  PressureWatcherForTest watcher2(false);
+
+  watcher1.Register(Provider());
+  watcher2.Register(Provider());
+  RunLoopUntilIdle();
+  ASSERT_EQ(GetWatcherCount(), 2);
+  ASSERT_EQ(watcher1.NumChanges(), 1);
+  ASSERT_EQ(watcher2.NumChanges(), 1);
+
+  // This should not trigger new notifications as the watchers have not responded to the last one.
+  InitialLevel();
+  RunLoopUntilIdle();
+  ASSERT_EQ(watcher1.NumChanges(), 1);
+  ASSERT_EQ(watcher2.NumChanges(), 1);
+}
+
+TEST_F(PressureFidlUnitTest, MultipleWatchersDelayedResponse) {
+  PressureWatcherForTest watcher1(false);
+  PressureWatcherForTest watcher2(false);
+
+  watcher1.Register(Provider());
+  watcher2.Register(Provider());
+  RunLoopUntilIdle();
+  ASSERT_EQ(GetWatcherCount(), 2);
+  ASSERT_EQ(watcher1.NumChanges(), 1);
+  ASSERT_EQ(watcher2.NumChanges(), 1);
+
+  // This should not trigger new notifications as the watchers have not responded to the last one.
+  InitialLevel();
+  RunLoopUntilIdle();
+  ASSERT_EQ(watcher1.NumChanges(), 1);
+  ASSERT_EQ(watcher2.NumChanges(), 1);
+
+  // Respond to the last message. This should send new notifications to the watchers.
+  watcher1.Respond();
+  watcher2.Respond();
+  RunLoopUntilIdle();
+  ASSERT_EQ(watcher1.NumChanges(), 2);
+  ASSERT_EQ(watcher2.NumChanges(), 2);
+}
+
+TEST_F(PressureFidlUnitTest, MultipleWatchersMixedResponse) {
+  // Set up watcher1 to not respond immediately, and watcher2 to respond immediately.
+  PressureWatcherForTest watcher1(false);
+  PressureWatcherForTest watcher2(true);
+
+  watcher1.Register(Provider());
+  watcher2.Register(Provider());
+  RunLoopUntilIdle();
+  ASSERT_EQ(GetWatcherCount(), 2);
+  ASSERT_EQ(watcher1.NumChanges(), 1);
+  ASSERT_EQ(watcher2.NumChanges(), 1);
+
+  // Trigger first pressure level change.
+  InitialLevel();
+  RunLoopUntilIdle();
+  // Since watcher1 did not respond to the previous change, it will not see this change.
+  ASSERT_EQ(watcher1.NumChanges(), 1);
+  // Since watcher2 responded to the previous change, it will see it.
+  ASSERT_EQ(watcher2.NumChanges(), 2);
+
+  // watcher1 responds now.
+  watcher1.Respond();
+  RunLoopUntilIdle();
+  // watcher1 sees the previous change now.
+  ASSERT_EQ(watcher1.NumChanges(), 2);
+  ASSERT_EQ(watcher2.NumChanges(), 2);
+}
+
+TEST_F(PressureFidlUnitTest, ReleaseWatcherNoPendingCallback) {
+  PressureWatcherForTest watcher(true);
+
+  watcher.Register(Provider());
+  RunLoopUntilIdle();
+  ASSERT_EQ(GetWatcherCount(), 1);
+  ASSERT_EQ(watcher.NumChanges(), 1);
+
+  // Trigger first pressure level change, causing another call to OnLevelChanged().
+  InitialLevel();
+  RunLoopUntilIdle();
+  ASSERT_EQ(watcher.NumChanges(), 2);
+
+  // Release all registered watchers, so that the watcher is now invalid.
+  ReleaseWatchers();
+  RunLoopUntilIdle();
+  // There were no outstanding callbacks, so ReleaseWatchers() sould have freed all watchers.
+  ASSERT_EQ(GetWatcherCount(), 0);
+}
+
+TEST_F(PressureFidlUnitTest, ReleaseWatcherPendingCallback) {
+  PressureWatcherForTest watcher(false);
+
+  watcher.Register(Provider());
+  RunLoopUntilIdle();
+  ASSERT_EQ(GetWatcherCount(), 1);
+  ASSERT_EQ(watcher.NumChanges(), 1);
+
+  // This should not trigger a new notification as the watcher has not responded to the last one.
+  InitialLevel();
+  RunLoopUntilIdle();
+  ASSERT_EQ(watcher.NumChanges(), 1);
+
+  // Release all registered watchers, so that the watcher is now invalid.
+  ReleaseWatchers();
+  RunLoopUntilIdle();
+  // Verify that the watcher has not been freed yet, since a callback is outstanding.
+  ASSERT_EQ(GetWatcherCount(), 1);
+
+  // Respond now. This should free the watcher as well.
+  watcher.Respond();
+  RunLoopUntilIdle();
+  // Verify that the watcher has been freed.
+  ASSERT_EQ(GetWatcherCount(), 0);
 }
 
 }  // namespace test

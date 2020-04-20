@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 
 #include <array>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -38,7 +39,8 @@ static constexpr std::array<char[kNameLength], Level::kNumLevels + 1> kLevelName
 struct WatcherState {
   fuchsia::memorypressure::WatcherPtr proxy;
   Level level_sent;
-  bool response_received;
+  bool pending_callback;
+  bool needs_free;
 };
 
 class Pressure : public fuchsia::memorypressure::Provider {
@@ -56,7 +58,8 @@ class Pressure : public fuchsia::memorypressure::Provider {
   void OnLevelChanged(zx_handle_t handle);
   void PostLevelChange();
   void ReleaseWatcher(fuchsia::memorypressure::Watcher* watcher);
-  void NotifyWatcher(WatcherState& watcher, Level level);
+  void OnLevelChangedCallback(WatcherState* watcher);
+  void NotifyWatcher(WatcherState* watcher, Level level);
   fuchsia::memorypressure::Level ConvertLevel(Level level);
 
   std::atomic<Level> level_ = Level::kNumLevels;
@@ -67,7 +70,7 @@ class Pressure : public fuchsia::memorypressure::Provider {
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_dispatcher_t* provider_dispatcher_;
   fidl::BindingSet<fuchsia::memorypressure::Provider> bindings_;
-  std::vector<WatcherState> watchers_;
+  std::vector<std::unique_ptr<WatcherState>> watchers_;
 
   friend class test::PressureUnitTest;
   friend class test::PressureFidlUnitTest;
