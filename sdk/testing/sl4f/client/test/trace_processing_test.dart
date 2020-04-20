@@ -380,10 +380,8 @@ void main(List<String> args) {
 
   test('Flutter frame stats metric', () async {
     final model = createModelFromJsonString(flutterAppTraceJsonString);
-    final metricsSpec = MetricsSpec(
-        name: 'flutter_frame_stats',
-        extraArgs: {'flutterAppName': 'flutter_app'});
-    final results = flutterFrameStatsMetricsProcessor(model, metricsSpec);
+    final results = flutterFrameStatsMetricsProcessor(
+        model, {'flutterAppName': 'flutter_app'});
 
     expect(results[0].label, 'flutter_app_fps');
     expect(results[0].values[0], _closeTo(57.65979623262868));
@@ -397,26 +395,23 @@ void main(List<String> args) {
 
   test('Flutter frame stats metric (no Scenic edge case)', () async {
     final model = createModelFromJsonString(flutterAppNoScenicTraceJsonString);
-    final metricsSpec = MetricsSpec(
-        name: 'flutter_frame_stats',
-        extraArgs: {'flutterAppName': 'flutter_app'});
-    expect(() => flutterFrameStatsMetricsProcessor(model, metricsSpec),
+    expect(
+        () => flutterFrameStatsMetricsProcessor(
+            model, {'flutterAppName': 'flutter_app'}),
         throwsA(isArgumentError));
   });
 
   test('Scenic frame stats metric', () async {
     final model = createModelFromJsonString(scenicTraceJsonString);
-    final metricsSpec = MetricsSpec(name: 'scenic_frame_stats');
-    final results = scenicFrameStatsMetricsProcessor(model, metricsSpec);
+    final results = scenicFrameStatsMetricsProcessor(model, {});
 
     expect(computeMean(results[0].values), _closeTo(1.0750221759999996));
   });
 
   test('DRM FPS metric', () async {
     final model = createModelFromJsonString(flutterAppTraceJsonString);
-    final metricsSpec = MetricsSpec(
-        name: 'drm_fps', extraArgs: {'flutterAppName': 'flutter_app'});
-    final results = drmFpsMetricsProcessor(model, metricsSpec);
+    final results =
+        drmFpsMetricsProcessor(model, {'flutterAppName': 'flutter_app'});
 
     expect(computeMean(results[0].values), _closeTo(58.75067228666503));
     expect(results[1].values[0], _closeTo(59.976428836915716));
@@ -426,8 +421,7 @@ void main(List<String> args) {
 
   test('System DRM FPS metric', () async {
     final model = createModelFromJsonString(flutterAppTraceJsonString);
-    final metricsSpec = MetricsSpec(name: 'system_drm_fps');
-    final results = systemDrmFpsMetricsProcessor(model, metricsSpec);
+    final results = systemDrmFpsMetricsProcessor(model, {});
 
     expect(computeMean(results[0].values), _closeTo(58.80063339525843));
     expect(results[1].values[0], _closeTo(59.97681878050269));
@@ -437,24 +431,21 @@ void main(List<String> args) {
 
   test('CPU metric', () async {
     final model = createModelFromJsonString(testCpuMetricJsonString);
-    final metricsSpec = MetricsSpec(name: 'cpu');
-    final results = cpuMetricsProcessor(model, metricsSpec);
+    final results = cpuMetricsProcessor(model, {});
     expect(results[0].values[0], _closeTo(43.00));
     expect(results[0].values[1], _closeTo(20.00));
   });
 
   test('Temperature metric', () async {
     final model = createModelFromJsonString(testTemperatureMetricJsonString);
-    final metricsSpec = MetricsSpec(name: 'temperature');
-    final results = temperatureMetricsProcessor(model, metricsSpec);
+    final results = temperatureMetricsProcessor(model, {});
     expect(results[0].values[0], _closeTo(50.00));
     expect(results[0].values[1], _closeTo(60.00));
   });
 
   test('Memory metric', () async {
     final model = createModelFromJsonString(testMemoryMetricJsonString);
-    final metricsSpec = MetricsSpec(name: 'memory');
-    final results = memoryMetricsProcessor(model, metricsSpec);
+    final results = memoryMetricsProcessor(model, {});
     expect(results[0].label, equals('Total System Memory'));
     expect(results[0].values[0], _closeTo(940612736));
     expect(results[0].values[1], _closeTo(990612736));
@@ -470,7 +461,9 @@ void main(List<String> args) {
   });
 
   test('Custom registry', () async {
-    List<TestCaseResults> testProcessor(Model _model, MetricsSpec _spec) => [
+    List<TestCaseResults> testProcessor(
+            Model _model, Map<String, dynamic> _extraArgs) =>
+        [
           TestCaseResults(
             'test',
             Unit.count,
@@ -496,8 +489,7 @@ void main(List<String> args) {
 
   test('Input latency metric', () async {
     final model = createModelFromJsonString(inputLatencyTraceJsonString);
-    final metricsSpec = MetricsSpec(name: 'input_latency');
-    final results = inputLatencyMetricsProcessor(model, metricsSpec);
+    final results = inputLatencyMetricsProcessor(model, {});
 
     expect(computeMean(results[0].values), _closeTo(77.39932275));
   });

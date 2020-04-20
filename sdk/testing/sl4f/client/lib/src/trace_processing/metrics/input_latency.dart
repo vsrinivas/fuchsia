@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import '../metrics_results.dart';
-import '../metrics_spec.dart';
 import '../trace_model.dart';
 import 'common.dart';
 
@@ -48,13 +47,7 @@ class _Zip2Iterator<T1, T2, R> extends Iterator<R> {
 }
 
 List<TestCaseResults> inputLatencyMetricsProcessor(
-    Model model, MetricsSpec metricsSpec) {
-  if (metricsSpec.name != 'input_latency') {
-    throw ArgumentError(
-        'Error, unexpected metrics name "${metricsSpec.name}" in '
-        'inputLatencyMetricsProcessor');
-  }
-
+    Model model, Map<String, dynamic> extraArgs) {
   final inputEvents = filterEventsTyped<DurationEvent>(getAllEvents(model),
       category: 'input', name: 'presentation_on_event');
   final vsyncEvents = inputEvents.map(findFollowingVsync);

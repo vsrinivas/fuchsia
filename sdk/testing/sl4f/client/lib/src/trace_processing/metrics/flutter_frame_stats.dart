@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import '../metrics_results.dart';
-import '../metrics_spec.dart';
 import '../time_delta.dart';
 import '../time_point.dart';
 import '../trace_model.dart';
@@ -281,14 +280,7 @@ List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
 }
 
 List<TestCaseResults> flutterFrameStatsMetricsProcessor(
-    Model model, MetricsSpec metricsSpec) {
-  if (metricsSpec.name != 'flutter_frame_stats') {
-    throw ArgumentError(
-        'Error, unexpected metrics name "${metricsSpec.name}" in '
-        'flutterFrameStatsMetricsProcessor');
-  }
-
-  final extraArgs = metricsSpec.extraArgs;
+    Model model, Map<String, dynamic> extraArgs) {
   if (!(extraArgs.containsKey('flutterAppName') &&
       extraArgs['flutterAppName'] is String)) {
     throw ArgumentError(

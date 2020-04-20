@@ -5,7 +5,6 @@
 import 'package:logging/logging.dart';
 
 import '../metrics_results.dart';
-import '../metrics_spec.dart';
 import '../time_delta.dart';
 import '../trace_model.dart';
 import 'common.dart';
@@ -13,12 +12,7 @@ import 'common.dart';
 final _log = Logger('CpuMetricsProcessor');
 
 List<TestCaseResults> cpuMetricsProcessor(
-    Model model, MetricsSpec metricsSpec) {
-  if (metricsSpec.name != 'cpu') {
-    throw ArgumentError(
-        'Error, unexpected metrics name "${metricsSpec.name}" in '
-        'cpuMetricsProcessor');
-  }
+    Model model, Map<String, dynamic> extraArgs) {
   final duration = getTotalTraceDuration(model);
   if (duration < TimeDelta.fromMilliseconds(1100)) {
     _log.info(

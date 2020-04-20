@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import '../metrics_results.dart';
-import '../metrics_spec.dart';
 import '../trace_model.dart';
 import 'common.dart';
 
@@ -23,7 +22,7 @@ _Results _scenicFrameStats(Model model) {
 }
 
 List<TestCaseResults> scenicFrameStatsMetricsProcessor(
-    Model model, MetricsSpec metricsSpec) {
+    Model model, Map<String, dynamic> extraArgs) {
   final results = _scenicFrameStats(model);
   if (results.renderFrameDurations.isEmpty) {
     results.renderFrameDurations = [0.0];

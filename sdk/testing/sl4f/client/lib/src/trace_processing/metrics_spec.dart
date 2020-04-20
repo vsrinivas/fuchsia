@@ -36,7 +36,8 @@ class MetricsSpecSet {
   MetricsSpecSet({@required this.testName, @required this.metricsSpecs});
 }
 
-typedef MetricsProcessor = List<TestCaseResults> Function(Model, MetricsSpec);
+typedef MetricsProcessor = List<TestCaseResults> Function(
+    Model, Map<String, dynamic> extraArgs);
 
 const defaultMetricsRegistry = {
   'cpu': cpuMetricsProcessor,
@@ -55,5 +56,5 @@ List<TestCaseResults> processMetrics(Model model, MetricsSpec metricsSpec,
     throw ArgumentError('Unknown metricsSpec "${metricsSpec.name}"');
   }
 
-  return processor(model, metricsSpec);
+  return processor(model, metricsSpec.extraArgs);
 }

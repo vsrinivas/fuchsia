@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import '../metrics_results.dart';
-import '../metrics_spec.dart';
 import '../time_delta.dart';
 import '../trace_model.dart';
 import 'common.dart';
@@ -75,14 +74,7 @@ List<double> _computeDrmFpsValues(Iterable<DurationEvent> events) {
 }
 
 List<TestCaseResults> drmFpsMetricsProcessor(
-    Model model, MetricsSpec metricsSpec) {
-  if (metricsSpec.name != 'drm_fps') {
-    throw ArgumentError(
-        'Error, unexpected metrics name "${metricsSpec.name}" in '
-        'drmFpsMetricsProcessor');
-  }
-
-  final extraArgs = metricsSpec.extraArgs;
+    Model model, Map<String, dynamic> extraArgs) {
   if (!(extraArgs.containsKey('flutterAppName') &&
       extraArgs['flutterAppName'] is String)) {
     throw ArgumentError(
@@ -184,13 +176,7 @@ List<TestCaseResults> drmFpsMetricsProcessor(
 // most importantly, comparable) metric.
 
 List<TestCaseResults> systemDrmFpsMetricsProcessor(
-    Model model, MetricsSpec metricsSpec) {
-  if (metricsSpec.name != 'system_drm_fps') {
-    throw ArgumentError(
-        'Error, unexpected metrics name "${metricsSpec.name}" in '
-        'systemDrmFpsMetricsProcessor');
-  }
-
+    Model model, Map<String, dynamic> extraArgs) {
   final renderFrameEvents = filterEventsTyped<DurationEvent>(
       getAllEvents(model),
       category: 'gfx',

@@ -119,12 +119,12 @@ void main(List<String> args) {
     final metricsSpecSet =
         MetricsSpecSet(testName: 'test_name', metricsSpecs: metricsSpecs);
     final testMetricsRegistry = {
-      'test_metric_1': (Model model, MetricsSpec metricsSpec) => [
+      'test_metric_1': (Model model, Map<String, dynamic> extraArgs) => [
             TestCaseResults('label_1', Unit.nanoseconds, [1.0])
           ],
-      'test_metric_2': (Model model, MetricsSpec metricsSpec) => [
+      'test_metric_2': (Model model, Map<String, dynamic> extraArgs) => [
             TestCaseResults('label_2', Unit.milliseconds, [2.0])
-          ]
+          ],
     };
 
     final traceFile = File(path.join(createTempDir().path, 'sample-trace.json'))
