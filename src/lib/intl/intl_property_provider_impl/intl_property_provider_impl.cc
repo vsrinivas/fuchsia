@@ -25,7 +25,7 @@
 #include "third_party/icu/source/i18n/unicode/calendar.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
 
-namespace modular {
+namespace intl {
 
 using fuchsia::intl::CalendarId;
 using fuchsia::intl::LocaleId;
@@ -329,4 +329,4 @@ void IntlPropertyProviderImpl::ProcessProfileRequests() {
   }
 }
 
-}  // namespace modular
+}  // namespace intl

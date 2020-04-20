@@ -42,6 +42,7 @@ struct TypeConverter<fuchsia::modular::AppConfig, fuchsia::modular::session::App
 namespace modular {
 
 using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
+using intl::IntlPropertyProviderImpl;
 
 namespace {
 

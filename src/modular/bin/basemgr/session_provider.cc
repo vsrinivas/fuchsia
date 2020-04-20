@@ -10,12 +10,15 @@
 
 #include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
 
+#include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
+
+using intl::IntlPropertyProviderImpl;
 
 const int kMaxCrashRecoveryLimit = 3;
 

@@ -12,6 +12,8 @@
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/lib/syslog/cpp/logger.h"
 
+using intl::IntlPropertyProviderImpl;
+
 int main() {
   syslog::SetTags({"intl_services"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -19,8 +21,7 @@ int main() {
 
   FX_LOGS(INFO) << "Started.";
 
-  std::unique_ptr<modular::IntlPropertyProviderImpl> intl =
-      modular::IntlPropertyProviderImpl::Create(context->svc());
+  std::unique_ptr<IntlPropertyProviderImpl> intl = IntlPropertyProviderImpl::Create(context->svc());
 
   context->outgoing()->AddPublicService(intl->GetHandler());
 

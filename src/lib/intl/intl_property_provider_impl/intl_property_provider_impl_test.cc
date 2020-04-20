@@ -23,7 +23,8 @@
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/clone.h"
 
-namespace modular_testing {
+namespace intl {
+namespace testing {
 namespace {
 
 using fuchsia::intl::CalendarId;
@@ -33,7 +34,6 @@ using fuchsia::intl::PropertyProvider;
 using fuchsia::intl::TemperatureUnit;
 using fuchsia::intl::TimeZoneId;
 using fuchsia::settings::HourCycle;
-using modular::IntlPropertyProviderImpl;
 using sys::testing::ComponentContextProvider;
 
 fuchsia::settings::IntlSettings NewSettings(std::vector<std::string> locale_ids,
@@ -357,7 +357,8 @@ TEST_F(IntlPropertyProviderImplTest, Multilocale) {
 }
 
 }  // namespace
-}  // namespace modular_testing
+}  // namespace testing
+}  // namespace intl
 
 // This test has its own main because we want the logger to be turned on.
 int main(int argc, char** argv) {

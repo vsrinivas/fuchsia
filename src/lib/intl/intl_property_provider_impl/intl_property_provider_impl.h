@@ -16,7 +16,7 @@
 
 #include <sdk/lib/sys/cpp/component_context.h>
 
-namespace modular {
+namespace intl {
 
 // Implementation of `fuchsia.intl.PropertyProvider`.
 //
@@ -97,6 +97,6 @@ class IntlPropertyProviderImpl final : fuchsia::intl::PropertyProvider {
   std::queue<fuchsia::intl::PropertyProvider::GetProfileCallback> get_profile_queue_;
 };
 
-}  // namespace modular
+}  // namespace intl
 
 #endif  // SRC_LIB_INTL_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_

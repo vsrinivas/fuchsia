@@ -46,7 +46,7 @@ class SessionProvider {
                   fuchsia::modular::AppConfig sessionmgr, fuchsia::modular::AppConfig session_shell,
                   fuchsia::modular::AppConfig story_shell,
                   bool use_session_shell_for_story_shell_factory,
-                  std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
+                  std::unique_ptr<intl::IntlPropertyProviderImpl> intl_property_provider,
                   fuchsia::modular::session::ModularConfig config,
                   fit::function<void()> on_zero_sessions);
 
@@ -96,7 +96,7 @@ class SessionProvider {
   // Service directory from which `fuchsia.intl.PropertyProvider` and others
   // will be served to child `Sessionmgr`s.
   vfs::PseudoDir sessionmgr_service_dir_;
-  std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider_;
+  std::unique_ptr<intl::IntlPropertyProviderImpl> intl_property_provider_;
 
   // A copy of the modular configuration to be served to sessionmgr.
   fuchsia::modular::session::ModularConfig config_;
