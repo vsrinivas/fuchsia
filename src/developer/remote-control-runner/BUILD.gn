@@ -22,7 +22,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//src/developer/remote-control/service:remote-control-rustc",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

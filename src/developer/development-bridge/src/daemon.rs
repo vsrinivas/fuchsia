@@ -14,7 +14,7 @@ use {
     async_std::task,
     async_trait::async_trait,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
-    fidl_fidl_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream},
+    fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_developer_remotecontrol::{ComponentControlError, RemoteControlMarker},
     fidl_fuchsia_overnet::{
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
@@ -439,7 +439,7 @@ mod test {
     use crate::target::TargetState;
     use chrono::Utc;
     use fidl::endpoints::create_proxy;
-    use fidl_fidl_developer_bridge::DaemonMarker;
+    use fidl_fuchsia_developer_bridge::DaemonMarker;
     use fidl_fuchsia_developer_remotecontrol::{
         ComponentControllerMarker, RemoteControlMarker, RemoteControlProxy, RemoteControlRequest,
     };

@@ -10,7 +10,7 @@ use {
     crate::logger::setup_logger,
     anyhow::{anyhow, format_err, Context, Error},
     fidl::endpoints::{create_proxy, ServiceMarker},
-    fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy},
+    fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_developer_remotecontrol::{ComponentControllerEvent, ComponentControllerMarker},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
@@ -469,7 +469,7 @@ fn main() {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequest};
+    use fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequest};
     use fidl_fuchsia_test::{
         Case, CaseIteratorRequest, CaseIteratorRequestStream, CaseListenerMarker, Result_, Status,
         SuiteRequest, SuiteRequestStream,

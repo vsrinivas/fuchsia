@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.developer.bridge") {
+  sdk_category = "internal"
+  sources = [ "daemon.fidl" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol",
+    "//sdk/fidl/fuchsia.test",
+    "//sdk/fidl/fuchsia.test.manager",
+    "//sdk/fidl/fuchsia.url",
+  ]
+
+  # XXX(awdavies): Figure out whether or not to fuzz.
+  fuzzers = [
+    {
+      protocol = "fidl.developer.bridge.Daemon"
+    },
+  ]
+}

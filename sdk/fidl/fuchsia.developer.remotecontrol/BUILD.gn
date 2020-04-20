@@ -4,13 +4,17 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("test_manager") {
-  name = "fuchsia.test.manager"
-
-  sources = [ "test_manager.fidl" ]
-
+fidl("fuchsia.developer.remotecontrol") {
+  sdk_category = "internal"
+  sources = [
+    "component-control.fidl",
+    "host-identification.fidl",
+    "remote-control.fidl",
+  ]
   public_deps = [
     "//sdk/fidl/fuchsia.test",
+    "//sdk/fidl/fuchsia.test.manager",
     "//sdk/fidl/fuchsia.url",
+    "//zircon/system/fidl/fuchsia-device",
   ]
 }
