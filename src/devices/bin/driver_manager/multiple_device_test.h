@@ -61,6 +61,24 @@ class CoordinatorForTest : public Coordinator {
 };
 
 struct DeviceState {
+  DeviceState() = default;
+  DeviceState(DeviceState&& other)
+      : device(std::move(other.device)),
+        coordinator_remote(std::move(other.coordinator_remote)),
+        controller_remote(std::move(other.controller_remote)) {}
+
+  DeviceState& operator=(DeviceState&& other) {
+    device = std::move(other.device);
+    coordinator_remote = std::move(other.coordinator_remote);
+    controller_remote = std::move(other.controller_remote);
+    return *this;
+  }
+
+  ~DeviceState() {
+    if (device) {
+      device->coordinator->RemoveDevice(device, false);
+    }
+  }
   // The representation in the coordinator of the device
   fbl::RefPtr<Device> device;
   // The remote end of the channel that the coordinator is talking to

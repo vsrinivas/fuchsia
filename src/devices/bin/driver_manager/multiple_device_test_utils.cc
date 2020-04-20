@@ -152,22 +152,34 @@ void MultipleDeviceTestCase::SetUp() {
 }
 
 void MultipleDeviceTestCase::TearDown() {
-  if (!coordinator_loop_thread_running_) {
-    coordinator_loop_.RunUntilIdle();
+  // Stop any threads, so we're serialized here.
+  if (coordinator_loop_thread_running_) {
+    coordinator_loop_.Quit();
+    coordinator_loop_.JoinThreads();
+    coordinator_loop_.ResetQuit();
   }
+
+  coordinator_loop_.RunUntilIdle();
+
   // Remove the devices in the opposite order that we added them
   while (!devices_.is_empty()) {
     devices_.pop_back();
-    if (!coordinator_loop_thread_running_) {
-      coordinator_loop_.RunUntilIdle();
-    }
+    coordinator_loop_.RunUntilIdle();
   }
-  platform_bus_.device.reset();
-  if (!coordinator_loop_thread_running_) {
+
+  coordinator_.RemoveDevice(std::move(platform_bus_.device), /* forced */ false);
+  coordinator_loop_.RunUntilIdle();
+
+  // We need to explicitly remove this proxy device, because it holds a reference to devhost_.
+  // Other devices will be removed via the DeviceState dtor.
+  fbl::RefPtr<Device> sys_proxy = coordinator_.sys_device()->proxy();
+  if (sys_proxy) {
+    coordinator_.RemoveDevice(std::move(sys_proxy), /* forced */ false);
     coordinator_loop_.RunUntilIdle();
   }
 
   devhost_.devices().clear();
+
   // We no longer need the async loop.
   // If we do not shutdown here, the destructor
   // could be cleaning up the vfs, before the loop clears the
