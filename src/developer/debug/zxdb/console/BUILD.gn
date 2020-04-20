@@ -71,6 +71,8 @@ static_library("console") {
     "commands/verb_mem_analyze.h",
     "commands/verb_mem_read.cc",
     "commands/verb_mem_read.h",
+    "commands/verb_new.cc",
+    "commands/verb_new.h",
     "commands/verb_next.cc",
     "commands/verb_next.h",
     "commands/verb_nexti.cc",
@@ -89,6 +91,8 @@ static_library("console") {
     "commands/verb_quit_agent.h",
     "commands/verb_regs.cc",
     "commands/verb_regs.h",
+    "commands/verb_rm.cc",
+    "commands/verb_rm.h",
     "commands/verb_run.cc",
     "commands/verb_run.h",
     "commands/verb_stack.cc",
@@ -173,7 +177,6 @@ static_library("console") {
     "verbs.cc",
     "verbs.h",
     "verbs_settings.cc",
-    "verbs_shared.cc",
   ]
 
   deps = []
@@ -211,6 +214,7 @@ source_set("tests") {
     "commands/verb_detach_unittest.cc",
     "commands/verb_disassemble_unittest.cc",
     "commands/verb_display_unittest.cc",
+    "commands/verb_new_rm_unittest.cc",
     "commands/verb_print_unittest.cc",
     "commands/verb_quit_unittest.cc",
     "commands/verb_status_unittest.cc",
@@ -240,7 +244,6 @@ source_set("tests") {
     "string_util_unittest.cc",
     "verbs_memory_unittest.cc",
     "verbs_settings_unittest.cc",
-    "verbs_shared_unittest.cc",
   ]
 
   deps = [

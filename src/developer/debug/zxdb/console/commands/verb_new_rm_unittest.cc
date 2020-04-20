@@ -15,7 +15,7 @@ namespace zxdb {
 
 namespace {
 
-class VerbsSharedTest : public RemoteAPITest {
+class VerbNewRmTest : public RemoteAPITest {
  public:
   std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() {
     auto remote_api = std::make_unique<MockRemoteAPI>();
@@ -31,7 +31,7 @@ class VerbsSharedTest : public RemoteAPITest {
 
 }  // namespace
 
-TEST_F(VerbsSharedTest, NewRm) {
+TEST_F(VerbNewRmTest, NewRm) {
   MockConsole console(&session());
 
   console.ProcessInputLine("attach foobar");

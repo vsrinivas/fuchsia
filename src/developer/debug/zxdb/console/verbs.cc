@@ -30,6 +30,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_locals.h"
 #include "src/developer/debug/zxdb/console/commands/verb_mem_analyze.h"
 #include "src/developer/debug/zxdb/console/commands/verb_mem_read.h"
+#include "src/developer/debug/zxdb/console/commands/verb_new.h"
 #include "src/developer/debug/zxdb/console/commands/verb_next.h"
 #include "src/developer/debug/zxdb/console/commands/verb_nexti.h"
 #include "src/developer/debug/zxdb/console/commands/verb_opendump.h"
@@ -39,6 +40,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_quit.h"
 #include "src/developer/debug/zxdb/console/commands/verb_quit_agent.h"
 #include "src/developer/debug/zxdb/console/commands/verb_regs.h"
+#include "src/developer/debug/zxdb/console/commands/verb_rm.h"
 #include "src/developer/debug/zxdb/console/commands/verb_run.h"
 #include "src/developer/debug/zxdb/console/commands/verb_stack.h"
 #include "src/developer/debug/zxdb/console/commands/verb_status.h"
@@ -108,7 +110,6 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
   static std::map<Verb, VerbRecord> all_verbs;
   if (all_verbs.empty()) {
     AppendSettingsVerbs(&all_verbs);
-    AppendSharedVerbs(&all_verbs);
 
     all_verbs[Verb::kAspace] = GetAspaceVerbRecord();
     all_verbs[Verb::kAttach] = GetAttachVerbRecord();
@@ -137,6 +138,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kLocals] = GetLocalsVerbRecord();
     all_verbs[Verb::kMemAnalyze] = GetMemAnalyzeVerbRecord();
     all_verbs[Verb::kMemRead] = GetMemReadVerbRecord();
+    all_verbs[Verb::kNew] = GetNewVerbRecord();
     all_verbs[Verb::kNext] = GetNextVerbRecord();
     all_verbs[Verb::kNexti] = GetNextiVerbRecord();
     all_verbs[Verb::kOpenDump] = GetOpendumpVerbRecord();
@@ -145,6 +147,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kQuitAgent] = GetQuitAgentVerbRecord();
     all_verbs[Verb::kQuit] = GetQuitVerbRecord();
     all_verbs[Verb::kRegs] = GetRegsVerbRecord();
+    all_verbs[Verb::kRm] = GetRmVerbRecord();
     all_verbs[Verb::kRun] = GetRunVerbRecord();
     all_verbs[Verb::kStatus] = GetStatusVerbRecord();
     all_verbs[Verb::kStdout] = GetStdoutVerbRecord();

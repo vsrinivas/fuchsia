@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/console/commands/verb_new.h"
+
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
@@ -14,8 +16,6 @@
 namespace zxdb {
 
 namespace {
-
-// new ---------------------------------------------------------------------------------------------
 
 const char kNewShortHelp[] = "new: Create a new debugger object.";
 const char kNewHelp[] =
@@ -45,8 +45,8 @@ job new
     [zxdb] job new
     Job 2 [Not attached]
     [zxdb] job 2 attach-job 1960
-    Job 2 [Attached] koid=1960 
-  
+    Job 2 [Attached] koid=1960
+
 process new
 
   A process context holds settings (binary name, command line arguments, etc.)
@@ -58,7 +58,8 @@ process new
     [zxdb] attach 22860
     Attached Process 2 [Running] koid=22860 foobar.cmx
 )";
-Err DoNew(ConsoleContext* context, const Command& cmd) {
+
+Err RunVerbNew(ConsoleContext* context, const Command& cmd) {
   // Require exactly one noun to be specified for the type of object.
   if (cmd.nouns().size() != 1u || !cmd.args().empty()) {
     return Err(
@@ -101,72 +102,10 @@ Err DoNew(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// rm --------------------------------------------------------------------------
-
-const char kRmShortHelp[] = "rm: Remove a debugger object.";
-const char kRmHelp[] =
-    R"(<object-type> [ <object-id> ] rm
-
-  Removes the given object. Specify an explicit object id ("filter 2 rm") to
-  remove that object, or omit it ("filter rm") to remove the current one (if
-  there is one). To see a list of available objects and their IDs, use the
-  object type by itself ("filter").
-
-filter rm
-
-  Removes the filter.
-
-job rm
-
-  Removes the job. Any filters tied to this job will also be deleted.
-)";
-Err DoRm(ConsoleContext* context, const Command& cmd) {
-  // Require exactly one noun to be specified for the type of object.
-  if (cmd.nouns().size() != 1u || !cmd.args().empty()) {
-    return Err(
-        "Use \"<object-type> <index> rm\" to delete an object.\n"
-        "For example, \"filter 2 rm\".");
-  }
-
-  OutputBuffer description;
-  switch (cmd.nouns().begin()->first) {
-    case Noun::kFilter: {
-      if (cmd.filter()) {
-        description = FormatFilter(context, cmd.filter());
-        context->session()->system().DeleteFilter(cmd.filter());
-      } else {
-        return Err("No filter to remove.");
-      }
-      break;
-    }
-    case Noun::kJob: {
-      if (cmd.job_context()) {
-        description = FormatJobContext(context, cmd.job_context());
-        context->session()->system().DeleteJobContext(cmd.job_context());
-      } else {
-        return Err("No job to remove.");
-      }
-      break;
-    }
-    default: {
-      std::string noun_name = GetNouns().find(cmd.nouns().begin()->first)->second.aliases[0];
-      return Err("The \"rm\" command is not supported for \"%s\" objects.", noun_name.c_str());
-    }
-  }
-
-  OutputBuffer out("Removed ");
-  out.Append(std::move(description));
-  Console::get()->Output(out);
-
-  return Err();
-}
-
 }  // namespace
 
-void AppendSharedVerbs(std::map<Verb, VerbRecord>* verbs) {
-  (*verbs)[Verb::kNew] =
-      VerbRecord(&DoNew, {"new"}, kNewShortHelp, kNewHelp, CommandGroup::kGeneral);
-  (*verbs)[Verb::kRm] = VerbRecord(&DoRm, {"rm"}, kRmShortHelp, kRmHelp, CommandGroup::kGeneral);
+VerbRecord GetNewVerbRecord() {
+  return VerbRecord(&RunVerbNew, {"new"}, kNewShortHelp, kNewHelp, CommandGroup::kGeneral);
 }
 
 }  // namespace zxdb
