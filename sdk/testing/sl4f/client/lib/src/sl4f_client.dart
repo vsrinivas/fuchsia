@@ -62,28 +62,30 @@ class Sl4f {
   }
 
   /// Constructs an SL4F client from the following environment variables:
-  /// * `FUCHSIA_DEVICE_ADDR` or `FUCHSIA_IPV4_ADDR`: IPV4 or IPV6 address of
-  ///       the target address to be tested (required).
+  /// * `FUCHSIA_DEVICE_ADDR`, `FUCHSIA_IPV4_ADDR`, or `FUCHSIA_IPV6_ADDR`:
+  ///       IPV4 or IPV6 address of the target address to be tested (required).
   /// * `SL4F_HTTP_PORT`: TCP port that the SL4F HTTP server is listening on
   ///       the target device (optional, defaults to $_sl4fHttpDefaultPort)
   /// * `FUCHSIA_SSH_PORT`: SSH port of the target device (optional).
   /// * `FUCHSIA_SSH_KEY`: Path of the SSH private key (required if
   ///       `SSH_AUTH_SOCK` is not set).
   ///
-  /// If both `FUCHSIA_DEVICE_ADDR` and `FUCHSIA_IPV4_ADDR` are defined,
-  /// `FUCHSIA_DEVICE_ADDR` is used.
+  /// The environment variables specifying the IP address will be checked in
+  /// the order `FUCHSIA_DEVICE_ADDR`, then `FUCHSIA_IPV4_ADDR`, then
+  /// `FUCHSIA_IPV6_ADDR`.
   ///
   /// If `FUCHSIA_SSH_KEY` is not set but `SSH_AUTH_SOCK` is, then it's
   /// assumed that ssh-agent can provide the credentials to connect to the
   /// device. Otherwise an [Sl4fException] is thrown.
   factory Sl4f.fromEnvironment({Map<String, String> environment}) {
     environment ??= Platform.environment;
-    final address =
-        environment['FUCHSIA_DEVICE_ADDR'] ?? environment['FUCHSIA_IPV4_ADDR'];
+    final address = environment['FUCHSIA_DEVICE_ADDR'] ??
+        environment['FUCHSIA_IPV4_ADDR'] ??
+        environment['FUCHSIA_IPV6_ADDR'];
     if (_isNullOrEmpty(address)) {
       throw Sl4fException(
-          'No FUCHSIA_DEVICE_ADDR or FUCHSIA_IPV4_ADDR provided when '
-          'starting SL4F from env');
+          'No FUCHSIA_DEVICE_ADDR, FUCHSIA_IPV4_ADDR, or FUCHSIA_IPV6_ADDR '
+          'provided when starting SL4F from env');
     }
 
     Ssh ssh;

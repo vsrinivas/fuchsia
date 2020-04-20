@@ -222,6 +222,28 @@ void main() {
       expect(client.port, equals(8282));
     });
 
+    test('IPv6 address using FUCHSIA_DEVICE_ADDR', () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_IPV6_ADDR': '::1',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'SL4F_HTTP_PORT': '8282'
+      });
+      expect(client.target, equals('[::1]'));
+      expect(client.port, equals(8282));
+    });
+
+    test('IPv6 link-local address using FUCHSIA_DEVICE_ADDR', () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_IPV6_ADDR': 'fe80::1234:44f%eth0',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'SL4F_HTTP_PORT': '8282'
+      });
+      expect(client.target, equals('[fe80::1234:44f%eth0]'));
+      expect(client.port, equals(8282));
+    });
+
     test('IPv6 address using both FUCHSIA_IPV4_ADDR and FUCHSIA_DEVICE_ADDR',
         () {
       Sl4f client = Sl4f.fromEnvironment(environment: {
@@ -231,7 +253,36 @@ void main() {
         'FUCHSIA_SSH_PORT': '8022',
         'SL4F_HTTP_PORT': '8282'
       });
-      // FUCHSIA)DEVICE_ADDR has preference over FUCHSIA_IPV4_ADDR:
+      // FUCHSIA_DEVICE_ADDR has preference over FUCHSIA_IPV4_ADDR:
+      expect(client.target, equals('[::1]'));
+      expect(client.port, equals(8282));
+    });
+
+    test('IPv6 address using both FUCHSIA_IPV4_ADDR and FUCHSIA_IPV6_ADDR', () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_IPV6_ADDR': '::1',
+        'FUCHSIA_IPV4_ADDR': '127.0.0.1',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'SL4F_HTTP_PORT': '8282'
+      });
+      // FUCHSIA_IPV4_ADDR has preference over FUCHSIA_IPV6_ADDR:
+      expect(client.target, equals('127.0.0.1'));
+      expect(client.port, equals(8282));
+    });
+
+    test(
+        'IPv6 address using FUCHSIA_IPV4_ADDR and FUCHSIA_IPV6_ADDR and FUCHSIA_DEVICE_ADDR',
+        () {
+      Sl4f client = Sl4f.fromEnvironment(environment: {
+        'FUCHSIA_DEVICE_ADDR': '::1',
+        'FUCHSIA_IPV6_ADDR': 'fe80::1234:44f%eth0',
+        'FUCHSIA_IPV4_ADDR': '127.0.0.1',
+        'FUCHSIA_SSH_KEY': '/foo',
+        'FUCHSIA_SSH_PORT': '8022',
+        'SL4F_HTTP_PORT': '8282'
+      });
+      // FUCHSIA_DEVICE_ADDR has preference over the other two:
       expect(client.target, equals('[::1]'));
       expect(client.port, equals(8282));
     });
