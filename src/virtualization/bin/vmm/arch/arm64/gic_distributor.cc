@@ -195,6 +195,9 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& 
   }
   type_ = info->type;
 
+  // Initialize CPU masks, and let the guest update them.
+  memset(cpu_masks_, bit_mask<uint8_t>(num_cpus), sizeof(cpu_masks_));
+
   // Create physical interrupts, so that we can bind them to VCPUs.
   if (!interrupts.empty()) {
     zx::resource resource;
@@ -487,7 +490,6 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       std::lock_guard<std::mutex> lock(mutex_);
       affinity_routing_ = type_ == fuchsia::sysinfo::InterruptControllerType::GIC_V3 &&
                           (value.u32 & kGicdCtlrARENSMask);
-      memset(cpu_masks_, UINT8_MAX, sizeof(cpu_masks_));
       return ZX_OK;
     }
     case GicdRegister::IROUTE32... GicdRegister::IROUTE1019: {
