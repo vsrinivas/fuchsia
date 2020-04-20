@@ -92,23 +92,15 @@ pub async fn run_resolver_service(
                             fx_log_warn!("resolve does not support selectors yet");
                         }
                         let start_time = Instant::now();
-
                         let status = resolve(&cache, &package_fetcher, package_url, dir).await;
-
                         cobalt_sender.log_elapsed_time(
                             metrics::RESOLVE_DURATION_METRIC_ID,
                             (
-                                match status {
-                                    Ok(_) => metrics::ResolveDurationMetricDimensionResult::Success,
-                                    Err(_) => {
-                                        metrics::ResolveDurationMetricDimensionResult::Failure
-                                    }
-                                },
+                                result_to_resolve_duration_result_code(&status),
                                 metrics::ResolveDurationMetricDimensionResolverType::Regular,
                             ),
                             Instant::now().duration_since(start_time).as_micros() as i64,
                         );
-
                         responder.send(Status::from(status).into_raw())?;
                         Ok(())
                     }
@@ -323,9 +315,7 @@ pub async fn run_font_resolver_service(
                 directory_request,
                 responder,
             } = event;
-
             let start_time = Instant::now();
-
             let status = resolve_font(
                 &font_package_manager,
                 &cache,
@@ -335,19 +325,14 @@ pub async fn run_font_resolver_service(
                 cobalt_sender.clone(),
             )
             .await;
-
             cobalt_sender.log_elapsed_time(
                 metrics::RESOLVE_DURATION_METRIC_ID,
                 (
-                    match status {
-                        Ok(_) => metrics::ResolveDurationMetricDimensionResult::Success,
-                        Err(_) => metrics::ResolveDurationMetricDimensionResult::Failure,
-                    },
+                    result_to_resolve_duration_result_code(&status),
                     metrics::ResolveDurationMetricDimensionResolverType::Font,
                 ),
                 Instant::now().duration_since(start_time).as_micros() as i64,
             );
-
             responder.send(Status::from(status).into_raw())?;
             Ok(())
         })
@@ -397,6 +382,15 @@ fn handle_bad_package_url(parse_error: ParseError, pkg_url: &str) -> Status {
 fn handle_bad_package_open(open_error: crate::cache::PackageOpenError, pkg_url: &str) -> Status {
     fx_log_err!("failed to open package url {:?}: {}", pkg_url, open_error);
     Status::from(open_error)
+}
+
+fn result_to_resolve_duration_result_code(
+    res: &Result<(), Status>,
+) -> metrics::ResolveDurationMetricDimensionResult {
+    match res {
+        Ok(_) => metrics::ResolveDurationMetricDimensionResult::Success,
+        Err(_) => metrics::ResolveDurationMetricDimensionResult::Failure,
+    }
 }
 
 #[cfg(test)]
