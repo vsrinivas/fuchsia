@@ -11,9 +11,9 @@
 #include "coordinator.h"
 #include "log.h"
 
-zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel coordinator_rpc,
-                                  zx::channel device_controller_rpc, zx::vmo driver,
-                                  const char* args, zx::handle rpc_proxy) {
+zx_status_t dh_send_create_device(Device* dev, const fbl::RefPtr<Devhost>& dh,
+                                  zx::channel coordinator_rpc, zx::channel device_controller_rpc,
+                                  zx::vmo driver, const char* args, zx::handle rpc_proxy) {
   size_t driver_path_size = dev->libname().size();
   size_t args_size = strlen(args);
   uint32_t wr_num_bytes =
@@ -59,7 +59,8 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel coordina
   return msg.Write(dh->hrpc(), 0);
 }
 
-zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel coordinator_rpc,
+zx_status_t dh_send_create_device_stub(Device* dev, const fbl::RefPtr<Devhost>& dh,
+                                       zx::channel coordinator_rpc,
                                        zx::channel device_controller_rpc, uint32_t protocol_id) {
   FIDL_ALIGNDECL char
       wr_bytes[sizeof(fuchsia_device_manager_DevhostControllerCreateDeviceStubRequest)];
@@ -150,7 +151,8 @@ zx_status_t dh_send_complete_removal(Device* dev_ptr, fit::function<void()> cb) 
   return ZX_OK;
 }
 
-zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite_dev,
+zx_status_t dh_send_create_composite_device(const fbl::RefPtr<Devhost>& dh,
+                                            const Device* composite_dev,
                                             const CompositeDevice& composite,
                                             const uint64_t* fragment_local_ids,
                                             zx::channel coordinator_rpc,

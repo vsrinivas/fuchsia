@@ -389,7 +389,8 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
   return ZX_OK;
 }
 
-static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector& loader_connector,
+static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
+                                     const LoaderServiceConnector& loader_connector,
                                      const char* devhost_bin, const char* name,
                                      const char* const* env, zx_handle_t hrpc,
                                      const zx::resource& root_resource, zx::unowned_job devhost_job,
@@ -465,8 +466,8 @@ static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector
   return ZX_OK;
 }
 
-zx_status_t Coordinator::NewDevhost(const char* name, Devhost** out) {
-  auto dh = std::make_unique<Devhost>();
+zx_status_t Coordinator::NewDevhost(const char* name, fbl::RefPtr<Devhost>* out) {
+  auto dh = fbl::MakeRefCounted<Devhost>(this);
   if (dh == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -477,7 +478,6 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost** out) {
     return status;
   }
   dh->set_hrpc(dh_hrpc.release());
-  auto defer = fit::defer([&dh] { zx_handle_close(dh->hrpc()); });
 
   const char* program = kDriverHostPath;
   std::vector<const char*> env;
@@ -512,32 +512,18 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost** out) {
   }
 
   env.push_back(nullptr);
-  status = dc_launch_devhost(dh.get(), loader_service_connector_, program, name, env.data(),
-                             hrpc.release(), root_resource(), zx::unowned_job(config_.devhost_job),
-                             config_.fs_provider);
+  status =
+      dc_launch_devhost(dh, loader_service_connector_, program, name, env.data(), hrpc.release(),
+                        root_resource(), zx::unowned_job(config_.devhost_job), config_.fs_provider);
   if (status != ZX_OK) {
     return status;
   }
   launched_first_devhost_ = true;
 
-  devhosts_.push_back(dh.get());
-
   log(DEVLC, "driver_manager: new host %p\n", dh.get());
 
-  *out = dh.release();
-  defer.cancel();
+  *out = std::move(dh);
   return ZX_OK;
-}
-
-void Coordinator::ReleaseDevhost(Devhost* dh) {
-  if (!dh->Release()) {
-    return;
-  }
-  log(INFO, "driver_manager: destroy host %p\n", dh);
-  devhosts_.erase(*dh);
-  zx_handle_close(dh->hrpc());
-  dh->proc()->kill();
-  delete dh;
 }
 
 // Add a new device to a parent device (same devhost)
@@ -722,7 +708,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
   dev->CompleteSuspend(ZX_OK);
   dev->CompleteInit(ZX_ERR_UNAVAILABLE);
 
-  Devhost* dh = dev->host();
+  fbl::RefPtr<Devhost> dh = dev->host();
   bool devhost_dying = (dh != nullptr && (dh->flags() & Devhost::Flags::kDying));
   if (forced || devhost_dying) {
     // We are force removing all devices in the devhost, so force complete any outstanding tasks.
@@ -764,11 +750,9 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
 
   // detach from devhost
   if (dh != nullptr) {
-    dev->host()->devices().erase(*dev);
-    // Acquire an extra reference to the devhost that gets released below.
-    // This is necessary to prevent a dh from being freed in the middle of
+    // We're holding on to a reference to the devhost through |dh|.
+    // This is necessary to prevent it from being freed in the middle of
     // the code below.
-    dh->AddRef();
     dev->set_host(nullptr);
 
     // If we are responding to a disconnect,
@@ -795,7 +779,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
       //      in a reasonable amount of time, we fix the glitch.
     }
 
-    ReleaseDevhost(dh);
+    dh.reset();
   }
 
   // if we have a parent, disconnect and downref it
@@ -1066,8 +1050,8 @@ zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const c
 }
 
 // send message to devhost, requesting the creation of a device
-static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, Devhost* dh, const char* args,
-                                    zx::handle rpc_proxy) {
+static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, const fbl::RefPtr<Devhost>& dh,
+                                    const char* args, zx::handle rpc_proxy) {
   zx_status_t r;
 
   zx::channel hcoordinator, hcoordinator_remote;
@@ -1101,7 +1085,6 @@ static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, Devhost* dh,
   if ((r = Device::BeginWait(dev, dev->coordinator->dispatcher())) != ZX_OK) {
     return r;
   }
-  dh->devices().push_back(dev.get());
   return ZX_OK;
 }
 
@@ -1173,7 +1156,8 @@ static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* li
 // has a devhost.  If |target_devhost| is not nullptr and the proxy doesn't have
 // a devhost yet, |target_devhost| will be used for it.  Otherwise a new devhost
 // will be created.
-zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* target_devhost) {
+zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
+                                      fbl::RefPtr<Devhost> target_devhost) {
   ZX_ASSERT(!(dev->flags & DEV_CTX_PROXY) && (dev->flags & DEV_CTX_MUST_ISOLATE));
 
   // proxy args are "processname,args"
@@ -1215,7 +1199,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
       }
     }
 
-    dev->proxy()->set_host(target_devhost);
+    dev->proxy()->set_host(std::move(target_devhost));
     if ((r = dh_create_device(dev->proxy(), dev->proxy()->host(), arg1, std::move(h1))) < 0) {
       log(ERROR, "driver_manager: dh_create_device: %d\n", r);
       return r;

@@ -278,7 +278,7 @@ class Device : public fbl::RefCounted<Device>,
                             zx::channel coordinator_rpc, zx::channel device_controller_rpc,
                             bool wait_make_visible, bool want_init_task, zx::channel client_remote,
                             fbl::RefPtr<Device>* device);
-  static zx_status_t CreateComposite(Coordinator* coordinator, Devhost* devhost,
+  static zx_status_t CreateComposite(Coordinator* coordinator, fbl::RefPtr<Devhost> devhost,
                                      const CompositeDevice& composite, zx::channel coordinator_rpc,
                                      zx::channel device_controller_rpc,
                                      fbl::RefPtr<Device>* device);
@@ -382,8 +382,8 @@ class Device : public fbl::RefCounted<Device>,
   }
   void disassociate_from_composite() { composite_ = UnassociatedWithComposite{}; }
 
-  void set_host(Devhost* host);
-  Devhost* host() const { return host_; }
+  void set_host(fbl::RefPtr<Devhost> host);
+  const fbl::RefPtr<Devhost>& host() const { return host_; }
   uint64_t local_id() const { return local_id_; }
 
   const fbl::DoublyLinkedList<std::unique_ptr<Metadata>, Metadata::Node>& metadata() const {
@@ -580,8 +580,7 @@ class Device : public fbl::RefCounted<Device>,
   fbl::DoublyLinkedListNodeState<Device*> devhost_node_;
 
   // list of all fragments that this device bound to.
-  fbl::DoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceNode>
-      fragments_;
+  fbl::DoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceNode> fragments_;
 
   // - If this device is part of a composite device, this is inhabited by
   //   CompositeDeviceFragment* and it points to the fragment that matched it.
@@ -593,7 +592,7 @@ class Device : public fbl::RefCounted<Device>,
   struct UnassociatedWithComposite {};
   std::variant<UnassociatedWithComposite, CompositeDevice*> composite_;
 
-  Devhost* host_ = nullptr;
+  fbl::RefPtr<Devhost> host_;
   // The id of this device from the perspective of the devhost.  This can be
   // used to communicate with the devhost about this device.
   uint64_t local_id_ = 0;

@@ -125,10 +125,6 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
     return status;
   }
 
-  if (dev->host_) {
-    // TODO host == nullptr should be impossible
-    dev->host_->devices().push_back(dev.get());
-  }
   real_parent->children_.push_back(dev.get());
   log(DEVLC, "devcoord: dev %p name='%s' (child)\n", real_parent.get(), real_parent->name().data());
 
@@ -140,7 +136,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
   return ZX_OK;
 }
 
-zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
+zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<Devhost> devhost,
                                     const CompositeDevice& composite, zx::channel coordinator_rpc,
                                     zx::channel device_controller_rpc,
                                     fbl::RefPtr<Device>* device) {
@@ -164,7 +160,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
   dev->device_controller_.Bind(std::move(device_controller_rpc), coordinator->dispatcher());
   dev->set_channel(std::move(coordinator_rpc));
   // We exist within our parent's device host
-  dev->set_host(devhost);
+  dev->set_host(std::move(devhost));
 
   // TODO: Record composite membership
 
@@ -177,9 +173,6 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
   if ((status = Device::BeginWait(dev, coordinator->dispatcher())) != ZX_OK) {
     return status;
   }
-
-  dev->host_->AddRef();
-  dev->host_->devices().push_back(dev.get());
 
   log(DEVLC, "driver_manager: composite dev created %p name='%s'\n", dev.get(), dev->name().data());
 
@@ -628,14 +621,14 @@ zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
   return ZX_OK;
 }
 
-void Device::set_host(Devhost* host) {
+void Device::set_host(fbl::RefPtr<Devhost> host) {
   if (host_) {
-    this->coordinator->ReleaseDevhost(host_);
+    host_->devices().erase(*this);
   }
-  host_ = host;
+  host_ = std::move(host);
   local_id_ = 0;
   if (host_) {
-    host_->AddRef();
+    host_->devices().push_back(this);
     local_id_ = host_->new_device_id();
   }
 }

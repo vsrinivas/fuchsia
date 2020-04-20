@@ -33,8 +33,9 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
 
     status = fidl::Bind(dispatcher, std::move(server), this);
     if (status != ZX_OK) {
-      log(ERROR, "driver_manager: failed to create client for mock fshost admin, failed to bind: %s\n",
-             zx_status_get_string(status));
+      log(ERROR,
+          "driver_manager: failed to create client for mock fshost admin, failed to bind: %s\n",
+          zx_status_get_string(status));
       return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
     }
 
@@ -96,7 +97,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void set_coordinator_loop_thread_running(bool value) { coordinator_loop_thread_running_ = value; }
   CoordinatorForTest* coordinator() { return &coordinator_; }
 
-  Devhost* devhost() { return &devhost_; }
+  const fbl::RefPtr<Devhost>& devhost() { return devhost_; }
   const zx::channel& devhost_remote() { return devhost_remote_; }
 
   const fbl::RefPtr<Device>& platform_bus() const { return platform_bus_.device; }
@@ -154,22 +155,6 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void SetUp() override;
   void TearDown() override;
 
-  // The fake devhost that the platform bus is put into
-  Devhost devhost_;
-
-  // The remote end of the channel that the coordinator uses to talk to the
-  // devhost
-  zx::channel devhost_remote_;
-
-  // The remote end of the channel that the coordinator uses to talk to the
-  // sys device proxy
-  zx::channel sys_proxy_coordinator_remote_;
-  zx::channel sys_proxy_controller_remote_;
-
-  // The device object representing the platform bus driver (child of the
-  // sys proxy)
-  DeviceState platform_bus_;
-
   // These should be listed after devhost/sys_proxy as it needs to be
   // destroyed before them.
   async::Loop coordinator_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
@@ -185,6 +170,22 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   CoordinatorForTest coordinator_{DefaultConfig(
       coordinator_loop_.dispatcher(), mock_server_loop_.dispatcher(), &boot_args_, &args_client_)};
+
+  // The fake devhost that the platform bus is put into
+  fbl::RefPtr<Devhost> devhost_;
+
+  // The remote end of the channel that the coordinator uses to talk to the
+  // devhost
+  zx::channel devhost_remote_;
+
+  // The remote end of the channel that the coordinator uses to talk to the
+  // sys device proxy
+  zx::channel sys_proxy_coordinator_remote_;
+  zx::channel sys_proxy_controller_remote_;
+
+  // The device object representing the platform bus driver (child of the
+  // sys proxy)
+  DeviceState platform_bus_;
 
   // A list of all devices that were added during this test, and their
   // channels.  These exist to keep them alive until the test is over.

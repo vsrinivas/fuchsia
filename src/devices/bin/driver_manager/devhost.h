@@ -11,13 +11,19 @@
 #include <utility>
 
 #include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
 
 #include "device.h"
 
+class Coordinator;
 class Device;
 
-class Devhost : public fbl::DoublyLinkedListable<Devhost*> {
+class Devhost : public fbl::RefCounted<Devhost>, public fbl::DoublyLinkedListable<Devhost*> {
  public:
+  // |coordinator| must outlive this Devhost object.
+  explicit Devhost(Coordinator* coordinator);
+  ~Devhost();
+
   enum Flags : uint32_t {
     kDying = 1 << 0,
     kSuspend = 1 << 1,
@@ -36,21 +42,12 @@ class Devhost : public fbl::DoublyLinkedListable<Devhost*> {
   // Returns a device id that will be unique within this devhost.
   uint64_t new_device_id() { return next_device_id_++; }
 
-  // The AddRef and Release functions follow the contract for fbl::RefPtr.
-  void AddRef() const { ++refcount_; }
-
-  // Returns true when the last reference has been released.
-  bool Release() const {
-    const int32_t rc = refcount_;
-    --refcount_;
-    return rc == 1;
-  }
-
  private:
+  Coordinator* coordinator_;
+
   zx_handle_t hrpc_ = ZX_HANDLE_INVALID;
   zx::process proc_;
   zx_koid_t koid_ = 0;
-  mutable int32_t refcount_ = 0;
   uint32_t flags_ = 0;
 
   // The next ID to be allocated to a device in this devhost.  Skip 0 to make

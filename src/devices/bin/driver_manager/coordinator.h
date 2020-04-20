@@ -277,7 +277,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 
   void HandleNewDevice(const fbl::RefPtr<Device>& dev);
-  zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* target_devhost);
+  zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Devhost> target_devhost);
 
   void DumpState(VmoWriter* vmo) const;
 
@@ -329,12 +329,14 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   const Driver* fragment_driver() const { return fragment_driver_; }
 
-  void ReleaseDevhost(Devhost* dh);
-
   InspectManager& inspect_manager() { return inspect_manager_; }
 
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
+
+  // These methods are used by the Devhost class to register in the coordinator's bookkeeping
+  void RegisterDevhost(Devhost* dh) { devhosts_.push_back(dh); }
+  void UnregisterDevhost(Devhost* dh) { devhosts_.erase(*dh); }
 
  protected:
   std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> fshost_admin_client_;
@@ -356,11 +358,11 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   // List of drivers loaded from /system by system_driver_loader()
   fbl::DoublyLinkedList<Driver*, Driver::Node> system_drivers_;
 
-  // All Devices (excluding static immortal devices)
-  fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode> devices_;
-
   // All DevHosts
   fbl::DoublyLinkedList<Devhost*> devhosts_;
+
+  // All Devices (excluding static immortal devices)
+  fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode> devices_;
 
   // All composite devices
   fbl::DoublyLinkedList<std::unique_ptr<CompositeDevice>, CompositeDevice::Node> composite_devices_;
@@ -409,7 +411,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   std::unique_ptr<Driver> ValidateDriver(std::unique_ptr<Driver> drv);
 
-  zx_status_t NewDevhost(const char* name, Devhost** out);
+  zx_status_t NewDevhost(const char* name, fbl::RefPtr<Devhost>* out);
 
   zx_status_t BindDriver(Driver* drv) {
     return BindDriver(drv, fit::bind_member(this, &Coordinator::AttemptBind));

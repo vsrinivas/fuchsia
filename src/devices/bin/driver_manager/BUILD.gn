@@ -25,6 +25,8 @@ source_set("lib") {
     "coordinator.h",
     "devfs.cc",
     "devfs.h",
+    "devhost.cc",
+    "devhost.h",
     "devhost_loader_service.cc",
     "devhost_loader_service.h",
     "device.cc",

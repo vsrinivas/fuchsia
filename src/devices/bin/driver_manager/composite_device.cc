@@ -125,7 +125,7 @@ zx_status_t CompositeDevice::TryAssemble() {
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  Devhost* devhost = nullptr;
+  fbl::RefPtr<Devhost> devhost;
   for (auto& fragment : bound_) {
     // Find the devhost to put everything in (if we don't find one, nullptr
     // means "a new devhost").

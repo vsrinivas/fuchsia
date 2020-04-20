@@ -105,20 +105,19 @@ void MultipleDeviceTestCase::CheckSuspendReceivedAndReply(const zx::channel& rem
 void MultipleDeviceTestCase::SetUp() {
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator_));
 
-  // refcount starts at zero, so bump it up to keep us from being cleaned up
-  devhost_.AddRef();
+  devhost_ = fbl::MakeRefCounted<Devhost>(&coordinator_);
   {
     zx::channel local;
     zx_status_t status = zx::channel::create(0, &local, &devhost_remote_);
     ASSERT_OK(status);
-    devhost_.set_hrpc(local.release());
+    devhost_->set_hrpc(local.release());
   }
 
   // Start the mock server thread.
   ASSERT_OK(mock_server_loop_.StartThread("mock-admin-server"));
 
   // Set up the sys device proxy, inside of the devhost
-  ASSERT_OK(coordinator_.PrepareProxy(coordinator_.sys_device(), &devhost_));
+  ASSERT_OK(coordinator_.PrepareProxy(coordinator_.sys_device(), devhost_));
   coordinator_loop_.RunUntilIdle();
   ASSERT_NO_FATAL_FAILURES(CheckCreateDeviceReceived(devhost_remote_, kSystemDriverPath,
                                                      &sys_proxy_coordinator_remote_,
@@ -177,8 +176,6 @@ void MultipleDeviceTestCase::TearDown() {
     coordinator_.RemoveDevice(std::move(sys_proxy), /* forced */ false);
     coordinator_loop_.RunUntilIdle();
   }
-
-  devhost_.devices().clear();
 
   // We no longer need the async loop.
   // If we do not shutdown here, the destructor
