@@ -23,6 +23,14 @@ constexpr uint32_t kBlockOp(uint32_t op) { return op & BLOCK_OP_MASK; }
 
 constexpr uint32_t kBootSizeMultiplier = 128'000;
 
+inline void BlockComplete(sdmmc::BlockOperation& txn, zx_status_t status) {
+  if (txn.node()->complete_cb()) {
+    txn.Complete(status);
+  } else {
+    zxlogf(TRACE, "sdmmc: block op %p completion_cb unset!\n", txn.operation());
+  }
+}
+
 }  // namespace
 
 namespace sdmmc {
@@ -230,52 +238,21 @@ void SdmmcBlockDevice::StopWorkerThread() {
     worker_thread_ = 0;
 
     // error out all pending requests
-    trace_async_id_t async_id = async_id_;
-    lock_.Acquire();
+    fbl::AutoLock lock(&lock_);
     for (std::optional<BlockOperation> txn = txn_list_.pop(); txn; txn = txn_list_.pop()) {
-      lock_.Release();
-      BlockComplete(&(*txn), ZX_ERR_BAD_STATE, async_id);
-      lock_.Acquire();
+      BlockComplete(*txn, ZX_ERR_BAD_STATE);
     }
-    lock_.Release();
   }
 }
 
-void SdmmcBlockDevice::BlockComplete(BlockOperation* txn, zx_status_t status,
-                                     trace_async_id_t async_id) {
-  const block_op_t* bop = txn->operation();
-  if (txn->node()->complete_cb()) {
-    // If tracing is not enabled this is a no-op.
-    TRACE_ASYNC_END("sdmmc", "sdmmc_do_txn", async_id_, "command", TA_INT32(bop->rw.command),
-                    "extra", TA_INT32(bop->rw.extra), "length", TA_INT32(bop->rw.length),
-                    "offset_vmo", TA_INT64(bop->rw.offset_vmo), "offset_dev",
-                    TA_INT64(bop->rw.offset_dev), "txn_status", TA_INT32(status));
-    txn->Complete(status);
-  } else {
-    zxlogf(TRACE, "sdmmc: block op %p completion_cb unset!\n", bop);
-  }
-}
-
-void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
-  // The TRACE_*() event macros are empty if driver tracing isn't enabled.
-  // But that doesn't work for our call to trace_state().
-  if (TRACE_ENABLED()) {
-    async_id_ = TRACE_NONCE();
-    TRACE_ASYNC_BEGIN("sdmmc", "sdmmc_do_txn", async_id_, "command",
-                      TA_INT32(txn->operation()->rw.command), "extra",
-                      TA_INT32(txn->operation()->rw.extra), "length",
-                      TA_INT32(txn->operation()->rw.length), "offset_vmo",
-                      TA_INT64(txn->operation()->rw.offset_vmo), "offset_dev",
-                      TA_INT64(txn->operation()->rw.offset_dev));
-  }
-
+zx_status_t SdmmcBlockDevice::DoTxn(const BlockOperation& txn, const EmmcPartition partition) {
   uint32_t cmd_idx = 0;
   uint32_t cmd_flags = 0;
 
   // Figure out which SD command we need to issue.
-  switch (kBlockOp(txn->operation()->command)) {
+  switch (kBlockOp(txn.operation()->command)) {
     case BLOCK_OP_READ:
-      if (txn->operation()->rw.length > 1) {
+      if (txn.operation()->rw.length > 1) {
         cmd_idx = SDMMC_READ_MULTIPLE_BLOCK;
         cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS;
         if (sdmmc_.host_info().caps & SDMMC_HOST_CAP_AUTO_CMD12) {
@@ -287,7 +264,7 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
       }
       break;
     case BLOCK_OP_WRITE:
-      if (txn->operation()->rw.length > 1) {
+      if (txn.operation()->rw.length > 1) {
         cmd_idx = SDMMC_WRITE_MULTIPLE_BLOCK;
         cmd_flags = SDMMC_WRITE_MULTIPLE_BLOCK_FLAGS;
         if (sdmmc_.host_info().caps & SDMMC_HOST_CAP_AUTO_CMD12) {
@@ -299,48 +276,45 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
       }
       break;
     case BLOCK_OP_FLUSH:
-      BlockComplete(txn, ZX_OK, async_id_);
-      return;
+      return ZX_OK;
     default:
       // should not get here
-      zxlogf(ERROR, "sdmmc: do_txn invalid block op %d\n", kBlockOp(txn->operation()->command));
-      ZX_DEBUG_ASSERT(true);
-      BlockComplete(txn, ZX_ERR_INVALID_ARGS, async_id_);
-      return;
+      zxlogf(ERROR, "sdmmc: do_txn invalid block op %d\n", kBlockOp(txn.operation()->command));
+      ZX_DEBUG_ASSERT(false);
+      return ZX_ERR_INVALID_ARGS;
   }
 
   zx_status_t st = ZX_OK;
-  if (!is_sd_ && txn->private_storage()->partition != current_partition_) {
+  if (!is_sd_ && partition != current_partition_) {
     const uint8_t partition_config_value =
         (raw_ext_csd_[MMC_EXT_CSD_PARTITION_CONFIG] & MMC_EXT_CSD_PARTITION_ACCESS_MASK) |
-        txn->private_storage()->partition;
+        partition;
     if ((st = MmcDoSwitch(MMC_EXT_CSD_PARTITION_CONFIG, partition_config_value)) != ZX_OK) {
-      zxlogf(ERROR, "sdmmc: failed to switch to partition %u\n", txn->private_storage()->partition);
-      BlockComplete(txn, st, async_id_);
-      return;
+      zxlogf(ERROR, "sdmmc: failed to switch to partition %u\n", partition);
+      return st;
     }
   }
 
-  current_partition_ = txn->private_storage()->partition;
+  current_partition_ = partition;
 
   zxlogf(TRACE,
          "sdmmc: do_txn blockop 0x%x offset_vmo 0x%" PRIx64
          " length 0x%x blocksize 0x%x"
          " max_transfer_size 0x%x\n",
-         txn->operation()->command, txn->operation()->rw.offset_vmo, txn->operation()->rw.length,
+         txn.operation()->command, txn.operation()->rw.offset_vmo, txn.operation()->rw.length,
          block_info_.block_size, block_info_.max_transfer_size);
 
   sdmmc_req_t* req = &req_;
   memset(req, 0, sizeof(*req));
   req->cmd_idx = cmd_idx;
   req->cmd_flags = cmd_flags;
-  req->arg = static_cast<uint32_t>(txn->operation()->rw.offset_dev);
-  req->blockcount = static_cast<uint16_t>(txn->operation()->rw.length);
+  req->arg = static_cast<uint32_t>(txn.operation()->rw.offset_dev);
+  req->blockcount = static_cast<uint16_t>(txn.operation()->rw.length);
   req->blocksize = static_cast<uint16_t>(block_info_.block_size);
 
   // convert offset_vmo and length to bytes
-  uint64_t offset_vmo = txn->operation()->rw.offset_vmo * block_info_.block_size;
-  uint64_t length = txn->operation()->rw.length * block_info_.block_size;
+  uint64_t offset_vmo = txn.operation()->rw.offset_vmo * block_info_.block_size;
+  uint64_t length = txn.operation()->rw.length * block_info_.block_size;
 
   fzl::VmoMapper mapper;
 
@@ -348,16 +322,15 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
     req->use_dma = true;
     req->virt_buffer = nullptr;
     req->pmt = ZX_HANDLE_INVALID;
-    req->dma_vmo = txn->operation()->rw.vmo;
+    req->dma_vmo = txn.operation()->rw.vmo;
     req->buf_offset = offset_vmo;
   } else {
     req->use_dma = false;
-    st = mapper.Map(*zx::unowned_vmo(txn->operation()->rw.vmo), offset_vmo, length,
+    st = mapper.Map(*zx::unowned_vmo(txn.operation()->rw.vmo), offset_vmo, length,
                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (st != ZX_OK) {
       zxlogf(TRACE, "sdmmc: do_txn vmo map error %d\n", st);
-      BlockComplete(txn, st, async_id_);
-      return;
+      return st;
     }
     req->virt_buffer = mapper.start();
     req->virt_size = length;
@@ -376,12 +349,11 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
     zxlogf(TRACE, "sdmmc: do_txn error %d\n", st);
   }
 
-  BlockComplete(txn, st, async_id_);
   zxlogf(TRACE, "sdmmc: do_txn complete\n");
+  return st;
 }
 
 void SdmmcBlockDevice::Queue(BlockOperation txn) {
-  trace_async_id_t async_id = async_id_;
   block_op_t* btxn = txn.operation();
 
   switch (kBlockOp(btxn->command)) {
@@ -389,11 +361,11 @@ void SdmmcBlockDevice::Queue(BlockOperation txn) {
     case BLOCK_OP_WRITE: {
       const uint64_t max = txn.private_storage()->block_count;
       if ((btxn->rw.offset_dev >= max) || ((max - btxn->rw.offset_dev) < btxn->rw.length)) {
-        BlockComplete(&txn, ZX_ERR_OUT_OF_RANGE, async_id);
+        BlockComplete(txn, ZX_ERR_OUT_OF_RANGE);
         return;
       }
       if (btxn->rw.length == 0) {
-        BlockComplete(&txn, ZX_OK, async_id);
+        BlockComplete(txn, ZX_OK);
         return;
       }
       break;
@@ -403,7 +375,7 @@ void SdmmcBlockDevice::Queue(BlockOperation txn) {
       // driver, when this op gets processed all previous ops are complete.
       break;
     default:
-      BlockComplete(&txn, ZX_ERR_NOT_SUPPORTED, async_id);
+      BlockComplete(txn, ZX_ERR_NOT_SUPPORTED);
       return;
   }
 
@@ -417,13 +389,26 @@ void SdmmcBlockDevice::Queue(BlockOperation txn) {
 int SdmmcBlockDevice::WorkerThread() {
   fbl::AutoLock lock(&lock_);
 
-  for (;;) {
-    if (dead_) {
-      break;
-    }
-
+  while (!dead_) {
     for (std::optional<BlockOperation> txn = txn_list_.pop(); txn; txn = txn_list_.pop()) {
-      DoTxn(&(*txn));
+      TRACE_DURATION_BEGIN("sdmmc", "sdmmc_do_txn");
+
+      BlockOperation btxn(*std::move(txn));
+      zx_status_t status = DoTxn(btxn, btxn.private_storage()->partition);
+
+      const block_op_t& bop = *btxn.operation();
+      const uint32_t op = kBlockOp(bop.command);
+      if (op == BLOCK_OP_READ || op == BLOCK_OP_WRITE) {
+        TRACE_DURATION_END("sdmmc", "sdmmc_do_txn", "command", TA_INT32(bop.rw.command), "extra",
+                           TA_INT32(bop.rw.extra), "length", TA_INT32(bop.rw.length), "offset_vmo",
+                           TA_INT64(bop.rw.offset_vmo), "offset_dev", TA_INT64(bop.rw.offset_dev),
+                           "txn_status", TA_INT32(status));
+      } else {
+        TRACE_DURATION_END("sdmmc", "sdmmc_do_txn", "command", TA_INT32(bop.rw.command),
+                           "txn_status", TA_INT32(status));
+      }
+
+      BlockComplete(btxn, status);
     }
 
     worker_event_.Wait(&lock_);

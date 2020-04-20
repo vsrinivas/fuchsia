@@ -91,22 +91,21 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   zx_status_t ProbeSd();
   zx_status_t ProbeMmc();
 
-  zx_status_t AddDevice();
+  zx_status_t AddDevice() TA_EXCL(lock_);
 
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
   // Called by children of this device.
-  void Queue(BlockOperation txn);
+  void Queue(BlockOperation txn) TA_EXCL(lock_);
 
   // Visible for testing.
   zx_status_t Init() { return sdmmc_.Init(); }
-  void StopWorkerThread();
+  void StopWorkerThread() TA_EXCL(lock_);
   void SetBlockInfo(uint32_t block_size, uint64_t block_count);
 
  private:
-  void BlockComplete(BlockOperation* txn, zx_status_t status, trace_async_id_t async_id);
-  void DoTxn(BlockOperation* txn);
+  zx_status_t DoTxn(const BlockOperation& txn, const EmmcPartition partition) TA_REQ(lock_);
   int WorkerThread();
 
   zx_status_t WaitForTran();
@@ -121,8 +120,6 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   bool MmcSupportsHsDdr();
   bool MmcSupportsHs200();
   bool MmcSupportsHs400();
-
-  std::atomic<trace_async_id_t> async_id_;
 
   SdmmcDevice sdmmc_;
 
@@ -153,7 +150,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 
   bool is_sd_ = false;
 
-  EmmcPartition current_partition_ = EmmcPartition::USER_DATA_PARTITION;
+  EmmcPartition current_partition_ TA_GUARDED(lock_) = EmmcPartition::USER_DATA_PARTITION;
 };
 
 }  // namespace sdmmc
