@@ -30,10 +30,6 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #         manifests to publish to repositories and to produce manifests to write
 #         into blobfs images.
 #
-#       meta_far_index_entries
-#         The metafar index entries are aggregated in image builds to produce
-#         manifests of packages to publish to a repository.
-#
 #       meta_far_merkle_index_entries
 #         The metafar merkle index entries are aggregated in image builds to
 #         produce package server indices for base serving.

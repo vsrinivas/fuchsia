@@ -138,10 +138,6 @@ template("pm_build") {
       blob_manifests =
           [ rebase_path("$pkg_out_dir/blobs.manifest", root_build_dir) ]
 
-      meta_far_index_entries =
-          [ "$package_name/$package_variant=" +
-            rebase_path("$pkg_out_dir/meta.far", root_build_dir) ]
-
       meta_far_merkle_index_entries =
           [ "$package_name/$package_variant=" +
             rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir) ]
