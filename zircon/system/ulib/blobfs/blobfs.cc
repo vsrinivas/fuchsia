@@ -35,7 +35,6 @@
 #include <fs/journal/superblock.h>
 #include <fs/pseudo_dir.h>
 #include <fs/ticker.h>
-#include <fs/transaction/block_transaction.h>
 #include <fs/vfs_types.h>
 #include <fvm/client.h>
 
@@ -508,25 +507,6 @@ zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
 
   *out_actual = df.BytesFilled();
   return ZX_OK;
-}
-
-zx_status_t Blobfs::RunOperation(const storage::Operation& operation,
-                                 storage::BlockBuffer* buffer) {
-  if (operation.type != storage::OperationType::kWrite &&
-      operation.type != storage::OperationType::kRead) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  block_fifo_request_t request;
-  request.vmoid = buffer->vmoid();
-  request.opcode = operation.type == storage::OperationType::kWrite ? BLOCKIO_WRITE : BLOCKIO_READ;
-  request.vmo_offset = BlockNumberToDevice(operation.vmo_offset);
-  request.dev_offset = BlockNumberToDevice(operation.dev_offset);
-  uint64_t length = BlockNumberToDevice(operation.length);
-  ZX_ASSERT_MSG(length < UINT32_MAX, "Request size too large");
-  request.length = static_cast<uint32_t>(length);
-
-  return block_device_->FifoTransaction(&request, 1);
 }
 
 zx_status_t Blobfs::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {

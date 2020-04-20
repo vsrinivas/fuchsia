@@ -13,7 +13,7 @@
 #include <disk_inspector/buffer_factory.h>
 #include <fs/journal/format.h>
 #include <fs/journal/initializer.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/legacy_transaction_handler.h>
 #include <zxtest/zxtest.h>
 
 namespace blobfs {

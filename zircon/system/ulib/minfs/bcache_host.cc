@@ -22,30 +22,31 @@
 
 namespace minfs {
 
-zx_status_t Bcache::RunOperation(const storage::Operation& operation,
-                                 storage::BlockBuffer* buffer) {
-  if (operation.type != storage::OperationType::kWrite &&
-      operation.type != storage::OperationType::kRead) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+zx_status_t Bcache::RunRequests(const std::vector<storage::BufferedOperation>& operations) {
+  for (const storage::BufferedOperation& operation : operations) {
+    if (operation.op.type != storage::OperationType::kWrite &&
+        operation.op.type != storage::OperationType::kRead) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
 
-  // TODO(fxb/47947): Clean up this hack.
-  void* data = static_cast<uint8_t*>(buffer->Data(0)) + operation.vmo_offset * kMinfsBlockSize;
-  ssize_t result;
-  if (operation.type == storage::OperationType::kRead) {
-    result = pread(fd_.get(), data, operation.length * kMinfsBlockSize,
-                   operation.dev_offset * kMinfsBlockSize);
-  } else {
-    result = pwrite(fd_.get(), data, operation.length * kMinfsBlockSize,
-                    operation.dev_offset * kMinfsBlockSize);
-  }
+    // TODO(fxb/47947): Clean up this hack.
+    void* data = static_cast<uint8_t*>(operation.data) + operation.op.vmo_offset * kMinfsBlockSize;
+    ssize_t result;
+    if (operation.op.type == storage::OperationType::kRead) {
+      result = pread(fd_.get(), data, operation.op.length * kMinfsBlockSize,
+                     operation.op.dev_offset * kMinfsBlockSize);
+    } else {
+      result = pwrite(fd_.get(), data, operation.op.length * kMinfsBlockSize,
+                      operation.op.dev_offset * kMinfsBlockSize);
+    }
 
-  if (result != static_cast<ssize_t>(operation.length * kMinfsBlockSize)) {
-    // Linux and Mac don't agree on the number of "longs" on uint64_t.
-    FS_TRACE_ERROR("minfs: RunOperation %s failure at block 0x%lx (%zd)\n",
-                   operation.type == storage::OperationType::kRead ? "read" : "write",
-                   static_cast<unsigned long>(operation.dev_offset), result);
-    return ZX_ERR_IO;
+    if (result != static_cast<ssize_t>(operation.op.length * kMinfsBlockSize)) {
+      // Linux and Mac don't agree on the number of "longs" on uint64_t.
+      FS_TRACE_ERROR("minfs: RunOperation %s failure at block 0x%lx (%zd)\n",
+                     operation.op.type == storage::OperationType::kRead ? "read" : "write",
+                     static_cast<unsigned long>(operation.op.dev_offset), result);
+      return ZX_ERR_IO;
+    }
   }
   return ZX_OK;
 }

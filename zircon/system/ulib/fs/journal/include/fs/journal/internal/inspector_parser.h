@@ -10,7 +10,6 @@
 #include <array>
 
 #include <fs/journal/format.h>
-#include <fs/transaction/block_transaction.h>
 #include <storage/buffer/block_buffer.h>
 
 namespace fs {

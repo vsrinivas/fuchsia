@@ -15,7 +15,6 @@
 #include <bitmap/storage.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
-#include <fs/transaction/block_transaction.h>
 #include <fs/transaction/buffered_operations_builder.h>
 #include <minfs/allocator_reservation.h>
 #include <minfs/format.h>

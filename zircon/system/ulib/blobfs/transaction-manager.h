@@ -10,7 +10,7 @@
 #endif
 
 #include <fs/journal/journal.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/legacy_transaction_handler.h>
 #include <fs/vnode.h>
 
 #include "allocator/allocator.h"

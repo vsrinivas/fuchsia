@@ -15,7 +15,7 @@
 #include <disk_inspector/common_types.h>
 #include <disk_inspector/loader.h>
 #include <fs/journal/format.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/transaction_handler.h>
 
 namespace blobfs {
 

@@ -12,7 +12,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/string_buffer.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/transaction_handler.h>
 #include <zircon/types.h>
 
 #include <assert.h>

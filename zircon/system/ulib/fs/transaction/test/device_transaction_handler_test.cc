@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fs/transaction/block_transaction.h"
+#include "fs/transaction/device_transaction_handler.h"
 
 #include <vector>
 
@@ -44,7 +44,7 @@ class MockBlockDevice : public block_client::FakeBlockDevice {
   bool called_ = false;
 };
 
-class MockTransactionHandler : public fs::TransactionHandler {
+class MockTransactionHandler : public fs::DeviceTransactionHandler {
  public:
   MockTransactionHandler() {}
   ~MockTransactionHandler() override {}

@@ -15,7 +15,7 @@
 
 #include <blobfs/node-finder.h>
 #include <fbl/macros.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/legacy_transaction_handler.h>
 #include <storage/buffer/owned_vmoid.h>
 #include <storage/buffer/vmoid_registry.h>
 

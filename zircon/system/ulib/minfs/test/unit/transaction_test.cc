@@ -21,22 +21,6 @@ constexpr size_t kTotalElements = 32768;
 constexpr size_t kDefaultElements = kTotalElements / 64;
 constexpr size_t kDefaultStartBlock = 0;
 
-// Mock TransactionHandler class to be used in transaction tests.
-class MockTransactionHandler : public fs::TransactionHandler {
- public:
-  MockTransactionHandler() = default;
-
-  // fs::TransactionHandler Interface.
-  uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
-
-  zx_status_t RunOperation(const storage::Operation& operation,
-                           storage::BlockBuffer* buffer) final {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  block_client::BlockDevice* GetDevice() final { return nullptr; }
-};
-
 // Fake Storage class to be used in Transaction tests.
 class FakeStorage : public AllocatorStorage {
  public:
@@ -165,7 +149,6 @@ class FakeMinfs : public TransactionalFs {
 
  private:
   mutable fbl::Mutex txn_lock_;
-  MockTransactionHandler handler_;
   FakeBlockDevice block_device_;
   fs::BufferedOperationsBuilder builder_;
   Superblock info_ = {};

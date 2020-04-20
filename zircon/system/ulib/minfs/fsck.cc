@@ -822,7 +822,7 @@ zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const FsckOptions& 
 
 // Write Superblock and Backup Superblock to disk.
 #ifdef __Fuchsia__
-zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transaction_handler,
+zx_status_t WriteSuperBlockAndBackupSuperblock(fs::DeviceTransactionHandler* transaction_handler,
                                                block_client::BlockDevice* device,
                                                Superblock* info) {
 #else
@@ -883,7 +883,7 @@ zx_status_t ReadBackupSuperblock(fs::TransactionHandler* transaction_handler,
 
 // Repairs superblock from backup.
 #ifdef __Fuchsia__
-zx_status_t RepairSuperblock(fs::TransactionHandler* transaction_handler,
+zx_status_t RepairSuperblock(fs::DeviceTransactionHandler* transaction_handler,
                              block_client::BlockDevice* device, uint32_t max_blocks,
                              Superblock* info_out) {
   Superblock backup_info;

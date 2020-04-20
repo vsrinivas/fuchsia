@@ -7,9 +7,10 @@
 
 #include <vector>
 
+#include <zircon/assert.h>
 #include <fbl/macros.h>
-#include <fs/transaction/block_transaction.h>
 #include <storage/buffer/block_buffer.h>
+#include <storage/operation/operation.h>
 #ifdef __Fuchsia__
 #include <storage/buffer/owned_vmoid.h>
 #endif

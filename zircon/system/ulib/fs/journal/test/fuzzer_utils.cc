@@ -54,11 +54,6 @@ void FuzzedTransactionHandler::Init(FuzzerUtils* fuzz_utils) {
   block_size_ = 1 << fuzz_utils_->data_provider()->ConsumeIntegralInRange<size_t>(9, 15);
 }
 
-zx_status_t FuzzedTransactionHandler::RunOperation(const Operation& operation,
-                                                   BlockBuffer* buffer) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t FuzzedTransactionHandler::RunRequests(
     const std::vector<storage::BufferedOperation>& requests) {
   if (fuzz_utils_->data_provider()->remaining_bytes() == 0) {

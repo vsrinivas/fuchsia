@@ -123,25 +123,6 @@ zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device, ui
 
 uint32_t Bcache::DeviceBlockSize() const { return info_.block_size; }
 
-zx_status_t Bcache::RunOperation(const storage::Operation& operation,
-                                 storage::BlockBuffer* buffer) {
-  if (operation.type != storage::OperationType::kWrite &&
-      operation.type != storage::OperationType::kRead) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  block_fifo_request_t request;
-  request.vmoid = buffer->vmoid();
-  request.opcode = operation.type == storage::OperationType::kWrite ? BLOCKIO_WRITE : BLOCKIO_READ;
-  request.vmo_offset = BlockNumberToDevice(operation.vmo_offset);
-  request.dev_offset = BlockNumberToDevice(operation.dev_offset);
-  uint64_t length = BlockNumberToDevice(operation.length);
-  ZX_ASSERT_MSG(length < UINT32_MAX, "Request size too large");
-  request.length = static_cast<uint32_t>(length);
-
-  return device_->FifoTransaction(&request, 1);
-}
-
 Bcache::Bcache(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks)
     : max_blocks_(max_blocks), device_(std::move(device)) {}
 

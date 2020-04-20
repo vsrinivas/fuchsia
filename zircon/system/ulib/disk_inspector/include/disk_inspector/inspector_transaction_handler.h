@@ -11,7 +11,7 @@
 #include <memory>
 
 #include <block-client/cpp/block-device.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/legacy_transaction_handler.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
 #include <storage/operation/operation.h>
@@ -32,7 +32,6 @@ class InspectorTransactionHandler : public fs::LegacyTransactionHandler, public 
 
   // fs::TransactionHandler interface:
   uint64_t BlockNumberToDevice(uint64_t block_num) const final;
-  zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
   block_client::BlockDevice* GetDevice() final { return device_.get(); }
 
   // storage::VmoidRegistry interface:

@@ -5,7 +5,7 @@
 #include "inspector/loader.h"
 
 #include <fs/journal/format.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/transaction_handler.h>
 #include <minfs/format.h>
 #include <storage/buffer/array_buffer.h>
 #include <zxtest/zxtest.h>
@@ -22,6 +22,10 @@ class MockTransactionHandler : public fs::TransactionHandler {
   MockTransactionHandler& operator=(MockTransactionHandler&&) = default;
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
+
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>&) final {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   zx_status_t RunOperation(const storage::Operation& operation,
                            storage::BlockBuffer* buffer) final {
@@ -40,8 +44,6 @@ class MockTransactionHandler : public fs::TransactionHandler {
     }
     return ZX_OK;
   }
-
-  block_client::BlockDevice* GetDevice() final { return nullptr; }
 
   void ValidateOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) {
     ASSERT_NOT_NULL(mock_device_);

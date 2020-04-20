@@ -44,13 +44,6 @@ class MockTransactionHandler final : public fs::TransactionHandler {
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
-  zx_status_t RunOperation(const storage::Operation& operation,
-                           storage::BlockBuffer* buffer) final {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  block_client::BlockDevice* GetDevice() final { return nullptr; }
-
   zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& requests) override {
     EXPECT_LT(transactions_seen_, transactions_expected_);
     return callbacks_[transactions_seen_++](requests);

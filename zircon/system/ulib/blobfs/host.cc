@@ -28,7 +28,6 @@
 #include <fs-host/common.h>
 #include <fs/journal/initializer.h>
 #include <fs/trace.h>
-#include <fs/transaction/block_transaction.h>
 #include <safemath/checked_math.h>
 
 #include "compression/compressor.h"

@@ -12,7 +12,6 @@
 #include <fbl/ref_ptr.h>
 #include <fs/journal/initializer.h>
 #include <fs/trace.h>
-#include <fs/transaction/block_transaction.h>
 #include <fvm/client.h>
 #include <storage/buffer/owned_vmoid.h>
 

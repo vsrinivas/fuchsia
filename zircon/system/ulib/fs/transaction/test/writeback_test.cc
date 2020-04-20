@@ -37,11 +37,6 @@ class MockTransactionHandler : public LegacyTransactionHandler {
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
-  zx_status_t RunOperation(const storage::Operation& operation,
-                           storage::BlockBuffer* buffer) final {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   block_client::BlockDevice* GetDevice() final { return nullptr; }
 
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override {

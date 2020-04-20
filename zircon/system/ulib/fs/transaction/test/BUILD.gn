@@ -36,8 +36,8 @@ test("fs-transaction") {
   ]
   if (is_fuchsia) {
     sources = [
-      "block_transaction_test.cc",
       "buffered_operations_builder_test.cc",
+      "device_transaction_handler_test.cc",
       "writeback_test.cc",
     ]
     deps += [ "//zircon/public/lib/fake-device" ]

@@ -35,7 +35,6 @@
 #include <fbl/vector.h>
 #include <fs/journal/journal.h>
 #include <fs/trace.h>
-#include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <storage/operation/unbuffered_operations_builder.h>
@@ -100,8 +99,6 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   uint64_t BlockNumberToDevice(uint64_t block_num) const final {
     return block_num * kBlobfsBlockSize / block_info_.block_size;
   }
-
-  zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
 
   block_client::BlockDevice* GetDevice() final { return block_device_.get(); }
 

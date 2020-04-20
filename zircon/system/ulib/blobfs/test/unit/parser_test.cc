@@ -6,7 +6,6 @@
 
 #include <blobfs/format.h>
 #include <storage/buffer/array_buffer.h>
-#include <fs/transaction/block_transaction.h>
 #include <zxtest/zxtest.h>
 
 namespace blobfs {

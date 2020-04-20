@@ -31,7 +31,6 @@
 #include <fs/locking.h>
 #include <fs/ticker.h>
 #include <fs/trace.h>
-#include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <minfs/format.h>

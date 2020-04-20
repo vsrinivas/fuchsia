@@ -18,7 +18,7 @@
 #include <fs/journal/format.h>
 #include <fs/journal/internal/journal_writer.h>
 #include <fs/journal/superblock.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/transaction_handler.h>
 #include <storage/buffer/blocking_ring_buffer.h>
 #include <storage/buffer/ring_buffer.h>
 #include <storage/operation/unbuffered_operation.h>

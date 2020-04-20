@@ -14,7 +14,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 #include <fs/trace.h>
-#include <fs/transaction/block_transaction.h>
 #include <fs/vnode.h>
 #include <minfs/format.h>
 #include <minfs/minfs.h>

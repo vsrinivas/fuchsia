@@ -4,7 +4,6 @@
 
 #include "inspector/parser.h"
 
-#include <fs/transaction/block_transaction.h>
 #include <minfs/format.h>
 #include <storage/buffer/array_buffer.h>
 #include <zxtest/zxtest.h>

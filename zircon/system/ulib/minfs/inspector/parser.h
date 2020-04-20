@@ -5,7 +5,6 @@
 #ifndef ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_PARSER_H_
 #define ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_PARSER_H_
 
-#include <fs/transaction/block_transaction.h>
 #include <minfs/format.h>
 #include <storage/buffer/block_buffer.h>
 

@@ -8,7 +8,7 @@
 #include <zircon/types.h>
 
 #include <fs/journal/superblock.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/transaction_handler.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/operation/operation.h>
 

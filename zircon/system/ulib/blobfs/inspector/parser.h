@@ -6,7 +6,6 @@
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_INSPECTOR_PARSER_H_
 
 #include <blobfs/format.h>
-#include <fs/transaction/block_transaction.h>
 #include <storage/buffer/block_buffer.h>
 
 namespace blobfs {

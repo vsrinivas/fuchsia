@@ -21,7 +21,6 @@
 #include <disk_inspector/inspector_transaction_handler.h>
 #include <disk_inspector/vmo_buffer_factory.h>
 #include <fbl/unique_fd.h>
-#include <fs/transaction/block_transaction.h>
 #include <minfs/command_handler.h>
 #include <minfs/minfs_inspector.h>
 

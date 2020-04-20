@@ -18,12 +18,12 @@
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <fs/trace.h>
-#include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <minfs/format.h>
 
 #ifdef __Fuchsia__
+#include <fs/transaction/device_transaction_handler.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/zx/vmo.h>
@@ -35,6 +35,7 @@
 #include <storage/buffer/vmoid_registry.h>
 #else
 #include <fbl/vector.h>
+#include <fs/transaction/transaction_handler.h>
 #endif
 
 namespace minfs {
@@ -44,7 +45,7 @@ namespace minfs {
 // A helper function for converting "fd" to "BlockDevice".
 zx_status_t FdToBlockDevice(fbl::unique_fd& fd, std::unique_ptr<block_client::BlockDevice>* out);
 
-class Bcache : public fs::TransactionHandler, public storage::VmoidRegistry {
+class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistry {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
   friend class BlockNode;
@@ -60,8 +61,6 @@ class Bcache : public fs::TransactionHandler, public storage::VmoidRegistry {
   uint64_t BlockNumberToDevice(uint64_t block_num) const final {
     return block_num * kMinfsBlockSize / info_.block_size;
   }
-
-  zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
 
   block_client::BlockDevice* GetDevice() final { return device_.get(); }
 
@@ -122,7 +121,7 @@ class Bcache : public fs::TransactionHandler {
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
 
-  zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) final;
 
   // Raw block read functions.
   // These do not track blocks (or attempt to access the block cache)

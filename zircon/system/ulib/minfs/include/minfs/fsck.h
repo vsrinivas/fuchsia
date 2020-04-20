@@ -52,7 +52,7 @@ zx_status_t LoadSuperblock(Bcache* bc, Superblock* out);
 
 // Repair corrupted superblock from backup.
 #ifdef __Fuchsia__
-zx_status_t RepairSuperblock(fs::TransactionHandler* transaction_handler,
+zx_status_t RepairSuperblock(fs::DeviceTransactionHandler* transaction_handler,
                              block_client::BlockDevice* device, uint32_t max_blocks,
                              Superblock* info_out);
 #endif

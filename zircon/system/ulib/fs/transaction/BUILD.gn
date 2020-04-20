@@ -9,8 +9,8 @@ zx_library("transaction") {
 
   sdk = "source"
   sdk_headers = [
-    "fs/transaction/block_transaction.h",
     "fs/transaction/buffered_operations_builder.h",
+    "fs/transaction/transaction_handler.h",
     "fs/transaction/writeback.h",
   ]
 
@@ -22,8 +22,10 @@ zx_library("transaction") {
 
   if (is_fuchsia) {
     sources = [
-      "block_transaction.cc",
       "buffered_operations_builder.cc",
+      "device_transaction_handler.cc",
+      "legacy_transaction_handler.cc",
+      "transaction_handler.cc",
       "writeback.cc",
     ]
 
@@ -41,9 +43,8 @@ zx_library("transaction") {
     ]
   } else {
     sources = [
-      "block_transaction.cc",
-      "block_transaction_host.cc",
       "buffered_operations_builder.cc",
+      "transaction_handler.cc",
     ]
 
     deps = [

@@ -21,7 +21,6 @@
 #include <fbl/auto_call.h>
 #include <fs/journal/initializer.h>
 #include <fs/trace.h>
-#include <fs/transaction/block_transaction.h>
 #include <minfs/minfs.h>
 #include <safemath/checked_math.h>
 #ifdef __Fuchsia__

@@ -38,28 +38,6 @@ uint64_t InspectorTransactionHandler::BlockNumberToDevice(uint64_t block_num) co
   return block_num * FsBlockSize() / DeviceBlockSize();
 }
 
-zx_status_t InspectorTransactionHandler::RunOperation(const storage::Operation& operation,
-                                                      storage::BlockBuffer* buffer) {
-  if (operation.type != storage::OperationType::kWrite &&
-      operation.type != storage::OperationType::kRead) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  block_fifo_request_t request;
-  request.vmoid = buffer->vmoid();
-  request.opcode = operation.type == storage::OperationType::kWrite ? BLOCKIO_WRITE : BLOCKIO_READ;
-  request.vmo_offset = BlockNumberToDevice(operation.vmo_offset);
-  request.dev_offset = BlockNumberToDevice(operation.dev_offset);
-  uint64_t length = BlockNumberToDevice(operation.length);
-  if (length > UINT32_MAX) {
-    FS_TRACE_ERROR("Operation length larger than uint32_max.");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  request.length = safemath::checked_cast<uint32_t>(length);
-
-  return device_->FifoTransaction(&request, 1);
-}
-
 zx_status_t InspectorTransactionHandler::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
   zx_status_t status = device_->BlockAttachVmo(vmo, out);
   return status;

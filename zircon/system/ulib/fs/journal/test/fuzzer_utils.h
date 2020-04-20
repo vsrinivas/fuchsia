@@ -15,7 +15,7 @@
 
 #include <fs/journal/format.h>
 #include <fs/journal/superblock.h>
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/transaction_handler.h>
 #include <fuzzer/FuzzedDataProvider.h>
 #include <storage/buffer/blocking_ring_buffer.h>
 #include <storage/buffer/vmo_buffer.h>
@@ -76,8 +76,6 @@ class FuzzedTransactionHandler final : public fs::TransactionHandler {
 
   // TransactionHandler interface
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
-  block_client::BlockDevice* GetDevice() final { return nullptr; }
-  zx_status_t RunOperation(const storage::Operation& operation, storage::BlockBuffer* buffer) final;
   zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& requests) final;
 
   uint32_t block_size() const { return block_size_; }

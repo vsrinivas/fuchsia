@@ -5,7 +5,7 @@
 #ifndef DISK_INSPECTOR_LOADER_H_
 #define DISK_INSPECTOR_LOADER_H_
 
-#include <fs/transaction/block_transaction.h>
+#include <fs/transaction/transaction_handler.h>
 #include <storage/buffer/block_buffer.h>
 
 namespace disk_inspector {

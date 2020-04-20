@@ -24,7 +24,7 @@ constexpr size_t data_block = 7;
 constexpr size_t integrity_block = 8;
 
 // Mock TransactionHandler class to be used in superblock tests.
-class MockTransactionHandler : public fs::TransactionHandler {
+class MockTransactionHandler : public fs::DeviceTransactionHandler {
  public:
   MockTransactionHandler(block_client::BlockDevice* device) { device_ = device; }
 
@@ -35,14 +35,6 @@ class MockTransactionHandler : public fs::TransactionHandler {
 
   // fs::TransactionHandler Interface.
   uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
-
-  zx_status_t RunOperation(const storage::Operation& operation,
-                           storage::BlockBuffer* buffer) final {
-    return RunRequests({storage::BufferedOperation{
-          .vmoid = buffer->vmoid(),
-          .op = operation
-        }});
-  }
 
   block_client::BlockDevice* GetDevice() final { return device_; }
 
