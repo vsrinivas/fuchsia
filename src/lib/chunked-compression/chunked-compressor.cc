@@ -18,31 +18,31 @@ ChunkedCompressor::ChunkedCompressor(CompressionParams params) : inner_(params) 
 
 ChunkedCompressor::~ChunkedCompressor() {}
 
-Status ChunkedCompressor::CompressBytes(const void* data, size_t data_len,
-                                        fbl::Array<uint8_t>* compressed_data_out,
+Status ChunkedCompressor::CompressBytes(const void* input, size_t input_len,
+                                        fbl::Array<uint8_t>* output,
                                         size_t* bytes_written_out) {
   CompressionParams params;
   ChunkedCompressor compressor(params);
-  size_t out_len = params.ComputeOutputSizeLimit(data_len);
-  fbl::Array<uint8_t> buf(new uint8_t[out_len], out_len);
-  Status status = compressor.Compress(data, data_len, buf.get(), out_len, bytes_written_out);
+  size_t output_len = params.ComputeOutputSizeLimit(input_len);
+  fbl::Array<uint8_t> buf(new uint8_t[output_len], output_len);
+  Status status = compressor.Compress(input, input_len, buf.get(), output_len, bytes_written_out);
   if (status == kStatusOk) {
-    *compressed_data_out = std::move(buf);
+    *output = std::move(buf);
   }
   return status;
 }
 
-Status ChunkedCompressor::Compress(const void* data, size_t data_len, void* dst, size_t dst_len,
-                                   size_t* bytes_written_out) {
-  if (data_len == 0) {
+Status ChunkedCompressor::Compress(const void* input, size_t input_len, void* output,
+                                   size_t output_len, size_t* bytes_written_out) {
+  if (input_len == 0) {
     *bytes_written_out = 0ul;
     return kStatusOk;
   }
-  Status status = inner_.Init(data_len, dst, dst_len);
+  Status status = inner_.Init(input_len, output, output_len);
   if (status != kStatusOk) {
     return status;
   }
-  status = inner_.Update(data, data_len);
+  status = inner_.Update(input, input_len);
   if (status != kStatusOk) {
     return status;
   }

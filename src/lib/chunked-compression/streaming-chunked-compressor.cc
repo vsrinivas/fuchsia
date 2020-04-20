@@ -68,10 +68,10 @@ void StreamingChunkedCompressor::MoveFrom(StreamingChunkedCompressor&& o) {
   context_ = std::move(o.context_);
 }
 
-Status StreamingChunkedCompressor::Init(size_t data_len, void* dst, size_t dst_len) {
-  size_t num_frames = HeaderWriter::NumFramesForDataSize(data_len, params_.chunk_size);
+Status StreamingChunkedCompressor::Init(size_t stream_len, void* output, size_t output_len) {
+  size_t num_frames = HeaderWriter::NumFramesForDataSize(stream_len, params_.chunk_size);
   size_t metadata_size = HeaderWriter::MetadataSizeForNumFrames(num_frames);
-  if (metadata_size > dst_len) {
+  if (metadata_size > output_len) {
     return kStatusErrBufferTooSmall;
   }
 
@@ -88,11 +88,11 @@ Status StreamingChunkedCompressor::Init(size_t data_len, void* dst, size_t dst_l
     }
   }
 
-  compressed_output_ = static_cast<uint8_t*>(dst);
-  compressed_output_len_ = dst_len;
+  compressed_output_ = static_cast<uint8_t*>(output);
+  compressed_output_len_ = output_len;
   compressed_output_offset_ = metadata_size;
 
-  input_len_ = data_len;
+  input_len_ = stream_len;
   input_offset_ = 0ul;
 
   Status status = StartFrame();
@@ -100,12 +100,12 @@ Status StreamingChunkedCompressor::Init(size_t data_len, void* dst, size_t dst_l
     return status;
   }
 
-  header_writer_ = std::make_unique<HeaderWriter>(dst, metadata_size, num_frames);
+  header_writer_ = std::make_unique<HeaderWriter>(output, metadata_size, num_frames);
 
   return kStatusOk;
 }
 
-Status StreamingChunkedCompressor::Update(const void* data, size_t len) {
+Status StreamingChunkedCompressor::Update(const void* input, size_t len) {
   if (compressed_output_ == nullptr) {
     return kStatusErrBadState;
   } else if (len > input_len_ - input_offset_) {
@@ -114,7 +114,7 @@ Status StreamingChunkedCompressor::Update(const void* data, size_t len) {
   }
 
   size_t consumed = 0;
-  // Consume data up to one input frame at a time.
+  // Consume input up to one input frame at a time.
   while (consumed < len) {
     const size_t bytes_left = len - consumed;
 
@@ -124,7 +124,7 @@ Status StreamingChunkedCompressor::Update(const void* data, size_t len) {
 
     const size_t bytes_to_consume = fbl::min(bytes_left, bytes_left_in_current_frame);
 
-    Status status = AppendToFrame(static_cast<const uint8_t*>(data) + consumed, bytes_to_consume);
+    Status status = AppendToFrame(static_cast<const uint8_t*>(input) + consumed, bytes_to_consume);
     if (status != kStatusOk) {
       return status;
     }

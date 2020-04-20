@@ -34,30 +34,30 @@ ChunkedDecompressor::ChunkedDecompressor()
     : context_(std::make_unique<DecompressionContext>(ZSTD_createDCtx())) {}
 ChunkedDecompressor::~ChunkedDecompressor() {}
 
-Status ChunkedDecompressor::DecompressBytes(const void* data, size_t len,
-                                            fbl::Array<uint8_t>* data_out,
+Status ChunkedDecompressor::DecompressBytes(const void* input, size_t len,
+                                            fbl::Array<uint8_t>* output,
                                             size_t* bytes_written_out) {
   Status status;
   SeekTable table;
   HeaderReader reader;
-  if ((status = reader.Parse(data, len, len, &table)) != kStatusOk) {
+  if ((status = reader.Parse(input, len, len, &table)) != kStatusOk) {
     FXL_LOG(ERROR) << "Failed to parse table";
     return status;
   }
   ChunkedDecompressor decompressor;
   size_t out_len = table.DecompressedSize();
   fbl::Array<uint8_t> buf(new uint8_t[out_len], out_len);
-  status = decompressor.Decompress(table, data, len, buf.get(), buf.size(), bytes_written_out);
+  status = decompressor.Decompress(table, input, len, buf.get(), buf.size(), bytes_written_out);
   if (status == kStatusOk) {
-    *data_out = std::move(buf);
+    *output = std::move(buf);
   }
   return status;
 }
 
-Status ChunkedDecompressor::Decompress(const SeekTable& table, const void* data, size_t len,
-                                       void* dst, size_t dst_len, size_t* bytes_written_out) {
+Status ChunkedDecompressor::Decompress(const SeekTable& table, const void* input, size_t len,
+                                       void* output, size_t output_len, size_t* bytes_written_out) {
   Status status;
-  if (dst_len < table.DecompressedSize() || len < table.CompressedSize()) {
+  if (output_len < table.DecompressedSize() || len < table.CompressedSize()) {
     return kStatusErrBufferTooSmall;
   }
 
@@ -65,9 +65,9 @@ Status ChunkedDecompressor::Decompress(const SeekTable& table, const void* data,
   for (unsigned i = 0; i < table.Entries().size(); ++i) {
     const SeekTableEntry& entry = table.Entries()[i];
     ZX_DEBUG_ASSERT(entry.compressed_offset + entry.compressed_size <= len);
-    ZX_DEBUG_ASSERT(entry.decompressed_offset + entry.decompressed_size <= dst_len);
-    auto frame_src = (static_cast<const uint8_t*>(data) + entry.compressed_offset);
-    auto frame_dst = (static_cast<uint8_t*>(dst) + entry.decompressed_offset);
+    ZX_DEBUG_ASSERT(entry.decompressed_offset + entry.decompressed_size <= output_len);
+    auto frame_src = (static_cast<const uint8_t*>(input) + entry.compressed_offset);
+    auto frame_dst = (static_cast<uint8_t*>(output) + entry.decompressed_offset);
     size_t frame_decompressed_size;
     if ((status = DecompressFrame(table, i, frame_src, entry.compressed_size, frame_dst,
                                   entry.decompressed_size, &frame_decompressed_size)) !=
@@ -84,14 +84,14 @@ Status ChunkedDecompressor::Decompress(const SeekTable& table, const void* data,
   return kStatusOk;
 }
 
-Status ChunkedDecompressor::DecompressFrame(const SeekTable& table, unsigned frame_num,
+Status ChunkedDecompressor::DecompressFrame(const SeekTable& table, unsigned table_index,
                                             const void* compressed_buffer,
                                             size_t compressed_buffer_len, void* dst, size_t dst_len,
                                             size_t* bytes_written_out) {
-  if (frame_num >= table.Entries().size()) {
+  if (table_index >= table.Entries().size()) {
     return kStatusErrInvalidArgs;
   }
-  const SeekTableEntry& entry = table.Entries()[frame_num];
+  const SeekTableEntry& entry = table.Entries()[table_index];
   if (compressed_buffer_len < entry.compressed_size || dst_len < entry.decompressed_size) {
     return kStatusErrBufferTooSmall;
   }

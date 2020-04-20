@@ -51,20 +51,21 @@ class StreamingChunkedCompressor {
   // Returns the minimum size that a buffer must be to hold the result of compressing |len| bytes.
   size_t ComputeOutputSizeLimit(size_t len) { return params_.ComputeOutputSizeLimit(len); }
 
-  // Initializes the compressor to prepare to recieve |data_len| bytes of input data.
+  // Initializes the compressor to prepare to recieve |stream_len| bytes of input data.
   //
-  // The compressed data will be written to |dst|. |dst_len| must be at least
-  // |ComputeOutputSizeLimit(len)| bytes.
+  // The compressed data will be written to |output|. |output_len| must be at least
+  // |ComputeOutputSizeLimit(stream_len)| bytes.
   //
   // If |Init| is invoked while compression is ongoing, the context of the previous compression is
   // reset and the previous output buffer is left in an undefined state.
-  Status Init(size_t data_len, void* dst, size_t dst_len);
+  Status Init(size_t stream_len, void* output, size_t output_len);
 
-  // Processes exactly |len| bytes of input data, read from |data|.
+  // Processes exactly |input_len| bytes of input data, read from |input|.
   //
-  // If |len| bytes would take the streaming compressor past the end of the expected data length
-  // (i.e. the |data_len| parameter to the previous call to |Init|), then an error is returned.
-  Status Update(const void* data, size_t len);
+  // If |input_len| bytes would take the streaming compressor past the end of the expected data
+  // length (i.e. the |stream_len| parameter to the previous call to |Init|), then an error is
+  // returned.
+  Status Update(const void* input, size_t input_len);
 
   // Finalizes the compressed archive, returning its size in |compressed_size_out|.
   //

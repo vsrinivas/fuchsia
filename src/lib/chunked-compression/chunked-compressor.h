@@ -16,6 +16,20 @@
 
 namespace chunked_compression {
 
+// ChunkedCompressor creates compressed archives by compressing an input buffer.
+//
+// Usage (error checks omitted):
+//
+//   const void* input = Input();
+//   size_t input_len = InputDataSize();
+//
+//   ChunkedCompressor compressor;
+//   size_t output_limit = compressor.ComputeOutputSizeLimit(input_len);
+//
+//   fbl::Array<uint8_t> output(new uint8_t[output_limit], output_limit);
+//
+//   size_t bytes_written;
+//   compressor.Compress(input, input_len, output.get(), output.size(), &bytes_written);
 class ChunkedCompressor {
  public:
   ChunkedCompressor();
@@ -25,18 +39,18 @@ class ChunkedCompressor {
   ChunkedCompressor& operator=(ChunkedCompressor&& o) = default;
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ChunkedCompressor);
 
-  // Convenience method to do a one-shot compression of |data|, returning an allocated
+  // Convenience method to do a one-shot compression of |input|, returning an allocated
   // buffer containing the compressed bytes.
-  static Status CompressBytes(const void* data, size_t data_len,
-                              fbl::Array<uint8_t>* compressed_data_out, size_t* bytes_written_out);
+  static Status CompressBytes(const void* input, size_t input_len, fbl::Array<uint8_t>* output,
+                              size_t* bytes_written_out);
 
   // Returns the minimum size that a buffer must be to hold the result of compressing |len| bytes.
   size_t ComputeOutputSizeLimit(size_t len) { return inner_.ComputeOutputSizeLimit(len); }
 
-  // Reads from |data| and writes the compressed representation to |dst|.
-  // |dst_len| must be at least |ComputeOutputSizeLimit(data_len)| bytes long.
+  // Reads from |input| and writes the compressed representation to |output|.
+  // |output_len| must be at least |ComputeOutputSizeLimit(input_len)| bytes long.
   // Returns the number of compressed bytes written in |bytes_written_out|.
-  Status Compress(const void* data, size_t data_len, void* dst, size_t dst_len,
+  Status Compress(const void* input, size_t input_len, void* output, size_t output_len,
                   size_t* bytes_written_out);
 
   // Registers |callback| to be invoked after each frame is complete.
