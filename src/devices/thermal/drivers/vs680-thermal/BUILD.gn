@@ -47,6 +47,7 @@ test("vs680-thermal-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.clock:ddk.protocol.clock_mock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
@@ -61,6 +62,7 @@ test("vs680-thermal-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.power",
+    "//zircon/system/banjo/ddk.protocol.power:ddk.protocol.power_mock",
     "//zircon/system/dev/lib/as370",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/fake_ddk",
