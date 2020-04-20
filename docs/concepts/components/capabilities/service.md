@@ -90,10 +90,10 @@ another, see [`//examples/components/routing`][routing-example].
 ## Service paths {#service-paths}
 
 When a service capability is `use`d by a component, its path refers to the
-path in the component's [namespace][namespace].
+path in the component's [namespace][glossary-namespace].
 
 When a service capability is `offer`ed or `expose`d from itself, its path
-refers to the path in the component's [outgoing directory][outgoing].
+refers to the path in the component's [outgoing directory][glossary-outgoing].
 
 The path also hints to clients which FIDL service the server expects clients to
 use, but this is entirely a convention. Service capability paths can be renamed

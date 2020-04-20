@@ -24,6 +24,7 @@ As mentioned in the overview, the Magma architecture involves two driver compone
 ![Block diagram of Magma architecture](block_diagram.png)
 
 Magma defines two interfaces to gpu-specific code:
+
 * The **magma** interface provides the foundation for the client driver, typically libvulkan
 * The **msd** (magma system driver) interface dictates the entry points for an implementation of a magma service driver
 
