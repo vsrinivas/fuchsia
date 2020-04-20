@@ -269,7 +269,7 @@ TEST(KernelCmdlineTest, Short) {
   EXPECT_EQ(c->GetUInt32("a", 0), 1);
 }
 
-TEST(KernelCmdlineTest, MaximumExpansion) {
+TEST(KernelCmdlineTest, AlmostMaximumExpansion) {
   auto c = std::make_unique<Cmdline>();
 
   static_assert(Cmdline::kCmdlineMax == 4096, "1365 below needs to be updated");
@@ -282,6 +282,40 @@ TEST(KernelCmdlineTest, MaximumExpansion) {
 
   // One more should panic though.
   ASSERT_DEATH(([&c]() { c->Append("a "); }));
+}
+
+TEST(KernelCmdlineTest, MaximumExpansion) {
+  auto c = std::make_unique<Cmdline>();
+
+  static_assert(Cmdline::kCmdlineMax == 4096, "1364 below needs to be updated");
+
+  // AlmostMaximumExpansion was the first attempt at finding the correct maximal
+  // input, but, as a fuzzer found, there's a larger case. See fxbug.dev/47006
+  // for repro.
+  //
+  // Consider if the limit were 10 (rather than 4096), then an analogous
+  // 'longest' input would be "a a a " which would expand to "a=0a=0a=00" (using
+  // 0 instead of \0 for readability), so 6->10 (including terminator).
+  //
+  // But, because the end of the string also counts as the end of a variable,
+  // these 6 characters as input instead "a a aa" result in "a=0a=0aa=00" for an
+  // expansion of 6->11. (This is sort of like getting a bonus 7th character in
+  // the input due to null termination, rather than needing to have the trailing
+  // space to end the variable.)
+  //
+  // Attempting to use this "trick" twice results in fewer \0 being inserted, so
+  // doesn't further lengthen the string.
+  //
+  // (The specifics aren't particularly important as the kernel is already going
+  // to panic if the limit is exceeded, but it's necessary to get the edges
+  // right for this test and the fuzzer test.)
+
+  for (size_t i = 0; i < 1364; ++i) {
+    c->Append("a ");
+  }
+
+  // One more should panic though.
+  ASSERT_DEATH(([&c]() { c->Append("aa"); }));
 }
 
 }  // namespace

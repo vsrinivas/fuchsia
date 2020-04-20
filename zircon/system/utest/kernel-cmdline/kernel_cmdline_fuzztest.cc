@@ -16,18 +16,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // maximum changes.
   static_assert(Cmdline::kCmdlineMax == 4096, "need to update early out below");
   // Limit the input size, because Cmdline will intentionally panic if its limit
-  // exceeded. The maximum expansion happens in the case of an input string
-  // like: [a a a ...], which turns into [a=\0a=\0a=\0...], that is, an
-  // expansion by a third. Additionally, there's an extra trailing terminator
-  // that must fit into the buffer.
-  //
-  // Two-thirds of 4096 is 1365 1/3, so, the maximum possible number of "a " is
-  // 1365*2 = 2730. Each "a " turns into "a=\0", for a total of 1365*3=4095
-  // long. So, there's already one extra space available for the extra
-  // terminator due to rounding, so there's no need to subtract one more.
-  //
-  // See KernelCmdLineTest.MaximumExpansion for a unittest of this logic.
-  constexpr size_t kMaxInputSize = 2730;
+  // exceeded. See KernelCmdlineTest.AlmostMaximumExpansion and
+  // KernelCmdlineTest.MaximumExpansion for explanation of the limit.
+  constexpr size_t kMaxInputSize = 2729;
   if (input.size() > kMaxInputSize) {
     return 0;
   }
