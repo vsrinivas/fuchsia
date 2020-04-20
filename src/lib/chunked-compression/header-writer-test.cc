@@ -17,7 +17,8 @@ namespace chunked_compression {
 TEST(HeaderWriter, ZeroState) {
   size_t sz = kChunkArchiveMinHeaderSize;
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
-  HeaderWriter writer(buf.get(), buf.size(), 0);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 0, &writer), kStatusOk);
 
   ASSERT_EQ(writer.Finalize(), kStatusOk);
 
@@ -33,7 +34,8 @@ TEST(HeaderWriter, ZeroState) {
 TEST(HeaderWriter, OneEntry) {
   size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
-  HeaderWriter writer(buf.get(), buf.size(), 1);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 1, &writer), kStatusOk);
 
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
@@ -62,7 +64,8 @@ TEST(HeaderWriter, OneEntry) {
 TEST(HeaderWriter, TwoEntries) {
   size_t sz = kChunkArchiveMinHeaderSize + 2 * sizeof(SeekTableEntry);
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
-  HeaderWriter writer(buf.get(), buf.size(), 2);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 2, &writer), kStatusOk);
 
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
@@ -106,7 +109,8 @@ TEST(HeaderWriter, TwoEntries) {
 TEST(HeaderWriter, FinalizeCalledEarly) {
   size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
-  HeaderWriter writer(buf.get(), buf.size(), 1);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 1, &writer), kStatusOk);
 
   ASSERT_EQ(writer.Finalize(), kStatusErrBadState);
 }
@@ -114,7 +118,8 @@ TEST(HeaderWriter, FinalizeCalledEarly) {
 TEST(HeaderWriter, TooManyEntriesWritten) {
   size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
-  HeaderWriter writer(buf.get(), buf.size(), 1);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 1, &writer), kStatusOk);
 
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
@@ -137,7 +142,8 @@ TEST(HeaderWriter, TooManyEntriesWritten) {
 TEST(HeaderWriter, Write_Invalid_I0_DecompressedDataStartsAbove0) {
   size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
-  HeaderWriter writer(buf.get(), buf.size(), 1);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 1, &writer), kStatusOk);
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 1ul,
                 .decompressed_size = 255ul,
@@ -150,7 +156,8 @@ TEST(HeaderWriter, Write_Invalid_I0_DecompressedDataStartsAbove0) {
 TEST(HeaderWriter, Write_Invalid_I1_CompressedDataOverlapsHeader) {
   size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
-  HeaderWriter writer(buf.get(), buf.size(), 1);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 1, &writer), kStatusOk);
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 256ul,
@@ -163,7 +170,8 @@ TEST(HeaderWriter, Write_Invalid_I1_CompressedDataOverlapsHeader) {
 TEST(HeaderWriter, Write_Invalid_I2_NonContigDecompressedFrames) {
   size_t sz = kChunkArchiveMinHeaderSize + 2 * sizeof(SeekTableEntry);
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
-  HeaderWriter writer(buf.get(), buf.size(), 2);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 2, &writer), kStatusOk);
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 256ul,
@@ -184,7 +192,8 @@ TEST(HeaderWriter, Write_Invalid_I2_NonContigDecompressedFrames) {
 TEST(HeaderWriter, Write_Invalid_I3_NonMonotonicCompressedFrames) {
   size_t sz = kChunkArchiveMinHeaderSize + 2 * sizeof(SeekTableEntry);
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
-  HeaderWriter writer(buf.get(), buf.size(), 2);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 2, &writer), kStatusOk);
   ASSERT_EQ(writer.AddEntry({
                 .decompressed_offset = 0ul,
                 .decompressed_size = 256ul,
@@ -204,7 +213,8 @@ TEST(HeaderWriter, Write_Invalid_I3_NonMonotonicCompressedFrames) {
 TEST(HeaderWriter, Write_Invalid_I4_ZeroLengthFrames) {
   size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
-  HeaderWriter writer(buf.get(), buf.size(), 1);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 1, &writer), kStatusOk);
 
   // Decompressed frame
   ASSERT_EQ(writer.AddEntry({

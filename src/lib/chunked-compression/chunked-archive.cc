@@ -79,7 +79,7 @@ Status HeaderReader::Parse(const void* void_data, size_t len, size_t file_length
   } else if (file_length < len) {
     return kStatusErrInvalidArgs;
   }
-  const uint8_t* data = static_cast<const uint8_t *>(void_data);
+  const uint8_t* data = static_cast<const uint8_t*>(void_data);
   Status status;
   if ((status = CheckMagic(data, len)) != kStatusOk) {
     return status;
@@ -89,6 +89,9 @@ Status HeaderReader::Parse(const void* void_data, size_t len, size_t file_length
   ChunkCountType num_chunks;
   if ((status = GetNumChunks(data, len, &num_chunks)) != kStatusOk) {
     return status;
+  } else if (num_chunks > kChunkArchiveMaxFrames) {
+    // It's possible that the num_chunks field was corrupted. Treat this as an integrity error.
+    return kStatusErrIoDataIntegrity;
   }
   size_t expected_header_length =
       kChunkArchiveSeekTableOffset + (num_chunks * sizeof(SeekTableEntry));
@@ -261,9 +264,20 @@ uint32_t HeaderReader::ComputeChecksum(const uint8_t* header, size_t header_leng
 
 // HeaderWriter
 
+Status HeaderWriter::Create(void* dst, size_t dst_len, size_t num_frames, HeaderWriter* out) {
+  if (num_frames >= kChunkArchiveMaxFrames) {
+    return kStatusErrInvalidArgs;
+  } else if (dst_len < MetadataSizeForNumFrames(num_frames)) {
+    return kStatusErrBufferTooSmall;
+  }
+  *out = HeaderWriter(dst, dst_len, num_frames);
+  return kStatusOk;
+}
+
 HeaderWriter::HeaderWriter(void* dst, size_t dst_len, size_t num_frames)
     : dst_(static_cast<uint8_t*>(dst)) {
-  ZX_ASSERT(num_frames < kChunkArchiveMaxFrames);
+  ZX_DEBUG_ASSERT(num_frames < kChunkArchiveMaxFrames);
+
   num_frames_ = static_cast<ChunkCountType>(num_frames);
   entries_ = reinterpret_cast<SeekTableEntry*>(dst_ + kChunkArchiveSeekTableOffset);
 

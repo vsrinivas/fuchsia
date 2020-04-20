@@ -66,6 +66,8 @@
 // compressed space. This is to support adding alignment/padding to output files to improve storage
 // access efficiency.
 //
+// A seek table can hold at most 1023 entries (which results in a 32KiB header).
+//
 // ### Seek Table Invariants
 //
 // I0: The first seek table entry must have decompressed offset 0.
@@ -101,8 +103,6 @@ constexpr uint8_t kChunkArchiveMagic[kArchiveMagicLength] = {
 };
 constexpr ArchiveVersionType kVersion = 2u;
 
-constexpr ChunkCountType kChunkArchiveMaxFrames = UINT32_MAX;
-
 constexpr size_t kChunkArchiveMagicOffset = 0ul;
 constexpr size_t kChunkArchiveVersionOffset = 8ul;
 constexpr size_t kChunkArchiveReserved1Offset = 10ul;
@@ -111,7 +111,25 @@ constexpr size_t kChunkArchiveHeaderCrc32Offset = 16ul;
 constexpr size_t kChunkArchiveReserved2Offset = 20ul;
 constexpr size_t kChunkArchiveSeekTableOffset = 32ul;
 
+// A single entry into the seek table. Describes where an extent of decompressed
+// data lives in the compressed space.
+struct SeekTableEntry {
+  uint64_t decompressed_offset;
+  uint64_t decompressed_size;
+  uint64_t compressed_offset;
+  uint64_t compressed_size;
+};
+static_assert(sizeof(SeekTableEntry) == 32ul, "Breaking change to archive format");
+
+constexpr ChunkCountType kChunkArchiveMaxFrames = 1023;
+
 constexpr size_t kChunkArchiveMinHeaderSize = kChunkArchiveSeekTableOffset;
+constexpr size_t kChunkArchiveMaxHeaderSize =
+    kChunkArchiveSeekTableOffset + (kChunkArchiveMaxFrames * sizeof(SeekTableEntry));
+
+// This assert just documents the relationship between the maximum number of frames and the actual
+// maximum header size (32KiB).
+static_assert(kChunkArchiveMaxHeaderSize == (32 * 1024), "");
 
 static_assert(kChunkArchiveMagicOffset == 0ul, "Breaking change to archive format");
 static_assert(kChunkArchiveVersionOffset == kChunkArchiveMagicOffset + kArchiveMagicLength,
@@ -129,16 +147,6 @@ static_assert(kChunkArchiveReserved2Offset == kChunkArchiveHeaderCrc32Offset + s
 static_assert(kChunkArchiveSeekTableOffset ==
                   kChunkArchiveReserved2Offset + sizeof(uint32_t) + sizeof(uint64_t),
               "Breaking change to archive format");
-
-// A single entry into the seek table. Describes where an extent of decompressed
-// data lives in the compressed space.
-struct SeekTableEntry {
-  uint64_t decompressed_offset;
-  uint64_t decompressed_size;
-  uint64_t compressed_offset;
-  uint64_t compressed_size;
-};
-static_assert(sizeof(SeekTableEntry) == 32ul, "Breaking change to archive format");
 
 // A parsed view of a chunked archive's seek table.
 // Constructed by parsing a buffer containing a raw archive (see |HeaderReader::Parse()|).
@@ -218,17 +226,21 @@ class HeaderReader {
 // HeaderWriter writes chunked archive headers to a target buffer.
 class HeaderWriter {
  public:
-  HeaderWriter(void* dst, size_t dst_len, size_t num_frames);
-  HeaderWriter() = delete;
-  ~HeaderWriter() = default;
-  DISALLOW_COPY_ASSIGN_AND_MOVE(HeaderWriter);
+  HeaderWriter() = default;
+  HeaderWriter(HeaderWriter&& o) = default;
+  HeaderWriter& operator=(HeaderWriter&& o) = default;
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(HeaderWriter);
+
+  // Initializes |out| to write a header to |dst| (which is a buffer of |dst_len| bytes).
+  // Exactly |num_frames| will be written.
+  static Status Create(void* dst, size_t dst_len, size_t num_frames, HeaderWriter* out);
 
   // Computes the number of frames which will be used to compress a |size|-byte input.
   static size_t NumFramesForDataSize(size_t size, size_t chunk_size) {
     return fbl::round_up(size, chunk_size) / chunk_size;
   }
 
-  // Computes the size of the metadata header necessary for an archive with |num_frames|.
+  // Computes the size of the header for an archive with |num_frames|.
   static size_t MetadataSizeForNumFrames(size_t num_frames) {
     return kChunkArchiveSeekTableOffset + (num_frames * sizeof(SeekTableEntry));
   }
@@ -251,9 +263,11 @@ class HeaderWriter {
   Status Finalize();
 
  private:
-  uint8_t* const dst_;
+  HeaderWriter(void* dst, size_t dst_len, size_t num_frames);
+
+  uint8_t* dst_ = nullptr;
   size_t dst_length_;
-  SeekTableEntry* entries_;
+  SeekTableEntry* entries_ = nullptr;
   unsigned current_frame_ = 0;
   ChunkCountType num_frames_;
 };

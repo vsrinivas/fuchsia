@@ -142,6 +142,17 @@ TEST(HeaderReader, Parse_CorruptSeekTableEntry) {
   ASSERT_EQ(reader.Parse(buf.get(), buf.size(), buf.size(), &header), kStatusErrIoDataIntegrity);
 }
 
+TEST(HeaderReader, Parse_TooManyFrames) {
+  HeaderReader reader;
+  fbl::Array<uint8_t> buf = CreateHeader();
+  reinterpret_cast<ChunkCountType*>(buf.get() + kChunkArchiveNumChunksOffset)[0] = 1024;
+
+  // This can't be distinguished from a corrupt header, so the library treats this as an integrity
+  // error.
+  SeekTable header;
+  ASSERT_EQ(reader.Parse(buf.get(), buf.size(), buf.size(), &header), kStatusErrIoDataIntegrity);
+}
+
 // Parse_Invalid_I* tests verify the invariants documented in the header during parsing.
 
 TEST(HeaderReader, Parse_Invalid_I0_DecompressedDataStartsAbove0) {

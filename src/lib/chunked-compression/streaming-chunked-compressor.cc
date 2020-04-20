@@ -97,10 +97,15 @@ Status StreamingChunkedCompressor::Init(size_t stream_len, void* output, size_t 
 
   Status status = StartFrame();
   if (status != kStatusOk) {
+    compressed_output_ = nullptr;
     return status;
   }
 
-  header_writer_ = std::make_unique<HeaderWriter>(output, metadata_size, num_frames);
+  status = HeaderWriter::Create(output, metadata_size, num_frames, &header_writer_);
+  if (status != kStatusOk) {
+    compressed_output_ = nullptr;
+    return status;
+  }
 
   return kStatusOk;
 }
@@ -145,7 +150,7 @@ Status StreamingChunkedCompressor::Final(size_t* compressed_size_out) {
   // There should not be any pending output frames.
   ZX_DEBUG_ASSERT(context_->current_output_frame_relative_pos_ == 0ul);
 
-  Status status = header_writer_->Finalize();
+  Status status = header_writer_.Finalize();
   if (status == kStatusOk) {
     *compressed_size_out = compressed_output_offset_;
   }
@@ -181,7 +186,7 @@ Status StreamingChunkedCompressor::EndFrame(size_t uncompressed_frame_start,
   entry.decompressed_size = uncompressed_frame_len;
   entry.compressed_offset = context_->current_output_frame_start_;
   entry.compressed_size = compressed_output_offset_ - context_->current_output_frame_start_;
-  Status status = header_writer_->AddEntry(entry);
+  Status status = header_writer_.AddEntry(entry);
   if (status != kStatusOk) {
     return status;
   }

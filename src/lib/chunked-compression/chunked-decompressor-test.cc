@@ -29,7 +29,8 @@ void RandomFill(uint8_t* data, size_t len) {
 TEST(ChunkedDecompressorTest, Decompress_EmptyArchive) {
   srand(zxtest::Runner::GetInstance()->random_seed());
   fbl::Array<uint8_t> buf(new uint8_t[kChunkArchiveMinHeaderSize], kChunkArchiveMinHeaderSize);
-  HeaderWriter writer(buf.get(), buf.size(), 0);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), 0, &writer), kStatusOk);
   ASSERT_EQ(writer.Finalize(), kStatusOk);
 
   fbl::Array<uint8_t> out_buf;

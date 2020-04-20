@@ -101,7 +101,7 @@ class StreamingChunkedCompressor {
   size_t input_len_;
   size_t input_offset_;
 
-  std::unique_ptr<HeaderWriter> header_writer_;
+  HeaderWriter header_writer_;
 
   std::optional<ProgressFn> progress_callback_;
 
