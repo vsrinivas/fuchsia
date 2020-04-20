@@ -4,8 +4,7 @@
 
 use {
     anyhow::Error,
-    fidl_fidl_examples_routing_echo as fecho, 
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     test_utils_lib::events::{Event, EventMatcher, EventSource, Resolved},
@@ -26,9 +25,7 @@ async fn main() -> Result<(), Error> {
     let mut child_ref = fsys::ChildRef { name: "child_a".to_string(), collection: None };
 
     let (_, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-    let _ = realm
-        .bind_child(&mut child_ref, server_end)
-        .await;
+    let _ = realm.bind_child(&mut child_ref, server_end).await;
 
     let event = event_stream.expect_exact::<Resolved>(EventMatcher::new()).await?;
 

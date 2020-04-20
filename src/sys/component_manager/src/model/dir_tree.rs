@@ -10,7 +10,7 @@ use {
             error::ModelError,
             moniker::AbsoluteMoniker,
             realm::WeakRealm,
-            routing_facade::RoutingFacade,
+            routing_fns::route_capability_source,
         },
     },
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
@@ -25,12 +25,11 @@ type Directory = Arc<pfs::Simple>;
 pub(super) struct CapabilityUsageTree {
     directory_nodes: HashMap<String, CapabilityUsageTree>,
     dir: Box<Directory>,
-    routing_facade: RoutingFacade,
 }
 
 impl CapabilityUsageTree {
-    pub fn new(dir: Directory, routing_facade: RoutingFacade) -> Self {
-        Self { directory_nodes: HashMap::new(), dir: Box::new(dir), routing_facade }
+    pub fn new(dir: Directory) -> Self {
+        Self { directory_nodes: HashMap::new(), dir: Box::new(dir) }
     }
 
     pub async fn mark_capability_used(
@@ -50,8 +49,7 @@ impl CapabilityUsageTree {
         // TODO(44746): This is probably not correct. The capability source lacks crucial
         // information about the capability routing, such as rights to apply on a directory.  Could
         // possibly use `route_use_fn_factory` instead.
-        let routing_factory = tree.routing_facade.route_capability_source_fn_factory();
-        let routing_fn = routing_factory(target_realm.clone(), source);
+        let routing_fn = route_capability_source(target_realm.clone(), source);
 
         let node = DirectoryBroker::new(routing_fn);
 
@@ -76,8 +74,7 @@ impl CapabilityUsageTree {
                 // If the next component does not exist in the tree, create it.
                 if !tree.directory_nodes.contains_key(component) {
                     let dir_node = pfs::simple();
-                    let routing_facade = tree.routing_facade.clone();
-                    let child_tree = CapabilityUsageTree::new(dir_node.clone(), routing_facade);
+                    let child_tree = CapabilityUsageTree::new(dir_node.clone());
                     tree.dir.add_node(component, dir_node, abs_moniker)?;
                     tree.directory_nodes.insert(component.to_string(), child_tree);
                 }

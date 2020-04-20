@@ -20,7 +20,7 @@ pub(crate) mod events;
 pub(crate) mod resolver;
 pub(crate) mod rights;
 pub(crate) mod routing;
-pub(crate) mod routing_facade;
+pub(crate) mod routing_fns;
 pub(crate) mod runner;
 
 mod addable_directory;

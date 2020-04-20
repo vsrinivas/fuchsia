@@ -10,7 +10,6 @@ use {
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
         realm::{ExecutionState, Realm, Runtime, WeakRealm},
-        routing_facade::RoutingFacade,
     },
     cm_rust::data,
     fidl::endpoints::{self, Proxy, ServerEnd},
@@ -55,14 +54,12 @@ pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
 
     // Invoke the BeforeStart hook.
     {
-        let routing_facade = RoutingFacade::new();
         let event = Event::new_with_timestamp(
             realm.abs_moniker.clone(),
             Ok(EventPayload::Started {
                 component_url: realm.component_url.clone(),
                 runtime: RuntimeInfo::from_runtime(&pending_runtime),
                 component_decl: component.decl.clone(),
-                routing_facade,
             }),
             pending_runtime.timestamp,
         );

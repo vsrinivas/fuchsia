@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        dir_tree::DirTree, error::ModelError, realm::WeakRealm, routing_facade::RoutingFacade,
+        dir_tree::DirTree, error::ModelError, realm::WeakRealm, routing_fns::route_expose_fn,
     },
     cm_rust::ComponentDecl,
     fidl::endpoints::ServerEnd,
@@ -34,8 +34,7 @@ impl ExposedDir {
         decl: ComponentDecl,
     ) -> Result<Self, ModelError> {
         let mut dir = pfs::simple();
-        let route_fn = RoutingFacade::new().route_expose_fn_factory();
-        let tree = DirTree::build_from_exposes(route_fn, realm.clone(), decl);
+        let tree = DirTree::build_from_exposes(route_expose_fn, realm.clone(), decl);
         tree.install(&realm.moniker, &mut dir)?;
         Ok(ExposedDir { root_dir: dir, execution_scope: scope })
     }

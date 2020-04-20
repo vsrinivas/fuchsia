@@ -15,7 +15,7 @@ use {
             model::Model,
             moniker::AbsoluteMoniker,
             realm::Realm,
-            routing_facade::RoutingFacade,
+            routing_fns::{route_expose_fn, route_use_fn},
         },
         path::PathBufExt,
     },
@@ -265,14 +265,9 @@ impl Hub {
         execution_directory: Directory,
         component_decl: ComponentDecl,
         package_dir: Option<DirectoryProxy>,
-        routing_facade: &RoutingFacade,
         target_realm: &Arc<Realm>,
     ) -> Result<(), ModelError> {
-        let tree = DirTree::build_from_uses(
-            routing_facade.route_use_fn_factory(),
-            target_realm.as_weak(),
-            component_decl,
-        );
+        let tree = DirTree::build_from_uses(route_use_fn, target_realm.as_weak(), component_decl);
         let mut in_dir = pfs::simple();
         tree.install(&target_realm.abs_moniker, &mut in_dir)?;
         if let Some(pkg_dir) = package_dir {
@@ -289,15 +284,11 @@ impl Hub {
     fn add_expose_directory(
         execution_directory: Directory,
         component_decl: ComponentDecl,
-        routing_facade: &RoutingFacade,
         target_realm: &Arc<Realm>,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_expose_directory");
-        let tree = DirTree::build_from_exposes(
-            routing_facade.route_expose_fn_factory(),
-            target_realm.as_weak(),
-            component_decl,
-        );
+        let tree =
+            DirTree::build_from_exposes(route_expose_fn, target_realm.as_weak(), component_decl);
         let mut expose_dir = pfs::simple();
         tree.install(&target_realm.abs_moniker, &mut expose_dir)?;
         execution_directory.add_node("expose", expose_dir, &target_realm.abs_moniker)?;
@@ -342,7 +333,6 @@ impl Hub {
         component_url: String,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
-        routing_facade: RoutingFacade,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_start_instance_async");
 
@@ -369,8 +359,7 @@ impl Hub {
 
             let used = pfs::simple();
 
-            let capability_usage_tree =
-                CapabilityUsageTree::new(used.clone(), routing_facade.clone());
+            let capability_usage_tree = CapabilityUsageTree::new(used.clone());
             let exec = Execution {
                 resolved_url: runtime.resolved_url.clone(),
                 directory: execution_directory.clone(),
@@ -388,14 +377,12 @@ impl Hub {
                 execution_directory.clone(),
                 component_decl.clone(),
                 Self::clone_dir(runtime.package_dir.as_ref()),
-                &routing_facade,
                 &target_realm,
             )?;
 
             Self::add_expose_directory(
                 execution_directory.clone(),
                 component_decl.clone(),
-                &routing_facade,
                 &target_realm,
             )?;
 
@@ -602,18 +589,12 @@ impl Hook for Hub {
             Ok(EventPayload::MarkedForDestruction) => {
                 self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
-            Ok(EventPayload::Started {
-                component_url,
-                runtime,
-                component_decl,
-                routing_facade,
-            }) => {
+            Ok(EventPayload::Started { component_url, runtime, component_decl }) => {
                 self.on_started_async(
                     &event.target_moniker,
                     component_url.clone(),
                     &runtime,
                     &component_decl,
-                    routing_facade.clone(),
                 )
                 .await?;
             }

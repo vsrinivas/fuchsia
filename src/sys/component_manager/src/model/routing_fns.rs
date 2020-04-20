@@ -19,34 +19,7 @@ use {
     std::path::PathBuf,
 };
 
-/// A facade over `Model` that provides factories for routing functions.
-#[derive(Clone)]
-pub struct RoutingFacade;
-
-impl RoutingFacade {
-    pub fn new() -> Self {
-        RoutingFacade {}
-    }
-
-    /// Returns a factory for functions that route a `use` declaration to its source.
-    pub fn route_use_fn_factory(&self) -> impl Fn(WeakRealm, UseDecl) -> RoutingFn {
-        move |realm: WeakRealm, use_: UseDecl| route_use_fn(realm, use_)
-    }
-
-    /// Returns a factory for functions that route an `expose` declaration to its source.
-    pub fn route_expose_fn_factory(&self) -> impl Fn(WeakRealm, ExposeDecl) -> RoutingFn {
-        move |realm: WeakRealm, expose: ExposeDecl| route_expose_fn(realm, expose)
-    }
-
-    /// Returns a factory for functions that route a component to a capability source.
-    pub fn route_capability_source_fn_factory(
-        &self,
-    ) -> impl Fn(WeakRealm, CapabilitySource) -> RoutingFn {
-        move |realm: WeakRealm, source: CapabilitySource| route_capability_source(realm, source)
-    }
-}
-
-fn route_use_fn(realm: WeakRealm, use_: UseDecl) -> RoutingFn {
+pub fn route_use_fn(realm: WeakRealm, use_: UseDecl) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let realm = realm.clone();
@@ -84,7 +57,7 @@ fn route_use_fn(realm: WeakRealm, use_: UseDecl) -> RoutingFn {
     )
 }
 
-fn route_capability_source(realm: WeakRealm, source: CapabilitySource) -> RoutingFn {
+pub fn route_capability_source(realm: WeakRealm, source: CapabilitySource) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let realm = realm.clone();
@@ -119,7 +92,7 @@ fn route_capability_source(realm: WeakRealm, source: CapabilitySource) -> Routin
     )
 }
 
-fn route_expose_fn(realm: WeakRealm, expose: ExposeDecl) -> RoutingFn {
+pub fn route_expose_fn(realm: WeakRealm, expose: ExposeDecl) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let realm = realm.clone();
