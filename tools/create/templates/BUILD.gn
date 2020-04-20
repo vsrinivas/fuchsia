@@ -12,6 +12,10 @@ if (host_toolchain == current_toolchain) {
     sources = [
       "_copyright.tmpl",
       "_generated.tmpl",
+      "component-v1/BUILD.gn.tmpl-rust",
+      "component-v1/meta/{{PROJECT_NAME}}.cmx.tmpl",
+      "component-v1/meta/{{PROJECT_NAME}}_test.cmx.tmpl",
+      "component-v1/src/main.rs.tmpl-rust",
       "component-v2/BUILD.gn.tmpl-cpp",
       "component-v2/BUILD.gn.tmpl-rust",
       "component-v2/main.cc.tmpl-cpp",

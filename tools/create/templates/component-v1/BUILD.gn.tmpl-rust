@@ -1,0 +1,73 @@
+{{>copyright comment="#"}}
+
+{{>generated comment="#"}}
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("{{PROJECT_NAME}}") {
+  testonly = true
+  public_deps = [
+    ":pkg",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":{{PROJECT_NAME}}-tests" ]
+}
+
+rustc_binary("bin") {
+  name = "{{PROJECT_NAME}}"
+
+  # Generates a GN target for unit-tests with the label `bin_test`, and
+  # a binary named `{{snake_case PROJECT_NAME}}_bin_test`.
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+package("pkg") {
+  package_name = "{{PROJECT_NAME}}"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "{{snake_case PROJECT_NAME}}"
+      dest = "{{PROJECT_NAME}}"
+    },
+  ]
+
+  meta = [
+    # Include the package's CMX manifest.
+    # The resulting component manifest can be referenced through the URL
+    # fuchsia-pkg://fuchsia.com/{{PROJECT_NAME}}#meta/{{PROJECT_NAME}}.cmx.
+    {
+      path = rebase_path("meta/{{PROJECT_NAME}}.cmx")
+      dest = "{{PROJECT_NAME}}.cmx"
+    },
+  ]
+}
+
+# Run with `fx test {{PROJECT_NAME}}-tests`.
+test_package("{{PROJECT_NAME}}-tests") {
+  deps = [ ":bin_test" ]
+
+  tests = [
+    {
+      name = "{{snake_case PROJECT_NAME}}_bin_test"
+      dest = "{{PROJECT_NAME}}_test"
+      environments = basic_envs
+    },
+  ]
+}

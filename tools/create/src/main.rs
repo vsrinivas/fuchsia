@@ -94,6 +94,7 @@ struct CreateArgs {
     ///
     /// This can be one of:
     ///
+    /// - component-v1: A V1 component launched with appmgr,
     /// - component-v2: A V2 component launched with Component Manager,
     project_type: String,
 
