@@ -5,14 +5,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
-	"syscall/zx/fidl"
 	"time"
 
-	"app/context"
-
+	appcontext "app/context"
 	"netstack/fidlconv"
 
 	"fidl/fuchsia/net"
@@ -20,12 +19,12 @@ import (
 )
 
 type testApp struct {
-	ctx      *context.Context
+	ctx      *appcontext.Context
 	netstack *netstack.NetstackWithCtxInterface
 }
 
 func main() {
-	a := &testApp{ctx: context.CreateFromStartupInfo()}
+	a := &testApp{ctx: appcontext.CreateFromStartupInfo()}
 
 	var listen bool
 	flag.BoolVar(&listen, "listen", false, "Listen for notifications and print interfaces every time they change")
@@ -52,7 +51,7 @@ func usage() {
 func (a *testApp) listen() {
 	fmt.Printf("Listening for changes...\n")
 	for {
-		interfaces, err := a.netstack.ExpectOnInterfacesChanged(fidl.Background())
+		interfaces, err := a.netstack.ExpectOnInterfacesChanged(context.Background())
 		if err != nil {
 			fmt.Println("OnInterfacesChanged failed:", err)
 		}

@@ -5,11 +5,12 @@
 package main
 
 import (
+	"context"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"app/context"
+	appcontext "app/context"
 	"syscall/zx/fidl"
 
 	"fidl/fuchsia/power"
@@ -29,7 +30,7 @@ func (pmw *WatcherMock) OnChangeBatteryInfo(_ fidl.Context, bi power.BatteryInfo
 }
 
 func TestPowerManager(t *testing.T) {
-	ctx := context.CreateFromStartupInfo()
+	ctx := appcontext.CreateFromStartupInfo()
 	req, iface, err := power.NewBatteryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
@@ -37,7 +38,7 @@ func TestPowerManager(t *testing.T) {
 	pmClient := &ClientMock{}
 	pmClient.pm = iface
 	ctx.ConnectToEnvService(req)
-	_, err = pmClient.pm.GetBatteryInfo(fidl.Background())
+	_, err = pmClient.pm.GetBatteryInfo(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +46,7 @@ func TestPowerManager(t *testing.T) {
 }
 
 func TestBatteryInfoWatcher(t *testing.T) {
-	ctx := context.CreateFromStartupInfo()
+	ctx := appcontext.CreateFromStartupInfo()
 	r, p, err := power.NewBatteryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
@@ -65,7 +66,7 @@ func TestBatteryInfoWatcher(t *testing.T) {
 	bi.Add(&s, rw.Channel, nil)
 	go fidl.Serve()
 
-	err = pmClient.pm.Watch(fidl.Background(), *pw)
+	err = pmClient.pm.Watch(context.Background(), *pw)
 	if err != nil {
 		t.Fatal(err)
 	}

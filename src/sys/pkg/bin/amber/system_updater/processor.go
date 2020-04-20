@@ -7,6 +7,7 @@ package system_updater
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,10 +18,9 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
-	"syscall/zx/fidl"
 	zxio "syscall/zx/io"
 
-	"app/context"
+	appcontext "app/context"
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/mem"
 	"fidl/fuchsia/paver"
@@ -32,7 +32,7 @@ import (
 // that looks for all matches within the update package.
 const ImageTypeSuffix = "[_type]"
 
-func ConnectToPackageResolver(context *context.Context) (*pkg.PackageResolverWithCtxInterface, error) {
+func ConnectToPackageResolver(ctx *appcontext.Context) (*pkg.PackageResolverWithCtxInterface, error) {
 	req, pxy, err := pkg.NewPackageResolverWithCtxInterfaceRequest()
 
 	if err != nil {
@@ -40,11 +40,11 @@ func ConnectToPackageResolver(context *context.Context) (*pkg.PackageResolverWit
 		return nil, err
 	}
 
-	context.ConnectToEnvService(req)
+	ctx.ConnectToEnvService(req)
 	return pxy, nil
 }
 
-func ConnectToPaver(context *context.Context) (*paver.DataSinkWithCtxInterface, *paver.BootManagerWithCtxInterface, error) {
+func ConnectToPaver(ctx *appcontext.Context) (*paver.DataSinkWithCtxInterface, *paver.BootManagerWithCtxInterface, error) {
 	req, pxy, err := paver.NewPaverWithCtxInterfaceRequest()
 
 	if err != nil {
@@ -53,7 +53,7 @@ func ConnectToPaver(context *context.Context) (*paver.DataSinkWithCtxInterface, 
 	}
 	defer pxy.Close()
 
-	context.ConnectToEnvService(req)
+	ctx.ConnectToEnvService(req)
 
 	dataSinkReq, dataSinkPxy, err := paver.NewDataSinkWithCtxInterfaceRequest()
 	if err != nil {
@@ -61,7 +61,7 @@ func ConnectToPaver(context *context.Context) (*paver.DataSinkWithCtxInterface, 
 		return nil, nil, err
 	}
 
-	err = pxy.FindDataSink(fidl.Background(), dataSinkReq)
+	err = pxy.FindDataSink(context.Background(), dataSinkReq)
 	if err != nil {
 		syslog.Errorf("could not find data sink: %s", err)
 		return nil, nil, err
@@ -73,7 +73,7 @@ func ConnectToPaver(context *context.Context) (*paver.DataSinkWithCtxInterface, 
 		return nil, nil, err
 	}
 
-	err = pxy.FindBootManager(fidl.Background(), bootManagerReq)
+	err = pxy.FindBootManager(context.Background(), bootManagerReq)
 	if err != nil {
 		syslog.Errorf("could not find boot manager: %s", err)
 		return nil, nil, err
@@ -376,7 +376,7 @@ func FetchPackages(pkgs []string, resolver *pkg.PackageResolverWithCtxInterface)
 func fetchPackage(pkgURI string, resolver *pkg.PackageResolverWithCtxInterface) error {
 	dirPxy, err := resolvePackage(pkgURI, resolver)
 	if dirPxy != nil {
-		dirPxy.Close(fidl.Background())
+		dirPxy.Close(context.Background())
 	}
 	return err
 }
@@ -391,15 +391,15 @@ func resolvePackage(pkgURI string, resolver *pkg.PackageResolverWithCtxInterface
 
 	syslog.Infof("requesting %s from update system", pkgURI)
 
-	status, err := resolver.Resolve(fidl.Background(), pkgURI, selectors, updatePolicy, dirReq)
+	status, err := resolver.Resolve(context.Background(), pkgURI, selectors, updatePolicy, dirReq)
 	if err != nil {
-		dirPxy.Close(fidl.Background())
+		dirPxy.Close(context.Background())
 		return nil, fmt.Errorf("fetch: Resolve error: %s", err)
 	}
 
 	statusErr := zx.Status(status)
 	if statusErr != zx.ErrOk {
-		dirPxy.Close(fidl.Background())
+		dirPxy.Close(context.Background())
 		return nil, fmt.Errorf("fetch: Resolve status: %s", statusErr)
 	}
 
@@ -491,7 +491,7 @@ func WriteImgs(dataSink *paver.DataSinkWithCtxInterface, bootManager *paver.Boot
 // from. If the device does not support ABR, it returns nil as the
 // configuration.
 func queryActiveConfig(bootManager *paver.BootManagerWithCtxInterface) (*paver.Configuration, error) {
-	activeConfig, err := bootManager.QueryActiveConfiguration(fidl.Background())
+	activeConfig, err := bootManager.QueryActiveConfiguration(context.Background())
 	if err != nil {
 		// FIXME(fxb/43577): If the paver service runs into a problem
 		// creating a boot manager, it will close the channel with an
@@ -546,7 +546,7 @@ func calculateTargetConfig(activeConfig paver.Configuration) (*paver.Configurati
 
 func setConfigurationActive(bootManager *paver.BootManagerWithCtxInterface, targetConfig paver.Configuration) error {
 	syslog.Infof("img_writer: setting configuration %s active", targetConfig)
-	status, err := bootManager.SetConfigurationActive(fidl.Background(), targetConfig)
+	status, err := bootManager.SetConfigurationActive(context.Background(), targetConfig)
 	if err != nil {
 		return err
 	}
@@ -560,7 +560,7 @@ func setConfigurationActive(bootManager *paver.BootManagerWithCtxInterface, targ
 
 func setConfigurationUnbootable(bootManager *paver.BootManagerWithCtxInterface, targetConfig paver.Configuration) error {
 	syslog.Infof("img_writer: setting configuration %s unbootable", targetConfig)
-	status, err := bootManager.SetConfigurationUnbootable(fidl.Background(), targetConfig)
+	status, err := bootManager.SetConfigurationUnbootable(context.Background(), targetConfig)
 	if err != nil {
 		return err
 	}
@@ -575,7 +575,7 @@ func setConfigurationUnbootable(bootManager *paver.BootManagerWithCtxInterface, 
 func writeAsset(svc *paver.DataSinkWithCtxInterface, configuration paver.Configuration, asset paver.Asset, payload *mem.Buffer) error {
 	syslog.Infof("img_writer: writing asset %q to %q", asset, configuration)
 
-	status, err := svc.WriteAsset(fidl.Background(), configuration, asset, *payload)
+	status, err := svc.WriteAsset(context.Background(), configuration, asset, *payload)
 	if err != nil {
 		syslog.Errorf("img_writer: failed to write asset %q: %s", asset, err)
 		return err
@@ -687,7 +687,7 @@ func writeImg(svc *paver.DataSinkWithCtxInterface, img Image, updatePkg *UpdateP
 		fallthrough
 	case "firmware":
 		writeImg = func() error {
-			result, err := svc.WriteFirmware(fidl.Background(), img.Type, *buffer)
+			result, err := svc.WriteFirmware(context.Background(), img.Type, *buffer)
 			if err != nil {
 				return err
 			}

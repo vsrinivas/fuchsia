@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/dispatch"
-	"syscall/zx/fidl"
 	"time"
 
 	"syslog"
@@ -189,7 +188,7 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInte
 					},
 				)
 			}
-			cobaltLogger.LogCobaltEvents(fidl.Background(), events)
+			cobaltLogger.LogCobaltEvents(context.Background(), events)
 			lastCreated = created
 			lastDestroyed = destroyed
 			lastTcpConnectionsClosed = tcpConnectionsClosed
@@ -733,7 +732,7 @@ func (ns *Netstack) getdnsServers() []tcpip.Address {
 var nameProviderErrorLogged uint32 = 0
 
 func (ns *Netstack) getDeviceName() string {
-	result, err := ns.nameProvider.GetDeviceName(fidl.Background())
+	result, err := ns.nameProvider.GetDeviceName(context.Background())
 	if err != nil {
 		if atomic.CompareAndSwapUint32(&nameProviderErrorLogged, 0, 1) {
 			syslog.Warnf("getDeviceName: error accessing device name provider: %s", err)

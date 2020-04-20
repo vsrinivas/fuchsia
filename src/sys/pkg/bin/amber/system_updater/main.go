@@ -5,6 +5,7 @@
 package system_updater
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"strconv"
@@ -13,7 +14,7 @@ import (
 	"syscall/zx/fidl"
 	"time"
 
-	"app/context"
+	appcontext "app/context"
 	devmgr "fidl/fuchsia/device/manager"
 	"fidl/fuchsia/space"
 	"syslog"
@@ -30,7 +31,7 @@ var (
 	reboot        bool
 )
 
-func run(ctx *context.Context) (err error) {
+func run(ctx *appcontext.Context) (err error) {
 	syslog.Infof("starting system update at %s", startTime)
 	syslog.Infof("initiator: %s", initiator)
 	if sourceVersion != "" {
@@ -56,7 +57,7 @@ func run(ctx *context.Context) (err error) {
 	var queryFreeSpace func() int64
 
 	if blobfs, err := OpenBlobfs(); err == nil {
-		defer blobfs.Close(fidl.Background())
+		defer blobfs.Close(context.Background())
 		queryFreeSpace = func() int64 {
 			n, err := blobfs.QueryFreeSpace()
 			if err != nil {
@@ -212,20 +213,20 @@ func SendReboot() {
 	var administrator = devmgr.AdministratorWithCtxInterface(
 		fidl.ChannelProxy{Channel: zx.Channel(channel_local)})
 	var status int32
-	status, err = administrator.Suspend(fidl.Background(), devmgr.SuspendFlagReboot)
+	status, err = administrator.Suspend(context.Background(), devmgr.SuspendFlagReboot)
 	if err != nil || status != 0 {
 		syslog.Errorf("error sending restart to Administrator: %s status: %d", err, status)
 	}
 }
 
-func GcPackages(ctx *context.Context) {
+func GcPackages(ctx *appcontext.Context) {
 	req, pxy, err := space.NewManagerWithCtxInterfaceRequest()
 	if err != nil {
 		syslog.Errorf("Error creating space Manager request: %s", err)
 		return
 	}
 	ctx.ConnectToEnvService(req)
-	res, err := pxy.Gc(fidl.Background())
+	res, err := pxy.Gc(context.Background())
 	if err != nil {
 		syslog.Errorf("Error collecting garbage: %s", err)
 	}
@@ -251,7 +252,7 @@ func (i InitiatorValue) Set(s string) error {
 }
 
 func Main() {
-	ctx := context.CreateFromStartupInfo()
+	ctx := appcontext.CreateFromStartupInfo()
 
 	{
 		if l, err := syslog.NewLoggerWithDefaults(ctx.Connector(), "system-updater"); err != nil {

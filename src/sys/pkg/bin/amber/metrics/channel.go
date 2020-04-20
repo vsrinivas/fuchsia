@@ -1,25 +1,26 @@
 package metrics
 
 import (
-	"app/context"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"os"
-	"syscall/zx/fidl"
 	"time"
 
-	cobalt "fidl/fuchsia/cobalt"
+	appcontext "app/context"
+
+	"fidl/fuchsia/cobalt"
 )
 
 type releaseChannelUpdater struct {
 	in             chan string
-	ctx            *context.Context
+	ctx            *appcontext.Context
 	currentChannel *string
 }
 
-func startReleaseChannelUpdater(ctx *context.Context) chan string {
+func startReleaseChannelUpdater(ctx *appcontext.Context) chan string {
 	cc := readCurrentChannel()
 	in := make(chan string)
 	u := releaseChannelUpdater{in: in, ctx: ctx, currentChannel: cc}
@@ -94,10 +95,10 @@ func (u *releaseChannelUpdater) sendSync(proxy *cobalt.SystemDataUpdaterWithCtxI
 	var err error
 	if u.currentChannel == nil {
 		log.Printf("calling cobalt.SetChannel(\"\")")
-		result, err = proxy.SetChannel(fidl.Background(), "")
+		result, err = proxy.SetChannel(context.Background(), "")
 	} else {
 		log.Printf("calling cobalt.SetChannel(%q)", *u.currentChannel)
-		result, err = proxy.SetChannel(fidl.Background(), *u.currentChannel)
+		result, err = proxy.SetChannel(context.Background(), *u.currentChannel)
 	}
 
 	if err != nil {

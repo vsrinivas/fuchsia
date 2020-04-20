@@ -7,6 +7,7 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sync"
@@ -229,7 +230,7 @@ func (d *directoryWrapper) Open(_ fidl.Context, inFlags, inMode uint32, path str
 		if inFlags&io.OpenFlagDescribe != 0 {
 			flags |= io.OpenFlagDescribe
 		}
-		return fwd.Open(fidl.Background(), flags, mode, fsRemote.Path, node)
+		return fwd.Open(context.Background(), flags, mode, fsRemote.Path, node)
 	}
 
 	// Handle the file and directory cases. They're mostly the same, except where noted.

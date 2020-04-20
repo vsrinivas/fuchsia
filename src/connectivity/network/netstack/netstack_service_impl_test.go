@@ -5,12 +5,12 @@
 package netstack
 
 import (
+	"context"
 	"net"
 	"netstack/fidlconv"
 	"sync"
 	"syscall/zx"
 	"syscall/zx/dispatch"
-	"syscall/zx/fidl"
 	"testing"
 
 	"fidl/fuchsia/hardware/ethernet"
@@ -64,14 +64,14 @@ func TestRouteTableTransactions(t *testing.T) {
 		}
 
 		var originalTable []netstack.RouteTableEntry2
-		originalTable, err = netstackServiceImpl.GetRouteTable2(fidl.Background())
+		originalTable, err = netstackServiceImpl.GetRouteTable2(context.Background())
 		AssertNoError(t, err)
 
 		req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 		AssertNoError(t, err)
 
 		defer transactionInterface.Close()
-		success, err := netstackServiceImpl.StartRouteTableTransaction(fidl.Background(), req)
+		success, err := netstackServiceImpl.StartRouteTableTransaction(context.Background(), req)
 		// We've given req away, it's important that we don't mess with it anymore!
 		AssertNoError(t, err)
 		if zx.Status(success) != zx.ErrOk {
@@ -93,14 +93,14 @@ func TestRouteTableTransactions(t *testing.T) {
 			Metric:      100,
 		}
 
-		success, err = transactionInterface.AddRoute(fidl.Background(), newRouteTableEntry2)
+		success, err = transactionInterface.AddRoute(context.Background(), newRouteTableEntry2)
 		AssertNoError(t, err)
 		if zx.Status(success) != zx.ErrOk {
 			t.Fatal("can't add new route entry")
 		}
 
 		// New table should contain the one route we just added.
-		actualTable2, err := netstackServiceImpl.GetRouteTable2(fidl.Background())
+		actualTable2, err := netstackServiceImpl.GetRouteTable2(context.Background())
 		AssertNoError(t, err)
 		if diff := cmp.Diff(actualTable2[0], newRouteTableEntry2, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Errorf("(-want +got)\n%s", diff)
@@ -114,27 +114,27 @@ func TestRouteTableTransactions(t *testing.T) {
 			Nicid:       newRouteTableEntry2.Nicid,
 			// no metric
 		}
-		actualTable, err := netstackServiceImpl.GetRouteTable(fidl.Background())
+		actualTable, err := netstackServiceImpl.GetRouteTable(context.Background())
 		AssertNoError(t, err)
 		if diff := cmp.Diff(actualTable[0], expectedRouteTableEntry, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Errorf("(-want +got)\n%s", diff)
 		}
 
-		success, err = transactionInterface.DelRoute(fidl.Background(), newRouteTableEntry2)
+		success, err = transactionInterface.DelRoute(context.Background(), newRouteTableEntry2)
 		AssertNoError(t, err)
 		if zx.Status(success) != zx.ErrOk {
 			t.Error("can't delete route entry")
 		}
 
 		// New table should be empty.
-		actualTable2, err = netstackServiceImpl.GetRouteTable2(fidl.Background())
+		actualTable2, err = netstackServiceImpl.GetRouteTable2(context.Background())
 		AssertNoError(t, err)
 		if len(actualTable2) != len(originalTable) {
 			t.Errorf("got %v, want <nothing>", actualTable2)
 		}
 
 		// Same for deprecated route table.
-		actualTable, err = netstackServiceImpl.GetRouteTable(fidl.Background())
+		actualTable, err = netstackServiceImpl.GetRouteTable(context.Background())
 		AssertNoError(t, err)
 		if len(actualTable) != len(originalTable) {
 			t.Errorf("got %v, want <nothing>", actualTable)
@@ -166,7 +166,7 @@ func TestRouteTableTransactions(t *testing.T) {
 			req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 			AssertNoError(t, err)
 			defer transactionInterface.Close()
-			success, err := netstackServiceImpl.StartRouteTableTransaction(fidl.Background(), req)
+			success, err := netstackServiceImpl.StartRouteTableTransaction(context.Background(), req)
 			AssertNoError(t, err)
 			if zx.Status(success) != zx.ErrOk {
 				t.Errorf("expected success before starting concurrent transactions")
@@ -175,7 +175,7 @@ func TestRouteTableTransactions(t *testing.T) {
 			req2, transactionInterface2, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 			AssertNoError(t, err)
 			defer transactionInterface2.Close()
-			success, err = netstackServiceImpl.StartRouteTableTransaction(fidl.Background(), req2)
+			success, err = netstackServiceImpl.StartRouteTableTransaction(context.Background(), req2)
 			AssertNoError(t, err)
 			if zx.Status(success) != zx.ErrShouldWait {
 				t.Errorf("expected failure when trying to start concurrent transactions")
@@ -187,7 +187,7 @@ func TestRouteTableTransactions(t *testing.T) {
 		req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 		AssertNoError(t, err)
 		defer transactionInterface.Close()
-		success, err := netstackServiceImpl.StartRouteTableTransaction(fidl.Background(), req)
+		success, err := netstackServiceImpl.StartRouteTableTransaction(context.Background(), req)
 		AssertNoError(t, err)
 		if zx.Status(success) != zx.ErrOk {
 			t.Errorf("expected success after ending the previous transaction")

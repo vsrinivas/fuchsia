@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"syscall/zx"
-	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 	"testing"
 	"time"
@@ -153,7 +152,7 @@ func TestSendingOnInterfacesChangedEvent(t *testing.T) {
 			if signals&zx.SignalChannelReadable == 0 {
 				t.Fatalf("got zxwait.Wait(_, zx.SignalChannelReadable|zx.SignalChannelPeerClosed, %s) = %b, want = %b", onInterfacesChangedEventTimeout, signals, zx.SignalChannelReadable)
 			}
-			interfaces, err := cli.ExpectOnInterfacesChanged(fidl.Background())
+			interfaces, err := cli.ExpectOnInterfacesChanged(context.Background())
 			if err != nil {
 				t.Fatalf("cli.ExpectOnInterfacesChanged(): %s", err)
 			}

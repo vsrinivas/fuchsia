@@ -5,6 +5,7 @@
 package context
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"syscall/zx"
@@ -113,7 +114,7 @@ func CreateFromStartupInfo() *Context {
 	}); directoryRequest.IsValid() {
 		if err := (&DirectoryWrapper{
 			Directory: mapDirectory(c.OutgoingService),
-		}).addConnection(fidl.Background(), 0, 0, io.NodeWithCtxInterfaceRequest{
+		}).addConnection(context.Background(), 0, 0, io.NodeWithCtxInterfaceRequest{
 			Channel: zx.Channel(directoryRequest),
 		}); err != nil {
 			panic(err)

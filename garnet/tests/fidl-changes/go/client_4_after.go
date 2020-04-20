@@ -5,7 +5,7 @@
 package main
 
 import (
-	"syscall/zx/fidl"
+	"context"
 
 	"fidl/fidl/test/after"
 )
@@ -18,8 +18,8 @@ type client_after struct {
 }
 
 func (c client_after) callAllMethodsExpectAllEvents() {
-	c.addMethod.ExistingMethod(fidl.Background())
-	c.removeMethod.ExistingMethod(fidl.Background())
-	c.addMethod.NewMethod(fidl.Background())
-	_ = c.addEvent.ExpectNewEvent(fidl.Background())
+	c.addMethod.ExistingMethod(context.Background())
+	c.removeMethod.ExistingMethod(context.Background())
+	c.addMethod.NewMethod(context.Background())
+	_ = c.addEvent.ExpectNewEvent(context.Background())
 }

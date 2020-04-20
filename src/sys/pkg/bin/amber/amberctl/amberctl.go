@@ -6,6 +6,7 @@ package amberctl
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -21,12 +22,11 @@ import (
 	"regexp"
 	"strings"
 	"syscall/zx"
-	"syscall/zx/fidl"
 	"time"
 	"unicode"
 
 	"amber/urlscope"
-	"app/context"
+	appcontext "app/context"
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/pkg/rewrite"
@@ -104,7 +104,7 @@ type Services struct {
 	updateManager *update.ManagerWithCtxInterface
 }
 
-func connectToPackageResolver(ctx *context.Context) *pkg.PackageResolverWithCtxInterface {
+func connectToPackageResolver(ctx *appcontext.Context) *pkg.PackageResolverWithCtxInterface {
 	req, pxy, err := pkg.NewPackageResolverWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
@@ -113,7 +113,7 @@ func connectToPackageResolver(ctx *context.Context) *pkg.PackageResolverWithCtxI
 	return pxy
 }
 
-func connectToRepositoryManager(ctx *context.Context) *pkg.RepositoryManagerWithCtxInterface {
+func connectToRepositoryManager(ctx *appcontext.Context) *pkg.RepositoryManagerWithCtxInterface {
 	req, pxy, err := pkg.NewRepositoryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
@@ -122,7 +122,7 @@ func connectToRepositoryManager(ctx *context.Context) *pkg.RepositoryManagerWith
 	return pxy
 }
 
-func connectToRewriteEngine(ctx *context.Context) *rewrite.EngineWithCtxInterface {
+func connectToRewriteEngine(ctx *appcontext.Context) *rewrite.EngineWithCtxInterface {
 	req, pxy, err := rewrite.NewEngineWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
@@ -131,7 +131,7 @@ func connectToRewriteEngine(ctx *context.Context) *rewrite.EngineWithCtxInterfac
 	return pxy
 }
 
-func connectToSpace(ctx *context.Context) *space.ManagerWithCtxInterface {
+func connectToSpace(ctx *appcontext.Context) *space.ManagerWithCtxInterface {
 	req, pxy, err := space.NewManagerWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
@@ -140,7 +140,7 @@ func connectToSpace(ctx *context.Context) *space.ManagerWithCtxInterface {
 	return pxy
 }
 
-func connectToUpdateManager(ctx *context.Context) *update.ManagerWithCtxInterface {
+func connectToUpdateManager(ctx *appcontext.Context) *update.ManagerWithCtxInterface {
 	req, pxy, err := update.NewManagerWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
@@ -242,11 +242,11 @@ func rewriteRuleForId(id string) rewrite.Rule {
 
 func replaceDynamicRewriteRules(rewriteEngine *rewrite.EngineWithCtxInterface, rule rewrite.Rule) error {
 	return doRewriteRuleEditTransaction(rewriteEngine, func(transaction *rewrite.EditTransactionWithCtxInterface) error {
-		if err := transaction.ResetAll(fidl.Background()); err != nil {
+		if err := transaction.ResetAll(context.Background()); err != nil {
 			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.ResetAll IPC encountered an error: %s", err)
 		}
 
-		s, err := transaction.Add(fidl.Background(), rule)
+		s, err := transaction.Add(context.Background(), rule)
 		if err != nil {
 			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.Add IPC encountered an error: %s", err)
 		}
@@ -261,7 +261,7 @@ func replaceDynamicRewriteRules(rewriteEngine *rewrite.EngineWithCtxInterface, r
 
 func removeAllDynamicRewriteRules(rewriteEngine *rewrite.EngineWithCtxInterface) error {
 	return doRewriteRuleEditTransaction(rewriteEngine, func(transaction *rewrite.EditTransactionWithCtxInterface) error {
-		if err := transaction.ResetAll(fidl.Background()); err != nil {
+		if err := transaction.ResetAll(context.Background()); err != nil {
 			return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.ResetAll IPC encountered an error: %s", err)
 		}
 
@@ -280,7 +280,7 @@ func doRewriteRuleEditTransaction(rewriteEngine *rewrite.EngineWithCtxInterface,
 				return fmt.Errorf("creating edit transaction: %s", err), status
 			}
 			defer transaction.Close()
-			if err := rewriteEngine.StartEditTransaction(fidl.Background(), req); err != nil {
+			if err := rewriteEngine.StartEditTransaction(context.Background(), req); err != nil {
 				return fmt.Errorf("fuchsia.pkg.rewrite.Engine IPC encountered an error: %s", err), status
 			}
 
@@ -288,7 +288,7 @@ func doRewriteRuleEditTransaction(rewriteEngine *rewrite.EngineWithCtxInterface,
 				return err, status
 			}
 
-			s, err := transaction.Commit(fidl.Background())
+			s, err := transaction.Commit(context.Background())
 			if err != nil {
 				return fmt.Errorf("fuchsia.pkg.rewrite.EditTransaction.Commit IPC encountered an error: %s", err), status
 			}
@@ -409,7 +409,7 @@ func addSource(services Services, repoOnly bool) error {
 
 	repoCfg := upgradeSourceConfig(cfg)
 	logIfVerbose("making fuchsia.pkg.RepositoryManager.Add FIDL request")
-	s, err := services.repoMgr.Add(fidl.Background(), repoCfg)
+	s, err := services.repoMgr.Add(context.Background(), repoCfg)
 	if err != nil {
 		return fmt.Errorf("fuchsia.pkg.RepositoryManager IPC encountered an error: %s", err)
 	}
@@ -448,7 +448,7 @@ func rmSource(services Services) error {
 		return err
 	}
 
-	s, err := services.repoMgr.Remove(fidl.Background(), repoUrlForId(name))
+	s, err := services.repoMgr.Remove(context.Background(), repoUrlForId(name))
 	if err != nil {
 		return fmt.Errorf("fuchsia.pkg.RepositoryManager IPC encountered an error: %s", err)
 	}
@@ -483,12 +483,12 @@ func listSources(r *pkg.RepositoryManagerWithCtxInterface) error {
 		return err
 	}
 	defer iter.Close()
-	if err := r.List(fidl.Background(), req); err != nil {
+	if err := r.List(context.Background(), req); err != nil {
 		return err
 	}
 
 	for {
-		repos, err := iter.Next(fidl.Background())
+		repos, err := iter.Next(context.Background())
 		if err != nil {
 			return err
 		}
@@ -556,7 +556,7 @@ func do(services Services) int {
 		return 1
 	case "system_update":
 		result, err := services.updateManager.CheckNow(
-			fidl.Background(),
+			context.Background(),
 			update.CheckOptions{
 				Initiator:                                  update.InitiatorUser,
 				InitiatorPresent:                           true,
@@ -610,7 +610,7 @@ func do(services Services) int {
 		}
 		fmt.Printf("Source %q disabled\n", *name)
 	case "gc":
-		res, err := services.space.Gc(fidl.Background())
+		res, err := services.space.Gc(context.Background())
 		if err != nil {
 			log.Printf("Error collecting garbage: %s", err)
 			return 1
@@ -676,7 +676,7 @@ func Main() {
 		fmt.Println(`Warning: -x is no longer supported.`)
 	}
 
-	ctx := context.CreateFromStartupInfo()
+	ctx := appcontext.CreateFromStartupInfo()
 
 	var services Services
 
@@ -729,11 +729,11 @@ func getUpdateComplete(r *pkg.PackageResolverWithCtxInterface, name string, vers
 	if err != nil {
 		return err
 	}
-	defer dirPxy.Close(fidl.Background())
+	defer dirPxy.Close(context.Background())
 
 	ch := make(chan resolveResult)
 	go func() {
-		status, err := r.Resolve(fidl.Background(), pkgUri, selectors, updatePolicy, dirReq)
+		status, err := r.Resolve(context.Background(), pkgUri, selectors, updatePolicy, dirReq)
 		ch <- resolveResult{
 			status: zx.Status(status),
 			err:    err,

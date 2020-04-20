@@ -5,13 +5,13 @@
 package eth
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"math/bits"
 	"reflect"
 	"sync"
 	"syscall/zx"
-	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 	"unsafe"
 
@@ -270,13 +270,13 @@ type Client struct {
 
 // NewClient creates a new ethernet Client.
 func NewClient(clientName string, topopath, filepath string, device ethernet.DeviceWithCtx) (*Client, error) {
-	if status, err := device.SetClientName(fidl.Background(), clientName); err != nil {
+	if status, err := device.SetClientName(context.Background(), clientName); err != nil {
 		return nil, err
 	} else if err := checkStatus(status, "SetClientName"); err != nil {
 		return nil, err
 	}
 	// TODO(NET-57): once we support IGMP, don't automatically set multicast promisc true
-	if status, err := device.ConfigMulticastSetPromiscuousMode(fidl.Background(), true); err != nil {
+	if status, err := device.ConfigMulticastSetPromiscuousMode(context.Background(), true); err != nil {
 		return nil, err
 	} else if err := checkStatus(status, "ConfigMulticastSetPromiscuousMode"); err != nil {
 		// Some drivers - most notably virtio - don't support this setting.
@@ -285,11 +285,11 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 		}
 		_ = syslog.WarnTf(tag, "%s", err)
 	}
-	info, err := device.GetInfo(fidl.Background())
+	info, err := device.GetInfo(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	status, fifos, err := device.GetFifos(fidl.Background())
+	status, fifos, err := device.GetFifos(context.Background())
 	if err != nil {
 		return nil, err
 	} else if err := checkStatus(status, "GetFifos"); err != nil {
@@ -325,7 +325,7 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 			return nil, fmt.Errorf("eth: make IO buffer: %w", err)
 		}
 		c.iob = iob
-		if status, err := device.SetIoBuffer(fidl.Background(), vmo); err != nil {
+		if status, err := device.SetIoBuffer(context.Background(), vmo); err != nil {
 			_ = c.Close()
 			return nil, fmt.Errorf("eth: cannot set IO VMO: %w", err)
 		} else if err := checkStatus(status, "SetIoBuffer"); err != nil {
@@ -692,7 +692,7 @@ func (c *Client) Up() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.state != link.StateStarted {
-		if status, err := c.device.Start(fidl.Background()); err != nil {
+		if status, err := c.device.Start(context.Background()); err != nil {
 			return err
 		} else if err := checkStatus(status, "Start"); err != nil {
 			return err
@@ -717,7 +717,7 @@ func (c *Client) Down() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.state != link.StateDown {
-		if err := c.device.Stop(fidl.Background()); err != nil {
+		if err := c.device.Stop(context.Background()); err != nil {
 			return err
 		}
 		c.changeStateLocked(link.StateDown)
@@ -736,7 +736,7 @@ func (c *Client) closeLocked() error {
 	if c.state == link.StateClosed {
 		return nil
 	}
-	err := c.device.Stop(fidl.Background())
+	err := c.device.Stop(context.Background())
 	if err != nil {
 		err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.topopath, err)
 	}
@@ -759,7 +759,7 @@ func (c *Client) SetPromiscuousMode(enabled bool) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if status, err := c.device.SetPromiscuousMode(fidl.Background(), enabled); err != nil {
+	if status, err := c.device.SetPromiscuousMode(context.Background(), enabled); err != nil {
 		return err
 	} else if err := checkStatus(status, "SetPromiscuousMode"); err != nil {
 		return err
@@ -784,7 +784,7 @@ func FifoRead(handle zx.Handle, b []FifoEntry) (zx.Status, uint32) {
 // ListenTX tells the ethernet driver to reflect all transmitted
 // packets back to this ethernet client.
 func (c *Client) ListenTX() error {
-	if status, err := c.device.ListenStart(fidl.Background()); err != nil {
+	if status, err := c.device.ListenStart(context.Background()); err != nil {
 		return err
 	} else if err := checkStatus(status, "ListenStart"); err != nil {
 		return err
@@ -801,7 +801,7 @@ const (
 
 // GetStatus returns the underlying device's status.
 func (c *Client) GetStatus() (LinkStatus, error) {
-	status, err := c.device.GetStatus(fidl.Background())
+	status, err := c.device.GetStatus(context.Background())
 	linkStatus := LinkStatus(status & ethernet.DeviceStatusOnline)
 	syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s", linkStatus)
 	return linkStatus, err

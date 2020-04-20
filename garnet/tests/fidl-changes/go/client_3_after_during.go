@@ -5,8 +5,9 @@
 package main
 
 import (
+	"context"
+
 	"fidl/fidl/test/during"
-	"syscall/zx/fidl"
 )
 
 type client_after_during struct {
@@ -17,8 +18,8 @@ type client_after_during struct {
 }
 
 func (c client_after_during) callAllMethodsExpectAllEvents() {
-	c.addMethod.ExistingMethod(fidl.Background())
-	c.removeMethod.ExistingMethod(fidl.Background())
-	c.addMethod.NewMethod(fidl.Background())
-	_ = c.addEvent.ExpectNewEvent(fidl.Background())
+	c.addMethod.ExistingMethod(context.Background())
+	c.removeMethod.ExistingMethod(context.Background())
+	c.addMethod.NewMethod(context.Background())
+	_ = c.addEvent.ExpectNewEvent(context.Background())
 }

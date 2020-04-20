@@ -451,7 +451,7 @@ func getSecretKeyForOpaqueIID(appCtx *appcontext.Context) ([]byte, error) {
 	appCtx.ConnectToEnvService(storeReq)
 
 	// Use our secure stash.
-	if err := store.Identify(fidl.Background(), stashStoreIdentificationName); err != nil {
+	if err := store.Identify(context.Background(), stashStoreIdentificationName); err != nil {
 		syslog.Errorf("failed to identify as %s to the secure stash store: %s", stashStoreIdentificationName, err)
 		return newSecretKeyForOpaqueIID()
 	}
@@ -461,13 +461,13 @@ func getSecretKeyForOpaqueIID(appCtx *appcontext.Context) ([]byte, error) {
 		return newSecretKeyForOpaqueIID()
 	}
 	defer storeAccessor.Close()
-	if err := store.CreateAccessor(fidl.Background(), false /* readOnly */, storeAccessorReq); err != nil {
+	if err := store.CreateAccessor(context.Background(), false /* readOnly */, storeAccessorReq); err != nil {
 		syslog.Errorf("failed to create accessor to the secure stash store: %s", err)
 		return newSecretKeyForOpaqueIID()
 	}
 
 	// Attempt to get the existing secret key.
-	opaqueIIDSecretKeyValue, err := storeAccessor.GetValue(fidl.Background(), opaqueIIDSecretKeyName)
+	opaqueIIDSecretKeyValue, err := storeAccessor.GetValue(context.Background(), opaqueIIDSecretKeyName)
 	if err != nil {
 		syslog.Errorf("failed to get opaque IID secret key from secure stash store: %s", err)
 		return newSecretKeyForOpaqueIID()
@@ -505,11 +505,11 @@ func getSecretKeyForOpaqueIID(appCtx *appcontext.Context) ([]byte, error) {
 
 	// Store the newly generated key to the secure stash store as a base64
 	// encoded string.
-	if err := storeAccessor.SetValue(fidl.Background(), opaqueIIDSecretKeyName, stash.ValueWithStringval(base64.StdEncoding.EncodeToString(secretKey))); err != nil {
+	if err := storeAccessor.SetValue(context.Background(), opaqueIIDSecretKeyName, stash.ValueWithStringval(base64.StdEncoding.EncodeToString(secretKey))); err != nil {
 		syslog.Errorf("failed to set newly created secret key for opaque IID to secure stash store: %s", err)
 		return secretKey, nil
 	}
-	flushResp, err := storeAccessor.Flush(fidl.Background())
+	flushResp, err := storeAccessor.Flush(context.Background())
 	if err != nil {
 		syslog.Errorf("failed to flush secure stash store with updated secret key for opaque IID: %s", err)
 		return secretKey, nil
@@ -538,7 +538,7 @@ func connectCobaltLogger(ctx *appcontext.Context) (*cobalt.LoggerWithCtxInterfac
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to cobalt logger service: %s", err)
 	}
-	result, err := cobaltLoggerFactory.CreateLoggerFromProjectId(fidl.Background(), networking_metrics.ProjectId, lreq)
+	result, err := cobaltLoggerFactory.CreateLoggerFromProjectId(context.Background(), networking_metrics.ProjectId, lreq)
 	if err != nil {
 		return nil, fmt.Errorf("CreateLoggerFromProjectId(%d, ...) = _, %s", networking_metrics.ProjectId, err)
 	}

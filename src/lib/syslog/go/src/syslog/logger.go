@@ -5,6 +5,7 @@
 package syslog
 
 import (
+	"context"
 	"encoding/binary"
 	"flag"
 	"fmt"
@@ -15,10 +16,9 @@ import (
 	"strings"
 	"sync/atomic"
 	"syscall/zx"
-	"syscall/zx/fidl"
 	"unicode/utf8"
 
-	"app/context"
+	appcontext "app/context"
 
 	"fidl/fuchsia/logger"
 
@@ -122,7 +122,7 @@ func (l *Writer) Write(data []byte) (n int, err error) {
 	return origLen, nil
 }
 
-func ConnectToLogger(c *context.Connector) (zx.Socket, error) {
+func ConnectToLogger(c *appcontext.Connector) (zx.Socket, error) {
 	localS, peerS, err := zx.NewSocket(zx.SocketDatagram)
 	if err != nil {
 		return zx.Socket(zx.HandleInvalid), err
@@ -135,7 +135,7 @@ func ConnectToLogger(c *context.Connector) (zx.Socket, error) {
 	}
 	c.ConnectToEnvService(req)
 	{
-		err := logSink.Connect(fidl.Background(), peerS)
+		err := logSink.Connect(context.Background(), peerS)
 		_ = logSink.Close()
 		if err != nil {
 			_ = localS.Close()
@@ -174,7 +174,7 @@ func NewLogger(options LogInitOptions) (*Logger, error) {
 	}, nil
 }
 
-func NewLoggerWithDefaults(c *context.Connector, tags ...string) (*Logger, error) {
+func NewLoggerWithDefaults(c *appcontext.Connector, tags ...string) (*Logger, error) {
 	s, err := ConnectToLogger(c)
 	if err != nil {
 		return nil, err

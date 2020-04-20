@@ -5,7 +5,7 @@
 package filter
 
 import (
-	"syscall/zx/fidl"
+	"context"
 	"testing"
 
 	"fidl/fuchsia/net/filter"
@@ -68,7 +68,7 @@ func TestGetAndUpdateRules(t *testing.T) {
 	}
 
 	// 1. Get the current rules (should be empty).
-	nrs1, generation1, status1, err := fi.GetRules(fidl.Background())
+	nrs1, generation1, status1, err := fi.GetRules(context.Background())
 	if err != nil {
 		t.Errorf("GetRules error: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestGetAndUpdateRules(t *testing.T) {
 	}
 
 	// 2. Update the current rules with trs1.
-	status2, err := fi.UpdateRules(fidl.Background(), trs1, generation1)
+	status2, err := fi.UpdateRules(context.Background(), trs1, generation1)
 	if err != nil {
 		t.Errorf("UpdateRules error: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestGetAndUpdateRules(t *testing.T) {
 	}
 
 	// 3. Get the current rules (should be trs1).
-	nrs3, generation3, status3, err := fi.GetRules(fidl.Background())
+	nrs3, generation3, status3, err := fi.GetRules(context.Background())
 	if err != nil {
 		t.Errorf("GetRules error: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestGetAndUpdateRules(t *testing.T) {
 	}
 
 	// 4. Update the current rules with trs2 using an old generation number.
-	status4, err := fi.UpdateRules(fidl.Background(), trs2, generation1)
+	status4, err := fi.UpdateRules(context.Background(), trs2, generation1)
 	if err != nil {
 		t.Errorf("UpdateRules error: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestGetAndUpdateRules(t *testing.T) {
 	}
 
 	// 5. Update the current rules with trs2 using the currenct generation number.
-	status5, err := fi.UpdateRules(fidl.Background(), trs2, generation3)
+	status5, err := fi.UpdateRules(context.Background(), trs2, generation3)
 	if err != nil {
 		t.Errorf("UpdateRules error: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestGetAndUpdateRules(t *testing.T) {
 	}
 
 	// 6. Get the current rules (should be trs2).
-	nrs6, generation6, status6, err := fi.GetRules(fidl.Background())
+	nrs6, generation6, status6, err := fi.GetRules(context.Background())
 	if err != nil {
 		t.Errorf("GetRules error: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestGetAndUpdateNatRules(t *testing.T) {
 	}
 
 	// 1. Get the current rules (should be empty).
-	nrs1, generation1, status1, err := fi.GetNatRules(fidl.Background())
+	nrs1, generation1, status1, err := fi.GetNatRules(context.Background())
 	if err != nil {
 		t.Errorf("GetNatRules error: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestGetAndUpdateNatRules(t *testing.T) {
 	}
 
 	// 2. Update the current rules with trs1.
-	status2, err := fi.UpdateNatRules(fidl.Background(), trs1, generation1)
+	status2, err := fi.UpdateNatRules(context.Background(), trs1, generation1)
 	if err != nil {
 		t.Errorf("UpdateNatRules error: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestGetAndUpdateNatRules(t *testing.T) {
 	}
 
 	// 3. Get the current rules (should be trs1).
-	nrs3, generation3, status3, err := fi.GetNatRules(fidl.Background())
+	nrs3, generation3, status3, err := fi.GetNatRules(context.Background())
 	if err != nil {
 		t.Errorf("GetNatRules error: %v", err)
 	}
@@ -221,7 +221,7 @@ func TestGetAndUpdateNatRules(t *testing.T) {
 	}
 
 	// 4. Update the current rules with trs2 using an old generation number.
-	status4, err := fi.UpdateNatRules(fidl.Background(), trs2, generation1)
+	status4, err := fi.UpdateNatRules(context.Background(), trs2, generation1)
 	if err != nil {
 		t.Errorf("UpdateNatRules error: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestGetAndUpdateNatRules(t *testing.T) {
 	}
 
 	// 5. Update the current rules with trs2 using the currenct generation number.
-	status5, err := fi.UpdateNatRules(fidl.Background(), trs2, generation3)
+	status5, err := fi.UpdateNatRules(context.Background(), trs2, generation3)
 	if err != nil {
 		t.Errorf("UpdateNatRules error: %v", err)
 	}
@@ -239,7 +239,7 @@ func TestGetAndUpdateNatRules(t *testing.T) {
 	}
 
 	// 6. Get the current rules (should be trs2).
-	nrs6, generation6, status6, err := fi.GetNatRules(fidl.Background())
+	nrs6, generation6, status6, err := fi.GetNatRules(context.Background())
 	if err != nil {
 		t.Errorf("GetNatRules error: %v", err)
 	}
@@ -292,7 +292,7 @@ func TestGetAndUpdateRdrRules(t *testing.T) {
 	}
 
 	// 1. Get the current rules (should be empty).
-	nrs1, generation1, status1, err := fi.GetRdrRules(fidl.Background())
+	nrs1, generation1, status1, err := fi.GetRdrRules(context.Background())
 	if err != nil {
 		t.Errorf("GetRdrRules error: %v", err)
 	}
@@ -307,7 +307,7 @@ func TestGetAndUpdateRdrRules(t *testing.T) {
 	}
 
 	// 2. Update the current rules with trs1.
-	status2, err := fi.UpdateRdrRules(fidl.Background(), trs1, generation1)
+	status2, err := fi.UpdateRdrRules(context.Background(), trs1, generation1)
 	if err != nil {
 		t.Errorf("UpdateRdrRules error: %v", err)
 	}
@@ -316,7 +316,7 @@ func TestGetAndUpdateRdrRules(t *testing.T) {
 	}
 
 	// 3. Get the current rules (should be trs1).
-	nrs3, generation3, status3, err := fi.GetRdrRules(fidl.Background())
+	nrs3, generation3, status3, err := fi.GetRdrRules(context.Background())
 	if err != nil {
 		t.Errorf("GetRdrRules error: %v", err)
 	}
@@ -331,7 +331,7 @@ func TestGetAndUpdateRdrRules(t *testing.T) {
 	}
 
 	// 4. Update the current rules with trs2 using an old generation number.
-	status4, err := fi.UpdateRdrRules(fidl.Background(), trs2, generation1)
+	status4, err := fi.UpdateRdrRules(context.Background(), trs2, generation1)
 	if err != nil {
 		t.Errorf("UpdateRdrRules error: %v", err)
 	}
@@ -340,7 +340,7 @@ func TestGetAndUpdateRdrRules(t *testing.T) {
 	}
 
 	// 5. Update the current rules with trs2 using the currenct generation number.
-	status5, err := fi.UpdateRdrRules(fidl.Background(), trs2, generation3)
+	status5, err := fi.UpdateRdrRules(context.Background(), trs2, generation3)
 	if err != nil {
 		t.Errorf("UpdateRdrRules error: %v", err)
 	}
@@ -349,7 +349,7 @@ func TestGetAndUpdateRdrRules(t *testing.T) {
 	}
 
 	// 6. Get the current rules (should be trs2).
-	nrs6, generation6, status6, err := fi.GetRdrRules(fidl.Background())
+	nrs6, generation6, status6, err := fi.GetRdrRules(context.Background())
 	if err != nil {
 		t.Errorf("GetRdrRules error: %v", err)
 	}

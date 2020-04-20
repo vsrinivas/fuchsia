@@ -5,14 +5,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"syscall/zx"
 	"syscall/zx/fdio"
-	"syscall/zx/fidl"
 	"syscall/zx/io"
 
-	"app/context"
+	appcontext "app/context"
 
 	"fidl/fidl/examples/echo"
 	"fidl/fuchsia/sys"
@@ -24,7 +24,7 @@ func main() {
 
 	flag.Parse()
 
-	ctx := context.CreateFromStartupInfo()
+	ctx := appcontext.CreateFromStartupInfo()
 
 	directoryReq, directoryInterface, err := io.NewDirectoryWithCtxInterfaceRequest()
 	if err != nil {
@@ -39,7 +39,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if err := ctx.Launcher().CreateComponent(fidl.Background(), launchInfo, componentControllerReq); err != nil {
+	if err := ctx.Launcher().CreateComponent(context.Background(), launchInfo, componentControllerReq); err != nil {
 		panic(err)
 	}
 
@@ -51,7 +51,7 @@ func main() {
 		panic(err)
 	}
 
-	response, err := echoInterface.EchoString(fidl.Background(), msg)
+	response, err := echoInterface.EchoString(context.Background(), msg)
 	if err != nil {
 		panic(err)
 	}

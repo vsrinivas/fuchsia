@@ -5,6 +5,7 @@
 package system_updater
 
 import (
+	"context"
 	"fmt"
 
 	"syscall"
@@ -42,7 +43,7 @@ func OpenBlobfs() (*Blobfs, error) {
 
 // QueryFreeSpace returns the number of unused bytes allocated to blobfs.
 func (b *Blobfs) QueryFreeSpace() (int64, error) {
-	status, info, err := b.QueryFilesystem(fidl.Background())
+	status, info, err := b.QueryFilesystem(context.Background())
 	if err != nil {
 		return 0, err
 	}

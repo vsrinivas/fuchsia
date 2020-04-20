@@ -10,22 +10,16 @@
 package fake_clock
 
 import (
+	"context"
 	"runtime"
+	"syscall/zx"
+	"syscall/zx/zxwait"
 	"testing"
 
-	"app/context"
-	"syscall/zx"
-	"syscall/zx/fidl"
-	"syscall/zx/zxwait"
+	appcontext "app/context"
 
 	mock_clock "fidl/fuchsia/testing"
 )
-
-var ctx *context.Context
-
-func init() {
-	ctx = context.CreateFromStartupInfo()
-}
 
 type FakeClockTest struct {
 	control *mock_clock.FakeClockControlWithCtxInterface
@@ -36,10 +30,10 @@ type FakeClockTest struct {
 // starts in the same state.
 func setup(t *testing.T) FakeClockTest {
 	service, control, _ := mock_clock.NewFakeClockControlWithCtxInterfaceRequest()
-	ctx.ConnectToEnvService(service)
+	appcontext.CreateFromStartupInfo().ConnectToEnvService(service)
 
 	// Always pause the fake clock before the test starts.
-	if err := control.Pause(fidl.Background()); err != nil {
+	if err := control.Pause(context.Background()); err != nil {
 		t.Fatalf("Error pausing: %s", err)
 	}
 
@@ -52,7 +46,7 @@ func (f *FakeClockTest) Close() error {
 
 // Utility for advancing the fake clock by an integer amount.
 func (f *FakeClockTest) advance(i int64) {
-	f.control.Advance(fidl.Background(), mock_clock.IncrementWithDetermined(i))
+	f.control.Advance(context.Background(), mock_clock.IncrementWithDetermined(i))
 }
 
 // Utility for calling the syscall for time which is intercepted by the fake
