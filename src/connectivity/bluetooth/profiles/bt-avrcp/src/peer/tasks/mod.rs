@@ -166,7 +166,6 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                     return;
                 }
                 let socket = channel.socket.expect("socket isn't None");
-                let mut peer_guard = peer.write();
                 match peer_guard.control_channel {
                     PeerChannel::Connecting => match AvcPeer::new(socket) {
                         Ok(peer) => {

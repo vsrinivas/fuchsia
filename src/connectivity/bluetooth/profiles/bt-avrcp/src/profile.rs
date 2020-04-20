@@ -172,7 +172,6 @@ impl AvrcpService {
         let mut profile: Option<ProfileDescriptor> = None;
 
         for attr in attributes {
-            fx_log_info!("attribute: {:#?} ", attr);
             match attr.id {
                 ATTR_SERVICE_CLASS_ID_LIST => {
                     if let DataElement::Sequence(seq) = attr.element {

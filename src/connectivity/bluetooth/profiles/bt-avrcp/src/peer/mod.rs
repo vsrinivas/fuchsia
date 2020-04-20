@@ -415,13 +415,21 @@ mod tests {
     use crate::profile::{AvcrpTargetFeatures, AvrcpProtocolVersion};
     use anyhow::Error;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest};
-    use fuchsia_async::{DurationExt, TimeoutExt};
-    use fuchsia_zircon::DurationNum;
+    use fidl_fuchsia_bluetooth_bredr::{Channel, ProfileMarker, ProfileRequest};
+    use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
+    use fuchsia_zircon::{self as zx, DurationNum};
+    use futures::{pin_mut, task::Poll};
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    fn get_channel() -> (zx::Socket, Channel) {
+        let (remote, socket) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        (remote, Channel { socket: Some(socket), ..Channel::new_empty() })
+    }
+
     // Check that the remote will attempt to connect to a peer if we have a profile.
-    async fn trigger_connection_test() -> Result<(), Error> {
+    #[test]
+    fn trigger_connection_test() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+
         let (profile_proxy, mut profile_requests) = create_proxy_and_stream::<ProfileMarker>()?;
 
         let target_delegate = Arc::new(TargetDelegate::new());
@@ -438,10 +446,20 @@ mod tests {
         assert!(!peer_handle.is_connected());
 
         let next_request_fut = profile_requests.next().on_timeout(1.second().after_now(), || None);
+        pin_mut!(next_request_fut);
 
-        match next_request_fut.await {
-            Some(Ok(ProfileRequest::Connect { .. })) => Ok(()),
-            x => panic!("Expected Profile connection request, got {:?} instead.", x),
-        }
+        // Peer should have requested a connection.
+        let (_remote, channel) = get_channel();
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
+
+        // run until stalled, the connection should be put in place.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_connected());
+        Ok(())
     }
 }
