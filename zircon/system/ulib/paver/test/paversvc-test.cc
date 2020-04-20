@@ -404,7 +404,7 @@ void ComputeCrc(AbrData* data) {
 
 TEST_F(PaverServiceSkipBlockTest, InitializeAbr) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-  
+
   AbrData abr_data = {};
   memset(&abr_data, 0x3d, sizeof(abr_data));
   SetAbr(abr_data);
@@ -525,7 +525,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
-  AbrData abr_data = kAbrData;  
+  AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
@@ -1047,9 +1047,10 @@ class PaverServiceBlockTest : public PaverServiceTest {
 
 constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 
-TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTables) {
+TEST_F(PaverServiceBlockTest, InitializePartitionTables) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
+  // 32GiB disk.
+  constexpr uint64_t block_count = (32LU << 30) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
@@ -1063,9 +1064,10 @@ TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTables) {
   ASSERT_OK(result->status);
 }
 
-TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTablesMultipleDevices) {
+TEST_F(PaverServiceBlockTest, InitializePartitionTablesMultipleDevices) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
-  constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
+  // 32GiB disk.
+  constexpr uint64_t block_count = (32LU << 30) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev1));
   ASSERT_NO_FATAL_FAILURES(
@@ -1081,9 +1083,10 @@ TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTablesMultipleDevices)
   ASSERT_OK(result->status);
 }
 
-TEST_F(PaverServiceBlockTest, DISABLED_WipePartitionTables) {
+TEST_F(PaverServiceBlockTest, WipePartitionTables) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
+  // 32GiB disk.
+  constexpr uint64_t block_count = (32LU << 30) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
