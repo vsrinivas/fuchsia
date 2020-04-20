@@ -148,32 +148,32 @@ impl Duration {
     }
 
     /// Returns the number of nanoseconds contained by this `Duration`.
-    pub fn into_nanos(self) -> i64 {
+    pub const fn into_nanos(self) -> i64 {
         self.0
     }
 
     /// Returns the total number of whole microseconds contained by this `Duration`.
-    pub fn into_micros(self) -> i64 {
+    pub const fn into_micros(self) -> i64 {
         self.0 / 1_000
     }
 
     /// Returns the total number of whole milliseconds contained by this `Duration`.
-    pub fn into_millis(self) -> i64 {
+    pub const fn into_millis(self) -> i64 {
         self.into_micros() / 1_000
     }
 
     /// Returns the total number of whole seconds contained by this `Duration`.
-    pub fn into_seconds(self) -> i64 {
+    pub const fn into_seconds(self) -> i64 {
         self.into_millis() / 1_000
     }
 
     /// Returns the total number of whole minutes contained by this `Duration`.
-    pub fn into_minutes(self) -> i64 {
+    pub const fn into_minutes(self) -> i64 {
         self.into_seconds() / 60
     }
 
     /// Returns the total number of whole hours contained by this `Duration`.
-    pub fn into_hours(self) -> i64 {
+    pub const fn into_hours(self) -> i64 {
         self.into_minutes() / 60
     }
 
