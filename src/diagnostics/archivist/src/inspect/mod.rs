@@ -52,7 +52,7 @@ static IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
 //    5) Converting an unpopulated data map into a populated data map.
 static INSPECT_ASYNC_TIMEOUT_SECONDS: i64 = 15;
 
-type InspectDataTrie = trie::Trie<char, UnpopulatedInspectDataContainer>;
+type InspectDataTrie = trie::Trie<String, UnpopulatedInspectDataContainer>;
 
 enum ReadSnapshot {
     Single(Snapshot),
@@ -376,13 +376,7 @@ impl InspectDataRepository {
     }
 
     pub fn remove(&mut self, component_id: &ComponentIdentifier) {
-        // TODO(4601): The data directory trie should be a prefix of
-        //             absolute moniker segments, not component names,
-        //             so that client provided selectors can scope
-        //             more quickly.
-        let mut key: Vec<char> = component_id.component_name().chars().collect();
-        key.extend(component_id.instance_id().chars());
-        self.data_directories.remove(key);
+        self.data_directories.remove(component_id.unique_key());
     }
 
     pub fn add(
@@ -402,12 +396,11 @@ impl InspectDataRepository {
         // The component events stream might contain duplicated events for out/diagnostics
         // directories of components that already existed before the archivist started or the
         // archivist itself, make sure we don't track duplicated component diagnostics directories.
-        let mut key: Vec<char> = identifier.component_name().chars().collect();
-        key.extend(identifier.instance_id().chars());
-        if self.contains(&key, &relative_moniker) {
+        if self.contains(&identifier, &relative_moniker) {
             return Ok(());
         }
 
+        let key = identifier.unique_key();
         match matched_selectors {
             Some(selectors) => {
                 if !selectors.is_empty() {
@@ -461,9 +454,13 @@ impl InspectDataRepository {
             .collect();
     }
 
-    fn contains(&mut self, key: &Vec<char>, relative_moniker: &[String]) -> bool {
+    fn contains(
+        &mut self,
+        component_id: &ComponentIdentifier,
+        relative_moniker: &[String],
+    ) -> bool {
         self.data_directories
-            .get(key.clone())
+            .get(component_id.unique_key())
             .map(|trie_node| {
                 trie_node
                     .get_values()
@@ -1170,8 +1167,7 @@ mod tests {
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
         inspect_repo.add(component_id.clone(), proxy).expect("add to repo");
 
-        let mut key: Vec<char> = "foo.cmx".chars().collect();
-        key.extend(component_id.instance_id().chars());
+        let key = component_id.unique_key();
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
     }
 

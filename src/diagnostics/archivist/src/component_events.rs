@@ -82,15 +82,13 @@ impl ComponentIdentifier {
         }
     }
 
-    pub fn component_name(&self) -> String {
+    pub fn unique_key(&self) -> Vec<String> {
         match self {
-            Self::Legacy(identifier) => identifier.component_name.clone(),
-        }
-    }
-
-    pub fn instance_id(&self) -> String {
-        match self {
-            Self::Legacy(identifier) => identifier.instance_id.clone(),
+            Self::Legacy(identifier) => {
+                let mut key = self.relative_moniker_for_selectors();
+                key.push(identifier.instance_id.clone());
+                key
+            }
         }
     }
 }
