@@ -141,35 +141,32 @@ receiving Testability+1.
 
 ### Tests must be tested for flakiness (if supported)
 
-As a testability reviewer, if a change is tested with automated tests, you
-should make sure the author has added the MULTIPLY feature as described below
-and has run a successful tryjob that uses this feature (if supported). You can
-check to see if it worked by clicking on the tryjob and looking for a step that
-says `shard multiplied:<shard name>-<test name>` for each test. This feature
-is only supported for builders that test in shards. If there are no such
-builders that run their tests, they will not be able to use this feature.
+Note: This feature is not currently supported for bringup builders.
 
-As a change author, when you add or modify automated tests, you should specify
-this with a MULTIPLY field in the commit message. For example, ``MULTIPLY:
-`<json_string>` `` where `<json_string>` should be a list of tests following
-this schema:
+As a testability reviewer, if a change adds or modifies tests, you
+should make sure the author correctly tests for flakiness using the MULTIPLY
+feature as described below. Check to see if it worked by clicking on the tryjob
+and looking for a step that says `shard multiplied:<shard name>-<test name>`.
+For example:
+
+![multiplied shard screenshot](multiplied-shard-screenshot.png)
+
+As a change author, when you add or modify tests, you should tell the
+infrastructure to run those tests multiple times with a MULTIPLY field in the
+commit message. You would add something like this to your commit message:
 
 ```json
-[
+MULTIPLY: `[
   {
-    "name": <test basename, e.g., "foo_bin_test">,
+    "name": <test name, e.g., "foo_bin_test">,
     "os": <one of "fuchsia", "linux", "mac"; defaults to "fuchsia">,
-    "total_runs": <any positive int; defaults to 1>
-  },
-  ...
-]
+    "total_runs": <any positive int; defaults to 1; suggested value is 30>
+  }
+]`
 ```
 
-The test name refers to the name of a test executable inside a `test_package`
-GN target which is located in the `out/default/tests.json` file located in
-your Fuchsia directory. This file is created after you run `fx build` inside
-of your Fuchsia directory. The test name and OS must match one of the tests
-in this list for this feature to work.
+The test name and OS **must match** a test in `out/default/tests.json`.
+This file is created after you run `fx set` inside of your Fuchsia directory.
 
 An example CL description should look like:
 
