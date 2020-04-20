@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::component_events::Data,
+    crate::component_events::{ComponentIdentifier, InspectData},
     anyhow::{format_err, Error},
     fidl::endpoints::DiscoverableService,
     fidl::endpoints::{RequestStream, ServerEnd},
@@ -60,7 +60,7 @@ enum ReadSnapshot {
     Finished(NodeHierarchy),
 }
 
-type DataMap = HashMap<String, Data>;
+type DataMap = HashMap<String, InspectData>;
 
 pub trait DataCollector {
     // Processes all previously collected data from the configured sources,
@@ -142,12 +142,12 @@ impl InspectDataCollector {
                     .buffer
                     .map(|b| b.vmo);
 
-                self.maybe_add(&entry.name, Data::Tree(proxy, maybe_vmo));
+                self.maybe_add(&entry.name, InspectData::Tree(proxy, maybe_vmo));
                 continue;
             }
 
             if let Some(proxy) = self.maybe_load_service::<InspectMarker>(inspect_proxy, &entry)? {
-                self.maybe_add(&entry.name, Data::DeprecatedFidl(proxy));
+                self.maybe_add(&entry.name, InspectData::DeprecatedFidl(proxy));
                 continue;
             }
 
@@ -180,7 +180,7 @@ impl InspectDataCollector {
             {
                 Ok(nodeinfo) => match nodeinfo {
                     NodeInfo::Vmofile(vmofile) => {
-                        self.maybe_add(&entry.name, Data::Vmo(vmofile.vmo));
+                        self.maybe_add(&entry.name, InspectData::Vmo(vmofile.vmo));
                     }
                     NodeInfo::File(_) => {
                         let contents = io_util::read_file_bytes(&file_proxy)
@@ -191,7 +191,7 @@ impl InspectDataCollector {
                                 ))
                             })
                             .await?;
-                        self.maybe_add(&entry.name, Data::File(contents));
+                        self.maybe_add(&entry.name, InspectData::File(contents));
                     }
                     ty @ _ => {
                         error!(
@@ -209,7 +209,7 @@ impl InspectDataCollector {
 
     /// Adds a key value to the contained vector if it hasn't been taken yet. Otherwise, does
     /// nothing.
-    fn maybe_add(&mut self, key: impl Into<String>, value: Data) {
+    fn maybe_add(&mut self, key: impl Into<String>, value: InspectData) {
         if let Some(map) = self.inspect_data_map.lock().as_mut() {
             map.insert(key.into(), value);
         };
@@ -290,11 +290,11 @@ impl PopulatedInspectDataContainer {
                     let mut acc = vec![];
                     for (_, data) in data_map {
                         match data {
-                            Data::Tree(tree, _) => match SnapshotTree::try_from(&tree).await {
+                            InspectData::Tree(tree, _) => match SnapshotTree::try_from(&tree).await {
                                 Ok(snapshot_tree) => acc.push(ReadSnapshot::Tree(snapshot_tree)),
                                 Err(_) => {}
                             },
-                            Data::DeprecatedFidl(inspect_proxy) => {
+                            InspectData::DeprecatedFidl(inspect_proxy) => {
                                 match deprecated_inspect::load_hierarchy(inspect_proxy)
                                     .on_timeout(
                                         INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
@@ -310,15 +310,15 @@ impl PopulatedInspectDataContainer {
                                     _ => {}
                                 }
                             }
-                            Data::Vmo(vmo) => match Snapshot::try_from(&vmo) {
+                            InspectData::Vmo(vmo) => match Snapshot::try_from(&vmo) {
                                 Ok(snapshot) => acc.push(ReadSnapshot::Single(snapshot)),
                                 _ => {}
                             },
-                            Data::File(contents) => match Snapshot::try_from(contents) {
+                            InspectData::File(contents) => match Snapshot::try_from(contents) {
                                 Ok(snapshot) => acc.push(ReadSnapshot::Single(snapshot)),
                                 _ => {}
                             },
-                            Data::Empty => {}
+                            InspectData::Empty => {}
                         }
                     }
                     snapshots = Some(acc);
@@ -375,23 +375,22 @@ impl InspectDataRepository {
         }
     }
 
-    pub fn remove(&mut self, component_name: &str, component_id: &str) {
+    pub fn remove(&mut self, component_id: &ComponentIdentifier) {
         // TODO(4601): The data directory trie should be a prefix of
         //             absolute moniker segments, not component names,
         //             so that client provided selectors can scope
         //             more quickly.
-        let mut key: Vec<char> = component_name.chars().collect();
-        key.extend(component_id.chars());
+        let mut key: Vec<char> = component_id.component_name().chars().collect();
+        key.extend(component_id.instance_id().chars());
         self.data_directories.remove(key);
     }
 
     pub fn add(
         &mut self,
-        component_name: String,
-        component_id: String,
-        relative_moniker: Vec<String>,
+        identifier: ComponentIdentifier,
         directory_proxy: DirectoryProxy,
     ) -> Result<(), Error> {
+        let relative_moniker = identifier.relative_moniker_for_selectors();
         let matched_selectors = match &self.static_selectors {
             Some(selectors) => Some(selectors::match_component_moniker_against_selectors(
                 &relative_moniker,
@@ -403,8 +402,8 @@ impl InspectDataRepository {
         // The component events stream might contain duplicated events for out/diagnostics
         // directories of components that already existed before the archivist started or the
         // archivist itself, make sure we don't track duplicated component diagnostics directories.
-        let mut key: Vec<char> = component_name.chars().collect();
-        key.extend(component_id.chars());
+        let mut key: Vec<char> = identifier.component_name().chars().collect();
+        key.extend(identifier.instance_id().chars());
         if self.contains(&key, &relative_moniker) {
             return Ok(());
         }
@@ -897,8 +896,9 @@ impl ReaderServer {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use {
+        super::*,
+        crate::component_events::{LegacyIdentifier, RealmPath},
         fdio,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::DirectoryMarker,
@@ -965,7 +965,7 @@ mod tests {
                     assert!(extra.is_some());
 
                     match extra.unwrap() {
-                        Data::Vmo(vmo) => {
+                        InspectData::Vmo(vmo) => {
                             let mut buf = [0u8; 5];
                             vmo.read(&mut buf, 0).expect("reading vmo");
                             assert_eq!(content, &buf);
@@ -1040,7 +1040,7 @@ mod tests {
                 assert!(extra.is_some());
 
                 match extra.unwrap() {
-                    Data::Tree(tree, vmo) => {
+                    InspectData::Tree(tree, vmo) => {
                         // Assert we can read the tree proxy and get the data we expected.
                         let hierarchy = reader::read_from_tree(tree)
                             .await
@@ -1106,7 +1106,7 @@ mod tests {
             let done = done1;
             let mut executor = fasync::Executor::new().unwrap();
             executor.run_singlethreaded(async {
-                verify_reader("test.inspect", path).await;
+                verify_reader(path).await;
                 done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
             });
         });
@@ -1143,7 +1143,7 @@ mod tests {
             let done = done1;
             let mut executor = fasync::Executor::new().unwrap();
             executor.run_singlethreaded(async {
-                verify_reader(TreeMarker::SERVICE_NAME, path).await;
+                verify_reader(path).await;
                 done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
             });
         });
@@ -1154,23 +1154,24 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
         let mut inspect_repo = InspectDataRepository::new(None);
-        let relative_moniker = vec!["a".to_string(), "b".to_string()];
-        let component_id = "1234".to_string();
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let instance_id = "1234".to_string();
+
+        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+            instance_id,
+            realm_path,
+            component_name: "foo.cmx".into(),
+        });
+        let (proxy, _) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        inspect_repo.add(component_id.clone(), proxy).expect("add to repo");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        inspect_repo
-            .add("foo.cmx".to_string(), component_id.clone(), relative_moniker.clone(), proxy)
-            .expect("add to repo");
-
-        let (proxy, _) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        inspect_repo
-            .add("foo.cmx".to_string(), component_id.clone(), relative_moniker, proxy)
-            .expect("add to repo");
+        inspect_repo.add(component_id.clone(), proxy).expect("add to repo");
 
         let mut key: Vec<char> = "foo.cmx".chars().collect();
-        key.extend(component_id.chars());
+        key.extend(component_id.instance_id().chars());
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
     }
 
@@ -1190,7 +1191,7 @@ mod tests {
         inspector
     }
 
-    async fn verify_reader(filename: impl Into<String>, path: PathBuf) {
+    async fn verify_reader(path: PathBuf) {
         let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
             selectors::parse_selector(r#"test_component.cmx:root/child_2:*"#).unwrap();
@@ -1203,13 +1204,12 @@ mod tests {
 
         // The absolute moniker here is made up since the selector is a glob
         // selector, so any path would match.
-        let absolute_moniker = vec!["test_component.cmx".to_string()];
-        let filename_string = filename.into();
-        let component_id = "1234".to_string();
-        inspect_repo
-            .write()
-            .add(filename_string.clone(), component_id.clone(), absolute_moniker, out_dir_proxy)
-            .unwrap();
+        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+            instance_id: "1234".into(),
+            realm_path: vec![].into(),
+            component_name: "test_component.cmx".into(),
+        });
+        inspect_repo.write().add(component_id.clone(), out_dir_proxy).unwrap();
 
         let reader_server = ReaderServer::new(inspect_repo.clone(), None);
 
@@ -1232,7 +1232,7 @@ mod tests {
 }"#;
         assert_eq!(result_string, expected_result);
 
-        inspect_repo.write().remove(&filename_string, &component_id);
+        inspect_repo.write().remove(&component_id);
         let result_string = read_snapshot(reader_server.clone()).await;
 
         assert_eq!(result_string, "".to_string());

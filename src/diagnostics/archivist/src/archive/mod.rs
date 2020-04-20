@@ -5,8 +5,8 @@
 use {
     crate::{
         component_events::{
-            ComponentEvent, ComponentEventData, ComponentEventStream, Data, InspectReaderData,
-            RealmPath,
+            ComponentEvent, ComponentEventData, ComponentEventStream, ComponentIdentifier,
+            InspectData, InspectReaderData,
         },
         configs, diagnostics, inspect,
     },
@@ -260,9 +260,7 @@ impl EventFileGroup {
 pub struct Event {
     timestamp_nanos: u64,
     event_type: String,
-    component_name: String,
-    component_instance: String,
-    realm_path: String,
+    relative_moniker: String,
     event_files: Vec<String>,
 }
 
@@ -272,29 +270,20 @@ fn datetime_to_timestamp<T: TimeZone>(t: &DateTime<T>) -> u64 {
 
 impl Event {
     /// Create a new Event at the current time.
-    pub fn new(
-        event_type: impl ToString,
-        component_name: impl ToString,
-        component_instance: impl ToString,
-        realm_path: RealmPath,
-    ) -> Self {
-        Self::new_with_time(Utc::now(), event_type, component_name, component_instance, realm_path)
+    pub fn new(event_type: impl ToString, relative_moniker: impl ToString) -> Self {
+        Self::new_with_time(Utc::now(), event_type, relative_moniker)
     }
 
     /// Create a new Event at the given time.
     pub fn new_with_time<T: TimeZone>(
         time: DateTime<T>,
         event_type: impl ToString,
-        component_name: impl ToString,
-        component_instance: impl ToString,
-        realm_path: RealmPath,
+        relative_moniker: impl ToString,
     ) -> Self {
         Event {
             timestamp_nanos: datetime_to_timestamp(&time),
             event_type: event_type.to_string(),
-            component_name: component_name.to_string(),
-            component_instance: component_instance.to_string(),
-            realm_path: realm_path.into(),
+            relative_moniker: relative_moniker.to_string(),
             event_files: vec![],
         }
     }
@@ -449,13 +438,11 @@ impl EventFileGroupWriter {
     pub fn new_event(
         &mut self,
         event_type: impl ToString,
-        component_name: impl ToString,
-        component_instance: impl ToString,
-        realm_path: RealmPath,
+        relative_moniker: impl ToString,
     ) -> EventBuilder<'_> {
         EventBuilder {
             writer: self,
-            event: Event::new(event_type, component_name, component_instance, realm_path),
+            event: Event::new(event_type, relative_moniker),
             event_files: Ok(vec![]),
             event_file_size: 0,
         }
@@ -617,23 +604,19 @@ fn populate_inspect_repo(
     // The InspectReaderData should always contain a directory_proxy. Its existence
     // as an Option is only to support mock objects for equality in tests.
     let inspect_directory_proxy = inspect_reader_data.data_directory_proxy.unwrap();
-    let mut relative_moniker = inspect_reader_data.realm_path;
-    relative_moniker.push(inspect_reader_data.component_name.clone());
 
-    state.lock().inspect_repository.write().add(
-        inspect_reader_data.component_name,
-        inspect_reader_data.component_id,
-        relative_moniker,
-        inspect_directory_proxy,
-    )
+    state
+        .lock()
+        .inspect_repository
+        .write()
+        .add(inspect_reader_data.component_id, inspect_directory_proxy)
 }
 
 fn remove_from_inspect_repo(
     state: &Arc<Mutex<ArchivistState>>,
-    component_name: &str,
-    component_id: &str,
+    component_id: &ComponentIdentifier,
 ) {
-    state.lock().inspect_repository.write().remove(component_name, component_id);
+    state.lock().inspect_repository.write().remove(&component_id);
 }
 
 async fn process_event(
@@ -643,7 +626,7 @@ async fn process_event(
     match event {
         ComponentEvent::Start(data) => archive_event(&state, "START", data).await,
         ComponentEvent::Stop(data) => {
-            remove_from_inspect_repo(&state, &data.component_name, &data.component_id);
+            remove_from_inspect_repo(&state, &data.component_id);
             archive_event(&state, "STOP", data).await
         }
         ComponentEvent::OutDirectoryAppeared(data) => populate_inspect_repo(&state, data),
@@ -667,18 +650,15 @@ async fn archive_event(
     let max_archive_size_bytes = configuration.max_archive_size_bytes;
     let max_event_group_size_bytes = configuration.max_event_group_size_bytes;
 
-    let mut log = writer.get_log().new_event(
-        event_name,
-        event_data.component_name,
-        event_data.component_id,
-        event_data.realm_path,
-    );
+    let mut log = writer.get_log().new_event(event_name, event_data.component_id);
 
     if let Some(data_map) = event_data.component_data_map {
         for (path, object) in data_map {
             match object {
-                Data::Empty | Data::DeprecatedFidl(_) | Data::Tree(_, None) => {}
-                Data::Vmo(vmo) | Data::Tree(_, Some(vmo)) => {
+                InspectData::Empty
+                | InspectData::DeprecatedFidl(_)
+                | InspectData::Tree(_, None) => {}
+                InspectData::Vmo(vmo) | InspectData::Tree(_, Some(vmo)) => {
                     let mut contents = vec![0u8; vmo.get_size()? as usize];
                     vmo.read(&mut contents[..], 0)?;
 
@@ -697,7 +677,7 @@ async fn archive_event(
 
                     log = log.add_event_file(path, &contents);
                 }
-                Data::File(contents) => {
+                InspectData::File(contents) => {
                     log = log.add_event_file(path, &contents);
                 }
             }
@@ -781,9 +761,10 @@ pub async fn run_archivist(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::io::Write;
-    use std::iter::FromIterator;
+    use {
+        super::*,
+        std::{io::Write, iter::FromIterator},
+    };
 
     #[test]
     fn archive_open() {
@@ -937,16 +918,13 @@ mod tests {
     #[test]
     fn event_creation() {
         let time = Utc::now();
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
-        let event = Event::new_with_time(time, "START", "component", "instance", realm_path);
+        let event = Event::new_with_time(time, "START", "a/b/component.cmx:1234");
         assert_eq!(time, event.get_timestamp(Utc));
         assert_eq!(
             Event {
                 timestamp_nanos: datetime_to_timestamp(&time),
+                relative_moniker: "a/b/component.cmx:1234".into(),
                 event_type: "START".to_string(),
-                component_name: "component".to_string(),
-                component_instance: "instance".to_string(),
-                realm_path: "a/b".to_string(),
                 event_files: vec![],
             },
             event
@@ -955,9 +933,8 @@ mod tests {
 
     #[test]
     fn event_ordering() {
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
-        let event1 = Event::new("START", "a", "b", realm_path.clone());
-        let event2 = Event::new("END", "a", "b", realm_path);
+        let event1 = Event::new("START", "a/b/c.cmx:123");
+        let event2 = Event::new("END", "a/b/c.cmx:123");
         assert!(
             event1.get_timestamp(Utc) < event2.get_timestamp(Utc),
             "Expected {:?} before {:?}",
@@ -968,8 +945,7 @@ mod tests {
 
     #[test]
     fn event_event_files() {
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
-        let mut event = Event::new("START", "a", "b", realm_path);
+        let mut event = Event::new("START", "a/b/c.cmx:123");
         event.add_event_file("f1");
         assert_eq!(&vec!["f1"], event.get_event_files());
     }
@@ -992,10 +968,9 @@ mod tests {
         assert!(meta.is_ok());
         assert!(meta.unwrap().is_file());
 
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
-        assert!(writer.new_event("START", "test", "0", realm_path.clone()).build().is_ok());
+        assert!(writer.new_event("START", "a/b/test.cmx:0").build().is_ok());
         assert!(writer
-            .new_event("EXIT", "test", "0", realm_path)
+            .new_event("EXIT", "a/b/test.cmx:0")
             .add_event_file("root.inspect", b"INSP TEST")
             .build()
             .is_ok());
@@ -1013,15 +988,14 @@ mod tests {
         let mut archive =
             ArchiveWriter::open(dir.path().join("archive")).expect("failed to create archive");
 
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         archive
             .get_log()
-            .new_event("START", "test", "0", realm_path.clone())
+            .new_event("START", "a/b/test.cmx:0")
             .build()
             .expect("failed to write log");
         archive
             .get_log()
-            .new_event("STOP", "test", "0", realm_path)
+            .new_event("STOP", "a/b/test.cmx:0")
             .add_event_file("root.inspect", b"test")
             .build()
             .expect("failed to write log");
@@ -1049,10 +1023,9 @@ mod tests {
         });
         assert_eq!(2, group_count);
 
-        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let mut stats = archive
             .get_log()
-            .new_event("STOP", "test", "0", realm_path)
+            .new_event("STOP", "a/b/test.cmx:0")
             .add_event_file("root.inspect", b"test")
             .build()
             .expect("failed to write log");

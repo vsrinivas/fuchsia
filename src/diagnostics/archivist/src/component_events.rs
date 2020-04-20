@@ -17,17 +17,36 @@ use {
     fuchsia_zircon as zx,
     futures::{channel::mpsc, stream::BoxStream, SinkExt, StreamExt, TryStreamExt},
     log::error,
-    std::{collections::HashMap, path::PathBuf},
+    std::{
+        collections::HashMap,
+        convert::{TryFrom, TryInto},
+        ops::{Deref, DerefMut},
+    },
 };
-
-/// The capacity for bounded channels used by this implementation.
-static CHANNEL_CAPACITY: usize = 1024;
-
-type ComponentEventChannel = mpsc::Sender<ComponentEvent>;
 
 /// A realm path is a vector of realm names.
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct RealmPath(pub Vec<String>);
+
+impl Deref for RealmPath {
+    type Target = Vec<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for RealmPath {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<Vec<String>> for RealmPath {
+    fn from(v: Vec<String>) -> Self {
+        RealmPath(v)
+    }
+}
 
 impl Into<String> for RealmPath {
     fn into(self) -> String {
@@ -35,64 +54,108 @@ impl Into<String> for RealmPath {
     }
 }
 
-impl AsRef<Vec<String>> for RealmPath {
-    fn as_ref(&self) -> &Vec<String> {
-        &self.0
-    }
-}
-impl AsMut<Vec<String>> for RealmPath {
-    fn as_mut(&mut self) -> &mut Vec<String> {
-        &mut self.0
-    }
-}
-impl From<Vec<String>> for RealmPath {
-    fn from(v: Vec<String>) -> Self {
-        RealmPath(v)
-    }
-}
-
 #[derive(Debug)]
 pub struct InspectReaderData {
-    /// Path through the component hierarchy to the component
-    /// that this data packet is about.
-    pub component_hierarchy_path: PathBuf,
-
-    /// The path from the root parent to
-    /// the component generating the inspect reader
-    /// data, with all non-monikers stripped, such as
-    /// `r` and `c` characters denoting realm or component,
-    /// component names or realm id/component id.
-    /// eg: /r/my_realm/123/c/echo.cmx/123/ becomes:
-    ///     [my_realm]
-    /// If the realm is at the same level as this archivist, then
-    /// this will be empty.
-    pub realm_path: Vec<String>,
-
-    /// The name of the component.
-    pub component_name: String,
-
-    /// The instance ID of the component.
-    pub component_id: String,
+    /// The identifier of this component
+    pub component_id: ComponentIdentifier,
 
     /// Proxy to the inspect data host.
     pub data_directory_proxy: Option<DirectoryProxy>,
 }
 
-/// Represents the data associated with a component event.
-#[derive(Debug)]
-pub struct ComponentEventData {
+/// Represents the ID of a component.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ComponentIdentifier {
+    Legacy(LegacyIdentifier),
+}
+
+impl ComponentIdentifier {
+    /// Returns the relative moniker to be used for selectors.
+    /// For legacy components (v1), this is the relative moniker with respect to the root realm.
+    pub fn relative_moniker_for_selectors(&self) -> Vec<String> {
+        match self {
+            Self::Legacy(identifier) => {
+                let mut moniker = identifier.realm_path.clone();
+                moniker.push(identifier.component_name.clone());
+                moniker.0
+            }
+        }
+    }
+
+    pub fn component_name(&self) -> String {
+        match self {
+            Self::Legacy(identifier) => identifier.component_name.clone(),
+        }
+    }
+
+    pub fn instance_id(&self) -> String {
+        match self {
+            Self::Legacy(identifier) => identifier.instance_id.clone(),
+        }
+    }
+}
+
+impl TryFrom<SourceIdentity> for ComponentIdentifier {
+    type Error = anyhow::Error;
+
+    fn try_from(component: SourceIdentity) -> Result<Self, Self::Error> {
+        if component.component_name.is_some()
+            && component.instance_id.is_some()
+            && component.realm_path.is_some()
+        {
+            Ok(ComponentIdentifier::Legacy(LegacyIdentifier {
+                component_name: component.component_name.unwrap(),
+                instance_id: component.instance_id.unwrap(),
+                realm_path: RealmPath(component.realm_path.unwrap()),
+            }))
+        } else {
+            Err(format_err!("Missing fields in SourceIdentity"))
+        }
+    }
+}
+
+impl ToString for ComponentIdentifier {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Legacy(identifier) => format!(
+                "{}/{}:{}",
+                identifier.realm_path.join("/"),
+                identifier.component_name,
+                identifier.instance_id
+            ),
+        }
+    }
+}
+
+/// The ID of a component as used in components V1.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LegacyIdentifier {
     /// The name of the component.
     pub component_name: String,
 
     /// The instance ID of the component.
-    pub component_id: String,
-
-    /// Extra data about this event (to be stored in extra files in the archive).
-    pub component_data_map: Option<HashMap<String, Data>>,
+    pub instance_id: String,
 
     /// The path to the component's realm.
     pub realm_path: RealmPath,
 }
+
+/// Represents the data associated with a component event.
+#[derive(Debug)]
+pub struct ComponentEventData {
+    pub component_id: ComponentIdentifier,
+
+    /// Extra data about this event (to be stored in extra files in the archive).
+    pub component_data_map: Option<HashMap<String, InspectData>>,
+}
+
+/// The capacity for bounded channels used by this implementation.
+pub static CHANNEL_CAPACITY: usize = 1024;
+
+pub type ComponentEventChannel = mpsc::Sender<ComponentEvent>;
+
+/// A stream of |ComponentEvent|s
+pub type ComponentEventStream = BoxStream<'static, ComponentEvent>;
 
 /// An event that occurred to a component.
 #[derive(Debug)]
@@ -107,13 +170,10 @@ pub enum ComponentEvent {
     OutDirectoryAppeared(InspectReaderData),
 }
 
-/// A stream of |ComponentEvent|s
-pub type ComponentEventStream = BoxStream<'static, ComponentEvent>;
-
 /// Data associated with a component.
 /// This data is stored by data collectors and passed by the collectors to processors.
 #[derive(Debug)]
-pub enum Data {
+pub enum InspectData {
     /// Empty data, for testing.
     Empty,
 
@@ -211,51 +271,37 @@ impl EventListenerServer {
         Ok(())
     }
 
-    fn log_inspect(&mut self, event_name: &str, component: &SourceIdentity) {
-        let realm_path: String = RealmPath(component.realm_path.clone().unwrap()).into();
-        let moniker =
-            vec![realm_path, component.component_name.as_ref().unwrap().clone()].join("/");
+    fn log_inspect(&mut self, event_name: &str, identifier: &ComponentIdentifier) {
         inspect_log!(self.component_log_node,
             event: event_name,
-            component_id: component.instance_id.as_ref().unwrap().clone(),
-            moniker: moniker,
+            moniker: identifier.to_string(),
         );
     }
 
     async fn handle_on_start(&mut self, component: SourceIdentity) -> Result<(), Error> {
-        if !(component.component_name.is_some()
-            && component.instance_id.is_some()
-            && component.realm_path.is_some())
-        {
-            return Ok(());
+        if let Ok(component_id) = component.try_into() {
+            self.components_started.add(1);
+            self.log_inspect("START", &component_id);
+            self.send_event(ComponentEvent::Start(ComponentEventData {
+                component_id,
+                component_data_map: None,
+            }))
+            .await?;
         }
-        self.components_started.add(1);
-        self.log_inspect("START", &component);
-        self.send_event(ComponentEvent::Start(ComponentEventData {
-            component_name: component.component_name.unwrap(),
-            component_id: component.instance_id.unwrap(),
-            component_data_map: None,
-            realm_path: RealmPath(component.realm_path.unwrap()),
-        }))
-        .await
+        Ok(())
     }
 
     async fn handle_on_stop(&mut self, component: SourceIdentity) -> Result<(), Error> {
-        if !(component.component_name.is_some()
-            && component.instance_id.is_some()
-            && component.realm_path.is_some())
-        {
-            return Ok(());
+        if let Ok(component_id) = component.try_into() {
+            self.components_stopped.add(1);
+            self.log_inspect("STOP", &component_id);
+            self.send_event(ComponentEvent::Stop(ComponentEventData {
+                component_id,
+                component_data_map: None,
+            }))
+            .await?;
         }
-        self.components_stopped.add(1);
-        self.log_inspect("STOP", &component);
-        self.send_event(ComponentEvent::Stop(ComponentEventData {
-            component_name: component.component_name.unwrap(),
-            component_id: component.instance_id.unwrap(),
-            component_data_map: None,
-            realm_path: RealmPath(component.realm_path.unwrap()),
-        }))
-        .await
+        Ok(())
     }
 
     async fn handle_on_directory_ready(
@@ -263,28 +309,16 @@ impl EventListenerServer {
         component: SourceIdentity,
         directory: fidl::endpoints::ClientEnd<DirectoryMarker>,
     ) -> Result<(), Error> {
-        if !(component.component_name.is_some()
-            && component.instance_id.is_some()
-            && component.realm_path.is_some())
-        {
-            return Ok(());
+        if let Ok(component_id) = component.try_into() {
+            self.diagnostics_directories_seen.add(1);
+            self.log_inspect("DIAGNOSTICS_DIR_READY", &component_id);
+            self.send_event(ComponentEvent::OutDirectoryAppeared(InspectReaderData {
+                component_id,
+                data_directory_proxy: directory.into_proxy().ok(),
+            }))
+            .await?;
         }
-        self.diagnostics_directories_seen.add(1);
-        self.log_inspect("DIAGNOSTICS_DIR_READY", &component);
-        let component_hierarchy_path = PathBuf::from(format!(
-            "{}/{}/{}",
-            component.realm_path.clone().unwrap().join("/"),
-            component.component_name.clone().unwrap(),
-            component.instance_id.clone().unwrap()
-        ));
-        self.send_event(ComponentEvent::OutDirectoryAppeared(InspectReaderData {
-            component_hierarchy_path,
-            realm_path: component.realm_path.unwrap(),
-            component_name: component.component_name.unwrap(),
-            component_id: component.instance_id.unwrap(),
-            data_directory_proxy: directory.into_proxy().ok(),
-        }))
-        .await
+        Ok(())
     }
 
     async fn send_event(&mut self, event: ComponentEvent) -> Result<(), Error> {
@@ -326,10 +360,12 @@ mod tests {
     impl Into<ComponentEventData> for ClonableSourceIdentity {
         fn into(self) -> ComponentEventData {
             ComponentEventData {
-                component_name: self.component_name,
-                component_id: self.instance_id,
+                component_id: ComponentIdentifier::Legacy(LegacyIdentifier {
+                    component_name: self.component_name,
+                    instance_id: self.instance_id,
+                    realm_path: RealmPath(self.realm_path),
+                }),
                 component_data_map: None,
-                realm_path: RealmPath(self.realm_path),
             }
         }
     }
@@ -360,32 +396,13 @@ mod tests {
         /// We implement this manually so that we can avoid requiring equality comparison on
         /// `component_data_map`.
         fn eq(&self, other: &Self) -> bool {
-            self.component_name == other.component_name
-                && self.component_id == other.component_id
-                && self.realm_path == other.realm_path
+            self.component_id == other.component_id
         }
     }
 
     impl PartialEq for InspectReaderData {
         fn eq(&self, other: &Self) -> bool {
-            let InspectReaderData {
-                component_hierarchy_path,
-                realm_path,
-                component_name,
-                component_id,
-                data_directory_proxy: _,
-            } = self;
-            let InspectReaderData {
-                component_hierarchy_path: other_hierarchy_path,
-                component_name: other_name,
-                realm_path: other_realm_path,
-                component_id: other_id,
-                data_directory_proxy: _,
-            } = other;
-            component_hierarchy_path == other_hierarchy_path
-                && component_name == other_name
-                && component_id == other_id
-                && realm_path == other_realm_path
+            self.component_id == other.component_id
         }
     }
 
@@ -419,15 +436,13 @@ mod tests {
 
         let event = event_stream.next().await.unwrap();
         match event {
-            ComponentEvent::OutDirectoryAppeared(data) => {
-                assert_eq!(
-                    data.component_hierarchy_path.to_string_lossy().to_string(),
-                    "root/a/test.cmx/12345"
-                );
-                assert_eq!(data.realm_path, identity.realm_path);
-                assert_eq!(data.component_name, identity.component_name);
-                assert_eq!(data.component_id, identity.instance_id);
-                assert!(data.data_directory_proxy.is_some());
+            ComponentEvent::OutDirectoryAppeared(InspectReaderData {
+                component_id: ComponentIdentifier::Legacy(identifier),
+                data_directory_proxy: Some(_),
+            }) => {
+                assert_eq!(identifier.realm_path, RealmPath(identity.realm_path.clone()));
+                assert_eq!(identifier.component_name, identity.component_name);
+                assert_eq!(identifier.instance_id, identity.instance_id);
             }
             _ => assert!(false),
         }
@@ -444,20 +459,17 @@ mod tests {
                     "0": {
                         "@time": inspect::testing::AnyProperty,
                         event: "START",
-                        component_id: "12345",
-                        moniker: "root/a/test.cmx"
+                        moniker: "root/a/test.cmx:12345"
                     },
                     "1": {
                         "@time": inspect::testing::AnyProperty,
                         event: "DIAGNOSTICS_DIR_READY",
-                        component_id: "12345",
-                        moniker: "root/a/test.cmx"
+                        moniker: "root/a/test.cmx:12345"
                     },
                     "2": {
                         "@time": inspect::testing::AnyProperty,
                         event: "STOP",
-                        component_id: "12345",
-                        moniker: "root/a/test.cmx"
+                        moniker: "root/a/test.cmx:12345"
                     }
                 }
             }
