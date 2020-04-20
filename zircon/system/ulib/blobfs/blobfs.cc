@@ -41,6 +41,7 @@
 #include "allocator/extent-reserver.h"
 #include "allocator/node-reserver.h"
 #include "blob.h"
+#include "blob-loader.h"
 #include "blobfs-checker.h"
 #include "compression/algorithm.h"
 #include "compression/compressor.h"
@@ -291,6 +292,9 @@ zx_status_t Blobfs::CreateWithWriteCompressionAlgorithm(
   if (fs->write_uncompressed_) {
     FS_TRACE_INFO("blobfs: Compression disabled\n");
   }
+
+  auto* fs_ptr = fs.get();
+  fs->loader_ = BlobLoader(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs_ptr, fs->Metrics());
 
   *out = std::move(fs);
   return ZX_OK;

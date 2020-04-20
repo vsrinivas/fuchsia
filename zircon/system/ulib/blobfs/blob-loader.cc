@@ -24,12 +24,18 @@
 
 namespace blobfs {
 
-BlobLoader::BlobLoader(Blobfs* const blobfs, UserPager* const pager)
-  : blobfs_(blobfs), pager_(pager) {}
+BlobLoader::BlobLoader(
+      TransactionManager* txn_manager,
+      BlockIteratorProvider* block_iter_provider,
+      NodeFinder* node_finder,
+      UserPager* pager,
+      BlobfsMetrics* metrics) :
+    txn_manager_(txn_manager), block_iter_provider_(block_iter_provider), node_finder_(node_finder),
+    pager_(pager), metrics_(metrics) {}
 
 zx_status_t BlobLoader::LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_out,
                                  fzl::OwnedVmoMapper* merkle_out) {
-  const Inode* const inode = blobfs_->GetNode(node_index);
+  const Inode* const inode = node_finder_->GetNode(node_index);
   // LoadBlob should only be called for Inodes. If this doesn't hold, one of two things happened:
   //   - Programmer error
   //   - Corruption of a blob's Inode
@@ -91,7 +97,7 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
                                       std::unique_ptr<PageWatcher>* page_watcher_out,
                                       fzl::OwnedVmoMapper* data_out,
                                       fzl::OwnedVmoMapper* merkle_out) {
-  const Inode* const inode = blobfs_->GetNode(node_index);
+  const Inode* const inode = node_finder_->GetNode(node_index);
   // LoadBlobPaged should only be called for Inodes. If this doesn't hold, one of two things
   // happened:
   //   - Programmer error
@@ -158,7 +164,7 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
   uint64_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   if (num_merkle_blocks == 0) {
     return BlobVerifier::CreateWithoutTree(digest::Digest(inode.merkle_root_hash),
-                                           blobfs_->Metrics(), inode.blob_size, out_verifier);
+                                           metrics_, inode.blob_size, out_verifier);
   }
 
   fzl::OwnedVmoMapper merkle_mapper;
@@ -184,7 +190,7 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
     return status;
   }
 
-  if ((status = BlobVerifier::Create(digest::Digest(inode.merkle_root_hash), blobfs_->Metrics(),
+  if ((status = BlobVerifier::Create(digest::Digest(inode.merkle_root_hash), metrics_,
                                      merkle_mapper.start(), merkle_vmo_size, inode.blob_size,
                                      &verifier)) != ZX_OK) {
     return status;
@@ -197,7 +203,7 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
 
 zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
                                    const fzl::OwnedVmoMapper& vmo) const {
-  storage::OwnedVmoid vmoid(blobfs_);
+  storage::OwnedVmoid vmoid(txn_manager_);
   zx_status_t status;
   if ((status = vmoid.AttachVmo(vmo.vmo())) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to attach VMO to block device; error: %s\n",
@@ -209,11 +215,11 @@ zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
   uint64_t merkle_size = static_cast<uint64_t>(merkle_blocks) * kBlobfsBlockSize;
 
   TRACE_DURATION("blobfs", "BlobLoader::LoadMerkle", "merkle_size", merkle_size);
-  fs::Ticker ticker(blobfs_->Metrics()->Collecting());
-  fs::ReadTxn txn(blobfs_);
+  fs::Ticker ticker(metrics_->Collecting());
+  fs::ReadTxn txn(txn_manager_);
 
-  const uint64_t kDataStart = DataStartBlock(blobfs_->Info());
-  BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(node_index);
+  const uint64_t kDataStart = DataStartBlock(txn_manager_->Info());
+  BlockIterator block_iter = block_iter_provider_->BlockIteratorByNodeIndex(node_index);
   status = StreamBlocks(&block_iter, merkle_blocks,
                         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
                           txn.Enqueue(vmoid.get(), vmo_offset, kDataStart + dev_offset,
@@ -229,7 +235,7 @@ zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
     return status;
   }
 
-  blobfs_->Metrics()->UpdateMerkleDiskRead(merkle_size, ticker.End());
+  metrics_->UpdateMerkleDiskRead(merkle_size, ticker.End());
   return ZX_OK;
 }
 
@@ -243,7 +249,7 @@ zx_status_t BlobLoader::LoadData(uint32_t node_index, const Inode& inode,
   if ((status = LoadDataInternal(node_index, inode, vmo, &read_duration, &bytes_read)) != ZX_OK) {
     return status;
   }
-  blobfs_->Metrics()->UpdateMerkleDiskRead(bytes_read, read_duration);
+  metrics_->UpdateMerkleDiskRead(bytes_read, read_duration);
   return ZX_OK;
 }
 
@@ -290,7 +296,7 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index,
     return status;
   }
 
-  fs::Ticker ticker(blobfs_->Metrics()->Collecting());
+  fs::Ticker ticker(metrics_->Collecting());
 
   // Decompress into the target buffer.
   size_t target_size = inode.blob_size;
@@ -312,7 +318,7 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index,
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-  blobfs_->Metrics()->UpdateMerkleDecompress(compressed_size, inode.blob_size, read_duration,
+  metrics_->UpdateMerkleDecompress(compressed_size, inode.blob_size, read_duration,
                                              ticker.End());
 
   return ZX_OK;
@@ -323,24 +329,24 @@ zx_status_t BlobLoader::LoadDataInternal(uint32_t node_index, const Inode& inode
                                          fs::Duration* out_duration,
                                          uint64_t* out_bytes_read) const {
   TRACE_DURATION("blobfs", "BlobLoader::LoadDataInternal");
-  fs::Ticker ticker(blobfs_->Metrics()->Collecting());
+  fs::Ticker ticker(metrics_->Collecting());
 
   zx_status_t status;
   // Attach |vmo| for transfer to the block FIFO.
-  storage::OwnedVmoid vmoid(blobfs_);
+  storage::OwnedVmoid vmoid(txn_manager_);
   if ((status = vmoid.AttachVmo(vmo.vmo())) != ZX_OK) {
     FS_TRACE_ERROR("Failed to attach VMO to block device; error: %s\n",
                    zx_status_get_string(status));
     return status;
   }
 
-  fs::ReadTxn txn(blobfs_);
+  fs::ReadTxn txn(txn_manager_);
 
   // Stream the blocks, skipping the first |merkle_blocks| which contain the merkle tree.
   uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   uint32_t data_blocks = inode.block_count - merkle_blocks;
-  const uint64_t kDataStart = DataStartBlock(blobfs_->Info());
-  BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(node_index);
+  const uint64_t kDataStart = DataStartBlock(txn_manager_->Info());
+  BlockIterator block_iter = block_iter_provider_->BlockIteratorByNodeIndex(node_index);
   if ((status = IterateToBlock(&block_iter, merkle_blocks)) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to seek past merkle blocks: %s\n", zx_status_get_string(status));
     return status;

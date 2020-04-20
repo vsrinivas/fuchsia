@@ -101,7 +101,6 @@ Blob::Blob(Blobfs* bs, const Digest& digest)
     : CacheNode(digest),
       blobfs_(bs),
       flags_(kBlobStateEmpty),
-      blob_loader_(bs, bs),
       clone_watcher_(this) {}
 
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
@@ -109,7 +108,6 @@ Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
       blobfs_(bs),
       flags_(kBlobStateReadable),
       syncing_state_(SyncingState::kDone),
-      blob_loader_(bs, bs),
       clone_watcher_(this),
       map_index_(node_index),
       inode_(inode) {}
@@ -602,10 +600,11 @@ zx_status_t Blob::LoadVmosFromDisk() {
   if (IsDataLoaded()) {
     return ZX_OK;
   }
+  BlobLoader& loader = blobfs_->loader();
   zx_status_t status =
       IsPagerBacked()
-          ? blob_loader_.LoadBlobPaged(map_index_, &page_watcher_, &data_mapping_, &merkle_mapping_)
-          : blob_loader_.LoadBlob(map_index_, &data_mapping_, &merkle_mapping_);
+          ? loader.LoadBlobPaged(map_index_, &page_watcher_, &data_mapping_, &merkle_mapping_)
+          : loader.LoadBlob(map_index_, &data_mapping_, &merkle_mapping_);
 
   std::scoped_lock guard(mutex_);
   syncing_state_ = SyncingState::kDone;  // Nothing to sync when blob was loaded from the device.

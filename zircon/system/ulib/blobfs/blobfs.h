@@ -44,6 +44,7 @@
 #include "allocator/extent-reserver.h"
 #include "allocator/node-reserver.h"
 #include "blob-cache.h"
+#include "blob-loader.h"
 #include "compression/algorithm.h"
 #include "directory.h"
 #include "iterator/allocated-extent-iterator.h"
@@ -195,6 +196,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   const zx::resource& vmex_resource() const { return vmex_resource_; }
 
+  BlobLoader& loader() { return loader_; }
+
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
@@ -302,6 +305,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // Compression is enabled by default. Use the kernel commandline "blobfs.uncompressed"
   // to disable it.
   bool write_uncompressed_ = false;
+
+  BlobLoader loader_;
 };
 
 }  // namespace blobfs
