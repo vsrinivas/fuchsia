@@ -228,6 +228,20 @@ void x86_cpu_feature_late_init(void) {
                                        /*default_value=*/false);
   }
 
+  // Mitigate Spectre V4 (Speculative Store Bypass) if requested.
+  if (x86_cpu_should_mitigate_ssb()) {
+    switch (x86_vendor) {
+    case X86_VENDOR_AMD:
+      x86_amd_cpu_set_ssbd(&cpuid, &msr);
+      break;
+    case X86_VENDOR_INTEL:
+      x86_intel_cpu_set_ssbd(&cpuid, &msr);
+      break;
+    default:
+      break;
+    }
+  }
+
   // Set up hardware-controlled performance states.
   if (gCmdline.GetBool("kernel.x86.hwp", /*default_value=*/true)) {
     // Read the policy from the command line, falling back to kBiosSpecified.

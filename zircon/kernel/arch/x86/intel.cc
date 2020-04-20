@@ -270,10 +270,6 @@ void x86_intel_init_percpu(void) {
     write_msr(0x1fc, power_ctl_msr & ~0x2);
   }
 
-  if (x86_cpu_should_mitigate_ssb()) {
-    x86_intel_cpu_set_ssbd(&cpuid, &msr);
-  }
-
   if (x86_cpu_has_enhanced_ibrs()) {
     x86_cpu_ibrs(&msr);
   }
