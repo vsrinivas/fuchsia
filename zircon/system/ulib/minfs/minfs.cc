@@ -628,6 +628,8 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
 
 #ifdef __Fuchsia__
   vn->CancelPendingWriteback();
+
+  VmoIndirect& vmo_indirect = vn->vmo_indirect();
 #endif
 
   inodes_->Free(transaction, vn->GetIno());
@@ -651,12 +653,11 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
 
 #ifdef __Fuchsia__
     zx_status_t status;
-    if ((status = vn->InitIndirectVmo()) != ZX_OK) {
+    if ((status = vmo_indirect.Init(vn)) != ZX_OK) {
       return status;
     }
 
-    uint32_t* entry;
-    vn->ReadIndirectVmoBlock(n, &entry);
+    VmoIndirect::View entry(&vmo_indirect, n);
 #else
     uint32_t entry[kMinfsBlockSize];
     vn->ReadIndirectBlock(vn->GetInode()->inum[n], entry);
@@ -682,12 +683,11 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
     }
 #ifdef __Fuchsia__
     zx_status_t status;
-    if ((status = vn->InitIndirectVmo()) != ZX_OK) {
+    if ((status = vmo_indirect.Init(vn)) != ZX_OK) {
       return status;
     }
 
-    uint32_t* dentry;
-    vn->ReadIndirectVmoBlock(GetVmoOffsetForDoublyIndirect(n), &dentry);
+    VmoIndirect::View dentry(&vmo_indirect, GetVmoOffsetForDoublyIndirect(n));
 #else
     uint32_t dentry[kMinfsBlockSize];
     vn->ReadIndirectBlock(vn->GetInode()->dinum[n], dentry);
@@ -699,13 +699,11 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
       }
 
 #ifdef __Fuchsia__
-      if ((status = vn->LoadIndirectWithinDoublyIndirect(n)) != ZX_OK) {
+      if ((status = vmo_indirect.LoadIndirectWithinDoublyIndirect(vn, n)) != ZX_OK) {
         return status;
       }
 
-      uint32_t* entry;
-      vn->ReadIndirectVmoBlock(GetVmoOffsetForIndirect(n) + m, &entry);
-
+      VmoIndirect::View entry(&vmo_indirect, GetVmoOffsetForIndirect(n) + m);
 #else
       uint32_t entry[kMinfsBlockSize];
       vn->ReadIndirectBlock(dentry[m], entry);

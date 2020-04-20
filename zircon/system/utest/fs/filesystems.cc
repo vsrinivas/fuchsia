@@ -25,6 +25,7 @@
 #include <fs-management/mount.h>
 #include <fvm/format.h>
 #include <ramdevice-client/ramdisk.h>
+#include <minfs/format.h>
 
 const char* kTmpfsPath = "/fs-test-tmp";
 const char* kDevPath = "/dev";
@@ -382,6 +383,7 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_mmap = true,
         .supports_resize = false,
         .nsec_granularity = 1,
+        .max_file_size = 512 * 1024 * 1024,
     },
     {
         minfs_name,
@@ -398,5 +400,6 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_mmap = false,
         .supports_resize = true,
         .nsec_granularity = 1,
+        .max_file_size = minfs::kMinfsMaxFileSize,
     },
 };

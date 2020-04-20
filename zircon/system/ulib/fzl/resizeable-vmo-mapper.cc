@@ -104,34 +104,28 @@ zx_status_t ResizeableVmoMapper::Grow(size_t size) {
     return status;
   }
 
-  // Try to extend mapping
   uintptr_t new_start;
-  if ((status = zx_vmar_map(vmar_handle, map_options_ | ZX_VM_FLAG_SPECIFIC,
-                            start_ + size_ - vmar_info.base, vmo().get(), size_, size - size_,
-                            &new_start)) != ZX_OK) {
-    // If extension fails, create entirely new mapping and unmap the old one
-    if ((status = zx_vmar_map(vmar_handle, map_options_, 0, vmo().get(), 0, size, &new_start)) !=
-        ZX_OK) {
-      // If we could not extend the old mapping, and we cannot create a
-      // new mapping, then we are done.  Attempt to shrink the VMO back to
-      // its original size.  This operation should *never* fail.  If it
-      // does, something has gone very wrong and it is time to terminate
-      // this process.
-      zx_status_t stat2 = vmo().set_size(size_);
-      ZX_ASSERT_MSG(stat2 == ZX_OK, "Failed to shrink to original size (0x%zx -> 0x%lx : res %d)\n",
-                    size, this->size(), stat2);
-      return status;
-    }
-
-    // Now that we have a new mapping, unmap our original mapping.  Once
-    // again, this should *never* fail.  Hard assert that this is the case.
-    status = zx_vmar_unmap(vmar_handle, start_, size_);
-    ZX_ASSERT_MSG(status == ZX_OK, "Failed to destroy original mapping ([%p, len 0x%lx] : res %d\n",
-                  start(), this->size(), status);
-
-    start_ = new_start;
+  // Create entirely new mapping.
+  if ((status = zx_vmar_map(vmar_handle, map_options_, 0, vmo().get(), 0, size, &new_start)) !=
+      ZX_OK) {
+    // If we could not extend the old mapping, and we cannot create a
+    // new mapping, then we are done.  Attempt to shrink the VMO back to
+    // its original size.  This operation should *never* fail.  If it
+    // does, something has gone very wrong and it is time to terminate
+    // this process.
+    zx_status_t stat2 = vmo().set_size(size_);
+    ZX_ASSERT_MSG(stat2 == ZX_OK, "Failed to shrink to original size (0x%zx -> 0x%lx : res %d)\n",
+                  size, this->size(), stat2);
+    return status;
   }
 
+  // Now that we have a new mapping, unmap our original mapping.  Once
+  // again, this should *never* fail.  Hard assert that this is the case.
+  status = zx_vmar_unmap(vmar_handle, start_, size_);
+  ZX_ASSERT_MSG(status == ZX_OK, "Failed to destroy original mapping ([%p, len 0x%lx] : res %d\n",
+                start(), this->size(), status);
+
+  start_ = new_start;
   size_ = size;
   return ZX_OK;
 }

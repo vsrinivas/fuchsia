@@ -36,6 +36,7 @@ typedef struct fs_info {
   bool supports_mmap;
   bool supports_resize;
   int64_t nsec_granularity;
+  uint64_t max_file_size;
 } fs_info_t;
 
 // Path to mounted filesystem currently being tested
@@ -62,7 +63,7 @@ extern fs_info_t* test_info;
 
 extern const fsck_options_t test_fsck_options;
 
-#define NUM_FILESYSTEMS 3
+#define NUM_FILESYSTEMS 2
 extern fs_info_t FILESYSTEMS[NUM_FILESYSTEMS];
 
 typedef enum fs_test_type {

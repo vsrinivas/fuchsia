@@ -136,8 +136,24 @@ bool TestRemove() {
   END_TEST;
 }
 
+bool TestUnlinkLargeSparseFileAfterClose() {
+  BEGIN_TEST;
+
+  fbl::unique_fd fd(open("::foo", O_RDWR | O_CREAT | O_EXCL, 0644));
+  ASSERT_TRUE(fd);
+  // The offset here is deliberately chosen so that it would involve Minfs's double indirect blocks,
+  // but also fits within memfs.
+  ASSERT_EQ(pwrite(fd.get(), "hello", 5, 0x20000000 - 5), 5);
+  ASSERT_EQ(fsync(fd.get()), 0);  // Deliberate sync so that close is likely to unload the vnode.
+  ASSERT_EQ(close(fd.release()), 0);
+  ASSERT_EQ(unlink("::foo"), 0);
+
+  END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(unlink_tests,
                         RUN_TEST_MEDIUM(TestUnlinkSimple)
                         RUN_TEST_MEDIUM(TestUnlinkUseAfterwards)
                         RUN_TEST_MEDIUM(TestUnlinkOpenElsewhere)
-                        RUN_TEST_MEDIUM(TestRemove))
+                        RUN_TEST_MEDIUM(TestRemove)
+                        RUN_TEST_MEDIUM(TestUnlinkLargeSparseFileAfterClose))

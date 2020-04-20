@@ -135,6 +135,7 @@ zx_library("minfs") {
       "inspector_inode_table.cc",
       "inspector_superblock.cc",
       "superblock.cc",
+      "vmo_indirect.cc",
       "vnode_allocation.cc",
     ]
   }

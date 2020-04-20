@@ -22,7 +22,7 @@
 namespace {
 
 // Test that zero length read and write operations are valid.
-bool TestZeroLengthOperations(void) {
+bool TestZeroLengthOperations() {
   BEGIN_TEST;
 
   const char* filename = "::zero_length_ops";
@@ -47,7 +47,7 @@ bool TestZeroLengthOperations(void) {
 }
 
 // Test that non-zero length read_at and write_at operations are valid.
-bool TestOffsetOperations(void) {
+bool TestOffsetOperations() {
   BEGIN_TEST;
 
   srand(0xDEADBEEF);
@@ -110,7 +110,33 @@ bool TestOffsetOperations(void) {
   END_TEST;
 }
 
+bool TestMaxFileSize() {
+  BEGIN_TEST;
+
+  constexpr uint8_t test_data[] = "hello";
+  constexpr size_t test_data_len = 5;
+  off_t offset = test_info->max_file_size - test_data_len;
+  {
+    fbl::unique_fd fd(open("::foo", O_RDWR | O_CREAT, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(pwrite(fd.get(), test_data, test_data_len, offset), test_data_len);
+    ASSERT_EQ(fsync(fd.get()), 0);  // Deliberate sync so that close is likely to unload the vnode.
+    ASSERT_EQ(close(fd.release()), 0);
+  }
+  {
+    fbl::unique_fd fd(open("::foo", O_RDONLY));
+    ASSERT_TRUE(fd);
+    uint8_t buf[test_data_len];
+    ASSERT_EQ(pread(fd.get(), buf, test_data_len, offset), test_data_len);
+    ASSERT_BYTES_EQ(buf, test_data, test_data_len, "buf != test_data");
+  }
+
+  END_TEST;
+}
+
 }  // namespace
 
-RUN_FOR_ALL_FILESYSTEMS(rw_tests, RUN_TEST_MEDIUM(TestZeroLengthOperations)
-                                      RUN_TEST_MEDIUM(TestOffsetOperations))
+RUN_FOR_ALL_FILESYSTEMS(rw_tests,
+                        RUN_TEST_MEDIUM(TestZeroLengthOperations)
+                        RUN_TEST_MEDIUM(TestOffsetOperations)
+                        RUN_TEST_MEDIUM(TestMaxFileSize))

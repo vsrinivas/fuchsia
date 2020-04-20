@@ -20,6 +20,7 @@
 #include <fs/remote.h>
 #include <fs/watcher.h>
 
+#include "vmo_indirect.h"
 #include "vnode_allocation.h"
 #endif
 
@@ -185,14 +186,7 @@ class VnodeMinfs : public fs::Vnode,
   zx_status_t TruncateInternal(Transaction* transaction, size_t len);
 
   // TODO: The following methods should be made private:
-#ifdef __Fuchsia__
-  zx_status_t InitIndirectVmo();
-  // Reads the block at |offset| in memory.
-  // Assumes that vmo_indirect_ has already been initialized
-  void ReadIndirectVmoBlock(uint32_t offset, uint32_t** entry);
-  // Loads indirect blocks up to and including the doubly indirect block at |index|.
-  zx_status_t LoadIndirectWithinDoublyIndirect(uint32_t index);
-#else
+#ifndef __Fuchsia__
   // Reads the block at |bno| on disk.
   void ReadIndirectBlock(blk_t bno, uint32_t* entry);
 #endif
@@ -207,6 +201,10 @@ class VnodeMinfs : public fs::Vnode,
   // 1) Calls |Purge()| (if no open fds exist), or
   // 2) Adds itself to the "unlinked list", to be purged later.
   [[nodiscard]] zx_status_t RemoveInodeLink(Transaction* transaction);
+
+#ifdef __Fuchsia__
+  VmoIndirect& vmo_indirect() { return vmo_indirect_; }
+#endif
 
   // TODO(smklein): These operations and members are protected as a historical artifact
   // of "File + Directory + Vnode" being a single class. They should be transitioned to
@@ -428,14 +426,6 @@ class VnodeMinfs : public fs::Vnode,
   zx_status_t AttachRemote(fs::MountChannel h) final;
   zx_status_t InitVmo(PendingWork* transaction);
 
-  // Initializes the indirect VMO, grows it to |size| bytes, and reads |count| indirect
-  // blocks from |iarray| into the indirect VMO, starting at block offset |offset|.
-  zx_status_t LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32_t offset, uint64_t size);
-
-  // Clears the block at |offset| in memory.
-  // Assumes that vmo_indirect_ has already been initialized
-  void ClearIndirectVmoBlock(uint32_t offset);
-
   // Use the watcher container to implement a directory watcher
   void Notify(fbl::StringPiece name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
@@ -455,28 +445,9 @@ class VnodeMinfs : public fs::Vnode,
   zx::vmo vmo_{};
   uint64_t vmo_size_ = 0;
 
-  // vmo_indirect_ contains all indirect and doubly indirect blocks in the following order:
-  // First kMinfsIndirect blocks                                - initial set of indirect blocks
-  // Next kMinfsDoublyIndirect blocks                           - doubly indirect blocks
-  // Next kMinfsDoublyIndirect * kMinfsDirectPerIndirect blocks - indirect blocks pointed to
-  //                                                              by doubly indirect blocks
-  // DataBlockAssigner may modify this field asynchronously, so a valid Transaction object must
-  // be held before accessing it.
-  //
-  // vmo_indirect_ layout is sparse even when the corresponding file is not sparse.
-  // Meaning, the layout of vmo looks something like
-  // +----------------+-----------------+-----------------+------+-----------------+...
-  // | indirect block | dindirect block | indirect blocks | hole | indirect blocks |...
-  // +----------------+-----------------+-----------------+------+-----------------+...
-  // Above, the "hole" in vmo address range will never contain valid data(block numbers)
-  // irrespective of how large the file gets. This is because of how GetVmoOffsetForIndirect
-  // is implemented. Having sparse vmo layout, without any need for it to be sparse,
-  // makes reading/debugging difficult.
-  // TODO(fxb/42096).
-  std::unique_ptr<fzl::ResizeableVmoMapper> vmo_indirect_;
+  VmoIndirect vmo_indirect_;
 
   storage::Vmoid vmoid_;
-  storage::Vmoid vmoid_indirect_;
 
   fs::WatcherContainer watcher_{};
 #endif
