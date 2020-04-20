@@ -29,11 +29,39 @@ pub fn get_client_controller(
     Ok((client_controller, update_stream))
 }
 
+/// Communicates with the AP policy provider to get the components required to get an AP
+/// controller.
+pub fn get_ap_controller() -> Result<
+    (wlan_policy::AccessPointControllerProxy, wlan_policy::AccessPointStateUpdatesRequestStream),
+    Error,
+> {
+    let policy_provider = connect_to_service::<wlan_policy::AccessPointProviderMarker>()?;
+    let (ap_controller, server_end) =
+        create_proxy::<wlan_policy::AccessPointControllerMarker>().unwrap();
+    let (update_client_end, update_server_end) =
+        create_endpoints::<wlan_policy::AccessPointStateUpdatesMarker>().unwrap();
+    let () = policy_provider.get_controller(server_end, update_client_end)?;
+    let update_stream = update_server_end.into_stream()?;
+
+    Ok((ap_controller, update_stream))
+}
+
 /// Communicates with the client listener service to get a stream of client state updates.
 pub fn get_listener_stream() -> Result<wlan_policy::ClientStateUpdatesRequestStream, Error> {
     let listener = connect_to_service::<wlan_policy::ClientListenerMarker>()?;
     let (client_end, server_end) =
         create_endpoints::<wlan_policy::ClientStateUpdatesMarker>().unwrap();
+    listener.get_listener(client_end)?;
+    let server_stream = server_end.into_stream()?;
+    Ok(server_stream)
+}
+
+/// Communicates with the AP listener service to get a stream of AP state updates.
+pub fn get_ap_listener_stream() -> Result<wlan_policy::AccessPointStateUpdatesRequestStream, Error>
+{
+    let listener = connect_to_service::<wlan_policy::AccessPointListenerMarker>()?;
+    let (client_end, server_end) =
+        create_endpoints::<wlan_policy::AccessPointStateUpdatesMarker>().unwrap();
     listener.get_listener(client_end)?;
     let server_stream = server_end.into_stream()?;
     Ok(server_stream)
@@ -383,6 +411,124 @@ pub async fn handle_stop_client_connections(
     return handle_request_status(status);
 }
 
+/// Asks the policy layer to start an AP with the user's specified network configuration.
+pub async fn handle_start_ap(
+    ap_controller: wlan_policy::AccessPointControllerProxy,
+    mut server_stream: wlan_policy::AccessPointStateUpdatesRequestStream,
+    config: PolicyNetworkConfig,
+) -> Result<(), Error> {
+    let network_config = construct_network_config(config);
+    let connectivity_mode = wlan_policy::ConnectivityMode::Unrestricted;
+    let operating_band = wlan_policy::OperatingBand::Any;
+    let result =
+        ap_controller.start_access_point(network_config, connectivity_mode, operating_band).await?;
+    handle_request_status(result)?;
+
+    // Listen for state updates until the service indicates that there is an active AP.
+    while let Some(update_request) = server_stream.try_next().await? {
+        let update = update_request.into_on_access_point_state_update();
+        let (updates, responder) = match update {
+            Some((update, responder)) => (update, responder),
+            None => return Err(format_err!("AP provider produced invalid update.")),
+        };
+        let _ = responder.send();
+
+        for update in updates {
+            match update.state {
+                Some(state) => match state {
+                    wlan_policy::OperatingState::Failed => {
+                        return Err(format_err!("Failed to start AP."));
+                    }
+                    wlan_policy::OperatingState::Starting => {
+                        println!("AP is starting.");
+                        continue;
+                    }
+                    wlan_policy::OperatingState::Active => return Ok(()),
+                },
+                None => continue,
+            }
+        }
+    }
+    Err(format_err!("Status stream terminated before AP start could be verified."))
+}
+
+/// Requests that the policy layer stop the AP associated with the given network configuration.
+pub async fn handle_stop_ap(
+    ap_controller: wlan_policy::AccessPointControllerProxy,
+    config: PolicyNetworkConfig,
+) -> Result<(), Error> {
+    let network_config = construct_network_config(config);
+    let result = ap_controller.stop_access_point(network_config).await?;
+    handle_request_status(result)
+}
+
+/// Requests that the policy layer stop all AP interfaces.
+pub async fn handle_stop_all_aps(
+    ap_controller: wlan_policy::AccessPointControllerProxy,
+) -> Result<(), Error> {
+    ap_controller.stop_all_access_points()?;
+    Ok(())
+}
+
+/// Listens for AP state updates and prints each update that is received.
+pub async fn handle_ap_listen(
+    mut server_stream: wlan_policy::AccessPointStateUpdatesRequestStream,
+) -> Result<(), Error> {
+    println!("{:8} | {:12} | {:6} | {:4} | {:7}", "State", "Mode", "Band", "Freq", "#Clients");
+
+    while let Some(update_request) = server_stream.try_next().await? {
+        let updates = update_request.into_on_access_point_state_update();
+        let (updates, responder) = match updates {
+            Some((update, responder)) => (update, responder),
+            None => return Err(format_err!("AP provider produced invalid update.")),
+        };
+        let _ = responder.send();
+
+        for update in updates {
+            let state = match update.state {
+                Some(state) => match state {
+                    wlan_policy::OperatingState::Failed => "failed",
+                    wlan_policy::OperatingState::Starting => "starting",
+                    wlan_policy::OperatingState::Active => "active",
+                },
+                None => "",
+            };
+            let mode = match update.mode {
+                Some(mode) => match mode {
+                    wlan_policy::ConnectivityMode::LocalOnly => "local only",
+                    wlan_policy::ConnectivityMode::Unrestricted => "unrestricted",
+                },
+                None => "",
+            };
+            let band = match update.band {
+                Some(band) => match band {
+                    wlan_policy::OperatingBand::Any => "any",
+                    wlan_policy::OperatingBand::Only24Ghz => "2.4Ghz",
+                    wlan_policy::OperatingBand::Only5Ghz => "5Ghz",
+                },
+                None => "",
+            };
+            let frequency = match update.frequency {
+                Some(frequency) => frequency.to_string(),
+                None => "".to_string(),
+            };
+            let client_count = match update.clients {
+                Some(connected_clients) => match connected_clients.count {
+                    Some(count) => count.to_string(),
+                    None => "".to_string(),
+                },
+                None => "".to_string(),
+            };
+
+            println!(
+                "{:8} | {:12} | {:6} | {:4} | {:7}",
+                state, mode, band, frequency, client_count
+            );
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -405,7 +551,7 @@ mod tests {
         update_stream: wlan_policy::ClientStateUpdatesRequestStream,
     }
 
-    fn test_setup() -> ClientTestValues {
+    fn client_test_setup() -> ClientTestValues {
         let (client_proxy, client_stream) =
             endpoints::create_proxy_and_stream::<wlan_policy::ClientControllerMarker>()
                 .expect("failed to create ClientController proxy");
@@ -424,7 +570,7 @@ mod tests {
 
     /// Allows callers to respond to StartClientConnections, StopClientConnections, and Connect
     /// calls with the RequestStatus response of their choice.
-    fn send_request_status(
+    fn send_client_request_status(
         exec: &mut Executor,
         server: &mut wlan_policy::ClientControllerRequestStream,
         response: fidl_wlan_common::RequestStatus,
@@ -456,7 +602,7 @@ mod tests {
     }
 
     /// Creates a ClientStateSummary to provide as an update to listeners.
-    fn create_state_summary(
+    fn create_client_state_summary(
         ssid: &str,
         state: wlan_policy::ConnectionState,
     ) -> wlan_policy::ClientStateSummary {
@@ -468,6 +614,19 @@ mod tests {
         wlan_policy::ClientStateSummary {
             state: Some(wlan_policy::WlanClientState::ConnectionsEnabled),
             networks: Some(vec![network_state]),
+        }
+    }
+
+    /// Creates an AccessPointStateSummary to provide as an update to listeners.
+    fn create_ap_state_summary(
+        state: wlan_policy::OperatingState,
+    ) -> wlan_policy::AccessPointState {
+        wlan_policy::AccessPointState {
+            state: Some(state),
+            mode: None,
+            band: None,
+            frequency: None,
+            clients: None,
         }
     }
 
@@ -505,6 +664,60 @@ mod tests {
 
         if result.is_err() {
             panic!("could not send network config response");
+        }
+    }
+
+    struct ApTestValues {
+        ap_proxy: wlan_policy::AccessPointControllerProxy,
+        ap_stream: wlan_policy::AccessPointControllerRequestStream,
+        update_proxy: wlan_policy::AccessPointStateUpdatesProxy,
+        update_stream: wlan_policy::AccessPointStateUpdatesRequestStream,
+    }
+
+    fn ap_test_setup() -> ApTestValues {
+        let (ap_proxy, ap_stream) =
+            endpoints::create_proxy_and_stream::<wlan_policy::AccessPointControllerMarker>()
+                .expect("failed to create AccessPointController proxy");
+
+        let (listener_proxy, listener_stream) =
+            endpoints::create_proxy_and_stream::<wlan_policy::AccessPointStateUpdatesMarker>()
+                .expect("failed to create AccessPointController proxy");
+
+        ApTestValues {
+            ap_proxy,
+            ap_stream,
+            update_proxy: listener_proxy,
+            update_stream: listener_stream,
+        }
+    }
+
+    /// Allows callers to respond to StartAccessPoint and StopAccessPoint
+    /// calls with the RequestStatus response of their choice.
+    fn send_ap_request_status(
+        exec: &mut Executor,
+        server: &mut wlan_policy::AccessPointControllerRequestStream,
+        response: fidl_wlan_common::RequestStatus,
+    ) {
+        let poll = exec.run_until_stalled(&mut server.next());
+        let request = match poll {
+            Poll::Ready(poll_ready) => poll_ready
+                .expect("poll ready result is None")
+                .expect("poll ready result is an Error"),
+            Poll::Pending => panic!("no AccessPointController request available"),
+        };
+
+        let result = match request {
+            wlan_policy::AccessPointControllerRequest::StartAccessPoint { responder, .. } => {
+                responder.send(response)
+            }
+            wlan_policy::AccessPointControllerRequest::StopAccessPoint { config: _, responder } => {
+                responder.send(response)
+            }
+            _ => panic!("expecting a request that expects a RequestStatus"),
+        };
+
+        if result.is_err() {
+            panic!("could not send request status");
         }
     }
 
@@ -641,7 +854,7 @@ mod tests {
     #[test]
     fn test_start_client_connections_success() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
+        let mut test_values = client_test_setup();
         let fut = handle_start_client_connections(test_values.client_proxy);
         pin_mut!(fut);
 
@@ -649,7 +862,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Send back an acknowledgement
-        send_request_status(
+        send_client_request_status(
             &mut exec,
             &mut test_values.client_stream,
             fidl_wlan_common::RequestStatus::Acknowledged,
@@ -662,7 +875,7 @@ mod tests {
     #[test]
     fn test_start_client_connections_fail() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
+        let mut test_values = client_test_setup();
         let fut = handle_start_client_connections(test_values.client_proxy);
         pin_mut!(fut);
 
@@ -670,7 +883,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Send back an acknowledgement
-        send_request_status(
+        send_client_request_status(
             &mut exec,
             &mut test_values.client_stream,
             fidl_wlan_common::RequestStatus::RejectedNotSupported,
@@ -683,7 +896,7 @@ mod tests {
     #[test]
     fn test_stop_client_connections_success() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
+        let mut test_values = client_test_setup();
         let fut = handle_stop_client_connections(test_values.client_proxy);
         pin_mut!(fut);
 
@@ -691,7 +904,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Send back an acknowledgement
-        send_request_status(
+        send_client_request_status(
             &mut exec,
             &mut test_values.client_stream,
             fidl_wlan_common::RequestStatus::Acknowledged,
@@ -704,7 +917,7 @@ mod tests {
     #[test]
     fn test_stop_client_connections_fail() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
+        let mut test_values = client_test_setup();
         let fut = handle_stop_client_connections(test_values.client_proxy);
         pin_mut!(fut);
 
@@ -712,7 +925,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Send back an acknowledgement
-        send_request_status(
+        send_client_request_status(
             &mut exec,
             &mut test_values.client_stream,
             fidl_wlan_common::RequestStatus::RejectedNotSupported,
@@ -725,7 +938,7 @@ mod tests {
     #[test]
     fn test_save_network_pass() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let test_values = client_test_setup();
         let config = create_network_config_arg(TEST_SSID);
         let fut = handle_save_network(test_values.client_proxy, config);
         pin_mut!(fut);
@@ -743,7 +956,7 @@ mod tests {
     #[test]
     fn test_save_network_fail() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let test_values = client_test_setup();
         let config = create_network_config_arg(TEST_SSID);
         let fut = handle_save_network(test_values.client_proxy, config);
         pin_mut!(fut);
@@ -761,7 +974,7 @@ mod tests {
     #[test]
     fn test_remove_network_pass() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let test_values = client_test_setup();
         let config = create_network_config_arg(TEST_SSID);
         let fut = handle_remove_network(test_values.client_proxy, config);
         pin_mut!(fut);
@@ -779,7 +992,7 @@ mod tests {
     #[test]
     fn test_remove_network_fail() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let test_values = client_test_setup();
         let config = create_network_config_arg(TEST_SSID);
         let fut = handle_remove_network(test_values.client_proxy, config);
         pin_mut!(fut);
@@ -797,7 +1010,7 @@ mod tests {
     #[test]
     fn test_connect_pass() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
+        let mut test_values = client_test_setup();
 
         // Start the connect routine.
         let config = create_network_id_arg(TEST_SSID);
@@ -808,7 +1021,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Send back a positive acknowledgement
-        send_request_status(
+        send_client_request_status(
             &mut exec,
             &mut test_values.client_stream,
             fidl_wlan_common::RequestStatus::Acknowledged,
@@ -816,14 +1029,14 @@ mod tests {
 
         // The client should now wait for events from the listener.  Send a Connecting update.
         assert!(exec.run_until_stalled(&mut fut).is_pending());
-        let _ = test_values.update_proxy.on_client_state_update(create_state_summary(
+        let _ = test_values.update_proxy.on_client_state_update(create_client_state_summary(
             TEST_SSID,
             wlan_policy::ConnectionState::Connecting,
         ));
 
         // The client should stall and then wait for a Connected message.  Send that over.
         assert!(exec.run_until_stalled(&mut fut).is_pending());
-        let _ = test_values.update_proxy.on_client_state_update(create_state_summary(
+        let _ = test_values.update_proxy.on_client_state_update(create_client_state_summary(
             TEST_SSID,
             wlan_policy::ConnectionState::Connected,
         ));
@@ -836,7 +1049,7 @@ mod tests {
     #[test]
     fn test_connect_fail() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
+        let mut test_values = client_test_setup();
 
         // Start the connect routine.
         let config = create_network_id_arg(TEST_SSID);
@@ -847,7 +1060,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Send back a positive acknowledgement
-        send_request_status(
+        send_client_request_status(
             &mut exec,
             &mut test_values.client_stream,
             fidl_wlan_common::RequestStatus::Acknowledged,
@@ -855,7 +1068,7 @@ mod tests {
 
         // The client should now wait for events from the listener
         assert!(exec.run_until_stalled(&mut fut).is_pending());
-        let _ = test_values.update_proxy.on_client_state_update(create_state_summary(
+        let _ = test_values.update_proxy.on_client_state_update(create_client_state_summary(
             TEST_SSID,
             wlan_policy::ConnectionState::Failed,
         ));
@@ -868,7 +1081,7 @@ mod tests {
     #[test]
     fn test_scan_pass() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let test_values = client_test_setup();
 
         let fut = handle_scan(test_values.client_proxy);
         pin_mut!(fut);
@@ -900,7 +1113,7 @@ mod tests {
     #[test]
     fn test_scan_fail() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let test_values = client_test_setup();
 
         let fut = handle_scan(test_values.client_proxy);
         pin_mut!(fut);
@@ -924,7 +1137,7 @@ mod tests {
     #[test]
     fn test_get_saved_networks() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let test_values = client_test_setup();
 
         let fut = handle_get_saved_networks(test_values.client_proxy);
         pin_mut!(fut);
@@ -952,28 +1165,227 @@ mod tests {
 
     /// Tests to ensure that the listening loop continues to be active after receiving client state updates.
     #[test]
-    fn test_listen() {
+    fn test_client_listen() {
         let mut exec = Executor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let test_values = client_test_setup();
 
         let fut = handle_listen(test_values.update_stream);
         pin_mut!(fut);
 
         // Listen should stall waiting for updates
         assert!(exec.run_until_stalled(&mut fut).is_pending());
-        let _ = test_values.update_proxy.on_client_state_update(create_state_summary(
+        let _ = test_values.update_proxy.on_client_state_update(create_client_state_summary(
             TEST_SSID,
             wlan_policy::ConnectionState::Connecting,
         ));
 
         // Listen should process the message and stall again
         assert!(exec.run_until_stalled(&mut fut).is_pending());
-        let _ = test_values.update_proxy.on_client_state_update(create_state_summary(
+        let _ = test_values.update_proxy.on_client_state_update(create_client_state_summary(
             TEST_SSID,
             wlan_policy::ConnectionState::Connected,
         ));
 
         // Listener future should continue to run but stall waiting for more updates
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+    }
+
+    /// Tests the case where an AP is requested to be stopped and the policy service returns an
+    /// error.
+    #[test]
+    fn test_stop_ap_fail() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = ap_test_setup();
+
+        let network_config = create_network_config_arg(&TEST_SSID);
+        let fut = handle_stop_ap(test_values.ap_proxy, network_config);
+        pin_mut!(fut);
+
+        // The request should stall waiting for the service
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back a rejection
+        send_ap_request_status(
+            &mut exec,
+            &mut test_values.ap_stream,
+            fidl_wlan_common::RequestStatus::RejectedNotSupported,
+        );
+
+        // Run the request to completion
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+    }
+
+    /// Tests the case where an AP is successfully stopped.
+    #[test]
+    fn test_stop_ap_pass() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = ap_test_setup();
+
+        let network_config = create_network_config_arg(&TEST_SSID);
+        let fut = handle_stop_ap(test_values.ap_proxy, network_config);
+        pin_mut!(fut);
+
+        // The request should stall waiting for the service
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back an acknowledgement
+        send_ap_request_status(
+            &mut exec,
+            &mut test_values.ap_stream,
+            fidl_wlan_common::RequestStatus::Acknowledged,
+        );
+
+        // Run the request to completion
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+    }
+
+    /// Tests the case where the request to start an AP results in an error.
+    #[test]
+    fn test_start_ap_request_fail() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = ap_test_setup();
+
+        let network_config = create_network_config_arg(&TEST_SSID);
+        let fut = handle_start_ap(test_values.ap_proxy, test_values.update_stream, network_config);
+        pin_mut!(fut);
+
+        // The request should stall waiting for the service
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back a rejection
+        send_ap_request_status(
+            &mut exec,
+            &mut test_values.ap_stream,
+            fidl_wlan_common::RequestStatus::RejectedNotSupported,
+        );
+
+        // Run the request to completion
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+    }
+
+    /// Tests the case where the start AP process returns an acknowledgement.  The tool should then
+    /// wait for an update indicating that the AP is active.
+    #[test]
+    fn test_start_ap_pass() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = ap_test_setup();
+
+        let network_config = create_network_config_arg(&TEST_SSID);
+        let fut = handle_start_ap(test_values.ap_proxy, test_values.update_stream, network_config);
+        pin_mut!(fut);
+
+        // The request should stall waiting for the service
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back an acknowledgement
+        send_ap_request_status(
+            &mut exec,
+            &mut test_values.ap_stream,
+            fidl_wlan_common::RequestStatus::Acknowledged,
+        );
+
+        // Progress the future so that it waits for AP state updates
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // First send a `Starting` status.
+        let mut state_updates = vec![
+            create_ap_state_summary(wlan_policy::OperatingState::Starting),
+            create_ap_state_summary(wlan_policy::OperatingState::Active),
+        ];
+        let _ =
+            test_values.update_proxy.on_access_point_state_update(&mut state_updates.drain(..1));
+
+        // Future should still be waiting to see that the AP to be active
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send the response indicating that the AP is active
+        let _ = test_values.update_proxy.on_access_point_state_update(&mut state_updates.drain(..));
+
+        // Run the request to completion
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+    }
+
+    /// Tests the case where the AP start command is successfully sent, but the AP fails during
+    /// the startup process.
+    #[test]
+    fn test_ap_failed_to_start() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = ap_test_setup();
+
+        let network_config = create_network_config_arg(&TEST_SSID);
+        let fut = handle_start_ap(test_values.ap_proxy, test_values.update_stream, network_config);
+        pin_mut!(fut);
+
+        // The request should stall waiting for the service
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back an acknowledgement
+        send_ap_request_status(
+            &mut exec,
+            &mut test_values.ap_stream,
+            fidl_wlan_common::RequestStatus::Acknowledged,
+        );
+
+        // Progress the future so that it waits for AP state updates
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back a failure
+        let mut state_updates = vec![create_ap_state_summary(wlan_policy::OperatingState::Failed)];
+        let _ = test_values.update_proxy.on_access_point_state_update(&mut state_updates.drain(..));
+
+        // Expect that the future returns an error
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+    }
+
+    /// Tests the case where all APs are requested to be stopped.
+    #[test]
+    fn test_stop_all_aps() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = ap_test_setup();
+
+        let fut = handle_stop_all_aps(test_values.ap_proxy);
+        pin_mut!(fut);
+
+        // The future should finish immediately
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+
+        // Make sure that the request is seen on the request stream
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.ap_stream.next()),
+            Poll::Ready(Some(Ok(wlan_policy::AccessPointControllerRequest::StopAllAccessPoints{ .. })))
+        );
+    }
+
+    /// Tests that the AP listen routine continues listening for new updates.
+    #[test]
+    fn test_ap_listen() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let test_values = ap_test_setup();
+
+        let mut state_updates = vec![
+            create_ap_state_summary(wlan_policy::OperatingState::Starting),
+            create_ap_state_summary(wlan_policy::OperatingState::Active),
+            create_ap_state_summary(wlan_policy::OperatingState::Failed),
+        ];
+
+        let fut = handle_ap_listen(test_values.update_stream);
+        pin_mut!(fut);
+
+        // Listen should stall waiting for updates
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        let _ =
+            test_values.update_proxy.on_access_point_state_update(&mut state_updates.drain(..1));
+
+        // Listen should process the message and stall again
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        let _ =
+            test_values.update_proxy.on_access_point_state_update(&mut state_updates.drain(..1));
+
+        // Process message and stall again
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        let _ =
+            test_values.update_proxy.on_access_point_state_update(&mut state_updates.drain(..1));
+
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
     }
 }

@@ -4,6 +4,8 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.wlan.policy.AccessPointListener",
+            "fuchsia.wlan.policy.AccessPointProvider",
             "fuchsia.wlan.policy.ClientListener",
             "fuchsia.wlan.policy.ClientProvider"
         ]

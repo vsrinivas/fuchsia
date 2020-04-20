@@ -132,7 +132,22 @@ pub enum PolicyClientCmd {
 }
 
 #[derive(StructOpt, Clone, Debug)]
+pub enum PolicyAccessPointCmd {
+    // TODO(sakuma): Allow users to specify connectivity mode and operating band.
+    #[structopt(name = "start")]
+    Start(PolicyNetworkConfig),
+    #[structopt(name = "stop")]
+    Stop(PolicyNetworkConfig),
+    #[structopt(name = "stop-all")]
+    StopAllAccessPoints,
+    #[structopt(name = "listen")]
+    Listen,
+}
+
+#[derive(StructOpt, Clone, Debug)]
 pub enum Opt {
     #[structopt(name = "client")]
     Client(PolicyClientCmd),
+    #[structopt(name = "ap")]
+    AccessPoint(PolicyAccessPointCmd),
 }

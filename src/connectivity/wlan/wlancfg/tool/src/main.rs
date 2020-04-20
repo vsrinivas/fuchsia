@@ -21,6 +21,7 @@ fn main() -> Result<(), Error> {
     let fut = async {
         match opt {
             Opt::Client(cmd) => do_policy_client_cmd(cmd).await,
+            Opt::AccessPoint(cmd) => do_policy_ap_cmd(cmd).await,
         }
     };
     exec.run_singlethreaded(fut)
@@ -61,6 +62,28 @@ async fn do_policy_client_cmd(cmd: opts::PolicyClientCmd) -> Result<(), Error> {
         opts::PolicyClientCmd::StopClientConnections => {
             let (client_controller, _) = get_client_controller()?;
             handle_stop_client_connections(client_controller).await?;
+        }
+    }
+    Ok(())
+}
+
+async fn do_policy_ap_cmd(cmd: opts::PolicyAccessPointCmd) -> Result<(), Error> {
+    match cmd {
+        opts::PolicyAccessPointCmd::Start(network_config) => {
+            let (ap_controller, updates_server_end) = get_ap_controller()?;
+            handle_start_ap(ap_controller, updates_server_end, network_config).await?;
+        }
+        opts::PolicyAccessPointCmd::Stop(network_config) => {
+            let (ap_controller, _) = get_ap_controller()?;
+            handle_stop_ap(ap_controller, network_config).await?;
+        }
+        opts::PolicyAccessPointCmd::StopAllAccessPoints => {
+            let (ap_controller, _) = get_ap_controller()?;
+            handle_stop_all_aps(ap_controller).await?;
+        }
+        opts::PolicyAccessPointCmd::Listen => {
+            let update_stream = get_ap_listener_stream()?;
+            handle_ap_listen(update_stream).await?
         }
     }
     Ok(())
