@@ -180,6 +180,10 @@ executable("fxl_unittests") {
     "test/test_settings_unittest.cc",
   ]
 
+  if (is_fuchsia) {
+    sources += [ "logging_socket_unittest.cc" ]
+  }
+
   deps = [
     ":fxl",
     ":fxl_logging",

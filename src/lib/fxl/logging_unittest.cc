@@ -22,31 +22,6 @@
 namespace fxl {
 namespace {
 
-#ifdef __Fuchsia__
-
-struct LogPacket {
-  fx_log_metadata_t metadata;
-  std::vector<std::string> tags;
-  std::string message;
-};
-
-LogPacket ReadPacket(const zx::socket& local) {
-  LogPacket result;
-  fx_log_packet_t packet;
-  local.read(0, &packet, sizeof(packet), nullptr);
-  result.metadata = packet.metadata;
-  int pos = 0;
-  while (packet.data[pos]) {
-    int tag_len = packet.data[pos++];
-    result.tags.emplace_back(packet.data + pos, tag_len);
-    pos += tag_len;
-  }
-  result.message.append(packet.data + pos + 1);
-  return result;
-}
-
-#endif
-
 class LoggingFixture : public ::testing::Test {
  public:
   LoggingFixture() : old_settings_(GetLogSettings()), old_stderr_(dup(STDERR_FILENO)) {}
@@ -65,6 +40,8 @@ class LoggingFixture : public ::testing::Test {
   LogSettings old_settings_;
   int old_stderr_;
 };
+
+using LoggingFixtureDeathTest = LoggingFixture;
 
 TEST_F(LoggingFixture, Log) {
   LogSettings new_settings;
@@ -161,6 +138,8 @@ TEST_F(LoggingFixture, DVLogWithMinLevel) {
 #endif
 }
 
+TEST_F(LoggingFixtureDeathTest, CheckFailed) { ASSERT_DEATH(FXL_CHECK(false), ""); }
+
 #if defined(__Fuchsia__)
 TEST_F(LoggingFixture, Plog) {
   LogSettings new_settings;
@@ -178,38 +157,6 @@ TEST_F(LoggingFixture, Plog) {
   EXPECT_THAT(log, testing::HasSubstr("should be ok: 0 (ZX_OK)"));
   EXPECT_THAT(log, testing::HasSubstr("got access denied: -30 (ZX_ERR_ACCESS_DENIED)"));
 }
-
-TEST_F(LoggingFixture, UseSyslog) {
-  // Initialize syslog with a socket.
-  zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  const char* tags[] = {"tags1", "tag2"};
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_service_channel = remote.release(),
-                               .tags = tags,
-                               .num_tags = 2};
-  ASSERT_EQ(ZX_OK, fx_log_reconfigure(&config));
-
-  // Write a message using FXL_LOG and verify that it's forwarded to syslog.
-  std::string msg = "test message";
-  FXL_LOG(ERROR) << msg;
-  LogPacket packet = ReadPacket(local);
-  EXPECT_EQ(2u, packet.tags.size());
-  EXPECT_EQ(tags[0], packet.tags[0]);
-  EXPECT_EQ(tags[1], packet.tags[1]);
-
-  // |msg| should appear at the end of the log.
-  EXPECT_EQ(packet.message.rfind(msg), packet.message.size() - msg.size());
-
-  // The error message should not contain the severity since it's already
-  // included in the metadata.
-  EXPECT_EQ(packet.message.find("ERROR"), std::string::npos);
-
-  // Cleanup. Make sure syslog switches back to using stderr.
-  fx_logger_activate_fallback(fx_log_get_logger(), -1);
-}
-
 #endif  // defined(__Fuchsia__)
 
 }  // namespace
