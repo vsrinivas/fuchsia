@@ -17,7 +17,10 @@ import("cmc.gni")
 #
 #   data_deps
 #     Required: Dependencies examined for metadata. These dependencies define
-#     the contents of the component. These are executables and libraries.
+#     the contents of the component. These are executables and libraries, and
+#     resources. By marking these as data_deps, they can be built in parallel
+#     with this component, meaning the component target does not need to wait
+#     for the executables and libraries to be complete.
 #
 #   manifest
 #     Required: The source manifest file for this component. This can be
