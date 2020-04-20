@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/prebuilt.gni")
+
+declare_args() {
+  # If true, produce a Breakpad symbol file for each binary.
+  output_breakpad_syms = false
+}
+
+breakpad_dump_syms =
+    "$prebuilt_dir/third_party/breakpad/$host_platform/dump_syms/dump_syms"
+
+# TODO(mcgrathr): Document why -r.
+breakpad_args = [ "-r" ]
+
+breakpad_fuchsia_args = [
+  "-n",
+  "<_>",
+  "-o",
+  "Fuchsia",
+]

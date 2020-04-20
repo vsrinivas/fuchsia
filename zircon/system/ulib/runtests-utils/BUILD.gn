@@ -14,7 +14,9 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/zx_library.gni")
 
-import("//zircon/public/gn/toolchain/clang.gni")
+if (false) {  # is_gcc
+  import("//zircon/public/gn/toolchain/clang.gni")
+}
 
 zx_library("runtests-utils") {
   testonly = true

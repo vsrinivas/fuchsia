@@ -582,7 +582,7 @@ if (toolchain.environment == "user") {
       visibility = [ ":instrumented-ulib-redirect" ]
       variant = variant
       deps = [
-        "$zx/public/gn/config:shared-libcxx-deps",
+        "$zx/public/gn/config:shared-libc++-deps",
         "$zx/system/ulib",
       ]
       foreach(dep, toolchain.implicit_deps) {

@@ -20,11 +20,6 @@ if (current_toolchain == default_toolchain) {
       cpu = cpu
       shlib = true
       strip = "--strip-sections"
-      if (output_breakpad_syms) {
-        breakpad_syms = "-r -n \"<_>\" -o Fuchsia"
-      } else {
-        breakpad_syms = false
-      }
 
       configs += standard_fuchsia_configs
       configs += [

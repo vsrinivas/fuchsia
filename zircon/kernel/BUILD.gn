@@ -19,10 +19,6 @@ if (current_toolchain == default_toolchain) {
         is_kernel = true
       }
 
-      if (output_breakpad_syms) {
-        breakpad_syms = "-r -n \"zircon.elf\" -o Fuchsia"
-      }
-
       # Put the kernel's include_dirs ahead of the defaults so
       # it can override libc++ headers.
       common_configs = configs + standard_fuchsia_configs

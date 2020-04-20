@@ -192,7 +192,8 @@ template("shared_library") {
       if (!defined(output_extension)) {
         output_extension = "so"
       }
-      output_file = "$output_dir/lib$output_name"
+      output_file_base = "$output_dir/lib$output_name"
+      output_file = output_file_base
       if (output_extension != "") {
         output_file += ".$output_extension"
       }
@@ -231,10 +232,10 @@ template("shared_library") {
             }
             if (current_os != "mac" && current_os != "win") {
               elf_build_id =
-                  rebase_path("$output_file.build-id.stamp", root_build_dir)
+                  rebase_path("${output_file}.build-id.stamp", root_build_dir)
             }
-            if (toolchain.breakpad_syms != false && current_os == "fuchsia") {
-              breakpad = rebase_path("$output_file.sym", root_build_dir)
+            if (toolchain.breakpad_syms) {
+              breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
             }
           },
         ]
@@ -511,8 +512,8 @@ template("library") {
 
     sanitizer_config = "$zx_build/public/gn/config:no_sanitizers"
     sanitizers_disabled =
-        defined(invoker.configs) &&
-        invoker.configs + [ sanitizer_config ] - [ sanitizer_config ] != invoker.configs
+        defined(invoker.configs) && invoker.configs + [ sanitizer_config ] -
+                                    [ sanitizer_config ] != invoker.configs
 
     legacy_metadata = {
       legacy_barrier = []
@@ -1380,7 +1381,8 @@ template("_basic_executable") {
     if (!defined(output_extension)) {
       output_extension = toolchain.executable_extension
     }
-    output_file = "$output_dir/$output_name"
+    output_file_base = "$output_dir/$output_name"
+    output_file = output_file_base
     if (output_extension != "") {
       output_file += ".$output_extension"
     }
@@ -1419,10 +1421,10 @@ template("_basic_executable") {
           }
           if (current_os != "mac" && current_os != "win") {
             elf_build_id =
-                rebase_path("$output_file.build-id.stamp", root_build_dir)
+                rebase_path("${output_file}.build-id.stamp", root_build_dir)
           }
-          if (toolchain.breakpad_syms != false && current_os == "fuchsia") {
-            breakpad = rebase_path("$output_file.sym", root_build_dir)
+          if (toolchain.breakpad_syms) {
+            breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
           }
         },
       ]
@@ -1764,7 +1766,8 @@ template("_loadable_module") {
     if (!defined(output_extension)) {
       output_extension = "so"
     }
-    output_file = "$output_dir/$output_name"
+    output_file_base = "$output_dir/$output_name"
+    output_file = output_file_base
     if (output_extension != "") {
       output_file += ".$output_extension"
     }
@@ -1803,10 +1806,10 @@ template("_loadable_module") {
           }
           if (current_os != "mac" && current_os != "win") {
             elf_build_id =
-                rebase_path("$output_file.build-id.stamp", root_build_dir)
+                rebase_path("${output_file}.build-id.stamp", root_build_dir)
           }
-          if (toolchain.breakpad_syms != false && current_os == "fuchsia") {
-            breakpad = rebase_path("$output_file.sym", root_build_dir)
+          if (toolchain.breakpad_syms) {
+            breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
           }
         },
       ]

@@ -4,11 +4,6 @@
 
 import("$zx/public/gn/prebuilt.gni")
 
-declare_args() {
-  # "$output_breakpad_syms" gates whether or not breakpad symbols are produced.
-  output_breakpad_syms = false
-}
-
 # All the $current_cpu values that `current_os == "fuchsia"` supports.
 standard_fuchsia_cpus = [
   "arm64",
@@ -114,7 +109,6 @@ standard_environments = [
     # Ensure that host binaries have __zx_panic.
     implicit_deps = [ "$zx/system/ulib/zx-panic-libc" ]
     strip = true
-    breakpad_syms = false
   },
   {
     name = "user"
@@ -139,7 +133,7 @@ standard_environments = [
           "driver",
           "test_driver",
         ]
-        add = [ "$zx/public/gn/config:static-libcxx" ]
+        add = [ "$zx/public/gn/config:static-libc++" ]
       },
     ]
     implicit_deps = [
@@ -164,20 +158,15 @@ standard_environments = [
       # implicitly linked in might have runtime dependencies of their own.
       # So first add the static C++ deps and then, if not actually using
       # static C++, remove it again and add the shared C++ deps instead.
-      "$zx/public/gn/config:static-libcxx-deps",
+      "$zx/public/gn/config:static-libc++-deps",
       {
-        unless_configs = [ "$zx/public/gn/config:static-libcxx" ]
-        add = [ "$zx/public/gn/config:shared-libcxx-deps" ]
-        remove = [ "$zx/public/gn/config:static-libcxx-deps" ]
+        unless_configs = [ "$zx/public/gn/config:static-libc++" ]
+        add = [ "$zx/public/gn/config:shared-libc++-deps" ]
+        remove = [ "$zx/public/gn/config:static-libc++-deps" ]
       },
     ]
     shlib = true
     strip = "--strip-sections"
-    if (output_breakpad_syms) {
-      breakpad_syms = "-r -n \"<_>\" -o Fuchsia"
-    } else {
-      breakpad_syms = false
-    }
   },
 ]
 

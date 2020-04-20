@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/prebuilt.gni")
+import("breakpad.gni")
 import("ccache.gni")
 import("clang.gni")
 import("gcc.gni")
@@ -22,8 +23,6 @@ _buildidtool =
     rebase_path("$prebuilt_dir/tools/buildidtool/$host_platform/buildidtool",
                 root_build_dir)
 _id_dir = rebase_path(build_id_dir, root_build_dir)
-_dump_syms = rebase_path(
-        "$prebuilt_dir/third_party/breakpad/$host_platform/dump_syms/dump_syms")
 
 # Define a toolchain for compiling C/C++ code.
 #
@@ -52,13 +51,6 @@ _dump_syms = rebase_path(
 #     Optional: If not false, linked binaries will be stripped.
 #     If this is a string rather than true, it's a switch to the `objcopy`
 #     tool, e.g. "--strip-sections".
-#     Type: bool or string
-#     Default: false
-#
-#   breakpad_syms
-#     Optional: If not false, linked binaries will have breakpad symbol files
-#     of them made with a ".sym" extension added. If this is a string rather
-#     than true, it's a switch to the `dump_syms` tool, e.g. "-o Fuchsia".
 #     Type: bool or string
 #     Default: false
 #
@@ -142,8 +134,6 @@ template("c_toolchain") {
 
   use_gcc = defined(invoker.gcc) && invoker.gcc
   use_strip = defined(invoker.strip) && invoker.strip != false
-  use_breakpad_syms =
-      defined(invoker.breakpad_syms) && invoker.breakpad_syms != false
 
   # These are used in some, but not all, of the if branches below.
   if (clang_tool_dir == "") {
@@ -258,10 +248,37 @@ template("c_toolchain") {
   ld = cxx
   ar = "$dir_prefix${tc.tool_prefix}ar"
 
+  # All other OS possibilities are ELF and so might have ELF build IDs.
+  is_elf = invoker.os != "mac" && invoker.os != "win"
+
+  # buildidtool only supports ELF build IDs.
+  use_buildidtool = is_elf
+
+  # The prebuilt dump_syms tool is the one that only supports ELF.
+  # Breakpad has dump_syms tools for Mach-O (macOS) and PE-COFF
+  # (Windows/EFI) too, but the PE-COFF tool only runs on Windows.  The
+  # Mach-O tool can be cross compiled, though we can't cross compile to
+  # macOS anyway.  But we also don't have a prebuilt of the macOS
+  # self-targetting Breakpad dump_syms tool on hand.
+  use_breakpad = output_breakpad_syms && is_elf && use_buildidtool
+  if (use_breakpad) {
+    dump_syms = rebase_path(breakpad_dump_syms, root_build_dir)
+    foreach(arg, breakpad_args) {
+      dump_syms += " \"$arg\""
+    }
+    if (invoker.os == "fuchsia") {
+      foreach(arg, breakpad_fuchsia_args) {
+        dump_syms += " \"$arg\""
+      }
+    } else {
+      # Use what's probably installation name, not the ".debug" name.
+      dump_syms += " -n \"{{target_output_name}}{{output_extension}}\""
+    }
+  }
+
   _compile_common = {
-    outputs = [
-      "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o",
-    ]
+    outputs =
+        [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
     depfile = "{{output}}.d"
     depsformat = "gcc"
     switches = "-MD -MF $depfile -o {{output}} {{defines}} {{include_dirs}}"
@@ -271,11 +288,15 @@ template("c_toolchain") {
     lib_switch = "-l"
     lib_dir_switch = "-L"
     default_output_dir = "{{target_out_dir}}"
-    outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+    outfile_base = "{{output_dir}}/{{target_output_name}}"
+    outfile = "$outfile_base{{output_extension}}"
     runtime_outputs = [ outfile ]
     outputs = runtime_outputs
 
     if (use_strip) {
+      # This doesn't use ${outfile_base} so that it's consistent that
+      # toolchain.link_output_suffix is appended whether "" or ".debug",
+      # rather than replacing output_extension, which requires more logic.
       unstripped_outfile = "${outfile}.debug"
       outputs += [ unstripped_outfile ]
       strip_command = " && "
@@ -297,27 +318,7 @@ template("c_toolchain") {
       strip_command = ""
     }
 
-    # All others are ELF and so might have build IDs.
-    if (invoker.os != "mac" && invoker.os != "win") {
-      # TODO(TC-606): Kludgey heuristic to match --build-id=none switch and
-      # guess that only then will the output not have a build ID note.
-      # buildidtool unavoidably fails if there is no build ID note, but
-      # some binaries specifically don't have one.  Remove the check once
-      # buildidtool is fixed to be more tolerant.
-      strip_command +=
-          " && case '{{ldflags}}' in *build-id=none*) ;; *)" +
-          " $_buildidtool -build-id-dir \"$_id_dir\"" +
-          " -stamp \"$outfile.build-id.stamp\"" +
-          " -entry \"=$outfile\" -entry \".debug=$unstripped_outfile\"" +
-          " ;; esac"
-    }
-    if (use_breakpad_syms && current_os == "fuchsia") {
-      _breakpad_outfile = "$outfile.sym"
-      outputs += [ _breakpad_outfile ]
-      strip_command += "&& $_dump_syms ${invoker.breakpad_syms} \"$unstripped_outfile\" > \"_breakpad_outfile\""
-    }
-
-    rspfile = "${outfile}.rsp"
+    rspfile = "${outfile_base}.rsp"
     switches = "-o $unstripped_outfile {{ldflags}}"
     if (invoker.os == "mac") {
       rspfile_content = "{{inputs_newline}}"
@@ -330,16 +331,40 @@ template("c_toolchain") {
       } else {
         link_inputs = "-Wl,--start-group " + link_inputs +
                       " {{libs}} -Wl,--end-group {{solibs}}"
-        mapfile = "${outfile}.map"
+        mapfile = "${outfile_base}.map"
         outputs += [ mapfile ]
         switches += " -Wl,-Map,$mapfile"
       }
     }
+
     if (invoker.os == "win") {
       # This assumes "-Wl,/debug" or suchlike is in ldflags.  If it's not
       # but nothing depends on the .pdb file, then it should be OK that
       # Ninja thinks it's an additional output but it doesn't get created.
       outputs += [ "{{output_dir}}/{{target_output_name}}.pdb" ]
+    }
+
+    if (use_buildidtool) {
+      buildid_stampfile = "${outfile_base}.build-id.stamp"
+      strip_command +=
+          " && $_buildidtool -build-id-dir \"$_id_dir\"" +
+          " -stamp \"$buildid_stampfile\"" +
+          " -entry \"=$outfile\" -entry \".debug=$unstripped_outfile\""
+    }
+
+    if (use_breakpad) {
+      breakpad_outfile = "${outfile_base}.sym"
+      outputs += [ breakpad_outfile ]
+
+      # dump_syms will fail if there is no build ID.  buildidtool succeeds and
+      # writes an empty stamp file for that case, so use it to tell whether
+      # dump_syms should be run.
+      assert(use_buildidtool)
+      strip_command +=
+          " && { " +  # The brace group is superfluous.
+          "test ! -s \"$buildid_stampfile\" || " +
+          "$dump_syms \"$unstripped_outfile\" > \"$breakpad_outfile\"" +
+          "; }"  # But makes the control flow a little clearer.
     }
   }
 
@@ -397,9 +422,8 @@ template("c_toolchain") {
         default_output_dir = "{{target_out_dir}}"
         default_output_extension = ".a"
         output_prefix = "lib"
-        outputs = [
-          "{{output_dir}}/{{target_output_name}}{{output_extension}}",
-        ]
+        outputs =
+            [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       },
 
       {
@@ -532,11 +556,9 @@ template("c_toolchain") {
           link_output_suffix = ""
         }
 
-        if (use_breakpad_syms) {
-          breakpad_syms = invoker.breakpad_syms
-        } else {
-          breakpad_syms = false
-        }
+        # This is checked in the templates in BUILDCONFIG.gn because
+        # it can't import breakpad.gni directly.
+        breakpad_syms = use_breakpad
       }
     }
   }

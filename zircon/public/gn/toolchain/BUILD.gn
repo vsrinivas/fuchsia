@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/config/standard.gni")
+import("breakpad.gni")
 import("clang.gni")
 import("environment.gni")
 import("toolchain.gni")
@@ -66,6 +67,38 @@ group("llvm-tools") {
           path = rebase_path("$clang_tool_dir/$tool", root_build_dir)
         },
       ]
+    }
+  }
+}
+
+if (output_breakpad_syms) {
+  # Generate a target for each unique debug file provided by the toolchain.
+  # toolchain_runtime_deps() produces deps on these targets.
+
+  clang_runtime_debug = []
+  foreach(config, clang_runtime) {
+    foreach(lib, config.runtime) {
+      if (defined(lib.debug)) {
+        clang_runtime_debug += [ lib.debug ]
+        clang_runtime_debug -= [ lib.debug ]
+        clang_runtime_debug += [ lib.debug ]
+      }
+    }
+  }
+
+  assert(get_label_info(clang_runtime_breakpad_syms_label, "dir") ==
+         get_label_info(":here", "dir"))
+  breakpad_target = get_label_info(clang_runtime_breakpad_syms_label, "name")
+
+  foreach(debug, clang_runtime_debug) {
+    # This matches the transformation clang.gni does.
+    action(breakpad_target + string_join(".", string_split(debug, "/"))) {
+      sources = [ "$clang_tool_dir/../lib/$debug" ]
+      outputs = [ "$clang_runtime_breakpad_syms_dir/$debug" ]
+      inputs = [ breakpad_dump_syms ]
+      script = "$zx/public/gn/redirect-output.sh"
+      args = rebase_path(outputs + inputs, root_build_dir) + breakpad_args +
+             breakpad_fuchsia_args + rebase_path(sources, root_build_dir)
     }
   }
 }
