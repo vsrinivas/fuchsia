@@ -145,6 +145,7 @@ class SimFirmware {
     uint16_t auth_type;
     uint64_t auth_timer_id;
     enum simulation::SimSecProtoType sec_type = simulation::SEC_PROTO_TYPE_OPEN;
+    common::MacAddr bssid;
   };
 
   struct ChannelSwitchState {
@@ -260,8 +261,9 @@ class SimFirmware {
   zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
   zx_status_t HandleJoinRequest(const void* value, size_t value_len, const uint16_t ifidx);
   zx_status_t HandleAssocReq(uint16_t ifidx, const common::MacAddr& src_mac);
-  void HandleDisassocForClientIF(const common::MacAddr& src, const common::MacAddr& dst,
-                                 const uint16_t reason);
+  void HandleDisconnectForClientIF(const simulation::SimManagementFrame* frame,
+                                   const uint16_t ifidx, const common::MacAddr& bssid,
+                                   const uint16_t reason);
 
   // Generic scan operations
   zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts, const uint16_t ifidx);
@@ -281,11 +283,12 @@ class SimFirmware {
   void AuthStart();  // Scan complete, start authentication process
   void AssocStart();
   void AssocClearContext();
+  void AuthClearContext();
   void AssocHandleFailure();
   void AuthHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
   void DisassocLocalClient(brcmf_scb_val_le* scb_val);
-  void SetStateToDisassociated();
+  void SetStateToDisassociated(const uint16_t ifidx);
   void RestartBeaconWatchdog();
   void DisableBeaconWatchdog();
   void HandleBeaconTimeout();
@@ -303,6 +306,7 @@ class SimFirmware {
   void RxAuthResp(const simulation::SimAuthFrame* frame);
   // Handler for channel switch.
   void ConductChannelSwitch(wlan_channel_t& dst_channel, uint8_t mode);
+  void RxDeauthReq(const simulation::SimDeauthFrame* frame);
 
   // Allocate a buffer for an event (brcmf_event)
   std::unique_ptr<std::vector<uint8_t>> CreateEventBuffer(size_t requested_size,
@@ -327,6 +331,7 @@ class SimFirmware {
   wlan_channel_t GetIfChannel(bool is_ap);
 
   zx_status_t SetIFChanspec(uint16_t ifidx, uint16_t chanspec);
+  bool FindAndRemoveClient(const uint16_t ifidx, const common::MacAddr client_mac, uint16_t reason);
   // This is the simulator object that represents the interface between the driver and the
   // firmware. We will use it to send back events.
   brcmf_simdev* simdev_;

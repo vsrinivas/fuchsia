@@ -18,6 +18,7 @@ constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kMadeupClient({0xde, 0xad, 0xbe, 0xef, 0x00, 0x01});
 const uint16_t kDefaultApDisassocReason = 1;
+const uint16_t kDefaultApDeauthReason = 0;
 
 class AssocTest : public SimTest {
  public:
@@ -51,6 +52,11 @@ class AssocTest : public SimTest {
   // Pretend to transmit Disassoc from AP
   void TxFakeDisassocReq();
 
+  // Deauth routines
+  void StartDeauth();
+  void DeauthClient();
+  void DeauthFromAp();
+
  protected:
   struct AssocContext {
     // Information about the BSS we are attempting to associate with. Used to generate the
@@ -73,6 +79,9 @@ class AssocTest : public SimTest {
     size_t disassoc_conf_count = 0;
     // Track number of deauth indications (initiated from AP)
     size_t deauth_ind_count = 0;
+    // Number of deauth confirmations (when initiated by self)
+    size_t deauth_conf_count = 0;
+    // Number of signal report indications (once client is assoc'd)
     size_t signal_ind_count = 0;
   };
 
@@ -103,7 +112,14 @@ class AssocTest : public SimTest {
   // from the FakeAP else from the station itself.
   bool disassoc_from_ap_ = false;
 
+  // This flag is checked only if disassoc_from_ap_ is false. If set to true, the
+  // local client mac is used in disassoc_req else a fake mac address is used
   bool disassoc_self_ = true;
+
+  // Indicates if deauth needs to be issued.
+  bool start_deauth_ = false;
+  // Indicates if deauth is from the AP or from self
+  bool deauth_from_ap_ = false;
 
  private:
   // StationIfc overrides
@@ -119,6 +135,7 @@ class AssocTest : public SimTest {
   void OnAuthConf(const wlanif_auth_confirm_t* resp);
   void OnAssocConf(const wlanif_assoc_confirm_t* resp);
   void OnDisassocConf(const wlanif_disassoc_confirm_t* resp);
+  void OnDeauthConf(const wlanif_deauth_confirm_t* resp);
   void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   void OnSignalReport(const wlanif_signal_report_indication* ind);
 };
@@ -140,6 +157,10 @@ wlanif_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
     .auth_conf =
         [](void* cookie, const wlanif_auth_confirm_t* resp) {
           static_cast<AssocTest*>(cookie)->OnAuthConf(resp);
+        },
+    .deauth_conf =
+        [](void* cookie, const wlanif_deauth_confirm_t* resp) {
+          static_cast<AssocTest*>(cookie)->OnDeauthConf(resp);
         },
     .deauth_ind =
         [](void* cookie, const wlanif_deauth_indication_t* ind) {
@@ -257,6 +278,10 @@ void AssocTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
     std::function<void()>* callback = new std::function<void()>;
     *callback = std::bind(&AssocTest::StartDisassoc, this);
     env_->ScheduleNotification(this, zx::msec(100), static_cast<void*>(callback));
+  } else if (start_deauth_) {
+    std::function<void()>* callback = new std::function<void()>;
+    *callback = std::bind(&AssocTest::StartDeauth, this);
+    env_->ScheduleNotification(this, zx::msec(100), static_cast<void*>(callback));
   }
 }
 
@@ -265,6 +290,8 @@ void AssocTest::OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {
     context_.disassoc_conf_count++;
   }
 }
+
+void AssocTest::OnDeauthConf(const wlanif_deauth_confirm_t* resp) { context_.deauth_conf_count++; }
 
 void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) { context_.deauth_ind_count++; }
 
@@ -301,11 +328,39 @@ void AssocTest::StartDisassoc() {
   }
 }
 
+void AssocTest::StartDeauth() {
+  // Send disassoc request
+  if (!deauth_from_ap_) {
+    DeauthClient();
+  } else {
+    DeauthFromAp();
+  }
+}
+
 void AssocTest::DisassocClient(const common::MacAddr& mac_addr) {
   wlanif_disassoc_req disassoc_req = {};
 
   std::memcpy(disassoc_req.peer_sta_address, mac_addr.byte, ETH_ALEN);
   client_ifc_->if_impl_ops_->disassoc_req(client_ifc_->if_impl_ctx_, &disassoc_req);
+}
+
+void AssocTest::DeauthClient() {
+  wlanif_deauth_req_t deauth_req = {};
+
+  std::memcpy(deauth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
+  client_ifc_->if_impl_ops_->deauth_req(client_ifc_->if_impl_ctx_, &deauth_req);
+}
+
+void AssocTest::DeauthFromAp() {
+  // Figure out our own MAC
+  uint8_t mac_buf[ETH_ALEN];
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  common::MacAddr my_mac(mac_buf);
+
+  // Send a Deauth to our STA
+  simulation::SimDeauthFrame deauth_frame(context_.bssid, my_mac, kDefaultApDeauthReason);
+  env_->Tx(&deauth_frame, context_.tx_info, this);
 }
 
 void AssocTest::TxFakeDisassocReq() {
@@ -333,6 +388,7 @@ void AssocTest::TxFakeDisassocReq() {
                                                   kDefaultApDisassocReason);
   env_->Tx(&wrong_sta_frame, context_.tx_info, this);
 }
+
 // For this test, we want the pre-assoc scan test to fail because no APs are found.
 TEST_F(AssocTest, NoAps) {
   // Create our device instance
@@ -701,6 +757,75 @@ TEST_F(AssocTest, DisassocFromAPTest) {
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.deauth_ind_count, 1U);
 }
+
+// After assoc & disassoc, send disassoc again to test event handling
+TEST_F(AssocTest, LinkEventTest) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
+  disassoc_from_ap_ = true;
+  start_disassoc_ = true;
+
+  env_->Run();
+
+  // Send Deauth frame after disassociation
+  DeauthFromAp();
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.deauth_ind_count, 1U);
+}
+
+// After assoc, send a deauth from ap - client should disassociate
+TEST_F(AssocTest, deauth_from_ap) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
+  deauth_from_ap_ = true;
+  start_deauth_ = true;
+
+  env_->Run();
+
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.deauth_ind_count, 1U);
+}
+
+// After assoc, send a deauth from client - client should disassociate
+TEST_F(AssocTest, deauth_from_self) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
+  deauth_from_ap_ = false;
+  start_deauth_ = true;
+
+  env_->Run();
+
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.deauth_conf_count, 1U);
+}
+
 // Verify that association is retried as per the setting
 TEST_F(AssocTest, AssocMaxRetries) {
   // Create our device instance

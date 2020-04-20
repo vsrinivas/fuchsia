@@ -3685,9 +3685,30 @@ static bool brcmf_is_linkup(struct brcmf_cfg80211_vif* vif, const struct brcmf_e
   return false;
 }
 
-static bool brcmf_is_linkdown(const net_device* ndev, const struct brcmf_event_msg* e) {
+// Returns true if client is connected (also includes CONNECTING and DISCONNECTING).
+static bool brcmf_is_client_connected(brcmf_if* ifp) {
+  return (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state) ||
+          brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state) ||
+          brcmf_test_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state));
+}
+
+static const char* brcmf_get_client_connect_state_string(brcmf_if* ifp) {
+  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+    return "Connected";
+  } else if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+    return "Connecting";
+  } else if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state)) {
+    return "Disconnecting";
+  } else {
+    return "Not connected";
+  }
+}
+// Returns true if client is in connected (includes CONNECTED, CONNECTING and DISCONNECTING) state
+// and a disconnect notification is received from the firmware.
+static bool brcmf_is_link_going_down(net_device* ndev, const brcmf_event_msg* e) {
   uint32_t event = e->event_code;
   uint16_t flags = e->flags;
+  brcmf_if* ifp = ndev_to_if(ndev);
 
   if ((event == BRCMF_E_DEAUTH) || (event == BRCMF_E_DEAUTH_IND) ||
       (event == BRCMF_E_DISASSOC_IND) ||
@@ -3695,9 +3716,12 @@ static bool brcmf_is_linkdown(const net_device* ndev, const struct brcmf_event_m
     BRCMF_DBG(CONN, "Processing link down\n");
     // Adding this log for debugging disconnect issues.
     // TODO(karthikrish) : Move this to CONN level for production code
-    BRCMF_INFO("Link Down Event: %d flg: 0x%x reas: %d sts: %d rssi: %d snr: %d\n", event, flags,
-               e->reason, e->status, ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
-    return true;
+    BRCMF_INFO("Link Down Event: State: %s evt: %d flg: 0x%x rsn: %d sts: %d rssi: %d snr: %d\n",
+               brcmf_get_client_connect_state_string(ifp), event, flags, e->reason, e->status,
+               ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
+    // No need to process linkdown if disconnected
+    if (brcmf_is_client_connected(ifp))
+      return true;
   }
   return false;
 }
@@ -3956,7 +3980,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
     BRCMF_DBG(CONN, "Linkup\n");
     brcmf_bss_connect_done(cfg, ndev, e, true);
     brcmf_net_setcarrier(ifp, true);
-  } else if (brcmf_is_linkdown(ndev, e)) {
+  } else if (brcmf_is_link_going_down(ndev, e)) {
     BRCMF_DBG(CONN, "Linkdown\n");
     brcmf_bss_connect_done(cfg, ndev, e, false);
     brcmf_disconnect_done(cfg);

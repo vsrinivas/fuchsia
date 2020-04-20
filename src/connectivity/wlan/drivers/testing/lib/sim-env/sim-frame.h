@@ -84,10 +84,13 @@ class SimManagementFrame : public SimFrame {
     FRAME_TYPE_ASSOC_REQ,
     FRAME_TYPE_ASSOC_RESP,
     FRAME_TYPE_DISASSOC_REQ,
-    FRAME_TYPE_AUTH
+    FRAME_TYPE_AUTH,
+    FRAME_TYPE_DEAUTH,
   };
 
   SimManagementFrame(){};
+  SimManagementFrame(const common::MacAddr& src, const common::MacAddr& dst)
+      : src_addr_(src), dst_addr_(dst){};
 
   ~SimManagementFrame() override;
 
@@ -99,6 +102,8 @@ class SimManagementFrame : public SimFrame {
   std::shared_ptr<InformationElement> FindIE(InformationElement::SimIEType ie_type) const;
   void RemoveIE(InformationElement::SimIEType);
 
+  common::MacAddr src_addr_ = {};
+  common::MacAddr dst_addr_ = {};
   std::list<std::shared_ptr<InformationElement>> IEs_;
   // This is a brief alternative for security related IEs since we don't include entire IE for
   // security protocol such as WPA IE or RSNE IE.
@@ -127,13 +132,11 @@ class SimBeaconFrame : public SimManagementFrame {
 class SimProbeReqFrame : public SimManagementFrame {
  public:
   SimProbeReqFrame() = default;
-  explicit SimProbeReqFrame(const common::MacAddr& src) : src_addr_(src){};
+  explicit SimProbeReqFrame(const common::MacAddr& src) : SimManagementFrame(src, {}){};
 
   ~SimProbeReqFrame() override;
 
   SimMgmtFrameType MgmtFrameType() const override;
-
-  common::MacAddr src_addr_;
 };
 
 class SimProbeRespFrame : public SimManagementFrame {
@@ -141,14 +144,12 @@ class SimProbeRespFrame : public SimManagementFrame {
   SimProbeRespFrame() = default;
   explicit SimProbeRespFrame(const common::MacAddr& src, const common::MacAddr& dst,
                              const wlan_ssid_t& ssid)
-      : src_addr_(src), dst_addr_(dst), ssid_(ssid){};
+      : SimManagementFrame(src, dst), ssid_(ssid){};
 
   ~SimProbeRespFrame() override;
 
   SimMgmtFrameType MgmtFrameType() const override;
 
-  common::MacAddr src_addr_;
-  common::MacAddr dst_addr_;
   wlan_ssid_t ssid_;
   wlan::CapabilityInfo capability_info_;
 };
@@ -158,13 +159,12 @@ class SimAssocReqFrame : public SimManagementFrame {
   SimAssocReqFrame() = default;
   explicit SimAssocReqFrame(const common::MacAddr& src, const common::MacAddr bssid,
                             const wlan_ssid_t ssid)
-      : src_addr_(src), bssid_(bssid), ssid_(ssid){};
+      : SimManagementFrame(src, {}), bssid_(bssid), ssid_(ssid){};
 
   ~SimAssocReqFrame() override;
 
   SimMgmtFrameType MgmtFrameType() const override;
 
-  common::MacAddr src_addr_;
   common::MacAddr bssid_;
   wlan_ssid_t ssid_;
 };
@@ -174,14 +174,12 @@ class SimAssocRespFrame : public SimManagementFrame {
   SimAssocRespFrame() = default;
   explicit SimAssocRespFrame(const common::MacAddr& src, const common::MacAddr& dst,
                              const uint16_t status)
-      : src_addr_(src), dst_addr_(dst), status_(status){};
+      : SimManagementFrame(src, dst), status_(status){};
 
   ~SimAssocRespFrame() override;
 
   SimMgmtFrameType MgmtFrameType() const override;
 
-  common::MacAddr src_addr_;
-  common::MacAddr dst_addr_;
   uint16_t status_;
 };
 
@@ -190,14 +188,12 @@ class SimDisassocReqFrame : public SimManagementFrame {
   SimDisassocReqFrame() = default;
   explicit SimDisassocReqFrame(const common::MacAddr& src, const common::MacAddr& dst,
                                const uint16_t reason)
-      : src_addr_(src), dst_addr_(dst), reason_(reason){};
+      : SimManagementFrame(src, dst), reason_(reason){};
 
   ~SimDisassocReqFrame() override;
 
   SimMgmtFrameType MgmtFrameType() const override;
 
-  common::MacAddr src_addr_;
-  common::MacAddr dst_addr_;
   uint16_t reason_;
 };
 
@@ -207,17 +203,28 @@ class SimAuthFrame : public SimManagementFrame {
   SimAuthFrame() = default;
   explicit SimAuthFrame(const common::MacAddr& src, const common::MacAddr& dst, uint16_t seq,
                         SimAuthType auth_type, uint16_t status)
-      : src_addr_(src), dst_addr_(dst), seq_num_(seq), auth_type_(auth_type), status_(status){};
+      : SimManagementFrame(src, dst), seq_num_(seq), auth_type_(auth_type), status_(status){};
 
   ~SimAuthFrame() override;
 
   SimMgmtFrameType MgmtFrameType() const override;
 
-  common::MacAddr src_addr_;
-  common::MacAddr dst_addr_;
   uint16_t seq_num_;
   SimAuthType auth_type_;
   uint16_t status_;
+};
+
+class SimDeauthFrame : public SimManagementFrame {
+ public:
+  SimDeauthFrame() = default;
+  explicit SimDeauthFrame(const common::MacAddr& src, const common::MacAddr& dst, uint16_t reason)
+      : SimManagementFrame(src, dst), reason_(reason){};
+
+  ~SimDeauthFrame() override;
+
+  SimMgmtFrameType MgmtFrameType() const override;
+
+  uint16_t reason_;
 };
 
 }  // namespace wlan::simulation

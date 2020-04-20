@@ -571,12 +571,15 @@ void SimFirmware::AssocScanDone() {
 
 void SimFirmware::AssocClearContext() {
   assoc_state_.state = AssocState::NOT_ASSOCIATED;
-  auth_state_.state = AuthState::NOT_AUTHENTICATED;
-  auth_state_.sec_type = simulation::SEC_PROTO_TYPE_OPEN;
   assoc_state_.opts = nullptr;
   assoc_state_.scan_results.clear();
   // Clear out the channel setting
   iface_tbl_[assoc_state_.ifidx].chanspec = 0;
+}
+
+void SimFirmware::AuthClearContext() {
+  auth_state_.state = AuthState::NOT_AUTHENTICATED;
+  auth_state_.sec_type = simulation::SEC_PROTO_TYPE_OPEN;
 }
 
 void SimFirmware::AssocHandleFailure() {
@@ -662,6 +665,8 @@ void SimFirmware::RxAuthResp(const simulation::SimAuthFrame* frame) {
       return;
     }
     auth_state_.state = AuthState::AUTHENTICATED;
+    // Remember the last auth'd bssid
+    auth_state_.bssid = assoc_state_.opts->bssid;
     AssocStart();
   } else {
     // When auth_state_.auth_type == BRCMF_AUTH_MODE_AUTO
@@ -691,9 +696,50 @@ void SimFirmware::RxAuthResp(const simulation::SimAuthFrame* frame) {
     } else if (auth_state_.state == AuthState::EXPECTING_FOURTH && frame->seq_num_ == 4) {
       // If we receive the fourth auth frame when we are expecting it, start association
       auth_state_.state = AuthState::AUTHENTICATED;
+      // Remember the last auth'd bssid
+      auth_state_.bssid = assoc_state_.opts->bssid;
       AssocStart();
     }
   }
+}
+
+// Remove the client from the list. If found return true else false.
+bool SimFirmware::FindAndRemoveClient(const uint16_t ifidx, const common::MacAddr client_mac,
+                                      uint16_t reason) {
+  for (auto client : iface_tbl_[ifidx].ap_config.clients) {
+    if (client == client_mac) {
+      iface_tbl_[ifidx].ap_config.clients.remove(client_mac);
+      // Send DISASSOC_IND and DEAUTH events to driver
+      SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr,
+                        BRCMF_EVENT_MSG_LINK, WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC,
+                        client_mac);
+      SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH_IND, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0,
+                        reason, client_mac);
+      return true;
+    }
+  }
+  return false;
+}
+void SimFirmware::RxDeauthReq(const simulation::SimDeauthFrame* frame) {
+  BRCMF_DBG(SIM, "Deauth from %s for %s reason: %d\n", MACSTR(frame->src_addr_),
+            MACSTR(frame->dst_addr_), frame->reason_);
+  // First check if this is a deauth meant for a client associated to our SoftAP
+  auto ifidx = GetIfidxByMac(frame->dst_addr_);
+  if (ifidx == -1) {
+    // Not meant for any of the valid IFs, ignore
+    return;
+  }
+  if (!iface_tbl_[ifidx].ap_mode) {
+    // Not meant for the SoftAP. Check if it is meant for the client interface
+    HandleDisconnectForClientIF(frame, ifidx, auth_state_.bssid, frame->reason_);
+    return;
+  }
+  // Remove the client from the list (if found)
+  if (FindAndRemoveClient(ifidx, frame->src_addr_, frame->reason_)) {
+    BRCMF_DBG(SIM, "Deauth done Num Clients: %lu\n", iface_tbl_[ifidx].ap_config.clients.size());
+    return;
+  }
+  BRCMF_DBG(SIM, "Deauth Client not found in List\n");
 }
 
 void SimFirmware::AssocStart() {
@@ -751,24 +797,19 @@ void SimFirmware::RxDisassocReq(const simulation::SimDisassocReqFrame* frame) {
             MACSTR(frame->dst_addr_), frame->reason_);
   // First check if this is a disassoc meant for a client associated to our SoftAP
   auto ifidx = GetIfidxByMac(frame->dst_addr_);
+  if (ifidx == -1) {
+    // Not meant for any of the valid IFs, ignore
+    return;
+  }
   if (!iface_tbl_[ifidx].ap_mode) {
     // Not meant for the SoftAP. Check if it is meant for the client interface
-    HandleDisassocForClientIF(frame->src_addr_, frame->dst_addr_, frame->reason_);
+    HandleDisconnectForClientIF(frame, ifidx, assoc_state_.opts->bssid, frame->reason_);
     return;
   }
   // Remove the client from the list (if found)
-  for (auto client : iface_tbl_[ifidx].ap_config.clients) {
-    if (client == frame->src_addr_) {
-      iface_tbl_[ifidx].ap_config.clients.remove(frame->src_addr_);
-      // Send DISASSOC_IND and DEAUTH events to driver
-      SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr,
-                        BRCMF_EVENT_MSG_LINK, WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC,
-                        frame->src_addr_);
-      SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0,
-                        WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC, frame->src_addr_);
-      BRCMF_DBG(SIM, "Disasoc done Num Clients: %lu\n", iface_tbl_[ifidx].ap_config.clients.size());
-      return;
-    }
+  if (FindAndRemoveClient(ifidx, frame->src_addr_, WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC)) {
+    BRCMF_DBG(SIM, "Disassoc done Num Clients: %lu\n", iface_tbl_[ifidx].ap_config.clients.size());
+    return;
   }
   BRCMF_DBG(SIM, "Client not found in List\n");
 }
@@ -816,44 +857,53 @@ void SimFirmware::DisassocLocalClient(brcmf_scb_val_le* scb_val) {
     // driver now
     simulation::SimDisassocReqFrame disassoc_req_frame(srcAddr, *bssid, reason);
     hw_.Tx(&disassoc_req_frame);
-    SetStateToDisassociated();
+    SetStateToDisassociated(assoc_state_.ifidx);
   } else {
     SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
   }
   AssocClearContext();
 }
 
-// Disassoc Request from FakeAP for the Client IF
-void SimFirmware::HandleDisassocForClientIF(const common::MacAddr& src, const common::MacAddr& dst,
-                                            const uint16_t reason) {
-  // Ignore if we are not associated
-  if (assoc_state_.state != AssocState::ASSOCIATED) {
-    return;
-  }
-
+// Disassoc/deauth Request from FakeAP for the Client IF.
+void SimFirmware::HandleDisconnectForClientIF(const simulation::SimManagementFrame* frame,
+                                              const uint16_t ifidx, const common::MacAddr& bssid,
+                                              const uint16_t reason) {
   // Ignore if this is not intended for us
-  common::MacAddr mac_addr(mac_addr_);
-  if (dst != mac_addr) {
+  common::MacAddr mac_addr(iface_tbl_[ifidx].mac_addr);
+  if (frame->dst_addr_ != mac_addr) {
     return;
   }
 
-  // Ignore if this is not from the bssid with which we are associated
-  common::MacAddr bssid(assoc_state_.opts->bssid);
-  if (src != bssid) {
+  // Ignore if this is not from the bssid with which we are associated/authenticated
+  if (frame->src_addr_ != bssid) {
     return;
   }
 
-  SetStateToDisassociated();
+  if (frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_DEAUTH) {
+    // The client could receive a deauth even after disassociation. Notify the driver always
+    SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH, BRCMF_E_STATUS_SUCCESS, ifidx, 0, 0, reason);
+    if (assoc_state_.state == AuthState::AUTHENTICATED) {
+      AuthClearContext();
+    }
+    // DEAUTH implies disassoc, so continue
+  }
+  // disassoc
+  if (assoc_state_.state != AssocState::ASSOCIATED) {
+    // Already disassoc'd, nothing more to do.
+    return;
+  }
+
+  SetStateToDisassociated(ifidx);
   AssocClearContext();
 }
 
 // precondition: was associated
-void SimFirmware::SetStateToDisassociated() {
+void SimFirmware::SetStateToDisassociated(const uint16_t ifidx) {
   // Disable beacon watchdog that triggers disconnect
   DisableBeaconWatchdog();
 
   // Proprogate disassociation to driver code
-  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx);
+  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx);
 }
 
 // Assoc Request from Client for the SoftAP IF
@@ -1442,6 +1492,12 @@ void SimFirmware::RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame,
     case simulation::SimManagementFrame::FRAME_TYPE_AUTH: {
       auto auth_resp = static_cast<const simulation::SimAuthFrame*>(mgmt_frame);
       RxAuthResp(auth_resp);
+      break;
+    }
+
+    case simulation::SimManagementFrame::FRAME_TYPE_DEAUTH: {
+      auto deauth_req = static_cast<const simulation::SimDeauthFrame*>(mgmt_frame);
+      RxDeauthReq(deauth_req);
       break;
     }
 
