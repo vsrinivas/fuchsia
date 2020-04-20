@@ -131,7 +131,7 @@ class VmAddressRegionOrMapping : public fbl::RefCounted<VmAddressRegionOrMapping
 
   // utility so WAVL tree can find the intrusive node for the child list
   struct WAVLTreeTraits {
-    static fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>, bool>& node_state(
+    static fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>>& node_state(
         VmAddressRegionOrMapping& obj) {
       return obj.subregion_list_node_;
     }
@@ -203,7 +203,7 @@ class VmAddressRegionOrMapping : public fbl::RefCounted<VmAddressRegionOrMapping
   VmAddressRegion* parent_;
 
   // node for element in list of parent's children.
-  fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>, bool> subregion_list_node_;
+  fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>> subregion_list_node_;
 };
 
 // A list of regions ordered by virtual address.

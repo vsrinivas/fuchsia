@@ -53,6 +53,16 @@ struct DefaultKeyedObjectTraits {
   static bool EqualTo(const KeyType& key1, const KeyType& key2) { return key1 == key2; }
 };
 
+// A set of flag-style options which can be applied to container nodes in order
+// to control and sanity check their behavior and compatibility at compile time.
+enum class NodeOptions : uint64_t {
+  None = 0,
+
+  // Reserved bits reserved for testing purposes and should always be ignored by
+  // node implementations.
+  ReservedBits = 0xF000000000000000,
+};
+
 struct DefaultObjectTag {};
 
 // ContainableBaseClasses<> makes it easy to define types that live in multiple
@@ -99,33 +109,70 @@ struct DefaultObjectTag {};
 //    the user does not specify one.
 // ++ Pass the same tag type twice.
 //
+namespace internal {
+
 template <typename... BaseClasses>
-struct ContainableBaseClasses;
+struct ContainableBaseClassEnumerator;
 
 template <>
-struct ContainableBaseClasses<> {
+struct ContainableBaseClassEnumerator<> {
   using ContainableTypes = std::tuple<>;
   using TagTypes = std::tuple<>;
 };
 
-template <template <typename, typename> class Containable, typename PtrType, typename TagType,
-          typename... Rest>
-struct ContainableBaseClasses<Containable<PtrType, TagType>, Rest...>
-    : public Containable<PtrType, TagType>, public ContainableBaseClasses<Rest...> {
+template <template <typename, typename, NodeOptions> class Containable, typename PtrType,
+          typename TagType, NodeOptions Options, typename... Rest>
+struct ContainableBaseClassEnumerator<Containable<PtrType, TagType, Options>, Rest...>
+    : public Containable<PtrType, TagType, Options>,
+      public ContainableBaseClassEnumerator<Rest...> {
   static_assert(internal::ContainerPtrTraits<PtrType>::CanCopy || sizeof...(Rest) == 0,
                 "You can't have a unique_ptr in multiple containers at once.");
   static_assert(!std::is_same_v<TagType, DefaultObjectTag>,
                 "Do not use fbl::DefaultObjectTag when inheriting from "
                 "fbl::ContainableBaseClasses; define your own instead.");
   static_assert((!std::is_same_v<TagType, typename Rest::TagType> && ...),
-                "All tag types used with fbl::ContainableBaseClasses must be unique.");
+                "All tag types used with fbl::ContainableBaseClassEnumerator must be unique.");
 
-  using ContainableTypes = decltype(
-      std::tuple_cat(std::declval<std::tuple<Containable<PtrType, TagType>>>(),
-                     std::declval<typename ContainableBaseClasses<Rest...>::ContainableTypes>()));
-  using TagTypes =
-      decltype(std::tuple_cat(std::declval<std::tuple<TagType>>(),
-                              std::declval<typename ContainableBaseClasses<Rest...>::TagTypes>()));
+  using ContainableTypes = decltype(std::tuple_cat(
+      std::declval<std::tuple<Containable<PtrType, TagType, Options>>>(),
+      std::declval<typename ContainableBaseClassEnumerator<Rest...>::ContainableTypes>()));
+  using TagTypes = decltype(
+      std::tuple_cat(std::declval<std::tuple<TagType>>(),
+                     std::declval<typename ContainableBaseClassEnumerator<Rest...>::TagTypes>()));
+};
+
+}  // namespace internal
+
+template <typename... BaseClasses>
+struct ContainableBaseClasses {
+  using Enumerator = internal::ContainableBaseClassEnumerator<BaseClasses...>;
+  using ContainableTypes = typename Enumerator::ContainableTypes;
+  using TagTypes = typename Enumerator::TagTypes;
+
+  template <typename Tag, size_t N = 0>
+  static constexpr size_t TagIndex() {
+    static_assert(N < std::tuple_size<ContainableTypes>(), "Tag not found!");
+    using ContainableType = typename std::tuple_element<N, ContainableTypes>::type;
+    if constexpr (std::is_same_v<Tag, typename ContainableType::TagType>) {
+      return N;
+    } else {
+      return TagIndex<Tag, N + 1>();
+    }
+  }
+
+  template <typename Tag>
+  auto& GetContainableByTag() {
+    constexpr size_t Index = TagIndex<Tag>();
+    return std::get<Index>(contained_nodes_);
+  }
+
+  template <typename Tag>
+  const auto& GetContainableByTag() const {
+    constexpr size_t Index = TagIndex<Tag>();
+    return std::get<Index>(contained_nodes_);
+  }
+
+  ContainableTypes contained_nodes_;
 };
 
 namespace internal {
@@ -133,35 +180,15 @@ DECLARE_HAS_MEMBER_TYPE(has_tag_types, TagTypes);
 }
 
 // This is a free function because making it a member function presents complicated lookup issues
-// since the specific Containable classes already have a non-template InContainer, and you'd need to
-// say obj.template InContainer<TagType>(), which is super ugly.
-template <typename TagType, typename Containable, size_t Index = 0,
-          typename = std::enable_if_t<internal::has_tag_types_v<Containable>>>
+// since the specific Containable classes exist as members of the ContainableBaseClasses<...>, and
+// you'd need to say obj.template GetContainableByTag<TagType>().InContainer, which is super ugly.
+template <typename TagType = DefaultObjectTag, typename Containable>
 bool InContainer(const Containable& c) {
-  static_assert(Index < std::tuple_size_v<typename Containable::TagTypes>,
-                "Containable is not a member of a container with the specified tag type.");
-
-  using SpecificContainable = std::tuple_element_t<Index, typename Containable::ContainableTypes>;
-  if constexpr (std::is_same_v<TagType, typename SpecificContainable::TagType>) {
-    return InContainer(static_cast<const SpecificContainable&>(c));
+  if constexpr (std::is_same_v<TagType, DefaultObjectTag>) {
+    return c.InContainer();
   } else {
-    return InContainer<TagType, Containable, Index + 1>(c);
+    return c.template GetContainableByTag<TagType>().InContainer();
   }
-}
-
-// Overload for specific containables so this function can be used generically in any situation,
-// similarly to std::begin, std::end, std::size, etc.
-template <typename TagType = DefaultObjectTag, typename Containable,
-          typename = std::enable_if_t<!internal::has_tag_types_v<Containable>>>
-bool InContainer(const Containable& c) {
-  // It's okay to let people leave TagType as DefaultObjectTag because if there are multiple TagType
-  // member typedefs, the compiler will complain. We just want to prevent people from passing a
-  // nonsensical TagType parameter.
-  static_assert(std::is_same_v<TagType, typename Containable::TagType> ||
-                    std::is_same_v<TagType, DefaultObjectTag>,
-                "Containable is not a member of a container with the specified tag type.");
-
-  return c.InContainer();
 }
 
 // An enumeration which can be used as a template argument on list types to
@@ -175,6 +202,34 @@ bool InContainer(const Containable& c) {
 enum class SizeOrder { N, Constant };
 
 }  // namespace fbl
+
+// Helper functions which make it a bit easier to use the enum class NodeOptions
+// in a flag style fashion.
+//
+// The | operator will take two options and or them together to produce their
+// composition without needing to do all sorts of nasty casting.  In other
+// words:
+//
+//   fbl::NodeOptions::AllowX | fbl::NodeOptions::AllowY
+//
+// is legal.
+//
+// The global & operator is overloaded to perform the bitwise and of the
+// underlying flags and test against zero returning a bool.  This allows us to
+// say things like:
+//
+//   if constexpr (SomeOptions | fbl::NodeOptions::AllowX) { ... }
+//
+constexpr fbl::NodeOptions operator|(fbl::NodeOptions A, fbl::NodeOptions B) {
+  return static_cast<fbl::NodeOptions>(
+      static_cast<std::underlying_type<fbl::NodeOptions>::type>(A) |
+      static_cast<std::underlying_type<fbl::NodeOptions>::type>(B));
+}
+
+constexpr bool operator&(fbl::NodeOptions A, fbl::NodeOptions B) {
+  return (static_cast<std::underlying_type<fbl::NodeOptions>::type>(A) &
+          static_cast<std::underlying_type<fbl::NodeOptions>::type>(B)) != 0;
+}
 
 namespace fbl::internal {
 

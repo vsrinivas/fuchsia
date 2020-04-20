@@ -71,9 +71,10 @@ class WAVLBalanceTestObserver;
 }  // namespace intrusive_containers
 }  // namespace tests
 
-template <typename PtrType, typename RankType>
+template <typename PtrType, NodeOptions Options, typename RankType>
 struct WAVLTreeNodeStateBase {
   using PtrTraits = internal::ContainerPtrTraits<PtrType>;
+  static constexpr NodeOptions kNodeOptions = Options;
 
   WAVLTreeNodeStateBase() = default;
 
@@ -119,9 +120,9 @@ struct WAVLTreeNodeStateBase {
   RankType rank_{};
 };
 
-template <typename PtrType>
-struct WAVLTreeNodeState<PtrType, DefaultWAVLTreeRankType>
-    : public WAVLTreeNodeStateBase<PtrType, DefaultWAVLTreeRankType> {
+template <typename PtrType, NodeOptions Options>
+struct WAVLTreeNodeState<PtrType, Options, DefaultWAVLTreeRankType>
+    : public WAVLTreeNodeStateBase<PtrType, Options, DefaultWAVLTreeRankType> {
   bool rank_parity() const { return this->rank_; }
   void promote_rank() { this->rank_ = !this->rank_; }
   void double_promote_rank() {}
@@ -129,39 +130,40 @@ struct WAVLTreeNodeState<PtrType, DefaultWAVLTreeRankType>
   void double_demote_rank() {}
 };
 
-template <typename PtrType, typename TagType>
+template <typename PtrType, typename TagType, NodeOptions Options>
 struct WAVLTreeContainable;
 
-template <typename PtrType, typename RankType = DefaultWAVLTreeRankType>
+template <typename PtrType>
 struct DefaultWAVLTreeTraits {
  private:
   using ValueType = typename internal::ContainerPtrTraits<PtrType>::ValueType;
 
-  template <typename TagType>
-  using NodeType = std::conditional_t<internal::has_tag_types_v<ValueType>,
-                                      WAVLTreeContainable<PtrType, TagType>, ValueType>;
-
  public:
   using PtrTraits = internal::ContainerPtrTraits<PtrType>;
+
   template <typename TagType = DefaultObjectTag>
-  static WAVLTreeNodeState<PtrType, RankType>& node_state(typename PtrTraits::RefType obj) {
-    using Node [[maybe_unused]] = NodeType<TagType>;
-    return obj.Node::wavl_node_state_;
+  static auto& node_state(typename PtrTraits::RefType obj) {
+    if constexpr (std::is_same_v<TagType, DefaultObjectTag>) {
+      return obj.ValueType::wavl_node_state_;
+    } else {
+      return obj.template GetContainableByTag<TagType>().wavl_node_state_;
+    }
   }
 };
 
-template <typename PtrType, typename TagType_ = DefaultObjectTag>
+template <typename PtrType, typename TagType_ = DefaultObjectTag,
+          NodeOptions Options = kDefaultWAVLTreeNodeOptions>
 struct WAVLTreeContainable {
  public:
   using TagType = TagType_;
   bool InContainer() const {
-    using Node = WAVLTreeContainable<PtrType, TagType>;
+    using Node = WAVLTreeContainable<PtrType, TagType, Options>;
     return Node::wavl_node_state_.InContainer();
   }
 
  private:
-  friend DefaultWAVLTreeTraits<PtrType, DefaultWAVLTreeRankType>;
-  WAVLTreeNodeState<PtrType, DefaultWAVLTreeRankType> wavl_node_state_;
+  friend DefaultWAVLTreeTraits<PtrType>;
+  WAVLTreeNodeState<PtrType, Options, DefaultWAVLTreeRankType> wavl_node_state_;
 };
 
 template <typename KeyType_, typename PtrType_,
@@ -777,7 +779,10 @@ class __POINTER(KeyType_) WAVLTree {
   template <typename BaseNodeTraits>
   struct AddGenericNodeState<BaseNodeTraits,
                              std::enable_if_t<internal::has_node_state_v<BaseNodeTraits>>>
-      : public BaseNodeTraits {};
+      : public BaseNodeTraits {
+    using NodeState = std::decay_t<
+        std::invoke_result_t<decltype(BaseNodeTraits::node_state), typename PtrTraits::RefType>>;
+  };
 
   template <typename BaseNodeTraits>
   struct AddGenericNodeState<BaseNodeTraits,
@@ -788,9 +793,11 @@ class __POINTER(KeyType_) WAVLTree {
                                   *std::declval<typename PtrTraits::RawPtrType>()))>::rank_);
 
    public:
-    static WAVLTreeNodeState<PtrType, RankType>& node_state(typename PtrTraits::RefType obj) {
-      return DefaultWAVLTreeTraits<PtrType, RankType>::template node_state<TagType>(obj);
+    static auto& node_state(typename PtrTraits::RefType obj) {
+      return DefaultWAVLTreeTraits<PtrType>::template node_state<TagType>(obj);
     }
+    using NodeState =
+        std::decay_t<std::invoke_result_t<decltype(node_state), typename PtrTraits::RefType>>;
   };
 
   // The test framework's 'checker' class is our friend.

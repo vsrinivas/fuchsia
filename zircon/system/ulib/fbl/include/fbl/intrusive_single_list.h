@@ -160,9 +160,14 @@ class SequenceContainerTestEnvironment;
 // specific type SinglyLinkedList<T> must expose a SinglyLinkedListNodeState<T>
 // to the list implementation via the supplied traits.  See
 // DefaultSinglyLinkedListTraits<T>
-template <typename T>
+constexpr NodeOptions kDefaultSinglyLinkedListNodeOptions = NodeOptions::None;
+
+template <typename T, NodeOptions Options = kDefaultSinglyLinkedListNodeOptions>
 struct SinglyLinkedListNodeState {
   using PtrTraits = internal::ContainerPtrTraits<T>;
+
+  static constexpr NodeOptions kNodeOptions = Options;
+
   constexpr SinglyLinkedListNodeState() {}
   ~SinglyLinkedListNodeState() {
     // Note; this ASSERT can only be enforced for lists made of managed
@@ -212,7 +217,7 @@ struct SinglyLinkedListNodeState {
   typename PtrTraits::RawPtrType next_ = nullptr;
 };
 
-template <typename T, typename TagType>
+template <typename T, typename TagType, NodeOptions Options>
 struct SinglyLinkedListable;
 
 // DefaultSinglyLinkedListNodeState<T>
@@ -233,16 +238,16 @@ struct DefaultSinglyLinkedListTraits {
  private:
   using ValueType = typename internal::ContainerPtrTraits<T>::ValueType;
 
-  template <typename TagType>
-  using NodeType = std::conditional_t<internal::has_tag_types_v<ValueType>,
-                                      SinglyLinkedListable<T, TagType>, ValueType>;
-
  public:
   using PtrTraits = internal::ContainerPtrTraits<T>;
+
   template <typename TagType = DefaultObjectTag>
-  static SinglyLinkedListNodeState<T>& node_state(typename PtrTraits::RefType obj) {
-    using Node [[maybe_unused]] = NodeType<TagType>;
-    return obj.Node::sll_node_state_;
+  static auto& node_state(typename PtrTraits::RefType obj) {
+    if constexpr (std::is_same_v<TagType, DefaultObjectTag>) {
+      return obj.ValueType::sll_node_state_;
+    } else {
+      return obj.template GetContainableByTag<TagType>().sll_node_state_;
+    }
   }
 };
 
@@ -250,18 +255,21 @@ struct DefaultSinglyLinkedListTraits {
 //
 // A helper class which makes it simple to exist on a singly linked list.
 // Simply derive your object from SinglyLinkedListable and you are done.
-template <typename T, typename TagType_ = DefaultObjectTag>
+template <typename T, typename TagType_ = DefaultObjectTag,
+          NodeOptions Options = kDefaultSinglyLinkedListNodeOptions>
 struct SinglyLinkedListable {
  public:
   using TagType = TagType_;
+  static constexpr NodeOptions kNodeOptions = Options;
+
   bool InContainer() const {
-    using Node = SinglyLinkedListable<T, TagType>;
+    using Node = SinglyLinkedListable<T, TagType, Options>;
     return Node::sll_node_state_.InContainer();
   }
 
  private:
   friend struct DefaultSinglyLinkedListTraits<T>;
-  SinglyLinkedListNodeState<T> sll_node_state_;
+  SinglyLinkedListNodeState<T, Options> sll_node_state_;
 };
 
 template <typename T, typename NodeTraits_ = DefaultSinglyLinkedListTraits<T>,
@@ -715,15 +723,20 @@ class __POINTER(T) SinglyLinkedList : private internal::SizeTracker<ListSizeOrde
   template <typename BaseNodeTraits>
   struct AddGenericNodeState<BaseNodeTraits,
                              std::enable_if_t<internal::has_node_state_v<BaseNodeTraits>>>
-      : public BaseNodeTraits {};
+      : public BaseNodeTraits {
+    using NodeState = std::decay_t<
+        std::invoke_result_t<decltype(BaseNodeTraits::node_state), typename PtrTraits::RefType>>;
+  };
 
   template <typename BaseNodeTraits>
   struct AddGenericNodeState<BaseNodeTraits,
                              std::enable_if_t<!internal::has_node_state_v<BaseNodeTraits>>>
       : public BaseNodeTraits {
-    static SinglyLinkedListNodeState<T>& node_state(typename PtrTraits::RefType obj) {
+    static auto& node_state(typename PtrTraits::RefType obj) {
       return DefaultSinglyLinkedListTraits<T>::template node_state<TagType>(obj);
     }
+    using NodeState =
+        std::decay_t<std::invoke_result_t<decltype(node_state), typename PtrTraits::RefType>>;
   };
 
   // The test framework's 'checker' class is our friend.

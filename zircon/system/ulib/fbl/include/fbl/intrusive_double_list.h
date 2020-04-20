@@ -46,9 +46,14 @@ class SequenceContainerTestEnvironment;
 }  // namespace intrusive_containers
 }  // namespace tests
 
-template <typename T>
+constexpr NodeOptions kDefaultDoublyLinkedListNodeOptions = NodeOptions::None;
+
+template <typename T, NodeOptions Options = kDefaultDoublyLinkedListNodeOptions>
 struct DoublyLinkedListNodeState {
   using PtrTraits = internal::ContainerPtrTraits<T>;
+
+  static constexpr NodeOptions kNodeOptions = Options;
+
   constexpr DoublyLinkedListNodeState() {}
   ~DoublyLinkedListNodeState() {
     // Note; this ASSERT can only be enforced for lists made of managed
@@ -99,7 +104,7 @@ struct DoublyLinkedListNodeState {
   typename PtrTraits::RawPtrType prev_ = nullptr;
 };
 
-template <typename T, typename TagType>
+template <typename T, typename TagType, NodeOptions Options>
 struct DoublyLinkedListable;
 
 template <typename T>
@@ -107,31 +112,34 @@ struct DefaultDoublyLinkedListTraits {
  private:
   using ValueType = typename internal::ContainerPtrTraits<T>::ValueType;
 
-  template <typename TagType>
-  using NodeType = std::conditional_t<internal::has_tag_types_v<ValueType>,
-                                      DoublyLinkedListable<T, TagType>, ValueType>;
-
  public:
   using PtrTraits = internal::ContainerPtrTraits<T>;
+
   template <typename TagType = DefaultObjectTag>
-  static DoublyLinkedListNodeState<T>& node_state(typename PtrTraits::RefType obj) {
-    using Node [[maybe_unused]] = NodeType<TagType>;
-    return obj.Node::dll_node_state_;
+  static auto& node_state(typename PtrTraits::RefType obj) {
+    if constexpr (std::is_same_v<TagType, DefaultObjectTag>) {
+      return obj.ValueType::dll_node_state_;
+    } else {
+      return obj.template GetContainableByTag<TagType>().dll_node_state_;
+    }
   }
 };
 
-template <typename T, typename TagType_ = DefaultObjectTag>
+template <typename T, typename TagType_ = DefaultObjectTag,
+          NodeOptions Options = kDefaultDoublyLinkedListNodeOptions>
 struct DoublyLinkedListable {
  public:
   using TagType = TagType_;
+  static constexpr NodeOptions kNodeOptions = Options;
+
   bool InContainer() const {
-    using Node = DoublyLinkedListable<T, TagType>;
+    using Node = DoublyLinkedListable<T, TagType, Options>;
     return Node::dll_node_state_.InContainer();
   }
 
  private:
   friend struct DefaultDoublyLinkedListTraits<T>;
-  DoublyLinkedListNodeState<T> dll_node_state_;
+  DoublyLinkedListNodeState<T, Options> dll_node_state_;
 };
 
 template <typename T, typename NodeTraits_ = DefaultDoublyLinkedListTraits<T>,
@@ -152,7 +160,6 @@ class __POINTER(T) DoublyLinkedList : private internal::SizeTracker<ListSizeOrde
   static constexpr SizeOrder ListSizeOrder = ListSizeOrder_;
   using PtrTraits = internal::ContainerPtrTraits<T>;
   using NodeTraits = AddGenericNodeState<NodeTraits_>;
-  using NodeState = DoublyLinkedListNodeState<T>;
   using PtrType = typename PtrTraits::PtrType;
   using RawPtrType = typename PtrTraits::RawPtrType;
   using RawPtrTraits = internal::ContainerPtrTraits<RawPtrType>;
@@ -626,15 +633,20 @@ class __POINTER(T) DoublyLinkedList : private internal::SizeTracker<ListSizeOrde
   template <typename BaseNodeTraits>
   struct AddGenericNodeState<BaseNodeTraits,
                              std::enable_if_t<internal::has_node_state_v<BaseNodeTraits>>>
-      : public BaseNodeTraits {};
+      : public BaseNodeTraits {
+    using NodeState = std::decay_t<
+        std::invoke_result_t<decltype(BaseNodeTraits::node_state), typename PtrTraits::RefType>>;
+  };
 
   template <typename BaseNodeTraits>
   struct AddGenericNodeState<BaseNodeTraits,
                              std::enable_if_t<!internal::has_node_state_v<BaseNodeTraits>>>
       : public BaseNodeTraits {
-    static DoublyLinkedListNodeState<T>& node_state(typename PtrTraits::RefType obj) {
+    static auto& node_state(typename PtrTraits::RefType obj) {
       return DefaultDoublyLinkedListTraits<T>::template node_state<TagType>(obj);
     }
+    using NodeState =
+        std::decay_t<std::invoke_result_t<decltype(node_state), typename PtrTraits::RefType>>;
   };
 
   // The test framework's 'checker' class is our friend.

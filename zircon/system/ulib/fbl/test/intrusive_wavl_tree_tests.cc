@@ -341,10 +341,10 @@ class BalanceTestObj;
 
 using BalanceTestKeyType = uint64_t;
 using BalanceTestObjPtr = std::unique_ptr<BalanceTestObj>;
-using BalanceTestTree = WAVLTree<BalanceTestKeyType, BalanceTestObjPtr,
-                                 DefaultKeyedObjectTraits<BalanceTestKeyType, BalanceTestObj>,
-                                 DefaultWAVLTreeTraits<BalanceTestObjPtr, int32_t>,
-                                 DefaultObjectTag, WAVLBalanceTestObserver>;
+using BalanceTestTree =
+    WAVLTree<BalanceTestKeyType, BalanceTestObjPtr,
+             DefaultKeyedObjectTraits<BalanceTestKeyType, BalanceTestObj>,
+             DefaultWAVLTreeTraits<BalanceTestObjPtr>, DefaultObjectTag, WAVLBalanceTestObserver>;
 
 class BalanceTestObj {
  public:
@@ -367,7 +367,7 @@ class BalanceTestObj {
   bool InContainer() const { return wavl_node_state_.InContainer(); }
 
  private:
-  friend DefaultWAVLTreeTraits<BalanceTestObjPtr, int32_t>;
+  friend DefaultWAVLTreeTraits<BalanceTestObjPtr>;
   friend WAVLBalanceTestObserver;
 
   static void operator delete(void* ptr) {
@@ -379,7 +379,7 @@ class BalanceTestObj {
   BalanceTestKeyType min_subtree_key_;
   BalanceTestKeyType max_subtree_key_;
   BalanceTestObj* erase_deck_ptr_;
-  WAVLTreeNodeState<BalanceTestObjPtr, int32_t> wavl_node_state_;
+  WAVLTreeNodeState<BalanceTestObjPtr, kDefaultWAVLTreeNodeOptions, int32_t> wavl_node_state_;
 };
 
 // Only enable heavy weight testing when asked to do so.

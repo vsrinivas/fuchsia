@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <fbl/intrusive_container_utils.h>
+
 namespace fbl {
 
 namespace tests {
@@ -83,8 +85,7 @@ struct DefaultWAVLTreeObserver {
   // left() and right() iterator methods of each node return unreflected values.
   //
   template <typename Iter>
-  static void RecordRotation(Iter pivot, Iter lr_child, Iter rl_child, Iter parent,
-                             Iter sibling) {}
+  static void RecordRotation(Iter pivot, Iter lr_child, Iter rl_child, Iter parent, Iter sibling) {}
 
   // Invoked on the node to be erased and the node in the tree where the
   // augmented invariants become invalid, leading up to the root. Called just
@@ -134,6 +135,7 @@ struct DefaultWAVLTreeObserver {
 }  // namespace intrusive_containers
 }  // namespace tests
 
+constexpr NodeOptions kDefaultWAVLTreeNodeOptions = NodeOptions::None;
 using DefaultWAVLTreeRankType = bool;
 
 // Prototypes for the WAVL tree node state.  By default, we just use a bool to
@@ -148,13 +150,15 @@ using DefaultWAVLTreeRankType = bool;
 // which include a WAVLTreeNodeState<> to be standard layout types, provided
 // that they follow all of the other the rules as well.
 //
-template <typename PtrType, typename RankType>  // Fwd decl
+template <typename PtrType, NodeOptions Options, typename RankType>  // Fwd decl
 struct WAVLTreeNodeStateBase;
-template <typename PtrType, typename RankType = DefaultWAVLTreeRankType>  // Partial spec
+template <typename PtrType, NodeOptions Options = kDefaultWAVLTreeNodeOptions,
+          typename RankType = DefaultWAVLTreeRankType>  // Partial spec
 struct WAVLTreeNodeState;
 
-template <typename PtrType>
-struct WAVLTreeNodeState<PtrType, int32_t> : public WAVLTreeNodeStateBase<PtrType, int32_t> {
+template <typename PtrType, NodeOptions Options>
+struct WAVLTreeNodeState<PtrType, Options, int32_t>
+    : public WAVLTreeNodeStateBase<PtrType, Options, int32_t> {
   bool rank_parity() const { return ((this->rank_ & 0x1) != 0); }
   void promote_rank() { this->rank_ += 1; }
   void double_promote_rank() { this->rank_ += 2; }
