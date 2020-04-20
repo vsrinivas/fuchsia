@@ -15,8 +15,6 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
-import("//zircon/public/gn/package.gni")
-
 executable("console") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
