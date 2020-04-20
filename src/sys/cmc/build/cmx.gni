@@ -2,33 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/json/validate_json.gni")
-import("//src/sys/cmc/cmc.gni")
-
-# Given a .cmx file, validates the module facet of it
-#
-# Parameters
-#   cmx (required)
-#     This is the .cmx file that wants to be validated.
-#
-#   deps (optional)
-template("cmx_module_validate") {
-  module_facet_validation = target_name + "_module_facet"
-
-  # Validate the |fuchsia.module| facet schema.
-  validate_json(module_facet_validation) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "public_deps",
-                             "testonly",
-                             "visibility",
-                           ])
-
-    data = invoker.cmx
-    schema = "//build/cmx/facets/module_facet_schema.json"
-  }
-}
+import("//src/modular/build/fuchsia_module_facet.gni")
+import("//src/sys/cmc/build/cmc.gni")
 
 # Validates a cmx file
 #
@@ -92,7 +67,7 @@ template("cmx_validate") {
       }
     }
   }
-  cmx_module_validate("module_" + target_name) {
+  validate_module_cmx_facet("module_" + target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",

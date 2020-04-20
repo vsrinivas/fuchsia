@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cml/cml.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/cmc/build/cml.gni")
 
 group("tests") {
   testonly = true

@@ -1,0 +1,30 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/json/validate_json.gni")
+
+# Validates the fuchsia.module facet in a cmx file.
+#
+# Parameters
+#   cmx (required)
+#     .cmx file to validate.
+#
+#   deps (optional)
+template("validate_module_cmx_facet") {
+  module_facet_validation = target_name + "_module_facet"
+
+  # Validate the |fuchsia.module| facet schema.
+  validate_json(module_facet_validation) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    data = invoker.cmx
+    schema = "//src/modular/build/module_facet_schema.json"
+  }
+}
