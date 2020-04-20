@@ -47,11 +47,15 @@ pub struct EventDispatcher {
     /// An `mpsc::Sender` used to dispatch an event. Note that this
     /// `mpsc::Sender` is wrapped in an Mutex<..> to allow it to be passed along
     /// to other tasks for dispatch.
-    tx: Mutex<mpsc::Sender<Event>>,
+    tx: Mutex<mpsc::UnboundedSender<Event>>,
 }
 
 impl EventDispatcher {
-    pub fn new(sync_mode: SyncMode, scopes: Vec<ScopeMetadata>, tx: mpsc::Sender<Event>) -> Self {
+    pub fn new(
+        sync_mode: SyncMode,
+        scopes: Vec<ScopeMetadata>,
+        tx: mpsc::UnboundedSender<Event>,
+    ) -> Self {
         // TODO(fxb/48360): flatten scope_monikers. There might be monikers that are
         // contained within another moniker in the list.
         Self { sync_mode, scopes, tx: Mutex::new(tx) }
@@ -116,7 +120,7 @@ impl EventDispatcher {
 }
 
 /// A scope for dispatching and filters on that scope.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ScopeMetadata {
     /// The moniker of the realm
     pub moniker: AbsoluteMoniker,

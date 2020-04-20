@@ -11,6 +11,7 @@ use {
             stream::EventStream,
         },
         hooks::{Event as ComponentEvent, EventType, HasEventType, Hook, HooksRegistration},
+        model::Model,
     },
     async_trait::async_trait,
     cm_rust::CapabilityName,
@@ -30,11 +31,12 @@ pub struct RoutedEvent {
 /// Subscribes to events from multiple tasks and sends events to all of them.
 pub struct EventRegistry {
     dispatcher_map: Arc<Mutex<HashMap<CapabilityName, Vec<Weak<EventDispatcher>>>>>,
+    model: Weak<Model>,
 }
 
 impl EventRegistry {
-    pub fn new() -> Self {
-        Self { dispatcher_map: Arc::new(Mutex::new(HashMap::new())) }
+    pub fn new(model: Weak<Model>) -> Self {
+        Self { dispatcher_map: Arc::new(Mutex::new(HashMap::new())), model }
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
@@ -50,18 +52,35 @@ impl EventRegistry {
     }
 
     /// Subscribes to events of a provided set of EventTypes.
-    pub async fn subscribe(&self, sync_mode: &SyncMode, events: Vec<RoutedEvent>) -> EventStream {
+    pub async fn subscribe(
+        &self,
+        sync_mode: &SyncMode,
+        events: Vec<RoutedEvent>,
+    ) -> Result<EventStream, ModelError> {
         // TODO(fxb/48510): get rid of this channel and use FIDL directly.
         let mut event_stream = EventStream::new();
 
         let mut dispatcher_map = self.dispatcher_map.lock().await;
+        let mut synthesize_scopes = Vec::new();
+        let running_name: CapabilityName = EventType::Running.to_string().into();
         for event in events {
-            let dispatchers = dispatcher_map.entry(event.source_name).or_insert(vec![]);
-            let dispatcher = event_stream.create_dispatcher(sync_mode.clone(), event.scopes);
-            dispatchers.push(dispatcher);
+            if event.source_name == running_name {
+                synthesize_scopes.extend(event.scopes);
+            } else {
+                let dispatchers = dispatcher_map.entry(event.source_name).or_insert(vec![]);
+                let dispatcher = event_stream.create_dispatcher(sync_mode.clone(), event.scopes);
+                dispatchers.push(dispatcher);
+            }
         }
 
-        event_stream
+        // TODO(fxb/50387): consider alternative proposed: creating a new internal-only event type
+        // such as EventSourceSubscribed, and define a SynthesizeRunning hook on that.
+        // The advantage of the hook is that it would decouple the subscribe() call from the
+        // implementation details of synthesized events. We could add new synthesized events in the
+        // future without changing the implementation of the event registry.
+        event_stream.spawn_synthesis(self.model.clone(), synthesize_scopes);
+
+        Ok(event_stream)
     }
 
     /// Sends the event to all dispatchers and waits to be unblocked by all
@@ -157,6 +176,7 @@ mod tests {
         crate::model::{
             hooks::{Event as ComponentEvent, EventError, EventPayload},
             moniker::AbsoluteMoniker,
+            testing::test_helpers::*,
         },
         matches::assert_matches,
     };
@@ -184,7 +204,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn drop_dispatcher_when_event_stream_dropped() {
-        let event_registry = EventRegistry::new();
+        let model = Arc::new(new_test_model("root", Vec::new()));
+        let event_registry = EventRegistry::new(Arc::downgrade(&model));
 
         assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
 
@@ -196,7 +217,8 @@ mod tests {
                     scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root())],
                 }],
             )
-            .await;
+            .await
+            .expect("subscribe succeeds");
 
         assert_eq!(1, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
 
@@ -208,7 +230,8 @@ mod tests {
                     scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root())],
                 }],
             )
-            .await;
+            .await
+            .expect("subscribe succeeds");
 
         assert_eq!(2, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
 
@@ -237,7 +260,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn event_error_dispatch() {
-        let event_registry = EventRegistry::new();
+        let model = Arc::new(new_test_model("root", Vec::new()));
+        let event_registry = EventRegistry::new(Arc::downgrade(&model));
 
         assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Resolved).await);
 
@@ -249,7 +273,8 @@ mod tests {
                     scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root())],
                 }],
             )
-            .await;
+            .await
+            .expect("subscribed to event stream");
 
         assert_eq!(1, event_registry.dispatchers_per_event_type(EventType::Resolved).await);
 

@@ -1,0 +1,42 @@
+{
+    program: {
+        binary: "bin/synthesis_reporter",
+    },
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "/svc/fidl.examples.routing.echo.Echo",
+                "/svc/fuchsia.sys2.EventSource",
+                "/svc/fuchsia.sys2.Realm",
+            ],
+            from: "framework",
+        },
+        {
+            event: "started",
+            from: "framework",
+        },
+        {
+            event: "running",
+            from: "framework",
+        },
+        {
+            event: "marked_for_destruction",
+            from: "framework",
+        },
+    ],
+    offer: [
+        // Offer the ELF runner to children.
+        {
+            runner: "elf",
+            from: "realm",
+            to: [ "#coll" ],
+        },
+    ],
+}

@@ -50,7 +50,7 @@ impl EventSourceFactory {
     pub fn new(model: Weak<Model>) -> Self {
         Self {
             event_source_registry: Mutex::new(HashMap::new()),
-            event_registry: Arc::new(EventRegistry::new()),
+            event_registry: Arc::new(EventRegistry::new(model.clone())),
             model,
         }
     }
@@ -151,6 +151,11 @@ impl EventSourceFactory {
     async fn has_event_source(&self, abs_moniker: &AbsoluteMoniker) -> bool {
         let event_source_registry = self.event_source_registry.lock().await;
         event_source_registry.contains_key(abs_moniker)
+    }
+
+    #[cfg(test)]
+    pub fn registry(&self) -> Arc<EventRegistry> {
+        self.event_registry.clone()
     }
 }
 

@@ -37,6 +37,7 @@ fn event_name(event_type: &fsys::EventType) -> String {
         fsys::EventType::Resolved => "resolved",
         fsys::EventType::Started => "started",
         fsys::EventType::Stopped => "stopped",
+        fsys::EventType::Running => "running",
     }
     .to_string()
 }
@@ -953,6 +954,7 @@ create_event!(MarkedForDestruction, marked_for_destruction);
 create_event!(Resolved, resolved);
 create_event!(Started, started);
 create_event!(Stopped, stopped);
+create_event!(Running, running);
 create_event!(
     event_type: CapabilityReady,
     event_name: capability_ready,

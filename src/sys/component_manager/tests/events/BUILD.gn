@@ -75,6 +75,7 @@ test_package("events_integration_test") {
     "components:realm_offered_nested",
     "components:resolved_error_reporter_bin",
     "components:stub_component_bin",
+    "components:synthesis_reporter_bin",
     "//examples/components/routing/echo_server",
   ]
 
@@ -155,6 +156,10 @@ test_package("events_integration_test") {
       path = rebase_path("components/capability_ready/meta/child.cml")
       dest = "capability_ready_child.cm"
     },
+    {
+      path = rebase_path("components/synthesis/meta/reporter.cml")
+      dest = "synthesis_reporter.cm"
+    },
   ]
 
   binaries = [
@@ -202,6 +207,9 @@ test_package("events_integration_test") {
     },
     {
       name = "capability_ready_child"
+    },
+    {
+      name = "synthesis_reporter"
     },
   ]
 

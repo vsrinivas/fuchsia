@@ -129,6 +129,8 @@ events!([
     /// An instance was stopped successfully.
     /// This event must occur before Destroyed.
     (Stopped, stopped),
+    /// A component is running.
+    (Running, running),
 ]);
 
 impl Into<CapabilityName> for EventType {
@@ -214,6 +216,7 @@ pub enum EventPayload {
         component_decl: ComponentDecl,
     },
     Stopped,
+    Running,
 }
 
 /// Information about a component's runtime provided to `Started`.
@@ -260,7 +263,8 @@ impl fmt::Debug for EventPayload {
             EventPayload::Resolved { decl } => formatter.field("decl", decl).finish(),
             EventPayload::Destroyed
             | EventPayload::MarkedForDestruction
-            | EventPayload::Stopped => formatter.finish(),
+            | EventPayload::Stopped
+            | EventPayload::Running => formatter.finish(),
         }
     }
 }

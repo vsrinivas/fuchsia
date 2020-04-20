@@ -113,7 +113,7 @@ impl EventSource {
                             scopes: vec![ScopeMetadata::new(target_moniker.clone())],
                         }],
                     )
-                    .await,
+                    .await?,
             )
         }));
         Ok(Self {
@@ -178,7 +178,7 @@ impl EventSource {
 
         // Create an event stream for the given events
         if let Some(registry) = self.registry.upgrade() {
-            return Ok(registry.subscribe(&self.sync_mode, events).await);
+            return registry.subscribe(&self.sync_mode, events).await;
         }
         Err(EventsError::RegistryNotFound.into())
     }

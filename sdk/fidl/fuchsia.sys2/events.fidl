@@ -56,6 +56,10 @@ enum EventType {
     /// An instance was stopped successfully.
     /// This event must occur before Destroyed.
     STOPPED = 8;
+
+    /// If requested, this event is dispatched on subscription and indicates
+    /// that the instance has already started and is still running.
+    RUNNING = 9;
 };
 
 /// Describes the source of a routed capability.
