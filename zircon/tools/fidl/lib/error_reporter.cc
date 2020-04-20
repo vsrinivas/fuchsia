@@ -107,12 +107,12 @@ void ErrorReporter::ReportWarning(std::unique_ptr<BaseError> warn) {
 void ErrorReporter::PrintReports() {
   for (const auto& error : errors_) {
     size_t squiggle_size = error->span ? error->span.value().data().size() : 0;
-    auto error_str = Format("error", error->span, error->Format(), enable_color_, squiggle_size);
+    auto error_str = Format("error", error->span, error->msg, enable_color_, squiggle_size);
     fprintf(stderr, "%s\n", error_str.c_str());
   }
   for (const auto& warning : warnings_) {
     size_t squiggle_size = warning->span ? warning->span.value().data().size() : 0;
-    auto warning_str = Format("warning", warning->span, warning->Format(),
+    auto warning_str = Format("warning", warning->span, warning->msg,
                               enable_color_, squiggle_size);
     fprintf(stderr, "%s\n", warning_str.c_str());
   }

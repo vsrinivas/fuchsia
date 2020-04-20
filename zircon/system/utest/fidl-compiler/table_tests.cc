@@ -271,7 +271,7 @@ table Example {
   EXPECT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrNonDenseOrdinal);
-  ASSERT_STR_STR(library.errors().at(0)->Format().c_str(), "2");
+  ASSERT_STR_STR(library.errors().at(0)->msg.c_str(), "2");
 
   END_TEST;
 }

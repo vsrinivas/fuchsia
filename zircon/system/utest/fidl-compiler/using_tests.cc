@@ -160,7 +160,7 @@ struct Foo {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrUnknownType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "dependent.Bar");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "dependent.Bar");
 
   END_TEST;
 }
@@ -182,7 +182,7 @@ struct Foo {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrUnknownLibrary);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "dependent");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "dependent");
 
   END_TEST;
 }
@@ -211,7 +211,7 @@ using dependent; // duplicated
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrDuplicateLibraryImport);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "dependent");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "dependent");
 
   END_TEST;
 }
@@ -245,7 +245,7 @@ struct Foo {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrUnusedImport);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "dependent");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "dependent");
 
   END_TEST;
 }
@@ -299,7 +299,7 @@ struct B{dep.A a;}; // So the import is used.
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "dep");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "dep");
   END_TEST;
 }
 
@@ -333,7 +333,7 @@ struct B{dep.A a;}; // So the import is used.
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "x");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "x");
   END_TEST;
 }
 
@@ -367,7 +367,7 @@ struct B{depnoconflict.A a;}; // So the import is used.
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrDeclNameConflictsWithLibraryImport);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "dep");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "dep");
   END_TEST;
 }
 

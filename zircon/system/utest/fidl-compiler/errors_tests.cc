@@ -132,7 +132,7 @@ protocol Example {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnknownType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "ErrorType");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "ErrorType");
   END_TEST;
 }
 

@@ -27,7 +27,7 @@ bool ReportErrorFormatParams() {
 
   const auto& errors = error_reporter.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0]->Format().c_str(),
+  ASSERT_STR_STR(errors[0]->msg.c_str(),
                  "This test error has one string param 'param1' and another 'param2'.");
   END_TEST;
 }
@@ -43,7 +43,7 @@ bool MakeErrorThenReportIt() {
 
   const auto& errors = error_reporter.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0]->Format().c_str(),
+  ASSERT_STR_STR(errors[0]->msg.c_str(),
                  "This test error has one string param 'param1' and another 'param2'.");
   END_TEST;
 }

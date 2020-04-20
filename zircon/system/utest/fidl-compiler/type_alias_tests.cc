@@ -112,7 +112,7 @@ struct Bad {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "int64");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "int64");
 
   END_TEST;
 }
@@ -134,7 +134,7 @@ struct Bad {
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
   ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "int64");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "int64");
 
   END_TEST;
 }

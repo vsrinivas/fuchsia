@@ -107,37 +107,28 @@ struct ErrorDef : BaseErrorDef {
   }
 };
 
+// Represents a given instance of an error. Points to the error type it is an
+// instance of. Holds a SourceSpan indicating where the error occurred and a
+// formatted error message, built from the ErrorDef's message template and
+// format parameters passed in to Error's constructor.
+// Exists in order to allow deferral of error reporting and to be able to pass
+// around errors.
 struct BaseError {
-  BaseError(const BaseErrorDef& err, const std::optional<SourceSpan>& span)
-    : err(err), span(span) {}
-  BaseError(const BaseErrorDef& err, const Token& token)
-    : err(err), span(token.span()) {}
+  BaseError(const BaseErrorDef& err, const std::optional<SourceSpan>& span, const std::string msg)
+    : err(err), span(span), msg(msg) {}
+  BaseError(const BaseErrorDef& err, const Token& token, const std::string msg)
+    : err(err), span(token.span()), msg(msg) {}
   virtual ~BaseError() {}
-
-  virtual std::string Format() const = 0;
 
   const BaseErrorDef& err;
   std::optional<SourceSpan> span;
+  std::string msg;
 };
 
-// Represents a given instance of an error. Points to the error type it is an
-// instance of. Holds values of format parameters as a tuple in order to defer
-// formatting/reporting and be able to pass around errors.
 template <typename... Args>
 struct Error : BaseError {
   Error(const ErrorDef<Args...>& err, std::optional<SourceSpan> span, Args... args)
-    : BaseError(err, span), params(std::make_tuple(args...)) {}
-
-  template<std::size_t... Is>
-  std::string CallFormatErr(std::index_sequence<Is...>) const {
-    return internal::FormatErr(err.msg, std::get<Is>(params)...);
-  }
-
-  std::string Format() const override {
-    return CallFormatErr(std::index_sequence_for<Args...>());
-  }
-
-  std::tuple<Args...> params;
+    : BaseError(err, span, internal::FormatErr(err.msg, args...)) {}
 };
 
 }  // namespace errors

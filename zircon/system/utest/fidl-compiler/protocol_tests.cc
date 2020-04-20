@@ -230,7 +230,7 @@ protocol Child {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrUnknownType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "MissingParent");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "MissingParent");
 
   END_TEST;
 }
@@ -330,7 +330,7 @@ protocol cv {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodOrdinal);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "f_");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "f_");
 
   END_TEST;
 }
@@ -355,7 +355,7 @@ protocol YearningForSimplicity {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrMemberMustBeSimple);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "arg");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "arg");
 
   END_TEST;
 }

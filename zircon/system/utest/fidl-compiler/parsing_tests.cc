@@ -48,7 +48,7 @@ library a_b;
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidLibraryNameComponent);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "a_b");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "a_b");
 
   END_TEST;
 }
@@ -276,7 +276,7 @@ struct Test {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "@");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "@");
 
   END_TEST;
 }
@@ -295,7 +295,7 @@ struct Test / {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidCharacter);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "/");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "/");
 
   END_TEST;
 }
@@ -314,7 +314,7 @@ struct test_ {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidIdentifier);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "test_");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "test_");
 
   END_TEST;
 }

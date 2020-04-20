@@ -127,7 +127,7 @@ struct MyStruct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "MyEnum");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "MyEnum");
 
   END_TEST;
 }
@@ -203,7 +203,7 @@ struct MyStruct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "MyBits");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "MyBits");
 
   END_TEST;
 }

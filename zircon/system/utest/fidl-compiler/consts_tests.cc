@@ -82,7 +82,7 @@ const bool c = "foo";
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "\"foo\"");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "\"foo\"");
 
   END_TEST;
 }
@@ -99,7 +99,7 @@ const bool c = 6;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "6");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "6");
 
   END_TEST;
 }
@@ -143,7 +143,7 @@ const int32 c = "foo";
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "\"foo\"");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "\"foo\"");
 
   END_TEST;
 }
@@ -160,7 +160,7 @@ const int32 c = true;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "true");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "true");
 
   END_TEST;
 }
@@ -204,7 +204,7 @@ const uint64 a = -42;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "-42");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "-42");
 
   END_TEST;
 }
@@ -221,7 +221,7 @@ const uint64 a = 18446744073709551616;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "18446744073709551616");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "18446744073709551616");
 
   END_TEST;
 }
@@ -278,7 +278,7 @@ const float32 hi = 3.41e38;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "3.41e38");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "3.41e38");
 
   END_TEST;
 }
@@ -295,7 +295,7 @@ const float32 b = -3.41e38;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "-3.41e38");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "-3.41e38");
 
   END_TEST;
 }
@@ -371,7 +371,7 @@ const string c = 4;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "4");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "4");
 
   END_TEST;
 }
@@ -388,7 +388,7 @@ const string c = true;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "true");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "true");
 
   END_TEST;
 }
@@ -405,7 +405,7 @@ const string:4 c = "hello";
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrStringConstantExceedsSizeBound);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "\"hello\"");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "\"hello\"");
 
   END_TEST;
 }
@@ -437,7 +437,7 @@ const foo c = "nope";
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "\"nope\"");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "\"nope\"");
 
   END_TEST;
 }
@@ -454,7 +454,7 @@ const string? c = "";
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidConstantType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "string?");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "string?");
 
   END_TEST;
 }
@@ -471,7 +471,7 @@ const array<int32>:2 c = -1;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidConstantType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "array<int32>:2");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "array<int32>:2");
 
   END_TEST;
 }
@@ -488,7 +488,7 @@ const vector<int32>:2 c = -1;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidConstantType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "vector<int32>:2");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "vector<int32>:2");
 
   END_TEST;
 }
@@ -505,7 +505,7 @@ const handle<thread> c = -1;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidConstantType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "handle<thread>");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "handle<thread>");
 
   END_TEST;
 }
@@ -615,7 +615,7 @@ const MyEnum c = 5;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "MyEnum");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "MyEnum");
 
   END_TEST;
 }
@@ -633,7 +633,7 @@ const MyBits c = 5;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "MyBits");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "MyBits");
 
   END_TEST;
 }
@@ -696,7 +696,7 @@ const uint32 FOO = MAX;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrFailedConstantLookup);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "MAX");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "MAX");
 
   END_TEST;
 }
@@ -878,7 +878,7 @@ const uint8 two_fifty_seven = one | two_fifty_six;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrCannotConvertConstantToType);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "uint8");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "uint8");
   ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);
 
   END_TEST;
@@ -1038,8 +1038,8 @@ const AnotherEnum b = a;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrMismatchedNameTypeAssignment);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "AnotherEnum");
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "OneEnum");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "AnotherEnum");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "OneEnum");
   ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);
 
   END_TEST;
@@ -1067,8 +1067,8 @@ const OneEnum a = AnotherEnum.B;
   const auto& errors = library.errors();
   ASSERT_GE(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrMismatchedNameTypeAssignment);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "AnotherEnum");
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "OneEnum");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "AnotherEnum");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "OneEnum");
   ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);
 
   END_TEST;

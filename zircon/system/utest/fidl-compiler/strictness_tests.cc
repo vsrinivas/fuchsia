@@ -24,7 +24,7 @@ bool invalid_strictness(const std::string& type, const std::string& definition) 
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyStrict);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), type.c_str());
+  ASSERT_STR_STR(errors[0]->msg.c_str(), type.c_str());
 
   END_TEST;
 }

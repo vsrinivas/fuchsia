@@ -27,7 +27,7 @@ flexible enum Foo : uint8 {
   ASSERT_EQ(errors.size(), 1);
 
   ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyFlexible);
-  ASSERT_SUBSTR(errors[0]->Format().c_str(), "enum");
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "enum");
 }
 
 TEST(FlexibleEnum, MultipleUnknown) {

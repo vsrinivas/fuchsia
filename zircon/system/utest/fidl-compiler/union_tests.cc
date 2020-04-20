@@ -294,7 +294,7 @@ union Example {
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrNonDenseOrdinal);
-  ASSERT_STR_STR(library.errors().at(0)->Format().c_str(), "2");
+  ASSERT_STR_STR(library.errors().at(0)->msg.c_str(), "2");
 
   END_TEST;
 }
@@ -404,7 +404,7 @@ union Foo {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_STR_STR(errors[0]->Format().c_str(), "Selector");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "Selector");
 
   END_TEST;
 }
