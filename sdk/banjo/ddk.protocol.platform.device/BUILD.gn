@@ -6,5 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("ddk.protocol.platform.device") {
   sources = [ "platform-device.banjo" ]
-  deps = [ "//zircon/system/banjo/ddk.driver" ]
+  deps = [ "//sdk/banjo/ddk.driver" ]
 }

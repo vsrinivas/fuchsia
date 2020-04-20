@@ -7,5 +7,5 @@ import("//build/banjo/banjo.gni")
 banjo("ddk.protocol.composite") {
   sources = [ "composite.banjo" ]
 
-  deps = [ "//zircon/system/banjo/ddk.driver" ]
+  deps = [ "//sdk/banjo/ddk.driver" ]
 }
