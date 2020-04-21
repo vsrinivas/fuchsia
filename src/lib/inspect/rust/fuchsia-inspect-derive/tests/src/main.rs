@@ -5,9 +5,15 @@
 #![cfg(test)]
 
 use core::fmt;
-use fuchsia_inspect::{assert_inspect_tree, Inspector};
-use fuchsia_inspect_derive::{IDebug, IValue, Unit};
+use futures::lock;
 use serde::Serialize;
+use std::{cell, rc, sync};
+
+use fuchsia_async as fasync;
+use fuchsia_inspect::{
+    assert_inspect_tree, Inspector, Node, NumericProperty, Property, StringProperty, UintProperty,
+};
+use fuchsia_inspect_derive::{AttachError, IDebug, IValue, Inspect, Unit};
 
 // TODO(49049): Add negative tests when compile failure tests are possible.
 
@@ -35,6 +41,12 @@ enum Horse {
     Icelandic,
 }
 
+impl Default for Horse {
+    fn default() -> Self {
+        Self::Arabian
+    }
+}
+
 #[derive(Unit, Default)]
 struct BasicTypes {
     t_u8: u8,
@@ -54,18 +66,46 @@ struct BasicTypes {
     t_vec_u8: Vec<u8>,
 }
 
-// Compile test to check that derive of Default and Debug works with IOwned wrappers
-#[derive(Default, Debug)]
-struct _Composite {
+#[derive(Default)]
+struct PowerYak {
     name: IValue<String>,
-    age: IDebug<u8>,
+    age: sync::Arc<sync::Mutex<IDebug<u8>>>,
+    size: rc::Rc<lock::Mutex<IValue<String>>>,
+    ty: cell::RefCell<IDebug<Horse>>,
+    counter: Box<UintProperty>,
+    last_words: parking_lot::RwLock<StringProperty>,
+    inspect_node: Node,
+}
+
+impl PowerYak {
+    pub fn bday(&self) {
+        let mut age = self.age.lock().expect("Could not lock mutex");
+        **age += 1;
+        age.iupdate();
+    }
+}
+
+// Manual implementation of `Inspect`, proving that an implementation can
+// easily be auto-generated (using a derive-macro).
+impl Inspect for &mut PowerYak {
+    fn iattach(self, parent: &Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        let inspect_node = parent.create_child(name);
+        self.name.iattach(&inspect_node, "name")?;
+        self.age.iattach(&inspect_node, "age")?;
+        self.size.iattach(&inspect_node, "size")?;
+        self.ty.iattach(&inspect_node, "type")?;
+        self.counter.iattach(&inspect_node, "counter")?;
+        self.last_words.iattach(&inspect_node, "last_words")?;
+        self.inspect_node = inspect_node;
+        Ok(())
+    }
 }
 
 // Display cannot be derived with std, so we require that the fields are `Display` instead.
 // This is important so that 3p crates such as `Derivative` can auto-derive `Display`.
-impl fmt::Display for _Composite {
+impl fmt::Display for PowerYak {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "name: {}, age: {}", self.name, self.age)
+        write!(f, "name: {}, age: {}", self.name, self.age.lock().expect("lock poisoned"))
     }
 }
 
@@ -334,4 +374,37 @@ fn iowned_display() {
     assert_eq!(format!("{}", d).as_str(), "hello");
     d.iset("hello, world".to_string());
     assert_eq!(format!("{}", d).as_str(), "hello, world");
+}
+
+#[fasync::run_until_stalled(test)]
+async fn iowned_composite() -> Result<(), AttachError> {
+    let inspector = Inspector::new();
+    let mut yak = PowerYak::default();
+    yak.iattach(inspector.root(), "my_yak")?;
+    assert_inspect_tree!(inspector, root: { my_yak: {
+        name: "",
+        age: "0",
+        size: "",
+        type: "Arabian",
+        counter: 0u64,
+        last_words: "",
+    }});
+    yak.name.iset("Lil Sebastian".to_string());
+    yak.age.lock().expect("could not lock mutex").iset(23);
+    yak.size.lock().await.iset("small".to_string());
+    yak.ty.borrow_mut().iset(Horse::Icelandic);
+    yak.counter.add(1337);
+    yak.last_words.write().set("good bye, friends");
+    yak.bday();
+    assert_inspect_tree!(inspector, root: { my_yak: {
+        name: "Lil Sebastian",
+        age: "24",
+        size: "small",
+        type: "Icelandic",
+        counter: 1337u64,
+        last_words: "good bye, friends",
+    }});
+    std::mem::drop(yak);
+    assert_inspect_tree!(inspector, root: {});
+    Ok(())
 }

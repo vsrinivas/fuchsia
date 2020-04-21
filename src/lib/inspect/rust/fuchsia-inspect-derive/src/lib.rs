@@ -7,12 +7,15 @@
 //! in a separate crate, but re-exported here. Users should depend directly
 //! on this crate.
 
+mod inspect;
+
 use core::fmt;
 use core::ops::{Deref, DerefMut};
 use fuchsia_inspect::{
     BoolProperty, BytesProperty, DoubleProperty, IntProperty, Node, Property, StringProperty,
     UintProperty,
 };
+pub use inspect::{AttachError, Inspect};
 use std::marker::PhantomData;
 
 /// The `Unit` derive macro can be applied to named structs in order to generate an
@@ -154,6 +157,13 @@ impl<R: Render> IOwned<R> {
 
     pub fn into_inner(self) -> R::Base {
         self._base
+    }
+}
+
+impl<R: Render> Inspect for &mut IOwned<R> {
+    fn iattach(self, parent: &Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self._inspect_data = R::create(&self._base, &parent, name);
+        Ok(())
     }
 }
 
