@@ -50,7 +50,8 @@ function fx-gen {
     (
       set -ex
       cd "${FUCHSIA_DIR}"
-      fx-gn gen --check --ide=json --export-rust-project --export-compile-commands=default "${FUCHSIA_BUILD_DIR}"
+      local newpath="${PREBUILT_PYTHON3_DIR}/bin:${PATH}"
+      PATH="${newpath}" fx-gn gen --check --ide=json --export-rust-project --export-compile-commands=default "${FUCHSIA_BUILD_DIR}"
       # symlink rust-project.json to root of project
       if [[ -f "${FUCHSIA_BUILD_DIR}/rust-project.json" ]]; then
         ln -f -s "${FUCHSIA_BUILD_DIR}/rust-project.json" rust-project.json
@@ -526,7 +527,8 @@ function fx-run-ninja {
   # when TMPDIR="" - it is deliberately unquoted and using the ${+} expansion
   # expression). GOMA_DISABLED will forcefully disable Goma even if it's set to
   # empty.
-  full_cmdline=(env -i "TERM=${TERM}" "PATH=${PATH}" \
+  local newpath="${PREBUILT_PYTHON3_DIR}/bin:${PATH}"
+  full_cmdline=(env -i "TERM=${TERM}" "PATH=${newpath}" \
     ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
     ${GOMA_DISABLED+"GOMA_DISABLED=$GOMA_DISABLED"} \
     ${TMPDIR+"TMPDIR=$TMPDIR"} \
