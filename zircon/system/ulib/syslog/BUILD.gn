@@ -20,7 +20,7 @@ zx_library("syslog") {
     "logger.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-logger:c",
+    "$zx/system/fidl/fuchsia-logger:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
