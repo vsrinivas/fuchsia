@@ -788,12 +788,12 @@ def _offset_symbols_and_breakpoints(kernel_relocated_base=None):
 
     # Update all addresses to the relocated address
     sections = dict(
-        [(name, addr - offset) for name, addr in sections.iteritems()])
+        [(name, addr - offset) for name, addr in sections.items()])
 
     text_addr = sections[".text"]
     del sections[".text"]
 
-    args = ["-s %s 0x%x" % (name, addr) for name, addr in sections.iteritems()]
+    args = ["-s %s 0x%x" % (name, addr) for name, addr in sections.items()]
 
     # Reload the ELF with all sections set
     gdb.execute("add-symbol-file \"%s\" 0x%x -readnow %s" \
