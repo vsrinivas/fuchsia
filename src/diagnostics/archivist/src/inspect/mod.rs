@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::component_events::{ComponentIdentifier, InspectData},
+    crate::events::types::{ComponentIdentifier, InspectData},
     anyhow::{format_err, Error},
     fidl::endpoints::DiscoverableService,
     fidl::endpoints::{RequestStream, ServerEnd},
@@ -895,7 +895,7 @@ impl ReaderServer {
 mod tests {
     use {
         super::*,
-        crate::component_events::{LegacyIdentifier, RealmPath},
+        crate::events::types::{LegacyIdentifier, RealmPath},
         fdio,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::DirectoryMarker,

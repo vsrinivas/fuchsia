@@ -4,11 +4,12 @@
 
 use {
     crate::{
-        component_events::{
+        configs, diagnostics,
+        events::types::{
             ComponentEvent, ComponentEventData, ComponentEventStream, ComponentIdentifier,
             InspectData, InspectReaderData,
         },
-        configs, diagnostics, inspect,
+        inspect,
     },
     anyhow::{format_err, Error},
     chrono::prelude::*,

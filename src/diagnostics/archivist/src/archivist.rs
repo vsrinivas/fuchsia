@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        archive, archive_accessor, component_events, configs, data_stats, diagnostics, inspect,
-        logs,
-    },
+    crate::{archive, archive_accessor, configs, data_stats, diagnostics, events, inspect, logs},
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_sys_internal::{ComponentEventProviderProxy, LogConnectorProxy, SourceIdentity},
@@ -85,8 +82,7 @@ impl Archivist {
         pipeline_exists: bool,
     ) -> Result<(), Error> {
         let events_result =
-            component_events::listen(provider, diagnostics::root().create_child("event_stats"))
-                .await;
+            events::legacy::listen(provider, diagnostics::root().create_child("event_stats")).await;
 
         let events = match events_result {
             Ok(events) => {

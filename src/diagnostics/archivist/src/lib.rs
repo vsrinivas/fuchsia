@@ -5,10 +5,10 @@
 pub mod archive;
 pub mod archive_accessor;
 pub mod archivist;
-pub mod component_events;
 pub mod configs;
 pub mod data_stats;
 pub mod diagnostics;
+pub mod events;
 pub mod inspect;
 pub mod internal_logging;
 pub mod logs;
