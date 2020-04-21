@@ -469,6 +469,10 @@ func (*testNDPDispatcher) OnAutoGenAddressInvalidated(tcpip.NICID, tcpip.Address
 func (*testNDPDispatcher) OnRecursiveDNSServerOption(tcpip.NICID, []tcpip.Address, time.Duration) {
 }
 
+// OnDNSSearchListOption implements stack.NDPDispatcher.OnDNSSearchListOption.
+func (*testNDPDispatcher) OnDNSSearchListOption(tcpip.NICID, []string, time.Duration) {
+}
+
 // OnDHCPv6Configuration implements stack.NDPDispatcher.OnDHCPv6Configuration.
 func (*testNDPDispatcher) OnDHCPv6Configuration(tcpip.NICID, tcpipstack.DHCPv6ConfigurationFromNDPRA) {
 }
