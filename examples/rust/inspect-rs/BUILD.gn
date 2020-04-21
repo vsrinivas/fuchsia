@@ -6,6 +6,19 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 
+group("inspect-rs") {
+  testonly = true
+  public_deps = [
+    ":pkg",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":inspect_example_rs_tests" ]
+}
+
 rustc_binary("bin") {
   name = "inspect_example_rs"
 
@@ -23,7 +36,9 @@ rustc_binary("bin") {
   ]
 }
 
-package("inspect-rs") {
+package("pkg") {
+  package_name = "inspect-rs"
+
   deps = [ ":bin" ]
 
   binary = "inspect_example_rs"

@@ -14,11 +14,11 @@ group("examples") {
     "hello_world",
     "isolated_cache",
     "rolldice",
+    "rust",
     "speech",
     "//examples/components/basic:components_basic_example",
     "//examples/components/basic:hello-world-tests",
     "//examples/components/routing:components_routing_example",
-    "//examples/rust/staticlib:crust",
   ]
 }
 
@@ -29,7 +29,6 @@ group("tests") {
     "hello_world:tests",
     "isolated_cache:tests",
     "rolldice:rolldice-tests",
-    "rust/inspect-rs:inspect_example_rs_tests",
-    "rust/rust_static_linking:static_linking_tests",
+    "rust:tests",
   ]
 }

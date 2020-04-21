@@ -4,6 +4,11 @@
 
 import("//build/package.gni")
 
+group("staticlib") {
+  testonly = true
+  public_deps = [ ":crust" ]
+}
+
 package("crust") {
   meta = [
     {

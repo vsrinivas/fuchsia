@@ -5,7 +5,21 @@
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 
-rustc_library("static_linking") {
+group("rust_static_linking") {
+  testonly = true
+  public_deps = [
+    ":lib",
+    ":static",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":static_linking_tests" ]
+}
+
+rustc_library("lib") {
   name = "static_linking"
   with_unit_tests = true
   version = "0.1.0"
@@ -18,7 +32,7 @@ static_library("static") {
 }
 
 unittest_package("static_linking_tests") {
-  deps = [ ":static_linking_test" ]
+  deps = [ ":lib_test" ]
   tests = [
     {
       name = "static_linking_lib_test"
