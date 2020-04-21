@@ -29,7 +29,7 @@ enum class IntelHwpPolicy {
 };
 
 // Parse a string as an HWP policy.
-ktl::optional<IntelHwpPolicy> IntelHwpParsePolicy(ktl::string_view s);
+ktl::optional<IntelHwpPolicy> IntelHwpParsePolicy(const char* str);
 
 // Initialise the Intel HWP on the current CPU.
 //

@@ -245,11 +245,9 @@ void x86_cpu_feature_late_init(void) {
   // Set up hardware-controlled performance states.
   if (gCmdline.GetBool("kernel.x86.hwp", /*default_value=*/true)) {
     // Read the policy from the command line, falling back to kBiosSpecified.
-    x86::IntelHwpPolicy policy = x86::IntelHwpPolicy::kBiosSpecified;
-    const char* policy_str = gCmdline.GetString("kernel.x86.hwp_policy");
-    if (policy_str != nullptr) {
-      policy = x86::IntelHwpParsePolicy(policy_str).value_or(x86::IntelHwpPolicy::kBiosSpecified);
-    }
+    x86::IntelHwpPolicy policy =
+        x86::IntelHwpParsePolicy(gCmdline.GetString("kernel.x86.hwp_policy"))
+            .value_or(x86::IntelHwpPolicy::kBiosSpecified);
     x86::IntelHwpInit(&cpuid, &msr, policy);
   }
 

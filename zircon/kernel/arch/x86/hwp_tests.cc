@@ -31,6 +31,7 @@ bool TestParsePolicy() {
   EXPECT_EQ(parsed_policy.value(), IntelHwpPolicy::kBiosSpecified);
 
   // Invalid parses.
+  EXPECT_TRUE(!IntelHwpParsePolicy(nullptr).has_value());
   EXPECT_TRUE(!IntelHwpParsePolicy("").has_value());
   EXPECT_TRUE(!IntelHwpParsePolicy("invalid").has_value());
   EXPECT_TRUE(!IntelHwpParsePolicy("\n").has_value());

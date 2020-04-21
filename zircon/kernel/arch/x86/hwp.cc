@@ -115,7 +115,11 @@ uint64_t MakeHwpRequest(PerformanceLevel min_perf, PerformanceLevel max_perf,
 
 }  // namespace
 
-ktl::optional<IntelHwpPolicy> IntelHwpParsePolicy(ktl::string_view s) {
+ktl::optional<IntelHwpPolicy> IntelHwpParsePolicy(const char* str) {
+  if (str == nullptr) {
+    return ktl::nullopt;
+  }
+
   static const constexpr struct IntelHwpPolicyName {
     IntelHwpPolicy policy;
     ktl::string_view name;
@@ -126,6 +130,7 @@ ktl::optional<IntelHwpPolicy> IntelHwpParsePolicy(ktl::string_view s) {
       {IntelHwpPolicy::kPowerSave, "power-save"sv},
       {IntelHwpPolicy::kStablePerformance, "stable-performance"sv},
   };
+  ktl::string_view s = ktl::string_view(str);
   for (const IntelHwpPolicyName item : kHwpPolicyNames) {
     if (s == item.name) {
       return item.policy;
