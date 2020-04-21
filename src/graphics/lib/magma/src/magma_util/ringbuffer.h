@@ -20,7 +20,8 @@ namespace magma {
 template <typename GpuMapping>
 class Ringbuffer : public InstructionWriter {
  public:
-  Ringbuffer(std::unique_ptr<typename GpuMapping::BufferType>&& buffer);
+  // If specified, |size| must be less than the buffer size.
+  Ringbuffer(std::unique_ptr<typename GpuMapping::BufferType>&& buffer, uint32_t size = 0);
 
   uint64_t size() { return size_; }
 
@@ -73,10 +74,16 @@ class Ringbuffer : public InstructionWriter {
 };
 
 template <typename GpuMapping>
-Ringbuffer<GpuMapping>::Ringbuffer(std::unique_ptr<typename GpuMapping::BufferType>&& buffer)
-    : buffer_(std::move(buffer)) {
-  size_ = BufferAccessor<typename GpuMapping::BufferType>::platform_buffer(buffer_.get())->size();
-  DASSERT(magma::is_page_aligned(size_));
+Ringbuffer<GpuMapping>::Ringbuffer(std::unique_ptr<typename GpuMapping::BufferType>&& buffer,
+                                   uint32_t size)
+    : buffer_(std::move(buffer)), size_(size) {
+  uint64_t buffer_size =
+      BufferAccessor<typename GpuMapping::BufferType>::platform_buffer(buffer_.get())->size();
+  if (size_ == 0) {
+    size_ = buffer_size;
+  }
+  DASSERT(size_ <= buffer_size);
+  DASSERT((size_ & (sizeof(*vaddr_) - 1)) == 0);
 
   tail_ = 0;
   head_ = tail_;

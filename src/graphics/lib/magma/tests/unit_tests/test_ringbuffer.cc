@@ -51,6 +51,15 @@ TEST_F(TestRingbuffer, CreateAndDestroy) {
   EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
 }
 
+TEST_F(TestRingbuffer, Size) {
+  const uint32_t kRingbufferSize = magma::page_size();
+  const uint32_t kBufferSize = kRingbufferSize + magma::page_size();
+
+  auto ringbuffer = std::make_unique<Ringbuffer>(magma::PlatformBuffer::Create(kBufferSize, "test"),
+                                                 kRingbufferSize);
+  EXPECT_EQ(ringbuffer->size(), kRingbufferSize);
+}
+
 TEST_F(TestRingbuffer, Write) {
   const uint32_t kMagmaPageSize = magma::page_size();
   auto ringbuffer =

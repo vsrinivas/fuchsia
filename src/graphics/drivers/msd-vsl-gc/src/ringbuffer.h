@@ -11,8 +11,8 @@
 
 class Ringbuffer : public magma::Ringbuffer<GpuMapping> {
  public:
-  Ringbuffer(std::unique_ptr<MsdVslBuffer>&& buffer)
-      : magma::Ringbuffer<GpuMapping>(std::move(buffer)) {}
+  Ringbuffer(std::unique_ptr<MsdVslBuffer>&& buffer, uint32_t size = 0)
+      : magma::Ringbuffer<GpuMapping>(std::move(buffer), size) {}
 
   // Returns whether |offset| points to a currently stored value in the ringbuffer.
   bool IsOffsetPopulated(uint32_t offset);

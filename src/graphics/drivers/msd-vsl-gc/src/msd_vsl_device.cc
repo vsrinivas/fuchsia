@@ -144,9 +144,16 @@ bool MsdVslDevice::Init(void* device_handle) {
   if (!page_table_arrays_)
     return DRETF(false, "failed to create page table arrays");
 
-  auto buffer = MsdVslBuffer::Create(AddressSpaceLayout::ringbuffer_size(), "ring-buffer");
+  // Add a page to account for ringbuffer overfetch
+  uint32_t ringbuffer_size = AddressSpaceLayout::ringbuffer_size() + magma::page_size();
+  DASSERT(ringbuffer_size <= AddressSpaceLayout::system_gpu_addr_size());
+
+  auto buffer = MsdVslBuffer::Create(ringbuffer_size, "ring-buffer");
+
   buffer->platform_buffer()->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED);
-  ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer));
+
+  ringbuffer_ =
+      std::make_unique<Ringbuffer>(std::move(buffer), AddressSpaceLayout::ringbuffer_size());
 
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
