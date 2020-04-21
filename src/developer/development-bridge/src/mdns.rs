@@ -54,7 +54,6 @@ mod linux {
     use std::collections::HashSet;
     use std::fmt::Write;
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV6, UdpSocket};
-    use std::sync::Arc;
     use std::thread;
 
     use crate::net;
@@ -143,9 +142,9 @@ mod linux {
                 return Err(MdnsConvertError::NodenameMissing);
             }
             let time = Utc::now();
-            let addrs = Arc::new(Mutex::new(addrs));
-            let last_response = Arc::new(Mutex::new(time));
-            let state = Arc::new(Mutex::new(TargetState::new()));
+            let addrs = Mutex::new(addrs);
+            let last_response = Mutex::new(time);
+            let state = Mutex::new(TargetState::new());
             Ok(Target { nodename, addrs, last_response, state })
         }
     }
