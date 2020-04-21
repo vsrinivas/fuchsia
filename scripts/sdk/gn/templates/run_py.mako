@@ -52,7 +52,6 @@ DEFAULT_CLANG_DIR = os.path.join(THIRD_PARTY_DIR, 'clang', DEFAULT_HOST)
 
 # host test constants
 HOST_TEST_PATH = os.path.join(SCRIPT_DIR, 'tests', 'run-host-tests.sh')
-HOST_TEST_LIST_PATH = os.path.join(DEFAULT_OUT_DIR, 'all_host_tests.txt')
 
 
 class GnTester(object):
@@ -83,6 +82,7 @@ class GnTester(object):
             raise AssertionError('Unit test failed.')
 
     def _generate_test(self):
+        """Test generate.py via python test class."""
         self._run_unit_test(test_generate)
         print "Generate tests passed."
 
@@ -104,61 +104,64 @@ class GnTester(object):
             raise AssertionError(msg)
         return (stdoutdata, stderrdata)
 
-    def _run_test(self, test):
+    def _run_test(self, test, *args):
         try:
-            getattr(self, test)()
+            getattr(self, test)(*args)
         except Exception as err:
-            print err
+            print "ERROR Running test %s: %s" % (test, err)
             self._test_failed = True
 
-    def _build_test_project(self):
-        self._invoke_gn()
-        self._invoke_ninja()
-        print "Test project built successfully"
+    def _build_test_project(self, arch):
+        """Builds the test project for given architecture."""
+        self._invoke_gn(arch)
+        self._invoke_ninja(arch)
+        print "Test project for %s built successfully" % arch
 
-    def _invoke_gn(self):
-        # Example invocation
-        # gn" gen out --args='target_os="fuchsia" target_cpu="arm64"'
-        base_invocation = []
+    def _invoke_gn(self, arch):
+        """Invokes GN targeting the given architecture.
+
+        Example invocation:
+          "gn" gen out --args='target_os="fuchsia" target_cpu="arm64"'
+        """
         # Invoke the gn binary and "gen" command e.g. `gn gen`
-        base_invocation.append(self.gn)
-        base_invocation.append('gen')
-        # Add output directory to command
-        base_invocation.append(self.out_dir)
-        for arch in ARCHES:
-            # Add GN flags to command
-            # e.g. `--args="--target_cpu=x64 --target_os=fuchsia --clang_base_path=clang"`
-            target_cpu = 'target_cpu=\"%s\"' % arch
-            target_os = 'target_os="fuchsia"'
-            clang_base_path = 'clang_base_path="%s"' % self.clang
-            args = '--args=%s %s %s' % (target_cpu, target_os, clang_base_path)
-            invocation = base_invocation + [args]
-            # invoke command
-            print 'Running gn gen: "%s"' % ' '.join(invocation)
-            self._run_cmd(invocation, cwd=self.proj_dir)
+        invocation = [
+            self.gn, "gen",
+            os.path.join(self.out_dir, arch),
+            "--args=target_cpu=\"{cpu}\" target_os=\"fuchsia\" clang_base_path=\"{clang}\""
+            .format(cpu=arch, clang=self.clang)
+        ]
+        # invoke command
+        print 'Running gn gen: "%s"' % ' '.join(invocation)
+        self._run_cmd(invocation, cwd=self.proj_dir)
 
-    def _invoke_ninja(self):
-        invocation = []
-        # Invoke the ninja binary
-        invocation.append(self.ninja)
-        # Add Ninja flag to command e.g. `-C`
-        invocation.append('-C')
-        # Add output directory to command
-        invocation.append(self.out_dir)
-        # Build the default and test targets
-        invocation.append("default")
-        invocation.append("tests")
+    def _invoke_ninja(self, arch):
+        """Invokes Ninja to build default and tests targets.
+
+        Args:
+           arch: The target architecture to build.
+        """
+        invocation = [
+            # Invoke the ninja binary
+            self.ninja,
+            # Add Ninja flag to command e.g. `-C`
+            "-C",
+            # Add output directory to command
+            os.path.join(self.out_dir, arch),
+            # Build the default and test targets
+            "default",
+            "tests"
+        ]
         print 'Running ninja: "%s"' % ' '.join(invocation)
         return self._run_cmd(invocation, cwd=self.proj_dir)
 
-    def _verify_package_depfile(self):
+    def _verify_package_depfile(self, arch):
         print('Running package dep file verification test')
         # Build test project
-        self._build_test_project()
+        self._build_test_project(arch)
         # Verify package dep file for built project
         package_dep_file_contents = "gen/tests/package/package/package.archive_manifest: lib/libfdio.so lib/libunwind.so.1 lib/libc++abi.so.1 hello_bin lib/ld.so.1 lib/libc++.so.2"
         dep_filepath = os.path.join(
-            DEFAULT_OUT_DIR, "gen", "tests", "package", "package_stamp.d")
+            self.out_dir, arch, "gen", "tests", "package", "package_stamp.d")
         with open(dep_filepath, 'r') as dep_file:
             dep_file_contents = dep_file.read()
             if dep_file_contents != package_dep_file_contents:
@@ -167,12 +170,13 @@ class GnTester(object):
                 msg += 'but got \n\n%s\n\n' % dep_file_contents
                 raise AssertionError(msg)
 
-    def _verify_rebuild_noop(self):
+    def _verify_rebuild_noop(self, arch):
+        """Builds each architecture twice, confirming the second is a noop."""
         # Build test project initially
-        self._build_test_project()
+        self._build_test_project(arch)
         # Build test project a second time
-        self._invoke_gn()
-        (stdout, stderr) = self._invoke_ninja()
+        self._invoke_gn(arch)
+        (stdout, stderr) = self._invoke_ninja(arch)
         # Verify that the second test project build is a noop for ninja
         ninja_no_work_string = 'ninja: no work to do.'
         if not ninja_no_work_string in stdout:
@@ -183,19 +187,20 @@ class GnTester(object):
         print "Test project rebuilt successfully"
 
     def _run_build_tests(self):
-        self._run_test("_build_test_project")
-        self._run_test("_verify_package_depfile")
-        self._run_test("_verify_rebuild_noop")
-        self._run_test("_host_tests")
+        """Run the build tests, once per architecture."""
+        for arch in ARCHES:
+            self._run_test("_build_test_project", arch)
+            self._run_test("_verify_package_depfile", arch)
+            self._run_test("_verify_rebuild_noop", arch)
+            self._run_test("_host_tests", arch)
 
-    def _host_tests(self):
+    def _host_tests(self, arch):
         # Build test project to generate far archives
-        self._build_test_project()
-
-        # Run host test script
-        invocation = []
-        invocation.append(HOST_TEST_PATH)  # path to test script
-        invocation.append(HOST_TEST_LIST_PATH)  # path to list of tests to run
+        self._build_test_project(arch)
+        invocation = [
+            HOST_TEST_PATH,
+            os.path.join("out", arch, 'all_host_tests.txt')
+        ]
         print 'Running run-host-tests.sh: "%s"' % ' '.join(invocation)
         self._run_cmd(invocation, cwd=self.proj_dir)
 
@@ -240,6 +245,7 @@ def main():
             proj_dir=args.proj_dir,
             out_dir=args.out_dir,
     ).run():
+        print "ERROR: One or more tests failed."
         return 1
     return 0
 
