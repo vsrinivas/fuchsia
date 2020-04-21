@@ -21,13 +21,13 @@ template("settings_app") {
   ]
 
   base_deps = [
+    "//src/experiences/settings/lib/settings",
     "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.wlan.service",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/meta",
-    "//topaz/lib/settings:lib.settings",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_services",

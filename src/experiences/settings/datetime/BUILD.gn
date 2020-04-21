@@ -20,9 +20,9 @@ flutter_app("datetime_settings") {
   ]
 
   deps = [
+    "//src/experiences/settings/lib/settings",
     "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
-    "//topaz/lib/settings:lib.settings",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",
     "//topaz/public/dart/widgets:lib.widgets"
