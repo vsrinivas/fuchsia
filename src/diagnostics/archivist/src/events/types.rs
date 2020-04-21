@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::format_err,
+    anyhow::{format_err, Error},
     fidl_fuchsia_inspect::TreeProxy,
     fidl_fuchsia_inspect_deprecated::InspectProxy,
     fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, stream::BoxStream},
+    regex::Regex,
     std::{
         collections::HashMap,
         convert::TryFrom,
@@ -60,6 +62,7 @@ pub struct InspectReaderData {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ComponentIdentifier {
     Legacy(LegacyIdentifier),
+    Moniker(String),
 }
 
 impl ComponentIdentifier {
@@ -72,6 +75,15 @@ impl ComponentIdentifier {
                 moniker.push(identifier.component_name.clone());
                 moniker.0
             }
+            Self::Moniker(moniker) => {
+                // Selectors use moniker paths without instance ids. We receive relative monikers.
+                // Converts from: ./a:0/b:1/c:2 to a/b/c
+                let re = Regex::new(r":\d+").unwrap();
+                re.replace_all(&moniker[1..], "") // 1.. to remove the `.`
+                    .split("/")
+                    .filter_map(|s| if s.is_empty() { None } else { Some(s.to_string()) })
+                    .collect::<Vec<_>>()
+            }
         }
     }
 
@@ -81,6 +93,9 @@ impl ComponentIdentifier {
                 let mut key = self.relative_moniker_for_selectors();
                 key.push(identifier.instance_id.clone());
                 key
+            }
+            Self::Moniker(moniker) => {
+                moniker.split(|c| c == '/' || c == ':').map(|s| s.to_string()).collect()
             }
         }
     }
@@ -114,6 +129,7 @@ impl ToString for ComponentIdentifier {
                 identifier.component_name,
                 identifier.instance_id
             ),
+            Self::Moniker(moniker) => moniker.clone(),
         }
     }
 }
@@ -185,6 +201,64 @@ pub enum InspectData {
 
     /// A connection to the deprecated Inspect service.
     DeprecatedFidl(InspectProxy),
+}
+
+impl TryFrom<fsys::Event> for ComponentEvent {
+    type Error = anyhow::Error;
+
+    fn try_from(event: fsys::Event) -> Result<ComponentEvent, Error> {
+        if event.target_moniker.is_none() {
+            return Err(format_err!("No moniker present"));
+        }
+        match event.event_type {
+            Some(fsys::EventType::Started) | Some(fsys::EventType::Running) => {
+                let data = ComponentEventData {
+                    component_id: ComponentIdentifier::Moniker(event.target_moniker.unwrap()),
+                    component_data_map: None,
+                };
+                Ok(ComponentEvent::Start(data))
+            }
+            Some(fsys::EventType::Stopped) => {
+                let data = ComponentEventData {
+                    component_id: ComponentIdentifier::Moniker(event.target_moniker.unwrap()),
+                    component_data_map: None,
+                };
+                Ok(ComponentEvent::Stop(data))
+            }
+            Some(fsys::EventType::CapabilityReady) => {
+                if let Some(node_proxy) = event
+                    .event_result
+                    .and_then(|result| {
+                        match result {
+                            fsys::EventResult::Payload(payload) => payload.capability_ready,
+                            fsys::EventResult::Error(_) => {
+                                // TODO: result.error carries information about errors that happened
+                                // in component_manager. We should dump those in diagnostics.
+                                None
+                            }
+                            _ => None,
+                        }
+                    })
+                    .and_then(|capability_ready| {
+                        if capability_ready.path == Some("/diagnostics".to_string()) {
+                            capability_ready.node
+                        } else {
+                            None
+                        }
+                    })
+                {
+                    let data = InspectReaderData {
+                        component_id: ComponentIdentifier::Moniker(event.target_moniker.unwrap()),
+                        data_directory_proxy: io_util::node_to_directory(node_proxy.into_proxy()?)
+                            .ok(),
+                    };
+                    return Ok(ComponentEvent::OutDirectoryAppeared(data));
+                }
+                Err(format_err!("Missing diagnostics directory in CapabilityReady payload"))
+            }
+            _ => Err(format_err!("Unexpected type: {:?}", event.event_type)),
+        }
+    }
 }
 
 impl PartialEq for ComponentEvent {

@@ -24,6 +24,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/diagnostics/lib/inspect-fidl-load",
     "//src/diagnostics/lib/selectors",
     "//src/diagnostics/lib/validating-log-listener",

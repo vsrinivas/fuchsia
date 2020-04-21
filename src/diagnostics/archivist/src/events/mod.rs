@@ -4,3 +4,6 @@
 
 pub(crate) mod legacy;
 pub(crate) mod types;
+
+#[cfg(test)]
+mod core;
