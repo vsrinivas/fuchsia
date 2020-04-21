@@ -284,8 +284,10 @@ sdk("core") {
   ]
 }
 
-# Tools and libraries to develop for Fuchsia with Dart.
-# TODO(gridman): Rename to fuchsia_dart after migration from //topaz/public/sdk is done.
+# This target is deprecated and will soon be removed.
+# Please use //topaz/public/sdk:fuchsia_dart.
+# Please keep both targets in sync.
+# See fxb/34988 for details
 sdk("fuchsia_dart2") {
   category = "partner"
 
