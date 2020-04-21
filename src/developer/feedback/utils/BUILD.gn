@@ -4,6 +4,8 @@
 
 import("//third_party/cobalt/metrics_registry.gni")
 
+visibility = [ "//src/developer/feedback/*" ]
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -25,22 +27,15 @@ source_set("archive") {
     "//src/lib/syslog/cpp",
     "//third_party/zlib:minizip",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("cobalt") {
-  public = [
-    "cobalt.h",
-    "cobalt_event.h",
-    "cobalt_metrics.h",
-  ]
-
   sources = [
     "cobalt.cc",
     "cobalt.h",
     "cobalt_event.cc",
     "cobalt_event.h",
+    "cobalt_metrics.h",
   ]
 
   public_deps = [
@@ -57,17 +52,9 @@ source_set("cobalt") {
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("files") {
-  public = [
-    "file_size.h",
-    "rotating_file_set.h",
-    "write_only_file.h",
-  ]
-
   sources = [
     "file_size.h",
     "rotating_file_set.cc",
@@ -89,8 +76,6 @@ source_set("inspect_node_manager") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("inspect_protocol_stats") {
@@ -103,8 +88,6 @@ source_set("inspect_protocol_stats") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/developer/feedback/utils:inspect_node_manager",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("logs") {
@@ -133,8 +116,6 @@ source_set("time") {
   ]
 
   deps = [ "//src/lib/fxl" ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("utc_time_provider") {
@@ -153,8 +134,6 @@ source_set("utc_time_provider") {
     ":time",
     "//src/lib/syslog/cpp",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 ###############################################################################

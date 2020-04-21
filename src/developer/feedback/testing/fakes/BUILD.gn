@@ -4,6 +4,8 @@
 
 import("//build/package.gni")
 
+visibility = [ "//src/developer/feedback/*" ]
+
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -19,10 +21,7 @@ package("fake_crash_reporter") {
 
   deps = [ ":crash_reporter_main" ]
 
-  visibility = [
-    "//src/developer/feedback/*",
-    "//src/developer/exception_broker/tests",
-  ]
+  visibility += [ "//src/developer/exception_broker/tests" ]
 }
 
 package("fake_data_provider") {
@@ -43,8 +42,6 @@ package("fake_data_provider") {
   ]
 
   deps = [ ":data_provider_main" ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 package("fake-device-id-provider") {
@@ -58,8 +55,6 @@ package("fake-device-id-provider") {
   ]
 
   deps = [ ":device_id_provider_main" ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 ###############################################################################

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+visibility = [ "//src/developer/feedback/*" ]
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -19,8 +21,6 @@ source_set("board_info_provider") {
   ]
 
   deps = [ "//src/lib/syslog/cpp" ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("channel_provider") {
@@ -37,8 +37,6 @@ source_set("channel_provider") {
   ]
 
   deps = [ "//zircon/public/lib/zx" ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("cobalt") {
@@ -62,8 +60,6 @@ source_set("cobalt") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("crash_reporter") {
@@ -85,8 +81,6 @@ source_set("crash_reporter") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("data_provider") {
@@ -110,8 +104,6 @@ source_set("data_provider") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("device_id_provider") {
@@ -131,8 +123,6 @@ source_set("device_id_provider") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("fidl_server") {
@@ -166,8 +156,6 @@ source_set("inspect") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("logger") {
@@ -186,8 +174,6 @@ source_set("logger") {
   ]
 
   deps = [ "//src/lib/syslog/cpp" ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("product_info_provider") {
@@ -204,8 +190,6 @@ source_set("product_info_provider") {
   ]
 
   deps = [ "//src/lib/syslog/cpp" ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("network_reachability_provider") {
@@ -225,8 +209,6 @@ source_set("network_reachability_provider") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("scenic") {
@@ -247,8 +229,6 @@ source_set("scenic") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
 
 source_set("utc_provider") {
@@ -270,6 +250,4 @@ source_set("utc_provider") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
   ]
-
-  visibility = [ "//src/developer/feedback/*" ]
 }
