@@ -29,10 +29,13 @@ const (
 	// Default RSA key size.
 	RSAKeySize = 2048
 
-	// The allowed timeout to establish an SSH connection.
-	connTimeout = 5 * time.Second
-	// The total allowed timeout to establish an SSH connection and complete an auth handshake.
-	totalDialTimeout = 10 * time.Second
+	// The allowed timeout for a single attempt at establishing an SSH
+	// connection.
+	connectAttemptTimeout = 10 * time.Second
+
+	// The allowed timeout to establish an ssh connection, possibly including
+	// many attempts.
+	totalConnectTimeout = 2 * time.Minute
 
 	sshUser = "fuchsia"
 
@@ -85,19 +88,19 @@ func ConnectDeprecated(ctx context.Context, raddr net.Addr, config *ssh.ClientCo
 
 	var client *ssh.Client
 	// TODO: figure out optimal backoff time and number of retries
-	connectTimeout := time.Minute
 	startTime := time.Now()
-	if err := retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, connectTimeout), func() error {
+	backoff := retry.WithMaxDuration(&retry.ZeroBackoff{}, totalConnectTimeout)
+	if err := retry.Retry(ctx, backoff, func() error {
 		var err error
-		client, err = dialWithTimeout(network, raddr.String(), config, totalDialTimeout)
+		client, err = dialWithTimeout(network, raddr.String(), config, connectAttemptTimeout)
 		return err
 	}, nil); err != nil {
 		var netErr net.Error
 		if errors.As(err, &netErr) && netErr.Timeout() {
 			// The exact time at which the timeout triggers is nondeterministic;
-			// it'll be somewhere between `connectTimeout` and
-			// `connectTimeout + totalDialTimeout`. So we measure the duration
-			// to improve accuracy.
+			// it'll be somewhere between `totalConnectTimeout` and
+			// `totalConnectTimeout + connectAttemptTimeout`. So we measure the
+			// duration to improve accuracy.
 			duration := time.Now().Sub(startTime).Truncate(time.Second)
 			err = fmt.Errorf("%w: timed out trying to connect to ssh after %v", ConnectionError, duration)
 		} else {
@@ -163,7 +166,7 @@ func DefaultSSHConfigFromSigners(signers ...ssh.Signer) (*ssh.ClientConfig, erro
 	return &ssh.ClientConfig{
 		User:            sshUser,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signers...)},
-		Timeout:         connTimeout,
+		Timeout:         connectAttemptTimeout,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}, nil
 }
