@@ -7,15 +7,14 @@
 ### generate a report of error conditions
 
 ## usage: fx triage [--config <config-file>]
-##                  [--inspect <path-to-inspect.json>] ##
+##                  [--bugreport <path-to-bugreport>]
 ## Processes "fx bugreport" output looking for problems specified in a config
 ## file. If no bugreport output is specified (no '--inspect') it runs a new
 ## "fx bugreport" and uses its "inspect.json" file.
 ##
 ##    --config <config-file-or-dir>      Path to config file or dir
 ##    --inspect <path-to-inspect.json>   Path to inspect.json
-##    --output_format <format>           How the results should be formatted.
-##    --directory <dir>                  Directory to get an inspect.json file from
+##    --bugreport <dir>                  Directory to get an inspect.json file from
 ##    --tag <tag>                        Adds an action tag to include
 ##    --exclude-tag <tag>                Adds an action tag to exclude
 ##    --test                             Run self-tests (only)
@@ -24,18 +23,6 @@
 ##   If path is a directory, path/*.triage will be loaded.
 ##   If 0 paths are given, config defaults to
 ##   /src/diagnostics/config/triage/*.triage.
-##
-## 0 or more --directory paths may be given. Path is relative to CWD, or
-##   absolute.
-##   If path is a directory, path/*.triage will be loaded.
-##   If 0 paths are given, config defaults to
-##   /src/diagnostics/config/triage/*.triage.
-##
-## 0 or 1 --inspect paths may be given. Path is relative to CWD, or absolute.
-##   If no path is given, `fx bugreport` will be run using a temp directory.
-##
-## 1 --output_format type can be given. Currently only text and csv are supported.
-##   Text is the default option.
 ##
 ## 0 or more --tag values may be given. If tags are provided, only actions with
 ##   matching tags will be included.
@@ -46,6 +33,10 @@
 ##
 ## If no --tag values or --exclude-tag values are included then all of the
 ##   actions will be included.
+##
+## 0 or more --bugreport paths may be given. Path is relative to CWD, or
+##   absolute. Each path is a directory containing an unpacked "bugreport.zip".
+##   If no --bugreport is given, `fx bugreport` will be invoked and analyzed.
 
 set -e
 trap 'echo Failed: ${BASH_COMMAND}' ERR
@@ -55,8 +46,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"\
 
 # Defaults.
 config_paths=( )
-inspect=""
-output_format=""
 testit=""
 directories=( )
 tags=( )
@@ -74,15 +63,7 @@ while [[ "$1" =~ ^- ]]; do
       shift
       config_paths+=( "$1" )
       ;;
-    --inspect)
-      shift
-      inspect="$1"
-      ;;
-    --output_format)
-      shift
-      output_format="$1"
-      ;;
-    --directory)
+    --bugreport)
       shift
       directories+=( "$1" )
       ;;
@@ -121,7 +102,7 @@ fi
 config_files=( )
 for config_path in "${config_paths[@]}"; do
   if [[ -d "${config_path}" ]] ; then
-    config_files+=( "${config_path}"*.triage )
+    config_files+=( "${config_path}"/*.triage )
   else
     config_files+=( "${config_path}" )
   fi
@@ -132,9 +113,17 @@ do
   flags="${flags} --config ${config_file}"
 done
 
+if [ -z "${directories}" ]; then
+  temp_dir=$(mktemp -d)
+  trap 'rm -rf "${temp_dir}"' EXIT
+  fx-command-run bugreport --output-directory "${temp_dir}" > /dev/null
+  unzip "${temp_dir}/bugreport.zip" -d "${temp_dir}" > /dev/null
+  directories+="${temp_dir}"
+fi
+
 for directory in "${directories[@]}"
 do
-  flags="${flags} --directory ${directory}"
+  flags="${flags} --bugreport ${directory}"
 done
 
 for tag in "${tags[@]}"
@@ -146,21 +135,6 @@ for tag in "${exclude_tags[@]}"
 do
   flags="${flags} --exclude-tag ${tag}"
 done
-
-if [ -z "${output_format}" ]; then
-   output_format="text"
-fi
-flags="${flags} --output_format ${output_format}"
-
-# Post-flag processing.
-if [ -z "${inspect}" ]; then
-  temp_dir=$(mktemp -d)
-  trap 'rm -rf "${temp_dir}"' EXIT
-  fx-command-run bugreport --output-directory "${temp_dir}" > /dev/null
-  unzip "${temp_dir}/bugreport.zip" -d "${temp_dir}" > /dev/null
-  inspect="${temp_dir}/inspect.json"
-fi
-flags="${flags} --inspect ${inspect}"
 
 echo "${triage_exe} ${flags}"
 $triage_exe ${flags}

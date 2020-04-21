@@ -55,12 +55,8 @@ fn run_command(
         }
         None => {}
     }
-    args.push("--inspect".to_owned());
-    args.push(format!(
-        "{}/src/diagnostics/triage/test/inspect/{}",
-        FUCHSIA_ROOT.to_string(),
-        inspect
-    ));
+    args.push("--bugreport".to_owned());
+    args.push(format!("{}/src/diagnostics/triage/test/{}", FUCHSIA_ROOT.to_string(), inspect));
     for config in configs.iter() {
         args.push("--config".to_owned());
         args.push(format!(
@@ -116,7 +112,8 @@ fn report_error(
                 }
             } else {
                 println!(
-                    "Bad return code {:?} (expected Some({})) from {} and {:?}; output:\n'{}'\n",
+                    "Bad program exec return code {:?} (expected Some({})) from {} and {:?};
+                    output:\n'{}'\n",
                     output.status.code(),
                     rc,
                     inspect,
@@ -150,18 +147,18 @@ fn look_for_error() -> bool {
         };
     }
     should!(
-        "Report missing inspect.json",
-        "not_found_file",
+        "Report missing bugreport",
+        "not_found_dir",
         &vec!["sample.triage"],
         &vec![],
         &vec![],
         None,
         0,
-        "Couldn't read Inspect file"
+        "not_found_dir/inspect.json' to string"
     );
     should!(
         "Report missing config file",
-        "inspect.json",
+        "bugreport",
         &vec!["cfg2"],
         &vec![],
         &vec![],
@@ -170,7 +167,7 @@ fn look_for_error() -> bool {
         "Couldn't read config file"
     );
     should!("Successfully read correct files",
-        "inspect.json",
+        "bugreport",
         &vec!["other.triage", "sample.triage"],
         &vec![],
         &vec![],
@@ -179,7 +176,7 @@ fn look_for_error() -> bool {
         not "Couldn't");
     should!(
         "Use namespace in actions",
-        "inspect.json",
+        "bugreport",
         &vec!["other.triage", "sample.triage"],
         &vec![],
         &vec![],
@@ -189,7 +186,7 @@ fn look_for_error() -> bool {
     );
     should!(
         "Use namespace in metrics",
-        "inspect.json",
+        "bugreport",
         &vec!["other.triage", "sample.triage"],
         &vec![],
         &vec![],
@@ -199,7 +196,7 @@ fn look_for_error() -> bool {
     );
     should!(
         "Fail on missing namespace",
-        "inspect.json",
+        "bugreport",
         &vec!["sample.triage"],
         &vec![],
         &vec![],
@@ -208,8 +205,8 @@ fn look_for_error() -> bool {
         "Bad namespace"
     );
     should!(
-        "Die on bad format arg",
-        "inspect.json",
+        "Die on bad arg",
+        "bugreport",
         &vec!["sample.triage"],
         &vec![],
         &vec![],
@@ -218,28 +215,8 @@ fn look_for_error() -> bool {
         ""
     );
     should!(
-        "Normal output on text format",
-        "inspect.json",
-        &vec!["other.triage", "sample.triage"],
-        &vec![],
-        &vec![],
-        Some("text"),
-        0,
-        "Warning: 'some_disk' in 'sample' detected 'Used some of disk': 'tiny' was true"
-    );
-    should!(
-        "CSV output on csv format",
-        "inspect.json",
-        &vec!["other.triage", "sample.triage"],
-        &vec![],
-        &vec![],
-        Some("csv"),
-        0,
-        "inspect.json,true,false,false,true"
-    );
-    should!(
         "include tagged actions",
-        "inspect.json",
+        "bugreport",
         &vec!["sample_tags.triage"],
         &vec!["foo"],
         &vec![],
@@ -249,7 +226,7 @@ fn look_for_error() -> bool {
     );
     should!(
         "only runs included actions",
-        "inspect.json",
+        "bugreport",
         &vec!["sample_tags.triage"],
         &vec!["not_included"],
         &vec![],
@@ -259,7 +236,7 @@ fn look_for_error() -> bool {
     );
     should!(
         "included tags override excludes",
-        "inspect.json",
+        "bugreport",
         &vec!["sample_tags.triage"],
         &vec!["foo"],
         &vec!["foo"],
@@ -269,7 +246,7 @@ fn look_for_error() -> bool {
     );
     should!(
         "exclude actions with excluded tags",
-        "inspect.json",
+        "bugreport",
         &vec!["sample_tags.triage"],
         &vec![],
         &vec!["foo"],

@@ -1,8 +1,8 @@
 {
     select: {
-        total: "global_data:root.stats:total_bytes",
-        used: "global_data:root.stats:used_bytes",
-        foo_health: "foo.cmx:root.Health:status",
+        total: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
+        used: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:used_bytes",
+        foo_health: "INSPECT:foo.cmx:root/fuchsia.inspect.Health:status",
     },
     eval: {
         c1: "other::m == 1", // JSON5: Comments work, don't need so many quotes.
@@ -39,12 +39,16 @@
             no: [],
             inspect: [
                 {
-                    path: "global_data",
+                    path: "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
                     contents: {
                         root: {
-                            stats: {
-                                total_bytes: 10,
-                                used_bytes: 9,
+                            data_stats: {
+                                global_data: {
+                                    stats: {
+                                        total_bytes: 10,
+                                        used_bytes: 9,
+                                    },
+                                },
                             },
                         },
                     },
@@ -58,10 +62,10 @@
             no: [],
             inspect: [
                 {
-                    path: "foo.cmx",
+                    path: "/hub/c/foo.cmx/13141/out/global_data/storage_stats.inspect",
                     contents: {
                         root: {
-                            Health: {
+                            "fuchsia.inspect.Health": {
                                 status: "UNHEALTHY",
                             },
                         },

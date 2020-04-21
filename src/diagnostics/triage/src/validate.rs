@@ -5,13 +5,12 @@
 use {
     super::{
         act::Actions,
-        config::InspectData,
-        metrics::{MetricState, MetricValue, Metrics},
+        metrics::{fetch::InspectFetcher, MetricState, MetricValue, Metrics},
     },
     anyhow::{format_err, Error},
     serde::Deserialize,
     serde_json as json,
-    std::collections::HashMap,
+    std::{collections::HashMap, convert::TryFrom},
 };
 
 #[derive(Deserialize, Debug)]
@@ -22,15 +21,15 @@ pub struct Trial {
 }
 
 // Outer String is namespace, inner String is trial name
-pub type Trials = HashMap<String, TestsSchema>;
-pub type TestsSchema = HashMap<String, Trial>;
+pub type Trials = HashMap<String, TrialsSchema>;
+pub type TrialsSchema = HashMap<String, Trial>;
 
 pub fn validate(metrics: &Metrics, actions: &Actions, trials: &Trials) -> Result<(), Error> {
     let mut failed = false;
     for (namespace, trial_map) in trials {
         for (trial_name, trial) in trial_map {
-            let temp_data = InspectData::new(trial.inspect.clone());
-            let state = MetricState { metrics, inspect_data: &temp_data };
+            let inspect = InspectFetcher::try_from(trial.inspect.clone())?;
+            let state = MetricState { metrics, inspect: &inspect };
             for action_name in trial.yes.clone().into_iter() {
                 failed = check_failure(namespace, trial_name, &action_name, actions, &state, true)
                     || failed;
@@ -42,7 +41,7 @@ pub fn validate(metrics: &Metrics, actions: &Actions, trials: &Trials) -> Result
         }
     }
     if failed {
-        return Err(format_err!("Validation failed"));
+        return Err(format_err!("Config validation test failed"));
     } else {
         Ok(())
     }
@@ -69,7 +68,7 @@ fn check_failure(
             }
             Some(action) => {
                 let trigger_name = &action.trigger;
-                match metric_state.metric_value(namespace, &trigger_name) {
+                match metric_state.metric_value_by_name(namespace, &trigger_name) {
                     MetricValue::Bool(actual) if actual == expected => return false,
                     other => {
                         println!(

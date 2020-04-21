@@ -7,7 +7,7 @@ use {
     structopt::StructOpt,
     triage_lib::{
         act::{self, ActionContext, ActionResults},
-        config::{self, OutputFormat, StateHolder},
+        config::{self, OutputFormat, ProgramStateHolder},
         result_format::ActionResultFormatter,
         Options,
     },
@@ -19,28 +19,24 @@ fn main() {
     }
 }
 
+// TODO(fxb/50449): Use 'argh' crate for parsing arguments.
 fn try_to_run() -> Result<(), Error> {
-    let StateHolder { metrics, actions, inspect_contexts, output_format } =
+    let ProgramStateHolder { metrics, actions, diagnostic_data, output_format } =
         config::initialize(Options::from_args())?;
-    // TODO(cphoenix): argh::from_env();
 
-    let mut action_contexts: Vec<ActionContext<'_>> =
-        inspect_contexts.iter().map(|c| act::ActionContext::new(&metrics, &actions, c)).collect();
-
-    let action_results: Vec<&ActionResults> =
-        action_contexts.iter_mut().map(|c| c.process()).collect();
-
-    let mut action_labels = Vec::new();
-    for result in &action_results {
-        action_labels.append(&mut result.get_actions());
-    }
-    action_labels.sort();
-    action_labels.dedup();
-
-    let results_formatter = ActionResultFormatter::new(action_results, action_labels);
     match output_format {
-        OutputFormat::Text => println!("{}", results_formatter.to_warnings()),
-        OutputFormat::CSV => println!("{}", results_formatter.to_csv().to_string(",")),
+        OutputFormat::Text => {
+            let mut action_contexts: Vec<ActionContext<'_>> = diagnostic_data
+                .iter()
+                .map(|d| act::ActionContext::new(&metrics, &actions, d))
+                .collect();
+
+            let action_results: Vec<&ActionResults> =
+                action_contexts.iter_mut().map(|c| c.process()).collect();
+
+            let results_formatter = ActionResultFormatter::new(action_results);
+            println!("{}", results_formatter.to_warnings());
+        }
     };
 
     Ok(())

@@ -13,22 +13,16 @@ use {crate::config::OutputFormat, structopt::StructOpt};
 #[derive(StructOpt, Debug)]
 pub struct Options {
     /// Config files
-    // TODO(cphoenix): #[argh(option, long = "config")]
     #[structopt(long = "config")]
     config_files: Vec<String>,
 
-    /// inspect.json file
-    // TODO(cphoenix): #[argh(option, long = "inspect")]
-    #[structopt(long)]
-    inspect: Option<String>,
+    /// Directories to read diagnostic (bugreport) files from.
+    #[structopt(long = "bugreport")]
+    data_directories: Vec<String>,
 
     /// How to print the results.
-    #[structopt(long = "output_format", default_value = "text")]
+    #[structopt(long = "output-format", default_value = "text")]
     output_format: OutputFormat,
-
-    /// Directories to read "inspect.json" files from.
-    #[structopt(long = "directory")]
-    directories: Vec<String>,
 
     /// Which tags we should include
     #[structopt(long = "tag")]

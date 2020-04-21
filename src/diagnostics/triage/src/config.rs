@@ -5,39 +5,43 @@
 use {
     crate::{
         act::{Actions, ActionsSchema},
-        metrics::{Metric, Metrics},
-        validate::{validate, TestsSchema, Trials},
+        metrics::{
+            fetch::{InspectFetcher, SelectorString},
+            Metric, Metrics,
+        },
+        validate::{validate, Trials, TrialsSchema},
         Options,
     },
-    anyhow::{bail, format_err, Error},
-    serde::Deserialize,
-    serde_json as json,
-    std::{collections::HashMap, fs, path::Path, str::FromStr},
+    anyhow::{bail, format_err, Context, Error},
+    serde_derive::Deserialize,
+    std::{collections::HashMap, convert::TryFrom, fs, path::Path, str::FromStr},
 };
 
-pub mod parse;
+pub(crate) mod parse;
 
 /// Schema for JSON triage configuration. This structure is parsed directly from the configuration
 /// files using serde_json.
 #[derive(Deserialize, Default, Debug)]
-pub struct ConfigFileSchema {
+pub(crate) struct ConfigFileSchema {
     /// Map of named Selectors. Each Selector selects a value from Diagnostic data.
     #[serde(rename = "select")]
-    pub file_selectors: HashMap<String, String>,
+    pub(crate) file_selectors: Option<HashMap<String, String>>,
     /// Map of named Evals. Each Eval calculates a value.
     #[serde(rename = "eval")]
-    pub file_evals: HashMap<String, String>,
+    pub(crate) file_evals: Option<HashMap<String, String>>,
     /// Map of named Actions. Each Action uses a boolean value to trigger a warning.
     #[serde(rename = "act")]
-    pub file_actions: ActionsSchema,
+    pub(crate) file_actions: Option<ActionsSchema>,
     /// Map of named Tests. Each test applies sample data to lists of actions that should or
     /// should not trigger.
     #[serde(rename = "test")]
-    pub file_tests: TestsSchema,
+    pub(crate) file_tests: Option<TrialsSchema>,
 }
 
-impl ConfigFileSchema {
-    pub fn parse(s: String) -> Result<ConfigFileSchema, Error> {
+impl TryFrom<String> for ConfigFileSchema {
+    type Error = anyhow::Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
         match json5::from_str::<ConfigFileSchema>(&s) {
             Ok(config) => Ok(config),
             Err(e) => return Err(format_err!("Error {}", e)),
@@ -45,17 +49,16 @@ impl ConfigFileSchema {
     }
 }
 
+// TODO(fxb/50451): Add support for CSV.
 #[derive(Debug, PartialEq)]
 pub enum OutputFormat {
     Text,
-    CSV,
 }
 
 impl FromStr for OutputFormat {
     type Err = anyhow::Error;
     fn from_str(output_format: &str) -> Result<Self, Self::Err> {
         match output_format {
-            "csv" => Ok(OutputFormat::CSV),
             "text" => Ok(OutputFormat::Text),
             incorrect => {
                 Err(format_err!("Invalid output type '{}' - must be 'csv' or 'text'", incorrect))
@@ -64,100 +67,70 @@ impl FromStr for OutputFormat {
     }
 }
 
-/// Permanent storage of program execution context. This lives as long as the program, so we can
-/// store references to it in various other structs.
-pub struct StateHolder {
+/// Complete program execution context.
+pub struct ProgramStateHolder {
     pub metrics: Metrics,
     pub actions: Actions,
-    pub inspect_contexts: Vec<InspectContext>,
+    pub diagnostic_data: Vec<DiagnosticData>,
     pub output_format: OutputFormat,
 }
 
-/// Top-level schema of the inspect.json file found in bugreport.zip.
-pub struct InspectData {
-    entries: Vec<json::Value>,
+/// The path of the Diagnostic files and the data contained within them.
+pub struct DiagnosticData {
+    pub(crate) source: String,
+    pub(crate) inspect: InspectFetcher,
 }
 
-impl InspectData {
-    pub fn new(entries: Vec<json::Value>) -> InspectData {
-        InspectData { entries }
+impl DiagnosticData {
+    pub(crate) fn initialize_from_directory(
+        directory_path: String,
+    ) -> Result<DiagnosticData, Error> {
+        let inspect_text = Self::text_from_file(&directory_path, "inspect.json")?;
+        Self::initialize_from_text(inspect_text, directory_path)
     }
 
-    /// Parses a JSON string formatted as an array of [json::Value]'s.
-    pub fn from(data: String) -> Result<InspectData, Error> {
-        let raw_json = match data.parse::<json::Value>() {
-            Ok(data) => data,
-            Err(_) => return Err(format_err!("Couldn't parse Inspect file '{}' as JSON", data)),
-        };
-        match raw_json {
-            json::Value::Array(entries) => Ok(InspectData { entries }),
-            _ => return Err(format_err!("Array expected in inspect.json format")),
-        }
+    pub(crate) fn initialize_from_text(
+        inspect_text: String,
+        directory_path: String,
+    ) -> Result<DiagnosticData, Error> {
+        let inspect = InspectFetcher::try_from(&*inspect_text).context("Parsing inspect.json")?;
+        Ok(DiagnosticData { source: directory_path, inspect })
     }
 
-    pub fn as_json(&self) -> &Vec<json::Value> {
-        &self.entries
-    }
-}
-
-/// The path of the inspect file and the data contained within it.
-pub struct InspectContext {
-    pub source: String,
-    pub data: InspectData,
-}
-
-impl InspectContext {
-    pub fn initialize_from_file(filename: String) -> Result<InspectContext, Error> {
-        let text = match fs::read_to_string(&filename) {
-            Ok(data) => data,
-            Err(_) => {
-                return Err(format_err!("Couldn't read Inspect file '{}' to string", filename))
-            }
-        };
-
-        let inspect_data = match InspectData::from(text) {
-            Ok(data) => data,
-            Err(e) => return Err(e),
-        };
-
-        Ok(InspectContext { source: filename, data: inspect_data })
+    fn text_from_file(directory: &String, file_name: &str) -> Result<String, Error> {
+        let file_path =
+            Path::new(&directory).join(file_name).into_os_string().to_string_lossy().to_string();
+        fs::read_to_string(&file_path)
+            .context(format!("Couldn't read file '{}' to string", file_path))
     }
 }
 
 /// Parses the inspect.json file and all the config files.
-pub fn initialize(options: Options) -> Result<StateHolder, Error> {
-    let Options { directories, output_format, inspect, config_files, tags, exclude_tags, .. } =
-        options;
+pub fn initialize(options: Options) -> Result<ProgramStateHolder, Error> {
+    let Options { data_directories, output_format, config_files, tags, exclude_tags, .. } = options;
 
     let action_tag_directive = action_tag_directive_from_tags(tags, exclude_tags);
 
-    let mut inspect_contexts = Vec::new();
-    inspect_contexts.push(InspectContext::initialize_from_file(inspect.unwrap())?);
-
-    for directory in directories {
-        let inspect_file = Path::new(&directory).join("inspect.json").into_os_string();
-        match InspectContext::initialize_from_file(inspect_file.to_string_lossy().to_string()) {
-            Ok(c) => inspect_contexts.push(c),
-            Err(e) => println!("{}", e),
-        };
-    }
+    let diagnostic_data = data_directories
+        .into_iter()
+        .map(|path| DiagnosticData::initialize_from_directory(path))
+        .collect::<Result<Vec<_>, Error>>()?;
 
     if config_files.len() == 0 {
         bail!("Need at least one config file; use --config");
     }
 
-    let config_file_map = load_config_files(config_files)?;
-
+    let config_file_map = load_config_files(&config_files)?;
     let ParseResult { actions, metrics, tests } =
         parse_config_files(config_file_map, action_tag_directive)?;
 
     validate(&metrics, &actions, &tests)?;
 
-    Ok(StateHolder { metrics, actions, inspect_contexts, output_format })
+    Ok(ProgramStateHolder { metrics, actions, diagnostic_data, output_format })
 }
 
 pub fn initialize_for_validation(config_files: Vec<String>) -> Result<ParseResult, Error> {
-    let config_file_map = load_config_files(config_files)?;
+    let config_file_map = load_config_files(&config_files)?;
     parse_config_files(config_file_map, ActionTagDirective::AllowAll)
 }
 
@@ -167,7 +140,7 @@ pub struct ParseResult {
     pub tests: Trials,
 }
 
-fn load_config_files(config_files: Vec<String>) -> Result<HashMap<String, String>, Error> {
+fn load_config_files(config_files: &Vec<String>) -> Result<HashMap<String, String>, Error> {
     let mut config_file_map = HashMap::new();
     for file_name in config_files {
         let namespace = base_name(&file_name)?;
@@ -191,16 +164,19 @@ fn parse_config_files(
     let mut tests = HashMap::new();
 
     for (namespace, file_data) in config_files {
-        let file_config = match ConfigFileSchema::parse(file_data) {
+        let file_config = match ConfigFileSchema::try_from(file_data) {
             Ok(c) => c,
             Err(e) => bail!("Parsing file '{}': {}", namespace, e),
         };
         let ConfigFileSchema { file_actions, file_selectors, file_evals, file_tests } = file_config;
-
+        let file_actions = file_actions.unwrap_or_else(|| HashMap::new());
+        let file_selectors = file_selectors.unwrap_or_else(|| HashMap::new());
+        let file_evals = file_evals.unwrap_or_else(|| HashMap::new());
+        let file_tests = file_tests.unwrap_or_else(|| HashMap::new());
         let file_actions = filter_actions(file_actions, &action_tag_directive);
         let mut file_metrics = HashMap::new();
         for (key, value) in file_selectors.into_iter() {
-            file_metrics.insert(key, Metric::Selector(value));
+            file_metrics.insert(key, Metric::Selector(SelectorString::try_from(value)?));
         }
         for (key, value) in file_evals.into_iter() {
             if file_metrics.contains_key(&key) {
@@ -301,15 +277,14 @@ mod test {
 
     #[test]
     fn inspect_data_from_works() -> Result<(), Error> {
-        assert!(InspectData::from("foo".to_string()).is_err(), "'foo' isn't valid JSON");
-        assert!(InspectData::from(r#"{"a":5}"#.to_string()).is_err(), "Needed an array");
-        assert!(InspectData::from("[]".to_string()).is_ok(), "A JSON array should have worked");
+        assert!(InspectFetcher::try_from("foo").is_err(), "'foo' isn't valid JSON");
+        assert!(InspectFetcher::try_from(r#"{"a":5}"#).is_err(), "Needed an array");
+        assert!(InspectFetcher::try_from("[]").is_ok(), "A JSON array should have worked");
         Ok(())
     }
 
     #[test]
     fn output_format_from_string() -> Result<(), Error> {
-        assert_eq!(OutputFormat::from_str("csv")?, OutputFormat::CSV);
         assert_eq!(OutputFormat::from_str("text")?, OutputFormat::Text);
         assert!(OutputFormat::from_str("").is_err(), "Should have returned 'Err' on ''");
         assert!(OutputFormat::from_str("CSV").is_err(), "Should have returned 'Err' on 'CSV'");

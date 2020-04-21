@@ -4,7 +4,7 @@
 
 use {
     super::{
-        config::InspectContext,
+        config::DiagnosticData,
         metrics::{MetricState, MetricValue, Metrics},
     },
     anyhow::Error,
@@ -15,8 +15,8 @@ use {
 
 /// Reports an [Error] to stdout and logs at "error" level.
 pub fn report_failure(e: Error) {
-    error!("Triage failed: {}", e);
-    println!("Triage failed: {}", e);
+    error!("Triage failed: {:?}", e);
+    println!("Triage failed: {:?}", e);
 }
 
 /// Provides the [metric_state] context to evaluate [Action]s and results of the [actions].
@@ -30,12 +30,12 @@ impl<'a> ActionContext<'a> {
     pub fn new(
         metrics: &'a Metrics,
         actions: &'a Actions,
-        inspect_context: &'a InspectContext,
+        diagnostic_data: &'a DiagnosticData,
     ) -> ActionContext<'a> {
         ActionContext {
             actions,
-            metric_state: MetricState::new(metrics, &inspect_context.data),
-            action_results: ActionResults::new(&inspect_context.source),
+            metric_state: MetricState::new(metrics, &diagnostic_data.inspect),
+            action_results: ActionResults::new(&diagnostic_data.source),
         }
     }
 }
@@ -43,55 +43,47 @@ impl<'a> ActionContext<'a> {
 /// Stores the results of each [Action] specified in [source] and the [warnings] that are
 /// generated.
 pub struct ActionResults {
-    pub source: String,
+    pub(crate) source: String,
     results: HashMap<String, bool>,
     warnings: Vec<String>,
 }
 
 impl ActionResults {
-    pub fn new(source: &str) -> ActionResults {
+    pub(crate) fn new(source: &str) -> ActionResults {
         ActionResults { source: source.to_string(), results: HashMap::new(), warnings: Vec::new() }
     }
 
-    pub fn set_result(&mut self, action: &str, value: bool) {
+    pub(crate) fn set_result(&mut self, action: &str, value: bool) {
         self.results.insert(action.to_string(), value);
     }
 
-    pub fn get_result(&self, action: &str) -> Option<&bool> {
-        self.results.get(action)
-    }
-
-    pub fn get_actions(&self) -> Vec<String> {
-        self.results.keys().map(|k| k.clone()).collect()
-    }
-
-    pub fn add_warning(&mut self, warning: String) {
+    pub(crate) fn add_warning(&mut self, warning: String) {
         self.warnings.push(warning);
     }
 
-    pub fn get_warnings(&self) -> &Vec<String> {
+    pub(crate) fn get_warnings(&self) -> &Vec<String> {
         &self.warnings
     }
 }
 
 /// [Actions] are stored as a map of maps, both with string keys. The outer key
 /// is the namespace for the inner key, which is the name of the [Action].
-pub type Actions = HashMap<String, ActionsSchema>;
+pub(crate) type Actions = HashMap<String, ActionsSchema>;
 
 /// [ActionsSchema] stores the [Action]s from a single config file / namespace.
 ///
 /// This struct is used to deserialize the [Action]s from the JSON-formatted
 /// config file.
-pub type ActionsSchema = HashMap<String, Action>;
+pub(crate) type ActionsSchema = HashMap<String, Action>;
 
 /// [Action] stores the specification for an action. [trigger] should name a
 /// [Metric] that calculates a Boolean value. If the [Metric] is true, then
 /// the string from [print] will be printed as a warning.
 #[derive(Deserialize, Debug)]
 pub struct Action {
-    pub trigger: String,     // The name of a boolean Metric
-    pub print: String,       // What to print if trigger is true
-    pub tag: Option<String>, // An optional tag to associate with this Action
+    pub(crate) trigger: String,     // The name of a boolean Metric
+    pub(crate) print: String,       // What to print if trigger is true
+    pub(crate) tag: Option<String>, // An optional tag to associate with this Action
 }
 
 impl ActionContext<'_> {
@@ -106,7 +98,8 @@ impl ActionContext<'_> {
     }
 
     fn consider(&mut self, action: &Action, namespace: &String, name: &String) {
-        let was_triggered = match self.metric_state.metric_value(namespace, &action.trigger) {
+        let was_triggered = match self.metric_state.metric_value_by_name(namespace, &action.trigger)
+        {
             MetricValue::Bool(true) => {
                 self.act(namespace, name, &action);
                 true
@@ -114,7 +107,7 @@ impl ActionContext<'_> {
             MetricValue::Bool(false) => false,
             other => {
                 self.warn(format!(
-                    "ERROR: In '{}', action '{}' used bad metric '{}' with value '{:?}'",
+                    "ERROR: In '{}', action '{}' used bad metric '{}' with value {}",
                     namespace, name, action.trigger, other
                 ));
                 false
@@ -139,8 +132,7 @@ impl ActionContext<'_> {
 mod test {
     use {
         super::*,
-        crate::config::InspectData,
-        crate::metrics::{Metric, Metrics},
+        crate::metrics::{fetch::InspectFetcher, Metric, Metrics},
     };
 
     /// Tells whether any of the stored warnings include a substring.
@@ -176,7 +168,7 @@ mod test {
         );
         actions.insert("file".to_string(), action_file);
         let inspect_context =
-            InspectContext { source: String::from("source"), data: InspectData::new(vec![]) };
+            DiagnosticData { source: String::from("source"), inspect: InspectFetcher::new_empty() };
         let mut context = ActionContext::new(&metrics, &actions, &inspect_context);
         let results = context.process();
         assert!(warnings_include(

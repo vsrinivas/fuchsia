@@ -1,30 +1,64 @@
 {
-    select: {
-        total: "archivist.cmx:root.data_stats.global_data.stats:total_bytes",
-        used: "archivist.cmx:root.data_stats.global_data.stats:used_bytes",
-    },
-
-    eval: {
-        ratio: "used / (total + 0.0)",
-        disk98: "ratio > 0.98",
-    },
-
-    act: {
-        disk_full: {trigger: "disk98", print: "Disk >98% full!"}
-    },
-
-    test: {
-        disk_full: {
-            yes: ["disk_full"],
-            no: [],
-            inspect: [{
-                path: "archivist.cmx",
-                contents: {root: {data_stats: {global_data: {stats: {total_bytes: 100, used_bytes: 99}}}}}}]},
-        not_full: {
-            yes: [],
-            no: ["disk_full"],
-            inspect: [{
-                path: "archivist.cmx",
-                contents: {root: {data_stats: {global_data: {stats: {total_bytes: 100, used_bytes: 90}}}}}}]}
+  select: {
+    total: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
+    used: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:used_bytes"
+  },
+  eval: {
+    ratio: "used / (total + 0.0)",
+    disk98: "ratio > 0.98"
+  },
+  act: {
+    disk_full: {
+      trigger: "disk98",
+      print: "Disk is >98% full"
     }
+  },
+  test: {
+    is_full: {
+      yes: [
+        "disk_full"
+      ],
+      no: [],
+      inspect: [
+        {
+          path: "archivist.cmx",
+          contents: {
+            root: {
+              data_stats: {
+                global_data: {
+                  stats: {
+                    total_bytes: 100,
+                    used_bytes: 99
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    not_full: {
+      yes: [],
+      no: [
+        "disk_full"
+      ],
+      inspect: [
+        {
+          path: "archivist.cmx",
+          contents: {
+            root: {
+              data_stats: {
+                global_data: {
+                  stats: {
+                    total_bytes: 100,
+                    used_bytes: 98
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
 }

@@ -2,66 +2,196 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::MetricValue;
+use {
+    super::MetricValue,
+    anyhow::{anyhow, bail, Context, Error, Result},
+    fuchsia_inspect_node_hierarchy::{
+        serialization::{json::RawJsonNodeHierarchySerializer, HierarchyDeserializer},
+        NodeHierarchy,
+    },
+    selectors,
+    serde_derive::Deserialize,
+    serde_json::Value as JsonValue,
+    std::{convert::TryFrom, str::FromStr, sync::Arc},
+};
 
-pub fn fetch(inspect_data: &Vec<serde_json::Value>, selector: &String) -> MetricValue {
-    // TODO(cphoenix): Use Luke's selector crate.
-    let parts: Vec<_> = selector.split(":").collect();
-    if parts.len() != 3 {
-        return MetricValue::Missing(format!("Bad selector '{}'", selector));
-    }
-    let empty = "".to_string();
-    for entry in inspect_data.iter() {
-        let path = match entry {
-            serde_json::Value::Object(o) => match &o["path"] {
-                serde_json::Value::String(s) => s,
-                _ => &empty,
-            },
-            _ => &empty,
-        };
-        if path.contains(parts[0]) {
-            let mut node = &entry["contents"];
-            let mut selectors: Vec<_> = parts[1].split(".").collect();
-            selectors.push(parts[2]);
-            for name in selectors {
-                if let serde_json::Value::Object(map) = node {
-                    if let Some(entry) = map.get(name) {
-                        node = entry;
-                    } else {
-                        return MetricValue::Missing(format!(
-                            "'{}' not found in '{}'",
-                            name, selector
-                        ));
-                    }
-                } else {
-                    return MetricValue::Missing(format!(
-                        "Non-map JSON '{}' at '{}' in '{}'",
-                        node, name, selector
-                    ));
-                }
-            }
-            return match node {
-                serde_json::Value::Bool(b) => MetricValue::Bool(*b),
-                serde_json::Value::String(s) => MetricValue::String(s.to_string()),
-                serde_json::Value::Number(n) => {
-                    if n.is_i64() {
-                        MetricValue::Int(n.as_i64().unwrap())
-                    } else if n.is_u64() {
-                        MetricValue::Int(n.as_u64().unwrap() as i64)
-                    } else {
-                        MetricValue::Float(n.as_f64().unwrap())
-                    }
-                }
-                bad => MetricValue::Missing(format!("Bad JSON type '{}' for '{}'", bad, selector)),
-            };
+/// Selector type used to determine how to query target file.
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+pub(crate) enum SelectorType {
+    /// Selector for Inspect Tree ("inspect.json" files).
+    Inspect,
+}
+
+impl FromStr for SelectorType {
+    type Err = anyhow::Error;
+    fn from_str(selector_type: &str) -> Result<Self, Self::Err> {
+        match selector_type {
+            "INSPECT" => Ok(SelectorType::Inspect),
+            incorrect => bail!("Invalid selector type '{}' - must be INSPECT", incorrect),
         }
     }
-    MetricValue::Missing(format!("Inspect data '{}' not found", parts[0]))
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+pub struct SelectorString {
+    full_selector: String,
+    pub(crate) selector_type: SelectorType,
+    body: String,
+}
+
+impl SelectorString {
+    pub(crate) fn body(&self) -> &str {
+        &self.body
+    }
+}
+
+impl TryFrom<String> for SelectorString {
+    type Error = anyhow::Error;
+
+    fn try_from(full_selector: String) -> Result<Self, Self::Error> {
+        let mut string_parts = full_selector.splitn(2, ':');
+        let selector_type =
+            SelectorType::from_str(string_parts.next().ok_or(anyhow!("Empty selector"))?)?;
+        let body = string_parts.next().ok_or(anyhow!("Selector needs a :"))?.to_owned();
+        Ok(SelectorString { full_selector, selector_type, body })
+    }
+}
+
+struct ComponentInspectInfo {
+    processed_data: NodeHierarchy,
+    moniker: Vec<String>,
+}
+
+pub(crate) struct InspectFetcher {
+    components: Vec<ComponentInspectInfo>,
+}
+
+impl TryFrom<&str> for InspectFetcher {
+    type Error = anyhow::Error;
+
+    fn try_from(json_text: &str) -> Result<Self, Self::Error> {
+        let raw_json =
+            json_text.parse::<JsonValue>().context("Couldn't parse Inspect text as JSON.")?;
+        match raw_json {
+            JsonValue::Array(list) => Self::try_from(list),
+            _ => bail!("Bad json inspect data needs to be array."),
+        }
+    }
+}
+
+impl TryFrom<Vec<JsonValue>> for InspectFetcher {
+    type Error = anyhow::Error;
+
+    fn try_from(component_vec: Vec<JsonValue>) -> Result<Self, Self::Error> {
+        fn extract_json_value<'a>(
+            component: &'a JsonValue,
+            key: &'_ str,
+        ) -> Result<&'a JsonValue, Error> {
+            component.get(key).ok_or_else(|| anyhow!("'{}' not found in Inspect component", key))
+        }
+
+        fn path_from(component: &JsonValue) -> Result<String, Error> {
+            Ok(extract_json_value(component, "path")?
+                .as_str()
+                .ok_or_else(|| anyhow!("Inspect component path wasn't a valid string"))?
+                .to_owned())
+        }
+
+        fn moniker_from(path_string: &String) -> Result<Vec<String>, Error> {
+            selectors::parse_path_to_moniker(path_string)
+                .context("Path string needs to be a moniker")
+        }
+
+        let components: Vec<_> =
+            component_vec
+                .iter()
+                .map(|raw_component| {
+                    let path = path_from(raw_component)?;
+                    let moniker = moniker_from(&path)?;
+                    let raw_contents = extract_json_value(raw_component, "contents")?;
+                    let processed_data =
+                        RawJsonNodeHierarchySerializer::deserialize(raw_contents.clone())
+                            .with_context(|| {
+                                format!(
+                    "Unable to deserialize Inspect contents for {} to node hierarchy", path)
+                            })?;
+                    Ok(ComponentInspectInfo { moniker, processed_data })
+                })
+                .collect::<Result<Vec<_>, Error>>()?;
+        Ok(Self { components })
+    }
+}
+
+impl InspectFetcher {
+    #[cfg(test)]
+    pub(crate) fn new_empty() -> Self {
+        Self { components: Vec::new() }
+    }
+
+    fn try_fetch(&self, selector_string: &str) -> Result<Vec<MetricValue>, Error> {
+        let arc_selector = Arc::new(selectors::parse_selector(selector_string)?);
+        let mut values = Vec::new();
+        let mut found_component = false;
+        for component in self.components.iter() {
+            if !selectors::match_component_moniker_against_selector(
+                &component.moniker,
+                &arc_selector,
+            )? {
+                continue;
+            }
+            found_component = true;
+            let selector = selectors::parse_selector(selector_string)?;
+            for value in fuchsia_inspect_node_hierarchy::select_from_node_hierarchy(
+                component.processed_data.clone(),
+                selector,
+            )?
+            .into_iter()
+            {
+                values.push(value)
+            }
+        }
+        if !found_component {
+            return Ok(vec![MetricValue::Missing(format!(
+                "Component of {} matched nothing",
+                selector_string
+            ))]);
+        }
+        if values.is_empty() {
+            return Ok(vec![MetricValue::Missing(format!(
+                "Tree of {} matched nothing",
+                selector_string
+            ))]);
+        }
+        Ok(values.into_iter().map(|value| MetricValue::from(value.property)).collect())
+    }
+
+    pub(crate) fn fetch(&self, selector: &SelectorString) -> Vec<MetricValue> {
+        match self.try_fetch(selector.body()) {
+            Ok(v) => v,
+            Err(e) => vec![MetricValue::Missing(format!("Fetch {:?} -> {}", selector, e))],
+        }
+    }
+
+    #[cfg(test)]
+    fn fetch_str(&self, selector_str: &str) -> Vec<MetricValue> {
+        match SelectorString::try_from(selector_str.to_owned()) {
+            Ok(selector) => self.fetch(&selector),
+            Err(e) => vec![MetricValue::Missing(format!("Bad selector {}: {}", selector_str, e))],
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::config::InspectData, anyhow::Error};
+    use {super::*, anyhow::Error};
+
+    #[test]
+    fn inspect_fetcher_new_works() -> Result<(), Error> {
+        assert!(InspectFetcher::try_from("foo").is_err(), "'foo' isn't valid JSON");
+        assert!(InspectFetcher::try_from(r#"{"a":5}"#).is_err(), "Needed an array");
+        assert!(InspectFetcher::try_from("[]").is_ok(), "A JSON array should have worked");
+        Ok(())
+    }
 
     #[test]
     fn test_fetch() -> Result<(), Error> {
@@ -70,30 +200,40 @@ mod test {
                         {"path":"zxcv/bar/hjkl",
                         "contents":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
                         ]"#;
-        let inspect_data = InspectData::from(json.to_string())?;
-        let inspect = inspect_data.as_json();
+        let inspect = InspectFetcher::try_from(json)?;
         macro_rules! assert_wrong {
             ($selector:expr, $error:expr) => {
                 assert_eq!(
-                    fetch(&inspect, &$selector.to_string()),
-                    MetricValue::Missing($error.to_string())
+                    inspect.fetch_str($selector),
+                    vec![MetricValue::Missing($error.to_string())]
                 )
             };
         }
-        assert_wrong!("foo:root.dataInt", "Bad selector 'foo:root.dataInt'");
-        assert_wrong!("foo:root:data:Int", "Bad selector 'foo:root:data:Int'");
-        assert_wrong!("fow:root:dataInt", "Inspect data 'fow' not found");
-        assert_wrong!("foo:root.kid:dataInt", "'kid' not found in 'foo:root.kid:dataInt'");
-        assert_wrong!(
-            "bar:base.array:dataInt",
-            "Non-map JSON '[2,3,4]' at 'dataInt' in 'bar:base.array:dataInt'"
-        );
-        assert_eq!(fetch(&inspect, &"foo:root:dataInt".to_string()), MetricValue::Int(5));
+        assert_wrong!("INSPET:*/foo/*:root:dataInt", "Bad selector INSPET:*/foo/*:root:dataInt: Invalid selector type \'INSPET\' - must be INSPECT");
+        assert_eq!(inspect.fetch_str("INSPECT:*/foo/*:root:dataInt"), vec![MetricValue::Int(5)]);
         assert_eq!(
-            fetch(&inspect, &"foo:root.child:dataFloat".to_string()),
-            MetricValue::Float(2.3)
+            inspect.fetch_str("INSPECT:*/foo/*:root/child:dataFloat"),
+            vec![MetricValue::Float(2.3)]
         );
-        assert_eq!(fetch(&inspect, &"bar:base:yes".to_string()), MetricValue::Bool(true));
+        assert_eq!(inspect.fetch_str("INSPECT:*/bar/*:base:yes"), vec![MetricValue::Bool(true)]);
+        assert_wrong!(
+            "INSPECT:*/foo/*:root.dataInt",
+            "Tree of */foo/*:root.dataInt matched nothing"
+        );
+        assert_wrong!(
+            "INSPECT:*/fo/*:root.dataInt",
+            "Component of */fo/*:root.dataInt matched nothing"
+        );
+        assert_wrong!("INSPECT:*/foo/*:root:data:Int", "Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
+        assert_wrong!(
+            "INSPECT:*/foo/*:root/kid:dataInt",
+            "Tree of */foo/*:root/kid:dataInt matched nothing"
+        );
+        assert_wrong!(
+            "INSPECT:*/bar/*:base/array:dataInt",
+            "Tree of */bar/*:base/array:dataInt matched nothing"
+        );
+        assert_wrong!("INSPECT:*/bar/*:base:array", "Arrays not supported yet");
         Ok(())
     }
 }

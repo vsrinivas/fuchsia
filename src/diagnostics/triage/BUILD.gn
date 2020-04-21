@@ -32,7 +32,8 @@ lib_deps = [
   "//garnet/lib/rust/cm_json",
 
   # "//src/lib/syslog/rust:syslog",
-
+  "//src/diagnostics/lib/selectors",
+  "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:clap",
   "//third_party/rust_crates:json5",
@@ -41,6 +42,7 @@ lib_deps = [
   "//third_party/rust_crates:nom",
   "//third_party/rust_crates:regex",
   "//third_party/rust_crates:serde",
+  "//third_party/rust_crates:serde_derive",
   "//third_party/rust_crates:serde_json",
   "//third_party/rust_crates:structopt",
   "//third_party/rust_crates:tempfile",
