@@ -424,7 +424,7 @@ zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI
            parent);
     return nullptr;
   } else {
-    zxlogf(ERROR, "acpi: published device %s(%p), parent=%s(%p), handle=%p\n", name, dev.get(),
+    zxlogf(INFO, "acpi: published device %s(%p), parent=%s(%p), handle=%p\n", name, dev.get(),
            device_get_name(parent), parent, (void*)dev->ns_node);
     // device_add takes ownership of args.ctx, but only on success.
     return dev.release()->zxdev;
