@@ -40,6 +40,7 @@ build_api_module("api") {
   testonly = true
   data_keys = [ "build_api_modules" ]
   deps = [
+    ":args",
     ":binaries",
     ":generated_sources",
     ":images",
@@ -49,6 +50,12 @@ build_api_module("api") {
     ":zbi_tests",
   ]
 }
+
+# See //:args in the fuchsia build for a description.
+build_api_module("args") {
+  contents = read_file("$root_build_dir/args.gn", "scope")
+}
+
 
 # This describes all the binaries linked by the build.
 #

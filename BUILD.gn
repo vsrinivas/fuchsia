@@ -192,6 +192,7 @@ build_api_module("api") {
   data_keys = [ "build_api_modules" ]
   deps = [
     ":archives",
+    ":args",
     ":binaries",
     ":build_info",
     ":checkout_artifacts",
@@ -234,6 +235,22 @@ build_api_module("archives") {
     "//build/gn:archives",
     "//build/images:archives",
   ]
+}
+
+# TODO(crbug.com/gn/132): Remove when GN emits the equivalent information
+# itself.
+#
+# This just regurgitates the build arguments specified to `gn gen`.  This is
+# the exact JSON representation of the settings in "$root_build_dir/args.gn".
+# It does not include build arguments left to their default values.  So to
+# reproduce the settings of this build, one could put in `args.gn`:
+# ```
+#   forward_variables_from(read_file("args.json", "json"), "*")
+# ```
+# Type: scope
+#
+build_api_module("args") {
+  contents = read_file("$root_build_dir/args.gn", "scope")
 }
 
 # See //zircon:binaries for a description and schema definition.

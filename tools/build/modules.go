@@ -14,6 +14,7 @@ import (
 
 const (
 	apiModuleName              = "api.json"
+	argsModuleName             = "args.json"
 	binaryModuleName           = "binaries.json"
 	checkoutArtifactModuleName = "checkout_artifacts.json"
 	imageModuleName            = "images.json"
@@ -29,6 +30,7 @@ const (
 type Modules struct {
 	buildDir          string
 	apis              []string
+	args              Args
 	binaries          []Binary
 	checkoutArtifacts []CheckoutArtifact
 	images            []Image
@@ -46,6 +48,11 @@ func NewModules(buildDir string) (*Modules, error) {
 	m := &Modules{buildDir: buildDir}
 
 	m.apis, err = loadAPIs(m.APIManifest())
+	if err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
+	m.args, err = loadArgs(m.ArgManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
@@ -109,6 +116,16 @@ func (m Modules) APIs() []string {
 // APIManifest returns the path to the manifest of build API modules present in the build.
 func (m Modules) APIManifest() string {
 	return filepath.Join(m.BuildDir(), apiModuleName)
+}
+
+// Args returns the build API module of args set in the build.
+func (m Modules) Args() Args {
+	return m.args
+}
+
+// ArgManifest returns the path to the manifest of GN args set in the build.
+func (m Modules) ArgManifest() string {
+	return filepath.Join(m.BuildDir(), argsModuleName)
 }
 
 // Binaries returns the build API module of binaries.
