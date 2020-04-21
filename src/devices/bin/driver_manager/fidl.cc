@@ -56,7 +56,7 @@ zx_status_t dh_send_create_device(Device* dev, const fbl::RefPtr<Devhost>& dh,
   }
 
   fidl::Message msg(builder.Finalize(), fidl::HandlePart(handles, num_handles, num_handles));
-  return msg.Write(dh->hrpc(), 0);
+  return msg.Write(dh->hrpc().get(), 0);
 }
 
 zx_status_t dh_send_create_device_stub(Device* dev, const fbl::RefPtr<Devhost>& dh,
@@ -81,7 +81,7 @@ zx_status_t dh_send_create_device_stub(Device* dev, const fbl::RefPtr<Devhost>& 
   zx_handle_t handles[] = {coordinator_rpc.release(), device_controller_rpc.release()};
   fidl::Message msg(builder.Finalize(),
                     fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
-  return msg.Write(dh->hrpc(), 0);
+  return msg.Write(dh->hrpc().get(), 0);
 }
 
 zx_status_t dh_send_bind_driver(Device* dev_ptr, const char* libname, zx::vmo driver,
@@ -192,5 +192,5 @@ zx_status_t dh_send_create_composite_device(const fbl::RefPtr<Devhost>& dh,
   uint32_t num_handles = 2;
 
   fidl::Message msg(builder.Finalize(), fidl::HandlePart(handles, num_handles, num_handles));
-  return msg.Write(dh->hrpc(), 0);
+  return msg.Write(dh->hrpc().get(), 0);
 }

@@ -392,7 +392,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
 static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
                                      const LoaderServiceConnector& loader_connector,
                                      const char* devhost_bin, const char* name,
-                                     const char* const* env, zx_handle_t hrpc,
+                                     const char* const* env, zx::channel hrpc,
                                      const zx::resource& root_resource, zx::unowned_job devhost_job,
                                      FsProvider* fs_provider) {
   // Give devhosts the root resource if we have it (in tests, we may not)
@@ -403,6 +403,14 @@ static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
     if (status != ZX_OK) {
       log(ERROR, "driver_manager: failed to duplicate root resource: %d\n", status);
     }
+  }
+
+  zx::channel loader_connection;
+  zx_status_t status = loader_connector(&loader_connection);
+  if (status != ZX_OK) {
+    log(ERROR, "driver_manager: failed to get devhost loader connection: %s\n",
+        zx_status_get_string(status));
+    return status;
   }
 
   constexpr size_t kMaxActions = 5;
@@ -417,7 +425,7 @@ static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
   };
   actions[actions_count++] = fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 0), .handle = hrpc},
+      .h = {.id = PA_HND(PA_USER0, 0), .handle = hrpc.release()},
   };
   if (resource.is_valid()) {
     actions[actions_count++] = fdio_spawn_action_t{
@@ -426,13 +434,6 @@ static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
     };
   }
 
-  zx::channel loader_connection;
-  zx_status_t status = loader_connector(&loader_connection);
-  if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to get devhost loader connection: %s\n",
-        zx_status_get_string(status));
-    return status;
-  }
   actions[actions_count++] = fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
       .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release()},
@@ -467,17 +468,16 @@ static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
 }
 
 zx_status_t Coordinator::NewDevhost(const char* name, fbl::RefPtr<Devhost>* out) {
-  auto dh = fbl::MakeRefCounted<Devhost>(this);
-  if (dh == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
   zx::channel hrpc, dh_hrpc;
   zx_status_t status = zx::channel::create(0, &hrpc, &dh_hrpc);
   if (status != ZX_OK) {
     return status;
   }
-  dh->set_hrpc(dh_hrpc.release());
+
+  auto dh = fbl::MakeRefCounted<Devhost>(this, std::move(dh_hrpc));
+  if (dh == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
 
   const char* program = kDriverHostPath;
   std::vector<const char*> env;
@@ -513,7 +513,7 @@ zx_status_t Coordinator::NewDevhost(const char* name, fbl::RefPtr<Devhost>* out)
 
   env.push_back(nullptr);
   status =
-      dc_launch_devhost(dh, loader_service_connector_, program, name, env.data(), hrpc.release(),
+      dc_launch_devhost(dh, loader_service_connector_, program, name, env.data(), std::move(hrpc),
                         root_resource(), zx::unowned_job(config_.devhost_job), config_.fs_provider);
   if (status != ZX_OK) {
     return status;

@@ -21,7 +21,8 @@ class Device;
 class Devhost : public fbl::RefCounted<Devhost>, public fbl::DoublyLinkedListable<Devhost*> {
  public:
   // |coordinator| must outlive this Devhost object.
-  explicit Devhost(Coordinator* coordinator);
+  // |rpc| is a client channel speaking fuchsia.device.manager/DevhostController
+  Devhost(Coordinator* coordinator, zx::channel rpc);
   ~Devhost();
 
   enum Flags : uint32_t {
@@ -29,8 +30,7 @@ class Devhost : public fbl::RefCounted<Devhost>, public fbl::DoublyLinkedListabl
     kSuspend = 1 << 1,
   };
 
-  zx_handle_t hrpc() const { return hrpc_; }
-  void set_hrpc(zx_handle_t hrpc) { hrpc_ = hrpc; }
+  const zx::channel& hrpc() const { return hrpc_; }
   zx::unowned_process proc() const { return zx::unowned_process(proc_); }
   void set_proc(zx::process proc) { proc_ = std::move(proc); }
   zx_koid_t koid() const { return koid_; }
@@ -45,7 +45,7 @@ class Devhost : public fbl::RefCounted<Devhost>, public fbl::DoublyLinkedListabl
  private:
   Coordinator* coordinator_;
 
-  zx_handle_t hrpc_ = ZX_HANDLE_INVALID;
+  zx::channel hrpc_;
   zx::process proc_;
   zx_koid_t koid_ = 0;
   uint32_t flags_ = 0;

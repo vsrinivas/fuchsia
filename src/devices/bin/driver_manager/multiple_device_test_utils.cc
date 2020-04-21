@@ -105,12 +105,11 @@ void MultipleDeviceTestCase::CheckSuspendReceivedAndReply(const zx::channel& rem
 void MultipleDeviceTestCase::SetUp() {
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator_));
 
-  devhost_ = fbl::MakeRefCounted<Devhost>(&coordinator_);
   {
     zx::channel local;
     zx_status_t status = zx::channel::create(0, &local, &devhost_remote_);
     ASSERT_OK(status);
-    devhost_->set_hrpc(local.release());
+    devhost_ = fbl::MakeRefCounted<Devhost>(&coordinator_, std::move(local));
   }
 
   // Start the mock server thread.

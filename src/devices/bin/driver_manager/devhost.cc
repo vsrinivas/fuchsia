@@ -7,13 +7,13 @@
 #include "coordinator.h"
 #include "log.h"
 
-Devhost::Devhost(Coordinator* coordinator) : coordinator_(coordinator) {
+Devhost::Devhost(Coordinator* coordinator, zx::channel rpc)
+    : coordinator_(coordinator), hrpc_(std::move(rpc)) {
   coordinator_->RegisterDevhost(this);
 }
 
 Devhost::~Devhost() {
   log(INFO, "driver_manager: destroy host %p\n", this);
   coordinator_->UnregisterDevhost(this);
-  zx_handle_close(hrpc_);
   proc_.kill();
 }
