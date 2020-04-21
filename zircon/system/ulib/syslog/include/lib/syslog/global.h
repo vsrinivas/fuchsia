@@ -38,9 +38,6 @@ static inline bool fx_log_is_enabled(fx_log_severity_t severity) {
 // - ZX_OK if the reconfiguration succeeds.
 zx_status_t fx_log_reconfigure(const fx_logger_config_t* config);
 
-// DEPRECATED. Do not use.
-zx_status_t fx_log_init_with_config(const fx_logger_config_t* config);
-
 // Returns true if writing messages with the given severity is enabled in the
 // global logger. |severity| is one of DEBUG, INFO, WARNING, ERROR, or FATAL.
 #define FX_LOG_IS_ENABLED(severity) (fx_log_is_enabled(FX_LOG_##severity))

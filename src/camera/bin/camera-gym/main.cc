@@ -19,7 +19,7 @@
 #include "src/camera/bin/camera-gym/stream_cycler.h"
 
 int main(int argc, char* argv[]) {
-  syslog::InitLogger({"camera-gym"});
+  syslog::SetTags({"camera-gym"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();

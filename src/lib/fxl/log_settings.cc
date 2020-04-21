@@ -48,8 +48,8 @@ void SetLogSettings(const LogSettings& settings) {
             zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
         if (status != ZX_OK)
           process_name[0] = '\0';
-        syslog::InitLogger({.severity = state::g_log_settings.min_log_level, .fd = fd},
-                           {process_name});
+        syslog::SetSettings({.severity = state::g_log_settings.min_log_level, .fd = fd},
+                            {process_name});
         state::g_log_settings.log_file = settings.log_file;
 #else
         // Redirect stderr to file.
