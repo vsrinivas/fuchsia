@@ -105,14 +105,14 @@ func getUncompressedReader(obj *storage.ObjectHandle) (io.ReadCloser, error) {
 	ctx := context.Background()
 	objAttrs, err := obj.Attrs(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get attrs for %q from GCS: %v", obj.ObjectName(), err)
 	}
 	if objAttrs.ContentEncoding != "gzip" {
 		return obj.NewReader(ctx)
 	}
 	r, err := obj.ReadCompressed(true).NewReader(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read %q from GCS: %v", obj.ObjectName(), err)
 	}
 	if r.Attrs.ContentEncoding != "gzip" {
 		return nil, fmt.Errorf("content-encoding expected: gzip, actual: %s", r.Attrs.ContentEncoding)
@@ -181,12 +181,12 @@ func ImagesFromGCS(ctx context.Context, manifest *url.URL, bootMode Mode) ([]Ima
 	obj := bkt.Object(manifestGcsPath)
 	r, err := getUncompressedReader(obj)
 	if err != nil {
-		return nil, closeFunc, fmt.Errorf("failed to get reader for manifest: %v", err)
+		return nil, closeFunc, fmt.Errorf("failed to get image manifest from GCS: %v", err)
 	}
 	defer r.Close()
 	var buildImgs []build.Image
 	if err := json.NewDecoder(r).Decode(&buildImgs); err != nil {
-		return nil, closeFunc, fmt.Errorf("failed to decode manifest: %v", err)
+		return nil, closeFunc, fmt.Errorf("failed to decode image manifest: %v", err)
 	}
 	var imgs []Image
 	namespace := filepath.Dir(manifestGcsPath)
