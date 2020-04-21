@@ -62,7 +62,10 @@ class DecoderCore {
 
   virtual ~DecoderCore() {}
 
-  virtual __WARN_UNUSED_RESULT zx_status_t LoadFirmware(const uint8_t* data, uint32_t len) = 0;
+  [[nodiscard]] virtual std::optional<InternalBuffer> LoadFirmwareToBuffer(const uint8_t* data,
+                                                                           uint32_t len) = 0;
+  [[nodiscard]] virtual zx_status_t LoadFirmware(const uint8_t* data, uint32_t len) = 0;
+  [[nodiscard]] virtual zx_status_t LoadFirmware(InternalBuffer& buffer) = 0;
   virtual void PowerOn() = 0;
   virtual void PowerOff() = 0;
   virtual void StartDecoding() = 0;

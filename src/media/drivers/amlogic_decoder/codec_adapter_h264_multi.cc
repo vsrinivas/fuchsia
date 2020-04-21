@@ -112,9 +112,12 @@ void CodecAdapterH264Multi::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
   // invalidate call here instead of two with no downsides.
   // TODO(jbauman): avoid unnecessary cache ops when in RAM domain or when the buffer isn't
   // mappable.
-  io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
-  io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
-                                   frame->stride * frame->coded_height / 2);
+  {
+    TRACE_DURATION("media", "cache invalidate");
+    io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
+    io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
+                                     frame->stride * frame->coded_height / 2);
+  }
   output_stride_ = frame->stride;
   const CodecBuffer* buffer = frame->codec_buffer;
   ZX_DEBUG_ASSERT(buffer);

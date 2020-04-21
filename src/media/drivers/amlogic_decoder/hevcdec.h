@@ -20,7 +20,10 @@ class HevcDec : public DecoderCore {
   }
 
   // DecoderCore implementation.
-  zx_status_t LoadFirmware(const uint8_t* data, uint32_t len) override;
+  [[nodiscard]] std::optional<InternalBuffer> LoadFirmwareToBuffer(const uint8_t* data,
+                                                                   uint32_t len) override;
+  [[nodiscard]] zx_status_t LoadFirmware(const uint8_t* data, uint32_t len) override;
+  [[nodiscard]] zx_status_t LoadFirmware(InternalBuffer& buffer) override;
   void PowerOn() override;
   void PowerOff() override;
   void StartDecoding() override;

@@ -147,6 +147,7 @@ class H264MultiDecoder : public VideoDecoder {
   std::unique_ptr<media::H264Decoder> media_decoder_;
   std::unique_ptr<media::DecoderBuffer> current_decoder_buffer_;
 
+  std::optional<InternalBuffer> firmware_;
   std::optional<InternalBuffer> secondary_firmware_;
   std::optional<InternalBuffer> codec_data_;
   std::optional<InternalBuffer> aux_buf_;

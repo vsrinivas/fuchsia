@@ -454,6 +454,7 @@ void AmlogicVideo::SwapOutCurrentInstance() {
 }
 
 void AmlogicVideo::TryToReschedule() {
+  TRACE_DURATION("media", "AmlogicVideo::TryToReschedule");
   DLOG("AmlogicVideo::TryToReschedule");
   if (swapped_out_instances_.size() == 0) {
     DLOG("Nothing swapped out; returning");
@@ -596,6 +597,8 @@ static constexpr uint32_t CreateFunctionId(CallType call_type, CallConvention ca
 }  // namespace tee_smc
 
 zx_status_t AmlogicVideo::SetProtected(ProtectableHardwareUnit unit, bool protect) {
+  TRACE_DURATION("media", "AmlogicVideo::SetProtected", "unit", static_cast<uint32_t>(unit),
+                 "protect", protect);
   if (!secure_monitor_)
     return protect ? ZX_ERR_INVALID_ARGS : ZX_OK;
 

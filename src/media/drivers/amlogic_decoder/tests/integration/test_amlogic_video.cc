@@ -39,6 +39,24 @@ class TestAmlogicVideo {
               internal_buffer2.value().phys_base());
     video.reset();
   }
+
+  static void LoadFirmware(bool vdec) {
+    auto firmware_type = vdec ? FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm
+                              : FirmwareBlob::FirmwareType::kDec_Vp9_G12a;
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    uint8_t* data;
+    uint32_t firmware_size;
+    ASSERT_EQ(ZX_OK, video->firmware_blob()->GetFirmwareData(firmware_type, &data, &firmware_size));
+    DecoderCore* core = vdec ? video->vdec1_core() : video->hevc_core();
+    EXPECT_TRUE(core->LoadFirmwareToBuffer(data, firmware_size).has_value());
+  }
 };
 
 TEST(AmlogicVideo, BufferAlignment) { TestAmlogicVideo::BufferAlignment(); }
+
+TEST(AmlogicVideo, LoadVdecFirmware) { TestAmlogicVideo::LoadFirmware(/*vdec=*/true); }
+
+TEST(AmlogicVideo, LoadHeavcFirmware) { TestAmlogicVideo::LoadFirmware(/*vdec=*/false); }

@@ -15,7 +15,11 @@
 namespace {
 class FakeDecoderCore : public DecoderCore {
  public:
+  std::optional<InternalBuffer> LoadFirmwareToBuffer(const uint8_t* data, uint32_t len) override {
+    return {};
+  }
   zx_status_t LoadFirmware(const uint8_t* data, uint32_t len) override { return ZX_OK; }
+  zx_status_t LoadFirmware(InternalBuffer& buffer) override { return ZX_OK; }
   void PowerOn() override {}
   void PowerOff() override {}
   void StartDecoding() override {}

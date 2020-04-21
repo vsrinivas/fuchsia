@@ -4,6 +4,7 @@
 
 #include "hevcdec.h"
 
+#include <lib/trace/event.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
@@ -15,43 +16,58 @@
 #include "util.h"
 #include "video_decoder.h"
 
-zx_status_t HevcDec::LoadFirmware(const uint8_t* data, uint32_t size) {
+static constexpr uint32_t kFirmwareSize = 4 * 4096;
+
+std::optional<InternalBuffer> HevcDec::LoadFirmwareToBuffer(const uint8_t* data, uint32_t len) {
+  TRACE_DURATION("media", "HevcDec::LoadFirmwareToBuffer");
+  const uint32_t kBufferAlignShift = 16;
+  auto create_result = InternalBuffer::CreateAligned(
+      "Vdec1Firmware", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kFirmwareSize,
+      1 << kBufferAlignShift, /*is_secure=*/false, /*is_writable=*/true,
+      /*is_mapping_needed=*/true);
+  if (!create_result.is_ok()) {
+    DECODE_ERROR("Failed to make firmware buffer - %d", create_result.error());
+    return {};
+  }
+  auto buffer = create_result.take_value();
+  memcpy(buffer.virt_base(), data, std::min(len, kFirmwareSize));
+  buffer.CacheFlush(0, kFirmwareSize);
+  BarrierAfterFlush();
+  return std::move(buffer);
+}
+
+zx_status_t HevcDec::LoadFirmware(const uint8_t* data, uint32_t len) {
+  auto buffer = LoadFirmwareToBuffer(data, len);
+  if (!buffer)
+    return ZX_ERR_NO_MEMORY;
+  return LoadFirmware(*buffer);
+}
+
+zx_status_t HevcDec::LoadFirmware(InternalBuffer& buffer) {
+  TRACE_DURATION("media", "HevcDec::LoadFirmware");
+  ZX_DEBUG_ASSERT(buffer.size() == kFirmwareSize);
   HevcMpsr::Get().FromValue(0).WriteTo(mmio()->dosbus);
   HevcCpsr::Get().FromValue(0).WriteTo(mmio()->dosbus);
-  io_buffer_t firmware_buffer;
-  const uint32_t kFirmwareSize = 4 * 4096;
-  // Most buffers should be 64-kbyte aligned.
-  const uint32_t kBufferAlignShift = 16;
-  zx_status_t status = io_buffer_init_aligned(&firmware_buffer, owner_->bti()->get(), kFirmwareSize,
-                                              kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to make firmware buffer");
-    return status;
-  }
-  SetIoBufferName(&firmware_buffer, "HevcFirmware");
-
-  memcpy(io_buffer_virt(&firmware_buffer), data, std::min(size, kFirmwareSize));
-  io_buffer_cache_flush(&firmware_buffer, 0, kFirmwareSize);
-
-  BarrierAfterFlush();
-  HevcImemDmaAdr::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&firmware_buffer)))
-      .WriteTo(mmio()->dosbus);
+  HevcImemDmaAdr::Get().FromValue(truncate_to_32(buffer.phys_base())).WriteTo(mmio()->dosbus);
   HevcImemDmaCount::Get().FromValue(kFirmwareSize / sizeof(uint32_t)).WriteTo(mmio()->dosbus);
   HevcImemDmaCtrl::Get().FromValue(0x8000 | (7 << 16)).WriteTo(mmio()->dosbus);
+  {
+    TRACE_DURATION("media", "SpinWaitForRegister");
 
-  if (!WaitForRegister(std::chrono::seconds(1), [this] {
-        return (HevcImemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value() & 0x8000) == 0;
-      })) {
-    DECODE_ERROR("Failed to load microcode.");
+    // Measured spin wait time is around 5 microseconds on sherlock, so it makes sense to SpinWait.
+    if (!SpinWaitForRegister(std::chrono::milliseconds(100), [this] {
+          return (HevcImemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value() & 0x8000) == 0;
+        })) {
+      DECODE_ERROR("Failed to load microcode, ImemDmaCtrl %d, ImemDmaAdr 0x%x",
+                   HevcImemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value(),
+                   HevcImemDmaAdr::Get().ReadFrom(mmio()->dosbus).reg_value());
 
-    BarrierBeforeRelease();
-    io_buffer_release(&firmware_buffer);
-    return ZX_ERR_TIMED_OUT;
+      BarrierBeforeRelease();
+      return ZX_ERR_TIMED_OUT;
+    }
   }
 
   BarrierBeforeRelease();
-  io_buffer_release(&firmware_buffer);
   return ZX_OK;
 }
 

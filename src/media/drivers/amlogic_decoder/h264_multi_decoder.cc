@@ -5,6 +5,7 @@
 #include "h264_multi_decoder.h"
 
 #include <lib/media/codec_impl/codec_buffer.h>
+#include <lib/trace/event.h>
 
 #include <cmath>
 
@@ -265,8 +266,8 @@ zx_status_t H264MultiDecoder::Initialize() {
 }
 
 zx_status_t H264MultiDecoder::LoadSecondaryFirmware(const uint8_t* data, uint32_t firmware_size) {
-  if (secondary_firmware_)
-    return ZX_OK;
+  TRACE_DURATION("media", "H264MultiDecoder::LoadSecondaryFirmware");
+  ZX_DEBUG_ASSERT(!secondary_firmware_);
   // For some reason, some portions of the firmware aren't loaded into the
   // hardware directly, but are kept in main memory.
   constexpr uint32_t kSecondaryFirmwareSize = 4 * 1024;
@@ -307,6 +308,41 @@ constexpr uint32_t kAuxBufPrefixSize = 16 * 1024;
 constexpr uint32_t kAuxBufSuffixSize = 0;
 
 zx_status_t H264MultiDecoder::InitializeBuffers() {
+  // Don't use the TEE to load the firmware, since the version we're using on astro and sherlock
+  // doesn't support H264_Multi_Gxm.
+  FirmwareBlob::FirmwareType firmware_type = FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm;
+  uint8_t* data;
+  uint32_t firmware_size;
+  zx_status_t status =
+      owner_->firmware_blob()->GetFirmwareData(firmware_type, &data, &firmware_size);
+  if (status != ZX_OK)
+    return status;
+  static constexpr uint32_t kFirmwareSize = 4 * 4096;
+  const uint32_t kBufferAlignShift = 16;
+  if (firmware_size < kFirmwareSize) {
+    DECODE_ERROR("Firmware too small");
+    return ZX_ERR_INTERNAL;
+  }
+
+  {
+    auto create_result = InternalBuffer::CreateAligned(
+        "H264MultiFirmware", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kFirmwareSize,
+        1 << kBufferAlignShift, /*is_secure=*/false, /*is_writable=*/true,
+        /*is_mapping_needed=*/true);
+    if (!create_result.is_ok()) {
+      DECODE_ERROR("Failed to make firmware buffer - %d", create_result.error());
+      return {};
+    }
+    firmware_ = create_result.take_value();
+    memcpy(firmware_->virt_base(), data, kFirmwareSize);
+    firmware_->CacheFlush(0, kFirmwareSize);
+    BarrierAfterFlush();
+  }
+  status = LoadSecondaryFirmware(data, firmware_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   constexpr uint32_t kBufferAlignment = 1 << 16;
   constexpr uint32_t kCodecDataSize = 0x200000;
   auto codec_data_create_result =
@@ -347,6 +383,7 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
 }
 
 void H264MultiDecoder::ResetHardware() {
+  TRACE_DURATION("media", "H264MultiDecoder::ResetHardware");
   DosSwReset0::Get().FromValue(0).set_vdec_mc(1).set_vdec_iqidct(1).set_vdec_vld_part(1).WriteTo(
       owner_->dosbus());
   DosSwReset0::Get().FromValue(0).WriteTo(owner_->dosbus());
@@ -374,25 +411,15 @@ void H264MultiDecoder::ResetHardware() {
 }
 
 zx_status_t H264MultiDecoder::InitializeHardware() {
+  TRACE_DURATION("media", "H264MultiDecoder::InitializeHardware");
   ZX_DEBUG_ASSERT(state_ == DecoderState::kSwappedOut);
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   zx_status_t status =
       owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kVdec, is_secure());
   if (status != ZX_OK)
     return status;
-  FirmwareBlob::FirmwareType firmware_type = FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm;
 
-  // Don't use the TEE to load the firmware, since the version we're using on astro and sherlock
-  // doesn't support H264_Multi_Gxm.
-  uint8_t* data;
-  uint32_t firmware_size;
-  status = owner_->firmware_blob()->GetFirmwareData(firmware_type, &data, &firmware_size);
-  if (status != ZX_OK)
-    return status;
-  status = owner_->core()->LoadFirmware(data, firmware_size);
-  if (status != ZX_OK)
-    return status;
-  status = LoadSecondaryFirmware(data, firmware_size);
+  status = owner_->core()->LoadFirmware(*firmware_);
   if (status != ZX_OK)
     return status;
 
@@ -840,6 +867,7 @@ void H264MultiDecoder::HandleInterrupt() {
   // Clear interrupt
   VdecAssistMbox1ClrReg::Get().FromValue(1).WriteTo(owner_->dosbus());
   uint32_t decode_status = DpbStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value();
+  TRACE_DURATION("media", "H264MultiDecoder::HandleInterrupt", "decode_status", decode_status);
   DLOG("Got H264MultiDecoder::HandleInterrupt, decode status: %x", decode_status);
   switch (decode_status) {
     case kH264ConfigRequest: {
@@ -1127,6 +1155,7 @@ void H264MultiDecoder::RequestStreamReset() {
 }
 
 void H264MultiDecoder::StartConfigChange() {
+  TRACE_DURATION("media", "H264MultiDecoder::StartConfigChange");
   ZX_DEBUG_ASSERT(pending_config_change_);
   // We shouldn't try to run this if decoding is currently ongoing, since the interrupt handlers are
   // using the current set of video_frames_.
@@ -1174,6 +1203,7 @@ void H264MultiDecoder::StartConfigChange() {
 }
 
 void H264MultiDecoder::PumpDecoder() {
+  TRACE_DURATION("media", "H264MultiDecoder::PumpDecoder");
   // Don't try to reenter media_decoder_->Decode().
   if (in_pump_decoder_)
     return;
