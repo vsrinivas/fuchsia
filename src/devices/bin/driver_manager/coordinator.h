@@ -185,7 +185,6 @@ struct CoordinatorConfig {
   FsProvider* fs_provider;
 };
 
-using LoaderServiceConnector = fit::function<zx_status_t(zx::channel*)>;
 using ResumeCallback = std::function<void(zx_status_t)>;
 using SuspendCallback = fit::function<void(zx_status_t)>;
 
@@ -295,7 +294,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   void set_system_available(bool system_available) { system_available_ = system_available; }
   bool system_loaded() const { return system_loaded_; }
 
-  void set_loader_service_connector(LoaderServiceConnector loader_service_connector) {
+  void set_loader_service_connector(Devhost::LoaderServiceConnector loader_service_connector) {
     loader_service_connector_ = std::move(loader_service_connector);
   }
 
@@ -349,7 +348,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   bool launched_first_devhost_ = false;
   bool system_available_ = false;
   bool system_loaded_ = false;
-  LoaderServiceConnector loader_service_connector_;
+  Devhost::LoaderServiceConnector loader_service_connector_;
 
   // All Drivers
   fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;

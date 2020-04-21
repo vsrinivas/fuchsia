@@ -16,7 +16,6 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/spawn.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/coding.h>
@@ -53,7 +52,6 @@
 #include "devfs.h"
 #include "devhost_loader_service.h"
 #include "env.h"
-#include "fdio.h"
 #include "fidl.h"
 #include "fidl_txn.h"
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
@@ -376,94 +374,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
   return ZX_OK;
 }
 
-static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
-                                     const LoaderServiceConnector& loader_connector,
-                                     const char* devhost_bin, const char* name,
-                                     const char* const* env, zx::channel hrpc,
-                                     const zx::resource& root_resource, zx::unowned_job devhost_job,
-                                     FsProvider* fs_provider) {
-  // Give devhosts the root resource if we have it (in tests, we may not)
-  // TODO: limit root resource to root devhost only
-  zx::resource resource;
-  if (root_resource.is_valid()) {
-    zx_status_t status = root_resource.duplicate(ZX_RIGHT_SAME_RIGHTS, &resource);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to duplicate root resource: %s", zx_status_get_string(status));
-    }
-  }
-
-  zx::channel loader_connection;
-  zx_status_t status = loader_connector(&loader_connection);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to get driver_host loader connection: %s", zx_status_get_string(status));
-    return status;
-  }
-
-  constexpr size_t kMaxActions = 5;
-  fdio_spawn_action_t actions[kMaxActions];
-  size_t actions_count = 0;
-  actions[actions_count++] =
-      fdio_spawn_action_t{.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = name}};
-  // TODO: constrain to /svc/device
-  actions[actions_count++] = fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-      .ns = {.prefix = "/svc", .handle = fs_provider->CloneFs("svc").release()},
-  };
-  actions[actions_count++] = fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 0), .handle = hrpc.release()},
-  };
-  if (resource.is_valid()) {
-    actions[actions_count++] = fdio_spawn_action_t{
-        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-        .h = {.id = PA_HND(PA_RESOURCE, 0), .handle = resource.release()},
-    };
-  }
-
-  actions[actions_count++] = fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release()},
-  };
-  ZX_ASSERT(actions_count <= kMaxActions);
-
-  zx::process proc;
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH] = {};
-  // Inherit devmgr's environment (including kernel cmdline)
-  const char* const argv[] = {
-      devhost_bin,
-      nullptr,
-  };
-  const auto flags = FDIO_SPAWN_CLONE_ENVIRON | FDIO_SPAWN_CLONE_STDIO;
-  status = fdio_spawn_etc(devhost_job->get(), flags, argv[0], argv, env, actions_count, actions,
-                          proc.reset_and_get_address(), err_msg);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to launch driver_host '%s': %s", name, err_msg);
-    return status;
-  }
-
-  host->set_proc(std::move(proc));
-
-  zx_info_handle_basic_t info;
-  if (host->proc()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) ==
-      ZX_OK) {
-    host->set_koid(info.koid);
-  }
-  LOGF(INFO, "Launching driver_host '%s' (pid %zu)", name, host->koid());
-  return ZX_OK;
-}
-
 zx_status_t Coordinator::NewDevhost(const char* name, fbl::RefPtr<Devhost>* out) {
-  zx::channel hrpc, dh_hrpc;
-  zx_status_t status = zx::channel::create(0, &hrpc, &dh_hrpc);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  auto dh = fbl::MakeRefCounted<Devhost>(this, std::move(dh_hrpc));
-  if (dh == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
   const char* program = kDriverHostPath;
   std::vector<const char*> env;
   if (config_.asan_drivers) {
@@ -501,9 +412,11 @@ zx_status_t Coordinator::NewDevhost(const char* name, fbl::RefPtr<Devhost>* out)
   }
 
   env.push_back(nullptr);
-  status =
-      dc_launch_devhost(dh, loader_service_connector_, program, name, env.data(), std::move(hrpc),
-                        root_resource(), zx::unowned_job(config_.devhost_job), config_.fs_provider);
+
+  fbl::RefPtr<Devhost> dh;
+  zx_status_t status =
+      Devhost::Launch(this, loader_service_connector_, program, name, env.data(), root_resource(),
+                      zx::unowned_job(config_.devhost_job), config_.fs_provider, &dh);
   if (status != ZX_OK) {
     return status;
   }
