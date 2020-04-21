@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_STREAM_UTILS_IMAGE_IO_UTIL_H_
-#define SRC_CAMERA_STREAM_UTILS_IMAGE_IO_UTIL_H_
+#ifndef SRC_CAMERA_LIB_STREAM_UTILS_IMAGE_IO_UTIL_H_
+#define SRC_CAMERA_LIB_STREAM_UTILS_IMAGE_IO_UTIL_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 
@@ -56,4 +56,4 @@ class ImageIOUtil {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_STREAM_UTILS_IMAGE_IO_UTIL_H_
+#endif  // SRC_CAMERA_LIB_STREAM_UTILS_IMAGE_IO_UTIL_H_
