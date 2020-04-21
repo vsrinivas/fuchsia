@@ -289,6 +289,30 @@ fn iowned_default() {
 }
 
 #[test]
+fn iowned_from() {
+    let v = IValue::from(17u16);
+    assert_eq!(*v, 17u16);
+    let d = IDebug::from("hello".to_string());
+    assert_eq!(d.as_str(), "hello");
+}
+
+#[test]
+fn iowned_into() {
+    let v: IValue<_> = 17u16.into();
+    assert_eq!(*v, 17u16);
+    let d: IDebug<String> = "hello".to_string().into();
+    assert_eq!(d.as_str(), "hello");
+}
+
+#[test]
+fn iowned_into_inner() {
+    let v = IValue::new(17u16);
+    assert_eq!(v.into_inner(), 17u16);
+    let d = IDebug::new("hello".to_string());
+    assert_eq!(d.into_inner(), "hello".to_string());
+}
+
+#[test]
 fn iowned_debug() {
     let mut v = IValue::new(1337u64);
     assert_eq!(format!("{:?}", v).as_str(), "1337");

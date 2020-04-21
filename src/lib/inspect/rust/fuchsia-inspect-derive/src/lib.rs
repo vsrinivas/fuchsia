@@ -151,6 +151,10 @@ impl<R: Render> IOwned<R> {
         self._base = value;
         R::update(&self._base, &mut self._inspect_data);
     }
+
+    pub fn into_inner(self) -> R::Base {
+        self._base
+    }
 }
 
 impl<R, B> fmt::Debug for IOwned<R>
@@ -218,6 +222,12 @@ impl<B: Unit> Render for ValueMarker<B> {
 /// inspect subtree as defined by `B: Unit`.
 pub type IValue<B> = IOwned<ValueMarker<B>>;
 
+impl<B: Unit> From<B> for IValue<B> {
+    fn from(value: B) -> Self {
+        Self::new(value)
+    }
+}
+
 #[doc(hidden)]
 pub struct DebugMarker<B: fmt::Debug>(PhantomData<B>);
 
@@ -237,3 +247,9 @@ impl<B: fmt::Debug> Render for DebugMarker<B> {
 /// An `Inspect` smart pointer for a type `B`, which renders the debug
 /// output of `B` as a string property.
 pub type IDebug<B> = IOwned<DebugMarker<B>>;
+
+impl<B: fmt::Debug> From<B> for IDebug<B> {
+    fn from(value: B) -> Self {
+        Self::new(value)
+    }
+}
