@@ -686,7 +686,7 @@ if (is_fuchsia) {
   }
 }
 group("wasm-bindgen") {
-  deps = [ ":wasm-bindgen-v0_2_59" ]
+  deps = [ ":wasm-bindgen-v0_2_60" ]
 }
 
 if (is_fuchsia) {
@@ -9489,10 +9489,10 @@ rust_library("wasi-v0_7_0") {
   ]
 }
 
-rust_library("wasm-bindgen-v0_2_59") {
+rust_library("wasm-bindgen-v0_2_60") {
   crate_name = "wasm_bindgen"
   crate_root = "//third_party/rust_crates/vendor/wasm-bindgen/src/lib.rs"
-  output_name = "wasm_bindgen-97c777b33c574730"
+  output_name = "wasm_bindgen-170fd7409417d807"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9500,26 +9500,26 @@ rust_library("wasm-bindgen-v0_2_59") {
 
   deps = []
   deps += [ ":cfg-if-v0_1_10" ]
-  deps += [ ":wasm-bindgen-macro-v0_2_59($host_toolchain)" ]
+  deps += [ ":wasm-bindgen-macro-v0_2_60($host_toolchain)" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=97c777b33c574730",
-    "-Cextra-filename=97c777b33c574730",
+    "-Cmetadata=170fd7409417d807",
+    "-Cextra-filename=170fd7409417d807",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"spans\"",
     "--cfg=feature=\"std\"",
   ]
 }
 
-rust_library("wasm-bindgen-backend-v0_2_59") {
+rust_library("wasm-bindgen-backend-v0_2_60") {
   crate_name = "wasm_bindgen_backend"
   crate_root =
       "//third_party/rust_crates/vendor/wasm-bindgen-backend/src/lib.rs"
-  output_name = "wasm_bindgen_backend-805c9b349e2e7305"
+  output_name = "wasm_bindgen_backend-14835867b17fa11a"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9532,23 +9532,23 @@ rust_library("wasm-bindgen-backend-v0_2_59") {
   deps += [ ":proc-macro2-v1_0_9" ]
   deps += [ ":quote-v1_0_2" ]
   deps += [ ":syn-v1_0_11" ]
-  deps += [ ":wasm-bindgen-shared-v0_2_59" ]
+  deps += [ ":wasm-bindgen-shared-v0_2_60" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=805c9b349e2e7305",
-    "-Cextra-filename=805c9b349e2e7305",
+    "-Cmetadata=14835867b17fa11a",
+    "-Cextra-filename=14835867b17fa11a",
     "--cfg=feature=\"spans\"",
   ]
 }
 
-rust_proc_macro("wasm-bindgen-macro-v0_2_59") {
+rust_proc_macro("wasm-bindgen-macro-v0_2_60") {
   crate_name = "wasm_bindgen_macro"
   crate_root = "//third_party/rust_crates/vendor/wasm-bindgen-macro/src/lib.rs"
-  output_name = "wasm_bindgen_macro-7012c78adfe09dc7"
+  output_name = "wasm_bindgen_macro-787ef10a23c0675c"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9556,24 +9556,24 @@ rust_proc_macro("wasm-bindgen-macro-v0_2_59") {
 
   deps = []
   deps += [ ":quote-v1_0_2" ]
-  deps += [ ":wasm-bindgen-macro-support-v0_2_59" ]
+  deps += [ ":wasm-bindgen-macro-support-v0_2_60" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=7012c78adfe09dc7",
-    "-Cextra-filename=7012c78adfe09dc7",
+    "-Cmetadata=787ef10a23c0675c",
+    "-Cextra-filename=787ef10a23c0675c",
     "--cfg=feature=\"spans\"",
   ]
 }
 
-rust_library("wasm-bindgen-macro-support-v0_2_59") {
+rust_library("wasm-bindgen-macro-support-v0_2_60") {
   crate_name = "wasm_bindgen_macro_support"
   crate_root =
       "//third_party/rust_crates/vendor/wasm-bindgen-macro-support/src/lib.rs"
-  output_name = "wasm_bindgen_macro_support-cd5ca094db00eb94"
+  output_name = "wasm_bindgen_macro_support-4017d91a063a2714"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9583,24 +9583,24 @@ rust_library("wasm-bindgen-macro-support-v0_2_59") {
   deps += [ ":proc-macro2-v1_0_9" ]
   deps += [ ":quote-v1_0_2" ]
   deps += [ ":syn-v1_0_11" ]
-  deps += [ ":wasm-bindgen-backend-v0_2_59" ]
-  deps += [ ":wasm-bindgen-shared-v0_2_59" ]
+  deps += [ ":wasm-bindgen-backend-v0_2_60" ]
+  deps += [ ":wasm-bindgen-shared-v0_2_60" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=cd5ca094db00eb94",
-    "-Cextra-filename=cd5ca094db00eb94",
+    "-Cmetadata=4017d91a063a2714",
+    "-Cextra-filename=4017d91a063a2714",
     "--cfg=feature=\"spans\"",
   ]
 }
 
-rust_library("wasm-bindgen-shared-v0_2_59") {
+rust_library("wasm-bindgen-shared-v0_2_60") {
   crate_name = "wasm_bindgen_shared"
   crate_root = "//third_party/rust_crates/vendor/wasm-bindgen-shared/src/lib.rs"
-  output_name = "wasm_bindgen_shared-78c8f99226e1d657"
+  output_name = "wasm_bindgen_shared-9fdc313316279fe6"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -9608,13 +9608,13 @@ rust_library("wasm-bindgen-shared-v0_2_59") {
 
   deps = []
 
-  rustenv = []
+  rustenv = [ "CARGO_PKG_VERSION=0.2.60" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=78c8f99226e1d657",
-    "-Cextra-filename=78c8f99226e1d657",
+    "-Cmetadata=9fdc313316279fe6",
+    "-Cextra-filename=9fdc313316279fe6",
   ]
 }
 

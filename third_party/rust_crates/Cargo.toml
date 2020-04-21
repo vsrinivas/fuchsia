@@ -103,7 +103,7 @@ unicase = "2.2.0"
 url = "2.1"
 uuid = { version = "0.7.2", features = ["serde", "v4"] } # move ?
 valico = "2.4.2"
-wasm-bindgen = "0.2.59"
+wasm-bindgen = "0.2.60"
 xml-rs = "0.8"
 # move once target-side tests of host-side code have been removed
 # in wayland/scanner:lib and unicode_block_generator :
@@ -389,6 +389,8 @@ env_vars = [ "CARGO_PKG_VERSION=\\\"0.19.2\\\"" ]
 [[gn.crate.rust_icu_sys."0.1.1"]]
 [[gn.crate.syn."1.0.11"]]
 [[gn.crate.test-case."1.0.0"]]
-[[gn.crate.wasm-bindgen-shared."0.2.59"]]
-[[gn.crate.wasm-bindgen."0.2.59"]]
+[[gn.crate.wasm-bindgen-shared."0.2.60"]]
+# Do not quote, this is embedded directly in .wasm sections and is needed by wasm-bindgen.
+env_vars = [ "CARGO_PKG_VERSION=0.2.60"]
+[[gn.crate.wasm-bindgen."0.2.60"]]
 [[gn.crate.ws2_32."0.2.1"]]
