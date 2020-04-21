@@ -15,33 +15,47 @@
 namespace feedback {
 
 struct CobaltEvent {
-  CobaltEvent(CobaltEventType type, uint32_t metric_id, uint32_t event_code, uint64_t count)
-      : type(type), metric_id(metric_id), event_code(event_code), count(count) {}
+  CobaltEvent(CobaltEventType type, uint32_t metric_id, const std::vector<uint32_t>& dimensions,
+              uint64_t count)
+      : type(type), metric_id(metric_id), dimensions(dimensions), count(count) {}
 
   // Define constructors that allow for the omission of a metric id.
-  template <typename EventCodeType>
-  explicit CobaltEvent(EventCodeType event_code)
-      : type(EventTypeForEventCode(event_code)),
-        metric_id(MetricIDForEventCode(event_code)),
-        event_code(static_cast<uint32_t>(event_code)),
+  template <typename DimensionType>
+  explicit CobaltEvent(DimensionType dimension)
+      : type(EventTypeForEventCode(dimension)),
+        metric_id(MetricIDForEventCode(dimension)),
+        dimensions({static_cast<uint32_t>(dimension)}),
         count(0u) {
-    static_assert(std::is_enum<EventCodeType>::value, "EventCodeType must be an enum");
+    static_assert(std::is_enum<DimensionType>::value, "DimensionType must be an enum");
   }
 
-  template <typename EventCodeType>
-  CobaltEvent(EventCodeType event_code, uint64_t count)
-      : type(EventTypeForEventCode(event_code)),
-        metric_id(MetricIDForEventCode(event_code)),
-        event_code(static_cast<uint32_t>(event_code)),
+  template <typename DimensionType>
+  CobaltEvent(DimensionType dimension, uint64_t count)
+      : type(EventTypeForEventCode(dimension)),
+        metric_id(MetricIDForEventCode(dimension)),
+        dimensions({static_cast<uint32_t>(dimension)}),
         count(count) {
-    static_assert(std::is_enum<EventCodeType>::value, "EventCodeType must be an enum");
+    static_assert(std::is_enum<DimensionType>::value, "DimensionType must be an enum");
+  }
+
+  template <typename DimensionTypesH, typename... DimensionTypesT,
+            typename = std::enable_if_t<(std::is_enum_v<DimensionTypesT> && ...)>>
+  explicit CobaltEvent(DimensionTypesH dimensions_h, DimensionTypesT... dimensions_t)
+      : type(CobaltEventType::kMultidimensionalOccurrence),
+        metric_id(MetricIDForEventCode(dimensions_h, dimensions_t...)),
+        dimensions(std::vector<uint32_t>({
+            static_cast<uint32_t>(dimensions_h),
+            static_cast<uint32_t>(dimensions_t)...,
+        })),
+        count(1u) {
+    static_assert(std::is_enum_v<DimensionTypesH>, "DimensionTypes must be enums");
   }
 
   std::string ToString() const;
 
   CobaltEventType type;
   uint32_t metric_id = 0;
-  uint32_t event_code = 0;
+  std::vector<uint32_t> dimensions;
 
   union {
     uint64_t count;          // Used for Count metrics.

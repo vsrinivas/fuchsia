@@ -95,10 +95,41 @@ inline constexpr uint32_t MetricIDForEventCode(const CrashpadFunctionError funct
   return cobalt_registry::kCrashpadErrorsMetricId;
 }
 
+namespace internal {
+
+// Determines if all passed event code types correspond to the same metric ids.
+//
+// The base case needs to be provided with a default value to return.
+template <typename EventCodeTypeDefault, typename... EventCodeTypes>
+struct MetricIDChecker {
+  static constexpr uint32_t metric_id = MetricIDForEventCode(static_cast<EventCodeTypeDefault>(0));
+  static constexpr bool all_same = true;
+};
+
+// Uses the first event code type as the default for the base case and check if all of the metric
+// ids for the event codes in the parameter pack are the same.
+template <typename EventCodeTypeDefault, typename EventCodeTypesH, typename... EventCodeTypesT>
+struct MetricIDChecker<EventCodeTypeDefault, EventCodeTypesH, EventCodeTypesT...> {
+  static constexpr uint32_t metric_id = MetricIDForEventCode(static_cast<EventCodeTypesH>(0));
+  static constexpr bool all_same =
+      metric_id == MetricIDChecker<EventCodeTypeDefault, EventCodeTypesT...>::metric_id;
+};
+
+}  // namespace internal
+
+template <typename EventCodeTypesH, typename... EventCodeTypesT>
+inline constexpr uint32_t MetricIDForEventCode(const EventCodeTypesH event_code,
+                                               const EventCodeTypesT... event_codes_t) {
+  constexpr internal::MetricIDChecker<EventCodeTypesH, EventCodeTypesH, EventCodeTypesT...> checker;
+  static_assert(checker.all_same, "All event codes need to have the same metric id");
+  return checker.metric_id;
+}
+
 enum class CobaltEventType {
   kOccurrence,
   kCount,
   kTimeElapsed,
+  kMultidimensionalOccurrence,
 };
 
 inline constexpr CobaltEventType EventTypeForEventCode(const BugreportGenerationFlow status) {

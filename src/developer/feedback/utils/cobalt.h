@@ -32,16 +32,16 @@ class Cobalt {
 
   // Log an occurrence event with fuchsia.cobalt.Logger with the provided parameters. If the service
   // is not accessible, keep the parameters to try again later.
-  template <typename EventCodeType>
-  void LogOccurrence(EventCodeType event_code) {
-    LogEvent(CobaltEvent(event_code));
+  template <typename... DimensionTypes>
+  void LogOccurrence(DimensionTypes... dimensions) {
+    LogEvent(CobaltEvent(std::forward<DimensionTypes>(dimensions)...));
   }
 
   // Log a count event with fuchsia.cobalt.Logger with the provided parameters. If the service is
   // not accessible, keep the parameters to try again later.
-  template <typename EventCodeType>
-  void LogCount(EventCodeType event_code, uint64_t count) {
-    LogEvent(CobaltEvent(event_code, count));
+  template <typename DimensionType>
+  void LogCount(DimensionType dimension, uint64_t count) {
+    LogEvent(CobaltEvent(dimension, count));
   }
 
   // Start a timer and return the id to that timer. The id is needed to log the elapsed time since
@@ -53,9 +53,9 @@ class Cobalt {
   // later.
   //
   // This does not stop the timer.
-  template <typename EventCodeType>
-  void LogElapsedTime(EventCodeType event_code, uint64_t timer_id) {
-    LogEvent(CobaltEvent(event_code, GetTimerDurationUSecs(timer_id)));
+  template <typename DimensionType>
+  void LogElapsedTime(DimensionType dimension, uint64_t timer_id) {
+    LogEvent(CobaltEvent(dimension, GetTimerDurationUSecs(timer_id)));
   }
 
   // Immediately shutdown |Cobalt| so it can no longer be used to log events.

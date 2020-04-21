@@ -160,15 +160,24 @@ void Cobalt::SendEvent(uint64_t event_id) {
 
   switch (event.type) {
     case CobaltEventType::kOccurrence:
-      logger_->LogEvent(event.metric_id, event.event_code, std::move(cb));
+      logger_->LogEvent(event.metric_id, event.dimensions[0], std::move(cb));
       break;
     case CobaltEventType::kCount:
-      logger_->LogEventCount(event.metric_id, event.event_code, /*component=*/"",
+      logger_->LogEventCount(event.metric_id, event.dimensions[0], /*component=*/"",
                              /*period_duration_micros=*/0u, event.count, std::move(cb));
       break;
     case CobaltEventType::kTimeElapsed:
-      logger_->LogElapsedTime(event.metric_id, event.event_code, /*component=*/"",
+      logger_->LogElapsedTime(event.metric_id, event.dimensions[0], /*component=*/"",
                               /*elapsed_micros=*/event.usecs_elapsed, std::move(cb));
+      break;
+    case CobaltEventType::kMultidimensionalOccurrence:
+      fuchsia::cobalt::CobaltEvent cobalt_event;
+      cobalt_event.metric_id = event.metric_id;
+      cobalt_event.event_codes = event.dimensions;
+      cobalt_event.payload = fuchsia::cobalt::EventPayload::WithEventCount(
+          fuchsia::cobalt::CountEvent{.count = static_cast<int64_t>(event.count)});
+
+      logger_->LogCobaltEvent(std::move(cobalt_event), std::move(cb));
       break;
   }
 }

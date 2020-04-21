@@ -38,6 +38,7 @@ class CobaltLoggerBase : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::cobalt,
 
  protected:
   void SetLastEvent(uint32_t metric_id, uint32_t event_code, uint64_t count);
+  void SetLastEvent(uint32_t metric_id, std::vector<uint32_t> event_codes, uint64_t count);
 
   void MarkLogEventAsCalled() { MarkFunctionAsCalled(Function::LogEvent); }
   void MarkLogEventCountAsCalled() { return MarkFunctionAsCalled(Function::LogEventCount); }
@@ -95,6 +96,8 @@ class CobaltLogger : public CobaltLoggerBase {
   void LogElapsedTime(uint32_t metric_id, uint32_t event_code, ::std::string component,
                       int64_t elapsed_micros,
                       fuchsia::cobalt::Logger::LogEventCountCallback callback) override;
+  void LogCobaltEvent(fuchsia::cobalt::CobaltEvent event,
+                      fuchsia::cobalt::Logger::LogCobaltEventCallback callback) override;
 };
 
 // Fail to acknowledge that LogEvent() was called and return |Status::INVALID_ARGUMENTS|.

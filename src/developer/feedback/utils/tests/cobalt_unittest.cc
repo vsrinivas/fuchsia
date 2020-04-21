@@ -28,6 +28,7 @@ namespace {
 
 constexpr uint32_t kMaxQueueSize = 500u;
 constexpr RebootReason kEventCode = RebootReason::kOOM;
+constexpr RebootReason kAnotherEventCode = RebootReason::kKernelPanic;
 constexpr uint64_t kCount = 2u;
 constexpr zx::duration kLoggerBackoffInitialDelay = zx::msec(100);
 
@@ -54,6 +55,11 @@ class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
     events_.emplace_back(kEventCode, kCount);
   }
 
+  void LogMultidimensionalOccurrence() {
+    cobalt_->LogOccurrence(kEventCode, kAnotherEventCode);
+    events_.emplace_back(kEventCode, kAnotherEventCode);
+  }
+
   const std::vector<CobaltEvent> SentCobaltEvents() { return events_; }
 
   // The lifetime of |clock_| is managed by |cobalt_|.
@@ -70,6 +76,7 @@ TEST_F(CobaltTest, Check_Log) {
   for (size_t i = 0; i < 5; ++i) {
     LogCount();
     LogOccurrence();
+    LogMultidimensionalOccurrence();
     RunLoopUntilIdle();
   }
 
