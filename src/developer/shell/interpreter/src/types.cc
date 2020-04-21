@@ -229,6 +229,19 @@ void TypeUint64::LoadVariable(const ExecutionScope* scope, size_t index, Value* 
 
 std::unique_ptr<Type> TypeInteger::Duplicate() const { return std::make_unique<TypeInteger>(); }
 
+bool TypeInteger::GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
+                                         const IntegerLiteral* literal) const {
+  return impl_->GenerateIntegerLiteral(context, code, literal);
+}
+
+void TypeInteger::GenerateDefaultValue(ExecutionContext* context, code::Code* code) const {
+  impl_->GenerateDefaultValue(context, code);
+}
+
+void TypeInteger::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
+  impl_->LoadVariable(scope, index, value);
+}
+
 void TypeInteger::Dump(std::ostream& os) const { os << "integer"; }
 
 // - type float32 ----------------------------------------------------------------------------------
@@ -249,29 +262,43 @@ void TypeFloat64::Dump(std::ostream& os) const { os << "float64"; }
 void TypeObject::Dump(std::ostream& os) const {
   // TODO: improve indentation.
   os << "{" << std::endl;
-  for (auto& field : schema_->fields()) {
+  for (auto& field : schema_->AsObjectSchema()->fields()) {
     ObjectFieldSchema* field_schema = field->AsObjectFieldSchema();
 
     FX_DCHECK(field_schema != nullptr) << "Bad node found as field schema";
-    os << field_schema->name() << " : ";
+    os << field_schema->name() << ": ";
     field_schema->type()->Dump(os);
     os << "," << std::endl;
   }
   os << "}";
 }
 
-size_t TypeObject::Size() const {
-  // TODO: If we want the alignment right, we need to know the alignment of the largest contained
-  // element.  We therefore need an Alignment() method.
-  size_t size = 0;
-  for (auto& field : schema_->fields()) {
-    size += field->type()->Size();
-  }
-  return size;
-}
-
 std::unique_ptr<Type> TypeObject::Duplicate() const {
   return std::make_unique<TypeObject>(schema_);
+}
+
+void TypeObject::GenerateObject(ExecutionContext* context, code::Code* code,
+                                const ObjectDeclaration* literal) const {
+  code->ObjectPush(schema_);
+  code->ObjectInit();
+}
+
+void TypeObject::GenerateInitialization(ExecutionContext* context, code::Code* code,
+                                        const ObjectDeclaration* declaration) const {
+  for (auto& object_field : declaration->fields()) {
+    const Type* type = object_field->schema()->type();
+    object_field->Compile(context, code, type);
+  }
+}
+
+Variable* TypeObject::CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
+                                     const std::string& name) const {
+  return scope->CreateVariable(id, name, Duplicate());
+}
+
+void TypeObject::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
+  auto data = reinterpret_cast<Object* const*>(scope->Data(index, sizeof(Object*)));
+  value->SetObject(*data);
 }
 
 }  // namespace interpreter

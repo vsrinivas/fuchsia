@@ -16,7 +16,11 @@ namespace interpreter {
 template <typename Type, typename ContainerType>
 class Container;
 
+class ObjectSchema;
+class ObjectFieldSchema;
+class Schema;
 class Thread;
+class Value;
 
 enum class ValueType {
   // Value is not defined. This is, for example, the case when we try to load a global which doesn't
@@ -40,6 +44,8 @@ enum class ValueType {
   kUint64,
   // The value is a string.
   kString,
+  // The value is an object.
+  kObject,
 };
 
 // Base class for all reference counted objects.
@@ -69,12 +75,16 @@ class ReferenceCountedBase {
   void Release() {
     FX_DCHECK(reference_count_ > 0);
     if (--reference_count_ == 0) {
-      delete this;
+      Free();
     }
   }
 
   // Reference count for the value. When the count reaches zero, the value is destroyed.
   size_t reference_count_ = 1;
+
+  // Does the hard work of freeing this object.  Override if you have special semantics when
+  // freeing.
+  virtual void Free() { delete this; }
 };
 
 // Base class for all reference counted objects.
@@ -139,6 +149,23 @@ class String : public ReferenceCounted<String> {
 
  private:
   const std::string value_;
+};
+
+class Object : public ReferenceCounted<Object> {
+ public:
+  explicit Object(const std::shared_ptr<ObjectSchema> schema) : schema_(schema) {}
+
+  const std::shared_ptr<ObjectSchema> schema();
+
+  std::unique_ptr<Value> GetField(ObjectFieldSchema*) const;
+
+  void SetField(ObjectFieldSchema*, uint64_t value);
+
+ protected:
+  virtual void Free() override;
+
+ private:
+  const std::shared_ptr<ObjectSchema> schema_;
 };
 
 // Helper class for strings. This automatically manages the references.
@@ -260,6 +287,17 @@ class Value {
     string_ = string;
   }
 
+  Object* GetObject() const {
+    FX_DCHECK(type_ == ValueType::kObject);
+    return object_;
+  }
+  void SetObject(Object* value) {
+    Object* object = value->Use();
+    Release();
+    type_ = ValueType::kObject;
+    object_ = object;
+  }
+
   void Set(const Value& value);
 
  private:
@@ -288,6 +326,8 @@ class Value {
     uint64_t uint64_value_;
     // String value when type is kString.
     String* string_;
+    // Object value when type is kString.
+    Object* object_;
   };
 };
 

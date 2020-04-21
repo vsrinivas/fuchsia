@@ -59,6 +59,12 @@ class InterpreterTest : public ::testing::Test {
   InterpreterTestContext* CreateContext();
   InterpreterTestContext* GetContext(uint64_t context_id);
 
+  // Check that there is a variable with the given name, and it is a wire representation of the
+  // names, with the values and the types given as parallel arrays.  Asserts if false.
+  void GlobalIsObject(const std::string& var_name, std::vector<std::string>& names,
+                      std::vector<llcpp::fuchsia::shell::Node*>& values,
+                      std::vector<llcpp::fuchsia::shell::ShellType>& types);
+
  private:
   async::Loop loop_;
   std::unique_ptr<sys::ComponentContext> context_;

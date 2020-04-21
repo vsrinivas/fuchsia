@@ -9,6 +9,8 @@
 #include <string>
 #include <utility>
 
+#include "src/developer/shell/interpreter/src/schema.h"
+
 namespace shell {
 namespace interpreter {
 
@@ -73,6 +75,11 @@ void Interpreter::AddNode(uint64_t file_id, uint64_t node_id, Node* node) {
 
 void Interpreter::RemoveNode(uint64_t file_id, uint64_t node_id) {
   nodes_.erase(std::make_pair(file_id, node_id));
+}
+
+void Interpreter::AddObjectSchema(std::shared_ptr<ObjectSchema> object_schema) {
+  object_schemas_[std::make_pair<uint64_t, uint64_t>(object_schema->node_id(),
+                                                     object_schema->file_id())] = object_schema;
 }
 
 }  // namespace interpreter

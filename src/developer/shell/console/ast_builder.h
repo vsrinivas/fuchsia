@@ -15,6 +15,8 @@
 namespace shell::console {
 
 // Builds the remote AST for consumption by the interpreter service.
+//
+// Node ids start at 1, because node id 0 is reserved for null.
 class AstBuilder {
  public:
   using NodeId = llcpp::fuchsia::shell::NodeId;
@@ -108,6 +110,16 @@ class AstBuilder {
   // Returns the added node_id
   NodeId AddNode(llcpp::fuchsia::shell::Node&& node, bool is_root = false);
 
+  // Returns a pointer to a node that has previously been added.  For testing.
+  llcpp::fuchsia::shell::Node* at(llcpp::fuchsia::shell::NodeId& id) {
+    for (auto& def : nodes_) {
+      if (def.node_id.node_id == id.node_id && def.node_id.file_id == id.file_id) {
+        return &def.node;
+      }
+    }
+    return nullptr;
+  }
+
   // The following methods generate a ShellType object for the given type.
   llcpp::fuchsia::shell::ShellType TypeUndef() {
     fidl::aligned<bool> undef = false;
@@ -169,6 +181,11 @@ class AstBuilder {
 
   llcpp::fuchsia::shell::ShellType TypeFloat64() {
     return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::FLOAT64);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeObject(AstBuilder::NodeId schema_node) {
+    llcpp::fuchsia::shell::NodeId* schema_ptr = ManagedNodeId(schema_node);
+    return llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned_ptr(schema_ptr));
   }
 
  private:

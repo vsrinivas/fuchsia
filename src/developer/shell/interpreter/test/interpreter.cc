@@ -141,6 +141,67 @@ TEST_F(InterpreterTest, BuiltinTypes) {
   ASSERT_EQ(results()[13], "var f64: float64\n");
 }
 
+namespace {
+
+// Adds an object to the builder with the names, values, and types as given in parallel arrays.
+void AddObject(shell::console::AstBuilder& builder, std::vector<std::string>& names,
+               std::vector<shell::console::AstBuilder::NodeId>& values,
+               std::vector<llcpp::fuchsia::shell::ShellType>&& types,
+               shell::console::AstBuilder::NodePair& result) {
+  ASSERT_EQ(names.size(), values.size())
+      << "Test incorrect - mismatch in keys and values for constructing object";
+  ASSERT_EQ(names.size(), types.size())
+      << "Test incorrect - mismatch in fields and types for constructing object";
+  builder.OpenObject();
+  for (size_t i = 0; i < names.size(); i++) {
+    builder.AddField(names[i], values[i], std::move(types[i]));
+  }
+  result = builder.CloseObject();
+}
+
+}  // anonymous namespace
+
+TEST_F(InterpreterTest, ObjectTypeDump) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  shell::console::AstBuilder builder(kFileId);
+
+  {
+    shell::console::AstBuilder::NodePair object_pair;
+    std::vector<std::string> names;
+    std::vector<shell::console::AstBuilder::NodeId> values;
+    std::vector<llcpp::fuchsia::shell::ShellType> types;
+    AddObject(builder, names, values, std::move(types), object_pair);
+    builder.AddVariableDeclaration("obj1", builder.TypeObject(object_pair.schema_node),
+                                   object_pair.value_node, /*is_const=*/false, /*is_root=*/true);
+  }
+  {
+    shell::console::AstBuilder::NodePair object_pair;
+    std::vector<std::string> names{"alpha", "beta"};
+    std::vector<shell::console::AstBuilder::NodeId> values{builder.AddIntegerLiteral(4, false),
+                                                           builder.AddIntegerLiteral(5, false)};
+    std::vector<llcpp::fuchsia::shell::ShellType> types;
+    types.emplace_back(builder.TypeUint64());
+    types.emplace_back(builder.TypeUint64());
+    AddObject(builder, names, values, std::move(types), object_pair);
+    builder.AddVariableDeclaration("obj2", builder.TypeObject(object_pair.schema_node),
+                                   object_pair.value_node, /*is_const=*/false, /*is_root=*/true);
+  }
+
+  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell().DumpExecutionContext(context->id));
+  Finish(kDump);
+
+  ASSERT_FALSE(last_result_partial());
+  ASSERT_EQ(results().size(), static_cast<size_t>(2));
+
+  ASSERT_EQ(results()[0], "var obj1: {\n} = {}\n");
+  ASSERT_EQ(results()[1],
+            "var obj2: {\nalpha: uint64,\nbeta: uint64,\n} = {alpha: uint64 = 4, beta: uint64 "
+            "= 5}\n");
+}
+
 TEST_F(InterpreterTest, VariableOk) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
@@ -154,12 +215,24 @@ TEST_F(InterpreterTest, VariableOk) {
   builder.AddVariableDeclaration("groucho", builder.TypeString(),
                                  builder.AddStringLiteral("A Marx brother"), false, true);
 
+  shell::console::AstBuilder::NodePair object_pair;
+  std::vector<std::string> names{"a", "b"};
+  std::vector<shell::console::AstBuilder::NodeId> values{builder.AddIntegerLiteral(2, false),
+                                                         builder.AddIntegerLiteral(3, false)};
+  std::vector<llcpp::fuchsia::shell::ShellType> types;
+  types.emplace_back(builder.TypeUint64());
+  types.emplace_back(builder.TypeUint64());
+  AddObject(builder, names, values, std::move(types), object_pair);
+  builder.AddVariableDeclaration("obj", builder.TypeObject(object_pair.schema_node),
+                                 object_pair.value_node, /*is_const=*/false, /*is_root=*/true);
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   LoadGlobal("foo");
   LoadGlobal("bar");
   LoadGlobal("groucho");
   LoadGlobal("x");
+  LoadGlobal("obj");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
@@ -183,6 +256,12 @@ TEST_F(InterpreterTest, VariableOk) {
 
   llcpp::fuchsia::shell::Node* x = GetGlobal("x");
   ASSERT_EQ(x, nullptr);
+
+  std::vector<llcpp::fuchsia::shell::Node*> value_ptrs;
+  for (auto& def : values) {
+    value_ptrs.push_back(builder.at(def));
+  }
+  GlobalIsObject("obj", names, value_ptrs, types);
 }
 
 TEST_F(InterpreterTest, VariableNoType) {
@@ -206,25 +285,6 @@ TEST_F(InterpreterTest, VariableNoType) {
       "node 1:1 Type not defined.\n"
       "node 1:3 Type not defined.\n",
       error_result);
-}
-
-TEST_F(InterpreterTest, VariableTypeNotImplemented) {
-  constexpr uint64_t kFileId = 1;
-  InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
-
-  shell::console::AstBuilder builder(kFileId);
-  builder.AddVariableDeclaration("bar", builder.TypeInteger(), NullNode, false, true);
-
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-
-  Finish(kExecute);
-  ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::ANALYSIS_ERROR, context->result);
-
-  std::string error_result = context->error_stream.str();
-  ASSERT_EQ("node 1:1 Can't create variable 'bar' of type integer (not implemented yet).\n",
-            error_result);
 }
 
 TEST_F(InterpreterTest, VariableDefinedTwice) {

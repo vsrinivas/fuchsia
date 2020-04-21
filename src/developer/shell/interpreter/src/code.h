@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_SHELL_INTERPRETER_SRC_CODE_H_
 
 #include <memory>
+#include <set>
 #include <vector>
 
 #include "src/developer/shell/interpreter/src/value.h"
@@ -40,6 +41,23 @@ enum class Opcode : uint64_t {
   // Loads a referenced counted value from a global variable and pushes it to the thread's value
   // stack.
   kLoadReferenceCounted,
+  // Initializes an object.
+  // Value stack before:
+  //   <reference to uninitialized object>
+  //   <initial value N>
+  //   <initial value N-1>
+  //   ...
+  //   (where 1, 2, ..., N are values in the order they appear in the schema of the object)
+  // Value stack after:
+  //   <reference to initialized object>
+  kObjectInit,
+  // Allocates an object and sets its schema.
+  // Value stack before:
+  //   ...
+  // Value stack after:
+  //   <reference>
+  //   ...
+  kObjectNew,
   // Pushes a reference counted literal to the thread's value stack. Increment the reference count
   // for the object.
   kReferenceCountedLiteral,
@@ -188,8 +206,31 @@ class Code {
     code_.emplace_back(reinterpret_cast<uint64_t>(value));
   }
 
+  // Adds an operation that allocates an object and leaves a reference to it on the stack.
+  void ObjectPush(const std::shared_ptr<ObjectSchema>& object_schema) {
+    emplace_back_opcode(Opcode::kObjectNew);
+    auto ref = object_schemas_.insert(object_schema);
+    // We store the shared_ptr so that the object that later gets allocated can ref and deref it.
+    const std::shared_ptr<ObjectSchema>* ptr = &(*(ref.first));
+    code_.emplace_back(reinterpret_cast<uint64_t>(ptr));
+  }
+
+  // Adds an operation that initializes an object.
+  void ObjectInit() { emplace_back_opcode(Opcode::kObjectInit); }
+
  private:
   void emplace_back_opcode(Opcode opcode) { code_.emplace_back(static_cast<uint64_t>(opcode)); }
+
+  struct SchemaPtrLT {
+    constexpr bool operator()(const std::shared_ptr<ObjectSchema>& lhs,
+                              const std::shared_ptr<ObjectSchema>& rhs) const {
+      return lhs.get() < rhs.get();
+    }
+  };
+
+  // Tracking for the schemas used as arguments by the code.  Because schemas are managed by
+  // shared_ptrs, and code_ only stores opaque values.
+  std::set<std::shared_ptr<ObjectSchema>, SchemaPtrLT> object_schemas_;
 
   // Contains the operations. It's a mix of opcodes and arguments for the operations.
   std::vector<uint64_t> code_;

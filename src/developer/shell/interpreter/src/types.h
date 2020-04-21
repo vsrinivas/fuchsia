@@ -20,6 +20,8 @@ class TypeUndefined : public Type {
 
   size_t Size() const override { return 0; }
 
+  size_t Alignment() const override { return 1; }
+
   TypeKind Kind() const override { return TypeKind::kUndefined; }
 
   std::unique_ptr<Type> Duplicate() const override;
@@ -60,6 +62,8 @@ class TypeBool : public TypeRaw {
 
   size_t Size() const override { return sizeof(bool); }
 
+  size_t Alignment() const override { return alignof(bool); }
+
   TypeKind Kind() const override { return TypeKind::kBool; }
 
   std::unique_ptr<Type> Duplicate() const override;
@@ -73,6 +77,8 @@ class TypeChar : public TypeRaw {
 
   size_t Size() const override { return sizeof(uint32_t); }
 
+  size_t Alignment() const override { return alignof(uint32_t); }
+
   TypeKind Kind() const override { return TypeKind::kChar; }
 
   std::unique_ptr<Type> Duplicate() const override;
@@ -85,6 +91,8 @@ class TypeString : public TypeReferenceCounted {
   TypeString() = default;
 
   size_t Size() const override { return sizeof(String*); }
+
+  size_t Alignment() const override { return alignof(String*); }
 
   TypeKind Kind() const override { return TypeKind::kString; }
 
@@ -141,6 +149,8 @@ class TypeInt8 : public TypeSignedInt {
 
   size_t Size() const override { return sizeof(int8_t); }
 
+  size_t Alignment() const override { return alignof(int8_t); }
+
   TypeKind Kind() const override { return TypeKind::kInt8; }
 
   std::pair<uint64_t, uint64_t> Limits() const override {
@@ -161,6 +171,8 @@ class TypeUint8 : public TypeUnsignedInt {
 
   size_t Size() const override { return sizeof(uint8_t); }
 
+  size_t Alignment() const override { return alignof(uint8_t); }
+
   TypeKind Kind() const override { return TypeKind::kUint8; }
 
   std::pair<uint64_t, uint64_t> Limits() const override {
@@ -179,6 +191,8 @@ class TypeInt16 : public TypeSignedInt {
   TypeInt16() = default;
 
   size_t Size() const override { return sizeof(int16_t); }
+
+  size_t Alignment() const override { return alignof(int16_t); }
 
   TypeKind Kind() const override { return TypeKind::kInt16; }
 
@@ -200,6 +214,8 @@ class TypeUint16 : public TypeUnsignedInt {
 
   size_t Size() const override { return sizeof(uint16_t); }
 
+  size_t Alignment() const override { return alignof(uint16_t); }
+
   TypeKind Kind() const override { return TypeKind::kUint16; }
 
   std::pair<uint64_t, uint64_t> Limits() const override {
@@ -218,6 +234,8 @@ class TypeInt32 : public TypeSignedInt {
   TypeInt32() = default;
 
   size_t Size() const override { return sizeof(int32_t); }
+
+  size_t Alignment() const override { return alignof(uint32_t); }
 
   TypeKind Kind() const override { return TypeKind::kInt32; }
 
@@ -239,6 +257,8 @@ class TypeUint32 : public TypeUnsignedInt {
 
   size_t Size() const override { return sizeof(uint32_t); }
 
+  size_t Alignment() const override { return alignof(uint32_t); }
+
   TypeKind Kind() const override { return TypeKind::kUint32; }
 
   std::pair<uint64_t, uint64_t> Limits() const override {
@@ -257,6 +277,8 @@ class TypeInt64 : public TypeSignedInt {
   TypeInt64() = default;
 
   size_t Size() const override { return sizeof(int64_t); }
+
+  size_t Alignment() const override { return sizeof(int64_t); }
 
   TypeKind Kind() const override { return TypeKind::kInt64; }
 
@@ -278,6 +300,8 @@ class TypeUint64 : public TypeUnsignedInt {
 
   size_t Size() const override { return sizeof(uint64_t); }
 
+  size_t Alignment() const override { return alignof(uint64_t); }
+
   TypeKind Kind() const override { return TypeKind::kUint64; }
 
   std::pair<uint64_t, uint64_t> Limits() const override {
@@ -291,18 +315,31 @@ class TypeUint64 : public TypeUnsignedInt {
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 };
 
-class TypeInteger : public Type {
+class TypeInteger : public TypeBuiltin {
  public:
-  TypeInteger() = default;
+  TypeInteger() : impl_(std::make_unique<TypeInt64>()) {}
 
   // TODO(vbelliard): Use the right size when it will be implemented.
-  size_t Size() const override { return 0; }
+  // Currently, we assume it is int64.
+  size_t Size() const override { return impl_->Size(); }
+
+  size_t Alignment() const override { return impl_->Alignment(); }
 
   TypeKind Kind() const override { return TypeKind::kInteger; }
 
   std::unique_ptr<Type> Duplicate() const override;
 
   void Dump(std::ostream& os) const override;
+
+  void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
+
+  bool GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
+                              const IntegerLiteral* literal) const override;
+
+  void GenerateDefaultValue(ExecutionContext* context, code::Code* code) const override;
+
+ private:
+  std::unique_ptr<TypeInt64> impl_;
 };
 
 class TypeFloat32 : public TypeRaw {
@@ -310,6 +347,8 @@ class TypeFloat32 : public TypeRaw {
   TypeFloat32() = default;
 
   size_t Size() const override { return sizeof(float); }
+
+  size_t Alignment() const override { return alignof(float); }
 
   TypeKind Kind() const override { return TypeKind::kFloat32; }
 
@@ -324,6 +363,8 @@ class TypeFloat64 : public TypeRaw {
 
   size_t Size() const override { return sizeof(double); }
 
+  size_t Alignment() const override { return alignof(double); }
+
   TypeKind Kind() const override { return TypeKind::kFloat64; }
 
   std::unique_ptr<Type> Duplicate() const override;
@@ -333,15 +374,19 @@ class TypeFloat64 : public TypeRaw {
 
 class TypeObject : public Type {
  public:
-  TypeObject(const ObjectSchema* schema) : schema_(schema) {}
+  TypeObject(const std::shared_ptr<ObjectSchema> schema) : schema_(schema) {}
   TypeObject() = delete;
   TypeObject(TypeObject&) = delete;
   TypeObject operator=(TypeObject& t) = delete;
 
   void Dump(std::ostream& os) const override;
 
-  // The size for the type in bytes.
-  virtual size_t Size() const override;
+  // The size of a reference to an object of the type (i.e., the thing that is stored in another
+  // object / variable / value stack element).
+  virtual size_t Size() const override { return sizeof(Object*); }
+
+  // Always stored as reference for now.
+  size_t Alignment() const override { return alignof(Object*); }
 
   TypeKind Kind() const override { return TypeKind::kObject; }
 
@@ -350,8 +395,19 @@ class TypeObject : public Type {
 
   virtual TypeObject* AsTypeObject() override { return this; }
 
+  void GenerateObject(ExecutionContext* context, code::Code* code,
+                      const ObjectDeclaration* literal) const;
+
+  void GenerateInitialization(ExecutionContext* context, code::Code* code,
+                              const ObjectDeclaration* literal) const;
+
+  Variable* CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
+                           const std::string& name) const override;
+
+  void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
+
  private:
-  const ObjectSchema* schema_;
+  const std::shared_ptr<ObjectSchema> schema_;
 };
 
 }  // namespace interpreter

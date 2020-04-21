@@ -24,6 +24,7 @@ class ExpressionVariable;
 class Instruction;
 class IntegerLiteral;
 class Interpreter;
+class ObjectDeclaration;
 class ObjectSchema;
 class ObjectFieldSchema;
 class Scope;
@@ -54,7 +55,7 @@ struct NodeId {
 
 // Base class for a type.
 class Type {
- protected:
+ public:
   enum class TypeKind {
     kUndefined,
     kBool,
@@ -74,12 +75,14 @@ class Type {
     kObject
   };
 
- public:
   Type() = default;
   virtual ~Type() = default;
 
   // The size for the type in bytes.
   virtual size_t Size() const = 0;
+
+  // The alignment for instances of the type.
+  virtual size_t Alignment() const = 0;
 
   // Returns the type kind.
   virtual TypeKind Kind() const = 0;
@@ -201,13 +204,6 @@ class Instruction : public Node {
 
   // Compiles the instruction (performs the semantic checks and generates code).
   virtual void Compile(ExecutionContext* context, code::Code* code) = 0;
-};
-
-// Base class for schemas described by the client (for definining objects).
-class Schema : public Node {
- public:
-  Schema(Interpreter* interpreter, uint64_t file_id, uint64_t node_id)
-      : Node(interpreter, file_id, node_id) {}
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Instruction& instruction) {

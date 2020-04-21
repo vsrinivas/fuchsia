@@ -44,33 +44,43 @@ class IntegerLiteral : public Expression {
 
 // Fields of objects.  Objects themselves are expressions.
 // Located in this file for proximity to Objects.
-class ObjectField : public Node {
+class ObjectDeclarationField : public Node {
  public:
-  ObjectField(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
-              std::unique_ptr<Expression> value)
-      : Node(interpreter, file_id, node_id), expression_(std::move(value)) {}
+  ObjectDeclarationField(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
+                         ObjectFieldSchema* field_schema, std::unique_ptr<Expression> value)
+      : Node(interpreter, file_id, node_id),
+        field_schema_(field_schema),
+        expression_(std::move(value)) {}
 
   // Prints the field.
   void Dump(std::ostream& os) const;
 
+  const ObjectFieldSchema* schema() const { return field_schema_; }
+
+  bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) {
+    return expression_->Compile(context, code, for_type);
+  }
+
  private:
-  std::unique_ptr<Type> type_;
+  ObjectFieldSchema* field_schema_;
   std::unique_ptr<Expression> expression_;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const ObjectField& field) {
+inline std::ostream& operator<<(std::ostream& os, const ObjectDeclarationField& field) {
   field.Dump(os);
   return os;
 }
 
-// Objects are Objects (whether builtin or FIDL).
-class Object : public Expression {
+// ObjectDeclarations are Objects (whether builtin or FIDL).
+class ObjectDeclaration : public Expression {
  public:
-  Object(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
-         std::unique_ptr<TypeObject> type, std::vector<std::unique_ptr<ObjectField>>&& fields)
-      : Expression(interpreter, file_id, node_id),
-        type_(std::move(type)),
-        fields_(std::move(fields)) {}
+  ObjectDeclaration(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
+                    const ObjectSchema* object_schema,
+                    std::vector<std::unique_ptr<ObjectDeclarationField>>&& fields);
+
+  const ObjectSchema* object_schema() const { return object_schema_; }
+
+  const std::vector<std::unique_ptr<ObjectDeclarationField>>& fields() const { return fields_; }
 
   // Prints the object.
   virtual void Dump(std::ostream& os) const override;
@@ -80,8 +90,10 @@ class Object : public Expression {
                        const Type* for_type) const override;
 
  private:
-  std::unique_ptr<TypeObject> type_;
-  std::vector<std::unique_ptr<ObjectField>> fields_;
+  const ObjectSchema* object_schema_;
+
+  // fields_ are stored in the same order the ObjectSchemaFields are found in the object_schema_.
+  std::vector<std::unique_ptr<ObjectDeclarationField>> fields_;
 };
 
 // Defines a string value.

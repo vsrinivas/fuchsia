@@ -88,6 +88,7 @@ class Scope {
 
   // All the variables for this scope.
   std::map<std::string, std::unique_ptr<Variable>> variables_;
+
   // Current index in the data_ field of an execution scope.
   size_t current_index_ = 0;
 };

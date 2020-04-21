@@ -60,6 +60,9 @@ class ExecutionContext {
   const uint64_t id_;
   // Instructions waiting to be executed.
   std::vector<std::unique_ptr<Instruction>> pending_instructions_;
+  // Object schemas in use.  At some point, these are likely to be needed beyond this execution
+  // context.
+  std::vector<std::shared_ptr<ObjectSchema>> object_schemas_;
   // True if the context encountered an error.
   bool has_errors_ = false;
 };
@@ -149,13 +152,33 @@ class Interpreter {
     return isolate_->LoadGlobal(variable, value);
   }
 
+  void AddObjectSchema(std::shared_ptr<ObjectSchema> schema);
+
+  std::shared_ptr<ObjectSchema> GetObjectSchema(const NodeId& node_id) {
+    std::shared_ptr<ObjectSchema> schema_ptr;
+    auto result =
+        object_schemas_.find(std::pair<uint64_t, uint64_t>(node_id.node_id, node_id.file_id));
+    if (result == object_schemas_.end()) {
+      return nullptr;
+    }
+    return result->second;
+  }
+
  private:
   // All the contexts for the interpreter.
   std::map<uint64_t, std::unique_ptr<ExecutionContext>> contexts_;
+
   // All the nodes handled by the interpreter.
   std::map<std::pair<uint64_t, uint64_t>, Node*> nodes_;
   // The isolate ran by the interpreter.
   std::unique_ptr<Isolate> isolate_;
+
+  // Tracking for the schemas handled by the interpreter.  Because schemas are managed by
+  // shared_ptrs, and nodes_ only stores raw Node pointers; if we want the schemas to be deref'd
+  // when this object is destructed, we need a separate object containing its shared_ptr.  The
+  // ObjectSchema destructor unregisters ObjectFieldSchemas from the nodes_ above, so it has to be
+  // destructed first.
+  std::map<std::pair<uint64_t, uint64_t>, std::shared_ptr<ObjectSchema>> object_schemas_;
 };
 
 }  // namespace interpreter

@@ -41,7 +41,7 @@ InterpreterTest::InterpreterTest()
 void InterpreterTest::Finish(FinishAction action) {
   llcpp::fuchsia::shell::Shell::EventHandlers handlers;
   bool done = false;
-  enum Errs : zx_status_t { kNoContext = 1, kPendingNodes, kNoResult, kWrongAction };
+  enum Errs : zx_status_t { kNoContext = 1, kNoResult, kWrongAction };
   while (!done) {
     std::string msg;
     handlers.on_error = [this, &msg, &done, action](
@@ -111,12 +111,6 @@ void InterpreterTest::Finish(FinishAction action) {
                                              response_buffer->view());
           auto& nodes = response->nodes;
           if (!nodes.empty()) {
-            // Currently we only support single values.
-            if (nodes.count() != static_cast<size_t>(1)) {
-              msg =
-                  "nodes.count() (" + std::to_string(nodes.count()) + ") != 1 in on_execution_done";
-              return kPendingNodes;
-            }
             globals_.emplace(global, std::move(response));
           }
         }
@@ -166,6 +160,101 @@ InterpreterTestContext* InterpreterTest::GetContext(uint64_t context_id) {
     return nullptr;
   }
   return result->second.get();
+}
+
+// Checks that the given node is an integer literal of the given value.  Asserts on failure.
+void NodeIsInteger(const llcpp::fuchsia::shell::Node* node, uint64_t val, bool negative) {
+  ASSERT_TRUE(node->is_integer_literal());
+  ASSERT_EQ(negative, node->integer_literal().negative);
+  ASSERT_EQ(static_cast<size_t>(1), node->integer_literal().absolute_value.count());
+  ASSERT_EQ(val, node->integer_literal().absolute_value[0]);
+}
+
+// Check that there is a variable with the given name, and it is a wire representation of the
+// names, with the values and the types given as parallel arrays.  Asserts if false.
+void InterpreterTest::GlobalIsObject(const std::string& name, std::vector<std::string>& names,
+                                     std::vector<llcpp::fuchsia::shell::Node*>& values,
+                                     std::vector<llcpp::fuchsia::shell::ShellType>& types) {
+  auto result = globals_.find(name);
+  ASSERT_NE(result, globals_.end()) << "Global with name " << name << " not found";
+  using Node = llcpp::fuchsia::shell::Node;
+  fidl::VectorView<Node>& nodes = result->second->nodes;
+
+  // Makes sure there is an object and a schema.
+  Node* obj_root = nullptr;
+  Node* schema_root = nullptr;
+  for (Node& node : nodes) {
+    if (node.is_object()) {
+      obj_root = &node;
+    }
+    if (node.is_object_schema()) {
+      schema_root = &node;
+    }
+  }
+  ASSERT_NE(nullptr, obj_root) << "No object found for global " << name;
+  ASSERT_NE(nullptr, schema_root) << "No object schema found for global " << name;
+
+  size_t num_fields = names.size();
+  // Sanity checking: should be guaranteed by the caller.
+  ASSERT_EQ(num_fields, values.size());
+  ASSERT_EQ(num_fields, types.size());
+
+  // Figure out which name in the actual data goes with which type and which value.
+  // Populate these maps with the information.
+  std::map<const std::string, const llcpp::fuchsia::shell::ShellType*> names_to_types;
+  std::map<const std::string, const Node*> names_to_values;
+
+  const llcpp::fuchsia::shell::ObjectSchemaDefinition& object_schema = schema_root->object_schema();
+  const fidl::VectorView<::llcpp::fuchsia::shell::NodeId>& field_schemas = object_schema.fields;
+  ASSERT_EQ(num_fields, field_schemas.count());
+  for (auto& id : field_schemas) {
+    ASSERT_TRUE(id.node_id < nodes.count()) << "Schema node id too high!";
+    // Node ids are always offset by one.
+    Node* field_schema_node = &nodes.at(id.node_id - 1);
+    ASSERT_TRUE(field_schema_node->is_field_schema())
+        << "Declared field schema is not a field schema";
+    const llcpp::fuchsia::shell::ObjectFieldSchemaDefinition& field_schema =
+        field_schema_node->field_schema();
+    names_to_types.emplace(std::make_pair(
+        std::string(field_schema.name.data(), field_schema.name.size()), &field_schema.type));
+
+    for (auto& field : obj_root->object().fields) {
+      Node* obj_field_definition = &nodes.at(field.node_id - 1);
+      ASSERT_TRUE(obj_field_definition->is_object_field()) << "Node given as field is not field";
+      auto& obj_field_schema = obj_field_definition->object_field().object_field_schema;
+      if (obj_field_schema.node_id != id.node_id) {
+        continue;
+      }
+      names_to_values.emplace(std::string(field_schema.name.data(), field_schema.name.size()),
+                              &nodes.at(obj_field_definition->object_field().value.node_id - 1));
+      break;
+    }
+  }
+
+  // Check that the information we gathered about the actual data matches the expected data.
+  for (size_t i = 0; i < num_fields; i++) {
+    const auto& def = names_to_types.find(names[i]);
+    ASSERT_NE(names_to_types.end(), def) << "Definition for field " << names[i] << " not found";
+    const auto& val = names_to_values.find(names[i]);
+    ASSERT_NE(names_to_values.end(), val) << "Value for field " << names[i] << " not found";
+    Node* expected = values[i];
+
+    if (def->second->is_builtin_type()) {
+      switch (def->second->builtin_type()) {
+        case llcpp::fuchsia::shell::BuiltinType::UINT64:
+          // Sanity check our input.
+          ASSERT_TRUE(expected->is_integer_literal());
+          NodeIsInteger(val->second, expected->integer_literal().absolute_value[0],
+                        expected->integer_literal().negative);
+          break;
+          // TODO(jeremymanson): Other types.
+        default:
+          FAIL() << "Unexpected type in object field";
+      }
+    } else {
+      FAIL() << "Unexpected type in object field";
+    }
+  }
 }
 
 void InterpreterTest::SetUp() {

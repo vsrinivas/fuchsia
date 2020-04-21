@@ -153,7 +153,7 @@ There are basically three different kinds of values:
 *   Values that can be stored in a fixed size slot (for example, integers, Booleans).
 
 *   Values that needs additional storage. This storage is referenced by a pointer which is stored
-in a fixed size slot (for example strings).
+in a fixed size slot (for example, strings and objects).
 
 *   Values that can hold any type of value (that means that such a value can hold an integer and,
 later, hold a string). These values are stored using **shell::interpreter::Value** whose size is
@@ -197,6 +197,31 @@ it as if all characters were encoded using code points. They are reference count
 they are only copied on write.
 
 The class **StringContainer** automatically manages a **String** (the reference).
+
+## Objects and Object Schemas
+
+An object schema defines a specific referenced type and holds information about how it is
+implemented (e.g., its memory layout).  Object schemas are defined by the class **ObjectSchema**.
+An object is an instance of the type described by an object schema.  Objects are represented in
+memory by the class **Object**.
+
+Every object must have an associated schema; as a result, when defining a new object using the
+wire format, users must either refer to an existing schema, or provide a schema for it.
+
+The AST represents objects with **ObjectDeclarations** that have **ObjectFields**.
+Similarly, **ObjectSchemas** have **ObjectFieldSchemas**.  Each **ObjectField** has an associated
+**ObjectFieldSchema**.
+
+When instantiating a new object with a given schema, the current implementation creates an
+object by allocating a buffer large enough to hold both the instance of class **Object** (which
+contains a pointer to the object's **ObjectSchema**), and the object's fields.  The
+interpreter will then compute the initial values of the fields, and set them appropriately.
+
+The contents of an object are stored in the same way that values are stored in the stack: they may
+have fixed-sized slot values, values that require additional storage, and any values.  A given
+field's offset in the buffer is described in the **ObjectFieldSchema** associated with that field.
+The implementation currently uses the platform alignment for all types (e.g., int32s are 4-byte
+aligned, reference types, being backed by pointers, are 8-byte aligned, and so forth).
 
 # Basic arithmetic operations
 

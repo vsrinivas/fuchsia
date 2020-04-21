@@ -9,6 +9,8 @@
 
 #include "src/developer/shell/interpreter/src/code.h"
 #include "src/developer/shell/interpreter/src/interpreter.h"
+#include "src/developer/shell/interpreter/src/schema.h"
+#include "src/developer/shell/interpreter/src/types.h"
 
 namespace shell {
 namespace interpreter {
@@ -144,6 +146,24 @@ void ExecutionScope::Execute(ExecutionContext* context, Thread* thread,
         ReferenceCountedBase* value = *source;
         value->Use();
         thread->Push(reinterpret_cast<uint64_t>(value));
+        break;
+      }
+      case code::Opcode::kObjectInit: {
+        Object* object = reinterpret_cast<Object*>(thread->Pop());
+        const ObjectSchema* schema = object->schema()->AsObjectSchema();
+        for (auto it = schema->fields().rbegin(); it != schema->fields().rend(); ++it) {
+          uint64_t value = thread->Pop();
+          // TODO(jeremymanson): Future work: encode the offsets in the opcode stream?
+          object->SetField((*it).get(), value);
+        }
+        thread->Push(reinterpret_cast<uint64_t>(object));
+        break;
+      }
+      case code::Opcode::kObjectNew: {
+        uint64_t type_val = code->code()[pc++];
+        auto schema = reinterpret_cast<std::shared_ptr<ObjectSchema>*>(type_val);
+        Object* object = ObjectSchema::AllocateObject(*schema);
+        thread->Push(reinterpret_cast<uint64_t>(object));
         break;
       }
       case code::Opcode::kReferenceCountedLiteral: {

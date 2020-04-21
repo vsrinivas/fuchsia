@@ -32,11 +32,38 @@ bool IntegerLiteral::Compile(ExecutionContext* context, code::Code* code,
 
 // - ObjectField -----------------------------------------------------------------------------------
 
-void ObjectField::Dump(std::ostream& os) const { os << *type_ << " : " << *expression_; }
+void ObjectDeclarationField::Dump(std::ostream& os) const {
+  os << field_schema_->name() << ": " << *(field_schema_->type()) << " = " << *expression_;
+}
 
-// - Object ----------------------------------------------------------------------------------------
+// - ObjectDeclaration -----------------------------------------------------------------------------
 
-void Object::Dump(std::ostream& os) const {
+ObjectDeclaration::ObjectDeclaration(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
+                                     const ObjectSchema* object_schema,
+                                     std::vector<std::unique_ptr<ObjectDeclarationField>>&& fields)
+    : Expression(interpreter, file_id, node_id),
+      object_schema_(object_schema),
+      fields_(std::move(fields)) {
+  // Fields need to be in the same order that they are in the schema.  Find them in the schema and
+  // insert them at the correct point.
+  for (size_t i = 0; i < object_schema->fields().size(); i++) {
+    if (object_schema->fields()[i].get() != fields_[i]->schema()) {
+      bool found = false;
+      for (size_t j = i + 1; j < object_schema->fields().size(); j++) {
+        if (object_schema->fields()[i].get() == fields_[j]->schema()) {
+          ObjectDeclarationField* tmp = fields_[j].release();
+          fields_[j].reset(fields_[i].release());
+          fields_[i].reset(tmp);
+          found = true;
+          break;
+        }
+      }
+      FX_DCHECK(found) << "Unable to find schema for field";
+    }
+  }
+}
+
+void ObjectDeclaration::Dump(std::ostream& os) const {
   os << "{";
   const char* separator = "";
   for (size_t i = 0; i < fields_.size(); i++) {
@@ -46,9 +73,12 @@ void Object::Dump(std::ostream& os) const {
   os << "}";
 }
 
-bool Object::Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const {
-  // TODO: Actually do something when we encounter a object
-  return false;
+bool ObjectDeclaration::Compile(ExecutionContext* context, code::Code* code,
+                                const Type* for_type) const {
+  const TypeObject* object_type = const_cast<Type*>(for_type)->AsTypeObject();
+  object_type->GenerateInitialization(context, code, this);
+  object_type->GenerateObject(context, code, this);
+  return true;
 }
 
 // - StringLiteral ---------------------------------------------------------------------------------

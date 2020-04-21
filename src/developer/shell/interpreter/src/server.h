@@ -46,18 +46,18 @@ class ServerInterpreterContext {
   }
 
   // Adds a schema to the context. This definition must be used later by another node.
-  void AddSchema(std::unique_ptr<Schema> definition) {
-    schemas_.emplace(definition->id(), std::move(definition));
+  void AddObjectSchema(std::shared_ptr<ObjectSchema> definition) {
+    object_schemas_.emplace(definition->id(), definition);
   }
 
   // Adds a field schema definition to the context. This definition must be used later by another
   // node.
-  void AddObjectFieldSchema(std::unique_ptr<ObjectFieldSchema> field) {
-    object_field_schemas_.emplace(field->id(), std::move(field));
+  void AddObjectFieldSchema(std::shared_ptr<ObjectFieldSchema> field) {
+    object_field_schemas_.emplace(field->id(), field);
   }
 
-  // Adds an object to the context. This definition must be used later by another node.
-  void AddObjectField(std::unique_ptr<ObjectField> field) {
+  // Adds an object field to the context. This definition must be used later by another node.
+  void AddObjectField(std::unique_ptr<ObjectDeclarationField> field) {
     fields_.emplace(field->id(), std::move(field));
   }
 
@@ -66,13 +66,13 @@ class ServerInterpreterContext {
   std::unique_ptr<Expression> GetExpression(const NodeId& node_id);
 
   // Retrieves the type definition for the given node id.
-  std::unique_ptr<Schema> GetSchema(const NodeId& node_id);
+  std::shared_ptr<ObjectSchema> GetObjectSchema(const NodeId& node_id);
 
   // Retrieves the field definition for the given node id.
-  std::unique_ptr<ObjectField> GetObjectField(const NodeId& node_id);
+  std::unique_ptr<ObjectDeclarationField> GetObjectField(const NodeId& node_id);
 
   // Retrieves the field definition for the given node id.
-  std::unique_ptr<ObjectFieldSchema> GetObjectFieldSchema(const NodeId& node_id);
+  std::shared_ptr<ObjectFieldSchema> GetObjectFieldSchema(const NodeId& node_id);
 
  private:
   // The execution context (interpreter level) associated with this context.
@@ -82,11 +82,11 @@ class ServerInterpreterContext {
   // All the instructions waiting to be used.
   std::map<NodeId, std::unique_ptr<Instruction>> instructions_;
   // All the schema definitions waiting to be used.
-  std::map<NodeId, std::unique_ptr<Schema>> schemas_;
+  std::map<NodeId, std::shared_ptr<ObjectSchema>> object_schemas_;
   // All of the fields waiting to be used.
-  std::map<NodeId, std::unique_ptr<ObjectField>> fields_;
+  std::map<NodeId, std::unique_ptr<ObjectDeclarationField>> fields_;
   // All of the fields waiting to be used.
-  std::map<NodeId, std::unique_ptr<ObjectFieldSchema>> object_field_schemas_;
+  std::map<NodeId, std::shared_ptr<ObjectFieldSchema>> object_field_schemas_;
 };
 
 // Defines an interpreter managed by a server.
@@ -124,22 +124,22 @@ class ServerInterpreter : public Interpreter {
 
   // Adds an instruction to this context. If root_node is true, the instruction is added to the
   // interpreter context's pending instruction list.
-  // If global node is false, the instructions waits to be used by another node.
+  // If global_node is false, the instruction waits to be used by another node.
   void AddInstruction(ServerInterpreterContext* context, std::unique_ptr<Instruction> instruction,
-                      bool root_node);
+                      bool global_node);
 
   // Adds a object schema definition to this context.  The definition can then be referred to by
   // other nodes. The argument root_node should always be false.
-  void AddSchema(ServerInterpreterContext* context, std::unique_ptr<Schema> definition,
-                 bool root_node);
+  void AddObjectSchema(ServerInterpreterContext* context, std::shared_ptr<ObjectSchema> definition,
+                       bool root_node);
 
   void AddObjectFieldSchema(ServerInterpreterContext* context,
-                            std::unique_ptr<ObjectFieldSchema> definitions, bool root_node);
+                            std::shared_ptr<ObjectFieldSchema> definitions, bool root_node);
 
   // Adds a field to this context.  The definition can then be referred to by
   // other nodes. The argument root_node should always be false.
-  void AddObjectField(ServerInterpreterContext* context, std::unique_ptr<ObjectField> definition,
-                      bool root_node);
+  void AddObjectField(ServerInterpreterContext* context,
+                      std::unique_ptr<ObjectDeclarationField> definition, bool root_node);
 
   // Retrives the expression for the given context/node id. If the expression is not found, it emits
   // an error.
@@ -154,9 +154,10 @@ class ServerInterpreter : public Interpreter {
 
   // Retrieves the schema definition for the given context/node id. If the definition is not found,
   // it emits an error.
-  std::unique_ptr<Schema> GetSchema(ServerInterpreterContext* context, const NodeId& node_id);
+  std::shared_ptr<ObjectSchema> GetObjectSchema(ServerInterpreterContext* context,
+                                                const NodeId& node_id);
 
-  std::unique_ptr<ObjectFieldSchema> GetObjectFieldSchema(ServerInterpreterContext* context,
+  std::shared_ptr<ObjectFieldSchema> GetObjectFieldSchema(ServerInterpreterContext* context,
                                                           const NodeId& node_id);
 
  private:
@@ -223,14 +224,14 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
                              uint64_t node_node_id,
                              const llcpp::fuchsia::shell::VariableDefinition& node, bool root_node);
 
-  void AddObjectType(ServerInterpreterContext* context, uint64_t node_file_id,
-                     uint64_t node_node_id,
-                     const llcpp::fuchsia::shell::ObjectSchemaDefinition& node, bool root_node);
+  void AddObjectSchema(ServerInterpreterContext* context, uint64_t node_file_id,
+                       uint64_t node_node_id,
+                       const llcpp::fuchsia::shell::ObjectSchemaDefinition& node, bool root_node);
 
-  void AddObjectTypeField(ServerInterpreterContext* context, uint64_t node_file_id,
-                          uint64_t node_node_id,
-                          const llcpp::fuchsia::shell::ObjectFieldSchemaDefinition& field_type,
-                          bool root_node);
+  void AddObjectSchemaField(ServerInterpreterContext* context, uint64_t node_file_id,
+                            uint64_t node_node_id,
+                            const llcpp::fuchsia::shell::ObjectFieldSchemaDefinition& field_type,
+                            bool root_node);
 
   void AddObject(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
                  const llcpp::fuchsia::shell::ObjectDefinition& node, bool root_node);
