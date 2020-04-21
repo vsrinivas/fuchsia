@@ -56,7 +56,6 @@
             protocol: [
                 "/svc/fuchsia.boot.Arguments",
                 "/svc/fuchsia.boot.Items",
-                "/svc/fuchsia.boot.WriteOnlyLog",
                 "/svc/fuchsia.cobalt.LoggerFactory",
                 "/svc/fuchsia.process.Launcher",
                 "/svc/fuchsia.tracing.provider.Registry",
@@ -65,6 +64,17 @@
             to: [
                 "#driver_manager",
                 "#fshost",
+            ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
+            from: "realm",
+            to: [
+                "#console",
+                "#driver_manager",
+                "#fshost",
+                "#ptysvc",
+                "#sysinfo",
             ],
         },
         {

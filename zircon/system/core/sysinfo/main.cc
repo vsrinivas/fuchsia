@@ -15,16 +15,22 @@
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
+#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
 #include "sysinfo.h"
 
 int main(int argc, const char** argv) {
+  zx_status_t status = StdoutToDebuglog::Init();
+  if (status != ZX_OK) {
+    return status;
+  }
+
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
   auto sysinfo = sysinfo::SysInfo();
 
   svc::Outgoing outgoing(dispatcher);
-  zx_status_t status = outgoing.ServeFromStartupInfo();
+  status = outgoing.ServeFromStartupInfo();
   if (status != ZX_OK) {
     printf("console: outgoing.ServeFromStartupInfo() = %s\n", zx_status_get_string(status));
     return -1;

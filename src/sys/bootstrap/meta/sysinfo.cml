@@ -9,6 +9,7 @@
             rights: [ "rw*" ],
         },
         { protocol: "/svc/fuchsia.boot.RootResource" },
+        { protocol: "/svc/fuchsia.boot.WriteOnlyLog" },
     ],
     expose: [
         {

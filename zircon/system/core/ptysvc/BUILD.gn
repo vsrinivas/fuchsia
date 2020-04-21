@@ -28,6 +28,7 @@ executable("ptysvc") {
   sources = [ "main.cc" ]
   deps = [
     ":common",
+    "//src/sys/lib/stdout-to-debuglog",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async-cpp",

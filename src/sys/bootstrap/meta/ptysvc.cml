@@ -4,6 +4,7 @@
     },
     use: [
         { runner: "elf" },
+        { protocol: "/svc/fuchsia.boot.WriteOnlyLog" },
     ],
     expose: [
         {

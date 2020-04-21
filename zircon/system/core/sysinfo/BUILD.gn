@@ -30,6 +30,7 @@ executable("sysinfo") {
     "sysinfo.cc",
   ]
   deps = [
+    "//src/sys/lib/stdout-to-debuglog",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fdio",

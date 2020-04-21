@@ -18,6 +18,7 @@
 
 #include "pty-server-vnode.h"
 #include "pty-server.h"
+#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
 
 // Each Open() on this Vnode redirects to a new PtyServerVnode
 class PtyGeneratingVnode : public fs::Vnode {
@@ -50,10 +51,14 @@ class PtyGeneratingVnode : public fs::Vnode {
 };
 
 int main(int argc, const char** argv) {
+  zx_status_t status = StdoutToDebuglog::Init();
+  if (status != ZX_OK) {
+    return status;
+  }
+
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
   fs::SynchronousVfs vfs(dispatcher);
-  zx_status_t status;
 
   auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();

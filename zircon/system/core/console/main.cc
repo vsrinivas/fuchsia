@@ -12,6 +12,7 @@
 #include <zircon/syscalls.h>
 
 #include "console.h"
+#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
 
 namespace {
 
@@ -41,6 +42,11 @@ zx::resource GetRootResource() {
 }  // namespace
 
 int main(int argc, const char** argv) {
+  zx_status_t status = StdoutToDebuglog::Init();
+  if (status != ZX_OK) {
+    return status;
+  }
+
   zx::resource root_resource(GetRootResource());
   // Provide a RxSource that grabs the data from the kernel serial connection
   Console::RxSource rx_source = [root_resource = std::move(root_resource)](uint8_t* byte) {
@@ -69,8 +75,7 @@ int main(int argc, const char** argv) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
   fbl::RefPtr<Console> console;
-  zx_status_t status =
-      Console::Create(dispatcher, std::move(rx_source), std::move(tx_sink), &console);
+  status = Console::Create(dispatcher, std::move(rx_source), std::move(tx_sink), &console);
   if (status != ZX_OK) {
     printf("console: Console::Create() = %s\n", zx_status_get_string(status));
     return -1;
