@@ -21,19 +21,18 @@ group("tests") {
   testonly = true
 
   public_deps = [
-    "//src/developer/feedback/boot_log_checker/tests",
-    "//src/developer/feedback/bugreport/tests",
-    "//src/developer/feedback/crashpad_agent/tests",
-    "//src/developer/feedback/feedback_data/tests",
-    "//src/developer/feedback/utils/tests",
+    "boot_log_checker/tests",
+    "bugreport/tests",
+    "crashpad_agent/tests",
+    "feedback_data/tests",
+    "utils/tests",
   ]
 }
 
 group("infra_configs") {
-  deps =
-      [ "//src/developer/feedback/crashpad_agent:upload_to_prod_server_config" ]
+  deps = [ "crashpad_agent:upload_to_prod_server_config" ]
 }
 
 group("production_configs") {
-  deps = [ "//src/developer/feedback/crashpad_agent:production_config" ]
+  deps = [ "crashpad_agent:production_config" ]
 }
