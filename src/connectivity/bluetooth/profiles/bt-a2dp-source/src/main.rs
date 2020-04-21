@@ -13,9 +13,9 @@ use {
     fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_bluetooth_component::LifecycleState,
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
-        detachable_map::{DetachableMap, DetachableWeak},
+        detachable_map::{DetachableMap, DetachableWeak, LazyEntry},
         profile::find_profile_descriptors,
         types::{PeerId, Uuid},
     },
@@ -149,6 +149,8 @@ struct Peers {
     profile: ProfileProxy,
 }
 
+const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(2);
+
 impl Peers {
     fn new(streams: stream::Streams, profile: ProfileProxy) -> Self {
         Peers { peers: DetachableMap::new(), profile, streams }
@@ -158,75 +160,117 @@ impl Peers {
         self.peers.get(id).and_then(|p| p.upgrade())
     }
 
-    async fn discovered(&mut self, id: PeerId, desc: ProfileDescriptor) -> Result<(), Error> {
-        if let Some(peer) = self.peers.get(&id) {
+    /// Handle te first connection to a Peer is established, either after discovery or on
+    /// receiving a peer connection.  Uses the Channel to create the Peer object with the given
+    /// streams, which handles requests and commands to the peer.
+    fn add_control_connection(
+        entry: LazyEntry<PeerId, Peer>,
+        channel: Channel,
+        desc: Option<ProfileDescriptor>,
+        streams: stream::Streams,
+        profile: ProfileProxy,
+    ) -> Result<(), Error> {
+        let id = entry.key();
+        let socket = channel.socket.ok_or(format_err!("No socket in control connection"))?;
+        let avdtp_peer = avdtp::Peer::new(socket).map_err(|e| avdtp::Error::ChannelSetup(e))?;
+        let peer = Peer::create(id.clone(), avdtp_peer, streams, profile);
+        // Start the streaming task if the profile information is populated.
+        // Otherwise, `self.discovered()` will do so.
+        let start_streaming_flag = desc.map_or(false, |d| {
+            peer.set_descriptor(d);
+            true
+        });
+
+        let closed_fut = peer.closed();
+        let detached_peer = match entry.try_insert(peer) {
+            Ok(detached_peer) => detached_peer,
+            Err(_peer) => {
+                fx_log_info!("Peer connected to us, aborting.");
+                return Err(format_err!("Couldn't start peer"));
+            }
+        };
+
+        if start_streaming_flag {
+            Peers::spawn_streaming(entry.clone());
+        }
+
+        let peer_id = id.clone();
+        fasync::spawn_local(async move {
+            closed_fut.await;
+            fx_log_info!("Detaching closed peer {}", peer_id);
+            detached_peer.detach();
+        });
+        Ok(())
+    }
+
+    /// Called when a peer is discovered via SDP.
+    fn discovered(&mut self, id: PeerId, desc: ProfileDescriptor) {
+        let entry = self.peers.lazy_entry(&id);
+        let profile = self.profile.clone();
+        let streams = self.streams.as_new();
+        fasync::spawn_local(async move {
+            fx_log_info!("Waiting {:?} to connect to discovered peer {}", INITIATOR_DELAY, id);
+            fasync::Timer::new(INITIATOR_DELAY.after_now()).await;
+            if let Some(peer) = entry.get() {
+                fx_log_info!("After initiatiator delay, {} was connected, not connecting..", id);
+                if let Some(peer) = peer.upgrade() {
+                    if peer.set_descriptor(desc.clone()).is_none() {
+                        // TODO(50465): maybe check to see if we should start streaming.
+                        Peers::spawn_streaming(entry.clone());
+                    }
+                }
+                return;
+            }
+            let channel = match profile
+                .connect(&mut id.into(), PSM_AVDTP, ChannelParameters::new_empty())
+                .await
+            {
+                Err(e) => {
+                    fx_log_warn!("FIDL error connecting to peer {}: {:?}", id, e);
+                    return;
+                }
+                Ok(Err(code)) => {
+                    fx_log_info!("Couldn't connect to peer {}: {:?}", id, code);
+                    return;
+                }
+                Ok(Ok(channel)) => channel,
+            };
+            if let Err(e) =
+                Peers::add_control_connection(entry, channel, Some(desc), streams, profile)
+            {
+                fx_log_warn!("Error adding control connection for {}: {:?}", id, e);
+            }
+        });
+    }
+
+    /// Called when a peer initiates a connection. If it is the first active connection, it creates
+    /// a new Peer to handle communication.
+    fn connected(&mut self, id: PeerId, channel: Channel) -> Result<(), Error> {
+        let entry = self.peers.lazy_entry(&id);
+        if let Some(peer) = entry.get() {
             if let Some(peer) = peer.upgrade() {
-                if let None = peer.set_descriptor(desc.clone()) {
-                    self.spawn_streaming(id);
+                let socket = channel.socket.ok_or(format_err!("Socket not included in channel"))?;
+                if let Err(e) = peer.receive_channel(socket) {
+                    fx_log_warn!("{} connected an unexpected channel: {}", id, e);
                 }
             }
             return Ok(());
         }
-        let channel = match self
-            .profile
-            .connect(&mut id.into(), PSM_AVDTP, ChannelParameters::new_empty())
-            .await?
-        {
-            Ok(channel) => channel,
-            Err(code) => return Err(format_err!("Couldn't connect to peer {}: {:?}", id, code)),
-        };
-
-        match channel.socket {
-            Some(socket) => self.connected(id, socket, Some(desc))?,
-            None => fx_log_warn!("Couldn't connect {}: no socket", id),
-        };
-        Ok(())
+        Peers::add_control_connection(
+            entry,
+            channel,
+            None,
+            self.streams.as_new(),
+            self.profile.clone(),
+        )
     }
 
-    fn connected(
-        &mut self,
-        id: PeerId,
-        channel: zx::Socket,
-        desc: Option<ProfileDescriptor>,
-    ) -> Result<(), Error> {
-        if let Some(peer) = self.peers.get(&id) {
-            if let Some(peer) = peer.upgrade() {
-                if let Err(e) = peer.receive_channel(channel) {
-                    fx_log_warn!("{} connected an unexpected channel: {}", id, e);
-                }
-            }
-        } else {
-            let avdtp_peer =
-                avdtp::Peer::new(channel).map_err(|e| avdtp::Error::ChannelSetup(e))?;
-            let peer = Peer::create(id, avdtp_peer, self.streams.as_new(), self.profile.clone());
-            // Start the streaming task if the profile information is populated.
-            // Otherwise, `self.discovered()` will do so.
-            let start_streaming_flag = desc.map_or(false, |d| {
-                peer.set_descriptor(d);
-                true
-            });
-
-            let closed_fut = peer.closed();
-            self.peers.insert(id, peer);
-
-            if start_streaming_flag {
-                self.spawn_streaming(id);
-            }
-
-            // Remove the peer when the device disconnects.
-            let detached_peer = self.peers.get(&id).expect("just added");
-            let peer_id = id.clone();
-            fasync::spawn_local(async move {
-                closed_fut.await;
-                fx_log_info!("Detaching closed peer {}", peer_id);
-                detached_peer.detach();
-            });
-        }
-        Ok(())
-    }
-
-    fn spawn_streaming(&mut self, id: PeerId) {
-        let weak_peer = self.peers.get(&id).expect("just added");
+    /// Attempt to start a media stream to `peer`
+    fn spawn_streaming(entry: LazyEntry<PeerId, Peer>) {
+        let weak_peer = match entry.get() {
+            None => return,
+            Some(peer) => peer,
+        };
         fuchsia_async::spawn_local(async move {
             if let Err(e) = start_streaming(&weak_peer).await {
                 fx_log_info!("Failed to stream: {:?}", e);
@@ -439,8 +483,7 @@ async fn handle_profile_events(
                 let ConnectionReceiverRequest::Connected { peer_id, channel, .. } = connected;
                 let peer_id: PeerId = peer_id.into();
                 fx_log_info!("Connected sink {}", peer_id);
-                let socket = channel.socket.ok_or(format_err!("socket from profile should not be None"))?;
-                if let Err(e) = peers.connected(peer_id, socket, None) {
+                if let Err(e) = peers.connected(peer_id, channel) {
                     fx_log_info!("Error connecting peer {}: {:?}", peer_id, e);
                     continue;
                 }
@@ -469,9 +512,7 @@ async fn handle_profile_events(
                         continue;
                     }
                 };
-                if let Err(e) = peers.discovered(peer_id, profile).await {
-                    fx_log_info!("Error with discovered peer {}: {:?}", peer_id, e);
-                }
+                peers.discovered(peer_id, profile);
             },
             complete => break,
         }
@@ -536,13 +577,18 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
+    fn get_channel() -> (zx::Socket, Channel) {
+        let (remote, socket) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        (remote, Channel { socket: Some(socket), ..Channel::new_empty() })
+    }
+
     #[test]
     fn peers_peer_disconnect_removes_peer() {
         let (mut exec, id, mut peers, _stream) = setup_peers_test();
 
-        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (remote, signaling) = get_channel();
 
-        let _ = peers.connected(id, signaling, None);
+        let _ = peers.connected(id, signaling);
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -557,8 +603,8 @@ mod tests {
     fn peers_reconnect_works() {
         let (mut exec, id, mut peers, _stream) = setup_peers_test();
 
-        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let _ = peers.connected(id, signaling, None);
+        let (remote, signaling) = get_channel();
+        let _ = peers.connected(id, signaling);
         run_to_stalled(&mut exec);
 
         assert!(peers.get(&id).is_some());
@@ -571,8 +617,8 @@ mod tests {
         assert!(peers.get(&id).is_none());
 
         // Connect another peer with the same ID
-        let (_remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let _ = peers.connected(id, signaling, None);
+        let (_remote, signaling) = get_channel();
+        let _ = peers.connected(id, signaling);
         run_to_stalled(&mut exec);
 
         // Should be connected.

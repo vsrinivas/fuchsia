@@ -5,7 +5,7 @@
 use parking_lot::RwLock;
 use std::{
     borrow::Borrow,
-    collections::HashMap,
+    collections::{hash_map::Entry, HashMap},
     hash::Hash,
     sync::{Arc, Weak},
 };
@@ -39,6 +39,49 @@ impl<K: Hash + Eq, V> DetachableWeak<K, V> {
     /// Get a reference to the key for this entry.
     pub fn key(&self) -> &K {
         &self.key
+    }
+}
+
+pub struct LazyEntry<K, V> {
+    parent: Arc<RwLock<HashMap<K, Arc<V>>>>,
+    key: K,
+}
+
+impl<K: Clone, V> Clone for LazyEntry<K, V> {
+    fn clone(&self) -> Self {
+        Self { parent: self.parent.clone(), key: self.key.clone() }
+    }
+}
+
+impl<K: Hash + Eq + Clone, V> LazyEntry<K, V> {
+    fn new(parent: Arc<RwLock<HashMap<K, Arc<V>>>>, key: K) -> Self {
+        Self { parent, key }
+    }
+
+    /// Get a reference to the key that this entry is built for.
+    pub fn key(&self) -> &K {
+        &self.key
+    }
+
+    /// Attempt to insert into the map at `key`. Returns a detachable weak entry if the value was
+    /// inserted, and Err(value) if the item already existed.
+    /// Err(value) if the value was not able to be inserted.
+    pub fn try_insert(&self, value: V) -> Result<DetachableWeak<K, V>, V> {
+        match self.parent.write().entry(self.key.clone()) {
+            Entry::Occupied(_) => return Err(value),
+            Entry::Vacant(entry) => entry.insert(Arc::new(value)),
+        };
+        Ok(self.get().unwrap())
+    }
+
+    /// Attempt to resolve the entry to a weak reference, as returned by `DetachableMap::get`.
+    /// Returns None if the key does not exist.
+    pub fn get(&self) -> Option<DetachableWeak<K, V>> {
+        self.parent.read().get(&self.key).and_then(|v| {
+            let map = self.parent.clone();
+            let key = self.key.clone();
+            Some(DetachableWeak::new(&v, map, key))
+        })
     }
 }
 
@@ -84,6 +127,12 @@ impl<K: Hash + Eq + Clone, V> DetachableMap<K, V> {
             let key = key.clone();
             Some(DetachableWeak::new(&v, map, key))
         })
+    }
+
+    /// Returns a lazy entry. Lazy Entries can be used later to attempt to insert into the map if the key doesn't eixst.
+    /// They can also be resolved to a detachable refernece (as returned by `DetachableMap::get`) if the key already exists.
+    pub fn lazy_entry(&self, key: &K) -> LazyEntry<K, V> {
+        LazyEntry::new(self.map.clone(), key.clone())
     }
 }
 
@@ -144,5 +193,41 @@ mod test {
 
         // Detatching twice doesn't do anyting (and doesn't panic)
         detached.detach();
+    }
+
+    #[test]
+    fn lazy_entry() {
+        let map = DetachableMap::default();
+
+        // Should be able to get an entry before the key exists.
+        let entry = map.lazy_entry(&1);
+
+        // Can't get a reference if the key doesn't exist.
+        assert!(entry.get().is_none());
+
+        // We can insert though.
+        let detachable =
+            entry.try_insert(TestStruct { data: 45 }).expect("should be able to insert");
+
+        // Can't insert if there's something there though.
+        let second_val = TestStruct { data: 56 };
+        let returned_val =
+            entry.try_insert(second_val).err().expect("should get an error when trying to insert");
+        assert_eq!(56, returned_val.data);
+
+        assert!(entry.get().is_some());
+
+        // If we detach though, the entry is empty again, and we can insert again.
+        detachable.detach();
+
+        assert!(entry.get().is_none());
+
+        let new = entry.try_insert(returned_val).expect("should be able to insert after removal");
+
+        // Deopping the new entry doesn't remove it from the map.
+        drop(new);
+
+        let still_there = map.get(&1).expect("should be there");
+        assert!(still_there.upgrade().is_some());
     }
 }
