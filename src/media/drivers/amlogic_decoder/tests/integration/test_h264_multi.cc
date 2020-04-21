@@ -25,6 +25,8 @@ class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvid
     frame_data_.insert(frame_data_.end(), frame_data.begin(), frame_data.end());
   }
 
+  void set_async_reset_handler(fit::closure handler) { async_reset_handler_ = std::move(handler); }
+
   H264MultiDecoder::DataInput ReadMoreInputData(H264MultiDecoder* decoder) override {
     H264MultiDecoder::DataInput result;
     if (frame_data_.empty())
@@ -39,12 +41,23 @@ class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvid
     return result;
   }
   bool HasMoreInputData() override { return !frame_data_.empty(); }
-  void AsyncResetStreamAfterCurrentFrame() override { EXPECT_TRUE(false); }
+  void AsyncResetStreamAfterCurrentFrame() override {
+    EXPECT_TRUE(async_reset_handler_);
+    async_reset_handler_();
+  }
 
  private:
   std::list<std::vector<uint8_t>> frame_data_;
   uint64_t next_pts_{};
+  fit::closure async_reset_handler_;
 };
+
+// Set the min logging level so every log will display.
+static void SetMaxLogging() {
+  fxl::LogSettings settings;
+  settings.min_log_level = -10;
+  fxl::SetLogSettings(settings);
+}
 
 class TestH264Multi {
  public:
@@ -60,9 +73,7 @@ class TestH264Multi {
     bool has_sar;
   };
   static void DecodeSetStream(const VideoInfo& data, bool use_parser) {
-    fxl::LogSettings settings;
-    settings.min_log_level = -10;
-    fxl::SetLogSettings(settings);
+    SetMaxLogging();
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
     TestFrameAllocator frame_allocator(video.get());
@@ -175,9 +186,7 @@ class TestH264Multi {
 
   static void DecodeUnsplit(const char* input_filename,
                             uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH], const char* filename) {
-    fxl::LogSettings settings;
-    settings.min_log_level = -10;
-    fxl::SetLogSettings(settings);
+    SetMaxLogging();
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
     TestFrameAllocator frame_allocator(video.get());
@@ -307,9 +316,7 @@ class TestH264Multi {
   }
 
   static void DecodeMultiInstance() {
-    fxl::LogSettings settings;
-    settings.min_log_level = -10;
-    fxl::SetLogSettings(settings);
+    SetMaxLogging();
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
@@ -427,9 +434,7 @@ class TestH264Multi {
   }
 
   static void DecodeChangeConfig() {
-    fxl::LogSettings settings;
-    settings.min_log_level = -10;
-    fxl::SetLogSettings(settings);
+    SetMaxLogging();
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
     TestFrameAllocator frame_allocator(video.get());
@@ -527,9 +532,7 @@ class TestH264Multi {
   static void DecodeWithEos(const char* input_filename,
                             uint8_t (*input_hashes)[SHA256_DIGEST_LENGTH], const char* filename,
                             bool early_eos) {
-    fxl::LogSettings settings;
-    settings.min_log_level = -10;
-    fxl::SetLogSettings(settings);
+    SetMaxLogging();
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
     TestFrameAllocator frame_allocator(video.get());
@@ -609,6 +612,74 @@ class TestH264Multi {
     video->ClearDecoderInstance();
     video.reset();
   }
+
+  static void DecodeMalformed(VideoInfo data,
+                              const std::vector<std::pair<uint32_t, uint8_t>>& modifications) {
+    SetMaxLogging();
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+    TestFrameAllocator frame_allocator(video.get());
+
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
+    H264TestFrameDataProvider frame_data_provider;
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      video->SetDefaultInstance(
+          std::make_unique<H264MultiDecoder>(video.get(), &frame_allocator, &frame_data_provider,
+                                             /*is_secure=*/false),
+          /*hevc=*/false);
+      frame_allocator.set_decoder(video->video_decoder());
+    }
+    frame_allocator.set_pump_function([&video]() {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      static_cast<H264MultiDecoder*>(video->video_decoder())->PumpOrReschedule();
+    });
+    // Don't use parser, because we need to be able to save and restore the read
+    // and write pointers, which can't be done if the parser is using them as
+    // well.
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, 1024 * PAGE_SIZE,
+                                                   /*is_secure=*/false));
+    uint32_t frame_count = 0;
+    std::promise<void> wait_valid;
+
+    frame_data_provider.set_async_reset_handler([&wait_valid] { wait_valid.set_value(); });
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      frame_allocator.SetFrameReadyNotifier(
+          [&video, &frame_count](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DLOG("Got frame %d\n", frame_count);
+            video->AssertVideoDecoderLockHeld();
+            video->video_decoder()->ReturnFrame(frame);
+          });
+
+      // Initialize must happen after InitializeStreamBuffer or else it may misparse the SPS.
+      EXPECT_EQ(ZX_OK, video->video_decoder()->Initialize());
+    }
+
+    auto input_h264 = TestSupport::LoadFirmwareFile(data.input_filename);
+    ASSERT_NE(nullptr, input_h264);
+    video->core()->InitializeDirectInput();
+    std::vector<uint8_t> modified_data(input_h264->ptr, input_h264->ptr + input_h264->size);
+    for (auto& modification : modifications) {
+      modified_data[modification.first] = modification.second;
+    }
+    auto nal_units = SplitNalUnits(modified_data.data(), modified_data.size());
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      frame_data_provider.AppendFrameData(std::move(nal_units));
+      auto multi_decoder = static_cast<H264MultiDecoder*>(video->video_decoder());
+      multi_decoder->ReceivedNewInput();
+    }
+    auto future = wait_valid.get_future();
+    EXPECT_EQ(std::future_status::ready, future.wait_for(std::chrono::seconds(10)));
+
+    EXPECT_EQ(0u, frame_count);
+
+    video->ClearDecoderInstance();
+    video.reset();
+  }
 };
 
 static TestH264Multi::VideoInfo bear_data = {
@@ -678,4 +749,9 @@ TEST(H264Multi, DecodeWithEarlyEos) {
 TEST(H264Multi, DecodeWithLateEos) {
   TestH264Multi::DecodeWithEos("video_test_data/bear.h264", bear_h264_hashes,
                                "/tmp/bearmultih264.yuv", /*early_eos=*/false);
+}
+
+TEST(H264Multi, DecodeMalformedSize) {
+  // This changes the height to 53184, which is too high for the hardware.
+  TestH264Multi::DecodeMalformed(bear_data, {{593, 64}});
 }

@@ -496,6 +496,27 @@ void H264MultiDecoder::StartFrameDecode() {
 void H264MultiDecoder::ConfigureDpb() {
   ZX_DEBUG_ASSERT(currently_decoding_);
   ZX_DEBUG_ASSERT(!video_frames_.empty());
+  auto stream_info = StreamInfo::Get().ReadFrom(owner_->dosbus());
+  uint32_t mb_width = stream_info.width_in_mbs();
+  // The maximum supported image width is 4096 bytes. The value of width_in_mbs should be 256 in
+  // that case, but it wraps around since the field is only 8 bits. We need to correct for that
+  // special case.
+  if (!mb_width && stream_info.total_mbs())
+    mb_width = 256;
+  if (!mb_width) {
+    DECODE_ERROR("0 mb_width");
+    OnFatalError();
+    return;
+  }
+  uint32_t mb_height = stream_info.total_mbs() / mb_width;
+  // Check that the values derived from the stream buffer contents match the input that was parsed
+  // through media::H264Decoder.
+  if (mb_width != mb_width_ || mb_height != mb_height_) {
+    DECODE_ERROR("Non-matching mb_width %d mb_width_ %d mb_height %d mb_height_ %d", mb_width,
+                 mb_width_, mb_height, mb_height_);
+    OnFatalError();
+    return;
+  }
   seq_info2_ = AvScratch1::Get().ReadFrom(owner_->dosbus()).reg_value();
   for (auto& frame : video_frames_) {
     AncNCanvasAddr::Get(frame->index)
@@ -516,6 +537,7 @@ struct HardwareRenderParams {
   static constexpr uint32_t kOffsetDelimiterLo = 0x2f;
   static constexpr uint32_t kOffsetDelimiterHi = 0x30;
 
+  static constexpr uint32_t kNewPictureStructure = 0x7c;
   static constexpr uint32_t kNalUnitType = 0x80;
   static constexpr uint32_t kNalRefIdc = 0x81;
   static constexpr uint32_t kSliceType = 0x82;
@@ -611,6 +633,30 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   }
   SliceData slice_data = std::move(slice_data_list_.front());
   slice_data_list_.pop_front();
+
+  // The following checks are to try to ensure what the hardware's parsing matches what H264Decoder
+  // parsed. They generally should only fail if the streambuffer contents don't match what was
+  // decoded.
+
+  // Slices 5-9 are equivalent for this purpose with slices 0-4 - see 7.4.3
+  constexpr uint32_t kSliceTypeMod = 5;
+  if (slice_data.header.slice_type % kSliceTypeMod !=
+      params.data[HardwareRenderParams::kSliceType] % kSliceTypeMod) {
+    DECODE_ERROR("Slice types don't match %d %d", slice_data.header.slice_type,
+                 params.data[HardwareRenderParams::kSliceType]);
+    OnFatalError();
+    return;
+  }
+
+  // Check for interlacing.
+  constexpr uint32_t kPictureStructureFrame = 3;
+  if (params.data[HardwareRenderParams::kNewPictureStructure] != kPictureStructureFrame) {
+    DECODE_ERROR("Unexpected picture structure type %d",
+                 params.data[HardwareRenderParams::kNewPictureStructure]);
+    OnFatalError();
+    return;
+  }
+
   auto poc = poc_.ComputePicOrderCnt(&slice_data.sps, slice_data.header);
   if (!poc) {
     DECODE_ERROR("No poc");
@@ -746,13 +792,21 @@ void H264MultiDecoder::HandlePicDataDone() {
   // TODO(fxb/13483): Get PTS
   current_frame_ = nullptr;
   current_metadata_frame_ = nullptr;
-  ZX_DEBUG_ASSERT(slice_data_list_.size() == 0);
 
   OutputReadyFrames();
   state_ = DecoderState::kInitialWaitingForInput;
   owner_->core()->StopDecoding();
 
+  // Set currently_decoding_ to false after OutputReadyFrames to avoid running PumpDecoder too
+  // early.
   currently_decoding_ = false;
+
+  if (!slice_data_list_.empty()) {
+    DECODE_ERROR("Extra unexpected slice data for frame: %ld", slice_data_list_.size());
+    // This shouldn't happen if the client is behaving correctly.
+    OnFatalError();
+    return;
+  }
   PropagatePotentialEos();
   if (pending_config_change_) {
     StartConfigChange();
@@ -1066,6 +1120,12 @@ void H264MultiDecoder::PropagatePotentialEos() {
   client_->OnEos();
 }
 
+void H264MultiDecoder::RequestStreamReset() {
+  fatal_error_ = true;
+  frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
+  owner_->TryToReschedule();
+}
+
 void H264MultiDecoder::StartConfigChange() {
   ZX_DEBUG_ASSERT(pending_config_change_);
   // We shouldn't try to run this if decoding is currently ongoing, since the interrupt handlers are
@@ -1088,6 +1148,13 @@ void H264MultiDecoder::StartConfigChange() {
   uint32_t max_frame_count = 24;
   uint32_t coded_width = media_decoder_->GetPicSize().width();
   uint32_t coded_height = media_decoder_->GetPicSize().height();
+  constexpr uint32_t kMaxDimension = 4096;  // for both width and height.
+
+  if (coded_width > kMaxDimension || coded_height > kMaxDimension) {
+    DECODE_ERROR("Unsupported dimensions %dx%d", coded_width, coded_height);
+    RequestStreamReset();
+    return;
+  }
   uint32_t stride = fbl::round_up(coded_width, 32u);
   bool has_sar = false;
   uint32_t sar_width = 1;
@@ -1113,7 +1180,7 @@ void H264MultiDecoder::PumpDecoder() {
 
   while (true) {
     if (waiting_for_surfaces_ || currently_decoding_ || pending_config_change_ ||
-        (state_ == DecoderState::kSwappedOut))
+        (state_ == DecoderState::kSwappedOut) || fatal_error_)
       return;
     ZX_DEBUG_ASSERT(!in_pump_decoder_);
     in_pump_decoder_ = true;
@@ -1146,8 +1213,7 @@ void H264MultiDecoder::PumpDecoder() {
       owner_->TryToReschedule();
       return;
     } else if (res == media::AcceleratedVideoDecoder::kDecodeError) {
-      frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
-      owner_->TryToReschedule();
+      RequestStreamReset();
       return;
     } else if (res == media::AcceleratedVideoDecoder::kTryAgain) {
       owner_->TryToReschedule();

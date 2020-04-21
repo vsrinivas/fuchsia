@@ -133,6 +133,10 @@ class H264MultiDecoder : public VideoDecoder {
   void OutputReadyFrames();
   void PropagatePotentialEos();
   void HandleHardwareError();
+  // This method should be called when the decoder detects an error with the input stream and
+  // requires that the decoder is torn down and recreated before continuing. The method will try to
+  // reschedule, since the decoder can't do any more work.
+  void RequestStreamReset();
 
   FrameDataProvider* frame_data_provider_;
   bool fatal_error_ = false;
