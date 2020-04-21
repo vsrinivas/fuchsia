@@ -73,12 +73,12 @@ zx_status_t fx_log_init_with_config(const fx_logger_config_t* config);
     }                                                       \
   } while (0)
 
-#define _FX_LOGF(severity, tag, message, ...)                            \
-  do {                                                                   \
-    fx_logger_t* logger = fx_log_get_logger();                           \
-    if (fx_logger_get_min_severity(logger) <= (severity)) {              \
-      fx_logger_logf(logger, (severity), (tag), (message), __VA_ARGS__); \
-    }                                                                    \
+#define _FX_LOGF(severity, tag, message...)                 \
+  do {                                                      \
+    fx_logger_t* logger = fx_log_get_logger();              \
+    if (fx_logger_get_min_severity(logger) <= (severity)) { \
+      fx_logger_logf(logger, (severity), (tag), message);   \
+    }                                                       \
   } while (0)
 
 #define _FX_LOGVF(severity, tag, message, args)                      \
@@ -99,8 +99,7 @@ zx_status_t fx_log_init_with_config(const fx_logger_config_t* config);
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
 // |message| is the message to write, or NULL if none.
-#define FX_LOGF(severity, tag, message, ...) \
-  _FX_LOGF((FX_LOG_##severity), tag, message, __VA_ARGS__)
+#define FX_LOGF(severity, tag, message...) _FX_LOGF((FX_LOG_##severity), tag, message)
 
 // Writes formatted message to the global logger using vaargs
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
@@ -119,7 +118,7 @@ zx_status_t fx_log_init_with_config(const fx_logger_config_t* config);
 // |verbosity| is positive integer.
 // |tag| is a tag to associated with the message, or NULL if none.
 // |message| is the message to write, or NULL if none.
-#define FX_VLOGF(verbosity, tag, message, ...) _FX_LOGF(-(verbosity), tag, message, __VA_ARGS__)
+#define FX_VLOGF(verbosity, tag, message...) _FX_LOGF(-(verbosity), tag, message)
 
 // Writes formatted verbose message to the global logger using vaargs
 // |verbosity| is positive integer.
