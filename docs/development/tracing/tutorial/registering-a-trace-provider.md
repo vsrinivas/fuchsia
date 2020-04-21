@@ -38,7 +38,7 @@ For example:
     // process argv
 
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-    trace::TracelinkProviderWithFdio trace_provider(
+    trace::TraceProviderWithFdio trace_provider(
         loop.dispatcher(), "my_trace_provider");
 
     // further setup
