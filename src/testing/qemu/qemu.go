@@ -430,6 +430,38 @@ func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) {
 	}
 }
 
+// AssertLogMessageNotSeenWithinTimeout will fail if |notSeen| is seen within the
+// |timeout| period. This function will timeout as success if more than |timeout| has
+// passed without seeing |notSeen|.
+func (i *Instance) AssertLogMessageNotSeenWithinTimeout(notSeen string, timeout time.Duration) {
+	// ReadString is blocking, we need to make sure it respects the global timeout.
+	seen := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-seen:
+				return
+			default:
+				line, err := i.stdout.ReadString('\n')
+				if err == nil {
+					if strings.Contains(line, notSeen) {
+						seen <- true
+						return
+					}
+				}
+			}
+		}
+	}()
+	select {
+	case <-seen:
+		close(seen)
+		panic(notSeen + " was in output")
+	case <-time.After(timeout):
+		close(seen)
+		return
+	}
+}
+
 // Reset display: ESC c
 // Reset screen mode: ESC [ ? 7 l
 // Move cursor home: ESC [ 2 J

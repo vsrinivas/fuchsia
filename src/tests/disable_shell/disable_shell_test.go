@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func zbiPath(t *testing.T) string {
@@ -60,9 +61,10 @@ func TestShellDisabled(t *testing.T) {
 	}
 	defer i.Kill()
 
-	// TODO(fxb/48965) - Enable timeout based checking for disabled to verify
-	// RunCommand doesn't push the echo command.
-	i.WaitForLogMessage("console.shell: disabled")
+	i.WaitForLogMessage("vc: Successfully attached")
+	tokenFromSerial := randomTokenAsString()
+	i.RunCommand("echo '" + tokenFromSerial + "'")
+	i.AssertLogMessageNotSeenWithinTimeout(tokenFromSerial, 3*time.Second)
 }
 
 func TestShellEnabled(t *testing.T) {
