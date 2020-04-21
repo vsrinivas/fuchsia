@@ -752,7 +752,8 @@ void DebuggedProcess::OnStdout(bool close) {
 
   auto data = ReadSocketInput(&stdout_);
   FXL_DCHECK(!data.empty());
-  DEBUG_LOG(Process) << LogPreamble(this) << "Got stdout: " << data.data();
+  DEBUG_LOG(Process) << LogPreamble(this)
+                     << "Got stdout: " << std::string(data.data(), data.size());
   SendIO(debug_ipc::NotifyIO::Type::kStdout, std::move(data));
 }
 
