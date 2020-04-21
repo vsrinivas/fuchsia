@@ -40,6 +40,9 @@ Please read the [contributing doc][contributing] for more information.
 [pagination]: /docs/development/languages/fidl/guides/max-out-pagination.md
 [c-family]: /docs/development/languages/fidl/guides/c-family-comparison.md
 
+[tutorials]: /docs/development/languages/fidl/tutorials/overview.md
+[concepts]: /docs/concepts/fidl/overview.md
+[contributing]: /docs/community/contribute/contributing_to_fidl.md
 [bindings-ref]: /docs/reference/fidl/bindings/overview.md
 [language-ref]: /docs/reference/fidl/language/language.md
 [wire-format]: /docs/reference/fidl/language/wire-format
