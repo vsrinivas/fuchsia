@@ -141,7 +141,7 @@ ktl::optional<IntelHwpPolicy> IntelHwpParsePolicy(const char* str) {
 
 void IntelHwpInit(const cpu_id::CpuId* cpuid, MsrAccess* msr, IntelHwpPolicy policy) {
   // Ensure we have HWP on this CPU.
-  if (!cpuid->ReadFeatures().HasFeature(cpu_id::Features::HWP_PREF)) {
+  if (!IntelHwpSupported(cpuid)) {
     return;
   }
 
@@ -191,6 +191,11 @@ void IntelHwpInit(const cpu_id::CpuId* cpuid, MsrAccess* msr, IntelHwpPolicy pol
   // Program the HWP request register.
   msr->write_msr(X86_MSR_IA32_HWP_REQUEST, MakeHwpRequest(/*min_perf=*/min, /*max_perf=*/max,
                                                           /*desired_perf=*/desired, /*epp=*/pref));
+}
+
+bool IntelHwpSupported(const cpu_id::CpuId* cpuid) {
+  return cpuid->ReadFeatures().HasFeature(cpu_id::Features::HWP) &&
+         cpuid->ReadFeatures().HasFeature(cpu_id::Features::HWP_PREF);
 }
 
 static void hwp_set_hint_sync_task(void* ctx) {

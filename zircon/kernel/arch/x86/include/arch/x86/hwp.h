@@ -36,6 +36,9 @@ ktl::optional<IntelHwpPolicy> IntelHwpParsePolicy(const char* str);
 // If HWP is not supported on the current CPU, no action will be taken.
 void IntelHwpInit(const cpu_id::CpuId*, MsrAccess*, IntelHwpPolicy);
 
+// Determine if Intel HWP is supported on given CPU.
+bool IntelHwpSupported(const cpu_id::CpuId* cpuid);
+
 }  // namespace x86
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_HWP_H_

@@ -39,6 +39,23 @@ bool TestParsePolicy() {
   END_TEST;
 }
 
+bool TestIntelHwpSupported() {
+  BEGIN_TEST;
+
+  // AMD processors that don't support Intel HWP.
+  ASSERT_FALSE(IntelHwpSupported(&cpu_id::kCpuIdAmdA49120C));
+  ASSERT_FALSE(IntelHwpSupported(&cpu_id::kCpuIdThreadRipper2970wx));
+
+  // Intel processors supporting HWP.
+  ASSERT_TRUE(IntelHwpSupported(&cpu_id::kCpuIdCorei5_6260U));
+
+  // Older Intel processors not supporting HWP.
+  ASSERT_FALSE(IntelHwpSupported(&cpu_id::kCpuIdXeon2690v4));
+  ASSERT_FALSE(IntelHwpSupported(&cpu_id::kCpuIdCeleronJ3455));
+
+  END_TEST;
+}
+
 bool TestNoCpuSupport() {
   BEGIN_TEST;
 
@@ -134,6 +151,7 @@ static bool TestUseStablePerformancePolicy() {
 
 UNITTEST_START_TESTCASE(x86_hwp_tests)
 UNITTEST("TestParsePolicy", x86::TestParsePolicy)
+UNITTEST("TestIntelHwpSupported", x86::TestIntelHwpSupported)
 UNITTEST("TestNoCpuSupport", x86::TestNoCpuSupport)
 UNITTEST("TestUseBiosValues", x86::TestUseBiosValues)
 UNITTEST("TestPerformancePolicy", x86::TestUsePerformancePolicy)
