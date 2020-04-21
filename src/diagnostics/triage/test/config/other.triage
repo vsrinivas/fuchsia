@@ -1,13 +1,13 @@
 {
     select: {
-        m: "feedback_agent.cmx:root:current_num_connections"
+        m: "feedback_agent.cmx:root:current_num_connections",
     },
-
     eval: {},
-
     act: {
-        act1: {trigger: "sample::c1", print: "yes on A!"}
+        act1: {
+            trigger: "sample::c1",
+            print: "yes on A!",
+        },
     },
-
     test: {},
 }
