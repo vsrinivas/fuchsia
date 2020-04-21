@@ -51,6 +51,7 @@ void SwipeAction::Run(ActionData process_data) {
   uint32_t new_node_id = new_node->node_id();
   auto promise =
       SetA11yFocusPromise(new_node_id, a11y_focus.value().view_ref_koid)
+          .and_then([this]() { return CancelTts(); })
           .and_then([this, a11y_focus, new_node_id]() mutable {
             return BuildUtteranceFromNodePromise(a11y_focus.value().view_ref_koid, new_node_id);
           })

@@ -79,4 +79,11 @@ fit::promise<Utterance> ScreenReaderAction::BuildUtteranceFromNodePromise(zx_koi
   });
 }
 
+fit::promise<> ScreenReaderAction::CancelTts() {
+  fit::bridge<> bridge;
+  action_context_->tts_engine_ptr->Cancel(
+      [completer = std::move(bridge.completer)]() mutable { completer.complete_ok(); });
+  return bridge.consumer.promise_or(fit::error());
+}
+
 }  // namespace a11y

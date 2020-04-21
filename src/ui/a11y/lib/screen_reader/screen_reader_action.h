@@ -65,6 +65,9 @@ class ScreenReaderAction {
   // utterance is rejected by the TTS service.
   fit::promise<> EnqueueUtterancePromise(fuchsia::accessibility::tts::Utterance utterance);
 
+  // Returns a promise that cancels pending tts utterances.
+  fit::promise<> CancelTts();
+
   // ActionContext which is used to make calls to Semantics Manager and TTS.
   ActionContext* action_context_;
 

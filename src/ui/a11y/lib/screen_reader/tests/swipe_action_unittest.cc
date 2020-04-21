@@ -138,6 +138,7 @@ TEST_F(SwipeActionTest, NoTreeInFocus) {
   EXPECT_FALSE(factory_ptr_->semantic_tree()->IsGetNextNodeCalled());
   EXPECT_FALSE(factory_ptr_->semantic_tree()->IsGetPreviousNodeCalled());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
 }
 
@@ -162,6 +163,7 @@ TEST_F(SwipeActionTest, NextNodeNotFound) {
   EXPECT_TRUE(factory_ptr_->semantic_tree()->IsGetNextNodeCalled());
   EXPECT_EQ(kRootNodeId, factory_ptr_->semantic_tree()->NextNodeCalledOnId());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
 }
 
@@ -187,6 +189,7 @@ TEST_F(SwipeActionTest, PreviousNodeNotFound) {
   EXPECT_TRUE(factory_ptr_->semantic_tree()->IsGetPreviousNodeCalled());
   EXPECT_EQ(kRootNodeId, factory_ptr_->semantic_tree()->PreviousNodeCalledOnId());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
 }
 
@@ -216,6 +219,7 @@ TEST_F(SwipeActionTest, SetA11yFocusFailed) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
   EXPECT_EQ(kRootNodeId, a11y_focus_manager_ptr_->GetA11yFocus().value().node_id);
   EXPECT_EQ(semantic_provider_.koid(),
             a11y_focus_manager_ptr_->GetA11yFocus().value().view_ref_koid);
@@ -246,6 +250,7 @@ TEST_F(SwipeActionTest, NextActionPerformed) {
   RunLoopUntilIdle();
 
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   EXPECT_EQ(next_node_id, a11y_focus_manager_ptr_->GetA11yFocus().value().node_id);
   EXPECT_EQ(semantic_provider_.koid(),
             a11y_focus_manager_ptr_->GetA11yFocus().value().view_ref_koid);
@@ -281,6 +286,7 @@ TEST_F(SwipeActionTest, PreviousActionPerformed) {
   RunLoopUntilIdle();
 
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   EXPECT_EQ(previous_node_id, a11y_focus_manager_ptr_->GetA11yFocus().value().node_id);
   EXPECT_EQ(semantic_provider_.koid(),
             a11y_focus_manager_ptr_->GetA11yFocus().value().view_ref_koid);

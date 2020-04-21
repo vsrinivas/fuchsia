@@ -64,6 +64,7 @@ void ExploreAction::Run(ActionData process_data) {
                      mode = screen_reader_context_->mode()](Hit& hit) mutable -> fit::promise<> {
             return SetA11yFocusOrStopPromise(mode, view_koid, hit.node_id());
           })
+          .and_then([this]() { return CancelTts(); })
           .and_then([this]() mutable -> fit::result<A11yFocusManager::A11yFocusInfo> {
             auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
             auto focus = a11y_focus_manager->GetA11yFocus();

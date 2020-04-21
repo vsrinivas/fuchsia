@@ -110,6 +110,9 @@ TEST_F(ExploreActionTest, SuccessfulExploreActionReadsLabel) {
   EXPECT_EQ(focus->node_id, 0u);
   EXPECT_EQ(focus->view_ref_koid, semantic_provider_.koid());
 
+  // Make sure Cancel() is called to empty the queue.
+  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
+
   EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
 
   // Check if Utterance and Speak functions are called in Tts.
@@ -135,6 +138,7 @@ TEST_F(ExploreActionTest, HitTestFails) {
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
   EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
+  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
 }
 
 TEST_F(ExploreActionTest, SetA11yFocusFails) {
@@ -160,6 +164,7 @@ TEST_F(ExploreActionTest, SetA11yFocusFails) {
 
   EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
+  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
 }
 
 TEST_F(ExploreActionTest, GettingA11yFocusFails) {
@@ -178,6 +183,7 @@ TEST_F(ExploreActionTest, GettingA11yFocusFails) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   // We need to inspect the focus that was set by us, so flip the mock behavior.
   a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(false);
 
@@ -205,6 +211,7 @@ TEST_F(ExploreActionTest, HitTestNodeIDResultIsNotPresentInTheTree) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
 }
@@ -232,6 +239,7 @@ TEST_F(ExploreActionTest, NodeIsMissingLabelToBuildUtterance) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
 }
@@ -251,6 +259,7 @@ TEST_F(ExploreActionTest, EnqueueTtsUtteranceFails) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
 }
@@ -270,6 +279,8 @@ TEST_F(ExploreActionTest, SpeakFails) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
+
   // It received the utterances, but failed Speak() later.
   ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
   EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), "Label A");
@@ -295,6 +306,8 @@ TEST_F(ExploreActionTest, ContinuousExploreSpeaksNodeWhenA11yFocusIsDifferent) {
 
   // Checks that a new a11y focus was set.
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
+
   auto focus = a11y_focus_manager_ptr_->GetA11yFocus();
   ASSERT_TRUE(focus);
   EXPECT_EQ(focus->node_id, 0u);
@@ -320,6 +333,7 @@ TEST_F(ExploreActionTest, ContinuousExploreDropsWhenA11yFocusIsTheSame) {
   explore_action.Run(action_data);
   RunLoopUntilIdle();
 
+  EXPECT_FALSE(mock_tts_engine_.ReceivedCancel());
   EXPECT_FALSE(mock_tts_engine_.ReceivedSpeak());
   EXPECT_TRUE(mock_tts_engine_.ExamineUtterances().empty());
 }
