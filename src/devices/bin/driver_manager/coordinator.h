@@ -26,9 +26,9 @@
 #include <fbl/vector.h>
 
 #include "composite_device.h"
-#include "devhost.h"
 #include "device.h"
 #include "driver.h"
+#include "driver_host.h"
 #include "fbl/auto_lock.h"
 #include "fuchsia/device/manager/llcpp/fidl.h"
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
@@ -42,7 +42,7 @@
 
 using llcpp::fuchsia::device::manager::SystemPowerState;
 
-class DevhostLoaderService;
+class DriverHostLoaderService;
 class FsProvider;
 
 constexpr zx::duration kDefaultResumeTimeout = zx::sec(30);
@@ -159,8 +159,8 @@ struct DevmgrArgs {
 struct CoordinatorConfig {
   // Initial root resource from the kernel.
   zx::resource root_resource;
-  // Job for all devhosts.
-  zx::job devhost_job;
+  // Job for all driver_hosts.
+  zx::job driver_host_job;
   // Event that is signaled by the kernel in OOM situation.
   zx::event oom_event;
   // Async dispatcher for the coordinator.
@@ -181,7 +181,7 @@ struct CoordinatorConfig {
   zx::duration suspend_timeout = kDefaultSuspendTimeout;
   // Timeout for system wide resume
   zx::duration resume_timeout = kDefaultResumeTimeout;
-  // Something to clone a handle from the environment to pass to a Devhost.
+  // Something to clone a handle from the environment to pass to a DriverHost.
   FsProvider* fs_provider;
 };
 
@@ -247,11 +247,11 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
                         fbl::RefPtr<Device>* new_device);
   // Begin scheduling for removal of the device and unbinding of its children.
   void ScheduleRemove(const fbl::RefPtr<Device>& dev);
-  // This is for scheduling the initial unbind task as a result of a devhost's |ScheduleRemove|
+  // This is for scheduling the initial unbind task as a result of a driver_host's |ScheduleRemove|
   // request.
   // If |do_unbind| is true, unbinding is also requested for |dev|.
-  void ScheduleDevhostRequestedRemove(const fbl::RefPtr<Device>& dev, bool do_unbind = false);
-  void ScheduleDevhostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent);
+  void ScheduleDriverHostRequestedRemove(const fbl::RefPtr<Device>& dev, bool do_unbind = false);
+  void ScheduleDriverHostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent);
   zx_status_t RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced);
   zx_status_t MakeVisible(const fbl::RefPtr<Device>& dev);
   // Try binding a driver to the device. Returns ZX_ERR_ALREADY_BOUND if there
@@ -278,7 +278,8 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 
   void HandleNewDevice(const fbl::RefPtr<Device>& dev);
-  zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Devhost> target_devhost);
+  zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev,
+                           fbl::RefPtr<DriverHost> target_driver_host);
 
   void DumpState(VmoWriter* vmo) const;
 
@@ -294,7 +295,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   void set_system_available(bool system_available) { system_available_ = system_available; }
   bool system_loaded() const { return system_loaded_; }
 
-  void set_loader_service_connector(Devhost::LoaderServiceConnector loader_service_connector) {
+  void set_loader_service_connector(DriverHost::LoaderServiceConnector loader_service_connector) {
     loader_service_connector_ = std::move(loader_service_connector);
   }
 
@@ -335,9 +336,9 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
 
-  // These methods are used by the Devhost class to register in the coordinator's bookkeeping
-  void RegisterDevhost(Devhost* dh) { devhosts_.push_back(dh); }
-  void UnregisterDevhost(Devhost* dh) { devhosts_.erase(*dh); }
+  // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
+  void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
+  void UnregisterDriverHost(DriverHost* dh) { driver_hosts_.erase(*dh); }
 
  protected:
   std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> fshost_admin_client_;
@@ -345,10 +346,10 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
  private:
   CoordinatorConfig config_;
   bool running_ = false;
-  bool launched_first_devhost_ = false;
+  bool launched_first_driver_host_ = false;
   bool system_available_ = false;
   bool system_loaded_ = false;
-  Devhost::LoaderServiceConnector loader_service_connector_;
+  DriverHost::LoaderServiceConnector loader_service_connector_;
 
   // All Drivers
   fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;
@@ -359,8 +360,8 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   // List of drivers loaded from /system by system_driver_loader()
   fbl::DoublyLinkedList<Driver*, Driver::Node> system_drivers_;
 
-  // All DevHosts
-  fbl::DoublyLinkedList<Devhost*> devhosts_;
+  // All DriverHosts
+  fbl::DoublyLinkedList<DriverHost*> driver_hosts_;
 
   // All Devices (excluding static immortal devices)
   fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode> devices_;
@@ -412,7 +413,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   std::unique_ptr<Driver> ValidateDriver(std::unique_ptr<Driver> drv);
 
-  zx_status_t NewDevhost(const char* name, fbl::RefPtr<Devhost>* out);
+  zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
 
   zx_status_t BindDriver(Driver* drv) {
     return BindDriver(drv, fit::bind_member(this, &Coordinator::AttemptBind));

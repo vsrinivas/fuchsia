@@ -138,8 +138,8 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
-  async::Loop devhost_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  ASSERT_OK(devhost_loop.StartThread("DevHostLoop"));
+  async::Loop driver_host_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  ASSERT_OK(driver_host_loop.StartThread("DriverHostLoop"));
 
   async::Wait suspend_task_pbus(
       platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
@@ -147,7 +147,7 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
         CheckSuspendReceivedAndReply(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC,
                                      ZX_OK);
       });
-  ASSERT_OK(suspend_task_pbus.Begin(devhost_loop.dispatcher()));
+  ASSERT_OK(suspend_task_pbus.Begin(driver_host_loop.dispatcher()));
 
   async::Wait suspend_task_sys(
       sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
@@ -155,7 +155,7 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
         CheckSuspendReceivedAndReply(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC,
                                      ZX_OK);
       });
-  ASSERT_OK(suspend_task_sys.Begin(devhost_loop.dispatcher()));
+  ASSERT_OK(suspend_task_sys.Begin(driver_host_loop.dispatcher()));
 
   zx::channel services, services_remote;
   ASSERT_OK(zx::channel::create(0, &services, &services_remote));
@@ -193,8 +193,8 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
-  async::Loop devhost_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  ASSERT_OK(devhost_loop.StartThread("DevHostLoop"));
+  async::Loop driver_host_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  ASSERT_OK(driver_host_loop.StartThread("DriverHostLoop"));
 
   async::Wait suspend_task_pbus(
       platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
@@ -202,14 +202,14 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
         zx_txid_t txid;
         CheckSuspendReceived(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC, &txid);
       });
-  ASSERT_OK(suspend_task_pbus.Begin(devhost_loop.dispatcher()));
+  ASSERT_OK(suspend_task_pbus.Begin(driver_host_loop.dispatcher()));
 
   async::Wait suspend_task_sys(
       sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
       [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
         CheckSuspendReceived(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
       });
-  ASSERT_OK(suspend_task_sys.Begin(devhost_loop.dispatcher()));
+  ASSERT_OK(suspend_task_sys.Begin(driver_host_loop.dispatcher()));
 
   zx::channel services, services_remote;
   ASSERT_OK(zx::channel::create(0, &services, &services_remote));
@@ -435,8 +435,8 @@ TEST_F(MultipleDeviceTestCase, ResumeTimeout) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
-  async::Loop devhost_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  ASSERT_OK(devhost_loop.StartThread("DevHostLoop"));
+  async::Loop driver_host_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  ASSERT_OK(driver_host_loop.StartThread("DriverHostLoop"));
 
   coordinator_.sys_device()->set_state(Device::State::kSuspended);
   coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
@@ -464,7 +464,7 @@ TEST_F(MultipleDeviceTestCase, ResumeTimeout) {
         ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
             sys_proxy_controller_remote_, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, &txid));
       });
-  ASSERT_OK(resume_task_sys_proxy.Begin(devhost_loop.dispatcher()));
+  ASSERT_OK(resume_task_sys_proxy.Begin(driver_host_loop.dispatcher()));
 
   // Wait for the event that the callback sets, otherwise the test will quit.
   resume_received_event.wait_one(ZX_USER_SIGNAL_0, zx::time(ZX_TIME_INFINITE), nullptr);

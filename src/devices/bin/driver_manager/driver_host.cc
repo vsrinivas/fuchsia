@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devhost.h"
+#include "driver_host.h"
 
 #include <lib/fdio/spawn.h>
 #include <zircon/status.h>
@@ -10,7 +10,7 @@
 #include "coordinator.h"
 #include "src/devices/lib/log/log.h"
 
-Devhost::Devhost(Coordinator* coordinator, zx::channel rpc, zx::process proc)
+DriverHost::DriverHost(Coordinator* coordinator, zx::channel rpc, zx::process proc)
     : coordinator_(coordinator), hrpc_(std::move(rpc)), proc_(std::move(proc)) {
   // cache the process's koid
   zx_info_handle_basic_t info;
@@ -19,28 +19,29 @@ Devhost::Devhost(Coordinator* coordinator, zx::channel rpc, zx::process proc)
     koid_ = info.koid;
   }
 
-  coordinator_->RegisterDevhost(this);
+  coordinator_->RegisterDriverHost(this);
 }
 
-Devhost::~Devhost() {
-  coordinator_->UnregisterDevhost(this);
+DriverHost::~DriverHost() {
+  coordinator_->UnregisterDriverHost(this);
   proc_.kill();
   LOGF(INFO, "Destroyed driver_host %p", this);
 }
 
-zx_status_t Devhost::Launch(Coordinator* coordinator,
-                            const LoaderServiceConnector& loader_connector, const char* devhost_bin,
-                            const char* proc_name, const char* const* proc_env,
-                            const zx::resource& root_resource, zx::unowned_job devhost_job,
-                            FsProvider* fs_provider, fbl::RefPtr<Devhost>* out) {
+zx_status_t DriverHost::Launch(Coordinator* coordinator,
+                               const LoaderServiceConnector& loader_connector,
+                               const char* driver_host_bin, const char* proc_name,
+                               const char* const* proc_env, const zx::resource& root_resource,
+                               zx::unowned_job driver_host_job, FsProvider* fs_provider,
+                               fbl::RefPtr<DriverHost>* out) {
   zx::channel hrpc, dh_hrpc;
   zx_status_t status = zx::channel::create(0, &hrpc, &dh_hrpc);
   if (status != ZX_OK) {
     return status;
   }
 
-  // Give devhosts the root resource if we have it (in tests, we may not)
-  // TODO: limit root resource to root devhost only
+  // Give driver_hosts the root resource if we have it (in tests, we may not)
+  // TODO: limit root resource to root driver_host only
   zx::resource resource;
   if (root_resource.is_valid()) {
     zx_status_t status = root_resource.duplicate(ZX_RIGHT_SAME_RIGHTS, &resource);
@@ -87,18 +88,18 @@ zx_status_t Devhost::Launch(Coordinator* coordinator,
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   // Inherit devmgr's environment (including kernel cmdline)
   const char* const argv[] = {
-      devhost_bin,
+      driver_host_bin,
       nullptr,
   };
   const auto flags = FDIO_SPAWN_CLONE_ENVIRON | FDIO_SPAWN_CLONE_STDIO;
-  status = fdio_spawn_etc(devhost_job->get(), flags, argv[0], argv, proc_env, actions_count,
+  status = fdio_spawn_etc(driver_host_job->get(), flags, argv[0], argv, proc_env, actions_count,
                           actions, proc.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to launch driver_host '%s': %s", proc_name, err_msg);
     return status;
   }
 
-  auto host = fbl::MakeRefCounted<Devhost>(coordinator, std::move(dh_hrpc), std::move(proc));
+  auto host = fbl::MakeRefCounted<DriverHost>(coordinator, std::move(dh_hrpc), std::move(proc));
   LOGF(INFO, "Launching driver_host '%s' (pid %zu)", proc_name, host->koid());
   *out = std::move(host);
   return ZX_OK;

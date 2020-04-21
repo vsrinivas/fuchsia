@@ -96,7 +96,7 @@ void SuspendTask::Run() {
     return;
   }
 
-  // Check if this device is not in a devhost.  This happens for the
+  // Check if this device is not in a driver_host.  This happens for the
   // top-level devices like /sys provided by devcoordinator,
   // or the device is already dead.
   if (device_->host() == nullptr) {

@@ -551,7 +551,7 @@ int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* 
       return ZX_ERR_IO;
     }
 
-    // TODO(ZX-3385): Clean this up once devhost stops speaking fuchsia.io.File
+    // TODO(ZX-3385): Clean this up once driver_host stops speaking fuchsia.io.File
     // on behalf of drivers.  Once that happens, the virtio-console driver
     // should just speak that instead of this shim interface.
     auto boolresp = boot_args.GetBool(fidl::StringView{"console.is_virtio"}, false);

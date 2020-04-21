@@ -12,7 +12,7 @@
 #include "coordinator.h"
 #include "src/devices/lib/log/log.h"
 
-zx_status_t dh_send_create_device(Device* dev, const fbl::RefPtr<Devhost>& dh,
+zx_status_t dh_send_create_device(Device* dev, const fbl::RefPtr<DriverHost>& dh,
                                   zx::channel coordinator_rpc, zx::channel device_controller_rpc,
                                   zx::vmo driver, const char* args, zx::handle rpc_proxy) {
   size_t driver_path_size = dev->libname().size();
@@ -60,7 +60,7 @@ zx_status_t dh_send_create_device(Device* dev, const fbl::RefPtr<Devhost>& dh,
   return msg.Write(dh->hrpc().get(), 0);
 }
 
-zx_status_t dh_send_create_device_stub(Device* dev, const fbl::RefPtr<Devhost>& dh,
+zx_status_t dh_send_create_device_stub(Device* dev, const fbl::RefPtr<DriverHost>& dh,
                                        zx::channel coordinator_rpc,
                                        zx::channel device_controller_rpc, uint32_t protocol_id) {
   FIDL_ALIGNDECL char
@@ -157,7 +157,7 @@ zx_status_t dh_send_complete_removal(Device* dev_ptr, fit::function<void()> cb) 
   return ZX_OK;
 }
 
-zx_status_t dh_send_create_composite_device(const fbl::RefPtr<Devhost>& dh,
+zx_status_t dh_send_create_composite_device(const fbl::RefPtr<DriverHost>& dh,
                                             const Device* composite_dev,
                                             const CompositeDevice& composite,
                                             const uint64_t* fragment_local_ids,

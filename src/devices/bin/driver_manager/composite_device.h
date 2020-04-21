@@ -142,7 +142,7 @@ class CompositeDevice {
   void UnbindFragment(CompositeDeviceFragment* fragment);
 
   // Creates the actual device and orchestrates the creation of the composite
-  // device in a devhost.
+  // device in a driver_host.
   // Returns ZX_ERR_SHOULD_WAIT if some fragment is not fully ready (i.e. has
   // either not been matched or the fragment driver that bound to it has not
   // yet published its device).

@@ -125,12 +125,12 @@ zx_status_t CompositeDevice::TryAssemble() {
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  fbl::RefPtr<Devhost> devhost;
+  fbl::RefPtr<DriverHost> driver_host;
   for (auto& fragment : bound_) {
-    // Find the devhost to put everything in (if we don't find one, nullptr
-    // means "a new devhost").
+    // Find the driver_host to put everything in (if we don't find one, nullptr
+    // means "a new driver_host").
     if (fragment.index() == coresident_device_index_) {
-      devhost = fragment.bound_device()->host();
+      driver_host = fragment.bound_device()->host();
     }
     // Make sure the fragment driver has created its device
     if (fragment.fragment_device() == nullptr) {
@@ -155,27 +155,27 @@ zx_status_t CompositeDevice::TryAssemble() {
 
     // Check if we need to use the proxy.  If not, share a reference to
     // the instance of the fragment device.
-    if (bound_dev->host() == devhost) {
+    if (bound_dev->host() == driver_host) {
       fragment_local_ids[fragment.index()] = fragment_dev->local_id();
       continue;
     }
 
     // We need to create it.  Double check that we haven't ended up in a state
     // where the proxies would need to be in different processes.
-    if (devhost != nullptr && fragment_dev->proxy() != nullptr &&
-        fragment_dev->proxy()->host() != nullptr && fragment_dev->proxy()->host() != devhost) {
+    if (driver_host != nullptr && fragment_dev->proxy() != nullptr &&
+        fragment_dev->proxy()->host() != nullptr && fragment_dev->proxy()->host() != driver_host) {
       LOGF(ERROR, "Cannot create composite device, device proxies are in different driver_hosts");
       return ZX_ERR_BAD_STATE;
     }
 
-    zx_status_t status = coordinator->PrepareProxy(fragment_dev, devhost);
+    zx_status_t status = coordinator->PrepareProxy(fragment_dev, driver_host);
     if (status != ZX_OK) {
       return status;
     }
-    // If we hadn't picked a devhost, use the one that was created just now.
-    if (devhost == nullptr) {
-      devhost = fragment_dev->proxy()->host();
-      ZX_ASSERT(devhost != nullptr);
+    // If we hadn't picked a driver_host, use the one that was created just now.
+    if (driver_host == nullptr) {
+      driver_host = fragment_dev->proxy()->host();
+      ZX_ASSERT(driver_host != nullptr);
     }
     // Stash the local ID after the proxy has been created
     fragment_local_ids[fragment.index()] = fragment_dev->proxy()->local_id();
@@ -194,15 +194,16 @@ zx_status_t CompositeDevice::TryAssemble() {
   }
 
   fbl::RefPtr<Device> new_device;
-  status = Device::CreateComposite(coordinator, devhost, *this, std::move(coordinator_rpc_local),
-                                   std::move(device_controller_rpc_remote), &new_device);
+  status =
+      Device::CreateComposite(coordinator, driver_host, *this, std::move(coordinator_rpc_local),
+                              std::move(device_controller_rpc_remote), &new_device);
   if (status != ZX_OK) {
     return status;
   }
   coordinator->devices().push_back(new_device);
 
-  // Create the composite device in the devhost
-  status = dh_send_create_composite_device(devhost, new_device.get(), *this, fragment_local_ids,
+  // Create the composite device in the driver_host
+  status = dh_send_create_composite_device(driver_host, new_device.get(), *this, fragment_local_ids,
                                            std::move(coordinator_rpc_remote),
                                            std::move(device_controller_rpc_local));
   if (status != ZX_OK) {

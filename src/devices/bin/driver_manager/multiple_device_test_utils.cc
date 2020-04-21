@@ -107,18 +107,18 @@ void MultipleDeviceTestCase::SetUp() {
 
   {
     zx::channel local;
-    zx_status_t status = zx::channel::create(0, &local, &devhost_remote_);
+    zx_status_t status = zx::channel::create(0, &local, &driver_host_remote_);
     ASSERT_OK(status);
-    devhost_ = fbl::MakeRefCounted<Devhost>(&coordinator_, std::move(local), zx::process{});
+    driver_host_ = fbl::MakeRefCounted<DriverHost>(&coordinator_, std::move(local), zx::process{});
   }
 
   // Start the mock server thread.
   ASSERT_OK(mock_server_loop_.StartThread("mock-admin-server"));
 
-  // Set up the sys device proxy, inside of the devhost
-  ASSERT_OK(coordinator_.PrepareProxy(coordinator_.sys_device(), devhost_));
+  // Set up the sys device proxy, inside of the driver_host
+  ASSERT_OK(coordinator_.PrepareProxy(coordinator_.sys_device(), driver_host_));
   coordinator_loop_.RunUntilIdle();
-  ASSERT_NO_FATAL_FAILURES(CheckCreateDeviceReceived(devhost_remote_, kSystemDriverPath,
+  ASSERT_NO_FATAL_FAILURES(CheckCreateDeviceReceived(driver_host_remote_, kSystemDriverPath,
                                                      &sys_proxy_coordinator_remote_,
                                                      &sys_proxy_controller_remote_));
   coordinator_loop_.RunUntilIdle();

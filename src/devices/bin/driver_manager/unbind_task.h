@@ -14,8 +14,8 @@ struct UnbindTaskOpts {
   bool do_unbind;
   // Whether to immediately post this task to the async dispatcher.
   bool post_on_create;
-  // Whether the devhost (i.e. not the devcoordinator) called |ScheduleRemove| on the device.
-  bool devhost_requested;
+  // Whether the driver_host (i.e. not the devcoordinator) called |ScheduleRemove| on the device.
+  bool driver_host_requested;
 };
 
 // This is used for sending |Unbind| requests, and scheduling additional unbind and remove
@@ -34,7 +34,7 @@ class UnbindTask final : public Task {
 
   void set_do_unbind(bool do_unbind) { do_unbind_ = do_unbind; }
 
-  bool devhost_requested() const { return devhost_requested_; }
+  bool driver_host_requested() const { return driver_host_requested_; }
 
   fbl::String TaskDescription() const final {
     return fbl::String::Concat({"unbind(", device_->name(), ")"});
@@ -46,11 +46,11 @@ class UnbindTask final : public Task {
 
   // The device being unbound.
   fbl::RefPtr<Device> device_;
-  // If true, |Unbind| will be sent to the devhost.
+  // If true, |Unbind| will be sent to the driver_host.
   bool do_unbind_;
-  // True if this task is for the device that had |ScheduleRemove| called on it by a devhost,
+  // True if this task is for the device that had |ScheduleRemove| called on it by a driver_host,
   // false otherwise.
-  bool devhost_requested_;
+  bool driver_host_requested_;
 };
 
 // This is used for sending |CompleteRemoval| requests.

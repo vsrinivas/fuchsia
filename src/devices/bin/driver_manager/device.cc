@@ -53,7 +53,7 @@ Device::~Device() {
 
   devfs_unpublish(this);
 
-  // Drop our reference to our devhost if we still have it
+  // Drop our reference to our driver_host if we still have it
   set_host(nullptr);
 
   std::unique_ptr<Metadata> md;
@@ -136,7 +136,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
   return ZX_OK;
 }
 
-zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<Devhost> devhost,
+zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
                                     const CompositeDevice& composite, zx::channel coordinator_rpc,
                                     zx::channel device_controller_rpc,
                                     fbl::RefPtr<Device>* device) {
@@ -160,7 +160,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<Devhos
   dev->device_controller_.Bind(std::move(device_controller_rpc), coordinator->dispatcher());
   dev->set_channel(std::move(coordinator_rpc));
   // We exist within our parent's device host
-  dev->set_host(std::move(devhost));
+  dev->set_host(std::move(driver_host));
 
   // TODO: Record composite membership
 
@@ -351,7 +351,7 @@ void Device::CreateUnbindRemoveTasks(UnbindTaskOpts opts) {
     return;
   }
   // User requested removals take priority over coordinator generated unbind tasks.
-  bool override_existing = opts.devhost_requested && !active_unbind_->devhost_requested();
+  bool override_existing = opts.driver_host_requested && !active_unbind_->driver_host_requested();
   if (!override_existing) {
     return;
   }
@@ -371,7 +371,7 @@ void Device::CreateUnbindRemoveTasks(UnbindTaskOpts opts) {
     // |do_unbind| may not match the stored field in the existing unbind task due to
     // the current device_remove / unbind model.
     // For closest compatibility with the current model, we should prioritize
-    // devhost calls to |ScheduleRemove| over our own scheduled unbind tasks for the children.
+    // driver_host calls to |ScheduleRemove| over our own scheduled unbind tasks for the children.
     active_unbind_->set_do_unbind(opts.do_unbind);
   }
 }
@@ -430,16 +430,16 @@ zx_status_t Device::CompleteRemove(zx_status_t status) {
   }
   if (remove_completion_) {
     // If we received an error, it is because we are currently force removing the device.
-    // In that case, all other devices in the devhost will be force removed too,
+    // In that case, all other devices in the driver_host will be force removed too,
     // and they will call CompleteRemove() before the remove task is scheduled to run.
-    // For ancestor dependents in other devhosts, we want them to proceed removal as usual.
+    // For ancestor dependents in other driver_hosts, we want them to proceed removal as usual.
     remove_completion_(ZX_OK);
   }
   active_remove_ = nullptr;
   return ZX_OK;
 }
 
-// Handle inbound messages from devhost to devices
+// Handle inbound messages from driver_host to devices
 void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher,
                        async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) {
@@ -468,7 +468,7 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
     return;
   }
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    // If the device is already dead, we are detecting an expected disconnect from the devhost.
+    // If the device is already dead, we are detecting an expected disconnect from the driver_host.
     if (dev->state() != Device::State::kDead) {
       LOGF(ERROR, "Disconnected device %p '%s'", dev.get(), dev->name().data());
       dev->coordinator->RemoveDevice(dev, true);
@@ -625,7 +625,7 @@ zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
   return ZX_OK;
 }
 
-void Device::set_host(fbl::RefPtr<Devhost> host) {
+void Device::set_host(fbl::RefPtr<DriverHost> host) {
   if (host_) {
     host_->devices().erase(*this);
   }
@@ -699,8 +699,8 @@ int Device::RunCompatibilityTests() {
     auto& child = *itr;
     itr++;
     this->set_test_state(Device::TestStateMachine::kTestUnbindSent);
-    coordinator->ScheduleDevhostRequestedRemove(fbl::RefPtr<Device>(&child),
-                                                true /* unbind_self */);
+    coordinator->ScheduleDriverHostRequestedRemove(fbl::RefPtr<Device>(&child),
+                                                   true /* unbind_self */);
   }
 
   zx_signals_t observed = 0;
@@ -847,7 +847,7 @@ void Device::ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync comp
 
   VLOGF(1, "Scheduling remove of device %p '%s'", dev.get(), dev->name().data());
 
-  dev->coordinator->ScheduleDevhostRequestedRemove(dev, unbind_self);
+  dev->coordinator->ScheduleDriverHostRequestedRemove(dev, unbind_self);
 }
 
 void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync completer) {
@@ -855,7 +855,7 @@ void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync comple
 
   VLOGF(1, "Scheduling unbind of children for device %p '%s'", dev.get(), dev->name().data());
 
-  dev->coordinator->ScheduleDevhostRequestedUnbindChildren(dev);
+  dev->coordinator->ScheduleDriverHostRequestedUnbindChildren(dev);
 }
 
 void Device::MakeVisible(MakeVisibleCompleter::Sync completer) {

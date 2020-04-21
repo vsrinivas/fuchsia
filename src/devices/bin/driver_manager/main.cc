@@ -41,7 +41,7 @@
 
 #include "coordinator.h"
 #include "devfs.h"
-#include "devhost_loader_service.h"
+#include "driver_host_loader_service.h"
 #include "fdio.h"
 #include "src/devices/lib/log/log.h"
 #include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
@@ -51,8 +51,8 @@ namespace {
 
 // These are helpers for getting sets of parameters over FIDL
 struct DriverManagerParams {
-  bool devhost_asan;
-  bool devhost_strict_linking;
+  bool driver_host_asan;
+  bool driver_host_strict_linking;
   bool log_to_debuglog;
   bool require_system;
   bool suspend_timeout_fallback;
@@ -180,9 +180,9 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
   }
 }
 
-zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) {
-  zx::job devhost_job;
-  zx_status_t status = zx::job::create(root_job, 0u, &devhost_job);
+zx_status_t CreateDriverHostJob(const zx::job& root_job, zx::job* driver_host_job_out) {
+  zx::job driver_host_job;
+  zx_status_t status = zx::job::create(root_job, 0u, &driver_host_job);
   if (status != ZX_OK) {
     LOGF(ERROR, "Unable to create driver_host job: %s", zx_status_get_string(status));
     return status;
@@ -190,19 +190,19 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
   static const zx_policy_basic_v2_t policy[] = {
       {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY},
   };
-  status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy,
-                                  fbl::count_of(policy));
+  status = driver_host_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy,
+                                      fbl::count_of(policy));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to set driver_host job policy: %s", zx_status_get_string(status));
     return status;
   }
-  status = devhost_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
+  status = driver_host_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to set driver_host job property: %s", zx_status_get_string(status));
     return status;
   }
 
-  *devhost_job_out = std::move(devhost_job);
+  *driver_host_job_out = std::move(driver_host_job);
   return ZX_OK;
 }
 
@@ -255,7 +255,7 @@ int main(int argc, char** argv) {
   config.dispatcher = loop.dispatcher();
   config.boot_args = &boot_args;
   config.require_system = driver_manager_params.require_system;
-  config.asan_drivers = driver_manager_params.devhost_asan;
+  config.asan_drivers = driver_manager_params.driver_host_asan;
   config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;
   config.verbose = driver_manager_params.verbose;
   config.disable_netsvc = devmgr_args.disable_netsvc;
@@ -273,7 +273,7 @@ int main(int argc, char** argv) {
     LOGF(ERROR, "Failed to get root job: %s", zx_status_get_string(status));
     return status;
   }
-  status = CreateDevhostJob(root_job, &config.devhost_job);
+  status = CreateDriverHostJob(root_job, &config.driver_host_job);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to create driver_host job: %s", zx_status_get_string(status));
     return status;
@@ -393,9 +393,9 @@ int main(int argc, char** argv) {
   }
   thrd_detach(t);
 
-  if (driver_manager_params.devhost_strict_linking) {
-    std::unique_ptr<DevhostLoaderService> loader_service;
-    status = DevhostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);
+  if (driver_manager_params.driver_host_strict_linking) {
+    std::unique_ptr<DriverHostLoaderService> loader_service;
+    status = DriverHostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to create loader service: %s", zx_status_get_string(status));
       return status;

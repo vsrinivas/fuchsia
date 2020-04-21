@@ -29,7 +29,7 @@
 #include "metadata.h"
 
 class Coordinator;
-class Devhost;
+class DriverHost;
 struct Devnode;
 class InitTask;
 class RemoveTask;
@@ -45,7 +45,7 @@ struct UnbindTaskOpts;
 #define DEV_CTX_IMMORTAL           0x01
 
 // This device requires that children are created in a
-// new devhost attached to a proxy device
+// new driver_host attached to a proxy device
 #define DEV_CTX_MUST_ISOLATE       0x02
 
 // This device may be bound multiple times
@@ -123,9 +123,9 @@ class Device : public fbl::RefCounted<Device>,
     static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) { return obj.node_; }
   };
 
-  struct DevhostNode {
+  struct DriverHostNode {
     static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
-      return obj.devhost_node_;
+      return obj.driver_host_node_;
     }
   };
 
@@ -269,7 +269,7 @@ class Device : public fbl::RefCounted<Device>,
   ~Device();
 
   // Create a new device with the given parameters.  This sets up its
-  // relationship with its parent and devhost and adds its RPC channel to the
+  // relationship with its parent and driver_host and adds its RPC channel to the
   // coordinator's async loop.  This does not add the device to the
   // coordinator's devices_ list, or trigger publishing
   static zx_status_t Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
@@ -278,7 +278,7 @@ class Device : public fbl::RefCounted<Device>,
                             zx::channel coordinator_rpc, zx::channel device_controller_rpc,
                             bool wait_make_visible, bool want_init_task, zx::channel client_remote,
                             fbl::RefPtr<Device>* device);
-  static zx_status_t CreateComposite(Coordinator* coordinator, fbl::RefPtr<Devhost> devhost,
+  static zx_status_t CreateComposite(Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
                                      const CompositeDevice& composite, zx::channel coordinator_rpc,
                                      zx::channel device_controller_rpc,
                                      fbl::RefPtr<Device>* device);
@@ -382,8 +382,8 @@ class Device : public fbl::RefCounted<Device>,
   }
   void disassociate_from_composite() { composite_ = UnassociatedWithComposite{}; }
 
-  void set_host(fbl::RefPtr<Devhost> host);
-  const fbl::RefPtr<Devhost>& host() const { return host_; }
+  void set_host(fbl::RefPtr<DriverHost> host);
+  const fbl::RefPtr<DriverHost>& host() const { return host_; }
   uint64_t local_id() const { return local_id_; }
 
   const fbl::DoublyLinkedList<std::unique_ptr<Metadata>, Metadata::Node>& metadata() const {
@@ -464,12 +464,12 @@ class Device : public fbl::RefCounted<Device>,
   // TODO(teisenbe): We probably want more states.
   enum class State {
     kActive,
-    kInitializing,  // The devhost is in the process of running the device init hook.
-    kSuspending,    // The devhost is in the process of suspending the device.
+    kInitializing,  // The driver_host is in the process of running the device init hook.
+    kSuspending,    // The driver_host is in the process of suspending the device.
     kSuspended,
-    kResuming,   // The devhost is in the process of resuming the device.
+    kResuming,   // The driver_host is in the process of resuming the device.
     kResumed,    // Resume is complete. Will be marked active, after all children resume.
-    kUnbinding,  // The devhost is in the process of unbinding and removing the device.
+    kUnbinding,  // The driver_host is in the process of unbinding and removing the device.
     kDead,       // The device has been remove()'d
   };
 
@@ -576,8 +576,8 @@ class Device : public fbl::RefCounted<Device>,
   // listnode for this device in the all devices list
   fbl::DoublyLinkedListNodeState<fbl::RefPtr<Device>> all_devices_node_;
 
-  // listnode for this device in its devhost's list-of-devices
-  fbl::DoublyLinkedListNodeState<Device*> devhost_node_;
+  // listnode for this device in its driver_host's list-of-devices
+  fbl::DoublyLinkedListNodeState<Device*> driver_host_node_;
 
   // list of all fragments that this device bound to.
   fbl::DoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceNode> fragments_;
@@ -592,9 +592,9 @@ class Device : public fbl::RefCounted<Device>,
   struct UnassociatedWithComposite {};
   std::variant<UnassociatedWithComposite, CompositeDevice*> composite_;
 
-  fbl::RefPtr<Devhost> host_;
-  // The id of this device from the perspective of the devhost.  This can be
-  // used to communicate with the devhost about this device.
+  fbl::RefPtr<DriverHost> host_;
+  // The id of this device from the perspective of the driver_host.  This can be
+  // used to communicate with the driver_host about this device.
   uint64_t local_id_ = 0;
 
   // The current state of the device

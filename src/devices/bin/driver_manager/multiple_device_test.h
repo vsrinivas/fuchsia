@@ -93,8 +93,8 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void set_coordinator_loop_thread_running(bool value) { coordinator_loop_thread_running_ = value; }
   CoordinatorForTest* coordinator() { return &coordinator_; }
 
-  const fbl::RefPtr<Devhost>& devhost() { return devhost_; }
-  const zx::channel& devhost_remote() { return devhost_remote_; }
+  const fbl::RefPtr<DriverHost>& driver_host() { return driver_host_; }
+  const zx::channel& driver_host_remote() { return driver_host_remote_; }
 
   const fbl::RefPtr<Device>& platform_bus() const { return platform_bus_.device; }
   const zx::channel& platform_bus_coordinator_remote() const {
@@ -151,7 +151,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void SetUp() override;
   void TearDown() override;
 
-  // These should be listed after devhost/sys_proxy as it needs to be
+  // These should be listed after driver_host/sys_proxy as it needs to be
   // destroyed before them.
   async::Loop coordinator_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   bool coordinator_loop_thread_running_ = false;
@@ -167,12 +167,12 @@ class MultipleDeviceTestCase : public zxtest::Test {
   CoordinatorForTest coordinator_{DefaultConfig(
       coordinator_loop_.dispatcher(), mock_server_loop_.dispatcher(), &boot_args_, &args_client_)};
 
-  // The fake devhost that the platform bus is put into
-  fbl::RefPtr<Devhost> devhost_;
+  // The fake driver_host that the platform bus is put into
+  fbl::RefPtr<DriverHost> driver_host_;
 
   // The remote end of the channel that the coordinator uses to talk to the
-  // devhost
-  zx::channel devhost_remote_;
+  // driver_host
+  zx::channel driver_host_remote_;
 
   // The remote end of the channel that the coordinator uses to talk to the
   // sys device proxy

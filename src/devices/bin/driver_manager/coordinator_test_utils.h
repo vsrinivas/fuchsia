@@ -30,7 +30,7 @@
 
 #include "coordinator.h"
 #include "devfs.h"
-#include "devhost.h"
+#include "driver_host.h"
 #include "fdio.h"
 
 constexpr char kSystemDriverPath[] = "/boot/driver/platform-bus.so";

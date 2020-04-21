@@ -77,7 +77,7 @@ TEST_F(UnbindTestCase, UnbindWithRemoveOp) {
   // We will schedule child device 1_1_1's removal in device 1_1's unbind hook.
   auto unbind_op = [&] {
     ASSERT_NO_FATAL_FAILURES(
-        coordinator_.ScheduleDevhostRequestedRemove(device(devices[2].index)->device));
+        coordinator_.ScheduleDriverHostRequestedRemove(device(devices[2].index)->device));
   };
   devices[1].unbind_op = unbind_op;
   ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, fbl::count_of(devices), index_to_remove));
@@ -141,10 +141,10 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
   if (unbind_children_only) {
     // Skip removal of the target device.
     ASSERT_NO_FATAL_FAILURES(
-        coordinator_.ScheduleDevhostRequestedUnbindChildren(device(desc.index)->device));
+        coordinator_.ScheduleDriverHostRequestedUnbindChildren(device(desc.index)->device));
   } else {
-    ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleDevhostRequestedRemove(device(desc.index)->device,
-                                                                         unbind_target_device));
+    ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleDriverHostRequestedRemove(
+        device(desc.index)->device, unbind_target_device));
   }
   coordinator_loop()->RunUntilIdle();
 
@@ -291,7 +291,7 @@ TEST_F(UnbindTestCase, NumRemovals) {
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  // Make sure the coordinator device does not detect the devhost's remote channel closing,
+  // Make sure the coordinator device does not detect the driver_host's remote channel closing,
   // otherwise it will try to remove an already dead device and we will get a log error.
   child_device->coordinator_remote.reset();
   coordinator_loop()->RunUntilIdle();
@@ -513,12 +513,12 @@ TEST_F(UnbindTestCase, RemoveParentAndChildSimultaneously) {
   auto* child_device = device(child_index);
 
   ASSERT_NO_FATAL_FAILURES(
-      coordinator_.ScheduleDevhostRequestedRemove(parent_device->device, false /* do_unbind */));
+      coordinator_.ScheduleDriverHostRequestedRemove(parent_device->device, false /* do_unbind */));
   coordinator_loop()->RunUntilIdle();
 
   // At the same time, have the child try to remove itself.
   ASSERT_NO_FATAL_FAILURES(
-      coordinator_.ScheduleDevhostRequestedRemove(child_device->device, false /* do_unbind */));
+      coordinator_.ScheduleDriverHostRequestedRemove(child_device->device, false /* do_unbind */));
   coordinator_loop()->RunUntilIdle();
 
   zx_txid_t txid;

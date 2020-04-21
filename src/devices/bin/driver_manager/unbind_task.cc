@@ -13,7 +13,7 @@ UnbindTask::UnbindTask(fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completi
     : Task(device->coordinator->dispatcher(), std::move(completion), opts.post_on_create),
       device_(std::move(device)),
       do_unbind_(opts.do_unbind),
-      devhost_requested_(opts.devhost_requested) {}
+      driver_host_requested_(opts.driver_host_requested) {}
 
 UnbindTask::~UnbindTask() = default;
 
@@ -51,7 +51,7 @@ void UnbindTask::ScheduleUnbindChildren() {
       case Device::State::kResumed:
       case Device::State::kActive: {
         device_->proxy()->CreateUnbindRemoveTasks(UnbindTaskOpts{
-            .do_unbind = false, .post_on_create = false, .devhost_requested = false});
+            .do_unbind = false, .post_on_create = false, .driver_host_requested = false});
 
         proxy_unbind_task = device_->proxy()->GetActiveUnbind();
         // The proxy's unbind task may have already completed, in which case we only
@@ -95,7 +95,7 @@ void UnbindTask::ScheduleUnbindChildren() {
         break;
     }
     child.CreateUnbindRemoveTasks(
-        UnbindTaskOpts{.do_unbind = true, .post_on_create = false, .devhost_requested = false});
+        UnbindTaskOpts{.do_unbind = true, .post_on_create = false, .driver_host_requested = false});
 
     auto parent = device_->proxy() != nullptr ? device_->proxy() : device_;
 
@@ -149,7 +149,7 @@ void UnbindTask::Run() {
   ScheduleUnbindChildren();
 
   auto completion = [this](zx_status_t status) {
-    // If this unbind task failed, force remove all devices from the devhost.
+    // If this unbind task failed, force remove all devices from the driver_host.
     bool failed_unbind = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_unbind && device_->state() != Device::State::kDead) {
       LOGF(ERROR, "Unbind task failed, force removing device %p '%s': %s", device_.get(),
@@ -161,8 +161,8 @@ void UnbindTask::Run() {
     Complete(status == ZX_OK ? ZX_OK : ZX_ERR_UNAVAILABLE);
   };
 
-  // Check if we should send the unbind request to the devhost. We do not want to send it if:
-  //  - This device is not in a devhost.  This happens for the top-level devices like /sys
+  // Check if we should send the unbind request to the driver_host. We do not want to send it if:
+  //  - This device is not in a driver_host.  This happens for the top-level devices like /sys
   //    provided by devcoordinator, or if the device has already been removed.
   //  - device_remove does not call unbind on the device.
   bool send_unbind = (device_->host() != nullptr) && do_unbind_;
@@ -170,7 +170,7 @@ void UnbindTask::Run() {
   if (send_unbind) {
     status = device_->SendUnbind(std::move(completion));
     if (status == ZX_OK) {
-      // Sent the unbind request, the devhost will call our completion when ready.
+      // Sent the unbind request, the driver_host will call our completion when ready.
       return;
     }
   }
@@ -197,7 +197,7 @@ fbl::RefPtr<RemoveTask> RemoveTask::Create(fbl::RefPtr<Device> device, Completio
 void RemoveTask::Run() {
   LOGF(INFO, "Running remove task for device %p '%s'", device_.get(), device_->name().data());
   auto completion = [this](zx_status_t status) {
-    // If this remove task failed, force remove all devices from the devhost.
+    // If this remove task failed, force remove all devices from the driver_host.
     bool failed_remove = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_remove && device_->state() != Device::State::kDead) {
       LOGF(ERROR, "Remove task failed, forcing remove of device %p '%s': %s", device_.get(),
@@ -213,7 +213,7 @@ void RemoveTask::Run() {
   if (device_->host() != nullptr) {
     status = device_->SendCompleteRemoval(std::move(completion));
     if (status == ZX_OK) {
-      // Sent the remove request, the devhost will call our completion when ready.
+      // Sent the remove request, the driver_host will call our completion when ready.
       return;
     }
   }

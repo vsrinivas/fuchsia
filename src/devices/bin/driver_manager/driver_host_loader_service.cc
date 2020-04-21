@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devhost_loader_service.h"
+#include "driver_host_loader_service.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -45,7 +45,7 @@ zx_status_t LoadObject(void* ctx, const char* name, zx_handle_t* vmo) {
   if (!InWhitelist(name)) {
     return ZX_ERR_ACCESS_DENIED;
   }
-  auto self = static_cast<DevhostLoaderService*>(ctx);
+  auto self = static_cast<DriverHostLoaderService*>(ctx);
   fbl::String path = fbl::StringPrintf("/boot/lib/%s", name);
   int raw_fd;
   zx_status_t status =
@@ -88,9 +88,9 @@ constexpr loader_service_ops_t ops_{
 
 }  // namespace
 
-zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
-                                         SystemInstance* system_instance,
-                                         std::unique_ptr<DevhostLoaderService>* out) {
+zx_status_t DriverHostLoaderService::Create(async_dispatcher_t* dispatcher,
+                                            SystemInstance* system_instance,
+                                            std::unique_ptr<DriverHostLoaderService>* out) {
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_create(&ns);
   if (status != ZX_OK) {
@@ -118,7 +118,7 @@ zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
     LOGF(ERROR, "Failed to open root directory");
     return ZX_ERR_IO;
   }
-  std::unique_ptr<DevhostLoaderService> ldsvc(new DevhostLoaderService);
+  std::unique_ptr<DriverHostLoaderService> ldsvc(new DriverHostLoaderService);
   status = loader_service_create(dispatcher, &ops_, ldsvc.get(), &ldsvc->svc_);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to create loader service: %s", zx_status_get_string(status));
@@ -129,12 +129,12 @@ zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
   return ZX_OK;
 }
 
-DevhostLoaderService::~DevhostLoaderService() {
+DriverHostLoaderService::~DriverHostLoaderService() {
   if (svc_ != nullptr) {
     loader_service_release(svc_);
   }
 }
 
-zx_status_t DevhostLoaderService::Connect(zx::channel* out) {
+zx_status_t DriverHostLoaderService::Connect(zx::channel* out) {
   return loader_service_connect(svc_, out->reset_and_get_address());
 }

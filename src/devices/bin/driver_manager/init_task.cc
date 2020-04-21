@@ -51,7 +51,7 @@ void InitTask::Run() {
     } else if (device_->state() != Device::State::kDead) {
       LOGF(ERROR, "Init task failed, scheduling removal of device %p '%s': %s", device_.get(),
            device_->name().data(), zx_status_get_string(status));
-      device_->coordinator->ScheduleDevhostRequestedRemove(device_, true /* do_unbind */);
+      device_->coordinator->ScheduleDriverHostRequestedRemove(device_, true /* do_unbind */);
     }
     // We still want other tasks to run even if init failed, so do not propagate errors.
     // If a driver adds multiple devices, it is possible that init tasks are scheduled
@@ -65,7 +65,7 @@ void InitTask::Run() {
   if (device_->host() != nullptr) {
     status = device_->SendInit(std::move(completion));
     if (status == ZX_OK) {
-      // Sent the init request, the devhost will call our completion when ready.
+      // Sent the init request, the driver_host will call our completion when ready.
       return;
     }
   }

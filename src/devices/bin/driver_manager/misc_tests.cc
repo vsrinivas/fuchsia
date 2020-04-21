@@ -24,7 +24,7 @@
 
 #include "coordinator_test_utils.h"
 #include "devfs.h"
-#include "devhost.h"
+#include "driver_host.h"
 #include "driver_test_reporter.h"
 #include "fdio.h"
 
@@ -390,13 +390,13 @@ TEST(MiscTestCase, BindDevices) {
   loop.RunUntilIdle();
   ASSERT_FALSE(coordinator.drivers().is_empty());
 
-  // The device has no devhost, so the init task should automatically complete.
+  // The device has no driver_host, so the init task should automatically complete.
   ASSERT_TRUE(device->is_visible());
   ASSERT_EQ(Device::State::kActive, device->state());
 
-  // Bind the device to a fake devhost.
+  // Bind the device to a fake driver_host.
   fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
-  auto host = fbl::MakeRefCounted<Devhost>(&coordinator, zx::channel{}, zx::process{});
+  auto host = fbl::MakeRefCounted<DriverHost>(&coordinator, zx::channel{}, zx::process{});
   dev->set_host(std::move(host));
   status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
   ASSERT_OK(status);
@@ -405,7 +405,7 @@ TEST(MiscTestCase, BindDevices) {
   ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(controller_remote, kDriverPath));
   loop.RunUntilIdle();
 
-  // Reset the fake devhost connection.
+  // Reset the fake driver_host connection.
   dev->set_host(nullptr);
   coordinator_remote.reset();
   controller_remote.reset();
@@ -447,13 +447,13 @@ TEST(MiscTestCase, TestOutput) {
   loop.RunUntilIdle();
   ASSERT_FALSE(coordinator.drivers().is_empty());
 
-  // The device has no devhost, so the init task should automatically complete.
+  // The device has no driver_host, so the init task should automatically complete.
   ASSERT_TRUE(device->is_visible());
   ASSERT_EQ(Device::State::kActive, device->state());
 
-  // Bind the device to a fake devhost.
+  // Bind the device to a fake driver_host.
   fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
-  auto host = fbl::MakeRefCounted<Devhost>(&coordinator, zx::channel{}, zx::process{});
+  auto host = fbl::MakeRefCounted<DriverHost>(&coordinator, zx::channel{}, zx::process{});
   dev->set_host(std::move(host));
   status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
   ASSERT_OK(status);
@@ -482,7 +482,7 @@ TEST(MiscTestCase, TestOutput) {
   EXPECT_TRUE(test_reporter->log_test_case_called);
   EXPECT_TRUE(test_reporter->finished_called);
 
-  // Reset the fake devhost connection.
+  // Reset the fake driver_host connection.
   dev->set_host(nullptr);
   controller_remote.reset();
   coordinator_remote.reset();

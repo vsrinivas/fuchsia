@@ -50,7 +50,7 @@
 
 #include "composite_device.h"
 #include "devfs.h"
-#include "devhost_loader_service.h"
+#include "driver_host_loader_service.h"
 #include "env.h"
 #include "fidl.h"
 #include "fidl_txn.h"
@@ -374,15 +374,15 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
   return ZX_OK;
 }
 
-zx_status_t Coordinator::NewDevhost(const char* name, fbl::RefPtr<Devhost>* out) {
+zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out) {
   const char* program = kDriverHostPath;
   std::vector<const char*> env;
   if (config_.asan_drivers) {
     // If there are any ASan drivers, use the ASan-supporting driver_host for
-    // all drivers because even a devhost launched initially with just a
+    // all drivers because even a driver_host launched initially with just a
     // non-ASan driver might later load an ASan driver.  One day we might be
     // able to be more flexible about which drivers must get loaded into the
-    // same devhost and thus be able to use both ASan and non-ASan devhosts
+    // same driver_host and thus be able to use both ASan and non-ASan driver_hosts
     // at the same time when only a subset of drivers use ASan.
     //
     // TODO(44814): The build logic to install the asan-ready driver_host
@@ -393,13 +393,13 @@ zx_status_t Coordinator::NewDevhost(const char* name, fbl::RefPtr<Devhost>* out)
     env.push_back(kAsanEnvironment);
   }
 
-  auto devhost_env = boot_args()->Collect("driver.");
-  if (!devhost_env.ok()) {
-    return devhost_env.status();
+  auto driver_host_env = boot_args()->Collect("driver.");
+  if (!driver_host_env.ok()) {
+    return driver_host_env.status();
   }
 
   std::vector<std::string> strings;
-  for (auto& entry : devhost_env->results) {
+  for (auto& entry : driver_host_env->results) {
     strings.emplace_back(entry.data(), entry.size());
   }
 
@@ -413,21 +413,21 @@ zx_status_t Coordinator::NewDevhost(const char* name, fbl::RefPtr<Devhost>* out)
 
   env.push_back(nullptr);
 
-  fbl::RefPtr<Devhost> dh;
-  zx_status_t status =
-      Devhost::Launch(this, loader_service_connector_, program, name, env.data(), root_resource(),
-                      zx::unowned_job(config_.devhost_job), config_.fs_provider, &dh);
+  fbl::RefPtr<DriverHost> dh;
+  zx_status_t status = DriverHost::Launch(
+      this, loader_service_connector_, program, name, env.data(), root_resource(),
+      zx::unowned_job(config_.driver_host_job), config_.fs_provider, &dh);
   if (status != ZX_OK) {
     return status;
   }
-  launched_first_devhost_ = true;
+  launched_first_driver_host_ = true;
 
   VLOGF(1, "New driver_host %p", dh.get());
   *out = std::move(dh);
   return ZX_OK;
 }
 
-// Add a new device to a parent device (same devhost)
+// Add a new device to a parent device (same driver_host)
 // New device is published in devfs.
 // Caller closes handles on error, so we don't have to.
 zx_status_t Coordinator::AddDevice(
@@ -558,25 +558,26 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
 
 void Coordinator::ScheduleRemove(const fbl::RefPtr<Device>& dev) {
   dev->CreateUnbindRemoveTasks(
-      UnbindTaskOpts{.do_unbind = false, .post_on_create = true, .devhost_requested = false});
+      UnbindTaskOpts{.do_unbind = false, .post_on_create = true, .driver_host_requested = false});
 }
 
-void Coordinator::ScheduleDevhostRequestedRemove(const fbl::RefPtr<Device>& dev, bool do_unbind) {
-  dev->CreateUnbindRemoveTasks(
-      UnbindTaskOpts{.do_unbind = do_unbind, .post_on_create = true, .devhost_requested = true});
+void Coordinator::ScheduleDriverHostRequestedRemove(const fbl::RefPtr<Device>& dev,
+                                                    bool do_unbind) {
+  dev->CreateUnbindRemoveTasks(UnbindTaskOpts{
+      .do_unbind = do_unbind, .post_on_create = true, .driver_host_requested = true});
 }
 
-void Coordinator::ScheduleDevhostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent) {
+void Coordinator::ScheduleDriverHostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent) {
   for (auto& child : parent->children()) {
     child.CreateUnbindRemoveTasks(
-        UnbindTaskOpts{.do_unbind = true, .post_on_create = true, .devhost_requested = true});
+        UnbindTaskOpts{.do_unbind = true, .post_on_create = true, .driver_host_requested = true});
   }
 }
 
 // Remove device from parent
 // forced indicates this is removal due to a channel close
 // or process exit, which means we should remove all other
-// devices that share the devhost at the same time
+// devices that share the driver_host at the same time
 zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced) {
   dev->inc_num_removal_attempts();
 
@@ -604,10 +605,11 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
   dev->CompleteSuspend(ZX_OK);
   dev->CompleteInit(ZX_ERR_UNAVAILABLE);
 
-  fbl::RefPtr<Devhost> dh = dev->host();
-  bool devhost_dying = (dh != nullptr && (dh->flags() & Devhost::Flags::kDying));
-  if (forced || devhost_dying) {
-    // We are force removing all devices in the devhost, so force complete any outstanding tasks.
+  fbl::RefPtr<DriverHost> dh = dev->host();
+  bool driver_host_dying = (dh != nullptr && (dh->flags() & DriverHost::Flags::kDying));
+  if (forced || driver_host_dying) {
+    // We are force removing all devices in the driver_host, so force complete any outstanding
+    // tasks.
     dev->CompleteUnbind(ZX_ERR_UNAVAILABLE);
     dev->CompleteRemove(ZX_ERR_UNAVAILABLE);
 
@@ -644,19 +646,19 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     }
   }
 
-  // detach from devhost
+  // detach from driver_host
   if (dh != nullptr) {
-    // We're holding on to a reference to the devhost through |dh|.
+    // We're holding on to a reference to the driver_host through |dh|.
     // This is necessary to prevent it from being freed in the middle of
     // the code below.
     dev->set_host(nullptr);
 
     // If we are responding to a disconnect,
-    // we'll remove all the other devices on this devhost too.
-    // A side-effect of this is that the devhost will be released,
+    // we'll remove all the other devices on this driver_host too.
+    // A side-effect of this is that the driver_host will be released,
     // as well as any proxy devices.
     if (forced) {
-      dh->flags() |= Devhost::Flags::kDying;
+      dh->flags() |= DriverHost::Flags::kDying;
 
       fbl::RefPtr<Device> next;
       fbl::RefPtr<Device> last;
@@ -671,7 +673,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
         last = std::move(next);
       }
 
-      // TODO: set a timer so if this devhost does not finish dying
+      // TODO: set a timer so if this driver_host does not finish dying
       //      in a reasonable amount of time, we fix the glitch.
     }
 
@@ -701,16 +703,17 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
         }
 
         // TODO: This code is to cause the bind process to
-        //      restart and get a new devhost to be launched
-        //      when a devhost dies.  It should probably be
-        //      more tied to devhost teardown than it is.
+        //      restart and get a new driver_host to be launched
+        //      when a driver_host dies.  It should probably be
+        //      more tied to driver_host teardown than it is.
         // IF we are the last child of our parent
         // AND our parent is not itself dead
         // AND our parent is a BUSDEV
-        // AND our parent's devhost is not dying
+        // AND our parent's driver_host is not dying
         // THEN we will want to rebind our parent
         if ((parent->state() != Device::State::kDead) && (parent->flags & DEV_CTX_MUST_ISOLATE) &&
-            ((parent->host() == nullptr) || !(parent->host()->flags() & Devhost::Flags::kDying))) {
+            ((parent->host() == nullptr) ||
+             !(parent->host()->flags() & DriverHost::Flags::kDying))) {
           VLOGF(1, "Bus device %p '%s' is unbound", parent.get(), parent->name().data());
 
           if (parent->retries > 0) {
@@ -916,10 +919,10 @@ zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const c
     // Caller is adding a path that matches itself or one of its children, which is allowed.
   } else {
     fbl::RefPtr<Device> itr = dev;
-    // Adding metadata to arbitrary paths is restricted to drivers running in the sys devhost.
+    // Adding metadata to arbitrary paths is restricted to drivers running in the sys driver_host.
     while (itr && itr != sys_device_) {
       if (itr->proxy()) {
-        // this device is in a child devhost
+        // this device is in a child driver_host
         return ZX_ERR_ACCESS_DENIED;
       }
       itr = itr->parent();
@@ -944,9 +947,10 @@ zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const c
   return ZX_OK;
 }
 
-// send message to devhost, requesting the creation of a device
-static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, const fbl::RefPtr<Devhost>& dh,
-                                    const char* args, zx::handle rpc_proxy) {
+// send message to driver_host, requesting the creation of a device
+static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev,
+                                    const fbl::RefPtr<DriverHost>& dh, const char* args,
+                                    zx::handle rpc_proxy) {
   zx_status_t r;
 
   zx::channel hcoordinator, hcoordinator_remote;
@@ -983,7 +987,7 @@ static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, const fbl::R
   return ZX_OK;
 }
 
-// send message to devhost, requesting the binding of a driver to a device
+// send message to driver_host, requesting the binding of a driver to a device
 static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* libname) {
   zx::vmo vmo;
   zx_status_t status = dev->coordinator->LibnameToVmo(libname, &vmo);
@@ -1046,11 +1050,11 @@ static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* li
 }
 
 // Create the proxy node for the given device if it doesn't exist and ensure it
-// has a devhost.  If |target_devhost| is not nullptr and the proxy doesn't have
-// a devhost yet, |target_devhost| will be used for it.  Otherwise a new devhost
+// has a driver_host.  If |target_driver_host| is not nullptr and the proxy doesn't have
+// a driver_host yet, |target_driver_host| will be used for it.  Otherwise a new driver_host
 // will be created.
 zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
-                                      fbl::RefPtr<Devhost> target_devhost) {
+                                      fbl::RefPtr<DriverHost> target_driver_host) {
   ZX_ASSERT(!(dev->flags & DEV_CTX_PROXY) && (dev->flags & DEV_CTX_MUST_ISOLATE));
 
   // proxy args are "processname,args"
@@ -1063,8 +1067,8 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
   size_t arg0len = arg1 - arg0;
   arg1++;
 
-  char devhostname[32];
-  snprintf(devhostname, sizeof(devhostname), "driver_host:%.*s", (int)arg0len, arg0);
+  char driver_hostname[32];
+  snprintf(driver_hostname, sizeof(driver_hostname), "driver_host:%.*s", (int)arg0len, arg0);
 
   zx_status_t r;
   if (dev->proxy() == nullptr && (r = dev->CreateProxy()) != ZX_OK) {
@@ -1072,7 +1076,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
     return r;
   }
 
-  // if this device has no devhost, first instantiate it
+  // if this device has no driver_host, first instantiate it
   if (dev->proxy()->host() == nullptr) {
     zx::channel h0, h1;
     // the immortal root devices do not provide proxy rpc
@@ -1084,23 +1088,24 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
         return r;
       }
     }
-    if (target_devhost == nullptr) {
-      if ((r = NewDevhost(devhostname, &target_devhost)) < 0) {
-        LOGF(ERROR, "Failed to create driver_host '%s': %s", devhostname, zx_status_get_string(r));
+    if (target_driver_host == nullptr) {
+      if ((r = NewDriverHost(driver_hostname, &target_driver_host)) < 0) {
+        LOGF(ERROR, "Failed to create driver_host '%s': %s", driver_hostname,
+             zx_status_get_string(r));
         return r;
       }
     }
 
-    dev->proxy()->set_host(std::move(target_devhost));
+    dev->proxy()->set_host(std::move(target_driver_host));
     if ((r = dh_create_device(dev->proxy(), dev->proxy()->host(), arg1, std::move(h1))) < 0) {
       LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().data(),
-           devhostname, zx_status_get_string(r));
+           driver_hostname, zx_status_get_string(r));
       return r;
     }
     if (need_proxy_rpc) {
       if ((r = dh_send_connect_proxy(dev.get(), std::move(h0))) < 0) {
         LOGF(ERROR, "Failed to connect to proxy device '%s' in driver_host '%s': %s",
-             dev->name().data(), devhostname, zx_status_get_string(r));
+             dev->name().data(), driver_hostname, zx_status_get_string(r));
       }
     }
     if (dev == sys_device_) {
@@ -1112,7 +1117,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
     if (client_remote.is_valid()) {
       if ((r = devfs_connect(dev->proxy().get(), std::move(client_remote))) != ZX_OK) {
         LOGF(ERROR, "Failed to connect to service from proxy device '%s' in driver_host '%s': %s",
-             dev->name().data(), devhostname, zx_status_get_string(r));
+             dev->name().data(), driver_hostname, zx_status_get_string(r));
       }
     }
   }
@@ -1136,12 +1141,12 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
   }
 
   zx_status_t r;
-  if ((r = PrepareProxy(dev, nullptr /* target_devhost */)) < 0) {
+  if ((r = PrepareProxy(dev, nullptr /* target_driver_host */)) < 0) {
     return r;
   }
 
   r = dh_bind_driver(dev->proxy(), drv->libname.c_str());
-  // TODO(swetland): arrange to mark us unbound when the proxy (or its devhost) goes away
+  // TODO(swetland): arrange to mark us unbound when the proxy (or its driver_host) goes away
   if ((r == ZX_OK) && !(dev->flags & DEV_CTX_MULTI_BIND)) {
     dev->flags |= DEV_CTX_BOUND;
   }
@@ -1379,7 +1384,7 @@ void Coordinator::Resume(SystemPowerState target_state, ResumeCallback callback)
 
 std::unique_ptr<Driver> Coordinator::ValidateDriver(std::unique_ptr<Driver> drv) {
   if ((drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !config_.asan_drivers) {
-    if (launched_first_devhost_) {
+    if (launched_first_driver_host_) {
       LOGF(ERROR, "%s (%s) requires ASan, cannot load after boot; use devmgr.devhost.asan=true",
            drv->libname.data(), drv->name.data());
       return nullptr;
@@ -1591,7 +1596,7 @@ zx_status_t Coordinator::ScanSystemDrivers() {
   }
   system_loaded_ = true;
   // Fire up a thread to scan/load system drivers.
-  // This avoids deadlocks between the devhosts hosting the block devices that
+  // This avoids deadlocks between the driver_hosts hosting the block devices that
   // these drivers may be served from and the devcoordinator loading them.
   thrd_t t;
   auto callback = [](void* arg) {

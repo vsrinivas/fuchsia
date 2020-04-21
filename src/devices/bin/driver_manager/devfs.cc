@@ -201,7 +201,7 @@ bool devnode_is_dir(const Devnode* dn) {
 }
 
 // Local devnodes are ones that we should not hand off OPEN
-// RPCs to the underlying devhost
+// RPCs to the underlying driver_host
 bool devnode_is_local(Devnode* dn) {
   if (dn->device == nullptr) {
     return true;

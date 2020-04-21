@@ -182,7 +182,7 @@ void CompositeTestCase::CheckCompositeCreation(const char* composite_name,
   }
   // Make sure the composite comes up
   ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
-      devhost_remote(), composite_name, device_indexes_count, composite_remote_coordinator_out,
+      driver_host_remote(), composite_name, device_indexes_count, composite_remote_coordinator_out,
       composite_remote_controller_out));
 }
 
@@ -532,10 +532,10 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
                                        driver, &fragment_device2_indexes[0]));
   }
   ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
-      devhost_remote(), kCompositeDev1Name, fbl::count_of(device_indexes),
+      driver_host_remote(), kCompositeDev1Name, fbl::count_of(device_indexes),
       &composite1_remote_coordinator, &composite1_remote_controller));
   ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
-      devhost_remote(), kCompositeDev2Name, fbl::count_of(device_indexes),
+      driver_host_remote(), kCompositeDev2Name, fbl::count_of(device_indexes),
       &composite1_remote_coordinator, &composite2_remote_controller));
 }
 
@@ -626,7 +626,7 @@ TEST_F(CompositeTestCase, FragmentUnbinds) {
                                        &fragment_device_indexes[0]));
   }
   ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
-      devhost_remote(), kCompositeDevName, fbl::count_of(device_indexes),
+      driver_host_remote(), kCompositeDevName, fbl::count_of(device_indexes),
       &composite_remote_coordinator, &composite_remote_controller));
 }
 
@@ -1110,7 +1110,7 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
                                        &fragment_device_indexes[0]));
   }
   ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(
-      devhost_remote(), kCompositeDevName, fbl::count_of(device_indexes),
+      driver_host_remote(), kCompositeDevName, fbl::count_of(device_indexes),
       &composite_remote_coordinator, &composite_remote_controller));
 
   composite_device = GetCompositeDeviceFromFragment(kCompositeDevName, device_indexes[0]);
