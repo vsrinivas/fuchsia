@@ -8,8 +8,13 @@
 
 mod board;
 mod image;
+mod update_mode;
 
-pub use crate::{board::VerifyBoardError, image::OpenImageError};
+pub use crate::{
+    board::VerifyBoardError,
+    image::OpenImageError,
+    update_mode::{ParseUpdateModeError, UpdateMode},
+};
 use fidl_fuchsia_io::DirectoryProxy;
 
 /// An open handle to an "update" package.
@@ -32,6 +37,11 @@ impl UpdatePackage {
     /// Verifies the board file has the given `contents`.
     pub async fn verify_board(&self, contents: &str) -> Result<(), VerifyBoardError> {
         board::verify_board(&self.proxy, contents).await
+    }
+
+    /// Parses the update-mode file to obtain update mode.
+    pub async fn update_mode(&self) -> Result<Option<UpdateMode>, ParseUpdateModeError> {
+        update_mode::update_mode(&self.proxy).await
     }
 }
 

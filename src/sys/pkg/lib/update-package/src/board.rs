@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Typesafe wrappers around verifying the board file.
+
 use {fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon::Status, thiserror::Error};
 
 /// An error encountered while verifying the board.
@@ -64,7 +66,8 @@ mod tests {
         let p = TestUpdatePackage::new().add_file("board", "khloe").await;
         assert_matches!(
             p.verify_board("kendall").await,
-            Err(VerifyBoardError::VerifyContents { .. })
+            Err(VerifyBoardError::VerifyContents { expected, found })
+                if expected=="kendall" && found=="khloe"
         );
     }
 }

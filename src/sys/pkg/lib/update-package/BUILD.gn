@@ -18,6 +18,8 @@ rustc_library("update-package") {
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",

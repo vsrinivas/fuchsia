@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::anyhow;
+use {
+    anyhow::anyhow,
+    fuchsia_syslog::fx_log_info,
+    update_package::{UpdateMode, UpdatePackage},
+};
 
 mod args;
 
@@ -13,7 +17,7 @@ fn main() {
 
 // TODO(49911) use this. Note: this behavior will be tested with the integration tests.
 #[allow(dead_code)]
-async fn verify_board(pkg: update_package::UpdatePackage) -> Result<(), anyhow::Error> {
+async fn verify_board(pkg: UpdatePackage) -> Result<(), anyhow::Error> {
     let system_board_file = io_util::file::open_in_namespace(
         "/config/build-info/board",
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
@@ -27,4 +31,18 @@ async fn verify_board(pkg: update_package::UpdatePackage) -> Result<(), anyhow::
     pkg.verify_board(&system_board_name)
         .await
         .map_err(|e| anyhow!(e).context("verify system board"))
+}
+
+// TODO(49911) use this. Note: this behavior will be tested with the integration tests.
+#[allow(dead_code)]
+async fn update_mode(
+    pkg: UpdatePackage,
+) -> Result<UpdateMode, update_package::ParseUpdateModeError> {
+    pkg.update_mode().await.map(|opt| {
+        opt.unwrap_or_else(|| {
+            let mode = UpdateMode::default();
+            fx_log_info!("update-mode file not found, using default mode: {:?}", mode);
+            mode
+        })
+    })
 }
