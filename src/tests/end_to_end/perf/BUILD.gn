@@ -46,24 +46,21 @@ foreach(target_name, test_list) {
 copy("runtime_deps") {
   _data_dir = "$target_gen_dir/runtime_deps"
 
-  sources = [
-    "$root_out_dir/catapult_converter",
-    "$root_out_dir/iperf3",
-  ]
-
+  sources = [ "$root_out_dir/catapult_converter" ]
   outputs = [ "$_data_dir/{{source_file_part}}" ]
 
   metadata = {
-    test_runtime_deps = [
-      "$_data_dir/catapult_converter",
-      "$_data_dir/iperf3",
-    ]
+    test_runtime_deps = [ "$_data_dir/catapult_converter" ]
   }
 
-  deps = [
-    "//garnet/bin/catapult_converter:converter_bin",
-    "//third_party/iperf:bin",
-  ]
+  deps = [ "//garnet/bin/catapult_converter:converter_bin" ]
+
+  # TODO(48350): Enable host build for non-linux hosts as well.
+  if (host_os == "linux") {
+    sources += [ "$root_out_dir/iperf3" ]
+    deps += [ "//third_party/iperf:bin" ]
+    metadata.test_runtime_deps += [ "$_data_dir/iperf3" ]
+  }
 }
 
 # Packages required either:
