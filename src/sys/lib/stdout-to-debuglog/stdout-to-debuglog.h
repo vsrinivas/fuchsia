@@ -14,7 +14,7 @@ namespace StdoutToDebuglog {
 // otherwise have stdout and stderr. The fuchsia.logger.LogSink protocol is also
 // insufficient for some of these components for logging, as we must have logs
 // for many of these components before appmgr can start running v1 components.
-zx_status_t Init(void);
+zx_status_t Init();
 
 }  // namespace StdoutToDebuglog
 

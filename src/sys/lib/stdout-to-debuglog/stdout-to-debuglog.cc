@@ -9,7 +9,7 @@
 
 namespace StdoutToDebuglog {
 
-int Init(void) {
+zx_status_t Init() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
