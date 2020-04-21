@@ -162,13 +162,14 @@ mod tests {
         super::*,
         crate::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
-        fuchsia_vfs_pseudo_fs::{
-            directory::entry::DirectoryEntry,
-            file::simple::{read_only_str, read_write_str, write_only},
-            pseudo_directory,
-        },
         futures::prelude::*,
         matches::assert_matches,
+        vfs::{
+            directory::entry::DirectoryEntry,
+            execution_scope::ExecutionScope,
+            file::pcb::{read_only_static, read_write, write_only},
+            pseudo_directory,
+        },
     };
 
     const DATA_FILE_CONTENTS: &str = "Hello World!\n";
@@ -301,26 +302,25 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn open_file_flags() {
-        let mut example_dir = pseudo_directory! {
-            "read_only" => read_only_str(|| Ok("read_only".to_string())),
-            "read_write" => read_write_str(
-                || Ok("read_write".to_string()),
+        let example_dir = pseudo_directory! {
+            "read_only" => read_only_static("read_only"),
+            "read_write" => read_write(
+                || future::ok("read_write".as_bytes().into()),
                 100,
-                |_| Ok(()),
+                |_| future::ok(()),
             ),
-            "write_only" => write_only(100, |_| Ok(())),
+            "write_only" => write_only(100, |_| future::ok(())),
         };
         let (example_dir_proxy, example_dir_service) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
         example_dir.open(
+            scope,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
-            &mut std::iter::empty(),
+            vfs::path::Path::empty(),
             ServerEnd::new(example_dir_service.into_channel()),
         );
-        fasync::spawn(async move {
-            let _ = example_dir.await;
-        });
 
         for (file_name, flags, should_succeed) in vec![
             ("read_only", OPEN_RIGHT_READABLE, true),
