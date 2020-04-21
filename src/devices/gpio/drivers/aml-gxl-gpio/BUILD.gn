@@ -13,6 +13,7 @@ driver_module("aml-gxl-gpio") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-gxl-gpio.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -22,7 +23,6 @@ driver_module("aml-gxl-gpio") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-platform-device",
   ]

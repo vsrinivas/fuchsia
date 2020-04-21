@@ -16,6 +16,7 @@ driver_module("aml-thermal-s912") {
   sources = [ "aml-thermal.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.scpi",
     "//sdk/banjo/ddk.protocol.thermal",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
@@ -27,7 +28,6 @@ driver_module("aml-thermal-s912") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/ulib/fidl-utils",
@@ -43,6 +43,8 @@ test("aml-thermal-s912-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//sdk/banjo/ddk.protocol.scpi",
     "//sdk/banjo/ddk.protocol.scpi:ddk.protocol.scpi_mock",
     "//sdk/banjo/ddk.protocol.thermal",
@@ -56,8 +58,6 @@ test("aml-thermal-s912-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/fake_ddk",

@@ -14,6 +14,7 @@ driver_module("aml-axg-gpio") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-axg-gpio.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -25,7 +26,6 @@ driver_module("aml-axg-gpio") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
@@ -43,6 +43,7 @@ test("aml-axg-gpio-test") {
     "aml-axg-gpio.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -55,7 +56,6 @@ test("aml-axg-gpio-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",

@@ -14,6 +14,7 @@ source_set("sources") {
   }
   sources = [ "aml-gpu.cc" ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.iommu",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -25,7 +26,6 @@ source_set("sources") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",

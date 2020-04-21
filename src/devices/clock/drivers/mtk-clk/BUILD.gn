@@ -14,6 +14,7 @@ driver_module("mtk-clk") {
   sources = [ "mtk-clk.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.clockimpl",
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
@@ -26,7 +27,6 @@ driver_module("mtk-clk") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/mt8167",

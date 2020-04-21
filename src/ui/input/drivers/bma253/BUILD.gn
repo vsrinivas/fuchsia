@@ -16,6 +16,7 @@ driver_module("bma253") {
   sources = [ "bma253.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.hidbus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -26,7 +27,6 @@ driver_module("bma253") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/lib/device-protocol-i2c-channel",
     "//zircon/system/dev/lib/device-protocol-pdev",
@@ -43,6 +43,7 @@ test("bma253-test") {
     "bma253.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -54,7 +55,6 @@ test("bma253-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/lib/device-protocol-i2c-channel",
     "//zircon/system/dev/lib/device-protocol-pdev",

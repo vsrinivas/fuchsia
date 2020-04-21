@@ -19,14 +19,14 @@ executable("sdio_test") {
   testonly = true
   sources = [ "sdio_test.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//sdk/banjo/ddk.protocol.sdio",
     "//sdk/banjo/ddk.protocol.sdio:ddk.protocol.sdio_mock",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/dev/lib/broadcom",
     "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/public",

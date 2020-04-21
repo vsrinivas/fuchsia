@@ -23,6 +23,7 @@ driver_module("aml-scpi-s912.mailbox") {
   sources = [ "aml-mailbox.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.mailbox",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
@@ -32,7 +33,6 @@ driver_module("aml-scpi-s912.mailbox") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",

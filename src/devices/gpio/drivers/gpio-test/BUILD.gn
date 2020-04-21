@@ -16,6 +16,7 @@ driver_module("gpio-test") {
   sources = [ "gpio-test.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -23,7 +24,6 @@ driver_module("gpio-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpio",
   ]
 }
 

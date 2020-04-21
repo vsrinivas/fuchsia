@@ -14,6 +14,7 @@ driver_module("gpio-light") {
   sources = [ "gpio-light.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//src/devices/lib/driver",
@@ -23,7 +24,6 @@ driver_module("gpio-light") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpio",
   ]
 }
 

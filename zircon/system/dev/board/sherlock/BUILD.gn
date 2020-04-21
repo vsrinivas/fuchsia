@@ -56,6 +56,7 @@ driver_module("sherlock") {
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.clockimpl",
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.iommu",
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -73,7 +74,6 @@ driver_module("sherlock") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/dev/lib/broadcom",
     "//zircon/system/dev/lib/device-protocol-display",

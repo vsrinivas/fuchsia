@@ -14,6 +14,7 @@ driver_module("as370-sdhci") {
   sources = [ "as370-sdhci.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sdhci",
     "//src/devices/lib/driver",
@@ -24,7 +25,6 @@ driver_module("as370-sdhci") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/lib/device-protocol-i2c-channel",
     "//zircon/system/dev/lib/device-protocol-pdev",
