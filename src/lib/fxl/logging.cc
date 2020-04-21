@@ -49,7 +49,8 @@ const char* StripPath(const char* path) {
 
 }  // namespace
 
-LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const char* condition
+LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const char* condition,
+                       const char* tag
 #if defined(__Fuchsia__)
                        ,
                        zx_status_t status
@@ -57,12 +58,17 @@ LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const c
                        )
     : severity_(severity),
       file_(file),
-      line_(line)
+      line_(line),
+      tag_(tag)
 #if defined(__Fuchsia__)
       ,
       status_(status)
 #endif
 {
+#if !defined(__Fuchsia__)
+  if (tag)
+    stream_ << "[" << tag_ << "] ";
+#endif
   stream_ << "[";
   // With syslog the severity is included in the metadata so no need to add it
   // to the log message itself.
@@ -95,7 +101,7 @@ LogMessage::~LogMessage() {
   if (severity_ == LOG_FATAL)
     std::cerr << stream_.str() << std::endl;
   fx_logger_t* logger = fx_log_get_logger();
-  fx_logger_log(logger, severity_, nullptr, stream_.str().c_str());
+  fx_logger_log(logger, severity_, tag_, stream_.str().c_str());
 #elif defined(OS_ANDROID)
   android_LogPriority priority = (severity_ < 0) ? ANDROID_LOG_VERBOSE : ANDROID_LOG_UNKNOWN;
   switch (severity_) {

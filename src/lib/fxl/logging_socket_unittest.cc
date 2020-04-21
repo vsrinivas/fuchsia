@@ -50,10 +50,12 @@ class LoggingSocketTest : public ::testing::Test {
     return result;
   }
 
-  void ReadPacketAndCompare(fx_log_severity_t severity, const std::string& message) {
+  void ReadPacketAndCompare(fx_log_severity_t severity, const std::string& message,
+                            const std::vector<std::string>& tags = {}) {
     LogPacket packet = ReadPacket();
     EXPECT_EQ(severity, packet.metadata.severity);
     EXPECT_THAT(packet.message, testing::EndsWith(message));
+    EXPECT_EQ(tags, packet.tags);
   }
 
   void CheckSocketEmpty() {
@@ -70,6 +72,14 @@ TEST_F(LoggingSocketTest, LogSimple) {
   const char* msg = "test message";
   FXL_LOG(INFO) << msg;
   ReadPacketAndCompare(FX_LOG_INFO, msg);
+  CheckSocketEmpty();
+}
+
+TEST_F(LoggingSocketTest, LogWithTag) {
+  const char* kMsg = "just some string";
+  const char* kTag = "tag";
+  FXL_LOGT(INFO, kTag) << "just some string";
+  ReadPacketAndCompare(FX_LOG_INFO, kMsg, {kTag});
   CheckSocketEmpty();
 }
 
@@ -107,6 +117,13 @@ TEST_F(LoggingSocketTest, PLog) {
 
   FXL_PLOG(INFO, ZX_ERR_ACCESS_DENIED) << "something that failed";
   ReadPacketAndCompare(FX_LOG_INFO, "something that failed: -30 (ZX_ERR_ACCESS_DENIED)");
+  CheckSocketEmpty();
+}
+
+TEST_F(LoggingSocketTest, PLogWithTag) {
+  FXL_PLOGT(WARNING, "test", ZX_ERR_IO_NOT_PRESENT) << "something bad happened";
+  ReadPacketAndCompare(FX_LOG_WARNING, "something bad happened: -44 (ZX_ERR_IO_NOT_PRESENT)",
+                       {"test"});
   CheckSocketEmpty();
 }
 

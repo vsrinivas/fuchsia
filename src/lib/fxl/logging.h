@@ -25,7 +25,8 @@ class LogMessageVoidify {
 
 class FXL_EXPORT LogMessage {
  public:
-  LogMessage(LogSeverity severity, const char* file, int line, const char* condition
+  LogMessage(LogSeverity severity, const char* file, int line, const char* condition,
+             const char* tag
 #if defined(__Fuchsia__)
              ,
              zx_status_t status = std::numeric_limits<zx_status_t>::max()
@@ -40,6 +41,7 @@ class FXL_EXPORT LogMessage {
   const LogSeverity severity_;
   const char* file_;
   const int line_;
+  const char* tag_;
 #if defined(__Fuchsia__)
   const zx_status_t status_;
 #endif
@@ -65,27 +67,31 @@ FXL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
 
 }  // namespace fxl
 
-#define FXL_LOG_STREAM(severity) \
-  ::fxl::LogMessage(::fxl::LOG_##severity, __FILE__, __LINE__, nullptr).stream()
+#define FXL_LOG_STREAM(severity, tag) \
+  ::fxl::LogMessage(::fxl::LOG_##severity, __FILE__, __LINE__, nullptr, tag).stream()
 
-#define FXL_LOG_STREAM_STATUS(severity, status) \
-  ::fxl::LogMessage(::fxl::LOG_##severity, __FILE__, __LINE__, nullptr, status).stream()
+#define FXL_LOG_STREAM_STATUS(severity, status, tag) \
+  ::fxl::LogMessage(::fxl::LOG_##severity, __FILE__, __LINE__, nullptr, tag, status).stream()
 
 #define FXL_LAZY_STREAM(stream, condition) \
   !(condition) ? (void)0 : ::fxl::LogMessageVoidify() & (stream)
 
-#define FXL_EAT_STREAM_PARAMETERS(ignored) \
-  true || (ignored)                        \
-      ? (void)0                            \
-      : ::fxl::LogMessageVoidify() & ::fxl::LogMessage(::fxl::LOG_FATAL, 0, 0, nullptr).stream()
+#define FXL_EAT_STREAM_PARAMETERS(ignored)         \
+  true || (ignored) ? (void)0                      \
+                    : ::fxl::LogMessageVoidify() & \
+                          ::fxl::LogMessage(::fxl::LOG_FATAL, 0, 0, nullptr, nullptr).stream()
 
 #define FXL_LOG_IS_ON(severity) (::fxl::ShouldCreateLogMessage(::fxl::LOG_##severity))
 
-#define FXL_LOG(severity) FXL_LAZY_STREAM(FXL_LOG_STREAM(severity), FXL_LOG_IS_ON(severity))
+#define FXL_LOG(severity) FXL_LOGT(severity, nullptr)
+
+#define FXL_LOGT(severity, tag) \
+  FXL_LAZY_STREAM(FXL_LOG_STREAM(severity, tag), FXL_LOG_IS_ON(severity))
 
 #if defined(__Fuchsia__)
-#define FXL_PLOG(severity, status) \
-  FXL_LAZY_STREAM(FXL_LOG_STREAM_STATUS(severity, status), FXL_LOG_IS_ON(severity))
+#define FXL_PLOGT(severity, tag, status) \
+  FXL_LAZY_STREAM(FXL_LOG_STREAM_STATUS(severity, status, tag), FXL_LOG_IS_ON(severity))
+#define FXL_PLOG(severity, status) FXL_PLOGT(severity, nullptr, status)
 #endif
 
 // Writes a message to the global logger, the first |n| times that any callsite
@@ -108,15 +114,16 @@ FXL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
          do_log = false)                                                                     \
   FXL_LOG(severity)
 
-#define FXL_CHECK(condition)                                                                    \
-  FXL_LAZY_STREAM(::fxl::LogMessage(::fxl::LOG_FATAL, __FILE__, __LINE__, #condition).stream(), \
-                  !(condition))
+#define FXL_CHECK(condition)                                                                 \
+  FXL_LAZY_STREAM(                                                                           \
+      ::fxl::LogMessage(::fxl::LOG_FATAL, __FILE__, __LINE__, #condition, nullptr).stream(), \
+      !(condition))
 
 #define FXL_VLOG_IS_ON(verbose_level) ((verbose_level) <= ::fxl::GetVlogVerbosity())
 
 // The VLOG macros log with negative verbosities.
 #define FXL_VLOG_STREAM(verbose_level) \
-  ::fxl::LogMessage(-verbose_level, __FILE__, __LINE__, nullptr).stream()
+  ::fxl::LogMessage(-verbose_level, __FILE__, __LINE__, nullptr, nullptr).stream()
 
 #define FXL_VLOG(verbose_level) \
   FXL_LAZY_STREAM(FXL_VLOG_STREAM(verbose_level), FXL_VLOG_IS_ON(verbose_level))

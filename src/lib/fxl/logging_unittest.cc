@@ -103,6 +103,40 @@ TEST_F(LoggingFixture, LogFirstN) {
   EXPECT_EQ(kLimit, count);
 }
 
+TEST_F(LoggingFixture, LogT) {
+  LogSettings new_settings;
+  EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
+  files::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
+  SetLogSettings(new_settings);
+
+  int error_line = __LINE__ + 1;
+  FXL_LOGT(ERROR, "first") << "something at error";
+
+  int info_line = __LINE__ + 1;
+  FXL_LOGT(INFO, "second") << "and some other at info level";
+
+  std::string log;
+  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
+
+#ifdef __Fuchsia__
+  EXPECT_THAT(log, testing::HasSubstr("first] ERROR: [src/lib/fxl/logging_unittest.cc(" +
+                                      std::to_string(error_line) + ")] something at error"));
+
+  EXPECT_THAT(log,
+              testing::HasSubstr("second] INFO: [logging_unittest.cc(" + std::to_string(info_line) +
+                                 ")] and some other at info level"));
+#else
+  EXPECT_THAT(log, testing::HasSubstr("[first] [ERROR:src/lib/fxl/logging_unittest.cc(" +
+                                      std::to_string(error_line) + ")] something at error"));
+
+  EXPECT_THAT(log,
+              testing::HasSubstr("[second] [INFO:logging_unittest.cc(" + std::to_string(info_line) +
+                                 ")] and some other at info level"));
+
+#endif
+}
+
 TEST_F(LoggingFixture, DVLogNoMinLevel) {
   LogSettings new_settings;
   EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
@@ -156,6 +190,29 @@ TEST_F(LoggingFixture, Plog) {
 
   EXPECT_THAT(log, testing::HasSubstr("should be ok: 0 (ZX_OK)"));
   EXPECT_THAT(log, testing::HasSubstr("got access denied: -30 (ZX_ERR_ACCESS_DENIED)"));
+}
+
+TEST_F(LoggingFixture, PlogT) {
+  LogSettings new_settings;
+  EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
+  files::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
+  SetLogSettings(new_settings);
+
+  int line1 = __LINE__ + 1;
+  FXL_PLOGT(ERROR, "abcd", ZX_OK) << "should be ok";
+
+  int line2 = __LINE__ + 1;
+  FXL_PLOGT(ERROR, "qwerty", ZX_ERR_ACCESS_DENIED) << "got access denied";
+
+  std::string log;
+  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
+
+  EXPECT_THAT(log, testing::HasSubstr("abcd] ERROR: [src/lib/fxl/logging_unittest.cc(" +
+                                      std::to_string(line1) + ")] should be ok: 0 (ZX_OK)"));
+  EXPECT_THAT(log, testing::HasSubstr("qwerty] ERROR: [src/lib/fxl/logging_unittest.cc(" +
+                                      std::to_string(line2) +
+                                      ")] got access denied: -30 (ZX_ERR_ACCESS_DENIED)"));
 }
 #endif  // defined(__Fuchsia__)
 
