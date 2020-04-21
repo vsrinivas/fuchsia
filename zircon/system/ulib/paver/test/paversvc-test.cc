@@ -1134,6 +1134,27 @@ TEST_F(PaverServiceBlockTest, WipePartitionTables) {
   ASSERT_OK(wipe_result.status());
   ASSERT_OK(wipe_result->status);
 }
+
+TEST_F(PaverServiceBlockTest, WipeVolume) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  // 32GiB disk.
+  constexpr uint64_t block_count = (32LU << 30) / kBlockSize;
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
+
+  zx::channel gpt_chan;
+  ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
+
+  ASSERT_NO_FATAL_FAILURES(UseBlockDevice(std::move(gpt_chan)));
+
+  auto result = data_sink_->InitializePartitionTables();
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
+
+  auto wipe_result = data_sink_->WipeVolume();
+  ASSERT_OK(wipe_result.status());
+  ASSERT_FALSE(wipe_result->result.is_err());
+}
 #endif
 
 }  // namespace
