@@ -138,6 +138,7 @@ class Imx227Device : public DeviceType,
   void HwDeInit() __TA_REQUIRES(lock_);
   void ShutDown();
   bool ValidateSensorID() __TA_REQUIRES(lock_);
+  bool IsSensorOutOfReset() __TA_REQUIRES(lock_) { return ValidateSensorID(); }
 
   // Sensor Context
   SensorCtx ctx_ __TA_GUARDED(lock_);

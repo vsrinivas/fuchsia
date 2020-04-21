@@ -7,6 +7,7 @@
 #include <endian.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/driver-unit-test/utils.h>
+#include <lib/fit/result.h>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/types.h>
@@ -31,7 +32,6 @@ constexpr uint16_t kSensorModelIdReg = 0x0016;
 constexpr uint16_t kModeSelectReg = 0x0100;
 constexpr uint16_t kFrameLengthLinesReg = 0x0340;
 constexpr uint16_t kLineLengthPckReg = 0x0342;
-
 constexpr uint8_t kByteShift = 8;
 constexpr uint8_t kRaw10Bits = 10;
 constexpr uint8_t kRaw12Bits = 12;
@@ -44,8 +44,32 @@ constexpr int32_t kSensorExpNumber = 1;
 constexpr uint32_t kMasterClock = 288000000;
 constexpr uint32_t kMaxIntegrationTime =
     0x15BC;  // Max allowed for 30fps = 2782 (dec)=0x0ADE (hex) 15fps = 5564 (dec)=0x15BC (hex).
-
+constexpr uint16_t kEndOfSequence = 0x0000;
 }  // namespace
+
+// Gets the register value from the sequence table.
+// |id| : Index of the sequence table.
+// |address| : Address of the register.
+static fit::result<uint8_t, zx_status_t> GetRegisterValueFromSequence(uint8_t index,
+                                                                      uint16_t address) {
+  if (index >= kSEQUENCE_TABLE.size()) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  const InitSeqFmt* sequence = kSEQUENCE_TABLE[index];
+  while (true) {
+    uint16_t register_address = sequence->address;
+    uint16_t register_value = sequence->value;
+    uint16_t register_len = sequence->len;
+    if (register_address == kEndOfSequence && register_value == 0 && register_len == 0) {
+      break;
+    }
+    if (address == register_address) {
+      return fit::ok(register_value);
+    }
+    sequence++;
+  }
+  return fit::error(ZX_ERR_NOT_FOUND);
+}
 
 zx_status_t Imx227Device::InitPdev() {
   std::lock_guard guard(lock_);
@@ -265,14 +289,16 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* ou
   return ZX_OK;
 }
 
+// TODO(braval): Update the Banjo documentation to indicate that SensorSetMode() will
+//               return ZX_OK even when the sensor is powered down and not
+//               initialized into the requested mode.
 zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
   std::lock_guard guard(lock_);
   zxlogf(TRACE, "%s IMX227 Camera Sensor Mode Set request to %d\n", __func__, mode);
 
   HwInit();
 
-  // Get Sensor ID to see if sensor is initialized.
-  if (!IsSensorInitialized() || !ValidateSensorID()) {
+  if (!IsSensorInitialized()) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -282,7 +308,9 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
 
   switch (supported_modes[mode].wdr_mode) {
     case CAMERASENSOR_WDR_MODE_LINEAR: {
-      InitSensor(supported_modes[mode].idx);
+      if (IsSensorOutOfReset()) {
+        InitSensor(supported_modes[mode].idx);
+      }
 
       ctx_.again_delay = 0;
       ctx_.dgain_delay = 0;
@@ -298,8 +326,13 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
 
   ctx_.param.active.width = supported_modes[mode].resolution.width;
   ctx_.param.active.height = supported_modes[mode].resolution.height;
-  ctx_.HMAX = Read16(kLineLengthPckReg);
-  ctx_.VMAX = Read16(kFrameLengthLinesReg);
+  auto hmax_result = GetRegisterValueFromSequence(supported_modes[mode].idx, kLineLengthPckReg);
+  auto vmax_result = GetRegisterValueFromSequence(supported_modes[mode].idx, kFrameLengthLinesReg);
+  if (hmax_result.is_error() || vmax_result.is_error()) {
+    return ZX_ERR_INTERNAL;
+  }
+  ctx_.HMAX = hmax_result.value();
+  ctx_.VMAX = vmax_result.value();
   ctx_.int_max = kMaxIntegrationTime;
   ctx_.int_time_min = 1;
   ctx_.int_time_limit = ctx_.int_max;
