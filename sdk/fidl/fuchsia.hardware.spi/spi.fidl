@@ -17,5 +17,5 @@ protocol Device {
     /// Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     /// buffer.
     Exchange(vector<uint8>:MAX_TRANSFER_SIZE txdata) -> (zx.status status,
-        vector<uint8>:MAX_TRANSFER_SIZE rxdata);
+                                                         vector<uint8>:MAX_TRANSFER_SIZE rxdata);
 };
