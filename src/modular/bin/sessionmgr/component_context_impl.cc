@@ -40,11 +40,24 @@ void ComponentContextImpl::ConnectToAgent(
     std::string url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
+  DeprecatedConnectToAgent(url, std::move(incoming_services_request),
+                           std::move(agent_controller_request));
+}
+
+void ComponentContextImpl::ConnectToAgentService(fuchsia::modular::AgentServiceRequest request) {
+  DeprecatedConnectToAgentService(std::move(request));
+}
+
+void ComponentContextImpl::DeprecatedConnectToAgent(
+    std::string url,
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
   agent_runner_->ConnectToAgent(component_instance_id_, url, std::move(incoming_services_request),
                                 std::move(agent_controller_request));
 }
 
-void ComponentContextImpl::ConnectToAgentService(fuchsia::modular::AgentServiceRequest request) {
+void ComponentContextImpl::DeprecatedConnectToAgentService(
+    fuchsia::modular::AgentServiceRequest request) {
   agent_runner_->ConnectToAgentService(component_instance_id_, std::move(request));
 }
 

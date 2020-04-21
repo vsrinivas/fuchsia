@@ -20,6 +20,10 @@ protocol ComponentContext {
     ConnectToAgent(string url,
                    request<fuchsia.sys.ServiceProvider> incoming_services,
                    request<AgentController> controller);
+    [Transitional]
+    DeprecatedConnectToAgent(string url,
+                             request<fuchsia.sys.ServiceProvider> incoming_services,
+                             request<AgentController> controller);
 
     /// DEPRECATED: use the component's incoming namespace (for C++, see sys.ComponentContext)
     /// to connect to services provided by agents. See
@@ -38,6 +42,8 @@ protocol ComponentContext {
     ///     the agent (either specified or discovered)
     [Transitional]
     ConnectToAgentService(AgentServiceRequest request);
+    [Transitional]
+    DeprecatedConnectToAgentService(AgentServiceRequest request);
 };
 
 /// Used by ComponentContext.ConnectToAgentService
