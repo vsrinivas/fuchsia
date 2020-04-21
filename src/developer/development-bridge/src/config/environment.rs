@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::configuration::ConfigLevel,
+    crate::config::api::ConfigLevel,
     anyhow::{anyhow, Error},
     serde::{Deserialize, Serialize},
     std::{

@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    crate::config::api::{ConfigLevel, ReadConfig, WriteConfig},
     crate::config::args::{
         ConfigCommand, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand, RemoveCommand,
         SetCommand, SubCommand,
     },
-    crate::config::configuration::{Config, ConfigLevel},
     crate::config::environment::Environment,
-    crate::config::{find_env_file, load_config_from_environment, save_config_from_environment},
+    crate::config::{find_env_file, load_config, save_config},
     anyhow::{anyhow, Error},
     serde_json::Value,
     std::collections::HashMap,
@@ -26,9 +26,7 @@ pub fn exec_config<W: Write + Sync>(config: ConfigCommand, writer: W) -> Result<
 }
 
 fn exec_get<W: Write + Sync>(get: GetCommand, mut writer: W) -> Result<(), Error> {
-    let file = find_env_file()?;
-    let env = Environment::load(&file)?;
-    let config = load_config_from_environment(&env, &get.build_dir)?;
+    let config = load_config(&get.build_dir)?;
     match config.get(&get.name) {
         Some(v) => writeln!(writer, "{}: {}", get.name, v)?,
         None => writeln!(writer, "{}: none", get.name)?,
@@ -37,19 +35,15 @@ fn exec_get<W: Write + Sync>(get: GetCommand, mut writer: W) -> Result<(), Error
 }
 
 fn exec_set(set: SetCommand) -> Result<(), Error> {
-    let file = find_env_file()?;
-    let env = Environment::load(&file)?;
-    let mut config = load_config_from_environment(&env, &set.build_dir)?;
+    let mut config = load_config(&set.build_dir)?;
     config.set(&set.level, &set.name, Value::String(set.value))?;
-    save_config_from_environment(&env, &mut config, set.build_dir)
+    save_config(&mut config, set.build_dir)
 }
 
 fn exec_remove(set: RemoveCommand) -> Result<(), Error> {
-    let file = find_env_file()?;
-    let env = Environment::load(&file)?;
-    let mut config = load_config_from_environment(&env, &set.build_dir)?;
+    let mut config = load_config(&set.build_dir)?;
     config.remove(&set.level, &set.name)?;
-    save_config_from_environment(&env, &mut config, set.build_dir)
+    save_config(&mut config, set.build_dir)
 }
 
 fn exec_env_set(env: &mut Environment, s: EnvSetCommand, file: String) -> Result<(), Error> {

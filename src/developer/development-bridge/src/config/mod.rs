@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::args::Ffx,
-    crate::config::configuration::Config,
-    crate::config::configuration::FileBackedConfig,
+    crate::config::api::{PersistentConfig, ReadConfig},
+    crate::config::config::Config,
     crate::config::environment::Environment,
+    crate::config::heuristic_config::HeuristicFn,
     crate::constants::{ENV_FILE, LOG_DIR, LOG_ENABLED, SSH_PRIV, SSH_PUB},
     anyhow::{anyhow, Error},
     serde_json::Value,
     std::{
+        collections::HashMap,
         env,
         fs::File,
         io::Write,
@@ -18,10 +19,17 @@ use {
     },
 };
 
+mod api;
 pub mod args;
 pub mod command;
-pub mod configuration;
-pub mod environment;
+mod config;
+mod env_var_config;
+mod environment;
+mod file_backed_config;
+mod heuristic_config;
+mod persistent_config;
+mod priority_config;
+mod runtime_config;
 
 pub fn get_config(name: &str) -> Result<Option<Value>, Error> {
     get_config_with_build_dir(name, &None)
@@ -31,9 +39,7 @@ pub fn get_config_with_build_dir(
     name: &str,
     build_dir: &Option<String>,
 ) -> Result<Option<Value>, Error> {
-    let file = find_env_file()?;
-    let env = Environment::load(&file)?;
-    let config = load_config_from_environment(&env, build_dir)?;
+    let config = load_config(build_dir)?;
     Ok(config.get(name))
 }
 
@@ -82,47 +88,29 @@ pub(crate) fn find_env_file() -> Result<String, Error> {
     }
 }
 
-pub(crate) fn save_config_from_environment(
-    env: &Environment,
-    config: &mut FileBackedConfig,
-    build_dir: Option<String>,
-) -> Result<(), Error> {
+pub fn save_config(config: &mut Config<'_>, build_dir: Option<String>) -> Result<(), Error> {
+    let file = find_env_file()?;
+    let env = Environment::load(&file)?;
+
     match build_dir {
         Some(b) => config.save(&env.global, &env.build.as_ref().and_then(|c| c.get(&b)), &env.user),
         None => config.save(&env.global, &None, &env.user),
     }
 }
 
-pub(crate) fn load_config_from_environment(
-    env: &Environment,
-    build_dir: &Option<String>,
-) -> Result<Box<FileBackedConfig>, Error> {
-    let mut config = match build_dir {
-        Some(b) => Box::new(FileBackedConfig::load(
-            &env.defaults,
-            &env.global,
-            &env.build.as_ref().and_then(|c| c.get(b)),
-            &env.user,
-        )?),
-        None => Box::new(FileBackedConfig::load(&env.defaults, &env.global, &None, &env.user)?),
-    };
+pub fn load_config<'a>(build_dir: &'_ Option<String>) -> Result<Config<'a>, Error> {
+    let file = find_env_file()?;
+    let env = Environment::load(&file)?;
 
-    config.data.heuristics.insert(SSH_PUB, find_ssh_keys);
-    config.data.heuristics.insert(SSH_PRIV, find_ssh_keys);
-    config.data.environment_variables.insert(LOG_DIR, vec!["FFX_LOG_DIR", "HOME", "HOMEPATH"]);
-    config.data.environment_variables.insert(LOG_ENABLED, vec!["FFX_LOG_ENABLED"]);
+    let mut heuristics = HashMap::<&str, HeuristicFn>::new();
+    heuristics.insert(SSH_PUB, find_ssh_keys);
+    heuristics.insert(SSH_PRIV, find_ssh_keys);
 
-    let cli: Ffx = argh::from_env();
-    match cli.config {
-        Some(config_str) => config_str.split(',').for_each(|c| {
-            let s: Vec<&str> = c.trim().split('=').collect();
-            if s.len() == 2 {
-                config.data.runtime_config.insert(s[0].to_string(), s[1].to_string());
-            }
-        }),
-        _ => {}
-    };
-    Ok(config)
+    let mut environment_variables = HashMap::new();
+    environment_variables.insert(LOG_DIR, vec!["FFX_LOG_DIR", "HOME", "HOMEPATH"]);
+    environment_variables.insert(LOG_ENABLED, vec!["FFX_LOG_ENABLED"]);
+
+    Config::new(&env, build_dir, environment_variables, heuristics, argh::from_env())
 }
 
 fn find_ssh_keys(key: &str) -> Option<Value> {
