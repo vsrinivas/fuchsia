@@ -64,7 +64,7 @@ fn main() -> Result<(), anyhow::Error> {
     // Rename the temp directory project to the final location.
     let dest_project_path = args.absolute_project_path()?;
     fs::rename(&tmp_out_path, &dest_project_path)
-        .map_err(|_| anyhow!("destination directory is not empty: {:?}", &dest_project_path))?;
+        .map_err(|e| anyhow!("rename to destination {:?} failed: {:?}", &dest_project_path, e))?;
 
     if !args.silent {
         println!("Project created at {}.", dest_project_path.to_string_lossy());
