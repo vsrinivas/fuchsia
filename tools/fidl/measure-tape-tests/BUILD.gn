@@ -29,8 +29,8 @@ test("hlcpp_tests") {
 }
 
 measure_tape("measure_tape_for_toplevelunion") {
-  fidls = [ ":measuretape" ]
   target_type = "measuretape/TopLevelUnion"
+  fidls = [ ":measuretape" ]
 }
 
 fidl("measuretape") {

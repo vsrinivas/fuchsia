@@ -454,6 +454,13 @@ To rebuild GIDL:
 fx build host-tools/gidl
 ```
 
+### Measure Tape
+
+```
+fx set core.x64 --with //tools/fidl/measure-tape:host
+fx build
+```
+
 ### All Tests
 
 | Name                     | Test Command                                  | Coverage                                                                |
@@ -475,6 +482,7 @@ fx build host-tools/gidl
 | rust bindings            | `fx test rust_fidl_tests`                     | src/lib/fidl/rust/fidl                                                  |
 | transformer host tests   | fx run-host-tests fidl_transformer_host_tests | zircon/system/ulib/fidl/transformer.cc                                  |
 | transformer tests        | fx run-host-tests fidl_tests                  | zircon/system/ulib/fidl/transformer.cc                                  |
+| measure tape test        | `fx test measure-tape-tests`                  | //tools/fidl/measure-tape                        |
 
 The following requires: `fx set bringup.x64 --with-base //garnet/packages/tests:zircon`
 
