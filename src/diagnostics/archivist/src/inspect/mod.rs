@@ -50,7 +50,7 @@ static IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
 //    3) Reading the bytes from a File.
 //    4) Loading a hierachy from the deprecated inspect fidl protocol.
 //    5) Converting an unpopulated data map into a populated data map.
-static INSPECT_ASYNC_TIMEOUT_SECONDS: i64 = 15;
+static INSPECT_ASYNC_TIMEOUT_SECONDS: i64 = 5;
 
 type InspectDataTrie = trie::Trie<String, UnpopulatedInspectDataContainer>;
 
