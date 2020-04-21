@@ -15,6 +15,13 @@ class AddressSpaceLayout {
 
   static constexpr uint32_t kRingbufferBlankPages = 3;
 
+  // Returns whether the range [start_gpu_addr, end_gpu_addr) lies within the
+  // client reserved region.
+  static bool IsValidClientGpuRange(uint64_t start_gpu_addr, uint64_t end_gpu_addr) {
+    return (start_gpu_addr >= client_gpu_addr_base()) &&
+           (end_gpu_addr <= (client_gpu_addr_base() + client_gpu_addr_size()));
+  }
+
   static uint32_t ringbuffer_size() { return kRingbufferSizeInPages * magma::page_size(); }
 
   static uint32_t system_gpu_addr_size() {

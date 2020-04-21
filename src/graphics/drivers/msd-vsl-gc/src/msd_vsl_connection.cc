@@ -4,6 +4,7 @@
 
 #include "msd_vsl_connection.h"
 
+#include "address_space_layout.h"
 #include "msd_vsl_buffer.h"
 #include "msd_vsl_context.h"
 
@@ -34,7 +35,12 @@ magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
 
 magma::Status MsdVslConnection::MapBufferGpu(std::shared_ptr<MsdVslBuffer> buffer, uint64_t gpu_va,
                                              uint64_t page_offset, uint64_t page_count) {
-  // TODO(fxb/47800): ensure clients cannot map / unmap at the ringbuffer gpu address.
+  uint64_t end_gpu_va = gpu_va + (page_count * magma::page_size());
+  if (!AddressSpaceLayout::IsValidClientGpuRange(gpu_va, end_gpu_va)) {
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                    "failed to map buffer to [0x%lx, 0x%lx), lies outside client region", gpu_va,
+                    end_gpu_va);
+  }
   std::shared_ptr<GpuMapping> mapping;
   magma::Status status = AddressSpace::MapBufferGpu(address_space(), buffer, gpu_va, page_offset,
                                                     page_count, &mapping);

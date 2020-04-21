@@ -94,7 +94,7 @@ TEST(MsdBuffer, Map) {
   msd_buffer_t* buffer;
   ASSERT_TRUE(test.CreateBuffer(kBufferSizeInPages, &buffer));
 
-  constexpr uint64_t kGpuAddress = (1ull << 32) / 2;  // Centered in 32 bit space
+  constexpr uint64_t kGpuAddress = (1ull << 31) / 2;  // Centered in 31 bit space
 
   EXPECT_EQ(MAGMA_STATUS_OK,
             msd_connection_map_buffer_gpu(test.connection(), buffer, kGpuAddress,

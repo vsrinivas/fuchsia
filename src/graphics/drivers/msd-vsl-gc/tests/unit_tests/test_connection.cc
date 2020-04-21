@@ -4,6 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "mock/mock_bus_mapper.h"
+#include "src/graphics/drivers/msd-vsl-gc/src/address_space_layout.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/mapped_batch.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/msd_vsl_connection.h"
 
@@ -172,4 +173,28 @@ TEST_F(TestMsdVslConnection, AddressSpaceDirty) {
             connection_->SubmitBatch(std::make_unique<NullBatch>()).get());
 
   EXPECT_FALSE(connection_->address_space_dirty());
+}
+
+// Tests that the client can map only within the client reserved region.
+TEST_F(TestMsdVslConnection, OnlyMapAllowedGpuAddresses) {
+  constexpr uint64_t kBufferSizeInPages = 2;
+  std::shared_ptr<MsdVslBuffer> buffer =
+      MsdVslBuffer::Create(kBufferSizeInPages * magma::page_size(), "test");
+
+  // Test mapping at the beginning of the client reserved region.
+  uint32_t gpu_addr = AddressSpaceLayout::client_gpu_addr_base();
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            connection_->MapBufferGpu(buffer, gpu_addr, 0, kBufferSizeInPages).get());
+
+  // Test mapping at the end of the client reserved region.
+  uint32_t client_reserved_gpu_addr_end =
+      AddressSpaceLayout::client_gpu_addr_base() + AddressSpaceLayout::client_gpu_addr_size();
+  gpu_addr = client_reserved_gpu_addr_end - (kBufferSizeInPages * magma::page_size());
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            connection_->MapBufferGpu(buffer, gpu_addr, 0, kBufferSizeInPages).get());
+
+  // Test mapping that extends beyond the end of the client reserved region.
+  gpu_addr = client_reserved_gpu_addr_end - magma::page_size();
+  EXPECT_NE(MAGMA_STATUS_OK,
+            connection_->MapBufferGpu(buffer, gpu_addr, 0, kBufferSizeInPages).get());
 }
