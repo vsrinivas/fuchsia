@@ -155,6 +155,19 @@ bool test_log_severity(void) {
   END_TEST;
 }
 
+bool test_log_severity_invalid(void) {
+  BEGIN_TEST;
+  fx_log_reset_global_for_testing();
+  int pipefd[2];
+  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
+  EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
+  fx_logger_t* logger = fx_log_get_logger();
+  EXPECT_EQ(FX_LOG_INFO, fx_logger_get_min_severity(logger));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_logger_set_min_severity(logger, FX_LOG_FATAL + 1));
+  EXPECT_EQ(FX_LOG_INFO, fx_logger_get_min_severity(logger));
+  END_TEST;
+}
+
 bool test_log_write_with_tag(void) {
   BEGIN_TEST;
   int pipefd[2];
@@ -340,6 +353,7 @@ RUN_TEST(test_log_simple_write)
 RUN_TEST(test_log_write)
 RUN_TEST(test_log_preprocessed_message)
 RUN_TEST(test_log_severity)
+RUN_TEST(test_log_severity_invalid)
 RUN_TEST(test_log_write_with_tag)
 RUN_TEST(test_log_write_with_global_tag)
 RUN_TEST(test_log_write_with_multi_global_tag)

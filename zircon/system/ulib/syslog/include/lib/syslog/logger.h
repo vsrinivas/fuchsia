@@ -74,8 +74,8 @@ void fx_logger_destroy(fx_logger_t* logger);
 // Gets the logger's minimum log severity.
 fx_log_severity_t fx_logger_get_min_severity(fx_logger_t* logger);
 
-// Sets logger severity
-void fx_logger_set_min_severity(fx_logger_t* logger, fx_log_severity_t severity);
+// Sets the logger's minimum log severity.
+zx_status_t fx_logger_set_min_severity(fx_logger_t* logger, fx_log_severity_t severity);
 
 // Activates fallback mode and logger starts writing to |fallback_fd|.
 // There is no way to revert this action.

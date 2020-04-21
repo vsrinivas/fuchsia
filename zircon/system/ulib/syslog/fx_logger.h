@@ -59,8 +59,12 @@ struct fx_logger {
     return VLogWrite(severity, tag, msg, empty_args, false);
   }
 
-  void SetSeverity(fx_log_severity_t log_severity) {
+  zx_status_t SetSeverity(fx_log_severity_t log_severity) {
+    if (log_severity > FX_LOG_FATAL) {
+      return ZX_ERR_INVALID_ARGS;
+    }
     severity_.store(log_severity, std::memory_order_relaxed);
+    return ZX_OK;
   }
 
   fx_log_severity_t GetSeverity() { return severity_.load(std::memory_order_relaxed); }

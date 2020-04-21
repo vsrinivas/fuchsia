@@ -52,7 +52,7 @@ fx_log_severity_t fx_logger_get_min_severity(fx_logger_t* logger) {
 }
 
 SYSLOG_EXPORT
-void fx_logger_set_min_severity(fx_logger_t* logger, fx_log_severity_t severity) {
+zx_status_t fx_logger_set_min_severity(fx_logger_t* logger, fx_log_severity_t severity) {
   return logger->SetSeverity(severity);
 }
 
