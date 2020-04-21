@@ -23,10 +23,10 @@ const uint32 MAX_INJECT = 128;
 /// (3) The injected events may be arbitrary. An injector can inject whatever
 ///     it wants to the clients it can reach.
 ///
-/// This protocol sets up the defined context for an |Injector|, and places it
-/// on a target. These parameters are set up in the |InjectorConfig|. An
-/// |Injector| may *inject* pointer events on the specified target in the scene,
-/// but the *dispatch* of pointer events to UI clients will depend on the
+/// This protocol sets up the defined context for an |Injector|, and directs the
+/// |Injector| at a target. These parameters are set up in the |InjectorConfig|.
+/// An |Injector| may *inject* pointer events on the specified target in the
+/// scene, but the *dispatch* of pointer events to UI clients will depend on the
 /// dispatch policy and the scene topology.
 ///
 /// An |Injector| operates within a defined context; it serves two purposes:
@@ -35,22 +35,31 @@ const uint32 MAX_INJECT = 128;
 /// (2) Coordinate System. It provides the reference coordinate space to
 ///     interpret injected pointer events.
 ///
-/// An |Injector| is placed on the specified target in the scene, and it is
-/// afforded some guarantees against snooping and interference from UI clients
-/// outside the target's view tree ("non-target clients").  Non-target clients
-/// never have injected events dispatched to them: an |Injector| preserves
-/// *confidentiality* for target clients.  Non-target clients never block
-/// injected events from reaching the target on injection, or from reaching
-/// target clients on dispatch: an |Injector| preserves *integrity* and
-/// *availability* for target clients.
+/// Guarantees. An |Injector| is directed at a specified target in the scene,
+/// and such a target is afforded some guarantees against snooping and
+/// interference from UI clients outside the target's view tree ("non-target
+/// clients").  Non-target clients never have injected events dispatched to
+/// them: an |Injector| preserves *confidentiality* for target clients.
+/// Non-target clients never block injected events from reaching the target on
+/// injection, or from reaching target clients on dispatch: an |Injector|
+/// preserves *integrity* and *availability* for target clients.  However, the
+/// |Injector| itself is subject to disruption by ancestor views of the target
+/// (see connectivity invariant, below).
 ///
 /// Note. This protocol, and its policies, are *not* a sufficient guard against
 ///       UI redress attacks! The confidentiality, integrity, and availability
 ///       guarantees apply only with respect to non-target clients. Within a
 ///       target, UI redress attacks can still happen, between target clients.
+///
+/// Connectivity invariant.  An |Injector| operates in a stable view tree that
+/// is connected to the root view.  When either the target, or both context and
+/// target, are disconnected from the view tree by a UI client, the |Injector|
+/// channel is closed.  If an event stream was in flight, the server dispatches
+/// a final CANCEL event following channel closure; this CANCEL event is then
+/// propagated according to dispatch policy.
 [Discoverable]
 protocol InjectorRegistry {
-    /// Sets up a defined context for an |Injector|, and places it on a target.
+    /// Sets up a defined context for an |Injector|, and directs it at a target.
     /// These parameters are specified in an |InjectorConfig|.
     ///
     /// If |config| is invalid (e.g., missing important data), the |injector|
@@ -61,14 +70,14 @@ protocol InjectorRegistry {
     Register(InjectorConfig config, request<Injector> injector) -> ();
 };
 
-/// The channel for injecting pointer events on a target.
+/// The channel for injecting pointer events into a target.
 /// The associated |InjectorConfig| applies to injected pointer events.
 ///
-/// An |Injector| may *inject* pointer events on a target in the scene, but the
-/// *dispatch* of pointer events to UI clients will depend on the dispatch
-/// policy and the scene topology.
+/// An |Injector| may *inject* pointer events into a target in the scene, but
+/// the *dispatch* of pointer events to UI clients within that target's view
+/// tree will depend on the dispatch policy and the scene topology.
 protocol Injector {
-    /// Injects events on a target.
+    /// Injects events into a target.
     ///
     /// Batching: The caller is expected to batch-inject all events that share the
     /// same timestamp (e.g., multiple finger samples). There may be multiple such
@@ -86,9 +95,15 @@ table InjectorConfig {
     1: DeviceConfig device_config;
 
     /// The scope and coordinate system of the injector.
+    ///
+    /// Note: To avoid circular injection scenarios, |context| must be a
+    ///       strict ancestor of |target|.
     2: InjectorContext context;
 
     /// The region where dispatch is attempted for injected events.
+    ///
+    /// Note: To avoid circular injection scenarios, |target| must be a strict
+    ///       descendant of |context|.
     3: InjectorTarget target;
 
     /// A specification of the UI clients in |target| that may have injected
@@ -164,7 +179,7 @@ enum DispatchPolicy {
 
     /// A single client may latch onto a pointer stream, where:
     /// - the pointer stream starts in the clip region of |InjectorTarget|,
-    /// - the latch attempt is on the DOWN phase of the pointer stream,
+    /// - the latch attempt is on the ADD phase of the pointer stream,
     /// - the latch attempt hits one or more surfaces owned by a client,
     /// - one of those surfaces is top-most (in Z or paint order) in the view
     ///   tree rooted at |InjectorTarget|, and
@@ -176,7 +191,7 @@ enum DispatchPolicy {
 
     /// Multiple clients may latch onto a pointer stream, where:
     /// - the pointer stream starts in the clip region of |InjectorTarget|,
-    /// - the latch attempt is on the DOWN phase of the pointer stream,
+    /// - the latch attempt is on the ADD phase of the pointer stream,
     /// - the latch attempt hits one or more surfaces owned by multiple clients,
     /// - each client is a sub-view of the |InjectorTarget| (inclusive).
     ///
