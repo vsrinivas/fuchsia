@@ -49,6 +49,11 @@ protocol Stream {
     /// callbacks received after receiving this callback apply to the newly negotiated collection.
     WatchBufferCollection() -> (fuchsia.sysmem.BufferCollectionToken token);
 
+    /// Returns the orientation if it has changed from a previously returned value, or is called by
+    /// a client for the first time. Frame callbacks received after receiving this callback reflect
+    /// the new orientation.
+    WatchOrientation() -> (Orientation orientation);
+
     /// Request the next available frame for this stream. Returns when the stream has completed
     /// populating the buffer and may be read by the client, provided the number of unreleased
     /// buffers held by the client is less than the count provided via the most recently negotiated
@@ -100,4 +105,33 @@ struct StreamProperties {
 
     /// Indicates whether a stream supports the SetCropRegion method.
     bool supports_crop_region;
+};
+
+/// Describes the intended orientation of a given stream relative to its encoded data. For clarity,
+/// the documentation for each enum value is accompanied by an orientation of the chiral '⮬' symbol
+/// illustrating the orientation of the stream's encoded data.
+enum Orientation {
+    /// ⮬: The content is already in the correct orientation.
+    UP = 1;
+
+    /// ⮯: The content must be rotated 180 degrees to appear correct.
+    DOWN = 2;
+
+    /// ⮫: The content must be rotated 90 degrees left (counter-clockwise) to appear correct.
+    LEFT = 3;
+
+    /// ⮨: The content must be rotated 90 degrees right (clockwise) to appear correct.
+    RIGHT = 4;
+
+    /// ⮭: The content must be flipped horizontally to appear correct.
+    UP_FLIPPED = 5;
+
+    /// ⮮: The content must be flipped horizontally then rotated 180 degrees to appear correct.
+    DOWN_FLIPPED = 6;
+
+    /// ⮪: The content must be flipped horizontally then rotated 90 degrees left (counter-clockwise) to appear correct.
+    LEFT_FLIPPED = 7;
+
+    /// ⮩: The content must be flipped horizontally then rotated 90 degrees right (clockwise) to appear correct.
+    RIGHT_FLIPPED = 8;
 };

@@ -41,6 +41,7 @@ class FakeStreamImpl : public FakeStream, public fuchsia::camera3::Stream {
   void SetBufferCollection(
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
   void WatchBufferCollection(WatchBufferCollectionCallback callback) override;
+  void WatchOrientation(WatchOrientationCallback callback) override;
   void GetNextFrame(GetNextFrameCallback callback) override;
   void Rebind(fidl::InterfaceRequest<Stream> request) override;
 

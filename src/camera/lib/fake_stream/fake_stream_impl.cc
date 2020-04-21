@@ -149,6 +149,10 @@ void FakeStreamImpl::WatchBufferCollection(WatchBufferCollectionCallback callbac
   token_request_ = std::move(callback);
 }
 
+void FakeStreamImpl::WatchOrientation(WatchOrientationCallback callback) {
+  callback(fuchsia::camera3::Orientation::UP);
+}
+
 void FakeStreamImpl::GetNextFrame(GetNextFrameCallback callback) {
   if (frame_request_) {
     bindings_.CloseAll(ZX_ERR_BAD_STATE);

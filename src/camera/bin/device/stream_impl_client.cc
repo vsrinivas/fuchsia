@@ -96,6 +96,11 @@ void StreamImpl::Client::WatchBufferCollection(WatchBufferCollectionCallback cal
   }
 }
 
+void StreamImpl::Client::WatchOrientation(WatchOrientationCallback callback) {
+  // Orientation is not currently reported by hardware. Assume UP (no transform).
+  callback(fuchsia::camera3::Orientation::UP);
+}
+
 void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {
   if (stream_.max_camping_buffers_ == 0) {
     FX_LOGS(INFO) << Messages::kNoCampingBuffers;
