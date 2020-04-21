@@ -65,6 +65,9 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   void PostShowBuffer(uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,
                       std::optional<fuchsia::math::Rect> subregion);
 
+  // Sets the collage to be visible (default), or hidden (black screen).
+  void PostSetVisibility(bool visible);
+
  private:
   BufferCollage();
 

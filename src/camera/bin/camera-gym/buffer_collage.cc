@@ -231,6 +231,16 @@ void BufferCollage::PostShowBuffer(uint32_t collection_id, uint32_t buffer_index
   });
 }
 
+void BufferCollage::PostSetVisibility(bool visible) {
+  uint8_t channel_value = visible ? 255 : 0;
+  async::PostTask(loop_.dispatcher(), [this, channel_value] {
+    for (auto& view : collection_views_) {
+      view.second.material->SetColor(channel_value, channel_value, channel_value, 255);
+    }
+    session_->Present(zx::clock::get_monotonic(), [](fuchsia::images::PresentationInfo info) {});
+  });
+}
+
 void BufferCollage::OnNewRequest(fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
   if (view_provider_binding_.is_bound()) {
     FX_LOGS(ERROR) << "Camera Gym only supports one view provider instance.";
