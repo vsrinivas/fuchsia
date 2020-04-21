@@ -29,7 +29,7 @@ zx_library("log-writer-logger") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/log",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-logger:c",
+    "//zircon/system/fidl/fuchsia-logger:llcpp",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
