@@ -44,6 +44,7 @@ test("usb-hci-test") {
     "EXPECTED_ISOCH_PACKETS=119000",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.usb.hcitest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
@@ -54,7 +55,6 @@ test("usb-hci-test") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-hardware-usb-hcitest",
   ]
 }
 
@@ -66,6 +66,7 @@ driver_module("driver") {
   deps = [
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/fidl/fuchsia.hardware.usb.hcitest:fuchsia.hardware.usb.hcitest_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -74,7 +75,6 @@ driver_module("driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/dev/lib/usb",
-    "//zircon/system/fidl/fuchsia-hardware-usb-hcitest:llcpp",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
