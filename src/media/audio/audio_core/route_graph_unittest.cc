@@ -891,5 +891,56 @@ TEST_F(RouteGraphTest, DoesNotRelinkCapturerIfRouteDoesNotChange) {
   EXPECT_EQ(1u, capturer->total_links_formed());
 }
 
+TEST_F(RouteGraphTest, DoesNotRelinkCapturerIfUnroutedDeviceIsAdded) {
+  auto capturer_owned = FakeAudioObject::FakeCapturer();
+  auto capturer = capturer_owned.get();
+  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
+                                  &context().link_matrix());
+  const RoutingProfile kRoutableProfile{
+      .routable = true,
+      .usage = StreamUsage::WithCaptureUsage(CaptureUsage::BACKGROUND),
+  };
+
+  // Add and confirm an initial link has been made.
+  under_test_.AddDevice(input.get());
+  under_test_.AddCapturer(std::move(capturer_owned));
+  under_test_.SetCapturerRoutingProfile(*capturer, kRoutableProfile);
+  EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({input.get()}));
+  EXPECT_EQ(1u, capturer->total_links_formed());
+
+  // Now add an unrelated device. We should see no link activity on our capturer.
+  auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                        &context().link_matrix());
+  under_test_.AddDevice(output.get());
+  EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({input.get()}));
+  EXPECT_EQ(1u, capturer->total_links_formed());
+}
+
+TEST_F(RouteGraphTest, DoesNotRelinkRendererIfUnroutedDeviceIsAdded) {
+  auto renderer_owned = FakeAudioObject::FakeRenderer();
+  auto renderer = renderer_owned.get();
+  auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                        &context().link_matrix());
+
+  const RoutingProfile kRoutableProfile{
+      .routable = true,
+      .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
+  };
+
+  // Add and confirm an initial link has been made.
+  under_test_.AddDevice(output.get());
+  under_test_.AddRenderer(std::move(renderer_owned));
+  under_test_.SetRendererRoutingProfile(*renderer, kRoutableProfile);
+  EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output.get()}));
+  EXPECT_EQ(1u, renderer->total_links_formed());
+
+  // Now set the same profile. We should see no change in our routes or link counts.
+  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
+                                  &context().link_matrix());
+  under_test_.AddDevice(input.get());
+  EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output.get()}));
+  EXPECT_EQ(1u, renderer->total_links_formed());
+}
+
 }  // namespace
 }  // namespace media::audio

@@ -207,7 +207,7 @@ void RouteGraph::UpdateGraphForDeviceChange() {
       Target target;
       if (!capturer.second.profile.routable ||
           !((target = TargetForUsage(capturer.second.profile.usage)).is_linkable()) ||
-          link_matrix_.DestLinkCount(*capturer.second.ref) > 0u) {
+          link_matrix_.SourceLinkCount(*capturer.second.ref) > 0u) {
         return;
       }
 
