@@ -482,6 +482,9 @@ bool RawToPNG(size_t width, size_t height, const uint8_t *data, std::vector<uint
   png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
                PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
+  // Image snapshots are always in sRGB color space.
+  png_set_sRGB(png_ptr, info_ptr, PNG_sRGB_INTENT_PERCEPTUAL);
+
   std::vector<uint8_t *> rows(height);
   for (size_t y = 0; y < height; ++y) {
     rows[y] = (uint8_t *)data + y * width * 4;
