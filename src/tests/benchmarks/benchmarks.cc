@@ -72,6 +72,11 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
                                           out_file);
   }
 
+  // FIDL benchmarks.
+  {
+    benchmarks_runner->AddLibPerfTestBenchmark(
+        "fuchsia.fidl_microbenchmarks", "/bin/lib_fidl_benchmarks", std::vector<std::string>());
+  }
   {
     constexpr const char* kLabel = "fuchsia.fidl_go_microbenchmarks";
     std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
@@ -88,7 +93,6 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
     benchmarks_runner->AddCustomBenchmark(kLabel, {"/bin/rust_fidl_benchmarks", out_file},
                                           out_file);
   }
-
   {
     benchmarks_runner->AddLibPerfTestBenchmark(
         "fuchsia.fidl_microbenchmarks", "/bin/llcpp_fidl_benchmarks", std::vector<std::string>());

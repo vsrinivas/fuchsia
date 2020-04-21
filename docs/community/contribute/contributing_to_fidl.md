@@ -507,7 +507,7 @@ During this transition, benchmarks should be integrated in both systems.
 Ensure that the benchmarks are included in your build:
 
 ```
-fx set --with=//src/tests/benchmarks
+fx set core.x64 --with=//src/tests/benchmarks
 ```
 
 You will need to `fx build` and restart `qemu` for the packages to be
@@ -517,16 +517,17 @@ Available benchmarks:
 
 | Name | Benchmark Command | Notes |
 |-|-|-|
-| fidl go benchmarks |  `fx shell /bin/go_fidl_benchmarks` | |
-| fidl rust benchmarks | `fx shell /bin/rust_fidl_benchmarks /tmp/myresultsfile` | Results can be viewed with `fx shell cat /tmp/myresultsfile/` |
-| fidl llcpp benchmarks |  `fx shell /bin/llcpp-fidl-benchmark` | |
+| Go Benchmarks |  `fx shell /bin/go_fidl_benchmarks` | |
+| Rust Benchmarks | `fx shell /bin/rust_fidl_benchmarks /tmp/myresultsfile` | Results can be viewed with `fx shell cat /tmp/myresultsfile/` |
+| LLCPP benchmarks |  `fx shell /bin/llcpp_fidl_benchmarks` | |
+| lib/fidl Benchmarks | `fx shell /bin/lib_fidl_benchmarks` | |
 
 #### Running with fuchsia_benchmarks
 
 Ensure that the benchmarks are included in your build:
 
 ```
-fx set --with=/src/tests/benchmarks
+fx set core.x64 --with=//src/tests/benchmarks
 ```
 
 You will need to `fx build` and restart `qemu` for the packages to be
