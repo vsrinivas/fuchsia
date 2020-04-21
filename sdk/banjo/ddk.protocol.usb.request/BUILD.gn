@@ -7,7 +7,7 @@ import("//build/banjo/banjo.gni")
 banjo("ddk.protocol.usb.request") {
   sources = [ "usb-request.banjo" ]
   deps = [
-    "//zircon/system/banjo/ddk.physiter",
+    "//sdk/banjo/ddk.physiter",
     "//zircon/system/banjo/zircon.hw.usb",
   ]
 }

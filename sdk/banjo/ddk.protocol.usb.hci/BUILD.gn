@@ -7,11 +7,11 @@ import("//build/banjo/banjo.gni")
 banjo("ddk.protocol.usb.hci") {
   sources = [ "usb-hci.banjo" ]
   deps = [
+    "//sdk/banjo/ddk.physiter",
     "//sdk/banjo/ddk.protocol.usb.bus",
     "//sdk/banjo/ddk.protocol.usb.hub",
     "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/banjo/zircon.hw.usb.hub",
-    "//zircon/system/banjo/ddk.physiter",
     "//zircon/system/banjo/zircon.hw.usb",
   ]
 }
