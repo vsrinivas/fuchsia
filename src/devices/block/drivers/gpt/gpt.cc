@@ -106,6 +106,19 @@ void PartitionDevice::BlockImplQueue(block_op_t* bop, block_impl_queue_callback 
       bop->rw.offset_dev += entry->first;
       break;
     }
+    case BLOCK_OP_TRIM: {
+      gpt_entry_t* entry = &gpt_entry_;
+      size_t blocks = bop->trim.length;
+      size_t max = EntryBlockCount(entry).value();
+
+      if ((bop->trim.offset_dev >= max) || ((max - bop->trim.offset_dev) < blocks)) {
+        completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, bop);
+        return;
+      }
+
+      bop->trim.offset_dev += entry->first;
+      break;
+    }
     case BLOCK_OP_FLUSH:
       break;
     default:

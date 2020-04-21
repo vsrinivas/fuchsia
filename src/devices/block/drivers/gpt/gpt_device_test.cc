@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
@@ -61,12 +62,24 @@ void FakeBlockDevice::BlockQueue(block_op_t* operation, block_queue_callback com
 }
 
 zx_status_t FakeBlockDevice::BlockQueueOp(block_op_t* op) {
-  if (op->rw.command != BLOCK_OP_READ) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  const uint32_t command = op->command & BLOCK_OP_MASK;
   const uint32_t bsize = info_.block_size;
-  if ((op->rw.offset_dev + op->rw.length) > (bsize * info_.block_count)) {
-    return ZX_ERR_OUT_OF_RANGE;
+  if (command == BLOCK_OP_READ || command == BLOCK_OP_WRITE) {
+    if ((op->rw.offset_dev + op->rw.length) > (bsize * info_.block_count)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    if (command == BLOCK_OP_WRITE) {
+      return ZX_OK;
+    }
+  } else if (command == BLOCK_OP_TRIM) {
+    if ((op->trim.offset_dev + op->trim.length) > (bsize * info_.block_count)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    return ZX_OK;
+  } else if (command == BLOCK_OP_FLUSH) {
+    return ZX_OK;
+  } else {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   size_t part_size = sizeof(test_partition_table);
@@ -128,6 +141,20 @@ class GptDeviceTest : public zxtest::Test {
   }
 
   fake_ddk::Bind ddk_;
+
+ protected:
+  struct BlockOpResult {
+    sync_completion_t completion;
+    block_op_t op;
+    zx_status_t status;
+  };
+
+  static void BlockOpCompleter(void* cookie, zx_status_t status, block_op_t* bop) {
+    auto* result = static_cast<BlockOpResult*>(cookie);
+    result->status = status;
+    result->op = *bop;
+    sync_completion_signal(&result->completion);
+  }
 
  private:
   FakeBlockDevice fake_block_device_;
@@ -244,6 +271,156 @@ TEST_F(GptDeviceTest, GuidMapMetadata) {
     uint8_t expected_guid[GPT_GUID_LEN] = GUID_UNIQUE_PART1;
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
   }
+
+  dev0->AsyncRemove();
+  dev1->AsyncRemove();
+
+  EXPECT_TRUE(ddk_.Ok());
+}
+
+TEST_F(GptDeviceTest, BlockOpsPropagate) {
+  Init();
+  fbl::Vector<std::unique_ptr<PartitionDevice>> devices;
+
+  const guid_map_t guid_map[] = {
+      {"Linux filesystem", GUID_METADATA},
+  };
+  ddk_.SetMetadata(&guid_map, sizeof(guid_map));
+
+  TableRef tab;
+  ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));
+  ASSERT_OK(tab->Bind());
+
+  ASSERT_EQ(devices.size(), 2);
+
+  PartitionDevice* dev0 = devices[0].get();
+  PartitionDevice* dev1 = devices[1].get();
+
+  block_info_t block_info = {};
+  size_t block_op_size = 0;
+  dev0->BlockImplQuery(&block_info, &block_op_size);
+  EXPECT_EQ(block_op_size, sizeof(block_op_t));
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(4 * block_info.block_size, 0, &vmo));
+
+  block_op_t op = {};
+  op.rw.command = BLOCK_OP_READ;
+  op.rw.vmo = vmo.get();
+  op.rw.length = 4;
+  op.rw.offset_dev = 1000;
+
+  BlockOpResult result;
+  dev0->BlockImplQueue(&op, BlockOpCompleter, &result);
+  sync_completion_wait(&result.completion, ZX_TIME_INFINITE);
+  sync_completion_reset(&result.completion);
+
+  EXPECT_EQ(result.op.command, BLOCK_OP_READ);
+  EXPECT_EQ(result.op.rw.length, 4);
+  EXPECT_EQ(result.op.rw.offset_dev, 2048 + 1000);
+  EXPECT_OK(result.status);
+
+  op.rw.command = BLOCK_OP_WRITE;
+  op.rw.vmo = vmo.get();
+  op.rw.length = 4;
+  op.rw.offset_dev = 5000;
+
+  dev1->BlockImplQueue(&op, BlockOpCompleter, &result);
+  sync_completion_wait(&result.completion, ZX_TIME_INFINITE);
+  sync_completion_reset(&result.completion);
+
+  EXPECT_EQ(result.op.command, BLOCK_OP_WRITE);
+  EXPECT_EQ(result.op.rw.length, 4);
+  EXPECT_EQ(result.op.rw.offset_dev, 22528 + 5000);
+  EXPECT_OK(result.status);
+
+  op.trim.command = BLOCK_OP_TRIM;
+  op.trim.length = 16;
+  op.trim.offset_dev = 10000;
+
+  dev0->BlockImplQueue(&op, BlockOpCompleter, &result);
+  sync_completion_wait(&result.completion, ZX_TIME_INFINITE);
+  sync_completion_reset(&result.completion);
+
+  EXPECT_EQ(result.op.command, BLOCK_OP_TRIM);
+  EXPECT_EQ(result.op.trim.length, 16);
+  EXPECT_EQ(result.op.trim.offset_dev, 2048 + 10000);
+  EXPECT_OK(result.status);
+
+  op.command = BLOCK_OP_FLUSH;
+
+  dev1->BlockImplQueue(&op, BlockOpCompleter, &result);
+  sync_completion_wait(&result.completion, ZX_TIME_INFINITE);
+  sync_completion_reset(&result.completion);
+
+  EXPECT_EQ(result.op.command, BLOCK_OP_FLUSH);
+  EXPECT_OK(result.status);
+
+  dev0->AsyncRemove();
+  dev1->AsyncRemove();
+
+  EXPECT_TRUE(ddk_.Ok());
+}
+
+TEST_F(GptDeviceTest, BlockOpsOutOfBounds) {
+  Init();
+  fbl::Vector<std::unique_ptr<PartitionDevice>> devices;
+
+  const guid_map_t guid_map[] = {
+      {"Linux filesystem", GUID_METADATA},
+  };
+  ddk_.SetMetadata(&guid_map, sizeof(guid_map));
+
+  TableRef tab;
+  ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));
+  ASSERT_OK(tab->Bind());
+
+  ASSERT_EQ(devices.size(), 2);
+
+  PartitionDevice* dev0 = devices[0].get();
+  PartitionDevice* dev1 = devices[1].get();
+
+  block_info_t block_info = {};
+  size_t block_op_size = 0;
+  dev0->BlockImplQuery(&block_info, &block_op_size);
+  EXPECT_EQ(block_op_size, sizeof(block_op_t));
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(4 * block_info.block_size, 0, &vmo));
+
+  block_op_t op = {};
+  op.rw.command = BLOCK_OP_READ;
+  op.rw.vmo = vmo.get();
+  op.rw.length = 4;
+  op.rw.offset_dev = 20481;
+
+  BlockOpResult result;
+  dev0->BlockImplQueue(&op, BlockOpCompleter, &result);
+  sync_completion_wait(&result.completion, ZX_TIME_INFINITE);
+  sync_completion_reset(&result.completion);
+
+  EXPECT_NOT_OK(result.status);
+
+  op.rw.command = BLOCK_OP_WRITE;
+  op.rw.vmo = vmo.get();
+  op.rw.length = 4;
+  op.rw.offset_dev = 20478;
+
+  dev0->BlockImplQueue(&op, BlockOpCompleter, &result);
+  sync_completion_wait(&result.completion, ZX_TIME_INFINITE);
+  sync_completion_reset(&result.completion);
+
+  EXPECT_NOT_OK(result.status);
+
+  op.trim.command = BLOCK_OP_TRIM;
+  op.trim.length = 18434;
+  op.trim.offset_dev = 0;
+
+  dev1->BlockImplQueue(&op, BlockOpCompleter, &result);
+  sync_completion_wait(&result.completion, ZX_TIME_INFINITE);
+  sync_completion_reset(&result.completion);
+
+  EXPECT_NOT_OK(result.status);
 
   dev0->AsyncRemove();
   dev1->AsyncRemove();
