@@ -5,6 +5,7 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        channel,
         framework::REALM_SERVICE,
         model::{
             error::ModelError,
@@ -58,8 +59,9 @@ async fn use_framework_service() {
             _flags: u32,
             _open_mode: u32,
             _relative_path: PathBuf,
-            server_end: zx::Channel,
+            server_end: &mut zx::Channel,
         ) -> Result<(), ModelError> {
+            let server_end = channel::take_channel(server_end);
             let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
                 .into_stream()
                 .expect("could not convert channel into stream");
@@ -267,10 +269,10 @@ async fn use_from_parent() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(true)).await;
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
     test.check_open_file(vec!["b:0"].into(), "/svc/device".try_into().unwrap()).await
@@ -357,10 +359,11 @@ async fn use_from_grandparent() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(true)).await;
+    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok))
+        .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -420,7 +423,7 @@ async fn use_builtin_from_grandparent() {
     let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -508,10 +511,11 @@ async fn use_from_sibling_no_root() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(true)).await;
+    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok))
+        .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -590,10 +594,10 @@ async fn use_from_sibling_root() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(true)).await;
+    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     test.check_use(
         vec!["c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -696,10 +700,10 @@ async fn use_from_niece() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(true)).await;
+    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     test.check_use(
         vec!["c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -876,16 +880,18 @@ async fn use_kitchen_sink() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0", "e:0"].into(), CheckUse::default_directory(true)).await;
+    test.check_use(vec!["b:0", "e:0"].into(), CheckUse::default_directory(ExpectedResult::Ok))
+        .await;
     test.check_use(
         vec!["b:0", "e:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
-    test.check_use(vec!["c:0", "f:0"].into(), CheckUse::default_directory(true)).await;
+    test.check_use(vec!["c:0", "f:0"].into(), CheckUse::default_directory(ExpectedResult::Ok))
+        .await;
     test.check_use(
         vec!["c:0", "f:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -918,10 +924,10 @@ async fn use_from_component_manager_namespace() {
     )];
     let test = RoutingTest::new("a", components).await;
     test.install_hippo_dir("/use_from_cm_namespace");
-    test.check_use(vec![].into(), CheckUse::default_directory(true)).await;
+    test.check_use(vec![].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     test.check_use(
         vec![].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -985,10 +991,10 @@ async fn offer_from_component_manager_namespace() {
     ];
     let test = RoutingTest::new("a", components).await;
     test.install_hippo_dir("/offer_from_cm_namespace");
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(true)).await;
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -1029,10 +1035,13 @@ async fn use_not_offered() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(false)).await;
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err,
+        },
     )
     .await;
 }
@@ -1093,10 +1102,13 @@ async fn use_offer_source_not_exposed() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(false)).await;
+    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
     test.check_use(
         vec!["c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err,
+        },
     )
     .await;
 }
@@ -1164,10 +1176,14 @@ async fn use_offer_source_not_offered() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(false)).await;
+    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(ExpectedResult::Err))
+        .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err,
+        },
     )
     .await;
 }
@@ -1233,10 +1249,13 @@ async fn use_from_expose() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(false)).await;
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err,
+        },
     )
     .await;
 }
@@ -1315,10 +1334,13 @@ async fn use_from_expose_to_framework() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(false)).await;
+    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
     test.check_use(
         vec!["c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err,
+        },
     )
     .await;
 }
@@ -1377,10 +1399,13 @@ async fn offer_from_non_executable() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(false)).await;
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Err)).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err,
+        },
     )
     .await;
 }
@@ -1497,10 +1522,11 @@ async fn use_in_collection() {
         },
     )
     .await;
-    test.check_use(vec!["b:0", "coll:c:1"].into(), CheckUse::default_directory(true)).await;
+    test.check_use(vec!["b:0", "coll:c:1"].into(), CheckUse::default_directory(ExpectedResult::Ok))
+        .await;
     test.check_use(
         vec!["b:0", "coll:d:2"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -1583,10 +1609,17 @@ async fn use_in_collection_not_offered() {
         },
     )
     .await;
-    test.check_use(vec!["b:0", "coll:c:1"].into(), CheckUse::default_directory(false)).await;
     test.check_use(
         vec!["b:0", "coll:c:1"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::default_directory(ExpectedResult::Err),
+    )
+    .await;
+    test.check_use(
+        vec!["b:0", "coll:c:1"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err,
+        },
     )
     .await;
 }
@@ -1658,11 +1691,10 @@ async fn use_directory_with_subdir_from_grandparent() {
         CheckUse::Directory {
             path: default_directory_capability(),
             file: PathBuf::from("inner"),
-            should_succeed: true,
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
-    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(false)).await;
 }
 
 ///   a
@@ -1728,11 +1760,10 @@ async fn use_directory_with_subdir_from_sibling() {
         CheckUse::Directory {
             path: default_directory_capability(),
             file: PathBuf::from("inner"),
-            should_succeed: true,
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(false)).await;
 }
 
 ///   a
@@ -1801,11 +1832,10 @@ async fn expose_directory_with_subdir() {
         CheckUse::Directory {
             path: "/data/hippo".try_into().unwrap(),
             file: PathBuf::from("inner"),
-            should_succeed: true,
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
-    test.check_use_exposed_dir(vec![].into(), CheckUse::default_directory(false)).await;
 }
 
 ///   a
@@ -2005,19 +2035,26 @@ async fn expose_from_self_and_child() {
         CheckUse::Directory {
             path: "/data/bar/hippo".try_into().unwrap(),
             file: PathBuf::from("hippo"),
-            should_succeed: true,
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
-        CheckUse::Protocol { path: "/svc/bar/hippo".try_into().unwrap(), should_succeed: true },
+        CheckUse::Protocol {
+            path: "/svc/bar/hippo".try_into().unwrap(),
+            expected_res: ExpectedResult::Ok,
+        },
     )
     .await;
-    test.check_use_exposed_dir(vec!["b:0", "c:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use_exposed_dir(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::default_directory(ExpectedResult::Ok),
+    )
+    .await;
+    test.check_use_exposed_dir(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -2062,16 +2099,30 @@ async fn use_not_exposed() {
     ];
     let test = RoutingTest::new("a", components).await;
     // Capability is only exposed from "c", so it only be usable from there.
-    test.check_use_exposed_dir(vec!["b:0"].into(), CheckUse::default_directory(false)).await;
+
+    // When trying to open a capability that's not exposed to realm, there's no node for it in the
+    // exposed dir, so no routing takes place.  Hence we don't expect an epitaph.
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::default_directory(ExpectedResult::ErrWithNoEpitaph),
     )
     .await;
-    test.check_use_exposed_dir(vec!["b:0", "c:0"].into(), CheckUse::default_directory(true)).await;
+    test.check_use_exposed_dir(
+        vec!["b:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::ErrWithNoEpitaph,
+        },
+    )
+    .await;
     test.check_use_exposed_dir(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::default_directory(ExpectedResult::Ok),
+    )
+    .await;
+    test.check_use_exposed_dir(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -2151,7 +2202,7 @@ async fn use_with_destroyed_parent() {
     // Confirm we can use service from "c".
     test.check_use(
         vec!["coll:b:1", "c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 
@@ -2162,14 +2213,14 @@ async fn use_with_destroyed_parent() {
 
     // Now attempt to route the service from "c". Should fail because "b" does not exist so we
     // cannot follow it.
-    let (_client, server) = zx::Channel::create().unwrap();
+    let (_client, mut server) = zx::Channel::create().unwrap();
     let err = routing::route_use_capability(
         OPEN_RIGHT_READABLE,
         MODE_TYPE_SERVICE,
         "hippo".to_string(),
         &use_decl,
         &realm_c,
-        server,
+        &mut server,
     )
     .await
     .expect_err("routing unexpectedly succeeded");
@@ -2205,7 +2256,7 @@ async fn invalid_use_from_component_manager() {
             vec![].into(),
             CheckUse::Protocol {
                 path: CapabilityPath::try_from("/svc/valid").unwrap(),
-                should_succeed: false,
+                expected_res: ExpectedResult::ErrWithNoEpitaph,
             },
         )
         .await;
@@ -2256,7 +2307,7 @@ async fn invalid_offer_from_component_manager() {
             vec!["b:0"].into(),
             CheckUse::Protocol {
                 path: CapabilityPath::try_from("/svc/valid").unwrap(),
-                should_succeed: false,
+                expected_res: ExpectedResult::ErrWithNoEpitaph,
             },
         )
         .await;
@@ -2297,7 +2348,7 @@ async fn use_event_from_framework() {
     let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Event { names: vec!["started".into()], should_be_allowed: true },
+        CheckUse::Event { names: vec!["started".into()], expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -2345,7 +2396,7 @@ async fn use_event_from_parent() {
     let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Event { names: vec!["started".into()], should_be_allowed: true },
+        CheckUse::Event { names: vec!["started".into()], expected_res: ExpectedResult::Ok },
     )
     .await;
 }
@@ -2442,13 +2493,13 @@ async fn use_event_from_grandparent() {
         vec!["b:0", "c:0"].into(),
         CheckUse::Event {
             names: vec!["started".into(), "destroyed".into()],
-            should_be_allowed: true,
+            expected_res: ExpectedResult::Ok,
         },
     )
     .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Event { names: vec!["stopped".into()], should_be_allowed: false },
+        CheckUse::Event { names: vec!["stopped".into()], expected_res: ExpectedResult::Err },
     )
     .await;
 }
@@ -2570,17 +2621,26 @@ async fn event_filter_routing() {
     let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Event { names: vec!["capability_ready_foo".into()], should_be_allowed: true },
+        CheckUse::Event {
+            names: vec!["capability_ready_foo".into()],
+            expected_res: ExpectedResult::Ok,
+        },
     )
     .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Event { names: vec!["capability_ready_foo_bar".into()], should_be_allowed: true },
+        CheckUse::Event {
+            names: vec!["capability_ready_foo_bar".into()],
+            expected_res: ExpectedResult::Ok,
+        },
     )
     .await;
     test.check_use(
         vec!["b:0", "d:0"].into(),
-        CheckUse::Event { names: vec!["capability_ready_baz".into()], should_be_allowed: false },
+        CheckUse::Event {
+            names: vec!["capability_ready_baz".into()],
+            expected_res: ExpectedResult::Err,
+        },
     )
     .await;
 }

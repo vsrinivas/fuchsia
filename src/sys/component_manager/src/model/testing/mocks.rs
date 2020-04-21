@@ -16,7 +16,7 @@ use {
     async_trait::async_trait,
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::RoutingFn,
-    fidl::endpoints::ServerEnd,
+    fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
@@ -291,7 +291,7 @@ impl Runner for MockRunner {
                     format_err!("launch error"),
                 )
                 .as_zx_status();
-                server_end.close_with_epitaph(status).unwrap();
+                server_end.into_channel().close_with_epitaph(status).unwrap();
                 return;
             }
 

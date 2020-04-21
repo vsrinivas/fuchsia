@@ -3,18 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        actions::{Action, ActionSet, Notification},
-        binding,
-        environment::Environment,
-        error::ModelError,
-        exposed_dir::ExposedDir,
-        hooks::{Event, EventError, EventPayload, EventType, Hooks},
-        moniker::{AbsoluteMoniker, ChildMoniker, InstanceId, PartialMoniker},
-        namespace::IncomingNamespace,
-        resolver::Resolver,
-        routing::{self, RoutingError},
-        runner::{NullRunner, RemoteRunner, Runner},
+    crate::{
+        channel,
+        model::{
+            actions::{Action, ActionSet, Notification},
+            binding,
+            environment::Environment,
+            error::ModelError,
+            exposed_dir::ExposedDir,
+            hooks::{Event, EventError, EventPayload, EventType, Hooks},
+            moniker::{AbsoluteMoniker, ChildMoniker, InstanceId, PartialMoniker},
+            namespace::IncomingNamespace,
+            resolver::Resolver,
+            routing::{self, RoutingError},
+            runner::{NullRunner, RemoteRunner, Runner},
+        },
     },
     clonable_error::ClonableError,
     cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
@@ -278,14 +281,13 @@ impl Realm {
             // as the routing logic may want to acquire the lock for this component's state.
         }
 
-        let (meta_client_chan, server_chan) =
+        let (meta_client_chan, mut server_chan) =
             zx::Channel::create().expect("failed to create channel");
-
         routing::route_and_open_storage_capability(
             &UseStorageDecl::Meta,
             fio::MODE_TYPE_DIRECTORY,
             self,
-            server_chan,
+            &mut server_chan,
         )
         .await?;
         let meta_dir = Arc::new(DirectoryProxy::from_channel(
@@ -318,22 +320,20 @@ impl Realm {
             };
 
             // Find any explicit "use" runner declaration, resolve that.
-            let runner_decl = decl.uses.iter().find_map(|u| match u {
-                UseDecl::Runner(runner) => Some(runner.clone()),
-                _ => return None,
-            });
+            let runner_decl = decl.get_used_runner();
             if let Some(runner_decl) = runner_decl {
                 // Open up a channel to the runner.
                 let (client_channel, server_channel) =
                     create_endpoints::<fcrunner::ComponentRunnerMarker>()
                         .map_err(|_| ModelError::InsufficientResources)?;
+                let mut server_channel = server_channel.into_channel();
                 routing::route_use_capability(
                     /*flags=*/ 0,
                     /*open_mode=*/ 0,
                     String::new(),
-                    &UseDecl::Runner(runner_decl),
+                    &UseDecl::Runner(runner_decl.clone()),
                     self,
-                    server_channel.into_channel(),
+                    &mut server_channel,
                 )
                 .await?;
 
@@ -535,9 +535,8 @@ impl Realm {
         flags: u32,
         open_mode: u32,
         path: PathBuf,
-        server_chan: zx::Channel,
+        server_chan: &mut zx::Channel,
     ) -> Result<(), ModelError> {
-        let server_end = ServerEnd::new(server_chan);
         let execution = self.lock_execution().await;
         if execution.runtime.is_none() {
             return Err(RoutingError::source_instance_stopped(&self.abs_moniker).into());
@@ -548,14 +547,15 @@ impl Realm {
         })?;
         let path = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
         let path = io_util::canonicalize_path(path);
+        let server_chan = channel::take_channel(server_chan);
+        let server_end = ServerEnd::new(server_chan);
         out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
             ModelError::from(RoutingError::open_outgoing_failed(&self.abs_moniker, path, e))
         })?;
         Ok(())
     }
 
-    pub async fn open_exposed(&self, server_chan: zx::Channel) -> Result<(), ModelError> {
-        let server_end = ServerEnd::new(server_chan);
+    pub async fn open_exposed(&self, server_chan: &mut zx::Channel) -> Result<(), ModelError> {
         let execution = self.lock_execution().await;
         if execution.runtime.is_none() {
             return Err(RoutingError::source_instance_stopped(&self.abs_moniker).into());
@@ -570,6 +570,8 @@ impl Realm {
         // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
         // the same directory rights as the parent directory connection.
         let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
+        let server_chan = channel::take_channel(server_chan);
+        let server_end = ServerEnd::new(server_chan);
         exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::empty(), server_end);
         Ok(())
     }
@@ -1489,7 +1491,8 @@ pub mod tests {
         let realm = test.model.bind(&vec![].into()).await.expect("failed to bind");
         let (node_proxy, server_end) =
             fidl::endpoints::create_proxy::<fio::NodeMarker>().expect("failed to create endpoints");
-        realm.open_exposed(server_end.into_channel()).await.expect("failed to open exposed dir");
+        let mut server_end = server_end.into_channel();
+        realm.open_exposed(&mut server_end).await.expect("failed to open exposed dir");
 
         // Ensure that the directory is open to begin with.
         let proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());

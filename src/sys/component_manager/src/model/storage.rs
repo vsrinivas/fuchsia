@@ -3,9 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        moniker::{AbsoluteMoniker, RelativeMoniker},
-        realm::Realm,
+    crate::{
+        channel,
+        model::{
+            error::ModelError,
+            moniker::{AbsoluteMoniker, RelativeMoniker},
+            realm::Realm,
+        },
     },
     anyhow::Error,
     clonable_error::ClonableError,
@@ -55,8 +59,6 @@ pub enum StorageError {
     },
     #[error("storage path for {} was invalid", relative_moniker)]
     InvalidStoragePath { relative_moniker: RelativeMoniker },
-    #[error("invalid utf8")]
-    InvalidUtf8,
 }
 
 impl StorageError {
@@ -97,59 +99,41 @@ pub async fn open_isolated_storage(
     storage_type: fsys::StorageType,
     relative_moniker: &RelativeMoniker,
     open_mode: u32,
-) -> Result<DirectoryProxy, StorageError> {
+) -> Result<DirectoryProxy, ModelError> {
     const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
     let (dir_proxy, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
+    let mut local_server_end = local_server_end.into_channel();
     if let Some(dir_source_realm) = dir_source_realm.as_ref() {
         dir_source_realm
             .bind()
-            .await
-            .map_err(|e| {
-                StorageError::open(
-                    Some(dir_source_realm.abs_moniker.clone()),
-                    dir_source_path.clone(),
-                    relative_moniker.clone(),
-                    e,
-                )
-            })?
-            .open_outgoing(
-                FLAGS,
-                open_mode,
-                dir_source_path.to_path_buf(),
-                local_server_end.into_channel(),
-            )
-            .await
-            .map_err(|e| {
-                StorageError::open(
-                    Some(dir_source_realm.abs_moniker.clone()),
-                    dir_source_path.clone(),
-                    relative_moniker.clone(),
-                    e,
-                )
-            })?;
+            .await?
+            .open_outgoing(FLAGS, open_mode, dir_source_path.to_path_buf(), &mut local_server_end)
+            .await?;
     } else {
         // If dir_source_moniker is None, the directory comes from component_manager's namespace
-        io_util::connect_in_namespace(
-            &dir_source_path.to_string(),
-            local_server_end.into_channel(),
-            FLAGS,
-        )
-        .map_err(|e| {
-            StorageError::open(None, dir_source_path.clone(), relative_moniker.clone(), e)
-        })?;
+        let local_server_end = channel::take_channel(&mut local_server_end);
+        io_util::connect_in_namespace(&dir_source_path.to_string(), local_server_end, FLAGS)
+            .map_err(|e| {
+                ModelError::from(StorageError::open(
+                    None,
+                    dir_source_path.clone(),
+                    relative_moniker.clone(),
+                    e,
+                ))
+            })?;
     }
     let storage_proxy = io_util::create_sub_directories(
         &dir_proxy,
         &generate_storage_path(Some(storage_type), &relative_moniker),
     )
     .map_err(|e| {
-        StorageError::open(
+        ModelError::from(StorageError::open(
             dir_source_realm.as_ref().map(|r| r.abs_moniker.clone()),
             dir_source_path.clone(),
             relative_moniker.clone(),
             e,
-        )
+        ))
     })?;
     Ok(storage_proxy)
 }
@@ -160,56 +144,37 @@ pub async fn delete_isolated_storage(
     dir_source_realm: Option<Arc<Realm>>,
     dir_source_path: &CapabilityPath,
     relative_moniker: &RelativeMoniker,
-) -> Result<(), StorageError> {
+) -> Result<(), ModelError> {
     let (root_dir, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
+    let mut local_server_end = local_server_end.into_channel();
     if let Some(dir_source_realm) = dir_source_realm.as_ref() {
         dir_source_realm
             .bind()
-            .await
-            .map_err(|e| {
-                StorageError::open(
-                    Some(dir_source_realm.abs_moniker.clone()),
-                    dir_source_path.clone(),
-                    relative_moniker.clone(),
-                    e,
-                )
-            })?
+            .await?
             .open_outgoing(
                 FLAGS,
                 MODE_TYPE_DIRECTORY,
                 dir_source_path.to_path_buf(),
-                local_server_end.into_channel(),
+                &mut local_server_end,
             )
-            .await
-            .map_err(|e| {
-                StorageError::open(
-                    Some(dir_source_realm.abs_moniker.clone()),
-                    dir_source_path.clone(),
-                    relative_moniker.clone(),
-                    e,
-                )
-            })?;
+            .await?;
     } else {
-        io_util::connect_in_namespace(
-            &dir_source_path.to_string(),
-            local_server_end.into_channel(),
-            FLAGS,
-        )
-        .map_err(|e| {
-            StorageError::open(None, dir_source_path.clone(), relative_moniker.clone(), e)
-        })?;
+        let local_server_end = channel::take_channel(&mut local_server_end);
+        io_util::connect_in_namespace(&dir_source_path.to_string(), local_server_end, FLAGS)
+            .map_err(|e| {
+                StorageError::open(None, dir_source_path.clone(), relative_moniker.clone(), e)
+            })?;
     }
     let storage_path = generate_storage_path(None, &relative_moniker);
     if storage_path.parent().is_none() {
-        return Err(StorageError::invalid_storage_path(relative_moniker.clone()));
+        return Err(StorageError::invalid_storage_path(relative_moniker.clone()).into());
     }
     let dir_path = storage_path.parent().unwrap();
-    let name = storage_path
-        .file_name()
-        .ok_or(StorageError::invalid_storage_path(relative_moniker.clone()))?
-        .to_str()
-        .ok_or(StorageError::InvalidUtf8)?;
+    let name = storage_path.file_name().ok_or_else(|| {
+        ModelError::from(StorageError::invalid_storage_path(relative_moniker.clone()))
+    })?;
+    let name = name.to_str().ok_or_else(|| ModelError::name_is_not_utf8(name.to_os_string()))?;
     let dir = if dir_path.parent().is_none() {
         root_dir
     } else {
@@ -295,9 +260,10 @@ fn generate_storage_path(
 mod tests {
     use super::*;
     use {
-        crate::{
-            model::testing::routing_test_helpers::{RoutingTest, RoutingTestBuilder},
-            model::testing::test_helpers::{
+        crate::model::{
+            routing::RoutingError,
+            testing::routing_test_helpers::{RoutingTest, RoutingTestBuilder},
+            testing::test_helpers::{
                 self, component_decl_with_test_runner, ComponentDeclBuilder, TEST_RUNNER_NAME,
             },
         },
@@ -404,7 +370,7 @@ mod tests {
         let components = vec![("a", component_decl_with_test_runner())];
 
         // Create a universe with a single component, whose outgoing directory service
-        // simply closes the channel of incoming reuqests.
+        // simply closes the channel of incoming requests.
         let test = RoutingTestBuilder::new("a", components)
             .set_component_outgoing_host_fn("a", Box::new(|_| {}))
             .build()
@@ -422,7 +388,7 @@ mod tests {
         .await
         .expect_err("open isolated storage not meant to succeed");
         match err {
-            StorageError::Open { .. } => {}
+            ModelError::RoutingError { err: RoutingError::OpenOutgoingFailed { .. } } => {}
             _ => {
                 panic!("unexpected error: {:?}", err);
             }
@@ -526,7 +492,7 @@ mod tests {
                 .await
                 .expect_err("delete isolated storage not meant to succeed");
         match err {
-            StorageError::Remove { .. } => {}
+            ModelError::StorageError { err: StorageError::Remove { .. } } => {}
             _ => {
                 panic!("unexpected error: {:?}", err);
             }

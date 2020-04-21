@@ -15,7 +15,7 @@ use {
     },
     anyhow::Error,
     clonable_error::ClonableError,
-    std::path::PathBuf,
+    std::{ffi::OsString, path::PathBuf},
     thiserror::Error,
 };
 
@@ -47,6 +47,8 @@ pub enum ModelError {
     ComponentInvalid,
     #[error("path is not utf-8: {:?}", path)]
     PathIsNotUtf8 { path: PathBuf },
+    #[error("filename is not utf-8: {:?}", name)]
+    NameIsNotUtf8 { name: OsString },
     #[error("component manifest invalid {}: {}", url, err)]
     ManifestInvalid {
         url: String,
@@ -141,6 +143,10 @@ impl ModelError {
 
     pub fn path_is_not_utf8(path: PathBuf) -> ModelError {
         ModelError::PathIsNotUtf8 { path }
+    }
+
+    pub fn name_is_not_utf8(name: OsString) -> ModelError {
+        ModelError::NameIsNotUtf8 { name }
     }
 
     pub fn namespace_creation_failed(err: impl Into<Error>) -> ModelError {

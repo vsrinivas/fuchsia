@@ -4,6 +4,7 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        channel,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -84,10 +85,11 @@ impl CapabilityProvider for RunnerCapabilityProvider {
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_chan: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let runner = Arc::clone(&self.runner);
-        let mut stream = ServerEnd::<fcrunner::ComponentRunnerMarker>::new(server_chan)
+        let server_end = channel::take_channel(server_end);
+        let mut stream = ServerEnd::<fcrunner::ComponentRunnerMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
         fasync::spawn(async move {
@@ -116,7 +118,7 @@ mod tests {
             self, CapabilityName, ChildDecl, ComponentDecl, OfferDecl, OfferRunnerDecl,
             OfferRunnerSource, OfferTarget, UseDecl, UseRunnerDecl,
         },
-        fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
+        fidl_fuchsia_sys2 as fsys,
         futures::lock::Mutex,
         futures::stream::StreamExt,
         matches::assert_matches,
@@ -163,7 +165,8 @@ mod tests {
         let (client, server) = fidl::endpoints::create_proxy::<fcrunner::ComponentRunnerMarker>()?;
         let (_, server_controller) =
             fidl::endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>()?;
-        provider.open(0, 0, PathBuf::from("."), server.into_channel()).await?;
+        let mut server = server.into_channel();
+        provider.open(0, 0, PathBuf::from("."), &mut server).await?;
 
         // Start the client.
         client.start(sample_start_info("xxx://test"), server_controller)?;
@@ -186,7 +189,8 @@ mod tests {
 
         // Open a connection to the provider.
         let (client, server) = fidl::endpoints::create_proxy::<fcrunner::ComponentRunnerMarker>()?;
-        provider.open(0, 0, PathBuf::from("."), server.into_channel()).await?;
+        let mut server = server.into_channel();
+        provider.open(0, 0, PathBuf::from("."), &mut server).await?;
 
         // Ensure errors are propagated back to the caller.
         //
@@ -204,12 +208,8 @@ mod tests {
                 .unwrap()
                 .err()
                 .unwrap();
-
-            let expected_status = zx::Status::from_raw(
-                fcomponent::Error::InstanceCannotStart.into_primitive() as zx::zx_status_t,
-            );
             assert_matches!(actual,
-                fidl::Error::ClientChannelClosed(status) if status == expected_status
+                fidl::Error::ClientChannelClosed(status) if status == zx::Status::UNAVAILABLE
             );
         }
 

@@ -5,6 +5,7 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        channel,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -296,8 +297,9 @@ impl CapabilityProvider for ProcessLauncherCapabilityProvider {
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fproc::LauncherMarker>::new(server_end);
         let stream: fproc::LauncherRequestStream = server_end.into_stream().unwrap();
         fasync::spawn(async move {
@@ -375,7 +377,7 @@ mod tests {
             scope_moniker: None,
         };
 
-        let (client, server) = zx::Channel::create()?;
+        let (client, mut server) = zx::Channel::create()?;
 
         let event = Event::new(
             AbsoluteMoniker::root(),
@@ -388,7 +390,7 @@ mod tests {
 
         let capability_provider = capability_provider.lock().await.take();
         if let Some(capability_provider) = capability_provider {
-            capability_provider.open(0, 0, PathBuf::new(), server).await?;
+            capability_provider.open(0, 0, PathBuf::new(), &mut server).await?;
         }
 
         let launcher_proxy = ClientEnd::<fproc::LauncherMarker>::new(client)

@@ -5,6 +5,7 @@
 use {
     crate::{
         capability::*,
+        channel,
         model::{
             error::ModelError,
             hooks::{EventType, Hook, HooksRegistration},
@@ -76,8 +77,9 @@ impl<B: 'static + BuiltinCapability + Sync + Send> CapabilityProvider
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<B::Marker>::new(server_end);
         let stream = server_end.into_stream().unwrap();
         fasync::spawn(async move {

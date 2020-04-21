@@ -217,7 +217,7 @@ pub trait CapabilityProvider: Send + Sync {
         flags: u32,
         open_mode: u32,
         relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError>;
 }
 

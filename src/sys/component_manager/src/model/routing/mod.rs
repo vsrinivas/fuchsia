@@ -10,6 +10,7 @@ use {
         capability::{
             CapabilityProvider, CapabilitySource, ComponentCapability, FrameworkCapability,
         },
+        channel,
         model::{
             error::ModelError,
             events::filter::EventFilter,
@@ -31,9 +32,10 @@ use {
         OfferRunnerSource, OfferServiceSource, OfferStorageSource, StorageDirectorySource, UseDecl,
         UseDirectoryDecl, UseEventDecl, UseStorageDecl,
     },
-    fidl::endpoints::ServerEnd,
+    fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
+    log::*,
     std::{path::PathBuf, sync::Arc},
 };
 const SERVICE_OPEN_FLAGS: u32 =
@@ -69,7 +71,7 @@ pub(super) async fn route_use_capability<'a>(
     relative_path: String,
     use_decl: &'a UseDecl,
     target_realm: &'a Arc<Realm>,
-    server_chan: zx::Channel,
+    server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
     match use_decl {
         UseDecl::Service(_) | UseDecl::Protocol(_) | UseDecl::Directory(_) | UseDecl::Runner(_) => {
@@ -113,7 +115,7 @@ pub(super) async fn route_expose_capability<'a>(
     relative_path: String,
     expose_decl: &'a ExposeDecl,
     target_realm: &'a Arc<Realm>,
-    server_chan: zx::Channel,
+    server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
     let capability = ComponentCapability::UsedExpose(expose_decl.clone());
     let cap_state = CapabilityState::new(&capability);
@@ -144,7 +146,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
         flags: u32,
         open_mode: u32,
         relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         // Start the source component, if necessary
         let path = self.path.to_path_buf().attach(relative_path);
@@ -184,7 +186,7 @@ pub async fn open_capability_at_source(
     relative_path: PathBuf,
     source: CapabilitySource,
     target_realm: &Arc<Realm>,
-    server_chan: zx::Channel,
+    server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
     let capability_provider = Arc::new(Mutex::new(get_default_provider(&source)));
     let event = Event::new(
@@ -246,6 +248,7 @@ pub async fn open_capability_at_source(
         };
         let path = path.to_path_buf().attach(relative_path);
         let path = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
+        let server_chan = channel::take_channel(server_chan);
         io_util::connect_in_namespace(path, server_chan, flags)
             .map_err(|e| RoutingError::open_component_manager_namespace_failed(path, e).into())
     }
@@ -257,7 +260,7 @@ pub async fn route_and_open_storage_capability<'a>(
     use_decl: &'a UseStorageDecl,
     open_mode: u32,
     target_realm: &'a Arc<Realm>,
-    server_chan: zx::Channel,
+    server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
     // TODO: Actually use `CapabilityState` to apply rights.
     let (dir_source_realm, dir_source_path, relative_moniker, _) =
@@ -273,6 +276,7 @@ pub async fn route_and_open_storage_capability<'a>(
     .map_err(|e| ModelError::from(e))?;
 
     // clone the final connection to connect the channel we're routing to its destination
+    let server_chan = channel::take_channel(server_chan);
     storage_dir_proxy.clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_chan)).map_err(
         |e| {
             let moniker = match &dir_source_realm {
@@ -1034,5 +1038,36 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                 .into());
             }
         }
+    }
+}
+
+/// Sets an epitaph on `server_end` for a capability routing failure, and logs the error. Logs a failure to route a capability. Formats `err` as a `String`, but elides the type if the
+/// error is a `RoutingError`, the common case.
+pub(super) fn report_routing_failure(
+    target_moniker: &AbsoluteMoniker,
+    cap: &ComponentCapability,
+    err: &ModelError,
+    server_end: zx::Channel,
+) {
+    let _ = server_end.close_with_epitaph(routing_epitaph(err));
+    let err_str = match err {
+        ModelError::RoutingError { err } => format!("{}", err),
+        _ => format!("{}", err),
+    };
+    error!(
+        "Failed to route `{}` `{}` from component `{}`: {}",
+        cap.type_name(),
+        cap.source_id(),
+        target_moniker,
+        err_str,
+    );
+}
+
+/// Converts `err` to a `zx::Status` to use as an epitaph on a routed channel.
+fn routing_epitaph(err: &ModelError) -> zx::Status {
+    match err {
+        ModelError::RoutingError { err } => err.as_zx_status(),
+        // Any other type of error is not expected.
+        _ => zx::Status::INTERNAL,
     }
 }

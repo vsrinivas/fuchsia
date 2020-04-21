@@ -130,9 +130,9 @@ mod tests {
         );
         hooks.dispatch(&event).await?;
 
-        let (client, server) = zx::Channel::create()?;
+        let (client, mut server) = zx::Channel::create()?;
         if let Some(provider) = provider.lock().await.take() {
-            provider.open(0, 0, PathBuf::new(), server).await?;
+            provider.open(0, 0, PathBuf::new(), &mut server).await?;
         }
 
         let client = ClientEnd::<fboot::RootJobMarker>::new(client)

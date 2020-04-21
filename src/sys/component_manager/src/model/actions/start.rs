@@ -158,16 +158,19 @@ async fn make_execution_runtime(
             .expect("could not create component controller endpoints");
     let controller =
         controller_client.into_proxy().expect("failed to create ComponentControllerProxy");
-    // Set up channels into/out of the new component.
+    // Set up channels into/out of the new component. These are absent from non-executable
+    // components.
+    let outgoing_dir_client = decl.get_used_runner().map(|_| {
+        DirectoryProxy::from_channel(fasync::Channel::from_channel(outgoing_dir_client).unwrap())
+    });
+    let runtime_dir_client = decl.get_used_runner().map(|_| {
+        DirectoryProxy::from_channel(fasync::Channel::from_channel(runtime_dir_client).unwrap())
+    });
     let runtime = Runtime::start_from(
         url.clone(),
         Some(namespace),
-        Some(DirectoryProxy::from_channel(
-            fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
-        )),
-        Some(DirectoryProxy::from_channel(
-            fasync::Channel::from_channel(runtime_dir_client).unwrap(),
-        )),
+        outgoing_dir_client,
+        runtime_dir_client,
         exposed_dir,
         Some(controller),
     )?;

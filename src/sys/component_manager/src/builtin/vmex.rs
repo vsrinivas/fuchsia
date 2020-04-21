@@ -5,6 +5,7 @@
 use {
     crate::{
         capability::*,
+        channel,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -115,8 +116,9 @@ impl CapabilityProvider for VmexCapabilityProvider {
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsec::VmexMarker>::new(server_end);
         let stream: fsec::VmexRequestStream = server_end.into_stream().unwrap();
         fasync::spawn(async move {
@@ -231,7 +233,7 @@ mod tests {
             scope_moniker: None,
         };
 
-        let (client, server) = zx::Channel::create()?;
+        let (client, mut server) = zx::Channel::create()?;
 
         let event = Event::new(
             AbsoluteMoniker::root(),
@@ -244,7 +246,7 @@ mod tests {
 
         let capability_provider = capability_provider.lock().await.take();
         if let Some(capability_provider) = capability_provider {
-            capability_provider.open(0, 0, PathBuf::new(), server).await?;
+            capability_provider.open(0, 0, PathBuf::new(), &mut server).await?;
         }
 
         let vmex_client = ClientEnd::<fsec::VmexMarker>::new(client)

@@ -762,7 +762,7 @@ mod connect_tests {
             scope_moniker: None,
         };
 
-        let (client, server) = zx::Channel::create()?;
+        let (client, mut server) = zx::Channel::create()?;
 
         let event = Event::new(
             AbsoluteMoniker::root(),
@@ -775,7 +775,7 @@ mod connect_tests {
 
         let capability_provider = capability_provider.lock().await.take();
         if let Some(capability_provider) = capability_provider {
-            capability_provider.open(0, 0, PathBuf::new(), server).await?;
+            capability_provider.open(0, 0, PathBuf::new(), &mut server).await?;
         }
 
         let work_scheduler_control = ClientEnd::<WorkSchedulerControlMarker>::new(client)

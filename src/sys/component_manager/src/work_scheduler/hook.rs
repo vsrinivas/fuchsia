@@ -5,6 +5,7 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        channel,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -173,8 +174,9 @@ impl CapabilityProvider for WorkSchedulerControlCapabilityProvider {
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsys::WorkSchedulerControlMarker>::new(server_end);
         let stream: fsys::WorkSchedulerControlRequestStream = server_end.into_stream().unwrap();
         fasync::spawn(async move {
@@ -239,8 +241,9 @@ impl CapabilityProvider for WorkSchedulerCapabilityProvider {
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsys::WorkSchedulerMarker>::new(server_end);
         let stream: fsys::WorkSchedulerRequestStream = server_end.into_stream().unwrap();
         let work_scheduler = self.work_scheduler.clone();

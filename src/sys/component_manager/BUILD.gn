@@ -58,6 +58,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:tempfile",
@@ -87,7 +88,6 @@ rustc_library("lib") {
   test_deps = [
     "//src/lib/process_builder:test-util-fidl-rustc",
     "//src/sys/lib/directory_broker",
-    "//third_party/rust_crates:matches",
   ]
 
   # TODO(47215): Fix the leaks and remove this.

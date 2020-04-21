@@ -62,6 +62,7 @@ impl FuchsiaPkgResolver {
         .await
         .map_err(|e| format_err!("failed to route pkgfs handle: {}", e))?;
         let (pkgfs_proxy, pkgfs_server) = create_proxy::<DirectoryMarker>()?;
+        let mut pkgfs_server = pkgfs_server.into_channel();
         realm
             .bind()
             .await
@@ -70,7 +71,7 @@ impl FuchsiaPkgResolver {
                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 capability_path.to_path_buf(),
-                pkgfs_server.into_channel(),
+                &mut pkgfs_server,
             )
             .await
             .map_err(|e| {

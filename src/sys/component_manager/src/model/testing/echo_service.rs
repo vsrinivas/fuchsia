@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{capability::*, model::error::ModelError, model::hooks::*},
+    crate::{capability::*, channel, model::error::ModelError, model::hooks::*},
     async_trait::async_trait,
     cm_rust::*,
     fidl::endpoints::ServerEnd,
@@ -38,8 +38,9 @@ impl CapabilityProvider for EchoCapabilityProvider {
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<EchoMarker>::new(server_end);
         let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
         fasync::spawn(async move {

@@ -5,6 +5,7 @@
 use {
     crate::{
         capability::*,
+        channel,
         model::addable_directory::AddableDirectoryWithResult,
         model::{
             error::ModelError,
@@ -364,10 +365,12 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
         flags: u32,
         open_mode: u32,
         in_relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
-        let (client_chan, server_chan) = zx::Channel::create().unwrap();
-        self.intercepted_capability.open(flags, open_mode, PathBuf::new(), server_chan).await?;
+        let (client_chan, mut server_chan) = zx::Channel::create().unwrap();
+        self.intercepted_capability
+            .open(flags, open_mode, PathBuf::new(), &mut server_chan)
+            .await?;
 
         let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
             .into_proxy()
@@ -385,6 +388,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
         relative_path.push('/');
         let path =
             pfsPath::validate_and_split(relative_path).expect("failed to split and validate path");
+        let server_end = channel::take_channel(server_end);
         dir.open(
             ExecutionScope::from_executor(Box::new(EHandle::local())),
             flags,

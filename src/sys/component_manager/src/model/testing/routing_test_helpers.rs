@@ -19,18 +19,22 @@ use {
         startup,
     },
     cm_rust::*,
-    fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
+    fidl::{
+        self,
+        endpoints::{self, create_proxy, ClientEnd, ServerEnd},
+    },
     fidl_fidl_examples_echo::{self as echo},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryProxy, FileEvent, FileMarker, FileObject, FileProxy, NodeInfo, NodeMarker,
-        CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
-        OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
+        OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
     futures::prelude::*,
+    matches::assert_matches,
     std::{
         collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
@@ -54,15 +58,22 @@ pub fn default_directory_capability() -> CapabilityPath {
     "/data/hippo".try_into().unwrap()
 }
 
+#[derive(Debug)]
+pub enum ExpectedResult {
+    Ok,
+    Err,
+    ErrWithNoEpitaph,
+}
+
 pub enum CheckUse {
     Protocol {
         path: CapabilityPath,
-        should_succeed: bool,
+        expected_res: ExpectedResult,
     },
     Directory {
         path: CapabilityPath,
         file: PathBuf,
-        should_succeed: bool,
+        expected_res: ExpectedResult,
     },
     Storage {
         path: CapabilityPath,
@@ -76,16 +87,16 @@ pub enum CheckUse {
     },
     Event {
         names: Vec<CapabilityName>,
-        should_be_allowed: bool,
+        expected_res: ExpectedResult,
     },
 }
 
 impl CheckUse {
-    pub fn default_directory(should_succeed: bool) -> Self {
+    pub fn default_directory(expected_res: ExpectedResult) -> Self {
         Self::Directory {
             path: default_directory_capability(),
             file: PathBuf::from("hippo"),
-            should_succeed,
+            expected_res,
         }
     }
 }
@@ -355,21 +366,20 @@ impl RoutingTest {
             .expect("could not find child namespace");
         Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
         match check {
-            CheckUse::Protocol { path, should_succeed } => {
-                capability_util::call_echo_svc_from_namespace(&namespace, path, should_succeed)
-                    .await;
+            CheckUse::Protocol { path, expected_res } => {
+                capability_util::call_echo_svc_from_namespace(&namespace, path, expected_res).await;
             }
-            CheckUse::Directory { path, file, should_succeed } => {
-                capability_util::read_data_from_namespace(&namespace, path, &file, should_succeed)
+            CheckUse::Directory { path, file, expected_res } => {
+                capability_util::read_data_from_namespace(&namespace, path, &file, expected_res)
                     .await
             }
             CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation, .. } => {
-                capability_util::write_file_to_meta_storage(
-                    &self.model,
-                    moniker,
-                    storage_relation.is_some(),
-                )
-                .await;
+                let expected_res = match storage_relation {
+                    Some(_) => ExpectedResult::Ok,
+                    None => ExpectedResult::Err,
+                };
+                capability_util::write_file_to_meta_storage(&self.model, moniker, expected_res)
+                    .await;
                 if let Some(relative_moniker) = storage_relation {
                     capability_util::check_file_in_storage(
                         fsys::StorageType::Meta,
@@ -380,12 +390,11 @@ impl RoutingTest {
                 }
             }
             CheckUse::Storage { path, type_, storage_relation, from_cm_namespace } => {
-                capability_util::write_file_to_storage(
-                    &namespace,
-                    path,
-                    storage_relation.is_some(),
-                )
-                .await;
+                let expected_res = match storage_relation {
+                    Some(_) => ExpectedResult::Ok,
+                    None => ExpectedResult::Err,
+                };
+                capability_util::write_file_to_storage(&namespace, path, expected_res).await;
 
                 if let Some(relative_moniker) = storage_relation {
                     if from_cm_namespace {
@@ -408,11 +417,10 @@ impl RoutingTest {
                     }
                 }
             }
-            CheckUse::Event { names, should_be_allowed } => {
+            CheckUse::Event { names, expected_res } => {
                 // Fails if the component did not use the protocol EventSource or if the event is
                 // not allowed.
-                capability_util::subscribe_to_event_stream(&namespace, should_be_allowed, names)
-                    .await;
+                capability_util::subscribe_to_event_stream(&namespace, expected_res, names).await;
             }
         }
     }
@@ -420,22 +428,22 @@ impl RoutingTest {
     /// Checks using a capability from a component's exposed directory.
     pub async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         match check {
-            CheckUse::Protocol { path, should_succeed } => {
+            CheckUse::Protocol { path, expected_res } => {
                 capability_util::call_echo_svc_from_exposed_dir(
                     path,
                     &moniker,
                     &self.model,
-                    should_succeed,
+                    expected_res,
                 )
                 .await;
             }
-            CheckUse::Directory { path, file, should_succeed } => {
+            CheckUse::Directory { path, file, expected_res } => {
                 capability_util::read_data_from_exposed_dir(
                     path,
                     &file,
                     &moniker,
                     &self.model,
-                    should_succeed,
+                    expected_res,
                 )
                 .await;
             }
@@ -614,6 +622,7 @@ impl RoutingTest {
         let (dir_proxy, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
         let realm = self.model.look_up_realm(component).await.expect("lookup root realm failed");
+        let mut server_end = server_end.into_channel();
         self.model
             .bind(&realm.abs_moniker)
             .await
@@ -622,7 +631,7 @@ impl RoutingTest {
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
                 fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
                 PathBuf::from("/."),
-                server_end.into_channel(),
+                &mut server_end,
             )
             .await
             .expect("failed to open realm's outgoing directory");
@@ -650,61 +659,93 @@ pub mod capability_util {
         namespace: &ManagedNamespace,
         path: CapabilityPath,
         file: &Path,
-        should_succeed: bool,
+        expected_res: ExpectedResult,
     ) {
         let path = path.to_string();
-        let dir_proxy = get_dir_from_namespace(namespace, &path).await;
+        let dir_proxy = take_dir_from_namespace(namespace, &path).await;
         let file_proxy =
             io_util::open_file(&dir_proxy, file, OPEN_RIGHT_READABLE).expect("failed to open file");
         let res = io_util::read_file(&file_proxy).await;
-
-        match should_succeed {
-            true => assert_eq!("hippo", res.expect("failed to read file")),
-            false => assert!(res.is_err(), "read file successfully when it should fail"),
+        match expected_res {
+            ExpectedResult::Ok => assert_eq!("hippo", res.expect("failed to read file")),
+            ExpectedResult::Err => {
+                assert!(res.is_err(), "read file successfully when it should fail");
+                let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
+                assert_matches!(
+                    epitaph,
+                    Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+                );
+            }
+            ExpectedResult::ErrWithNoEpitaph => {
+                assert!(res.is_err(), "read file successfully when it should fail");
+                assert_matches!(dir_proxy.take_event_stream().next().await, None);
+            }
         }
+        // We took ownership of `dir_proxy`, add it back to the namespace.
+        add_dir_to_namespace(namespace, &path, dir_proxy).await;
     }
 
     pub async fn write_file_to_storage(
         namespace: &ManagedNamespace,
         path: CapabilityPath,
-        should_succeed: bool,
+        expected_res: ExpectedResult,
     ) {
-        let dir_string = path.to_string();
-        let dir_proxy = get_dir_from_namespace(namespace, dir_string.as_str()).await;
-        write_hippo_file_to_directory(&dir_proxy, should_succeed).await;
+        let dir_path = path.to_string();
+        let dir_proxy = take_dir_from_namespace(namespace, dir_path.as_str()).await;
+        write_hippo_file_to_directory(&dir_proxy, expected_res).await;
+        add_dir_to_namespace(namespace, dir_path.as_str(), dir_proxy).await;
     }
 
     pub async fn write_file_to_meta_storage(
         model: &Arc<Model>,
         moniker: AbsoluteMoniker,
-        should_succeed: bool,
+        expected_res: ExpectedResult,
     ) {
         let realm = model.look_up_realm(&moniker).await.expect("failed to look up realm");
         let meta_dir_res = realm.resolve_meta_dir().await;
-        match (meta_dir_res, should_succeed) {
-            (Ok(Some(meta_dir)), true) => write_hippo_file_to_directory(&meta_dir, true).await,
-            (Err(ModelError::RoutingError { .. }), false) => (),
-            (Err(ModelError::StorageError { .. }), false) => (),
-            (Ok(Some(_)), false) => panic!("meta dir present when usage was expected to fail"),
-            (Ok(None), true) => panic!("meta dir missing when usage was expected to succeed"),
-            (Ok(None), false) => panic!("meta dir missing when resolution should return an error"),
-            (Err(_), true) => panic!("meta dir resolution failed usage was expected to succeed"),
-            (Err(_), false) => panic!("unexpected error when attempting meta dir resolution"),
+        match expected_res {
+            ExpectedResult::Ok => {
+                let meta_dir = meta_dir_res.expect("failed to resolve meta dir");
+                let meta_dir = meta_dir.as_ref().expect("no meta dir for component");
+                write_hippo_file_to_directory(&meta_dir, ExpectedResult::Ok).await
+            }
+            ExpectedResult::Err | ExpectedResult::ErrWithNoEpitaph => match meta_dir_res {
+                Ok(_) => {
+                    panic!("Unexpected success");
+                }
+                Err(ModelError::RoutingError { .. }) => {}
+                Err(e) => panic!("Unexpected error: {:?}", e),
+            },
         }
     }
 
-    async fn write_hippo_file_to_directory(dir_proxy: &DirectoryProxy, should_succeed: bool) {
+    async fn write_hippo_file_to_directory(
+        dir_proxy: &DirectoryProxy,
+        expected_res: ExpectedResult,
+    ) {
         let (file_proxy, server_end) = create_proxy::<FileMarker>().unwrap();
         let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
         dir_proxy
             .open(flags, MODE_TYPE_FILE, "hippos", ServerEnd::new(server_end.into_channel()))
             .expect("failed to open file on storage");
         let res = file_proxy.write(b"hippos can be stored here").await;
-        match (res, should_succeed) {
-            (Ok((s, _)),true) => assert_eq!(zx::Status::OK, zx::Status::from_raw(s)),
-            (Err(_),false) => (),
-            (Ok((s, _)),false) => panic!("we shouldn't be able to access storage, but we opened a file! failed write with status {}", zx::Status::from_raw(s)),
-            (Err(e),true) => panic!("failed to write to file when we expected to be able to! {:?}", e),
+        match expected_res {
+            ExpectedResult::Ok => {
+                let (s, _) = res.expect("failed to write file");
+                assert_matches!(zx::Status::from_raw(s), zx::Status::OK);
+            }
+            ExpectedResult::Err => {
+                res.expect_err("unexpectedly succeeded writing file");
+                let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
+                assert_matches!(
+                    epitaph,
+                    Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+                );
+            }
+            ExpectedResult::ErrWithNoEpitaph => {
+                res.expect_err("unexpectedly succeeded writing file");
+                assert_matches!(dir_proxy.take_event_stream().next().await, None);
+            }
         }
     }
 
@@ -750,7 +791,7 @@ pub mod capability_util {
         namespace: &ManagedNamespace,
         path: &CapabilityPath,
     ) -> T::Proxy {
-        let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
+        let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
@@ -758,6 +799,7 @@ pub mod capability_util {
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open echo service");
+        add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
         let client_end = ClientEnd::<T>::new(node_proxy.into_channel().unwrap().into_zx_channel());
         client_end.into_proxy().unwrap()
     }
@@ -768,7 +810,7 @@ pub mod capability_util {
     /// //src/sys/component_manager/tests/events/integration_test.rs
     pub async fn subscribe_to_event_stream(
         namespace: &ManagedNamespace,
-        should_succeed: bool,
+        expected_res: ExpectedResult,
         events: Vec<CapabilityName>,
     ) {
         let event_source_proxy = connect_to_svc_in_namespace::<BlockingEventSourceMarker>(
@@ -785,7 +827,14 @@ pub mod capability_util {
             .await
             .expect("failed to use service");
         event_source_proxy.start_component_tree().await.expect("failed to start component tree");
-        assert_eq!(res.is_ok(), should_succeed);
+        match expected_res {
+            ExpectedResult::Ok => {
+                res.expect("unexpected failure");
+            }
+            ExpectedResult::Err | ExpectedResult::ErrWithNoEpitaph => {
+                res.expect_err("unexpected success");
+            }
+        }
     }
 
     /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
@@ -793,18 +842,28 @@ pub mod capability_util {
     pub async fn call_echo_svc_from_namespace(
         namespace: &ManagedNamespace,
         path: CapabilityPath,
-        should_succeed: bool,
+        expected_res: ExpectedResult,
     ) {
         let echo_proxy = connect_to_svc_in_namespace::<echo::EchoMarker>(namespace, &path).await;
         let res = echo_proxy.echo_string(Some("hippos")).await;
 
-        match should_succeed {
-            true => {
+        match expected_res {
+            ExpectedResult::Ok => {
                 assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()))
             }
-            false => {
+            ExpectedResult::Err => {
                 let err = res.expect_err("used echo service successfully when it should fail");
                 assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
+                let epitaph = echo_proxy.take_event_stream().next().await.expect("no epitaph");
+                assert_matches!(
+                    epitaph,
+                    Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+                );
+            }
+            ExpectedResult::ErrWithNoEpitaph => {
+                let err = res.expect_err("used echo service successfully when it should fail");
+                assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
+                assert_matches!(echo_proxy.take_event_stream().next().await, None);
             }
         }
     }
@@ -813,7 +872,7 @@ pub mod capability_util {
     /// Expects the service to work like a fuchsia.io service, and respond with
     /// an OnOpen event when opened with OPEN_FLAG_DESCRIBE.
     pub async fn call_file_svc_from_namespace(namespace: &ManagedNamespace, path: CapabilityPath) {
-        let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
+        let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
@@ -823,6 +882,7 @@ pub mod capability_util {
             MODE_TYPE_FILE,
         )
         .expect("failed to open file service");
+        add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
 
         let file_proxy = FileProxy::new(node_proxy.into_channel().unwrap());
         let mut event_stream = file_proxy.take_event_stream();
@@ -842,23 +902,31 @@ pub mod capability_util {
         file: &Path,
         abs_moniker: &'a AbsoluteMoniker,
         model: &'a Arc<Model>,
-        should_succeed: bool,
+        expected_res: ExpectedResult,
     ) {
         let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
         open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_DIRECTORY, server_end).await;
         let dir_proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
-        let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE);
-
-        match file_proxy {
-            Ok(fp) => {
-                let res = io_util::read_file(&fp).await;
-                match should_succeed {
-                    true => assert_eq!("hippo", res.expect("failed to read file")),
-                    false => assert!(res.is_err(), "read file successfully when it should fail"),
-                }
+        match expected_res {
+            ExpectedResult::Ok => {
+                let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
+                    .expect("failed to open file");
+                let res = io_util::read_file(&file_proxy).await;
+                assert_eq!("hippo", res.expect("failed to read file"));
             }
-            Err(_) => {
-                assert!(!should_succeed, file_proxy.expect("failed to open file when it should"))
+            ExpectedResult::Err => {
+                io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
+                    .expect_err("opened file successfully when it should fail");
+                let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
+                assert_matches!(
+                    epitaph,
+                    Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+                );
+            }
+            ExpectedResult::ErrWithNoEpitaph => {
+                io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
+                    .expect_err("opened file successfully when it should fail");
+                assert_matches!(dir_proxy.take_event_stream().next().await, None);
             }
         }
     }
@@ -869,19 +937,29 @@ pub mod capability_util {
         path: CapabilityPath,
         abs_moniker: &'a AbsoluteMoniker,
         model: &'a Arc<Model>,
-        should_succeed: bool,
+        expected_res: ExpectedResult,
     ) {
         let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
         open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_SERVICE, server_end).await;
         let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
         let res = echo_proxy.echo_string(Some("hippos")).await;
-        match should_succeed {
-            true => {
+        match expected_res {
+            ExpectedResult::Ok => {
                 assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()))
             }
-            false => {
+            ExpectedResult::Err => {
                 let err = res.expect_err("used echo service successfully when it should fail");
                 assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
+                let epitaph = echo_proxy.take_event_stream().next().await.expect("no epitaph");
+                assert_matches!(
+                    epitaph,
+                    Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE))
+                );
+            }
+            ExpectedResult::ErrWithNoEpitaph => {
+                let err = res.expect_err("used echo service successfully when it should fail");
+                assert!(err.is_closed(), "expected file closed error, got: {:?}", err);
+                assert_matches!(echo_proxy.take_event_stream().next().await, None);
             }
         }
     }
@@ -894,7 +972,7 @@ pub mod capability_util {
         namespace: &ManagedNamespace,
         bind_calls: Arc<Mutex<Vec<String>>>,
     ) {
-        let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
+        let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
@@ -922,7 +1000,7 @@ pub mod capability_util {
         child_decl: ChildDecl,
     ) {
         let path: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().expect("no realm service");
-        let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
+        let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
@@ -930,6 +1008,7 @@ pub mod capability_util {
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
+        add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
         let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
         let mut collection_ref = fsys::CollectionRef { name: collection.to_string() };
         let child_decl = child_decl.native_into_fidl();
@@ -945,7 +1024,7 @@ pub mod capability_util {
         name: &'a str,
     ) {
         let path: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().expect("no realm service");
-        let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
+        let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
@@ -953,6 +1032,7 @@ pub mod capability_util {
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
+        add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
         let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
         let mut child_ref =
             fsys::ChildRef { collection: Some(collection.to_string()), name: name.to_string() };
@@ -960,11 +1040,9 @@ pub mod capability_util {
         let _ = res.expect("failed to destroy child");
     }
 
-    /// Returns a cloned DirectoryProxy to the dir `dir_string` inside the namespace of
-    /// `resolved_url`.
-    pub async fn get_dir_from_namespace(
+    pub async fn take_dir_from_namespace(
         namespace: &ManagedNamespace,
-        dir_string: &str,
+        dir_path: &str,
     ) -> DirectoryProxy {
         let mut ns = namespace.lock().await;
 
@@ -972,20 +1050,25 @@ pub mod capability_util {
         // path is removed so that the paths/dirs aren't shuffled in the namespace.
         let index = ns
             .iter()
-            .position(|entry| entry.path.as_ref().unwrap() == dir_string)
-            .expect(&format!("didn't find dir {}", dir_string));
+            .position(|entry| entry.path.as_ref().unwrap() == dir_path)
+            .expect(&format!("didn't find dir {}", dir_path));
         let entry = ns.remove(index);
-
-        // Clone our directory, and then put the directory and path back on the end of the namespace so
-        // that the namespace is (somewhat) unmodified.
         let dir_proxy = entry.directory.unwrap().into_proxy().unwrap();
-        let dir_proxy_clone = io_util::clone_directory(&dir_proxy, CLONE_FLAG_SAME_RIGHTS).unwrap();
+        dir_proxy
+    }
+
+    /// Adds `dir_proxy` back to the namespace. Useful for restoring the namespace after a call
+    /// to `take_dir_from_namespace`.
+    pub async fn add_dir_to_namespace(
+        namespace: &ManagedNamespace,
+        dir_path: &str,
+        dir_proxy: DirectoryProxy,
+    ) {
+        let mut ns = namespace.lock().await;
         ns.push(fcrunner::ComponentNamespaceEntry {
-            path: entry.path,
+            path: Some(dir_path.to_string()),
             directory: Some(ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel())),
         });
-
-        dir_proxy_clone
     }
 
     /// Open the exposed dir for `abs_moniker`.

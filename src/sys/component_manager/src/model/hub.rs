@@ -7,6 +7,7 @@ use {
         capability::{
             CapabilityProvider, CapabilitySource, ComponentCapability, FrameworkCapability,
         },
+        channel,
         model::{
             addable_directory::AddableDirectoryWithResult,
             dir_tree::{CapabilityUsageTree, DirTree},
@@ -61,7 +62,7 @@ impl CapabilityProvider for HubCapabilityProvider {
         flags: u32,
         open_mode: u32,
         in_relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         // Append relative_path to the back of the local relative_path vector, then convert it to a
         // pfsPath.
@@ -123,9 +124,14 @@ impl Hub {
         })
     }
 
-    pub async fn open_root(&self, flags: u32, server_end: zx::Channel) -> Result<(), ModelError> {
+    pub async fn open_root(
+        &self,
+        flags: u32,
+        mut server_end: zx::Channel,
+    ) -> Result<(), ModelError> {
         let root_moniker = AbsoluteMoniker::root();
-        self.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, pfsPath::empty(), server_end).await?;
+        self.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, pfsPath::empty(), &mut server_end)
+            .await?;
         Ok(())
     }
 
@@ -150,7 +156,7 @@ impl Hub {
         flags: u32,
         open_mode: u32,
         relative_path: pfsPath,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let instances_map = self.instances.lock().await;
         if !instances_map.contains_key(&abs_moniker) {
@@ -159,6 +165,7 @@ impl Hub {
                 relative_path.into_string(),
             ));
         }
+        let server_end = channel::take_channel(server_end);
         instances_map[&abs_moniker].directory.clone().open(
             self.scope.clone(),
             flags,

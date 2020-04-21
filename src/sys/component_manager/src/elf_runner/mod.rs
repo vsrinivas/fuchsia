@@ -12,7 +12,7 @@ use {
     async_trait::async_trait,
     clonable_error::ClonableError,
     fdio::fdio_sys,
-    fidl::endpoints::ServerEnd,
+    fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_process as fproc,
@@ -528,9 +528,7 @@ impl Runner for ElfRunner {
             }
             Err(err) => {
                 // Deliver any errors as epitaphs over ComponentController.
-                server_end.close_with_epitaph(err.as_zx_status()).unwrap_or_else(|e| {
-                    warn!("failed to send epitaph on ComponentController channel: {}", e);
-                });
+                let _ = server_end.into_channel().close_with_epitaph(err.as_zx_status());
             }
         }
     }

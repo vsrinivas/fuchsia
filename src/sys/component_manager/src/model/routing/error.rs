@@ -6,6 +6,7 @@ use {
     crate::model::moniker::{AbsoluteMoniker, ExtendedMoniker, PartialMoniker, RelativeMoniker},
     anyhow::Error,
     clonable_error::ClonableError,
+    fidl_fuchsia_component as fcomponent, fuchsia_zircon as zx,
     thiserror::Error,
 };
 
@@ -197,6 +198,16 @@ pub enum RoutingError {
 }
 
 impl RoutingError {
+    /// Convert this error into its approximate `fuchsia.component.Error` equivalent.
+    pub fn as_fidl_error(&self) -> fcomponent::Error {
+        fcomponent::Error::ResourceUnavailable
+    }
+
+    /// Convert this error into its approximate `zx::Status` equivalent.
+    pub fn as_zx_status(&self) -> zx::Status {
+        zx::Status::UNAVAILABLE
+    }
+
     pub fn source_instance_stopped(moniker: &AbsoluteMoniker) -> Self {
         Self::SourceInstanceStopped { moniker: moniker.clone() }
     }
@@ -361,12 +372,8 @@ impl RoutingError {
         }
     }
 
-    pub fn capability_from_component_manager_not_found(
-        capability_id: impl Into<String>,
-    ) -> Self {
-        Self::CapabilityFromComponentManagerNotFound {
-            capability_id: capability_id.into(),
-        }
+    pub fn capability_from_component_manager_not_found(capability_id: impl Into<String>) -> Self {
+        Self::CapabilityFromComponentManagerNotFound { capability_id: capability_id.into() }
     }
 
     pub fn expose_from_framework_not_found(

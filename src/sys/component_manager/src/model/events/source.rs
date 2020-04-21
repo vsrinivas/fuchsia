@@ -5,6 +5,7 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        channel,
         model::{
             error::ModelError,
             events::{
@@ -245,8 +246,9 @@ impl CapabilityProvider for EventSource {
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let server_end = channel::take_channel(server_end);
         let stream = ServerEnd::<fsys::BlockingEventSourceMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");

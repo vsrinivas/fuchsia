@@ -95,7 +95,7 @@ async fn dispatch(
     binder: &Arc<dyn Binder>,
     work_items: Vec<WorkItem>,
 ) -> Result<(), Error> {
-    let (client_end, server_end) = zx::Channel::create().map_err(|err| Error::Internal(err))?;
+    let (client_end, mut server_end) = zx::Channel::create().map_err(|err| Error::Internal(err))?;
 
     binder
         .bind(&target_moniker)
@@ -105,7 +105,7 @@ async fn dispatch(
             OPEN_RIGHT_READABLE,
             MODE_TYPE_SERVICE,
             WORKER_CAPABILITY_PATH.to_path_buf(),
-            server_end,
+            &mut server_end,
         )
         .await
         .map_err(|err| Error::Model(err))?;

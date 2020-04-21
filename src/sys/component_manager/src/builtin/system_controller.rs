@@ -5,6 +5,7 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        channel,
         model::{
             actions::{Action, ActionSet},
             error::ModelError,
@@ -139,8 +140,9 @@ impl CapabilityProvider for SystemControllerCapabilityProvider {
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<SystemControllerMarker>::new(server_end);
         let stream: SystemControllerRequestStream = server_end.into_stream().unwrap();
         fasync::spawn(async move {
@@ -217,8 +219,9 @@ mod tests {
         let (client_channel, server_channel) =
             endpoints::create_endpoints::<fsys::SystemControllerMarker>()
                 .expect("failed creating channel endpoints");
+        let mut server_channel = server_channel.into_channel();
         sys_controller
-            .open(0, 0, PathBuf::new(), server_channel.into_channel())
+            .open(0, 0, PathBuf::new(), &mut server_channel)
             .await
             .expect("failed to open capability");
         let controller_proxy =

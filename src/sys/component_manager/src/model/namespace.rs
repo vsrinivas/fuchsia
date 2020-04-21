@@ -198,24 +198,19 @@ impl IncomingNamespace {
                     return;
                 }
             };
+            let mut server_end = server_end.into_zx_channel();
             let res = routing::route_use_capability(
                 flags,
                 fio::MODE_TYPE_DIRECTORY,
                 String::new(),
                 &use_,
                 &target_realm,
-                server_end.into_zx_channel(),
+                &mut server_end,
             )
             .await;
             if let Err(e) = res {
                 let cap = ComponentCapability::Use(use_);
-                error!(
-                    "Failed to route `{}` `{}` from component `{}`: {}",
-                    cap.type_name(),
-                    cap.source_id(),
-                    &target_realm.abs_moniker,
-                    Self::routing_err_str(e),
-                );
+                routing::report_routing_failure(&target_realm.abs_moniker, &cap, &e, server_end);
             }
         };
 
@@ -274,22 +269,23 @@ impl IncomingNamespace {
                             return;
                         }
                     };
+                    let mut server_end = server_end.into_channel();
                     let res = routing::route_use_capability(
                         flags,
                         mode,
                         relative_path,
                         &use_,
                         &target_realm,
-                        server_end.into_channel(),
+                        &mut server_end,
                     )
                     .await;
                     if let Err(e) = res {
                         let cap = ComponentCapability::Use(use_);
-                        error!(
-                            "Failed to route protocol `{}` from component `{}`: {}",
-                            cap.source_id(),
+                        routing::report_routing_failure(
                             &target_realm.abs_moniker,
-                            Self::routing_err_str(e),
+                            &cap,
+                            &e,
+                            server_end,
                         );
                     }
                 });
@@ -333,14 +329,5 @@ impl IncomingNamespace {
             });
         }
         Ok(())
-    }
-
-    /// Formats `err` as a `String`, but elides the type if the error is a `RoutingError`, the
-    /// common case.
-    fn routing_err_str(err: ModelError) -> String {
-        match err {
-            ModelError::RoutingError { err } => format!("{}", err),
-            _ => format!("{}", err),
-        }
     }
 }

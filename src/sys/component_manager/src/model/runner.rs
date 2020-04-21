@@ -81,7 +81,7 @@ impl RunnerError {
         RunnerError::RunnerConnectionError { err: err.into().into() }
     }
 
-    /// Convert this error into its approximate fcomponent::Error equivalent.
+    /// Convert this error into its approximate `fuchsia.component.Error` equivalent.
     pub fn as_fidl_error(&self) -> fcomponent::Error {
         match self {
             RunnerError::InvalidArgs { .. } => fcomponent::Error::InvalidArguments,
@@ -93,11 +93,16 @@ impl RunnerError {
         }
     }
 
-    /// Convert this error into a zx::Status equivalent.
+    /// Convert this error into its approximate `zx::Status` equivalent.
     pub fn as_zx_status(&self) -> zx::Status {
-        zx::Status::from_raw(
-            self.as_fidl_error().into_primitive() as fuchsia_zircon_status::zx_status_t
-        )
+        match self {
+            RunnerError::InvalidArgs { .. } => zx::Status::INVALID_ARGS,
+            RunnerError::ComponentLoadError { .. } => zx::Status::UNAVAILABLE,
+            RunnerError::ComponentLaunchError { .. } => zx::Status::UNAVAILABLE,
+            RunnerError::ComponentRuntimeDirectoryError { .. } => zx::Status::INTERNAL,
+            RunnerError::RunnerConnectionError { .. } => zx::Status::INTERNAL,
+            RunnerError::Unsupported { .. } => zx::Status::NOT_SUPPORTED,
+        }
     }
 }
 

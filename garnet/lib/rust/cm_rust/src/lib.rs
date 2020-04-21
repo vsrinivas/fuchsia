@@ -368,6 +368,15 @@ impl Clone for ComponentDecl {
 }
 
 impl ComponentDecl {
+    /// Returns the `UseRunnerDecl` for this component, or `None` if this is a non-executable
+    /// component.
+    pub fn get_used_runner(&self) -> Option<&UseRunnerDecl> {
+        self.uses.iter().find_map(|u| match u {
+            UseDecl::Runner(runner) => Some(runner),
+            _ => return None,
+        })
+    }
+
     /// Returns the `StorageDecl` corresponding to `storage_name`.
     pub fn find_storage_source<'a>(&'a self, storage_name: &str) -> Option<&'a StorageDecl> {
         self.storage.iter().find(|s| &s.name == storage_name)

@@ -5,6 +5,7 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        channel,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -55,8 +56,9 @@ impl CapabilityProvider for RealmCapabilityProvider {
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_end: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let server_end = channel::take_channel(server_end);
         let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
@@ -169,6 +171,7 @@ impl RealmCapabilityHost {
             })?;
             realm_state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
         };
+        let mut exposed_dir = exposed_dir.into_channel();
         if let Some(child_realm) = child_realm {
             child_realm
                 .bind()
@@ -187,7 +190,7 @@ impl RealmCapabilityHost {
                         fcomponent::Error::Internal
                     }
                 })?
-                .open_exposed(exposed_dir.into_channel())
+                .open_exposed(&mut exposed_dir)
                 .await
                 .map_err(|e| {
                     error!("open_exposed() failed: {:?}", e);

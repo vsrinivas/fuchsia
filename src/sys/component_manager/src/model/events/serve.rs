@@ -5,6 +5,7 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        channel,
         model::{
             error::ModelError,
             events::{
@@ -220,10 +221,11 @@ impl CapabilityProvider for ExternalCapabilityProvider {
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
-        server_chan: zx::Channel,
+        server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let server_end = channel::take_channel(server_end);
         self.proxy
-            .open(server_chan)
+            .open(server_end)
             .await
             .expect("failed to invoke CapabilityProvider::Open over FIDL");
         Ok(())
@@ -247,7 +249,11 @@ async fn serve_routing_protocol(
 
                 responder.send().unwrap();
             }
-            fsys::RoutingProtocolRequest::ReplaceAndOpen { client_end, server_end, responder } => {
+            fsys::RoutingProtocolRequest::ReplaceAndOpen {
+                client_end,
+                mut server_end,
+                responder,
+            } => {
                 // Lock on the provider
                 let mut capability_provider = capability_provider.lock().await;
 
@@ -268,7 +274,9 @@ async fn serve_routing_protocol(
                     // TODO(xbhatnag): We should be passing in the flags, mode and path
                     // to open the existing provider with. For a service, it doesn't matter
                     // but it would for other kinds of capabilities.
-                    if let Err(e) = existing_provider.open(0, 0, PathBuf::new(), server_end).await {
+                    if let Err(e) =
+                        existing_provider.open(0, 0, PathBuf::new(), &mut server_end).await
+                    {
                         panic!("Could not open existing provider -> {}", e);
                     }
                 } else {

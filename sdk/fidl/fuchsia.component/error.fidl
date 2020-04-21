@@ -23,7 +23,7 @@ enum Error {
     INSTANCE_CANNOT_RESOLVE = 7;
     /// The component collection was not found.
     COLLECTION_NOT_FOUND = 8;
-    /// There was insufficient resources to perform the operation.
+    /// There were insufficient resources to perform the operation.
     RESOURCE_UNAVAILABLE = 9;
     /// The component instance died unexpectedly.
     INSTANCE_DIED = 10;
