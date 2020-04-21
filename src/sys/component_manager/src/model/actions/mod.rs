@@ -198,7 +198,7 @@ impl Action {
         let action = self.clone();
         fasync::spawn(async move {
             let res = match &action {
-                Action::Start => start::do_start(realm.clone()).await,
+                Action::Start => start::do_start(&realm).await,
                 Action::MarkDeleting(moniker) => {
                     do_mark_deleting(realm.clone(), moniker.clone()).await
                 }

@@ -7,14 +7,14 @@ use {
     fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    test_utils_lib::events::{Event, EventMatcher, EventSource, Resolved},
+    test_utils_lib::events::{Event, EventMatcher, EventSource, Resolved, Started},
 };
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Track all the starting child components.
     let event_source = EventSource::new_async()?;
-    let mut event_stream = event_source.subscribe(vec![Resolved::NAME]).await?;
+    let mut event_stream = event_source.subscribe(vec![Resolved::NAME, Started::NAME]).await?;
 
     event_source.start_component_tree().await?;
 
@@ -27,9 +27,14 @@ async fn main() -> Result<(), Error> {
     let (_, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     let _ = realm.bind_child(&mut child_ref, server_end).await;
 
-    let event = event_stream.expect_exact::<Resolved>(EventMatcher::new()).await?;
+    let resolved_event = event_stream.expect_exact::<Resolved>(EventMatcher::new()).await?;
+    // A started event should still be dispatched indicating failure due to a resolution
+    // error.
+    let started_event = event_stream.expect_exact::<Started>(EventMatcher::new()).await?;
 
-    if event.error.is_some() {
+    assert_eq!(resolved_event.error, started_event.error);
+
+    if resolved_event.error.is_some() {
         let _ = echo.echo_string(Some("ERROR")).await?;
     } else {
         let _ = echo.echo_string(Some("PAYLOAD")).await?;

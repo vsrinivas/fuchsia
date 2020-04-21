@@ -2,6 +2,13 @@
     program: {
         binary: "bin/resolved_error_reporter",
     },
+    children: [
+        {
+            name: "child_a",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/does_not_exist.cm",
+            startup: "lazy",
+        },
+    ],
     use: [
         { runner: "elf" },
         {
@@ -16,12 +23,9 @@
             event: "resolved",
             from: "framework",
         },
-    ],
-    children: [
         {
-            name: "child_a",
-            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/does_not_exist.cm",
-            startup: "lazy",
+            event: "started",
+            from: "framework",
         },
     ],
 }

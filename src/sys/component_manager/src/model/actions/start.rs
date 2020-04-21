@@ -6,10 +6,11 @@ use {
     crate::model::{
         error::ModelError,
         exposed_dir::ExposedDir,
-        hooks::{Event, EventPayload, RuntimeInfo},
+        hooks::{Event, EventError, EventPayload, EventType, RuntimeInfo},
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
         realm::{ExecutionState, Realm, Runtime, WeakRealm},
+        runner::Runner,
     },
     cm_rust::data,
     fidl::endpoints::{self, Proxy, ServerEnd},
@@ -23,7 +24,7 @@ use {
     vfs::execution_scope::ExecutionScope,
 };
 
-pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
+pub(super) async fn do_start(realm: &Arc<Realm>) -> Result<(), ModelError> {
     // Pre-flight check: if the component is already started, return now. Note that `bind_at` also
     // performs this check before scheduling the action; here, we do it again while the action is
     // registered so we avoid the risk of invoking the BeforeStart hook twice.
@@ -34,37 +35,65 @@ pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
         }
     }
 
-    // Resolve the component.
-    let component = realm.resolve().await?;
-
-    // Find the runner to use.
-    let runner = realm.resolve_runner().await.map_err(|e| {
-        error!("failed to resolve runner for {}: {:?}", realm.abs_moniker, e);
-        e
-    })?;
-
-    // Generate the Runtime which will be set in the Execution.
-    let (pending_runtime, start_info, controller_server) = make_execution_runtime(
-        realm.as_weak(),
-        component.resolved_url.clone(),
-        component.package,
-        &component.decl,
-    )
-    .await?;
-
-    // Invoke the BeforeStart hook.
-    {
-        let event = Event::new_with_timestamp(
-            realm.abs_moniker.clone(),
-            Ok(EventPayload::Started {
-                component_url: realm.component_url.clone(),
-                runtime: RuntimeInfo::from_runtime(&pending_runtime),
-                component_decl: component.decl.clone(),
-            }),
-            pending_runtime.timestamp,
-        );
-        realm.hooks.dispatch(&event).await?;
+    struct StartContext {
+        component_decl: cm_rust::ComponentDecl,
+        runner: Arc<dyn Runner>,
+        pending_runtime: Runtime,
+        start_info: fcrunner::ComponentStartInfo,
+        controller_server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
     }
+
+    let result = async move {
+        // Resolve the component.
+        let component = realm.resolve().await?;
+
+        // Find the runner to use.
+        let runner = realm.resolve_runner().await.map_err(|e| {
+            error!("failed to resolve runner for {}: {:?}", realm.abs_moniker, e);
+            e
+        })?;
+
+        // Generate the Runtime which will be set in the Execution.
+        let (pending_runtime, start_info, controller_server_end) = make_execution_runtime(
+            realm.as_weak(),
+            component.resolved_url.clone(),
+            component.package,
+            &component.decl,
+        )
+        .await?;
+
+        Ok(StartContext {
+            component_decl: component.decl,
+            runner,
+            pending_runtime,
+            start_info,
+            controller_server_end,
+        })
+    }
+    .await;
+
+    let start_context = match result {
+        Ok(start_context) => {
+            let event = Event::new_with_timestamp(
+                realm.abs_moniker.clone(),
+                Ok(EventPayload::Started {
+                    component_url: realm.component_url.clone(),
+                    runtime: RuntimeInfo::from_runtime(&start_context.pending_runtime),
+                    component_decl: start_context.component_decl.clone(),
+                }),
+                start_context.pending_runtime.timestamp,
+            );
+
+            realm.hooks.dispatch(&event).await?;
+            start_context
+        }
+        Err(e) => {
+            let event =
+                Event::new(realm.abs_moniker.clone(), Err(EventError::new(&e, EventType::Started)));
+            realm.hooks.dispatch(&event).await?;
+            return Err(e);
+        }
+    };
 
     // Set the Runtime in the Execution. From component manager's perspective, this indicates
     // that the component has started. This may return early if the component is shut down.
@@ -73,13 +102,13 @@ pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
         if let Some(res) = should_return_early(&execution, &realm.abs_moniker) {
             return res;
         }
-        execution.runtime = Some(pending_runtime);
+        execution.runtime = Some(start_context.pending_runtime);
     }
 
     // It's possible that the component is stopped before getting here. If so, that's fine: the
     // runner will start the component, but its stop or kill signal will be immediately set on the
     // component controller.
-    runner.start(start_info, controller_server).await;
+    start_context.runner.start(start_context.start_info, start_context.controller_server_end).await;
 
     Ok(())
 }

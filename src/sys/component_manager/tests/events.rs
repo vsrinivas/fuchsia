@@ -752,7 +752,7 @@ impl Drop for EventLog {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct EventError {
     pub description: String,
 }
