@@ -9,7 +9,7 @@ use {
         internal::SaeParameters,
     },
     crate::crypto_utils::kdf_sha256,
-    anyhow::{bail, Error},
+    anyhow::Error,
     log::warn,
     num::integer::Integer,
 };

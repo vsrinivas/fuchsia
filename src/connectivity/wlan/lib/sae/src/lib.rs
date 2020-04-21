@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// This crate doesn't comply with all 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
+#![allow(unused)]
+
 mod boringssl;
+mod crypto_utils;
 mod ecc;
 mod frame;
 mod state;
@@ -11,7 +16,7 @@ use {
     anyhow::{bail, Error},
     boringssl::{Bignum, EcGroupId},
     fidl_fuchsia_wlan_mlme::AuthenticateResultCodes as ResultCode,
-    frame::{AntiCloggingTokenMsg, CommitMsg, ConfirmMsg},
+    frame::{CommitMsg, ConfirmMsg},
     log::warn,
     mundane::{hash::Digest, hmac},
     wlan_common::ie::rsn::akm::{self, Akm},
@@ -276,7 +281,6 @@ fn cn(key: &[u8], counter: u16, data: Vec<&[u8]>) -> Vec<u8> {
 mod tests {
     use {
         super::{internal::*, *},
-        hex::FromHex,
         wlan_common::assert_variant,
     };
 

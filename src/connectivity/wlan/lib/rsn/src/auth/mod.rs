@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 pub mod psk;
-#[allow(unused)]
-pub mod sae;
 
 use crate::rsna::{Dot11VerifiedKeyFrame, UpdateSink};
 use anyhow;

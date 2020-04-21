@@ -11,7 +11,7 @@ use {
         CommitMsg, ConfirmMsg, Key, RejectReason, SaeHandshake, SaeUpdate, SaeUpdateSink, Timeout,
     },
     crate::crypto_utils::kdf_sha256,
-    anyhow::{bail, format_err, Error},
+    anyhow::Error,
     log::{error, warn},
     wlan_statemachine::*,
 };
@@ -535,8 +535,8 @@ impl<E> SaeHandshake for SaeHandshakeImpl<E> {
 mod test {
     use {
         super::*,
-        crate::auth::sae::{
-            self,
+        crate::{
+            self as sae,
             boringssl::{Bignum, EcGroupId},
             ecc,
         },

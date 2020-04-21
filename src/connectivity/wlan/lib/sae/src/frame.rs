@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    super::{internal::FiniteCyclicGroup, AuthFrameRx, AuthFrameTx},
+    super::{AuthFrameRx, AuthFrameTx},
     anyhow::{anyhow, bail, Error},
-    fidl_fuchsia_wlan_mlme::{
-        AuthenticateConfirm, AuthenticateRequest, AuthenticateResultCodes as ResultCode,
-    },
+    fidl_fuchsia_wlan_mlme::AuthenticateResultCodes as ResultCode,
     wlan_common::{appendable::Appendable, buffer_reader::BufferReader},
 };
 
