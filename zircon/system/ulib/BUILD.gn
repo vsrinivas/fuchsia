@@ -340,10 +340,8 @@ group("ulib") {
     "ram-crashlog",
 #------------------
 #------------------
-    "ramdevice-client",
 #------------------
 #------------------
-    "ramdevice-client:ramdevice-client-static",
 #------------------
 #------------------
     "range",

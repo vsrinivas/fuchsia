@@ -139,7 +139,6 @@ aggregate_manifest("legacy-aux") {
     "mini-process",
 #------------------
 #------------------
-    "ramdevice-client",
 #------------------
 #------------------
     "syslog",

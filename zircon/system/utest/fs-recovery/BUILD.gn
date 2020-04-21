@@ -44,9 +44,9 @@ test("fs-recovery") {
     "//zircon/public/lib/fs-management",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 
   # TODO(47413): Fix the leaks and remove this.

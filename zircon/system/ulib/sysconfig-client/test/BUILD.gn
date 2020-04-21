@@ -42,10 +42,10 @@ test("sysconfig-sync-client-test") {
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/inspector",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
   ]
 }

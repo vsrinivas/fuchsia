@@ -10,6 +10,16 @@
     "sdk": false
   },
   {
+    "label": "//zircon/system/ulib/ramdevice-client:ramdevice-client",
+    "name": "ramdevice-client",
+    "sdk": false
+  },
+  {
+    "label": "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
+    "name": "ramdevice-client-static",
+    "sdk": false
+  },
+  {
     "label": "//zircon/system/ulib/tee-client-api:tee-client-api",
     "name": "tee-client-api",
     "sdk": false

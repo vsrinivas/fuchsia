@@ -44,7 +44,6 @@ test("blobfs-bench") {
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/memfs-cpp",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
@@ -55,6 +54,7 @@ test("blobfs-bench") {
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fs-test-utils",
     "//zircon/system/ulib/perftest",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 }
 

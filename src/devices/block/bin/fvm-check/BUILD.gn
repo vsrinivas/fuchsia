@@ -24,6 +24,7 @@ executable("fvm-check") {
   }
   sources = [ "main.cc" ]
   deps = [
+    "//zircon/public/lib/boringssl",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
@@ -31,9 +32,8 @@ executable("fvm-check") {
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
-    "//zircon/public/lib/ramdevice-client",
-    "//zircon/public/lib/boringssl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 }
 

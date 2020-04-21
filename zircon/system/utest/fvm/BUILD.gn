@@ -48,7 +48,6 @@ executable("fvm") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/memfs",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
@@ -62,6 +61,7 @@ executable("fvm") {
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fvm-devices",
     "//zircon/system/ulib/minfs",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 
   # TODO(47415): Fix the leaks and remove this.

@@ -146,13 +146,13 @@ executable("fshost") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fs-management",
     "//zircon/public/lib/hermetic-decompressor",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-fshost:c",
     "//zircon/system/fidl/fuchsia-fshost:llcpp",
     "//zircon/system/fidl/fuchsia-ldsvc:c",
     "//zircon/system/ulib/loader-service",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 }
 
@@ -249,12 +249,12 @@ test("block-watcher-test") {
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fs-management",
     "//zircon/public/lib/in-memory-logger",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/ulib/fs/metrics:metrics-cobalt",
     "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/minfs",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 }
 

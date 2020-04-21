@@ -26,7 +26,6 @@ test("ramdisk") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fs-management",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
@@ -34,6 +33,7 @@ test("ramdisk") {
     "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
     "//zircon/system/fidl/fuchsia-hardware-ramdisk:c",
     "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 }
 

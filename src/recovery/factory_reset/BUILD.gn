@@ -134,10 +134,10 @@ test("factory_reset_unittests") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fs-management",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
     "//zircon/system/fidl/fuchsia-device-manager",
     "//zircon/system/fidl/fuchsia-hardware-block-volume:fuchsia-hardware-block-volume_c",
+    "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zxcrypt:zxcrypt-fdio",
   ]
 }

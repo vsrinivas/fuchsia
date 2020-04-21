@@ -66,8 +66,8 @@ executable("ftl-proxy-bin-test") {
     "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/driver-integration-test",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 }
 

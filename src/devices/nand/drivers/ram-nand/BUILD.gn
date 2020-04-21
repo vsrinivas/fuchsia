@@ -66,7 +66,6 @@ test("ram-nand-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zircon-internal",
@@ -74,6 +73,7 @@ test("ram-nand-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 }
 

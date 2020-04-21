@@ -69,7 +69,6 @@ test("paver-test") {
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
-    "//zircon/public/lib/ramdevice-client-static",
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/lib/amlogic",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
@@ -81,6 +80,7 @@ test("paver-test") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/libabr",
     "//zircon/system/ulib/paver",
+    "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
   ]

@@ -98,7 +98,6 @@ test("fs") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/memfs",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
@@ -112,6 +111,7 @@ test("fs") {
     "//zircon/system/fidl/fuchsia-mem:c",
     "//zircon/system/fidl/fuchsia-minfs:c",
     "//zircon/system/ulib/minfs",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 
   # TODO(46860): Fix the leaks and remove this.

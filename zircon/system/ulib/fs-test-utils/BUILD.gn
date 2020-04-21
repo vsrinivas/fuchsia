@@ -28,7 +28,7 @@ zx_library("fs-test-utils") {
   ]
   public_deps = [
     # <fs-test-utils/fixture.h> has #include <ramdevice-client/ramdisk.h>.
-    "//zircon/public/lib/ramdevice-client",
+    "//zircon/system/ulib/ramdevice-client",
 
     # <fs-test-utils/blobfs/bloblist.h> has #include <lib/zircon-internal/thread_annotations.h>.
     "//zircon/public/lib/zircon-internal",
@@ -53,7 +53,6 @@ zx_library("fs-test-utils") {
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/memfs-cpp",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
@@ -62,5 +61,6 @@ zx_library("fs-test-utils") {
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/ulib/perftest",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 }

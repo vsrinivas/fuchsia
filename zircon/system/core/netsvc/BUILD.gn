@@ -164,11 +164,11 @@ test("netsvc-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
+    "//zircon/system/ulib/ramdevice-client",
   ]
   data_deps = [ ":netsvc" ]
   configs += [ "//build/config:Wno-unused-function" ]
@@ -200,11 +200,11 @@ test("netsvc-stress-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
+    "//zircon/system/ulib/ramdevice-client",
   ]
   data_deps = [ ":netsvc" ]
 }
