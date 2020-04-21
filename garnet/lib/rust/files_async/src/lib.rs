@@ -345,15 +345,16 @@ mod tests {
     use {
         super::*,
         fuchsia_async as fasync,
-        fuchsia_vfs_pseudo_fs::{
-            directory::entry::DirectoryEntry, file::simple::read_only_str, pseudo_directory,
-        },
         fuchsia_zircon::DurationNum,
         futures::{channel::oneshot, stream::StreamExt},
         io_util, pin_utils,
         proptest::prelude::*,
         std::{path::Path, task::Poll},
         tempfile::TempDir,
+        vfs::{
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::pcb::read_only_static, pseudo_directory,
+        },
     };
 
     proptest! {
@@ -437,28 +438,26 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_readdir() {
-        let (dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        fasync::spawn(async move {
-            let mut dir = pseudo_directory! {
-                "afile" => read_only_str(|| Ok("".into())),
-                "zzz" => read_only_str(|| Ok("".into())),
-                "subdir" => pseudo_directory! {
-                    "ignored" => read_only_str(|| Ok("".into())),
-                },
-            };
-            dir.open(
-                fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
-                0,
-                &mut std::iter::empty(),
-                ServerEnd::new(server_end.into_channel()),
-            );
-            dir.await;
-            unreachable!();
-        });
+        let (dir_client, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let dir = pseudo_directory! {
+            "afile" => read_only_static(""),
+            "zzz" => read_only_static(""),
+            "subdir" => pseudo_directory! {
+                "ignored" => read_only_static(""),
+            },
+        };
+        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        dir.open(
+            scope,
+            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+            0,
+            vfs::path::Path::empty(),
+            ServerEnd::new(server_end.into_channel()),
+        );
 
         // run twice to check that seek offset is properly reset before reading the directory
         for _ in 0..2 {
-            let entries = readdir(&dir).await.expect("readdir to succeed");
+            let entries = readdir(&dir_client).await.expect("readdir to succeed");
             assert_eq!(
                 entries,
                 vec![
