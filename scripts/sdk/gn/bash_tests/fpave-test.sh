@@ -252,6 +252,38 @@ TEST_fpave_with_props() {
 
 }
 
+TEST_fpave_in_zedboot() {
+  # This test covers the case when the device is in zedboot, so ssh does not connect.
+
+  set_up_ssh
+  set_up_device_finder
+  set_up_gsutil
+  set_up_sdk_stubs
+
+  # mock ssh not connecting.
+  echo 127 > "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_status"
+
+  # Run command.
+  BT_EXPECT "${FPAVE_CMD}"  > "${BT_TEMP_DIR}/TEST_fpave_in_zedboot.log" 2>&1
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/TEST_fpave_in_zedboot.log" \
+      "WARNING: Confirm device is rebooting into recovery mode.  Paving may fail if device is not in Zedboot."
+
+  # Verify that the pave.sh script from the Fuchsia SDK was started correctly.
+  # shellcheck disable=SC1090
+  source "${FUCHSIA_WORK_DIR}/image/pave.sh.mock_state"
+
+  local expected_args=( _ANY_ --authorized-keys "${FUCHSIA_WORK_DIR}/.ssh/authorized_keys" -1 )
+  gn-test-check-mock-args "${expected_args[@]}"
+
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
+
+  local expected_args=( _ANY_ "-F" "${FUCHSIA_WORK_DIR}/sshconfig"
+                       "fe80::c0ff:eec0:ffee%coffee" "dm" "reboot-recovery" )
+  gn-test-check-mock-args "${expected_args[@]}"
+}
+
 # shellcheck disable=SC2034
 # Test initialization.
 BT_FILE_DEPS=(

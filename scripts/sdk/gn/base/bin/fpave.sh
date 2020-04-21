@@ -85,8 +85,8 @@ case $1 in
       PRIVATE_KEY_FILE="${1}"
     ;;
     --device-name)
-      DEVICE_NAME_FILTER="${1}"
       shift
+      DEVICE_NAME_FILTER="${1}"
     ;;
     --prepare)
       PREPARE_ONLY="yes"
@@ -206,8 +206,9 @@ fi
 DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
 if [[ "$?" && -n "$DEVICE_IP" ]]; then
     SSH_ARGS+=( "${DEVICE_IP}" dm reboot-recovery )
-    ssh-cmd "${SSH_ARGS[@]}"
-    fx-warn "Confirm device is rebooting into recovery mode.  Paving may fail if device is not in Zedboot."
+    if ! ssh-cmd "${SSH_ARGS[@]}"; then
+      fx-warn "Confirm device is rebooting into recovery mode.  Paving may fail if device is not in Zedboot."
+    fi
 else
     fx-warn "Device not detected.  Make sure the device is connected and at the 'Zedboot' screen."
 fi
