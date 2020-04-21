@@ -148,6 +148,9 @@ config("compiler") {
         "-march=x86-64",
       ]
     }
+  } else if (current_os == "win") {
+    # This enables build ID-like PDB UUIDs without timestamp.
+    ldflags += [ "-Wl,/Brepro" ]
   }
 
   if (is_host) {
@@ -268,6 +271,20 @@ config("relative_paths") {
   asmflags = compiler_flags
   cflags = compiler_flags
   ldflags = compiler_flags
+
+  if (current_os == "win") {
+    ldflags += [
+      # This embeds just "name.pdb" in the binary instead of the absolute
+      # path to the PDB file.
+      "-Wl,/pdbaltpath:%_PDB%",
+
+      # This embeds a fake Windows-style absolute path rather than the real
+      # build-time absolute path in the PDB file.  Windows apparently
+      # requires an absolute path here, so we use an arbitrary fake one for
+      # reproducibility.
+      "-Wl,/pdbsourcepath:c:\\src",
+    ]
+  }
 }
 
 config("nolibc") {
