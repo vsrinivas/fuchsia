@@ -966,10 +966,16 @@ static bool AllPagesMatch(VmObject* vmo, F pred, uint64_t offset, uint64_t len) 
   return status == ZX_OK ? context.result : false;
 }
 
-static bool PagesInUnswappableQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
+static bool PagesInUnswappableZeroForkQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
   return AllPagesMatch(
-      vmo, [](const vm_page_t* p) { return pmm_page_queues()->DebugPageIsUnswappable(p); }, offset,
-      len);
+      vmo, [](const vm_page_t* p) { return pmm_page_queues()->DebugPageIsUnswappableZeroFork(p); },
+      offset, len);
+}
+
+static bool PagesInAnyUnswappableQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
+  return AllPagesMatch(
+      vmo, [](const vm_page_t* p) { return pmm_page_queues()->DebugPageIsAnyUnswappable(p); },
+      offset, len);
 }
 
 static bool PagesInWiredQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
@@ -990,7 +996,7 @@ static bool vmo_commit_test() {
   ASSERT_EQ(ZX_OK, ret, "committing vm object\n");
   EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), PAGE_SIZE * vmo->AttributedPages(),
             "committing vm object\n");
-  EXPECT_TRUE(PagesInUnswappableQueue(vmo.get(), 0, alloc_size));
+  EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), 0, alloc_size));
   END_TEST;
 }
 
@@ -1039,7 +1045,7 @@ static bool vmo_pin_test() {
   EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
 
   vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
-  EXPECT_TRUE(PagesInUnswappableQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
+  EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
   status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
   EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
@@ -1073,7 +1079,7 @@ static bool vmo_multiple_pin_test() {
 
   status = vmo->CommitRange(0, alloc_size);
   EXPECT_EQ(ZX_OK, status, "committing range\n");
-  EXPECT_TRUE(PagesInUnswappableQueue(vmo.get(), 0, alloc_size));
+  EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), 0, alloc_size));
 
   status = vmo->Pin(0, alloc_size);
   EXPECT_EQ(ZX_OK, status, "pinning whole range\n");
@@ -1091,7 +1097,7 @@ static bool vmo_multiple_pin_test() {
 
   vmo->Unpin(0, alloc_size);
   EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 4 * PAGE_SIZE));
-  EXPECT_TRUE(PagesInUnswappableQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
+  EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
   status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
   EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
   status = vmo->DecommitRange(5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE);
@@ -1859,6 +1865,64 @@ static bool vmo_move_pages_on_access_test() {
   EXPECT_EQ(ZX_OK, status);
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
+
+  END_TEST;
+}
+
+static bool vmo_dedupe_zero_page() {
+  BEGIN_TEST;
+  // test that a zero page gets removed
+
+  // Disable the page scanner as this test would be flaky if the zero page scanner were to run in
+  // the middle.
+  scanner_push_disable_count();
+  auto pop_count = fbl::MakeAutoCall([] { scanner_pop_disable_count(); });
+
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE * 3, &vmo);
+  EXPECT_EQ(ZX_OK, status);
+  uint64_t val = 0;
+
+  status = vmo->Read(&val, 0, sizeof(val));
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(0u, val);
+
+  status = vmo->Write(&val, PAGE_SIZE, sizeof(val));
+  EXPECT_EQ(ZX_OK, status);
+
+  val = 42;
+  status = vmo->Write(&val, PAGE_SIZE * 2, sizeof(val));
+  EXPECT_EQ(ZX_OK, status);
+
+  // We should have two committed pages, as the first read should not have committed.
+  EXPECT_EQ(2u, vmo->AttributedPages());
+
+  // Both pages should be specifically in the unswappable zero fork list.
+  EXPECT_TRUE(PagesInUnswappableZeroForkQueue(vmo.get(), PAGE_SIZE, PAGE_SIZE * 2));
+
+  // Trigger the zero page scanner to process everything.
+  scanner_do_zero_scan(UINT64_MAX);
+
+  // One of our pages should have been deduped, and so we should only have 1 committed page.
+  EXPECT_EQ(1u, vmo->AttributedPages());
+
+  // If we now make the page zero again the scanner will not pick it up.
+  val = 0;
+  status = vmo->Write(&val, PAGE_SIZE * 2, sizeof(val));
+  EXPECT_EQ(ZX_OK, status);
+
+  scanner_do_zero_scan(UINT64_MAX);
+  EXPECT_EQ(1u, vmo->AttributedPages());
+
+  // To prove we really had a zero page, manually ask the vmo to attempt a dedupe.
+  vm_page_t* page = nullptr;
+  paddr_t paddr;
+  status = vmo->GetPage(PAGE_SIZE * 2, 0, nullptr, nullptr, &page, &paddr);
+  EXPECT_EQ(ZX_OK, status);
+  bool result = VmObjectPaged::AsVmObjectPaged(vmo)->DedupZeroPage(page, PAGE_SIZE * 2);
+  EXPECT_TRUE(result);
+
+  EXPECT_EQ(0u, vmo->AttributedPages());
 
   END_TEST;
 }
@@ -2789,28 +2853,28 @@ static bool pq_add_remove() {
   // Put the page in each queue and make sure it shows up
   pq.SetWired(&test_page);
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0}));
 
   pq.Remove(&test_page);
   EXPECT_FALSE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0}));
 
   pq.SetUnswappable(&test_page);
   EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 1, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 1, 0, 0}));
 
   pq.Remove(&test_page);
   EXPECT_FALSE(pq.DebugPageIsUnswappable(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0}));
 
   // Pretend we have some kind of pointer to a VmObjectPaged (this will never get dereferenced)
   pq.SetPagerBacked(&test_page, vmop, 0);
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0, 0}));
 
   pq.Remove(&test_page);
   EXPECT_FALSE(pq.DebugPageIsPagerBacked(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0}));
 
   END_TEST;
 }
@@ -2834,25 +2898,25 @@ static bool pq_move_queues() {
   // Move the page between queues.
   pq.SetWired(&test_page);
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0}));
 
   pq.MoveToUnswappable(&test_page);
   EXPECT_FALSE(pq.DebugPageIsWired(&test_page));
   EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 1, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 1, 0, 0}));
 
   pq.MoveToPagerBacked(&test_page, vmop, 0);
   EXPECT_FALSE(pq.DebugPageIsUnswappable(&test_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0, 0}));
 
   pq.MoveToWired(&test_page);
   EXPECT_FALSE(pq.DebugPageIsPagerBacked(&test_page));
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0}));
 
   pq.Remove(&test_page);
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0}));
 
   END_TEST;
 }
@@ -2869,14 +2933,14 @@ static bool pq_move_self_queue() {
   // Move the page into the queue it is already in.
   pq.SetWired(&test_page);
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0}));
 
   pq.MoveToWired(&test_page);
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0}));
 
   pq.Remove(&test_page);
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0}));
 
   END_TEST;
 }
@@ -2905,36 +2969,36 @@ static bool pq_rotate_queue() {
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   size_t queue;
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page, &queue));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 1, 0}));
   EXPECT_EQ(queue, 0u);
 
   // Gradually rotate the queue.
   pq.RotatePagerBackedQueues();
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page, &queue));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0}, 0, 1, 0}));
   EXPECT_EQ(queue, 1u);
 
   pq.RotatePagerBackedQueues();
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 0, 1, 0}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 0, 1, 0}, 0, 1, 0}));
   pq.RotatePagerBackedQueues();
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 1, 0}));
 
   // Further rotations should not move the page.
   pq.RotatePagerBackedQueues();
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 1, 0}));
 
   // Moving the page should bring it back to the first queue.
   pq.MoveToPagerBacked(&pager_page, vmop, 0);
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page));
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 1, 0}));
 
   // Just double check one rotation.
   pq.RotatePagerBackedQueues();
-  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0}, 0, 1}));
+  EXPECT_TRUE(pq.DebugQueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0}, 0, 1, 0}));
 
   pq.Remove(&wired_page);
   pq.Remove(&pager_page);
@@ -3083,6 +3147,7 @@ VM_UNITTEST(vmo_lookup_clone_test)
 VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(vmo_move_pages_on_access_test)
+VM_UNITTEST(vmo_dedupe_zero_page)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(vm_kernel_region_test)
 VM_UNITTEST(region_list_get_alloc_spot_test)

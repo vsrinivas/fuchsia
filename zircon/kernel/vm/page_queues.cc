@@ -14,6 +14,7 @@ PageQueues::PageQueues() {
   }
   list_initialize(&unswappable_);
   list_initialize(&wired_);
+  list_initialize(&unswappable_zero_fork_);
 }
 
 PageQueues::~PageQueues() {
@@ -22,6 +23,7 @@ PageQueues::~PageQueues() {
   }
   DEBUG_ASSERT(list_is_empty(&unswappable_));
   DEBUG_ASSERT(list_is_empty(&wired_));
+  DEBUG_ASSERT(list_is_empty(&unswappable_zero_fork_));
 }
 
 void PageQueues::RotatePagerBackedQueues() {
@@ -63,16 +65,20 @@ void PageQueues::SetUnswappable(vm_page_t* page) {
   list_add_head(&unswappable_, &page->queue_node);
 }
 
-void PageQueues::MoveToUnswappable(vm_page_t* page) {
+void PageQueues::MoveToUnswappableLocked(vm_page_t* page) {
   DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->object.pin_count == 0);
-  Guard<SpinLock, IrqSave> guard{&lock_};
   DEBUG_ASSERT(list_in_list(&page->queue_node));
   page->object.set_object(nullptr);
   page->object.set_page_offset(0);
   list_delete(&page->queue_node);
   list_add_head(&unswappable_, &page->queue_node);
+}
+
+void PageQueues::MoveToUnswappable(vm_page_t* page) {
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  MoveToUnswappableLocked(page);
 }
 
 void PageQueues::SetPagerBacked(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset) {
@@ -82,7 +88,7 @@ void PageQueues::SetPagerBacked(vm_page_t* page, VmObjectPaged* object, uint64_t
   DEBUG_ASSERT(object);
   Guard<SpinLock, IrqSave> guard{&lock_};
   DEBUG_ASSERT(!list_in_list(&page->queue_node));
-  page->object.set_object(reinterpret_cast<void*>(object));
+  page->object.set_object(object);
   page->object.set_page_offset(page_offset);
   list_add_head(&pager_backed_[0], &page->queue_node);
 }
@@ -94,10 +100,35 @@ void PageQueues::MoveToPagerBacked(vm_page_t* page, VmObjectPaged* object, uint6
   DEBUG_ASSERT(object);
   Guard<SpinLock, IrqSave> guard{&lock_};
   DEBUG_ASSERT(list_in_list(&page->queue_node));
-  page->object.set_object(reinterpret_cast<void*>(object));
+  page->object.set_object(object);
   page->object.set_page_offset(page_offset);
   list_delete(&page->queue_node);
   list_add_head(&pager_backed_[0], &page->queue_node);
+}
+
+void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmObjectPaged* object,
+                                        uint64_t page_offset) {
+  DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
+  DEBUG_ASSERT(!page->is_free());
+  DEBUG_ASSERT(page->object.pin_count == 0);
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  DEBUG_ASSERT(!list_in_list(&page->queue_node));
+  page->object.set_object(object);
+  page->object.set_page_offset(page_offset);
+  list_add_head(&unswappable_zero_fork_, &page->queue_node);
+}
+
+void PageQueues::MoveToUnswappableZeroFork(vm_page_t* page, VmObjectPaged* object,
+                                           uint64_t page_offset) {
+  DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
+  DEBUG_ASSERT(!page->is_free());
+  DEBUG_ASSERT(page->object.pin_count == 0);
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  DEBUG_ASSERT(list_in_list(&page->queue_node));
+  page->object.set_object(object);
+  page->object.set_page_offset(page_offset);
+  list_delete(&page->queue_node);
+  list_add_head(&unswappable_zero_fork_, &page->queue_node);
 }
 
 void PageQueues::RemoveLocked(vm_page_t* page) {
@@ -130,6 +161,7 @@ PageQueues::Counts PageQueues::DebugQueueCounts() const {
   }
   counts.unswappable = list_length(&unswappable_);
   counts.wired = list_length(&wired_);
+  counts.unswappable_zero_fork = list_length(&unswappable_zero_fork_);
   return counts;
 }
 
@@ -167,4 +199,39 @@ bool PageQueues::DebugPageIsUnswappable(const vm_page_t* page) const {
 
 bool PageQueues::DebugPageIsWired(const vm_page_t* page) const {
   return DebugPageInList(&wired_, page);
+}
+
+bool PageQueues::DebugPageIsUnswappableZeroFork(const vm_page_t* page) const {
+  return DebugPageInList(&unswappable_zero_fork_, page);
+}
+
+bool PageQueues::DebugPageIsAnyUnswappable(const vm_page_t* page) const {
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  return DebugPageInListLocked(&unswappable_, page) ||
+         DebugPageInListLocked(&unswappable_zero_fork_, page);
+}
+
+ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  vm_page_t* page = list_peek_tail_type(&unswappable_zero_fork_, vm_page_t, queue_node);
+  if (!page) {
+    return ktl::nullopt;
+  }
+
+  VmObjectPaged* vmop = reinterpret_cast<VmObjectPaged*>(page->object.get_object());
+  uint64_t page_offset = page->object.get_page_offset();
+  DEBUG_ASSERT(vmop);
+
+  page->object.set_object(0);
+  page->object.set_page_offset(0);
+
+  list_delete(&page->queue_node);
+  list_add_head(&unswappable_, &page->queue_node);
+
+  // We may be racing with destruction of VMO. As we currently hold our lock we know that our
+  // back pointer is correct in so far as the VmObjectPaged has not yet had completed running its
+  // destructor, so we know it is safe to attempt to upgrade it to a RefPtr. If upgrading fails
+  // we assume the page is about to be removed from the page queue once the VMO destructor gets
+  // a chance to run.
+  return VmoBacklink{fbl::MakeRefPtrUpgradeFromRaw(vmop, guard), page, page_offset};
 }

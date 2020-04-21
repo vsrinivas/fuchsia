@@ -157,6 +157,17 @@ class VmObjectPaged final : public VmObject {
 
   uint32_t ScanForZeroPages(bool reclaim) override;
 
+  // Attempts to dedup the given page at the specified offset with the zero page. The only
+  // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that
+  // all race conditions are handled internally. This function returns false if
+  //  * page is either not from this VMO, or not found at the specified offset
+  //  * page is pinned
+  //  * vmo is uncached
+  //  * page is not all zeroes
+  // Otherwise 'true' is returned and the page will have been returned to the pmm with a zero page
+  // marker put in its place.
+  bool DedupZeroPage(vm_page_t* page, uint64_t offset);
+
  private:
   // private constructor (use Create())
   VmObjectPaged(uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,

@@ -238,6 +238,52 @@ VmObjectPaged::~VmObjectPaged() {
   pmm_free(&list);
 }
 
+bool VmObjectPaged::DedupZeroPage(vm_page_t* page, uint64_t offset) {
+  Guard<Mutex> guard{&lock_};
+
+  // Check this page is still a part of this VMO. object.page_offset could be complete garbage,
+  // but there's no harm in looking up a random slot as we'll then notice it's the wrong page.
+  VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
+  if (!page_or_marker || !page_or_marker->IsPage() || page_or_marker->Page() != page ||
+      page->object.pin_count > 0) {
+    return false;
+  }
+
+  // Skip uncached VMOs as we cannot efficiently scan them.
+  if ((cache_policy_ & ZX_CACHE_POLICY_MASK) != ZX_CACHE_POLICY_CACHED) {
+    return false;
+  }
+
+  // Skip any VMOs that have non user mappings as we cannot safely remove write permissions from
+  // them and indicates this VMO is actually in use by the kernel and we probably would not want to
+  // perform zero page de-duplication on it even if we could.
+  for (auto& m : mapping_list_) {
+    if (!m.aspace()->is_user()) {
+      return false;
+    }
+  }
+
+  // We expect most pages to not be zero, as such we will first do a 'racy' zero page check where
+  // we leave write permissions on the page. If the page isn't zero, which is our hope, then we
+  // haven't paid the price of modifying page tables.
+  if (!IsZeroPage(page_or_marker->Page())) {
+    return false;
+  }
+
+  RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::RemoveWrite);
+
+  if (IsZeroPage(page_or_marker->Page())) {
+    RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::Unmap);
+    vm_page_t* page = page_or_marker->ReleasePage();
+    pmm_page_queues()->Remove(page);
+    DEBUG_ASSERT(!list_in_list(&page->queue_node));
+    pmm_free_page(page);
+    *page_or_marker = VmPageOrMarker::Marker();
+    return true;
+  }
+  return false;
+}
+
 uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
   list_node_t free_list;
   list_initialize(&free_list);
@@ -519,6 +565,26 @@ void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden
   DEBUG_ASSERT(!page_source_);
   // Move everything into the hidden parent, for immutability
   hidden_parent->page_list_ = ktl::move(page_list_);
+
+  // As we are moving pages between objects we need to make sure no backlinks are broken. We know
+  // there's no page_source_ and hence no pages will be in the pager_backed queue, but we could
+  // have pages in the unswappable_zero_forked queue. We do know that pages in this queue cannot
+  // have been pinned, so we can just move (or re-move potentially) any page that is not pinned
+  // into the regular unswappable queue.
+  {
+    PageQueues* pq = pmm_page_queues();
+    Guard<SpinLock, IrqSave> guard{pq->get_lock()};
+    hidden_parent->page_list_.ForEveryPage([pq](auto& p, uint64_t off) {
+      if (p.IsPage()) {
+        vm_page_t* page = p.Page();
+        if (page->object.pin_count == 0) {
+          AssertHeld<Lock<SpinLock>, IrqSave>(*pq->get_lock());
+          pq->MoveToUnswappableLocked(page);
+        }
+      }
+      return ZX_ERR_NEXT;
+    });
+  }
   hidden_parent->size_ = size_;
 }
 
@@ -936,6 +1002,26 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
     }
   }
 
+  // As we are moving pages between objects we need to make sure no backlinks are broken. We know
+  // there's no page_source_ and hence no pages will be in the pager_backed queue, but we could
+  // have pages in the unswappable_zero_forked queue. We do know that pages in this queue cannot
+  // have been pinned, so we can just move (or re-move potentially) any page that is not pinned
+  // into the unswappable queue.
+  {
+    PageQueues* pq = pmm_page_queues();
+    Guard<SpinLock, IrqSave> guard{pq->get_lock()};
+    page_list_.ForEveryPage([pq](auto& p, uint64_t off) {
+      if (p.IsPage()) {
+        vm_page_t* page = p.Page();
+        if (page->object.pin_count == 0) {
+          AssertHeld<Lock<SpinLock>, IrqSave>(*pq->get_lock());
+          pq->MoveToUnswappableLocked(page);
+        }
+      }
+      return ZX_ERR_NEXT;
+    });
+  }
+
   // At this point, we need to merge |this|'s page list and |child|'s page list.
   //
   // In general, COW clones are expected to share most of their pages (i.e. to fork a relatively
@@ -991,6 +1077,7 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
 
     // Now merge |child|'s pages into |this|, overwriting any pages present in |this|, and
     // then move that list to |child|.
+
     child.page_list_.MergeOnto(page_list_,
                                [&covered_remover](vm_page_t* p) { covered_remover.Push(p); });
     child.page_list_ = ktl::move(page_list_);
@@ -1881,6 +1968,9 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
       DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "status=%d\n", status);
       pmm_free_page(insert.ReleasePage());
       return status;
+    }
+    if (p == vm_get_zero_page()) {
+      pmm_page_queues()->MoveToUnswappableZeroFork(res_page, this, offset);
     }
 
     // This is the only path where we can allocate a new page without being a clone (clones are

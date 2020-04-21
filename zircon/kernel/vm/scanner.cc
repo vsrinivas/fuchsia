@@ -6,16 +6,19 @@
 
 #include <lib/cmdline.h>
 #include <lib/console.h>
+#include <lib/counters.h>
 #include <platform.h>
 #include <zircon/time.h>
 
 #include <kernel/event.h>
 #include <kernel/thread.h>
+#include <ktl/algorithm.h>
 #include <lk/init.h>
 #include <vm/scanner.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
+#include <vm/vm_object_paged.h>
 
 namespace {
 
@@ -29,6 +32,10 @@ static constexpr uint32_t kScannerOpRotateQueues = 1u << 5;
 // Amount of time between pager queue rotations.
 static constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
 
+// Number of pages to attempt to de-dupe back to zero every second. This not atomic as it is only
+// set during init before the scanner thread starts up, at which point it becomes read only.
+static uint64_t zero_page_scans_per_second = 0;
+
 // Tracks what the scanner should do when it is next woken up.
 ktl::atomic<uint32_t> scanner_operation = 0;
 
@@ -41,32 +48,38 @@ Event scanner_disabled_event;
 DECLARE_SINGLETON_MUTEX(scanner_disabled_lock);
 uint32_t scanner_disable_count TA_GUARDED(scanner_disabled_lock::Get()) = 0;
 
+KCOUNTER(zero_scan_requests, "vm.scanner.zero_scan.requests")
+KCOUNTER(zero_scan_ends_empty, "vm.scanner.zero_scan.queue_emptied")
+KCOUNTER(zero_scan_pages_scanned, "vm.scanner.zero_scan.total_pages_considered")
+KCOUNTER(zero_scan_pages_deduped, "vm.scanner.zero_scan.pages_deduped")
+
 void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
   uint64_t zero_pages = VmObject::ScanAllForZeroPages(false);
-  printf("[SCAN]: Found %lu zero pages that could be de-duped\n", zero_pages);
+  printf("[SCAN]: Found %lu zero pages across all of memory\n", zero_pages);
   PageQueues::Counts queue_counts = pmm_page_queues()->DebugQueueCounts();
   for (size_t i = 0; i < PageQueues::kNumPagerBacked; i++) {
     printf("[SCAN]: Found %lu user-paged backed pages in queue %zu\n", queue_counts.pager_backed[i],
            i);
   }
   printf("[SCAN]: Next queue rotation in %ld ms\n", time_till_queue_rotate / ZX_MSEC(1));
+  printf("[SCAN]: Found %lu zero forked pages\n", queue_counts.unswappable_zero_fork);
 }
 
-void scanner_do_reclaim(bool print) {
-  uint64_t zero_pages = VmObject::ScanAllForZeroPages(true);
-  if (print) {
-    printf("[SCAN]: Found %lu zero pages that were de-duped\n", zero_pages);
-  }
+zx_time_t calc_next_zero_scan_deadline(zx_time_t current) {
+  return zero_page_scans_per_second > 0 ? zx_time_add_duration(current, ZX_SEC(1))
+                                        : ZX_TIME_INFINITE;
 }
 
 int scanner_request_thread(void *) {
   bool disabled = false;
   zx_time_t next_rotate_deadline = zx_time_add_duration(current_time(), kQueueRotateTime);
+  zx_time_t next_zero_scan_deadline = calc_next_zero_scan_deadline(current_time());
   while (1) {
     if (disabled) {
       scanner_request_event.Wait(Deadline::infinite());
     } else {
-      scanner_request_event.Wait(Deadline::no_slack(next_rotate_deadline));
+      scanner_request_event.Wait(
+          Deadline::no_slack(ktl::min(next_rotate_deadline, next_zero_scan_deadline)));
     }
     int32_t op = scanner_operation.exchange(0);
     // It is possible for enable and disable to happen at the same time. This indicates the disabled
@@ -101,13 +114,22 @@ int scanner_request_thread(void *) {
       op &= ~kScannerFlagPrint;
       print = true;
     }
+    bool reclaim_all = false;
     if (op & kScannerOpReclaimAll) {
       op &= ~kScannerOpReclaimAll;
-      scanner_do_reclaim(print);
+      reclaim_all = true;
     }
     if (op & kScannerOpDump) {
       op &= ~kScannerOpDump;
       scanner_print_stats(zx_time_sub_time(next_rotate_deadline, current));
+    }
+    if (current >= next_zero_scan_deadline || reclaim_all) {
+      const uint64_t scan_limit = reclaim_all ? UINT64_MAX : zero_page_scans_per_second;
+      uint64_t pages = scanner_do_zero_scan(scan_limit);
+      if (print) {
+        printf("[SCAN]: De-duped %lu pages that were recently forked from the zero page\n", pages);
+      }
+      next_zero_scan_deadline = calc_next_zero_scan_deadline(current);
     }
     DEBUG_ASSERT(op == 0);
   }
@@ -126,6 +148,30 @@ void scanner_dump_info() {
 }
 
 }  // namespace
+
+uint64_t scanner_do_zero_scan(uint64_t limit) {
+  uint64_t deduped = 0;
+  uint64_t considered;
+  zero_scan_requests.Add(1);
+  for (considered = 0; considered < limit; considered++) {
+    if (ktl::optional<PageQueues::VmoBacklink> backlink =
+            pmm_page_queues()->PopUnswappableZeroFork()) {
+      if (!backlink->vmo) {
+        continue;
+      }
+      if (backlink->vmo->DedupZeroPage(backlink->page, backlink->offset)) {
+        deduped++;
+      }
+    } else {
+      zero_scan_ends_empty.Add(1);
+      break;
+    }
+  }
+
+  zero_scan_pages_scanned.Add(considered);
+  zero_scan_pages_deduped.Add(deduped);
+  return deduped;
+}
 
 void scanner_push_disable_count() {
   Guard<Mutex> guard{scanner_disabled_lock::Get()};
@@ -152,6 +198,8 @@ static void scanner_init_func(uint level) {
   Thread *thread =
       Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
   DEBUG_ASSERT(thread);
+  zero_page_scans_per_second =
+      gCmdline.GetUInt64("kernel.page-scanner.zero-page-scans-per-second", 0);
   if (!gCmdline.GetBool("kernel.page-scanner.start-at-boot", false)) {
     Guard<Mutex> guard{scanner_disabled_lock::Get()};
     scanner_disable_count++;

@@ -23,6 +23,7 @@
 #include <fbl/macros.h>
 #include <fbl/name.h>
 #include <fbl/ref_counted.h>
+#include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
@@ -68,7 +69,7 @@ struct GlobalListTag {};
 //
 // Can be created without mapping and used as a container of data, or mappable
 // into an address space via VmAddressRegion::CreateVmMapping
-class VmObject : public fbl::RefCounted<VmObject>,
+class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
                  public fbl::ContainableBaseClasses<
                      fbl::DoublyLinkedListable<VmObject*, internal::ChildListTag>,
                      fbl::DoublyLinkedListable<VmObject*, internal::GlobalListTag>> {

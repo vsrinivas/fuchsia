@@ -13,6 +13,7 @@
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <ktl/array.h>
+#include <ktl/optional.h>
 #include <vm/page.h>
 
 class VmObjectPaged;
@@ -58,23 +59,26 @@ class PageQueues {
   // Moves page from whichever queue it is currently in, to the pager backed queue. Same rules on
   // keeping the back reference up to date as given in SetPagerBacked apply.
   void MoveToPagerBacked(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset);
+  // Place page in the unswappable zero forked queue. Must not already be in a page queue. Same
+  // rules for back pointers apply as for SetPagerBacked.
+  void SetUnswappableZeroFork(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset);
+  // Moves page from whichever queue it is currently in, to the unswappable zero forked queue. Same
+  // rules for back pointers apply as for SetPagerBacked.
+  void MoveToUnswappableZeroFork(vm_page_t* page, VmObjectPaged* object, uint64_t page_offset);
+
   // Removes the page from any page list and returns ownership of the queue_node.
   void Remove(vm_page_t* page);
   // Batched version of Remove that also places all the pages in the specified list
   void RemoveArrayIntoList(vm_page_t** page, size_t count, list_node_t* out_list);
 
-  // Helper struct to group queue length counts returned by DebugQueueCounts.
-  struct Counts {
-    ktl::array<size_t, kNumPagerBacked> pager_backed = {0};
-    size_t unswappable = 0;
-    size_t wired = 0;
+  // Variation on MoveToUnswappable that allows for already holding the lock.
+  void MoveToUnswappableLocked(vm_page_t* page) TA_REQ(lock_);
 
-    bool operator==(const Counts& other) const {
-      return pager_backed == other.pager_backed && unswappable == other.unswappable &&
-             wired == other.wired;
-    }
-    bool operator!=(const Counts& other) const { return !(*this == other); }
-  };
+  // Provides access to the underlying lock, allowing _Locked variants to be called. Use of this is
+  // highly discouraged as the underlying lock is a spinlock, which cannot generally be held safely,
+  // specifically it is unsafe to access the heap whilst holding this lock. Preferably *Array
+  // variations should be used, but this provides a higher performance mechanism when needed.
+  Lock<SpinLock>* get_lock() TA_RET_CAP(lock_) { return &lock_; }
 
   // Rotates the pager backed queues such that all the pages in queue J get moved to queue J+1.
   // This leaves queue 0 empty and the last queue (kNumPagerBacked - 1) has both its old contents
@@ -85,6 +89,40 @@ class PageQueues {
   // {[], [a], [b], [d,c]}
   void RotatePagerBackedQueues();
 
+  // Used to represent and return page backlink information acquired whilst holding the page queue
+  // lock. The contained vmo could be null if the refptr could not be upgraded, indicating that the
+  // vmo was being destroyed whilst trying to construct the backlink.
+  // The page and offset contained here are not synchronized and must be separately validated before
+  // use. This can be done by acquiring the returned vmo's lock and then validating that the page is
+  // still contained at the offset.
+  struct VmoBacklink {
+    VmoBacklink() = default;
+
+    fbl::RefPtr<VmObjectPaged> vmo;
+    vm_page_t* page = nullptr;
+    uint64_t offset = 0;
+  };
+
+  // Moves a page from from the unswappable zero fork queue into the unswappable queue and returns
+  // the backlink information. If the zero fork queue is empty then a nullopt is returned, otherwise
+  // if it has_value the vmo field may be null to indicate that the vmo is running its destructor
+  // (see VmoBacklink for more details).
+  ktl::optional<VmoBacklink> PopUnswappableZeroFork();
+
+  // Helper struct to group queue length counts returned by DebugQueueCounts.
+  struct Counts {
+    ktl::array<size_t, kNumPagerBacked> pager_backed = {0};
+    size_t unswappable = 0;
+    size_t wired = 0;
+    size_t unswappable_zero_fork = 0;
+
+    bool operator==(const Counts& other) const {
+      return pager_backed == other.pager_backed && unswappable == other.unswappable &&
+             wired == other.wired && unswappable_zero_fork == other.unswappable_zero_fork;
+    }
+    bool operator!=(const Counts& other) const { return !(*this == other); }
+  };
+
   // These functions are marked debug as they perform O(n) traversals of the queues and will hold
   // the lock for the entire time. As such they should only be used for tests or instrumented
   // debugging.
@@ -93,6 +131,8 @@ class PageQueues {
   // index of the queue that the page was in.
   bool DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue = nullptr) const;
   bool DebugPageIsUnswappable(const vm_page_t* page) const;
+  bool DebugPageIsUnswappableZeroFork(const vm_page_t* page) const;
+  bool DebugPageIsAnyUnswappable(const vm_page_t* page) const;
   bool DebugPageIsWired(const vm_page_t* page) const;
 
  private:
@@ -106,6 +146,10 @@ class PageQueues {
   // wired pages include kernel data structures or memory pinned for devices and these pages must
   // not be touched in any way, removing both eviction and other strategies such as compression.
   list_node_t wired_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
+  // these are a subset of the unswappable_ pages that were forked from the zero pages. Pages being
+  // in this list is purely a hint, and it is correct for pages to at any point be moved between the
+  // unswappable_ and unswappabe_zero_fork_ lists.
+  list_node_t unswappable_zero_fork_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
 
   void RemoveLocked(vm_page_t* page) TA_REQ(lock_);
 
