@@ -76,6 +76,15 @@ class DeviceTest : public gtest::RealLoopFixture {
     RunLoopUntil([&]() { return HasFailure() || condition; });
   }
 
+  // Synchronizes messages to a stream. This method returns when an error occurs or all messages
+  // sent to |stream| have been received by the server.
+  void Sync(fuchsia::camera3::StreamPtr& stream) {
+    stream->SetResolution({.width = 0, .height = 0});
+    bool resolution_returned = false;
+    stream->WatchResolution([&](fuchsia::math::Size resolution) { resolution_returned = true; });
+    RunLoopUntilFailureOr(resolution_returned);
+  }
+
   std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<DeviceImpl> device_;
   std::unique_ptr<FakeController> controller_;
@@ -428,6 +437,22 @@ TEST_F(DeviceTest, SetResolutionInvalid) {
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     error_received = true;
   });
+  RunLoopUntilFailureOr(error_received);
+}
+
+TEST_F(DeviceTest, SetConfigurationDisconnectsStreams) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  fuchsia::camera3::StreamPtr stream;
+  bool error_received = false;
+  stream.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+    error_received = true;
+  });
+  device->ConnectToStream(0, stream.NewRequest());
+  Sync(stream);
+  device->SetCurrentConfiguration(0);
   RunLoopUntilFailureOr(error_received);
 }
 
