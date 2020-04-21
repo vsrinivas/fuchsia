@@ -16,6 +16,7 @@
 #include <string.h>
 #include <zircon/device/vfs.h>
 #include <zircon/fidl.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -29,7 +30,7 @@
 #include "async_loop_owned_rpc_handler.h"
 #include "coordinator.h"
 #include "lib/fidl/cpp/message_part.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 namespace {
 
@@ -809,7 +810,7 @@ void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* di
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: DcIostate::HandleRpc aborting, saw status %d\n", status);
+    LOGF(ERROR, "Failed to wait for RPC: %s", zx_status_get_string(status));
     return;
   }
 
@@ -827,8 +828,7 @@ void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* di
       return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
     });
   } else {
-    log(ERROR, "driver_manager: DcIostate::HandleRpc: invalid signals %x\n", signal->observed);
-    abort();
+    LOGF(FATAL, "Unexpected signal state %#08x", signal->observed);
   }
   // Do not start waiting again, and destroy |ios|
 }
@@ -840,7 +840,6 @@ zx::channel devfs_root_clone() { return zx::channel(fdio_service_clone(g_devfs_r
 void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher) {
   root_devnode = std::make_unique<Devnode>("");
   if (!root_devnode) {
-    log(ERROR, "driver_manager: failed to allocate devfs root node\n");
     return;
   }
   root_devnode->ino = 1;

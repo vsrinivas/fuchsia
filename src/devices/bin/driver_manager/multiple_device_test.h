@@ -8,12 +8,13 @@
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <zircon/status.h>
 
 #include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
 #include "coordinator_test_utils.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interface {
  public:
@@ -24,18 +25,13 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
     zx::channel client, server;
     zx_status_t status = zx::channel::create(0, &client, &server);
     if (status != ZX_OK) {
-      log(ERROR,
-          "driver_manager: failed to create client for mock fshost admin, failed to create "
-          "channel: %s\n",
-          zx_status_get_string(status));
       return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
     }
 
     status = fidl::Bind(dispatcher, std::move(server), this);
     if (status != ZX_OK) {
-      log(ERROR,
-          "driver_manager: failed to create client for mock fshost admin, failed to bind: %s\n",
-          zx_status_get_string(status));
+      LOGF(ERROR, "Failed to create client for mock fshost admin, failed to bind: %s",
+           zx_status_get_string(status));
       return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
     }
 

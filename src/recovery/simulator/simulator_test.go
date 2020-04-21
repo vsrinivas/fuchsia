@@ -81,8 +81,9 @@ func TestSerialShellEnabled(t *testing.T) {
 	}
 
 	i := distro.Create(qemu.Params{
-		Arch: arch,
-		ZBI:  zbiPath(t),
+		Arch:          arch,
+		ZBI:           zbiPath(t),
+		AppendCmdline: "devmgr.log-to-debuglog",
 		// This test uses additional memory on ASAN builds than normal.
 		Memory: 3072,
 	})
@@ -93,7 +94,7 @@ func TestSerialShellEnabled(t *testing.T) {
 	}
 	defer i.Kill()
 
-	i.WaitForLogMessage("(sh:console) OK")
+	i.WaitForLogMessage("Launching /boot/bin/sh (sh:console)")
 	tokenFromSerial := randomTokenAsString()
 	i.RunCommand("echo '" + tokenFromSerial + "'")
 	i.WaitForLogMessage(tokenFromSerial)

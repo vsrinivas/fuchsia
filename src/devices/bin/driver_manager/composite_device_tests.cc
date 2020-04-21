@@ -12,7 +12,7 @@
 #include <zxtest/zxtest.h>
 
 #include "multiple_device_test.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 // Reads a CreateCompositeDevice from remote, checks expectations, and sends
 // a ZX_OK response.

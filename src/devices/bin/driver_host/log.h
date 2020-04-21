@@ -1,35 +1,22 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_LOG_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_LOG_H_
 
-#include <stdint.h>
-#include <stdio.h>
+#include "src/devices/lib/log/log.h"
 
-// clang-format off
+#define LOGD(severity, dev, message...)                                   \
+  do {                                                                    \
+    std::vector<char> buf(FX_LOG_MAX_TAG_LEN);                            \
+    FX_LOGF(severity, mkdevpath((dev), buf.data(), buf.size()), message); \
+  } while (false)
 
-#define LOG_ERROR    0x001
-#define LOG_INFO     0x002
-#define LOG_TRACE    0x004
-#define LOG_SPEW     0x008
-#define LOG_RPC_IN   0x010
-#define LOG_RPC_OUT  0x020
-#define LOG_RPC_RIO  0x040
-#define LOG_RPC_SDW  0x080
-#define LOG_DEVFS    0x100
-#define LOG_DEVLC    0x200
-#define LOG_ALL      0x3ff
-
-// clang-format on
-
-extern uint32_t log_flags;
-
-#define log(flag, fmt...)         \
-  do {                            \
-    if (LOG_##flag & ::log_flags) \
-      printf(fmt);                \
-  } while (0)
+#define VLOGD(verbosity, dev, message...)                                   \
+  do {                                                                      \
+    std::vector<char> buf(FX_LOG_MAX_TAG_LEN);                              \
+    FX_VLOGF(verbosity, mkdevpath((dev), buf.data(), buf.size()), message); \
+  } while (false)
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_LOG_H_

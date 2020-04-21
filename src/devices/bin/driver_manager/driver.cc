@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/driver/binding.h>
+#include <zircon/status.h>
 
 #include <new>
 
@@ -18,7 +19,7 @@
 
 #include "env.h"
 #include "fdio.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 namespace {
 
@@ -64,17 +65,15 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, 
   drv->libname.Set(context->libname);
   drv->name.Set(note->name);
 
-#if VERBOSE_DRIVER_LOAD
-  log(INFO, "found driver: %s\n", (char*)cookie);
-  log(INFO, "        name: %s\n", note->name);
-  log(INFO, "      vendor: %s\n", note->vendor);
-  log(INFO, "     version: %s\n", note->version);
-  log(INFO, "       flags: %#x\n", note->flags);
-  log(INFO, "     binding:\n");
+  VLOGF(2, "Found driver: %s", (char*)cookie);
+  VLOGF(2, "        name: %s", note->name);
+  VLOGF(2, "      vendor: %s", note->vendor);
+  VLOGF(2, "     version: %s", note->version);
+  VLOGF(2, "       flags: %#x", note->flags);
+  VLOGF(2, "     binding:");
   for (size_t n = 0; n < note->bindcount; n++) {
-    log(INFO, "         %03zd: %08x %08x\n", n, bi[n].op, bi[n].arg);
+    VLOGF(2, "         %03zd: %08x %08x", n, bi[n].op, bi[n].arg);
   }
-#endif
 
   context->func(drv.release(), note->version);
 }
@@ -103,19 +102,18 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func) {
     }
     context.libname = libname;
 
-    int fd;
-    if ((fd = openat(dirfd(dir), de->d_name, O_RDONLY)) < 0) {
+    int fd = openat(dirfd(dir), de->d_name, O_RDONLY);
+    if (fd < 0) {
       continue;
     }
     zx_status_t status = di_read_driver_info(fd, &context, found_driver);
     close(fd);
 
-    if (status) {
-      if (status == ZX_ERR_NOT_FOUND) {
-        log(INFO, "driver_manager: no driver info in '%s'\n", libname);
-      } else {
-        log(ERROR, "driver_manager: error reading info from '%s'\n", libname);
-      }
+    if (status == ZX_ERR_NOT_FOUND) {
+      LOGF(INFO, "Missing info from driver '%s'", libname);
+    } else if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to read info from driver '%s': %s", libname,
+           zx_status_get_string(status));
     }
   }
   closedir(dir);
@@ -123,9 +121,9 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func) {
 
 void load_driver(const char* path, DriverLoadCallback func) {
   // TODO: check for duplicate driver add
-  int fd;
-  if ((fd = open(path, O_RDONLY)) < 0) {
-    log(ERROR, "driver_manager: cannot open '%s'\n", path);
+  int fd = open(path, O_RDONLY);
+  if (fd < 0) {
+    LOGF(ERROR, "Cannot open driver '%s'", path);
     return;
   }
 
@@ -133,11 +131,9 @@ void load_driver(const char* path, DriverLoadCallback func) {
   zx_status_t status = di_read_driver_info(fd, &context, found_driver);
   close(fd);
 
-  if (status) {
-    if (status == ZX_ERR_NOT_FOUND) {
-      log(ERROR, "driver_manager: no driver info in '%s'\n", path);
-    } else {
-      log(ERROR, "driver_manager: error reading info from '%s'\n", path);
-    }
+  if (status == ZX_ERR_NOT_FOUND) {
+    LOGF(INFO, "Missing info from driver '%s'", path);
+  } else if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to read info from driver '%s': %s", path, zx_status_get_string(status));
   }
 }

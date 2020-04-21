@@ -4,6 +4,7 @@
 
 #include "fdio.h"
 
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -30,9 +31,10 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
+#include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS)
 
@@ -80,7 +82,8 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
   zx::job job_copy;
   zx_status_t status = job.duplicate(CHILD_JOB_RIGHTS, &job_copy);
   if (status != ZX_OK) {
-    log(ERROR, "launch failed %s\n", zx_status_get_string(status));
+    LOGF(ERROR, "Failed to launch %s (%s), cannot duplicate job: %s", argv[0], name,
+         zx_status_get_string(status));
     return status;
   }
 
@@ -195,10 +198,10 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
                             actions.data(), proc.reset_and_get_address(), err_msg);
   }
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: spawn %s (%s) failed: %s: %d\n", argv[0], name, err_msg, status);
+    LOGF(ERROR, "Failed to launch %s (%s): %s", argv[0], name, err_msg);
     return status;
   }
-  log(INFO, "driver_manager: launch %s (%s) OK\n", argv[0], name);
+  LOGF(INFO, "Launching %s (%s)", argv[0], name);
   if (out_proc != nullptr) {
     *out_proc = std::move(proc);
   }
@@ -232,10 +235,9 @@ ArgumentVector ArgumentVector::FromCmdline(const char* cmdline) {
 }
 
 void ArgumentVector::Print(const char* prefix) const {
-  const char* const* argv = argv_;
-  log(INFO, "%s: starting", prefix);
-  for (const char* arg = *argv; arg != nullptr; ++argv, arg = *argv) {
-    log(INFO, " '%s'", *argv);
+  fbl::StringBuffer<llcpp::fuchsia::boot::MAX_ARGS_VALUE_LENGTH> buf;
+  for (const char* const* arg = argv_; *arg != nullptr; ++arg) {
+    buf.AppendPrintf(" '%s'", *arg);
   }
-  log(INFO, "...\n");
+  FX_LOGF(INFO, prefix, "Starting%s...", buf.data());
 }

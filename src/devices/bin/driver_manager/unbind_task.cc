@@ -4,8 +4,10 @@
 
 #include "unbind_task.h"
 
+#include <zircon/status.h>
+
 #include "coordinator.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 UnbindTask::UnbindTask(fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completion completion)
     : Task(device->coordinator->dispatcher(), std::move(completion), opts.post_on_create),
@@ -24,7 +26,8 @@ fbl::RefPtr<UnbindTask> UnbindTask::Create(fbl::RefPtr<Device> device, UnbindTas
 void UnbindTask::ScheduleUnbindChildren() {
   auto remove_task = device_->GetActiveRemove();
   if (remove_task == nullptr) {
-    log(ERROR, "running unbind task but no remove task existed, dev %s\n", device_->name().data());
+    LOGF(ERROR, "Unbind task failed, but no remove task exists for device %p '%s'", device_.get(),
+         device_->name().data());
     return;
   }
 
@@ -116,7 +119,8 @@ void UnbindTask::ScheduleUnbindChildren() {
 }
 
 void UnbindTask::Run() {
-  log(TRACE, "running unbind task for %s, do_unbind %d\n", device_->name().data(), do_unbind_);
+  LOGF(INFO, "Running unbind task for device %p '%s', do_unbind %b", device_.get(),
+       device_->name().data(), do_unbind_);
 
   if (device_->state() == Device::State::kInitializing) {
     auto init_task = device_->GetActiveInit();
@@ -148,8 +152,8 @@ void UnbindTask::Run() {
     // If this unbind task failed, force remove all devices from the devhost.
     bool failed_unbind = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_unbind && device_->state() != Device::State::kDead) {
-      log(ERROR, "%s: unbind task failed, err: %d, force removing device\n", device_->name().data(),
-          status);
+      LOGF(ERROR, "Unbind task failed, force removing device %p '%s': %s", device_.get(),
+           device_->name().data(), zx_status_get_string(status));
       device_->coordinator->RemoveDevice(device_, true /* forced */);
     }
     // The forced removal will schedule new unbind tasks if needed (e.g. for proxy tasks),
@@ -191,13 +195,13 @@ fbl::RefPtr<RemoveTask> RemoveTask::Create(fbl::RefPtr<Device> device, Completio
 }
 
 void RemoveTask::Run() {
-  log(TRACE, "running remove task for %s\n", device_->name().data());
+  LOGF(INFO, "Running remove task for device %p '%s'", device_.get(), device_->name().data());
   auto completion = [this](zx_status_t status) {
     // If this remove task failed, force remove all devices from the devhost.
     bool failed_remove = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_remove && device_->state() != Device::State::kDead) {
-      log(ERROR, "%s: remove task failed, err: %d, force removing device\n", device_->name().data(),
-          status);
+      LOGF(ERROR, "Remove task failed, forcing remove of device %p '%s': %s", device_.get(),
+           device_->name().data(), zx_status_get_string(status));
       device_->coordinator->RemoveDevice(device_, true /* forced */);
     }
     // The forced removal will schedule new remove tasks if needed (e.g. for proxy tasks),

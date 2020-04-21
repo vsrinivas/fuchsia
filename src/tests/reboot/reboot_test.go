@@ -30,8 +30,9 @@ func TestReboot(t *testing.T) {
 	}
 
 	i := distro.Create(qemu.Params{
-		Arch: arch,
-		ZBI:  zbiPath(t),
+		Arch:          arch,
+		ZBI:           zbiPath(t),
+		AppendCmdline: "devmgr.log-to-debuglog",
 	})
 
 	i.Start()
@@ -52,7 +53,7 @@ func TestReboot(t *testing.T) {
 		i.RunCommand(cmd)
 
 		// Make sure the file system is notified and unmounts.
-		i.WaitForLogMessage("driver_manager: Successfully waited for VFS exit completion")
+		i.WaitForLogMessage("Successfully waited for VFS exit completion")
 
 		// Is the target rebooting?
 		i.WaitForLogMessage("Shutting down debuglog")

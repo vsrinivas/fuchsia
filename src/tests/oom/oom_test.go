@@ -30,8 +30,9 @@ func TestOOM(t *testing.T) {
 	}
 
 	i := distro.Create(qemu.Params{
-		Arch: arch,
-		ZBI:  zbiPath(t),
+		Arch:          arch,
+		ZBI:           zbiPath(t),
+		AppendCmdline: "devmgr.log-to-debuglog",
 	})
 
 	i.Start()
@@ -51,7 +52,7 @@ func TestOOM(t *testing.T) {
 	i.WaitForLogMessage("OOM: memory availability state OutOfMemory")
 
 	// Make sure the file system is notified and unmounts.
-	i.WaitForLogMessage("driver_manager: Successfully waited for VFS exit completion")
+	i.WaitForLogMessage("Successfully waited for VFS exit completion")
 
 	// Ensure the OOM thread reboots the target.
 	i.WaitForLogMessage("OOM: rebooting")

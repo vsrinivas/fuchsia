@@ -11,6 +11,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fit/defer.h>
 #include <stdint.h>
+#include <zircon/status.h>
 
 #include <array>
 #include <memory>
@@ -19,8 +20,8 @@
 
 #include "coordinator.h"
 #include "fdio.h"
+#include "src/devices/lib/log/log.h"
 #include "system_instance.h"
-#include "log.h"
 
 namespace {
 
@@ -93,35 +94,34 @@ zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_create(&ns);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to create namespace %d\n", status);
+    LOGF(ERROR, "Failed to create namespace: %s", zx_status_get_string(status));
     return status;
   }
   auto defer = fit::defer([ns] { fdio_ns_destroy(ns); });
   zx::channel boot_client, boot_server;
   status = zx::channel::create(0, &boot_client, &boot_server);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to create channel %d\n", status);
     return status;
   }
   status = fdio_open("/boot", FS_READONLY_DIR_FLAGS, boot_server.release());
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to connect to /boot %d\n", status);
+    LOGF(ERROR, "Failed to connect to '/boot': %s", zx_status_get_string(status));
     return status;
   }
   status = fdio_ns_bind(ns, "/boot", boot_client.release());
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to bind namespace %d\n", status);
+    LOGF(ERROR, "Failed to bind namespace '/boot': %s", zx_status_get_string(status));
     return status;
   }
   fbl::unique_fd root(fdio_ns_opendir(ns));
   if (!root) {
-    log(ERROR, "driver_manager: failed to open root directory %d\n", errno);
+    LOGF(ERROR, "Failed to open root directory");
     return ZX_ERR_IO;
   }
   std::unique_ptr<DevhostLoaderService> ldsvc(new DevhostLoaderService);
   status = loader_service_create(dispatcher, &ops_, ldsvc.get(), &ldsvc->svc_);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to create loader service %d\n", status);
+    LOGF(ERROR, "Failed to create loader service: %s", zx_status_get_string(status));
     return status;
   }
   ldsvc->root_ = std::move(root);

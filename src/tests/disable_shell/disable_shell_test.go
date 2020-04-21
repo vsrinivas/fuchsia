@@ -52,7 +52,7 @@ func TestShellDisabled(t *testing.T) {
 	i := distro.Create(qemu.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
-		AppendCmdline: "console.shell=false",
+		AppendCmdline: "devmgr.log-to-debuglog console.shell=false",
 	})
 
 	i.Start()
@@ -81,7 +81,7 @@ func TestShellEnabled(t *testing.T) {
 	i := distro.Create(qemu.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
-		AppendCmdline: "console.shell=true",
+		AppendCmdline: "devmgr.log-to-debuglog console.shell=true",
 	})
 
 	i.Start()

@@ -4,12 +4,14 @@
 
 #include "proxy_iostate.h"
 
+#include <zircon/status.h>
+
 #include <memory>
 
 #include <fbl/auto_lock.h>
 
 #include "connection_destroyer.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 #include "zx_device.h"
 
 ProxyIostate::~ProxyIostate() {
@@ -40,25 +42,26 @@ void ProxyIostate::HandleRpc(std::unique_ptr<ProxyIostate> conn, async_dispatche
   }
 
   if (conn->dev == nullptr) {
-    log(RPC_SDW, "proxy-rpc: stale rpc? (ios=%p)\n", conn.get());
+    FX_VLOGF(1, "proxy-rpc", "Stale RPC, IO state %p", conn.get());
     // Do not re-issue the wait here
     return handle_destroy();
   }
   if (signal->observed & ZX_CHANNEL_READABLE) {
-    log(RPC_SDW, "proxy-rpc: rpc readable (ios=%p,dev=%p)\n", conn.get(), conn->dev.get());
     zx_status_t r = conn->dev->ops->rxrpc(conn->dev->ctx, wait->object());
     if (r != ZX_OK) {
-      log(RPC_SDW, "proxy-rpc: rpc cb error %d (ios=%p,dev=%p)\n", r, conn.get(), conn->dev.get());
+      FX_VLOGF(1, "proxy-rpc", "RPC callback failed, IO state %p, device %p: %s", conn.get(),
+               conn->dev.get(), zx_status_get_string(r));
       return handle_destroy();
     }
     BeginWait(std::move(conn), dispatcher);
     return;
   }
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    log(RPC_SDW, "proxy-rpc: peer closed (ios=%p,dev=%p)\n", conn.get(), conn->dev.get());
+    FX_VLOGF(1, "proxy-rpc", "Peer closed, IO state %p, device %p", conn.get(), conn->dev.get());
     return handle_destroy();
   }
-  log(ERROR, "driver_host: no work? %08x\n", signal->observed);
+  LOGF(WARNING, "Unexpected signal state %#08x for device %p '%s'", signal->observed,
+       conn->dev.get(), conn->dev->name);
   BeginWait(std::move(conn), dispatcher);
 }
 

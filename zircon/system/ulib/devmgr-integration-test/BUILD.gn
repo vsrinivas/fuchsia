@@ -42,6 +42,7 @@ zx_library("devmgr-integration-test") {
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/mock-boot-arguments",
+    "$zx/system/ulib/syslog",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

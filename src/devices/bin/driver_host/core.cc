@@ -30,7 +30,7 @@
 
 #include "composite_device.h"
 #include "driver_host.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 #define TRACE 0
 
@@ -763,7 +763,7 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
   if (dev->auto_suspend_configured()) {
     dev->ops->configure_auto_suspend(dev->ctx, false,
                                      fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
-    log(INFO, "Devhost: system suspend overriding auto suspend for %s\n", dev->name);
+    LOGF(INFO, "System suspend overriding auto suspend for device %p '%s'", dev.get(), dev->name);
   }
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new suspend hook is implemented, prefer that.
@@ -799,7 +799,7 @@ void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
   if (dev->auto_suspend_configured()) {
     dev->ops->configure_auto_suspend(dev->ctx, false,
                                      fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
-    log(INFO, "Devhost: system resume overriding auto suspend for %s\n", dev->name);
+    LOGF(INFO, "System resume overriding auto suspend for device %p '%s'", dev.get(), dev->name);
   }
 
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
@@ -829,7 +829,7 @@ void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
 void DriverHostContext::DeviceSuspendNew(const fbl::RefPtr<zx_device>& dev,
                                          DevicePowerState requested_state) {
   if (dev->auto_suspend_configured()) {
-    log(INFO, "Devhost: Suspending %s failed: AutoSuspend is enabled\n", dev->name);
+    LOGF(INFO, "Failed to suspend device %p '%s', auto suspend is enabled", dev.get(), dev->name);
     dev->suspend_cb(ZX_ERR_NOT_SUPPORTED,
                     static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0));
     return;
@@ -870,8 +870,7 @@ zx_status_t DriverHostContext::DeviceSetPerformanceState(const fbl::RefPtr<zx_de
 
 void DriverHostContext::DeviceResumeNew(const fbl::RefPtr<zx_device>& dev) {
   if (dev->auto_suspend_configured()) {
-    log(INFO, "Devhost: Resuming %s failed: AutoSuspend/Resume is enabled for the driver\n",
-        dev->name);
+    LOGF(INFO, "Failed to resume device %p '%s', auto suspend is enabled", dev.get(), dev->name);
     dev->resume_cb(ZX_ERR_NOT_SUPPORTED,
                    static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
                    llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);

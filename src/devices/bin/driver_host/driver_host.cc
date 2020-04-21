@@ -106,38 +106,33 @@ static void logflag(char* flag, uint32_t* flags) {
   }
 }
 
-void log_rpc(const fbl::RefPtr<zx_device_t>& dev, const char* opname) {
-  char buffer[512];
-  const char* path = mkdevpath(dev, buffer, sizeof(buffer));
-  log(RPC_OUT, "driver_host[%s] %s'\n", path, opname);
-}
-
-void log_rpc_result(const char* opname, zx_status_t status, zx_status_t call_status = ZX_OK) {
+zx_status_t log_rpc_result(const fbl::RefPtr<zx_device_t>& dev, const char* opname,
+                           zx_status_t status, zx_status_t call_status = ZX_OK) {
   if (status != ZX_OK) {
-    log(ERROR, "driver_host: rpc:%s sending failed: %d\n", opname, status);
-  } else if (call_status != ZX_OK) {
-    log(ERROR, "driver_host: rpc:%s failed: %d\n", opname, call_status);
+    LOGD(ERROR, dev, "Failed %s RPC: %s", opname, zx_status_get_string(status));
+    return status;
   }
+  if (call_status != ZX_OK && call_status != ZX_ERR_NOT_FOUND) {
+    LOGD(ERROR, dev, "Failed %s: %s", opname, zx_status_get_string(call_status));
+  }
+  return call_status;
 }
 
 }  // namespace
 
-const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max) {
-  if (dev == nullptr) {
+const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* const path, size_t max) {
+  if (!dev || max == 0) {
     return "";
-  }
-  if (max < 1) {
-    return "<invalid>";
   }
   char* end = path + max;
   char sep = 0;
 
   fbl::RefPtr<zx_device> itr_dev(dev);
-  while (itr_dev) {
+  while (itr_dev && end > path) {
     *(--end) = sep;
 
     size_t len = strlen(itr_dev->name);
-    if (len > (size_t)(end - path)) {
+    if (len > static_cast<size_t>(end - path)) {
       break;
     }
     end -= len;
@@ -145,6 +140,19 @@ const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t ma
     sep = '/';
     itr_dev = itr_dev->parent;
   }
+
+  // If devpath is longer than |max|, add an ellipsis.
+  constexpr char ellipsis[] = "...";
+  constexpr size_t ellipsis_len = sizeof(ellipsis) - 1;
+  if (*end == sep && max > ellipsis_len) {
+    if (ellipsis_len > static_cast<size_t>(end - path)) {
+      end = path;
+    } else {
+      end -= ellipsis_len;
+    }
+    memcpy(end, ellipsis, ellipsis_len);
+  }
+
   return end;
 }
 
@@ -152,8 +160,6 @@ zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
   *out_driver = fbl::AdoptRef(new zx_driver());
   return ZX_OK;
 }
-
-uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 zx_status_t DriverHostContext::SetupRootDevcoordinatorConnection(zx::channel ch) {
   auto conn = std::make_unique<internal::DevhostControllerConnection>(this);
@@ -181,9 +187,6 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
                                                 const char* proxy_args,
                                                 const zx_device_prop_t* props, uint32_t prop_count,
                                                 zx::channel client_remote) {
-  char buffer[512];
-  const char* path = mkdevpath(parent, buffer, sizeof(buffer));
-
   bool add_invisible = child->flags & DEV_FLAG_INVISIBLE;
   fuchsia::device::manager::AddDeviceConfig add_device_config;
 
@@ -257,21 +260,14 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
       }
     }
   }
+
+  status = log_rpc_result(parent, "add-device", status, call_status);
   if (status != ZX_OK) {
-    log(ERROR, "driver_host[%s] add '%s': rpc sending failed: %d\n", path, child->name, status);
     return status;
-  } else if (call_status != ZX_OK) {
-    log(ERROR, "driver_host[%s] add '%s': rpc failed: %d\n", path, child->name, call_status);
-    return call_status;
   }
 
   child->set_local_id(device_id);
-
-  status = DeviceControllerConnection::BeginWait(std::move(conn), loop_.dispatcher());
-  if (status != ZX_OK) {
-    return status;
-  }
-  return ZX_OK;
+  return DeviceControllerConnection::BeginWait(std::move(conn), loop_.dispatcher());
 }
 
 // Send message to driver_manager informing it that this device
@@ -279,9 +275,10 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
 zx_status_t DriverHostContext::DriverManagerRemove(fbl::RefPtr<zx_device_t> dev) {
   DeviceControllerConnection* conn = dev->conn.load();
   if (conn == nullptr) {
-    log(ERROR, "removing device %p, conn is nullptr\n", dev.get());
+    LOGD(ERROR, dev, "Invalid device controller connection");
     return ZX_ERR_INTERNAL;
   }
+  VLOGD(1, dev, "Removing device %p", dev.get());
 
   // This must be done before the RemoveDevice message is sent to
   // driver_manager, since driver_manager will close the channel in response.
@@ -293,8 +290,6 @@ zx_status_t DriverHostContext::DriverManagerRemove(fbl::RefPtr<zx_device_t> dev)
   // Drop the device vnode, since no one should be able to open connections anymore.
   // This will break the reference cycle between the DevfsVnode and the zx_device.
   dev->vnode.reset();
-
-  log(DEVLC, "removing device %p, conn %p\n", dev.get(), conn);
 
   // respond to the remove fidl call
   dev->removal_cb(ZX_OK);
@@ -349,21 +344,21 @@ zx_status_t DriverHostContext::FindDriver(fbl::StringPiece libname, zx::vmo vmo,
 
   void* dl = dlopen_vmo(vmo.get(), RTLD_NOW);
   if (dl == nullptr) {
-    log(ERROR, "driver_host: cannot load '%s': %s\n", c_libname, dlerror());
+    LOGF(ERROR, "Cannot load '%s': %s", c_libname, dlerror());
     new_driver->set_status(ZX_ERR_IO);
     return new_driver->status();
   }
 
   auto dn = static_cast<const zircon_driver_note_t*>(dlsym(dl, "__zircon_driver_note__"));
   if (dn == nullptr) {
-    log(ERROR, "driver_host: driver '%s' missing __zircon_driver_note__ symbol\n", c_libname);
+    LOGF(ERROR, "Driver '%s' missing __zircon_driver_note__ symbol", c_libname);
     new_driver->set_status(ZX_ERR_IO);
     return new_driver->status();
   }
   auto ops = static_cast<const zx_driver_ops_t**>(dlsym(dl, "__zircon_driver_ops__"));
   auto dr = static_cast<zx_driver_rec_t*>(dlsym(dl, "__zircon_driver_rec__"));
   if (dr == nullptr) {
-    log(ERROR, "driver_host: driver '%s' missing __zircon_driver_rec__ symbol\n", c_libname);
+    LOGF(ERROR, "Driver '%s' missing __zircon_driver_rec__ symbol", c_libname);
     new_driver->set_status(ZX_ERR_IO);
     return new_driver->status();
   }
@@ -373,14 +368,13 @@ zx_status_t DriverHostContext::FindDriver(fbl::StringPiece libname, zx::vmo vmo,
     ops = &dr->ops;
   }
   if (!(*ops)) {
-    log(ERROR, "driver_host: driver '%s' has nullptr ops\n", c_libname);
+    LOGF(ERROR, "Driver '%s' has nullptr ops", c_libname);
     new_driver->set_status(ZX_ERR_INVALID_ARGS);
     return new_driver->status();
   }
   if ((*ops)->version != DRIVER_OPS_VERSION) {
-    log(ERROR,
-        "driver_host: driver '%s' has bad driver ops version %" PRIx64 ", expecting %" PRIx64 "\n",
-        c_libname, (*ops)->version, DRIVER_OPS_VERSION);
+    LOGF(ERROR, "Driver '%s' has bad driver ops version %#lx, expecting %#lx", c_libname,
+         (*ops)->version, DRIVER_OPS_VERSION);
     new_driver->set_status(ZX_ERR_INVALID_ARGS);
     return new_driver->status();
   }
@@ -407,14 +401,14 @@ zx_status_t DriverHostContext::FindDriver(fbl::StringPiece libname, zx::vmo vmo,
         break;
       }
     }
-    log(INFO, "driver_host: driver '%s': log flags set to: 0x%x\n", new_driver->name(),
-        dr->log_flags);
+    LOGF(INFO, "Driver '%s' set log flags to %#x", new_driver->name(), dr->log_flags);
   }
 
   if (new_driver->has_init_op()) {
     new_driver->set_status(new_driver->InitOp());
     if (new_driver->status() != ZX_OK) {
-      log(ERROR, "driver_host: driver '%s' failed in init: %d\n", c_libname, new_driver->status());
+      LOGF(ERROR, "Driver '%s' failed in init: %s", c_libname,
+           zx_status_get_string(new_driver->status()));
     }
   } else {
     new_driver->set_status(ZX_OK);
@@ -452,26 +446,25 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
   // since the newly created device is not visible to
   // any API surface until a driver is bound to it.
   // (which can only happen via another message on this thread)
-  log(ERROR, "driver_host: create device drv='%.*s' args='%.*s'\n",
-      static_cast<int>(driver_path.size()), driver_path.data(), static_cast<int>(proxy_args.size()),
-      proxy_args.data());
 
   // named driver -- ask it to create the device
   fbl::RefPtr<zx_driver_t> drv;
   zx_status_t r = driver_host_context_->FindDriver(driver_path, std::move(driver_vmo), &drv);
   if (r != ZX_OK) {
-    log(ERROR, "driver_host: driver load failed: %d\n", r);
+    LOGF(ERROR, "Failed to load driver '%.*s': %s", driver_path.size(), driver_path.data(),
+         zx_status_get_string(r));
     return;
   }
   if (!drv->has_create_op()) {
-    log(ERROR, "driver_host: driver create() not supported\n");
+    LOGF(ERROR, "Driver does not support create operation");
     return;
   }
 
   // Create a dummy parent device for use in this call to Create
   fbl::RefPtr<zx_device> parent;
-  if ((r = zx_device::Create(driver_host_context_, &parent)) != ZX_OK) {
-    log(ERROR, "driver_host: device create() failed: %d\n", r);
+  r = zx_device::Create(driver_host_context_, &parent);
+  if (r != ZX_OK) {
+    LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(r));
     return;
   }
   // magic cookie for device create handshake
@@ -495,13 +488,13 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
   creation_context.parent->flags |= DEV_FLAG_DEAD;
 
   if (r != ZX_OK) {
-    log(ERROR, "driver_host: driver create() failed: %d\n", r);
+    LOGF(ERROR, "Failed to create driver: %s", zx_status_get_string(r));
     return;
   }
 
   auto new_device = std::move(creation_context.child);
   if (new_device == nullptr) {
-    log(ERROR, "driver_host: driver create() failed to create a device!");
+    LOGF(ERROR, "Driver did not create a device");
     return;
   }
 
@@ -515,11 +508,11 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
   }
 
   // TODO: inform devcoord
-
-  log(RPC_IN, "driver_host: creating '%.*s' conn=%p\n", static_cast<int>(driver_path.size()),
-      driver_path.data(), newconn.get());
-  if ((r = DeviceControllerConnection::BeginWait(
-           std::move(newconn), driver_host_context_->loop().dispatcher())) != ZX_OK) {
+  VLOGF(1, "Created device %p '%.*s'", new_device.get(), driver_path.size(), driver_path.data());
+  r = DeviceControllerConnection::BeginWait(std::move(newconn),
+                                            driver_host_context_->loop().dispatcher());
+  if (r != ZX_OK) {
+    LOGF(ERROR, "Failed to wait for device controller connection: %s", zx_status_get_string(r));
     return;
   }
 }
@@ -528,9 +521,6 @@ void DevhostControllerConnection::CreateCompositeDevice(
     zx::channel coordinator_rpc, zx::channel device_controller_rpc,
     ::fidl::VectorView<uint64_t> fragments, ::fidl::StringView name, uint64_t local_device_id,
     CreateCompositeDeviceCompleter::Sync completer) {
-  log(RPC_IN, "driver_host: create composite device %.*s'\n", static_cast<int>(name.size()),
-      name.data());
-
   // Convert the fragment IDs into zx_device references
   CompositeFragments fragments_list(new fbl::RefPtr<zx_device>[fragments.count()],
                                     fragments.count());
@@ -576,9 +566,10 @@ void DevhostControllerConnection::CreateCompositeDevice(
     return;
   }
 
-  log(RPC_IN, "driver_host: creating new composite conn=%p\n", newconn.get());
-  if ((status = DeviceControllerConnection::BeginWait(
-           std::move(newconn), driver_host_context_->loop().dispatcher())) != ZX_OK) {
+  VLOGF(1, "Created composite device %p '%s'", dev.get(), dev->name);
+  status = DeviceControllerConnection::BeginWait(std::move(newconn),
+                                                 driver_host_context_->loop().dispatcher());
+  if (status != ZX_OK) {
     completer.Reply(status);
     return;
   }
@@ -589,8 +580,6 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
                                                    zx::channel device_controller_rpc,
                                                    uint32_t protocol_id, uint64_t local_device_id,
                                                    CreateDeviceStubCompleter::Sync completer) {
-  log(RPC_IN, "driver_host: create device stub\n");
-
   fbl::RefPtr<zx_device_t> dev;
   zx_status_t r = zx_device::Create(driver_host_context_, &dev);
   // TODO: dev->ops and other lifecycle bits
@@ -610,10 +599,10 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
   if (r != ZX_OK) {
     return;
   }
-
-  log(RPC_IN, "driver_host: creating new stub conn=%p\n", newconn.get());
-  if ((r = DeviceControllerConnection::BeginWait(
-           std::move(newconn), driver_host_context_->loop().dispatcher())) != ZX_OK) {
+  VLOGF(1, "Created device stub %p '%s'", dev.get(), dev->name);
+  r = DeviceControllerConnection::BeginWait(std::move(newconn),
+                                            driver_host_context_->loop().dispatcher());
+  if (r != ZX_OK) {
     return;
   }
 }
@@ -653,74 +642,73 @@ void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerCon
                                             async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                             zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    log(ERROR, "driver_host: devcoord conn wait error: %d\n", status);
+    LOGF(ERROR, "Failed to wait on %p from driver_manager: %s", conn.get(),
+         zx_status_get_string(status));
     return;
   }
   if (signal->observed & ZX_CHANNEL_READABLE) {
     status = conn->HandleRead();
     if (status != ZX_OK) {
-      log(ERROR, "driver_host: devmgr rpc unhandleable ios=%p r=%s. fatal.\n", conn.get(),
-          zx_status_get_string(status));
-      abort();
+      LOGF(FATAL, "Unhandled RPC on %p from driver_manager: %s", conn.get(),
+           zx_status_get_string(status));
     }
     BeginWait(std::move(conn), dispatcher);
     return;
   }
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    log(ERROR, "driver_host: devmgr disconnected! fatal. (conn=%p)\n", conn.get());
-    abort();
+    LOGF(FATAL, "Disconnected %p from driver_manager", conn.get());
   }
-  log(ERROR, "driver_host: no work? %08x\n", signal->observed);
+  LOGF(WARNING, "Unexpected signal state %#08x", signal->observed);
   BeginWait(std::move(conn), dispatcher);
 }
 
 int main(int argc, char** argv) {
-  zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
-  if (!root_resource.is_valid()) {
-    log(TRACE, "driver_host: no root resource handle!\n");
+  if (getenv_bool("devmgr.verbose", false)) {
+    FX_LOG_SET_VERBOSITY(1);
   }
 
-  log(TRACE, "driver_host: main()\n");
+  zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+  if (!root_resource.is_valid()) {
+    LOGF(WARNING, "No root resource handle");
+  }
 
   zx::channel root_conn_channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
   if (!root_conn_channel.is_valid()) {
-    log(ERROR, "driver_host: rpc handle invalid\n");
-    return -1;
+    LOGF(ERROR, "Invalid root connection to driver_manager");
+    return ZX_ERR_BAD_HANDLE;
   }
 
   DriverHostContext ctx(&kAsyncLoopConfigAttachToCurrentThread, std::move(root_resource));
   RegisterContextForApi(&ctx);
 
-  zx_status_t r;
+  zx_status_t status = connect_scheduler_profile_provider();
+  if (status != ZX_OK) {
+    LOGF(INFO, "Failed to connect to profile provider: %s", zx_status_get_string(status));
+    return status;
+  }
 
   if (getenv_bool("driver.tracing.enable", true)) {
-    r = start_trace_provider();
-    if (r != ZX_OK) {
-      log(INFO, "driver_host: error registering as trace provider: %d\n", r);
+    status = start_trace_provider();
+    if (status != ZX_OK) {
+      LOGF(INFO, "Failed to register trace provider: %s", zx_status_get_string(status));
       // This is not a fatal error.
     }
   }
 
-  r = connect_scheduler_profile_provider();
-  if (r != ZX_OK) {
-    log(INFO, "driver_host: error connecting to profile provider: %d\n", r);
-    return -1;
+  status = ctx.SetupRootDevcoordinatorConnection(std::move(root_conn_channel));
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to watch root connection to driver_manager: %s",
+         zx_status_get_string(status));
+    return status;
   }
 
-  if ((r = ctx.SetupRootDevcoordinatorConnection(std::move(root_conn_channel))) != ZX_OK) {
-    log(ERROR, "driver_host: could not watch rpc channel: %d\n", r);
-    return -1;
+  status = ctx.SetupEventWaiter();
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to setup event watcher: %s", zx_status_get_string(status));
+    return status;
   }
 
-  if (r = ctx.SetupEventWaiter(); r != ZX_OK) {
-    log(ERROR, "driver_host: could not setup event watcher: %d\n", r);
-    return -1;
-  }
-
-  r = ctx.loop().Run(zx::time::infinite(), false /* once */);
-  log(ERROR, "driver_host: async loop finished: %d\n", r);
-
-  return 0;
+  return ctx.loop().Run(zx::time::infinite(), false /* once */);
 }
 
 }  // namespace internal
@@ -743,7 +731,7 @@ void DriverHostContext::MakeVisible(const fbl::RefPtr<zx_device_t>& dev,
   }
 
   // TODO(teisenbe): Handle failures here...
-  log_rpc(dev, "make-visible");
+  VLOGD(1, dev, "make-visible");
   auto response =
       fuchsia::device::manager::Coordinator::Call::MakeVisible(zx::unowned_channel(rpc.get()));
   zx_status_t status = response.status();
@@ -753,7 +741,7 @@ void DriverHostContext::MakeVisible(const fbl::RefPtr<zx_device_t>& dev,
       call_status = response.Unwrap()->result.err();
     }
   }
-  log_rpc_result("make-visible", status, call_status);
+  log_rpc_result(dev, "make-visible", status, call_status);
   dev->flags &= ~(DEV_FLAG_INVISIBLE);
 
   // Reply to any pending bind/rebind requests, if all
@@ -780,20 +768,20 @@ zx_status_t DriverHostContext::ScheduleRemove(const fbl::RefPtr<zx_device_t>& de
                                               bool unbind_self) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   ZX_ASSERT(rpc.is_valid());
-  log_rpc(dev, "schedule-remove");
+  VLOGD(1, dev, "schedule-remove");
   auto resp = fuchsia::device::manager::Coordinator::Call::ScheduleRemove(
       zx::unowned_channel(rpc.get()), unbind_self);
-  log_rpc_result("schedule-remove called", resp.status());
+  log_rpc_result(dev, "schedule-remove", resp.status());
   return resp.status();
 }
 
 zx_status_t DriverHostContext::ScheduleUnbindChildren(const fbl::RefPtr<zx_device_t>& dev) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   ZX_ASSERT(rpc.is_valid());
-  log_rpc(dev, "schedule-unbind-children");
+  VLOGD(1, dev, "schedule-unbind-children");
   auto resp = fuchsia::device::manager::Coordinator::Call::ScheduleUnbindChildren(
       zx::unowned_channel(rpc.get()));
-  log_rpc_result("schedule-unbind-children", resp.status());
+  log_rpc_result(dev, "schedule-unbind-children", resp.status());
   return resp.status();
 }
 
@@ -817,7 +805,7 @@ zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, 
     return ZX_ERR_IO_REFUSED;
   }
 
-  log_rpc(remote_dev, "get-topo-path");
+  VLOGD(1, remote_dev, "get-topo-path");
   auto response = fuchsia::device::manager::Coordinator::Call::GetTopologicalPath(
       zx::unowned_channel(rpc.get()));
   zx_status_t status = response.status();
@@ -832,7 +820,7 @@ zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, 
     }
   }
 
-  log_rpc_result("get-topo-path", status, call_status);
+  log_rpc_result(dev, "get-topo-path", status, call_status);
   if (status != ZX_OK) {
     return status;
   }
@@ -854,10 +842,9 @@ zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,
                                           const char* drv_libname) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   if (!rpc.is_valid()) {
-    log_rpc(dev, "bind failed");
     return ZX_ERR_IO_REFUSED;
   }
-  log_rpc(dev, "bind-device");
+  VLOGD(1, dev, "bind-device");
   auto driver_path = ::fidl::unowned_str(drv_libname, strlen(drv_libname));
   auto response = fuchsia::device::manager::Coordinator::Call::BindDevice(
       zx::unowned_channel(rpc.get()), std::move(driver_path));
@@ -866,7 +853,7 @@ zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {
     call_status = response.Unwrap()->result.err();
   }
-  log_rpc_result("bind-device finished!", status, call_status);
+  log_rpc_result(dev, "bind-device", status, call_status);
   if (status != ZX_OK) {
     return status;
   }
@@ -880,7 +867,7 @@ zx_status_t DriverHostContext::DeviceRunCompatibilityTests(const fbl::RefPtr<zx_
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  log_rpc(dev, "run-compatibility-test");
+  VLOGD(1, dev, "run-compatibility-test");
   auto response = fuchsia::device::manager::Coordinator::Call::RunCompatibilityTests(
       zx::unowned_channel(rpc.get()), hook_wait_time);
   zx_status_t status = response.status();
@@ -888,7 +875,7 @@ zx_status_t DriverHostContext::DeviceRunCompatibilityTests(const fbl::RefPtr<zx_
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {
     call_status = response.Unwrap()->result.err();
   }
-  log_rpc_result("run-compatibility-test", status, call_status);
+  log_rpc_result(dev, "run-compatibility-test", status, call_status);
   if (status != ZX_OK) {
     return status;
   }
@@ -906,7 +893,7 @@ zx_status_t DriverHostContext::LoadFirmware(const fbl::RefPtr<zx_device_t>& dev,
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  log_rpc(dev, "load-firmware");
+  VLOGD(1, dev, "load-firmware");
   auto str_path = ::fidl::unowned_str(path, strlen(path));
   auto response = fuchsia::device::manager::Coordinator::Call::LoadFirmware(
       zx::unowned_channel(rpc.get()), std::move(str_path));
@@ -920,7 +907,7 @@ zx_status_t DriverHostContext::LoadFirmware(const fbl::RefPtr<zx_device_t>& dev,
     *size = resp.size;
     vmo = std::move(resp.vmo);
   }
-  log_rpc_result("load-firmware", status, call_status);
+  log_rpc_result(dev, "load-firmware", status, call_status);
   if (status != ZX_OK) {
     return status;
   }
@@ -941,35 +928,26 @@ zx_status_t DriverHostContext::GetMetadata(const fbl::RefPtr<zx_device_t>& dev, 
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  log_rpc(dev, "get-metadata");
+  VLOGD(1, dev, "get-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::GetMetadata(
       zx::unowned_channel(rpc.get()), type);
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response.Unwrap()->result.is_err()) {
-    call_status = response.Unwrap()->result.err();
-  }
-
-  if (status != ZX_OK) {
-    log(ERROR, "driver_host: rpc:get-metadata sending failed: %d\n", status);
-    return status;
-  }
-  if (call_status != ZX_OK) {
-    if (call_status != ZX_ERR_NOT_FOUND) {
-      log(ERROR, "driver_host: rpc:get-metadata failed: %d\n", call_status);
+  if (status == ZX_OK) {
+    if (response->result.is_response()) {
+      const auto& r = response.Unwrap()->result.mutable_response();
+      if (r.data.count() > buflen) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      memcpy(buf, r.data.data(), r.data.count());
+      if (actual != nullptr) {
+        *actual = r.data.count();
+      }
+    } else {
+      call_status = response->result.err();
     }
-    return call_status;
   }
-  auto r = std::move(response.Unwrap()->result.mutable_response());
-  if (r.data.count() > buflen) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-
-  memcpy(buf, r.data.data(), r.data.count());
-  if (actual != nullptr) {
-    *actual = r.data.count();
-  }
-  return ZX_OK;
+  return log_rpc_result(dev, "get-metadata", status, call_status);
 }
 
 zx_status_t DriverHostContext::GetMetadataSize(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
@@ -978,26 +956,19 @@ zx_status_t DriverHostContext::GetMetadataSize(const fbl::RefPtr<zx_device_t>& d
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  log_rpc(dev, "get-metadata");
+  VLOGD(1, dev, "get-metadata-size");
   auto response = fuchsia::device::manager::Coordinator::Call::GetMetadataSize(
       zx::unowned_channel(rpc.get()), type);
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response.Unwrap()->result.is_err()) {
-    call_status = response.Unwrap()->result.err();
-  }
-  if (status != ZX_OK) {
-    log(ERROR, "driver_host: rpc:get-metadata sending failed: %d\n", status);
-    return status;
-  }
-  if (call_status != ZX_OK) {
-    if (call_status != ZX_ERR_NOT_FOUND) {
-      log(ERROR, "driver_host: rpc:get-metadata failed: %d\n", call_status);
+  if (status == ZX_OK) {
+    if (response->result.is_response()) {
+      *out_length = response->result.response().size;
+    } else {
+      call_status = response->result.err();
     }
-    return call_status;
   }
-  *out_length = response.Unwrap()->result.response().size;
-  return ZX_OK;
+  return log_rpc_result(dev, "get-metadata-size", status, call_status);
 }
 
 zx_status_t DriverHostContext::AddMetadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
@@ -1009,20 +980,17 @@ zx_status_t DriverHostContext::AddMetadata(const fbl::RefPtr<zx_device_t>& dev, 
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  log_rpc(dev, "add-metadata");
+  VLOGD(1, dev, "add-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::AddMetadata(
       zx::unowned_channel(rpc.get()), type,
       ::fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
                          length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response.Unwrap()->result.is_err()) {
-    call_status = response.Unwrap()->result.err();
+  if (status == ZX_OK && response->result.is_err()) {
+    call_status = response->result.err();
   }
-  if (status != ZX_OK) {
-    return status;
-  }
-  return call_status;
+  return log_rpc_result(dev, "add-metadata", status, call_status);
 }
 
 zx_status_t DriverHostContext::PublishMetadata(const fbl::RefPtr<zx_device_t>& dev,
@@ -1035,21 +1003,17 @@ zx_status_t DriverHostContext::PublishMetadata(const fbl::RefPtr<zx_device_t>& d
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  log_rpc(dev, "publish-metadata");
+  VLOGD(1, dev, "publish-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::PublishMetadata(
       zx::unowned_channel(rpc.get()), ::fidl::unowned_str(path, strlen(path)), type,
       ::fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
                          length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response.Unwrap()->result.is_err()) {
-    call_status = response.Unwrap()->result.err();
+  if (status == ZX_OK && response->result.is_err()) {
+    call_status = response->result.err();
   }
-  log_rpc_result("publish-metadata", status, call_status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return call_status;
+  return log_rpc_result(dev, "publish-metadata", status, call_status);
 }
 
 zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev,
@@ -1064,6 +1028,7 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
     return ZX_ERR_IO_REFUSED;
   }
 
+  VLOGD(1, dev, "create-composite");
   std::vector<fuchsia::device::manager::DeviceFragment> compvec = {};
   for (size_t i = 0; i < comp_desc->fragments_count; i++) {
     ::fidl::Array<fuchsia::device::manager::DeviceFragmentPart,
@@ -1114,18 +1079,13 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
       .coresident_device_index = comp_desc->coresident_device_index,
       .metadata = ::fidl::unowned_vec(metadata)};
 
-  log_rpc(dev, "create-composite");
   static_assert(sizeof(comp_desc->props[0]) == sizeof(uint64_t));
   auto response = fuchsia::device::manager::Coordinator::Call::AddCompositeDevice(
       zx::unowned_channel(rpc.get()), ::fidl::unowned_str(name, strlen(name)), std::move(comp_dev));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response.Unwrap()->result.is_err()) {
-    call_status = response.Unwrap()->result.err();
+  if (status == ZX_OK && response->result.is_err()) {
+    call_status = response->result.err();
   }
-  if (status != ZX_OK) {
-    return status;
-  }
-  log_rpc_result("create-composite", status, call_status);
-  return call_status;
+  return log_rpc_result(dev, "create-composite", status, call_status);
 }

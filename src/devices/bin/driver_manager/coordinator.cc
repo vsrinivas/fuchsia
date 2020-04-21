@@ -58,7 +58,7 @@
 #include "fidl_txn.h"
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
 #include "lib/zx/time.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 #include "vmo_writer.h"
 
 namespace {
@@ -95,21 +95,18 @@ std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> ConnectToFshostAdminS
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: Failed connect to fshost admin, failed to create channel: %s\n",
-        zx_status_get_string(status));
     return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
   }
   status = fdio_service_connect(kFshostAdminPath, remote.release());
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: Failed to connect to fuchsia.fshost.Admin: %s\n",
-        zx_status_get_string(status));
+    LOGF(ERROR, "Failed to connect to fuchsia.fshost.Admin: %s", zx_status_get_string(status));
     return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
   }
   return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(std::move(local));
 }
 
 void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
-  log(ERROR, "driver_manager: suspend fallback with flags 0x%08x\n", flags);
+  LOGF(INFO, "Suspend fallback with flags %#08x", flags);
   if (flags == DEVICE_SUSPEND_FLAG_REBOOT) {
     zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT, nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER) {
@@ -126,8 +123,6 @@ void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
 namespace power_fidl = llcpp::fuchsia::hardware::power;
 
 const char* kFragmentDriverPath = "/boot/driver/fragment.so";
-
-uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 Coordinator::Coordinator(CoordinatorConfig config)
     : config_(std::move(config)), inspect_manager_(config_.dispatcher) {
@@ -156,12 +151,11 @@ void Coordinator::ShutdownFilesystems() {
   }
   auto result = fshost_admin_client_->Shutdown();
   if (result.status() != ZX_OK) {
-    log(ERROR, "driver_manager: Failed to cause VFS exit: %s\n",
-        zx_status_get_string(result.status()));
+    LOGF(ERROR, "Failed to cause VFS exit: %s", zx_status_get_string(result.status()));
     return;
   }
 
-  log(INFO, "driver_manager: Successfully waited for VFS exit completion\n");
+  LOGF(INFO, "Successfully waited for VFS exit completion");
 }
 
 zx_status_t Coordinator::InitCoreDevices(const char* sys_device_driver) {
@@ -197,14 +191,14 @@ static zx_status_t load_vmo(const fbl::String& libname, zx::vmo* out_vmo) {
   zx_status_t r = fdio_open_fd(
       libname.data(), fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_EXECUTABLE, &fd);
   if (r != ZX_OK) {
-    log(ERROR, "driver_manager: cannot open driver '%s'\n", libname.data());
+    LOGF(ERROR, "Cannot open driver '%s'", libname.data());
     return ZX_ERR_IO;
   }
   zx::vmo vmo;
   r = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
   close(fd);
   if (r != ZX_OK) {
-    log(ERROR, "driver_manager: cannot get driver vmo '%s'\n", libname.data());
+    LOGF(ERROR, "Cannot get driver VMO '%s'", libname.data());
     return r;
   }
   const char* vmo_name = strrchr(libname.data(), '/');
@@ -215,7 +209,7 @@ static zx_status_t load_vmo(const fbl::String& libname, zx::vmo* out_vmo) {
   }
   r = vmo.set_property(ZX_PROP_NAME, vmo_name, strlen(vmo_name));
   if (r != ZX_OK) {
-    log(ERROR, "driver_manager: cannot set name on driver vmo to '%s'\n", libname.data());
+    LOGF(ERROR, "Cannot set name on driver VMO to '%s'", libname.data());
     return r;
   }
   *out_vmo = std::move(vmo);
@@ -225,7 +219,7 @@ static zx_status_t load_vmo(const fbl::String& libname, zx::vmo* out_vmo) {
 zx_status_t Coordinator::LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const {
   const Driver* drv = LibnameToDriver(libname);
   if (drv == nullptr) {
-    log(ERROR, "driver_manager: cannot find driver '%s'\n", libname.data());
+    LOGF(ERROR, "Cannot find driver '%s'", libname.data());
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -235,8 +229,7 @@ zx_status_t Coordinator::LibnameToVmo(const fbl::String& libname, zx::vmo* out_v
         ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP,
         out_vmo);
     if (r != ZX_OK) {
-      log(ERROR, "driver_manager: cannot duplicate cached dso for '%s' '%s'\n", drv->name.data(),
-          libname.data());
+      LOGF(ERROR, "Cannot duplicate cached DSO for '%s' '%s'", drv->name.data(), libname.data());
     }
     return r;
   } else {
@@ -246,18 +239,12 @@ zx_status_t Coordinator::LibnameToVmo(const fbl::String& libname, zx::vmo* out_v
 
 void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const {
   zx_koid_t pid = dev->host() ? dev->host()->koid() : 0;
-  char extra[256];
-  if (log_flags & LOG_DEVLC) {
-    snprintf(extra, sizeof(extra), " dev=%p ", dev);
-  } else {
-    extra[0] = 0;
-  }
   if (pid == 0) {
-    vmo->Printf("%*s[%s]%s\n", (int)(indent * 3), "", dev->name().data(), extra);
+    vmo->Printf("%*s[%s]\n", (int)(indent * 3), "", dev->name().data());
   } else {
-    vmo->Printf("%*s%c%s%c pid=%zu%s %s\n", (int)(indent * 3), "",
+    vmo->Printf("%*s%c%s%c pid=%zu %s\n", (int)(indent * 3), "",
                 dev->flags & DEV_CTX_PROXY ? '<' : '[', dev->name().data(),
-                dev->flags & DEV_CTX_PROXY ? '>' : ']', pid, extra, dev->libname().data());
+                dev->flags & DEV_CTX_PROXY ? '>' : ']', pid, dev->libname().data());
   }
   if (dev->proxy()) {
     indent++;
@@ -291,7 +278,7 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
     char b = (char)((dev->protocol_id() >> 16) & 0xFF);
     char c = (char)((dev->protocol_id() >> 8) & 0xFF);
     char d = (char)(dev->protocol_id() & 0xFF);
-    vmo->Printf("ProtoId : '%c%c%c%c' 0x%08x(%u)\n", isprint(a) ? a : '.', isprint(b) ? b : '.',
+    vmo->Printf("ProtoId : '%c%c%c%c' %#08x(%u)\n", isprint(a) ? a : '.', isprint(b) ? b : '.',
                 isprint(c) ? c : '.', isprint(d) ? d : '.', dev->protocol_id(), dev->protocol_id());
 
     const auto& props = dev->props();
@@ -301,9 +288,9 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
       const char* param_name = di_bind_param_name(p->id);
 
       if (param_name) {
-        vmo->Printf("[%2u/%2zu] : Value 0x%08x Id %s\n", i, props.size(), p->value, param_name);
+        vmo->Printf("[%2u/%2zu] : Value %#08x Id %s\n", i, props.size(), p->value, param_name);
       } else {
-        vmo->Printf("[%2u/%2zu] : Value 0x%08x Id 0x%04hx\n", i, props.size(), p->value, p->id);
+        vmo->Printf("[%2u/%2zu] : Value %#08x Id %#04hx\n", i, props.size(), p->value, p->id);
       }
     }
     vmo->Printf("\n");
@@ -329,7 +316,7 @@ void Coordinator::DumpDrivers(VmoWriter* vmo) const {
   for (const auto& drv : drivers_) {
     vmo->Printf("%sName    : %s\n", first ? "" : "\n", drv.name.c_str());
     vmo->Printf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
-    vmo->Printf("Flags   : 0x%08x\n", drv.flags);
+    vmo->Printf("Flags   : %#08x\n", drv.flags);
     if (drv.binding_size) {
       char line[256];
       uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(drv.binding[0]));
@@ -401,15 +388,14 @@ static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
   if (root_resource.is_valid()) {
     zx_status_t status = root_resource.duplicate(ZX_RIGHT_SAME_RIGHTS, &resource);
     if (status != ZX_OK) {
-      log(ERROR, "driver_manager: failed to duplicate root resource: %d\n", status);
+      LOGF(ERROR, "Failed to duplicate root resource: %s", zx_status_get_string(status));
     }
   }
 
   zx::channel loader_connection;
   zx_status_t status = loader_connector(&loader_connection);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to get devhost loader connection: %s\n",
-        zx_status_get_string(status));
+    LOGF(ERROR, "Failed to get driver_host loader connection: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -441,7 +427,7 @@ static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
   ZX_ASSERT(actions_count <= kMaxActions);
 
   zx::process proc;
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH] = {};
   // Inherit devmgr's environment (including kernel cmdline)
   const char* const argv[] = {
       devhost_bin,
@@ -451,8 +437,7 @@ static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
   status = fdio_spawn_etc(devhost_job->get(), flags, argv[0], argv, env, actions_count, actions,
                           proc.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: launch devhost '%s': failed: %s: %s\n", name,
-        zx_status_get_string(status), err_msg);
+    LOGF(ERROR, "Failed to launch driver_host '%s': %s", name, err_msg);
     return status;
   }
 
@@ -463,7 +448,7 @@ static zx_status_t dc_launch_devhost(const fbl::RefPtr<Devhost>& host,
       ZX_OK) {
     host->set_koid(info.koid);
   }
-  log(INFO, "driver_manager: launch devhost '%s': pid=%zu\n", name, host->koid());
+  LOGF(INFO, "Launching driver_host '%s' (pid %zu)", name, host->koid());
   return ZX_OK;
 }
 
@@ -511,6 +496,10 @@ zx_status_t Coordinator::NewDevhost(const char* name, fbl::RefPtr<Devhost>* out)
     env.push_back(entry.data());
   }
 
+  if (config_.verbose) {
+    env.push_back("devmgr.verbose=true");
+  }
+
   env.push_back(nullptr);
   status =
       dc_launch_devhost(dh, loader_service_connector_, program, name, env.data(), std::move(hrpc),
@@ -520,8 +509,7 @@ zx_status_t Coordinator::NewDevhost(const char* name, fbl::RefPtr<Devhost>* out)
   }
   launched_first_devhost_ = true;
 
-  log(DEVLC, "driver_manager: new host %p\n", dh.get());
-
+  VLOGF(1, "New driver_host %p", dh.get());
   *out = std::move(dh);
   return ZX_OK;
 }
@@ -540,25 +528,22 @@ zx_status_t Coordinator::AddDevice(
   static_assert(fuchsia_device_manager_PROPERTIES_MAX <= UINT32_MAX);
 
   if (InSuspend()) {
-    log(ERROR, "driver_manager: rpc: add-device '%.*s' forbidden in suspend\n",
-        static_cast<int>(name.size()), name.data());
+    LOGF(ERROR, "Add device '%.*s' forbidden in suspend", static_cast<int>(name.size()),
+         name.data());
     return ZX_ERR_BAD_STATE;
   }
 
   if (InResume()) {
-    log(ERROR, "driver_manager: rpc: add-device '%.*s' forbidden in resume\n",
-        static_cast<int>(name.size()), name.data());
+    LOGF(ERROR, "Add device '%.*s' forbidden in resume", static_cast<int>(name.size()),
+         name.data());
     return ZX_ERR_BAD_STATE;
   }
 
   if (parent->state() == Device::State::kUnbinding) {
-    log(ERROR, "driver_manager: rpc: add-device '%.*s' forbidden while parent is unbinding\n",
-        static_cast<int>(name.size()), name.data());
+    LOGF(ERROR, "Add device '%.*s' forbidden while parent is unbinding",
+         static_cast<int>(name.size()), name.data());
     return ZX_ERR_BAD_STATE;
   }
-
-  log(RPC_IN, "driver_manager: rpc: add-device '%.*s' args='%.*s'\n", static_cast<int>(name.size()),
-      name.data(), static_cast<int>(args.size()), args.data());
 
   fbl::Array<zx_device_prop_t> props(new zx_device_prop_t[props_count], props_count);
   if (!props) {
@@ -616,22 +601,22 @@ zx_status_t Coordinator::AddDevice(
         cur_fragment.set_fragment_device(dev);
         status = cur_fragment.composite()->TryAssemble();
         if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
-          log(ERROR, "driver_manager: failed to assemble composite: %s\n",
-              zx_status_get_string(status));
+          LOGF(ERROR, "Failed to assemble composite device: %s", zx_status_get_string(status));
         }
         break;
       }
     }
   }
 
+  VLOGF(1, "Added device %p '%s'", dev.get(), dev->name().data());
   // TODO(fxb/43370): remove this once init tasks can be enabled for all devices.
   if (!invisible && !want_init_task) {
-    log(DEVLC, "devcoord: publish %p '%s' props=%zu args='%s' parent=%p\n", dev.get(),
-        dev->name().data(), dev->props().size(), dev->args().data(), dev->parent().get());
     status = dev->SignalReadyForBind();
     if (status != ZX_OK) {
       return status;
     }
+    VLOGF(1, "Published device %p '%s' args='%s' props=%zu parent=%p", dev.get(),
+          dev->name().data(), dev->args().data(), dev->props().size(), dev->parent().get());
   }
 
   *new_device = std::move(dev);
@@ -684,19 +669,17 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
 
   if (dev->state() == Device::State::kDead) {
     // This should not happen
-    log(ERROR, "driver_manager: cannot remove dev %p name='%s' twice!\n", dev.get(),
-        dev->name().data());
+    LOGF(ERROR, "Cannot remove device %p '%s' twice", dev.get(), dev->name().data());
     return ZX_ERR_BAD_STATE;
   }
   if (dev->flags & DEV_CTX_IMMORTAL) {
     // This too should not happen
-    log(ERROR, "driver_manager: cannot remove dev %p name='%s' (immortal)\n", dev.get(),
-        dev->name().data());
+    LOGF(ERROR, "Cannot remove device %p '%s' (immortal)", dev.get(), dev->name().data());
     return ZX_ERR_BAD_STATE;
   }
 
-  log(DEVLC, "driver_manager: remove %p name='%s' parent=%p\n", dev.get(), dev->name().data(),
-      dev->parent().get());
+  LOGF(INFO, "Removing device %p '%s' parent=%p", dev.get(), dev->name().data(),
+       dev->parent().get());
   dev->set_state(Device::State::kDead);
 
   // remove from devfs, preventing further OPEN attempts
@@ -768,8 +751,8 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
         next = fbl::RefPtr(&dh->devices().front());
         if (last == next) {
           // This shouldn't be possible, but let's not infinite-loop if it happens
-          log(ERROR, "driver_manager: fatal: failed to remove dev %p from devhost\n", next.get());
-          abort();
+          LOGF(FATAL, "Failed to remove device %p '%s' from driver_host", next.get(),
+               next->name().data());
         }
         RemoveDevice(next, false);
         last = std::move(next);
@@ -815,8 +798,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
         // THEN we will want to rebind our parent
         if ((parent->state() != Device::State::kDead) && (parent->flags & DEV_CTX_MUST_ISOLATE) &&
             ((parent->host() == nullptr) || !(parent->host()->flags() & Devhost::Flags::kDying))) {
-          log(DEVLC, "driver_manager: bus device %p name='%s' is unbound\n", parent.get(),
-              parent->name().data());
+          VLOGF(1, "Bus device %p '%s' is unbound", parent.get(), parent->name().data());
 
           if (parent->retries > 0) {
             // Add device with an exponential backoff.
@@ -865,12 +847,12 @@ zx_status_t Coordinator::AddCompositeDevice(
     auto dev_ref = fbl::RefPtr(&dev);
     size_t index;
     if (new_device->TryMatchFragments(dev_ref, &index)) {
-      log(SPEW, "driver_manager: dev='%s' matched fragment %zu of composite='%s'\n",
-          dev.name().data(), index, new_device->name().data());
+      LOGF(INFO, "Device '%s' matched fragment %zu of composite '%s'", dev.name().data(), index,
+           new_device->name().data());
       status = new_device->BindFragment(index, dev_ref);
       if (status != ZX_OK) {
-        log(ERROR, "driver_manager: dev='%s' failed to bind fragment %zu of composite='%s': %s\n",
-            dev.name().data(), index, new_device->name().data(), zx_status_get_string(status));
+        LOGF(ERROR, "Device '%s' failed to bind fragment %zu of composite '%s': %s",
+             dev.name().data(), index, new_device->name().data(), zx_status_get_string(status));
       }
     }
   }
@@ -1098,8 +1080,8 @@ static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* li
   status = dh_send_bind_driver(
       dev.get(), libname, std::move(vmo), [dev](zx_status_t status, zx::channel test_output) {
         if (status != ZX_OK) {
-          log(ERROR, "driver_manager: rpc: bind-driver '%s' status %d\n", dev->name().data(),
-              status);
+          LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(),
+               zx_status_get_string(status));
           return;
         }
         fbl::RefPtr<Device> real_parent;
@@ -1135,13 +1117,11 @@ static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* li
           }
         }
         if (test_output.is_valid()) {
-          log(ERROR, "driver_manager: rpc: bind-driver '%s' set test channel\n",
-              dev->name().data());
+          LOGF(INFO, "Setting test channel for driver '%s'", dev->name().data());
           status = dev->set_test_output(std::move(test_output), dev->coordinator->dispatcher());
           if (status != ZX_OK) {
-            log(ERROR,
-                "driver_manager: rpc: bind-driver '%s' failed to start test output wait: %d\n",
-                dev->name().data(), status);
+            LOGF(ERROR, "Failed to wait on test output for driver '%s': %s", dev->name().data(),
+                 zx_status_get_string(status));
           }
         }
       });
@@ -1164,7 +1144,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
   const char* arg0 = dev->args().data();
   const char* arg1 = strchr(arg0, ',');
   if (arg1 == nullptr) {
-    log(ERROR, "invalid proxy args: \"processname,args\" (see also fxb/33674)\n");
+    LOGF(ERROR, "Missing proxy arguments, expected '%s,args' (see fxb/33674)", arg0);
     return ZX_ERR_INTERNAL;
   }
   size_t arg0len = arg1 - arg0;
@@ -1175,7 +1155,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
 
   zx_status_t r;
   if (dev->proxy() == nullptr && (r = dev->CreateProxy()) != ZX_OK) {
-    log(ERROR, "devcoord: cannot create proxy device: %d\n", r);
+    LOGF(ERROR, "Cannot create proxy device '%s': %s", dev->name().data(), zx_status_get_string(r));
     return r;
   }
 
@@ -1188,36 +1168,38 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
     if (need_proxy_rpc || dev == sys_device_) {
       // create rpc channel for proxy device to talk to the busdev it proxys
       if ((r = zx::channel::create(0, &h0, &h1)) < 0) {
-        log(ERROR, "driver_manager: cannot create proxy rpc channel: %d\n", r);
         return r;
       }
     }
     if (target_devhost == nullptr) {
       if ((r = NewDevhost(devhostname, &target_devhost)) < 0) {
-        log(ERROR, "driver_manager: NewDevhost: %d\n", r);
+        LOGF(ERROR, "Failed to create driver_host '%s': %s", devhostname, zx_status_get_string(r));
         return r;
       }
     }
 
     dev->proxy()->set_host(std::move(target_devhost));
     if ((r = dh_create_device(dev->proxy(), dev->proxy()->host(), arg1, std::move(h1))) < 0) {
-      log(ERROR, "driver_manager: dh_create_device: %d\n", r);
+      LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().data(),
+           devhostname, zx_status_get_string(r));
       return r;
     }
     if (need_proxy_rpc) {
       if ((r = dh_send_connect_proxy(dev.get(), std::move(h0))) < 0) {
-        log(ERROR, "driver_manager: dh_send_connect_proxy: %d\n", r);
+        LOGF(ERROR, "Failed to connect to proxy device '%s' in driver_host '%s': %s",
+             dev->name().data(), devhostname, zx_status_get_string(r));
       }
     }
     if (dev == sys_device_) {
       if ((r = fdio_service_connect(kItemsPath, h0.release())) != ZX_OK) {
-        log(ERROR, "driver_manager: fdio_service_connect %s: %d\n", kItemsPath, r);
+        LOGF(ERROR, "Failed to connect to %s: %s", kItemsPath, zx_status_get_string(r));
       }
     }
     zx::channel client_remote = dev->take_client_remote();
     if (client_remote.is_valid()) {
       if ((r = devfs_connect(dev->proxy().get(), std::move(client_remote))) != ZX_OK) {
-        log(ERROR, "driver_manager: devfs_connnect: %d\n", r);
+        LOGF(ERROR, "Failed to connect to service from proxy device '%s' in driver_host '%s': %s",
+             dev->name().data(), devhostname, zx_status_get_string(r));
       }
     }
   }
@@ -1234,7 +1216,7 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
   if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
     // non-busdev is pretty simple
     if (dev->host() == nullptr) {
-      log(ERROR, "driver_manager: can't bind to device without devhost\n");
+      LOGF(ERROR, "Cannot bind to device '%s', it has no driver_host", dev->name().data());
       return ZX_ERR_BAD_STATE;
     }
     return dh_bind_driver(dev, drv->libname.c_str());
@@ -1261,13 +1243,14 @@ void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
     if (client_remote.is_valid()) {
       zx_status_t status = devfs_connect(dev.get(), std::move(client_remote));
       if (status != ZX_OK) {
-        log(ERROR, "driver_manager: devfs_connnect: %d\n", status);
+        LOGF(ERROR, "Failed to connect to service from proxy device '%s': %s", dev->name().data(),
+             zx_status_get_string(status));
       }
     }
   }
   // TODO(tesienbe): We probably should do something with the return value
   // from this...
-  BindDevice(dev, fbl::StringPiece("") /* autobind */, true /* new device */);
+  BindDevice(dev, nullptr /* autobind */, true /* new device */);
 }
 
 static void dump_suspend_task_dependencies(const SuspendTask* task, int depth = 0) {
@@ -1286,27 +1269,26 @@ static void dump_suspend_task_dependencies(const SuspendTask* task, int depth = 
       }
     }
     task_status = dependence ? "<dependence>" : "Stuck <suspending>";
-  }
-  log(INFO, "%sSuspend %s: %s\n", fbl::String(2 * depth, ' ').data(), task->device().name().data(),
-      task_status);
-  if (!strcmp(task_status, "Stuck <suspending>")) {
-    zx_koid_t pid = task->device().host()->koid();
-    if (!pid) {
-      return;
+    if (!dependence) {
+      zx_koid_t pid = task->device().host()->koid();
+      if (!pid) {
+        return;
+      }
+      zx::unowned_process process = task->device().host()->proc();
+      char process_name[ZX_MAX_NAME_LEN];
+      zx_status_t status = process->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
+      if (status != ZX_OK) {
+        strlcpy(process_name, "unknown", sizeof(process_name));
+      }
+      printf("Backtrace of threads of process %lu:%s\n", pid, process_name);
+      inspector_print_debug_info_for_all_threads(stdout, process->get());
+      fflush(stdout);
     }
-    zx::unowned_process process = task->device().host()->proc();
-    char process_name[ZX_MAX_NAME_LEN];
-    zx_status_t status = process->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
-    if (status != ZX_OK) {
-      strlcpy(process_name, "unknown", sizeof(process_name));
-    }
-    log(INFO, "Backtrace of threads of process %lu:%s\n", pid, process_name);
-    inspector_print_debug_info_for_all_threads(stdout, process->get());
   }
+  LOGF(INFO, "%*cSuspend %s: %s", 2 * depth, ' ', task->device().name().data(), task_status);
   for (const auto* dependency : task->Dependencies()) {
     dump_suspend_task_dependencies(reinterpret_cast<const SuspendTask*>(dependency), depth + 1);
   }
-  fflush(stdout);
 }
 
 void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> callback) {
@@ -1315,7 +1297,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   // in queue, and another suspend request comes in, we should nullify the resume that
   // is in queue.
   if (InResume()) {
-    log(ERROR, "driver_manager: Aborting system-suspend. A system resume is in progresss.\n");
+    LOGF(ERROR, "Aborting system-suspend, a system resume is in progresss");
     if (callback) {
       callback(ZX_ERR_UNAVAILABLE);
     }
@@ -1324,8 +1306,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
 
   // A suspend is already in progress.
   if (InSuspend()) {
-    log(ERROR,
-        "driver_manager: Aborting system-suspend. A system suspend is already in progress\n");
+    LOGF(ERROR, "Aborting system-suspend, a system suspend is already in progress");
     if (callback) {
       callback(ZX_ERR_ALREADY_EXISTS);
     }
@@ -1335,7 +1316,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   // The sys device should have a proxy. If not, the system hasn't fully initialized yet and
   // cannot go to suspend.
   if (!sys_device_->proxy()) {
-    log(ERROR, "driver_manager: Aborting system-suspend. System is not fully initialized yet.\n");
+    LOGF(ERROR, "Aborting system-suspend, system is not fully initialized yet");
     if (callback) {
       callback(ZX_ERR_UNAVAILABLE);
     }
@@ -1343,10 +1324,11 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   }
 
   if ((ctx.sflags() & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
-    log(ERROR, "driver_manager: Shutting down filesystems to prepare for system-suspend\n");
+    log_to_debuglog();
+    LOGF(INFO, "Shutting down filesystems to prepare for system-suspend");
     ShutdownFilesystems();
   }
-  log(INFO, "driver_manager: Filesystem shutdown complete, creating a suspend timeout-watchdog\n");
+  LOGF(INFO, "Filesystem shutdown complete, creating a suspend timeout-watchdog");
 
   suspend_context() = std::move(ctx);
   auto callback_info = fbl::MakeRefCounted<SuspendCallbackInfo>(std::move(callback));
@@ -1357,8 +1339,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
           return;  // Suspend failed to complete.
         }
         auto& ctx = suspend_context();
-        log(ERROR, "driver_manager: DEVICE SUSPEND TIMED OUT\n");
-        log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
+        LOGF(ERROR, "Device suspend timed out, suspend flags: %#08x", ctx.sflags());
         if (ctx.task() != nullptr) {
           dump_suspend_task_dependencies(ctx.task());
         }
@@ -1373,7 +1354,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
       },
       config_.suspend_timeout);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: Failed to create suspend timeout watchdog\n");
+    LOGF(ERROR, "Failed to create suspend timeout watchdog");
   }
 
   auto completion = [this, callback_info = std::move(callback_info)](zx_status_t status) {
@@ -1382,7 +1363,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
       // TODO: unroll suspend
       // do not continue to suspend as this indicates a driver suspend
       // problem and should show as a bug
-      log(ERROR, "driver_manager: failed to suspend: %s\n", zx_status_get_string(status));
+      LOGF(ERROR, "Failed to suspend: %s", zx_status_get_string(status));
       ctx.set_flags(SuspendContext::Flags::kRunning);
       if (callback_info->callback) {
         callback_info->callback(status);
@@ -1409,7 +1390,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
 
   auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
   suspend_context().set_task(std::move(task));
-  log(INFO, "driver_manager: Successfully created suspend task on sys-device\n");
+  LOGF(INFO, "Successfully created suspend task on device 'sys'");
 }
 
 void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback) {
@@ -1425,7 +1406,7 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
     auto completion = [this, &dev, callback](zx_status_t status) {
       auto& ctx = resume_context();
       if (status != ZX_OK) {
-        log(ERROR, "driver_manager: failed to resume: %s\n", zx_status_get_string(status));
+        LOGF(ERROR, "Failed to resume: %s", zx_status_get_string(status));
         ctx.set_flags(ResumeContext::Flags::kSuspended);
         auto task = ctx.take_pending_task(dev);
         callback(status);
@@ -1437,7 +1418,7 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
         ctx.push_completed_task(std::move(task.value()));
       } else {
         // Something went wrong
-        log(ERROR, "driver_manager: failed to resume. Cant find matching pending task\n");
+        LOGF(ERROR, "Failed to resume, cannot find matching pending task");
         callback(ZX_ERR_INTERNAL);
         return;
       }
@@ -1462,7 +1443,7 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
         if (!InResume()) {
           return;
         }
-        log(ERROR, "driver_manager: SYSTEM RESUME TIMED OUT\n");
+        LOGF(ERROR, "System resume timed out");
         callback(ZX_ERR_TIMED_OUT);
         // TODO(ravoorir): Figure out what is the best strategy
         // of for recovery here. Should we put back all devices
@@ -1471,7 +1452,7 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
       },
       config_.resume_timeout);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: Failure to create resume timeout watchdog\n");
+    LOGF(ERROR, "Failure to create resume timeout watchdog");
   }
 }
 
@@ -1486,10 +1467,8 @@ void Coordinator::Resume(SystemPowerState target_state, ResumeCallback callback)
 std::unique_ptr<Driver> Coordinator::ValidateDriver(std::unique_ptr<Driver> drv) {
   if ((drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !config_.asan_drivers) {
     if (launched_first_devhost_) {
-      log(ERROR,
-          "%s (%s) requires ASan: cannot load after boot;"
-          " consider devmgr.devhost.asan=true\n",
-          drv->libname.data(), drv->name.data());
+      LOGF(ERROR, "%s (%s) requires ASan, cannot load after boot; use devmgr.devhost.asan=true",
+           drv->libname.data(), drv->name.data());
       return nullptr;
     }
     config_.asan_drivers = true;
@@ -1509,8 +1488,7 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
     drivers_.push_back(drv);
     zx_status_t status = BindDriver(drv);
     if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
-      log(ERROR, "driver_manager: failed to bind driver '%s': %s\n", drv->name.data(),
-          zx_status_get_string(status));
+      LOGF(ERROR, "Failed to bind driver '%s': %s", drv->name.data(), zx_status_get_string(status));
     }
   });
 }
@@ -1554,11 +1532,10 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
   if (!driver) {
     return;
   }
-  log(INFO, "driver_manager: adding system driver '%s' '%s'\n", driver->name.data(),
-      driver->libname.data());
+  LOGF(INFO, "Adding system driver '%s' '%s'", driver->name.data(), driver->libname.data());
   if (load_vmo(driver->libname.data(), &driver->dso_vmo)) {
-    log(ERROR, "driver_manager: system driver '%s' '%s' could not cache DSO\n", driver->name.data(),
-        driver->libname.data());
+    LOGF(ERROR, "System driver '%s' '%s' could not cache DSO", driver->name.data(),
+         driver->libname.data());
   }
   if (version[0] == '*') {
     // de-prioritize drivers that are "fallback"
@@ -1584,8 +1561,8 @@ zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, cons
 
   zx_status_t status = attempt_bind(drv, dev);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to bind drv='%s' to dev='%s': %s\n", drv->name.data(),
-        dev->name().data(), zx_status_get_string(status));
+    LOGF(ERROR, "Failed to bind driver '%s' to device '%s': %s", drv->name.data(),
+         dev->name().data(), zx_status_get_string(status));
   }
   if (status == ZX_ERR_NEXT) {
     // Convert ERR_NEXT to avoid confusing the caller
@@ -1647,11 +1624,12 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringP
     for (auto& composite : composite_devices_) {
       size_t index;
       if (composite.TryMatchFragments(dev, &index)) {
-        log(SPEW, "driver_manager: dev='%s' matched fragment %zu of composite='%s'\n",
-            dev->name().data(), index, composite.name().data());
+        LOGF(INFO, "Device '%s' matched fragment %zu of composite '%s'", dev->name().data(), index,
+             composite.name().data());
         status = composite.BindFragment(index, dev);
         if (status != ZX_OK) {
-          log(ERROR, "composite bind fragment failed\n");
+          LOGF(ERROR, "Device '%s' failed to bind fragment %zu of composite '%s': %s",
+               dev->name().data(), index, composite.name().data(), zx_status_get_string(status));
           return status;
         }
       }
@@ -1712,7 +1690,7 @@ zx_status_t Coordinator::ScanSystemDrivers() {
   };
   int ret = thrd_create_with_name(&t, callback, this, "system-driver-loader");
   if (ret != thrd_success) {
-    log(ERROR, "driver_manager: failed to create system driver scanning thread\n");
+    LOGF(ERROR, "Failed to create system driver scanning thread: %d", ret);
     return ZX_ERR_NO_RESOURCES;
   }
   thrd_detach(t);
@@ -1726,18 +1704,16 @@ void Coordinator::BindSystemDrivers() {
     drivers_.push_back(drv);
     zx_status_t status = BindDriver(drv);
     if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
-      log(ERROR, "driver_manager: failed to bind driver '%s': %s\n", drv->name.data(),
-          zx_status_get_string(status));
+      LOGF(ERROR, "Failed to bind driver '%s': %s", drv->name.data(), zx_status_get_string(status));
     }
   }
   // Bind remaining fallback drivers.
   while ((drv = fallback_drivers_.pop_front()) != nullptr) {
-    log(INFO, "driver_manager: fallback driver '%s' is available\n", drv->name.data());
+    LOGF(INFO, "Fallback driver '%s' is available", drv->name.data());
     drivers_.push_back(drv);
     zx_status_t status = BindDriver(drv);
     if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
-      log(ERROR, "driver_manager: failed to bind driver '%s': %s\n", drv->name.data(),
-          zx_status_get_string(status));
+      LOGF(ERROR, "Failed to bind driver '%s': %s", drv->name.data(), zx_status_get_string(status));
     }
   }
 }
@@ -1746,8 +1722,7 @@ void Coordinator::BindDrivers() {
   for (Driver& drv : drivers_) {
     zx_status_t status = BindDriver(&drv);
     if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
-      log(ERROR, "driver_manager: failed to bind driver '%s': %s\n", drv.name.data(),
-          zx_status_get_string(status));
+      LOGF(ERROR, "Failed to bind driver '%s': %s", drv.name.data(), zx_status_get_string(status));
     }
   }
 }
@@ -1876,7 +1851,8 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
                   reinterpret_cast<fidl_dispatch_t*>(fuchsia_device_manager_Administrator_dispatch),
                   this, &kOps);
     if (status != ZX_OK) {
-      log(ERROR, "Failed to bind to client channel: %d \n", status);
+      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
+           fuchsia_device_manager_Administrator_Name, zx_status_get_string(status));
     }
     return status;
   };
@@ -1890,11 +1866,11 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     auto status = fidl::Bind<llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface>(
         this->config_.dispatcher, std::move(request), this);
     if (status != ZX_OK) {
-      log(ERROR, "Failed to bind to client channel: %d \n", status);
+      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
+           power_fidl::statecontrol::Admin::Name, zx_status_get_string(status));
     }
     return status;
   };
-
   status = svc_dir->AddEntry(power_fidl::statecontrol::Admin::Name,
                              fbl::MakeRefCounted<fs::Service>(admin2));
   if (status != ZX_OK) {
@@ -1905,13 +1881,16 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     auto status = fidl::Bind<llcpp::fuchsia::device::manager::BindDebugger::Interface>(
         this->config_.dispatcher, std::move(request), this);
     if (status != ZX_OK) {
-      log(ERROR, "Failed to bind to client channel: %d \n", status);
+      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
+           llcpp::fuchsia::device::manager::BindDebugger::Name, zx_status_get_string(status));
     }
     return status;
   };
-
-  svc_dir->AddEntry(llcpp::fuchsia::device::manager::BindDebugger::Name,
-                    fbl::MakeRefCounted<fs::Service>(bind_debugger));
+  status = svc_dir->AddEntry(llcpp::fuchsia::device::manager::BindDebugger::Name,
+                             fbl::MakeRefCounted<fs::Service>(bind_debugger));
+  if (status != ZX_OK) {
+    return status;
+  }
 
   const auto debug = [this](zx::channel request) {
     static constexpr fuchsia_device_manager_DebugDumper_ops_t kOps = {
@@ -1943,7 +1922,8 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
                   reinterpret_cast<fidl_dispatch_t*>(fuchsia_device_manager_DebugDumper_dispatch),
                   this, &kOps);
     if (status != ZX_OK) {
-      log(ERROR, "Failed to bind to client channel: %d \n", status);
+      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
+           fuchsia_device_manager_DebugDumper_Name, zx_status_get_string(status));
     }
     return status;
   };

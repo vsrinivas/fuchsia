@@ -6,8 +6,6 @@
 
 #include <fs/vmo_file.h>
 
-#include "log.h"
-
 InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
   inspect_vmo_ = inspect_.DuplicateVmo();
 

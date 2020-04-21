@@ -5,11 +5,12 @@
 #include "driver_host_context.h"
 
 #include <stdio.h>
+#include <zircon/status.h>
 
 #include <fbl/auto_lock.h>
 #include <fs/vfs.h>
 
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 void DriverHostContext::PushWorkItem(const fbl::RefPtr<zx_device_t>& dev, Callback callback) {
   auto work_item = std::make_unique<WorkItem>(dev, std::move(callback));
@@ -100,7 +101,7 @@ void DriverHostContext::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> ev
                                                  async::WaitBase* wait, zx_status_t status,
                                                  const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    log(ERROR, "driver_host: event waiter error: %d\n", status);
+    LOGF(ERROR, "Failed to wait for event: %s", zx_status_get_string(status));
     return;
   }
 
@@ -108,8 +109,7 @@ void DriverHostContext::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> ev
     event_waiter->InvokeCallback();
     BeginWait(std::move(event_waiter), dispatcher);
   } else {
-    printf("%s: invalid signals %x\n", __func__, signal->observed);
-    abort();
+    LOGF(FATAL, "Unexpected signal state %#08x", signal->observed);
   }
 }
 

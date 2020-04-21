@@ -4,8 +4,10 @@
 
 #include "init_task.h"
 
+#include <zircon/status.h>
+
 #include "coordinator.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 InitTask::InitTask(fbl::RefPtr<Device> device, Completion completion)
     : Task(device->coordinator->dispatcher(), std::move(completion)), device_(std::move(device)) {}
@@ -17,7 +19,7 @@ fbl::RefPtr<InitTask> InitTask::Create(fbl::RefPtr<Device> device, Completion co
 }
 
 void InitTask::Run() {
-  log(TRACE, "running init task for %s\n", device_->name().data());
+  LOGF(INFO, "Running init task for device %p '%s'", device_.get(), device_->name().data());
 
   // If the init task exists for a device, it should always run before
   // other tasks for a device.
@@ -47,8 +49,8 @@ void InitTask::Run() {
         status = device_->coordinator->MakeVisible(device_);
       }
     } else if (device_->state() != Device::State::kDead) {
-      log(ERROR, "%s: init task failed, err: %d, scheduling removal of device\n",
-          device_->name().data(), status);
+      LOGF(ERROR, "Init task failed, scheduling removal of device %p '%s': %s", device_.get(),
+           device_->name().data(), zx_status_get_string(status));
       device_->coordinator->ScheduleDevhostRequestedRemove(device_, true /* do_unbind */);
     }
     // We still want other tasks to run even if init failed, so do not propagate errors.

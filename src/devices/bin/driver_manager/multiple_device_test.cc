@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
   size_t parent_index;

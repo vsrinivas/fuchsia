@@ -7,9 +7,10 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/txn_header.h>
+#include <zircon/status.h>
 
 #include "coordinator.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 zx_status_t dh_send_create_device(Device* dev, const fbl::RefPtr<Devhost>& dh,
                                   zx::channel coordinator_rpc, zx::channel device_controller_rpc,
@@ -99,7 +100,8 @@ zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy) {
 zx_status_t dh_send_init(Device* dev_ptr) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev->device_controller()->Init([dev](zx_status_t status) {
-    log(ERROR, "driver_manager: init done '%s'\n", dev->name().data());
+    LOGF(INFO, "Initialized device %p '%s': %s", dev.get(), dev->name().data(),
+         zx_status_get_string(status));
     dev->CompleteInit(status);
   });
   return ZX_OK;
@@ -108,7 +110,8 @@ zx_status_t dh_send_init(Device* dev_ptr) {
 zx_status_t dh_send_suspend(Device* dev_ptr, uint32_t flags) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev->device_controller()->Suspend(flags, [dev](zx_status_t status) {
-    log(INFO, "driver_manager: suspended name='%s' status %d\n", dev->name().data(), status);
+    LOGF(INFO, "Suspended device %p '%s': %s", dev.get(), dev->name().data(),
+         zx_status_get_string(status));
     dev->CompleteSuspend(status);
   });
   return ZX_OK;
@@ -117,7 +120,8 @@ zx_status_t dh_send_suspend(Device* dev_ptr, uint32_t flags) {
 zx_status_t dh_send_resume(Device* dev_ptr, uint32_t target_system_state) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev_ptr->device_controller()->Resume(target_system_state, [dev](zx_status_t status) {
-    log(INFO, "driver_manager: resumed dev %p name='%s'\n", dev.get(), dev->name().data());
+    LOGF(INFO, "Resumed device %p '%s': %s", dev.get(), dev->name().data(),
+         zx_status_get_string(status));
     dev->CompleteResume(status);
   });
   return ZX_OK;
@@ -133,7 +137,8 @@ zx_status_t dh_send_unbind(Device* dev_ptr) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev->device_controller()->Unbind(
       [dev](fuchsia::device::manager::DeviceController_Unbind_Result status) {
-        log(ERROR, "driver_manager: unbind done '%s'\n", dev->name().data());
+        LOGF(INFO, "Unbound device %p '%s': %s", dev.get(), dev->name().data(),
+             zx_status_get_string(status.is_err() ? status.err() : ZX_OK));
         dev->CompleteUnbind();
       });
   return ZX_OK;
@@ -145,7 +150,8 @@ zx_status_t dh_send_complete_removal(Device* dev_ptr, fit::function<void()> cb) 
   dev->device_controller()->CompleteRemoval(
       [dev, cb = std::move(cb)](
           fuchsia::device::manager::DeviceController_CompleteRemoval_Result status) {
-        log(ERROR, "driver_manager: remove done '%s'\n", dev->name().data());
+        LOGF(INFO, "Removed device %p '%s': %s", dev.get(), dev->name().data(),
+             zx_status_get_string(status.is_err() ? status.err() : ZX_OK));
         cb();
       });
   return ZX_OK;

@@ -169,6 +169,7 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
   // Forward required services from the current namespace. Currently this is just
   // fuchsia.process.Launcher.
   ForwardService(svc_loop_state_->root, fuchsia_process_Launcher_Name, std::move(svc_client));
+  ForwardService(svc_loop_state_->root, "fuchsia.logger.LogSink", std::move(svc_client));
   ForwardService(svc_loop_state_->root, "fuchsia.fshost.Loader", std::move(fshost_svc_client));
 
   // Host fake instances of some services normally provided by bootsvc and routed to devcoordinator

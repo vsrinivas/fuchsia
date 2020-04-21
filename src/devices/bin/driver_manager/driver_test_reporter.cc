@@ -3,28 +3,27 @@
 // found in the LICENSE file.
 
 #include "driver_test_reporter.h"
-#include "log.h"
 
 #include <stdio.h>
 
+#include "src/devices/lib/log/log.h"
+
 void DriverTestReporter::LogMessage(const char* msg, size_t size) {
-  log(INFO, "[----------][%s] %.*s\n", driver_name_.data(), static_cast<int>(size), msg);
+  LOGF(INFO, "[----------][%s] %.*s\n", driver_name_.data(), static_cast<int>(size), msg);
 }
 
 void DriverTestReporter::LogTestCase(const char* name, size_t name_size,
                                      const fuchsia_driver_test_TestCaseResult* result) {
   uint64_t ran = result->passed + result->failed;
-  log(INFO, "[----------] %lu tests from %s.%.*s\n", ran, driver_name_.data(),
-          static_cast<int>(name_size), name);
-  log(INFO, "[----------] %lu passed\n", result->passed);
-  log(INFO, "[----------] %lu failed\n", result->failed);
-  log(INFO, "[----------] %lu skipped\n", result->skipped);
+  LOGF(INFO, "[----------] %lu tests from %s.%.*s\n", ran, driver_name_.data(),
+       static_cast<int>(name_size), name);
+  LOGF(INFO, "[----------] %lu passed\n", result->passed);
+  LOGF(INFO, "[----------] %lu failed\n", result->failed);
+  LOGF(INFO, "[----------] %lu skipped\n", result->skipped);
   if (result->failed == 0) {
-    log(INFO, "[       OK ] %s.%.*s\n", driver_name_.data(), static_cast<int>(name_size),
-            name);
+    LOGF(INFO, "[       OK ] %s.%.*s\n", driver_name_.data(), static_cast<int>(name_size), name);
   } else {
-    log(INFO, "[     FAIL ] %s.%.*s\n", driver_name_.data(), static_cast<int>(name_size),
-            name);
+    LOGF(INFO, "[     FAIL ] %s.%.*s\n", driver_name_.data(), static_cast<int>(name_size), name);
   }
   total_cases_ += 1;
   total_passed_ += result->passed;
@@ -33,20 +32,20 @@ void DriverTestReporter::LogTestCase(const char* name, size_t name_size,
 }
 
 void DriverTestReporter::TestStart() {
-  log(INFO, "[==========] Running driver unit tests: %s.\n", driver_name_.data());
+  LOGF(INFO, "[==========] Running driver unit tests: %s.\n", driver_name_.data());
 }
 
 void DriverTestReporter::TestFinished() {
   uint64_t total_ran = total_passed_ + total_failed_;
   if (total_skipped_ == 0) {
-    log(INFO, "[==========] %lu test from %lu test cases ran.\n", total_ran, total_cases_);
+    LOGF(INFO, "[==========] %lu test from %lu test cases ran.\n", total_ran, total_cases_);
   } else {
-    log(INFO, "[==========] %lu test from %lu test cases ran (%lu skipped).\n", total_ran,
-            total_cases_, total_skipped_);
+    LOGF(INFO, "[==========] %lu test from %lu test cases ran (%lu skipped).\n", total_ran,
+         total_cases_, total_skipped_);
   }
   if (total_failed_ == 0) {
-    log(INFO, "[  PASSED  ] %s: %lu tests passed.\n", driver_name_.data(), total_passed_);
+    LOGF(INFO, "[  PASSED  ] %s: %lu tests passed.\n", driver_name_.data(), total_passed_);
   } else {
-    log(INFO, "[  FAILED  ] %s: %lu tests failed.\n", driver_name_.data(), total_failed_);
+    LOGF(INFO, "[  FAILED  ] %s: %lu tests failed.\n", driver_name_.data(), total_failed_);
   }
 }

@@ -4,12 +4,11 @@
 
 #include "vmo_writer.h"
 
+#include <stdarg.h>
 #include <stdio.h>
-#include <zircon/compiler.h>
+#include <zircon/status.h>
 
-#include <cstdarg>
-
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 
 void VmoWriter::Printf(const char* fmt, ...) {
   if (status_ != ZX_OK) {
@@ -38,7 +37,7 @@ void VmoWriter::Printf(const char* fmt, ...) {
   auto status = vmo_.write(buf, written_, length);
   if (status != ZX_OK) {
     status_ = status;
-    log(ERROR, "Unable to write to vmo. status: %d \n", status);
+    LOGF(ERROR, "Failed to write to VMO: %s", zx_status_get_string(status));
     return;
   }
 

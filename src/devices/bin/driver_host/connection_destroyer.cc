@@ -7,8 +7,8 @@
 #include <inttypes.h>
 
 #include "device_controller_connection.h"
-#include "log.h"
 #include "proxy_iostate.h"
+#include "src/devices/lib/log/log.h"
 #include "zx_device.h"
 
 zx_status_t ConnectionDestroyer::QueueProxyConnection(async_dispatcher_t* dispatcher,
@@ -35,13 +35,13 @@ void ConnectionDestroyer::Handler(async_dispatcher_t* dispatcher, async::Receive
   switch (type) {
     case Type::DeviceController: {
       auto conn = reinterpret_cast<DeviceControllerConnection*>(ptr);
-      log(TRACE, "driver_host: destroying devcoord conn '%p'\n", conn);
+      VLOGF(1, "Destroying driver_manager connection %p", conn);
       delete conn;
       break;
     }
     case Type::Proxy: {
       auto conn = reinterpret_cast<ProxyIostate*>(ptr);
-      log(TRACE, "driver_host: destroying proxy conn '%p'\n", conn);
+      VLOGF(1, "Destroying proxy connection %p", conn);
       delete conn;
       break;
     }

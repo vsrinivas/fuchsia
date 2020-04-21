@@ -43,7 +43,7 @@
 #include "devfs.h"
 #include "devhost_loader_service.h"
 #include "fdio.h"
-#include "log.h"
+#include "src/devices/lib/log/log.h"
 #include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
 #include "system_instance.h"
 
@@ -51,31 +51,31 @@ namespace {
 
 // These are helpers for getting sets of parameters over FIDL
 struct DriverManagerParams {
-  bool verbose;
-  bool require_system;
   bool devhost_asan;
   bool devhost_strict_linking;
+  bool log_to_debuglog;
+  bool require_system;
   bool suspend_timeout_fallback;
+  bool verbose;
 };
 
 DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::SyncClient& client) {
   llcpp::fuchsia::boot::BoolPair bool_req[]{
-      {"devmgr.verbose", false},
-      {"devmgr.require-system", false},
       // TODO(bwb): remove this or figure out how to make it work
       {"devmgr.devhost.asan", false},
       {"devmgr.devhost.strict-linking", false},
+      {"devmgr.log-to-debuglog", false},
+      {"devmgr.require-system", false},
       // Turn it on by default. See fxb/34577
       {"devmgr.suspend-timeout-fallback", true},
+      {"devmgr.verbose", false},
   };
   auto bool_resp = client.GetBools(fidl::unowned_vec(bool_req));
-  DriverManagerParams params{false, false, false, false, true};
-
-  if (bool_resp.ok()) {
-    params = {bool_resp->values[0], bool_resp->values[1], bool_resp->values[2],
-              bool_resp->values[3], bool_resp->values[4]};
+  if (!bool_resp.ok()) {
+    return {};
   }
-  return params;
+  return {bool_resp->values[0], bool_resp->values[1], bool_resp->values[2],
+          bool_resp->values[3], bool_resp->values[4], bool_resp->values[5]};
 }
 
 constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
@@ -132,16 +132,16 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
   };
 
   auto print_usage_and_exit = [options]() {
-    log(INFO, "driver_manager: supported arguments:\n");
+    printf("driver_manager: supported arguments:\n");
     for (const auto& option : options) {
-      log(INFO, "  --%s\n", option.name);
+      printf("  --%s\n", option.name);
     }
     abort();
   };
 
   auto check_not_duplicated = [print_usage_and_exit](const char* arg) {
     if (arg != nullptr) {
-      log(ERROR, "driver_manager: duplicated argument\n");
+      printf("driver_manager: duplicated argument\n");
       print_usage_and_exit();
     }
   };
@@ -184,7 +184,7 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
   zx::job devhost_job;
   zx_status_t status = zx::job::create(root_job, 0u, &devhost_job);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: unable to create devhost job\n");
+    LOGF(ERROR, "Unable to create driver_host job: %s", zx_status_get_string(status));
     return status;
   }
   static const zx_policy_basic_v2_t policy[] = {
@@ -193,12 +193,12 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
   status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy,
                                   fbl::count_of(policy));
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: zx_job_set_policy() failed\n");
+    LOGF(ERROR, "Failed to set driver_host job policy: %s", zx_status_get_string(status));
     return status;
   }
   status = devhost_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: zx_job_set_property() failed\n");
+    LOGF(ERROR, "Failed to set driver_host job property: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -209,32 +209,35 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
 }  // namespace
 
 int main(int argc, char** argv) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
+  zx_status_t status = StdoutToDebuglog::Init();
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to create channel for boot args: '%s'",
-        zx_status_get_string(status));
+    LOGF(INFO, "Failed to redirect stdout to debuglog, assuming test environment and continuing");
+  }
+
+  zx::channel local, remote;
+  status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
     return status;
   }
   auto path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::boot::Arguments::Name);
   status = fdio_service_connect(path.data(), remote.release());
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to get boot arguments service handle: '%s'",
-        zx_status_get_string(status));
+    LOGF(ERROR, "Failed to get boot arguments service handle: %s", zx_status_get_string(status));
     return status;
   }
 
   auto boot_args = llcpp::fuchsia::boot::Arguments::SyncClient{std::move(local)};
   auto driver_manager_params = GetDriverManagerParams(boot_args);
-  if (driver_manager_params.verbose) {
-    log_flags |= LOG_ALL;
-  }
-
   DevmgrArgs devmgr_args;
   ParseArgs(argc, argv, &devmgr_args);
-  if (devmgr_args.log_to_debuglog) {
-    zx_status_t status = StdoutToDebuglog::Init();
+
+  if (driver_manager_params.verbose) {
+    FX_LOG_SET_VERBOSITY(1);
+  }
+  if (driver_manager_params.log_to_debuglog || devmgr_args.log_to_debuglog) {
+    zx_status_t status = log_to_debuglog();
     if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to reconfigure logger to use debuglog: %s", zx_status_get_string(status));
       return status;
     }
   }
@@ -254,35 +257,32 @@ int main(int argc, char** argv) {
   config.require_system = driver_manager_params.require_system;
   config.asan_drivers = driver_manager_params.devhost_asan;
   config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;
+  config.verbose = driver_manager_params.verbose;
   config.disable_netsvc = devmgr_args.disable_netsvc;
   config.fs_provider = &system_instance;
 
   // TODO(ZX-4178): Remove all uses of the root resource.
   status = get_root_resource(&config.root_resource);
   if (status != ZX_OK) {
-    log(INFO,
-        "driver_manager: failed to get root resource, assuming test "
-        "environment and continuing\n");
+    LOGF(INFO, "Failed to get root resource, assuming test environment and continuing");
   }
   // TODO(ZX-4177): Remove all uses of the root job.
   zx::job root_job;
   status = get_root_job(&root_job);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to get root job: %d\n", status);
-    return 1;
+    LOGF(ERROR, "Failed to get root job: %s", zx_status_get_string(status));
+    return status;
   }
   status = CreateDevhostJob(root_job, &config.devhost_job);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to create devhost job: %d\n", status);
-    return 1;
+    LOGF(ERROR, "Failed to create driver_host job: %s", zx_status_get_string(status));
+    return status;
   }
 
   zx_handle_t oom_event;
   status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &oom_event);
   if (status != ZX_OK) {
-    log(INFO,
-        "driver_manager: failed to get oom event, assuming test "
-        "environment and continuing\n");
+    LOGF(INFO, "Failed to get OOM event, assuming test environment and continuing");
   } else {
     config.oom_event = zx::event(oom_event);
   }
@@ -293,8 +293,8 @@ int main(int argc, char** argv) {
   svc::Outgoing outgoing{loop.dispatcher()};
   status = coordinator.InitOutgoingServices(outgoing.svc_dir());
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to initialize outgoing services\n");
-    return 1;
+    LOGF(ERROR, "Failed to initialize outgoing services: %s", zx_status_get_string(status));
+    return status;
   }
 
   // Check if whatever launched devcoordinator gave a channel to be connected to the
@@ -305,15 +305,15 @@ int main(int argc, char** argv) {
   if (outgoing_svc_dir_client.is_valid()) {
     status = outgoing.Serve(std::move(outgoing_svc_dir_client));
     if (status != ZX_OK) {
-      log(ERROR, "driver_manager: failed to bind outgoing services\n");
-      return 1;
+      LOGF(ERROR, "Failed to bind outgoing services: %s", zx_status_get_string(status));
+      return status;
     }
   }
 
   status = coordinator.InitCoreDevices(devmgr_args.sys_device_driver);
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to initialize core devices\n");
-    return 1;
+    LOGF(ERROR, "Failed to initialize core devices: %s", zx_status_get_string(status));
+    return status;
   }
 
   devfs_init(coordinator.root_device(), loop.dispatcher());
@@ -331,14 +331,13 @@ int main(int argc, char** argv) {
 
   status = system_instance.CreateSvcJob(root_job);
   if (status != ZX_OK) {
-    return 1;
+    return status;
   }
 
   status = system_instance.PrepareChannels();
   if (status != ZX_OK) {
-    log(ERROR, "driver_manager: failed to create other system channels %s\n",
-        zx_status_get_string(status));
-    return 1;
+    LOGF(ERROR, "Failed to create other system channels: %s", zx_status_get_string(status));
+    return status;
   }
 
   if (devmgr_args.start_svchost) {
@@ -349,21 +348,20 @@ int main(int argc, char** argv) {
     }
     status = outgoing.Serve(std::move(root_server));
     if (status != ZX_OK) {
-      log(ERROR, "driver_manager: failed to bind outgoing services\n");
-      return 1;
+      LOGF(ERROR, "Failed to bind outgoing services: %s", zx_status_get_string(status));
+      return status;
     }
     status = system_instance.StartSvchost(root_job, root_client,
                                           driver_manager_params.require_system, &coordinator);
     if (status != ZX_OK) {
-      log(ERROR, "driver_manager: failed to start svchost: %s\n", zx_status_get_string(status));
-      return 1;
+      LOGF(ERROR, "Failed to start svchost: %s", zx_status_get_string(status));
+      return status;
     }
   } else {
     status = system_instance.ReuseExistingSvchost();
     if (status != ZX_OK) {
-      log(ERROR, "driver_manager: failed to reuse existing svchost: %s\n",
-          zx_status_get_string(status));
-      return 1;
+      LOGF(ERROR, "Failed to reuse existing svchost: %s", zx_status_get_string(status));
+      return status;
     }
   }
 
@@ -377,8 +375,8 @@ int main(int argc, char** argv) {
   int ret = thrd_create_with_name(&t, SystemInstance::pwrbtn_monitor_starter,
                                   pwrbtn_starter_args.release(), "pwrbtn-monitor-starter");
   if (ret != thrd_success) {
-    log(ERROR, "driver_manager: failed to create pwrbtn monitor starter thread\n");
-    return 1;
+    LOGF(ERROR, "Failed to create pwrbtn monitor starter thread: %d", ret);
+    return ret;
   }
   thrd_detach(t);
 
@@ -390,33 +388,32 @@ int main(int argc, char** argv) {
   ret = thrd_create_with_name(&t, SystemInstance::service_starter, service_starter_args.release(),
                               "service-starter");
   if (ret != thrd_success) {
-    log(ERROR, "driver_manager: failed to create service starter thread\n");
-    return 1;
+    LOGF(ERROR, "Failed to create service starter thread: %d", ret);
+    return ret;
   }
   thrd_detach(t);
 
-  std::unique_ptr<DevhostLoaderService> loader_service;
   if (driver_manager_params.devhost_strict_linking) {
+    std::unique_ptr<DevhostLoaderService> loader_service;
     status = DevhostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);
     if (status != ZX_OK) {
-      log(ERROR, "driver_manager: failed to create loader service\n");
-      return 1;
+      LOGF(ERROR, "Failed to create loader service: %s", zx_status_get_string(status));
+      return status;
     }
-    coordinator.set_loader_service_connector(
-        [loader_service = std::move(loader_service)](zx::channel* c) {
-          zx_status_t status = loader_service->Connect(c);
-          if (status != ZX_OK) {
-            log(ERROR, "driver_manager: failed to add devhost loader connection: %s\n",
-                zx_status_get_string(status));
-          }
-          return status;
-        });
+    coordinator.set_loader_service_connector([ls = std::move(loader_service)](zx::channel* c) {
+      zx_status_t status = ls->Connect(c);
+      if (status != ZX_OK) {
+        LOGF(ERROR, "Failed to add driver_host loader connection: %s",
+             zx_status_get_string(status));
+      }
+      return status;
+    });
   } else {
     coordinator.set_loader_service_connector([&system_instance](zx::channel* c) {
       zx_status_t status = system_instance.clone_fshost_ldsvc(c);
       if (status != ZX_OK) {
-        log(ERROR, "driver_manager: failed to clone fshost loader for driver_host: %s\n",
-            zx_status_get_string(status));
+        LOGF(ERROR, "Failed to clone fshost loader for driver_host: %s",
+             zx_status_get_string(status));
       }
       return status;
     });
@@ -430,9 +427,7 @@ int main(int argc, char** argv) {
   }
 
   if (coordinator.require_system() && !coordinator.system_loaded()) {
-    log(INFO,
-        "driver_manager: full system required, ignoring fallback drivers until /system is "
-        "loaded\n");
+    LOGF(INFO, "Full system required, ignoring fallback drivers until '/system' is loaded");
   } else {
     coordinator.UseFallbackDrivers();
   }
@@ -453,6 +448,6 @@ int main(int argc, char** argv) {
 
   coordinator.set_running(true);
   status = loop.Run();
-  log(ERROR, "driver_manager: coordinator exited unexpectedly: %d\n", status);
-  return status == ZX_OK ? 0 : 1;
+  LOGF(ERROR, "Coordinator exited unexpectedly: %s", zx_status_get_string(status));
+  return status;
 }
