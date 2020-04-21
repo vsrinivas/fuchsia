@@ -20,6 +20,11 @@ extern "C" {
 
 namespace {
 
+// Provided by etnaviv_cl_test_gc7000.c
+extern "C" uint32_t hello_code[];
+extern "C" void gen_cmd_stream(struct etna_cmd_stream* stream, struct etna_bo* code,
+                               struct etna_bo* bmp);
+
 class MagmaExecuteMsdVsi : public testing::Test {
  protected:
   void SetUp() override {
@@ -28,7 +33,11 @@ class MagmaExecuteMsdVsi : public testing::Test {
     magma_vsi_.ContextCreate();
   }
 
-  void TearDown() override { magma_vsi_.DeviceClose(); }
+  void TearDown() override {
+    magma_vsi_.ContextRelease();
+    magma_vsi_.ConnectionRelease();
+    magma_vsi_.DeviceClose();
+  }
 
  public:
   class EtnaBuffer : public etna_bo {
@@ -49,8 +58,10 @@ class MagmaExecuteMsdVsi : public testing::Test {
     auto etna_buffer = std::make_shared<EtnaBuffer>();
     uint64_t actual_size = 0;
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_create_buffer(magma_vsi_.GetConnection(), size, &actual_size,
-                                                   &(etna_buffer->magma_buffer_)));
+    if (MAGMA_STATUS_OK != magma_create_buffer(magma_vsi_.GetConnection(), size, &actual_size,
+                                               &(etna_buffer->magma_buffer_)))
+      return nullptr;
+
     EXPECT_EQ(actual_size, size);
     EXPECT_NE(etna_buffer->magma_buffer_, 0ul);
 
@@ -78,8 +89,6 @@ class MagmaExecuteMsdVsi : public testing::Test {
     etna_buffer->resource_.buffer_id = magma_get_buffer_id(etna_buffer->magma_buffer_);
     etna_buffer->resource_.offset = 0;
     etna_buffer->resource_.length = etna_buffer->size_;
-
-    buffers_.push_back(etna_buffer);
 
     return etna_buffer;
   }
@@ -145,9 +154,7 @@ class MagmaExecuteMsdVsi : public testing::Test {
     uint64_t semaphore_id = magma_get_semaphore_id(semaphore);
 
     std::vector<magma_system_exec_resource> resources;
-    for (auto buffer : buffers_) {
-      resources.push_back(buffer->resource_);
-    }
+    resources.push_back(command_stream->etna_buffer->resource_);
 
     magma_system_command_buffer command_buffer = {
         .batch_buffer_resource_index = 0,
@@ -173,20 +180,54 @@ class MagmaExecuteMsdVsi : public testing::Test {
     magma_release_semaphore(magma_vsi_.GetConnection(), semaphore);
   }
 
+  void Test() {
+    static constexpr size_t kCodeSize = 4096;
+
+    std::shared_ptr<EtnaCommandStream> command_stream = CreateEtnaCommandStream(kCodeSize);
+    ASSERT_TRUE(command_stream);
+
+    std::shared_ptr<EtnaBuffer> code = CreateEtnaBuffer(kCodeSize);
+    ASSERT_TRUE(code);
+
+    bool found_end_of_code = false;
+    for (uint32_t i = 0; i < kCodeSize / sizeof(uint32_t); i++) {
+      if ((i % 4 == 0) && hello_code[i] == 0) {
+        // End of code is a NOOP line
+        found_end_of_code = true;
+        break;
+      }
+      code->GetCpuAddress()[i] = hello_code[i];
+    }
+    EXPECT_TRUE(found_end_of_code);
+
+    static constexpr size_t kBufferSize = 65536;
+    std::shared_ptr<EtnaBuffer> output_buffer = CreateEtnaBuffer(kBufferSize);
+    ASSERT_TRUE(output_buffer);
+
+    // Memset doesn't like uncached buffers
+    for (uint32_t i = 0; i < kBufferSize / sizeof(uint32_t); i++) {
+      output_buffer->GetCpuAddress()[i] = 0;
+    }
+
+    gen_cmd_stream(command_stream.get(), code.get(), output_buffer.get());
+
+    static constexpr uint32_t kTimeoutMs = 10;
+    ExecuteCommand(command_stream, kTimeoutMs);
+
+    auto data = reinterpret_cast<const char*>(output_buffer->GetCpuAddress());
+    ASSERT_TRUE(data);
+
+    const char kHelloWorld[] = "Hello, World!";
+    EXPECT_STREQ(data, kHelloWorld);
+  }
+
  private:
   MagmaVsi magma_vsi_;
-
-  std::vector<std::shared_ptr<EtnaBuffer>> buffers_;
 
   uint64_t next_gpu_addr_ = 0x10000;
 };
 
 }  // namespace
-
-// Provided by etnaviv_cl_test_gc7000.c
-extern "C" uint32_t hello_code[];
-extern "C" void gen_cmd_stream(struct etna_cmd_stream* stream, struct etna_bo* code,
-                               struct etna_bo* bmp);
 
 // Called from etnaviv_cl_test_gc7000.c
 void etna_set_state(struct etna_cmd_stream* stream, uint32_t address, uint32_t value) {
@@ -213,43 +254,12 @@ struct drm_test_info* drm_test_setup(int argc, char** argv) {
 }
 void drm_test_teardown(struct drm_test_info* info) {}
 
-TEST_F(MagmaExecuteMsdVsi, TestExecuteCommand) {
-  static constexpr size_t kCodeSize = 4096;
+TEST_F(MagmaExecuteMsdVsi, ExecuteCommand) { Test(); }
 
-  std::shared_ptr<EtnaCommandStream> command_stream = CreateEtnaCommandStream(kCodeSize);
-  ASSERT_TRUE(command_stream);
-
-  std::shared_ptr<EtnaBuffer> code = CreateEtnaBuffer(kCodeSize);
-  ASSERT_TRUE(code);
-
-  bool found_end_of_code = false;
-  for (uint32_t i = 0; i < kCodeSize / sizeof(uint32_t); i++) {
-    if ((i % 4 == 0) && hello_code[i] == 0) {
-      // End of code is a NOOP line
-      found_end_of_code = true;
-      break;
-    }
-    code->GetCpuAddress()[i] = hello_code[i];
+TEST_F(MagmaExecuteMsdVsi, ExecuteMany) {
+  for (uint32_t iter = 0; iter < 100; iter++) {
+    Test();
+    TearDown();
+    SetUp();
   }
-  EXPECT_TRUE(found_end_of_code);
-
-  static constexpr size_t kBufferSize = 65536;
-  std::shared_ptr<EtnaBuffer> output_buffer = CreateEtnaBuffer(kBufferSize);
-  ASSERT_TRUE(output_buffer);
-
-  // Memset doesn't like uncached buffers
-  for (uint32_t i = 0; i < kBufferSize / sizeof(uint32_t); i++) {
-    output_buffer->GetCpuAddress()[i] = 0;
-  }
-
-  gen_cmd_stream(command_stream.get(), code.get(), output_buffer.get());
-
-  static constexpr uint32_t kTimeoutMs = 10;
-  ExecuteCommand(command_stream, kTimeoutMs);
-
-  auto data = reinterpret_cast<const char*>(output_buffer->GetCpuAddress());
-  ASSERT_TRUE(data);
-
-  const char kHelloWorld[] = "Hello, World!";
-  EXPECT_STREQ(data, kHelloWorld);
 }
