@@ -12,10 +12,10 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 
@@ -92,7 +92,7 @@ func ConnectDeprecated(ctx context.Context, raddr net.Addr, config *ssh.ClientCo
 	backoff := retry.WithMaxDuration(&retry.ZeroBackoff{}, totalConnectTimeout)
 	if err := retry.Retry(ctx, backoff, func() error {
 		var err error
-		client, err = dialWithTimeout(network, raddr.String(), config, connectAttemptTimeout)
+		client, err = dialWithTimeout(ctx, network, raddr.String(), config, connectAttemptTimeout)
 		return err
 	}, nil); err != nil {
 		var netErr net.Error
@@ -117,7 +117,7 @@ func ConnectDeprecated(ctx context.Context, raddr net.Addr, config *ssh.ClientCo
 // ssh.Dial with the ability to set a deadline on the underlying connection.
 //
 // See https://github.com/golang/go/issues/21941 for more details on the hang.
-func dialWithTimeout(network, addr string, config *ssh.ClientConfig, timeout time.Duration) (*ssh.Client, error) {
+func dialWithTimeout(ctx context.Context, network, addr string, config *ssh.ClientConfig, timeout time.Duration) (*ssh.Client, error) {
 	conn, err := net.DialTimeout(network, addr, config.Timeout)
 	if err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func dialWithTimeout(network, addr string, config *ssh.ClientConfig, timeout tim
 		return nil, err
 	}
 	client := ssh.NewClient(c, chans, reqs)
-	go keepAlive(conn, client)
+	go keepAlive(ctx, conn, client)
 	return client, nil
 }
 
@@ -200,7 +200,7 @@ func network(address net.Addr) (string, error) {
 // keepAlive runs for the duration of the client's lifetime, sending periodic
 // pings (with reponse timeouts) to ensure that the client is still connected.
 // If a ping fails, it will close the client and exit.
-func keepAlive(conn net.Conn, client *ssh.Client) {
+func keepAlive(ctx context.Context, conn net.Conn, client *ssh.Client) {
 	ticker := time.NewTicker(keepAliveInterval)
 	defer ticker.Stop()
 	for range ticker.C {
@@ -208,7 +208,7 @@ func keepAlive(conn net.Conn, client *ssh.Client) {
 			// Try to close the client. It's possible the keep-alive failed
 			// because the client has already been closed, which is fine – this
 			// close will just silently fail.
-			log.Printf("ssh keep-alive failed, closing client")
+			logger.Errorf(ctx, "ssh keep-alive failed, closing client")
 			client.Close()
 			return
 		}

@@ -8,12 +8,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strings"
 	"sync"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 
 	"golang.org/x/crypto/ssh"
@@ -58,7 +58,7 @@ func NewClient(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*C
 		timeout := func() <-chan time.Time {
 			return time.After(defaultKeepaliveTimeout)
 		}
-		client.keepalive(t.C, timeout)
+		client.keepalive(ctx, t.C, timeout)
 	}()
 	return client, nil
 }
@@ -68,14 +68,14 @@ func NewClient(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*C
 func connect(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*Client, error) {
 	var client *ssh.Client
 	err := retry.Retry(ctx, retry.NewConstantBackoff(connectInterval), func() error {
-		log.Printf("trying to connect to %s...", addr)
+		logger.Debugf(ctx, "trying to connect to %s...", addr)
 		var err error
 		client, err = connectToSSH(ctx, addr, config)
 		if err != nil {
-			log.Printf("failed to connect, will try again in %s: %s", connectInterval, err)
+			logger.Debugf(ctx, "failed to connect, will try again in %s: %s", connectInterval, err)
 			return err
 		}
-		log.Printf("connected to %s", addr)
+		logger.Debugf(ctx, "connected to %s", addr)
 		return nil
 	}, nil)
 	if err != nil {
@@ -160,7 +160,7 @@ func (c *Client) Start(ctx context.Context, command []string, stdout io.Writer, 
 		return nil, err
 	}
 
-	log.Printf("spawning: %s", command)
+	logger.Debugf(ctx, "spawning: %s", command)
 
 	if err := session.Start(ctx, command); err != nil {
 		session.Close()
@@ -178,7 +178,7 @@ func (c *Client) Run(ctx context.Context, command []string, stdout io.Writer, st
 	}
 	defer session.Close()
 
-	log.Printf("running: %s", command)
+	logger.Debugf(ctx, "running: %s", command)
 
 	return session.Run(ctx, command)
 }
@@ -225,7 +225,7 @@ func (c *Client) disconnect() {
 // After sending a ping, we call the `timeout` function and wait until either we
 // recieve a response or we receive something on the channel returned by
 // `timeout`.
-func (c *Client) keepalive(ticks <-chan time.Time, timeout func() <-chan time.Time) {
+func (c *Client) keepalive(ctx context.Context, ticks <-chan time.Time, timeout func() <-chan time.Time) {
 	if timeout == nil {
 		timeout = func() <-chan time.Time {
 			return nil
@@ -264,13 +264,13 @@ func (c *Client) keepalive(ticks <-chan time.Time, timeout func() <-chan time.Ti
 		case err := <-ch:
 			// disconnect if we hit an error sending a keepalive.
 			if err != nil {
-				log.Printf("error sending keepalive to %s, disconnecting: %s", c.addr, err)
+				logger.Errorf(ctx, "error sending keepalive to %s, disconnecting: %s", c.addr, err)
 				c.disconnect()
 				return
 			}
 
 		case <-timeout():
-			log.Printf("timed out sending keepalive, disconnecting")
+			logger.Errorf(ctx, "timed out sending keepalive, disconnecting")
 			c.disconnect()
 			return
 		}

@@ -74,7 +74,7 @@ func TestKeepalive(t *testing.T) {
 		// Sending on this channel triggers a keepalive ping. keepalive() also
 		// sends an initial ping immediately when it's called.
 		keepaliveTicks := make(chan time.Time)
-		go client.keepalive(keepaliveTicks, nil)
+		go client.keepalive(ctx, keepaliveTicks, nil)
 
 		select {
 		case <-requestsReceived:
@@ -105,7 +105,7 @@ func TestKeepalive(t *testing.T) {
 		keepaliveTimeouts := make(chan time.Time, 1)
 		keepaliveTimeouts <- time.Now()
 
-		go client.keepalive(nil, func() <-chan time.Time {
+		go client.keepalive(ctx, nil, func() <-chan time.Time {
 			return keepaliveTimeouts
 		})
 
@@ -127,7 +127,7 @@ func TestKeepalive(t *testing.T) {
 
 		keepaliveComplete := make(chan struct{})
 		go func() {
-			client.keepalive(nil, nil)
+			client.keepalive(ctx, nil, nil)
 			close(keepaliveComplete)
 		}()
 
@@ -143,7 +143,7 @@ func TestKeepalive(t *testing.T) {
 
 		keepaliveComplete := make(chan struct{})
 		go func() {
-			client.keepalive(nil, nil)
+			client.keepalive(ctx, nil, nil)
 			close(keepaliveComplete)
 		}()
 
