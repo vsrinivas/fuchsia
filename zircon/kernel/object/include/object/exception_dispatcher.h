@@ -83,8 +83,13 @@ class ExceptionDispatcher final
 
   // Whether to resume the thread on exception close or pass it to the
   // next handler in line.
-  void GetResumeThreadOnClose(bool* resume_on_close) const;
-  void SetResumeThreadOnClose(bool resume_on_close);
+  bool ResumesThreadOnClose() const;
+  void SetWhetherResumesThreadOnClose(bool resume_on_close);
+
+  // Whether a debugger should have a second chance to handle the exception
+  // after the process handler has tried and failed to do so.
+  bool IsSecondChance() const;
+  void SetWhetherSecondChance(bool second_chance);
 
   // Blocks until the exception handler is done processing.
   //
@@ -129,6 +134,7 @@ class ExceptionDispatcher final
   const arch_exception_context_t* arch_context_ TA_GUARDED(get_lock());
 
   bool resume_on_close_ TA_GUARDED(get_lock()) = false;
+  bool second_chance_ TA_GUARDED(get_lock()) = false;
   AutounsignalEvent response_event_;
 };
 

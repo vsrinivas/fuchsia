@@ -140,7 +140,8 @@ given the chance to handle an exception:
 1. process debug
 2. thread
 3. process
-4. job (parent job -> grandparent job -> etc)
+4. process debug (optionally, if the exception is [`'second-chance'`](#process-debugger-first-and-possibly-again-later))
+5. job (parent job -> grandparent job -> etc)
 
 If there are no remaining exception channels to try, the kernel terminates the
 process as if [`zx_task_kill()`] was called. The return code of a process
@@ -161,7 +162,7 @@ regardless of actual handler behavior. This is also the only exception that
 job debugger channels receive, making them a special-case handler for just
 detecting new processes.
 
-### Process Debugger First
+### Process Debugger First... and Possibly Again Later
 
 In Zircon the process debugger exception channel is tried first. This is useful
 for at least a few reasons:
@@ -171,6 +172,13 @@ for at least a few reasons:
   non-debugger channels seeing the exception.
 - Ensures debugger breakpoints get sent directly to the debugger without
   other handlers having to explicitly pass them along.
+
+If an exception has ZX_EXCEPTION_STRATEGY_SECOND_CHANCE set and remains
+unhandled after the process exception channel is tried, the process debugger
+exception channel will be given a second chance. The utility of this lies in
+the case in which a process listens to its own exceptions and uses that
+information for correct functioning; in this case, it serves to have debugger
+inspect in the event of a failed correction.
 
 ## Interaction with Task Suspension
 

@@ -650,6 +650,10 @@ typedef struct zx_info_msi {
 // Argument is a uint64_t.
 #define ZX_PROP_VMO_CONTENT_SIZE            17u
 
+// How an exception should be handled.
+// See //docs/concepts/kernel/exceptions.md.
+#define ZX_PROP_EXCEPTION_STRATEGY          18u
+
 // Basic thread states, in zx_info_thread_t.state.
 #define ZX_THREAD_STATE_NEW                 ((zx_thread_state_t) 0x0000u)
 #define ZX_THREAD_STATE_RUNNING             ((zx_thread_state_t) 0x0001u)
@@ -677,8 +681,14 @@ typedef struct zx_info_msi {
 #define ZX_THREAD_STATE_BASIC(n) ((n) & 0xff)
 
 // How a thread should behave when the current exception is closed.
+// ZX_PROP_EXCEPTION_STATE values.
 #define ZX_EXCEPTION_STATE_TRY_NEXT         0u
 #define ZX_EXCEPTION_STATE_HANDLED          1u
+
+// How an exception should be handled
+// ZX_PROP_EXCEPTION_STRATEGY values.
+#define ZX_EXCEPTION_STRATEGY_FIRST_CHANCE  0u
+#define ZX_EXCEPTION_STRATEGY_SECOND_CHANCE 1u
 
 __END_CDECLS
 

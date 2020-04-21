@@ -834,10 +834,22 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
         return ZX_ERR_WRONG_TYPE;
       }
 
-      bool resume_on_close;
-      exception->GetResumeThreadOnClose(&resume_on_close);
+      bool resume_on_close = exception->ResumesThreadOnClose();
       return _value.reinterpret<uint32_t>().copy_to_user(
           resume_on_close ? ZX_EXCEPTION_STATE_HANDLED : ZX_EXCEPTION_STATE_TRY_NEXT);
+    }
+    case ZX_PROP_EXCEPTION_STRATEGY: {
+      if (size < sizeof(uint32_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      auto exception = DownCastDispatcher<ExceptionDispatcher>(&dispatcher);
+      if (!exception) {
+        return ZX_ERR_WRONG_TYPE;
+      }
+
+      bool second_chance = exception->IsSecondChance();
+      return _value.reinterpret<uint32_t>().copy_to_user(
+          second_chance ? ZX_EXCEPTION_STRATEGY_SECOND_CHANCE : ZX_EXCEPTION_STRATEGY_FIRST_CHANCE);
     }
     case ZX_PROP_VMO_CONTENT_SIZE: {
       if (size < sizeof(uint64_t)) {
@@ -1004,9 +1016,42 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
         return status;
       }
       if (value == ZX_EXCEPTION_STATE_HANDLED) {
-        exception->SetResumeThreadOnClose(true);
+        exception->SetWhetherResumesThreadOnClose(true);
       } else if (value == ZX_EXCEPTION_STATE_TRY_NEXT) {
-        exception->SetResumeThreadOnClose(false);
+        exception->SetWhetherResumesThreadOnClose(false);
+      } else {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return ZX_OK;
+    }
+    case ZX_PROP_EXCEPTION_STRATEGY: {
+      if (size < sizeof(uint32_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      auto exception = DownCastDispatcher<ExceptionDispatcher>(&dispatcher);
+      if (!exception) {
+        return ZX_ERR_WRONG_TYPE;
+      }
+
+      // Invalid if the exception handle is not held by a debugger.
+      zx_info_thread_t info = {};
+      zx_status_t status = exception->thread()->GetInfoForUserspace(&info);
+      if (status != ZX_OK) {
+        return status;
+      }
+      if (info.wait_exception_channel_type != ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER) {
+        return ZX_ERR_BAD_STATE;
+      }
+
+      uint32_t value = 0;
+      status = _value.reinterpret<const uint32_t>().copy_from_user(&value);
+      if (status != ZX_OK) {
+        return status;
+      }
+      if (value == ZX_EXCEPTION_STRATEGY_FIRST_CHANCE) {
+        exception->SetWhetherSecondChance(false);
+      } else if (value == ZX_EXCEPTION_STRATEGY_SECOND_CHANCE) {
+        exception->SetWhetherSecondChance(true);
       } else {
         return ZX_ERR_INVALID_ARGS;
       }

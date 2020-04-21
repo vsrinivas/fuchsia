@@ -114,18 +114,32 @@ void ExceptionDispatcher::on_zero_handles() {
   response_event_.Signal();
 }
 
-void ExceptionDispatcher::GetResumeThreadOnClose(bool* resume_on_close) const {
+bool ExceptionDispatcher::ResumesThreadOnClose() const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
-  *resume_on_close = resume_on_close_;
+  Guard<fbl::Mutex> guard{get_lock()};
+  return resume_on_close_;
 }
 
-void ExceptionDispatcher::SetResumeThreadOnClose(bool resume_on_close) {
+void ExceptionDispatcher::SetWhetherResumesThreadOnClose(bool resume_on_close) {
   canary_.Assert();
 
   Guard<Mutex> guard{get_lock()};
   resume_on_close_ = resume_on_close;
+}
+
+bool ExceptionDispatcher::IsSecondChance() const {
+  canary_.Assert();
+
+  Guard<fbl::Mutex> guard{get_lock()};
+  return second_chance_;
+}
+
+void ExceptionDispatcher::SetWhetherSecondChance(bool second_chance) {
+  canary_.Assert();
+
+  Guard<fbl::Mutex> guard{get_lock()};
+  second_chance_ = second_chance;
 }
 
 zx_status_t ExceptionDispatcher::WaitForHandleClose() {

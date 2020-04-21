@@ -190,6 +190,21 @@ finish exception processing and resume the underlying thread.
 `ZX_EXCEPTION_STATE_TRY_NEXT` will instead continue exception processing by
 trying the next handler in order.
 
+### ZX_PROP_EXCEPTION_STRATEGY
+
+*handle* type: **Exception**
+
+*value* type: `uint32_t`
+
+Allowed operations: **get**, **set**
+
+If `ZX_EXCEPTION_STRATEGY_SECOND_CHANCE` is set, then the debugger gets a 'second
+chance' at handling the exception if the process-level handler fails to do so.
+
+This property can only be set when the handle corresponds to a debugger process
+exception channel. Attempting to set this property when the exception channel
+is any other type will result in ZX_ERR_BAD_STATE.
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->

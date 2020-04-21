@@ -639,6 +639,16 @@ void SetExceptionStateProperty(const zx::exception& exception, uint32_t state) {
   ASSERT_OK(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)));
 }
 
+uint32_t GetExceptionStrategyProperty(const zx::exception& exception) {
+  uint32_t state = ~0;
+  EXPECT_OK(exception.get_property(ZX_PROP_EXCEPTION_STRATEGY, &state, sizeof(state)));
+  return state;
+}
+
+void SetExceptionStrategyProperty(const zx::exception& exception, uint32_t state) {
+  ASSERT_OK(exception.set_property(ZX_PROP_EXCEPTION_STRATEGY, &state, sizeof(state)));
+}
+
 // A finite timeout to use when you want to make sure something isn't happening
 // e.g. a certain signal isn't going to be asserted.
 auto constexpr kTestTimeout = zx::msec(50);
@@ -900,6 +910,53 @@ TEST(ExceptionTest, ExceptionStatePropertyBadArgs) {
   EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
 }
 
+TEST(ExceptionTest, ExceptionStrategy) {
+  TestLoop loop;
+  zx::channel exception_channel;
+  ASSERT_OK(
+      loop.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &exception_channel));
+
+  loop.CrashAuxThread();
+  zx::exception exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+
+  // By default exceptions should be first-chance.
+  EXPECT_EQ(GetExceptionStrategyProperty(exception), ZX_EXCEPTION_STRATEGY_FIRST_CHANCE);
+
+  SetExceptionStrategyProperty(exception, ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+  EXPECT_EQ(GetExceptionStrategyProperty(exception), ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+
+  // Exception strategy values are independent of state values.
+  SetExceptionStateProperty(exception, ZX_EXCEPTION_STATE_HANDLED);
+  EXPECT_EQ(GetExceptionStrategyProperty(exception), ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+  SetExceptionStateProperty(exception, ZX_EXCEPTION_STATE_TRY_NEXT);
+  EXPECT_EQ(GetExceptionStrategyProperty(exception), ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+
+  test_exceptions::ExceptionCatcher catcher(loop.process());
+  exception.reset();
+  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
+  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+}
+
+TEST(ExceptionTest, ExceptionStrategyBadArgs) {
+  TestLoop loop;
+  zx::channel exception_channel;
+  ASSERT_OK(loop.aux_thread().create_exception_channel(0u, &exception_channel));
+  loop.CrashAuxThread();
+
+  zx::exception exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+
+  // Second chance property can only be set on a channel associated with a
+  // process debugger.
+  uint32_t state = ZX_EXCEPTION_STRATEGY_SECOND_CHANCE;
+  EXPECT_EQ(exception.set_property(ZX_PROP_EXCEPTION_STRATEGY, &state, sizeof(state)),
+            ZX_ERR_BAD_STATE);
+
+  test_exceptions::ExceptionCatcher catcher(loop.process());
+  exception.reset();
+  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
+  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+}
+
 TEST(ExceptionTest, CloseChannelWithException) {
   TestLoop loop;
   zx::channel exception_channel;
@@ -1066,6 +1123,76 @@ TEST(ExceptionTest, ExceptionChannelOrder) {
   ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
   EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
 }
+
+TEST(ExceptionTest, ExceptionChannelOrderWithSecondChanceDebugging) {
+  TestLoop loop;
+
+  // Set the exception channels up in their expected order, modulo that we
+  // expect debugger to handle the exception again after the process exception
+  // channel.
+  zx::channel exception_channels[5];
+  ASSERT_OK(loop.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
+                                                    &exception_channels[0]));
+  ASSERT_OK(loop.aux_thread().create_exception_channel(0u, &exception_channels[1]));
+  ASSERT_OK(loop.process().create_exception_channel(0u, &exception_channels[2]));
+  ASSERT_OK(loop.job().create_exception_channel(0u, &exception_channels[3]));
+  ASSERT_OK(loop.parent_job().create_exception_channel(0u, &exception_channels[4]));
+
+  loop.CrashAuxThread();
+  test_exceptions::ExceptionCatcher catcher(*zx::job::default_job());
+
+  // First set the excpetion as 'second chance' and close its handle so it can
+  // be tried by the next handler.
+  {
+    zx::exception exception = ReadException(exception_channels[0], ZX_EXCP_FATAL_PAGE_FAULT);
+    SetExceptionStrategyProperty(exception, ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+  }
+  int remaining_order[5] = {1, 2, 0, 3, 4};
+  for (const int i : remaining_order) {
+    ReadException(exception_channels[i], ZX_EXCP_FATAL_PAGE_FAULT);
+  }
+
+  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
+  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+}
+
+TEST(ExceptionTest, DebugChannelClosedBeforeSecondChance) {
+  // This case validates that a second chance exception with a closed debug
+  // exception channel reverts to behaving like a first chance exception.
+
+  TestLoop loop;
+
+  // Set the exception channels up in their expected order, modulo that we
+  // expect debugger to handle the exception again after the process exception
+  // channel.
+  zx::channel exception_channels[5];
+  ASSERT_OK(loop.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
+                                                    &exception_channels[0]));
+  ASSERT_OK(loop.aux_thread().create_exception_channel(0u, &exception_channels[1]));
+  ASSERT_OK(loop.process().create_exception_channel(0u, &exception_channels[2]));
+  ASSERT_OK(loop.job().create_exception_channel(0u, &exception_channels[3]));
+  ASSERT_OK(loop.parent_job().create_exception_channel(0u, &exception_channels[4]));
+
+  loop.CrashAuxThread();
+  test_exceptions::ExceptionCatcher catcher(*zx::job::default_job());
+
+  // We mark the exception as second chance, but then promptly close the
+  // debugger exception channel.
+  {
+    zx::exception exception = ReadException(exception_channels[0], ZX_EXCP_FATAL_PAGE_FAULT);
+    SetExceptionStrategyProperty(exception, ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+  }
+  exception_channels[0].reset();
+
+  int remaining_order[4] = {1, 2, 3, 4};
+  for (const int i : remaining_order) {
+    ReadException(exception_channels[i], ZX_EXCP_FATAL_PAGE_FAULT);
+  }
+
+  ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
+  EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+}
+
 
 TEST(ExceptionTest, ThreadLifecycleChannelExceptions) {
   TestLoop loop(TestLoop::Control::kManual);

@@ -56,6 +56,7 @@ static const char* excp_type_to_string(uint type) {
 // - debugger
 // - thread
 // - process
+// - debugger (in dealing with a second-chance exception)
 // - job (first owning job, then its parent job, and so on up to root job)
 class ExceptionHandlerIterator final {
  public:
@@ -74,11 +75,21 @@ class ExceptionHandlerIterator final {
     bool sent = false;
 
     while (true) {
+      // This state may change during the handling of the debugger exception
+      // channel. Accordingly, we check its value before the next round of
+      // handling to be sure of the proper sequencing.
+      bool second_chance = exception_->IsSecondChance();
+
       switch (next_type_) {
         case ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER:
           *result = thread_->HandleException(
               thread_->process()->exceptionate(Exceptionate::Type::kDebug), exception_, &sent);
-          next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_THREAD;
+          if (second_chance) {
+            next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_JOB;
+            next_job_ = thread_->process()->job();
+          } else {
+            next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_THREAD;
+          }
           break;
         case ZX_EXCEPTION_CHANNEL_TYPE_THREAD:
           *result = thread_->HandleException(thread_->exceptionate(), exception_, &sent);
@@ -87,8 +98,13 @@ class ExceptionHandlerIterator final {
         case ZX_EXCEPTION_CHANNEL_TYPE_PROCESS:
           *result = thread_->HandleException(
               thread_->process()->exceptionate(Exceptionate::Type::kStandard), exception_, &sent);
-          next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_JOB;
-          next_job_ = thread_->process()->job();
+
+          if (second_chance) {
+            next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER;
+          } else {
+            next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_JOB;
+            next_job_ = thread_->process()->job();
+          }
           break;
         case ZX_EXCEPTION_CHANNEL_TYPE_JOB:
           if (next_job_ == nullptr) {
