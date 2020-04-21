@@ -19,6 +19,7 @@ executable("usbctl") {
   sources = [ "usbctl.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.usb.modeswitch",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
@@ -26,7 +27,6 @@ executable("usbctl") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:c",
     "//zircon/system/ulib/usb-peripheral-utils",
   ]
 }

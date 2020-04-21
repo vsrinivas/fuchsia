@@ -11,6 +11,7 @@ executable("telephony-qmi-usb-integration-test") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/isolated_devmgr:usb-virtual-bus",
@@ -21,6 +22,5 @@ executable("telephony-qmi-usb-integration-test") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:fuchsia-hardware-usb-peripheral_llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:fuchsia-hardware-usb-virtual-bus_llcpp",
   ]
 }
