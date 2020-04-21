@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -33,7 +33,7 @@ static constexpr uint32_t kHostMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 // Inject an interrupt with vector 32, the first user defined interrupt vector.
 static constexpr uint32_t kInterruptVector = 32u;
 static constexpr uint64_t kTrapKey = 0x1234;
-static const std::string kSysInfoPath = "/svc/" + std::string(fuchsia_sysinfo_SysInfo_Name);
+static const std::string kSysInfoPath = "/svc/" + std::string(fuchsia::sysinfo::SysInfo::Name_);
 
 #ifdef __x86_64__
 static constexpr uint32_t kNmiVector = 2u;
@@ -95,48 +95,34 @@ typedef struct test {
   }
 } test_t;
 
-// TODO(MAC-246): Convert to C++ FIDL interface.
-static zx_status_t get_sysinfo(zx::channel* sysinfo) {
-  fbl::unique_fd fd(open(kSysInfoPath.c_str(), O_RDWR));
-  if (!fd) {
-    return ZX_ERR_IO;
-  }
-
-  return fdio_get_service_handle(fd.release(), sysinfo->reset_and_get_address());
+static fuchsia::sysinfo::SysInfoSyncPtr get_sysinfo() {
+  fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
+  fdio_service_connect(kSysInfoPath.c_str(), sysinfo.NewRequest().TakeChannel().release());
+  return sysinfo;
 }
 
-// TODO(MAC-246): Convert to C++ FIDL interface.
 static zx_status_t get_hypervisor_resource(zx::resource* resource) {
-  zx::channel channel;
-  zx_status_t status = get_sysinfo(&channel);
+  fuchsia::sysinfo::SysInfoSyncPtr sysinfo = get_sysinfo();
+
+  zx_status_t fidl_status;
+  zx_status_t status = sysinfo->GetHypervisorResource(&fidl_status, resource);
   if (status != ZX_OK) {
     return status;
   }
-
-  zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetHypervisorResource(
-      channel.get(), &status, resource->reset_and_get_address());
-  if (fidl_status != ZX_OK) {
-    return fidl_status;
-  }
-  return status;
+  return fidl_status;
 }
 
 #ifdef __aarch64__
 
-// TODO(MAC-246): Convert to C++ FIDL interface.
-static zx_status_t get_interrupt_controller_info(fuchsia_sysinfo_InterruptControllerInfo* info) {
-  zx::channel channel;
-  zx_status_t status = get_sysinfo(&channel);
+static zx_status_t get_interrupt_controller_info(fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
+  fuchsia::sysinfo::SysInfoSyncPtr sysinfo = get_sysinfo();
+
+  zx_status_t fidl_status;
+  zx_status_t status = sysinfo->GetInterruptControllerInfo(&fidl_status, info);
   if (status != ZX_OK) {
     return status;
   }
-
-  zx_status_t fidl_status =
-      fuchsia_sysinfo_SysInfoGetInterruptControllerInfo(channel.get(), &status, info);
-  if (fidl_status != ZX_OK) {
-    return fidl_status;
-  }
-  return status;
+  return fidl_status;
 }
 
 #endif  // __aarch64__
@@ -603,16 +589,16 @@ static bool vcpu_wfi() {
 static bool vcpu_wfi_pending_interrupt() {
   BEGIN_TEST;
 
-  fuchsia_sysinfo_InterruptControllerInfo info;
+  fuchsia::sysinfo::InterruptControllerInfoPtr info;
   ASSERT_EQ(ZX_OK, get_interrupt_controller_info(&info));
 
   test_t test;
-  switch (info.type) {
-    case fuchsia_sysinfo_InterruptControllerType_GIC_V2:
+  switch (info->type) {
+    case fuchsia::sysinfo::InterruptControllerType::GIC_V2:
       ASSERT_TRUE(setup(&test, vcpu_wfi_pending_interrupt_gicv2_start,
                         vcpu_wfi_pending_interrupt_gicv2_end));
       break;
-    case fuchsia_sysinfo_InterruptControllerType_GIC_V3:
+    case fuchsia::sysinfo::InterruptControllerType::GIC_V3:
       ASSERT_TRUE(setup(&test, vcpu_wfi_pending_interrupt_gicv3_start,
                         vcpu_wfi_pending_interrupt_gicv3_end));
       break;
