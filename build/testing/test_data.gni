@@ -1,0 +1,36 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Copy host-side test data and make it available at test runtime.
+#
+# It is a requirement that host tests with runtime dependencies express this
+# by depending on instances of this template.
+#
+# Parameters are the same as that of `copy`.
+template("test_data") {
+  testonly = true
+
+  main_target_name = target_name
+  group_target_name = "${target_name}_metadata"
+
+  # The main target that copies test data to the build directory.
+  # It depends on the generated group `group_target_name`, which
+  # carries the `test_runtime_deps` metadata.
+  # The copy rule is the main target so that clients can still
+  # call `get_target_outputs` on it.
+  copy(target_name) {
+    forward_variables_from(invoker, "*")
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":$group_target_name" ]
+  }
+
+  # This group exists only to carry the `test_runtime_deps` metadata.
+  group(group_target_name) {
+    metadata = {
+      test_runtime_deps = get_target_outputs(":$main_target_name")
+    }
+  }
+}
