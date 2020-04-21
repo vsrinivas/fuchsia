@@ -151,60 +151,62 @@ TEST_F(ControllerDeviceTest, GetDeviceInfo) {
 }
 
 // Verifies sanity of returned configs.
-TEST_F(ControllerDeviceTest, GetConfigs) {
+TEST_F(ControllerDeviceTest, GetNextConfig) {
   ASSERT_NO_FATAL_FAILURE(BindControllerProtocol());
   uint32_t number_of_configs = 0;
   constexpr uint32_t kNumConfigs = 4;
   bool config_populated = false;
 
   while (number_of_configs != kNumConfigs) {
-    controller_protocol_->GetConfigs(
-        [&](fidl::VectorPtr<fuchsia::camera2::hal::Config> configs, zx_status_t status) {
-          if (number_of_configs < kNumConfigs - 1) {
-            ASSERT_EQ(1u, configs->size());
-          }
+    controller_protocol_->GetNextConfig(
+        [&](std::unique_ptr<fuchsia::camera2::hal::Config> config, zx_status_t status) {
           switch (number_of_configs) {
             case 0: {
               // Config 0 (debug)
-              EXPECT_EQ(configs->at(0).stream_configs.at(0).properties.stream_type(),
+              ASSERT_NE(config, nullptr);
+              EXPECT_EQ(config->stream_configs.at(0).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
               break;
             }
             case 1: {
               // Config 1 (monitoring)
-              EXPECT_EQ(configs->at(0).stream_configs.at(0).properties.stream_type(),
+              ASSERT_NE(config, nullptr);
+              EXPECT_EQ(config->stream_configs.at(0).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-              EXPECT_EQ(configs->at(0).stream_configs.at(1).properties.stream_type(),
+              EXPECT_EQ(config->stream_configs.at(1).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-              EXPECT_EQ(configs->at(0).stream_configs.at(2).properties.stream_type(),
+              EXPECT_EQ(config->stream_configs.at(2).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::MONITORING);
               break;
             }
             case 2: {
               // Config 2 (video conferencing)
-              EXPECT_EQ(configs->at(0).stream_configs.at(0).properties.stream_type(),
+              ASSERT_NE(config, nullptr);
+              EXPECT_EQ(config->stream_configs.at(0).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
                             fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
-              EXPECT_EQ(configs->at(0).stream_configs.at(1).properties.stream_type(),
+              EXPECT_EQ(config->stream_configs.at(1).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
               break;
             }
             case 3: {
               // Config 3 (video conferencing with extended FOV)
-              EXPECT_EQ(configs->at(0).stream_configs.at(0).properties.stream_type(),
+              ASSERT_NE(config, nullptr);
+              EXPECT_EQ(config->stream_configs.at(0).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
                             fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
                             fuchsia::camera2::CameraStreamType::EXTENDED_FOV);
-              EXPECT_EQ(configs->at(0).stream_configs.at(1).properties.stream_type(),
+              EXPECT_EQ(config->stream_configs.at(1).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
                             fuchsia::camera2::CameraStreamType::EXTENDED_FOV);
               break;
             }
             default: {
+              EXPECT_EQ(config, nullptr);
               EXPECT_EQ(status, ZX_ERR_STOP);
               break;
             }
@@ -224,38 +226,35 @@ TEST_F(ControllerDeviceTest, GetConfigs) {
 TEST_F(ControllerDeviceTest, CreateStreamInvalidArgs) {
   ASSERT_NO_FATAL_FAILURE(BindControllerProtocol());
   fuchsia::camera2::StreamPtr stream;
-
-  std::vector<fuchsia::camera2::hal::Config> configs;
+  std::unique_ptr<fuchsia::camera2::hal::Config> camera_config;
   bool configs_populated = false;
-  controller_protocol_->GetConfigs(
-      [&](fidl::VectorPtr<fuchsia::camera2::hal::Config> configs_ptr, zx_status_t status) {
+  controller_protocol_->GetNextConfig(
+      [&](std::unique_ptr<fuchsia::camera2::hal::Config> config, zx_status_t status) {
+        ASSERT_NE(config, nullptr);
         ASSERT_EQ(status, ZX_OK);
-        ASSERT_TRUE(configs_ptr.has_value());
-        configs = std::move(configs_ptr).value();
         configs_populated = true;
+        camera_config = std::move(config);
       });
   while (!configs_populated) {
     RunLoopUntilIdle();
   }
-  ASSERT_GT(configs.size(), 0u);
-  ASSERT_GT(configs[0].stream_configs.size(), 0u);
-  ASSERT_GT(configs[0].stream_configs[0].image_formats.size(), 0u);
 
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
   buffer_collection.buffer_count = 0;
 
   // Invalid config index.
-  controller_protocol_->CreateStream(configs.size(), 0, 0, std::move(buffer_collection),
+  constexpr uint32_t kInvalidConfigIndex = 10;
+  controller_protocol_->CreateStream(kInvalidConfigIndex, 0, 0, std::move(buffer_collection),
                                      stream.NewRequest());
   WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
 
   // Invalid stream index.
-  controller_protocol_->CreateStream(0, configs[0].stream_configs.size(), 0,
+  controller_protocol_->CreateStream(0, camera_config->stream_configs.size(), 0,
                                      std::move(buffer_collection), stream.NewRequest());
   WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
 
   // Invalid format index.
-  controller_protocol_->CreateStream(0, 0, configs[0].stream_configs[0].image_formats.size(),
+  controller_protocol_->CreateStream(0, 0, camera_config->stream_configs[0].image_formats.size(),
                                      std::move(buffer_collection), stream.NewRequest());
   WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
 

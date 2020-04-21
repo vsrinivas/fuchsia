@@ -49,7 +49,7 @@ class FakeCamera : public fuchsia::hardware::camera::Device,
   void GetChannel2(zx::channel channel) override {
     ZX_ASSERT(controller_binding_.Bind(std::move(channel)) == ZX_OK);
   }
-  void GetConfigs(fuchsia::camera2::hal::Controller::GetConfigsCallback callback) override {}
+  void GetNextConfig(fuchsia::camera2::hal::Controller::GetNextConfigCallback callback) override {}
   void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,
                     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                     fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) override {}

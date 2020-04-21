@@ -30,22 +30,17 @@ class CameraHalTest : public testing::Test {
 
   void TestGetConfigs() {
     zx_status_t out_status;
-    fidl::VectorPtr<fuchsia::camera2::hal::Config> out_configs;
-    zx_status_t fidl_status = camera_client_->GetConfigs(&out_configs, &out_status);
+    std::unique_ptr<fuchsia::camera2::hal::Config> out_config;
+    zx_status_t fidl_status = camera_client_->GetNextConfig(&out_config, &out_status);
     ASSERT_EQ(fidl_status, ZX_OK) << "Couldn't get Camera Configs. fidl status: " << fidl_status;
     ASSERT_EQ(out_status, ZX_OK) << "Couldn't get Camera Configs. status: " << out_status;
-    ASSERT_TRUE(out_configs) << "Couldn't get Camera Configs. No Configs.";
     // Test more about the configs
-    configs_ = std::move(out_configs.value());
-    // Assert that there is at least one config
-    ASSERT_TRUE(configs_.size());
-    // Assert that each config has at least one stream config:
-    for (auto& config : configs_) {
-      ASSERT_TRUE(config.stream_configs.size());
-      for (auto& stream : config.stream_configs) {
-        // Assert that each stream config has at least one image format:
-        ASSERT_TRUE(stream.image_formats.size());
-      }
+    config_ = std::move(out_config);
+    // Assert that the config has at least one stream config.
+    ASSERT_TRUE(config_->stream_configs.size());
+    for (auto& stream : config_->stream_configs) {
+      // Assert that each stream config has at least one image format:
+      ASSERT_TRUE(stream.image_formats.size());
     }
   }
 
@@ -75,7 +70,7 @@ class CameraHalTest : public testing::Test {
 
  private:
   async::Loop loop_;
-  std::vector<fuchsia::camera2::hal::Config> configs_;
+  std::unique_ptr<fuchsia::camera2::hal::Config> config_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
   VirtualCamera2ControllerImpl virtual_camera2_;
 };

@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 
+#include "lib/fidl/cpp/optional.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
@@ -90,7 +91,7 @@ VirtualCamera2ControllerImpl::VirtualCamera2ControllerImpl(
       .image_formats = GetImageFormats(),
   };
   config1.stream_configs.push_back(std::move(sconfig));
-  configs_.push_back(std::move(config1));
+  config_ = std::make_unique<fuchsia::camera2::hal::Config>(std::move(config1));
 
   binding_.set_error_handler([on_connection_closed = std::move(on_connection_closed)](
                                  zx_status_t status) { on_connection_closed(); });
@@ -137,8 +138,9 @@ void VirtualCamera2ControllerImpl::ProduceFrame() {
   PostNextCaptureTask();
 }
 
-void VirtualCamera2ControllerImpl::GetConfigs(GetConfigsCallback callback) {
-  callback(fidl::Clone(configs_), ZX_OK);
+void VirtualCamera2ControllerImpl::GetNextConfig(GetNextConfigCallback callback) {
+  auto config = fidl::Clone(config_);
+  callback(std::move(config), ZX_OK);
 }
 
 void VirtualCamera2ControllerImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
@@ -153,7 +155,7 @@ void VirtualCamera2ControllerImpl::CreateStream(
     uint32_t config_index, uint32_t stream_type, uint32_t /*image_format_index*/,
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
     fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
-  auto& stream_config = configs_[config_index].stream_configs[stream_type];
+  auto& stream_config = config_->stream_configs[stream_type];
   rate_ = stream_config.frame_rate;
 
   // Pull all the vmos out of the structs that BufferCollection_2 stores them in:

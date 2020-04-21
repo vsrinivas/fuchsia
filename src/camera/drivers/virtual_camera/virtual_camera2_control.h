@@ -77,8 +77,8 @@ class VirtualCamera2ControllerImpl : public fuchsia::camera2::hal::Controller {
 
   // Device FIDL implementation
 
-  // Get a list of all available configurations which the camera driver supports.
-  void GetConfigs(GetConfigsCallback callback) override;
+  // Get an available configuration which the camera driver supports.
+  void GetNextConfig(GetNextConfigCallback callback) override;
 
   // Set a particular configuration and create the requested stream.
   // |config_index| : Configuration index from the vector which needs to be applied.
@@ -118,7 +118,7 @@ class VirtualCamera2ControllerImpl : public fuchsia::camera2::hal::Controller {
   fuchsia::camera2::FrameRate rate_;
   uint64_t frame_count_ = 0;
 
-  std::vector<fuchsia::camera2::hal::Config> configs_;
+  std::unique_ptr<fuchsia::camera2::hal::Config> config_;
   fzl::VmoPool buffers_;
   media::TimelineFunction frame_to_timestamp_;
   async::TaskClosureMethod<VirtualCamera2ControllerImpl,

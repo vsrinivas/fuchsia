@@ -54,43 +54,39 @@ fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
         ZX_ASSERT(event.signal(0, kGetDeviceInfoReturned) == ZX_OK);
       });
 
-  zx_status_t get_configs_status = ZX_OK;
-  fit::function<void(fidl::VectorPtr<fuchsia::camera2::hal::Config>, zx_status_t)>
-      get_configs_callback =
-          [&, device = device.get()](fidl::VectorPtr<fuchsia::camera2::hal::Config> configs,
+  zx_status_t get_next_config_status = ZX_OK;
+  fit::function<void(std::unique_ptr<fuchsia::camera2::hal::Config>, zx_status_t)>
+      get_next_config_callback =
+          [&, device = device.get()](std::unique_ptr<fuchsia::camera2::hal::Config> config,
                                      zx_status_t status) {
-            get_configs_status = status;
-            if (status == ZX_OK && configs.has_value() && !configs.value().empty()) {
-              for (auto& config : configs.value()) {
-                auto result = Convert(config);
-                if (result.is_error()) {
-                  get_configs_status = result.error();
-                  FX_PLOGS(ERROR, get_configs_status);
-                  break;
-                }
-                device->configurations_.push_back(result.take_value());
-                device->configs_.push_back(std::move(config));
+            get_next_config_status = status;
+            if (status == ZX_OK) {
+              auto result = Convert(*config);
+              if (result.is_error()) {
+                get_next_config_status = result.error();
+                FX_PLOGS(ERROR, get_next_config_status);
+                return;
               }
-              // TODO(msandy): remove once pagination change is merged
-              if (configs.value().size() > 1) {
-                device->SetConfiguration(0);
-              } else {
-                // Call again to get remaining configs.
-                device->controller_->GetConfigs(get_configs_callback.share());
-              }
-            } else {
-              if (status == ZX_ERR_STOP) {
-                get_configs_status = ZX_OK;
-                device->SetConfiguration(0);
-              } else {
-                get_configs_status = ZX_ERR_INTERNAL;
-                FX_PLOGS(ERROR, status)
-                    << "Controller unexpectedly returned error or null/empty configs list.";
-              }
-              ZX_ASSERT(event.signal(0, kGetConfigsReturned) == ZX_OK);
+              device->configurations_.push_back(result.take_value());
+              device->configs_.push_back(std::move(*config));
+
+              // Call again to get remaining configs.
+              device->controller_->GetNextConfig(get_next_config_callback.share());
+              return;
             }
+            if (status == ZX_ERR_STOP) {
+              get_next_config_status = ZX_OK;
+              device->SetConfiguration(0);
+            } else {
+              get_next_config_status = ZX_ERR_INTERNAL;
+              FX_PLOGS(ERROR, status)
+                  << "Controller unexpectedly returned error or null/empty configs list.";
+            }
+
+            ZX_ASSERT(event.signal(0, kGetConfigsReturned) == ZX_OK);
           };
-  device->controller_->GetConfigs(get_configs_callback.share());
+
+  device->controller_->GetNextConfig(get_next_config_callback.share());
 
   // Start the device thread and begin processing messages.
 

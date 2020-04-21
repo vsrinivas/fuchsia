@@ -59,7 +59,7 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   // Device FIDL implementation
 
   // Get a list of all available configurations which the camera driver supports.
-  void GetConfigs(GetConfigsCallback callback) override;
+  void GetNextConfig(GetNextConfigCallback callback) override;
 
   // Set a particular configuration and create the requested stream.
   // |config_index| : Configuration index from the vector which needs to be applied.

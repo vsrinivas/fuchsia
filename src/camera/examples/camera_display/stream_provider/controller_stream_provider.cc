@@ -76,8 +76,8 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
   bool all_configs_received = false;
 
   while (!all_configs_received) {
-    fidl::VectorPtr<fuchsia::camera2::hal::Config> configs;
-    status = provider->controller_->GetConfigs(&configs, &status_return);
+    std::unique_ptr<fuchsia::camera2::hal::Config> config;
+    status = provider->controller_->GetNextConfig(&config, &status_return);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to call GetConfigs";
       return nullptr;
@@ -86,11 +86,11 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
       all_configs_received = true;
       break;
     }
-    if (status_return != ZX_OK || configs->size() == 0) {
+    if (status_return != ZX_OK) {
       FX_PLOGS(ERROR, status_return) << "Failed to get configs";
       return nullptr;
     }
-    provider->configs_->push_back(std::move(configs->at(0)));
+    provider->configs_->push_back(std::move(config));
   }
   return std::move(provider);
 }
@@ -142,11 +142,11 @@ ControllerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera
     return fit::error(ZX_ERR_BAD_STATE);
   }
   auto& config = configs_->at(config_index);
-  if (stream_config_index >= config.stream_configs.size()) {
+  if (stream_config_index >= config->stream_configs.size()) {
     FX_LOGS(ERROR) << "Invalid stream config index " << stream_config_index;
     return fit::error(ZX_ERR_BAD_STATE);
   }
-  auto& stream_config = config.stream_configs[stream_config_index];
+  auto& stream_config = config->stream_configs[stream_config_index];
   if (image_format_index >= stream_config.image_formats.size()) {
     FX_LOGS(ERROR) << "Invalid image format index " << image_format_index;
     return fit::error(ZX_ERR_BAD_STATE);

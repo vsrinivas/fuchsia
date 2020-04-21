@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
+#include "lib/fidl/cpp/optional.h"
 #include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
 
 static fuchsia::camera2::DeviceInfo DefaultDeviceInfo() {
@@ -125,14 +126,13 @@ zx_status_t FakeController::SendFrameViaLegacyStream(fuchsia::camera2::FrameAvai
   return stream_->SendFrameAvailable(std::move(info));
 }
 
-void FakeController::GetConfigs(fuchsia::camera2::hal::Controller::GetConfigsCallback callback) {
+void FakeController::GetNextConfig(
+    fuchsia::camera2::hal::Controller::GetNextConfigCallback callback) {
   if (get_configs_call_count_ >= DefaultConfigs().size()) {
     callback(nullptr, ZX_ERR_STOP);
     return;
   }
-  fidl::VectorPtr<fuchsia::camera2::hal::Config> configs(1u);
-  configs->at(0) = std::move(DefaultConfigs()[get_configs_call_count_++]);
-  callback(std::move(configs), ZX_OK);
+  callback(fidl::MakeOptional(std::move(DefaultConfigs()[get_configs_call_count_++])), ZX_OK);
 }
 
 void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,

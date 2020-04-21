@@ -30,7 +30,7 @@ class FakeController : public fuchsia::camera2::hal::Controller {
 
  private:
   // |fuchsia::camera2::hal::Controller|
-  void GetConfigs(fuchsia::camera2::hal::Controller::GetConfigsCallback callback) override;
+  void GetNextConfig(fuchsia::camera2::hal::Controller::GetNextConfigCallback callback) override;
   void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,
                     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                     fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) override;

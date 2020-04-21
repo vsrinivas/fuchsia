@@ -14,8 +14,8 @@
 
 class ControllerStreamProvider : public StreamProvider {
  public:
-  ControllerStreamProvider() : configs_(std::vector<fuchsia::camera2::hal::Config>()) {}
-
+  ControllerStreamProvider()
+      : configs_(std::vector<std::unique_ptr<fuchsia::camera2::hal::Config>>()) {}
   ~ControllerStreamProvider() override;
   static std::unique_ptr<StreamProvider> Create();
   fit::result<
@@ -29,7 +29,7 @@ class ControllerStreamProvider : public StreamProvider {
   fuchsia::camera2::hal::ControllerSyncPtr controller_;
   fuchsia::sysmem::AllocatorSyncPtr allocator_;
   std::map<uint32_t, fuchsia::sysmem::BufferCollectionSyncPtr> buffer_collections_;
-  fidl::VectorPtr<fuchsia::camera2::hal::Config> configs_;
+  fidl::VectorPtr<std::unique_ptr<fuchsia::camera2::hal::Config>> configs_;
 };
 
 #endif  // SRC_CAMERA_EXAMPLES_CAMERA_DISPLAY_STREAM_PROVIDER_CONTROLLER_STREAM_PROVIDER_H_

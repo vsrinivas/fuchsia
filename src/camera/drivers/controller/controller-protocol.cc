@@ -4,10 +4,12 @@
 
 #include "controller-protocol.h"
 
+#include <fuchsia/camera2/cpp/fidl.h>
+#include <lib/fidl/cpp/optional.h>
+
 #include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 
-#include "fuchsia/camera2/cpp/fidl.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
@@ -41,15 +43,15 @@ zx_status_t ControllerImpl::GetInternalConfiguration(uint32_t config_index,
   return ZX_OK;
 }
 
-void ControllerImpl::GetConfigs(GetConfigsCallback callback) {
-  std::vector<fuchsia::camera2::hal::Config> configs;
+void ControllerImpl::GetNextConfig(GetNextConfigCallback callback) {
+  fuchsia::camera2::hal::Config config;
 
   if (config_count_ >= configs_.size()) {
-    callback(std::move(configs), ZX_ERR_STOP);
+    callback(nullptr, ZX_ERR_STOP);
     return;
   }
-  configs.push_back(fidl::Clone(configs_.at(config_count_)));
-  callback(std::move(configs), ZX_OK);
+  config = fidl::Clone(configs_.at(config_count_));
+  callback(fidl::MakeOptional(std::move(config)), ZX_OK);
   config_count_++;
 }
 
