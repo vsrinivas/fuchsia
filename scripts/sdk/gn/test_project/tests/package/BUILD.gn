@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/far_analysis.gni")
+import("//build/config/fuchsia-sdk.gni")
+import("//build/shellscript_test.gni")
 import("//third_party/fuchsia-sdk/build/component.gni")
 import("//third_party/fuchsia-sdk/build/package.gni")
 
@@ -62,9 +63,31 @@ fuchsia_package("package") {
   ]
 }
 
-far_analysis("package_analysis_test") {
-  data_deps = [ ":package" ]
-  package_name = "package"
+# Copy far.sh to the output dir. This script is used
+# in the static analysis test.
+copy("far_test_script") {
+  sources = [ "//tests/package/far.sh" ]
+  outputs = [ "${target_gen_dir}/{{source_file_part}}" ]
+}
+
+# Static far analysis test.
+shellscript_test("package_analysis_test") {
+  script_template_file = "run_package_analysis_test_template.txt"
+  template_keys = [
+    "far_sh_path",
+    "far_bin_path",
+    "package_name",
+  ]
+  template_data = {
+    far_sh_path = rebase_path("${target_gen_dir}/far.sh")
+    far_bin_path = rebase_path("${tools_out_dir}/far")
+    package_name = rebase_path("${target_gen_dir}/package/package")
+  }
+  data_deps = [
+    ":far_test_script",
+    ":package",
+    "//build:sdk_tools",
+  ]
 }
 
 group("tests") {

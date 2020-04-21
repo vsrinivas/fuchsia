@@ -1,0 +1,3 @@
+#!/bin/bash
+
+{far_sh_path} {far_bin_path} {package_name}.far

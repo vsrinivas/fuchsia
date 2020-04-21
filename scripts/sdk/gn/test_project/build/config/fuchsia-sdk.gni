@@ -1,0 +1,3 @@
+declare_args() {
+  tools_out_dir = "${root_out_dir}/tools"
+}

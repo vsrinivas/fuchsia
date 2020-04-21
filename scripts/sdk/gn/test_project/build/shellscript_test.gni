@@ -1,0 +1,70 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Shell script tests are tests generated from script templates
+# and expose host test metadata. These tests are then runnable after a
+# build.
+#
+#  Parameters
+#
+#   script_template_file
+#     Required. The file to read and process as the script template. Placeholder
+#       strings are {key} and replaces with the corresponding value. The template is processed
+#       by iterating over template_data and calling string_replace.
+#
+#   template_keys
+#     Optional. The list of keys to process in template_data when processing the script template.
+#       Defaults to [].
+#   template_data
+#     Optional. The key/value object to use when processing the script_template_file. Defaults to an
+#       empty object.
+#   test_name
+#     Optional. The basename of the test. Defaults to "run_$target_name". This
+#       basename is appended with .sh to indicate it is a shell script.
+template("shellscript_test") {
+  assert(defined(invoker.script_template_file),
+         "script_template_file is a required parameter")
+  script_template_file = invoker.script_template_file
+
+  if (defined(invoker.template_keys)) {
+    template_keys = invoker.template_keys
+  } else {
+    template_keys = []
+  }
+
+  if (defined(invoker.template_data)) {
+    template_data = invoker.template_data
+  } else {
+    template_data = {
+    }
+  }
+
+  if (defined(invoker.test_name)) {
+    test_name = invoker.test_name
+  } else {
+    test_name = "run_$target_name"
+  }
+
+  template_contents = read_file(script_template_file, "string")
+  foreach(key, template_keys) {
+    key_str = "{$key}"
+    template_contents =
+        string_replace(template_contents, key_str, template_data[key])
+  }
+
+  write_file("${target_out_dir}/${test_name}.sh", template_contents)
+
+  group(target_name) {
+    testonly = true
+    metadata = {
+      host_test_name = [ rebase_path("${target_out_dir}/${test_name}.sh") ]
+    }
+    if (defined(invoker.deps)) {
+      deps = invoker.deps
+    }
+    if (defined(invoker.data_deps)) {
+      data_deps = invoker.data_deps
+    }
+  }
+}
