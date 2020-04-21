@@ -33,6 +33,7 @@ test("core-unittest") {
   include_dirs = [ "." ]
   sources = [
     "test/main.cc",
+    "test/server.cc",
     "test/stub-block-device.cc",
   ]
   deps = [
