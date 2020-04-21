@@ -120,3 +120,11 @@ func ContainsUnknownField(value Value) bool {
 		return false
 	}
 }
+
+func TypeFromValue(value Value) string {
+	record, ok := value.(Record)
+	if !ok {
+		panic("only can extract type name from struct value")
+	}
+	return record.Name
+}

@@ -1,15 +1,12 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 import("//build/fidl/fidl.gni")
 import("//build/go/go_library.gni")
+import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
-benchmark_suite_gidl_files = [
-  "//src/tests/benchmarks/fidl/benchmark_suite/byte_array.gidl",
-  "//src/tests/benchmarks/fidl/benchmark_suite/byte_vector.gidl",
-  "//src/tests/benchmarks/fidl/benchmark_suite/inline.gidl",
-  "//src/tests/benchmarks/fidl/benchmark_suite/result.gidl",
-  "//src/tests/benchmarks/fidl/benchmark_suite/socket.gidl",
-  "//src/tests/benchmarks/fidl/benchmark_suite/struct_field.gidl",
-]
 benchmark_suite_fidl_files = [
   "byte_array.test.fidl",
   "byte_vector.test.fidl",

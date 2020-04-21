@@ -19,18 +19,15 @@ bool DecodeBenchmark(perftest::RepeatState* state, FidlType obj) {
   fidl::Message encode_msg = enc.GetMessage();
   ZX_ASSERT(ZX_OK == encode_msg.Validate(&FidlTypeWithHeader<FidlType>, nullptr));
 
-  // TODO(fxb/50213) This decodes the message header - it may throw off timing.
-  std::vector<uint8_t> buffer(encode_msg.bytes().capacity());
+  std::vector<uint8_t> buffer(encode_msg.bytes().actual());
   while (state->KeepRunning()) {
     memcpy(buffer.data(), encode_msg.bytes().data(), encode_msg.bytes().actual());
-    fidl::Message decode_msg(
-        fidl::BytePart(buffer.data(), encode_msg.bytes().capacity(), encode_msg.bytes().actual()),
-        fidl::HandlePart());
-
+    fidl::Message decode_msg(fidl::BytePart(buffer.data(), buffer.size(), buffer.size()),
+                             fidl::HandlePart());
     ZX_ASSERT(ZX_OK == decode_msg.Decode(&FidlTypeWithHeader<FidlType>, nullptr));
     fidl::Decoder decoder(std::move(decode_msg));
     FidlType output;
-    FidlType::Decode(&decoder, &output, 0);
+    FidlType::Decode(&decoder, &output, sizeof(fidl_message_header_t));
   }
 
   return true;

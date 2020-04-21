@@ -12,13 +12,12 @@ namespace hlcpp_benchmarks {
 template <typename FidlType>
 bool EncodeBenchmark(perftest::RepeatState* state, FidlType obj) {
   constexpr uint32_t ordinal = 0xfefefefe;
-  // TODO(fxb/50213) This encodes the message header - it may throw off timing.
   while (state->KeepRunning()) {
     fidl::Encoder enc(ordinal);
     auto offset = enc.Alloc(fidl::EncodingInlineSize<FidlType, fidl::Encoder>(&enc));
     obj.Encode(&enc, offset);
     fidl::Message msg = enc.GetMessage();
-    ZX_ASSERT(ZX_OK == msg.Encode(&FidlTypeWithHeader<FidlType>, nullptr));
+    ZX_ASSERT(ZX_OK == msg.Validate(&FidlTypeWithHeader<FidlType>, nullptr));
   }
   return true;
 }

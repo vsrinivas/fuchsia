@@ -33,15 +33,16 @@ type Generator func(io.Writer, gidlir.All, fidlir.Root) error
 
 var conformanceGenerators = map[string]Generator{
 	"go":          gidlgolang.GenerateConformanceTests,
-	"cpp":         gidlcpp.Generate,
 	"llcpp":       gidlllcpp.Generate,
+	"cpp":         gidlcpp.GenerateConformanceTests,
 	"dart":        gidldart.Generate,
 	"rust":        gidlrust.Generate,
 	"transformer": gidltransformer.Generate,
 }
 
 var benchmarkGenerators = map[string]Generator{
-	"go": gidlgolang.GenerateBenchmarks,
+	"go":  gidlgolang.GenerateBenchmarks,
+	"cpp": gidlcpp.GenerateBenchmarks,
 }
 
 var allGenerators = map[string]map[string]Generator{

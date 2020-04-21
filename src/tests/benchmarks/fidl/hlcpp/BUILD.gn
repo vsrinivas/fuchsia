@@ -5,15 +5,27 @@
 import("//build/fidl/fidl.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
+
+gidl_cpp("benchmark_suite_hlcpp") {
+  testonly = true
+  type = "benchmark"
+  inputs = benchmark_suite_gidl_files
+  fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/perftest",
+  ]
+}
 
 executable("bin") {
   output_name = "hlcpp_fidl_benchmarks"
   testonly = true
-  sources = [
-    "benchmarks.cc",
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
+    ":benchmark_suite_hlcpp",
     "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",

@@ -156,7 +156,7 @@ var _ = []NamedDeclaration{
 }
 
 type RecordDeclaration interface {
-	Declaration
+	NamedDeclaration
 
 	// AllFields returns the names of all fields in the type.
 	FieldNames() []string
