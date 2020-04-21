@@ -19,6 +19,7 @@
    fout = 24MHz*m/(n*(1 << od))
 */
 static const hhi_pll_rate_t s905d2_hiu_pll_rates[] = {
+    HHI_PLL_RATE(768000000, 1, 128, 0, 2),  /*DCO=3072M*/
     HHI_PLL_RATE(846000000, 1, 141, 0, 2),  /*DCO=3384M*/
     HHI_PLL_RATE(1200000000, 1, 200, 0, 2), /*DCO=4800M*/
     HHI_PLL_RATE(1296000000, 1, 216, 0, 2), /*DCO=5184M*/
