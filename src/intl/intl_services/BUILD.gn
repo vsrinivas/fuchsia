@@ -21,7 +21,8 @@ group("config") {
   public_deps = [ "config" ]
 }
 
-executable("bin") {
+executable("intl_services_bin") {
+
   sources = [ "main.cc" ]
 
   deps = [
@@ -37,11 +38,11 @@ executable("bin") {
 
 package("pkg") {
   package_name = "intl_services"
-  deps = [ ":bin" ]
+  deps = [ ":intl_services_bin" ]
 
   binaries = [
     {
-      name = "bin"
+      name = "intl_services_bin"
       dest = "intl_services"
     },
   ]
