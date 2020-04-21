@@ -8,7 +8,7 @@
 # by depending on instances of this template.
 #
 # Parameters are the same as that of `copy`.
-template("test_data") {
+template("host_test_data") {
   testonly = true
 
   main_target_name = target_name

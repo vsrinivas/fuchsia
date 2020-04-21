@@ -6,6 +6,7 @@ import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
 
 rustc_binary("font_manifest_generator") {
   name = "font_manifest_generator"
@@ -55,7 +56,7 @@ rustc_test("font_manifest_generator_integration_tests") {
   non_rust_deps = [ ":test_files" ]
 }
 
-copy("copy_test_data") {
+host_test_data("copy_test_data") {
   sources = [
     "tests/data/a.font_catalog.json",
     "tests/data/a.font_pkgs.json",
@@ -71,13 +72,13 @@ copy("copy_test_data") {
 }
 
 group("test_files") {
+  testonly = true
   data_deps = [
     ":copy_test_data",
     ":font_manifest_generator",
   ]
   metadata = {
-    test_runtime_deps = get_target_outputs(":copy_test_data") +
-                        [ "$root_out_dir/font_manifest_generator" ]
+    test_runtime_deps = [ "$root_out_dir/font_manifest_generator" ]
   }
 }
 

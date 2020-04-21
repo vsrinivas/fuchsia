@@ -7,6 +7,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/package.gni")
+import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
   name = "traceutil"
@@ -49,14 +50,10 @@ go_test("zedmon_test") {
   non_go_deps = [ ":zedmon_test_runtime_deps" ]
 }
 
-copy("zedmon_test_runtime_deps") {
+host_test_data("zedmon_test_runtime_deps") {
   sources = [ "$root_out_dir/fake_zedmon" ]
 
   outputs = [ _fake_zedmon_path ]
-
-  metadata = {
-    test_runtime_deps = [ _fake_zedmon_path ]
-  }
 
   deps = [ "//tools/zedmon:fake_zedmon_bin" ]
 }

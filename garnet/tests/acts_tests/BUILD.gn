@@ -4,16 +4,11 @@
 
 import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
 
-copy("acts") {
-  _data_dir = "$target_gen_dir/acts"
-
+host_test_data("acts") {
   sources = [ "//prebuilt/test_data/connectivity/acts/acts.zip" ]
-  outputs = [ "$_data_dir/{{source_file_part}}" ]
-
-  metadata = {
-    test_runtime_deps = [ "$_data_dir/acts.zip" ]
-  }
+  outputs = [ "$target_gen_dir/acts/{{source_file_part}}" ]
 }
 
 specs = [

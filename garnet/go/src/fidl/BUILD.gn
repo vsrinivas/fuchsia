@@ -6,6 +6,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
+import("//build/testing/host_test_data.gni")
 
 go_library("fidl_lib") {
   name = "fidl"
@@ -81,6 +82,7 @@ install_host_tools("fidl") {
 }
 
 go_library("fidlgen_test_lib") {
+  testonly = true
   deps = [ ":fidl_lib" ]
   if (is_linux || is_mac) {
     non_go_deps = [ "compiler/backend/goldens" ]
@@ -109,13 +111,11 @@ go_test("fidlgen_libfuzzer_test") {
 }
 
 group("clang_format_copy_group") {
+  testonly = true
   deps = [ ":copy_clang_format" ]
-  metadata = {
-    test_runtime_deps = [ "$root_out_dir/test_data/fidlgen/clang-format" ]
-  }
 }
 
-copy("copy_clang_format") {
+host_test_data("copy_clang_format") {
   sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
   outputs = [ "$root_out_dir/test_data/fidlgen/clang-format" ]
 }

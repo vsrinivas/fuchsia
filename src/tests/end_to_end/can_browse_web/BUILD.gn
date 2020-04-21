@@ -4,6 +4,7 @@
 
 import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
 
 dart_test("can_browse_web_test") {
   sources = [ "can_browse_web_test.dart" ]
@@ -35,16 +36,10 @@ dart_test("can_browse_web_test") {
   ]
 }
 
-copy("runtime_deps") {
-  _data_dir = "$target_gen_dir/runtime_deps"
-
+host_test_data("runtime_deps") {
   sources = [ "//prebuilt/third_party/chromedriver/linux-x64/chromedriver" ]
 
-  outputs = [ "$_data_dir/{{source_file_part}}" ]
-
-  metadata = {
-    test_runtime_deps = [ "$_data_dir/chromedriver" ]
-  }
+  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 }
 
 group("test") {

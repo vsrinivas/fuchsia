@@ -4,6 +4,7 @@
 
 import("//build/dart/test.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/testing/host_test_data.gni")
 
 rustc_binary("bin") {
   name = "zedmon"
@@ -27,14 +28,9 @@ dart_test("zedmon_client_manual_test") {
   environments = []
 }
 
-copy("runtime_deps") {
-  _data_dir = "$target_gen_dir/runtime_deps"
+host_test_data("runtime_deps") {
   sources = [ "$root_out_dir/zedmon" ]
-  outputs = [ "$_data_dir/{{source_file_part}}" ]
-
-  metadata = {
-    test_runtime_deps = [ "$_data_dir/zedmon" ]
-  }
+  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
   deps = [ ":bin" ]
 }

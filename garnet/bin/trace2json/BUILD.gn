@@ -5,6 +5,7 @@
 import("//build/host.gni")
 import("//build/package.gni")
 import("//build/test.gni")
+import("//build/testing/host_test_data.gni")
 
 executable("bin") {
   output_name = "trace2json"
@@ -40,7 +41,7 @@ install_host_tools("trace2json") {
   outputs = [ "trace2json" ]
 }
 
-copy("copy_test_data") {
+host_test_data("copy_test_data") {
   sources = [
     "test_data/example_benchmark.fxt",
     "test_data/example_benchmark_expected.json",
@@ -52,18 +53,6 @@ copy("copy_test_data") {
   ]
 
   outputs = [ "$root_out_dir/test_data/trace2json/{{source_file_part}}" ]
-
-  metadata = {
-    test_runtime_deps = [
-      "$root_out_dir/test_data/trace2json/example_benchmark.fxt",
-      "$root_out_dir/test_data/trace2json/example_benchmark_expected.json",
-      "$root_out_dir/test_data/trace2json/no_magic.fxt",
-      "$root_out_dir/test_data/trace2json/simple_trace.fxt",
-      "$root_out_dir/test_data/trace2json/simple_trace.fxt.gz",
-      "$root_out_dir/test_data/trace2json/simple_trace_expected.json",
-      "$root_out_dir/test_data/trace2json/simple_trace_expected.json.gz",
-    ]
-  }
 }
 
 test("trace2json_tests") {

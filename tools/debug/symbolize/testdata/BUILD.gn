@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-copy("testdata") {
+import("//build/testing/host_test_data.gni")
+
+host_test_data("testdata") {
   sources = [
     "gobug.elf",
     "gobug.yaml",
@@ -12,14 +14,4 @@ copy("testdata") {
     "libcrypto.yaml",
   ]
   outputs = [ "$root_out_dir/testdata/symbolize/{{source_file_part}}" ]
-  metadata = {
-    test_runtime_deps = [
-      "$root_out_dir/testdata/symbolize/gobug.elf",
-      "$root_out_dir/testdata/symbolize/gobug.yaml",
-      "$root_out_dir/testdata/symbolize/libc.elf",
-      "$root_out_dir/testdata/symbolize/libc.yaml",
-      "$root_out_dir/testdata/symbolize/libcrypto.elf",
-      "$root_out_dir/testdata/symbolize/libcrypto.yaml",
-    ]
-  }
 }

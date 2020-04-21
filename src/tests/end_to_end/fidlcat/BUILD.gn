@@ -5,6 +5,7 @@
 import("//build/dart/test.gni")
 import("//build/host.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
 
 _shared_out_dir = get_label_info(":bogus(${target_toolchain})", "root_out_dir")
 
@@ -61,11 +62,7 @@ generate_symbols("echo_client_cpp_sym") {
   output = "${target_gen_dir}/echo_client_cpp.debug"
 }
 
-copy("runtime_deps") {
-  testonly = true
-
-  _data_dir = "$target_gen_dir/runtime_deps"
-
+host_test_data("runtime_deps") {
   sources = [
     "$_shared_out_dir/fidling/gen/garnet/examples/fidl/services/echo.fidl.json",
     "$_shared_out_dir/gen/sdk/core.fidl_json.txt",
@@ -73,11 +70,7 @@ copy("runtime_deps") {
     "${target_gen_dir}/echo_client_cpp.debug",
   ]
 
-  outputs = [ "$_data_dir/{{source_file_part}}" ]
-
-  metadata = {
-    test_runtime_deps = [ "$_data_dir/fidlcat" ]
-  }
+  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
   deps = [
     ":echo_client_cpp_sym",

@@ -4,6 +4,7 @@
 
 import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
 
 dart_test("sl4f_test") {
   sources = [
@@ -37,16 +38,10 @@ dart_test("sl4f_test") {
   ]
 }
 
-copy("runtime_deps") {
-  _data_dir = "$target_gen_dir/runtime_deps"
-
+host_test_data("runtime_deps") {
   sources = [ "$root_out_dir/trace2json" ]
 
-  outputs = [ "$_data_dir/{{source_file_part}}" ]
-
-  metadata = {
-    test_runtime_deps = [ "$_data_dir/trace2json" ]
-  }
+  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
   deps = [ "//garnet/bin/trace2json:bin" ]
 }

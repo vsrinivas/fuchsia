@@ -4,6 +4,7 @@
 
 import("//build/dart/dart_tool.gni")
 import("//build/dart/test.gni")
+import("//build/testing/host_test_data.gni")
 
 dart_tool("fxtest") {
   package_name = "fxtest"
@@ -44,12 +45,9 @@ dart_tool("fxtest") {
   ]
 }
 
-copy("helpers") {
+host_test_data("helpers") {
   sources = [ "//scripts/fxtest/test/output_tester.sh" ]
   outputs = [ "$target_out_dir/test/output_tester.sh" ]
-  metadata = {
-    test_runtime_deps = [ "/test/output_tester.sh" ]
-  }
 }
 
 dart_test("fxtest_tests") {

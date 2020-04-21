@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
+import("//build/testing/host_test_data.gni")
 import("//build/testing/test_spec.gni")
 
 # Defines a golden test for `fx create`.
@@ -48,7 +49,7 @@ template("golden_test") {
 
   # Copy golden files to the out directory so that the test can have access to them.
   target_copy_goldens = "${target_name}_copy_goldens"
-  copy(target_copy_goldens) {
+  host_test_data(target_copy_goldens) {
     sources = invoker.golden_files
     outputs = [ "${test_dir}/{{source_target_relative}}" ]
   }
@@ -57,25 +58,25 @@ template("golden_test") {
   # to know which files are part of the test.
   target_goldens_json = "${target_name}_goldens_json"
   generated_file(target_goldens_json) {
+    testonly = true
     outputs = [ "${test_dir}/goldens.json" ]
     contents = rebase_path(get_target_outputs(":${target_copy_goldens}"),
                            root_build_dir)
     deps = [ ":${target_copy_goldens}" ]
     output_conversion = "json"
 
-    # Include the golden files as test dependencies.
+    # Include the generated file as a test dependency.
     # Automated infrastructure only makes available what has been explicitly marked as a
     # test dependency.
     metadata = {
-      test_runtime_deps =
-          get_target_outputs(":${target_copy_goldens}") + outputs
+      test_runtime_deps = outputs
     }
   }
 
   # Copy the test script, into this test's gen directory, making it easier to
   # find the .deps.json file relatively.
   target_test_script = "${target_name}_test_script"
-  copy(target_test_script) {
+  host_test_data(target_test_script) {
     sources = [ "//tools/create/goldens/test_script.py" ]
     outputs = [ "${test_dir}/test_script.py" ]
 
@@ -85,11 +86,11 @@ template("golden_test") {
       "//tools/create:install",
     ]
 
-    # Include the test script as a test dependency.
+    # Include the host tool as a test dependency.
     # Automated infrastructure only makes available what has been explicitly marked as a
     # test dependency.
     metadata = {
-      test_runtime_deps = outputs + [ "${host_tools_dir}/create" ]
+      test_runtime_deps = [ "${host_tools_dir}/create" ]
     }
   }
 

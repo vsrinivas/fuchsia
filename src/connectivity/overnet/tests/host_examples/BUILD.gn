@@ -4,8 +4,9 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
 
-copy("copy_test_commands") {
+host_test_data("copy_test_commands") {
   sources = [
     get_label_info(
             "//src/connectivity/overnet/examples/echo:bin($host_toolchain)",
@@ -27,16 +28,6 @@ copy("copy_test_commands") {
     "$root_out_dir/overnet_host_examples_test_commands/{{source_file_part}}",
   ]
 
-  metadata = {
-    test_runtime_deps = [
-      "$root_out_dir/overnet_host_examples_test_commands/ascendd",
-      "$root_out_dir/overnet_host_examples_test_commands/onet",
-      "$root_out_dir/overnet_host_examples_test_commands/overnet_echo",
-      "$root_out_dir/overnet_host_examples_test_commands/overnet_interface_passing",
-      "$root_out_dir/overnet_host_examples_test_commands/overnet_socket_passing",
-    ]
-  }
-
   deps = [
     "//src/connectivity/overnet/examples/echo:bin($host_toolchain)",
     "//src/connectivity/overnet/examples/interface_passing:bin($host_toolchain)",
@@ -47,6 +38,7 @@ copy("copy_test_commands") {
 }
 
 rustc_binary("bin") {
+  testonly = true
   name = "overnet_host_examples"
   with_unit_tests = true
   edition = "2018"

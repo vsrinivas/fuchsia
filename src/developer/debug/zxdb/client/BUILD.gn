@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/host_test_data.gni")
+
 static_library("client") {
   friend = [
     ":tests",
@@ -194,7 +196,7 @@ source_set("test_support") {
   ]
 }
 
-copy("copy_test_data") {
+host_test_data("copy_test_data") {
   sources = [
     "test_example_minidump.dmp",
     "test_example_minidump_new_cvrecord.dmp",
@@ -204,7 +206,7 @@ copy("copy_test_data") {
   outputs = [ "$root_out_dir/test_data/zxdb/{{source_file_part}}" ]
 }
 
-copy("copy_fake_home") {
+host_test_data("copy_fake_home") {
   sources = [ "test_dummy_file" ]
 
   if (is_mac) {
@@ -215,7 +217,7 @@ copy("copy_fake_home") {
   }
 }
 
-copy("copy_sample_core") {
+host_test_data("copy_sample_core") {
   sources = [
     "//prebuilt/test_data/debug/sample_core/core/0ef11cdd012be885a0a08a2c6914a391c887654a",
     "//prebuilt/test_data/debug/sample_core/core/0ef11cdd012be885a0a08a2c6914a391c887654a.debug",
@@ -278,12 +280,6 @@ source_set("tests") {
     ":copy_sample_core",
     ":copy_test_data",
   ]
-
-  metadata = {
-    test_runtime_deps = get_target_outputs(":copy_test_data") +
-                        get_target_outputs(":copy_fake_home") +
-                        get_target_outputs(":copy_sample_core")
-  }
 
   deps = [
     ":client",

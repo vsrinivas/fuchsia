@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-copy("testdata") {
+import("//build/testing/host_test_data.gni")
+
+host_test_data("testdata") {
   sources = [
     "libc.elf.section-only",
     "libc.elf.stripped",
@@ -10,12 +12,4 @@ copy("testdata") {
     "libc.yaml.section-only",
   ]
   outputs = [ "$root_out_dir/testdata/elflib/{{source_file_part}}" ]
-  metadata = {
-    test_runtime_deps = [
-      "$root_out_dir/testdata/elflib/libc.elf.section-only",
-      "$root_out_dir/testdata/elflib/libc.elf.stripped",
-      "$root_out_dir/testdata/elflib/libc.yaml",
-      "$root_out_dir/testdata/elflib/libc.yaml.section-only",
-    ]
-  }
 }

@@ -4,6 +4,7 @@
 
 import("//build/host.gni")
 import("//build/rust/rustc_test.gni")
+import("//build/testing/host_test_data.gni")
 
 rustc_test("icu_data_extractor_tests") {
   edition = "2018"
@@ -18,13 +19,13 @@ rustc_test("icu_data_extractor_tests") {
   non_rust_deps = [ ":test_files" ]
 }
 
-copy("copy_icudtl_dat") {
+host_test_data("copy_icudtl_dat") {
   sources = [ "//third_party/icu/common/icudtl.dat" ]
   outputs =
       [ "$root_out_dir/test_data/icu_data_extractor/{{source_file_part}}" ]
 }
 
-copy("copy_tzres") {
+host_test_data("copy_tzres") {
   sources = [
     "//third_party/icu/tzres/metaZones.res",
     "//third_party/icu/tzres/timezoneTypes.res",
@@ -36,15 +37,14 @@ copy("copy_tzres") {
 }
 
 group("test_files") {
+  testonly = true
   data_deps = [
     ":copy_icudtl_dat",
     ":copy_tzres",
     "//src/lib/icu/tools/extractor:icu_data_extractor($host_toolchain)",
   ]
   metadata = {
-    test_runtime_deps = get_target_outputs(":copy_icudtl_dat") +
-                        get_target_outputs(":copy_tzres") +
-                        [ "$root_out_dir/icu_data_extractor" ]
+    test_runtime_deps = [ "$root_out_dir/icu_data_extractor" ]
   }
 }
 

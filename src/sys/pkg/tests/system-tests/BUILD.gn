@@ -7,10 +7,10 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
 import("//src/sys/pkg/tests/system-tests/system-tests.gni")
 
-copy("copy") {
-  testonly = true
+host_test_data("copy") {
   sources = [
     "$host_tools_dir/device-finder",
     "//prebuilt/tools/artifacts/artifacts",
@@ -25,9 +25,6 @@ go_library("system_tests_lib") {
   name = "fuchsia.googlesource.com/system_tests"
   deps = [ "//src/sys/pkg/testing/host-target-testing" ]
   non_go_deps = [ ":copy" ]
-  metadata = {
-    test_runtime_deps = get_target_outputs(":copy")
-  }
 }
 
 go_test("system_tests_reboot") {

@@ -5,6 +5,7 @@
 import("//build/dart/dart_library.gni")
 import("//build/dart/dart_tool.gni")
 import("//build/dart/test.gni")
+import("//build/testing/host_test_data.gni")
 
 dart_library("client") {
   package_name = "sl4f"
@@ -97,18 +98,12 @@ dart_test("sl4f_client_tests") {
   non_dart_deps = [ ":runtime_deps" ]
 }
 
-copy("runtime_deps") {
-  _data_dir = "$target_gen_dir/runtime_deps"
-
+host_test_data("runtime_deps") {
   sources = [ "${root_out_dir}/fake_zedmon" ]
 
-  outputs = [ "$_data_dir/{{source_file_part}}" ]
+  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
   deps = [ "//tools/zedmon:fake_zedmon_bin" ]
-
-  metadata = {
-    test_runtime_deps = [ "$_data_dir/fake_zedmon" ]
-  }
 }
 
 group("tests") {

@@ -4,6 +4,7 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
 
 group("tests") {
   testonly = true
@@ -39,7 +40,7 @@ if (is_linux) {
     }
   }
 
-  copy("copy_misc_tools") {
+  host_test_data("misc_tools") {
     visibility = [ ":*" ]
 
     deps = [ "//zircon/tools/minfs" ]
@@ -49,17 +50,6 @@ if (is_linux) {
       "$zircon_root_build_dir/tools/zbi",
     ]
     outputs = [ "$root_out_dir/test_data/tools/{{source_file_part}}" ]
-  }
-
-  group("misc_tools") {
-    deps = [ ":copy_misc_tools" ]
-
-    metadata = {
-      test_runtime_deps = [
-        "$root_out_dir/test_data/tools/minfs",
-        "$root_out_dir/test_data/tools/zbi",
-      ]
-    }
   }
 
   # These take >5m (the infra timeout) if they're all in one binary, so they

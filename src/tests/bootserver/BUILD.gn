@@ -4,6 +4,7 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
 
 test_dirs = []
 
@@ -65,7 +66,7 @@ if (is_linux) {
 
   host_out_dir = get_label_info("//bogus($host_toolchain)", "root_out_dir")
 
-  copy("copy_bootserver") {
+  host_test_data("copy_bootserver") {
     visibility = [ ":*" ]
 
     sources = [ "$host_out_dir/bootserver" ]
@@ -75,7 +76,7 @@ if (is_linux) {
     deps = [ "//zircon/tools/bootserver($host_toolchain)" ]
   }
 
-  copy("copy_netls") {
+  host_test_data("copy_netls") {
     visibility = [ ":*" ]
 
     sources = [ "$host_out_dir/netls" ]
@@ -85,7 +86,7 @@ if (is_linux) {
     deps = [ "//zircon/tools/netprotocol:netls($host_toolchain)" ]
   }
 
-  copy("copy_fake_firmware") {
+  host_test_data("copy_fake_firmware") {
     visibility = [ ":*" ]
 
     sources = [ "testdata/fake_firmware" ]
@@ -93,19 +94,12 @@ if (is_linux) {
   }
 
   group("bootserver_user_tools") {
+    testonly = true
     deps = [
       ":copy_bootserver",
       ":copy_fake_firmware",
       ":copy_netls",
     ]
-
-    metadata = {
-      test_runtime_deps = [
-        "$root_out_dir/test_data/bootserver_tools/bootserver",
-        "$root_out_dir/test_data/bootserver_tools/fake_firmware",
-        "$root_out_dir/test_data/bootserver_tools/netls",
-      ]
-    }
   }
 
   foreach(test_dir, test_dirs) {
