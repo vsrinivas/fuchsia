@@ -451,15 +451,6 @@ additionally consumed by the Go toolchain.
 
 From //build/config/clang/clang.gni:12
 
-### clang_tool_dir
-Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
-found.  If this is "", then the behavior depends on $use_prebuilt_clang.
-This toolchain is expected to support both Fuchsia targets and the host.
-
-**Current value (from the default):** `""`
-
-From //zircon/public/gn/toolchain/clang.gni:16
-
 ### cobalt_environment
 Selects the Cobalt environment to send data to. Choices:
   "LOCAL" - record log data locally to a file
@@ -536,13 +527,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/4cb79941fcd4bfe6877e8d061aea5b6ab5901271/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/64c65b575728fd6663901ca1a211ae50e438c5c1/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/4cb79941fcd4bfe6877e8d061aea5b6ab5901271/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/64c65b575728fd6663901ca1a211ae50e438c5c1/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -624,7 +615,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/441a101ccfe3df01b929f5fb896e2c0cb5c039c5/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -639,7 +630,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/441a101ccfe3df01b929f5fb896e2c0cb5c039c5/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -689,7 +680,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/441a101ccfe3df01b929f5fb896e2c0cb5c039c5/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -986,7 +977,7 @@ From //build/unification/images/BUILD.gn:14
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/441a101ccfe3df01b929f5fb896e2c0cb5c039c5/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1001,14 +992,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/441a101ccfe3df01b929f5fb896e2c0cb5c039c5/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/f00fb147210a17036395ffebb1aabdeaa4d75b57/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/441a101ccfe3df01b929f5fb896e2c0cb5c039c5/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1225,6 +1216,13 @@ instead of bootfs.
 **Current value (from the default):** `false`
 
 From //build/images/vbmeta.gni:14
+
+### include_fvm_blob_sparse
+Include fvm.blob.sparse.blk image into the build if set to true
+
+**Current value (from the default):** `false`
+
+From //build/images/args.gni:102
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -1848,14 +1846,14 @@ ignore warnings.
 
 **Current value (from the default):** `"deny"`
 
-From //build/rust/config.gni:38
+From //build/rust/config.gni:45
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:25
+From //build/rust/config.gni:32
 
 ### rust_override_lto
 Overrides the LTO setting for all Rust builds, regardless of
@@ -1864,7 +1862,7 @@ Valid values are "none", "thin", and "fat".
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:48
+From //build/rust/config.gni:55
 
 ### rust_override_opt
 Overrides the optimization level for all Rust builds, regardless of
@@ -1873,7 +1871,7 @@ Valid values are 0-3, o, and z.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:43
+From //build/rust/config.gni:50
 
 ### rust_panic
 DEPRECATED: Sets the panic type for Rust on fuchsia.
@@ -1882,14 +1880,22 @@ This arg will be removed soon, and we will always use "abort".
 
 **Current value (from the default):** `"abort"`
 
-From //build/rust/config.gni:30
+From //build/rust/config.gni:37
+
+### rust_sysroot
+Sets a custom base directory for where rust tooling
+looks for the standard library
+
+**Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64"`
+
+From //build/rust/config.gni:29
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
 
 **Current value (from the default):** `"fuchsia"`
 
-From //build/rust/config.gni:33
+From //build/rust/config.gni:40
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
@@ -1897,7 +1903,7 @@ This can be used to test custom Rust toolchains.
 
 **Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64/bin"`
 
-From //build/rust/config.gni:22
+From //build/rust/config.gni:25
 
 ### scenic_display_frame_number
 Draws the current frame number in the top-left corner.
@@ -2379,15 +2385,6 @@ TODO(#38701): Remove this when the fork has been merged back in.
 **Current value (from the default):** `false`
 
 From //third_party/dart/sdk_args.gni:10
-
-### use_prebuilt_clang
-If $clang_tool_dir is "", then this controls how the Clang toolchain
-binaries are found.  If true, then the standard prebuilt is used.
-Otherwise the tools are just expected to be found by the shell via `PATH`.
-
-**Current value (from the default):** `true`
-
-From //zircon/public/gn/toolchain/clang.gni:11
 
 ### use_prebuilt_dart_sdk
 Whether to use the prebuilt Dart SDK for everything.

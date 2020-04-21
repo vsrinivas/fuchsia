@@ -32,7 +32,7 @@ Symbolization tools and debuggers find symbolic information this way.
 
 **Current value (from the default):** `"/b/s/w/ir/k/root_build_dir.zircon/.build-id"`
 
-From //public/gn/toolchain/c_toolchain.gni:18
+From //public/gn/toolchain/c_toolchain.gni:19
 
 ### build_id_format
 Build ID algorithm to use for Fuchsia-target code.  This does not apply
@@ -51,7 +51,7 @@ This toolchain is expected to support both Fuchsia targets and the host.
 
 **Current value (from the default):** `""`
 
-From //public/gn/toolchain/clang.gni:16
+From //public/gn/toolchain/clang.gni:17
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -334,11 +334,11 @@ From //third_party/ulib/musl/BUILD.gn:6
 From //public/gn/config/levels.gni:19
 
 ### output_breakpad_syms
-"$output_breakpad_syms" gates whether or not breakpad symbols are produced.
+If true, produce a Breakpad symbol file for each binary.
 
 **Current value (from the default):** `false`
 
-From //public/gn/config/standard.gni:9
+From //public/gn/toolchain/breakpad.gni:9
 
 ### scheduler_tracing_level
 The level of detail for scheduler traces when enabled. Values greater than
@@ -470,7 +470,7 @@ Otherwise the tools are just expected to be found by the shell via `PATH`.
 
 **Current value (from the default):** `true`
 
-From //public/gn/toolchain/clang.gni:11
+From //public/gn/toolchain/clang.gni:12
 
 ### use_prebuilt_gcc
 If $gcc_tool_dir is "", then this controls how the GCC toolchain
