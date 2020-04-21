@@ -50,7 +50,7 @@ device="$(get-device-name)" || exit $?
 
 if [[ -z "$(get-fuchsia-device-addr)" ]]; then
   echo >&2 "Could not find ${device} in Fuchsia, attempting to reboot using netboot (Zedboot)"
-  exec "${ZIRCON_TOOLS_DIR}/netruncmd" "--nowait" "${device}" "dm ${reboot_type}"
+  exec "${FUCHSIA_BUILD_DIR}/host_x64/netruncmd" "--nowait" "${device}" "dm ${reboot_type}"
 fi
 
 echo "Rebooting ${device}..."

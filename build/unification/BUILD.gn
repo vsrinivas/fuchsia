@@ -9,6 +9,7 @@ group("unification") {
     "fuzzing",
     "images",
     "tests:host-metadata",
+    "tools",
     "zbi",
   ]
 }
