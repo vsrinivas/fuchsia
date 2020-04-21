@@ -31,9 +31,12 @@ use {
     std::time::Duration,
 };
 
+/// A locked TargetCollection that has been acquired via the Mutex::lock fn.
+pub type GuardedTargetCollection = Arc<Mutex<TargetCollection>>;
+
 #[async_trait]
 pub trait DiscoveryHook {
-    async fn on_new_target(&self, target: &Arc<Target>, tc: &Arc<TargetCollection>);
+    async fn on_new_target(&self, target: &Arc<Target>, tc: &GuardedTargetCollection);
 }
 
 #[derive(Default)]
@@ -41,7 +44,7 @@ struct RCSActivatorHook {}
 
 #[async_trait]
 impl DiscoveryHook for RCSActivatorHook {
-    async fn on_new_target(&self, target: &Arc<Target>, _tc: &Arc<TargetCollection>) {
+    async fn on_new_target(&self, target: &Arc<Target>, _tc: &GuardedTargetCollection) {
         let mut state = target.state.lock().await;
         if state.overnet_started {
             return;
@@ -59,7 +62,7 @@ impl DiscoveryHook for RCSActivatorHook {
 // Daemon
 #[derive(Clone)]
 pub struct Daemon {
-    target_collection: Arc<TargetCollection>,
+    target_collection: GuardedTargetCollection,
 
     discovered_target_hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
     ascendd_child: Rc<RefCell<Option<Child>>>,
@@ -69,14 +72,18 @@ impl Daemon {
     pub async fn new(ascendd_child: Option<Child>) -> Result<Daemon, Error> {
         log::info!("Starting daemon overnet server");
         let (tx, rx) = mpsc::unbounded::<Target>();
-        let target_collection = Arc::new(TargetCollection::new());
+        let target_collection = Arc::new(Mutex::new(TargetCollection::new()));
         let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
-        Daemon::spawn_receiver_loop(rx, target_collection.clone(), discovered_target_hooks.clone());
-        Daemon::spawn_onet_discovery(target_collection.clone());
+        Daemon::spawn_receiver_loop(
+            rx,
+            Arc::clone(&target_collection),
+            Arc::clone(&discovered_target_hooks),
+        );
+        Daemon::spawn_onet_discovery(Arc::clone(&target_collection));
         let r = Rc::new(RefCell::new(ascendd_child));
         let mut d = Daemon {
-            target_collection: target_collection.clone(),
-            discovered_target_hooks: discovered_target_hooks.clone(),
+            target_collection: Arc::clone(&target_collection),
+            discovered_target_hooks: Arc::clone(&discovered_target_hooks),
             ascendd_child: r.clone(),
         };
         d.register_hook(RCSActivatorHook::default()).await;
@@ -98,14 +105,17 @@ impl Daemon {
 
     pub fn spawn_receiver_loop(
         mut rx: mpsc::UnboundedReceiver<Target>,
-        tc: Arc<TargetCollection>,
+        tc: Arc<Mutex<TargetCollection>>,
         hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
     ) {
         spawn(async move {
             loop {
                 let target = rx.next().await.unwrap();
-                let target_clone = tc.merge_insert(target).await;
-                let tc_clone = tc.clone();
+                let nodename = target.nodename.clone();
+                let mut tc_mut = tc.lock().await;
+                tc_mut.merge_insert(target).await;
+                let target_clone = Arc::clone(tc_mut.get(nodename.into()).await.unwrap());
+                let tc_clone = Arc::clone(&tc);
                 let hooks_clone = (*hooks.lock().await).clone();
                 spawn(async move {
                     futures::future::join_all(
@@ -122,9 +132,13 @@ impl Daemon {
         rx: mpsc::UnboundedReceiver<Target>,
         ascendd_child: Option<Child>,
     ) -> Daemon {
-        let target_collection = Arc::new(TargetCollection::new());
+        let target_collection = Arc::new(Mutex::new(TargetCollection::new()));
         let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
-        Daemon::spawn_receiver_loop(rx, target_collection.clone(), discovered_target_hooks.clone());
+        Daemon::spawn_receiver_loop(
+            rx,
+            Arc::clone(&target_collection),
+            Arc::clone(&discovered_target_hooks),
+        );
         let r = Rc::new(RefCell::new(ascendd_child));
         Daemon { target_collection, discovered_target_hooks, ascendd_child: r.clone() }
     }
@@ -140,7 +154,7 @@ impl Daemon {
         Ok(())
     }
 
-    pub fn spawn_onet_discovery(tc: Arc<TargetCollection>) {
+    pub fn spawn_onet_discovery(tc: Arc<Mutex<TargetCollection>>) {
         spawn(async move {
             let svc = hoist::connect_as_service_consumer().unwrap();
             loop {
@@ -159,7 +173,7 @@ impl Daemon {
                     {
                         continue;
                     }
-                    if tc.get(peer.id.id.into()).await.is_some() {
+                    if tc.lock().await.get(peer.id.id.into()).await.is_some() {
                         continue;
                     }
                     let remote_control_proxy = ok_or_continue!(RCSConnection::new(&mut peer.id)
@@ -169,7 +183,7 @@ impl Daemon {
                         Target::from_rcs_connection(remote_control_proxy).await,
                         "unable to convert proxy to target",
                     );
-                    tc.merge_insert(target).await;
+                    tc.lock().await.merge_insert(target).await;
                 }
             }
         });
@@ -197,14 +211,14 @@ impl Daemon {
     /// Attempts to get at most one target. If there is more than one target,
     /// returns an error.
     /// TODO(fxb/47843): Implement target lookup for commands to deprecate this
-    /// function, and as a result remove the inner_lock() function.
+    /// function.
     async fn target_from_cache(&self) -> Result<Arc<Target>, Error> {
-        let targets = self.target_collection.inner_lock().await;
+        let targets = self.target_collection.lock().await;
         if targets.len() > 1 {
             return Err(anyhow!("more than one target"));
         }
 
-        match targets.values().next() {
+        match targets.iter().next() {
             Some(t) => Ok(t.clone()),
             None => Err(anyhow!("no targets found")),
         }
@@ -282,15 +296,14 @@ impl Daemon {
                 }
                 // TODO(awdavies): Make this into a common format for easy
                 // parsing.
+                let targets = self.target_collection.lock().await;
                 let response = match value.as_ref() {
-                    "" => futures::future::join_all(
-                        self.target_collection.targets().await.iter().map(|t| t.to_string_async()),
-                    )
-                    .await
-                    .join("\n"),
+                    "" => futures::future::join_all(targets.iter().map(|t| t.to_string_async()))
+                        .await
+                        .join("\n"),
                     _ => format!(
                         "{}",
-                        match self.target_collection.get(value.into()).await {
+                        match targets.get(value.into()).await {
                             Some(t) => t.to_string_async().await,
                             None => String::new(),
                         }
@@ -445,7 +458,7 @@ mod test {
 
     #[async_trait]
     impl DiscoveryHook for TestHookFakeRCS {
-        async fn on_new_target(&self, target: &Arc<Target>, _tc: &Arc<TargetCollection>) {
+        async fn on_new_target(&self, target: &Arc<Target>, _tc: &GuardedTargetCollection) {
             let mut target_state = target.state.lock().await;
             target_state.rcs = match &target_state.rcs {
                 Some(_) => panic!("fake RCS should be set at most once"),
@@ -634,9 +647,9 @@ mod test {
 
     #[async_trait]
     impl DiscoveryHook for TestHookFirst {
-        async fn on_new_target(&self, target: &Arc<Target>, tc: &Arc<TargetCollection>) {
+        async fn on_new_target(&self, target: &Arc<Target>, tc: &GuardedTargetCollection) {
             // This will crash if the target isn't already inserted.
-            let t = tc.get(target.nodename.clone().into()).await.unwrap().clone();
+            let t = Arc::clone(&tc.lock().await.get(target.nodename.clone().into()).await.unwrap());
             assert_eq!(t.nodename, "nothin");
             assert_eq!(*t.state.lock().await, TargetState::new());
             assert_eq!(*t.addrs.lock().await, HashSet::new());
@@ -650,7 +663,7 @@ mod test {
 
     #[async_trait]
     impl DiscoveryHook for TestHookSecond {
-        async fn on_new_target(&self, _target: &Arc<Target>, _tc: &Arc<TargetCollection>) {
+        async fn on_new_target(&self, _target: &Arc<Target>, _tc: &GuardedTargetCollection) {
             self.callbacks_done.unbounded_send(true).unwrap();
         }
     }

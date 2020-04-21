@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use std::collections::hash_map::Values;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fmt::{Debug, Display};
@@ -9,7 +10,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Error};
-use async_std::sync::RwLock;
 use async_std::task;
 use chrono::{DateTime, Utc};
 use fidl::endpoints::ServiceMarker;
@@ -85,18 +85,18 @@ impl TargetState {
 pub struct Target {
     // Nodename of the target (immutable).
     pub nodename: String,
-    pub last_response: Mutex<DateTime<Utc>>,
-    pub state: Mutex<TargetState>,
-    pub addrs: Mutex<HashSet<TargetAddr>>,
+    pub last_response: Arc<Mutex<DateTime<Utc>>>,
+    pub state: Arc<Mutex<TargetState>>,
+    pub addrs: Arc<Mutex<HashSet<TargetAddr>>>,
 }
 
 impl Target {
     pub fn new(nodename: &str, t: DateTime<Utc>) -> Self {
         Self {
             nodename: nodename.to_string(),
-            last_response: Mutex::new(t),
-            state: Mutex::new(TargetState::new()),
-            addrs: Mutex::new(HashSet::new()),
+            last_response: Arc::new(Mutex::new(t)),
+            state: Arc::new(Mutex::new(TargetState::new())),
+            addrs: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 
@@ -306,32 +306,28 @@ impl From<u64> for TargetQuery {
 
 #[derive(Debug)]
 pub struct TargetCollection {
-    inner: RwLock<HashMap<String, Arc<Target>>>,
+    map: HashMap<String, Arc<Target>>,
 }
 
 impl TargetCollection {
     pub fn new() -> Self {
-        Self { inner: RwLock::new(HashMap::new()) }
+        Self { map: HashMap::new() }
     }
 
-    pub async fn inner_lock(
-        &self,
-    ) -> async_std::sync::RwLockWriteGuard<'_, HashMap<String, Arc<Target>>> {
-        self.inner.write().await
+    pub fn len(&self) -> usize {
+        self.map.len()
     }
 
-    pub async fn len(&self) -> usize {
-        self.inner.read().await.len()
+    // This is implemented as this instead of `impl Iterator` as most
+    // of the borrow-checker heavy lifting is already taken care of by
+    // using the `Values` struct.
+    pub fn iter(&self) -> Values<'_, String, Arc<Target>> {
+        self.map.values()
     }
 
-    pub async fn targets(&self) -> Vec<Arc<Target>> {
-        self.inner.read().await.values().map(|t| t.clone()).collect()
-    }
-
-    pub async fn merge_insert(&self, t: Target) -> Arc<Target> {
-        let mut inner = self.inner.write().await;
+    pub async fn merge_insert(&mut self, t: Target) {
         // TODO(awdavies): better merging (using more indices for matching).
-        match inner.get(&t.nodename) {
+        match self.map.get(&t.nodename) {
             Some(to_update) => {
                 let mut addrs = to_update.addrs.lock().await;
                 let mut last_response = to_update.last_response.lock().await;
@@ -346,25 +342,19 @@ impl TargetCollection {
                 if state.rcs.is_none() {
                     state.rcs = t.state.lock().await.rcs.clone();
                 }
-
-                to_update.clone()
             }
             None => {
-                let t = Arc::new(t);
-                inner.insert(t.nodename.clone(), t.clone());
-
-                t
+                self.map.insert(t.nodename.clone(), Arc::new(t));
             }
         }
     }
 
-    pub async fn get(&self, t: TargetQuery) -> Option<Arc<Target>> {
-        for target in self.inner.read().await.values() {
+    pub async fn get(&self, t: TargetQuery) -> Option<&Arc<Target>> {
+        for target in self.map.values() {
             if t.matches(target).await {
-                return Some(target.clone());
+                return Some(target);
             }
         }
-
         None
     }
 }
@@ -412,9 +402,9 @@ mod test {
         fn clone(&self) -> Self {
             Self {
                 nodename: self.nodename.clone(),
-                last_response: Mutex::new(block_on(self.last_response.lock()).clone()),
-                state: Mutex::new(block_on(self.state.lock()).clone()),
-                addrs: Mutex::new(block_on(self.addrs.lock()).clone()),
+                last_response: Arc::new(Mutex::new(block_on(self.last_response.lock()).clone())),
+                state: Arc::new(Mutex::new(block_on(self.state.lock()).clone())),
+                addrs: Arc::new(Mutex::new(block_on(self.addrs.lock()).clone())),
             }
         }
     }
@@ -439,11 +429,11 @@ mod test {
     #[test]
     fn test_target_collection_insert_new() {
         hoist::run(async move {
-            let tc = TargetCollection::new();
+            let mut tc = TargetCollection::new();
             let nodename = String::from("what");
             let t = Target::new(&nodename, fake_now());
             tc.merge_insert(t.clone()).await;
-            assert_eq!(&*tc.get(nodename.clone().into()).await.unwrap(), &t.clone());
+            assert_eq!(&**tc.get(nodename.clone().into()).await.unwrap(), &t.clone());
             match tc.get("oihaoih".into()).await {
                 Some(_) => panic!("string lookup should return Nobne"),
                 _ => (),
@@ -454,7 +444,7 @@ mod test {
     #[test]
     fn test_target_collection_merge() {
         hoist::run(async move {
-            let tc = TargetCollection::new();
+            let mut tc = TargetCollection::new();
             let nodename = String::from("bananas");
             let t1 = Target::new(&nodename, fake_now());
             let t2 = Target::new(&nodename, fake_elapsed());
@@ -466,9 +456,9 @@ mod test {
             t2.addrs.lock().await.insert((a2.clone(), 1).into());
             tc.merge_insert(t2.clone()).await;
             tc.merge_insert(t1.clone()).await;
-            let merged_target = tc.get(nodename.clone().into()).await.unwrap();
-            assert_ne!(&*merged_target, &t1);
-            assert_ne!(&*merged_target, &t2);
+            let merged_target: &Arc<Target> = tc.get(nodename.clone().into()).await.unwrap();
+            assert_ne!(&**merged_target, &t1);
+            assert_ne!(&**merged_target, &t2);
             assert_eq!(merged_target.addrs.lock().await.len(), 2);
             assert_eq!(*merged_target.last_response.lock().await, fake_elapsed());
             assert!(merged_target.addrs.lock().await.contains(&(a1, 1).into()));
@@ -598,9 +588,9 @@ mod test {
                 &NodeId { id: ID },
             );
             let t = Target::from_rcs_connection(conn).await.unwrap();
-            let tc = TargetCollection::new();
+            let mut tc = TargetCollection::new();
             tc.merge_insert(t.clone()).await;
-            assert_eq!(*tc.get(ID.into()).await.unwrap(), t);
+            assert_eq!(**tc.get(ID.into()).await.unwrap(), t);
         });
     }
 
@@ -610,10 +600,10 @@ mod test {
             let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
             let t = Target::new("foo", Utc::now());
             t.addrs.lock().await.insert(addr.clone());
-            let tc = TargetCollection::new();
+            let mut tc = TargetCollection::new();
             tc.merge_insert(t.clone()).await;
-            assert_eq!(*tc.get(addr.into()).await.unwrap(), t);
-            assert_eq!(*tc.get("192.168.0.1".into()).await.unwrap(), t);
+            assert_eq!(**tc.get(addr.into()).await.unwrap(), t);
+            assert_eq!(**tc.get("192.168.0.1".into()).await.unwrap(), t);
             assert!(tc.get("fe80::dead:beef:beef:beef".into()).await.is_none());
 
             let addr: TargetAddr =
@@ -621,9 +611,9 @@ mod test {
             let t = Target::new("fooberdoober", Utc::now());
             t.addrs.lock().await.insert(addr.clone());
             tc.merge_insert(t.clone()).await;
-            assert_eq!(*tc.get("fe80::dead:beef:beef:beef".into()).await.unwrap(), t);
-            assert_eq!(*tc.get(addr.clone().into()).await.unwrap(), t);
-            assert_eq!(*tc.get("fooberdoober".into()).await.unwrap(), t);
+            assert_eq!(**tc.get("fe80::dead:beef:beef:beef".into()).await.unwrap(), t);
+            assert_eq!(**tc.get(addr.clone().into()).await.unwrap(), t);
+            assert_eq!(**tc.get("fooberdoober".into()).await.unwrap(), t);
         });
     }
 
