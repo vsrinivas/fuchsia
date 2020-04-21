@@ -11,7 +11,6 @@ use {
     anyhow::{format_err, Context as _, Error},
     async_trait::async_trait,
     clonable_error::ClonableError,
-    fdio::fdio_sys,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
@@ -153,26 +152,6 @@ impl fmt::Display for LifecycleInterest {
     }
 }
 
-fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
-    // TODO(CF-592): fdio is not guaranteed to be asynchronous, replace with native rust solution
-    unsafe {
-        let mut fd_handle = zx::sys::ZX_HANDLE_INVALID;
-        let status = fdio_sys::fdio_fd_clone(fd, &mut fd_handle as *mut zx::sys::zx_handle_t);
-        if status == zx::sys::ZX_ERR_INVALID_ARGS || status == zx::sys::ZX_ERR_NOT_SUPPORTED {
-            // This file descriptor is closed or not clone-able.
-            // We just skip it rather than generating an error.
-            return Ok(None);
-        }
-        if status != zx::sys::ZX_OK {
-            return Err(format_err!("failed to clone fd {}: {}", fd, status));
-        }
-        Ok(Some(fproc::HandleInfo {
-            handle: zx::Handle::from_raw(fd_handle),
-            id: HandleInfo::new(HandleType::FileDescriptor, fd as u16).as_raw(),
-        }))
-    }
-}
-
 impl ElfRunner {
     pub fn new(launcher_connector: ProcessLauncherConnector) -> ElfRunner {
         ElfRunner { launcher_connector }
@@ -272,14 +251,6 @@ impl ElfRunner {
         .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
         let mut handle_infos = vec![];
-
-        // Copy standard input, output and error to process.
-        for fd in 0..3 {
-            handle_infos.extend(
-                handle_info_from_fd(fd)
-                    .map_err(|e| RunnerError::component_load_error(resolved_url.clone(), e))?,
-            );
-        }
 
         if let Some(outgoing_dir) = start_info.outgoing_dir {
             handle_infos.push(fproc::HandleInfo {
