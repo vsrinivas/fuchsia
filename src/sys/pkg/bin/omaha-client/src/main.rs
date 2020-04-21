@@ -81,6 +81,7 @@ fn main() -> Result<(), Error> {
         let protocol_state_node =
             inspect::ProtocolStateNode::new(root.create_child("protocol_state"));
         let last_results_node = inspect::LastResultsNode::new(root.create_child("last_results"));
+        let platform_metrics_node = root.create_child("platform_metrics");
         let _channel_source_property =
             root.create_string("channel_source", format!("{:?}", channel_source));
 
@@ -107,6 +108,7 @@ fn main() -> Result<(), Error> {
             last_results_node,
             app_set,
             notify_cobalt,
+            platform_metrics_node,
         );
 
         futures.push(

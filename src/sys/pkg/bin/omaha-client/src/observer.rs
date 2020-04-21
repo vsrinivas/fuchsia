@@ -7,6 +7,7 @@ use crate::{
     fidl::{FidlServer, StateMachineController},
     inspect::{LastResultsNode, ProtocolStateNode, ScheduleNode},
 };
+use fuchsia_inspect::Node;
 use omaha_client::{
     clock,
     common::{AppSet, ProtocolState, UpdateCheckSchedule},
@@ -32,6 +33,8 @@ where
     last_update_start_time: SystemTime,
     app_set: AppSet,
     notified_cobalt: bool,
+    target_version: Option<String>,
+    platform_metrics_emitter: platform::Emitter,
 }
 
 impl<ST, SM> FuchsiaObserver<ST, SM>
@@ -46,6 +49,7 @@ where
         last_results_node: LastResultsNode,
         app_set: AppSet,
         notified_cobalt: bool,
+        platform_metrics_node: Node,
     ) -> Self {
         FuchsiaObserver {
             fidl_server,
@@ -55,6 +59,8 @@ where
             last_update_start_time: SystemTime::UNIX_EPOCH,
             app_set,
             notified_cobalt,
+            target_version: None,
+            platform_metrics_emitter: platform::Emitter::from_node(platform_metrics_node),
         }
     }
 
@@ -74,8 +80,35 @@ where
     }
 
     async fn on_state_change(&mut self, state: State) {
-        if state == State::CheckingForUpdates {
-            self.last_update_start_time = clock::now();
+        match state {
+            State::Idle => {
+                self.target_version = None;
+            }
+            State::CheckingForUpdates => {
+                self.last_update_start_time = clock::now();
+            }
+            State::ErrorCheckingForUpdate => {
+                self.platform_metrics_emitter.emit(platform::Event::ErrorCheckingForUpdate);
+            }
+            State::NoUpdateAvailable => {
+                self.platform_metrics_emitter.emit(platform::Event::NoUpdateAvailable);
+            }
+            State::InstallationDeferredByPolicy => {
+                self.platform_metrics_emitter.emit(platform::Event::InstallationDeferredByPolicy {
+                    target_version: self.target_version.as_deref().unwrap_or(""),
+                });
+            }
+            State::InstallationError => {
+                self.platform_metrics_emitter.emit(platform::Event::InstallationError {
+                    target_version: self.target_version.as_deref().unwrap_or(""),
+                });
+            }
+            State::WaitingForReboot => {
+                self.platform_metrics_emitter.emit(platform::Event::WaitingForReboot {
+                    target_version: self.target_version.as_deref().unwrap_or(""),
+                });
+            }
+            State::InstallingUpdate => {}
         }
         FidlServer::on_state_change(Rc::clone(&self.fidl_server), state).await
     }
@@ -115,40 +148,56 @@ where
         FidlServer::on_progress_change(Rc::clone(&self.fidl_server), progress).await
     }
 
-    fn on_omaha_response(&mut self, _response: Response) {
-        // TODO(50039): cache target version
+    fn on_omaha_response(&mut self, response: Response) {
+        self.target_version = response
+            .apps
+            .into_iter()
+            .nth(0)
+            .and_then(|app| app.update_check)
+            .and_then(|update_check| update_check.manifest)
+            .map(|manifest| manifest.version);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fidl::FidlServerBuilder;
+    use crate::fidl::{FidlServerBuilder, StubOrRealStateMachineController};
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use omaha_client::{
         common::{App, UserCounting},
         policy::CheckDecision,
-        protocol::Cohort,
+        protocol::{
+            response::{self, Manifest, UpdateCheck},
+            Cohort,
+        },
+        storage::MemStorage,
     };
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_notify_cobalt() {
+    async fn new_test_observer() -> FuchsiaObserver<MemStorage, StubOrRealStateMachineController> {
         let fidl = FidlServerBuilder::new().build().await;
         let inspector = Inspector::new();
         let schedule_node = ScheduleNode::new(inspector.root().create_child("schedule"));
         let protocol_state_node =
             ProtocolStateNode::new(inspector.root().create_child("protocol_state"));
         let last_results_node = LastResultsNode::new(inspector.root().create_child("last_results"));
+        let platform_metrics_node = inspector.root().create_child("platform_metrics");
         let app_set = AppSet::new(vec![App::new("id", [1, 2], Cohort::default())]);
-        let mut observer = FuchsiaObserver::new(
+        FuchsiaObserver::new(
             fidl,
             schedule_node,
             protocol_state_node,
             last_results_node,
             app_set,
             false,
-        );
+            platform_metrics_node,
+        )
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_notify_cobalt() {
+        let mut observer = new_test_observer().await;
 
         assert!(!observer.notified_cobalt);
         observer
@@ -168,5 +217,43 @@ mod tests {
         });
         observer.on_update_check_result(&result).await;
         assert!(observer.notified_cobalt);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cache_target_version() {
+        let mut observer = new_test_observer().await;
+        assert_eq!(observer.target_version, None);
+        let response = Response {
+            apps: vec![response::App {
+                update_check: Some(UpdateCheck {
+                    manifest: Some(Manifest {
+                        version: "3.2.1".to_string(),
+                        ..Manifest::default()
+                    }),
+                    ..UpdateCheck::default()
+                }),
+                ..response::App::default()
+            }],
+            ..Response::default()
+        };
+        observer.on_omaha_response(response);
+        assert_eq!(observer.target_version, Some("3.2.1".to_string()));
+        observer.on_state_change(State::Idle).await;
+        assert_eq!(observer.target_version, None);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cache_target_version_no_update() {
+        let mut observer = new_test_observer().await;
+        assert_eq!(observer.target_version, None);
+        let response = Response {
+            apps: vec![response::App {
+                update_check: Some(UpdateCheck::no_update()),
+                ..response::App::default()
+            }],
+            ..Response::default()
+        };
+        observer.on_omaha_response(response);
+        assert_eq!(observer.target_version, None);
     }
 }

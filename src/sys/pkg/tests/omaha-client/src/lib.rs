@@ -22,6 +22,8 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
+    fuchsia_inspect::{assert_inspect_tree, reader::NodeHierarchy, testing::AnyProperty},
+    fuchsia_pkg_testing::get_inspect_hierarchy,
     fuchsia_zircon::{self as zx, Status},
     futures::{channel::mpsc, prelude::*},
     matches::assert_matches,
@@ -136,8 +138,9 @@ impl TestEnvBuilder {
             fasync::spawn(resolver_clone.run_resolver_service(stream))
         });
 
+        let nested_environment_label = Self::make_nested_environment_label();
         let env = fs
-            .create_salted_nested_environment("omaha_client_integration_test_env")
+            .create_nested_environment(&nested_environment_label)
             .expect("nested environment to create successfully");
         fasync::spawn(fs.collect());
 
@@ -166,7 +169,15 @@ impl TestEnvBuilder {
                     .expect("connect to update manager"),
             },
             _omaha_client: omaha_client,
+            nested_environment_label,
         }
+    }
+
+    fn make_nested_environment_label() -> String {
+        let mut salt = [0; 4];
+        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        // omaha_client_integration_test_env_xxxxxxxx is too long and gets truncated.
+        format!("omaha_client_test_env_{}", hex::encode(&salt))
     }
 }
 
@@ -175,6 +186,7 @@ struct TestEnv {
     mounts: Mounts,
     proxies: Proxies,
     _omaha_client: App,
+    nested_environment_label: String,
 }
 
 impl TestEnv {
@@ -221,6 +233,61 @@ impl TestEnv {
             }
         }
         panic!("Timeout waiting to start update check");
+    }
+
+    async fn inspect_hierarchy(&self) -> NodeHierarchy {
+        get_inspect_hierarchy(
+            &self.nested_environment_label,
+            "omaha-client-service-for-integration-test.cmx",
+        )
+        .await
+    }
+
+    async fn assert_platform_metrics_event_target_version(
+        &self,
+        event_name: &'static str,
+        target_version: &'static str,
+    ) {
+        let hierarchy = self.inspect_hierarchy().await;
+
+        assert_inspect_tree!(
+            hierarchy,
+            root: contains {
+                "platform_metrics": {
+                    "events": contains {
+                        "capacity": 50u64,
+                        "children": {
+                            "0": {
+                                "event": event_name,
+                                "ts": AnyProperty,
+                                "target-version": target_version,
+                            }
+                        }
+                    }
+                }
+            }
+        );
+    }
+
+    async fn assert_platform_metrics_event_no_target_version(&self, event_name: &'static str) {
+        let hierarchy = self.inspect_hierarchy().await;
+
+        assert_inspect_tree!(
+            hierarchy,
+            root: contains {
+                "platform_metrics": {
+                    "events": contains {
+                        "capacity": 50u64,
+                        "children": {
+                            "0": {
+                                "event": event_name,
+                                "ts": AnyProperty,
+                            }
+                        }
+                    }
+                }
+            }
+        );
     }
 }
 
@@ -467,6 +534,8 @@ async fn test_omaha_client_update() {
     }
     assert_matches!(last_progress, Some(_));
     assert!(waiting_for_reboot);
+
+    env.assert_platform_metrics_event_target_version("WaitingForReboot", "0.1.2.3").await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -522,6 +591,8 @@ async fn test_omaha_client_update_error() {
         responder.send().unwrap();
     }
     assert!(installation_error);
+
+    env.assert_platform_metrics_event_target_version("InstallationError", "0.1.2.3").await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -538,6 +609,8 @@ async fn test_omaha_client_no_update() {
     )
     .await;
     assert_matches!(stream.next().await, None);
+
+    env.assert_platform_metrics_event_no_target_version("NoUpdateAvailable").await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -554,6 +627,8 @@ async fn test_omaha_client_invalid_response() {
     )
     .await;
     assert_matches!(stream.next().await, None);
+
+    env.assert_platform_metrics_event_no_target_version("ErrorCheckingForUpdate").await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -573,6 +648,8 @@ async fn test_omaha_client_invalid_url() {
     )
     .await;
     assert_matches!(stream.next().await, None);
+
+    env.assert_platform_metrics_event_target_version("InstallationError", "0.1.2.3").await;
 }
 
 #[fasync::run_singlethreaded(test)]

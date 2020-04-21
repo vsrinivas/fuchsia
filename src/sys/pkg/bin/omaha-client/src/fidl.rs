@@ -464,7 +464,9 @@ where
 }
 
 #[cfg(test)]
-pub use stub::{FidlServerBuilder, StubFidlServer, StubStateMachineController};
+pub use stub::{
+    FidlServerBuilder, StubFidlServer, StubOrRealStateMachineController, StubStateMachineController,
+};
 
 #[cfg(test)]
 mod stub {
@@ -622,6 +624,7 @@ mod stub {
             let schedule_node = ScheduleNode::new(root.create_child("schedule"));
             let protocol_state_node = ProtocolStateNode::new(root.create_child("protocol_state"));
             let last_results_node = LastResultsNode::new(root.create_child("last_results"));
+            let platform_metrics_node = root.create_child("platform_metrics");
 
             let mut observer = FuchsiaObserver::new(
                 Rc::clone(&fidl),
@@ -630,6 +633,7 @@ mod stub {
                 last_results_node,
                 app_set,
                 true,
+                platform_metrics_node,
             );
             fasync::spawn_local(async move {
                 futures::pin_mut!(state_machine);

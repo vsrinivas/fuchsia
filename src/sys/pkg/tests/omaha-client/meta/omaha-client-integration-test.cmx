@@ -11,6 +11,7 @@
     },
     "sandbox": {
         "features": [
+            "hub",
             "isolated-temp"
         ],
         "services": [
