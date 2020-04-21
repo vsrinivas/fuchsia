@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/closure-queue/closure_queue.h>
@@ -56,6 +57,50 @@ class ScopedRelock {
   ScopedRelock() = delete;
   DISALLOW_COPY_ASSIGN_AND_MOVE(ScopedRelock);
 };
+
+bool IsStreamErrorRecoverable(fuchsia::media::StreamError e) {
+  using StreamError = fuchsia::media::StreamError;
+  switch (e) {
+    case StreamError::DECRYPTOR_NO_KEY:
+      return true;
+    default:
+      return false;
+  }
+}
+
+const char* ToString(fuchsia::media::StreamError e) {
+  using StreamError = fuchsia::media::StreamError;
+  switch (e) {
+    case StreamError::UNKNOWN:
+      return "UNKNOWN";
+    case StreamError::INVALID_INPUT_FORMAT_DETAILS:
+      return "INVALID_INPUT_FORMAT_DETAILS";
+    case StreamError::INCOMPATIBLE_BUFFERS_PROVIDED:
+      return "INCOMPATIBLE_BUFFERS_PROVIDED";
+    case StreamError::EOS_PROCESSING:
+      return "EOS_PROCESSING";
+    case StreamError::DECODER_UNKNOWN:
+      return "DECODER_UNKNOWN";
+    case StreamError::DECODER_DATA_PARSING:
+      return "DECODER_DATA_PARSING";
+    case StreamError::ENCODER_UNKNOWN:
+      return "ENCODER_UNKNOWN";
+    case StreamError::DECRYPTOR_UNKNOWN:
+      return "DECRYPTOR_UNKNOWN";
+    case StreamError::DECRYPTOR_NO_KEY:
+      return "DECRYPTOR_NO_KEY";
+  }
+}
+
+const char* GetStreamErrorAdditionalHelpText(fuchsia::media::StreamError e) {
+  using StreamError = fuchsia::media::StreamError;
+  switch (e) {
+    case StreamError::DECRYPTOR_NO_KEY:
+      return "Retry after keys arrive.";
+    default:
+      return "";
+  }
+}
 
 }  // namespace
 
@@ -3265,6 +3310,13 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
     // TODO(fxb/43490): Clean this up.
     output_end_of_stream_seen_.notify_all();
 
+    if (IsStreamErrorRecoverable(error)) {
+      LOG(INFO, "Stream %lu failed: %s. %s", stream_lifetime_ordinal_, ToString(error),
+          GetStreamErrorAdditionalHelpText(error));
+    } else {
+      LOG(ERROR, "Stream %lu failed: %s", stream_lifetime_ordinal_, ToString(error));
+    }
+
     // We're failing the current stream.  We should still queue to the output
     // ordering domain to ensure ordering vs. any previously-sent output on this
     // stream that was sent directly from codec processing thread.
@@ -3272,8 +3324,6 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
     // This failure is async, in the sense that the client may still be sending
     // input data, and the core codec is expected to just hold onto those
     // packets until the client has moved on from this stream.
-    LOG(ERROR, "onStreamFailed() - stream_lifetime_ordinal_: %lu error code: 0x%08x",
-        stream_lifetime_ordinal_, error);
 
     if (stream_->future_discarded()) {
       // No reason to report a stream failure to the client for an obsolete stream.  The client has

@@ -526,7 +526,6 @@ void DecryptorAdapter::ProcessInput() {
 
     auto error = Decrypt(encryption_params_, input, output, output_packet);
     if (error) {
-      LOG(ERROR, "Decrypt error: 0x%08x", *error);
       OnCoreCodecFailStream(*error);
       return;
     }
@@ -586,6 +585,5 @@ void DecryptorAdapter::OnCoreCodecFailStream(fuchsia::media::StreamError error) 
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = true;
   }
-  LOG(ERROR, "DecryptorAdapter::OnCoreCodecFailStream()");
   events_->onCoreCodecFailStream(error);
 }
