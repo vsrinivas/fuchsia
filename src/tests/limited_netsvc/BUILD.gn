@@ -45,7 +45,7 @@ if (is_linux) {
 
     foreach(tool, net_tools) {
       sources += [ "$host_out_dir/$tool" ]
-      deps += [ "//zircon/tools/netprotocol:$tool($host_toolchain)" ]
+      deps += [ "//tools/netprotocol:$tool($host_toolchain)" ]
     }
   }
 
@@ -56,7 +56,7 @@ if (is_linux) {
 
     outputs = [ "$root_out_dir/test_data/limited_netsvc/loglistener" ]
 
-    deps = [ "//zircon/tools/loglistener($host_toolchain)" ]
+    deps = [ "//tools/loglistener($host_toolchain)" ]
   }
 
   group("netsvc_user_tools") {

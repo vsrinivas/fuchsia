@@ -12,11 +12,8 @@ group("tools") {
   deps = [
     "//zircon/third_party/uapp/mkfs-msdosfs($host_toolchain)",
     "//zircon/tools/blobfs($host_toolchain)",
-    "//zircon/tools/bootserver($host_toolchain)",
     "//zircon/tools/fvm($host_toolchain)",
-    "//zircon/tools/loglistener($host_toolchain)",
     "//zircon/tools/minfs($host_toolchain)",
-    "//zircon/tools/netprotocol($host_toolchain)",
     "//zircon/tools/xdc-server($host_toolchain)",
   ]
   if (host_os == "linux") {

@@ -9,14 +9,17 @@ group("tools") {
     ":infratools",
     "//tools/bindc:host",
     "//tools/blackout:all",
+    "//tools/bootserver_old:host($host_toolchain)",
     "//tools/build",
     "//tools/create",
     "//tools/debroot($host_toolchain)",
     "//tools/fidl/fidldoc($host_toolchain)",
     "//tools/fidlcat:fidlcat_host",
+    "//tools/loglistener:host($host_toolchain)",
     "//tools/make-efi:host",
     "//tools/make-fuchsia-vol:host",
     "//tools/net/dev_finder:host",
+    "//tools/netprotocol($host_toolchain)",
   ]
 }
 
@@ -60,6 +63,7 @@ group("tests") {
     "//tools/bindc:tests",
     "//tools/blackout:tests",
     "//tools/bootserver:tests($host_toolchain)",
+    "//tools/bootserver_old/tests($host_toolchain)",
     "//tools/botanist:tests($host_toolchain)",
     "//tools/build:tests($host_toolchain)",
     "//tools/create:tests($host_toolchain)",

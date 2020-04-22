@@ -56,11 +56,11 @@ fi
 
 device="$(get-device-name)" || exit $?
 if (( is_raw )); then
-  exec "${ZIRCON_TOOLS_DIR}/loglistener" "${device}"
+  exec "${FUCHSIA_BUILD_DIR}/host-tools/loglistener" "${device}"
 else
   declare symbolizer=( "fx-command-run" "symbolize" )
   if (( is_remote )); then
     symbolizer+=("-r")
   fi
-  "${ZIRCON_TOOLS_DIR}/loglistener" "${device}" | "${symbolizer[@]}"
+  "${FUCHSIA_BUILD_DIR}/host-tools/loglistener" "${device}" | "${symbolizer[@]}"
 fi

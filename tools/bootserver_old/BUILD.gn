@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_executable.gni")
+import("//build/host.gni")
+
+sdk_executable("bootserver") {
+  category = "partner"
+  sources = [
+    "bootserver.c",
+    "netboot.c",
+    "tftp.c",
+  ]
+  deps = [ "//zircon/public/lib/tftp" ]
+}
+
+install_host_tools("host") {
+  deps = [ ":bootserver" ]
+  outputs = [ "bootserver" ]
+}

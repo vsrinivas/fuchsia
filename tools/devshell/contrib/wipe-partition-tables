@@ -23,4 +23,4 @@ if [[ -n "$name" ]]; then
   name_args+=("-n" "${name}")
 fi
 
-exec "${ZIRCON_TOOLS_DIR}/bootserver" "${name_args[@]}" --wipe-partition-tables "$1" -1 --fail-fast
+exec "${FUCHSIA_BUILD_DIR}/host-tools/bootserver" "${name_args[@]}" --wipe-partition-tables "$1" -1 --fail-fast

@@ -1995,7 +1995,7 @@ action("ids.txt") {
 }
 
 group("bootserver") {
-  deps = [ "//zircon/tools/bootserver($host_toolchain)" ]
+  deps = [ "//tools/bootserver_old:bootserver($host_toolchain)" ]
 
   host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
 

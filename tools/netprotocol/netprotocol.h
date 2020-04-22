@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_TOOLS_NETPROTOCOL_NETPROTOCOL_H_
-#define ZIRCON_TOOLS_NETPROTOCOL_NETPROTOCOL_H_
+#ifndef TOOLS_NETPROTOCOL_NETPROTOCOL_H_
+#define TOOLS_NETPROTOCOL_NETPROTOCOL_H_
 
 #include <arpa/inet.h>
 #include <getopt.h>
@@ -52,4 +52,4 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
 int netboot_open(const char* hostname, const char* ifname, struct sockaddr_in6* addr,
                  bool make_connection);
 
-#endif  // ZIRCON_TOOLS_NETPROTOCOL_NETPROTOCOL_H_
+#endif  // TOOLS_NETPROTOCOL_NETPROTOCOL_H_

@@ -69,7 +69,7 @@ cp "${netboot_script}" "${tmpdir}"
 # dependencies on the build, but at present the ssh-key fixup below is hard to
 # achieve otherwise.
 mkdir "${tmpdir}/host_x64"
-cp "${FUCHSIA_BUILD_DIR}/host_x64/bootserver" "${tmpdir}/host_x64/bootserver"
+cp "${HOST_OUT_DIR}/bootserver" "${tmpdir}/host_x64/bootserver"
 
 # Make a temporary image that adds in the .ssh/authorized_keys file.
 fx-zbi \

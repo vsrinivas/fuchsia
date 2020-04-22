@@ -30,7 +30,7 @@ The easiest way to run recovery on hardware is to netboot a device into a newly
 built recovery image:
 
 ```sh
-$ out/default.zircon/tools/bootserver --board_name pc --boot out/default/obj/build/images/recovery/recovery-eng.zbi
+$ out/default/host-tools/bootserver --board_name pc --boot out/default/obj/build/images/recovery/recovery-eng.zbi
 ```
 
 ## Testing

@@ -30,7 +30,6 @@ if (host_os == "linux") {
   ]
 }
 
-# TODO(scottmg): Colocate this test with bootserver/netsvc when it moves out of //zircon.
 group("tests") {
   testonly = true
 
@@ -73,7 +72,7 @@ if (is_linux) {
 
     outputs = [ "$root_out_dir/test_data/bootserver_tools/bootserver" ]
 
-    deps = [ "//zircon/tools/bootserver($host_toolchain)" ]
+    deps = [ "//tools/bootserver_old:bootserver($host_toolchain)" ]
   }
 
   host_test_data("copy_netls") {
@@ -83,7 +82,7 @@ if (is_linux) {
 
     outputs = [ "$root_out_dir/test_data/bootserver_tools/netls" ]
 
-    deps = [ "//zircon/tools/netprotocol:netls($host_toolchain)" ]
+    deps = [ "//tools/netprotocol:netls($host_toolchain)" ]
   }
 
   host_test_data("copy_fake_firmware") {

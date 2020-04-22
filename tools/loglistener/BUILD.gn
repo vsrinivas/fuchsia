@@ -2,16 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36139.                         #
-##########################################
-
 import("//build/cpp/sdk_executable.gni")
+import("//build/host.gni")
 
 sdk_executable("loglistener") {
   category = "partner"
   sources = [ "loglistener.c" ]
+}
+
+install_host_tools("host") {
+  deps = [ ":loglistener" ]
+  outputs = [ "loglistener" ]
 }
