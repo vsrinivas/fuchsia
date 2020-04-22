@@ -74,27 +74,29 @@ resulting output would be:
 
 ## Offline: CQ/GI
 
-When running tests, an infra bot invokes [botanist] which collects several output streams to be
+When running tests, a [Swarming] bot invokes [botanist] which collects several output streams to be
 presented in the web UI. The `stdout` & `stderr` of botanist are what's presented in the "swarming task
 UI".
 
-For individual test components botanist invokes [testrunner] and collects that output separately. It
-is this output that can be seen after a failing test, with a link named `stdio`. Most tests that
-testrunner invokes run `run-test-component` via SSH to the target device. This collects all of the
-stdio and logs from the test environment and prints them inline.
+For individual test executables botanist invokes [testrunner] and collects that output separately.
+It is this output that can be seen after a failing test, with a link named `stdio`. Most tests that
+testrunner invokes run `run-test-component` via SSH to the target device. This collects the
+stdout, stderr, and logs from the test environment and prints them inline.
 
 ### syslog.txt
 
-Provided with the `-syslog` argument, botanist runs `log_listener` on the target device and saves
-that output to syslog.txt. This is comparable to running `fx log --raw` at a development machine.
+Botanist runs `log_listener` on the target device and saves that output to syslog.txt. This is
+comparable to running `fx log` at a development machine.
 
-### symbolized_log
+### infra_and_test_std_and_klog.txt
 
-This log aggregates:
+This log includes the stdout and stderr of the command run by the [Swarming] task.
+Normally this includes the following notable items, all interleaved:
 
-* swarming task output
+* [botanist]'s log messages
 * kernel log from netsvc (equivalent to `fx klog`)
-* `stdout` and `stderr` of testrunner's SSH sessions
+* [testrunner]'s log messages
+* `stdout` and `stderr` of the tests run by testrunner
 
 This aggregate log is run through the equivalent of `fx symbolize` before upload.
 
@@ -107,3 +109,4 @@ This aggregate log is run through the equivalent of `fx symbolize` before upload
 [forwarded over UDP by netsvc]: /zircon/system/core/netsvc/debuglog.cc
 [botanist]: /tools/botanist/cmd/main.go
 [testrunner]: /tools/testing/testrunner/cmd/main.go
+[Swarming]: https://chromium.googlesource.com/infra/luci/luci-py/+/master/appengine/swarming/doc/README.md
