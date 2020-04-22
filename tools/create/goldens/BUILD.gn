@@ -9,7 +9,6 @@ group("goldens") {
   testonly = true
   deps = [
     ":tests",
-    "my-component-v1-cpp",
     "my-component-v1-rust",
     "my-component-v2-cpp",
     "my-component-v2-rust",
@@ -23,7 +22,6 @@ group("tests") {
     ":my-component-v1-rust($host_toolchain)",
     ":my-component-v2-cpp($host_toolchain)",
     ":my-component-v2-rust($host_toolchain)",
-    "my-component-v1-cpp:tests",
     "my-component-v1-rust:tests",
     "my-component-v2-cpp:tests",
     "my-component-v2-rust:tests",
@@ -40,22 +38,6 @@ golden_test("my-component-v1-rust") {
     "my-component-v1-rust/src/main.rs",
     "my-component-v1-rust/meta/my-component-v1-rust.cmx",
     "my-component-v1-rust/meta/my-component-v1-rust_test.cmx",
-  ]
-}
-
-# Create a C++ v1 component project named `my-component-v1-cpp` and
-# compare its file contents to the golden project of the same name.
-golden_test("my-component-v1-cpp") {
-  project_type = "component-v1"
-  language = "cpp"
-  golden_files = [
-    "my-component-v1-cpp/meta/my-component-v1-cpp.cmx",
-    "my-component-v1-cpp/meta/my-component-v1-cpp_test.cmx",
-    "my-component-v1-cpp/my_component_v1_cpp_unittest.cc",
-    "my-component-v1-cpp/my_component_v1_cpp.cc",
-    "my-component-v1-cpp/my_component_v1_cpp.h",
-    "my-component-v1-cpp/BUILD.gn",
-    "my-component-v1-cpp/main.cc",
   ]
 }
 
