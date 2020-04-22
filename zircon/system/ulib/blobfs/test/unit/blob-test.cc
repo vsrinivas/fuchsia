@@ -26,44 +26,10 @@ constexpr const char kEmptyBlobName[] =
 constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
 
-// This block device allows Fifo transactions to be delayed to test intermediate states, and to
-// wait until a Fifo transaction is complete.
-class DelayedFakeBlockDevice : public block_client::FakeBlockDevice {
- public:
-  DelayedFakeBlockDevice(uint64_t block_count, uint32_t block_size)
-      : FakeBlockDevice(block_count, block_size) {}
-
-  // By default transactions are allowed which means FifoTransaction() will process requests. When
-  // set to false, requests will be held until this function is called to release.
-  //
-  // This should be called on the main thread.
-  void SetAllowTransactions(bool allow) {
-    std::unique_lock<std::mutex> lock(mutex_);
-
-    allow_fifo_ = allow;
-    cond_var_.notify_one();
-  }
-
-  // BlockDevice override.
-  zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) override {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_var_.wait(lock, [this] { return allow_fifo_; });
-
-    return FakeBlockDevice::FifoTransaction(requests, count);
-  }
-
- private:
-  std::mutex mutex_;
-  std::condition_variable cond_var_;
-
-  // Whether FifoTransaction should run. Protected by the mutex_.
-  bool allow_fifo_ = true;
-};
-
 class BlobTest : public zxtest::Test {
  public:
   void SetUp() override {
-    auto device = std::make_unique<DelayedFakeBlockDevice>(kNumBlocks, kBlockSize);
+    auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
     device_ = device.get();
     ASSERT_OK(FormatFilesystem(device.get()));
 
@@ -83,7 +49,7 @@ class BlobTest : public zxtest::Test {
  protected:
   async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
 
-  DelayedFakeBlockDevice* device_;
+  block_client::FakeBlockDevice* device_;
   std::unique_ptr<Blobfs> fs_;
 };
 
@@ -121,7 +87,7 @@ TEST_F(BlobTest, SyncBehavior) {
   loop_.Run();
 
   // PHASE 2: Complete data, not yet synced.
-  device_->SetAllowTransactions(false);  // Don't let it sync yet.
+  device_->Pause();  // Don't let it sync yet.
   EXPECT_OK(file->Write(info->data.get(), info->size_data, 0, &out_actual));
   EXPECT_EQ(info->size_data, out_actual);
 
@@ -134,7 +100,7 @@ TEST_F(BlobTest, SyncBehavior) {
   // Allow the Sync to continue and wait for the reply. The system may issue this callback
   // asynchronously. RunUntilIdle can't be used because the backend posts work to another thread and
   // then back here.
-  device_->SetAllowTransactions(true);
+  device_->Resume();
   loop_.Run();
 
   // PHASE 3: Data previously synced.

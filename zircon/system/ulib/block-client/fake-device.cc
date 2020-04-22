@@ -18,6 +18,17 @@ FakeBlockDevice::FakeBlockDevice(uint64_t block_count, uint32_t block_size)
   ASSERT_OK(zx::vmo::create(block_count * block_size, ZX_VMO_RESIZABLE, &block_device_));
 }
 
+void FakeBlockDevice::Pause() {
+  fbl::AutoLock lock(&lock_);
+  paused_ = true;
+}
+
+void FakeBlockDevice::Resume() {
+  fbl::AutoLock lock(&lock_);
+  paused_ = false;
+  pause_condition_.Broadcast();
+}
+
 void FakeBlockDevice::SetWriteBlockLimit(uint64_t limit) {
   fbl::AutoLock lock(&lock_);
   write_block_limit_ = limit;
@@ -91,6 +102,11 @@ void FakeBlockDevice::UpdateStats(bool success, zx::ticks start_tick,
   stats_.UpdateStats(success, start_tick, op.opcode, block_size_ * op.length);
 }
 
+void FakeBlockDevice::WaitOnPaused() const __TA_REQUIRES(lock_) {
+  while (paused_)
+    pause_condition_.Wait(&lock_);
+}
+
 zx_status_t FakeBlockDevice::ReadBlock(uint64_t block_num, uint64_t fs_block_size,
                                        void* block) const {
   zx::ticks start_tick = zx::ticks::now();
@@ -103,6 +119,11 @@ zx_status_t FakeBlockDevice::ReadBlock(uint64_t block_num, uint64_t fs_block_siz
 zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, size_t count) {
   fbl::AutoLock lock(&lock_);
   for (size_t i = 0; i < count; i++) {
+    // Allow pauses to take effect between each issued operation. This will potentially allow other
+    // threads to issue transactions since it releases the lock, just as the actual implementation
+    // does.
+    WaitOnPaused();
+
     zx::ticks start_tick = zx::ticks::now();
     switch (requests[i].opcode & BLOCKIO_OP_MASK) {
       case BLOCKIO_READ: {
@@ -165,8 +186,7 @@ zx_status_t FakeBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_
   return ZX_OK;
 }
 
-zx_status_t FakeBlockDevice::BlockAttachVmo(const zx::vmo& vmo,
-                                            storage::Vmoid* out_vmoid) {
+zx_status_t FakeBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) {
   zx::vmo xfer_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
   if (status != ZX_OK) {
@@ -191,7 +211,10 @@ FakeFVMBlockDevice::FakeFVMBlockDevice(uint64_t block_count, uint32_t block_size
 }
 
 zx_status_t FakeFVMBlockDevice::FifoTransaction(block_fifo_request_t* requests, size_t count) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock lock(&fvm_lock_);
+  // Don't need WaitOnPaused() here because this code just validates the input. The actual
+  // requests will be excuted by the FakeBlockDevice::FifoTransaction() call at the bottom which
+  // handles the pause requests.
 
   fuchsia_hardware_block_BlockInfo info = {};
   EXPECT_OK(BlockGetInfo(&info));
@@ -234,9 +257,9 @@ zx_status_t FakeFVMBlockDevice::FifoTransaction(block_fifo_request_t* requests, 
 
 zx_status_t FakeFVMBlockDevice::VolumeQuery(
     fuchsia_hardware_block_volume_VolumeInfo* out_info) const {
+  fbl::AutoLock lock(&fvm_lock_);
   out_info->slice_size = slice_size_;
   out_info->vslice_count = vslice_count_;
-  fbl::AutoLock lock(&lock_);
   out_info->pslice_total_count = pslice_total_count_;
   out_info->pslice_allocated_count = pslice_allocated_count_;
   return ZX_OK;
@@ -246,7 +269,7 @@ zx_status_t FakeFVMBlockDevice::VolumeQuerySlices(
     const uint64_t* slices, size_t slices_count,
     fuchsia_hardware_block_volume_VsliceRange* out_ranges, size_t* out_ranges_count) const {
   *out_ranges_count = 0;
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock lock(&fvm_lock_);
   for (size_t i = 0; i < slices_count; i++) {
     uint64_t slice_start = slices[i];
     if (slice_start >= vslice_count_) {
@@ -280,7 +303,7 @@ zx_status_t FakeFVMBlockDevice::VolumeQuerySlices(
 }
 
 zx_status_t FakeFVMBlockDevice::VolumeExtend(uint64_t offset, uint64_t length) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock lock(&fvm_lock_);
   if (offset + length > vslice_count_) {
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -322,7 +345,7 @@ zx_status_t FakeFVMBlockDevice::VolumeExtend(uint64_t offset, uint64_t length) {
 }
 
 zx_status_t FakeFVMBlockDevice::VolumeShrink(uint64_t offset, uint64_t length) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock lock(&fvm_lock_);
   if (offset + length > vslice_count_) {
     return ZX_ERR_OUT_OF_RANGE;
   }

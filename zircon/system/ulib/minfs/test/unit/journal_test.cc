@@ -156,46 +156,14 @@ TEST_F(JournalGrowFvmTest, GrowingWithNoReplaySucceeds) {
   EXPECT_EQ(1, fs->Info().dat_slices);  // We expect the old, smaller size.
 }
 
-// Like FakeBlockDevice but can simulate slow writes.
-class PausableFakeDevice : public block_client::FakeBlockDevice {
- public:
-  using FakeBlockDevice::FakeBlockDevice;
-
-  zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) override {
-    {
-      std::unique_lock lock(mutex_);
-      while (paused_ && count > 0 && (requests[0].opcode & BLOCKIO_OP_MASK) == BLOCKIO_WRITE) {
-        condition_.wait(lock);
-      }
-    }
-    return FakeBlockDevice::FifoTransaction(requests, count);
-  }
-
-  void Pause() {
-    std::scoped_lock lock(mutex_);
-    paused_ = true;
-  }
-
-  void Resume() {
-    std::scoped_lock lock(mutex_);
-    paused_ = false;
-    condition_.notify_all();
-  }
-
- private:
-  std::mutex mutex_;
-  std::condition_variable condition_;
-  bool paused_ = false;
-};
-
 // It is not safe for data writes to go to freed blocks until the metadata that frees them has been
 // committed because data writes do not wait. This test verifies this by pausing writes and then
 // freeing blocks and making sure that block doesn't get reused. This test currently relies on the
 // allocator behaving a certain way, i.e. it allocates the first free block that it can find.
 TEST(JournalAllocationTest, BlocksAreReservedUntilMetadataIsCommitted) {
   static constexpr int kBlockCount = 1 << 15;
-  auto device = std::make_unique<PausableFakeDevice>(kBlockCount, 512);
-  PausableFakeDevice* device_ptr = device.get();
+  auto device = std::make_unique<block_client::FakeBlockDevice>(kBlockCount, 512);
+  block_client::FakeBlockDevice* device_ptr = device.get();
   std::unique_ptr<Bcache> bcache;
   ASSERT_OK(Bcache::Create(std::move(device), kBlockCount, &bcache));
   ASSERT_OK(Mkfs(bcache.get()));

@@ -12,16 +12,19 @@
 #include <optional>
 
 #include <block-client/cpp/block-device.h>
+#include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <range/range.h>
 #include <storage-metrics/block-metrics.h>
 
 namespace block_client {
 
-// A fake device implementing (most of) the BlockDevice interface on top of an
-// in-memory VMO representing the device. This allows clients of the BlockDevice
-// interface to test against this fake in-process, instead of relying on a real
-// block device.
+// A fake device implementing (most of) the BlockDevice interface on top of an in-memory VMO
+// representing the device. This allows clients of the BlockDevice interface to test against this
+// fake in-process instead of relying on a real block device.
+//
+// This device also supports pausing processing FIFO transactions to allow tests to emulate slow
+// devices or validate behavior in intermediate states.
 //
 // This class is thread-safe.
 // This class is not movable or copyable.
@@ -34,6 +37,11 @@ class FakeBlockDevice : public BlockDevice {
   FakeBlockDevice& operator=(FakeBlockDevice&& other) = delete;
 
   virtual ~FakeBlockDevice() = default;
+
+  // When paused, this device will make FIFO operations block until Resume() is called. The device
+  // is in the Resume() state by default.
+  void Pause();
+  void Resume();
 
   // Sets the number of blocks which may be written to the block device. Once |limit| is reached,
   // all following operations will return ZX_ERR_IO.
@@ -90,7 +98,16 @@ class FakeBlockDevice : public BlockDevice {
   void UpdateStats(bool success, zx::ticks start_tick, const block_fifo_request_t& op)
       __TA_REQUIRES(lock_);
 
+  // Waits, blocking the current thread, until execution is not paused.
+  void WaitOnPaused() const __TA_REQUIRES(lock_);
+
   mutable fbl::Mutex lock_ = {};
+
+  // For handling paused_ waiters. Use BlockOnPaused() to wait on this.
+  mutable fbl::ConditionVariable pause_condition_;
+
+  bool paused_ __TA_GUARDED(lock_) = false;
+
   // The number of transactions which may occur before I/O errors are returned
   // to callers. If "nullopt", no limit is set.
   std::optional<uint64_t> write_block_limit_ __TA_GUARDED(lock_) = std::nullopt;
@@ -123,14 +140,15 @@ class FakeFVMBlockDevice final : public FakeBlockDevice {
   zx_status_t VolumeShrink(uint64_t offset, uint64_t length) final;
 
  private:
-  mutable fbl::Mutex lock_ = {};
+  mutable fbl::Mutex fvm_lock_ = {};
+
   const uint64_t slice_size_;
   const uint64_t vslice_count_;
-  uint64_t pslice_total_count_ __TA_GUARDED(lock_) = 0;
-  uint64_t pslice_allocated_count_ __TA_GUARDED(lock_) = 0;
+  uint64_t pslice_total_count_ __TA_GUARDED(fvm_lock_) = 0;
+  uint64_t pslice_allocated_count_ __TA_GUARDED(fvm_lock_) = 0;
 
   // Start Slice -> Range.
-  std::map<uint64_t, range::Range<uint64_t>> extents_ __TA_GUARDED(lock_);
+  std::map<uint64_t, range::Range<uint64_t>> extents_ __TA_GUARDED(fvm_lock_);
 };
 
 }  // namespace block_client
