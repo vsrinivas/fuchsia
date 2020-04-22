@@ -86,6 +86,5 @@ void DeviceImpl::Client::ConnectToStream(uint32_t index,
 }
 
 void DeviceImpl::Client::Rebind(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
-  request.Close(ZX_ERR_NOT_SUPPORTED);
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  device_.PostBind(std::move(request), false);
 }

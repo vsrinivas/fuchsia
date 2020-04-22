@@ -39,6 +39,15 @@ StreamImpl::~StreamImpl() {
   loop_.JoinThreads();
 }
 
+void StreamImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
+  zx_status_t status =
+      async::PostTask(loop_.dispatcher(), [this, request = std::move(request)]() mutable {
+        auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
+        clients_.emplace(client_id_next_++, std::move(client));
+      });
+  ZX_ASSERT(status == ZX_OK);
+}
+
 void StreamImpl::OnLegacyStreamDisconnected(zx_status_t status) {
   FX_PLOGS(ERROR, status) << "Legacy Stream disconnected unexpectedly.";
   clients_.clear();

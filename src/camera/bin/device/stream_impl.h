@@ -35,6 +35,9 @@ class StreamImpl {
   ~StreamImpl();
 
  private:
+  // Called when a client calls Rebind.
+  void OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
+
   // Called if the underlying legacy stream disconnects.
   void OnLegacyStreamDisconnected(zx_status_t status);
 

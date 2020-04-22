@@ -44,6 +44,10 @@ class DeviceImpl {
   // published service.
   void OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> request);
 
+  // Posts a task to bind a new client. Closes |request| with the ZX_ERR_ALREADY_BOUND epitaph if
+  // |exclusive| is set and clients already exist.
+  void PostBind(fidl::InterfaceRequest<fuchsia::camera3::Device> request, bool exclusive);
+
   // Called if the underlying controller disconnects.
   void OnControllerDisconnected(zx_status_t status);
 

@@ -123,8 +123,13 @@ zx::event DeviceImpl::GetBadStateEvent() {
 }
 
 void DeviceImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
-  auto task = [this, request = std::move(request)]() mutable {
-    if (!clients_.empty()) {
+  PostBind(std::move(request), true);
+}
+
+void DeviceImpl::PostBind(fidl::InterfaceRequest<fuchsia::camera3::Device> request,
+                          bool exclusive) {
+  auto task = [this, request = std::move(request), exclusive]() mutable {
+    if (exclusive && !clients_.empty()) {
       FX_PLOGS(INFO, ZX_ERR_ALREADY_BOUND) << Messages::kDeviceAlreadyBound;
       request.Close(ZX_ERR_ALREADY_BOUND);
       return;

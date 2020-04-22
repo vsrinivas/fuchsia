@@ -119,6 +119,5 @@ void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {
 }
 
 void StreamImpl::Client::Rebind(fidl::InterfaceRequest<Stream> request) {
-  request.Close(ZX_ERR_NOT_SUPPORTED);
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  stream_.OnNewRequest(std::move(request));
 }

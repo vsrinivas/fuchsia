@@ -76,6 +76,14 @@ class DeviceTest : public gtest::RealLoopFixture {
     RunLoopUntil([&]() { return HasFailure() || condition; });
   }
 
+  // Synchronizes messages to a device. This method returns when an error occurs or all messages
+  // sent to |device| have been received by the server.
+  void Sync(fuchsia::camera3::DevicePtr& device) {
+    bool identifier_returned = false;
+    device->GetIdentifier([&](fidl::StringPtr identifier) { identifier_returned = true; });
+    RunLoopUntilFailureOr(identifier_returned);
+  }
+
   // Synchronizes messages to a stream. This method returns when an error occurs or all messages
   // sent to |stream| have been received by the server.
   void Sync(fuchsia::camera3::StreamPtr& stream) {
@@ -454,6 +462,39 @@ TEST_F(DeviceTest, SetConfigurationDisconnectsStreams) {
   Sync(stream);
   device->SetCurrentConfiguration(0);
   RunLoopUntilFailureOr(error_received);
+}
+
+TEST_F(DeviceTest, Rebind) {
+  // First device connection.
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+
+  // First stream connection.
+  fuchsia::camera3::StreamPtr stream;
+  SetFailOnError(stream, "Stream");
+  device->ConnectToStream(0, stream.NewRequest());
+  Sync(stream);
+
+  // Rebind second device connection.
+  fuchsia::camera3::DevicePtr device2;
+  SetFailOnError(device2, "Device");
+  device->Rebind(device2.NewRequest());
+
+  // Attempt to bind second stream independently.
+  fuchsia::camera3::StreamPtr stream2;
+  bool error_received = false;
+  stream2.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
+    error_received = true;
+  });
+  device->ConnectToStream(0, stream2.NewRequest());
+  RunLoopUntilFailureOr(error_received);
+
+  // Attempt to bind second stream via rebind.
+  SetFailOnError(stream2, "Stream");
+  stream->Rebind(stream2.NewRequest());
+  Sync(stream2);
 }
 
 }  // namespace camera
