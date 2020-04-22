@@ -183,9 +183,12 @@ void PacketQueue::ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
   TRACE_INSTANT("audio", "PacketQueue::ReportUnderflow", TRACE_SCOPE_PROCESS);
   uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
 
+  if (underflow_reporter_) {
+    underflow_reporter_(underflow_duration);
+  }
+
   if constexpr (kLogUnderflow) {
     auto underflow_msec = static_cast<double>(underflow_duration.to_nsecs()) / ZX_MSEC(1);
-
     if ((kUnderflowErrorInterval > 0) && (underflow_count % kUnderflowErrorInterval == 0)) {
       FX_LOGS(ERROR) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
                      << kUnderflowErrorInterval << "): source-start 0x" << std::hex

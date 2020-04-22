@@ -77,9 +77,6 @@ class Stream {
   virtual TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const = 0;
 
   // Hooks to add logging or metrics for [Partial] Underflow events.
-  //
-  // TODO(42674): Remove these methods and update any streams that may underflow to detect this
-  // underflow in |LockBuffer| directly.
   virtual void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
                                FractionalFrames<int64_t> frac_source_mix_point,
                                zx::duration underflow_duration) {}

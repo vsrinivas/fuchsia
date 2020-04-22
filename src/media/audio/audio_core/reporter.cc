@@ -191,6 +191,18 @@ void Reporter::SendingRendererPacket(const fuchsia::media::AudioRenderer& render
   payload_buffer->second.packets_.Add(1);
 }
 
+void Reporter::RendererUnderflow(const fuchsia::media::AudioRenderer& renderer,
+                                 zx::duration underflow_length) {
+  Renderer* r = FindRenderer(renderer);
+  if (r == nullptr) {
+    FX_LOGS(ERROR) << kRendererNotFound;
+    return;
+  }
+
+  r->underflows_.Add(1);
+  r->underflow_duration_.Add(underflow_length.to_nsecs());
+}
+
 void Reporter::SettingRendererGain(const fuchsia::media::AudioRenderer& renderer, float gain_db) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {

@@ -72,6 +72,9 @@ fit::result<std::shared_ptr<Stream>, zx_status_t> BaseRenderer::InitializeDestLi
     const AudioObject& dest) {
   TRACE_DURATION("audio", "BaseRenderer::InitializeDestLink");
   auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_);
+  queue->SetUnderflowReporter([this](zx::duration underflow_duration) {
+    REPORT(RendererUnderflow(*this, underflow_duration));
+  });
   packet_queues_.insert({&dest, queue});
   return fit::ok(std::move(queue));
 }

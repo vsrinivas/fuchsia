@@ -373,7 +373,8 @@ TEST_F(ReporterTest, RendererMetrics) {
                       UintIs("sample format", 0), UintIs("channels", 0),
                       UintIs("frames per second", 0), DoubleIs("gain db", 0.0), UintIs("muted", 0),
                       UintIs("calls to SetGainWithRamp", 0), UintIs("min lead time (ns)", 0),
-                      DoubleIs("pts continuity threshold (s)", 0.0),
+                      DoubleIs("pts continuity threshold (s)", 0.0), UintIs("underflows", 0),
+                      UintIs("total underflow duration (ns)", 0),
                       DoubleIs("final stream gain (post-volume) dbfs", 0))))))))))));
 
   fuchsia::media::AudioStreamType stream_type{
@@ -418,7 +419,8 @@ TEST_F(ReporterTest, RendererMetrics) {
                       UintIs("frames per second", stream_type.frames_per_second),
                       DoubleIs("gain db", -1.0), UintIs("muted", 1),
                       UintIs("calls to SetGainWithRamp", 2), UintIs("min lead time (ns)", 1000000),
-                      DoubleIs("pts continuity threshold (s)", 5.0),
+                      DoubleIs("pts continuity threshold (s)", 5.0), UintIs("underflows", 0),
+                      UintIs("total underflow duration (ns)", 0),
                       DoubleIs("final stream gain (post-volume) dbfs", -6.0))))))))))));
 }
 

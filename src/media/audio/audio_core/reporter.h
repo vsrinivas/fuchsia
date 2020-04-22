@@ -96,6 +96,8 @@ class Reporter {
                                   zx::duration min_lead_time);
   void SettingRendererPtsContinuityThreshold(const fuchsia::media::AudioRenderer& renderer,
                                              float threshold_seconds);
+  void RendererUnderflow(const fuchsia::media::AudioRenderer& renderer,
+                         zx::duration underflow_length);
 
   // Capturers.
   void AddingCapturer(const fuchsia::media::AudioCapturer& capturer);
@@ -189,10 +191,14 @@ class Reporter {
       min_lead_time_ns_ = node_.CreateUint("min lead time (ns)", 0);
       pts_continuity_threshold_seconds_ = node_.CreateDouble("pts continuity threshold (s)", 0.0);
       final_stream_gain_ = node_.CreateDouble("final stream gain (post-volume) dbfs", 0.0);
+      underflows_ = node_.CreateUint("underflows", 0);
+      underflow_duration_ = node_.CreateUint("total underflow duration (ns)", 0);
     }
     inspect::UintProperty min_lead_time_ns_;
     inspect::DoubleProperty pts_continuity_threshold_seconds_;
     inspect::DoubleProperty final_stream_gain_;
+    inspect::UintProperty underflows_;
+    inspect::UintProperty underflow_duration_;
   };
 
   struct Capturer : ClientPort {

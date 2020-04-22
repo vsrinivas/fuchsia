@@ -35,6 +35,10 @@ class PacketQueue : public Stream {
 
   void PushPacket(const fbl::RefPtr<Packet>& packet);
   void Flush(const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
+  /// Report duration of underflow that occured
+  void SetUnderflowReporter(fit::function<void(zx::duration)> underflow_reporter) {
+    underflow_reporter_ = std::move(underflow_reporter);
+  }
 
   // |media::audio::Stream|
   std::optional<Stream::Buffer> LockBuffer(zx::time now, int64_t frame,
@@ -61,6 +65,7 @@ class PacketQueue : public Stream {
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_;
   std::atomic<uint16_t> underflow_count_ = {0};
   std::atomic<uint16_t> partial_underflow_count_ = {0};
+  fit::function<void(zx::duration)> underflow_reporter_;
 };
 
 }  // namespace media::audio
