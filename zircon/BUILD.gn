@@ -56,7 +56,6 @@ build_api_module("args") {
   contents = read_file("$root_build_dir/args.gn", "scope")
 }
 
-
 # This describes all the binaries linked by the build.
 #
 # This enumerates each linked binary (executable, shared library, or
@@ -124,7 +123,7 @@ build_api_module("args") {
 #     Type: path relative to $root_build_dir
 build_api_module("binaries") {
   testonly = true
-  deps = [ ":everything" ] + default_deps
+  deps = [ ":everything" ]
   data_keys = [ "binaries" ]
 }
 
@@ -383,7 +382,7 @@ group("tool_paths.metadata") {
 build_api_module("zbi_tests") {
   testonly = true
   data_keys = [ "zbi_tests" ]
-  deps = [ ":everything" ] + default_deps
+  deps = [ ":everything" ]
 }
 
 ###
@@ -408,7 +407,11 @@ _everything_deps += [ ":build-tests" ]
 # Note that "all" is a magical target name to Ninja, hence this name instead.
 group("everything") {
   testonly = true
-  deps = _everything_deps
+
+  # TODO(mcgrathr): Infra depends on not seeing too many things in the
+  # build API, so only include things used by the legacy build for now.
+  #deps = _everything_deps
+  deps = default_deps
 }
 
 # This is the default target that Ninja builds when given no target arguments.

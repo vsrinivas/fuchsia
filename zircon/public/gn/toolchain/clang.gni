@@ -167,7 +167,7 @@ template("toolchain_runtime_deps") {
         deps = []
         runtime = []
         foreach(lib, match.runtime) {
-          if (defined(lib.debug)) {
+          if (defined(lib.debug) && !defined(lib.breakpad)) {
             lib.breakpad =
                 rebase_path("$clang_runtime_breakpad_syms_dir/${lib.debug}",
                             _clang_lib_dir)
@@ -227,10 +227,9 @@ template("toolchain_runtime_deps") {
           # Make the manifest describing this library available to the build
           # API module for unification.
           # The manifest is not published for fuzzer variants.
-          if (defined(invoker.zx_publish) && invoker.zx_publish && string_replace(
-                                                                       toolchain_label,
-                                                                       "fuzzer",
-                                                                       "") == toolchain_label) {
+          if (defined(invoker.zx_publish) && invoker.zx_publish &&
+              string_replace(toolchain_label, "fuzzer", "") ==
+              toolchain_label) {
             write_file(
                 "$target_gen_dir/${lib.soname}.zx_manifest.txt",
                 [ "lib/${toolchain.libprefix}${lib.soname}=" +
