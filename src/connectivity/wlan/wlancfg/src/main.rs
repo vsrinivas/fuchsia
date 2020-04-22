@@ -14,7 +14,7 @@ use {
     crate::config_management::SavedNetworksManager,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
-    fuchsia_async as fasync,
+    fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{channel::mpsc, future::try_join, prelude::*, select},
     log::error,
@@ -59,7 +59,11 @@ async fn serve_fidl(
     let service_fut = fs.collect::<()>().fuse();
     pin_mut!(service_fut);
 
-    let serve_policy_listeners = client::listener::serve(listener_msgs).fuse();
+    let serve_policy_listeners = util::listener::serve::<
+        fidl_policy::ClientStateUpdatesProxy,
+        fidl_policy::ClientStateSummary,
+    >(listener_msgs)
+    .fuse();
     pin_mut!(serve_policy_listeners);
 
     loop {

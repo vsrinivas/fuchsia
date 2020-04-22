@@ -14,7 +14,7 @@ use {
         config_management::{
             Credential, NetworkConfigError, NetworkIdentifier, SaveError, SavedNetworksManager,
         },
-        util::fuse_pending::FusePending,
+        util::{fuse_pending::FusePending, listener},
     },
     anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
@@ -32,7 +32,6 @@ use {
     std::{convert::TryFrom, sync::Arc},
 };
 
-pub mod listener;
 mod scan;
 
 /// Max number of network configs that we will send at once through the network config iterator
@@ -115,7 +114,7 @@ pub type ClientPtr = Arc<Mutex<Client>>;
 
 pub fn spawn_provider_server(
     client: ClientPtr,
-    update_sender: listener::MessageSender,
+    update_sender: listener::ClientMessageSender,
     saved_networks: SavedNetworksPtr,
     requests: fidl_policy::ClientProviderRequestStream,
 ) {
@@ -123,7 +122,7 @@ pub fn spawn_provider_server(
 }
 
 pub fn spawn_listener_server(
-    update_sender: listener::MessageSender,
+    update_sender: listener::ClientMessageSender,
     requests: fidl_policy::ClientListenerRequestStream,
 ) {
     fasync::spawn(serve_listener_requests(update_sender, requests));
@@ -134,7 +133,7 @@ pub fn spawn_listener_server(
 /// will result in their channel being immediately closed.
 async fn serve_provider_requests(
     client: ClientPtr,
-    update_sender: listener::MessageSender,
+    update_sender: listener::ClientMessageSender,
     saved_networks: SavedNetworksPtr,
     mut requests: fidl_policy::ClientProviderRequestStream,
 ) {
@@ -192,7 +191,7 @@ async fn serve_provider_requests(
 
 /// Serves the ClientListener protocol.
 async fn serve_listener_requests(
-    update_sender: listener::MessageSender,
+    update_sender: listener::ClientMessageSender,
     requests: fidl_policy::ClientListenerRequestStream,
 ) {
     let serve_fut = requests
@@ -207,7 +206,7 @@ async fn serve_listener_requests(
 async fn handle_provider_request(
     client: ClientPtr,
     internal_msg_sink: InternalMsgSink,
-    update_sender: listener::MessageSender,
+    update_sender: listener::ClientMessageSender,
     saved_networks: SavedNetworksPtr,
     req: fidl_policy::ClientProviderRequest,
 ) -> Result<(), fidl::Error> {
@@ -309,7 +308,7 @@ async fn handle_client_requests(
 }
 
 async fn handle_sme_connect_response(
-    update_sender: listener::MessageSender,
+    update_sender: listener::ClientMessageSender,
     id: NetworkIdentifier,
     credential: Credential,
     txn_event: fidl_sme::ConnectTransactionEvent,
@@ -481,7 +480,7 @@ pub fn sme_credential_from_policy(cred: &Credential) -> fidl_sme::Credential {
 
 /// Handle inbound requests to register an additional ClientStateUpdates listener.
 async fn handle_listener_request(
-    update_sender: listener::MessageSender,
+    update_sender: listener::ClientMessageSender,
     req: fidl_policy::ClientListenerRequest,
 ) -> Result<(), fidl::Error> {
     match req {
@@ -495,7 +494,7 @@ async fn handle_listener_request(
 /// Registers a new update listener.
 /// The client's current state will be send to the newly added listener immediately.
 fn register_listener(
-    update_sender: listener::MessageSender,
+    update_sender: listener::ClientMessageSender,
     listener: fidl_policy::ClientStateUpdatesProxy,
 ) {
     let _ignored = update_sender.unbounded_send(listener::Message::NewListener(listener));
@@ -585,8 +584,8 @@ mod tests {
         requests: fidl_policy::ClientProviderRequestStream,
         client: ClientPtr,
         sme_stream: fidl_sme::ClientSmeRequestStream,
-        update_sender: mpsc::UnboundedSender<listener::Message>,
-        listener_updates: mpsc::UnboundedReceiver<listener::Message>,
+        update_sender: mpsc::UnboundedSender<listener::ClientMessage>,
+        listener_updates: mpsc::UnboundedReceiver<listener::ClientMessage>,
     }
 
     // setup channels and proxies needed for the tests to use use the Client Provider and

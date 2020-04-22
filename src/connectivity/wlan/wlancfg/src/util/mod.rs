@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod fuse_pending;
+pub mod listener;
 pub mod logger;
 pub mod sme_conversion;
 pub mod state_machine;

@@ -2,23 +2,82 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-///! Serves ClientStateUpdate listeners.
+///! Serves WLAN policy listener update APIs.
 ///!
 use {
     fidl_fuchsia_wlan_policy as fidl_policy,
-    futures::{channel::mpsc, prelude::*, select, stream::FuturesUnordered},
-    parking_lot::Mutex,
-    std::sync::Arc,
+    futures::{channel::mpsc, prelude::*, select, stream::FuturesUnordered, Future},
 };
 
-/// Convenience wrapper for cloning a `ClientStateSummary`.
-struct ClientStateSummaryCloner(fidl_policy::ClientStateSummary);
+pub trait Listener<U> {
+    /// Sends an update to the listener.  Returns itself boxed if the update was sent successfully.
+    fn notify_listener(self, update: U) -> Box<dyn Future<Output = Option<Box<Self>>> + Unpin>;
+}
 
-impl ClientStateSummaryCloner {
+pub trait UpdateCloner {
+    fn clone(&self) -> Self;
+    fn default() -> Self;
+}
+
+/// Messages sent to update the current state and notify listeners or add new listeners.
+#[derive(Debug)]
+pub enum Message<P, U> {
+    /// Sent if a new listener wants to register itself for future updates.
+    NewListener(P),
+    /// Sent if an entity wants to notify all listeners about a state change.
+    #[allow(unused)]
+    NotifyListeners(U),
+}
+
+/// Serves and manages a list of Listeners.
+/// Use `Message` to interact with registered listeners.
+pub async fn serve<P, U>(mut messages: mpsc::UnboundedReceiver<Message<P, U>>)
+where
+    P: Listener<U>,
+    U: UpdateCloner,
+{
+    // A list of listeners which are ready to receive updates.
+    let mut acked_listeners = Vec::new();
+    // A list of pending listeners which have not acknowledged their last update yet.
+    let mut unacked_listeners = FuturesUnordered::new();
+    // Last reported state update.
+    let mut current_state = U::default();
+
+    loop {
+        select! {
+            // Enqueue every listener back into the listener pool once they ack'ed the reception
+            // of a previously sent update.
+            // Listeners which already closed their channel will be dropped.
+            // TODO(38128): Clients must be sent the latest update if they weren't updated due to
+            // their inactivity.
+            listener = unacked_listeners.select_next_some() => if let Some(listener) = listener {
+                acked_listeners.push(listener);
+            },
+            // Message for listeners
+            msg = messages.select_next_some() => match msg {
+                // Register new listener
+                Message::NewListener(listener) => {
+                    unacked_listeners.push(listener.notify_listener(current_state.clone()));
+                },
+                // Notify all listeners
+                Message::NotifyListeners(update) => {
+                    current_state = update.clone();
+                    // Listeners are dequeued and their pending acknowledgement is enqueued.
+                    while !acked_listeners.is_empty() {
+                        let listener = acked_listeners.remove(0);
+                        unacked_listeners.push(listener.notify_listener(update.clone()));
+                    }
+                },
+            },
+        }
+    }
+}
+
+impl UpdateCloner for fidl_policy::ClientStateSummary {
     fn clone(&self) -> fidl_policy::ClientStateSummary {
         fidl_policy::ClientStateSummary {
-            state: self.0.state.clone(),
-            networks: self.0.networks.as_ref().map(|x| {
+            state: self.state.clone(),
+            networks: self.networks.as_ref().map(|x| {
                 x.iter()
                     .map(|x| fidl_policy::NetworkState {
                         id: x.id.clone(),
@@ -29,80 +88,27 @@ impl ClientStateSummaryCloner {
             }),
         }
     }
-}
 
-impl From<fidl_policy::ClientStateSummary> for ClientStateSummaryCloner {
-    fn from(summary: fidl_policy::ClientStateSummary) -> Self {
-        Self(summary)
+    fn default() -> fidl_policy::ClientStateSummary {
+        fidl_policy::ClientStateSummary { state: None, networks: None }
     }
 }
 
-/// Messages sent by either of the two served service to interact with a shared pool of listeners.
-#[derive(Debug)]
-pub enum Message {
-    /// Sent if a new listener wants to register itself for future updates.
-    NewListener(fidl_policy::ClientStateUpdatesProxy),
-    /// Sent if an entity wants to notify all listeners about a state change.
-    #[allow(unused)]
-    NotifyListeners(fidl_policy::ClientStateSummary),
-}
-pub type MessageSender = mpsc::UnboundedSender<Message>;
-pub type MessageStream = mpsc::UnboundedReceiver<Message>;
-
-/// Serves and manages a list of ClientListener.
-/// Use `Message` to interact with registered listeners.
-pub async fn serve(mut messages: MessageStream) {
-    // A list of listeners which are ready to receive updates.
-    let acked_listeners = Arc::new(Mutex::new(vec![]));
-    // A list of pending listeners which have not acknowledged their last update yet.
-    let mut unacked_listeners = FuturesUnordered::new();
-    loop {
-        select! {
-            // Enqueue every listener back into the listener pool once they ack'ed the reception
-            // of a previously sent update.
-            // Listeners which already closed their channel will be dropped.
-            // TODO(38128): Clients must be send the latest update if they weren't updated due to
-            // their inactivity.
-            listener = unacked_listeners.select_next_some() => if let Some(listener) = listener {
-                acked_listeners.lock().push(listener);
-            },
-            // Message for listeners
-            msg = messages.select_next_some() => match msg {
-                // Register new listener
-                Message::NewListener(listener) => {
-                    unacked_listeners.push(notify_listener(listener, current_state()));
-                },
-                // Notify all listeners
-                Message::NotifyListeners(update) => {
-                    let update = ClientStateSummaryCloner(update);
-                    let mut listeners = acked_listeners.lock();
-                    // Listeners are dequeued and their pending acknowledgement is enqueued.
-                    while !listeners.is_empty() {
-                        let listener = listeners.remove(0);
-                        unacked_listeners.push(notify_listener(listener, update.clone()));
-                    }
-                },
-            },
-        }
+impl Listener<fidl_policy::ClientStateSummary> for fidl_policy::ClientStateUpdatesProxy {
+    fn notify_listener(
+        self,
+        update: fidl_policy::ClientStateSummary,
+    ) -> Box<dyn Future<Output = Option<Box<Self>>> + Unpin> {
+        let fut =
+            async move { self.on_client_state_update(update).await.ok().map(|()| Box::new(self)) };
+        Box::new(Box::pin(fut))
     }
 }
 
-/// Notifies a listener about the given update.
-/// Returns Some(listener) if the update was successful, otherwise None.
-async fn notify_listener(
-    listener: fidl_policy::ClientStateUpdatesProxy,
-    update: fidl_policy::ClientStateSummary,
-) -> Option<fidl_policy::ClientStateUpdatesProxy> {
-    listener.on_client_state_update(update).await.ok().map(|()| listener)
-}
-
-/// Returns the current state of the active Client.
-/// Right now, only a dummy state update is returned.
-fn current_state() -> fidl_policy::ClientStateSummary {
-    // TODO(hahnr): Don't just send a dummy state update but the correct current state of the
-    // interface.
-    fidl_policy::ClientStateSummary { state: None, networks: None }
-}
+// Helpful aliases for servicing client updates
+pub type ClientMessage =
+    Message<fidl_policy::ClientStateUpdatesProxy, fidl_policy::ClientStateSummary>;
+pub type ClientMessageSender = mpsc::UnboundedSender<ClientMessage>;
 
 #[cfg(test)]
 mod tests {
@@ -114,8 +120,11 @@ mod tests {
     #[test]
     fn initial_update() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (mut update_sender, listener_updates) = mpsc::unbounded();
-        let serve_listeners = serve(listener_updates);
+        let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientMessage>();
+        let serve_listeners = serve::<
+            fidl_policy::ClientStateUpdatesProxy,
+            fidl_policy::ClientStateSummary,
+        >(listener_updates);
         pin_mut!(serve_listeners);
         assert_variant!(exec.run_until_stalled(&mut serve_listeners), Poll::Pending);
 
@@ -133,8 +142,11 @@ mod tests {
     #[test]
     fn multiple_listeners_broadcast() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (mut update_sender, listener_updates) = mpsc::unbounded();
-        let serve_listeners = serve(listener_updates);
+        let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientMessage>();
+        let serve_listeners = serve::<
+            fidl_policy::ClientStateUpdatesProxy,
+            fidl_policy::ClientStateSummary,
+        >(listener_updates);
         pin_mut!(serve_listeners);
         assert_variant!(exec.run_until_stalled(&mut serve_listeners), Poll::Pending);
 
@@ -147,28 +159,28 @@ mod tests {
         ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
 
         // Send an update to both listeners.
-        let update = ClientStateSummaryCloner(fidl_policy::ClientStateSummary {
-            state: None,
-            networks: Some(vec![]),
-        });
+        let update = fidl_policy::ClientStateSummary { state: None, networks: Some(vec![]) };
         broadcast_update(&mut exec, &mut update_sender, update.clone(), &mut serve_listeners);
 
         // Verify #1 listener received the update.
         let summary = ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);
-        assert_eq!(summary, update.clone());
+        assert_eq!(summary, fidl_policy::ClientStateSummary::from(update.clone()));
         assert_variant!(exec.run_until_stalled(&mut l1_stream.next()), Poll::Pending);
 
         // Verify #2 listeners received the update.
         let summary = ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
-        assert_eq!(summary, update.clone());
+        assert_eq!(summary, fidl_policy::ClientStateSummary::from(update.clone()));
         assert_variant!(exec.run_until_stalled(&mut l2_stream.next()), Poll::Pending);
     }
 
     #[test]
     fn multiple_listeners_unacked() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (mut update_sender, listener_updates) = mpsc::unbounded();
-        let serve_listeners = serve(listener_updates);
+        let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientMessage>();
+        let serve_listeners = serve::<
+            fidl_policy::ClientStateUpdatesProxy,
+            fidl_policy::ClientStateSummary,
+        >(listener_updates);
         pin_mut!(serve_listeners);
         assert_variant!(exec.run_until_stalled(&mut serve_listeners), Poll::Pending);
 
@@ -181,10 +193,7 @@ mod tests {
         ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
 
         // Send an update to both listeners.
-        let update = ClientStateSummaryCloner(fidl_policy::ClientStateSummary {
-            state: None,
-            networks: Some(vec![]),
-        });
+        let update = fidl_policy::ClientStateSummary { state: None, networks: Some(vec![]) };
         broadcast_update(&mut exec, &mut update_sender, update.clone(), &mut serve_listeners);
 
         // #1 listener acknowledges update.
@@ -195,10 +204,7 @@ mod tests {
             try_next_status_update(&mut exec, &mut l2_stream).expect("expected status update");
 
         // Send another update.
-        let update = ClientStateSummaryCloner(fidl_policy::ClientStateSummary {
-            state: None,
-            networks: None,
-        });
+        let update = fidl_policy::ClientStateSummary { state: None, networks: None };
         broadcast_update(&mut exec, &mut update_sender, update.clone(), &mut serve_listeners);
 
         // #1 listener verifies and acknowledges update.
@@ -212,10 +218,7 @@ mod tests {
         ack_update(&mut exec, l2_responder, &mut serve_listeners);
 
         // Send another update.
-        let update = ClientStateSummaryCloner(fidl_policy::ClientStateSummary {
-            state: None,
-            networks: None,
-        });
+        let update = fidl_policy::ClientStateSummary { state: None, networks: None };
         broadcast_update(&mut exec, &mut update_sender, update.clone(), &mut serve_listeners);
 
         // Verify #1 & #2 listeners received the update.
@@ -238,13 +241,13 @@ mod tests {
     /// Broadcasts an update to all registered listeners.
     fn broadcast_update<F>(
         exec: &mut fasync::Executor,
-        sender: &mut MessageSender,
+        sender: &mut ClientMessageSender,
         update: fidl_policy::ClientStateSummary,
         serve_listeners: &mut F,
     ) where
         F: Future<Output = ()> + Unpin,
     {
-        let clone = ClientStateSummaryCloner(update).clone();
+        let clone = update.clone();
         sender.unbounded_send(Message::NotifyListeners(clone)).expect("error sending update");
         assert_variant!(exec.run_until_stalled(serve_listeners), Poll::Pending);
     }
@@ -268,7 +271,7 @@ mod tests {
     /// Registers a new listener.
     fn register_listener<F>(
         exec: &mut fasync::Executor,
-        sender: &mut MessageSender,
+        sender: &mut ClientMessageSender,
         serve_listeners: &mut F,
     ) -> fidl_policy::ClientStateUpdatesRequestStream
     where
