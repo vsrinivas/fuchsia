@@ -113,6 +113,16 @@ int main(int argc, char** argv) {
 }
 ```
 
+### GTest main with syslog initialized from command line
+
+No initialization is required for using the default configuration of
+syslog. If you would like your test suite to change the configuration
+based on command line arguments (e.g. --verbose), use:
+
+```gn
+//src/lib/fxl/test:gtest_main
+```
+
 ### Reference
 
 [C++ APIs](/src/lib/syslog/cpp/logger.h)
