@@ -91,6 +91,12 @@ const (
 	//
 	// As per RFC 4861 section 10, 1s is the default maximum time to wait.
 	maxRtrSolicitationDelay = time.Second
+
+	// autoGenAddressConflictRetries is the maximum number of times to attempt
+	// SLAAC address regeneration in response to DAD conflicts.
+	//
+	// As per RFC 7217 section, 3 is the default maximum number of retries.
+	autoGenAddressConflictRetries = 3
 )
 
 type bindingSetCounterStat struct {
@@ -187,15 +193,16 @@ func Main() {
 		HandleLocal: true,
 
 		NDPConfigs: tcpipstack.NDPConfigurations{
-			DupAddrDetectTransmits:  dadTransmits,
-			RetransmitTimer:         dadRetransmitTimer,
-			MaxRtrSolicitations:     maxRtrSolicitations,
-			RtrSolicitationInterval: rtrSolicitationInterval,
-			MaxRtrSolicitationDelay: maxRtrSolicitationDelay,
-			HandleRAs:               true,
-			DiscoverDefaultRouters:  true,
-			DiscoverOnLinkPrefixes:  true,
-			AutoGenGlobalAddresses:  true,
+			DupAddrDetectTransmits:        dadTransmits,
+			RetransmitTimer:               dadRetransmitTimer,
+			MaxRtrSolicitations:           maxRtrSolicitations,
+			RtrSolicitationInterval:       rtrSolicitationInterval,
+			MaxRtrSolicitationDelay:       maxRtrSolicitationDelay,
+			HandleRAs:                     true,
+			DiscoverDefaultRouters:        true,
+			DiscoverOnLinkPrefixes:        true,
+			AutoGenGlobalAddresses:        true,
+			AutoGenAddressConflictRetries: autoGenAddressConflictRetries,
 		},
 		NDPDisp: ndpDisp,
 
