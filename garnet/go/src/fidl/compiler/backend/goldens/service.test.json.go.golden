@@ -3,7 +3,6 @@
 package name
 
 import (
-	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -50,10 +49,6 @@ func (s_ *FirstProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 
 type FirstProtocolService struct {
 	_bindings.BindingSet
-}
-
-func (s *FirstProtocolService) AddWithCtx(impl FirstProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&FirstProtocolWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *FirstProtocolService) EventProxyFor(key _bindings.BindingKey) (*FirstProtocolEventProxy, bool) {
@@ -106,10 +101,6 @@ func (s_ *SecondProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bi
 
 type SecondProtocolService struct {
 	_bindings.BindingSet
-}
-
-func (s *SecondProtocolService) AddWithCtx(impl SecondProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&SecondProtocolWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *SecondProtocolService) EventProxyFor(key _bindings.BindingKey) (*SecondProtocolEventProxy, bool) {

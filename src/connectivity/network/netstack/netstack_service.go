@@ -9,6 +9,7 @@ import (
 	"net"
 	"sort"
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 
@@ -370,15 +371,19 @@ func (ni *netstackImpl) SetInterfaceStatus(_ fidl.Context, nicid uint32, enabled
 	return nil
 }
 
-func (ni *netstackImpl) GetDhcpClient(_ fidl.Context, id uint32, request dhcp.ClientWithCtxInterfaceRequest) (netstack.NetstackGetDhcpClientResult, error) {
+func (ni *netstackImpl) GetDhcpClient(ctx fidl.Context, id uint32, request dhcp.ClientWithCtxInterfaceRequest) (netstack.NetstackGetDhcpClientResult, error) {
 	var result netstack.NetstackGetDhcpClientResult
 	nicid := tcpip.NICID(id)
 	if _, ok := ni.ns.stack.NICInfo()[nicid]; !ok {
 		result.SetErr(int32(zx.ErrNotFound))
 		return result, nil
 	}
+	d, ok := dispatch.GetDispatcher(ctx)
+	if !ok {
+		panic("no dispatcher on FIDL context")
+	}
 	s := &dhcp.ClientWithCtxStub{Impl: &clientImpl{ns: ni.ns, nicid: nicid}}
-	if _, err := ni.dhcpClientService.BindingSet.Add(s, request.Channel, nil); err != nil {
+	if _, err := ni.dhcpClientService.BindingSet.AddToDispatcher(s, request.Channel, d, nil); err != nil {
 		result.SetErr(int32(zx.ErrInternal))
 		return result, nil
 	}

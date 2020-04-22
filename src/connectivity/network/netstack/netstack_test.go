@@ -9,6 +9,7 @@ import (
 	"net"
 	"sort"
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 	"testing"
 	"time"
@@ -165,6 +166,11 @@ func TestStackNICRemove(t *testing.T) {
 }
 
 func TestBindingSetCounterStat_Value(t *testing.T) {
+	d, err := dispatch.NewDispatcher()
+	if err != nil {
+		t.Fatalf("couldn't initialize dispatcher: %s", err)
+	}
+	defer d.Close()
 	s := bindingSetCounterStat{bindingSets: []*fidl.BindingSet{
 		new(fidl.BindingSet),
 		new(fidl.BindingSet),
@@ -209,7 +215,7 @@ func TestBindingSetCounterStat_Value(t *testing.T) {
 			}
 			pairs = append(pairs, Pair{ch: ch, peer: peer})
 
-			if _, err := b.Add(nil, ch, nil); err != nil {
+			if _, err := b.AddToDispatcher(nil, ch, d, nil); err != nil {
 				t.Fatalf("%T.Add(...) failed: %s", b, err)
 			}
 			want++

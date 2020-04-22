@@ -4,7 +4,6 @@ package top
 
 import (
 	bottom "fidl/bottom"
-	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -65,10 +64,6 @@ func (s_ *TopWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mess
 
 type TopService struct {
 	_bindings.BindingSet
-}
-
-func (s *TopService) AddWithCtx(impl TopWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&TopWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *TopService) EventProxyFor(key _bindings.BindingKey) (*TopEventProxy, bool) {

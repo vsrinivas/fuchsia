@@ -6,11 +6,13 @@ package main
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	appcontext "app/context"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"fidl/fuchsia/power"
@@ -47,6 +49,20 @@ func TestPowerManager(t *testing.T) {
 
 func TestBatteryInfoWatcher(t *testing.T) {
 	ctx := appcontext.CreateFromStartupInfo()
+	dispatcher, err := dispatch.NewDispatcher()
+	if err != nil {
+		t.Fatalf("couldn't initialize FIDL dispatcher: %s", err)
+	}
+	var wg sync.WaitGroup
+	defer func() {
+		dispatcher.Close()
+		wg.Wait()
+	}()
+	wg.Add(1)
+	go func() {
+		dispatcher.Serve()
+		wg.Done()
+	}()
 	r, p, err := power.NewBatteryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
@@ -63,8 +79,7 @@ func TestBatteryInfoWatcher(t *testing.T) {
 	pmWatcher := &WatcherMock{called: 0}
 	s := power.BatteryInfoWatcherWithCtxStub{Impl: pmWatcher}
 	bi := fidl.BindingSet{}
-	bi.Add(&s, rw.Channel, nil)
-	go fidl.Serve()
+	bi.AddToDispatcher(&s, rw.Channel, dispatcher, nil)
 
 	err = pmClient.pm.Watch(context.Background(), *pw)
 	if err != nil {

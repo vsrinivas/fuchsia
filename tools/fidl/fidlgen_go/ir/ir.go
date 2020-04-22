@@ -1061,12 +1061,12 @@ func Compile(fidlData types.Root) Root {
 	if len(fidlData.Structs) != 0 || len(fidlData.Interfaces) != 0 {
 		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 	}
-	if len(fidlData.Interfaces) != 0 {
-		c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
-	}
 	for _, v := range fidlData.Interfaces {
 		iface := c.compileInterface(v)
 		r.Interfaces = append(r.Interfaces, iface)
+		if iface.ProxyType == "ChannelProxy" && len(iface.ServiceNameString) != 0 {
+			c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
+		}
 		for _, method := range iface.Methods {
 			if method.Request != nil {
 				r.Structs = append(r.Structs, *method.Request)

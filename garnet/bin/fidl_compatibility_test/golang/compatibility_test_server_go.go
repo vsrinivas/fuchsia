@@ -8,6 +8,7 @@ import (
 	"context"
 	"log"
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
 	"syscall/zx/io"
@@ -294,10 +295,19 @@ func main() {
 	ctx.OutgoingService.AddService(
 		compatibility.EchoName,
 		&compatibility.EchoWithCtxStub{Impl: &echoImpl{ctx: ctx}},
-		func(s fidl.Stub, c zx.Channel) error {
-			_, err := echoService.BindingSet.Add(s, c, nil)
+		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
+			d, ok := dispatch.GetDispatcher(ctx)
+			if !ok {
+				panic("no dispatcher on FIDL context")
+			}
+			_, err := echoService.BindingSet.AddToDispatcher(s, c, d, nil)
 			return err
 		},
 	)
-	fidl.Serve()
+	d, err := dispatch.NewDispatcher()
+	if err != nil {
+		log.Fatalf("couldn't initialize FIDL dispatcher: %s", err)
+	}
+	ctx.BindStartupHandle(d)
+	d.Serve()
 }

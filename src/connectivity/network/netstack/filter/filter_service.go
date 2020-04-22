@@ -6,6 +6,7 @@ package filter
 
 import (
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"app/context"
@@ -24,8 +25,12 @@ func AddOutgoingService(ctx *context.Context, f *Filter) error {
 	ctx.OutgoingService.AddService(
 		filter.FilterName,
 		&filter.FilterWithCtxStub{Impl: &filterImpl{filter: f}},
-		func(s fidl.Stub, c zx.Channel) error {
-			_, err := filterService.BindingSet.Add(s, c, nil)
+		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
+			d, ok := dispatch.GetDispatcher(ctx)
+			if !ok {
+				panic("no dispatcher on FIDL context")
+			}
+			_, err := filterService.BindingSet.AddToDispatcher(s, c, d, nil)
 			return err
 		},
 	)

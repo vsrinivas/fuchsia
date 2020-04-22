@@ -3,7 +3,6 @@
 package json
 
 import (
-	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -95,10 +94,6 @@ type ParentService struct {
 	_bindings.BindingSet
 }
 
-func (s *ParentService) AddWithCtx(impl ParentWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&ParentWithCtxStub{Impl: impl}, c, onError)
-}
-
 func (s *ParentService) EventProxyFor(key _bindings.BindingKey) (*ParentEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*ParentEventProxy)(pxy), err
@@ -183,10 +178,6 @@ func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 
 type ChildService struct {
 	_bindings.BindingSet
-}
-
-func (s *ChildService) AddWithCtx(impl ChildWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&ChildWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *ChildService) EventProxyFor(key _bindings.BindingKey) (*ChildEventProxy, bool) {

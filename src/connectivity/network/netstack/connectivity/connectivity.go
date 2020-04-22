@@ -7,6 +7,7 @@ package connectivity
 import (
 	"sync"
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"app/context"
@@ -27,8 +28,12 @@ func AddOutgoingService(ctx *context.Context) error {
 	ctx.OutgoingService.AddService(
 		net.ConnectivityName,
 		&net.ConnectivityWithCtxStub{Impl: struct{}{}},
-		func(s fidl.Stub, c zx.Channel) error {
-			k, err := service.BindingSet.Add(s, c, nil)
+		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
+			d, ok := dispatch.GetDispatcher(ctx)
+			if !ok {
+				panic("no dispatcher on FIDL context")
+			}
+			k, err := service.BindingSet.AddToDispatcher(s, c, d, nil)
 			// Let clients know the status of the network when they get added.
 			if p, ok := service.EventProxyFor(k); ok {
 				p.OnNetworkReachable(reachable)

@@ -3,7 +3,6 @@
 package json
 
 import (
-	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -109,10 +108,6 @@ type SuperService struct {
 	_bindings.BindingSet
 }
 
-func (s *SuperService) AddWithCtx(impl SuperWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&SuperWithCtxStub{Impl: impl}, c, onError)
-}
-
 func (s *SuperService) EventProxyFor(key _bindings.BindingKey) (*SuperEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*SuperEventProxy)(pxy), err
@@ -176,10 +171,6 @@ func (s_ *SubWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mess
 
 type SubService struct {
 	_bindings.BindingSet
-}
-
-func (s *SubService) AddWithCtx(impl SubWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&SubWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *SubService) EventProxyFor(key _bindings.BindingKey) (*SubEventProxy, bool) {

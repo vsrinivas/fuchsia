@@ -220,10 +220,6 @@ type SimpleProtocolService struct {
 	_bindings.BindingSet
 }
 
-func (s *SimpleProtocolService) AddWithCtx(impl SimpleProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&SimpleProtocolWithCtxStub{Impl: impl}, c, onError)
-}
-
 func (s *SimpleProtocolService) EventProxyFor(key _bindings.BindingKey) (*SimpleProtocolEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*SimpleProtocolEventProxy)(pxy), err

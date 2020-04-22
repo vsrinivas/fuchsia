@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"app/context"
@@ -64,13 +65,13 @@ func (impl *inspectImpl) ListChildren(fidl.Context) ([]string, error) {
 	return impl.inner.ListChildren(), nil
 }
 
-func (impl *inspectImpl) OpenChild(_ fidl.Context, childName string, childChannel inspect.InspectWithCtxInterfaceRequest) (bool, error) {
+func (impl *inspectImpl) OpenChild(ctx fidl.Context, childName string, childChannel inspect.InspectWithCtxInterfaceRequest) (bool, error) {
 	if child := impl.inner.GetChild(childName); child != nil {
 		svc := (&inspectImpl{
 			inner:   child,
 			service: impl.service,
 		}).asService()
-		return true, svc.AddFn(svc.Stub, childChannel.Channel)
+		return true, svc.AddFn(svc.Stub, childChannel.Channel, ctx)
 	}
 	return false, nil
 }
@@ -78,8 +79,12 @@ func (impl *inspectImpl) OpenChild(_ fidl.Context, childName string, childChanne
 func (impl *inspectImpl) asService() *context.Service {
 	return &context.Service{
 		Stub: &inspect.InspectWithCtxStub{Impl: impl},
-		AddFn: func(s fidl.Stub, c zx.Channel) error {
-			_, err := impl.service.BindingSet.Add(s, c, nil)
+		AddFn: func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
+			d, ok := dispatch.GetDispatcher(ctx)
+			if !ok {
+				panic("no dispatcher provided for FIDL context")
+			}
+			_, err := impl.service.BindingSet.AddToDispatcher(s, c, d, nil)
 			return err
 		},
 	}

@@ -6,6 +6,7 @@ package main
 
 import (
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"app/context"
@@ -38,13 +39,18 @@ var benchmarkService benchmarks.BindingsUnderTestService
 func main() {
 	ctx := context.CreateFromStartupInfo()
 
+	dispatcher, err := dispatch.NewDispatcher()
+	if err != nil {
+		panic("could not initialize FIDL dispatcher: " + err.Error())
+	}
 	ctx.OutgoingService.AddService(
 		benchmarks.BindingsUnderTestName,
 		&benchmarks.BindingsUnderTestWithCtxStub{Impl: &impl{}},
-		func(s fidl.Stub, c zx.Channel) error {
-			_, err := benchmarkService.BindingSet.Add(s, c, nil)
+		func(s fidl.Stub, c zx.Channel, _ fidl.Context) error {
+			_, err := benchmarkService.BindingSet.AddToDispatcher(s, c, dispatcher, nil)
 			return err
 		},
 	)
-	fidl.Serve()
+	ctx.BindStartupHandle(dispatcher)
+	dispatcher.Serve()
 }

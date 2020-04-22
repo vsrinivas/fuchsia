@@ -8,9 +8,10 @@ import (
 	"log"
 	"os"
 
-	"app/context"
+	appcontext "app/context"
 
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	echo "fidl/fidl/examples/echo"
@@ -30,14 +31,23 @@ func (echo *echoImpl) EchoString(_ fidl.Context, inValue *string) (outValue *str
 func main() {
 	quiet := (len(os.Args) > 1) && os.Args[1] == "-q"
 	var echoService echo.EchoService
-	c := context.CreateFromStartupInfo()
+	c := appcontext.CreateFromStartupInfo()
 	c.OutgoingService.AddService(
 		echo.EchoName,
 		&echo.EchoWithCtxStub{Impl: &echoImpl{quiet: quiet}},
-		func(s fidl.Stub, c zx.Channel) error {
-			_, err := echoService.BindingSet.Add(s, c, nil)
+		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
+			d, ok := dispatch.GetDispatcher(ctx)
+			if !ok {
+				log.Fatal("no dispatcher provided on FIDL context")
+			}
+			_, err := echoService.BindingSet.AddToDispatcher(s, c, d, nil)
 			return err
 		},
 	)
-	fidl.Serve()
+	d, err := dispatch.NewDispatcher()
+	if err != nil {
+		log.Fatalf("couldn't initialize FIDL dispatcher: %s", err)
+	}
+	c.BindStartupHandle(d)
+	d.Serve()
 }

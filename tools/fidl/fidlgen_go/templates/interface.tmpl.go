@@ -233,10 +233,6 @@ type {{ .ServerName }} struct {
 	_bindings.BindingSet
 }
 
-func (s *{{ .ServerName }}) AddWithCtx(impl {{ .Name }}, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&{{ .StubName }}{Impl: impl}, c, onError)
-}
-
 func (s *{{ .ServerName }}) EventProxyFor(key _bindings.BindingKey) (*{{ .EventProxyName }}, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*{{ .EventProxyName }})(pxy), err

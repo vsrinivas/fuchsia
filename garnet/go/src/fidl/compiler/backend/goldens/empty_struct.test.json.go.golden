@@ -3,7 +3,6 @@
 package json
 
 import (
-	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -149,10 +148,6 @@ func (s_ *EmptyProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 
 type EmptyProtocolService struct {
 	_bindings.BindingSet
-}
-
-func (s *EmptyProtocolService) AddWithCtx(impl EmptyProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&EmptyProtocolWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *EmptyProtocolService) EventProxyFor(key _bindings.BindingKey) (*EmptyProtocolEventProxy, bool) {

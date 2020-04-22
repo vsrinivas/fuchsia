@@ -4,7 +4,6 @@ package example
 
 import (
 	exampleusing "fidl/exampleusing"
-	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -212,10 +211,6 @@ func (s_ *ExampleProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 
 type ExampleProtocolService struct {
 	_bindings.BindingSet
-}
-
-func (s *ExampleProtocolService) AddWithCtx(impl ExampleProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&ExampleProtocolWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *ExampleProtocolService) EventProxyFor(key _bindings.BindingKey) (*ExampleProtocolEventProxy, bool) {

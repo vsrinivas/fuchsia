@@ -300,7 +300,7 @@ func Main() {
 		&netstack.NetstackWithCtxStub{Impl: &netstackImpl{
 			ns: ns,
 		}},
-		func(s fidl.Stub, c zx.Channel) error {
+		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
 			k, err := ns.netstackService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			if err != nil {
 				syslog.Fatalf("%v", err)
@@ -338,7 +338,7 @@ func Main() {
 	appCtx.OutgoingService.AddService(
 		name.LookupAdminName,
 		&name.LookupAdminWithCtxStub{Impl: &nameLookupAdminImpl{ns: ns}},
-		func(s fidl.Stub, c zx.Channel) error {
+		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
 			_, err := nameLookupAdminService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			return err
 		},
@@ -350,7 +350,7 @@ func Main() {
 		&stack.StackWithCtxStub{Impl: &stackImpl{
 			ns: ns,
 		}},
-		func(s fidl.Stub, c zx.Channel) error {
+		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
 			_, err := stackService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			return err
 		},
@@ -360,7 +360,7 @@ func Main() {
 	appCtx.OutgoingService.AddService(
 		stack.LogName,
 		&stack.LogWithCtxStub{Impl: &logImpl{logger: l}},
-		func(s fidl.Stub, c zx.Channel) error {
+		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
 			_, err := logService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			return err
 		})
@@ -369,7 +369,7 @@ func Main() {
 	appCtx.OutgoingService.AddService(
 		net.NameLookupName,
 		&net.NameLookupWithCtxStub{Impl: &nameLookupImpl{dnsClient: ns.dnsClient}},
-		func(s fidl.Stub, c zx.Channel) error {
+		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
 			_, err := nameLookupService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			return err
 		},
@@ -378,7 +378,7 @@ func Main() {
 	appCtx.OutgoingService.AddService(
 		socket.ProviderName,
 		&socket.ProviderWithCtxStub{Impl: &socketProviderImpl},
-		func(s fidl.Stub, c zx.Channel) error {
+		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
 			_, err := posixSocketProviderService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
 			return err
 		},
@@ -412,10 +412,14 @@ func Main() {
 			wg.Done()
 		}()
 	}
-	// ensure that the default FIDL dispatcher is served.
+	appCtxDispatcher, err := dispatch.NewDispatcher()
+	if err != nil {
+		syslog.Fatalf("could not initialize dispatcher: %s", err)
+	}
+	appCtx.BindStartupHandle(appCtxDispatcher)
 	wg.Add(1)
 	go func() {
-		fidl.Serve()
+		appCtxDispatcher.Serve()
 		wg.Done()
 	}()
 	wg.Wait()

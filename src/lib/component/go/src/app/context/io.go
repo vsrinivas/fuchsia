@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
 	"unsafe"
@@ -45,7 +46,7 @@ type Node interface {
 	addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error
 }
 
-type addFn func(fidl.Stub, zx.Channel) error
+type addFn func(fidl.Stub, zx.Channel, fidl.Context) error
 
 // TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type Service struct {
@@ -69,13 +70,17 @@ func (s *Service) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio
 			Stub:    &fidlio.NodeWithCtxStub{Impl: s},
 			Channel: req.Channel,
 		}
-		return respond(ctx, flags, req, b.Init(func(error) {
+		d, ok := dispatch.GetDispatcher(ctx)
+		if !ok {
+			panic("no dispatcher found on FIDL context")
+		}
+		return respond(ctx, flags, req, b.InitWithDispatcher(d, func(error) {
 			if err := b.Close(); err != nil {
 				panic(err)
 			}
 		}), s)
 	}
-	return respond(ctx, flags, req, s.AddFn(s.Stub, req.Channel), s)
+	return respond(ctx, flags, req, s.AddFn(s.Stub, req.Channel, ctx), s)
 }
 
 func (s *Service) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
@@ -173,7 +178,11 @@ func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags, mode uint32,
 		Stub:    &fidlio.DirectoryWithCtxStub{Impl: ioDir},
 		Channel: req.Channel,
 	}
-	return respond(ctx, flags, req, b.Init(func(error) {
+	d, ok := dispatch.GetDispatcher(ctx)
+	if !ok {
+		panic("no dispatcher found on FIDL context")
+	}
+	return respond(ctx, flags, req, b.InitWithDispatcher(d, func(error) {
 		if err := b.Close(); err != nil {
 			panic(err)
 		}
@@ -366,7 +375,11 @@ func (file *FileWrapper) addConnection(ctx fidl.Context, flags, mode uint32, req
 		Stub:    &fidlio.FileWithCtxStub{Impl: ioFile},
 		Channel: req.Channel,
 	}
-	return respond(ctx, flags, req, b.Init(func(error) {
+	d, ok := dispatch.GetDispatcher(ctx)
+	if !ok {
+		panic("no dispatcher found on FIDL context")
+	}
+	return respond(ctx, flags, req, b.InitWithDispatcher(d, func(error) {
 		if err := b.Close(); err != nil {
 			panic(err)
 		}

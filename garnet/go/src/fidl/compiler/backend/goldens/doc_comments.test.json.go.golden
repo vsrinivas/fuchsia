@@ -3,7 +3,6 @@
 package name
 
 import (
-	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -209,10 +208,6 @@ func (s_ *InterfaceWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_binding
 
 type InterfaceService struct {
 	_bindings.BindingSet
-}
-
-func (s *InterfaceService) AddWithCtx(impl InterfaceWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&InterfaceWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *InterfaceService) EventProxyFor(key _bindings.BindingKey) (*InterfaceEventProxy, bool) {

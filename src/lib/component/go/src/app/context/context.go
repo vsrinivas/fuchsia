@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 	"syscall/zx"
+	"syscall/zx/dispatch"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
 
@@ -86,9 +87,12 @@ type Context struct {
 		sync.Once
 		*sys.LauncherWithCtxInterface
 	}
-	OutgoingService OutDirectory
+	startupHandleOnce sync.Once
+	OutgoingService   OutDirectory
 }
 
+// CreateFromStartupInfo connects to the service root directory and registers
+// debug services.
 func CreateFromStartupInfo() *Context {
 	c0, c1, err := zx.NewChannel(0)
 	if err != nil {
@@ -108,20 +112,32 @@ func CreateFromStartupInfo() *Context {
 
 	c.OutgoingService.AddDebug("pprof", &DirectoryWrapper{Directory: &pprofDirectory{}})
 
-	if directoryRequest := GetStartupHandle(HandleInfo{
-		Type: HandleDirectoryRequest,
-		Arg:  0,
-	}); directoryRequest.IsValid() {
-		if err := (&DirectoryWrapper{
-			Directory: mapDirectory(c.OutgoingService),
-		}).addConnection(context.Background(), 0, 0, io.NodeWithCtxInterfaceRequest{
-			Channel: zx.Channel(directoryRequest),
-		}); err != nil {
-			panic(err)
-		}
-	}
-
 	return c
+}
+
+// BindStartupHandle takes the startup handle if it's not already taken and
+// serves the out directory with all services that have been registered on
+// (*Context).OutgoingService thus far.
+//
+// New services added to OutgoingService after the dispatcher provided here is
+// served will likely not be exposed to the parent component, since they
+// weren't enumerated in the response to the initial directory listing call on
+// the directory request.
+func (c *Context) BindStartupHandle(d *dispatch.Dispatcher) {
+	c.startupHandleOnce.Do(func() {
+		if directoryRequest := GetStartupHandle(HandleInfo{
+			Type: HandleDirectoryRequest,
+			Arg:  0,
+		}); directoryRequest.IsValid() {
+			if err := (&DirectoryWrapper{
+				Directory: mapDirectory(c.OutgoingService),
+			}).addConnection(dispatch.WithDispatcher(context.Background(), d), 0, 0, io.NodeWithCtxInterfaceRequest{
+				Channel: zx.Channel(directoryRequest),
+			}); err != nil {
+				panic(err)
+			}
+		}
+	})
 }
 
 func (c *Context) Connector() *Connector {
