@@ -12,6 +12,7 @@ use {
         },
     },
     anyhow::format_err,
+    async_trait::async_trait,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::DurationExt,
@@ -31,17 +32,24 @@ const AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
 const AUTO_CONNECT_SCAN_TIMEOUT_SECONDS: u8 = 20;
 const DISCONNECTION_MONITOR_SECONDS: i64 = 10;
 
+#[async_trait]
+pub trait ClientApi {
+    fn connect(&self, request: ConnectRequest) -> Result<(), anyhow::Error>;
+    fn disconnect(&self, responder: oneshot::Sender<()>) -> Result<(), anyhow::Error>;
+}
+
 #[derive(Clone)]
 pub struct Client {
     req_sender: mpsc::UnboundedSender<ManualRequest>,
 }
 
-impl Client {
-    pub fn connect(&self, request: ConnectRequest) -> Result<(), anyhow::Error> {
+#[async_trait]
+impl ClientApi for Client {
+    fn connect(&self, request: ConnectRequest) -> Result<(), anyhow::Error> {
         handle_send_err(self.req_sender.unbounded_send(ManualRequest::Connect(request)))
     }
 
-    pub fn disconnect(&self, responder: oneshot::Sender<()>) -> Result<(), anyhow::Error> {
+    fn disconnect(&self, responder: oneshot::Sender<()>) -> Result<(), anyhow::Error> {
         handle_send_err(self.req_sender.unbounded_send(ManualRequest::Disconnect(responder)))
     }
 }

@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{config_management::SavedNetworksManager, legacy::client},
+    crate::{
+        config_management::SavedNetworksManager,
+        legacy::client::{self, ClientApi},
+    },
     fidl::{self, endpoints::create_proxy},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service as wlan_service,
     fidl_fuchsia_wlan_service as legacy, fidl_fuchsia_wlan_sme as fidl_sme,
