@@ -106,6 +106,7 @@ assoc_values!(Status, [
     IO_REFUSED             = sys::ZX_ERR_IO_REFUSED;
     IO_DATA_INTEGRITY      = sys::ZX_ERR_IO_DATA_INTEGRITY;
     IO_DATA_LOSS           = sys::ZX_ERR_IO_DATA_LOSS;
+    IO_NOT_PRESENT         = sys::ZX_ERR_IO_NOT_PRESENT;
     IO_OVERRUN             = sys::ZX_ERR_IO_OVERRUN;
     IO_MISSED_DEADLINE     = sys::ZX_ERR_IO_MISSED_DEADLINE;
     IO_INVALID             = sys::ZX_ERR_IO_INVALID;

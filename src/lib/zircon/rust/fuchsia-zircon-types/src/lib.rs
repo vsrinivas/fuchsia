@@ -167,6 +167,7 @@ multiconst!(zx_status_t, [
     ZX_ERR_IO_REFUSED             = -41;
     ZX_ERR_IO_DATA_INTEGRITY      = -42;
     ZX_ERR_IO_DATA_LOSS           = -43;
+    ZX_ERR_IO_NOT_PRESENT         = -44;
     ZX_ERR_IO_OVERRUN             = -45;
     ZX_ERR_IO_MISSED_DEADLINE     = -46;
     ZX_ERR_IO_INVALID             = -47;
