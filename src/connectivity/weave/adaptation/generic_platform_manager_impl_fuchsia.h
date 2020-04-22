@@ -4,8 +4,9 @@
 #ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_GENERIC_PLATFORM_MANAGER_IMPL_FUCHSIA_H_
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_GENERIC_PLATFORM_MANAGER_IMPL_FUCHSIA_H_
 
-#include <Weave/DeviceLayer/internal/GenericPlatformManagerImpl.h>
 #include <mutex>
+
+#include <Weave/DeviceLayer/internal/GenericPlatformManagerImpl.h>
 
 namespace nl {
 namespace Weave {
@@ -43,12 +44,6 @@ class GenericPlatformManagerImpl_Fuchsia : public GenericPlatformManagerImpl<Imp
   static void EventLoopTaskMain(void* arg);
   std::mutex mEventLoopLock;
 
-  // Weave submodule instances.
-  nl::Weave::System::Layer system_layer_;
-  nl::Inet::InetLayer inet_layer_;
-  nl::Weave::WeaveFabricState fabric_state_;
-  nl::Weave::WeaveMessageLayer message_layer_;
-  nl::Weave::WeaveSecurityManager security_manager_;
  public:
   System::Layer& GetSystemLayer();
   nl::Inet::InetLayer& GetInetLayer();

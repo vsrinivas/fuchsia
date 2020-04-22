@@ -33,43 +33,55 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
-    err = system_layer_.Init(nullptr);
-    if (err != WEAVE_NO_ERROR) {
+    // Initialize the Weave system layer.
+    // Placement new operation here constructs the SystemLayer object
+    // that is already allocated as global variable.
+    new (&SystemLayer) System::Layer();
+    err = SystemLayer.Init(nullptr);
+    if (err != WEAVE_SYSTEM_NO_ERROR) {
       FX_LOGS(ERROR) << "System layer init failed: " << ErrorStr(err);
       return err;
     }
 
-    err = inet_layer_.Init(system_layer_, nullptr);
-    if (err != WEAVE_NO_ERROR) {
+    // Initialize the Weave Inet layer.
+    new (&InetLayer) Inet::InetLayer();
+    err = InetLayer.Init(SystemLayer, nullptr);
+    if (err != INET_NO_ERROR) {
       FX_LOGS(ERROR) << "Inet layer init failed: " << ErrorStr(err);
       return err;
     }
 
-    err = fabric_state_.Init(ConfigurationMgr().GetGroupKeyStore());
+    // Initialize the Weave fabric state object.
+    new (&FabricState) WeaveFabricState();
+    err = FabricState.Init(ConfigurationMgr().GetGroupKeyStore());
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "FabricState init failed: " << ErrorStr(err);
       return err;
     }
 
-    initContext.inet = &inet_layer_;
-    initContext.systemLayer = &system_layer_;
-    initContext.fabricState = &fabric_state_;
+    initContext.inet = &InetLayer;
+    initContext.systemLayer = &SystemLayer;
+    initContext.fabricState = &FabricState;
     initContext.listenTCP = true;
     initContext.listenUDP = true;
 
-    err = message_layer_.Init(&initContext);
+    // Initialize the Weave message layer.
+    new (&MessageLayer) WeaveMessageLayer();
+    err = MessageLayer.Init(&initContext);
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "Message layer init failed: "<< ErrorStr(err);
       return err;
     }
 
-    err = ExchangeMgr.Init(&message_layer_);
+    err = ExchangeMgr.Init(&MessageLayer);
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "Exchange manager init failed: "<< ErrorStr(err);
       return err;
     }
 
-    err = security_manager_.Init(ExchangeMgr, system_layer_);
+    // Initialize the Weave security manager.
+    new (&SecurityMgr) WeaveSecurityManager();
+    err = SecurityMgr.Init(ExchangeMgr, SystemLayer);
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "Security manager init failed: " << ErrorStr(err);
       return err;
@@ -93,13 +105,13 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
-    err = ConfigurationMgr().GetDeviceId(fabric_state_.LocalNodeId);
+    err = ConfigurationMgr().GetDeviceId(FabricState.LocalNodeId);
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "GetDeviceId failed " << ErrorStr(err);
       return err;
     }
 
-    return err;
+    return WEAVE_NO_ERROR;
 }
 
 template<class ImplClass>
@@ -137,13 +149,13 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_StartWeaveTimer(uint
 template<class ImplClass>
 System::Layer& GenericPlatformManagerImpl_Fuchsia<ImplClass>::GetSystemLayer()
 {
-  return system_layer_;
+  return SystemLayer;
 }
 
 template<class ImplClass>
 nl::Inet::InetLayer& GenericPlatformManagerImpl_Fuchsia<ImplClass>::GetInetLayer()
 {
-  return inet_layer_;
+  return InetLayer;
 }
 
 template<class ImplClass>
@@ -152,12 +164,12 @@ void GenericPlatformManagerImpl_Fuchsia<ImplClass>::_ShutdownWeaveStack(void)
   FabricProvisioningSvr().Shutdown();
   DeviceControlSvr().Shutdown();
   DeviceDescriptionSvr().Shutdown();
-  security_manager_.Shutdown();
+  SecurityMgr.Shutdown();
   ExchangeMgr.Shutdown();
-  message_layer_.Shutdown();
-  fabric_state_.Shutdown();
-  inet_layer_.Shutdown();
-  system_layer_.Shutdown();
+  MessageLayer.Shutdown();
+  FabricState.Shutdown();
+  InetLayer.Shutdown();
+  SystemLayer.Shutdown();
 }
 
 // Fully instantiate the generic implementation class in whatever compilation unit includes this file.
