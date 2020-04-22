@@ -663,7 +663,6 @@ group("ulib-host") {
       "mtd",
 #------------------
 #------------------
-      "nand-redundant-storage",
 #------------------
 #------------------
       "unittest:unittest-static",

@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 # MTD Redundant Storage (mtd-rs)
 #
 # This library requires an environment with mtd/mtd-user.h and MTD support.
@@ -22,11 +34,11 @@ zx_library("nand-redundant-storage") {
     ]
   }
 
-  public_deps = [ "$zx/system/ulib/mtd:headers" ]
+  public_deps = [ "//zircon/public/lib/mtd" ]
 
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/mtd",
-    "$zx/third_party/ulib/cksum",
+    "//zircon/public/lib/cksum",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/mtd",
   ]
 }

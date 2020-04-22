@@ -37,7 +37,7 @@ test("nand-redundant-storage") {
   if (current_os == "linux") {
     # This library requires an environment with mtd/mtd-user.h and MTD support.
     # Currently, Linux is the only OS with that support.
-    deps += [ "//zircon/public/lib/nand-redundant-storage" ]
+    deps += [ "//zircon/system/ulib/nand-redundant-storage" ]
   } else {
     assert(false, "Unsupported OS: $current_os")
   }

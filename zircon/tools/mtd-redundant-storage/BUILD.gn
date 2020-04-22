@@ -15,7 +15,7 @@ executable("mtd-redundant-storage") {
   }
   deps = [
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/nand-redundant-storage",
     "//zircon/public/lib/zx-panic-libc",
+    "//zircon/system/ulib/nand-redundant-storage",
   ]
 }
