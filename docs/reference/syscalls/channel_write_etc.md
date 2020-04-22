@@ -100,7 +100,9 @@ in *handles* did not match the object type *type*.
 
 **ZX_ERR_INVALID_ARGS**  *bytes* is an invalid pointer, *handles*
 is an invalid pointer, or *options* is nonzero, or *operation* is not
-one of ZX_HANDLE_OP_MOVE or ZX_HANDLE_OP_DUPLICATE.
+one of ZX_HANDLE_OP_MOVE or ZX_HANDLE_OP_DUPLICATE, or any source
+handle in *handles\[i\]->handle* did not have the rights specified in
+*whandle\[i\]->rights*.
 
 **ZX_ERR_NOT_SUPPORTED**  *handle* is included in the *handles* array.
 

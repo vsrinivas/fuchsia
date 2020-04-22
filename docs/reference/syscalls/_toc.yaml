@@ -92,6 +92,8 @@ toc:
   section:
   - title: "zx_channel_call"
     path: /docs/reference/syscalls/channel_call.md
+  - title: "zx_channel_call_etc"
+    path: /docs/reference/syscalls/channel_call_etc.md
   - title: "zx_channel_create"
     path: /docs/reference/syscalls/channel_create.md
   - title: "zx_channel_read_etc"
