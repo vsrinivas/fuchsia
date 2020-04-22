@@ -37,8 +37,6 @@ class Variable;
 // automatically ref-ed when bound in a lambda.
 class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
  public:
-  virtual ~EvalContext() = default;
-
   // Returns the language associated with the expression.
   virtual ExprLanguage GetLanguage() const = 0;
 
@@ -98,6 +96,11 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // Returns true if base classes should automatically be promoted to derived classes when pointer
   // and references are dereferences.
   virtual bool ShouldPromoteToDerived() const = 0;
+
+ protected:
+  // Only RefPtr should be destructing this class.
+  FRIEND_REF_COUNTED_THREAD_SAFE(EvalContext);
+  virtual ~EvalContext() = default;
 };
 
 }  // namespace zxdb

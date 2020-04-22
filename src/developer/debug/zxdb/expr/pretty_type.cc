@@ -34,8 +34,7 @@ namespace {
 // using this context can then refer to "bar" and "baz" without qualification.
 class PrettyEvalContext : public EvalContext {
  public:
-  PrettyEvalContext(fxl::RefPtr<EvalContext> impl, ExprValue value)
-      : impl_(std::move(impl)), value_(std::move(value)) {}
+  // Construct with fxl::MakeRefCounted().
 
   // EvalContext implementation. Everything except GetNamedValue() passes through to the impl_.
   ExprLanguage GetLanguage() const override { return impl_->GetLanguage(); }
@@ -65,6 +64,13 @@ class PrettyEvalContext : public EvalContext {
   }
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(PrettyEvalContext);
+  FRIEND_MAKE_REF_COUNTED(PrettyEvalContext);
+
+  PrettyEvalContext(fxl::RefPtr<EvalContext> impl, ExprValue value)
+      : impl_(std::move(impl)), value_(std::move(value)) {}
+  ~PrettyEvalContext() override = default;
+
   fxl::RefPtr<EvalContext> impl_;
   ExprValue value_;
 };

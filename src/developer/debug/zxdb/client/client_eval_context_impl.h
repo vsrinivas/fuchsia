@@ -18,21 +18,24 @@ class Target;
 // Provides client-specific integration for EvalContextImpl.
 class ClientEvalContextImpl : public EvalContextImpl, public SettingStoreObserver {
  public:
-  // The input pointers are not saved so the caller should not need to worry about lifetime (this
-  // class is refcounted and may outlive a frame or target).
-  //
-  // Neither the Frame nor the Target variants accept a null pointer, but the Target variant does
-  // not need to have a currently running process.
-  explicit ClientEvalContextImpl(const Frame* frame, std::optional<ExprLanguage> language);
-  explicit ClientEvalContextImpl(Target* target, std::optional<ExprLanguage> language);
-
-  ~ClientEvalContextImpl() override;
-
   // EvalContext overrides.
   VectorRegisterFormat GetVectorRegisterFormat() const override;
   bool ShouldPromoteToDerived() const override { return auto_cast_to_derived_; }
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(ClientEvalContextImpl);
+  FRIEND_MAKE_REF_COUNTED(ClientEvalContextImpl);
+
+  // The input pointers are not saved so the caller should not need to worry about lifetime (this
+  // class is refcounted and may outlive a frame or target).
+  //
+  // Neither the Frame nor the Target variants accept a null pointer, but the Target variant does
+  // not need to have a currently running process.
+  ClientEvalContextImpl(const Frame* frame, std::optional<ExprLanguage> language);
+  ClientEvalContextImpl(Target* target, std::optional<ExprLanguage> language);
+
+  ~ClientEvalContextImpl() override;
+
   // SettingStoreObserver implementation:
   void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
 

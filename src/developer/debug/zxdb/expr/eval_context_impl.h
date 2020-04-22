@@ -37,25 +37,7 @@ class Variable;
 // that evaluation does not use any invalid context.
 class EvalContextImpl : public EvalContext {
  public:
-  // All of the input pointers can be null:
-  //
-  //  - The ProcessSymbols can be a null weak pointer in which case globals will not be resolved.
-  //    This can make testing easier and supports evaluating math without a loaded program.
-  //
-  //  - The SymbolDataProvider can be null in which case anything that requires memory from the
-  //    target will fail. Some operations like pure math don't require this.
-  //
-  //  - The code block can be null in which case nothing using the current scope will work. This
-  //    includes local variables, variables on "this", and things relative to the current namespace.
-  //
-  // The variant that takes a location will extract the code block from the location if possible.
-  EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
-                  fxl::RefPtr<SymbolDataProvider> data_provider, ExprLanguage language,
-                  fxl::RefPtr<CodeBlock> code_block = fxl::RefPtr<CodeBlock>());
-  EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
-                  fxl::RefPtr<SymbolDataProvider> data_provider, const Location& location,
-                  std::optional<ExprLanguage> force_language = std::nullopt);
-  ~EvalContextImpl() override;
+  // Construct with fxl::MakeRefCounted.
 
   // EvalContext implementation.
   //
@@ -75,6 +57,30 @@ class EvalContextImpl : public EvalContext {
     return VectorRegisterFormat::kDouble;
   }
   bool ShouldPromoteToDerived() const override { return false; }
+
+ protected:
+  FRIEND_REF_COUNTED_THREAD_SAFE(EvalContextImpl);
+  FRIEND_MAKE_REF_COUNTED(EvalContextImpl);
+
+  // All of the input pointers can be null:
+  //
+  //  - The ProcessSymbols can be a null weak pointer in which case globals will not be resolved.
+  //    This can make testing easier and supports evaluating math without a loaded program.
+  //
+  //  - The SymbolDataProvider can be null in which case anything that requires memory from the
+  //    target will fail. Some operations like pure math don't require this.
+  //
+  //  - The code block can be null in which case nothing using the current scope will work. This
+  //    includes local variables, variables on "this", and things relative to the current namespace.
+  //
+  // The variant that takes a location will extract the code block from the location if possible.
+  EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
+                  fxl::RefPtr<SymbolDataProvider> data_provider, ExprLanguage language,
+                  fxl::RefPtr<CodeBlock> code_block = fxl::RefPtr<CodeBlock>());
+  EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
+                  fxl::RefPtr<SymbolDataProvider> data_provider, const Location& location,
+                  std::optional<ExprLanguage> force_language = std::nullopt);
+  ~EvalContextImpl() override;
 
  private:
   // Converts an extern value to a real Variable by looking the name up in the index.

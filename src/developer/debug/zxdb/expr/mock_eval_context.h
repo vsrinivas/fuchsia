@@ -16,8 +16,7 @@ namespace zxdb {
 
 class MockEvalContext : public EvalContext {
  public:
-  MockEvalContext();
-  ~MockEvalContext();
+  // Construct with fxl::MakeRefCounted().
 
   MockSymbolDataProvider* data_provider() { return data_provider_.get(); }
   PrettyTypeManager& pretty_type_manager() { return pretty_type_manager_; }
@@ -46,6 +45,13 @@ class MockEvalContext : public EvalContext {
   const PrettyTypeManager& GetPrettyTypeManager() const override { return pretty_type_manager_; }
   VectorRegisterFormat GetVectorRegisterFormat() const override { return vector_register_format_; }
   bool ShouldPromoteToDerived() const override { return should_promote_to_derived_; }
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(MockEvalContext);
+  FRIEND_MAKE_REF_COUNTED(MockEvalContext);
+
+  MockEvalContext();
+  ~MockEvalContext();
 
  private:
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
