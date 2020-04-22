@@ -38,7 +38,7 @@ install_host_tools("install") {
 
 group("create") {
   testonly = true
-  public_deps = [
+  deps = [
     ":install",
     ":tests",
   ]
@@ -46,7 +46,7 @@ group("create") {
 
 group("tests") {
   testonly = true
-  public_deps = [
+  deps = [
     ":create_bin_test($host_toolchain)",
     "goldens:tests",
   ]

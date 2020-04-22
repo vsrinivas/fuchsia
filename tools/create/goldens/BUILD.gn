@@ -7,7 +7,7 @@ import("//tools/create/goldens/golden_test.gni")
 
 group("goldens") {
   testonly = true
-  public_deps = [
+  deps = [
     ":tests",
     "my-component-v1-cpp",
     "my-component-v1-rust",
@@ -18,7 +18,7 @@ group("goldens") {
 
 group("tests") {
   testonly = true
-  public_deps = [
+  deps = [
     ":my-component-v1-cpp($host_toolchain)",
     ":my-component-v1-rust($host_toolchain)",
     ":my-component-v2-cpp($host_toolchain)",

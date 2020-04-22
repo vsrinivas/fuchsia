@@ -12,7 +12,7 @@ import("//build/testing/environments.gni")
 
 group("my-component-v2-cpp") {
   testonly = true
-  public_deps = [
+  deps = [
     ":pkg",
     ":tests",
   ]
@@ -20,7 +20,7 @@ group("my-component-v2-cpp") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":my-component-v2-cpp-tests" ]
+  deps = [ ":my-component-v2-cpp-tests" ]
 }
 
 source_set("lib") {
