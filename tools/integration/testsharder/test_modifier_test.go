@@ -24,20 +24,6 @@ var bazTestModifier = TestModifier{
 	OS:   "linux",
 }
 
-var deprecatedTestModifier = TestModifier{
-	Target:    "this_field_is_deprecated",
-	OS:        "linux",
-	TotalRuns: 2,
-}
-
-// deprecatedTestModifer should be parsed into this format, with Name set
-// instead of Target.
-var parsedDeprecatedTestModifier = TestModifier{
-	Name:      "this_field_is_deprecated",
-	OS:        "linux",
-	TotalRuns: 2,
-}
-
 func TestLoadTestModifiers(t *testing.T) {
 	areEqual := func(a, b []TestModifier) bool {
 		stringify := func(modifier TestModifier) string {
@@ -59,7 +45,7 @@ func TestLoadTestModifiers(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	initial := []TestModifier{barTestModifier, bazTestModifier, deprecatedTestModifier}
+	initial := []TestModifier{barTestModifier, bazTestModifier}
 
 	modifiersPath := filepath.Join(tmpDir, "test_modifiers.json")
 	m, err := os.Create(modifiersPath)
@@ -81,7 +67,7 @@ func TestLoadTestModifiers(t *testing.T) {
 	bazOut.TotalRuns = 1
 	barOut := barTestModifier
 	barOut.OS = ""
-	expected := []TestModifier{barOut, bazOut, parsedDeprecatedTestModifier}
+	expected := []TestModifier{barOut, bazOut}
 
 	if !areEqual(expected, actual) {
 		t.Fatalf("test modifiers not properly loaded:\nexpected:\n%+v\nactual:\n%+v", expected, actual)

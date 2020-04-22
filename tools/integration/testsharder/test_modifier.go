@@ -16,11 +16,6 @@ type TestModifier struct {
 	// Name is the name of the test.
 	Name string `json:"name"`
 
-	// Target is the GN target name of the test.
-	// TODO(olivernewman): stop accepting `target` after the documentation has
-	// been updated to only mention `name`
-	Target string `json:"target"`
-
 	// OS is the operating system in which this test must be executed. If not
 	// present, this multiplier will match tests from any operating system.
 	OS string `json:"os,omitempty"`
@@ -42,13 +37,7 @@ func LoadTestModifiers(manifestPath string) ([]TestModifier, error) {
 
 	for i := range specs {
 		if specs[i].Name == "" {
-			if specs[i].Target == "" {
-				// TODO(olivernewman): Stop accepting target and only accept
-				// name after 2019-11-19.
-				return nil, fmt.Errorf("A test spec's target must have a non-empty name")
-			}
-			specs[i].Name = specs[i].Target
-			specs[i].Target = ""
+			return nil, fmt.Errorf("A test spec's target must have a non-empty name")
 		}
 		if specs[i].TotalRuns == 0 {
 			specs[i].TotalRuns = 1
