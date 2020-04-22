@@ -85,6 +85,7 @@ sdk("e2e_testing") {
 sdk_molecule("fidl") {
   visibility = [ ":*" ]
   deps = [
+    "//sdk/fidl/fuchsia.accessibility.gesture:fuchsia.accessibility.gesture_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.auth.oldtokens:fuchsia.auth.oldtokens_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.bluetooth.a2dp:fuchsia.bluetooth.a2dp_sdk($fidl_toolchain)",

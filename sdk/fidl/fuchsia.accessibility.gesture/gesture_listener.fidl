@@ -1,0 +1,61 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.accessibility.gesture;
+// Evolution. This listener protocol is expected to be exclusively consumed by
+// clients in a single out-of-tree repository, so the evolution burden (e.g.,
+// adding enums or methods) is expected to be minimal.
+
+/// Maximum size of a returned utterance.
+const uint64 MAX_UTTERANCE_SIZE = 16384;
+
+/// Gestures types that accessibility offers to a UI component for listening.
+enum Type {
+    /// A three-finger swipe up.
+    THREE_FINGER_SWIPE_UP = 1;
+    /// A three-finger swipe down.
+    THREE_FINGER_SWIPE_DOWN = 2;
+    /// A three-finger swipe right.
+    THREE_FINGER_SWIPE_RIGHT = 3;
+    /// A three-finger swipe left.
+    THREE_FINGER_SWIPE_LEFT = 4;
+};
+
+/// An interface to listen for accessibility gestures.
+///
+/// Accessibility services offer a set of gestures defined in Type above, which
+/// can be targeted by a system UI.
+/// Generally, in a touch screen system, there is a set of system-wide gestures
+/// which can be performed anywhere, triggering an action that changes some
+/// state of the UI.
+/// For example, some can offer a way to close an application and go back to
+/// their home screen, while others can offer a way to bring a list of running
+/// applications that users can choose from.
+/// Because those gestures can conflict with assistive technology gestures,
+/// accessibility services offer some alternative ones which can be bound to the
+/// UI actions.
+protocol Listener {
+    /// When accessibility services detect a gesture, the listener is informed
+    /// of which gesture was performed. The listener has the chance to handle
+    /// the gesture, setting the result in |handled|. In addition, an
+    /// |utterance| is also passed back to accessibility, with a custom message
+    /// to be spoken. The message is expected to be localized, matching the
+    /// same locale that the UI component is displaying its content.
+    /// If the utterance is empty, it is assumed that no spoken output is
+    /// necessary to describe the result of the action.
+    OnGesture(Type gesture_type) -> (bool handled, string:MAX_UTTERANCE_SIZE? utterance);
+};
+
+/// An interface for registering a listener of accessibility gestures.
+[Discoverable]
+protocol ListenerRegistry {
+    /// A UI registers itself to start listening for accessibility gestures
+    /// through `listener`.
+    /// Only one listener can be registered at a time.
+    /// This registry honors the last Register() call, and a previous listener
+    /// is closed.
+    /// In case of any failure, the channel of the listener is closed with an
+    /// epitaph.
+    Register(Listener listener) -> ();
+};
