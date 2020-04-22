@@ -34,6 +34,28 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
     }
   }
 
+  if (!data_origin.empty()) {
+    if (!files::CreateDirectory(data_origin)) {
+      FX_LOGS(ERROR) << "Unable to create directory at " << data_origin;
+      return;
+    }
+    launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+    launch_info.flat_namespace->paths.push_back("/data");
+
+    fbl::unique_fd dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
+    if (!dir.is_valid()) {
+      FX_LOGS(ERROR) << "Unable to open directory at " << data_origin << ". errno: " << errno;
+      return;
+    }
+
+    launch_info.flat_namespace->directories.push_back(
+        fsl::CloneChannelFromFileDescriptor(dir.get()));
+    if (!launch_info.flat_namespace->directories.at(0)) {
+      FX_LOGS(ERROR) << "Unable create a handle from  " << data_origin;
+      return;
+    }
+  }
+
   if (additional_services) {
     launch_info.additional_services = std::move(additional_services);
   }
