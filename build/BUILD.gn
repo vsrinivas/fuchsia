@@ -9,24 +9,6 @@ group("tests") {
   deps = [ "sdk:tests" ]
 }
 
-group("deprecated_misc_storage_allowlist") {
-  #  ________  _________  ________  ________
-  # |\   ____\|\___   ___\\   __  \|\   __  \
-  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
-  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
-  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
-  #     ____\_\  \   \ \__\ \ \_______\ \__\
-  #    |\_________\   \|__|  \|_______|\|__|
-  #    \|_________|
-  # This is an allowlist of packages that have components manifests that include
-  # the "deprecated-misc-storage" feature. This is only intended to be used as
-  # a temporary hack for OTAs. Do not add to this list.
-  visibility = [
-    "//src/sys/pkg/bin/amber:amber",
-    "//src/sys/pkg/bin/system-update-checker",
-  ]
-}
-
 group("deprecated_bare_tests_allowlist") {
   #  ________  _________  ________  ________
   # |\   ____\|\___   ___\\   __  \|\   __  \
@@ -41,111 +23,6 @@ group("deprecated_bare_tests_allowlist") {
   visibility = [
     "//topaz/runtime/dart_runner/examples/goodbye_dart:goodbye_dart_test",
     "//topaz/runtime/dart/utils:run_vmservice_object_tests",
-  ]
-}
-
-group("global_data_allowlist") {
-  # !DANGER!
-  # Only Archivist may use this feature, it's use case will be ported to component_manager.
-  # We use this to obtain storage stats in the archive output.
-  # Note that there is a secondary allow-list to trigger this behavior at
-  # //src/sys/appmgr/global_data_allowlist.txt
-  visibility = [
-    "//src/diagnostics/archivist:archivist",
-    "//src/sys/appmgr/integration_tests/sandbox/features/global-data:has_global_data",
-    "//src/sys/appmgr/integration_tests/sandbox/features/global-data:restricted_global_data",
-  ]
-}
-
-group("deprecated_shell_allowlist") {
-  #  ________  _________  ________  ________
-  # |\   ____\|\___   ___\\   __  \|\   __  \
-  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
-  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
-  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
-  #     ____\_\  \   \ \__\ \ \_______\ \__\
-  #    |\_________\   \|__|  \|_______|\|__|
-  #    \|_________|
-  # This is an allowlist of packages that have components manifests that include
-  # the "deprecated-shell" feature. Do not add to this list. If the manifest
-  # does not otherwise include the feature you need, please file a feature
-  # request for that fine-grained feature to help us support least-privileged
-  # components.
-  visibility = [
-    "//src/sys/appmgr:appmgr_unittests",
-    "//src/sys/appmgr/integration_tests/components:components_binary_tests",
-    "//src/sys/appmgr/integration_tests/sandbox/features/shell:has_deprecated_shell",
-    "//src/sys/appmgr/integration_tests/sandbox/features/shell:has_deprecated_shell_ends_with_opal_test",
-    "//src/sys/appmgr/integration_tests/sandbox/features/hub:has_hub_deprecated_shell",
-    "//garnet/bin/cpuperf_provider:cpuperf_provider_tests",
-    "//garnet/bin/glob:glob",
-    "//src/sys/tools/run/test:run_tests",
-    "//garnet/bin/run_test_component/test:run_test_component_test",
-    "//garnet/bin/sl4f:sl4f",
-
-    # Needs access to /system/data/static_packages. See fxb/22779 for more details.
-    "//garnet/bin/sshd-host:sshd-host",
-    "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
-    "//src/devices/tests/libdriver-integration-test",
-    "//src/devices/bin/driver_manager:driver_manager_tests",
-    "//src/sys/pkg/bin/system-update-checker:system-update-checker",
-    "//src/sys/appmgr/integration_tests/policy:policy-integration-tests",
-  ]
-}
-
-group("rootresource_svc_allowlist") {
-  #  ________  _________  ________  ________
-  # |\   ____\|\___   ___\\   __  \|\   __  \
-  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
-  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
-  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
-  #     ____\_\  \   \ \__\ \ \_______\ \__\
-  #    |\_________\   \|__|  \|_______|\|__|
-  #    \|_________|
-  # This is an allowlist of packages that have components manifests that include
-  # the "fuchsia.boot.RootResource" service. This is a highly privileged service that vends
-  # out a very powerful capability. Do not add yourself to this unless this is the only
-  # way to accomplish your goal and you have talked to the security team about this.
-  visibility = [
-    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
-    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester_tests",
-    "//garnet/bin/thermd:thermd",
-    "//src/sys/component_manager:component_manager_tests",
-    "//src/testing/loadbench:loadbench",
-    "//src/testing/loadbench:loadbench_tests",
-    "//src/virtualization/bin/vmm:vmm",
-    "//src/sys/appmgr/integration_tests/policy:policy-integration-tests",
-  ]
-}
-
-group("rootjob_svc_allowlist") {
-  #  ________  _________  ________  ________
-  # |\   ____\|\___   ___\\   __  \|\   __  \
-  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
-  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
-  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
-  #     ____\_\  \   \ \__\ \ \_______\ \__\
-  #    |\_________\   \|__|  \|_______|\|__|
-  #    \|_________|
-  # This is an allowlist of packages that have components manifests that include
-  # the "fuchsia.boot.RootJob" service. This is a highly privileged service that vends
-  # out a very powerful capability. Do not add yourself to this unless this is the only
-  # way to accomplish your goal and you have talked to the security team about this.
-  visibility = [
-    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
-    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester_tests",
-    "//garnet/bin/ktrace_provider:ktrace_provider",
-    "//garnet/bin/trace/tests:trace_tests",
-    "//garnet/lib/debugger_utils:debugger_utils_tests",
-    "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
-    "//src/developer/debug/debug_agent:debug_agent",
-    "//src/developer/debug/debug_agent:debug_agent_tests",
-    "//src/developer/shell:shell_tests",
-    "//src/ledger:ledger_tests",
-    "//src/ledger/bin/tests/benchmark:ledger_benchmarks",
-    "//src/lib/process_builder:process_builder_tests",
-    "//src/sys/component_manager:component_manager_tests",
-    "//src/sys/appmgr/integration_tests/policy:policy-integration-tests",
   ]
 }
 
