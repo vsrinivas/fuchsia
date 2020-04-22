@@ -38,6 +38,8 @@ rustc_binary("bin") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-process:fuchsia-process-rustc",
   ]
+
+  test_deps = [ "//src/sys/test_runners:test_lib" ]
 }
 
 package("gtest_runner") {

@@ -388,7 +388,6 @@ impl TestServer {
         &self,
         invocations: Vec<Invocation>,
         component: Arc<Component>,
-
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
         for invocation in invocations {
@@ -548,18 +547,14 @@ mod tests {
         anyhow::{Context as _, Error},
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_component_runner as fcrunner,
-        fidl_fuchsia_test::{
-            CaseListenerRequest::Finished,
-            RunListenerMarker,
-            RunListenerRequest::{OnFinished, OnTestCaseStarted},
-            RunListenerRequestStream, RunOptions, SuiteMarker,
-        },
+        fidl_fuchsia_test::{RunListenerMarker, RunOptions, SuiteMarker},
         fio::OPEN_RIGHT_WRITABLE,
         fuchsia_runtime::job_default,
         runner::component::ComponentNamespace,
         runner::component::ComponentNamespaceError,
         std::convert::TryFrom,
         std::fs,
+        test_runners_test_lib::{collect_listener_event, names_to_invocation, ListenerEvent},
         uuid::Uuid,
     };
 
@@ -681,48 +676,6 @@ mod tests {
         Ok(())
     }
 
-    #[derive(PartialEq, Debug)]
-    enum ListenerEvent {
-        StartTest(String),
-        FinishTest(String, TestResult),
-        FinishAllTests,
-    }
-
-    async fn collect_listener_event(
-        mut listener: RunListenerRequestStream,
-    ) -> Result<Vec<ListenerEvent>, Error> {
-        let mut ret = vec![];
-        // collect loggers so that they do not die.
-        let mut loggers = vec![];
-        while let Some(result_event) = listener.try_next().await? {
-            match result_event {
-                OnTestCaseStarted { invocation, primary_log, listener, .. } => {
-                    let name = invocation.name.unwrap();
-                    ret.push(ListenerEvent::StartTest(name.clone()));
-                    loggers.push(primary_log);
-                    let mut listener = listener.into_stream()?;
-                    while let Some(result) = listener.try_next().await? {
-                        match result {
-                            Finished { result, .. } => {
-                                ret.push(ListenerEvent::FinishTest(name, result));
-                                break;
-                            }
-                        }
-                    }
-                }
-                OnFinished { .. } => {
-                    ret.push(ListenerEvent::FinishAllTests);
-                    break;
-                }
-            }
-        }
-        Ok(ret)
-    }
-
-    fn names_to_invocation(names: Vec<&str>) -> Vec<Invocation> {
-        names.iter().map(|s| Invocation { name: Some(s.to_string()), tag: None }).collect()
-    }
-
     async fn run_tests(invocations: Vec<Invocation>) -> Result<Vec<ListenerEvent>, anyhow::Error> {
         let test_data = TestDataDir::new().context("Cannot create test data")?;
         let component = sample_test_component().context("Cannot create test component")?;
@@ -769,27 +722,27 @@ mod tests {
         .unwrap();
 
         let expected_events = vec![
-            ListenerEvent::StartTest("SampleTest1.SimpleFail".to_owned()),
-            ListenerEvent::FinishTest(
-                "SampleTest1.SimpleFail".to_owned(),
+            ListenerEvent::start_test("SampleTest1.SimpleFail"),
+            ListenerEvent::finish_test(
+                "SampleTest1.SimpleFail",
                 TestResult { status: Some(Status::Failed) },
             ),
-            ListenerEvent::StartTest("SampleTest1.Crashing".to_owned()),
-            ListenerEvent::FinishTest(
-                "SampleTest1.Crashing".to_owned(),
+            ListenerEvent::start_test("SampleTest1.Crashing"),
+            ListenerEvent::finish_test(
+                "SampleTest1.Crashing",
                 TestResult { status: Some(Status::Failed) },
             ),
-            ListenerEvent::StartTest("SampleTest2.SimplePass".to_owned()),
-            ListenerEvent::FinishTest(
-                "SampleTest2.SimplePass".to_owned(),
+            ListenerEvent::start_test("SampleTest2.SimplePass"),
+            ListenerEvent::finish_test(
+                "SampleTest2.SimplePass",
                 TestResult { status: Some(Status::Passed) },
             ),
-            ListenerEvent::StartTest("Tests/SampleParameterizedTestFixture.Test/2".to_owned()),
-            ListenerEvent::FinishTest(
-                "Tests/SampleParameterizedTestFixture.Test/2".to_owned(),
+            ListenerEvent::start_test("Tests/SampleParameterizedTestFixture.Test/2"),
+            ListenerEvent::finish_test(
+                "Tests/SampleParameterizedTestFixture.Test/2",
                 TestResult { status: Some(Status::Passed) },
             ),
-            ListenerEvent::FinishAllTests,
+            ListenerEvent::finish_all_test(),
         ];
 
         assert_eq!(expected_events, events);
@@ -800,7 +753,7 @@ mod tests {
     async fn run_no_test() -> Result<(), Error> {
         let events = run_tests(vec![]).await.unwrap();
 
-        let expected_events = vec![ListenerEvent::FinishAllTests];
+        let expected_events = vec![ListenerEvent::finish_all_test()];
 
         assert_eq!(expected_events, events);
         Ok(())
@@ -811,12 +764,12 @@ mod tests {
         let events = run_tests(names_to_invocation(vec!["SampleTest2.SimplePass"])).await.unwrap();
 
         let expected_events = vec![
-            ListenerEvent::StartTest("SampleTest2.SimplePass".to_owned()),
-            ListenerEvent::FinishTest(
-                "SampleTest2.SimplePass".to_owned(),
+            ListenerEvent::start_test("SampleTest2.SimplePass"),
+            ListenerEvent::finish_test(
+                "SampleTest2.SimplePass",
                 TestResult { status: Some(Status::Passed) },
             ),
-            ListenerEvent::FinishAllTests,
+            ListenerEvent::finish_all_test(),
         ];
 
         assert_eq!(expected_events, events);

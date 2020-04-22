@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    runner::component::ComponentNamespaceError, std::convert::From, test_runners_lib::LogError,
-    thiserror::Error,
+    fuchsia_zircon as zx, runner::component::ComponentNamespaceError, std::convert::From,
+    test_runners_lib::LogError, thiserror::Error,
 };
 
 /// Error encountered while running suite server
@@ -64,8 +64,23 @@ pub enum RunTestError {
     #[error("can't convert to string, refer fxb/4610: {:?}", _0)]
     Utf8ToString(std::str::Utf8Error),
 
+    #[error("cannot send start event: {:?}", _0)]
+    SendStart(fidl::Error),
+
+    #[error("cannot send finish event: {:?}", _0)]
+    SendFinish(fidl::Error),
+
     #[error("cannot send on_finished event: {:?}", _0)]
     SendFinishAllTests(fidl::Error),
+
+    #[error("Received unexpected exit code {} from test process.", _0)]
+    UnexpectedReturnCode(i64),
+
+    #[error("Cannot get test ptocess info: {}", _0)]
+    ProcessInfo(zx::Status),
+
+    #[error("Name in invocation cannot be null")]
+    TestCaseName,
 }
 
 impl From<EnumerationError> for SuiteServerError {

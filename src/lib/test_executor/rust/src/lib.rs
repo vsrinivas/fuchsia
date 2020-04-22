@@ -29,7 +29,7 @@ use {
 use fidl_fuchsia_sys::LauncherProxy;
 
 /// Defines the result of a test case run.
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Ord, PartialOrd, Copy, Clone)]
 pub enum TestResult {
     /// Test case passed.
     Passed,
@@ -42,15 +42,18 @@ pub enum TestResult {
 }
 
 /// Event to send to caller of `run_test_component`
-/// TestCaseStarted: Whenever a new test case is started.
-/// TestCaseFinished: Whenever a test case finishes.
-/// LogMessage: Whenever a test case produces a log message.
-/// Finish: When test finishes successfully.
-#[derive(PartialEq, Debug, Eq, Hash)]
+#[derive(PartialEq, Debug, Eq, Hash, Ord, PartialOrd)]
 pub enum TestEvent {
+    /// A new test case is started.
     TestCaseStarted { test_case_name: String },
+
+    /// Test case finished.
     TestCaseFinished { test_case_name: String, result: TestResult },
+
+    /// Test case produced a log message.
     LogMessage { test_case_name: String, msg: String },
+
+    /// Test finishes successfully.
     Finish,
 }
 

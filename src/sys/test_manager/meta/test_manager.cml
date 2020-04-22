@@ -8,6 +8,10 @@
             url: "fuchsia-pkg://fuchsia.com/gtest_runner#meta/gtest_runner.cm",
         },
         {
+            name: "rust_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/rust-test-runner#meta/rust-test-runner.cm",
+        },
+        {
             name: "runner_memfs",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm",
         },
@@ -38,6 +42,7 @@
             to: [
                 "#gtest_runner",
                 "#runner_memfs",
+                "#rust_test_runner",
                 "#test_tmpfs",
                 "#tests",
             ],
@@ -48,6 +53,7 @@
             to: [
                 "#gtest_runner",
                 "#runner_memfs",
+                "#rust_test_runner",
                 "#test_tmpfs",
                 "#tests",
             ],
@@ -57,6 +63,7 @@
             from: "realm",
             to: [
                 "#gtest_runner",
+                "#rust_test_runner",
                 "#tests",
             ],
         },
@@ -66,9 +73,17 @@
             to: [ "#tests" ],
         },
         {
+            runner: "rust_test_runner",
+            from: "#rust_test_runner",
+            to: [ "#tests" ],
+        },
+        {
             storage: "data",
             from: "#runner_storage",
-            to: [ "#gtest_runner" ],
+            to: [
+                "#gtest_runner",
+                "#rust_test_runner",
+            ],
         },
 
         // Some components run under test need access to /config/data.

@@ -16,6 +16,7 @@ rustc_library("lib") {
     ":*",
     "tests/*",
     "//src/sys/test_adapters/gtest/tests/*",
+    "//src/sys/test_runners/rust/tests/*",
   ]
 
   deps = [

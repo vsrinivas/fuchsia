@@ -9,16 +9,16 @@ use {
     anyhow::Context as _,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::prelude::*,
+    log::{error, info},
     test_runners_lib::elf_component::start_component,
     test_server::TestServer,
     thiserror::Error,
 };
 
 fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init_with_tags(&["gtest_runner"])?;
-    fx_log_info!("started");
+    fuchsia_syslog::init_with_tags(&["rust_test_runner"])?;
+    info!("started");
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
@@ -45,7 +45,7 @@ async fn start_runner(
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
                 if let Err(e) = start_component(start_info, controller, get_new_test_server) {
-                    fx_log_err!("cannot start test: {:?}", e);
+                    error!("cannot start test: {:?}", e);
                     continue;
                 }
             }

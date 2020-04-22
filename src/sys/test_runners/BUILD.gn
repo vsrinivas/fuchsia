@@ -38,6 +38,26 @@ rustc_library("lib") {
   ]
 }
 
+rustc_library("test_lib") {
+  testonly = true
+  name = "test_runners_test_lib"
+  edition = "2018"
+  source_root = "src/test_lib.rs"
+
+  # Only for internal use.
+  visibility = [
+    "gtest/*",
+    "rust/*",
+    ":*",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
 test_package("test-runner-unit-tests") {
   deps = [ ":lib_test" ]
 

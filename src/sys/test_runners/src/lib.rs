@@ -297,7 +297,11 @@ impl LogWriter {
     }
 
     pub async fn write_str(&mut self, s: String) -> Result<usize, LogError> {
-        self.logger.write(s.as_bytes()).await.map_err(LogError::Write)
+        self.write(s.as_bytes()).await
+    }
+
+    pub async fn write(&mut self, bytes: &[u8]) -> Result<usize, LogError> {
+        self.logger.write(bytes).await.map_err(LogError::Write)
     }
 }
 
