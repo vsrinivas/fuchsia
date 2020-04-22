@@ -87,6 +87,9 @@ class InheritancePath {
   const fxl::RefPtr<Collection> derived_ref() const { return path_.front().collection; }
 
   // The "base" is the base class of derived that this path represents.
+  //
+  // Note that in some cases that may not be a concrete type and you will have to convert it to one
+  // before using.
   const Collection* base() const { return path_.back().collection.get(); }
   const fxl::RefPtr<Collection> base_ref() const { return path_.back().collection; }
 

@@ -221,6 +221,47 @@ TEST_F(ResolveCollectionTest, ForwardDefMember) {
   EXPECT_EQ(forward_decl.get(), result.value().type());
 }
 
+// Tests that a base type can be a forward definition and we can still find members on it. In most
+// cases base classes will be concrete, but sometimes the toolchain seems to optimize things and
+// makes them declarations only, with one full definition for the full program.
+TEST_F(ResolveCollectionTest, ForwardDefBase) {
+  // Full definition of the base type.
+  const char kBaseName[] = "BaseName";
+  auto int32_type = MakeInt32Type();
+  auto base_type = MakeCollectionType(DwarfTag::kStructureType, kBaseName, {{"a", int32_type}});
+  base_type->set_assigned_name(kBaseName);
+
+  // The base type needs to be indexed for the forward-declaration to be resolved.
+  TestIndexedSymbol base_indexed(module_symbols_, &module_symbols_->index().root(), kBaseName,
+                                 base_type);
+
+  // Forward-declaration of the base type.
+  auto forward_decl = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
+  forward_decl->set_assigned_name(kBaseName);
+  forward_decl->set_is_declaration(true);
+
+  // Derived class.
+  auto derived = MakeCollectionTypeWithOffset(DwarfTag::kStructureType, "Derived", 4, {});
+
+  // Inheritance record referencing the forward-declaration.
+  uint32_t base_offset = 0;  // Offset in derived of base.
+  auto inherited = fxl::MakeRefCounted<InheritedFrom>(forward_decl, base_offset);
+  // auto inherited = fxl::MakeRefCounted<InheritedFrom>(base_type, base_offset);
+  derived->set_inherited_from({LazySymbol(inherited)});
+
+  ExprValue derived_value(derived, {42, 0, 0, 0});
+
+  bool called = false;
+  ResolveMember(eval_context_, derived_value, ParsedIdentifier(ParsedIdentifierComponent("a")),
+                [&called](ErrOrValue result) {
+                  called = true;
+
+                  EXPECT_FALSE(result.has_error()) << result.err().msg();
+                  EXPECT_EQ(42, result.value().GetAs<int32_t>());
+                });
+  EXPECT_TRUE(called);
+}
+
 TEST_F(ResolveCollectionTest, ExternStaticMember) {
   // This test doesn't do an end-to-end resolution of the EvalContextImpl resolving extern variables
   // since that requires a lot of setup and is tested by the EvalContextImpl unit tests. Instead
@@ -258,9 +299,9 @@ TEST_F(ResolveCollectionTest, ExternStaticMember) {
 }
 
 // Tests that "foo->bar" works where "foo" is a pointer to a base class, and "bar" is a member of
-// class derived from "foo". When EvalContext::ShouldPromoteToDerived() is set, the pointer should
-// be automatically up-casted when we know the types (this requires a vtable).
-TEST_F(ResolveCollectionTest, ResolveMemberByPtr_Derived) {
+// class virtually derived from "foo". When EvalContext::ShouldPromoteToDerived() is set, the
+// pointer should be automatically up-casted when we know the types (this requires a vtable).
+TEST_F(ResolveCollectionTest, ResolveVirtualDerivedMemberByPtr) {
   VirtualBaseTestSetup setup(data_provider_.get(), module_symbols_);
 
   ExprValue ptr_value(setup.kBaseAddress, setup.base_class_ptr);

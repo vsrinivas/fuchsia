@@ -251,6 +251,7 @@ std::optional<InheritancePath> GetDerivedClassPath(const Type* base, const Type*
 
   std::optional<InheritancePath> result;
   VisitClassHierarchy(derived_collection, [&result, &base_name](const InheritancePath& path) {
+    // Since we only need the name, the base type doesn't need to be concrete.
     if (path.base()->GetFullName() == base_name) {
       result = path;
       return VisitResult::kDone;

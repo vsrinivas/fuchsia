@@ -48,12 +48,6 @@ void MockEvalContext::GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback
     cb(found->second);
 }
 
-fxl::RefPtr<Type> MockEvalContext::GetConcreteType(const Type* type) const {
-  if (!type)
-    return nullptr;
-  return FindTypeDefinition(FindNameContext(), type->StripCVT());
-}
-
 const ProcessSymbols* MockEvalContext::GetProcessSymbols() const { return nullptr; }
 
 fxl::RefPtr<SymbolDataProvider> MockEvalContext::GetDataProvider() { return data_provider_; }

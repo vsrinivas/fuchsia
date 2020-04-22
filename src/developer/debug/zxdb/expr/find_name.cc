@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/index_walker.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
+#include "src/developer/debug/zxdb/expr/resolve_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
@@ -380,10 +381,15 @@ VisitResult FindInIndexLevelRecursiveNs(const FindNameOptions& options,
 VisitResult FindMemberOn(const FindNameContext& context, const FindNameOptions& options,
                          const InheritancePath& path, const ParsedIdentifier& looking_for,
                          const Variable* optional_object_ptr, std::vector<FoundName>* result) {
+  auto base = GetConcreteType(context, path.base());
+  const Collection* base_coll = base->AsCollection();
+  if (!base_coll)
+    return VisitResult::kContinue;  // Nothing to do at this level.
+
   // Data member iteration.
   if (const std::string* looking_for_name = GetSingleComponentIdentifierName(looking_for);
       looking_for_name && options.find_vars) {
-    for (const auto& lazy : path.base()->data_members()) {
+    for (const auto& lazy : base_coll->data_members()) {
       if (const DataMember* data = lazy.Get()->AsDataMember()) {
         // TODO(brettw) allow "BaseClass::foo" syntax for specifically naming a member of a base
         // class. Watch out: the base class could be qualified (or not) in various ways:
@@ -418,7 +424,7 @@ VisitResult FindMemberOn(const FindNameContext& context, const FindNameOptions& 
 
   // Index node iteration for this class' scope.
   if (OptionsRequiresIndex(options)) {
-    ParsedIdentifier container_name = ToParsedIdentifier(path.base()->GetIdentifier());
+    ParsedIdentifier container_name = ToParsedIdentifier(base_coll->GetIdentifier());
 
     // Don't search previous scopes (pass |search_containing| = false). If a class derives from a
     // class in another namespace, that doesn't bring the other namespace in the current scope.
@@ -567,21 +573,10 @@ void FindMemberOnThis(const FindNameContext& context, const FindNameOptions& opt
   if (!this_var)
     return;  // No "this" pointer.
 
-  // Pointed-to type for "this".
-  //
-  // TODO(brettw) this assumes the type of "this" is not a forward declaration. Currently that's
-  // true because the compiler will always need to have the definition of "this" to actually
-  // generate any code that uses it. But it's possible for the compiler to encode the symbols that
-  // way.
-  //
-  // Ideally we would use GetConcretePointedToCollection() for this lookup, but the implementation
-  // of that needs an ExprEvalContext which makes a FindNameContext, rather than the other way
-  // around. Maybe the best thing would be to separate out the concrete type resolution from the
-  // ExprEvalContext. But that needs to be done carefully to avoid complicating everything.
-  const Type* this_type = this_var->type().Get()->AsType();
+  // Type for "this".
+  fxl::RefPtr<Type> this_type = GetConcreteType(context, this_var->type().Get()->AsType());
   if (!this_type)
     return;  // Bad type.
-  this_type = this_type->StripCVT();
 
   const ModifiedType* modified = this_type->AsModifiedType();
   if (!modified || modified->tag() != DwarfTag::kPointerType)

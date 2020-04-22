@@ -44,9 +44,6 @@ class PrettyEvalContext : public EvalContext {
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override {
     return impl_->GetVariableValue(std::move(variable), std::move(cb));
   }
-  fxl::RefPtr<Type> GetConcreteType(const Type* type) const override {
-    return impl_->GetConcreteType(type);
-  }
   const ProcessSymbols* GetProcessSymbols() const override { return impl_->GetProcessSymbols(); }
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override { return impl_->GetDataProvider(); }
   NameLookupCallback GetSymbolNameLookupCallback() override {

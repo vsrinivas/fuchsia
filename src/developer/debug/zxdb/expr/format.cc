@@ -264,17 +264,25 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
     if (!inherited)
       continue;
 
-    const Collection* from = inherited->from().Get()->AsCollection();
-    if (!from)
+    auto from = eval_context->GetConcreteType(inherited->from().Get()->AsType());
+    const Collection* from_coll = from->AsCollection();
+    if (!from_coll)
       continue;
 
     // Some base classes are empty. Only show if this base class or any of its base classes have
     // member values.
-    VisitResult has_members_result = VisitClassHierarchy(from, [](const InheritancePath& path) {
-      if (path.base()->data_members().empty())
-        return VisitResult::kContinue;
-      return VisitResult::kDone;
-    });
+    VisitResult has_members_result =
+        VisitClassHierarchy(from_coll, [eval_context](const InheritancePath& path) {
+          auto base = eval_context->GetConcreteType(path.base());
+
+          const Collection* base_coll = base->AsCollection();
+          if (!base_coll)
+            return VisitResult::kContinue;  // No concrete base class, skip.
+
+          if (base_coll->data_members().empty())
+            return VisitResult::kContinue;
+          return VisitResult::kDone;
+        });
     if (has_members_result == VisitResult::kContinue)
       continue;
 

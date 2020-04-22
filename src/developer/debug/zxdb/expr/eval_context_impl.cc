@@ -133,7 +133,7 @@ EvalContextImpl::~EvalContextImpl() = default;
 ExprLanguage EvalContextImpl::GetLanguage() const { return language_; }
 
 FindNameContext EvalContextImpl::GetFindNameContext() const {
-  // The synbol context for the current location is passed to the FindNameContext to prioritize
+  // The symbol context for the current location is passed to the FindNameContext to prioritize
   // the current module's values when searching for variables. If relative, this will be ignored.
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
   if (block_ && process_symbols_)
@@ -241,27 +241,6 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
   // Schedule the expression to be evaluated.
   auto evaluator = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(cb), std::move(type));
   evaluator->Eval(RefPtrTo(this), symbol_context, loc_entry->expression);
-}
-
-fxl::RefPtr<Type> EvalContextImpl::GetConcreteType(const Type* type) const {
-  if (!type)
-    return fxl::RefPtr<Type>();
-
-  // Iteratively strip C-V qualifications, follow typedefs, and follow forward
-  // declarations.
-  fxl::RefPtr<Type> cur = RefPtrTo(type);
-  do {
-    // Follow forward declarations.
-    if (cur->is_declaration()) {
-      cur = FindTypeDefinition(GetFindNameContext(), cur.get());
-      if (cur->is_declaration())
-        break;  // Declaration can't be resolved, give up.
-    }
-
-    // Strip C-V qualifiers and follow typedefs.
-    cur = RefPtrTo(cur->StripCVT());
-  } while (cur && cur->is_declaration());
-  return cur;
 }
 
 const ProcessSymbols* EvalContextImpl::GetProcessSymbols() const {

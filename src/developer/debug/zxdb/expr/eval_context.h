@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
+#include "src/developer/debug/zxdb/expr/resolve_type.h"
 #include "src/developer/debug/zxdb/expr/vector_register_format.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
@@ -68,15 +69,11 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // into a Variable when the extern is resolved).
   virtual void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const = 0;
 
-  // Strips C-V qualifications and resolves forward declarations.
-  //
-  // This is the function to use to properly resolve the type to something there the data of the
-  // ExprValue can be interpreted.
-  //
-  // It will return null only if the input type is null. Sometimes forward declarations can't be
-  // resolved or the "const" refers to nothing, in which case this function will return the original
-  // type.
-  virtual fxl::RefPtr<Type> GetConcreteType(const Type* type) const = 0;
+  // Convenience wrapper around the toplevel GetConcreteType() that uses the FindNameContext()
+  // from this class.
+  inline fxl::RefPtr<Type> GetConcreteType(const Type* type) const {
+    return zxdb::GetConcreteType(GetFindNameContext(), type);
+  }
 
   // May return null (ProcessSymbols are destroyed with the process, and the EvalContext is
   // refcounted and can outlive it).

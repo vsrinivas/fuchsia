@@ -33,7 +33,8 @@ namespace {
 
 // A wrapper around FindMember that issues errors rather than returning an optional. The base can be
 // null for the convenience of the caller. On error, the output FoundMember will be untouched.
-ErrOr<FoundMember> FindMemberWithErr(const Collection* base, const ParsedIdentifier& identifier) {
+ErrOr<FoundMember> FindMemberWithErr(const fxl::RefPtr<EvalContext>& context,
+                                     const Collection* base, const ParsedIdentifier& identifier) {
   if (!base) {
     return Err("Can't resolve '%s' on non-struct/class/union value.",
                identifier.GetFullName().c_str());
@@ -43,7 +44,7 @@ ErrOr<FoundMember> FindMemberWithErr(const Collection* base, const ParsedIdentif
   options.find_vars = true;
 
   std::vector<FoundName> found;
-  FindMember(FindNameContext(), options, base, identifier, nullptr, &found);
+  FindMember(context->GetFindNameContext(), options, base, identifier, nullptr, &found);
   if (!found.empty()) {
     FXL_DCHECK(found[0].kind() == FoundName::kMemberVariable);
     return found[0].member();
@@ -59,7 +60,7 @@ ErrOr<FoundMember> FindMemberWithErr(const fxl::RefPtr<EvalContext>& context, co
   fxl::RefPtr<Type> concrete_base = base.GetConcreteType(context.get());
   if (!concrete_base)
     return Err("No type information for collection.");
-  return FindMemberWithErr(concrete_base->AsCollection(), identifier);
+  return FindMemberWithErr(context, concrete_base->AsCollection(), identifier);
 }
 
 Err GetErrorForInvalidMemberOf(const Collection* coll) {
@@ -145,7 +146,7 @@ void DoResolveMemberNameByPointer(const fxl::RefPtr<EvalContext>& context,
   if (Err err = GetConcretePointedToCollection(context, base_ptr.type(), &coll); err.has_error())
     return cb(err, FoundMember());
 
-  ErrOr<FoundMember> found = FindMemberWithErr(coll.get(), identifier);
+  ErrOr<FoundMember> found = FindMemberWithErr(context, coll.get(), identifier);
   if (found.has_error())
     return cb(found.err(), FoundMember());
 

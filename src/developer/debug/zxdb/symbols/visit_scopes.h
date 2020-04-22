@@ -36,6 +36,9 @@ VisitResult VisitLocalBlocks(const CodeBlock* starting,
 //
 // The callback gives the path from the input derived class to the current base class being
 // iterated over.
+//
+// Watch out, the classes in the InheritancePath may not necessarily be concrete so call
+// GetConcreteType() as necessary.
 VisitResult VisitClassHierarchy(const Collection* starting,
                                 fit::function<VisitResult(const InheritancePath& path)> cb);
 

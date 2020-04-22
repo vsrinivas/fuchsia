@@ -66,7 +66,6 @@ class EvalContextImpl : public EvalContext {
   FindNameContext GetFindNameContext() const override;
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
-  fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   const ProcessSymbols* GetProcessSymbols() const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;

@@ -6,8 +6,30 @@
 
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
+#include "src/developer/debug/zxdb/symbols/type.h"
 
 namespace zxdb {
+
+fxl::RefPtr<Type> GetConcreteType(const FindNameContext& find_name_context, const Type* type) {
+  if (!type)
+    return fxl::RefPtr<Type>();
+
+  // Iteratively strip C-V qualifications, follow typedefs, and follow forward
+  // declarations.
+  fxl::RefPtr<Type> cur = RefPtrTo(type);
+  do {
+    // Follow forward declarations.
+    if (cur->is_declaration()) {
+      cur = FindTypeDefinition(find_name_context, cur.get());
+      if (cur->is_declaration())
+        break;  // Declaration can't be resolved, give up.
+    }
+
+    // Strip C-V qualifiers and follow typedefs.
+    cur = RefPtrTo(cur->StripCVT());
+  } while (cur && cur->is_declaration());
+  return cur;
+}
 
 fxl::RefPtr<Type> FindTypeDefinition(const FindNameContext& context, const Type* type) {
   Identifier ident = type->GetIdentifier();
