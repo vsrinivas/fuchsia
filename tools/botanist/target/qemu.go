@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -24,6 +23,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/ring"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
@@ -217,17 +217,19 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		return err
 	}
 
-	if err := copyImagesToDir(workdir, &qemuKernel, &zirconA, &storageFull); err != nil {
+	if err := copyImagesToDir(ctx, workdir, &qemuKernel, &zirconA, &storageFull); err != nil {
 		return err
 	}
 
-	qemuCmd.SetKernel(filepath.Join(workdir, qemuKernel.Name))
-	qemuCmd.SetInitrd(filepath.Join(workdir, zirconA.Name))
+	// Now that the images hav successfully been copied to the working
+	// directory, Path points to their path on disk.
+	qemuCmd.SetKernel(qemuKernel.Path)
+	qemuCmd.SetInitrd(zirconA.Path)
 
-	if storageFull.Reader != nil {
+	if storageFull.Path != "" {
 		qemuCmd.AddVirtioBlkPciDrive(qemu.Drive{
 			ID:   "maindisk",
-			File: filepath.Join(workdir, storageFull.Name),
+			File: storageFull.Path,
 		})
 	}
 
@@ -304,7 +306,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 			Ctty:    int(t.pts.Fd()),
 		}
 	}
-	log.Printf("QEMU invocation:\n%s", strings.Join(invocation, " "))
+	logger.Debugf(ctx, "QEMU invocation:\n%s", strings.Join(invocation, " "))
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start: %w", err)
@@ -342,7 +344,7 @@ func (t *QEMUTarget) Wait(ctx context.Context) error {
 	return <-t.c
 }
 
-func copyImagesToDir(dir string, imgs ...*bootserver.Image) error {
+func copyImagesToDir(ctx context.Context, dir string, imgs ...*bootserver.Image) error {
 	// Copy each in a goroutine for efficiency's sake.
 	errs := make(chan error, len(imgs))
 	var wg sync.WaitGroup
@@ -350,7 +352,7 @@ func copyImagesToDir(dir string, imgs ...*bootserver.Image) error {
 	for _, img := range imgs {
 		go func(img *bootserver.Image) {
 			if img.Reader != nil {
-				if err := copyImageToDir(dir, img); err != nil {
+				if err := copyImageToDir(ctx, dir, img); err != nil {
 					errs <- err
 				}
 			}
@@ -366,12 +368,16 @@ func copyImagesToDir(dir string, imgs ...*bootserver.Image) error {
 	}
 }
 
-func copyImageToDir(dir string, img *bootserver.Image) error {
+func copyImageToDir(ctx context.Context, dir string, img *bootserver.Image) error {
 	dest := filepath.Join(dir, img.Name)
 
 	f, ok := img.Reader.(*os.File)
 	if ok {
-		return osmisc.CopyFile(f.Name(), dest)
+		if err := osmisc.CopyFile(f.Name(), dest); err != nil {
+			return err
+		}
+		img.Path = dest
+		return nil
 	}
 
 	f, err := os.Create(dest)
@@ -385,13 +391,21 @@ func copyImageToDir(dir string, img *bootserver.Image) error {
 	defer ticker.Stop()
 	go func() {
 		for range ticker.C {
-			log.Printf("transferring %s...\n", img.Name)
+			logger.Debugf(ctx, "transferring %s...\n", img.Name)
 		}
 	}()
 
 	if _, err := io.Copy(f, iomisc.ReaderAtToReader(img.Reader)); err != nil {
 		return fmt.Errorf("failed to copy image %q to %q: %w", img.Name, dest, err)
 	}
+	img.Path = dest
+
+	// We no longer need the reader at this point.
+	c, ok := img.Reader.(io.Closer)
+	if ok {
+		c.Close()
+	}
+	img.Reader = nil
 	return nil
 }
 
