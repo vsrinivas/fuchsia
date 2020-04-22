@@ -13,6 +13,7 @@ use fidl_fuchsia_lowpan_device::{
     ProvisioningMonitorMarker, ProvisioningMonitorRequest, ProvisioningProgress,
 };
 use futures::stream::BoxStream;
+use futures::FutureExt;
 
 /// A dummy LoWPAN Driver implementation, for testing.
 #[derive(Debug, Copy, Clone, Default)]
@@ -163,16 +164,109 @@ impl Driver for DummyDevice {
         &self,
         _params: &EnergyScanParameters,
     ) -> BoxStream<'_, ZxResult<Vec<EnergyScanResult>>> {
-        // TODO: Implement dummy energy scanner.
-        futures::stream::empty().boxed()
+        // NOTE: Updates to the returned value may need to be reflected
+        //       in `crate::lowpan_device::tests::test_energy_scan`.
+        futures::stream::empty()
+            .chain(
+                ready(vec![EnergyScanResult {
+                    channel_index: Some(11),
+                    max_rssi: Some(-20),
+                    min_rssi: Some(-90),
+                }])
+                .into_stream(),
+            )
+            .chain(ready(vec![]).into_stream())
+            .chain(
+                ready(vec![
+                    EnergyScanResult {
+                        channel_index: Some(12),
+                        max_rssi: Some(-30),
+                        min_rssi: Some(-90),
+                    },
+                    EnergyScanResult {
+                        channel_index: Some(13),
+                        max_rssi: Some(-25),
+                        min_rssi: Some(-90),
+                    },
+                ])
+                .into_stream(),
+            )
+            .chain(
+                ready(vec![
+                    EnergyScanResult {
+                        channel_index: Some(14),
+                        max_rssi: Some(-45),
+                        min_rssi: Some(-90),
+                    },
+                    EnergyScanResult {
+                        channel_index: Some(15),
+                        max_rssi: Some(-40),
+                        min_rssi: Some(-50),
+                    },
+                ])
+                .into_stream(),
+            )
+            .map(|x| Ok(x))
+            .boxed()
     }
 
     fn start_network_scan(
         &self,
         _params: &NetworkScanParameters,
     ) -> BoxStream<'_, ZxResult<Vec<BeaconInfo>>> {
-        // TODO: Implement dummy network scanner.
-        futures::stream::empty().boxed()
+        // NOTE: Updates to the returned value may need to be reflected
+        //       in `crate::lowpan_device::tests::test_network_scan`.
+        futures::stream::empty()
+            .chain(
+                ready(vec![BeaconInfo {
+                    identity: Identity {
+                        raw_name: Some("MyNet".as_bytes().to_vec()),
+                        xpanid: Some(vec![0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]),
+                        net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
+                        channel: Some(11),
+                        panid: Some(0x1234),
+                    },
+                    rssi: -40,
+                    lqi: 0,
+                    address: vec![0x02, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05],
+                    flags: vec![],
+                }])
+                .into_stream(),
+            )
+            .chain(ready(vec![]).into_stream())
+            .chain(
+                ready(vec![
+                    BeaconInfo {
+                        identity: Identity {
+                            raw_name: Some("MyNet".as_bytes().to_vec()),
+                            xpanid: Some(vec![0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]),
+                            net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
+                            channel: Some(11),
+                            panid: Some(0x1234),
+                        },
+                        rssi: -60,
+                        lqi: 0,
+                        address: vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x03, 0x13, 0x37],
+                        flags: vec![],
+                    },
+                    BeaconInfo {
+                        identity: Identity {
+                            raw_name: Some("MyNet2".as_bytes().to_vec()),
+                            xpanid: Some(vec![0xFF, 0xAA, 0xBB, 0xCC, 0x11, 0x22, 0x33, 0xFF]),
+                            net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
+                            channel: Some(12),
+                            panid: Some(0x5678),
+                        },
+                        rssi: -26,
+                        lqi: 0,
+                        address: vec![0x02, 0x00, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef],
+                        flags: vec![],
+                    },
+                ])
+                .into_stream(),
+            )
+            .map(|x| Ok(x))
+            .boxed()
     }
 
     async fn get_ncp_version(&self) -> ZxResult<String> {
