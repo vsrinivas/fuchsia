@@ -12,6 +12,7 @@ fidl("fuchsia.ui.views") {
     "focuser.fidl",
     "view.fidl",
     "view_ref.fidl",
+    "view_ref_installed.fidl",
     "view_token.fidl",
   ]
 }

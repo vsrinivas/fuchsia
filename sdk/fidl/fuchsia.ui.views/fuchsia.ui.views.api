@@ -3,5 +3,6 @@
   "fidl/fuchsia.ui.views/focuser.fidl": "4c1cd07c35619139106baa9334739a12",
   "fidl/fuchsia.ui.views/view.fidl": "6366a9bafc9e169332ca6eaccd367b9c",
   "fidl/fuchsia.ui.views/view_ref.fidl": "1e38b7588061422291bb01757c691647",
+  "fidl/fuchsia.ui.views/view_ref_installed.fidl": "64ae4de09d613dc596930a87bc06d046",
   "fidl/fuchsia.ui.views/view_token.fidl": "45a56b1b07fbd2c1aae4c34c20595026"
 }

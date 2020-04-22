@@ -1,0 +1,42 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.views;
+
+/// A collection of error codes related to |ViewRefInstalled|.
+enum ViewRefInstalledError {
+    /// The ViewRef being watched is invalid, or has become invalid.
+    INVALID_VIEW_REF = 1;
+};
+
+/// A method of enabling ViewRef holders to determine if a ViewRef has been
+/// "installed" in the view tree: the time it is first connected, transitively,
+/// to the root view.  Typically, after installation, view focus may be
+/// transferred to that ViewRef.
+///
+/// Note: It's important to distinguish between a ViewRef's installed status and
+///       current connected-to-view-tree status.  The former undergoes a state
+///       change once, from "no" to "yes".  The latter may change continuously,
+///       depending on view tree topology.  As such, "installed" cannot imply
+///       "currently connected to view tree"; even a hypothetical
+///       "ViewRefConnected" protocol is fundamentally racy.
+[Discoverable]
+protocol ViewRefInstalled {
+    /// Sets up a callback to fire when the requested |view_ref| is installed.
+    /// - If |view_ref| has not already been installed, the |Watch| response
+    ///   will fire when it is.
+    /// - If |view_ref| has already been installed, the |Watch| response will
+    ///   fire immediately.
+    /// - If |view_ref| is invalid, or becomes invalid (perhaps because the view
+    ///   was destroyed), the |Watch| call returns with an error.  The error is
+    ///   not guaranteed to be immediate, but a ViewRef holder can itself
+    ///   determine ViewRef validity by listening for ZX_ERR_PEER_CLOSED.
+    ///
+    /// Flow control: The caller is allowed multiple |Watch| calls on multiple
+    /// ViewRefs. There is at most one response per call back to the client.
+    ///
+    /// Note: Prior to installation, this |Watch| call is kept alive as long as
+    ///       the ViewRef is valid.
+    Watch(ViewRef view_ref) -> () error ViewRefInstalledError;
+};
