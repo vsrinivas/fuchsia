@@ -5,7 +5,6 @@ Example app to exercise the various stream configurations available for Sherlock
 
 TBD
 
-## How To Run
+## How To Run (in fx shell)
 
-tiles_ctl start
-tiles_ctl add fuchsia-pkg://fuchsia.com/camera-gym#meta/camera-gym.cmx
+present_view fuchsia-pkg://fuchsia.com/camera-gym#meta/camera-gym.cmx
