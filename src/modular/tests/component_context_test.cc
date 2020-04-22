@@ -13,7 +13,7 @@ namespace {
 class ComponentContextTest : public modular_testing::TestHarnessFixture {};
 
 // Tests that an agent is able to start another agent through
-// fuchsia::modular::ComponentContext.ConnectToAgent(). Asserts that closing
+// fuchsia::modular::ComponentContext.DeprecatedConnectToAgent(). Asserts that closing
 // fuchsia::modular::AgentController triggers the agent to stop.
 TEST_F(ComponentContextTest, AgentStartsSecondAgent) {
   modular_testing::TestHarnessBuilder builder;
@@ -38,16 +38,16 @@ TEST_F(ComponentContextTest, AgentStartsSecondAgent) {
   // Connect to the first fake agent from the fake mod.
   fuchsia::sys::ServiceProviderPtr first_agent_services;
   fuchsia::modular::AgentControllerPtr first_agent_controller;
-  fake_module->modular_component_context()->ConnectToAgent(
+  fake_module->modular_component_context()->DeprecatedConnectToAgent(
       fake_agent->url(), first_agent_services.NewRequest(), first_agent_controller.NewRequest());
   RunLoopUntil([&] { return fake_agent->is_running(); });
 
   // Connect to the second fake agent from the first fake agent.
   fuchsia::sys::ServiceProviderPtr second_agent_services;
   fuchsia::modular::AgentControllerPtr second_agent_controller;
-  fake_agent->modular_component_context()->ConnectToAgent(second_fake_agent->url(),
-                                                          second_agent_services.NewRequest(),
-                                                          second_agent_controller.NewRequest());
+  fake_agent->modular_component_context()->DeprecatedConnectToAgent(
+      second_fake_agent->url(), second_agent_services.NewRequest(),
+      second_agent_controller.NewRequest());
   RunLoopUntil([&] { return second_fake_agent->is_running(); });
 
   // Killing the agent controller should stop the agent.

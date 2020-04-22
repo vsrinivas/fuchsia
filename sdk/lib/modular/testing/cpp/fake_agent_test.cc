@@ -44,7 +44,7 @@ TEST_F(FakeAgentTest, AddAgentService) {
   req.set_channel(pinger.NewRequest().TakeChannel());
   req.set_handler(fake_agent->url());
   req.set_agent_controller(agent_controller.NewRequest());
-  component_context->ConnectToAgentService(std::move(req));
+  component_context->DeprecatedConnectToAgentService(std::move(req));
 
   EXPECT_FALSE(pinged());
   pinger->Ping();

@@ -196,8 +196,8 @@ TEST_F(StoriesShareSessionRunnersTest, AgentGetsSessionmgrProvidedServices) {
 
   fuchsia::modular::AgentControllerPtr agent_controller;
   fuchsia::sys::ServiceProviderPtr agent_services;
-  component_context->ConnectToAgent(fake_agent_url_, agent_services.NewRequest(),
-                                    agent_controller.NewRequest());
+  component_context->DeprecatedConnectToAgent(fake_agent_url_, agent_services.NewRequest(),
+                                              agent_controller.NewRequest());
 
   RunLoopUntil([&] { return fake_agent_->is_running(); });
 

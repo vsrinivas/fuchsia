@@ -19,7 +19,7 @@ namespace {
 const std::string kTestAgentUrl("fuchsia-pkg://fuchsia.com/fake_agent#meta/fake_agent.cmx");
 const std::string kTestServiceName(fuchsia::testing::modular::TestProtocol::Name_);
 
-// Configuration for testing |ComponentContext| ConnectToAgentService().
+// Configuration for testing |ComponentContext| DeprecatedConnectToAgentService().
 struct ConnectToAgentServiceTestConfig {
   // The map of |service_name|->|agent_url| used to look up a service
   // handler |agent_url| by name.
@@ -136,7 +136,7 @@ class AgentServicesTest : public modular_testing::TestHarnessFixture {
     fuchsia::modular::AgentControllerPtr agent_controller;
     auto agent_service_request = test_config.MakeAgentServiceRequest(
         service_name, std::move(service_request), agent_controller.NewRequest());
-    component_context->ConnectToAgentService(std::move(agent_service_request));
+    component_context->DeprecatedConnectToAgentService(std::move(agent_service_request));
 
     RunLoopUntil([&] { return got_request || service_terminated; });
     fake_agent_service_handler_ = nullptr;  // Callback references local variables.
@@ -596,7 +596,7 @@ TEST_F(AgentServicesSFWCompatTest, PublishToOutgoingDirectory) {
   protocol_ptrs.push_back(
       agent->component_context()->svc()->Connect<fuchsia::testing::modular::TestProtocol>());
 
-  // Method 2: Connect using fuchsia.modular.ComponentContext/ConnectToAgentService().
+  // Method 2: Connect using fuchsia.modular.ComponentContext/DeprecatedConnectToAgentService().
   fuchsia::modular::AgentServiceRequest agent_service_request;
   protocol_ptrs.emplace_back();
   agent_controllers.emplace_back();
@@ -604,7 +604,8 @@ TEST_F(AgentServicesSFWCompatTest, PublishToOutgoingDirectory) {
   agent_service_request.set_channel(protocol_ptrs.back().NewRequest().TakeChannel());
   agent_service_request.set_agent_controller(agent_controllers.back().NewRequest());
   agent_service_request.set_handler(serving_agent->url());
-  agent->modular_component_context()->ConnectToAgentService(std::move(agent_service_request));
+  agent->modular_component_context()->DeprecatedConnectToAgentService(
+      std::move(agent_service_request));
 
   // Track the number of those connection attempts failed.
   int num_errors = 0;

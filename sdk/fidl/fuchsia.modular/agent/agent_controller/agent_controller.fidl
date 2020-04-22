@@ -4,7 +4,7 @@
 
 library fuchsia.modular;
 
-/// This interface is used by the caller of ComponentContext::ConnectToAgent() to
+/// This interface is used by the caller of ComponentContext::DeprecatedConnectToAgent() to
 /// tell the framework that it is still interested in keeping this Agent running.
 ///
 /// The system counts AgentController connections and terminates this Agent if
