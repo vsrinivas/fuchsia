@@ -4,6 +4,7 @@
 
 #![recursion_limit = "512"]
 
+mod access_point;
 mod client;
 mod config_management;
 mod legacy;
@@ -26,6 +27,7 @@ use {
 
 async fn serve_fidl(
     client_ref: client::ClientPtr,
+    ap: access_point::AccessPoint,
     legacy_client_ref: legacy::shim::ClientRef,
     saved_networks: Arc<SavedNetworksManager>,
 ) -> Result<Void, Error> {
@@ -54,7 +56,8 @@ async fn serve_fidl(
         })
         .add_fidl_service(move |reqs| {
             client::spawn_listener_server(listener_msg_sender2.clone(), reqs)
-        });
+        })
+        .add_fidl_service(move |reqs| fasync::spawn(ap.clone().serve_provider_requests(reqs)));
     fs.take_and_serve_directory_handle()?;
     let service_fut = fs.collect::<()>().fuse();
     pin_mut!(service_fut);
@@ -85,7 +88,9 @@ fn main() -> Result<(), Error> {
     let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
     let legacy_client = legacy::shim::ClientRef::new();
     let client = Arc::new(Mutex::new(client::Client::new_empty()));
-    let fidl_fut = serve_fidl(client.clone(), legacy_client.clone(), Arc::clone(&saved_networks));
+    let ap = access_point::AccessPoint::new_empty();
+    let fidl_fut =
+        serve_fidl(client.clone(), ap, legacy_client.clone(), Arc::clone(&saved_networks));
 
     let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_proxy()?;
     wlan_svc.watch_devices(watcher_server_end)?;
