@@ -4,14 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/counters.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <pow2.h>
 #include <sys/types.h>
 
 #include <fbl/ref_counted.h>
 #include <ktl/move.h>
 #include <object/msi_allocation.h>
-
-#include "lib/counters.h"
 
 KCOUNTER(msi_create_count, "msi.create")
 KCOUNTER(msi_destroy_count, "msi.destroy")
@@ -31,9 +31,10 @@ zx_status_t MsiAllocation::Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* 
     }
   });
 
-  // Ensure the requested IRQs fit within the mask of permitted IRQs in an allocation.
+  // Ensure the requested IRQs fit within the mask of permitted IRQs in an
+  // allocation. MSI allocations must be a power of two.
   // MSI supports up to 32, MSI-X supports up to 2048.
-  if (irq_cnt == 0 || irq_cnt > kMsiAllocationCountMax) {
+  if (irq_cnt == 0 || irq_cnt > kMsiAllocationCountMax || !ispow2(irq_cnt)) {
     return ZX_ERR_INVALID_ARGS;
   }
 

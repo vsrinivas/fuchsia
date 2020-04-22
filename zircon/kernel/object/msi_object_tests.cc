@@ -7,6 +7,7 @@
 #include <debug.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
+#include <pow2.h>
 #include <zircon/errors.h>
 #include <zircon/time.h>
 
@@ -105,7 +106,7 @@ zx_status_t create_valid_msi_vmo(fbl::RefPtr<VmObject>* out_vmo,
 static bool allocation_creation_and_info_test() {
   BEGIN_TEST;
 
-  const uint32_t test_irq_cnt = 5;
+  const uint32_t test_irq_cnt = 8;
   ResourceDispatcher::ResourceStorage rsrc_storage;
   fbl::RefPtr<MsiAllocation> alloc;
   ASSERT_EQ(ZX_OK, create_resource_storage_and_allocation(&rsrc_storage, &alloc, test_irq_cnt));
@@ -131,11 +132,13 @@ static bool allocation_irq_count_test() {
   ResourceDispatcher::ResourceStorage rsrc_storage;
   ASSERT_EQ(ZX_OK, ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, 0, kVectorMax,
                                                            &rsrc_storage));
-  // Check that the valid range of allocation sizes work.
+  // Check that the valid range of allocation sizes work. Verifies that only
+  // powers of two are valid.
   for (uint32_t cnt = 1; cnt < MsiAllocation::kMsiAllocationCountMax; cnt++) {
     fbl::RefPtr<MsiAllocation> alloc;
-    ASSERT_EQ(ZX_OK, MsiAllocation::Create(cnt, &alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue,
-                                           &rsrc_storage));
+    zx_status_t expected = ispow2(cnt) ? ZX_OK : ZX_ERR_INVALID_ARGS;
+    ASSERT_EQ(expected, MsiAllocation::Create(cnt, &alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue,
+                                              &rsrc_storage));
   }
 
   fbl::RefPtr<MsiAllocation> alloc;
