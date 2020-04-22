@@ -569,7 +569,6 @@ impl Hub {
         match source {
             CapabilitySource::Framework { capability: FrameworkCapability::Runner(_), .. } => false,
             CapabilitySource::Component { capability: ComponentCapability::Runner(_), .. } => false,
-            CapabilitySource::StorageDecl(_, _) => false,
             _ => true,
         }
     }

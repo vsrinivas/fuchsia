@@ -167,7 +167,6 @@ fn maybe_create_capability_routed_payload(
                 ..fsys::ComponentCapability::empty()
             })
         }
-        _ => return None,
     });
 
     let routing_payload = Some(fsys::RoutingPayload { routing_protocol, capability_id, source });

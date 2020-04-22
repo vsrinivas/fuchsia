@@ -32,10 +32,6 @@ pub enum CapabilitySource {
     /// This capability originates from component manager itself and is optionally
     /// scoped to a component's realm.
     Framework { capability: FrameworkCapability, scope_moniker: Option<AbsoluteMoniker> },
-    /// This capability originates from a storage declaration in a component's decl.  `StorageDecl`
-    /// describes the backing directory capability offered to this realm, into which storage
-    /// requests should be fed.
-    StorageDecl(StorageDecl, WeakRealm),
 }
 
 impl CapabilitySource {
@@ -43,7 +39,6 @@ impl CapabilitySource {
         match self {
             CapabilitySource::Component { capability, .. } => capability.source_path(),
             CapabilitySource::Framework { capability, .. } => capability.path(),
-            CapabilitySource::StorageDecl(decl, _) => Some(&decl.source_path),
         }
     }
 
@@ -55,7 +50,6 @@ impl CapabilitySource {
             CapabilitySource::Framework { capability, .. } => {
                 capability.name().map(|name| name.to_string())
             }
-            CapabilitySource::StorageDecl(decl, _) => Some(decl.name.clone()),
         }
     }
 }

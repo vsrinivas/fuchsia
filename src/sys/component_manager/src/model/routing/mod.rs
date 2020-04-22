@@ -175,7 +175,6 @@ fn get_default_provider(source: &CapabilitySource) -> Option<Box<dyn CapabilityP
                 None
             }
         }
-        _ => None,
     }
 }
 
@@ -235,13 +234,6 @@ pub async fn open_capability_at_source(
                 unreachable!(
                     "Capability source is a component, which should have been caught by \
                     default_capability_provider: {:?}",
-                    source
-                );
-            }
-            CapabilitySource::StorageDecl(_, _) => {
-                unreachable!(
-                    "Capability source is a storage decl, which is not valid when opening \
-                    outgoing dir: {:?}",
                     source
                 );
             }
@@ -334,7 +326,11 @@ async fn route_storage_capability<'a>(
     let source = walk_offer_chain(&mut pos).await?;
 
     let (storage_decl, source_realm) = match source {
-        Some(CapabilitySource::StorageDecl(decl, realm)) => (decl, realm.upgrade()?),
+        Some(CapabilitySource::Component {
+            capability:
+                ComponentCapability::Storage(decl),
+            realm
+        }) => (decl, realm.upgrade()?),
         _ => {
             unreachable!("Storage capability must come from a storage declaration.");
         }
@@ -363,9 +359,6 @@ async fn route_storage_capability<'a>(
                         &source_realm.abs_moniker,
                     )
                     .into());
-                }
-                CapabilitySource::StorageDecl(..) => {
-                    unreachable!("storage directory sources can't come from storage declarations")
                 }
             }
         }
@@ -400,9 +393,6 @@ async fn route_storage_capability<'a>(
                         &source_realm.abs_moniker,
                     )
                     .into());
-                }
-                CapabilitySource::StorageDecl(..) => {
-                    unreachable!("storage directory sources can't come from storage declarations")
                 }
             }
         }
@@ -830,10 +820,10 @@ async fn walk_offer_chain<'a>(
                 let storage = decl
                     .find_storage_source(&storage_name)
                     .expect("storage offer references nonexistent section");
-                return Ok(Some(CapabilitySource::StorageDecl(
-                    storage.clone(),
-                    cur_realm.as_weak(),
-                )));
+                return Ok(Some(CapabilitySource::Component {
+                    capability: ComponentCapability::Storage(storage.clone()),
+                    realm: cur_realm.as_weak(),
+                }));
             }
         }
     }

@@ -48,7 +48,6 @@ impl CapabilityRoutedLogger {
             CapabilitySource::Framework { capability, .. } => {
                 info!("'{}' routed from framework to '{}'", capability.source_id(), target_moniker);
             }
-            _ => {}
         }
         Ok(())
     }
