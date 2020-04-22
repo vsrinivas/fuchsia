@@ -6,5 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("ddk.protocol.usb.composite") {
   sources = [ "usb-composite.banjo" ]
-  deps = [ "//zircon/system/banjo/zircon.hw.usb" ]
+  deps = [ "//sdk/banjo/zircon.hw.usb" ]
 }

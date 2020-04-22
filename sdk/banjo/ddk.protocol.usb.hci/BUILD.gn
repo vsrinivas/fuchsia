@@ -11,7 +11,7 @@ banjo("ddk.protocol.usb.hci") {
     "//sdk/banjo/ddk.protocol.usb.bus",
     "//sdk/banjo/ddk.protocol.usb.hub",
     "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/banjo/zircon.hw.usb",
     "//sdk/banjo/zircon.hw.usb.hub",
-    "//zircon/system/banjo/zircon.hw.usb",
   ]
 }
