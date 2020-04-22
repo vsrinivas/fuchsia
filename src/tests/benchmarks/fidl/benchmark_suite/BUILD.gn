@@ -15,8 +15,6 @@ benchmark_suite_fidl_files = [
   "socket.test.fidl",
   "string.test.fidl",
   "struct_field.test.fidl",
-  "table.test.fidl",
-  "table_reserved.test.fidl",
 ]
 
 fidl("benchmark_suite_fidl") {
