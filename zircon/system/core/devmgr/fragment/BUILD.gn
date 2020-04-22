@@ -39,6 +39,7 @@ driver_module("fragment") {
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/banjo/ddk.protocol.mipicsi",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.power",
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//sdk/banjo/ddk.protocol.pwm",
     "//sdk/banjo/ddk.protocol.sdio",
@@ -56,7 +57,6 @@ driver_module("fragment") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/banjo/ddk.protocol.power",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 }
@@ -78,6 +78,7 @@ driver_module("fragment.proxy") {
     "//sdk/banjo/ddk.protocol.ethernet.board",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.power",
     "//sdk/banjo/ddk.protocol.pwm",
     "//sdk/banjo/ddk.protocol.spi",
     "//sdk/banjo/ddk.protocol.sysmem",
@@ -90,7 +91,6 @@ driver_module("fragment.proxy") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/banjo/ddk.protocol.power",
   ]
 }
 
