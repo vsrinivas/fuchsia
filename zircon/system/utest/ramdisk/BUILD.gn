@@ -19,6 +19,7 @@ test("ramdisk") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ramdisk.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/fbl",
@@ -31,7 +32,6 @@ test("ramdisk") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
-    "//zircon/system/fidl/fuchsia-hardware-ramdisk:c",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/ramdevice-client",
   ]

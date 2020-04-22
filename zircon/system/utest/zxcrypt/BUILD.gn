@@ -33,6 +33,7 @@ test("zxcrypt") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//third_party/boringssl",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/ddk",
@@ -51,7 +52,6 @@ test("zxcrypt") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-ramdisk:c",
     "//zircon/system/ulib/kms-stateless",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zxcrypt:zxcrypt-fdio",
