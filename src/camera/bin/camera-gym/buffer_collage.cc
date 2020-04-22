@@ -62,7 +62,7 @@ BufferCollage::BufferCollage()
   SetStopOnError(scenic_);
   SetStopOnError(allocator_);
   view_provider_binding_.set_error_handler([this](zx_status_t status) {
-    FX_PLOGS(INFO, status) << "ViewProvider client disconnected.";
+    FX_PLOGS(DEBUG, status) << "ViewProvider client disconnected.";
     view_provider_binding_.Unbind();
   });
 }
