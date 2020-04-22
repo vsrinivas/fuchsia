@@ -93,6 +93,15 @@ pub async fn run_resolver_service(
                         }
                         let start_time = Instant::now();
                         let status = resolve(&cache, &package_fetcher, package_url, dir).await;
+                        let event_code = status_to_resolve_error(status);
+
+                        cobalt_sender.log_event_count(
+                            metrics::RESOLVE_METRIC_ID,
+                            (event_code, metrics::ResolveMetricDimensionResolverType::Regular),
+                            0,
+                            1,
+                        );
+
                         cobalt_sender.log_elapsed_time(
                             metrics::RESOLVE_DURATION_METRIC_ID,
                             (
@@ -325,6 +334,16 @@ pub async fn run_font_resolver_service(
                 cobalt_sender.clone(),
             )
             .await;
+
+            let event_code = status_to_resolve_error(status);
+
+            cobalt_sender.log_event_count(
+                metrics::RESOLVE_METRIC_ID,
+                (event_code, metrics::ResolveMetricDimensionResolverType::Font),
+                0,
+                1,
+            );
+
             cobalt_sender.log_elapsed_time(
                 metrics::RESOLVE_DURATION_METRIC_ID,
                 (
@@ -390,6 +409,74 @@ fn result_to_resolve_duration_result_code(
     match res {
         Ok(_) => metrics::ResolveDurationMetricDimensionResult::Success,
         Err(_) => metrics::ResolveDurationMetricDimensionResult::Failure,
+    }
+}
+
+fn status_to_resolve_error(status: Result<(), Status>) -> metrics::ResolveMetricDimensionResult {
+    match status {
+        Ok(()) => metrics::ResolveMetricDimensionResult::ZxOk,
+        Err(Status::INTERNAL) => metrics::ResolveMetricDimensionResult::ZxErrInternal,
+        Err(Status::NOT_SUPPORTED) => metrics::ResolveMetricDimensionResult::ZxErrNotSupported,
+        Err(Status::NO_RESOURCES) => metrics::ResolveMetricDimensionResult::ZxErrNoResources,
+        Err(Status::NO_MEMORY) => metrics::ResolveMetricDimensionResult::ZxErrNoMemory,
+        Err(Status::INTERRUPTED_RETRY) => {
+            metrics::ResolveMetricDimensionResult::ZxErrInternalIntrRetry
+        }
+        Err(Status::INVALID_ARGS) => metrics::ResolveMetricDimensionResult::ZxErrInvalidArgs,
+        Err(Status::BAD_HANDLE) => metrics::ResolveMetricDimensionResult::ZxErrBadHandle,
+        Err(Status::WRONG_TYPE) => metrics::ResolveMetricDimensionResult::ZxErrWrongType,
+        Err(Status::BAD_SYSCALL) => metrics::ResolveMetricDimensionResult::ZxErrBadSyscall,
+        Err(Status::OUT_OF_RANGE) => metrics::ResolveMetricDimensionResult::ZxErrOutOfRange,
+        Err(Status::BUFFER_TOO_SMALL) => metrics::ResolveMetricDimensionResult::ZxErrBufferTooSmall,
+        Err(Status::BAD_STATE) => metrics::ResolveMetricDimensionResult::ZxErrBadState,
+        Err(Status::TIMED_OUT) => metrics::ResolveMetricDimensionResult::ZxErrTimedOut,
+        Err(Status::SHOULD_WAIT) => metrics::ResolveMetricDimensionResult::ZxErrShouldWait,
+        Err(Status::CANCELED) => metrics::ResolveMetricDimensionResult::ZxErrCanceled,
+        Err(Status::PEER_CLOSED) => metrics::ResolveMetricDimensionResult::ZxErrPeerClosed,
+        Err(Status::NOT_FOUND) => metrics::ResolveMetricDimensionResult::ZxErrNotFound,
+        Err(Status::ALREADY_EXISTS) => metrics::ResolveMetricDimensionResult::ZxErrAlreadyExists,
+        Err(Status::ALREADY_BOUND) => metrics::ResolveMetricDimensionResult::ZxErrAlreadyBound,
+        Err(Status::UNAVAILABLE) => metrics::ResolveMetricDimensionResult::ZxErrUnavailable,
+        Err(Status::ACCESS_DENIED) => metrics::ResolveMetricDimensionResult::ZxErrAccessDenied,
+        Err(Status::IO) => metrics::ResolveMetricDimensionResult::ZxErrIo,
+        Err(Status::IO_REFUSED) => metrics::ResolveMetricDimensionResult::ZxErrIoRefused,
+        Err(Status::IO_DATA_INTEGRITY) => {
+            metrics::ResolveMetricDimensionResult::ZxErrIoDataIntegrity
+        }
+        Err(Status::IO_DATA_LOSS) => metrics::ResolveMetricDimensionResult::ZxErrIoDataLoss,
+        Err(Status::IO_NOT_PRESENT) => metrics::ResolveMetricDimensionResult::ZxErrIoNotPresent,
+        Err(Status::IO_OVERRUN) => metrics::ResolveMetricDimensionResult::ZxErrIoOverrun,
+        Err(Status::IO_MISSED_DEADLINE) => {
+            metrics::ResolveMetricDimensionResult::ZxErrIoMissedDeadline
+        }
+        Err(Status::IO_INVALID) => metrics::ResolveMetricDimensionResult::ZxErrIoInvalid,
+        Err(Status::BAD_PATH) => metrics::ResolveMetricDimensionResult::ZxErrBadPath,
+        Err(Status::NOT_DIR) => metrics::ResolveMetricDimensionResult::ZxErrNotDir,
+        Err(Status::NOT_FILE) => metrics::ResolveMetricDimensionResult::ZxErrNotFile,
+        Err(Status::FILE_BIG) => metrics::ResolveMetricDimensionResult::ZxErrFileBig,
+        Err(Status::NO_SPACE) => metrics::ResolveMetricDimensionResult::ZxErrNoSpace,
+        Err(Status::NOT_EMPTY) => metrics::ResolveMetricDimensionResult::ZxErrNotEmpty,
+        Err(Status::STOP) => metrics::ResolveMetricDimensionResult::ZxErrStop,
+        Err(Status::NEXT) => metrics::ResolveMetricDimensionResult::ZxErrNext,
+        Err(Status::ASYNC) => metrics::ResolveMetricDimensionResult::ZxErrAsync,
+        Err(Status::PROTOCOL_NOT_SUPPORTED) => {
+            metrics::ResolveMetricDimensionResult::ZxErrProtocolNotSupported
+        }
+        Err(Status::ADDRESS_UNREACHABLE) => {
+            metrics::ResolveMetricDimensionResult::ZxErrAddressUnreachable
+        }
+        Err(Status::ADDRESS_IN_USE) => metrics::ResolveMetricDimensionResult::ZxErrAddressInUse,
+        Err(Status::NOT_CONNECTED) => metrics::ResolveMetricDimensionResult::ZxErrNotConnected,
+        Err(Status::CONNECTION_REFUSED) => {
+            metrics::ResolveMetricDimensionResult::ZxErrConnectionRefused
+        }
+        Err(Status::CONNECTION_RESET) => {
+            metrics::ResolveMetricDimensionResult::ZxErrConnectionReset
+        }
+        Err(Status::CONNECTION_ABORTED) => {
+            metrics::ResolveMetricDimensionResult::ZxErrConnectionAborted
+        }
+        Err(_) => metrics::ResolveMetricDimensionResult::UnexpectedZxStatusValue,
     }
 }
 
