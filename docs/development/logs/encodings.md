@@ -81,7 +81,7 @@ The name is padded with zeroes to 8-byte alignment before the argument's content
 |       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
 |2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
 |---+-----------+-----------------------------------------------|
-| T | SizeWords | NameRef     | Reserved                        |
+| T | SizeWords | NameRef     | Varies                          |
 |---------------------------------------------------------------|
 | Name (1+ words)                                               |
 '---------------------------------------------------------------'
@@ -89,7 +89,7 @@ The name is padded with zeroes to 8-byte alignment before the argument's content
 T (type)  = {0,3}           see table below
 SizeWords = {4,15}          includes header word
 NameRef   = {16,31}         string ref for the argument name
-Reserved  = {32,63}         must be 0
+Varies    = {32,63}         varies by argument type, must be 0 if unused
 NameLen   = 64*NameRef
 Name      = {64,64+NameLen} name of the argument, padded to 8-byte alignment
 ```
@@ -188,7 +188,7 @@ argument name.
 |       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
 |2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
 |---+-----------+-----------------------------------------------|
-| 6 | SizeWords | NameRef     | Reserved                        |
+| 6 | SizeWords | NameRef     | ValueRef      | Reserved        |
 |---------------------------------------------------------------|
 | Name (1+ words)                                               |
 '---------------------------------------------------------------'
@@ -198,7 +198,8 @@ argument name.
 T (type)  = {0,3}                  must be 6
 SizeWords = {4,15}                 includes header word
 NameRef   = {16,31}                string ref for the argument name
-Reserved  = {32,63}                must be 0
+ValueRef  = {32,47}                string ref for the argument value
+Reserved  = {48,63}                must be 0
 NameEnd   = 64+(64*NameRef)
 Name      = {64,NameEnd}           name of the argument, padded to 8-byte alignment
 Value     = {NameEnd+1,SizeWords*64}
