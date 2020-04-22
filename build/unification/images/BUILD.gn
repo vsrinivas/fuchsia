@@ -155,7 +155,6 @@ aggregate_manifest("legacy-aux") {
     "unittest",
 #------------------
 #------------------
-    "zircon-crypto",
 #------------------
   ]
   lib_variants = [

@@ -39,9 +39,9 @@ driver_module("zxcrypt") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zircon-crypto-static",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.block",
+    "//zircon/system/ulib/zircon-crypto:zircon-crypto-static",
     "//zircon/system/ulib/zxcrypt:zxcrypt-dev",
   ]
 
@@ -52,7 +52,7 @@ driver_module("zxcrypt") {
     # needed by //zircon/public/lib/zxcrypt-dev.  But happily it doesn't show
     # up in our dynamically-linked shared libraries, so we're okay.
     #"//zircon/public/lib/trace-engine",
-    "//zircon/public/lib/zircon-crypto",
+    "//zircon/system/ulib/zircon-crypto",
 
     # Some day, we'd also like to be able to assert we don't pull in fdio here,
     # but it is pulled in transitively by //zircon/public/lib/driver, which is

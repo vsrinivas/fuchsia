@@ -491,10 +491,8 @@ group("ulib") {
     "zircon:zircon-headers",
 #------------------
 #------------------
-    "zircon-crypto",
 #------------------
 #------------------
-    "zircon-crypto:zircon-crypto-static",
 #------------------
 #------------------
     "zircon-internal",
