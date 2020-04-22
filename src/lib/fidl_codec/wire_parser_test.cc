@@ -878,6 +878,19 @@ std::string IntStructUnionPretty(const std::string& name, int v, const char* u1,
   return result;
 }
 
+test::fidlcodec::examples::DataElement GetDataElement(int32_t i32, uint8_t u8) {
+  test::fidlcodec::examples::DataElement result;
+  std::vector<std::unique_ptr<test::fidlcodec::examples::DataElement>> alternatives;
+  auto item_1 = std::make_unique<test::fidlcodec::examples::DataElement>();
+  item_1->set_int32(i32);
+  alternatives.emplace_back(std::move(item_1));
+  auto item_2 = std::make_unique<test::fidlcodec::examples::DataElement>();
+  item_2->set_uint8(u8);
+  alternatives.emplace_back(std::move(item_2));
+  result.set_alternatives(std::move(alternatives));
+  return result;
+}
+
 }  // namespace
 
 TEST_DECODE_WIRE(UnionInt, Union, R"({"isu":{"variant_i":"42"}, "i" : "1"})",
@@ -929,6 +942,17 @@ TEST_DECODE_WIRE(NullableXUnionIntFirstStruct, NullableXUnionIntFirst,
                  R"({"i": "1", "isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}})",
                  IntStructUnionPretty("IntStructXunion", 1, "harpo", "chico"), 1,
                  GetStructUnionPtr<xisu>("harpo", "chico"));
+
+TEST_DECODE_WIRE(
+    RecursiveUnion, RecursiveUnion, R"({"e":{"alternatives":[{"int32":"-10"},{"uint8":"200"}]}})",
+    "{\n"
+    "  e: #gre#test.fidlcodec.examples/DataElement#rst# = {\n"
+    "    alternatives: #gre#vector<test.fidlcodec.examples/DataElement>#rst# = [\n"
+    "      { int32: #gre#int32#rst# = #blu#-10#rst# }, { uint8: #gre#uint8#rst# = #blu#200#rst# }\n"
+    "    ]\n"
+    "  }\n"
+    "}",
+    GetDataElement(-10, 200));
 
 namespace {
 

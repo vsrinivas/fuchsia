@@ -63,6 +63,7 @@ protocol FidlCodecTestInterface {
     ShortUnion(U8U16Union u, int32 i);
     ShortUnionReserved(U8U16UnionReserved u, int32 i);
     ShortXUnion(U8U16Xunion u, int32 i);
+    RecursiveUnion(DataElement e);
 
     U8U16UnionStruct(U8U16UnionStructType s);
 
@@ -149,6 +150,26 @@ union U8U16UnionReserved {
 flexible union U8U16Xunion {
     1: uint8 variant_u8;
     2: uint16 variant_u16;
+};
+
+// Mostly copied from sdk/fidl/fuchsia.bluetooth.bredr/service.fidl
+
+const uint8 MAX_SEQUENCE_LENGTH = 255;
+const uint16 MAX_STRING_LENGTH = 1024;
+
+union DataElement {
+    1: int8 int8;
+    2: int16 int16;
+    3: int32 int32;
+    4: int64 int64;
+    5: uint8 uint8;
+    6: uint16 uint16;
+    7: uint32 uint32;
+    8: uint64 uint64;
+    9: string:MAX_STRING_LENGTH str;
+    10: bool b;
+    11: vector<DataElement?>:MAX_SEQUENCE_LENGTH sequence;
+    12: vector<DataElement?>:MAX_SEQUENCE_LENGTH alternatives;
 };
 
 struct U8U16UnionStructType {

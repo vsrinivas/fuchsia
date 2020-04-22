@@ -26,18 +26,21 @@ void EnumOrBits::DecodeTypes(bool is_scalar, const std::string& supertype_name,
   if (json_definition_ == nullptr) {
     return;
   }
-  name_ = enclosing_library->ExtractString(json_definition_, supertype_name, "<unknown>", "name");
+  const rapidjson::Value* json_definition = json_definition_;
+  // Reset json_definition_ member to allow recursive declarations.
+  json_definition_ = nullptr;
+  name_ = enclosing_library->ExtractString(json_definition, supertype_name, "<unknown>", "name");
   if (is_scalar) {
-    type_ = enclosing_library->ExtractScalarType(json_definition_, supertype_name, name_, "type");
+    type_ = enclosing_library->ExtractScalarType(json_definition, supertype_name, name_, "type");
   } else {
-    type_ = enclosing_library->ExtractType(json_definition_, supertype_name, name_, "type");
+    type_ = enclosing_library->ExtractType(json_definition, supertype_name, name_, "type");
   }
 
-  if (!json_definition_->HasMember("members")) {
+  if (!json_definition->HasMember("members")) {
     enclosing_library->FieldNotFound(supertype_name, name_, "members");
   } else {
-    if (json_definition_->HasMember("members")) {
-      for (auto& member : (*json_definition_)["members"].GetArray()) {
+    if (json_definition->HasMember("members")) {
+      for (auto& member : (*json_definition)["members"].GetArray()) {
         if (member.HasMember("value") && member["value"].HasMember("literal")) {
           if (!member.HasMember("name")) {
             continue;
@@ -60,7 +63,6 @@ void EnumOrBits::DecodeTypes(bool is_scalar, const std::string& supertype_name,
   }
 
   size_ = type_->InlineSize();
-  json_definition_ = nullptr;
 }
 
 Enum::~Enum() = default;
@@ -117,18 +119,20 @@ void Union::DecodeTypes() {
   if (json_definition_ == nullptr) {
     return;
   }
-  name_ = enclosing_library_->ExtractString(json_definition_, "union", "<unknown>", "name");
+  const rapidjson::Value* json_definition = json_definition_;
+  // Reset json_definition_ member to allow recursive declarations.
+  json_definition_ = nullptr;
+  name_ = enclosing_library_->ExtractString(json_definition, "union", "<unknown>", "name");
 
-  if (!json_definition_->HasMember("members")) {
+  if (!json_definition->HasMember("members")) {
     enclosing_library_->FieldNotFound("union", name_, "members");
   } else {
-    auto member_arr = (*json_definition_)["members"].GetArray();
+    auto member_arr = (*json_definition)["members"].GetArray();
     members_.reserve(member_arr.Size());
     for (auto& member : member_arr) {
       members_.push_back(std::make_unique<UnionMember>(*this, enclosing_library_, &member));
     }
   }
-  json_definition_ = nullptr;
 }
 
 const UnionMember* Union::MemberWithOrdinal(Ordinal32 ordinal) const {
@@ -185,25 +189,27 @@ void Struct::DecodeResponseTypes() {
 void Struct::DecodeTypes(std::string_view container_name, const char* size_name,
                          const char* member_name, const char* v1_name) {
   FXL_DCHECK(json_definition_ != nullptr);
-  name_ = enclosing_library_->ExtractString(json_definition_, container_name, "<unknown>", "name");
+  const rapidjson::Value* json_definition = json_definition_;
+  // Reset json_definition_ member to allow recursive declarations.
+  json_definition_ = nullptr;
+  name_ = enclosing_library_->ExtractString(json_definition, container_name, "<unknown>", "name");
 
-  if (!json_definition_->HasMember(v1_name)) {
+  if (!json_definition->HasMember(v1_name)) {
     enclosing_library_->FieldNotFound(container_name, name_, v1_name);
   } else {
-    const rapidjson::Value& v1 = (*json_definition_)[v1_name];
+    const rapidjson::Value& v1 = (*json_definition)[v1_name];
     size_ = enclosing_library_->ExtractUint64(&v1, container_name, name_, "inline_size");
   }
 
-  if (!json_definition_->HasMember(member_name)) {
+  if (!json_definition->HasMember(member_name)) {
     enclosing_library_->FieldNotFound(container_name, name_, member_name);
   } else {
-    auto member_arr = (*json_definition_)[member_name].GetArray();
+    auto member_arr = (*json_definition)[member_name].GetArray();
     members_.reserve(member_arr.Size());
     for (auto& member : member_arr) {
       members_.push_back(std::make_unique<StructMember>(enclosing_library_, &member));
     }
   }
-  json_definition_ = nullptr;
 }
 
 void Struct::VisitAsType(TypeVisitor* visitor) const {
@@ -238,12 +244,15 @@ void Table::DecodeTypes() {
   if (json_definition_ == nullptr) {
     return;
   }
-  name_ = enclosing_library_->ExtractString(json_definition_, "table", "<unknown>", "name");
+  const rapidjson::Value* json_definition = json_definition_;
+  // Reset json_definition_ member to allow recursive declarations.
+  json_definition_ = nullptr;
+  name_ = enclosing_library_->ExtractString(json_definition, "table", "<unknown>", "name");
 
-  if (!json_definition_->HasMember("members")) {
+  if (!json_definition->HasMember("members")) {
     enclosing_library_->FieldNotFound("table", name_, "members");
   } else {
-    auto member_arr = (*json_definition_)["members"].GetArray();
+    auto member_arr = (*json_definition)["members"].GetArray();
     for (auto& member : member_arr) {
       auto table_member = std::make_unique<TableMember>(enclosing_library_, &member);
       Ordinal32 ordinal = table_member->ordinal();
@@ -253,7 +262,6 @@ void Table::DecodeTypes() {
       members_[ordinal] = std::move(table_member);
     }
   }
-  json_definition_ = nullptr;
 }
 
 InterfaceMethod::InterfaceMethod(const Interface& interface,
