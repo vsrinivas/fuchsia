@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, stream::BoxStream},
-    regex::Regex,
+    io_util,
     std::{
         collections::HashMap,
         convert::TryFrom,
@@ -76,12 +76,18 @@ impl ComponentIdentifier {
                 moniker.0
             }
             Self::Moniker(moniker) => {
-                // Selectors use moniker paths without instance ids. We receive relative monikers.
-                // Converts from: ./a:0/b:1/c:2 to a/b/c
-                let re = Regex::new(r":\d+").unwrap();
-                re.replace_all(&moniker[1..], "") // 1.. to remove the `.`
+                // Transforms moniker strings such as "a:0/b:0/coll:dynamic_child:1/c:0 into
+                // a/b/coll:dynamic_child/c
+                // 2.. to remove the `.`, always present as this is a relative moniker.
+                moniker[2..]
                     .split("/")
-                    .filter_map(|s| if s.is_empty() { None } else { Some(s.to_string()) })
+                    .map(|component| match &component.split(":").collect::<Vec<_>>()[..] {
+                        [collection_name, component_name, _instance_id] => {
+                            format!("{}:{}", collection_name, component_name)
+                        }
+                        [component_name, _instance_id] => component_name.to_string(),
+                        x => unreachable!("We only expect two or three parts. Got: {:?}", x),
+                    })
                     .collect::<Vec<_>>()
             }
         }
@@ -95,7 +101,21 @@ impl ComponentIdentifier {
                 key
             }
             Self::Moniker(moniker) => {
-                moniker.split(|c| c == '/' || c == ':').map(|s| s.to_string()).collect()
+                // Transforms moniker strings such as "a:0/b:0/coll:dynamic_child:1/c:0 into
+                // [a, 0, b, 0, coll:dynamic_child, c]
+                // 1.. to remove the `./`, always present as this is a relative moniker.
+                moniker[2..]
+                    .split("/")
+                    .flat_map(|parts| match &parts.split(":").collect::<Vec<_>>()[..] {
+                        [collection_name, component_name, instance_id] => vec![
+                            format!("{}:{}", collection_name, component_name),
+                            instance_id.to_string(),
+                        ]
+                        .into_iter(),
+                        [coll, comp] => vec![coll.to_string(), comp.to_string()].into_iter(),
+                        x => unreachable!("We only expect two or three parts. Got: {:?}", x),
+                    })
+                    .collect::<Vec<_>>()
             }
         }
     }
@@ -291,5 +311,25 @@ impl PartialEq for ComponentEventData {
 impl PartialEq for InspectReaderData {
     fn eq(&self, other: &Self) -> bool {
         self.component_id == other.component_id
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn convert_v2_moniker_for_diagnostics() {
+        let identifier = ComponentIdentifier::Moniker("./a:0".into());
+        assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a"]);
+        assert_eq!(identifier.unique_key(), vec!["a", "0"]);
+
+        let identifier = ComponentIdentifier::Moniker("./a:0/b:1".into());
+        assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "b"]);
+        assert_eq!(identifier.unique_key(), vec!["a", "0", "b", "1"]);
+
+        let identifier = ComponentIdentifier::Moniker("./a:0/coll:comp:1/b:0".into());
+        assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "coll:comp", "b"]);
+        assert_eq!(identifier.unique_key(), vec!["a", "0", "coll:comp", "1", "b", "0"]);
     }
 }
