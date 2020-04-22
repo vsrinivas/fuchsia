@@ -182,6 +182,10 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "BacklightInit() failed\n");
   }
 
+  if (RamCtlInit() != ZX_OK) {
+    zxlogf(ERROR, "RamCtlInit failed\n");
+  }
+
   zx_status_t status = pbus_.DeviceAdd(&rtc_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d\n", __func__, status);
