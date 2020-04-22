@@ -65,13 +65,13 @@ const top = `// Copyright 2020 The Fuchsia Authors. All rights reserved.
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_LIB_FIDL_DATA_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_LIB_FIDL_DATA_H_
 
-namespace lib_fidl_benchmarks {
+namespace lib_fidl_microbenchmarks {
 
 `
 
 const bottom = `
 
-}  // namespace lib_fidl_benchmarks
+}  // namespace lib_fidl_microbenchmarks
 
 #endif  // SRC_TESTS_BENCHMARKS_FIDL_LIB_FIDL_DATA_H_
 `

@@ -75,27 +75,27 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   // FIDL benchmarks.
   {
     benchmarks_runner->AddLibPerfTestBenchmark(
-        "fuchsia.fidl_microbenchmarks", "/bin/lib_fidl_benchmarks", std::vector<std::string>());
+        "fuchsia.fidl_microbenchmarks", "/bin/lib_fidl_microbenchmarks", std::vector<std::string>());
   }
   {
     constexpr const char* kLabel = "fuchsia.fidl_go_microbenchmarks";
     std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
     benchmarks_runner->AddCustomBenchmark(
-        kLabel, {"/bin/go_fidl_benchmarks", "--out_file", out_file}, out_file);
+        kLabel, {"/bin/go_fidl_microbenchmarks", "--out_file", out_file}, out_file);
   }
   {
     benchmarks_runner->AddLibPerfTestBenchmark(
-        "fuchsia.fidl_microbenchmarks", "/bin/hlcpp_fidl_benchmarks", std::vector<std::string>());
+        "fuchsia.fidl_microbenchmarks", "/bin/hlcpp_fidl_microbenchmarks", std::vector<std::string>());
   }
   {
     constexpr const char* kLabel = "fuchsia.fidl_rust_microbenchmarks";
     std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
-    benchmarks_runner->AddCustomBenchmark(kLabel, {"/bin/rust_fidl_benchmarks", out_file},
+    benchmarks_runner->AddCustomBenchmark(kLabel, {"/bin/rust_fidl_microbenchmarks", out_file},
                                           out_file);
   }
   {
     benchmarks_runner->AddLibPerfTestBenchmark(
-        "fuchsia.fidl_microbenchmarks", "/bin/llcpp_fidl_benchmarks", std::vector<std::string>());
+        "fuchsia.fidl_microbenchmarks", "/bin/llcpp_fidl_microbenchmarks", std::vector<std::string>());
   }
   {
     constexpr const char* kLabel = "fuchsia.fidl_roundtrip_microbenchmarks";

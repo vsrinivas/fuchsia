@@ -517,10 +517,11 @@ Available benchmarks:
 
 | Name | Benchmark Command | Notes |
 |-|-|-|
-| Go Benchmarks |  `fx shell /bin/go_fidl_benchmarks` | |
-| Rust Benchmarks | `fx shell /bin/rust_fidl_benchmarks /tmp/myresultsfile` | Results can be viewed with `fx shell cat /tmp/myresultsfile/` |
-| LLCPP benchmarks |  `fx shell /bin/llcpp_fidl_benchmarks` | |
-| lib/fidl Benchmarks | `fx shell /bin/lib_fidl_benchmarks` | |
+| Go Benchmarks |  `fx shell /bin/go_fidl_microbenchmarks` | |
+| Rust Benchmarks | `fx shell /bin/rust_fidl_microbenchmarks /tmp/myresultsfile` | Results can be viewed with `fx shell cat /tmp/myresultsfile/` |
+| LLCPP benchmarks |  `fx shell /bin/llcpp_fidl_microbenchmarks` | |
+| lib/fidl Benchmarks | `fx shell /bin/lib_fidl_microbenchmarks` | |
+| Roundtrip Benchmarks | `fx shell /bin/roundtrip_fidl_benchmarks` | |
 
 #### Running with fuchsia_benchmarks
 

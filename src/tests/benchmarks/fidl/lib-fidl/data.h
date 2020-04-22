@@ -5,7 +5,7 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_LIB_FIDL_DATA_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_LIB_FIDL_DATA_H_
 
-namespace lib_fidl_benchmarks {
+namespace lib_fidl_microbenchmarks {
 
 const char S_258[] =
     "\xf0\x95\xbb\xb3\xf3\x9a\xa7\xb0\xef\xbf\xbd\xf0\x95\xa6\x9f\xe8"
@@ -5473,6 +5473,6 @@ const char S_65536[] =
     "\x96\xf0\xa9\x9f\x96\xf2\x94\xb1\xbc\xef\xbf\xbd\xf1\x8e\x86\xa2"
     "\xef\xbf\xbd\xef\xbf\xbd\xef\xbf\xbd\xef\xbf\xbd\xf0\xbd\xae\xa9";
 
-}  // namespace lib_fidl_benchmarks
+}  // namespace lib_fidl_microbenchmarks
 
 #endif  // SRC_TESTS_BENCHMARKS_FIDL_LIB_FIDL_DATA_H_

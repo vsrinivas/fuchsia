@@ -21,7 +21,7 @@ gidl_cpp("benchmark_suite_hlcpp") {
 }
 
 executable("bin") {
-  output_name = "hlcpp_fidl_benchmarks"
+  output_name = "hlcpp_fidl_microbenchmarks"
   testonly = true
   sources = [ "main.cc" ]
   deps = [
@@ -34,14 +34,14 @@ executable("bin") {
   libs = [ "zircon" ]
 }
 
-package("hlcpp-fidl-benchmarks") {
+package("hlcpp") {
   testonly = true
 
   deps = [ ":bin" ]
 
   binaries = [
     {
-      name = "hlcpp_fidl_benchmarks"
+      name = "hlcpp_fidl_microbenchmarks"
       shell = true
     },
   ]

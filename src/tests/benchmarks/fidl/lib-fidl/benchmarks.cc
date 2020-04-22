@@ -14,8 +14,8 @@ namespace {
 #define BENCHMARK_FOR(Num)                                              \
   bool BenchmarkS ## Num(perftest::RepeatState* state) {                \
     while (state->KeepRunning()) {                                      \
-      const char* bytes = lib_fidl_benchmarks::S_ ## Num;               \
-      uint32_t num_bytes = sizeof(lib_fidl_benchmarks::S_ ## Num) - 1;  \
+      const char* bytes = lib_fidl_microbenchmarks::S_ ## Num;               \
+      uint32_t num_bytes = sizeof(lib_fidl_microbenchmarks::S_ ## Num) - 1;  \
       ZX_ASSERT(ZX_OK == fidl_validate_string(bytes, num_bytes));       \
     }                                                                   \
     return true;                                                        \
