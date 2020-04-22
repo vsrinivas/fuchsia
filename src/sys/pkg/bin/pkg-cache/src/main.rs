@@ -5,7 +5,7 @@
 use {
     crate::blob_location::BlobLocation,
     crate::pkgfs_inspect::PkgfsInspectState,
-    anyhow::{Context as _, Error},
+    anyhow::{anyhow, Context as _, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as finspect,
@@ -44,17 +44,18 @@ async fn main_inner_async() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::spawn(
             cache_service::serve(Clone::clone(&pkgfs_versions), static_packages.clone(), stream)
-                .unwrap_or_else(|e| fx_log_err!("error handling PackageCache connection {:?}", e)),
+                .unwrap_or_else(|e| {
+                    fx_log_err!("error handling PackageCache connection {:#}", anyhow!(e))
+                }),
         )
     });
 
     let pkgfs_ctl =
         pkgfs::control::Client::open_from_namespace().context("error opening pkgfs/ctl")?;
     fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn(
-            gc_service::serve(Clone::clone(&pkgfs_ctl), stream)
-                .unwrap_or_else(|e| fx_log_err!("error handling SpaceManager connection {:?}", e)),
-        )
+        fasync::spawn(gc_service::serve(Clone::clone(&pkgfs_ctl), stream).unwrap_or_else(|e| {
+            fx_log_err!("error handling SpaceManager connection {:#}", anyhow!(e))
+        }))
     });
 
     let blob_location_fut = BlobLocation::new(
@@ -81,7 +82,7 @@ async fn get_static_packages(
 ) -> Result<Arc<StaticPackages>, Error> {
     Ok(Arc::new(if let Ok(file) = pkgfs_system.open_file("data/static_packages").await {
         StaticPackages::deserialize(file).unwrap_or_else(|e| {
-            fx_log_err!("error deserializing data/static_packages: {:?}", e);
+            fx_log_err!("error deserializing data/static_packages: {:#}", anyhow!(e));
             StaticPackages::empty()
         })
     } else {

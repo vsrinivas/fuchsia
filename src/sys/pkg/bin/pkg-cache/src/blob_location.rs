@@ -61,8 +61,8 @@ impl BlobLocation {
             },
             Err(e) => {
                 fx_log_err!(
-                    "Error determining base blobs, assuming all blobs are in base: {:?}",
-                    e
+                    "Error determining base blobs, assuming all blobs are in base: {:#}",
+                    anyhow!(e)
                 );
                 Self {
                     inner: Inner::AssumeAllInBase(node.create_child("assume-all-in-base")),

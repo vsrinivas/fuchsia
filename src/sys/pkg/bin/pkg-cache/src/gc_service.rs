@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     fidl_fuchsia_space::{
         ErrorCode as SpaceErrorCode, ManagerRequest as SpaceManagerRequest,
         ManagerRequestStream as SpaceManagerRequestStream,
@@ -26,7 +26,7 @@ pub async fn serve(
 async fn gc(pkgfs_ctl: &pkgfs::control::Client) -> Result<(), SpaceErrorCode> {
     fx_log_info!("triggering pkgfs gc");
     pkgfs_ctl.gc().await.map_err(|err| {
-        fx_log_err!("error unlinking /pkgfs/ctl/garbage: {:?}", err);
+        fx_log_err!("error unlinking /pkgfs/ctl/garbage: {:#}", anyhow!(err));
         SpaceErrorCode::Internal
     })
 }

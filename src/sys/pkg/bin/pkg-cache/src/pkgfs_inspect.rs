@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, fuchsia_inspect as finspect, fuchsia_syslog::fx_log_err,
+    anyhow::{anyhow, Error},
+    fuchsia_inspect as finspect,
+    fuchsia_syslog::fx_log_err,
     pkgfs::system::Client as SystemImage,
 };
 
@@ -27,7 +29,10 @@ impl PkgfsInspectState {
                 _node: node,
             },
             Err(e) => {
-                fx_log_err!("Unexpected error trying to open file from system image: {:?}", e);
+                fx_log_err!(
+                    "Unexpected error trying to open file from system image: {:#}",
+                    anyhow!(e)
+                );
                 Self {
                     _exec_restrictions_enabled: node.create_string(INSPECT_EXEC_PROP_NAME, "error"),
                     _node: node,

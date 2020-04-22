@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::{
@@ -111,7 +111,7 @@ async fn open<'a>(
         })?;
 
     pkg.reopen(dir_request).map_err(|err| {
-        fx_log_err!("error opening {}: {:?}", meta_far_blob_id, err);
+        fx_log_err!("error opening {}: {:#}", meta_far_blob_id, anyhow!(err));
         Status::INTERNAL
     })
 }
@@ -152,7 +152,7 @@ async fn base_package_index(
             Ok(())
         }
         .unwrap_or_else(|e: anyhow::Error| {
-            fx_log_err!("error running BasePackageIndex protocol: {:?}", e)
+            fx_log_err!("error running BasePackageIndex protocol: {:#}", anyhow!(e))
         }),
     );
 }
