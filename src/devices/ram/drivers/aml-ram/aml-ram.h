@@ -7,6 +7,9 @@
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zx/event.h>
+
+#include <thread>
 
 #include <ddktl/device.h>
 
@@ -16,7 +19,7 @@ namespace amlogic_ram {
 // to query performance counters. For example effective DDR bandwith.
 
 class AmlRam;
-using DeviceType = ddk::Device<AmlRam, ddk::Messageable>;
+using DeviceType = ddk::Device<AmlRam, ddk::SuspendableNew, ddk::Messageable>;
 
 class AmlRam : public DeviceType {
  public:
@@ -26,14 +29,19 @@ class AmlRam : public DeviceType {
 
   explicit AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio);
   void DdkRelease();
+  void DdkSuspendNew(ddk::SuspendTxn txn);
 
   // Implements ddk::Messageable
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
  private:
   zx_status_t Bind();
+  void ReadLoop();
+  void Shutdown();
 
   ddk::MmioBuffer mmio_;
+  std::thread thread_;
+  zx::event shutdown_;
 };
 
 }  // namespace amlogic_ram
