@@ -45,5 +45,7 @@ host_test_data("runtime_deps") {
 group("test") {
   testonly = true
 
-  deps = [ ":can_browse_web_test($host_toolchain)" ]
+  if (host_os == "linux") {
+    deps = [ ":can_browse_web_test($host_toolchain)" ]
+  }
 }
