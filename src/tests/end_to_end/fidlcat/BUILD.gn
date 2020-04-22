@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dart/test.gni")
+import("//build/fidl/fidl.gni")
 import("//build/host.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
@@ -23,10 +24,12 @@ dart_test("fidlcat_test") {
 
   args = [ "--data-dir=" + rebase_path(_shared_out_dir) ]
 
-  environments = [
-    # Runs on "main" builders (try and ci) in QEMU environments.
-    qemu_env,
-  ]
+  # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
+  # as we don't currently support Dart on arm64 hosts.
+  environments = []
+  if (is_host && target_cpu == "x64") {
+    environments = [ qemu_env ]
+  }
 }
 
 # Extract the symbols for the given ELF file from the .build-id directory.
@@ -64,8 +67,13 @@ generate_symbols("echo_client_cpp_sym") {
 
 host_test_data("runtime_deps") {
   sources = [
+    # We have to list all of the FIDL IR we need here explicitly here because it will not
+    # otherwise be present when we execute the test. This must be kept in sync with the
+    # list of FIDL IR in the test itself.
     "$_shared_out_dir/fidling/gen/garnet/examples/fidl/services/echo.fidl.json",
-    "$_shared_out_dir/gen/sdk/core.fidl_json.txt",
+    "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.sys/fuchsia.sys.fidl.json",
+    "$_shared_out_dir/fidling/gen/zircon/system/fidl/fuchsia-io/fuchsia-io.fidl.json",
+    "$_shared_out_dir/fidling/gen/zircon/system/fidl/fuchsia-mem/fuchsia-mem.fidl.json",
     "$host_tools_dir/fidlcat",
     "${target_gen_dir}/echo_client_cpp.debug",
   ]
@@ -79,9 +87,11 @@ host_test_data("runtime_deps") {
     "//garnet/examples/fidl/services:echo",
     "//garnet/packages/prod:run",
     "//garnet/packages/tools:sl4f",
-    "//sdk:core_fidl_json($target_toolchain)",
+    "//sdk/fidl/fuchsia.sys($fidl_toolchain)",
     "//src/developer/debug/debug_agent",
     "//tools/fidlcat:fidlcat_host($host_toolchain)",
+    "//zircon/system/fidl/fuchsia-io($fidl_toolchain)",
+    "//zircon/system/fidl/fuchsia-mem($fidl_toolchain)",
   ]
 }
 
