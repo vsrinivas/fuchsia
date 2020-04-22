@@ -5,28 +5,36 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_VIRTUAL_BASE_TEST_SETUP_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_VIRTUAL_BASE_TEST_SETUP_H_
 
+#include <memory>
 #include <vector>
 
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol.h"
+#include "src/developer/debug/zxdb/symbols/index_test_support.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 
 namespace zxdb {
 
-class MockEvalContext;
+class MockModuleSymbols;
+class MockSymbolDataProvider;
+struct TestIndexedSymbol;
 
 // Sets up the required information for a test involving a base class with a virtual function and
 // a class derived from it. The necessary symbols for the vtables all need to be set properly.
 //
+// It is designed to work with a module loaded at the address provided by ProcessSymbolsTestSetup.
+//
 // Example:
 //
-//    VirtualBaseTestSetup setup(&eval_context);
+//    VirtualBaseTestSetup setup(...);
 //    ExprValue ptr(setup::kBaseAddress, setup.base_class_ptr);
 //
 // This will be a pointer to the Base class that is actually implemented by the Derived class.
 struct VirtualBaseTestSetup {
-  explicit VirtualBaseTestSetup(MockEvalContext* eval_context);
+  VirtualBaseTestSetup(MockSymbolDataProvider* data_provider,
+                       MockModuleSymbols* mock_module_symbols);
 
   // Clang uses "vtbl_ptr_type*" as the type for the vtable pointers at the beginning of a virtual
   // class. Clang defines the vtable as being pointers to functions "int()", so a pointer to a table
@@ -38,6 +46,7 @@ struct VirtualBaseTestSetup {
 
   // Virtual base class collection type. It has one member "base_i" = kBaseI defined below.
   fxl::RefPtr<Collection> base_class;
+  std::unique_ptr<TestIndexedSymbol> base_class_indexed;
 
   fxl::RefPtr<ModifiedType> base_class_ptr;  // BaseClass*
   fxl::RefPtr<ModifiedType> base_class_ref;  // BaseClass&
@@ -48,11 +57,14 @@ struct VirtualBaseTestSetup {
 
   // Derived class type. It has one member "derived_i" = kDerivedI defined below.
   fxl::RefPtr<Collection> derived_class;
+  std::unique_ptr<TestIndexedSymbol> derived_class_indexed;
 
   // Address of the derived class' vtable.
-  static constexpr TargetPointer kVtableAddress = 0x200000;
+  static constexpr TargetPointer kVtableRelativeAddress = 0x2000;
+  static constexpr TargetPointer kVtableAbsoluteAddress =
+      ProcessSymbolsTestSetup::kDefaultLoadAddress + kVtableRelativeAddress;
 
-  // Address of the derived and base class in memory.
+  // Absolute address of the derived and base class in memory.
   static constexpr TargetPointer kDerivedAddress = 0x1000;
   static constexpr TargetPointer kBaseAddress = kDerivedAddress + kBaseOffset;
 

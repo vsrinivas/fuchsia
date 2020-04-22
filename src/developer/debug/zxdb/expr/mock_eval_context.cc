@@ -7,6 +7,8 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/find_name.h"
+#include "src/developer/debug/zxdb/expr/resolve_type.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 
 namespace zxdb {
@@ -21,13 +23,12 @@ void MockEvalContext::AddVariable(const std::string& name, ExprValue v) {
 }
 void MockEvalContext::AddVariable(const Value* key, ExprValue v) { values_by_symbol_[key] = v; }
 
-void MockEvalContext::AddType(fxl::RefPtr<Type> type) { types_[type->GetFullName()] = type; }
-
 void MockEvalContext::AddLocation(uint64_t address, Location location) {
   locations_[address] = std::move(location);
 }
 
-// EvalContext implementation.
+FindNameContext MockEvalContext::GetFindNameContext() const { return FindNameContext(); }
+
 void MockEvalContext::GetNamedValue(const ParsedIdentifier& ident, EvalCallback cb) const {
   // Can ignore the symbol output for this test, it's not needed by the expression evaluation
   // system.
@@ -47,24 +48,10 @@ void MockEvalContext::GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback
     cb(found->second);
 }
 
-fxl::RefPtr<Type> MockEvalContext::ResolveForwardDefinition(const Type* type) const {
-  auto found = types_.find(type->GetFullName());
-  if (found == types_.end())  // Not found, return the input.
-    return RefPtrTo(type);
-  return found->second;
-}
-
-fxl::RefPtr<Type> MockEvalContext::ResolveForwardDefinition(ParsedIdentifier type_name) const {
-  auto found = types_.find(type_name.GetFullName());
-  if (found == types_.end())  // Not found, return the input.
-    return nullptr;
-  return found->second;
-}
-
 fxl::RefPtr<Type> MockEvalContext::GetConcreteType(const Type* type) const {
   if (!type)
     return nullptr;
-  return ResolveForwardDefinition(type->StripCVT());
+  return FindTypeDefinition(FindNameContext(), type->StripCVT());
 }
 
 const ProcessSymbols* MockEvalContext::GetProcessSymbols() const { return nullptr; }

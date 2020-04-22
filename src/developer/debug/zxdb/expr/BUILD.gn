@@ -81,6 +81,8 @@ static_library("expr") {
     "resolve_const_value.h",
     "resolve_ptr_ref.cc",
     "resolve_ptr_ref.h",
+    "resolve_type.cc",
+    "resolve_type.h",
     "resolve_variant.cc",
     "resolve_variant.h",
     "template_type_extractor.cc",
@@ -104,6 +106,7 @@ source_set("test_support") {
   sources = [
     "mock_eval_context.cc",
     "mock_eval_context.h",
+    "test_eval_context_impl.h",
   ]
 
   public_deps = [

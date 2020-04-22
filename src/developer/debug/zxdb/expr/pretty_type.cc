@@ -39,15 +39,10 @@ class PrettyEvalContext : public EvalContext {
 
   // EvalContext implementation. Everything except GetNamedValue() passes through to the impl_.
   ExprLanguage GetLanguage() const override { return impl_->GetLanguage(); }
+  FindNameContext GetFindNameContext() const override { return impl_->GetFindNameContext(); }
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override {
     return impl_->GetVariableValue(std::move(variable), std::move(cb));
-  }
-  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override {
-    return impl_->ResolveForwardDefinition(type);
-  }
-  fxl::RefPtr<Type> ResolveForwardDefinition(ParsedIdentifier type_name) const override {
-    return impl_->ResolveForwardDefinition(std::move(type_name));
   }
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override {
     return impl_->GetConcreteType(type);

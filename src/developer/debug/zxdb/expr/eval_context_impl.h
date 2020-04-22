@@ -63,10 +63,9 @@ class EvalContextImpl : public EvalContext {
   // doesn't have enough context to know what they should be. The ClientEvalContextImpl hooks
   // some things up to the debugger settings system.
   ExprLanguage GetLanguage() const override;
+  FindNameContext GetFindNameContext() const override;
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
-  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override;
-  fxl::RefPtr<Type> ResolveForwardDefinition(ParsedIdentifier type_name) const override;
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   const ProcessSymbols* GetProcessSymbols() const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
@@ -89,8 +88,6 @@ class EvalContextImpl : public EvalContext {
 
   // Implements type name lookup on the target's symbol index.
   FoundName DoTargetSymbolsNameLookup(const ParsedIdentifier& ident);
-
-  FindNameContext GetFindNameContext() const;
 
   fxl::WeakPtr<const ProcessSymbols> process_symbols_;  // Possibly null.
   fxl::RefPtr<SymbolDataProvider> data_provider_;       // Possibly null.

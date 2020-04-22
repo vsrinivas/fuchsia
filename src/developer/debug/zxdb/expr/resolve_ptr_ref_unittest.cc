@@ -9,9 +9,11 @@
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/expr/test_eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/virtual_base_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
@@ -201,8 +203,13 @@ TEST_F(ResolvePtrRefTest, GetPointedToType_Good) {
 // Tests that ResolvePointer and EnsureResolveReference automatically converts a reference to be a
 // derived class according to the setting value.
 TEST_F(ResolvePtrRefTest, Derived) {
-  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
-  VirtualBaseTestSetup setup(eval_context.get());
+  ProcessSymbolsTestSetup symbol_setup;
+  MockModuleSymbols* mock_module_symbols = symbol_setup.InjectMockModule();
+  auto symbol_data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  VirtualBaseTestSetup setup(symbol_data_provider.get(), mock_module_symbols);
+
+  auto eval_context = fxl::MakeRefCounted<TestEvalContextImpl>(
+      symbol_setup.process().GetWeakPtr(), symbol_data_provider, ExprLanguage::kC);
 
   ExprValue ref_value(setup.kBaseAddress, setup.base_class_ref);
   ExprValue ptr_value(setup.kBaseAddress, setup.base_class_ptr);

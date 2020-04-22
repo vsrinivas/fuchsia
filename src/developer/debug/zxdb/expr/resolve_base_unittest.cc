@@ -8,12 +8,16 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/expr/test_eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/virtual_base_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
@@ -50,9 +54,15 @@ TEST_F(ResolveBase, PromotePtrRefToDerived_NoVtable) {
 }
 
 TEST_F(ResolveBase, PromotePtrRefToDerived) {
-  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  ProcessSymbolsTestSetup symbol_setup;
+  MockModuleSymbols* mock_module_symbols = symbol_setup.InjectMockModule();
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
 
-  VirtualBaseTestSetup setup(eval_context.get());
+  auto symbol_data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  auto eval_context = fxl::MakeRefCounted<TestEvalContextImpl>(
+      symbol_setup.process().GetWeakPtr(), symbol_data_provider, ExprLanguage::kC);
+
+  VirtualBaseTestSetup setup(symbol_data_provider.get(), mock_module_symbols);
 
   // Add a bunch of qualifiers to make sure they come out the other end.
   auto const_base_class = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, setup.base_class);
@@ -85,9 +95,9 @@ TEST_F(ResolveBase, PromotePtrRefToDerived) {
   // Part 2: vtable pointer points to "Base".
 
   // Fix up the vtable pointer to the base class.
-  Location vtable_location(setup.kVtableAddress, FileLine(), 0,
-                           SymbolContext::ForRelativeAddresses(), setup.base_vtable);
-  eval_context->AddLocation(setup.kVtableAddress, vtable_location);
+  Location vtable_location(setup.kVtableAbsoluteAddress, FileLine(), 0, symbol_context,
+                           setup.base_vtable);
+  mock_module_symbols->AddSymbolLocations(setup.kVtableAbsoluteAddress, {vtable_location});
 
   result = Err("Not called");
   PromotePtrRefToDerived(eval_context, PromoteToDerived::kPtrOrRef, base_ptr,
@@ -100,8 +110,9 @@ TEST_F(ResolveBase, PromotePtrRefToDerived) {
   // Part 3: vtable pointer is invalid.
 
   // Declare no symbol at this address.
-  eval_context->AddLocation(setup.kVtableAddress,
-                            Location(Location::State::kSymbolized, setup.kVtableAddress));
+  mock_module_symbols->AddSymbolLocations(
+      setup.kVtableAbsoluteAddress,
+      {Location(Location::State::kSymbolized, setup.kVtableAbsoluteAddress)});
 
   // Should run asynchronously and produce success.
   result = Err("Not called");
@@ -119,9 +130,9 @@ TEST_F(ResolveBase, PromotePtrRefToDerived) {
   // Part 4: virtual inheritance means we can't promote to derived.
 
   // Put back the good derived vtable location cleared in the previous step so it will succeed.
-  eval_context->AddLocation(setup.kVtableAddress,
-                            Location(setup.kVtableAddress, FileLine(), 0,
-                                     SymbolContext::ForRelativeAddresses(), setup.derived_vtable));
+  mock_module_symbols->AddSymbolLocations(setup.kVtableAbsoluteAddress,
+                                          {Location(setup.kVtableAbsoluteAddress, FileLine(), 0,
+                                                    symbol_context, setup.derived_vtable)});
 
   // Replace the inheritance record with one indicating virtual inheritance. This placeholder
   // expression won't work in practice (see VirtualInheritanceTestSetup for a real one) but the

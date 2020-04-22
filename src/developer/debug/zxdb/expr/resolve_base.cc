@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
+#include "src/developer/debug/zxdb/expr/resolve_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol.h"
@@ -164,7 +165,7 @@ fxl::RefPtr<Type> DerivedTypeForVtable(const fxl::RefPtr<EvalContext>& context, 
   if (ExprParser::ParseIdentifier(type_name, &ident).has_error())
     return nullptr;  // Type name not parseable.
 
-  return context->ResolveForwardDefinition(std::move(ident));
+  return FindTypeDefinition(context->GetFindNameContext(), std::move(ident));
 }
 
 }  // namespace zxdb

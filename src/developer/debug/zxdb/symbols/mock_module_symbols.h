@@ -16,16 +16,19 @@ namespace zxdb {
 // A mock for symbol lookup.
 class MockModuleSymbols : public ModuleSymbols {
  public:
-  // Adds a mock mapping from the given name/address to the list of locations. The addresses are
-  // mapped exactly to queries, we don't do anything fancy with ranges.
+  // Adds a mock mapping from the given name/address to the list of locations. The locations are
+  // returned exactly as given so should be given in absolute addresses.
   //
-  // The names here should be non-globally qualified (no leading "::"). This is because when the
-  // list is queried against, input Identifiers will be looked up as normal and non-globally
-  // qualified (if different). So to match everything, the underlying data needs to be
+  // The identifier names here should be non-globally qualified (no leading "::"). This is because
+  // when the list is queried against, input Identifiers will be looked up as normal and
+  // non-globally qualified (if different). So to match everything, the underlying data needs to be
   // non-qualified.
   //
   // The String variant does simple parsing based on "::" and is not template-aware. So anything
   // complex should use the Identifier variant.
+  //
+  // The address variant takes absolute addresses. We don't do anything with ranges to find the
+  // previous symbol, they should match exactly.
   void AddSymbolLocations(const Identifier& name, std::vector<Location> locs);
   void AddSymbolLocations(const std::string& name, std::vector<Location> locs);
   void AddSymbolLocations(uint64_t address, std::vector<Location> locs);

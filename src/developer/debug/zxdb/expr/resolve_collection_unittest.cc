@@ -9,10 +9,10 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
-#include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/expr/test_eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/virtual_base_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -43,9 +43,8 @@ class ResolveCollectionTest : public TestWithLoop {
     data_provider_ = fxl::MakeRefCounted<MockSymbolDataProvider>();
 
     // With the mock symbol system above, we make a real EvalContext that uses it.
-    eval_context_ =
-        fxl::MakeRefCounted<EvalContextImpl>(process_setup_.process().GetWeakPtr(), data_provider_,
-                                             ExprLanguage::kC, fxl::RefPtr<CodeBlock>());
+    eval_context_ = fxl::MakeRefCounted<TestEvalContextImpl>(process_setup_.process().GetWeakPtr(),
+                                                             data_provider_, ExprLanguage::kC);
   }
   void TearDown() override {
     index_root_ = nullptr;
@@ -65,7 +64,7 @@ class ResolveCollectionTest : public TestWithLoop {
   IndexNode* index_root_ = nullptr;
 
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
-  fxl::RefPtr<EvalContextImpl> eval_context_;
+  fxl::RefPtr<TestEvalContextImpl> eval_context_;
 };
 
 // Defines a class with two member types "a" and "b". It puts the definitions of "a" and "b' members
@@ -262,16 +261,15 @@ TEST_F(ResolveCollectionTest, ExternStaticMember) {
 // class derived from "foo". When EvalContext::ShouldPromoteToDerived() is set, the pointer should
 // be automatically up-casted when we know the types (this requires a vtable).
 TEST_F(ResolveCollectionTest, ResolveMemberByPtr_Derived) {
-  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
-  VirtualBaseTestSetup setup(eval_context.get());
+  VirtualBaseTestSetup setup(data_provider_.get(), module_symbols_);
 
   ExprValue ptr_value(setup.kBaseAddress, setup.base_class_ptr);
   ParsedIdentifier member_name(setup.kDerivedIName);  // Name of member on derived class.
 
   // Test with no promotion to derived classes.
-  eval_context->set_should_promote_to_derived(false);
+  eval_context_->set_should_promote_to_derived(false);
   ErrOrValue result(Err("Uncalled"));
-  ResolveMemberByPointer(eval_context, ptr_value, member_name,
+  ResolveMemberByPointer(eval_context_, ptr_value, member_name,
                          [&result](ErrOrValue r, const FoundMember&) { result = r; });
   loop().RunUntilNoTasks();
 
@@ -280,9 +278,9 @@ TEST_F(ResolveCollectionTest, ResolveMemberByPtr_Derived) {
   EXPECT_EQ("No member 'derived_i' in struct 'BaseClass'.", result.err().msg());
 
   // Now try with promotion enabled.
-  eval_context->set_should_promote_to_derived(true);
+  eval_context_->set_should_promote_to_derived(true);
   result = Err("Uncalled");
-  ResolveMemberByPointer(eval_context, ptr_value, member_name,
+  ResolveMemberByPointer(eval_context_, ptr_value, member_name,
                          [&result](ErrOrValue r, const FoundMember&) { result = r; });
   loop().RunUntilNoTasks();
 

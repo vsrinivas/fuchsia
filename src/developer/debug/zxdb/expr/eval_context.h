@@ -41,6 +41,9 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // Returns the language associated with the expression.
   virtual ExprLanguage GetLanguage() const = 0;
 
+  // Returns a context for looking up names.
+  virtual FindNameContext GetFindNameContext() const = 0;
+
   // Issues the callback with the value of the given named value in the context of the current
   // expression evaluation. This will handle things like implicit |this| members in addition to
   // normal local variables.
@@ -64,21 +67,6 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // The value is normally a Variable but it can also be an extern DataMember (which will transform
   // into a Variable when the extern is resolved).
   virtual void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const = 0;
-
-  // Attempts to resolve a type that is a declaration (is_declaration() is set on the type) by
-  // looking up a non-declaration type with the same name.
-  //
-  // Most callers will want GetConcreteType() instead, of which this is one component.
-  //
-  // Some variables will be specified by DWARF as having a type that's only a declaration.
-  // Declarations don't have full definitions which makes it impossible to interpret the data.
-  //
-  // Since the lookup is by type name, it may fail. It could also refer to a different type, but if
-  // the user has more than one type with the same name bad things will happen anyway. On failure,
-  // the Type* version will return the input type, and the ParsedIdentifier version will return
-  // null.
-  virtual fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const = 0;
-  virtual fxl::RefPtr<Type> ResolveForwardDefinition(ParsedIdentifier type_name) const = 0;
 
   // Strips C-V qualifications and resolves forward declarations.
   //

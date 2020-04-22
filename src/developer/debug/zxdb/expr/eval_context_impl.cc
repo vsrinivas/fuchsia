@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_const_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
+#include "src/developer/debug/zxdb/expr/resolve_type.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
@@ -131,6 +132,15 @@ EvalContextImpl::~EvalContextImpl() = default;
 
 ExprLanguage EvalContextImpl::GetLanguage() const { return language_; }
 
+FindNameContext EvalContextImpl::GetFindNameContext() const {
+  // The synbol context for the current location is passed to the FindNameContext to prioritize
+  // the current module's values when searching for variables. If relative, this will be ignored.
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+  if (block_ && process_symbols_)
+    symbol_context = block_->GetSymbolContext(process_symbols_.get());
+  return FindNameContext(process_symbols_.get(), symbol_context, block_.get());
+}
+
 void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, EvalCallback cb) const {
   if (FoundName found =
           FindName(GetFindNameContext(), FindNameOptions(FindNameOptions::kAllKinds), identifier)) {
@@ -233,43 +243,6 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
   evaluator->Eval(RefPtrTo(this), symbol_context, loc_entry->expression);
 }
 
-fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(const Type* type) const {
-  Identifier ident = type->GetIdentifier();
-  if (ident.empty()) {
-    // Some things like modified types don't have real identifier names.
-    return RefPtrTo(type);
-  }
-
-  fxl::RefPtr<Type> result = ResolveForwardDefinition(ToParsedIdentifier(ident));
-  if (result)
-    return result;
-  return RefPtrTo(type);  // Return the same input on failure.
-}
-
-fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(ParsedIdentifier type_name) const {
-  // Search for the first match of a type definition. Note that "find_types" is not desirable here
-  // since we only want to resolve real definitions. Normally the index contains only definitions
-  // but if a module contains only declarations that module's index will list the symbol as a
-  // declaration which we don't want.
-  FindNameOptions opts(FindNameOptions::kNoKinds);
-  opts.find_type_defs = true;
-  opts.max_results = 1;
-
-  // The type names will always be fully qualified. Mark the identifier as
-  // such and only search the global context by clearing the code location.
-  type_name.set_qualification(IdentifierQualification::kGlobal);
-  auto context = GetFindNameContext();
-  context.block = nullptr;
-
-  if (FoundName result = FindName(context, opts, type_name)) {
-    FXL_DCHECK(result.type());
-    return result.type();
-  }
-
-  // Nothing found in the index.
-  return nullptr;
-}
-
 fxl::RefPtr<Type> EvalContextImpl::GetConcreteType(const Type* type) const {
   if (!type)
     return fxl::RefPtr<Type>();
@@ -280,7 +253,7 @@ fxl::RefPtr<Type> EvalContextImpl::GetConcreteType(const Type* type) const {
   do {
     // Follow forward declarations.
     if (cur->is_declaration()) {
-      cur = ResolveForwardDefinition(cur.get());
+      cur = FindTypeDefinition(GetFindNameContext(), cur.get());
       if (cur->is_declaration())
         break;  // Declaration can't be resolved, give up.
     }
@@ -390,15 +363,6 @@ void EvalContextImpl::DoResolve(FoundName found, EvalCallback cb) const {
 
 FoundName EvalContextImpl::DoTargetSymbolsNameLookup(const ParsedIdentifier& ident) {
   return FindName(GetFindNameContext(), FindNameOptions(FindNameOptions::kAllKinds), ident);
-}
-
-FindNameContext EvalContextImpl::GetFindNameContext() const {
-  // The synbol context for the current location is passed to the FindNameContext to prioritize
-  // the current module's values when searching for variables. If relative, this will be ignored.
-  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
-  if (block_ && process_symbols_)
-    symbol_context = block_->GetSymbolContext(process_symbols_.get());
-  return FindNameContext(process_symbols_.get(), symbol_context, block_.get());
 }
 
 }  // namespace zxdb

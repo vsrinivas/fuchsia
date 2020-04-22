@@ -31,19 +31,14 @@ class MockEvalContext : public EvalContext {
   void AddVariable(const std::string& name, ExprValue v);
   void AddVariable(const Value* key, ExprValue v);
 
-  // Adds a definition for the given mocked type for returning from ResolveForwardDefinition() and
-  // GetConcreteType().
-  void AddType(fxl::RefPtr<Type> type);
-
   // Adds a location result for GetLocationForAddress().
   void AddLocation(uint64_t address, Location location);
 
   // EvalContext implementation.
   ExprLanguage GetLanguage() const override { return language_; }
+  FindNameContext GetFindNameContext() const override;
   void GetNamedValue(const ParsedIdentifier& ident, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
-  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override;
-  fxl::RefPtr<Type> ResolveForwardDefinition(ParsedIdentifier type_name) const override;
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   const ProcessSymbols* GetProcessSymbols() const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
@@ -57,7 +52,6 @@ class MockEvalContext : public EvalContext {
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
   std::map<std::string, ExprValue> values_by_name_;
   std::map<const Value*, ExprValue> values_by_symbol_;
-  std::map<std::string, fxl::RefPtr<Type>> types_;
   std::map<uint64_t, Location> locations_;
   ExprLanguage language_ = ExprLanguage::kC;
   PrettyTypeManager pretty_type_manager_;
