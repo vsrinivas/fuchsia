@@ -15,6 +15,11 @@ async fn on_device_gain_changed_ignores_invalid_tokens_in_sets() -> Result<()> {
     let env = Environment::new()?;
 
     let enumerator = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
+
+    let mut gain_change_events = enumerator.take_event_stream().try_filter_map(move |e| {
+        future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_gain_changed(e)))
+    });
+
     enumerator.set_device_gain(
         NULL_TOKEN,
         &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
@@ -29,9 +34,6 @@ async fn on_device_gain_changed_ignores_invalid_tokens_in_sets() -> Result<()> {
 
     // Synchronize with enumerator.
     let _ = enumerator.get_devices().await?;
-    let mut gain_change_events = enumerator.take_event_stream().try_filter_map(move |e| {
-        future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_gain_changed(e)))
-    });
     let mut on_device_gain_changed = gain_change_events.try_next().fuse();
     let mut get_devices = enumerator.get_devices().fuse();
 
