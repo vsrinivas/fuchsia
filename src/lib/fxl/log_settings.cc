@@ -28,11 +28,25 @@ extern LogSettings g_log_settings;
 }  // namespace state
 
 void SetLogSettings(const LogSettings& settings) {
+#ifdef __Fuchsia__
+  char process_name[ZX_MAX_NAME_LEN] = "";
+  zx_status_t status =
+      zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
+  if (status != ZX_OK)
+    process_name[0] = '\0';
+  SetLogSettings(settings, {process_name});
+#else
+  SetLogSettings(settings, {});
+#endif
+}
+
+void SetLogSettings(const LogSettings& settings, const std::initializer_list<std::string>& tags) {
   // Validate the new settings as we set them.
   state::g_log_settings.min_log_level = std::min(LOG_FATAL, settings.min_log_level);
 
 #ifdef __Fuchsia__
   _FX_LOG_SET_SEVERITY(state::g_log_settings.min_log_level);
+  syslog::SetTags(tags);
 #endif
 
   if (state::g_log_settings.log_file != settings.log_file) {
@@ -43,13 +57,7 @@ void SetLogSettings(const LogSettings& settings) {
                   << ")" << std::endl;
       } else {
 #ifdef __Fuchsia__
-        char process_name[ZX_MAX_NAME_LEN] = "";
-        zx_status_t status =
-            zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
-        if (status != ZX_OK)
-          process_name[0] = '\0';
-        syslog::SetSettings({.severity = state::g_log_settings.min_log_level, .fd = fd},
-                            {process_name});
+        syslog::SetSettings({.severity = state::g_log_settings.min_log_level, .fd = fd}, tags);
         state::g_log_settings.log_file = settings.log_file;
 #else
         // Redirect stderr to file.

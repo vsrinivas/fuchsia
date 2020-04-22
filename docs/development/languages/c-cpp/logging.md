@@ -104,12 +104,12 @@ int main(int argc, char** argv) {
 ### Set settings from command line
 
 ```C++
-#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 int main(int argc, char** argv) {
     auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-    fsl::InitLoggerFromCommandLine(command_line, {"my_program"});
+    fxl::SetLogSettingsFromCommandLine(command_line, {"my_program"});
 }
 ```
 
@@ -127,4 +127,4 @@ based on command line arguments (e.g. --verbose), use:
 
 [C++ APIs](/src/lib/syslog/cpp/logger.h)
 <br/>
-[FSL initialization API](/src/lib/fsl/syslogger/init.h)
+[Command line initialization API](/src/lib/fxl/log_settings_command_line.h)

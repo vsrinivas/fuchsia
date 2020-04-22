@@ -4,7 +4,8 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "src/lib/fsl/syslogger/init.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
@@ -16,6 +17,6 @@ int main(int argc, char** argv) {
   // (2) In a bash tab on your host workstation:
   //     fx syslog --tag test --verbosity 6
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  fsl::InitLoggerFromCommandLine(command_line, {"cobalt", "test"});
+  fxl::SetLogSettingsFromCommandLine(command_line, {"cobalt", "test"});
   return RUN_ALL_TESTS();
 }

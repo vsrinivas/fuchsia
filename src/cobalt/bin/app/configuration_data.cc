@@ -6,10 +6,10 @@
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/json_parser/json_parser.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/cobalt/src/lib/util/file_util.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
 

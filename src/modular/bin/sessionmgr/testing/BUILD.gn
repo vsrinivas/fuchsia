@@ -17,6 +17,7 @@ source_set("annotations_matchers") {
     "//garnet/public/lib/fostr/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
   ]
 }

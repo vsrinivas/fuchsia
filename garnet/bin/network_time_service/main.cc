@@ -9,8 +9,8 @@
 #include "garnet/bin/network_time_service/service.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fit/function.h"
-#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -18,7 +18,7 @@ constexpr char kServerConfigPath[] = "/pkg/data/roughtime-servers.json";
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (fsl::InitLoggerFromCommandLine(command_line, {"network_time_server"}) != ZX_OK) {
+  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
     return 1;
   }
 

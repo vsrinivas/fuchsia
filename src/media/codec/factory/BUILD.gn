@@ -18,6 +18,7 @@ source_set("factory_source") {
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace-provider-with-fdio",

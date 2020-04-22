@@ -13,7 +13,6 @@
 
 #include "lib/inspect/cpp/inspect.h"
 #include "lib/sys/inspect/cpp/component.h"
-#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
@@ -22,9 +21,7 @@
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line))
-    return 1;
-  if (fsl::InitLoggerFromCommandLine(command_line, {"scenic"}) != ZX_OK)
+  if (!fxl::SetLogSettingsFromCommandLine(command_line, {"scenic"}))
     return 1;
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

@@ -54,6 +54,15 @@ bool SetLogSettingsFromCommandLine(const fxl::CommandLine& command_line) {
   return true;
 }
 
+bool SetLogSettingsFromCommandLine(const fxl::CommandLine& command_line,
+                                   const std::initializer_list<std::string>& tags) {
+  LogSettings settings;
+  if (!ParseLogSettings(command_line, &settings))
+    return false;
+  SetLogSettings(settings, tags);
+  return true;
+}
+
 std::vector<std::string> LogSettingsToArgv(const LogSettings& settings) {
   std::vector<std::string> result;
 

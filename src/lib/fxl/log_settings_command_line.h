@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_LOG_SETTINGS_COMMAND_LINE_H_
-#define LIB_FXL_LOG_SETTINGS_COMMAND_LINE_H_
+#ifndef SRC_LIB_FXL_LOG_SETTINGS_COMMAND_LINE_H_
+#define SRC_LIB_FXL_LOG_SETTINGS_COMMAND_LINE_H_
 
 #include <string>
 #include <vector>
@@ -39,6 +39,11 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, LogSettings* out_set
 // See |ParseLogSettings| for syntax.
 bool SetLogSettingsFromCommandLine(const fxl::CommandLine& command_line);
 
+// Similar to the method above but uses the given list of tags instead of
+// the default which is the process name. On host |tags| is ignored.
+bool SetLogSettingsFromCommandLine(const fxl::CommandLine& command_line,
+                                   const std::initializer_list<std::string>& tags);
+
 // Do the opposite of |ParseLogSettings()|: Convert |settings| to the
 // command line arguments to pass to a program. The result is empty if
 // |settings| is the default.
@@ -46,4 +51,4 @@ std::vector<std::string> LogSettingsToArgv(const LogSettings& settings);
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_LOG_SETTINGS_COMMAND_LINE_H_
+#endif  // SRC_LIB_FXL_LOG_SETTINGS_COMMAND_LINE_H_

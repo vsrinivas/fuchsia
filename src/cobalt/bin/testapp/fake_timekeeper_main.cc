@@ -9,15 +9,13 @@
 #include <lib/async-loop/default.h>
 
 #include "src/cobalt/bin/testapp/fake_timekeeper.h"
-#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  fxl::SetLogSettingsFromCommandLine(command_line);
-  fsl::InitLoggerFromCommandLine(command_line, {"cobalt", "faketimekeeper"});
+  fxl::SetLogSettingsFromCommandLine(command_line, {"cobalt", "faketimekeeper"});
 
   FX_LOGS(INFO) << "The Cobalt fake timekeeper service is starting.";
 

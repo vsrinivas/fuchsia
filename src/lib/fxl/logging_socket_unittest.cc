@@ -8,7 +8,9 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 
 namespace fxl {
@@ -23,6 +25,8 @@ struct LogPacket {
 class LoggingSocketTest : public ::testing::Test {
  protected:
   void SetUp() override {
+    SetLogSettings(LogSettings());
+
     zx::socket local;
     ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &socket_));
 
@@ -97,7 +101,7 @@ TEST_F(LoggingSocketTest, VLog) {
   FXL_VLOG(1) << kMsg1;
   CheckSocketEmpty();
 
-  fxl::SetLogSettings({.min_log_level = -1, .log_file = ""});
+  fxl::SetLogSettings({.min_log_level = -1, .log_file = ""}, {});
   FXL_VLOG(1) << kMsg2;
   ReadPacketAndCompare(-1, kMsg2);
   CheckSocketEmpty();
@@ -146,6 +150,35 @@ TEST_F(LoggingSocketTest, DontWriteSeverity) {
   FXL_LOG(ERROR) << "Hi";
   LogPacket packet = ReadPacket();
   ASSERT_THAT(packet.message, testing::Not(testing::HasSubstr("ERROR")));
+  CheckSocketEmpty();
+}
+
+TEST_F(LoggingSocketTest, SetSettingsAndTags) {
+  constexpr const char* kLogMessage1 = "Hello";
+  constexpr const char* kLogMessage2 = "Message";
+  constexpr const char* kGlobalTag = "1234";
+  constexpr const char* kTag = "tag";
+
+  SetLogSettings(LogSettings(), {kGlobalTag});
+
+  FXL_LOG(ERROR) << kLogMessage1;
+  ReadPacketAndCompare(FX_LOG_ERROR, kLogMessage1, {kGlobalTag});
+  CheckSocketEmpty();
+
+  FXL_LOGT(WARNING, kTag) << kLogMessage2;
+  ReadPacketAndCompare(FX_LOG_WARNING, kLogMessage2, {kGlobalTag, kTag});
+  CheckSocketEmpty();
+}
+
+TEST_F(LoggingSocketTest, SetSettingsAndTagsFromCommandLine) {
+  constexpr const char* kLogMessage = "Hello";
+  constexpr const char* kTag = "1234";
+
+  CommandLine command_line = CommandLineFromInitializerList({"argv0", "--quiet"});
+  SetLogSettingsFromCommandLine(command_line, {kTag});
+
+  FXL_LOG(ERROR) << kLogMessage;
+  ReadPacketAndCompare(FX_LOG_ERROR, kLogMessage, {kTag});
   CheckSocketEmpty();
 }
 

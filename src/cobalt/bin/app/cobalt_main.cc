@@ -28,7 +28,6 @@
 
 #include "src/cobalt/bin/app/cobalt_app.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -120,8 +119,7 @@ std::string ReadBuildInfo(std::string value) {
 int main(int argc, const char** argv) {
   // Parse the flags.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  fxl::SetLogSettingsFromCommandLine(command_line);
-  fsl::InitLoggerFromCommandLine(command_line, {"cobalt", "fidl_service"});
+  fxl::SetLogSettingsFromCommandLine(command_line, {"cobalt", "fidl_service"});
 
   // Parse the schedule_interval_seconds flag.
   std::chrono::seconds schedule_interval =

@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_LOG_SETTINGS_H_
-#define LIB_FXL_LOG_SETTINGS_H_
-
-#include "src/lib/fxl/log_level.h"
+#ifndef SRC_LIB_FXL_LOG_SETTINGS_H_
+#define SRC_LIB_FXL_LOG_SETTINGS_H_
 
 #include <string>
 
 #include "src/lib/fxl/fxl_export.h"
+#include "src/lib/fxl/log_level.h"
 
 namespace fxl {
 
@@ -36,6 +35,11 @@ struct LogSettings {
 // Sets the active log settings for the current process.
 FXL_EXPORT void SetLogSettings(const LogSettings& settings);
 
+// Sets the active log settings and tags for the current process. |tags| is not
+// used on host.
+FXL_EXPORT void SetLogSettings(const LogSettings& settings,
+                               const std::initializer_list<std::string>& tags);
+
 // Gets the active log settings for the current process.
 FXL_EXPORT LogSettings GetLogSettings();
 
@@ -45,4 +49,4 @@ FXL_EXPORT int GetMinLogLevel();
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_LOG_SETTINGS_H_
+#endif  // SRC_LIB_FXL_LOG_SETTINGS_H_

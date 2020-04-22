@@ -22,6 +22,7 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/developer/memory/metrics",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/inspect",
     "//zircon/public/lib/trace",
     "//zircon/system/fidl/fuchsia-cobalt",

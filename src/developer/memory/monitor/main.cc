@@ -9,16 +9,14 @@
 #include <trace-provider/provider.h>
 
 #include "src/developer/memory/monitor/monitor.h"
-#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line))
+  if (!fxl::SetLogSettingsFromCommandLine(command_line, {"memory_monitor"}))
     return 1;
-  fsl::InitLoggerFromCommandLine(command_line, {"memory_monitor"});
 
   FXL_VLOG(2) << argv[0] << ": starting";
 

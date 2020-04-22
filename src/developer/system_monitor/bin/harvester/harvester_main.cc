@@ -15,12 +15,11 @@
 #include "dockyard_proxy_local.h"
 #include "harvester.h"
 #include "root_resource.h"
-#include "src/lib/fsl/syslogger/init.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {
   constexpr int EXIT_CODE_OK = 0;
@@ -42,7 +41,7 @@ int main(int argc, char** argv) {
 
   // Parse command line.
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  fsl::InitLoggerFromCommandLine(command_line, {"harvester"});
+  fxl::SetLogSettingsFromCommandLine(command_line, {"harvester"});
 
   FX_LOGS(INFO) << VERSION_OUTPUT;
 

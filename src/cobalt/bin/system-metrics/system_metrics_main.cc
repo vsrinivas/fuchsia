@@ -14,13 +14,14 @@
 #include <trace-provider/provider.h>
 
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
-#include "src/lib/fsl/syslogger/init.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
   // Parse the flags.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  fsl::InitLoggerFromCommandLine(command_line, {"cobalt", "system_metrics"});
+  fxl::SetLogSettingsFromCommandLine(command_line, {"cobalt", "system_metrics"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();

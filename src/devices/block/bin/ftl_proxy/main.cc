@@ -13,15 +13,13 @@
 
 #include "src/devices/block/bin/ftl_proxy/ftl_util.h"
 #include "src/devices/block/bin/ftl_proxy/local_storage_metrics.cb.h"
-#include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 
 int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  fxl::SetLogSettingsFromCommandLine(command_line);
-  fsl::InitLoggerFromCommandLine(command_line, {"ftl", "ftl_proxy"});
+  fxl::SetLogSettingsFromCommandLine(command_line, {"ftl", "ftl_proxy"});
 
   std::string topo_path = ftl_proxy::GetFtlTopologicalPath("/dev/class/block");
   if (topo_path.empty()) {
