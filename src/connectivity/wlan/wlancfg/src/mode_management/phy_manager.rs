@@ -5,6 +5,7 @@
 #![allow(dead_code)]
 
 use {
+    async_trait::async_trait,
     fidl_fuchsia_wlan_device::{self as fidl_device, MacRole},
     fidl_fuchsia_wlan_device_service as fidl_service, fuchsia_zircon,
     log::{info, warn},
@@ -14,7 +15,7 @@ use {
 
 /// Errors raised while attempting to query information about or configure PHYs and ifaces.
 #[derive(Debug, Error)]
-enum PhyManagerError {
+pub(crate) enum PhyManagerError {
     #[error("the requested operation is not supported")]
     Unsupported,
     #[error("unable to query phy information")]
@@ -28,14 +29,59 @@ enum PhyManagerError {
 }
 
 /// Stores information about a WLAN PHY and any interfaces that belong to it.
-struct PhyContainer {
+pub(crate) struct PhyContainer {
     phy_info: fidl_device::PhyInfo,
     client_ifaces: HashSet<u16>,
     ap_ifaces: HashSet<u16>,
 }
 
+#[async_trait]
+pub(crate) trait PhyManagerApi {
+    /// Checks to see if this PHY is already accounted for.  If it is not, queries its PHY
+    /// attributes and places it in the hash map.
+    async fn add_phy(&mut self, phy_id: u16) -> Result<(), PhyManagerError>;
+
+    /// If the PHY is accounted for, removes the associated `PhyContainer` from the hash map.
+    fn remove_phy(&mut self, phy_id: u16);
+
+    /// Queries the interface properties to get the PHY ID.  If the `PhyContainer`
+    /// representing the interface's parent PHY is already present and its
+    /// interface information is obsolete, updates it.  The PhyManager will track ifaces
+    /// as it creates and deletes them, but it is possible that another caller circumvents the
+    /// policy layer and creates an interface.  If no `PhyContainer` exists
+    /// for the new interface, creates one and adds the newly discovered interface
+    /// ID to it.
+    async fn on_iface_added(&mut self, iface_id: u16) -> Result<(), PhyManagerError>;
+
+    /// Ensures that the `iface_id` is not present in any of the `PhyContainer` interface lists.
+    fn on_iface_removed(&mut self, iface_id: u16);
+
+    /// Creates client interfaces for all PHYs that are capable of acting as clients.  For newly
+    /// discovered PHYs, create client interfaces if the PHY can support them.
+    async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError>;
+
+    /// Destroys all client interfaces.  Do not allow the creation of client interfaces for newly
+    /// discovered PHYs.
+    async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError>;
+
+    /// Finds a PHY with a client interface and returns the interface's ID to the caller.
+    fn get_client(&mut self) -> Option<u16>;
+
+    /// Finds a PHY that is capable of functioning as an AP.  PHYs that do not yet have AP ifaces
+    /// associated with them are searched first.  If one is found, an AP iface is created and its
+    /// ID is returned.  If all AP-capable PHYs already have AP ifaces associated with them, one of
+    /// the existing AP iface IDs is returned.  If there are no AP-capable PHYs, None is returned.
+    async fn create_or_get_ap_iface(&mut self) -> Result<Option<u16>, PhyManagerError>;
+
+    /// Destroys the interface associated with the given interface ID.
+    async fn destroy_ap_iface(&mut self, iface_id: u16) -> Result<(), PhyManagerError>;
+
+    /// Destroys all AP interfaces.
+    async fn destroy_all_ap_ifaces(&mut self) -> Result<(), PhyManagerError>;
+}
+
 /// Maintains a record of all PHYs that are present and their associated interfaces.
-struct PhyManager {
+pub(crate) struct PhyManager {
     phys: HashMap<u16, PhyContainer>,
     device_service: fidl_service::DeviceServiceProxy,
     client_connections_enabled: bool,
@@ -62,10 +108,47 @@ impl PhyManager {
     pub fn new(device_service: fidl_service::DeviceServiceProxy) -> Self {
         PhyManager { phys: HashMap::new(), device_service, client_connections_enabled: false }
     }
+    /// Verifies that a given PHY ID is accounted for and, if not, adds a new entry for it.
+    async fn ensure_phy(&mut self, phy_id: u16) -> Result<&mut PhyContainer, PhyManagerError> {
+        if !self.phys.contains_key(&phy_id) {
+            self.add_phy(phy_id).await?;
+        }
 
-    /// Checks to see if this PHY is already accounted for.  If it is not, queries its PHY
-    /// attributes and places it in the hash map.
-    pub async fn add_phy(&mut self, phy_id: u16) -> Result<(), PhyManagerError> {
+        // The phy_id is guaranteed to exist at this point because it was either previously
+        // accounted for or was just added above.
+        Ok(self.phys.get_mut(&phy_id).unwrap())
+    }
+
+    /// Queries the information associated with the given iface ID.
+    async fn query_iface(
+        &self,
+        iface_id: u16,
+    ) -> Result<Option<fidl_service::QueryIfaceResponse>, PhyManagerError> {
+        match self.device_service.query_iface(iface_id).await {
+            Ok((status, response)) => match status {
+                fuchsia_zircon::sys::ZX_OK => match response {
+                    Some(response) => Ok(Some(*response)),
+                    None => Ok(None),
+                },
+                fuchsia_zircon::sys::ZX_ERR_NOT_FOUND => Ok(None),
+                _ => Err(PhyManagerError::IfaceQueryFailure),
+            },
+            Err(_) => Err(PhyManagerError::IfaceQueryFailure),
+        }
+    }
+
+    /// Returns a list of PHY IDs that can have interfaces of the requested MAC role.
+    fn phys_for_role(&self, role: MacRole) -> Vec<u16> {
+        self.phys
+            .iter()
+            .filter_map(|(k, v)| if v.phy_info.mac_roles.contains(&role) { Some(*k) } else { None })
+            .collect()
+    }
+}
+
+#[async_trait]
+impl PhyManagerApi for PhyManager {
+    async fn add_phy(&mut self, phy_id: u16) -> Result<(), PhyManagerError> {
         let query_phy_response = match self
             .device_service
             .query_phy(&mut fidl_service::QueryPhyRequest { phy_id: phy_id })
@@ -100,48 +183,11 @@ impl PhyManager {
         Ok(())
     }
 
-    /// If the PHY is accounted for, removes the associated `PhyContainer` from the hash map.
-    pub fn remove_phy(&mut self, phy_id: u16) {
+    fn remove_phy(&mut self, phy_id: u16) {
         self.phys.remove(&phy_id);
     }
 
-    /// Verifies that a given PHY ID is accounted for and, if not, adds a new entry for it.
-    async fn ensure_phy(&mut self, phy_id: u16) -> Result<&mut PhyContainer, PhyManagerError> {
-        if !self.phys.contains_key(&phy_id) {
-            self.add_phy(phy_id).await?;
-        }
-
-        // The phy_id is guaranteed to exist at this point because it was either previously
-        // accounted for or was just added above.
-        Ok(self.phys.get_mut(&phy_id).unwrap())
-    }
-
-    /// Queries the information associated with the given iface ID.
-    async fn query_iface(
-        &self,
-        iface_id: u16,
-    ) -> Result<Option<fidl_service::QueryIfaceResponse>, PhyManagerError> {
-        match self.device_service.query_iface(iface_id).await {
-            Ok((status, response)) => match status {
-                fuchsia_zircon::sys::ZX_OK => match response {
-                    Some(response) => Ok(Some(*response)),
-                    None => Ok(None),
-                },
-                fuchsia_zircon::sys::ZX_ERR_NOT_FOUND => Ok(None),
-                _ => Err(PhyManagerError::IfaceQueryFailure),
-            },
-            Err(_) => Err(PhyManagerError::IfaceQueryFailure),
-        }
-    }
-
-    /// Queries the interface properties to get the PHY ID.  If the `PhyContainer`
-    /// representing the interface's parent PHY is already present and its
-    /// interface information is obsolete, updates it.  The PhyManager will track ifaces
-    /// as it creates and deletes them, but it is possible that another caller circumvents the
-    /// policy layer and creates an interface.  If no `PhyContainer` exists
-    /// for the new interface, creates one and adds the newly discovered interface
-    /// ID to it.
-    pub async fn on_iface_added(&mut self, iface_id: u16) -> Result<(), PhyManagerError> {
+    async fn on_iface_added(&mut self, iface_id: u16) -> Result<(), PhyManagerError> {
         if let Some(query_iface_response) = self.query_iface(iface_id).await? {
             let phy = self.ensure_phy(query_iface_response.phy_id).await?;
             let iface_id = query_iface_response.id;
@@ -167,25 +213,14 @@ impl PhyManager {
         Ok(())
     }
 
-    /// Ensures that the `iface_id` is not present in any of the `PhyContainer` interface lists.
-    pub fn on_iface_removed(&mut self, iface_id: u16) {
+    fn on_iface_removed(&mut self, iface_id: u16) {
         for (_, phy_info) in self.phys.iter_mut() {
             phy_info.client_ifaces.remove(&iface_id);
             phy_info.ap_ifaces.remove(&iface_id);
         }
     }
 
-    /// Returns a list of PHY IDs that can have interfaces of the requested MAC role.
-    fn phys_for_role(&self, role: MacRole) -> Vec<u16> {
-        self.phys
-            .iter()
-            .filter_map(|(k, v)| if v.phy_info.mac_roles.contains(&role) { Some(*k) } else { None })
-            .collect()
-    }
-
-    /// Creates client interfaces for all PHYs that are capable of acting as clients.  For newly
-    /// discovered PHYs, create client interfaces if the PHY can support them.
-    pub async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
+    async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
         self.client_connections_enabled = true;
 
         let client_capable_phy_ids = self.phys_for_role(MacRole::Client);
@@ -203,9 +238,7 @@ impl PhyManager {
         Ok(())
     }
 
-    /// Destroys all client interfaces.  Do not allow the creation of client interfaces for newly
-    /// discovered PHYs.
-    pub async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
+    async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
         self.client_connections_enabled = false;
 
         let client_capable_phys = self.phys_for_role(MacRole::Client);
@@ -233,8 +266,7 @@ impl PhyManager {
         result
     }
 
-    /// Finds a PHY with a client interface and returns the interface's ID to the caller.
-    pub fn get_client(&mut self) -> Option<u16> {
+    fn get_client(&mut self) -> Option<u16> {
         let client_capable_phys = self.phys_for_role(MacRole::Client);
         if client_capable_phys.is_empty() {
             return None;
@@ -248,11 +280,7 @@ impl PhyManager {
         }
     }
 
-    /// Finds a PHY that is capable of functioning as an AP.  PHYs that do not yet have AP ifaces
-    /// associated with them are searched first.  If one is found, an AP iface is created and its
-    /// ID is returned.  If all AP-capable PHYs already have AP ifaces associated with them, one of
-    /// the existing AP iface IDs is returned.  If there are no AP-capable PHYs, None is returned.
-    pub async fn create_or_get_ap_iface(&mut self) -> Result<Option<u16>, PhyManagerError> {
+    async fn create_or_get_ap_iface(&mut self) -> Result<Option<u16>, PhyManagerError> {
         let ap_capable_phy_ids = self.phys_for_role(MacRole::Ap);
         if ap_capable_phy_ids.is_empty() {
             return Ok(None);
@@ -284,7 +312,7 @@ impl PhyManager {
     }
 
     /// Destroys the interface associated with the given interface ID.
-    pub async fn destroy_ap_iface(&mut self, iface_id: u16) -> Result<(), PhyManagerError> {
+    async fn destroy_ap_iface(&mut self, iface_id: u16) -> Result<(), PhyManagerError> {
         let iface_info = match self.query_iface(iface_id).await? {
             Some(iface_info) => iface_info,
             None => return Err(PhyManagerError::IfaceQueryFailure),
@@ -306,8 +334,7 @@ impl PhyManager {
         Ok(())
     }
 
-    /// Destroys all AP interfaces.
-    pub async fn destroy_all_ap_ifaces(&mut self) -> Result<(), PhyManagerError> {
+    async fn destroy_all_ap_ifaces(&mut self) -> Result<(), PhyManagerError> {
         let ap_capable_phys = self.phys_for_role(MacRole::Ap);
         let mut result = Ok(());
 
