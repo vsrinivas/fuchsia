@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   public_deps = [
     "blobfs-ramdisk:tests",
+    "host-target-testing:tests",
     "pkgfs-ramdisk:tests",
   ]
 }
