@@ -109,6 +109,48 @@ impl fmt::Display for PowerYak {
     }
 }
 
+#[derive(Inspect)]
+struct AutoYak {
+    name: IValue<String>,
+    #[inspect(skip)]
+    _credit_card_no: String,
+    ty: IDebug<Horse>,
+    child: sync::Arc<lock::Mutex<inner::AutoYakling>>,
+    inspect_node: Node,
+}
+
+impl AutoYak {
+    fn new(name: String) -> Self {
+        Self {
+            name: name.into(),
+            _credit_card_no: "<secret>".into(),
+            ty: Horse::Icelandic.into(),
+            child: sync::Arc::new(lock::Mutex::new(inner::AutoYakling::default())),
+            inspect_node: Node::default(),
+        }
+    }
+    async fn host_bday(&self) {
+        self.child.lock().await.bday();
+    }
+}
+
+mod inner {
+    use super::*;
+
+    #[derive(Default, Inspect)]
+    pub struct AutoYakling {
+        age: IValue<u8>,
+        inspect_node: Node,
+    }
+
+    impl AutoYakling {
+        pub fn bday(&mut self) {
+            *self.age += 1;
+            self.age.iupdate();
+        }
+    }
+}
+
 #[test]
 fn unit_primitive() {
     let inspector = Inspector::new();
@@ -405,6 +447,34 @@ async fn iowned_composite() -> Result<(), AttachError> {
         last_words: "good bye, friends",
     }});
     std::mem::drop(yak);
+    assert_inspect_tree!(inspector, root: {});
+    Ok(())
+}
+
+#[fasync::run_until_stalled(test)]
+async fn derive_inspect_nested_interior_mut() -> Result<(), AttachError> {
+    let inspector = Inspector::new();
+    let mut yak_mut = AutoYak::new("Sebastian".to_string());
+    yak_mut.iattach(inspector.root(), "my_yak")?;
+
+    // Ensure only a reference is necessary, since AutoYak utilizes interior mutability
+    let yak = &yak_mut;
+    assert_inspect_tree!(inspector, root: { my_yak: {
+        name: "Sebastian",
+        ty: "Icelandic",
+        child: {
+            age: 0u64,
+        },
+    }});
+    yak.host_bday().await;
+    assert_inspect_tree!(inspector, root: { my_yak: {
+        name: "Sebastian",
+        ty: "Icelandic",
+        child: {
+            age: 1u64,
+        },
+    }});
+    std::mem::drop(yak_mut);
     assert_inspect_tree!(inspector, root: {});
     Ok(())
 }

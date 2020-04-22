@@ -30,7 +30,7 @@ use std::marker::PhantomData;
 ///     x: f32,
 ///     y: f32,
 /// }
-pub use fuchsia_inspect_derive_macro::Unit;
+pub use fuchsia_inspect_derive_macro::{Inspect, Unit};
 
 /// Provides a custom inspect `fuchsia_inspect` subtree for a type which is
 /// created, updated and removed in a single step. (It does NOT support per-field updates.)

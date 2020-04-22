@@ -61,7 +61,7 @@ impl UnitField {
     }
 }
 
-/// Parse a syn::Field into an inspect field. Returns an error if the field is not named.
+/// Parse a syn::Field into a unit field. Returns an error if the field is not named.
 impl TryFrom<&syn::Field> for UnitField {
     type Error = Error;
 
@@ -69,6 +69,36 @@ impl TryFrom<&syn::Field> for UnitField {
         let name = f.ident.as_ref().expect("internal error: expected named field").clone();
         let type_path = to_type_path(&f.ty)?;
         Ok(UnitField { name, type_path })
+    }
+}
+
+struct InspectField {
+    /// Name of the original and the inspect data field.
+    name: syn::Ident,
+}
+
+impl InspectField {
+    /// Get a string literal containing the name of the field.
+    fn literal(&self) -> syn::LitStr {
+        syn::LitStr::new(self.name.to_string().as_ref(), self.name.span())
+    }
+
+    /// Creates an iattach assignment.
+    fn iattach_stmt(&self) -> proc_macro2::TokenStream {
+        let name = &self.name;
+        let literal = self.literal();
+        let span = name.span();
+        quote_spanned! { span=> self.#name.iattach(&self.inspect_node, #literal)? }
+    }
+}
+
+/// Parse a syn::Field into an inspect field. Returns an error if the field is not named.
+impl TryFrom<&syn::Field> for InspectField {
+    type Error = Error;
+
+    fn try_from(f: &syn::Field) -> Result<InspectField, Error> {
+        let name = f.ident.as_ref().expect("internal error: expected named field").clone();
+        Ok(InspectField { name })
     }
 }
 
@@ -141,18 +171,21 @@ fn check_container_attrs(d: &syn::DeriveInput) -> Result<(), Error> {
     Ok(())
 }
 
-/// The `Inspect` derive macro.
+/// The `Unit` derive macro. Requires that the type is a named struct.
+///
+/// The only supported field-level attribute is `inspect(skip)`.
+// TODO(fxbug.dev/50504): Add support for more types, such as enums.
 #[proc_macro_derive(Unit, attributes(inspect))]
-pub fn derive(input: TokenStream) -> TokenStream {
+pub fn derive_unit(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    match derive_inner(ast) {
+    match derive_unit_inner(ast) {
         Ok(token_stream) => token_stream,
         Err(err) => err.to_compile_error(),
     }
     .into()
 }
 
-fn derive_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Error> {
+fn derive_unit_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Error> {
     let name = &ast.ident;
     check_container_attrs(&ast)?;
     let fields = match ast.data {
@@ -202,6 +235,69 @@ fn derive_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Error> {
 
             fn inspect_update(&self, data: &mut Self::Data) {
                 #(#update_stmts;)*
+            }
+        }
+    })
+}
+
+/// The `Inspect` derive macro. Requires that the type is a named struct
+/// with an `inspect_node` field of type `fuchsia_inspect::Node`.
+///
+/// The only supported field-level attribute is `inspect(skip)`.
+#[proc_macro_derive(Inspect, attributes(inspect))]
+pub fn derive_inspect(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+    match derive_inspect_inner(ast) {
+        Ok(token_stream) => token_stream,
+        Err(err) => err.to_compile_error(),
+    }
+    .into()
+}
+
+fn derive_inspect_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Error> {
+    let name = &ast.ident;
+    check_container_attrs(&ast)?;
+    let fields = match ast.data {
+        syn::Data::Struct(syn::DataStruct {
+            fields: syn::Fields::Named(syn::FieldsNamed { ref named, .. }),
+            ..
+        }) => Ok(named),
+        _ => Err(Error::new_spanned(&ast, "can only derive Inspect on named structs")),
+    }?;
+    let mut inspect_fields = Vec::new();
+    let mut has_inspect_node = false;
+    for field in fields {
+        if field.ident.as_ref().expect("internal error: expected named field") == "inspect_node" {
+            has_inspect_node = true;
+            continue;
+        }
+        let args = get_field_attrs(field)?;
+        if args.skip {
+            continue;
+        }
+        let data_field = InspectField::try_from(field)?;
+        inspect_fields.push(data_field);
+    }
+    if !has_inspect_node {
+        return Err(Error::new_spanned(
+            &ast,
+            "must have field `inspect_node` (of type `fuchsia_inspect::Node`) to derive Inspect",
+        ));
+    }
+
+    let iattach_stmts = inspect_fields.iter().map(|f| f.iattach_stmt());
+
+    Ok(quote! {
+
+        impl fuchsia_inspect_derive::Inspect for &mut #name {
+            fn iattach(
+                self,
+                parent: &::fuchsia_inspect::Node,
+                name: impl AsRef<str>
+            ) -> std::result::Result<(), fuchsia_inspect_derive::AttachError> {
+                self.inspect_node = parent.create_child(name);
+                #(#iattach_stmts;)*
+                Ok(())
             }
         }
     })
