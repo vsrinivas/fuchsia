@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -41,6 +42,14 @@ const (
 	defaultMACAddr       = "52:54:00:63:5e:7a"
 	defaultLinkLocalAddr = "fe80::5054:ff:fe63:5e7a"
 	defaultNodename      = "step-atom-yard-juicy"
+
+	// The size in bytes of minimimum desired size for the storage-full image.
+	// The image should be large enough to hold all downloaded test packages
+	// for a given test shard.
+	//
+	// No host-side disk blocks are allocated on extension (by use of the `fvm`
+	// host tool), so the operation is cheap regardless of the size we extend to.
+	storageFullMinSize int64 = 10000000000 // 10Gb
 )
 
 // qemuTargetMapping maps the Fuchsia target name to the name recognized by QEMU.
@@ -84,6 +93,9 @@ type QEMUConfig struct {
 
 	// MinFS is the filesystem to mount as a device.
 	MinFS *MinFS `json:"minfs,omitempty"`
+
+	// Path to the fvm host tool.
+	FVMTool string `json:"fvm_tool"`
 }
 
 // QEMUTarget is a QEMU target.
@@ -227,6 +239,11 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	qemuCmd.SetInitrd(zirconA.Path)
 
 	if storageFull.Path != "" {
+		if t.config.FVMTool != "" {
+			if err := extendStorageFull(ctx, &storageFull, t.config.FVMTool, storageFullMinSize); err != nil {
+				return fmt.Errorf("failed to extend fvm.blk to %d bytes: %v", storageFullMinSize, err)
+			}
+		}
 		qemuCmd.AddVirtioBlkPciDrive(qemu.Drive{
 			ID:   "maindisk",
 			File: storageFull.Path,
@@ -430,4 +447,23 @@ func overwriteFileWithCopy(path string) error {
 		return err
 	}
 	return os.Rename(tmpfile.Name(), path)
+}
+
+func extendStorageFull(ctx context.Context, storageFull *bootserver.Image, fvmTool string, size int64) error {
+	if storageFull.Size >= size {
+		return nil
+	}
+	absToolPath, err := filepath.Abs(fvmTool)
+	if err != nil {
+		return err
+	}
+	logger.Debugf(ctx, "extending fvm.blk to %d bytes", size)
+	cmd := exec.CommandContext(ctx, absToolPath, storageFull.Path, "extend", "--length", strconv.Itoa(int(size)))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	storageFull.Size = size
+	return nil
 }
