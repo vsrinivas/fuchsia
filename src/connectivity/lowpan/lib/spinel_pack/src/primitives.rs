@@ -5,6 +5,8 @@
 use super::*;
 use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use core::hash::Hash;
+use std::collections::HashSet;
 use std::convert::TryInto;
 
 /// Private convenience macro for defining the appropriate
@@ -168,6 +170,16 @@ impl TryPack for [u8] {
         TryPackAs::<[u8]>::pack_as_len(self)
     }
 
+    fn try_pack<B: std::io::Write + ?Sized>(&self, buffer: &mut B) -> io::Result<usize> {
+        TryPackAs::<[u8]>::try_pack_as(self, buffer)
+    }
+}
+
+impl TryPack for Vec<u8> {
+    fn pack_len(&self) -> io::Result<usize> {
+        TryPackAs::<[u8]>::pack_as_len(self)
+    }
+
     fn try_pack<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> io::Result<usize> {
         TryPackAs::<[u8]>::try_pack_as(self, buffer)
     }
@@ -294,15 +306,6 @@ impl<'a> TryUnpack<'a> for &'a [u8] {
         *iter = ret[ret.len()..].iter();
 
         Ok(ret)
-    }
-}
-
-impl_try_unpack_for_owned! {
-    impl TryOwnedUnpack for Vec<u8> {
-        type Unpacked = Self;
-        fn try_owned_unpack(iter: &mut std::slice::Iter<'_, u8>) -> anyhow::Result<Self::Unpacked> {
-            Ok(<&[u8]>::try_unpack(iter)?.to_owned())
-        }
     }
 }
 
@@ -447,33 +450,85 @@ impl_try_unpack_for_owned! {
     }
 }
 
-impl_try_unpack_for_owned! {
-    impl TryOwnedUnpack for Vec<String> {
-        type Unpacked = Vec<String>;
-        fn try_owned_unpack(iter: &mut std::slice::Iter<'_, u8>) -> anyhow::Result<Self::Unpacked> {
-            let mut ret: Self::Unpacked = vec![];
+impl<T> TryOwnedUnpack for [T]
+where
+    T: TryOwnedUnpack,
+{
+    type Unpacked = Vec<T::Unpacked>;
+    fn try_owned_unpack(iter: &mut std::slice::Iter<'_, u8>) -> anyhow::Result<Self::Unpacked> {
+        let mut ret: Self::Unpacked = Vec::with_capacity(iter.size_hint().0);
 
-            while iter.len() != 0 {
-                ret.push(String::try_unpack(iter)?);
-            }
-
-            Ok(ret)
+        while iter.len() != 0 {
+            ret.push(T::try_owned_unpack(iter)?);
         }
+
+        Ok(ret)
     }
 }
 
-impl_try_unpack_for_owned! {
-    impl TryOwnedUnpack for Vec<SpinelUint> {
-        type Unpacked = Vec<u32>;
-        fn try_owned_unpack(iter: &mut std::slice::Iter<'_,u8>) -> anyhow::Result<Self::Unpacked> {
-            let mut ret: Self::Unpacked = vec![];
+impl<T> TryOwnedUnpack for Vec<T>
+where
+    T: TryOwnedUnpack,
+{
+    type Unpacked = Vec<T::Unpacked>;
+    fn try_owned_unpack(iter: &mut std::slice::Iter<'_, u8>) -> anyhow::Result<Self::Unpacked> {
+        let mut ret: Self::Unpacked = Vec::with_capacity(iter.size_hint().0);
 
-            while iter.len() != 0 {
-                ret.push(SpinelUint::try_unpack(iter)?);
-            }
-
-            Ok(ret)
+        while iter.len() != 0 {
+            ret.push(T::try_owned_unpack(iter)?);
         }
+
+        Ok(ret)
+    }
+}
+
+impl<'a, T> TryUnpack<'a> for Vec<T>
+where
+    T: TryUnpack<'a>,
+{
+    type Unpacked = Vec<T::Unpacked>;
+    fn try_unpack(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self::Unpacked> {
+        let mut ret: Self::Unpacked = Vec::with_capacity(iter.size_hint().0);
+
+        while iter.len() != 0 {
+            ret.push(T::try_unpack(iter)?);
+        }
+
+        Ok(ret)
+    }
+}
+
+impl<T> TryOwnedUnpack for HashSet<T>
+where
+    T: TryOwnedUnpack,
+    T::Unpacked: Eq + Hash,
+{
+    type Unpacked = HashSet<T::Unpacked>;
+    fn try_owned_unpack(iter: &mut std::slice::Iter<'_, u8>) -> anyhow::Result<Self::Unpacked> {
+        let mut ret: Self::Unpacked = Default::default();
+
+        while iter.len() != 0 {
+            ret.insert(T::try_owned_unpack(iter)?);
+        }
+
+        Ok(ret)
+    }
+}
+
+impl<'a, T> TryUnpack<'a> for HashSet<T>
+where
+    T: TryUnpack<'a>,
+    T::Unpacked: Eq + Hash,
+{
+    type Unpacked = HashSet<T::Unpacked>;
+    fn try_unpack(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self::Unpacked> {
+        let mut ret: Self::Unpacked = Default::default();
+
+        while iter.len() != 0 {
+            ret.insert(T::try_unpack(iter)?);
+        }
+
+        Ok(ret)
     }
 }
 
@@ -575,5 +630,43 @@ mod tests {
             TryUnpackAs::<SpinelUint>::try_unpack_as(&mut buffer[0..5].iter()),
             Ok(4294967295u32)
         );
+    }
+
+    #[test]
+    fn test_vec_owned_unpack() {
+        let buffer: &[u8] = &[0x34, 0x12, 0xcd, 0xab];
+
+        let out = Vec::<u16>::try_owned_unpack_from_slice(buffer).unwrap();
+
+        assert_eq!(out.as_slice(), &[0x1234, 0xabcd]);
+    }
+
+    #[test]
+    fn test_vec_unpack() {
+        let buffer: &[u8] = &[0x31, 0x32, 0x33, 0x00, 0x34, 0x35, 0x36, 0x00];
+
+        let out = Vec::<&str>::try_unpack_from_slice(buffer).unwrap();
+
+        assert_eq!(out.as_slice(), &["123", "456"]);
+    }
+
+    #[test]
+    fn test_hashset_owned_unpack() {
+        let buffer: &[u8] = &[0x34, 0x12, 0xcd, 0xab];
+
+        let out = HashSet::<u16>::try_owned_unpack_from_slice(buffer).unwrap();
+
+        assert!(out.contains(&0x1234));
+        assert!(out.contains(&0xabcd));
+    }
+
+    #[test]
+    fn test_hashset_unpack() {
+        let buffer: &[u8] = &[0x31, 0x32, 0x33, 0x00, 0x34, 0x35, 0x36, 0x00];
+
+        let out = HashSet::<&str>::try_unpack_from_slice(buffer).unwrap();
+
+        assert!(out.contains("123"));
+        assert!(out.contains("456"));
     }
 }
