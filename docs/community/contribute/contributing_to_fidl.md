@@ -28,8 +28,8 @@ The back-end and runtime library locations are based on the target:
 Target     | Back-end                                               | Runtime Libraries
 -----------|--------------------------------------------------------|------------------
 C          | [//zircon/tools/fidl/lib/c_generator.cc][be-c]         | [//zircon/system/ulib/fidl/][rtl-c]
-C++        | [//garnet/go/src/fidl/compiler/backend/cpp/][be-cpp]   | [//zircon/system/ulib/fidl/][rtl-c] & [//sdk/lib/fidl/cpp/][rtl-cpp]
-Go         | [//garnet/go/src/fidl/compiler/go_backend/][be-go]     | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
+C++        | [//tools/fidl/fidlgen_hlcpp/][be-hlcpp]                | [//zircon/system/ulib/fidl/][rtl-c] & [//sdk/lib/fidl/cpp/][rtl-cpp]
+Go         | [//tools/fidl/fidlgen_go/][be-go]                      | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
 Rust       | [//tools/fidl/fidlgen_rust/][be-rust]                  | [//src/lib/fidl/rust/fidl/][rtl-rust]
 Dart       | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]<br>[//topaz/bin/fidl_bindings_test/][bindings_test-dart]
 JavaScript | [chromium:build/fuchsia/fidlgen_fs][be-js]             | [chromium:build/fuchsia/fidlgen_js/runtime][rtl-js]
@@ -705,9 +705,9 @@ fidl fmt --library my_library.fidl -i
 [fidl-readme]: /docs/development/languages/fidl
 [cpp-style]: /docs/development/languages/c-cpp/cpp-style.md
 [be-c]: /zircon/tools/fidl/lib/c_generator.cc
-[be-cpp]: /garnet/go/src/fidl/compiler/backend/cpp/
+[be-hlcpp]: /tools/fidl/fidlgen_hlcpp/
 [be-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidlgen_dart/
-[be-go]: /garnet/go/src/fidl/compiler/go_backend/
+[be-go]: /tools/fidl/fidlgen_go/
 [be-rust]: /tools/fidl/fidlgen_rust/
 [be-js]: https://chromium.googlesource.com/chromium/src/+/master/build/fuchsia/fidlgen_js/
 [bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_bindings_test

@@ -62,7 +62,7 @@ var testPath = func() string {
 	return filepath.Dir(testPath)
 }()
 
-var clangFormatPath = filepath.Join(testPath, "test_data", "fidlgen", "clang-format")
+var clangFormatPath = filepath.Join(testPath, "test_data", "fidlgen_libfuzzer", "clang-format")
 
 func TestCodegenHeader(t *testing.T) {
 	for _, filename := range typestest.AllExamples(basePath) {

@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"fidl/compiler/go_backend/ir"
-	"fidl/compiler/go_backend/templates"
+	"fidlgen_go/ir"
+	"fidlgen_go/templates"
 )
 
 type Generator struct {

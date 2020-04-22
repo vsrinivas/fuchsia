@@ -10,7 +10,8 @@ import (
 	"testing"
 
 	"fidl/compiler/backend/typestest"
-	"fidl/compiler/syzkaller_backend/ir"
+
+	"fidlgen_syzkaller/ir"
 )
 
 // basePath holds the base path to the directory containing goldens.

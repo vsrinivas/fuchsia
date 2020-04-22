@@ -10,7 +10,8 @@ import (
 	"testing"
 
 	"fidl/compiler/backend/typestest"
-	"fidl/compiler/go_backend/ir"
+
+	"fidlgen_go/ir"
 )
 
 // basePath holds the base path to the directory containing goldens.

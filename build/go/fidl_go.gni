@@ -37,7 +37,7 @@ template("fidl_go") {
   compiled_action(generation_target_name) {
     visibility = [ ":*" ]
 
-    tool = "//garnet/go/src/fidl:fidlgen_go"
+    tool = "//tools/fidl/fidlgen_go"
 
     inputs = [ json_representation ]
 

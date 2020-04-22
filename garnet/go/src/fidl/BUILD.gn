@@ -14,32 +14,6 @@ go_library("fidl_lib") {
   deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
-# TODO(fxb/45483): Remove once all SDK customers are using HLCPP backend
-# directly.
-go_binary("fidlgen") {
-  gopackage = "fidl/compiler/hlcpp_backend"
-
-  sdk_category = "partner"
-
-  deps = [ ":fidl_lib" ]
-}
-
-go_binary("fidlgen_hlcpp") {
-  gopackage = "fidl/compiler/hlcpp_backend"
-
-  sdk_category = "partner"
-
-  deps = [ ":fidl_lib" ]
-}
-
-go_binary("fidlgen_libfuzzer") {
-  gopackage = "fidl/compiler/libfuzzer_backend"
-
-  sdk_category = "partner"
-
-  deps = [ ":fidl_lib" ]
-}
-
 go_binary("fidlgen_llcpp") {
   gopackage = "fidl/compiler/llcpp_backend"
 
@@ -48,37 +22,9 @@ go_binary("fidlgen_llcpp") {
   deps = [ ":fidl_lib" ]
 }
 
-go_binary("fidlgen_go") {
-  gopackage = "fidl/compiler/go_backend"
-
-  sdk_category = "partner"
-
-  deps = [ ":fidl_lib" ]
-}
-
-go_binary("fidlgen_syzkaller") {
-  gopackage = "fidl/compiler/syzkaller_backend"
-
-  sdk_category = "partner"
-
-  deps = [ ":fidl_lib" ]
-}
-
 install_host_tools("fidl") {
-  deps = [
-    ":fidlgen_go",
-    ":fidlgen_hlcpp",
-    ":fidlgen_libfuzzer",
-    ":fidlgen_llcpp",
-    ":fidlgen_syzkaller",
-  ]
-  outputs = [
-    "fidlgen_go",
-    "fidlgen_hlcpp",
-    "fidlgen_libfuzzer",
-    "fidlgen_llcpp",
-    "fidlgen_syzkaller",
-  ]
+  deps = [ ":fidlgen_llcpp" ]
+  outputs = [ "fidlgen_llcpp" ]
 }
 
 go_library("fidlgen_test_lib") {
@@ -89,22 +35,8 @@ go_library("fidlgen_test_lib") {
   }
 }
 
-go_test("fidlgen_hlcpp_test") {
-  gopackages = [ "fidl/compiler/hlcpp_backend/codegen" ]
-
-  deps = [ ":fidlgen_test_lib" ]
-  non_go_deps = [ ":clang_format_copy_group" ]
-}
-
 go_test("fidlgen_llcpp_test") {
   gopackages = [ "fidl/compiler/llcpp_backend/codegen" ]
-
-  deps = [ ":fidlgen_test_lib" ]
-  non_go_deps = [ ":clang_format_copy_group" ]
-}
-
-go_test("fidlgen_libfuzzer_test") {
-  gopackages = [ "fidl/compiler/libfuzzer_backend/codegen" ]
 
   deps = [ ":fidlgen_test_lib" ]
   non_go_deps = [ ":clang_format_copy_group" ]
@@ -118,18 +50,6 @@ group("clang_format_copy_group") {
 host_test_data("copy_clang_format") {
   sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
   outputs = [ "$root_out_dir/test_data/fidlgen/clang-format" ]
-}
-
-go_test("fidlgen_go_test") {
-  gopackages = [ "fidl/compiler/go_backend/codegen" ]
-
-  deps = [ ":fidlgen_test_lib" ]
-}
-
-go_test("fidlgen_syzkaller_test") {
-  gopackages = [ "fidl/compiler/syzkaller_backend/codegen" ]
-
-  deps = [ ":fidlgen_test_lib" ]
 }
 
 go_test("fidlgen_common_test") {

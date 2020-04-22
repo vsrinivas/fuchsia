@@ -5,11 +5,12 @@
 package ir
 
 import (
-	"fidl/compiler/backend/common"
-	"fidl/compiler/backend/types"
 	"fmt"
 	"log"
 	"strings"
+
+	"fidl/compiler/backend/common"
+	"fidl/compiler/backend/types"
 )
 
 const (

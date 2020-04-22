@@ -12,33 +12,37 @@ import (
 	"path"
 
 	"fidl/compiler/backend/types"
-	"fidl/compiler/syzkaller_backend/codegen"
-	"fidl/compiler/syzkaller_backend/ir"
+
+	"fidlgen_go/codegen"
+	"fidlgen_go/ir"
 )
 
 type flagsDef struct {
-	jsonPath   *string
-	outputPath *string
+	jsonPath          *string
+	outputImplPath    *string
+	outputPkgNamePath *string
 }
 
 var flags = flagsDef{
 	jsonPath: flag.String("json", "",
 		"relative path to the FIDL intermediate representation."),
-	outputPath: flag.String("output-syz", "",
-		"output path for the generated syz.txt file."),
+	outputImplPath: flag.String("output-impl", "",
+		"output path for the generated Go implementation."),
+	outputPkgNamePath: flag.String("output-pkg-name", "",
+		"output path for the generated Go implementation."),
 }
 
 // valid returns true if the parsed flags are valid.
 func (f flagsDef) valid() bool {
-	return *f.jsonPath != "" && *f.outputPath != ""
+	return *f.jsonPath != ""
 }
 
 func printUsage() {
 	program := path.Base(os.Args[0])
 	message := `Usage: ` + program + ` [flags]
 
-Syzkaller FIDL backend, used to generate Syzkaller bindings from JSON IR input
-(the intermediate representation of a FIDL library).
+Go FIDL backend, used to generate Go bindings from JSON IR input (the
+intermediate representation of a FIDL library).
 
 Flags:
 `
@@ -62,7 +66,15 @@ func main() {
 	generator := codegen.NewGenerator()
 	tree := ir.Compile(root)
 
-	if err := generator.GenerateSyzDotTxt(tree, *flags.outputPath); err != nil {
-		log.Fatalf("Error syz.txt file: %v", err)
+	if outputImplPath := *flags.outputImplPath; outputImplPath != "" {
+		if err := generator.GenerateImplFile(tree, outputImplPath); err != nil {
+			log.Fatalf("Error generating impl file: %v", err)
+		}
+	}
+
+	if outputPkgNamePath := *flags.outputPkgNamePath; outputPkgNamePath != "" {
+		if err := generator.GeneratePkgNameFile(tree, outputPkgNamePath); err != nil {
+			log.Fatalf("Error generating pkg-name file: %v", err)
+		}
 	}
 }

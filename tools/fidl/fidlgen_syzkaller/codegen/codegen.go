@@ -9,8 +9,8 @@ import (
 	"io/ioutil"
 	"text/template"
 
-	"fidl/compiler/syzkaller_backend/ir"
-	"fidl/compiler/syzkaller_backend/templates"
+	"fidlgen_syzkaller/ir"
+	"fidlgen_syzkaller/templates"
 )
 
 type Generator struct {

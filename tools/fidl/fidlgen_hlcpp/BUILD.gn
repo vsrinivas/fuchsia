@@ -1,0 +1,56 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
+
+go_library("lib") {
+  name = "fidlgen_hlcpp"
+}
+
+go_binary("fidlgen_hlcpp") {
+  gopackage = "fidlgen_hlcpp"
+
+  sdk_category = "partner"
+
+  deps = [
+    ":lib",
+    "//garnet/go/src/fidl:fidl_lib",
+  ]
+}
+
+# TODO(fxb/45483): Remove once all SDK customers are using HLCPP backend
+# directly.
+go_binary("fidlgen") {
+  gopackage = "fidlgen_hlcpp"
+
+  sdk_category = "partner"
+
+  deps = [
+    ":lib",
+    "//garnet/go/src/fidl:fidl_lib",
+  ]
+}
+
+go_test("fidlgen_hlcpp_test") {
+  gopackages = [ "fidlgen_hlcpp/codegen" ]
+
+  deps = [
+    ":lib",
+    "//garnet/go/src/fidl:fidlgen_test_lib",
+  ]
+  non_go_deps = [ ":clang_format_copy_group" ]
+}
+
+group("clang_format_copy_group") {
+  testonly = true
+  deps = [ ":copy_clang_format" ]
+}
+
+host_test_data("copy_clang_format") {
+  sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
+  outputs = [ "$root_out_dir/test_data/fidlgen_hlcpp/clang-format" ]
+}
