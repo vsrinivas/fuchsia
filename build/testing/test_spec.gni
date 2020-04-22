@@ -70,6 +70,8 @@ template("test_spec") {
     if (!defined(environments)) {
       environments = [ host_env ]
     }
+  } else if (current_os == "unknown" && current_cpu == "wasm32") {
+    environments = []
   } else {
     assert(false, "$current_os not supported")
   }
