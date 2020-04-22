@@ -1,2 +1,3 @@
 fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx
 fuchsia-pkg://fuchsia.com/has-build-info#meta/has-build-info.cmx
+fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx
