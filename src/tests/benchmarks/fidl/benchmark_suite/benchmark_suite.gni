@@ -4,5 +4,6 @@ benchmark_suite_gidl_files = [
   "//src/tests/benchmarks/fidl/benchmark_suite/inline.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/result.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/socket.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/string.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/struct_field.gidl",
 ]

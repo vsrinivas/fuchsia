@@ -13,6 +13,7 @@ benchmark_suite_fidl_files = [
   "inline.test.fidl",
   "result.test.fidl",
   "socket.test.fidl",
+  "string.test.fidl",
   "struct_field.test.fidl",
 ]
 
