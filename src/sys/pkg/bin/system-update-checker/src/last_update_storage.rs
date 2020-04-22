@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Context as _,
+    anyhow::{anyhow, Context as _},
     fuchsia_merkle::Hash,
     fuchsia_syslog::fx_log_err,
     serde::{Deserialize, Serialize},
@@ -29,13 +29,13 @@ const LAST_UPDATE_FILENAME_PART: &str = "last_update.json.part";
 impl LastUpdateStorage for LastUpdateStorageFile {
     fn load(&self) -> Option<Hash> {
         self.load_impl().unwrap_or_else(|e| {
-            fx_log_err!("error loading last_update.json: {:?}", e);
+            fx_log_err!("error loading last_update.json: {:#}", anyhow!(e));
             None
         })
     }
     fn store(&self, update: &Hash) {
         self.store_impl(update).unwrap_or_else(|e| {
-            fx_log_err!("error storing last_update info, continuing anyway; {:?}", e);
+            fx_log_err!("error storing last_update info, continuing anyway; {:#}", anyhow!(e));
         })
     }
 }

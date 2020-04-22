@@ -7,7 +7,7 @@ use {
         channel::{CurrentChannelManager, TargetChannelManager},
         rate_limiter::RateLimiterMonotonic,
     },
-    anyhow::{Context as _, Error},
+    anyhow::{anyhow, Context as _, Error},
     fidl_fuchsia_update_channel::{ProviderRequest, ProviderRequestStream},
     fidl_fuchsia_update_channelcontrol::{ChannelControlRequest, ChannelControlRequestStream},
     fuchsia_syslog::fx_log_warn,
@@ -90,7 +90,7 @@ impl ChannelHandler {
     fn get_current(&self) -> String {
         self.current_channel_manager.read_current_channel().unwrap_or_else(|err| {
             self.warn_rate_limiter.rate_limit(|| {
-                fx_log_warn!("error getting current channel: {}", err);
+                fx_log_warn!("error getting current channel: {:#}", anyhow!(err));
             });
             // TODO: Remove this once we have channel in vbmeta (fxbug.dev/39970).
             self.target_channel_manager.get_target_channel().unwrap_or("".to_string())

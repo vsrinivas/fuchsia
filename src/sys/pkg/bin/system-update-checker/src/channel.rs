@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::connect::*;
+use anyhow::anyhow;
 use fidl_fuchsia_cobalt::{
     Status as CobaltStatus, SystemDataUpdaterMarker, SystemDataUpdaterProxy,
 };
@@ -40,8 +41,8 @@ pub fn build_current_channel_manager_and_notifier<S: ServiceConnect>(
     let path = dir.into();
     let current_channel = read_current_channel(path.as_ref()).unwrap_or_else(|err| {
             fx_log_err!(
-                "Error reading current_channel, defaulting to the empty string. This is expected before the first OTA. {}",
-                err
+                "Error reading current_channel, defaulting to the empty string. This is expected before the first OTA. {:#}",
+                anyhow!(err)
             );
             String::new()
         });
@@ -89,7 +90,7 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
                 }
                 Err(err) => {
                     // channel broken, so log the error and reconnect.
-                    fx_log_warn!("cobalt.SetChannel returned error: {}, retrying", err);
+                    fx_log_warn!("cobalt.SetChannel returned error: {:#}, retrying", anyhow!(err));
                 }
             }
 
@@ -141,7 +142,7 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
                     return cobalt;
                 }
                 Err(err) => {
-                    fx_log_err!("error connecting to cobalt: {}", err);
+                    fx_log_err!("error connecting to cobalt: {:#}", anyhow!(err));
                     Self::sleep().await
                 }
             }
@@ -314,23 +315,11 @@ mod mock_sysconfig {
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("io error: {}", _0)]
-    Io(io::Error),
+    #[error("io error")]
+    Io(#[from] io::Error),
 
-    #[error("json error: {}", _0)]
-    Json(serde_json::Error),
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::Io(err)
-    }
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(err: serde_json::Error) -> Self {
-        Error::Json(err)
-    }
+    #[error("json error")]
+    Json(#[from] serde_json::Error),
 }
 
 #[cfg(test)]

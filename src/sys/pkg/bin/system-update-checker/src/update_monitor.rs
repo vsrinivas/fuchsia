@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::anyhow,
     event_queue::{ControlHandle, EventQueue, Notify},
     fidl_fuchsia_update_ext::State,
     fuchsia_inspect_contrib::inspectable::InspectableDebugString,
@@ -51,7 +52,7 @@ where
 
     pub async fn add_temporary_callback(&mut self, callback: N) {
         if let Err(e) = self.temporary_queue.add_client(callback).await {
-            fx_log_err!("error adding client to temporary queue: {:?}", e)
+            fx_log_err!("error adding client to temporary queue: {:#}", anyhow!(e))
         }
     }
 
@@ -63,7 +64,7 @@ where
         self.send_on_state().await;
         if *self.update_state == None {
             if let Err(e) = self.temporary_queue.clear().await {
-                fx_log_warn!("error clearing clients of temporary queue: {:?}", e)
+                fx_log_warn!("error clearing clients of temporary queue: {:#}", anyhow!(e))
             }
         }
     }
@@ -84,7 +85,7 @@ where
     pub async fn send_on_state(&mut self) {
         if let Some(state) = self.update_state() {
             if let Err(e) = self.temporary_queue.queue_event(state).await {
-                fx_log_warn!("error sending state to temporary queue: {:?}", e)
+                fx_log_warn!("error sending state to temporary queue: {:#}", anyhow!(e))
             }
         }
     }

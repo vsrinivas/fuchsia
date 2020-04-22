@@ -9,7 +9,7 @@ use crate::connect::ServiceConnect;
 use crate::last_update_storage::{LastUpdateStorage, LastUpdateStorageFile};
 use crate::update_monitor::{StateNotifier, UpdateMonitor};
 use crate::update_service::RealStateNotifier;
-use anyhow::{Context as _, Error};
+use anyhow::{anyhow, Context as _, Error};
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
 use fidl_fuchsia_update::CheckNotStartedReason;
 use fidl_fuchsia_update_ext::{InstallationErrorData, InstallingData, State, UpdateInfo};
@@ -222,7 +222,9 @@ async fn discover_last_update_package(
     }
     match check_dynamic_index(pkgfs_path) {
         Ok(hash) => return Some(hash),
-        Err(err) => fx_log_warn!("error finding update package in dynamic index: {:?}", err),
+        Err(err) => {
+            fx_log_warn!("error finding update package in dynamic index: {:#}", anyhow!(err))
+        }
     }
 
     async fn fetch_update_merkle(
@@ -233,7 +235,7 @@ async fn discover_last_update_package(
     }
     match fetch_update_merkle(package_resolver).await {
         Ok(hash) => return Some(hash),
-        Err(err) => fx_log_warn!("error resolving update package: {:?}", err),
+        Err(err) => fx_log_warn!("error resolving update package: {:#}", anyhow!(err)),
     }
 
     None
@@ -295,7 +297,7 @@ where
         initiator: Initiator,
     ) {
         if let Err(e) = self.do_system_update_check(monitor.clone(), initiator).await {
-            fx_log_err!("update attempt failed: {:?}", e);
+            fx_log_err!("update attempt failed: {:#}", anyhow!(e));
         }
         let mut monitor = monitor.lock().await;
         match monitor.update_state() {
@@ -444,7 +446,7 @@ pub trait TargetChannelUpdater: Send + Sync + 'static {
 impl<S: ServiceConnect + 'static> TargetChannelUpdater for TargetChannelManager<S> {
     fn update(&self) -> BoxFuture<'_, ()> {
         TargetChannelManager::update(self)
-            .unwrap_or_else(|e| fx_log_err!("while updating target channel: {:?}", e))
+            .unwrap_or_else(|e| fx_log_err!("while updating target channel: {:#}", anyhow!(e)))
             .boxed()
     }
 }
@@ -457,7 +459,7 @@ pub trait CurrentChannelUpdater: Send + Sync + 'static {
 impl CurrentChannelUpdater for CurrentChannelManager {
     fn update(&self) -> BoxFuture<'_, ()> {
         CurrentChannelManager::update(self)
-            .unwrap_or_else(|e| fx_log_err!("while updating current channel: {:?}", e))
+            .unwrap_or_else(|e| fx_log_err!("while updating current channel: {:#}", anyhow!(e)))
             .boxed()
     }
 }

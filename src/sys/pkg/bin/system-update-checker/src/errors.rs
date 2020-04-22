@@ -45,7 +45,7 @@ pub enum Error {
     #[error("error reading line from 'packages' file")]
     ReadPackages,
 
-    #[error("error parsing latest system image merkle: {}", packages_entry)]
+    #[error("error parsing latest system image merkle: {packages_entry}")]
     ParseLatestSystemImageMerkle { packages_entry: String },
 
     #[error("could not find latest system image merkle in update package's 'packages' list")]

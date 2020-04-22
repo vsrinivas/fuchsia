@@ -24,7 +24,7 @@ use {
         poller::run_periodic_update_check,
         update_service::{RealUpdateManager, RealUpdateService},
     },
-    anyhow::{Context as _, Error},
+    anyhow::{anyhow, Context as _, Error},
     fidl_fuchsia_update_channel::ProviderRequestStream,
     fidl_fuchsia_update_channelcontrol::ChannelControlRequestStream,
     forced_fdr::perform_fdr_if_necessary,
@@ -33,8 +33,7 @@ use {
     fuchsia_inspect as finspect,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::{prelude::*, stream::FuturesUnordered},
-    std::sync::Arc,
-    std::time::Duration,
+    std::{sync::Arc, time::Duration},
 };
 
 const MAX_CONCURRENT_CONNECTIONS: usize = 100;
@@ -53,7 +52,7 @@ async fn main() -> Result<(), Error> {
     let target_channel_manager =
         channel::TargetChannelManager::new(connect::ServiceConnector, "/misc/ota");
     if let Err(e) = target_channel_manager.update().await {
-        fx_log_err!("while updating the target channel: {}", e);
+        fx_log_err!("while updating the target channel: {:#}", anyhow!(e));
     }
     let target_channel_manager = Arc::new(target_channel_manager);
 
@@ -101,8 +100,9 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle().context("ServiceFs::take_and_serve_directory_handle")?;
     futures.push(
         fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, |incoming_service| {
-            handle_incoming_service(incoming_service)
-                .unwrap_or_else(|e| fx_log_err!("error handling client connection: {}", e))
+            handle_incoming_service(incoming_service).unwrap_or_else(|e| {
+                fx_log_err!("error handling client connection: {:#}", anyhow!(e))
+            })
         })
         .boxed(),
     );
@@ -154,7 +154,7 @@ async fn handle_incoming_service(incoming_service: IncomingServices) -> Result<(
 
 async fn check_and_set_system_health() {
     if let Err(err) = check_and_set_system_health_impl().await {
-        fx_log_err!("error during system health check: {}", err);
+        fx_log_err!("error during system health check: {:#}", anyhow!(err));
     }
 }
 

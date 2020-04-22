@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::anyhow,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Duration,
@@ -31,13 +32,13 @@ impl Config {
         let f = match File::open("/config/data/ota_config.json") {
             Ok(f) => f,
             Err(e) => {
-                fx_log_info!("no config found, using defaults: {:?}", e.kind());
+                fx_log_info!("no config found, using defaults: {:#}", anyhow!(e));
                 return Config::default();
             }
         };
 
         Self::load(f).unwrap_or_else(|e| {
-            fx_log_err!("unable to load config, using defaults: {:?}", e);
+            fx_log_err!("unable to load config, using defaults: {:#}", anyhow!(e));
             Config::default()
         })
     }
@@ -50,8 +51,7 @@ impl Config {
             update_package_url: Option<PkgUrl>,
         }
 
-        let config =
-            serde_json::from_reader::<_, ParseConfig>(r).map_err(ConfigLoadError::Parse)?;
+        let config = serde_json::from_reader::<_, ParseConfig>(r)?;
         if config.update_package_url.as_ref().map(|url| url.resource().is_some()).unwrap_or(false) {
             return Err(ConfigLoadError::UpdatePackageUrlContainsResource);
         }
@@ -72,8 +72,8 @@ impl Config {
 
 #[derive(Debug, Error)]
 enum ConfigLoadError {
-    #[error("parse error: {}", _0)]
-    Parse(serde_json::Error),
+    #[error("parse error")]
+    Parse(#[from] serde_json::Error),
 
     #[error("update_package_url must not contain a resource path")]
     UpdatePackageUrlContainsResource,
