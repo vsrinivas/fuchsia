@@ -502,9 +502,9 @@ mod inspect_tests {
                         last_update_successfully_checked_time: "None",
                         updated_count: 0u64,
                         root_version: 1u64,
-                        timestamp_version: 0u64,
-                        snapshot_version: 0u64,
-                        targets_version: 0u64,
+                        timestamp_version: -1i64,
+                        snapshot_version: -1i64,
+                        targets_version: -1i64,
                     }
                 }
             }
@@ -556,9 +556,9 @@ mod inspect_tests {
                         last_update_successfully_checked_time: "Some(Time(0))",
                         updated_count: 1u64,
                         root_version: 1u64,
-                        timestamp_version: 2u64,
-                        snapshot_version: 2u64,
-                        targets_version: 2u64,
+                        timestamp_version: 2i64,
+                        snapshot_version: 2i64,
+                        targets_version: 2i64,
                     }
                 }
             }
@@ -619,9 +619,9 @@ mod inspect_tests {
                         last_update_successfully_checked_time: "Some(Time(0))",
                         updated_count: 1u64,
                         root_version: 1u64,
-                        timestamp_version: 2u64,
-                        snapshot_version: 2u64,
-                        targets_version: 2u64,
+                        timestamp_version: 2i64,
+                        snapshot_version: 2i64,
+                        targets_version: 2i64,
                         "auto_client" : {
                             connect_failure_count: 0u64,
                             connect_success_count: 1u64,

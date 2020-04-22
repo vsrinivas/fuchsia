@@ -77,14 +77,14 @@ struct UpdatingTufClientInspectState {
     /// Version of the active root file.
     root_version: inspect::UintProperty,
 
-    /// Version of the active timestamp file, or 0 if unknown.
-    timestamp_version: inspect::UintProperty,
+    /// Version of the active timestamp file, or -1 if unknown.
+    timestamp_version: inspect::IntProperty,
 
-    /// Version of the active snapshot file, or 0 if unknown.
-    snapshot_version: inspect::UintProperty,
+    /// Version of the active snapshot file, or -1 if unknown.
+    snapshot_version: inspect::IntProperty,
 
-    /// Version of the active targets file, or 0 if unknown.
-    targets_version: inspect::UintProperty,
+    /// Version of the active targets file, or -1 if unknown.
+    targets_version: inspect::IntProperty,
 
     _node: inspect::Node,
 }
@@ -150,9 +150,9 @@ where
                 ),
                 updated_count: inspect_util::Counter::new(&node, "updated_count"),
                 root_version: node.create_uint("root_version", root_version.into()),
-                timestamp_version: node.create_uint("timestamp_version", 0),
-                snapshot_version: node.create_uint("snapshot_version", 0),
-                targets_version: node.create_uint("targets_version", 0),
+                timestamp_version: node.create_int("timestamp_version", -1),
+                snapshot_version: node.create_int("snapshot_version", -1),
+                targets_version: node.create_int("targets_version", -1),
                 _node: node,
             },
         }));
@@ -226,9 +226,15 @@ where
     async fn update(&mut self) -> Result<bool, TufError> {
         let res = self.client.update().await;
         self.inspect.root_version.set(self.client.root_version().into());
-        self.inspect.timestamp_version.set(self.client.timestamp_version().unwrap_or(0).into());
-        self.inspect.snapshot_version.set(self.client.snapshot_version().unwrap_or(0).into());
-        self.inspect.targets_version.set(self.client.targets_version().unwrap_or(0).into());
+        self.inspect
+            .timestamp_version
+            .set(self.client.timestamp_version().map(|uint| uint.into()).unwrap_or(-1i64));
+        self.inspect
+            .snapshot_version
+            .set(self.client.snapshot_version().map(|uint| uint.into()).unwrap_or(-1i64));
+        self.inspect
+            .targets_version
+            .set(self.client.targets_version().map(|uint| uint.into()).unwrap_or(-1i64));
         if let Ok(update_occurred) = &res {
             self.last_update_successfully_checked_time.get_mut().replace(clock::now());
             self.inspect.update_check_success_count.increment();
