@@ -37,7 +37,7 @@ test("mtd") {
   if (current_os == "linux") {
     # This library requires an environment with mtd/mtd-user.h and MTD support.
     # Currently, Linux is the only OS with that support.
-    deps += [ "//zircon/public/lib/mtd" ]
+    deps += [ "//zircon/system/ulib/mtd" ]
   }
 
   if (current_cpu == "arm64") {

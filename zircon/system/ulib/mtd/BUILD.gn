@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 # This library requires an environment with mtd/mtd-user.h and MTD support.
 
 zx_library("mtd") {
@@ -17,11 +29,11 @@ zx_library("mtd") {
     sources += [ "mtd-interface.cc" ]
   }
 
-  public_deps = [ "$zx/system/ulib/fbl:headers" ]
+  public_deps = [ "//zircon/public/lib/fbl" ]
 
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/log",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/log",
   ]
 
   defines = []

@@ -30,7 +30,7 @@ sdk_executable("fvm") {
     sources += [ "mtd.cc" ]
     deps += [
       "//zircon/system/ulib/ftl-mtd",
-      "//zircon/public/lib/mtd",
+      "//zircon/system/ulib/mtd",
     ]
   } else {
     sources += [ "mtd-stub.cc" ]

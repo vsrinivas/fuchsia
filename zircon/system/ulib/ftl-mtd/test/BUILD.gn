@@ -29,8 +29,8 @@ source_set("common") {
 
   sources = [ "fake-nand-interface.cc" ]
 
-  deps = [ "//zircon/public/lib/mtd" ]
- }
+  deps = [ "//zircon/system/ulib/mtd" ]
+}
 
 test("nand-volume-driver") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -51,9 +51,9 @@ test("nand-volume-driver") {
 
   deps = [
     ":common",
-    "//zircon/system/ulib/ftl-mtd",
-    "//zircon/public/lib/mtd",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ftl-mtd",
+    "//zircon/system/ulib/mtd",
   ]
 }
 
@@ -75,10 +75,10 @@ test("ftl-volume-wrapper") {
   sources = [ "ftl-volume-wrapper-tests.cc" ]
 
   deps = [
-    "//zircon/system/ulib/ftl-mtd",
-    "//zircon/public/lib/mtd",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ftl-mtd",
     "//zircon/system/ulib/fvm-host",
+    "//zircon/system/ulib/mtd",
   ]
 }
 

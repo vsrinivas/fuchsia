@@ -34,11 +34,11 @@ zx_library("nand-redundant-storage") {
     ]
   }
 
-  public_deps = [ "//zircon/public/lib/mtd" ]
+  public_deps = [ "//zircon/system/ulib/mtd" ]
 
   deps = [
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/mtd",
+    "//zircon/system/ulib/mtd",
   ]
 }
