@@ -601,8 +601,8 @@ benchmark("ByteArray/4096") {
 }
 
 benchmark("ByteArray/65536") {
-    // GIDL generation is slow when HLCPP is enabled.
-    bindings_denylist = [cpp],
+    // GIDL generation is slow when LLCPP or HLCPP is enabled.
+    bindings_denylist = [llcpp, cpp],
     value = ByteArray65536{
         bytes: [
             // 1 - 256

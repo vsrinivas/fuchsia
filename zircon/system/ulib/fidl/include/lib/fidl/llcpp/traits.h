@@ -64,6 +64,10 @@ struct IsFidlMessage : public std::false_type {};
 template <typename T>
 struct IsFidlType : public std::is_base_of<zx::object_base, T> {};
 
+// Const-ness is not significant for determining IsFidlType.
+template <typename T>
+struct IsFidlType<const T> : public IsFidlType<T> {};
+
 // clang-format off
 // Specialize for primitives
 template <> struct IsFidlType<bool> : public std::true_type {};

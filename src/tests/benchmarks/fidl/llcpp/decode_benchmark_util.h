@@ -5,11 +5,22 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_LLCPP_DECODE_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_LLCPP_DECODE_BENCHMARK_UTIL_H_
 
+#include "encode_benchmark_util.h"
+
 namespace llcpp_benchmarks {
 
 template <typename FidlType>
-bool DecodeBenchmark(perftest::RepeatState* state, std::vector<uint8_t> bytes) {
+bool DecodeBenchmark(perftest::RepeatState* state, fidl::aligned<FidlType>* aligned_value) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
+
+  // Encode the value.
+  uint8_t linearize_buffer[BufferSize<FidlType>];
+  auto benchmark_linearize_result = Linearize(nullptr, &aligned_value->value, linearize_buffer);
+  auto& linearize_result = benchmark_linearize_result.result;
+  ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
+  auto encode_result = fidl::Encode(std::move(linearize_result.message));
+  ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);
+  const fidl::BytePart& bytes = encode_result.message.bytes();
 
   state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Decode/WallTime");
