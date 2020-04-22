@@ -5,23 +5,25 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
+shared_deps = [
+  "//src/diagnostics/triage:triage_lib",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:structopt",
+]
+
 rustc_test("triage_config_test_runner_test") {
   edition = 2018
   source_root = "src/main.rs"
-  deps = []
+  deps = shared_deps
 }
 
 rustc_binary("triage_config_test_runner") {
   edition = "2018"
 
-  deps = [
-    "//src/diagnostics/triage:triage_lib",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:structopt",
-  ]
+  deps = shared_deps
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":triage_config_test_runner($host_toolchain)" ]
+  deps = [ ":triage_config_test_runner_test($host_toolchain)" ]
 }

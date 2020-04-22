@@ -39,42 +39,11 @@ mod test {
 
     #[test]
     fn run_tests_fails_for_empty_file_list() {
-        assert!(run_tests(HashMap::new()).is_err(), "Should fail on empty vec");
+        assert!(run_tests(vec![]).is_err(), "Should fail on empty vec");
     }
 
     #[test]
     fn run_tests_fails_for_failing_validate() {
-        let config_text = r#"{
-            select: {},
-            eval: { e: "1 == 1" },
-            act: { equalact: {trigger: "e", print: "equal"}, },
-            test: { trial1: {
-                yes: [],
-                no: ["equalact"],
-                inspect: []
-            }
-        }}"#;
-        let mut config_files = HashMap::new();
-        config_files.insert(String::from("foo"), String::from(config_text));
-
-        assert!(run_tests(config_files).is_err(), "run_tests should have failed");
-    }
-
-    #[test]
-    fn run_tests_does_not_fail_for_passing_validate() {
-        let config_text = r#"{
-            select: {},
-            eval: { e: "1 == 1" },
-            act: { equalact: {trigger: "e", print: "equal"}, },
-            test: { trial1: {
-                yes: ["equalact"],
-                no: [],
-                inspect: []
-            }
-        }}"#;
-        let mut config_files = HashMap::new();
-        config_files.insert(String::from("foo"), String::from(config_text));
-
-        assert!(run_tests(config_files).is_ok(), "run_tests should not have failed");
+        assert!(run_tests(vec!["foo.triage".to_string()]).is_err(), "run_tests should have failed");
     }
 }

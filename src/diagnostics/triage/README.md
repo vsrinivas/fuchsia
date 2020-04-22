@@ -54,16 +54,12 @@ Config file format is described in [Configuring 'fx triage'](config.md). It incl
 
 Use `--with //src/diagnostics/triage:tests` for all tests.
 
-Unit tests for the Rust code are linked into CQ/CI. To run them manually:
+Unit tests for the Rust code are linked into CQ/CI. There are also a
+series of integration tests which live in the integration.rs file
+which are run in CQ/CI as well. To run them manually:
 
 ```
 fx test triage_lib_tests
-```
-
-There's a manually launched integration test to test the bash script:
-
-```
-fx build && fx triage --test
 ```
 
 ## Source layout
@@ -89,8 +85,7 @@ fx build && fx triage --test
         evaluate the self-tests specified in the config files.
     *   config.rs - Loads configuration information from *.triage files.
         *   config/parse.rs - A `nom`-based parser for Eval metrics.
-*   //src/diagnostics/triage/test/src/main.rs - Integration tester that invokes
-    the "fx triage" script and evaluates its output.
+*   //src/diagnostics/triage/test_data/ - Data which is used in integration testing.
 *   //src/diagnostics/triage/build
     *   triage_config_test.gni defines a gn target to run config tests in CQ.
     * triage_config_test_runner defines a binary which executes the tests for the triage_config_test.gni target.

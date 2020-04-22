@@ -17,7 +17,7 @@
 ##    --bugreport <dir>                  Directory to get an inspect.json file from
 ##    --tag <tag>                        Adds an action tag to include
 ##    --exclude-tag <tag>                Adds an action tag to exclude
-##    --test                             Run self-tests (only)
+##    --test                             (deprecated) Run self-tests (only)
 ##
 ## 0 or more --config paths may be given. Path is relative to CWD, or absolute.
 ##   If path is a directory, path/*.triage will be loaded.
@@ -90,9 +90,9 @@ done
 triage_exe="${HOST_OUT_DIR}/../host-tools/triage"
 
 if [[ -n "$testit" ]]; then
-  "${HOST_OUT_DIR}/../host-tools/triage_test" --target "${triage_exe}" \
-    --root "${FUCHSIA_DIR}"
-    exit
+  echo "[ERROR] fx triage --test is deprecated!"
+  echo "please use 'fx test triage_lib_test' instead"
+  exit
 fi
 
 if (( !"${#config_paths[@]}" )); then

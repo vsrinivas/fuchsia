@@ -42,6 +42,7 @@ impl<'a> ActionContext<'a> {
 
 /// Stores the results of each [Action] specified in [source] and the [warnings] that are
 /// generated.
+#[derive(Clone)]
 pub struct ActionResults {
     pub(crate) source: String,
     results: HashMap<String, bool>,
