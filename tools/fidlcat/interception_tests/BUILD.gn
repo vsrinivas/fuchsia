@@ -23,6 +23,7 @@ if (is_host) {
       "framebuffer_test.cc",
       "futex_test.cc",
       "guest_test.cc",
+      "handle_info_test.cc",
       "handle_test.cc",
       "interception_workflow_test.cc",
       "interrupt_test.cc",

@@ -148,6 +148,10 @@ class InterceptionWorkflow {
     return syscall_decoder_dispatcher_.get();
   }
 
+  std::unique_ptr<SyscallDecoderDispatcher> GetBackDispatcher() {
+    return std::move(syscall_decoder_dispatcher_);
+  }
+
   InterceptingThreadObserver& thread_observer() { return thread_observer_; }
 
   InterceptionWorkflow(const InterceptionWorkflow&) = delete;

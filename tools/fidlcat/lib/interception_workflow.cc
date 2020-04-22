@@ -287,7 +287,7 @@ void InterceptionWorkflow::Attach(const std::vector<zx_koid_t>& process_koids) {
     target->Attach(process_koid, [this, target, process_koid](fxl::WeakPtr<zxdb::Target> /*target*/,
                                                               const zxdb::Err& err) {
       if (!err.ok()) {
-        syscall_decoder_dispatcher()->ProcessMonitored("", process_koid, err.msg());
+        syscall_decoder_dispatcher()->ProcessMonitored("", process_koid, nullptr, err.msg());
         return;
       }
 
@@ -386,7 +386,8 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
   }
   configured_processes_.emplace(process->GetKoid());
 
-  syscall_decoder_dispatcher()->ProcessMonitored(process->GetName(), process->GetKoid(), "");
+  syscall_decoder_dispatcher()->ProcessMonitored(process->GetName(), process->GetKoid(),
+                                                 process->GetWeakPtr(), "");
 
   for (auto& syscall : syscall_decoder_dispatcher()->syscalls()) {
     bool put_breakpoint = true;

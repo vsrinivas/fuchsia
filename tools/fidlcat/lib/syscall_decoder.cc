@@ -308,9 +308,16 @@ void SyscallDecoder::DecodeInputs() {
     int64_t timestamp = time(nullptr);
     const Thread* thread = dispatcher_->SearchThread(thread_id_);
     if (thread == nullptr) {
-      const Process* process = dispatcher_->SearchProcess(process_id_);
+      Process* process = dispatcher_->SearchProcess(process_id_);
       if (process == nullptr) {
-        process = dispatcher_->CreateProcess(process_name_, process_id_);
+        zxdb::Thread* zxdb_thread = weak_thread_.get();
+        if (zxdb_thread == nullptr) {
+          aborted_ = true;
+          Destroy();
+          return;
+        }
+        process = dispatcher_->CreateProcess(process_name_, process_id_,
+                                             zxdb_thread->GetProcess()->GetWeakPtr());
       }
       thread = dispatcher_->CreateThread(thread_id_, process);
     }
@@ -335,6 +342,10 @@ void SyscallDecoder::DecodeInputs() {
         }
         ++outline_member;
       }
+    }
+    if (dispatcher_->with_handle_info() &&
+        invoked_event_->NeedsToLoadHandleInfo(process_id_, &dispatcher_->inference())) {
+      thread->process()->LoadHandleInfo(&dispatcher_->inference());
     }
   }
   UseInputs();
@@ -412,9 +423,16 @@ void SyscallDecoder::DecodeOutputs() {
     int64_t timestamp = time(nullptr);
     const Thread* thread = dispatcher_->SearchThread(thread_id_);
     if (thread == nullptr) {
-      const Process* process = dispatcher_->SearchProcess(process_id_);
+      Process* process = dispatcher_->SearchProcess(process_id_);
       if (process == nullptr) {
-        process = dispatcher_->CreateProcess(process_name_, process_id_);
+        zxdb::Thread* zxdb_thread = weak_thread_.get();
+        if (zxdb_thread == nullptr) {
+          aborted_ = true;
+          Destroy();
+          return;
+        }
+        process = dispatcher_->CreateProcess(process_name_, process_id_,
+                                             zxdb_thread->GetProcess()->GetWeakPtr());
       }
       thread = dispatcher_->CreateThread(thread_id_, process);
     }
@@ -442,6 +460,10 @@ void SyscallDecoder::DecodeOutputs() {
         }
         ++outline_member;
       }
+    }
+    if (dispatcher_->with_handle_info() &&
+        output_event_->NeedsToLoadHandleInfo(process_id_, &dispatcher_->inference())) {
+      thread->process()->LoadHandleInfo(&dispatcher_->inference());
     }
   }
   UseOutputs();

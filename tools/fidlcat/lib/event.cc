@@ -88,6 +88,65 @@ void FidlcatPrinter::DisplayOutline(
   }
 }
 
+void Process::LoadHandleInfo(Inference* inference) {
+  zxdb::Process* zxdb_process = zxdb_process_.get();
+  if (zxdb_process == nullptr) {
+    return;
+  }
+  if (loading_handle_info_) {
+    // We are currently loading information about the handles. If we are unlucky, the result won't
+    // include information about handles we are now needing. Ask the process to do another load just
+    // after the current one to be sure to have all the handles we need (including the handle only
+    // needed after the start of the load).
+    needs_to_load_handle_info_ = true;
+    return;
+  }
+  loading_handle_info_ = true;
+  needs_to_load_handle_info_ = false;
+  zxdb_process->LoadInfoHandleTable(
+      [this, inference](zxdb::ErrOr<std::vector<debug_ipc::InfoHandleExtended>> handles) {
+        loading_handle_info_ = false;
+        if (!handles.ok()) {
+          FXL_LOG(ERROR) << "msg: " << handles.err().msg();
+        } else {
+          for (const auto& handle : handles.value()) {
+            fidl_codec::semantic::HandleDescription* description =
+                inference->GetHandleDescription(koid_, handle.handle_value);
+            if (description != nullptr) {
+              // Associate the koid to the handle only if the handle is currently used by the
+              // monitored process. That is if the handle if referenced by an event.
+              // That means that we may need an extra load if the handle is already known by the
+              // kernel but not yet needed by the monitored process. This way we avoid creating
+              // handle description for handle we don't know the semantic.
+              description->set_koid(handle.koid);
+            }
+            if (handle.related_koid != ZX_HANDLE_INVALID) {
+              // However, the associated of koids is always useful.
+              inference->AddLinkedKoids(handle.koid, handle.related_koid);
+            }
+          }
+          if (needs_to_load_handle_info_) {
+            needs_to_load_handle_info_ = false;
+            LoadHandleInfo(inference);
+          }
+        }
+      });
+}
+
+bool Event::NeedsToLoadHandleInfo(zx_koid_t pid, Inference* inference) {
+  for (const auto& field : inline_fields_) {
+    if (field.second->NeedsToLoadHandleInfo(pid, inference)) {
+      return true;
+    }
+  }
+  for (const auto& field : outline_fields_) {
+    if (field.second->NeedsToLoadHandleInfo(pid, inference)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void InvokedEvent::PrettyPrint(FidlcatPrinter& printer) const {
   printer << syscall()->name();
   printer.DisplayInline(syscall()->input_inline_members(), inline_fields());

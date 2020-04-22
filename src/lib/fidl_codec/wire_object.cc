@@ -118,6 +118,12 @@ void StringValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitStringValue(this, for_type);
 }
 
+bool HandleValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+                                        semantic::HandleSemantic* handle_semantic) const {
+  auto description = handle_semantic->GetHandleDescription(pid, handle_.handle);
+  return (description == nullptr) || (description->koid() == ZX_KOID_INVALID);
+}
+
 int HandleValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
   return std::to_string(handle_.handle).size();
 }
@@ -128,6 +134,11 @@ void HandleValue::PrettyPrint(const Type* /*for_type*/, PrettyPrinter& printer) 
 
 void HandleValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitHandleValue(this, for_type);
+}
+
+bool UnionValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+                                       semantic::HandleSemantic* handle_semantic) const {
+  return value_->NeedsToLoadHandleInfo(pid, handle_semantic);
 }
 
 int UnionValue::DisplaySize(const Type* for_type, int remaining_size) const {
@@ -178,6 +189,16 @@ void StructValue::AddField(std::string_view name, std::unique_ptr<Value> value) 
   if (member != nullptr) {
     AddField(member, std::move(value));
   }
+}
+
+bool StructValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+                                        semantic::HandleSemantic* handle_semantic) const {
+  for (const auto& field : fields_) {
+    if (field.second->NeedsToLoadHandleInfo(pid, handle_semantic)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 int StructValue::DisplaySize(const Type* for_type, int remaining_size) const {
@@ -244,6 +265,16 @@ void StructValue::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   JsonVisitor visitor(&result, &allocator);
 
   Visit(&visitor, nullptr);
+}
+
+bool VectorValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+                                        semantic::HandleSemantic* handle_semantic) const {
+  for (const auto& value : values_) {
+    if (value->NeedsToLoadHandleInfo(pid, handle_semantic)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 int VectorValue::DisplaySize(const Type* for_type, int remaining_size) const {
@@ -337,6 +368,16 @@ bool TableValue::AddMember(std::string_view name, std::unique_ptr<Value> value) 
   return true;
 }
 
+bool TableValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+                                       semantic::HandleSemantic* handle_semantic) const {
+  for (const auto& member : members_) {
+    if (member.second->NeedsToLoadHandleInfo(pid, handle_semantic)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 int TableValue::DisplaySize(const Type* for_type, int remaining_size) const {
   int size = 0;
   for (const auto& member : table_definition_.members()) {
@@ -419,6 +460,17 @@ FidlMessageValue::FidlMessageValue(fidl_codec::DecodedMessage* message, std::str
       request_errors_(message->request_error_stream().str()),
       decoded_response_(std::move(message->decoded_response())),
       response_errors_(message->response_error_stream().str()) {}
+
+bool FidlMessageValue::NeedsToLoadHandleInfo(zx_koid_t pid,
+                                             semantic::HandleSemantic* handle_semantic) const {
+  for (const auto& handle : handles_) {
+    auto description = handle_semantic->GetHandleDescription(pid, handle.handle);
+    if (description == nullptr) {
+      return true;
+    }
+  }
+  return false;
+}
 
 int FidlMessageValue::DisplaySize(const Type* for_type, int remaining_size) const { return 0; }
 

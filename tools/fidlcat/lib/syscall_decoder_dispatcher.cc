@@ -287,13 +287,14 @@ void SyscallDecoderDispatcher::DeleteDecoder(ExceptionDecoder* decoder) {
 }
 
 void SyscallDecoderDispatcher::ProcessMonitored(std::string_view name, zx_koid_t koid,
+                                                fxl::WeakPtr<zxdb::Process> zxdb_process,
                                                 std::string_view error_message) {
   if (!error_message.empty()) {
     return;
   }
   auto process = processes_.find(koid);
   if (process == processes_.end()) {
-    processes_.emplace(std::make_pair(koid, std::make_unique<Process>(name, koid)));
+    processes_.emplace(std::make_pair(koid, std::make_unique<Process>(name, koid, zxdb_process)));
   }
 }
 
@@ -335,6 +336,7 @@ void SyscallDisplayDispatcher::ProcessLaunched(const std::string& command,
 }
 
 void SyscallDisplayDispatcher::ProcessMonitored(std::string_view name, zx_koid_t koid,
+                                                fxl::WeakPtr<zxdb::Process> zxdb_process,
                                                 std::string_view error_message) {
   last_displayed_syscall_ = nullptr;
   if (error_message.empty()) {
@@ -359,7 +361,7 @@ void SyscallDisplayDispatcher::ProcessMonitored(std::string_view name, zx_koid_t
     os_ << " : " << colors().red << error_message << colors().reset;
   }
   os_ << '\n';
-  SyscallDecoderDispatcher::ProcessMonitored(name, koid, error_message);
+  SyscallDecoderDispatcher::ProcessMonitored(name, koid, zxdb_process, error_message);
 }
 
 void SyscallDisplayDispatcher::StopMonitoring(zx_koid_t koid) {

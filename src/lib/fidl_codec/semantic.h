@@ -205,6 +205,8 @@ class HandleDescription {
   const std::string& type() const { return type_; }
   int64_t fd() const { return fd_; }
   const std::string& path() const { return path_; }
+  zx_koid_t koid() const { return koid_; }
+  void set_koid(zx_koid_t koid) { koid_ = koid; }
 
   // Convert a handle type (found in zircon/system/public/zircon/processargs.h) into a string.
   static std::string_view Convert(uint32_t type);
@@ -221,6 +223,8 @@ class HandleDescription {
   // Path associated with the handle. We can have both fd and path defined at the
   // same time.
   const std::string path_;
+  // The unique id assigned by the kernel to the object referenced by the handle.
+  zx_koid_t koid_ = ZX_KOID_INVALID;
 };
 
 // Holds the handle semantic for one process. That is all the meaningful information we have been
@@ -245,7 +249,7 @@ class HandleSemantic {
     return process_semantic->second.handles.size();
   }
 
-  const HandleDescription* GetHandleDescription(zx_koid_t pid, zx_handle_t handle) const {
+  HandleDescription* GetHandleDescription(zx_koid_t pid, zx_handle_t handle) const {
     const auto& process_semantic = process_handles_.find(pid);
     if (process_semantic == process_handles_.end()) {
       return nullptr;
@@ -303,8 +307,24 @@ class HandleSemantic {
     process_semantic.linked_handles.insert(std::make_pair(handle1, handle0));
   }
 
+  // Returns the koid of a channel peer given the channel koid).
+  zx_koid_t GetLinkedKoid(zx_koid_t koid) const {
+    auto linked = linked_koids_.find(koid);
+    if (linked == linked_koids_.end()) {
+      return ZX_KOID_INVALID;
+    }
+    return linked->second;
+  }
+
+  // Associates two channel koids.
+  void AddLinkedKoids(zx_koid_t koid0, zx_koid_t koid1) {
+    linked_koids_.insert(std::make_pair(koid0, koid1));
+    linked_koids_.insert(std::make_pair(koid1, koid0));
+  }
+
  private:
   std::map<zx_koid_t, ProcessSemantic> process_handles_;
+  std::map<zx_koid_t, zx_koid_t> linked_koids_;
 };
 
 // Holds the evaluation of an expression. Only one of the three fields can be defined.

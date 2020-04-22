@@ -36,7 +36,9 @@ constexpr uint64_t kFirstThreadKoid = 8764;
 constexpr uint64_t kSecondThreadKoid = 8765;
 
 constexpr uint32_t kHandle = 0xcefa1db0;
+constexpr uint64_t kHandleKoid = 1000828;
 constexpr uint32_t kHandle2 = 0xcefa1222;
+constexpr uint64_t kHandle2Koid = 1000829;
 constexpr uint32_t kHandle3 = 0xcefa1333;
 constexpr uint32_t kHandleOut = 0xbde90caf;
 constexpr uint32_t kHandleOut2 = 0xbde90222;
@@ -306,6 +308,31 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
     }
   }
 
+  void LoadInfoHandleTable(
+      const debug_ipc::LoadInfoHandleTableRequest& request,
+      fit::callback<void(const zxdb::Err&, debug_ipc::LoadInfoHandleTableReply)> cb) override {
+    debug_ipc::LoadInfoHandleTableReply reply;
+    reply.handles.push_back(debug_ipc::InfoHandleExtended{
+        .type = ZX_OBJ_TYPE_CHANNEL,
+        .handle_value = kHandle,
+        .rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL |
+                  ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT,
+        .props = ZX_OBJ_PROP_WAITABLE,
+        .koid = kHandleKoid,
+        .related_koid = kHandle2Koid,
+        .peer_owner_koid = 0});
+    reply.handles.push_back(debug_ipc::InfoHandleExtended{
+        .type = ZX_OBJ_TYPE_CHANNEL,
+        .handle_value = kHandle2,
+        .rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL |
+                  ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT,
+        .props = ZX_OBJ_PROP_WAITABLE,
+        .koid = kHandle2Koid,
+        .related_koid = kHandleKoid,
+        .peer_owner_koid = 0});
+    cb(zxdb::Err(), std::move(reply));
+  }
+
  private:
   std::map<uint32_t, debug_ipc::BreakpointSettings> breakpoints_;
   DataForSyscallTest& data_;
@@ -393,6 +420,8 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   // Function which can simulate the fact that the syscall can modify some data.
   std::function<void()> update_data_;
   bool bad_stack_ = false;
+  bool with_handle_info_ = false;
+  std::unique_ptr<SyscallDecoderDispatcher> last_decoder_dispatcher_;
 };
 
 class InterceptionWorkflowTestX64 : public InterceptionWorkflowTest {
@@ -440,6 +469,10 @@ class ProcessController {
   const std::vector<uint64_t>& process_koids() { return process_koids_; }
   uint64_t thread_koid(uint64_t process_koid) { return thread_koids_[process_koid]; }
   bool initialized() const { return initialized_; }
+
+  std::unique_ptr<SyscallDecoderDispatcher> GetBackDispatcher() {
+    return workflow_.GetBackDispatcher();
+  }
 
   void InjectProcesses(zxdb::Session& session);
 
@@ -604,6 +637,7 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
   void ProcessLaunched(const std::string& command, std::string_view error_message) override {}
 
   void ProcessMonitored(std::string_view name, zx_koid_t koid,
+                        fxl::WeakPtr<zxdb::Process> zxdb_process,
                         std::string_view error_message) override {}
 
   void StopMonitoring(zx_koid_t koid) override {

@@ -7,8 +7,11 @@
 
 #include <zircon/system/public/zircon/types.h>
 
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_types.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "tools/fidlcat/lib/inference.h"
 #include "tools/fidlcat/lib/type_decoder.h"
 
 namespace fidlcat {
@@ -46,25 +49,37 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
 
 class Process {
  public:
-  Process(std::string_view name, zx_koid_t koid) : name_(name), koid_(koid) {}
+  Process(std::string_view name, zx_koid_t koid, fxl::WeakPtr<zxdb::Process> zxdb_process)
+      : name_(name), koid_(koid), zxdb_process_(zxdb_process) {}
 
   const std::string& name() const { return name_; }
   zx_koid_t koid() const { return koid_; }
+  zxdb::Process* zxdb_process() const { return zxdb_process_.get(); }
+
+  void LoadHandleInfo(Inference* inference);
 
  private:
+  // The name of the process.
   const std::string name_;
+  // The koid of the process.
   const zx_koid_t koid_;
+  // The zxdb process for the koid.
+  fxl::WeakPtr<zxdb::Process> zxdb_process_;
+  // True if we are currently loading information about the process' handles.
+  bool loading_handle_info_ = false;
+  // True if we need to load again the info after the current load will be finished.
+  bool needs_to_load_handle_info_ = false;
 };
 
 class Thread {
  public:
-  Thread(const Process* process, zx_koid_t koid) : process_(process), koid_(koid) {}
+  Thread(Process* process, zx_koid_t koid) : process_(process), koid_(koid) {}
 
-  const Process* process() const { return process_; }
+  Process* process() const { return process_; }
   zx_koid_t koid() const { return koid_; }
 
  private:
-  const Process* const process_;
+  Process* const process_;
   const zx_koid_t koid_;
 };
 
@@ -96,6 +111,11 @@ class Event {
                        std::unique_ptr<fidl_codec::Value> value) {
     outline_fields_.emplace(std::make_pair(member, std::move(value)));
   }
+
+  // Returns true if we need to load information about the handle (call to zx_object_get_info with
+  // ZX_INFO_HANDLE_TABLE). We need to load information about the handle if one of the handles of
+  // the event has an unknown koid.
+  bool NeedsToLoadHandleInfo(zx_koid_t pid, Inference* inference);
 
  private:
   int64_t timestamp_;

@@ -1510,13 +1510,17 @@ class SyscallDecoderDispatcher {
 
   const DecodeOptions& decode_options() const { return decode_options_; }
 
+  bool with_handle_info() const { return with_handle_info_; }
+  void set_with_handle_info() { with_handle_info_ = true; }
+
   const std::vector<std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
 
   const std::map<zx_koid_t, std::unique_ptr<Process>>& processes() const { return processes_; }
 
   const Inference& inference() const { return inference_; }
+  Inference& inference() { return inference_; }
 
-  const Process* SearchProcess(zx_koid_t koid) const {
+  Process* SearchProcess(zx_koid_t koid) const {
     auto process = processes_.find(koid);
     if (process == processes_.end()) {
       return nullptr;
@@ -1524,9 +1528,10 @@ class SyscallDecoderDispatcher {
     return process->second.get();
   }
 
-  const Process* CreateProcess(std::string_view name, zx_koid_t koid) {
+  Process* CreateProcess(std::string_view name, zx_koid_t koid,
+                         fxl::WeakPtr<zxdb::Process> zxdb_process) {
     FXL_DCHECK(processes_.find(koid) == processes_.end());
-    auto process = std::make_unique<Process>(name, koid);
+    auto process = std::make_unique<Process>(name, koid, zxdb_process);
     auto returned_value = process.get();
     processes_.emplace(std::make_pair(koid, std::move(process)));
     return returned_value;
@@ -1540,7 +1545,7 @@ class SyscallDecoderDispatcher {
     return thread->second.get();
   }
 
-  const Thread* CreateThread(zx_koid_t koid, const Process* process) {
+  const Thread* CreateThread(zx_koid_t koid, Process* process) {
     FXL_DCHECK(threads_.find(koid) == threads_.end());
     auto thread = std::make_unique<Thread>(process, koid);
     auto returned_value = thread.get();
@@ -1587,6 +1592,7 @@ class SyscallDecoderDispatcher {
   // Called when a process is monitored. If |error_message| is not empty, we haven't been able
   // to monitor the process.
   virtual void ProcessMonitored(std::string_view name, zx_koid_t koid,
+                                fxl::WeakPtr<zxdb::Process> zxdb_process,
                                 std::string_view error_message);
 
   // Called when a process is no longer monitored.
@@ -1654,6 +1660,9 @@ class SyscallDecoderDispatcher {
   // Decoding options.
   const DecodeOptions& decode_options_;
 
+  // True if we need to load the information about the handles.
+  bool with_handle_info_ = false;
+
   // The definition of all the syscalls we can decode.
   std::vector<std::unique_ptr<Syscall>> syscalls_;
 
@@ -1715,6 +1724,7 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   void ProcessLaunched(const std::string& command, std::string_view error_message) override;
 
   void ProcessMonitored(std::string_view name, zx_koid_t koid,
+                        fxl::WeakPtr<zxdb::Process> zxdb_process,
                         std::string_view error_message) override;
 
   void StopMonitoring(zx_koid_t koid) override;
