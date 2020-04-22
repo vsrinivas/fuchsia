@@ -2,23 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO Follow 2018 idioms
-#![allow(elided_lifetimes_in_paths)]
-
 use anyhow::{format_err, Context, Error};
+use argh::FromArgs;
 use log::{error, info, LevelFilter};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 
-use clap::arg_enum;
-
 use rayon::prelude::*;
 
 use serde_json::{json, Value};
-
-use structopt::StructOpt;
 
 mod fidljson;
 use fidljson::{FidlJson, FidlJsonPackageData, TableOfContentsItem};
@@ -35,50 +29,56 @@ static FIDLDOC_VERSION: &str = "0.0.4";
 static SUPPORTED_FIDLJSON: &str = "0.0.1";
 static FIDLDOC_CONFIG_PATH: &str = "fidldoc.config.json";
 
-arg_enum! {
-    #[derive(Debug)]
-    enum TemplateType {
-        HTML,
-        Markdown
+#[derive(Debug)]
+enum TemplateType {
+    HTML,
+    Markdown,
+}
+
+fn parse_template_type_str(value: &str) -> Result<TemplateType, String> {
+    match &value.to_lowercase()[..] {
+        "html" => Ok(TemplateType::HTML),
+        "markdown" => Ok(TemplateType::Markdown),
+        _ => Err("invalid template type".to_string()),
     }
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(name = "fidldoc", about = "FIDL documentation generator", version = "0.1")]
+#[derive(Debug, FromArgs)]
+/// FIDL documentation generator.
 struct Opt {
-    /// Path to a configuration file to provide additional options
-    #[structopt(short = "c", long = "config")]
+    #[argh(option, short = 'c')]
+    /// path to a configuration file to provide additional options
     config: Option<PathBuf>,
-    /// Current commit hash, useful to coordinate doc generation with a specific source code revision
-    #[structopt(long = "tag", default_value = "master")]
+    #[argh(option, default = "\"master\".to_string()")]
+    /// current commit hash, useful to coordinate doc generation with a specific source code revision
     tag: String,
-    //// Set the input file(s) to use
-    #[structopt(parse(from_os_str), raw(required = "true"))]
+    #[argh(positional)]
+    /// set the input file(s) to use
     input: Vec<PathBuf>,
-    /// Set the output folder
-    #[structopt(short = "o", long = "out", default_value = "/tmp/fidldoc/")]
-    output: String,
-    /// Set the base URL path for the generated docs
-    #[structopt(short = "p", long = "path", default_value = "/")]
+    #[argh(option, short = 'o', default = "\"/tmp/fidldoc/\".to_string()")]
+    /// set the output folder
+    out: String,
+    #[argh(option, short = 'p', default = "\"/\".to_string()")]
+    /// set the base URL path for the generated docs
     path: String,
-    /// Select the template to use to render the docs
-    #[structopt(
-        short = "t",
-        long = "template",
-        default_value = "markdown",
-        raw(possible_values = "&TemplateType::variants()", case_insensitive = "true")
+    #[argh(
+        option,
+        short = 't',
+        from_str_fn(parse_template_type_str),
+        default = "TemplateType::Markdown"
     )]
+    /// select the template to use to render the docs
     template: TemplateType,
-    /// Generate verbose output
-    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
-    verbose: u64,
+    #[argh(switch, short = 'v')]
+    /// generate verbose output
+    verbose: bool,
 }
 
 static LOGGER: SimpleLogger = SimpleLogger;
 
 fn main() {
     log::set_logger(&LOGGER).unwrap();
-    let opt = Opt::from_args();
+    let opt: Opt = argh::from_env();
     if let Err(e) = run(opt) {
         error!("Error: {}", e);
         process::exit(1);
@@ -89,19 +89,19 @@ fn run(opt: Opt) -> Result<(), Error> {
     let mut input_files = opt.input;
     normalize_input_files(&mut input_files);
 
-    let output = &opt.output;
+    let output = &opt.out;
     let output_path = PathBuf::from(output);
 
     let url_path = &opt.path;
 
     let template_type = &opt.template;
     let template = select_template(template_type, &output_path)
-        .with_context(|| format!("Unable to instantiate template {}", template_type))?;
+        .with_context(|| format!("Unable to instantiate template {:?}", template_type))?;
 
-    match opt.verbose {
-        0 => log::set_max_level(LevelFilter::Error),
-        1 => log::set_max_level(LevelFilter::Info),
-        _ => log::set_max_level(LevelFilter::Debug),
+    if opt.verbose {
+        log::set_max_level(LevelFilter::Debug);
+    } else {
+        log::set_max_level(LevelFilter::Error);
     }
 
     // Read in fidldoc.config.json
@@ -195,7 +195,7 @@ fn render_fidl_interface(
     });
 
     let template = select_template(&template_type, &output_path)
-        .with_context(|| format!("Unable to instantiate template {}", template_type));
+        .with_context(|| format!("Unable to instantiate template {:?}", template_type));
     match template?.render_interface(&package, &fidl_doc) {
         Err(why) => error!("Unable to render interface {}: {:?}", &package, why),
         Ok(()) => info!("Generated interface documentation for {}", &package),

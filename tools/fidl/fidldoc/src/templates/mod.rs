@@ -20,18 +20,18 @@ pub trait FidldocTemplate {
 }
 
 pub type HandlebarsHelper = fn(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError>;
 
 pub fn get_link_helper(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -47,10 +47,10 @@ fn sanitize_name(name: &str) -> String {
 }
 
 pub fn remove_package_name(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -68,10 +68,10 @@ fn rpn(name: &str) -> String {
 }
 
 pub fn eq(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -93,10 +93,10 @@ pub fn eq(
 }
 
 fn package_link(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -135,10 +135,10 @@ fn pl(name: &str, base: &str) -> String {
 }
 
 fn doc_link(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -156,7 +156,7 @@ fn dl(docstring: &str, base: &str) -> String {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"\[`(.*?)`\]").unwrap();
     }
-    RE.replace_all(&docstring, |caps: &Captures| {
+    RE.replace_all(&docstring, |caps: &Captures<'_>| {
         let package = caps.get(1).unwrap().as_str();
         debug!("dl captured {}", package);
         pl(package, base)
@@ -165,10 +165,10 @@ fn dl(docstring: &str, base: &str) -> String {
 }
 
 pub fn remove_parent_folders(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -186,10 +186,10 @@ fn rpf(path: &str) -> String {
 }
 
 fn source_link(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     let fidl_json =
@@ -228,10 +228,10 @@ fn sl(fidl_json: &Value, location: &Value) -> String {
 }
 
 pub fn one_line(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
@@ -249,10 +249,10 @@ fn ol(description: &str) -> String {
 }
 
 pub fn pulldown(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error

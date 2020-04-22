@@ -93,10 +93,10 @@ impl FidldocTemplate for HtmlTemplate {
 }
 
 fn package_hash(
-    h: &Helper,
+    h: &Helper<'_, '_>,
     _: &Handlebars,
     _: &Context,
-    _: &mut RenderContext,
+    _: &mut RenderContext<'_>,
     out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
