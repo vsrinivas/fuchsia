@@ -5,9 +5,8 @@
 use anyhow::{Context as _, Error};
 
 use async_trait::async_trait;
-use fidl_fuchsia_hardware_backlight::State as BacklightState;
 use fidl_fuchsia_hardware_backlight::{
-    DeviceMarker as BacklightMarker, DeviceProxy as BacklightProxy,
+    DeviceMarker as BacklightMarker, DeviceProxy as BacklightProxy, State as BacklightCommand,
 };
 use fuchsia_syslog::fx_log_info;
 
@@ -69,8 +68,8 @@ impl Backlight {
     fn set(&mut self, value: f64) -> Result<(), Error> {
         // TODO(fxb/36302): Handle error here as well, similar to get_brightness above. Might involve
         let regulated_value = num_traits::clamp(value, AUTO_MINIMUM_BRIGHTNESS, 1.0);
-        let _result = self.proxy.set_state_normalized(&mut BacklightState {
-            backlight_on: regulated_value != 0.0,
+        let _result = self.proxy.set_state_normalized(&mut BacklightCommand {
+            backlight_on: value != 0.0,
             brightness: regulated_value,
         });
         Ok(())
@@ -94,5 +93,60 @@ impl BacklightControl for Backlight {
     }
     fn get_max_absolute_brightness(&self) -> f64 {
         self.get_max_absolute_brightness()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl_fuchsia_hardware_backlight::DeviceRequestStream as BacklightRequestStream;
+    use fuchsia_async as fasync;
+    use futures_util::stream::StreamExt;
+
+    fn mock_backlight() -> (Backlight, BacklightRequestStream) {
+        let (proxy, backlight_stream) =
+            fidl::endpoints::create_proxy_and_stream::<BacklightMarker>().unwrap();
+        (Backlight { proxy, max_brightness: 1000.0_f64 }, backlight_stream)
+    }
+
+    async fn mock_device(mut reqs: BacklightRequestStream) -> BacklightCommand {
+        match reqs.next().await.unwrap() {
+            Ok(fidl_fuchsia_hardware_backlight::DeviceRequest::SetStateNormalized {
+                state: command,
+                ..
+            }) => {
+                return command;
+            }
+            request => panic!("Unexpected request: {:?}", request),
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_zero_brightness_turns_screen_off() {
+        // Setup
+        let (mut mock, backlight_stream) = mock_backlight();
+        let backlight_fut = mock_device(backlight_stream);
+
+        // Act
+        mock.set(0.0).expect("set failed");
+        let backlight_command = backlight_fut.await;
+
+        // Assert
+        assert_eq!(backlight_command.backlight_on, false);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brightness_turns_screen_on() {
+        // Setup
+        let (mut mock, backlight_stream) = mock_backlight();
+        let backlight_fut = mock_device(backlight_stream);
+
+        // Act
+        mock.set(0.55).expect("set failed");
+        let backlight_command = backlight_fut.await;
+
+        // Assert
+        assert_eq!(backlight_command.backlight_on, true);
+        assert_eq!(backlight_command.brightness, 0.55);
     }
 }
