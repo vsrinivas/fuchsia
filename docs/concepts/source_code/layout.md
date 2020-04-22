@@ -200,7 +200,7 @@ import("//build/test/test_package.gni")
 
 group("fortune") {
   testonly = true
-  public_deps = [
+  deps = [
     ":pkg",
     ":tests",
   ]
@@ -208,7 +208,7 @@ group("fortune") {
 
 group("tests") {
   testonly = true
-  public_deps = [
+  deps = [
     ":fortune-tests"
   ]
 }
