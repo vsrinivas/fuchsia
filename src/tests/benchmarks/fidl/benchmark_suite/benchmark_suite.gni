@@ -1,3 +1,7 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 benchmark_suite_gidl_files = [
   "//src/tests/benchmarks/fidl/benchmark_suite/byte_array.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/byte_vector.gidl",
@@ -6,4 +10,8 @@ benchmark_suite_gidl_files = [
   "//src/tests/benchmarks/fidl/benchmark_suite/socket.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/string.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/struct_field.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/table_all_set.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/table_all_unset.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/table_single_set.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/table_reserved_last_set.gidl",
 ]
