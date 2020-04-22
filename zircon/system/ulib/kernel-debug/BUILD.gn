@@ -19,12 +19,12 @@ zx_library("kernel-debug") {
   sdk_headers = [ "lib/kernel-debug/kernel-debug.h" ]
   sources = [ "kernel-debug.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-kernel:c",
   ]
   public_deps = [ "//zircon/system/ulib/svc" ]
 }

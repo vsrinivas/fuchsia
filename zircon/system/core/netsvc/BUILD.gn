@@ -97,6 +97,7 @@ source_set("netsvc_common") {
     "zbi.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
@@ -108,7 +109,6 @@ source_set("netsvc_common") {
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
-    "//zircon/system/fidl/fuchsia-kernel:c",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
     "//zircon/system/ulib/bootfs",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",

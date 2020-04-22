@@ -33,6 +33,7 @@ source_set("system_metrics_daemon_lib") {
     ":metrics_registry_cc",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/fidl/fuchsia.ui.activity",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
@@ -47,7 +48,6 @@ source_set("system_metrics_daemon_lib") {
     "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-cobalt",
-    "//zircon/system/fidl/fuchsia-kernel:llcpp",
   ]
 }
 
