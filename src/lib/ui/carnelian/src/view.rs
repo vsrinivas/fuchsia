@@ -5,20 +5,19 @@
 use crate::{
     app::{FrameBufferPtr, MessageInternal, ViewMode},
     canvas::{Canvas, MappingPixelSink},
-    geometry::{IntSize, Point, Size},
+    geometry::{IntSize, Size},
+    input::{self},
     message::Message,
     render::Context,
     view::strategies::{
-        base::ViewStrategyPtr, framebuffer::FrameBufferViewStrategy,
-        framebuffer_render::FrameBufferRenderViewStrategy, scenic::ScenicViewStrategy,
-        scenic_canvas::ScenicCanvasViewStrategy, scenic_render::RenderViewStrategy,
+        base::ViewStrategyPtr, framebuffer_canvas::FrameBufferViewStrategy,
+        framebuffer_render::FrameBufferRenderViewStrategy, scenic_canvas::ScenicCanvasViewStrategy,
+        scenic_render::RenderViewStrategy,
     },
 };
-use anyhow::{bail, Error};
+use anyhow::Error;
 use fidl_fuchsia_ui_gfx::{self as gfx, Metrics, ViewProperties};
-use fidl_fuchsia_ui_input::{
-    FocusEvent, InputEvent, KeyboardEvent, PointerEvent, SetHardKeyboardDeliveryCmd,
-};
+use fidl_fuchsia_ui_input::SetHardKeyboardDeliveryCmd;
 use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_async::{self as fasync, Interval};
 use fuchsia_framebuffer::ImageId;
@@ -53,17 +52,13 @@ pub enum AnimationMode {
 pub struct ViewAssistantContext<'a> {
     /// A unique key representing this view.
     pub key: ViewKey,
-    /// The size taking screen density into account.
-    pub logical_size: Size,
     /// The actual number of pixels in the view.
     pub size: Size,
-    /// The factor between logical size and size.
+    /// A factor representing pixel density. Use to
+    /// calculate sizes for things like fonts.
     pub metrics: Size,
     /// For update, the time this will be presented.
     pub presentation_time: Time,
-    /// For views in Scenic mode, this will contain resources for
-    /// interacting with Scenic.
-    pub scenic_resources: Option<&'a ScenicResources>,
     /// For views in canvas mode, this will contain a canvas
     /// to be used for drawing.
     pub canvas: Option<&'a RefCell<Canvas<MappingPixelSink>>>,
@@ -94,101 +89,262 @@ impl<'a> ViewAssistantContext<'a> {
     pub fn queue_message(&mut self, message: Message) {
         self.messages.push(message);
     }
-
-    /// Get the root node for scenic based apps
-    pub fn root_node(&self) -> &EntityNode {
-        &self.scenic_resources.as_ref().unwrap().root_node
-    }
-
-    /// Get the session for scenic based apps
-    pub fn session(&self) -> &SessionPtr {
-        &self.scenic_resources.as_ref().unwrap().session
-    }
-
-    /// Given a point in the physical space, like those
-    /// contained in PointerEvents, return the logical
-    /// space point that is useful for drawing in the
-    /// canvas.
-    pub fn physical_to_logical(&self, pt: &Point) -> Point {
-        Point::new(pt.x * self.metrics.width, pt.y * self.metrics.height)
-    }
 }
 
-/// Trait that allows mod developers to customize the behavior of view controllers.
+/// Trait that allows Carnelian developers to customize the behavior of views.
 pub trait ViewAssistant {
-    /// This method is called once when a view is created. It is a good point to create scenic
-    /// commands that apply throughout the lifetime of the view.
-    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error>;
+    /// This method is called once when a view is created.
+    #[allow(unused_variables)]
+    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
 
-    /// This method is called when a view controller has been asked to update the view.
-    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error>;
+    /// For [`ViewMode::Canvas`] views, this method is called when a view needs to
+    /// be updated.
+    #[allow(unused_variables)]
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
 
-    /// render for render mode views
+    /// For [`ViewMode::Render`] views, this method is called when a view needs to
+    /// be updated.
+    #[allow(unused_variables)]
     fn render(
         &mut self,
-        _render_context: &mut Context,
-        _buffer_ready_event: Event,
-        _view_context: &ViewAssistantContext<'_>,
+        render_context: &mut Context,
+        buffer_ready_event: Event,
+        view_context: &ViewAssistantContext<'_>,
     ) -> Result<(), Error> {
         anyhow::bail!("Assistant has ViewMode::Render but doesn't implement render.")
     }
 
-    /// This method is called when input events come from scenic to this view.
+    /// This method is called when input events come to this view. The default implementation
+    /// calls specific methods for the type of event, so usually one does not need to implement
+    /// this method. Since the default methods for touch and mouse handle the pointer abstraction,
+    /// make sure to call them in an implementation of this method if you wish to use that
+    /// abstraction.
     fn handle_input_event(
         &mut self,
         context: &mut ViewAssistantContext<'_>,
-        event: &InputEvent,
+        event: &input::Event,
     ) -> Result<(), Error> {
-        match event {
-            InputEvent::Pointer(pointer_event) => {
-                self.handle_pointer_event(context, &pointer_event)
+        match &event.event_type {
+            input::EventType::Mouse(mouse_event) => {
+                self.handle_mouse_event(context, event, mouse_event)
             }
-            InputEvent::Keyboard(keyboard_event) => {
-                self.handle_keyboard_event(context, &keyboard_event)
+            input::EventType::Touch(touch_event) => {
+                self.handle_touch_event(context, event, touch_event)
             }
-            InputEvent::Focus(focus_event) => self.handle_focus_event(context, &focus_event),
+            input::EventType::Keyboard(keyboard_event) => {
+                self.handle_keyboard_event(context, event, keyboard_event)
+            }
         }
     }
 
-    /// This method is called when input events come from scenic to this view.
+    /// This method is called when mouse events come to this view.
+    /// ```no_run
+    /// # use anyhow::Error;
+    /// # use carnelian::{
+    /// #    input::{self},IntPoint,
+    /// #    ViewAssistant, ViewAssistantContext,
+    /// # };
+    /// # struct SampleViewAssistant { mouse_start: IntPoint};
+    /// impl ViewAssistant for SampleViewAssistant {
+    ///     fn handle_mouse_event(
+    ///         &mut self,
+    ///         context: &mut ViewAssistantContext<'_>,
+    ///         event: &input::Event,
+    ///         mouse_event: &input::mouse::Event,
+    ///     ) -> Result<(), Error> {
+    ///         match &mouse_event.phase {
+    ///             input::mouse::Phase::Down(button) => {
+    ///                 if button.is_primary() {
+    ///                     self.mouse_start = mouse_event.location
+    ///                 }
+    ///             }
+    ///             input::mouse::Phase::Moved => {}
+    ///             input::mouse::Phase::Up(button) => {
+    ///                 if button.is_primary() {
+    ///                     println!("mouse moved {}", mouse_event.location - self.mouse_start);
+    ///                 }
+    ///             }
+    ///             _ => (),
+    ///         }
+    ///         Ok(())
+    ///     }
+    /// }
+    /// ```
+    fn handle_mouse_event(
+        &mut self,
+        context: &mut ViewAssistantContext<'_>,
+        event: &input::Event,
+        mouse_event: &input::mouse::Event,
+    ) -> Result<(), Error> {
+        if self.uses_pointer_events() {
+            if let Some(mouse_event) =
+                input::pointer::Event::new_from_mouse_event(&event.device_id, mouse_event)
+            {
+                self.handle_pointer_event(context, event, &mouse_event)
+            } else {
+                Ok(())
+            }
+        } else {
+            Ok(())
+        }
+    }
+
+    /// This method is called when touch events come to this view.
+    /// ```no_run
+    /// # use anyhow::Error;
+    /// # use carnelian::{
+    /// #    input::{self},IntPoint,
+    /// #    ViewAssistant, ViewAssistantContext,
+    /// # };
+    /// # struct SampleViewAssistant {};
+    /// impl ViewAssistant for SampleViewAssistant {
+    ///     fn handle_touch_event(
+    ///         &mut self,
+    ///         context: &mut ViewAssistantContext<'_>,
+    ///         event: &input::Event,
+    ///         touch_event: &input::touch::Event,
+    ///     ) -> Result<(), Error> {
+    ///         for contact in &touch_event.contacts {
+    ///             // Use contact.contact_id as a key to handle
+    ///             // each contact individually
+    ///         }
+    ///         Ok(())
+    ///     }
+    /// }
+    /// ```
+    fn handle_touch_event(
+        &mut self,
+        context: &mut ViewAssistantContext<'_>,
+        event: &input::Event,
+        touch_event: &input::touch::Event,
+    ) -> Result<(), Error> {
+        if self.uses_pointer_events() {
+            for contact in &touch_event.contacts {
+                self.handle_pointer_event(
+                    context,
+                    event,
+                    &input::pointer::Event::new_from_contact(contact),
+                )?;
+            }
+            Ok(())
+        } else {
+            Ok(())
+        }
+    }
+
+    /// This method is called when the view desires pointer events and a compatible
+    /// mouse or touch event comes to this view.
+    /// ```no_run
+    /// # use anyhow::Error;
+    /// # use carnelian::{
+    /// #    input::{self},IntPoint,
+    /// #    ViewAssistant, ViewAssistantContext,
+    /// # };
+    /// #    #[derive(Default)]
+    /// #    struct SampleViewAssistant {
+    /// #        mouse_start: IntPoint,
+    /// #        pointer_start: IntPoint,
+    /// #        current_pointer_location: IntPoint,
+    /// #    }
+    /// impl ViewAssistant for SampleViewAssistant {
+    ///     fn handle_pointer_event(
+    ///         &mut self,
+    ///         context: &mut ViewAssistantContext<'_>,
+    ///         event: &input::Event,
+    ///         pointer_event: &input::pointer::Event,
+    ///     ) -> Result<(), Error> {
+    ///         match pointer_event.phase {
+    ///             input::pointer::Phase::Down(pointer_location) => {
+    ///                 self.pointer_start = pointer_location
+    ///             }
+    ///             input::pointer::Phase::Moved(pointer_location) => {
+    ///                 self.current_pointer_location = pointer_location;
+    ///             }
+    ///             input::pointer::Phase::Up => {
+    ///                 println!(
+    ///                     "pointer moved {}",
+    ///                     self.current_pointer_location - self.pointer_start
+    ///                 );
+    ///             }
+    ///             _ => (),
+    ///         }
+    ///         Ok(())
+    ///     }
+    /// }
+    /// ```
+    #[allow(unused_variables)]
     fn handle_pointer_event(
         &mut self,
-        _: &mut ViewAssistantContext<'_>,
-        _: &PointerEvent,
+        context: &mut ViewAssistantContext<'_>,
+        event: &input::Event,
+        pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {
         Ok(())
     }
 
-    /// This method is called when keyboard events come from scenic to this view.
+    /// This method is called when keyboard events come to this view.
+    #[allow(unused_variables)]
     fn handle_keyboard_event(
         &mut self,
-        _: &mut ViewAssistantContext<'_>,
-        _: &KeyboardEvent,
+        context: &mut ViewAssistantContext<'_>,
+        event: &input::Event,
+        keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
         Ok(())
     }
 
-    /// This method is called when focus events come from scenic to this view.
-    fn handle_focus_event(
-        &mut self,
-        _: &mut ViewAssistantContext<'_>,
-        _: &FocusEvent,
-    ) -> Result<(), Error> {
+    /// This method is called when focus events come from Scenic to this view. It will be
+    /// called once when a Carnelian app is running directly on the frame buffer, as such
+    /// views are always focused. See the button sample for an one way to respond to focus.
+    #[allow(unused_variables)]
+    fn handle_focus_event(&mut self, focused: bool) -> Result<(), Error> {
         Ok(())
     }
 
     /// This method is called when `App::send_message` is called with the associated
     /// view controller's `ViewKey` and the view controller does not handle the message.
-    fn handle_message(&mut self, _message: Message) {}
+    /// ```no_run
+    /// # use anyhow::Error;
+    /// # use carnelian::{
+    /// #     input::{self},
+    /// #     IntPoint, Message, ViewAssistant, ViewAssistantContext,
+    /// # };
+    /// # #[derive(Default)]
+    /// # struct SampleViewAssistant {}
+    /// use fuchsia_zircon::Time;
+    /// pub enum SampleMessages {
+    ///     Pressed(Time),
+    /// }
+    /// impl ViewAssistant for SampleViewAssistant {
+    ///     fn handle_message(&mut self, message: Message) {
+    ///         if let Some(sample_message) = message.downcast_ref::<SampleMessages>() {
+    ///             match sample_message {
+    ///                 SampleMessages::Pressed(value) => {
+    ///                     println!("value = {:#?}", value);
+    ///                 }
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    #[allow(unused_variables)]
+    fn handle_message(&mut self, message: Message) {}
 
-    /// Initial animation mode for view
+    /// Initial animation mode for view. Default to [`AnimationMode::None`], which
+    /// requires an view to be sent an [`ViewMessages::Update`] message when the
+    /// view should be redrawn.
     fn initial_animation_mode(&mut self) -> AnimationMode {
         return AnimationMode::None;
     }
 
-    /// Pixel format for image pipe mode
-    fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        fuchsia_framebuffer::PixelFormat::Argb8888
+    /// Whether this view wants touch and mouse events abstracted as
+    /// [`input::pointer::Event`](./input/pointer/struct.Event.html). Defaults to true.
+    fn uses_pointer_events(&self) -> bool {
+        true
     }
 }
 
@@ -296,12 +452,10 @@ impl ViewController {
             ViewMode::Canvas => {
                 ScenicCanvasViewStrategy::new(&session, view_token, app_sender.clone()).await?
             }
-            ViewMode::Scenic => ScenicViewStrategy::new(&session, view_token, app_sender.clone()),
             ViewMode::Render(render_options) => {
                 RenderViewStrategy::new(&session, render_options, view_token, app_sender.clone())
                     .await?
             }
-            ViewMode::ImagePipe => bail!("ImagePipe mode is not yet supported with Scenic"),
         };
 
         let initial_animation_mode = view_assistant.initial_animation_mode();
@@ -349,7 +503,7 @@ impl ViewController {
                 )
                 .await?
             }
-            ViewMode::ImagePipe | ViewMode::Canvas => {
+            ViewMode::Canvas => {
                 FrameBufferViewStrategy::new(
                     key,
                     &size,
@@ -362,7 +516,6 @@ impl ViewController {
                 )
                 .await?
             }
-            _ => bail!("Invalid view mode {:#?} when running without Scenic", view_mode),
         };
         let initial_animation_mode = view_assistant.initial_animation_mode();
         let mut view_controller = ViewController {
@@ -442,6 +595,11 @@ impl ViewController {
         fasync::spawn_local(f);
     }
 
+    pub(crate) fn focus(&mut self) {
+        self.assistant.handle_focus_event(true).expect("handle_focus_event");
+        self.update();
+    }
+
     pub(crate) fn setup_animation_mode(&mut self) {
         match self.animation_mode {
             AnimationMode::None => {}
@@ -459,17 +617,15 @@ impl ViewController {
         events.iter().for_each(|event| match event {
             fidl_fuchsia_ui_scenic::Event::Gfx(event) => match event {
                 fidl_fuchsia_ui_gfx::Event::Metrics(event) => {
-                    assert!(self.strategy.validate_root_node_id(event.node_id));
                     self.handle_metrics_changed(&event.metrics);
                 }
                 fidl_fuchsia_ui_gfx::Event::ViewPropertiesChanged(event) => {
-                    assert!(self.strategy.validate_view_id(event.view_id));
                     self.handle_view_properties_changed(&event.properties);
                 }
                 _ => (),
             },
             fidl_fuchsia_ui_scenic::Event::Input(event) => {
-                let messages = self.strategy.handle_input_event(
+                let messages = self.strategy.handle_scenic_input_event(
                     &self.make_view_details(),
                     &mut self.assistant,
                     &event,
@@ -480,6 +636,20 @@ impl ViewController {
             }
             _ => (),
         });
+    }
+
+    /// Handler for Events on this ViewController's Session.
+    pub fn handle_input_events(&mut self, events: Vec<input::Event>) {
+        for event in events {
+            let messages = self.strategy.handle_input_event(
+                &self.make_view_details(),
+                &mut self.assistant,
+                &event,
+            );
+            for msg in messages {
+                self.send_message(msg);
+            }
+        }
     }
 
     /// This method sends an arbitrary message to this view. If it is not

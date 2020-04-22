@@ -21,6 +21,8 @@ pub type IntRect = euclid::default::Rect<IntCoord>;
 /// A type representing the extent of an element
 /// in two-dimensionals.
 pub type IntSize = euclid::default::Size2D<IntCoord>;
+/// A type alias for an integer 2D vector.
+pub type IntVector = euclid::default::Vector2D<IntCoord>;
 
 /// A type representing the extent of an element
 /// in two-dimensions.
@@ -49,5 +51,17 @@ impl Corners for Rect {
 
     fn bottom_right(&self) -> Point {
         Point::new(self.max_x(), self.max_y())
+    }
+}
+
+pub trait LimitToBounds {
+    fn limit_to_bounds(&self, point: IntPoint) -> IntPoint;
+}
+
+impl LimitToBounds for IntRect {
+    fn limit_to_bounds(&self, point: IntPoint) -> IntPoint {
+        let x = point.x.min(self.max_x()).max(self.min_x());
+        let y = point.y.min(self.max_y()).max(self.min_y());
+        IntPoint::new(x, y)
     }
 }

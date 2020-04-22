@@ -1,0 +1,45 @@
+{
+    "program": {
+        "binary": "bin/terminal"
+    },
+    "sandbox": {
+        "boot": [
+            "bin"
+        ],
+        "dev": [
+            "class/display-controller",
+            "class/input",
+            "class/input-report"
+        ],
+        "features": [
+            "hub",
+            "shell-commands",
+            "vulkan"
+        ],
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.device.manager.Administrator",
+            "fuchsia.hardware.pty.Device",
+            "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
+            "fuchsia.pkg.PackageResolverAdmin",
+            "fuchsia.pkg.RepositoryManager",
+            "fuchsia.pkg.rewrite.Engine",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.space.Manager",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.sys.index.FuzzySearch",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.update.Manager",
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::{
+    input,
     message::Message,
     view::{ViewAssistantPtr, ViewDetails},
 };
@@ -19,18 +20,21 @@ pub(crate) trait ViewStrategy {
         _view_assistant: &mut ViewAssistantPtr,
     ) {
     }
-    fn validate_root_node_id(&self, _: u32) -> bool {
-        true
-    }
-    fn validate_view_id(&self, _: u32) -> bool {
-        true
-    }
-    fn handle_input_event(
+    fn handle_scenic_input_event(
         &mut self,
         _view_details: &ViewDetails,
         _view_assistant: &mut ViewAssistantPtr,
         _: &fidl_fuchsia_ui_input::InputEvent,
     ) -> Vec<Message>;
+
+    fn handle_input_event(
+        &mut self,
+        _view_details: &ViewDetails,
+        _view_assistant: &mut ViewAssistantPtr,
+        _: &input::Event,
+    ) -> Vec<Message> {
+        Vec::new()
+    }
 
     fn image_freed(&mut self, _image_id: u64, _collection_id: u32) {}
 

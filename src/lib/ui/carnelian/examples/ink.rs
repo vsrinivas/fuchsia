@@ -961,7 +961,7 @@ impl StylusDevice {
     }
 }
 
-// TODO: Remove touch device when supported by carnelian.
+// TODO: Remove touch device and use handle_pointer_event
 struct TouchDevice {
     device: hid_input_report::InputDeviceSynchronousProxy,
     x_range: hid_input_report::Range,
@@ -1069,7 +1069,7 @@ impl Ink {
         duration!("gfx", "update");
 
         let time_now = Time::get(ClockId::Monotonic);
-        let size = &context.logical_size;
+        let size = &context.size;
         let mut full_damage = false;
 
         // Process touch device input.
@@ -1317,24 +1317,16 @@ impl InkViewAssistant {
 }
 
 impl ViewAssistant for InkViewAssistant {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
     fn render(
         &mut self,
         render_context: &mut Context,
         ready_event: Event,
         context: &ViewAssistantContext<'_>,
     ) -> Result<(), Error> {
-        if context.logical_size != self.size || self.ink.is_none() {
-            let ink = Ink::new(render_context, context.logical_size);
+        if context.size != self.size || self.ink.is_none() {
+            let ink = Ink::new(render_context, context.size);
 
-            self.size = context.logical_size;
+            self.size = context.size;
             self.ink = Some(ink);
         }
 

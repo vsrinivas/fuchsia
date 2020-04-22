@@ -5,6 +5,7 @@ use crate::{
     app::{MessageInternal, RenderOptions},
     canvas::{Canvas, MappingPixelSink},
     geometry::UintSize,
+    input::ScenicInputHandler,
     message::Message,
     render::{
         self,
@@ -154,6 +155,7 @@ pub(crate) struct RenderViewStrategy {
     plumber: Option<Plumber>,
     retiring_plumbers: Vec<Plumber>,
     next_image_id: u64,
+    input_handler: ScenicInputHandler,
 }
 
 impl RenderViewStrategy {
@@ -183,6 +185,7 @@ impl RenderViewStrategy {
             retiring_plumbers: Vec::new(),
             next_buffer_collection: 1,
             next_image_id: 1,
+            input_handler: ScenicInputHandler::new(),
         };
         Ok(Box::new(strat))
     }
@@ -195,12 +198,10 @@ impl RenderViewStrategy {
     ) -> ViewAssistantContext<'a> {
         ViewAssistantContext {
             key: view_details.key,
-            logical_size: view_details.logical_size,
             size: view_details.physical_size,
             metrics: view_details.metrics,
             presentation_time: Time::get(ClockId::Monotonic),
             messages: Vec::new(),
-            scenic_resources: None,
             canvas: canvas,
             buffer_count: None,
             wait_event: None,
@@ -262,9 +263,9 @@ fn make_image_format(
 #[async_trait(?Send)]
 impl ViewStrategy for RenderViewStrategy {
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
-        let canvas_context =
+        let render_context =
             RenderViewStrategy::make_view_assistant_context(view_details, 0, 0, None);
-        view_assistant.setup(&canvas_context).unwrap_or_else(|e| panic!("Setup error: {:?}", e));
+        view_assistant.setup(&render_context).unwrap_or_else(|e| panic!("Setup error: {:?}", e));
     }
 
     async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
@@ -348,19 +349,23 @@ impl ViewStrategy for RenderViewStrategy {
         scenic_present_done(&mut self.scenic_resources);
     }
 
-    fn handle_input_event(
+    fn handle_scenic_input_event(
         &mut self,
         view_details: &ViewDetails,
         view_assistant: &mut ViewAssistantPtr,
         event: &fidl_fuchsia_ui_input::InputEvent,
     ) -> Vec<Message> {
-        let mut canvas_context =
-            RenderViewStrategy::make_view_assistant_context(view_details, 0, 0, None);
-        view_assistant
-            .handle_input_event(&mut canvas_context, &event)
-            .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
+        let events = self.input_handler.handle_scenic_input_event(&view_details.metrics, &event);
 
-        canvas_context.messages
+        let mut render_context =
+            RenderViewStrategy::make_view_assistant_context(view_details, 0, 0, None);
+        for input_event in events {
+            view_assistant
+                .handle_input_event(&mut render_context, &input_event)
+                .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
+        }
+
+        render_context.messages
     }
 
     fn image_freed(&mut self, image_id: u64, collection_id: u32) {

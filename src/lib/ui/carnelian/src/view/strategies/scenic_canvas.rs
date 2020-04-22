@@ -5,6 +5,7 @@ use crate::{
     app::MessageInternal,
     canvas::{Canvas, MappingPixelSink},
     geometry::{IntSize, UintSize},
+    input::ScenicInputHandler,
     message::Message,
     view::{
         scenic_present, scenic_present_done,
@@ -198,6 +199,7 @@ pub(crate) struct ScenicCanvasViewStrategy {
     plumber: Option<Plumber>,
     retiring_plumbers: Vec<Plumber>,
     next_image_id: u64,
+    input_handler: ScenicInputHandler,
 }
 
 impl ScenicCanvasViewStrategy {
@@ -225,6 +227,7 @@ impl ScenicCanvasViewStrategy {
             retiring_plumbers: Vec::new(),
             next_buffer_collection: 1,
             next_image_id: 1,
+            input_handler: ScenicInputHandler::new(),
         };
         Ok(Box::new(strat))
     }
@@ -236,12 +239,10 @@ impl ScenicCanvasViewStrategy {
     ) -> ViewAssistantContext<'a> {
         ViewAssistantContext {
             key: view_details.key,
-            logical_size: view_details.logical_size,
             size: view_details.physical_size,
             metrics: view_details.metrics,
             presentation_time: Time::get(ClockId::Monotonic),
             messages: Vec::new(),
-            scenic_resources: None,
             canvas: canvas,
             buffer_count: None,
             wait_event: None,
@@ -414,17 +415,21 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
         scenic_present_done(&mut self.scenic_resources);
     }
 
-    fn handle_input_event(
+    fn handle_scenic_input_event(
         &mut self,
         view_details: &ViewDetails,
         view_assistant: &mut ViewAssistantPtr,
         event: &fidl_fuchsia_ui_input::InputEvent,
     ) -> Vec<Message> {
+        let events = self.input_handler.handle_scenic_input_event(&view_details.metrics, &event);
+
         let mut canvas_context =
             ScenicCanvasViewStrategy::make_view_assistant_context(view_details, 0, None);
-        view_assistant
-            .handle_input_event(&mut canvas_context, &event)
-            .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
+        for input_event in events {
+            view_assistant
+                .handle_input_event(&mut canvas_context, &input_event)
+                .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
+        }
 
         canvas_context.messages
     }

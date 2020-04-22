@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_ui_input::{self as input, KeyboardEvent, KeyboardEventPhase};
+use carnelian::input::{self};
 
 const HID_USAGE_KEY_ENTER: u32 = 0x28;
 const HID_USAGE_KEY_ESC: u32 = 0x29;
@@ -19,19 +19,20 @@ const HID_USAGE_KEY_LEFT: u32 = 0x50;
 const HID_USAGE_KEY_DOWN: u32 = 0x51;
 const HID_USAGE_KEY_UP: u32 = 0x52;
 
-const NON_CONTROL_MODIFIER: u32 =
-    input::MODIFIER_SUPER | input::MODIFIER_ALT | input::MODIFIER_SHIFT;
-
 /// Converts the given keyboard event into a String suitable to send to the shell.
 /// If the conversion fails for any reason None is returned instead of an Error
 /// to promote performance since we do not need to handle all errors for keyboard
 /// events which are not supported.
-pub fn get_input_sequence_for_key_event(event: &KeyboardEvent) -> Option<String> {
+pub fn get_input_sequence_for_key_event(event: &input::keyboard::Event) -> Option<String> {
     match event.phase {
-        KeyboardEventPhase::Pressed | KeyboardEventPhase::Repeat => match event.code_point {
-            0 => HidUsage(event.hid_usage).into(),
-            _ => CodePoint { code_point: event.code_point, modifiers: event.modifiers }.into(),
-        },
+        input::keyboard::Phase::Pressed | input::keyboard::Phase::Repeat => {
+            match event.code_point {
+                None => HidUsage(event.hid_usage).into(),
+                Some(code_point) => {
+                    CodePoint { code_point: code_point, modifiers: event.modifiers }.into()
+                }
+            }
+        }
         _ => None,
     }
 }
@@ -43,9 +44,9 @@ trait ControlModifier {
     fn is_control_only(&self) -> bool;
 }
 
-impl ControlModifier for u32 {
+impl ControlModifier for carnelian::input::Modifiers {
     fn is_control_only(&self) -> bool {
-        self & input::MODIFIER_CONTROL != 0 && self & NON_CONTROL_MODIFIER == 0
+        self.control && !self.shift && !self.alt && !self.caps_lock
     }
 }
 
@@ -53,7 +54,7 @@ impl ControlModifier for u32 {
 /// and key modifiers to a String
 struct CodePoint {
     code_point: u32,
-    modifiers: u32,
+    modifiers: carnelian::input::Modifiers,
 }
 
 impl From<CodePoint> for Option<String> {
@@ -115,34 +116,70 @@ impl From<HidUsage> for Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_ui_input::{self as scenic_input};
 
     #[test]
     fn is_control_only_true_for_left_control() {
-        assert!(input::MODIFIER_LEFT_CONTROL.is_control_only());
+        let modifiers =
+            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_LEFT_CONTROL);
+        assert!(modifiers.is_control_only());
     }
 
     #[test]
     fn is_control_only_true_for_right_control() {
-        assert!(input::MODIFIER_RIGHT_CONTROL.is_control_only());
+        let modifiers = carnelian::input::Modifiers::from_scenic_modifiers(
+            scenic_input::MODIFIER_RIGHT_CONTROL,
+        );
+        assert!(modifiers.is_control_only());
     }
 
     #[test]
     fn is_control_only_true_for_left_and_right_control() {
-        assert!(input::MODIFIER_CONTROL.is_control_only());
+        let modifiers =
+            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_CONTROL);
+        assert!(modifiers.is_control_only());
     }
 
     #[test]
     fn is_control_only_false() {
-        assert!(input::MODIFIER_NONE.is_control_only() == false);
-        assert!(input::MODIFIER_SHIFT.is_control_only() == false);
-        assert!(input::MODIFIER_CAPS_LOCK.is_control_only() == false);
-        assert!(input::MODIFIER_ALT.is_control_only() == false);
-        assert!(input::MODIFIER_SUPER.is_control_only() == false);
+        assert!(
+            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_NONE)
+                .is_control_only()
+                == false
+        );
+        assert!(
+            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_SHIFT)
+                .is_control_only()
+                == false
+        );
+        assert!(
+            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_CAPS_LOCK)
+                .is_control_only()
+                == false
+        );
+        assert!(
+            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_ALT)
+                .is_control_only()
+                == false
+        );
+        assert!(
+            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_SUPER)
+                .is_control_only()
+                == false
+        );
     }
 
     #[test]
     fn convert_from_code_point_unsupported_values() {
-        assert!(Option::<String>::from(CodePoint { code_point: 129, modifiers: 0 }).is_none());
+        assert!(Option::<String>::from(CodePoint {
+            code_point: 129,
+            modifiers: carnelian::input::Modifiers::default()
+        })
+        .is_none());
+    }
+
+    fn modifiers_with_control() -> carnelian::input::Modifiers {
+        carnelian::input::Modifiers { control: true, ..carnelian::input::Modifiers::default() }
     }
 
     #[test]
@@ -152,7 +189,7 @@ mod tests {
             i = i + 1;
             let result = Option::<String>::from(CodePoint {
                 code_point: c as u32,
-                modifiers: input::MODIFIER_CONTROL,
+                modifiers: modifiers_with_control(),
             })
             .unwrap();
             let expected = String::from_utf8(vec![i]).unwrap();
@@ -167,7 +204,7 @@ mod tests {
             i = i + 1;
             let result = Option::<String>::from(CodePoint {
                 code_point: c as u32,
-                modifiers: input::MODIFIER_CONTROL,
+                modifiers: modifiers_with_control(),
             })
             .unwrap();
 

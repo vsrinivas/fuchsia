@@ -6,6 +6,7 @@ use anyhow::Error;
 use carnelian::{
     color::Color,
     drawing::{path_for_rectangle, GlyphMap, Paint, Text},
+    input::{self},
     make_app_assistant, make_font_description, make_message,
     render::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
@@ -14,7 +15,6 @@ use carnelian::{
     App, AppAssistant, Message, Point, Rect, RenderOptions, Size, ViewAssistant,
     ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages, ViewMode,
 };
-use fidl_fuchsia_ui_input::{FocusEvent, PointerEvent, PointerEventPhase};
 use fuchsia_zircon::{AsHandleRef, ClockId, Event, Signals, Time};
 
 /// enum that defines all messages sent with `App::queue_message` that
@@ -53,7 +53,7 @@ struct Button {
     bg_color_disabled: Color,
     fg_color: Color,
     fg_color_disabled: Color,
-    tracking: bool,
+    tracking_pointer: Option<input::pointer::PointerId>,
     active: bool,
     focused: bool,
     glyphs: GlyphMap,
@@ -70,7 +70,7 @@ impl Button {
             bg_color_active: Color::from_hash_code("#f0703c")?,
             fg_color_disabled: Color::from_hash_code("#A0A0A0")?,
             bg_color_disabled: Color::from_hash_code("#C0C0C0")?,
-            tracking: false,
+            tracking_pointer: None,
             active: false,
             focused: false,
             glyphs: GlyphMap::new(),
@@ -85,7 +85,7 @@ impl Button {
         self.focused = focused;
         if !focused {
             self.active = false;
-            self.tracking = false;
+            self.tracking_pointer = None;
         }
     }
 
@@ -109,11 +109,11 @@ impl Button {
         // center the button in the Scenic view by translating the
         // container node. All child nodes will be positioned relative
         // to this container
-        let center_x = context.logical_size.width * 0.5;
-        let center_y = context.logical_size.height * 0.5;
+        let center_x = context.size.width * 0.5;
+        let center_y = context.size.height * 0.5;
 
         // pick font size and padding based on the available space
-        let min_dimension = context.logical_size.width.min(context.logical_size.height);
+        let min_dimension = context.size.width.min(context.size.height);
         let font_size = (min_dimension / 5.0).ceil().min(64.0) as u32;
         let padding = (min_dimension / 20.0).ceil().max(8.0);
 
@@ -170,42 +170,48 @@ impl Button {
     pub fn handle_pointer_event(
         &mut self,
         context: &mut ViewAssistantContext<'_>,
-        pointer_event: &PointerEvent,
+        pointer_event: &input::pointer::Event,
     ) {
         if !self.focused {
             return;
         }
-        let pointer_location =
-            context.physical_to_logical(&Point::new(pointer_event.x, pointer_event.y));
-        // TODO: extend this to support multiple pointers
-        match pointer_event.phase {
-            PointerEventPhase::Down => {
-                self.active = self.bounds.contains(pointer_location);
-                self.tracking = self.active;
-            }
-            PointerEventPhase::Add => {}
-            PointerEventPhase::Hover => {}
-            PointerEventPhase::Move => {
-                if self.tracking {
-                    self.active = self.bounds.contains(pointer_location);
+
+        if self.tracking_pointer.is_none() {
+            match pointer_event.phase {
+                input::pointer::Phase::Down(location) => {
+                    self.active = self.bounds.contains(location.to_f32());
+                    if self.active {
+                        self.tracking_pointer = Some(pointer_event.pointer_id.clone());
+                    }
                 }
+                _ => (),
             }
-            PointerEventPhase::Up => {
-                if self.active {
-                    context.queue_message(make_message(ButtonMessages::Pressed(Time::get(
-                        ClockId::Monotonic,
-                    ))));
+        } else {
+            let tracking_pointer = self.tracking_pointer.as_ref().expect("tracking_pointer");
+            if tracking_pointer == &pointer_event.pointer_id {
+                match pointer_event.phase {
+                    input::pointer::Phase::Moved(location) => {
+                        self.active = self.bounds.contains(location.to_f32());
+                    }
+                    input::pointer::Phase::Up => {
+                        if self.active {
+                            context.queue_message(make_message(ButtonMessages::Pressed(
+                                Time::get(ClockId::Monotonic),
+                            )));
+                        }
+                        self.tracking_pointer = None;
+                        self.active = false;
+                    }
+                    input::pointer::Phase::Remove => {
+                        self.active = false;
+                        self.tracking_pointer = None;
+                    }
+                    input::pointer::Phase::Cancel => {
+                        self.active = false;
+                        self.tracking_pointer = None;
+                    }
+                    _ => (),
                 }
-                self.tracking = false;
-                self.active = false;
-            }
-            PointerEventPhase::Remove => {
-                self.active = false;
-                self.tracking = false;
-            }
-            PointerEventPhase::Cancel => {
-                self.active = false;
-                self.tracking = false;
             }
         }
     }
@@ -232,16 +238,6 @@ impl ButtonViewAssistant {
 }
 
 impl ViewAssistant for ButtonViewAssistant {
-    // Called once by Carnelian when the view is first created. Good for setup
-    // that isn't concerned with the size of the view.
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
     fn render(
         &mut self,
         render_context: &mut RenderContext,
@@ -249,12 +245,12 @@ impl ViewAssistant for ButtonViewAssistant {
         context: &ViewAssistantContext<'_>,
     ) -> Result<(), Error> {
         // Position and size the background
-        let center_x = context.logical_size.width * 0.5;
-        let _center_y = context.logical_size.height * 0.5;
+        let center_x = context.size.width * 0.5;
+        let _center_y = context.size.height * 0.5;
 
         // Position and size the indicator
-        let indicator_y = context.logical_size.height / 5.0;
-        let indicator_size = context.logical_size.height.min(context.logical_size.width) / 8.0;
+        let indicator_y = context.size.height / 5.0;
+        let indicator_size = context.size.height.min(context.size.width) / 8.0;
         let indicator_bounds = Rect::new(
             Point::new(center_x - indicator_size / 2.0, indicator_y - indicator_size / 2.0),
             Size::new(indicator_size, indicator_size),
@@ -307,20 +303,16 @@ impl ViewAssistant for ButtonViewAssistant {
     fn handle_pointer_event(
         &mut self,
         context: &mut ViewAssistantContext<'_>,
-        pointer_event: &PointerEvent,
+        _event: &input::Event,
+        pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {
         self.button.handle_pointer_event(context, pointer_event);
         context.queue_message(make_message(ViewMessages::Update));
         Ok(())
     }
 
-    fn handle_focus_event(
-        &mut self,
-        context: &mut ViewAssistantContext<'_>,
-        focus_event: &FocusEvent,
-    ) -> Result<(), Error> {
-        self.button.set_focused(focus_event.focused);
-        context.queue_message(make_message(ViewMessages::Update));
+    fn handle_focus_event(&mut self, focused: bool) -> Result<(), Error> {
+        self.button.set_focused(focused);
         Ok(())
     }
 }

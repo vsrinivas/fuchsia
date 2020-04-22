@@ -862,7 +862,7 @@ impl Contents {
     }
 }
 
-// TODO: Remove touch device when supported by carnelian.
+// TODO: Remove touch device and use handle_pointer_event
 struct TouchDevice {
     x_range: hid_input_report::Range,
     y_range: hid_input_report::Range,
@@ -1071,7 +1071,7 @@ impl InfiniteScroll {
     ) -> Result<(), Error> {
         duration!("gfx", "InfiniteScrollViewAssistant::update");
 
-        let size = &context.logical_size;
+        let size = &context.size;
         let presentation_time = context.presentation_time;
         let elapsed = presentation_time - self.last_presentation_time;
         let scroll_method = self.scroll_method;
@@ -1251,21 +1251,13 @@ impl InfiniteScrollViewAssistant {
 }
 
 impl ViewAssistant for InfiniteScrollViewAssistant {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
     fn render(
         &mut self,
         render_context: &mut Context,
         ready_event: Event,
         context: &ViewAssistantContext<'_>,
     ) -> Result<(), Error> {
-        if context.logical_size != self.size || self.infinite_scroll.is_none() {
+        if context.size != self.size || self.infinite_scroll.is_none() {
             let infinite_scroll = InfiniteScroll::new(
                 self.args.scale,
                 self.args.scroll_method,
@@ -1275,7 +1267,7 @@ impl ViewAssistant for InfiniteScrollViewAssistant {
                 self.args.disable_text,
             );
 
-            self.size = context.logical_size;
+            self.size = context.size;
             self.infinite_scroll = Some(infinite_scroll);
         }
 

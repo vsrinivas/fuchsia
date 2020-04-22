@@ -6,9 +6,10 @@
 use {
     crate::ui::terminal_views::{BackgroundView, GridView, ScrollBar},
     carnelian::{
-        color::Color, Canvas, Coord, MappingPixelSink, Point, Rect, Size, ViewAssistantContext,
+        color::Color,
+        input::{self},
+        Canvas, Coord, MappingPixelSink, Rect, Size, ViewAssistantContext,
     },
-    fidl_fuchsia_ui_input::{PointerEvent, PointerEventPhase, PointerEventType},
     fuchsia_trace as ftrace,
     term_model::term::RenderableCellsIter,
 };
@@ -87,18 +88,21 @@ impl TerminalScene {
 
     pub fn handle_pointer_event(
         &mut self,
-        event: &PointerEvent,
-        ctx: &mut ViewAssistantContext<'_>,
+        event: &input::pointer::Event,
+        _ctx: &mut ViewAssistantContext<'_>,
     ) -> Option<PointerEventResponse> {
-        if event.type_ == PointerEventType::Mouse
-            && event.buttons != fidl_fuchsia_ui_input::MOUSE_PRIMARY_BUTTON
-        {
-            return None;
-        }
-
-        let point = ctx.physical_to_logical(&Point::new(event.x, event.y));
-        if self.scroll_bar.frame.contains(point) || self.scroll_bar.is_tracking() {
-            return self.handle_primary_pointer_event_for_scroll_bar(&event, point);
+        if self.scroll_bar.is_tracking() {
+            return self.handle_primary_pointer_event_for_scroll_bar(&event);
+        } else {
+            match event.phase {
+                input::pointer::Phase::Down(point) => {
+                    let point = point.to_f32();
+                    if self.scroll_bar.frame.contains(point) {
+                        return self.handle_primary_pointer_event_for_scroll_bar(&event);
+                    }
+                }
+                _ => (),
+            }
         }
 
         None
@@ -118,21 +122,20 @@ impl TerminalScene {
 
     fn handle_primary_pointer_event_for_scroll_bar(
         &mut self,
-        event: &PointerEvent,
-        point: Point,
+        event: &input::pointer::Event,
     ) -> Option<PointerEventResponse> {
         // The following logic assumes that we are only tracking one pointer at a time.
         let prev_offset = self.scroll_bar.content_offset;
         match event.phase {
-            PointerEventPhase::Down => {
-                self.scroll_bar.begin_tracking_pointer_event(point);
+            input::pointer::Phase::Down(location) => {
+                self.scroll_bar.begin_tracking_pointer_event(location.to_f32());
             }
-            PointerEventPhase::Move => self.scroll_bar.handle_pointer_move(point),
-            PointerEventPhase::Up | PointerEventPhase::Remove | PointerEventPhase::Cancel => {
-                self.scroll_bar.cancel_pointer_event()
+            input::pointer::Phase::Moved(location) => {
+                self.scroll_bar.handle_pointer_move(location.to_f32())
             }
-            // No need to redraw anything here
-            _ => return None,
+            input::pointer::Phase::Up
+            | input::pointer::Phase::Remove
+            | input::pointer::Phase::Cancel => self.scroll_bar.cancel_pointer_event(),
         };
 
         // do not rely on the ScrollContext being udpated at this point. Rely on the

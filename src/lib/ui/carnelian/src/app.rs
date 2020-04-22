@@ -4,12 +4,14 @@
 
 use crate::{
     geometry::IntSize,
+    input::{self, listen_for_user_input, DeviceId, InputReportHandler},
     message::Message,
     view::{ViewAssistantPtr, ViewController, ViewKey},
 };
 use anyhow::{format_err, Context as _, Error};
 use async_trait::async_trait;
 use fidl::endpoints::{create_endpoints, create_proxy};
+use fidl_fuchsia_input_report as hid_input_report;
 use fidl_fuchsia_ui_app::{ViewProviderRequest, ViewProviderRequestStream};
 use fidl_fuchsia_ui_policy::PresenterMarker;
 use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy, SessionListenerRequest};
@@ -24,7 +26,12 @@ use futures::{
     future::{Either, Future},
     StreamExt, TryFutureExt, TryStreamExt,
 };
-use std::{cell::RefCell, collections::BTreeMap, pin::Pin, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, HashMap},
+    pin::Pin,
+    rc::Rc,
+};
 
 pub type LocalBoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 
@@ -36,22 +43,18 @@ pub struct RenderOptions {
 /// Mode for all views created by this application
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum ViewMode {
-    /// This app's views requires Scenic features and should not be run without
-    /// Scenic.
-    Scenic,
     /// This app's views do all of their rendering with a Canvas and Carnelian should
     /// take care of creating such a canvas for view created by this app.
     Canvas,
-    /// This app's views requires an image pipe and Carnelian should
-    /// take care of creating a buffer collection for view created by this app.
-    ImagePipe,
     /// This apps view use the render module.
     Render(RenderOptions),
 }
 
+pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
+
 #[derive(Clone)]
 pub struct AppContext {
-    sender: UnboundedSender<MessageInternal>,
+    sender: InternalSender,
 }
 
 impl AppContext {
@@ -110,18 +113,6 @@ pub trait AppAssistant {
     }
 
     /// Called when the Fuchsia view system requests that a view be created for
-    /// apps running in ViewMode::ImagePipe.
-    fn create_view_assistant_image_pipe(
-        &mut self,
-        _: ViewKey,
-        _fb: FrameBufferPtr,
-    ) -> Result<ViewAssistantPtr, Error> {
-        anyhow::bail!(
-            "Assistant has ViewMode::ImagePipe but doesn't implement create_view_assistant_image_pipe."
-        )
-    }
-
-    /// Called when the Fuchsia view system requests that a view be created for
     /// apps running in ViewMode::Render.
     fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         anyhow::bail!(
@@ -145,7 +136,7 @@ pub trait AppAssistant {
 
     /// Mode for all views created by this app
     fn get_mode(&self) -> ViewMode {
-        ViewMode::Scenic
+        ViewMode::Render(RenderOptions::default())
     }
 
     /// Return true to indicate that this apps view assistants will
@@ -175,7 +166,21 @@ trait AppStrategy {
     async fn post_setup(
         &mut self,
         _pixel_format: fuchsia_framebuffer::PixelFormat,
+        _internal_sender: &InternalSender,
     ) -> Result<(), Error>;
+    fn handle_input_report(
+        &mut self,
+        _device_id: &input::DeviceId,
+        _input_report: &hid_input_report::InputReport,
+    ) -> Vec<input::Event> {
+        Vec::new()
+    }
+    fn handle_register_input_device(
+        &mut self,
+        _device_id: &input::DeviceId,
+        _device_descriptor: &hid_input_report::DeviceDescriptor,
+    ) {
+    }
 }
 
 type AppStrategyPtr = Box<dyn AppStrategy>;
@@ -186,9 +191,13 @@ pub type FrameBufferPtr = Rc<RefCell<FrameBuffer>>;
 struct FrameBufferAppStrategy {
     #[allow(unused)]
     frame_buffer: FrameBufferPtr,
+    view_key: ViewKey,
+    input_report_handlers: HashMap<DeviceId, InputReportHandler>,
 }
 
 pub const FRAME_COUNT: usize = 2;
+
+impl FrameBufferAppStrategy {}
 
 #[async_trait(?Send)]
 impl AppStrategy for FrameBufferAppStrategy {
@@ -227,18 +236,46 @@ impl AppStrategy for FrameBufferAppStrategy {
     async fn post_setup(
         &mut self,
         _pixel_format: fuchsia_framebuffer::PixelFormat,
+        internal_sender: &InternalSender,
     ) -> Result<(), Error> {
+        let view_key = self.view_key;
+        let input_report_sender = internal_sender.clone();
+        fasync::spawn_local(
+            listen_for_user_input(view_key, input_report_sender)
+                .unwrap_or_else(|e: anyhow::Error| eprintln!("error: listening for input {:?}", e)),
+        );
         Ok(())
+    }
+
+    fn handle_input_report(
+        &mut self,
+        device_id: &input::DeviceId,
+        input_report: &hid_input_report::InputReport,
+    ) -> Vec<input::Event> {
+        let handler = self.input_report_handlers.get_mut(device_id).expect("input_report_handler");
+        handler.handle_input_report(device_id, input_report)
+    }
+
+    fn handle_register_input_device(
+        &mut self,
+        device_id: &input::DeviceId,
+        device_descriptor: &hid_input_report::DeviceDescriptor,
+    ) {
+        let frame_buffer_size = self.get_frame_buffer_size().expect("frame_buffer_size");
+        self.input_report_handlers.insert(
+            device_id.clone(),
+            InputReportHandler::new(frame_buffer_size, device_descriptor),
+        );
     }
 }
 
 // Tries to create a framebuffer. If that fails, assume Scenic is running.
 async fn create_app_strategy(
     assistant: &AppAssistantPtr,
-    internal_sender: &UnboundedSender<MessageInternal>,
+    next_view_key: ViewKey,
+    internal_sender: &InternalSender,
 ) -> Result<AppStrategyPtr, Error> {
     let usage = match assistant.get_mode() {
-        ViewMode::ImagePipe => FrameUsage::Gpu,
         ViewMode::Render(render_options) => {
             if render_options.use_spinel {
                 FrameUsage::Gpu
@@ -284,6 +321,8 @@ async fn create_app_strategy(
 
         Ok::<AppStrategyPtr, Error>(Box::new(FrameBufferAppStrategy {
             frame_buffer: Rc::new(RefCell::new(fb)),
+            view_key: next_view_key,
+            input_report_handlers: HashMap::new(),
         }))
     }
 }
@@ -318,7 +357,11 @@ impl AppStrategy for ScenicAppStrategy {
         0
     }
 
-    async fn post_setup(&mut self, _: fuchsia_framebuffer::PixelFormat) -> Result<(), Error> {
+    async fn post_setup(
+        &mut self,
+        _: fuchsia_framebuffer::PixelFormat,
+        _internal_sender: &InternalSender,
+    ) -> Result<(), Error> {
         Ok(())
     }
 }
@@ -331,7 +374,7 @@ pub struct App {
     next_key: ViewKey,
     assistant: Option<AppAssistantPtr>,
     messages: Vec<(ViewKey, Message)>,
-    sender: Option<UnboundedSender<MessageInternal>>,
+    sender: Option<InternalSender>,
 }
 
 pub(crate) enum MessageInternal {
@@ -344,13 +387,15 @@ pub(crate) enum MessageInternal {
     ImageFreed(ViewKey, u64, u32),
     HandleVSyncParametersChanged(Time, Duration),
     TargetedMessage(ViewKey, Message),
+    RegisterDevice(DeviceId, hid_input_report::DeviceDescriptor),
+    InputReport(DeviceId, ViewKey, hid_input_report::InputReport),
 }
 
 pub type AssistantCreator<'a> = LocalBoxFuture<'a, Result<AppAssistantPtr, Error>>;
 pub type AssistantCreatorFunc = Box<dyn Fn(&AppContext) -> AssistantCreator<'_>>;
 
 impl App {
-    fn new(sender: Option<UnboundedSender<MessageInternal>>) -> App {
+    fn new(sender: Option<InternalSender>) -> App {
         App {
             strategy: None,
             view_controllers: BTreeMap::new(),
@@ -425,6 +470,22 @@ impl App {
                 let view = self.get_view(view_id);
                 view.send_message(message);
             }
+            MessageInternal::RegisterDevice(device_id, device_descriptor) => {
+                self.strategy
+                    .as_mut()
+                    .expect("strat")
+                    .handle_register_input_device(&device_id, &device_descriptor);
+            }
+            MessageInternal::InputReport(device_id, view_id, input_report) => {
+                let input_events = self
+                    .strategy
+                    .as_mut()
+                    .expect("strat")
+                    .handle_input_report(&device_id, &input_report);
+
+                let view = self.get_view(view_id);
+                view.handle_input_events(input_events);
+            }
         }
         Ok(())
     }
@@ -434,13 +495,10 @@ impl App {
         mut assistant: AppAssistantPtr,
     ) -> Result<bool, Error> {
         assistant.setup().context("app setup")?;
-        let strat = create_app_strategy(&assistant, self.sender.as_ref().expect("sender")).await?;
+        let strat =
+            create_app_strategy(&assistant, self.next_key, self.sender.as_ref().expect("sender"))
+                .await?;
         let supports_scenic = strat.supports_scenic();
-        if assistant.get_mode() == ViewMode::Scenic && !supports_scenic {
-            return Err(format_err!(
-                "This application requires Scenic but this Fuchsia system doesn't have it."
-            ));
-        }
         self.strategy.replace(strat);
         self.set_assistant(assistant);
         self.start_services_async()?;
@@ -522,6 +580,12 @@ impl App {
         self.assistant = Some(assistant);
     }
 
+    fn focus_first_view(&mut self) {
+        if let Some(controller) = self.view_controllers.values_mut().nth(0) {
+            controller.focus();
+        }
+    }
+
     fn update_all_views(&mut self) {
         for (_, view_controller) in &mut self.view_controllers {
             view_controller.update();
@@ -571,12 +635,6 @@ impl App {
         Ok(Session::new(session_proxy))
     }
 
-    // Creates a view assistant for views that are not using the canvas view
-    // mode feature.
-    fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
-        Ok(self.assistant.as_mut().unwrap().create_view_assistant(self.next_key, session)?)
-    }
-
     // Creates a view assistant for views that are using the canvas view mode feature, either
     // in Scenic or framebuffer mode.
     fn create_view_assistant_canvas(&mut self) -> Result<ViewAssistantPtr, Error> {
@@ -601,12 +659,8 @@ impl App {
         let session = self.setup_session()?;
         let view_mode = self.get_view_mode();
         let view_assistant = match view_mode {
-            ViewMode::Scenic => self.create_view_assistant(&session)?,
             ViewMode::Canvas => self.create_view_assistant_canvas()?,
             ViewMode::Render { .. } => self.create_view_assistant_render()?,
-            ViewMode::ImagePipe => {
-                return Err(format_err!("ImagePipe mode is not yet supported with Scenic."))
-            }
         };
         let mut view_controller = ViewController::new(
             self.next_key,
@@ -626,38 +680,18 @@ impl App {
         Ok(())
     }
 
-    // Creates a view assistant for views that are using the image pipe view
-    // mode feature, either in Scenic or framebuffer mode.
-    fn create_view_assistant_image_pipe(&mut self) -> Result<ViewAssistantPtr, Error> {
-        let strat = self.strategy.as_ref().unwrap();
-        let fb = strat.get_frame_buffer().unwrap();
-        let view =
-            self.assistant.as_mut().unwrap().create_view_assistant_image_pipe(self.next_key, fb)?;
-        Ok(view)
-    }
-
     async fn create_view_framebuffer_async(&mut self) -> Result<(), Error> {
         let view_mode = self.get_view_mode();
         let signals_wait_event = self.get_signals_wait_event();
         let view_assistant = match view_mode {
-            ViewMode::Scenic => {
-                return Err(format_err!(
-                    "Scenic mode is not yet supported when running on the framebuffer."
-                ))
-            }
             ViewMode::Canvas => self.create_view_assistant_canvas()?,
             ViewMode::Render { .. } => self.create_view_assistant_render()?,
-            ViewMode::ImagePipe => self.create_view_assistant_image_pipe()?,
         };
         let strat = self.strategy.as_mut().unwrap();
-        let pixel_format = if view_mode == ViewMode::ImagePipe {
-            view_assistant.get_pixel_format()
-        } else {
-            strat.get_pixel_format()
-        };
-        strat.post_setup(pixel_format).await?;
+        let pixel_format = strat.get_pixel_format();
+        strat.post_setup(pixel_format, self.sender.as_ref().expect("sender")).await?;
 
-        let size = strat.get_frame_buffer_size().unwrap();
+        let size = strat.get_frame_buffer_size().expect("frame_buffer_size");
         let mut view_controller = ViewController::new_with_frame_buffer(
             self.next_key,
             view_mode,
@@ -679,6 +713,7 @@ impl App {
         view_controller.present();
         self.view_controllers.insert(self.next_key, view_controller);
         self.next_key += 1;
+        self.focus_first_view();
         self.update_all_views();
         Ok(())
     }

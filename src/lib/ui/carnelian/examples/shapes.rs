@@ -7,7 +7,8 @@ use argh::FromArgs;
 use carnelian::{
     color::Color,
     drawing::{path_for_circle, path_for_polygon, path_for_rectangle, path_for_rounded_rectangle},
-    geometry::Corners,
+    geometry::{Corners, IntPoint},
+    input::{self},
     make_app_assistant,
     render::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
@@ -17,14 +18,13 @@ use carnelian::{
     ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
 };
 use euclid::default::Vector2D;
-use fidl_fuchsia_ui_input::{InputEvent::Pointer, PointerEvent, PointerEventPhase};
 use fuchsia_trace::duration;
 use fuchsia_zircon::{AsHandleRef, Event, Signals};
 use rand::{thread_rng, Rng};
 use std::{collections::BTreeMap, mem};
 
 fn make_bounds(context: &ViewAssistantContext<'_>) -> Rect {
-    Rect::new(Point::zero(), context.logical_size)
+    Rect::new(Point::zero(), context.size)
 }
 
 /// Shapes
@@ -135,9 +135,8 @@ impl TouchHandler {
         TouchHandler { location: Point::zero(), color, shape_type }
     }
 
-    fn update(&mut self, context: &mut ViewAssistantContext<'_>, pointer_event: &PointerEvent) {
-        let touch_point =
-            context.physical_to_logical(&Point::new(pointer_event.x, pointer_event.y));
+    fn update(&mut self, context: &mut ViewAssistantContext<'_>, location: &IntPoint) {
+        let touch_point = location.to_f32();
         let bounds = make_bounds(context);
         self.location =
             Point::new(touch_point.x, touch_point.y).clamp(bounds.origin, bounds.bottom_right());
@@ -183,15 +182,11 @@ fn raster_for_polygon(
 struct ShapeDropViewAssistant {
     partial_updates: bool,
     renderings: BTreeMap<u64, Rendering>,
-    touch_handlers: BTreeMap<(u32, u32), TouchHandler>,
+    touch_handlers: BTreeMap<input::pointer::PointerId, TouchHandler>,
     animators: Vec<ShapeAnimator>,
     background_color: Color,
     composition: Composition,
     shapes: BTreeMap<ShapeType, Raster>,
-}
-
-fn make_pointer_event_key(pointer_event: &PointerEvent) -> (u32, u32) {
-    (pointer_event.device_id, pointer_event.pointer_id)
 }
 
 impl ShapeDropViewAssistant {
@@ -213,48 +208,16 @@ impl ShapeDropViewAssistant {
     fn start_animating(
         &mut self,
         context: &mut ViewAssistantContext<'_>,
-        pointer_event: &PointerEvent,
+        location: &IntPoint,
+        pointer_id: &input::pointer::PointerId,
     ) {
-        if let Some(handler) = self.touch_handlers.remove(&make_pointer_event_key(pointer_event)) {
+        if let Some(handler) = self.touch_handlers.remove(&pointer_id) {
             let bounds = make_bounds(context);
-            let touch_point =
-                context.physical_to_logical(&Point::new(pointer_event.x, pointer_event.y));
+            let touch_point = location.to_f32();
             let location = Point::new(touch_point.x, touch_point.y)
                 .clamp(bounds.origin, bounds.bottom_right());
             let animator = ShapeAnimator::new(handler, Point::new(location.x, location.y));
             self.animators.push(animator);
-        }
-    }
-
-    fn handle_pointer_event(
-        &mut self,
-        context: &mut ViewAssistantContext<'_>,
-        pointer_event: &PointerEvent,
-    ) {
-        match pointer_event.phase {
-            PointerEventPhase::Down => {
-                let mut t = TouchHandler::new();
-                t.update(context, pointer_event);
-                self.touch_handlers.insert(make_pointer_event_key(pointer_event), t);
-            }
-            PointerEventPhase::Add => {}
-            PointerEventPhase::Hover => {}
-            PointerEventPhase::Move => {
-                if let Some(handler) =
-                    self.touch_handlers.get_mut(&make_pointer_event_key(pointer_event))
-                {
-                    handler.update(context, pointer_event);
-                }
-            }
-            PointerEventPhase::Up => {
-                self.start_animating(context, pointer_event);
-            }
-            PointerEventPhase::Remove => {
-                self.start_animating(context, pointer_event);
-            }
-            PointerEventPhase::Cancel => {
-                self.start_animating(context, pointer_event);
-            }
         }
     }
 
@@ -298,14 +261,6 @@ impl Rendering {
 }
 
 impl ViewAssistant for ShapeDropViewAssistant {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
     fn render(
         &mut self,
         render_context: &mut RenderContext,
@@ -332,8 +287,8 @@ impl ViewAssistant for ShapeDropViewAssistant {
 
         let rendering = self.renderings.entry(image_id).or_insert_with(|| Rendering::new());
 
-        let pre_clear = if !self.partial_updates || context.logical_size != rendering.size {
-            rendering.size = context.logical_size;
+        let pre_clear = if !self.partial_updates || context.size != rendering.size {
+            rendering.size = context.size;
             rendering.previous_shapes.clear();
             Some(PreClear { color: background_color })
         } else {
@@ -422,14 +377,31 @@ impl ViewAssistant for ShapeDropViewAssistant {
         return AnimationMode::EveryFrame;
     }
 
-    fn handle_input_event(
+    fn handle_pointer_event(
         &mut self,
         context: &mut ViewAssistantContext<'_>,
-        event: &fidl_fuchsia_ui_input::InputEvent,
+        _event: &input::Event,
+        pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {
-        match event {
-            Pointer(pointer_event) => {
-                self.handle_pointer_event(context, &pointer_event);
+        match &pointer_event.phase {
+            input::pointer::Phase::Down(touch_location) => {
+                let mut t = TouchHandler::new();
+                t.update(context, &touch_location);
+                self.touch_handlers.insert(pointer_event.pointer_id.clone(), t);
+            }
+            input::pointer::Phase::Moved(touch_location) => {
+                if let Some(handler) = self.touch_handlers.get_mut(&pointer_event.pointer_id) {
+                    handler.update(context, &touch_location);
+                }
+            }
+            input::pointer::Phase::Up => {
+                let end_location =
+                    if let Some(handler) = self.touch_handlers.get_mut(&pointer_event.pointer_id) {
+                        handler.location.to_i32()
+                    } else {
+                        IntPoint::zero()
+                    };
+                self.start_animating(context, &end_location, &pointer_event.pointer_id);
             }
             _ => (),
         }

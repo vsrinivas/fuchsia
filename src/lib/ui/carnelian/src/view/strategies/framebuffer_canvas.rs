@@ -5,6 +5,7 @@ use crate::{
     app::{FrameBufferPtr, MessageInternal, FRAME_COUNT},
     canvas::{Canvas, MappingPixelSink},
     geometry::IntSize,
+    input::{self},
     message::Message,
     view::{
         strategies::base::{ViewStrategy, ViewStrategyPtr},
@@ -118,17 +119,19 @@ impl FrameBufferViewStrategy {
             interval_offset += self.vsync_interval;
         }
 
+        let canvas = if image_id != 0 {
+            Some(self.canvases.get(&image_id).expect("failed to get canvas in make_context"))
+        } else {
+            None
+        };
+
         ViewAssistantContext {
             key: view_details.key,
-            logical_size: view_details.logical_size,
             size: view_details.physical_size,
             metrics: view_details.metrics,
             presentation_time: time_now + interval_offset,
             messages: Vec::new(),
-            scenic_resources: None,
-            canvas: Some(
-                &self.canvases.get(&image_id).expect("failed to get canvas in make_context"),
-            ),
+            canvas: canvas,
             buffer_count: Some(self.frame_buffer.borrow().get_frame_count()),
             wait_event: wait_event,
             image_id,
@@ -169,13 +172,27 @@ impl ViewStrategy for FrameBufferViewStrategy {
         }
     }
 
-    fn handle_input_event(
+    fn handle_scenic_input_event(
         &mut self,
         _view_details: &ViewDetails,
         _view_assistant: &mut ViewAssistantPtr,
         _event: &fidl_fuchsia_ui_input::InputEvent,
     ) -> Vec<Message> {
-        panic!("Not yet implemented");
+        unreachable!("Frame buffer strategies should never be used under scenic");
+    }
+
+    fn handle_input_event(
+        &mut self,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+        event: &input::Event,
+    ) -> Vec<Message> {
+        let mut framebuffer_context = self.make_context(view_details, 0);
+        view_assistant
+            .handle_input_event(&mut framebuffer_context, &event)
+            .unwrap_or_else(|e| eprintln!("handle_new_input_event: {:?}", e));
+
+        framebuffer_context.messages
     }
 
     fn image_freed(&mut self, image_id: u64, _collection_id: u32) {

@@ -70,14 +70,6 @@ impl GammaViewAssistant {
 }
 
 impl ViewAssistant for GammaViewAssistant {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, _: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
     fn render(
         &mut self,
         render_context: &mut Context,
@@ -87,14 +79,12 @@ impl ViewAssistant for GammaViewAssistant {
         let path = self.path.take().unwrap_or_else(|| {
             path_for_rectangle(&Rect::new(Point::zero(), Size::new(1.0, 1.0)), render_context)
         });
-        let transform = Transform2D::create_scale(
-            context.logical_size.width * 0.5,
-            context.logical_size.height * 0.5,
-        );
+        let transform =
+            Transform2D::create_scale(context.size.width * 0.5, context.size.height * 0.5);
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
         raster_builder.add(&path, Some(&transform));
         let raster = raster_builder.build();
-        let transform = Transform2D::create_scale(context.logical_size.width * 0.5, 1.0);
+        let transform = Transform2D::create_scale(context.size.width * 0.5, 1.0);
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
         raster_builder.add(&path, Some(&transform));
         let line_raster = raster_builder.build();
@@ -109,26 +99,21 @@ impl ViewAssistant for GammaViewAssistant {
             },
         })
         .chain(std::iter::once(Layer {
-            raster: raster
-                .clone()
-                .translate(Vector2D::new(0, (context.logical_size.height * 0.5) as i32)),
+            raster: raster.clone().translate(Vector2D::new(0, (context.size.height * 0.5) as i32)),
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(TRANSLUCENT_COLOR),
                 blend_mode: BlendMode::Over,
             },
         }))
-        .chain((0..context.logical_size.height as i32).step_by(2).map(|y| {
-            Layer {
-                raster: line_raster
-                    .clone()
-                    .translate(Vector2D::new((context.logical_size.width * 0.5) as i32, y)),
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(BLACK_COLOR),
-                    blend_mode: BlendMode::Over,
-                },
-            }
+        .chain((0..context.size.height as i32).step_by(2).map(|y| Layer {
+            raster:
+                line_raster.clone().translate(Vector2D::new((context.size.width * 0.5) as i32, y)),
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(BLACK_COLOR),
+                blend_mode: BlendMode::Over,
+            },
         }));
 
         self.composition.replace(.., layers);

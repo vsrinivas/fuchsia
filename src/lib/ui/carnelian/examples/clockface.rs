@@ -350,7 +350,7 @@ impl Clockface {
     ) -> Result<(), Error> {
         duration!("gfx", "update");
 
-        let size = &context.logical_size;
+        let size = &context.size;
         let image_id = context.image_id;
         let scale = size.width.min(size.height);
 
@@ -377,22 +377,14 @@ impl ClockfaceViewAssistant {
 }
 
 impl ViewAssistant for ClockfaceViewAssistant {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, _: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
     fn render(
         &mut self,
         render_context: &mut Context,
         ready_event: Event,
         context: &ViewAssistantContext<'_>,
     ) -> Result<(), Error> {
-        if context.logical_size != self.size || self.clockface.is_none() {
-            self.size = context.logical_size;
+        if context.size != self.size || self.clockface.is_none() {
+            self.size = context.size;
             self.clockface = Some(Clockface::new(render_context));
         }
 

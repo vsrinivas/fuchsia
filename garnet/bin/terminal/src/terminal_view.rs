@@ -8,11 +8,11 @@ use {
     crate::ui::{PointerEventResponse, ScrollContext, TerminalScene},
     anyhow::{Context as _, Error},
     carnelian::{
+        input::{self},
         make_message, AnimationMode, AppContext, Message, Size, ViewAssistant,
         ViewAssistantContext, ViewKey, ViewMessages,
     },
     fidl_fuchsia_hardware_pty::WindowSize,
-    fidl_fuchsia_ui_input::{KeyboardEvent, PointerEvent},
     fuchsia_async as fasync, fuchsia_trace as ftrace,
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
     std::{cell::RefCell, ffi::CStr, fs::File, io::prelude::*, rc::Rc},
@@ -348,7 +348,10 @@ impl TerminalViewAssistant {
     // This method is overloaded from the ViewAssistant trait so we can test the method.
     // The ViewAssistant trait requires a ViewAssistantContext which we do not use and
     // we cannot make. This allows us to call the method directly in the tests.
-    fn handle_keyboard_event(&mut self, event: &KeyboardEvent) -> Result<(), Error> {
+    fn handle_keyboard_event_internal(
+        &mut self,
+        event: &input::keyboard::Event,
+    ) -> Result<(), Error> {
         if let Some(string) = get_input_sequence_for_key_event(event) {
             // In practice these writes will contain a small amount of data
             // so we can use a synchronous write. If that proves to not be the
@@ -419,18 +422,21 @@ impl ViewAssistant for TerminalViewAssistant {
 
     fn handle_keyboard_event(
         &mut self,
-        _: &mut ViewAssistantContext<'_>,
-        event: &KeyboardEvent,
+        _context: &mut ViewAssistantContext<'_>,
+        _event: &input::Event,
+        keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
-        self.handle_keyboard_event(event)
+        self.handle_keyboard_event_internal(keyboard_event)?;
+        Ok(())
     }
 
     fn handle_pointer_event(
         &mut self,
         ctx: &mut ViewAssistantContext<'_>,
-        event: &PointerEvent,
+        _event: &input::Event,
+        pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {
-        if let Some(response) = self.terminal_scene.handle_pointer_event(&event, ctx) {
+        if let Some(response) = self.terminal_scene.handle_pointer_event(&pointer_event, ctx) {
             let mut handler = PointerEventResponseHandlerImpl { ctx, term: self.term.clone() };
             self.handle_pointer_event_response(response, &mut handler);
         }
@@ -447,7 +453,6 @@ mod tests {
     use {
         super::*,
         anyhow::anyhow,
-        fidl_fuchsia_ui_input::KeyboardEventPhase,
         fuchsia_async::{DurationExt, Timer},
         fuchsia_zircon::DurationNum,
         futures::future::Either,
@@ -617,7 +622,7 @@ mod tests {
         view.pty_context = Some(pty_context);
 
         let capital_a = 65;
-        view.handle_keyboard_event(&make_keyboard_event(capital_a))?;
+        view.handle_keyboard_event_internal(&make_keyboard_event(capital_a))?;
 
         let test_buffer = view.pty_context.as_mut().unwrap().test_buffer.take().unwrap();
         assert_eq!(test_buffer, b"A");
@@ -755,14 +760,12 @@ mod tests {
         Ok(())
     }
 
-    fn make_keyboard_event(code_point: u32) -> KeyboardEvent {
-        KeyboardEvent {
-            code_point: code_point,
-            phase: KeyboardEventPhase::Pressed,
-            device_id: 0 as u32,
-            event_time: 0 as u64,
+    fn make_keyboard_event(code_point: u32) -> input::keyboard::Event {
+        input::keyboard::Event {
+            code_point: Some(code_point),
+            phase: input::keyboard::Phase::Pressed,
             hid_usage: 0 as u32,
-            modifiers: 0 as u32,
+            modifiers: input::Modifiers::default(),
         }
     }
 

@@ -4,6 +4,7 @@
 use crate::{
     app::{FrameBufferPtr, MessageInternal, RenderOptions, FRAME_COUNT},
     geometry::{IntSize, UintSize},
+    input,
     message::Message,
     render::{
         generic::{self, Backend},
@@ -114,7 +115,7 @@ impl FrameBufferRenderViewStrategy {
     fn make_context(
         &mut self,
         view_details: &ViewDetails,
-        image_id: ImageId,
+        image_id: Option<ImageId>,
     ) -> (ViewAssistantContext<'_>, &mut Context) {
         let render_context = &mut self.context;
 
@@ -131,21 +132,23 @@ impl FrameBufferRenderViewStrategy {
             interval_offset += self.vsync_interval;
         }
 
-        let image_index = *self.image_indexes.get(&image_id).expect("image index");
+        let (image_index, actual_image_id) = if let Some(available) = image_id {
+            (*self.image_indexes.get(&available).expect("image index"), available)
+        } else {
+            (0, 0)
+        };
 
         (
             ViewAssistantContext {
                 key: view_details.key,
-                logical_size: view_details.logical_size,
                 size: view_details.physical_size,
                 metrics: view_details.metrics,
                 presentation_time: time_now + interval_offset,
                 messages: Vec::new(),
-                scenic_resources: None,
                 canvas: None,
                 buffer_count: Some(self.frame_buffer.borrow().get_frame_count()),
                 wait_event: None,
-                image_id,
+                image_id: actual_image_id,
                 image_index,
             },
             render_context,
@@ -157,7 +160,7 @@ impl FrameBufferRenderViewStrategy {
 impl ViewStrategy for FrameBufferRenderViewStrategy {
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         if let Some(available) = self.frame_set.get_available_image() {
-            let (framebuffer_context, ..) = self.make_context(view_details, available);
+            let (framebuffer_context, ..) = self.make_context(view_details, Some(available));
             view_assistant
                 .setup(&framebuffer_context)
                 .unwrap_or_else(|e| panic!("Setup error: {:?}", e));
@@ -171,7 +174,8 @@ impl ViewStrategy for FrameBufferRenderViewStrategy {
             let buffer_ready_event = buffer_ready_event
                 .duplicate_handle(zx::Rights::SAME_RIGHTS)
                 .expect("duplicate_handle");
-            let (framebuffer_context, render_context) = self.make_context(view_details, available);
+            let (framebuffer_context, render_context) =
+                self.make_context(view_details, Some(available));
             view_assistant
                 .render(render_context, buffer_ready_event, &framebuffer_context)
                 .unwrap_or_else(|e| panic!("Update error: {:?}", e));
@@ -188,13 +192,27 @@ impl ViewStrategy for FrameBufferRenderViewStrategy {
         }
     }
 
+    fn handle_scenic_input_event(
+        &mut self,
+        _: &ViewDetails,
+        _: &mut ViewAssistantPtr,
+        _: &fidl_fuchsia_ui_input::InputEvent,
+    ) -> Vec<Message> {
+        panic!("Scenic events should not be delivered when running under the frame buffer")
+    }
+
     fn handle_input_event(
         &mut self,
-        _view_details: &ViewDetails,
-        _view_assistant: &mut ViewAssistantPtr,
-        _event: &fidl_fuchsia_ui_input::InputEvent,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+        event: &input::Event,
     ) -> Vec<Message> {
-        panic!("Not yet implemented");
+        let (mut framebuffer_context, _render_context) = self.make_context(view_details, None);
+        view_assistant
+            .handle_input_event(&mut framebuffer_context, &event)
+            .unwrap_or_else(|e| eprintln!("handle_new_input_event: {:?}", e));
+
+        framebuffer_context.messages
     }
 
     fn image_freed(&mut self, image_id: u64, _collection_id: u32) {

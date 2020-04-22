@@ -6,6 +6,7 @@ use anyhow::{Context as _, Error};
 use carnelian::{
     color::Color,
     geometry::Corners,
+    input::{self},
     make_app_assistant, make_message,
     render::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, Path, PreClear,
@@ -17,7 +18,6 @@ use carnelian::{
 use euclid::{Angle, Transform2D, Vector2D};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
-use fidl_fuchsia_ui_input::{KeyboardEvent, KeyboardEventPhase};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{AsHandleRef, ClockId, Event, Signals, Time};
 use futures::prelude::*;
@@ -180,14 +180,6 @@ impl SpinningSquareViewAssistant {
 }
 
 impl ViewAssistant for SpinningSquareViewAssistant {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
     fn render(
         &mut self,
         render_context: &mut RenderContext,
@@ -200,9 +192,9 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         const SQUARE_PATH_SIZE_2: Coord = SQUARE_PATH_SIZE / 2.0;
         const CORNER_RADIUS: Coord = SQUARE_PATH_SIZE / 4.0;
 
-        let center_x = context.logical_size.width * 0.5;
-        let center_y = context.logical_size.height * 0.5;
-        let square_size = context.logical_size.width.min(context.logical_size.height) * 0.6;
+        let center_x = context.size.width * 0.5;
+        let center_y = context.size.height * 0.5;
+        let square_size = context.size.width.min(context.size.height) * 0.6;
         let t = ((context.presentation_time.into_nanos() - self.start.into_nanos()) as f32
             * SECONDS_PER_NANOSECOND
             * SPEED)
@@ -255,12 +247,13 @@ impl ViewAssistant for SpinningSquareViewAssistant {
     fn handle_keyboard_event(
         &mut self,
         context: &mut ViewAssistantContext<'_>,
-        keyboard_event: &KeyboardEvent,
+        _event: &input::Event,
+        keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
-        if keyboard_event.code_point == ' ' as u32
-            && keyboard_event.phase == KeyboardEventPhase::Pressed
-        {
-            self.toggle_rounded();
+        if let Some(code_point) = keyboard_event.code_point {
+            if code_point == ' ' as u32 && keyboard_event.phase == input::keyboard::Phase::Pressed {
+                self.toggle_rounded();
+            }
         }
         context.queue_message(make_message(ViewMessages::Update));
         Ok(())

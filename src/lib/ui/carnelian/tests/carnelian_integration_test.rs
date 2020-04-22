@@ -4,11 +4,12 @@
 
 use anyhow::Error;
 use carnelian::{
-    color::Color, AnimationMode, App, AppAssistant, Point, Rect, ViewAssistant,
+    color::Color, make_app_assistant, AnimationMode, App, AppAssistant, Point, Rect, ViewAssistant,
     ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
 };
 use fuchsia_zircon::Duration;
 
+#[derive(Default)]
 struct IntegrationTestAppAssistant;
 
 impl AppAssistant for IntegrationTestAppAssistant {
@@ -50,20 +51,18 @@ impl ViewAssistant for IntegrationTestViewAssistant {
 
 fn main() -> Result<(), Error> {
     println!("carnelian_integration_test");
-    let assistant = IntegrationTestAppAssistant {};
-    App::test(Box::new(assistant))
+    App::run(make_app_assistant::<IntegrationTestAppAssistant>())
 }
 
 #[cfg(test)]
 mod test {
 
     use crate::IntegrationTestAppAssistant;
-    use carnelian::App;
+    use carnelian::{make_app_assistant, App};
 
     #[test]
     fn carnelain_integration_test() -> std::result::Result<(), anyhow::Error> {
         println!("carnelian_integration_test");
-        let assistant = IntegrationTestAppAssistant {};
-        App::test(Box::new(assistant))
+        App::test(make_app_assistant::<IntegrationTestAppAssistant>())
     }
 }
