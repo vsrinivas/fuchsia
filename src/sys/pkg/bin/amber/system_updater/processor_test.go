@@ -57,7 +57,7 @@ func TestParsePackagesJson(t *testing.T) {
 
 	pFile := newByteReadCloser([]byte(`
 		{
-			"version": 1,
+			"version": "1",
 			"content": [
 				"fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
 				"fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789"

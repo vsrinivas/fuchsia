@@ -106,7 +106,7 @@ func CacheUpdatePackage(updateURL string, resolver *pkg.PackageResolverWithCtxIn
 
 // Packages deserializes the packages.json file in the system update package
 type Packages struct {
-	Version int `json:"version"`
+	Version string `json:"version"`
 	// A list of fully qualified URIs
 	URIs []string `json:"content"`
 }
@@ -189,7 +189,7 @@ func ParsePackagesJson(pkgSrc io.ReadCloser) ([]string, error) {
 	if err := json.Unmarshal(bytes, &packages); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal packages.json: %v", err)
 	}
-	if packages.Version != 1 {
+	if packages.Version != "1" {
 		return nil, fmt.Errorf("unsupported version of packages.json: %v", packages.Version)
 	}
 	return packages.URIs, nil

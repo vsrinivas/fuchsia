@@ -870,7 +870,7 @@ async fn test_packages_json_takes_precedence() {
         .add_file(
             "packages.json",
             &json!({
-              "version": 1,
+              "version": "1",
               "content": [
                 "fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
                 "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789",
@@ -907,7 +907,7 @@ async fn test_metrics_report_untrusted_tuf_repo() {
         .add_file(
             "packages.json",
             &json!({
-              "version": 1,
+              "version": "1",
               "content": [
                 "fuchsia-pkg://non-existent-repo.com/amber/0?hash=abcdef",
                 "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789",
