@@ -93,16 +93,17 @@ pub mod linux {
             return Err(io::Error::last_os_error());
         }
 
+        let mut ifaddrs_iter = ifaddrs;
         loop {
-            if ifaddrs.is_null() {
+            if ifaddrs_iter.is_null() {
                 break;
             }
-            if let Some(ip) = sockaddr_to_ip((*ifaddrs).ifa_addr) {
-                let name = std::ffi::CStr::from_ptr((*ifaddrs).ifa_name as *const _)
+            if let Some(ip) = sockaddr_to_ip((*ifaddrs_iter).ifa_addr) {
+                let name = std::ffi::CStr::from_ptr((*ifaddrs_iter).ifa_name as *const _)
                     .to_string_lossy()
                     .into_owned();
-                let id = libc::if_nametoindex((*ifaddrs).ifa_name as *const _);
-                let flags = (*ifaddrs).ifa_flags as i32;
+                let id = libc::if_nametoindex((*ifaddrs_iter).ifa_name as *const _);
+                let flags = (*ifaddrs_iter).ifa_flags as i32;
 
                 if flags.is_mcast() {
                     match res.get_mut(&id) {
@@ -113,7 +114,7 @@ pub mod linux {
                     }
                 }
             }
-            ifaddrs = (*ifaddrs).ifa_next;
+            ifaddrs_iter = (*ifaddrs_iter).ifa_next;
         }
         libc::freeifaddrs(ifaddrs);
         Ok(res.iter().map(|(_, v)| v.clone()).collect())
