@@ -165,9 +165,6 @@ async fn data_stats() -> Result<(), Error> {
         .await
         .unwrap();
     assert_eq!("", String::from_utf8(output.stdout).expect("utf8 stdout"));
-    assert_eq!(
-        "[observer] INFO: Logging started.\n",
-        String::from_utf8(output.stderr).expect("utf8 stderr")
-    );
+    assert_eq!("", String::from_utf8(output.stderr).expect("utf8 stderr"));
     Ok(())
 }

@@ -298,7 +298,7 @@ mod tests {
         futures::channel::oneshot,
     };
 
-    /// Helper to connec tot log sink and make it easy to write logs to socket.
+    /// Helper to connect to log sink and make it easy to write logs to socket.
     struct LogSinkHelper {
         log_sink: Option<LogSinkProxy>,
         sock: Option<zx::Socket>,

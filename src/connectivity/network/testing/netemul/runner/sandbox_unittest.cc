@@ -868,8 +868,6 @@ TEST_F(SandboxTest, SyslogWithNoKlog) {
       evt.set_code(100);
       bus()->Publish(std::move(evt));
       FXL_LOG(INFO) << "Published event!";
-    } else {
-      FAIL() << "Got log unexpected log message tags:" << fxl::JoinStrings(msg.tags);
     }
   });
   RunSandboxSuccess();
@@ -899,8 +897,6 @@ TEST_F(SandboxTest, SyslogWithKlog) {
       bus()->Publish(std::move(evt));
     } else if (std::find(msg.tags.begin(), msg.tags.end(), "klog") != msg.tags.end()) {
       klog_count++;
-    } else {
-      FAIL() << "Got log unexpected log message tags:" << fxl::JoinStrings(msg.tags);
     }
   });
   RunSandboxSuccess();

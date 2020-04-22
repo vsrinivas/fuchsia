@@ -13,6 +13,7 @@ use fidl_fuchsia_sys_internal::{
 };
 use fuchsia_async as fasync;
 use fuchsia_inspect as inspect;
+use fuchsia_zircon as zx;
 use futures::{
     channel::mpsc, future, lock::Mutex, sink::SinkExt, FutureExt, StreamExt, TryStreamExt,
 };
@@ -93,6 +94,20 @@ impl LogManager {
         Ok(())
     }
 
+    /// Spawn a log sink for messages sent by the archivist itself.
+    pub fn spawn_internal_sink(&self, socket: zx::Socket, name: &str) -> Result<(), Error> {
+        // TODO(50105): Figure out how to properly populate SourceIdentity
+        let mut source = SourceIdentity::empty();
+        source.component_name = Some(name.to_owned());
+        let log_stream = LogMessageSocket::new(socket, source)?;
+        let manager = self.clone();
+        fasync::spawn(async move {
+            manager.drain_messages(log_stream).await;
+            unreachable!();
+        });
+        Ok(())
+    }
+
     /// Spawn a task which attempts to act as `LogConnectionListener` for its parent realm, eventually
     /// passing `LogSink` connections into the manager.
     /// TODO(49764): Make this run on main future
@@ -102,7 +117,7 @@ impl LogManager {
             match connector.take_log_connection_listener().await {
                 Ok(Some(listener)) => {
                     let mut connections =
-                        listener.into_stream().expect("getting requeststream from serverend");
+                        listener.into_stream().expect("getting request stream from server end");
                     while let Ok(Some(connection)) = connections.try_next().await {
                         match connection {
                             LogConnectionListenerRequest::OnNewConnection {

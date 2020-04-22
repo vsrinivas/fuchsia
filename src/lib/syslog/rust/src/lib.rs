@@ -5,7 +5,7 @@
 // found in the LICENSE file.
 #![deny(missing_docs)]
 
-use fuchsia_zircon::{self as zx, sys::*};
+use fuchsia_zircon::{self as zx, sys::*, HandleBased};
 use lazy_static::lazy_static;
 use log::{Level, LevelFilter, Metadata, Record};
 use std::ffi::{CStr, CString};
@@ -251,7 +251,17 @@ pub fn init() -> Result<(), zx::Status> {
 /// Initializes syslogger with tags. Max number of tags can be 4
 /// and max length of each tag can be 63 characters.
 pub fn init_with_tags(tags: &[&str]) -> Result<(), zx::Status> {
-    //let mut c_tags: Vec<*const c_char> = Vec::new();
+    init_with_tags_and_handle(zx::sys::ZX_HANDLE_INVALID, tags)
+}
+
+/// Initialize syslogger with a single tag and a log service channel socket.
+pub fn init_with_socket_and_name(sink: zx::Socket, name: &str) -> Result<(), zx::Status> {
+    init_with_tags_and_handle(sink.into_raw(), &[name])
+}
+
+/// Initializes syslogger with tags. Max number of tags can be 4
+/// and max length of each tag can be 63 characters.
+fn init_with_tags_and_handle(handle: zx_handle_t, tags: &[&str]) -> Result<(), zx::Status> {
     let cstr_vec: Vec<CString> = tags
         .iter()
         .map(|x| CString::new(x.to_owned()).expect("Cannot create tag with interior null"))
@@ -260,7 +270,7 @@ pub fn init_with_tags(tags: &[&str]) -> Result<(), zx::Status> {
     let config = syslog::fx_logger_config_t {
         severity: levels::INFO,
         fd: -1,
-        log_service_channel: zx::sys::ZX_HANDLE_INVALID,
+        log_service_channel: handle,
         tags: c_tags.as_ptr(),
         num_tags: c_tags.len(),
     };

@@ -193,6 +193,7 @@ mod tests {
         assert_eq!(
             logs,
             vec![
+                (INFO, "Logging started.".to_owned()),
                 (-1, "my debug message.".to_owned()),
                 (INFO, "my info message.".to_owned()),
                 (WARN, "my warn message.".to_owned()),

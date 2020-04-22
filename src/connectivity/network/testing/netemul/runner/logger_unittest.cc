@@ -57,19 +57,39 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
     syslog->ListenSafe(std::move(test_handle), nullptr);
   }
 
-  void ValidateMessage(const fuchsia::logger::LogMessage& msg, const std::vector<std::string>& tags,
-                       const std::string& message) {
-    EXPECT_EQ(msg.severity, kDummySeverity);
-    EXPECT_EQ(msg.time, kDummyTime);
-    EXPECT_EQ(msg.pid, kDummyPid);
-    EXPECT_EQ(msg.tid, kDummyTid);
-    EXPECT_EQ(msg.dropped_logs, 0ul);
-    EXPECT_EQ(msg.msg, message);
-    EXPECT_EQ(tags.size(), msg.tags.size());
-    for (const auto& t : tags) {
-      EXPECT_NE(std::find(msg.tags.begin(), msg.tags.end(), t), msg.tags.end())
-          << "Can't find tag " << t << " in " << fxl::JoinStrings(msg.tags, ",");
+  void ValidateMessage(const std::vector<fuchsia::logger::LogMessage>& msgs,
+                       const std::vector<std::string>& tags, const std::string& message) {
+    for (const auto& msg : msgs) {
+      if (msg.msg != message || tags.size() != msg.tags.size()) {
+        continue;
+      }
+
+      bool found = true;
+
+      for (const auto& t : tags) {
+        if (std::find(msg.tags.begin(), msg.tags.end(), t) == msg.tags.end()) {
+          found = false;
+          break;
+        }
+      }
+
+      if (found) {
+        EXPECT_EQ(msg.severity, kDummySeverity);
+        EXPECT_EQ(msg.time, kDummyTime);
+        EXPECT_EQ(msg.pid, kDummyPid);
+        EXPECT_EQ(msg.tid, kDummyTid);
+        EXPECT_EQ(msg.dropped_logs, 0ul);
+        return;
+      }
     }
+
+    std::string tag_str = "";
+
+    for (const auto& t : tags) {
+      tag_str += " " + t;
+    }
+
+    FAIL() << "Could not find message " << message << " with tags:" << tag_str;
   }
 
   std::vector<fuchsia::logger::LogMessage> WaitForMessages() {
@@ -93,7 +113,7 @@ TEST_F(LoggerTest, SyslogRedirect) {
   proxy->Log(CreateLogMessage({"tag"}, "Hello"), [&called]() { called = true; });
   auto msgs = WaitForMessages();
   EXPECT_TRUE(called);
-  ValidateMessage(msgs[0], {"tag", env_name}, "Hello");
+  ValidateMessage(msgs, {"tag", env_name}, "Hello");
 }
 
 TEST_F(LoggerTest, TooManyTags) {
@@ -110,7 +130,7 @@ TEST_F(LoggerTest, TooManyTags) {
   proxy->Log(CreateLogMessage(tags, "Hello"), [&called]() { called = true; });
   auto msgs = WaitForMessages();
   EXPECT_TRUE(called);
-  ValidateMessage(msgs[0], tags, "[@netemul] Hello");
+  ValidateMessage(msgs, tags, "[@netemul] Hello");
 }
 
 TEST_F(LoggerTest, LongEnvironmentName) {
@@ -126,7 +146,7 @@ TEST_F(LoggerTest, LongEnvironmentName) {
   proxy->Log(CreateLogMessage({"tag"}, "Hello"), [&called]() { called = true; });
   auto msgs = WaitForMessages();
   EXPECT_TRUE(called);
-  ValidateMessage(msgs[0], {"tag", expect_tag}, "Hello");
+  ValidateMessage(msgs, {"tag", expect_tag}, "Hello");
 }
 
 TEST_F(LoggerTest, VeryLongEnvironmentName) {
@@ -149,7 +169,7 @@ TEST_F(LoggerTest, VeryLongEnvironmentName) {
   proxy->Log(CreateLogMessage(tags, "Hello"), [&called]() { called = true; });
   auto msgs = WaitForMessages();
   EXPECT_TRUE(called);
-  ValidateMessage(msgs[0], tags, "Hello");
+  ValidateMessage(msgs, tags, "Hello");
 }
 
 TEST_F(LoggerTest, LongMessageLongTags) {
@@ -178,7 +198,7 @@ TEST_F(LoggerTest, LongMessageLongTags) {
   auto msgs = WaitForMessages();
   EXPECT_TRUE(called);
   ValidateMessage(
-      msgs[0], tags,
+      msgs, tags,
       prefix + msg.substr(0, sizeof(fx_log_packet_t::data) - tags_len - prefix.length() - 1));
 }
 
@@ -203,7 +223,7 @@ TEST_F(LoggerTest, LongMessage) {
 
   auto msgs = WaitForMessages();
   EXPECT_TRUE(called);
-  ValidateMessage(msgs[0], {tag, env_name},
+  ValidateMessage(msgs, {tag, env_name},
                   msg.substr(0, sizeof(fx_log_packet_t::data) - tags_len - 1));
 }
 
@@ -211,10 +231,10 @@ TEST_F(LoggerTest, MultipleMessages) {
   std::string env_name = "@netemul";
   Init("netemul");
 
-  constexpr int messages = 10;
-  int called = 0;
-  for (int i = 0; i < messages; i++) {
-    proxy->Log(CreateLogMessage({"tag"}, fxl::StringPrintf("Hello%d", i)),
+  constexpr size_t messages = 10;
+  size_t called = 0;
+  for (size_t i = 0; i < messages; i++) {
+    proxy->Log(CreateLogMessage({"tag"}, fxl::StringPrintf("Hello%zu", i)),
                [&called]() { called++; });
   }
 
@@ -228,10 +248,8 @@ TEST_F(LoggerTest, MultipleMessages) {
   // sort the received messages by their contents to account for out-of-order delivery by logger
   std::sort(consumed.begin(), consumed.end(), [](auto a, auto b) { return a.msg < b.msg; });
 
-  int i = 0;
-  for (const auto& msg : consumed) {
-    ValidateMessage(msg, {"tag", env_name}, fxl::StringPrintf("Hello%d", i));
-    i++;
+  for (size_t i = 0; i < messages; i++) {
+    ValidateMessage(consumed, {"tag", env_name}, fxl::StringPrintf("Hello%zu", i));
   }
 }
 

@@ -10,5 +10,4 @@ pub mod data_stats;
 pub mod diagnostics;
 pub mod events;
 pub mod inspect;
-pub mod internal_logging;
 pub mod logs;

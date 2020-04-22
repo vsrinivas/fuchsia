@@ -186,10 +186,14 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
 
   RunLoopUntil([&log_listener]() { return !log_listener.GetLogs().empty(); });
   auto& logs = log_listener.GetLogs();
-  ASSERT_EQ(logs.size(), 1u);
-  auto& msg = logs[0];
+  ASSERT_EQ(logs.size(), 2u);
+  auto& msg = logs[1];
   ASSERT_EQ(msg.tags.size(), 1u);
   ASSERT_EQ(msg.tags[0], tag);
+  auto& start_msg = logs[0];
+  ASSERT_EQ(start_msg.tags.size(), 2u);
+  ASSERT_EQ(start_msg.tags[0], "observer");
+  ASSERT_EQ(start_msg.tags[1], "archivist");
 }
 
 }  // namespace

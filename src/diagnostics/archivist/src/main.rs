@@ -8,13 +8,13 @@
 
 use {
     anyhow::{Context, Error},
-    archivist_lib::{archivist, configs, diagnostics, internal_logging, logs},
+    archivist_lib::{archivist, configs, diagnostics, logs},
     argh::FromArgs,
     fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::MissingStartupHandle,
-    fuchsia_zircon as zx,
+    fuchsia_syslog, fuchsia_zircon as zx,
     log::{info, warn},
     std::path::PathBuf,
 };
@@ -43,7 +43,9 @@ pub struct Args {
 fn main() -> Result<(), Error> {
     let opt: Args = argh::from_env();
 
-    internal_logging::init(if opt.disable_klog { "observer" } else { "archivist" });
+    let (log_client, log_server) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
+    let log_name = if opt.disable_klog { "observer" } else { "archivist" };
+    fuchsia_syslog::init_with_socket_and_name(log_client, log_name)?;
     info!("Logging started.");
 
     let mut executor = fasync::Executor::new()?;
@@ -61,6 +63,7 @@ fn main() -> Result<(), Error> {
 
     let mut archivist = archivist::Archivist::new(archivist_configuration)?;
     archivist.install_logger_services().set_event_provider(event_provider);
+    archivist.log_manager().spawn_internal_sink(log_server, log_name)?;
 
     if !opt.disable_log_connector {
         archivist.set_log_connector(connect_to_service::<LogConnectorMarker>()?);
