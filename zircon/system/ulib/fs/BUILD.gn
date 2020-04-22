@@ -5,6 +5,7 @@
 zx_library("fs") {
   sdk = "source"
   sdk_headers = [
+    "fs/dir_test_util.h",
     "fs/internal/connection.h",
     "fs/internal/directory_connection.h",
     "fs/internal/fidl_transaction.h",

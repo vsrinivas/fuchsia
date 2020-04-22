@@ -2,49 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+
 #include <fbl/vector.h>
+#include <fs/dir_test_util.h>
 #include <fs/lazy_dir.h>
 #include <fs/pseudo_file.h>
 #include <fs/vfs.h>
-#include <unittest/unittest.h>
-
-#include <utility>
+#include <zxtest/zxtest.h>
 
 namespace {
-
-class DirentChecker {
- public:
-  DirentChecker(const void* buffer, size_t length)
-      : current_(reinterpret_cast<const uint8_t*>(buffer)), remaining_(length) {}
-
-  bool ExpectEnd() {
-    BEGIN_HELPER;
-
-    EXPECT_EQ(0u, remaining_);
-
-    END_HELPER;
-  }
-
-  bool ExpectEntry(const char* name, uint32_t vtype) {
-    BEGIN_HELPER;
-
-    ASSERT_NE(0u, remaining_);
-    auto entry = reinterpret_cast<const vdirent_t*>(current_);
-    size_t entry_size = entry->size + sizeof(vdirent_t);
-    ASSERT_GE(remaining_, entry_size);
-    current_ += entry_size;
-    remaining_ -= entry_size;
-    EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(name),
-                    reinterpret_cast<const uint8_t*>(entry->name), strlen(name), "name");
-    EXPECT_EQ(VTYPE_TO_DTYPE(vtype), entry->type);
-
-    END_HELPER;
-  }
-
- private:
-  const uint8_t* current_;
-  size_t remaining_;
-};
 
 class TestLazyDirHelper : public fs::LazyDir {
  public:
@@ -78,9 +45,7 @@ class TestLazyDirHelper : public fs::LazyDir {
   fbl::Vector<TestContent> contents_;
 };
 
-bool TestLazyDir() {
-  BEGIN_TEST;
-
+TEST(LazyDir, ApiTest) {
   TestLazyDirHelper test;
 
   {
@@ -89,9 +54,9 @@ bool TestLazyDir() {
     size_t len;
 
     EXPECT_EQ(test.Readdir(&cookie, buffer, sizeof(buffer), &len), ZX_OK);
-    DirentChecker dc(buffer, len);
-    EXPECT_TRUE(dc.ExpectEntry(".", V_TYPE_DIR));
-    EXPECT_TRUE(dc.ExpectEnd());
+    fs::DirentChecker dc(buffer, len);
+    dc.ExpectEntry(".", V_TYPE_DIR);
+    dc.ExpectEnd();
   }
 
   test.AddContent({1, "test"});
@@ -101,10 +66,10 @@ bool TestLazyDir() {
     size_t len;
 
     EXPECT_EQ(test.Readdir(&cookie, buffer, sizeof(buffer), &len), ZX_OK);
-    DirentChecker dc(buffer, len);
-    EXPECT_TRUE(dc.ExpectEntry(".", V_TYPE_DIR));
-    EXPECT_TRUE(dc.ExpectEntry("test", V_TYPE_FILE));
-    EXPECT_TRUE(dc.ExpectEnd());
+    fs::DirentChecker dc(buffer, len);
+    dc.ExpectEntry(".", V_TYPE_DIR);
+    dc.ExpectEntry("test", V_TYPE_FILE);
+    dc.ExpectEnd();
 
     fbl::RefPtr<fs::Vnode> out;
     EXPECT_EQ(test.Lookup(&out, "test"), ZX_OK);
@@ -121,11 +86,11 @@ bool TestLazyDir() {
     size_t len;
 
     EXPECT_EQ(test.Readdir(&cookie, buffer, sizeof(buffer), &len), ZX_OK);
-    DirentChecker dc(buffer, len);
-    EXPECT_TRUE(dc.ExpectEntry(".", V_TYPE_DIR));
-    EXPECT_TRUE(dc.ExpectEntry("test", V_TYPE_FILE));
-    EXPECT_TRUE(dc.ExpectEntry("aaaa", V_TYPE_FILE));
-    EXPECT_TRUE(dc.ExpectEnd());
+    fs::DirentChecker dc(buffer, len);
+    dc.ExpectEntry(".", V_TYPE_DIR);
+    dc.ExpectEntry("test", V_TYPE_FILE);
+    dc.ExpectEntry("aaaa", V_TYPE_FILE);
+    dc.ExpectEnd();
 
     fbl::RefPtr<fs::Vnode> out;
     EXPECT_EQ(test.Lookup(&out, "aaaa"), ZX_OK);
@@ -141,22 +106,16 @@ bool TestLazyDir() {
     size_t len;
 
     EXPECT_EQ(test.Readdir(&cookie, buffer, sizeof(buffer), &len), ZX_OK);
-    DirentChecker dc(buffer, len);
-    EXPECT_TRUE(dc.ExpectEntry(".", V_TYPE_DIR));
-    EXPECT_TRUE(dc.ExpectEntry("aaaa", V_TYPE_FILE));
-    EXPECT_TRUE(dc.ExpectEnd());
+    fs::DirentChecker dc(buffer, len);
+    dc.ExpectEntry(".", V_TYPE_DIR);
+    dc.ExpectEntry("aaaa", V_TYPE_FILE);
+    dc.ExpectEnd();
 
     // Expect that "." is missing when reusing the cookie.
     EXPECT_EQ(test.Readdir(&cookie, buffer, sizeof(buffer), &len), ZX_OK);
-    dc = DirentChecker(buffer, len);
-    EXPECT_TRUE(dc.ExpectEnd());
+    dc = fs::DirentChecker(buffer, len);
+    dc.ExpectEnd();
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(lazy_dir_tests)
-RUN_TEST(TestLazyDir)
-END_TEST_CASE(lazy_dir_tests)
