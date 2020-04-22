@@ -222,6 +222,7 @@ void CodecFactoryImpl::CreateDecoder(
       });
   if (factory) {
     // prefer HW-accelerated
+    FX_LOGS(INFO) << "CreateDecoder() found HW decoder for: " << params.input_details().mime_type();
     (*factory)->CreateDecoder(std::move(params), std::move(decoder));
     return;
   }
@@ -241,6 +242,7 @@ void CodecFactoryImpl::CreateDecoder(
     return;
   }
 
+  FX_LOGS(INFO) << "CreateDecoder() found SW decoder for: " << params.input_details().mime_type();
   ForwardToIsolate(
       *maybe_decoder_isolate_url, component_context_,
       [&params, &decoder](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
