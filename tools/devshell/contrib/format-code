@@ -67,6 +67,7 @@ function format-cmd() {
       *.go) printf "${GO_CMD}" ;;
       *.py) printf "${PY_CMD}" ;;
       *.rs) printf "${RUST_FMT_CMD}" ;;
+      *.triage) printf "${JSON5_FMT_CMD}" ;;
     esac
   fi
 }
@@ -167,6 +168,7 @@ declare CML_FMT_CMD="${HOST_OUT_DIR}/cmc format --cml --in-place"
 declare PY_CMD="${FUCHSIA_DIR}/prebuilt/third_party/vpython/vpython ${FUCHSIA_DIR}/prebuilt/third_party/yapf/yapf --in-place"
 declare RUST_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
 declare RUST_ENTRY_POINT_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
+declare JSON5_FMT_CMD="${HOST_OUT_DIR}/formatjson5 --replace"
 
 declare FIX_HEADER_GUARDS_CMD="${FUCHSIA_DIR}/scripts/style/check-header-guards.py --fix"
 
