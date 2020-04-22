@@ -27,6 +27,17 @@ func (m mockBinModules) BuildDir() string {
 	return m.buildDir
 }
 
+func (m mockBinModules) Args() build.Args {
+	val := true
+	trueMsg, err := json.Marshal(&val)
+	if err != nil {
+		panic("was not able to marshal `true`: " + err.Error())
+	}
+	return build.Args(map[string]json.RawMessage{
+		"output_breakpad_syms": trueMsg,
+	})
+}
+
 func (m mockBinModules) Binaries() []build.Binary {
 	return m.bins
 }
@@ -48,16 +59,19 @@ func TestDebugBinaryUploads(t *testing.T) {
 			Debug:    filepath.Join(".build-id", "pr", "ebuiltA.debug"),
 			Breakpad: filepath.Join("gen", "prebuiltA.sym"),
 			OS:       "fuchsia",
+			Label:    "//prebuilt",
 		},
 		{
 			Debug:    filepath.Join(".build-id", "pr", "ebuiltA.debug"),
 			Breakpad: filepath.Join("gen", "prebuiltA.sym"),
 			OS:       "fuchsia",
+			Label:    "//prebuilt",
 		},
 		{
 			Debug:    filepath.Join(".build-id", "pr", "ebuiltB.debug"),
 			Breakpad: filepath.Join("host", "gen", "prebuiltB.sym"),
 			OS:       "linux",
+			Label:    "//prebuilt",
 		},
 	})
 	if err != nil {
@@ -71,24 +85,24 @@ func TestDebugBinaryUploads(t *testing.T) {
 				Debug:    filepath.Join(".build-id", "fi", "rst.debug"),
 				Breakpad: filepath.Join("gen", "first.sym"),
 				OS:       "fuchsia",
+				Label:    "//first",
 			},
 			{
 				Debug:    filepath.Join(".build-id", "fi", "rst.debug"),
 				Breakpad: filepath.Join("gen", "first.sym"),
 				OS:       "fuchsia",
+				Label:    "//first",
 			},
 			{
 				Debug:    filepath.Join(".build-id", "se", "cond.debug"),
 				Breakpad: filepath.Join("host", "gen", "second.sym"),
 				OS:       "linux",
+				Label:    "//second",
 			},
 			{
 				Debug: filepath.Join(".build-id", "th", "ird.debug"),
-				OS:    "fuchsia",
-			},
-			{
-				Debug: "binD",
-				OS:    "fuchsia",
+				OS:    "linux",
+				Label: "//third",
 			},
 		},
 		pbins: []build.PrebuiltBinaries{
@@ -155,7 +169,7 @@ func TestDebugBinaryUploads(t *testing.T) {
 			Deduplicate: true,
 		},
 	}
-	expectedIDs := []string{"first", "third", "prebuiltA"}
+	expectedIDs := []string{"first", "prebuiltA"}
 
 	actualUploads, actualIDs, err := debugBinaryUploads(m, "NAMESPACE")
 	if err != nil {

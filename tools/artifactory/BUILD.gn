@@ -40,6 +40,7 @@ go_library("lib") {
   deps = [
     "//tools/build",
     "//tools/lib/logger",
+    "//tools/lib/osmisc",
   ]
 }
 

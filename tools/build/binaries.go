@@ -82,7 +82,11 @@ func (binary Binary) ELFBuildID(buildDir string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("failed to read binary's build ID file: %w", err)
 			}
-			return strings.TrimSpace(string(content)), nil
+			trimmed := strings.TrimSpace(string(content))
+			if trimmed == "" {
+				return "", ErrBuildIDNotFound
+			}
+			return trimmed, nil
 		} else if !os.IsNotExist(err) {
 			// It is WAI that there are binary entries that don't correspond to
 			// anything that was actually built (i.e., was in the GN graph, but
