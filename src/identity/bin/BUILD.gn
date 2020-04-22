@@ -8,8 +8,13 @@ import("//build/testing/environments.gni")
 group("bin") {
   testonly = true
   deps = [
-    ":core",
     ":identity_bin_unittests",
+    "account_handler",
+    "account_manager",
+    "dev_auth_provider",
+    "dev_authenticator",
+    "google_auth_provider",
+    "token_manager_factory",
   ]
 }
 
@@ -51,12 +56,32 @@ test_package("identity_bin_unittests") {
   ]
 }
 
-# Core is the group that is included into the core product definition.
-group("core") {
+# Modular is included in products based on the modular framework. This is a
+# transitional set that will shrink to empty as Identity is disentangled from
+# modular.
+group("modular") {
+  public_deps = [
+    "account_handler",
+    "account_manager",
+  ]
+}
+
+# Tier 1 should be included in products that only require token management
+# without support for platform-level accounts or authentication.
+group("tier_1") {
+  public_deps = [
+    "google_auth_provider",
+    "token_manager_factory",
+  ]
+}
+
+# Tier 2 should be included in products that require platform-level accounts
+# (i.e. representations of the people using the Fuchsia device). It provides
+# authentication, data isolation, and token management for these accounts.
+group("tier_2") {
   public_deps = [
     "account_handler",
     "account_manager",
     "account_manager:account_manager_auth_providers",
-    "token_manager_factory",
   ]
 }
