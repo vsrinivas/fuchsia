@@ -65,10 +65,24 @@ constexpr char kRenderUsageGainDefaultDb[] = "0.0";
 constexpr char kRenderUsageVolumeSwitch[] = "usage-vol";
 constexpr char kRenderUsageVolumeDefault[] = "0.50";
 
+constexpr char kUltrasoundSwitch[] = "ultrasound";
+
 constexpr char kVerboseSwitch[] = "v";
 
 constexpr char kHelpSwitch[] = "help";
 constexpr char kHelp2Switch[] = "?";
+
+constexpr std::array<const char*, 16> kUltrasoundInvalidOptions = {
+    kNumChannelsSwitch,          kInt16FormatSwitch,
+    kInt24FormatSwitch,          kFrameRateSwitch,
+    kOptimalClockSwitch,         kMonotonicClockSwitch,
+    kCustomClockSwitch,          kClockRateSwitch,
+    kStreamGainSwitch,           kStreamMuteSwitch,
+    kStreamRampSwitch,           kStreamRampDurationSwitch,
+    kStreamRampTargetGainSwitch, kRenderUsageSwitch,
+    kRenderUsageGainSwitch,      kRenderUsageVolumeSwitch,
+};
+
 }  // namespace
 
 void usage(const char* prog_name) {
@@ -158,6 +172,8 @@ void usage(const char* prog_name) {
          kRenderUsageVolumeSwitch, fuchsia::media::audio::MIN_VOLUME,
          fuchsia::media::audio::MAX_VOLUME, kRenderUsageVolumeDefault);
 
+  printf("\n  --%s\t\t Play signal using an ultrasound renderer\n", kUltrasoundSwitch);
+
   printf("\n  --%s\t\t\t Display per-packet information\n", kVerboseSwitch);
 
   printf("  --%s, --%s\t\t Show this message\n\n", kHelpSwitch, kHelp2Switch);
@@ -179,6 +195,18 @@ int main(int argc, const char** argv) {
 
   if (command_line.HasOption(kVerboseSwitch)) {
     media_app.set_verbose(true);
+  }
+
+  if (command_line.HasOption(kUltrasoundSwitch)) {
+    media_app.set_ultrasound(true);
+
+    for (auto& invalid_option : kUltrasoundInvalidOptions) {
+      if (command_line.HasOption(std::string(invalid_option))) {
+        fprintf(stderr, "--ultrasound cannot be used with --%s\n", invalid_option);
+        usage(argv[0]);
+        return 1;
+      }
+    }
   }
 
   // Handle channels and frame-rate
@@ -212,9 +240,9 @@ int main(int argc, const char** argv) {
                              return usage_option == usage_string_and_usage.first;
                            });
     if (it == kRenderUsageOptions.cend()) {
-      printf("Unrecognized AudioRenderUsage %s\n\n", usage_option.c_str());
+      fprintf(stderr, "Unrecognized AudioRenderUsage %s\n\n", usage_option.c_str());
       usage(argv[0]);
-      return 0;
+      return 1;
     }
     media_app.set_usage(it->second);
   }

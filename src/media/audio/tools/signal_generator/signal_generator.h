@@ -103,6 +103,7 @@ class MediaApp {
   }
 
   void set_verbose(bool verbose) { verbose_ = verbose; }
+  void set_ultrasound(bool ultrasound) { ultrasound_ = ultrasound; }
 
   void Run(sys::ComponentContext* app_context);
 
@@ -114,7 +115,8 @@ class MediaApp {
   void SetAudioCoreSettings(sys::ComponentContext* app_context);
   void AcquireAudioRenderer(sys::ComponentContext* app_context);
   void SetAudioRendererEvents();
-  void ConfigureAudioRenderer();
+  void InitializeAudibleRenderer();
+  void ConfigureAudioRendererPts();
   void InitializeWavWriter();
   void CreateMemoryMapping();
 
@@ -209,6 +211,8 @@ class MediaApp {
   float usage_volume_;
 
   bool verbose_ = false;
+
+  bool ultrasound_ = false;
 };
 
 }  // namespace media::tools

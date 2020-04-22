@@ -3,6 +3,7 @@
 
 #include "src/media/audio/tools/signal_generator/signal_generator.h"
 
+#include <fuchsia/ultrasound/cpp/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/clock.h>
 
@@ -70,17 +71,14 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
   // Check the cmdline flags; exit if any are invalid or out-of-range.
   ParameterRangeChecks();
 
+  SetAudioCoreSettings(app_context);
+  AcquireAudioRenderer(app_context);
+
   // Calculate the frame size, number of packets, and shared-buffer size.
   SetupPayloadCoefficients();
 
   // Show a summary of all our settings: exactly what we are about to do.
   DisplayConfigurationSettings();
-
-  SetAudioCoreSettings(app_context);
-  AcquireAudioRenderer(app_context);
-
-  // Set our render stream format, plus other settings as needed: gain, clock, continuity threshold
-  ConfigureAudioRenderer();
 
   // If requested, configure a WavWriter that will concurrently write this signal to a WAV file.
   InitializeWavWriter();
@@ -324,31 +322,58 @@ void MediaApp::SetAudioCoreSettings(sys::ComponentContext* app_context) {
 // Use ComponentContext to acquire AudioPtr; use that to acquire AudioRendererPtr in turn. Set
 // AudioRenderer error handler, in case of channel closure.
 void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
-  // Audio interface is needed to create AudioRenderer and set routing policy.
-  fuchsia::media::AudioPtr audio;
-  app_context->svc()->Connect(audio.NewRequest());
+  if (ultrasound_) {
+    fuchsia::ultrasound::FactorySyncPtr ultrasound_factory;
+    app_context->svc()->Connect(ultrasound_factory.NewRequest());
 
-  audio->CreateAudioRenderer(audio_renderer_.NewRequest());
+    zx::clock reference_clock;
+    fuchsia::media::AudioStreamType stream_type;
+    ultrasound_factory->CreateRenderer(audio_renderer_.NewRequest(), &reference_clock,
+                                       &stream_type);
+    frame_rate_ = stream_type.frames_per_second;
+    num_channels_ = stream_type.channels;
+    sample_format_ = stream_type.sample_format;
+  } else {
+    // Audio interface is needed to create AudioRenderer and set routing policy.
+    fuchsia::media::AudioPtr audio;
+    app_context->svc()->Connect(audio.NewRequest());
 
-  SetAudioRendererEvents();
+    audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
-  if (set_stream_mute_ || set_stream_gain_ || ramp_stream_gain_) {
-    audio_renderer_->BindGainControl(gain_control_.NewRequest());
-    gain_control_.set_error_handler([this](zx_status_t status) {
-      CLI_CHECK(Shutdown(),
-                "Client connection to fuchsia.media.audio.GainControl failed: " << status);
-    });
+    if (set_stream_mute_ || set_stream_gain_ || ramp_stream_gain_) {
+      audio_renderer_->BindGainControl(gain_control_.NewRequest());
+      gain_control_.set_error_handler([this](zx_status_t status) {
+        CLI_CHECK(Shutdown(),
+                  "Client connection to fuchsia.media.audio.GainControl failed: " << status);
+      });
+    }
+
+    // Set our render stream format, plus other settings as needed: gain, clock, continuity
+    // threshold
+    InitializeAudibleRenderer();
+
+    // ... now just let the instance of audio go out of scope.
+    //
+    // Although we could technically call gain_control_'s SetMute|SetGain|SetGainWithRamp here and
+    // then disconnect it (like we do for audio_core and audio), we instead maintain our GainControl
+    // throughout playback, just in case we someday want to change gain during playback.
   }
 
-  // ... now just let the instance of audio go out of scope.
-  //
-  // Although we could technically call gain_control_'s SetMute|SetGain|SetGainWithRamp here and
-  // then disconnect it (like we do for audio_core and audio), we instead maintain our GainControl
-  // throughout playback, just in case we someday want to change gain during playback.
+  SetAudioRendererEvents();
+  ConfigureAudioRendererPts();
+}
+
+void MediaApp::ConfigureAudioRendererPts() {
+  if (use_pts_) {
+    audio_renderer_->SetPtsUnits(frame_rate_, 1);
+  }
+  if (set_continuity_threshold_) {
+    audio_renderer_->SetPtsContinuityThreshold(pts_continuity_threshold_secs_);
+  }
 }
 
 // Set the AudioRenderer's audio format, plus other settings requested by command line
-void MediaApp::ConfigureAudioRenderer() {
+void MediaApp::InitializeAudibleRenderer() {
   CLI_CHECK(audio_renderer_, "audio_renderer must not be null");
 
   fuchsia::media::AudioStreamType format;
@@ -390,13 +415,6 @@ void MediaApp::ConfigureAudioRenderer() {
     audio_renderer_->SetReferenceClock(std::move(reference_clock_to_set));
   }
   // we retrieve the reference clock later in GetClockAndStart
-
-  if (use_pts_) {
-    audio_renderer_->SetPtsUnits(frame_rate_, 1);
-  }
-  if (set_continuity_threshold_) {
-    audio_renderer_->SetPtsContinuityThreshold(pts_continuity_threshold_secs_);
-  }
 
   audio_renderer_->SetUsage(usage_);
 

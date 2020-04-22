@@ -77,6 +77,8 @@ These optional parameters are interpreted as follows:
     --usage-gain[=<DB>]      Set render usage gain, in dB (min -160.0, max 0.0, default 0.0)
     --usage-vol[=<VOLUME>]   Set render usage volume (min 0.0, max 1.0, default 0.50)
 
+    --ultrasound             Play signal using an ultrasound renderer
+
     --v                      Display per-packet information
     --help, --?              Show this message
 
