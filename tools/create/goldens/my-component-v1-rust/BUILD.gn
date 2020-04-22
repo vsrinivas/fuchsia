@@ -13,7 +13,7 @@ import("//build/testing/environments.gni")
 
 group("my-component-v1-rust") {
   testonly = true
-  deps = [
+  public_deps = [
     ":pkg",
     ":tests",
   ]
@@ -21,7 +21,7 @@ group("my-component-v1-rust") {
 
 group("tests") {
   testonly = true
-  deps = [ ":my-component-v1-rust-tests" ]
+  public_deps = [ ":my-component-v1-rust-tests" ]
 }
 
 rustc_binary("bin") {
