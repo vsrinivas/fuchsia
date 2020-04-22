@@ -16,7 +16,7 @@ List<TestCaseResults> temperatureMetricsProcessor(
   final duration = getTotalTraceDuration(model);
   if (duration < TimeDelta.fromMilliseconds(10100)) {
     _log.info(
-        'Trace duration (${duration.toMilliseconds()} millisecconds) is too short to provide temperature information');
+        'Trace duration (${duration.toMilliseconds()} milliseconds) is too short to provide temperature information');
     return [];
   }
   final temperatureReadings = getArgValuesFromEvents<num>(

@@ -16,7 +16,7 @@ List<TestCaseResults> cpuMetricsProcessor(
   final duration = getTotalTraceDuration(model);
   if (duration < TimeDelta.fromMilliseconds(1100)) {
     _log.info(
-        'Trace duration (${duration.toMilliseconds()} millisecconds) is too short to provide CPU information');
+        'Trace duration (${duration.toMilliseconds()} milliseconds) is too short to provide CPU information');
     return [];
   }
   final cpuPercentages = getArgValuesFromEvents<double>(
