@@ -827,14 +827,12 @@ func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstac
 	// will be *int regardless of the value of the pointer: (T=*int, V=nil). Such
 	// an interface value will therefore be non-nil even when the pointer value V
 	// inside is nil.
-	var ndpDispImpl tcpipstack.NDPDispatcher
-	if ndpDisp != nil {
-		ndpDispImpl = ndpDispImpl
+	if ndpDisp == nil {
+		return newNetstackWithStackNDPDispatcher(t, nil)
 	}
-	ns := newNetstackWithStackNDPDispatcher(t, ndpDispImpl)
-	if ndpDisp != nil {
-		ndpDisp.ns = ns
-	}
+
+	ns := newNetstackWithStackNDPDispatcher(t, ndpDisp)
+	ndpDisp.ns = ns
 	return ns
 }
 
