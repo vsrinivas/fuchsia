@@ -104,7 +104,7 @@ To get Fuchsia running on hardware, see
 ### Set up the emulator
 
 If you don't have supported hardware, you can run Fuchsia in an emulator using
-[QEMU](/docs/development/run/qemu.md).
+[FEMU](/docs/development/run/femu.md).
 
 #### Configure network
 
@@ -113,7 +113,7 @@ an IPv6 network.
 
 ##### Linux
 
-To enable networking in QEMU, run the following commands:
+To enable networking in FEMU, run the following commands:
 
 ```sh
 sudo ip tuntap add dev qemu mode tap user $USER
@@ -229,9 +229,6 @@ To test Fuchsia on your device, see
 [Running tests as components](/docs/development/testing/running_tests_as_components.md).
 
 ## Launch a graphical component
-
-Warning: QEMU doesn't support Vulkan and therefore cannot run the graphics
-stack. Commands in this section don't work on QEMU.
 
 Most graphical components in Fuchsia use the
 [Scenic](/docs/concepts/graphics/scenic/scenic.md) system compositor. You can
