@@ -59,14 +59,16 @@ class _MyHomePageState extends State<MyHomePage> {
           setState(() {
             _touchCounter++; // Trigger color change on DOWN event.
           });
-          _respond(); // Notify test that input was seen.
+          _respond(fidl_test_ui.PointerData(
+              localX: data.physicalX,
+              localY: data.physicalY)); // Notify test that input was seen.
         }
       }
     };
   }
 
-  void _respond() async {
-    await _responseListener.respond();
+  void _respond(fidl_test_ui.PointerData pointerData) async {
+    await _responseListener.respond(pointerData);
   }
 
   @override

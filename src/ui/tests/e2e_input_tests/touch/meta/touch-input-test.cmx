@@ -11,6 +11,9 @@
         "binary": "test/touch-input-test"
     },
     "sandbox": {
+        "features": [
+            "config-data"
+        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

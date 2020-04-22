@@ -4,9 +4,18 @@
 
 library fuchsia.test.ui;
 
+/// A set of pointer event-related data that is returned to the test for verification.
+table PointerData {
+    /// The horizontal coordinate reported in the client's coordinate system.
+    1: float64 local_x;
+
+    /// The vertical coordinate reported in the client's coordinate system.
+    2: float64 local_y;
+};
+
 /// A test-specific scheme to gather signal from the client-under-test.
 [Discoverable]
 protocol ResponseListener {
     /// Notify the test that client-under-test has received expected input.
-    Respond();
+    Respond(PointerData pointer_data);
 };

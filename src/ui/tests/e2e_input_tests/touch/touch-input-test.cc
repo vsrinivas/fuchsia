@@ -5,12 +5,13 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/test/ui/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -60,8 +61,10 @@ using GfxEvent = fuchsia::ui::gfx::Event;
 constexpr zx::duration kTimeout = zx::min(5);
 
 // Fuchsia components that this test launches.
+// Root presenter is included in this test's package so the two components have the same
+// /config/data. This allows the test to control the display rotation read by root presenter.
 constexpr char kRootPresenter[] =
-    "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx";
+    "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cmx";
 constexpr char kScenic[] = "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx";
 
 class TouchInputTest : public sys::testing::TestWithEnvironment, public ResponseListener {
@@ -86,24 +89,25 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
         launch.arguments.emplace();
         launch.arguments->push_back("--verbose=2");
       }
-      is_ok = services->AddServiceWithLaunchInfo(std::move(launch), "fuchsia.ui.scenic.Scenic");
+      is_ok =
+          services->AddServiceWithLaunchInfo(std::move(launch), fuchsia::ui::scenic::Scenic::Name_);
       FXL_CHECK(is_ok == ZX_OK);
     }
 
     // Set up Root Presenter inside the test environment.
     is_ok = services->AddServiceWithLaunchInfo({.url = kRootPresenter},
-                                               "fuchsia.ui.input.InputDeviceRegistry");
+                                               fuchsia::ui::input::InputDeviceRegistry::Name_);
     FXL_CHECK(is_ok == ZX_OK);
 
-    is_ok =
-        services->AddServiceWithLaunchInfo({.url = kRootPresenter}, "fuchsia.ui.policy.Presenter");
+    is_ok = services->AddServiceWithLaunchInfo({.url = kRootPresenter},
+                                               fuchsia::ui::policy::Presenter::Name_);
     FXL_CHECK(is_ok == ZX_OK);
 
     // Tunnel through some system services; these are needed for Scenic.
-    is_ok = services->AllowParentService("fuchsia.sysmem.Allocator");
+    is_ok = services->AllowParentService(fuchsia::sysmem::Allocator::Name_);
     FXL_CHECK(is_ok == ZX_OK);
 
-    is_ok = services->AllowParentService("fuchsia.vulkan.loader.Loader");
+    is_ok = services->AllowParentService(fuchsia::vulkan::loader::Loader::Name_);
     FXL_CHECK(is_ok == ZX_OK);
 
     test_env_ = CreateNewEnclosingEnvironment("touch_input_test_env", std::move(services),
@@ -132,14 +136,14 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
     view_holder_ = std::make_unique<scenic::ViewHolder>(session_.get(), std::move(token), name);
   }
 
-  void SetRespondCallback(fit::function<void()> callback) {
+  void SetRespondCallback(fit::function<void(fuchsia::test::ui::PointerData)> callback) {
     respond_callback_ = std::move(callback);
   }
 
   // |fuchsia::test::ui::ResponseListener|
-  void Respond() override {
+  void Respond(fuchsia::test::ui::PointerData pointer_data) override {
     FXL_CHECK(respond_callback_) << "Expected callback to be set for Respond().";
-    respond_callback_();
+    respond_callback_(std::move(pointer_data));
   }
 
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
@@ -157,14 +161,19 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
     auto registry = test_env()->ConnectToService<fuchsia::ui::input::InputDeviceRegistry>();
     fuchsia::ui::input::InputDevicePtr connection;
     registry->RegisterDevice(std::move(device), connection.NewRequest());
+    FXL_LOG(INFO) << "Registered touchscreen with x touch range = (-1000, 1000) "
+                  << "and y touch range = (-1000, 1000).";
 
     // Inject one input report, then a conclusion (empty) report.
     {
+      // RotateTouchEvent() depends on this sending a touch event at the same location.
       auto touch = fuchsia::ui::input::TouchscreenReport::New();
-      *touch = {.touches = {{.finger_id = 1, .x = 0, .y = 0}}};  // screen center
+      *touch = {
+          .touches = {{.finger_id = 1, .x = 500, .y = -500}}};  // center of top right quadrant
       // Use system clock, instead of dispatcher clock, for measurement purposes.
       InputReport report{.event_time = RealNow(), .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
+      FXL_LOG(INFO) << "Dispatching touch report at (500, -500)";
     }
 
     {
@@ -205,17 +214,50 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
   // Child view's ViewHolder.
   std::unique_ptr<scenic::ViewHolder> view_holder_;
 
-  fit::function<void()> respond_callback_;
+  fit::function<void(fuchsia::test::ui::PointerData)> respond_callback_;
 };
 
 TEST_F(TouchInputTest, FlutterTap) {
   const std::string kOneFlutter = "fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx";
+  uint32_t display_width = 0;
+  uint32_t display_height = 0;
 
-  // Define response when Flutter calls back with "Respond()".
-  SetRespondCallback([this] {
-    FXL_LOG(INFO) << "*** PASS ***";
-    QuitLoop();
-  });
+  // Get the display dimensions
+  auto scenic = test_env()->ConnectToService<fuchsia::ui::scenic::Scenic>();
+  scenic->GetDisplayInfo(
+      [&display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
+        display_width = display_info.width_in_px;
+        display_height = display_info.height_in_px;
+        FXL_LOG(INFO) << "Got display_width = " << display_width
+                      << " and display_height = " << display_height;
+      });
+  RunLoopUntil(
+      [&display_width, &display_height] { return display_width != 0 && display_height != 0; });
+
+  // Define test expectations for when Flutter calls back with "Respond()".
+  SetRespondCallback(
+      [this, display_width, display_height](fuchsia::test::ui::PointerData pointer_data) {
+        // The /config/data/display_rotation (90) specifies how many degrees to rotate the
+        // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
+        // the user observes the child view to rotate *clockwise* by that amount (90).
+        //
+        // Hence, a tap in the center of the display's top-right quadrant is observed by the child
+        // view as a tap in the center of its top-left quadrant.
+        float expected_x = display_height / 4.f;
+        float expected_y = display_width / 4.f;
+
+        FXL_LOG(INFO) << "Flutter received tap at (" << pointer_data.local_x() << ", "
+                      << pointer_data.local_y() << ").";
+        FXL_LOG(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
+                      << ").";
+
+        // Allow for minor rounding differences in coordinates.
+        EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
+        EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
+
+        FXL_LOG(INFO) << "*** PASS ***";
+        QuitLoop();
+      });
 
   // Define when to set size for Flutter's view, and when to inject input against Flutter's view.
   scenic::Session::EventHandler handler = [this](std::vector<fuchsia::ui::scenic::Event> events) {
@@ -251,7 +293,6 @@ TEST_F(TouchInputTest, FlutterTap) {
                                        /* presentation */ nullptr);
 
   // Set up test's View, to harvest Flutter view's view_state.is_rendering signal.
-  auto scenic = test_env()->ConnectToService<fuchsia::ui::scenic::Scenic>();
   auto session_pair = scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get());
   MakeSession(std::move(session_pair.first), std::move(session_pair.second));
   session()->set_event_handler(std::move(handler));
