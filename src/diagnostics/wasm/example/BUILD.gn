@@ -1,0 +1,58 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+import("//src/diagnostics/wasm/wasm_bindings.gni")
+
+group("example") {
+  deps = [
+    ":lib",
+    ":lib($unknown_wasm32_toolchain)",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":wasm-example-unittests" ]
+}
+
+# We need to specify configs
+config("env") {
+  rustenv = [
+    "CARGO_PKG_NAME=\"example_lib\"",
+    "CARGO_PKG_VERSION=\"0.1\"",
+    "CARGO_MANIFEST_DIR=\"/\"",
+  ]
+}
+
+rustc_library("lib") {
+  name = "example_lib"
+  edition = "2018"
+
+  configs += [ ":env" ]
+
+  deps = [ "//third_party/rust_crates:wasm-bindgen" ]
+}
+
+rustc_test("example_lib_tests") {
+  edition = "2018"
+}
+
+unittest_package("wasm-example-unittests") {
+  deps = [ ":example_lib_tests" ]
+  tests = [
+    {
+      name = "example_lib_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+wasm_bindings("lib_wasm") {
+  target = ":lib"
+  target_output_name = "example_lib"
+}

@@ -9,6 +9,7 @@ group("diagnostics") {
     "archivist",
     "config",
     "examples",
+    "wasm",
   ]
 }
 
@@ -25,6 +26,7 @@ group("tests") {
     "streams:tests",
     "tool:host_tests",
     "triage:tests",
+    "wasm:tests",
 
     # "transit_bench",
   ]

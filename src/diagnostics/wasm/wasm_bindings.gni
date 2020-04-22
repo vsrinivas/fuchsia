@@ -1,0 +1,84 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/rust/config.gni")
+cargo_bin_path =
+    rebase_path("//prebuilt/third_party/rust/${host_platform}/bin/cargo")
+
+# Generates bindings for a WASM file.
+#
+# Parameters
+#
+#   target (required)
+#     [label] The library target to create bindings for.
+#
+#   target_output_name (optional)
+#     [string] The output name to expect, if different from the target label name.
+#
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+#
+# Example of usage:
+#
+#   wasm_bindings(format) {
+#     target = ":lib"
+#   }
+template("wasm_bindings") {
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    target = invoker.target
+    deps += [ "${target}($unknown_wasm32_toolchain)" ]
+    dep_out_dir =
+        get_label_info("${target}($unknown_wasm32_toolchain)", "target_out_dir")
+
+    if (defined(invoker.target_output_name)) {
+      dep_name = invoker.target_output_name
+    } else {
+      dep_name = get_label_info(invoker.target, "name")
+    }
+
+    file_name = ""
+    if (dep_name == "lib") {
+      file_name = rebase_path("${dep_out_dir}/lib.wasm")
+    } else {
+      file_name = rebase_path("${dep_out_dir}/lib${dep_name}.wasm")
+    }
+
+    tool = "//src/diagnostics/wasm/bindgen:bin"
+    tool_output_name = "fx_wasm_bindgen"
+
+    output_dir = rebase_path("$dep_out_dir/$target_name")
+
+    #sources = [ invoker.data ]
+
+    args = [
+      file_name,
+      rebase_path(output_dir, root_build_dir),
+    ]
+
+    output_file_name = get_path_info(file_name, "name")
+
+    outputs = [
+      "$target_out_dir/$target_name/${output_file_name}_bg.d.ts",
+      "$target_out_dir/$target_name/${output_file_name}_bg.wasm",
+      "$target_out_dir/$target_name/${output_file_name}.d.ts",
+      "$target_out_dir/$target_name/${output_file_name}.js",
+    ]
+  }
+}
