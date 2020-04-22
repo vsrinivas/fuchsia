@@ -73,29 +73,58 @@ func TestMultiplyShards(t *testing.T) {
 		}
 	}
 
-	t.Run("multiply tests in shards", func(t *testing.T) {
-		shards := []*Shard{
-			shard(env1, "fuchsia", 1),
-			shard(env2, "fuchsia", 1, 2, 4),
-			shard(env3, "linux", 3),
-		}
-		multipliers := []TestModifier{
-			makeTestModifier(1, "fuchsia", 5),
-			makeTestModifier(3, "linux", 3),
-		}
-		actual := MultiplyShards(
-			shards,
-			multipliers,
-		)
-		expected := append(
-			shards,
-			// We multiplied the test with id 1 five times from the first two shards.
-			multShard(env1, "fuchsia", 1, 5),
-			multShard(env2, "fuchsia", 1, 5),
-			multShard(env3, "linux", 3, 3),
-		)
-		assertEqual(t, expected, actual)
-	})
+	testCases := []struct {
+		name        string
+		shards      []*Shard
+		multipliers []TestModifier
+		expected    []*Shard
+	}{
+		{
+			name: "empty os matches any os",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+				shard(env3, "linux", 1),
+			},
+			multipliers: []TestModifier{
+				makeTestModifier(1, "", 5),
+			},
+			expected: []*Shard{
+				multShard(env1, "fuchsia", 1, 5),
+				multShard(env3, "linux", 1, 5),
+			},
+		},
+		{
+			name: "checks every shard",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+				shard(env2, "fuchsia", 1, 2, 4),
+				shard(env3, "linux", 3),
+			},
+			multipliers: []TestModifier{
+				makeTestModifier(1, "fuchsia", 5),
+				makeTestModifier(3, "linux", 3),
+			},
+			expected: []*Shard{
+				// We multiplied the test with id 1 five times from the first two shards.
+				multShard(env1, "fuchsia", 1, 5),
+				multShard(env2, "fuchsia", 1, 5),
+				multShard(env3, "linux", 3, 3),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// `expected` includes only the multiplied shards, but we want to make
+			// sure multiplication of shards leaves the original shards as-is.
+			expected := append(tc.shards, tc.expected...)
+			actual := MultiplyShards(
+				tc.shards,
+				tc.multipliers,
+			)
+			assertEqual(t, expected, actual)
+		})
+	}
 }
 
 func max(a, b int) int {

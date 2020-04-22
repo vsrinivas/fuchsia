@@ -77,13 +77,18 @@ func MultiplyShards(shards []*Shard, multipliers []TestModifier) []*Shard {
 	for _, shard := range shards {
 		for _, multiplier := range multipliers {
 			for _, test := range shard.Tests {
-				if multiplier.Name == test.Name && multiplier.OS == test.OS {
-					shards = append(shards, &Shard{
-						Name:  "multiplied:" + shard.Name + "-" + normalizeTestName(test.Name),
-						Tests: multiplyTest(test, multiplier.TotalRuns),
-						Env:   shard.Env,
-					})
+				if multiplier.Name != test.Name {
+					continue
 				}
+				// An empty OS matches all OSes.
+				if multiplier.OS != "" && multiplier.OS != test.OS {
+					continue
+				}
+				shards = append(shards, &Shard{
+					Name:  "multiplied:" + shard.Name + "-" + normalizeTestName(test.Name),
+					Tests: multiplyTest(test, multiplier.TotalRuns),
+					Env:   shard.Env,
+				})
 			}
 		}
 	}

@@ -80,8 +80,7 @@ func TestLoadTestModifiers(t *testing.T) {
 	// If TotalRuns is missing, it gets set to default 1.
 	bazOut.TotalRuns = 1
 	barOut := barTestModifier
-	// If OS is missing, it gets set to default Fuchsia.
-	barOut.OS = "fuchsia"
+	barOut.OS = ""
 	expected := []TestModifier{barOut, bazOut, parsedDeprecatedTestModifier}
 
 	if !areEqual(expected, actual) {
