@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.audio") {
+  sdk_category = "partner"
+
   sources = [
     "audio.fidl",
     "ring_buffer.fidl",
