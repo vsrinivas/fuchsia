@@ -20,7 +20,7 @@ declare_args() {
     asan_default_options = "detect_leaks=0"
   }
 
-  # Default [UndefinedBehaviorSanitizer](https://llvm.org/docs/UndefinedBehaviorSanitizer.html)
+  # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
   # options (before the `UBSAN_OPTIONS` environment variable is read at
   # runtime).  This can be set as a build argument to affect most "ubsan"
   # variants in `known_variants` (which see), or overridden in
