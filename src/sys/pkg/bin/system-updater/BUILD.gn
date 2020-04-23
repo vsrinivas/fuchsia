@@ -23,6 +23,8 @@ rustc_binary("bin") {
 }
 
 package("system-updater") {
+  deprecated_misc_storage = "//build"
+
   deps = [ ":bin" ]
 
   binaries = [
