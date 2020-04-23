@@ -100,6 +100,12 @@ pub enum ServerError {
     #[error("missing required dhcp option: {:?}", _0)]
     MissingRequiredDhcpOption(OptionCode),
 
+    #[error("missing server identifier in response")]
+    // According to RFC 2131, page 28, all server responses MUST include server identifier.
+    //
+    // https://tools.ietf.org/html/rfc2131#page-29
+    MissingServerIdentifier,
+
     #[error("unable to get system time")]
     // The underlying error is not provided to this variant as it (std::time::SystemTimeError) does
     // not implement PartialEq.
@@ -570,18 +576,36 @@ impl Server {
         }
     }
 
+    /// Determines the server identifier to use in DHCP responses. This
+    /// identifier is also the address the server should use to communicate with
+    /// the client.
+    ///
+    /// RFC 2131, Section 4.1, https://tools.ietf.org/html/rfc2131#section-4.1
+    ///
+    ///   The 'server identifier' field is used both to identify a DHCP server
+    ///   in a DHCP message and as a destination address from clients to
+    ///   servers.  A server with multiple network addresses MUST be prepared
+    ///   to to accept any of its network addresses as identifying that server
+    ///   in a DHCP message.  To accommodate potentially incomplete network
+    ///   connectivity, a server MUST choose an address as a 'server
+    ///   identifier' that, to the best of the server's knowledge, is reachable
+    ///   from the client.  For example, if the DHCP server and the DHCP client
+    ///   are connected to the same subnet (i.e., the 'giaddr' field in the
+    ///   message from the client is zero), the server SHOULD select the IP
+    ///   address the server is using for communication on that subnet as the
+    ///   'server identifier'.
     fn get_server_ip(&self, req: &Message) -> Result<Ipv4Addr, ServerError> {
-        match req
-            .options
-            .iter()
-            .filter_map(|opt| match opt {
-                DhcpOption::ServerIdentifier(v) => Some(v),
-                _ => None,
-            })
-            .next()
-        {
-            Some(v) if self.params.server_ips.contains(v) => Ok(*v),
-            _ => Ok(*self.params.server_ips.first().ok_or(ServerError::ServerMissingIpAddr)?),
+        match get_server_id_from(&req) {
+            Some(addr) => {
+                if self.params.server_ips.contains(&addr) {
+                    Ok(addr)
+                } else {
+                    Err(ServerError::IncorrectDHCPServer(addr))
+                }
+            }
+            // TODO(fxbug.dev/21423): This IP should be chosen based on the
+            // subnet of the client.
+            None => Ok(*self.params.server_ips.first().ok_or(ServerError::ServerMissingIpAddr)?),
         }
     }
 
@@ -1113,19 +1137,11 @@ fn get_requested_ip_addr(req: &Message) -> Option<Ipv4Addr> {
         .next()
 }
 
-fn get_server_id_from(req: &Message) -> Option<Ipv4Addr> {
-    req.options
-        .iter()
-        .filter_map(
-            |opt| {
-                if let DhcpOption::ServerIdentifier(addr) = opt {
-                    Some(*addr)
-                } else {
-                    None
-                }
-            },
-        )
-        .next()
+pub fn get_server_id_from(req: &Message) -> Option<Ipv4Addr> {
+    req.options.iter().find_map(|opt| match opt {
+        DhcpOption::ServerIdentifier(addr) => Some(*addr),
+        _ => None,
+    })
 }
 
 #[cfg(test)]

@@ -103,7 +103,7 @@ group("netstack_integration_tests") {
     ":device_name_provider",
 
     # dhcpd is used to test DHCP address acquisition.
-    "//src/connectivity/network/dhcp:dhcpd",
+    "//src/connectivity/network/dhcp:dhcpd-testing",
 
     # netstack{,3} is under test.
     "//src/connectivity/network/netstack",

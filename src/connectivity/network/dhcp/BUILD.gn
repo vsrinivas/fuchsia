@@ -90,13 +90,35 @@ package("dhcpd") {
       path = rebase_path("data/default_config.json")
       dest = "config.json"
     },
+  ]
+  binaries = [
+    {
+      name = "dhcpd"
+    },
+  ]
+}
+
+package("dhcpd-testing") {
+  testonly = true
+  deps = [ ":bin" ]
+  meta = [
+    {
+      path = rebase_path("meta/dhcpd.cmx")
+      dest = "dhcpd-testing.cmx"
+    },
+  ]
+  resources = [
     {
       path = rebase_path("data/test_config.json")
       dest = "test_config.json"
     },
     {
-      path = rebase_path("data/bound_device_test_config.json")
-      dest = "bound_device_test_config.json"
+      path = rebase_path("data/bound_device_test_config_eth2.json")
+      dest = "bound_device_test_config_eth2.json"
+    },
+    {
+      path = rebase_path("data/bound_device_test_config_eth3.json")
+      dest = "bound_device_test_config_eth3.json"
     },
   ]
   binaries = [
@@ -130,7 +152,7 @@ group("tests") {
   deps = [
     ":dhcp",
     ":dhcp_tests",
-    ":dhcpd",
+    ":dhcpd-testing",
     ":dhcpd_tests",
   ]
 }

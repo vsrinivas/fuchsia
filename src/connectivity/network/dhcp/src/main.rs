@@ -10,7 +10,10 @@ use {
     dhcp::{
         configuration,
         protocol::{Message, SERVER_PORT},
-        server::{Server, ServerAction, ServerDispatcher, DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX},
+        server::{
+            get_server_id_from, Server, ServerAction, ServerDispatcher, ServerError,
+            DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX,
+        },
     },
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
     fuchsia_component::server::ServiceFs,
@@ -19,6 +22,8 @@ use {
     net2::unix::UnixUdpBuilderExt,
     std::{
         cell::RefCell,
+        collections::hash_map::Entry,
+        collections::HashMap,
         net::{IpAddr, Ipv4Addr},
         os::unix::io::AsRawFd,
     },
@@ -72,24 +77,24 @@ async fn main() -> Result<(), Error> {
         params.bound_device_names.iter().map(String::as_str).try_fold::<_, _, Result<_, Error>>(
             Vec::new(),
             |mut acc, name| {
-                let sock = create_socket(Some(name))?;
+                let sock = create_socket(Some(name), Ipv4Addr::UNSPECIFIED)?;
                 let () = acc.push(sock);
                 Ok(acc)
             },
         )?
     } else {
-        vec![create_socket(None)?]
+        vec![create_socket(None, Ipv4Addr::UNSPECIFIED)?]
     };
     if socks.len() == 0 {
         return Err(anyhow::Error::msg("no valid sockets to receive messages from"));
     }
     let options = stash.load_options().await.unwrap_or_else(|e| {
         log::warn!("failed to load options from stash: {:?}", e);
-        std::collections::HashMap::new()
+        HashMap::new()
     });
     let cache = stash.load_client_configs().await.unwrap_or_else(|e| {
         log::warn!("failed to load cached client config from stash: {:?}", e);
-        std::collections::HashMap::new()
+        HashMap::new()
     });
     let server = RefCell::new(Server::new(stash, params, options, cache));
 
@@ -126,7 +131,7 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn create_socket(name: Option<&str>) -> Result<UdpSocket, Error> {
+fn create_socket(name: Option<&str>, src: Ipv4Addr) -> Result<UdpSocket, Error> {
     let sock = net2::UdpBuilder::new_v4()?;
     // Since dhcpd may listen to multiple interfaces, we must enable
     // SO_REUSEPORT so that binding the same (address, port) pair to each
@@ -152,7 +157,7 @@ fn create_socket(name: Option<&str>) -> Result<UdpSocket, Error> {
             ));
         }
     }
-    let sock = sock.bind((Ipv4Addr::UNSPECIFIED, SERVER_PORT))?;
+    let sock = sock.bind((src, SERVER_PORT))?;
     let () = sock.set_broadcast(true)?;
     Ok(UdpSocket::from_socket(sock)?)
 }
@@ -161,6 +166,7 @@ async fn define_msg_handling_loop_future(
     sock: UdpSocket,
     server: &RefCell<Server>,
 ) -> Result<Void, Error> {
+    let mut send_socks: HashMap<Ipv4Addr, UdpSocket> = HashMap::new();
     let mut buf = vec![0u8; BUF_SZ];
     loop {
         let (received, mut sender) =
@@ -182,8 +188,13 @@ async fn define_msg_handling_loop_future(
                 if let Some(addr) = dest {
                     sender.set_ip(IpAddr::V4(addr));
                 }
-
+                let src =
+                    get_server_id_from(&message).ok_or(ServerError::MissingServerIdentifier)?;
                 let response_buffer = message.serialize();
+                let sock = match send_socks.entry(src) {
+                    Entry::Occupied(entry) => entry.into_mut(),
+                    Entry::Vacant(entry) => entry.insert(create_socket(None, src)?),
+                };
                 sock.send_to(&response_buffer, sender).await.context("unable to send response")?;
                 log::info!("response sent to: {}", sender);
             }
@@ -328,9 +339,7 @@ mod tests {
                 pool_range_stop: Ipv4Addr::from([192, 168, 0, 0]),
             },
             permitted_macs: dhcp::configuration::PermittedMacs(vec![]),
-            static_assignments: dhcp::configuration::StaticAssignments(
-                std::collections::HashMap::new(),
-            ),
+            static_assignments: dhcp::configuration::StaticAssignments(HashMap::new()),
             arp_probe: false,
             bound_device_names: vec![],
         }
