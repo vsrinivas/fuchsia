@@ -30,6 +30,17 @@ zx_status_t ComponentHub::AddIncomingServices(fbl::RefPtr<fs::Vnode> incoming_se
   return in_dir_->AddEntry("svc", std::move(incoming_services));
 }
 
+zx_status_t ComponentHub::AddPackageHandle(fbl::RefPtr<fs::Vnode> package_handle) {
+  zx_status_t status = EnsureInDir();
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (!package_handle) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return in_dir_->AddEntry("pkg", std::move(package_handle));
+}
+
 zx_status_t ComponentHub::EnsureInDir() {
   if (in_dir_) {
     return ZX_OK;

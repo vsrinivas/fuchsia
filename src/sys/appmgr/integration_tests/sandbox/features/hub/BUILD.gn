@@ -9,24 +9,11 @@ group("hub") {
   testonly = true
   deps = [
     ":has_hub",
-    ":has_hub_deprecated_shell",
     ":no_hub",
   ]
 }
 
 sandbox_test_package("has_hub") {
-  sources = [ "has_hub.cc" ]
-
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
-  ]
-  environments = basic_envs
-}
-
-sandbox_test_package("has_hub_deprecated_shell") {
-  deprecated_shell = "//build"
-
   sources = [ "has_hub.cc" ]
 
   deps = [

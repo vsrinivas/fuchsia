@@ -165,7 +165,7 @@ class ComponentControllerImpl : public ComponentControllerBase {
                           ComponentContainer<ComponentControllerImpl>* container, zx::job job,
                           zx::process process, std::string url, std::string args, std::string label,
                           fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
-                          zx::channel client_request);
+                          zx::channel client_request, zx::channel package_handle);
   ~ComponentControllerImpl() override;
 
   const std::string& koid() const { return koid_; }

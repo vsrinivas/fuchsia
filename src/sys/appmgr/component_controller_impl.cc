@@ -252,7 +252,7 @@ ComponentControllerImpl::ComponentControllerImpl(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
     ComponentContainer<ComponentControllerImpl>* container, zx::job job, zx::process process,
     std::string url, std::string args, std::string label, fxl::RefPtr<Namespace> ns,
-    zx::channel exported_dir, zx::channel client_request)
+    zx::channel exported_dir, zx::channel client_request, zx::channel package_handle)
     : ComponentControllerBase(std::move(request), std::move(url), std::move(args), std::move(label),
                               std::to_string(fsl::GetKoid(process.get())), std::move(ns),
                               std::move(exported_dir), std::move(client_request)),
@@ -283,6 +283,10 @@ ComponentControllerImpl::ComponentControllerImpl(
   hub()->AddEntry("system_objects", system_objects);
 
   hub()->AddIncomingServices(this->incoming_services());
+
+  if (package_handle.is_valid()) {
+    hub()->AddPackageHandle(fbl::MakeRefCounted<fs::RemoteDir>(std::move(package_handle)));
+  }
 }
 
 ComponentControllerImpl::~ComponentControllerImpl() {

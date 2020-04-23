@@ -872,6 +872,13 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     return;
   }
 
+  // We want two handles to the package, one to put in the component's namespace
+  // and one to put in the hub.
+  zx::channel pkg_clone;
+  if (pkg.is_valid()) {
+    pkg_clone = zx::channel(fdio_service_clone(pkg.get()));
+  }
+
   // Note that |builder| is only used in the else block below. It is left here
   // because we would like to use it everywhere once US-313 is fixed.
   NamespaceBuilder builder = NamespaceBuilder(appmgr_config_dir_.duplicate(), fp.ToString());
@@ -934,10 +941,10 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
     if (runtime.IsNull()) {
       // Use the default runner: ELF binaries.
-      CreateElfBinaryComponentFromPackage(std::move(launch_info), std::move(executable), app_argv0,
-                                          program.env_vars(), std::move(loader_service),
-                                          builder.Build(), std::move(component_request),
-                                          std::move(ns), policies, std::move(callback));
+      CreateElfBinaryComponentFromPackage(
+          std::move(launch_info), std::move(executable), app_argv0, program.env_vars(),
+          std::move(loader_service), builder.Build(), std::move(component_request), std::move(ns),
+          policies, std::move(callback), std::move(pkg_clone));
     } else {
       // Use other component runners.
       CreateRunnerComponentFromPackage(std::move(package), std::move(launch_info), runtime,
@@ -952,7 +959,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
     const std::vector<std::string>& env_vars, zx::channel loader_service,
     fdio_flat_namespace_t* flat, ComponentRequestWrapper component_request,
     fxl::RefPtr<Namespace> ns, const std::vector<zx_policy_basic_v2_t>& policies,
-    ComponentObjectCreatedCallback callback) {
+    ComponentObjectCreatedCallback callback, zx::channel package_handle) {
   TRACE_DURATION("appmgr", "Realm::CreateElfBinaryComponentFromPackage", "launch_info.url",
                  launch_info.url);
 
@@ -982,7 +989,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
     auto application = std::make_shared<ComponentControllerImpl>(
         std::move(controller), this, std::move(child_job), std::move(process), url, std::move(args),
         Util::GetLabelFromURL(url), std::move(ns), std::move(channels.exported_dir),
-        std::move(channels.client_request));
+        std::move(channels.client_request), std::move(package_handle));
     // update hub
     hub_.AddComponent(application->HubInfo());
     ComponentControllerImpl* key = application.get();

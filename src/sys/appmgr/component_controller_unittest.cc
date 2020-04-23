@@ -194,7 +194,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
     }
     return std::make_unique<ComponentControllerImpl>(
         controller.NewRequest(), &realm_, std::move(job_clone), std::move(process_), "test-url",
-        "test-arg", "test-label", ns, std::move(export_dir), zx::channel());
+        "test-arg", "test-label", ns, std::move(export_dir), zx::channel(), zx::channel());
   }
 
   FakeRealm realm_;

@@ -28,6 +28,9 @@ class ComponentHub : public Hub {
   // Add a list of incoming services that the component has access to.
   zx_status_t AddIncomingServices(fbl::RefPtr<fs::Vnode> incoming_services);
 
+  // Add a handle to the component's package
+  zx_status_t AddPackageHandle(fbl::RefPtr<fs::Vnode> package_handle);
+
   ~ComponentHub();
 
  private:
