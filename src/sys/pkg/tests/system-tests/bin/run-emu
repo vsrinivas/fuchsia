@@ -1,152 +1,86 @@
 #!/bin/bash
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-## usage: run-emu -i <path-to-image>
+#### CATEGORY=Run, inspect and debug
+### start fuchsia in qemu with a FVM disk
+## start fuchsia in qemu with a FVM disk
 ##
-## Helper script for launching a Fuchsia emulator in a way that this can be used
-## for local OTA testing, until `fx emu` is modified to support OTA.
+## This command delegates to //zircon/scripts/run-zircon. Flags are documented
+## in that script, and can be discovered by passing -h or --help.
 ##
-## Options:
-##   -h|--help                Print out this message.
-##   -i|--image <image-path>  Path to the fuchsia image created by `make-vol.sh`.
-##   -e <directory>           Location of emulator, defaults to looking in
-##                            prebuilt/third_partyqemu/PLATFORM
-##   --ovmf-dir <directory>   Location of OVMF, defaults to looking in
-##                            prebuilt/third_party/ovmf/PLATFORM
 
-set -e
+set -ex
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../../../../../tools/devshell/lib/vars.sh" || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../../../../../tools/devshell/lib/image_build_vars.sh" || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../../../../../tools/devshell/lib/fvm.sh" || exit $?
 
-function usage() {
-  fx-command-help
-}
-
-FUCHSIA_IMG=""
-EMU="bin/qemu-system-x86_64"
-QEMU_IMG="bin/qemu-img"
-EMU_DIR=""
+trailing_args=()
 
 while (($#)); do
   case "$1" in
-    -e)
-      EMU_DIR="$2"
-      shift
+    -h|--help)
+      fx-command-help
+      "${FUCHSIA_DIR}/src/sys/pkg/tests/system-tests/bin/run-zircon" -h
+      exit 1
       ;;
-    --ovmf-dir)
-      OVMF_DIR="$2"
-      shift
+    *)
+      trailing_args+=("$1")
       ;;
-    -i|--image)
-      FUCHSIA_IMG="$2"
-      shift
-      ;;
-    -h|--help) usage && exit 0 ;;
-    *) fx-error echo "Unrecognized flag: '$1'" && exit 1 ;;
   esac
   shift
 done
 
-if [[ -z "${FUCHSIA_IMG}" ]]; then
-  echo "--image must be specified"
+qemu_dir="${PREBUILT_QEMU_DIR}/bin"
+ovmf_dir="${PREBUILT_OVMF_DIR}"
+
+imgdir="$(mktemp -d ${FUCHSIA_BUILD_DIR}/tmp.XXX)"
+if [[ ! -d "${imgdir}" ]]; then
+  echo >&2 "Failed to create temporary directory"
   exit 1
 fi
-
-if [[ -z "$EMU_DIR" && -d "$PREBUILT_QEMU_DIR" ]]; then
-  EMU_DIR="$PREBUILT_QEMU_DIR"
-fi
-
-if [[ -z "${OVMF_DIR}" ]]; then
-  OVMF_DIR="$PREBUILT_OVMF_DIR"
-fi
-
-# Make sure the OVMF directory contains the expected EFI images.
-OVMF_CODE="${PREBUILT_OVMF_DIR}/OVMF_CODE.fd"
-OVMF_VARS="${PREBUILT_OVMF_DIR}/OVMF_VARS.fd"
-
-if [[ ! -f "${OVMF_CODE}" ]]; then
-  echo "OVMF_CODE.fd not found in ${PREBUILT_OVMF_DIR}"
-  exit 1
-fi
-
-if [[ ! -f "${OVMF_VARS}" ]]; then
-  echo "OVMF_VARS.fd not found in ${PREBUILT_OVMF_DIR}"
-  exit 1
-fi
-
-# Configure the networking.
-if [[ "$(uname -s)" == "Darwin" ]]; then
-  IFNAME="tap0"
-else
-  IFNAME="qemu"
-fi
-
-MAC=""
-HASH=$(echo $IFNAME | shasum)
-SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
-MAC="52:54:00$SUFFIX"
-
-set -u
-
-log() {
-  printf "$(date '+%Y-%m-%d %H:%M:%S') [run-emu] $@\n"
-}
-
-TMPDIR="$(mktemp -d)"
-if [[ ! -d "${TMPDIR}" ]]; then
-  fx-error "Failed to create temporary directory"
-  exit 11
-fi
-
-cleanup() {
-  log "cleaning up"
-
-  # kill child processes. While there isn't technically a background process, we
-  # want to make sure we kill a long-running qemu if this shell dies.
-  local child_pids=$(jobs -p)
-  if [[ -n "${child_pids}" ]]; then
-    log "killing child processes: ${child_pids}"
-    # Note: child_pids must be expanded to args here.
-    kill ${child_pids} 2> /dev/null
-    wait 2> /dev/null
-  fi
-
-  rm -r "${TMPDIR}"
-}
-trap cleanup EXIT
-
-# Create a copy-on-write image on top of the fuchsia image. This prevents state
-# from being preserved across executions, which could make tests
-# non-reproducible.
-FUCHSIA_IMG_QCOW="${TMPDIR}/fuchsia.qcow2"
-"${EMU_DIR}/${QEMU_IMG}" create \
-  -f qcow2 \
-  -b "${FUCHSIA_IMG}" \
-  "${FUCHSIA_IMG_QCOW}"
+trap 'rm -rf "$imgdir"' EXIT
 
 # Copy in the OMVF_VARS.fd into our temp directory, which allows EFI data to be
 # persisted across reboots.
-OVMF_VARS_TMP="${TMPDIR}/OVMF_VARS.fd"
-cp "${OVMF_VARS}" "$OVMF_VARS_TMP"
+cp "${ovmf_dir}/OVMF_VARS.fd" "${imgdir}/OVMF_VARS.fd"
 
 # Make sure the OVMF_VARS file is writable.
-chmod +w "$OVMF_VARS_TMP"
+chmod +w "${imgdir}/OVMF_VARS.fd"
 
-"${EMU_DIR}/${EMU}" \
-  -enable-kvm \
-  -m 2048 \
-  -nographic \
-  -drive "if=pflash,format=raw,readonly,file=${OVMF_CODE}" \
-  -drive "if=pflash,format=raw,file=${OVMF_VARS_TMP}" \
-  -drive "file=${FUCHSIA_IMG_QCOW},format=qcow2,if=none,id=mydisk" \
-  -device virtio-blk-pci,drive=mydisk \
-  -netdev "type=tap,ifname=${IFNAME},script=no,downscript=no,id=net0" \
-  -device "virtio-net-pci,netdev=net0,mac=${MAC}" \
-  -smp 4,threads=2 \
-  -machine q35 \
-  -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
-  -cpu host
+# Ensure that the output is sent to the serial, and that we boot into zedboot.
+cat << EOF > "${imgdir}/cmdline.txt"
+kernel.serial=legacy
+TERM=xterm-256color
+kernel.halt-on-panic=true
+bootloader.default=zedboot
+bootloader.timeout=0
+EOF
 
-exit $?
+# Construct a Fuchsia image.
+PARTITION_SIZE=$(( 2 * 1024 * 1024 * 1024))
+"${FUCHSIA_BUILD_DIR}/host-tools/make-fuchsia-vol" \
+  -cmdline "${imgdir}/cmdline.txt" \
+  -resize "$PARTITION_SIZE" \
+  -abr-size 33554432 \
+  "${imgdir}/fuchsia.efi"
+
+# Start the paver in the background.
+exec "${FUCHSIA_BUILD_DIR}/pave.sh" \
+  -n 'step-atom-yard-juicy' \
+  --authorized-keys "${FUCHSIA_DIR}/.ssh/authorized_keys" \
+  -1 &
+
+# Launch QEMU.
+"${FUCHSIA_DIR}/src/sys/pkg/tests/system-tests/bin/run-zircon" \
+  -a "${FUCHSIA_ARCH}" \
+  -q "${qemu_dir}" \
+  -N \
+  -k \
+  -d \
+  -D "${imgdir}/fuchsia.efi" \
+  --diskfmt=raw \
+  "--ovmf-code=${ovmf_dir}/OVMF_CODE.fd" \
+  "--ovmf-vars=${imgdir}/OVMF_VARS.fd" \
+  "${trailing_args[@]}"

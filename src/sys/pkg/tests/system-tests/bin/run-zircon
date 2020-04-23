@@ -1,0 +1,374 @@
+#!/usr/bin/env bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+function HELP {
+    echo "help:"
+    echo "-a <arch>            : arm64, or x64"
+    echo "-c <text>            : add item to kernel commandline"
+    echo "-d                   : run with emulated disk"
+    echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
+    echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme, virtio-scsi), default is ahci"
+    echo "--diskfmt[=<format>] : disk format (raw, qcow2, etc), default is raw"
+    echo "-g                   : use graphical console"
+    echo "-I <interface name>  : network interface name, default is qemu."
+    echo "-k                   : use KVM (Linux host only)"
+    echo "-m <memory in MB>    : memory size, default is ${MEMSIZE_DEFAULT}MB"
+    echo "-n                   : run with emulated nic"
+    echo "-N                   : run with emulated nic via tun/tap"
+    echo "-q <directory>       : location of qemu, defaults to looking in prebuilt/downloads/qemu/bin, then \$PATH"
+    echo "-s <number of cpus>  : number of cpus, 1 for uniprocessor, default is 4"
+    echo "-t <binary>          : use <binary> as the QEMU->ZBI trampoline"
+    echo "-u <path>            : execute qemu startUp script, default is no script"
+    echo "-V                   : try to use virtio devices"
+    echo "-z <zbi>             : boot specified complete ZBI via trampoline"
+    echo "--audio[=<host_drv>] : use Intel HD Audio"
+    echo "                     : <host_drv> should be one of (alsa, oss, pa, wav, none)"
+    echo "--ahci=<disk image>  : run with disk image file as raw ahci drive"
+    echo "--debugger           : Enable gdb stub and wait for connection"
+    echo "--gic=<version>      : use GIC v2 or v3"
+    echo "--no-serial          : Disable writing out to the guest's serial port"
+    echo "--vnc=<display>      : use vnc based display"
+    echo "--wavfile=<file>     : When audio host_drv == wav, output to the specified WAV file"
+    echo "-h for help"
+    echo "all arguments after -- are passed to qemu directly"
+    exit 1
+}
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+AHCI=()
+ARCH=
+AUDIO=
+AUDIO_WAVFILE="/tmp/qemu.wav"
+DEBUGGER=0
+DISK=0
+DISKFILE="blk.bin"
+DISKTYPE=
+DISKFMT="raw"
+GIC=3
+GRAPHICS=0
+DO_KVM=0
+LTO=0
+THINLTO=0
+PROFILE=0
+XRAY=0
+MEMSIZE_DEFAULT=2048
+MEMSIZE=$MEMSIZE_DEFAULT
+NET=0
+QEMUDIR=
+UPSCRIPT=no
+VNC=
+VIRTIO=0
+SERIAL=1
+SMP=4
+CMDLINE=""
+QEMU_KERNEL=
+OVMF_CODE=
+OVMF_VARS=
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  IFNAME="tap0"
+else
+  IFNAME="qemu"
+fi
+
+# Propagate our TERM environment variable as a kernel command line
+# argument.  This is first so that an explicit -c TERM=foo argument
+# goes into CMDLINE later and overrides this.
+if [[ -n $TERM ]]; then
+    CMDLINE+="TERM=$TERM "
+fi
+
+# QEMU looks for its own files in its current directory before looking in its
+# data directory (.../share/qemu/).  So a file in the current directory that
+# happens to match one of those internal files' names will be used instead of
+# the proper file and make things go awry.  There's no way to tell QEMU not to
+# look in the current directory first.  So to make it safe to have files by any
+# name in the current directory, we cd to / before running QEMU (on the more
+# reasonable presumption that / won't contain any files by those names).  Hence,
+# we have to convert any relative file names we're passing to QEMU to absolute.
+abspath() {
+  local path="$1"
+  case "$path" in
+      /*) echo "$path";;
+      *) echo "`pwd`/$path";;
+  esac
+}
+
+while getopts "a:c:dD:gI:km:nNq:s:t::u:Vz:h-:" FLAG; do
+    case $FLAG in
+        a) ARCH=$OPTARG;;
+        c) CMDLINE+="$OPTARG ";;
+        d) DISK=1;;
+        D) DISKFILE="$(abspath "$OPTARG")";;
+        g) GRAPHICS=1;;
+        I) IFNAME=$OPTARG;;
+        k)
+            if [[ "$(uname -s)" == "Darwin" ]]; then
+                echo "error: KVM option (-k) is not supported on MacOS"
+                exit 1
+            fi
+            DO_KVM=1
+            ;;
+        m) MEMSIZE=$OPTARG;;
+        n) NET=1;;
+        N) NET=2;;
+        q) QEMUDIR=${OPTARG}/;;
+        s) SMP=$OPTARG;;
+        t) QEMU_KERNEL="$(abspath "$OPTARG")";;
+        u) UPSCRIPT="$(abspath "$OPTARG")";;
+        V) VIRTIO=1;;
+        h) HELP;;
+        \?)
+            echo unrecognized option
+            HELP
+            ;;
+        -)
+            case $OPTARG in
+            ahci=*) AHCI+=("$(abspath "${OPTARG#*=}")");;
+            audio) AUDIO=none;;
+            audio=*) AUDIO=${OPTARG#*=};;
+            wavfile=*) AUDIO_WAVFILE="$(abspath "${OPTARG#*=}")";;
+            debugger) DEBUGGER=1;;
+            disktype=*) DISKTYPE=${OPTARG#*=};;
+            diskfmt=*) DISKFMT=${OPTARG#*=};;
+            gic=*) GIC=${OPTARG#*=};;
+            no-serial) SERIAL=0;;
+            vnc=*) VNC=${OPTARG#*=};;
+            ovmf-code=*) OVMF_CODE=${OPTARG#*=};;
+            ovmf-vars=*) OVMF_VARS=${OPTARG#*=};;
+            *)
+                echo unrecognized long option
+                HELP
+                ;;
+            esac
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+# arch argument is non optional
+if [[ -z $ARCH ]]; then
+    echo must specify arch
+    HELP
+fi
+
+# by default use the qemu binary located in the fuchsia //prebuilt
+# repo if we can find it, but allow -q to override it for people
+# who want to use their own.
+case "$(uname -s)" in
+  Darwin)
+    readonly HOST_PLATFORM="mac-x64"
+    ;;
+  Linux)
+    readonly HOST_PLATFORM="linux-x64"
+    ;;
+esac
+
+if [[ -z $QEMUDIR && -d "$DIR/../prebuilt/downloads/qemu/bin" ]]; then
+    QEMUDIR="$DIR/../prebuilt/downloads/qemu/bin/"
+fi
+
+if [[ -z "$OVMF_CODE" ]]; then
+  echo -ovmf-code= switch is mandatory
+  HELP
+fi
+
+if [[ -z "$OVMF_VARS" ]]; then
+  echo -ovmf-vars= switch is mandatory
+  HELP
+fi
+
+# construct the args for qemu
+ARGS=" -m $MEMSIZE"
+if [[ -n $VNC ]]; then
+    ARGS+=" -vnc $VNC"
+fi
+
+if (( !$GRAPHICS  )); then
+    ARGS+=" -nographic"
+else
+    ARGS+=" -serial stdio"
+    if [[ "$ARCH" == "x64" && $VIRTIO == 0 ]]; then
+        # Enable Bochs VBE device, which Zircon has a device for
+        ARGS+=" -vga std"
+    else
+        # use the virtio gpu for display
+        ARGS+=" -vga none"
+        ARGS+=" -device virtio-gpu-pci"
+    fi
+fi
+
+if (( $DISK )); then
+    # if disktype wasn't set on the command line, default to ahci unless VIRTIO is set
+    if [[ -z $DISKTYPE ]]; then
+        if (( $VIRTIO )); then
+            DISKTYPE="virtio"
+        else
+            DISKTYPE="ahci"
+        fi
+    fi
+
+    ARGS+=" -drive file=${DISKFILE},format=${DISKFMT},if=none,id=mydisk"
+    if [[ "$DISKTYPE" == "virtio" ]]; then
+        ARGS+=" -device virtio-blk-pci,drive=mydisk"
+    elif [[ "$DISKTYPE" == "ahci" ]]; then
+        ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
+    elif [[ "$DISKTYPE" == "nvme" ]]; then
+        ARGS+=" -device nvme,drive=mydisk,serial=zircon"
+    elif [[ "$DISKTYPE" == "virtio-scsi" ]]; then
+        ARGS+=" -device virtio-scsi-pci,id=scsi -device scsi-hd,drive=mydisk,scsi-id=1,lun=1"
+    else
+        echo unrecognized disk type \"$DISKTYPE\"
+        exit
+    fi
+fi
+
+ahcinum=1
+for ahcifile in ${AHCI[@]}; do
+    ARGS+=" -drive file=${ahcifile},format=raw,if=none,id=ahcidisk${ahcinum}"
+    ARGS+=" -device ich9-ahci,id=ahci${ahcinum}"
+    ARGS+=" -device ide-drive,drive=ahcidisk${ahcinum},bus=ahci.${ahcinum}"
+    ahcinum=$((ahcinum + 1))
+done
+
+if (( !$NET )); then
+  ARGS+=" -nic none"
+else
+  if [[ $NET == 1 ]]; then
+    ARGS+=" -nic user,hostname=$IFNAME"
+  fi
+
+  if [[ $NET == 2 ]]; then
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      if [[ ! -c "/dev/$IFNAME" ]]; then
+        echo "To use qemu with networking on macOS, install the tun/tap driver:"
+        echo "http://tuntaposx.sourceforge.net/download.xhtml"
+        exit 1
+      fi
+      if [[ ! -w "/dev/$IFNAME" ]]; then
+        echo "For networking /dev/$IFNAME must be owned by $USER. Please run:"
+        echo "  sudo chown $USER /dev/$IFNAME"
+        exit 1
+      fi
+    else
+      TAP_IFS=$(ip tuntap show 2>/dev/null)
+      if [[ ! "$TAP_IFS" =~ "${IFNAME}:" ]]; then
+        echo "To use qemu with networking on Linux, configure tun/tap:"
+        echo
+        echo "sudo ip tuntap add dev $IFNAME mode tap user $USER && \\"
+        echo "sudo ip link set $IFNAME up"
+        exit 1
+      fi
+
+      # Try to detect if a firewall is active. There are only few ways to do that
+      # without being root. Unfortunately, using systemd or systemctl does not work
+      # on Debian, so use the following hack instead:
+      if (which ufw && grep -q "^ENABLED=yes" /etc/ufw/ufw.conf) >/dev/null 2>&1; then
+        echo "Active firewall detected: If this emulator is unreachable, run: fx setup-ufw"
+      fi
+    fi
+    HASH=$(echo $IFNAME | shasum)
+    SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
+    ARGS+=" -nic tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,mac=52:54:00$SUFFIX"
+  fi
+  if [[ "$ARCH" == "x64" ]] && [[ $VIRTIO == 0 ]]; then
+    ARGS+=",model=e1000"
+  else
+    ARGS+=",model=virtio-net-pci"
+  fi
+fi
+
+if [[ -n $AUDIO ]]; then
+    ARGS+=" -soundhw hda"
+    export QEMU_AUDIO_DRV=$AUDIO
+    export QEMU_AUDIO_DAC_FIXED_FREQ=48000
+    export QEMU_AUDIO_TIMER_PERIOD=20
+
+    case $AUDIO in
+        none) ;;
+        alsa) ;;
+        oss) ;;
+        pa) ;;
+        wav)
+            export QEMU_WAV_FREQUENCY=48000
+            export QEMU_WAV_PATH=${AUDIO_WAVFILE}
+            ;;
+        *)
+            echo unrecognized QEMU host audio driver \"$AUDIO\"
+            exit
+            ;;
+    esac
+fi
+
+if [[ $SMP != 1 ]]; then
+    ARGS+=" -smp $SMP"
+    if [[ "$ARCH" == "x64" ]]; then
+        ARGS+=",threads=2"
+    fi
+fi
+
+# start a few extra harmless virtio devices that can be ignored
+if (( $VIRTIO )); then
+    ARGS+=" -device virtio-serial-pci"
+    ARGS+=" -device virtio-rng-pci"
+    ARGS+=" -device virtio-mouse-pci"
+    ARGS+=" -device virtio-keyboard-pci"
+fi
+
+if (( $DEBUGGER )); then
+    ARGS+=" -s -S"
+fi
+
+case $ARCH in
+    arm64)
+        QEMU=${QEMUDIR}qemu-system-aarch64
+        if (( $DO_KVM )); then
+          ARGS+=" -enable-kvm -cpu host"
+          GIC=host
+        else
+          ARGS+=" -machine virtualization=true -cpu cortex-a53"
+        fi
+        ARGS+=" -machine virt"
+        # append a gic version to the machine specifier
+        if [[ $GIC != 0 ]]; then
+            ARGS+=",gic_version=${GIC}"
+        fi
+        ;;
+    x64)
+        QEMU=${QEMUDIR}qemu-system-x86_64
+        ARGS+=" -machine q35"
+        ARGS+=" -device isa-debug-exit,iobase=0xf4,iosize=0x04"
+        if (( $DO_KVM )); then
+          ARGS+=" -enable-kvm -cpu host,migratable=no,+invtsc"
+          # ZX-3373: Work around KVM bug on AMD Zen machines
+          # where SMAP and CPL=3 MMIO accesses trigger a loop
+          # in the Linux kernel.
+          if [[ "$(uname -s)" == "Linux" ]]; then
+            if [[ "$(lsmod | grep kvm_amd)" != "" ]]; then
+              ARGS+=",-smap"
+            fi
+          fi
+        else
+          ARGS+=" -cpu Haswell,+smap,-check,-fsgsbase"
+        fi
+        ;;
+    *)
+        echo unsupported arch
+        HELP
+        ;;
+esac
+
+# run qemu
+cd /
+set -x
+exec $QEMU \
+  -drive "if=pflash,format=raw,readonly,file=${OVMF_CODE}" \
+  -drive "if=pflash,format=raw,file=${OVMF_VARS}" \
+  $ARGS \
+  "$@"

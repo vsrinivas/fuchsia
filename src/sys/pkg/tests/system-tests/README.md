@@ -23,7 +23,7 @@ Then, login to luci by running:
 ```
 
 Now you should be able to run the tests against any device that is discoverable
-by the zircon tool `netaddr`.
+by `fx device-finder`.
 
 ## Available Tests
 
@@ -42,8 +42,8 @@ This tests Over the Air (OTA) updates. At a high level, it:
 You should be able to run the tests with:
 
 ```
-% ~/fuchsia/out/default/host_x64/system_tests_upgrade \
-  --ssh-private-key ~/fuchsia/.ssh/pkey \
+% $(fx get-build-dir)/host_x64/system_tests_upgrade \
+  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
   --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
   --upgrade-fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
@@ -56,8 +56,8 @@ The Upgrade Tests also support reproducing a specific build. To do this,
 determine the build ids from the downgrade and upgrade builds, then run:
 
 ```
-% ~/fuchsia/out/default/host_x64/system_tests_upgrade \
-  --ssh-private-key ~/fuchsia/.ssh/pkey \
+% $(fx get-build-dir)/host_x64/system_tests_upgrade \
+  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
   --downgrade-build-id 123456789... \
   --upgrade-build-id 987654321...
 ```
@@ -65,14 +65,14 @@ determine the build ids from the downgrade and upgrade builds, then run:
 Or you can combine these options:
 
 ```
-% ~/fuchsia/out/default/host_x64/system_tests_upgrade \
-  --ssh-private-key ~/fuchsia/.ssh/pkey \
+% $(fx get-build-dir)/host_x64/system_tests_upgrade \
+  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
   --downgrade-build-id 123456789... \
   --upgrade-fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
 
 There are more options to the test, to see them all run
-`~/fuchsia/out/default/host_x64/system_tests_upgrade -- -h`.
+`$(fx get-build-dir)/host_x64/system_tests_upgrade -- -h`.
 
 ### Reboot Testing
 
@@ -81,8 +81,8 @@ configurable number of times, or errs out if a problem occurs. This
 can be done by running:
 
 ```
-% ~/fuchsia/out/default/host_x64/system_tests_reboot \
-  --ssh-private-key ~/fuchsia/.ssh/pkey \
+% $(fx get-build-dir)/host_x64/system_tests_reboot \
+  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
   --fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
 
@@ -99,8 +99,8 @@ continuously updated to the latest available version, or errs out if a problem
 occurs. This can be done by running:
 
 ```
-% ~/fuchsia/out/default/host_x64/system_tests_tracking \
-  --ssh-private-key ~/fuchsia/.ssh/pkey \
+% $(fx get-build-dir)/host_x64/system_tests_tracking \
+  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
   --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
   --upgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only
 ```
@@ -120,7 +120,7 @@ come with a helper script `run-test` that can setup a `tmux` session
 for you. You can run it like this:
 
 ```
-% ~/fuchsia/src/sys/pkg/tests/system-tests/bin/run-test \
+% ${FUCHSIA_DIR}/src/sys/pkg/tests/system-tests/bin/run-test \
   -o ~/logs \
   --tty /dev/ttyUSB0 \
   $(fx get-build-dir)/host_x64/system_tests_upgrade \
@@ -141,22 +141,11 @@ OTA-ed. Until this is implemented, the `bin/` directory contains some helper
 scripts that bring up an OTA-able Fuchsia emulator. Follow these instructions to
 it.
 
-First, you need to create an EFI Fuchsia image. This can be done by running:
-
-```
-% mkdir /tmp/ota-test
-% ./bin/make-vol.sh \
-  --image /tmp/ota-test/fuchsia-efi.bin
-```
-
-This script is just a wrapper around `fx make-fuchsia-vol` to simplify creating
-an image that's appropriate for OTA testing.
-
-Finally, run the emulator with:
-
-```
-% ./bin/run-emu --image /tmp/ota-test/fuchsia-efi.bin
-```
+The `run-emu` script will create a Fuchsia EFI image, launch QEMU, then run the
+paver. To create the image the script wraps `fx make-fuchsia-vol`. To launch
+QEMU there is a modified version of `run-zircon` (also in the `bin/` directory)
+that uses OVMF to allow us to run the bootloader. Any arguments you pass to the
+script will be passed through to QEMU.
 
 One thing to note, by default, you won't see any terminal output in the emulator
 after an OTA. To restore this behavior, you need an extra build argument to send
@@ -169,6 +158,25 @@ output to the terminal:
 % fx build
 ```
 
-With all that setup, you now should be able to run the tests.
+With all that setup, you now should be able to run the tests. First, launch the
+emulator:
+
+```
+% ./bin/run-emu
+```
+
+In a new terminal, run the tests. For example, to run the upgrade tests:
+
+```
+% $(fx get-build-dir)/host_x64/system_tests_upgrade \
+  --ssh-private-key ${FUCHSIA_DIR}/.ssh/pkey \
+  --downgrade-builder-name fuchsia/global.ci/fuchsia-x64-release-build_only \
+  --upgrade-fuchsia-build-dir $(fx get-build-dir) \
+  --device step-atom-yard-juicy
+```
+
+Note that your QEMU device will always be named `step-atom-yard-juicy`.
+Explicitly naming the device for the test will help prevent accidental upgrades
+to your other devices.
 
 [OVMF]: https://github.com/tianocore/tianocore.github.io/wiki/OVMF
