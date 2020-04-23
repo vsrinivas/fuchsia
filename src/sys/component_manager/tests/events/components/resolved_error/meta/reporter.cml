@@ -20,11 +20,10 @@
             from: "framework",
         },
         {
-            event: "resolved",
-            from: "framework",
-        },
-        {
-            event: "started",
+            event: [
+                "resolved",
+                "started",
+            ],
             from: "framework",
         },
     ],

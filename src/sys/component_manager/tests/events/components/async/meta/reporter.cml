@@ -19,11 +19,10 @@
             from: "framework",
         },
         {
-            event: "started",
-            from: "framework",
-        },
-        {
-            event: "destroyed",
+            event: [
+                "destroyed",
+                "started",
+            ],
             from: "framework",
         },
     ],

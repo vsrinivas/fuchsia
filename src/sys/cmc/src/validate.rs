@@ -210,7 +210,7 @@ impl<'a> CapabilityId<'a> {
     /// source names.
     pub fn from_clause<'b, T>(clause: &'b T) -> Result<Vec<CapabilityId<'b>>, Error>
     where
-        T: cml::CapabilityClause + cml::AsClause,
+        T: cml::CapabilityClause + cml::AsClause + cml::FilterClause,
     {
         // For directory/service/runner types, return the source name,
         // using the "as" clause to rename if neccessary.
@@ -239,8 +239,27 @@ impl<'a> CapabilityId<'a> {
             return Ok(vec![CapabilityId::Resolver(
                 alias.map(|s| s.as_str()).unwrap_or(p.as_str()),
             )]);
-        } else if let Some(p) = clause.event().as_ref() {
-            return Ok(vec![CapabilityId::Event(alias.map(|a| a.as_str()).unwrap_or(p.as_str()))]);
+        } else if let Some(OneOrMany::One(event)) = clause.event().as_ref() {
+            return Ok(vec![CapabilityId::Event(
+                alias.map(|a| a.as_str()).unwrap_or(event.as_str()),
+            )]);
+        } else if let Some(OneOrMany::Many(events)) = clause.event().as_ref() {
+            return match (alias, clause.filter(), events.len()) {
+                (Some(valid_alias), _, 1) => Ok(vec![CapabilityId::Event(valid_alias)]),
+                (None, Some(_), 1) => Ok(vec![CapabilityId::Event(events[0].as_str())]),
+                (Some(_), None, _) => Err(Error::validate(
+                    "\"as\" field can only be specified when one `event` is supplied",
+                )),
+                (None, Some(_), _) => Err(Error::validate(
+                    "\"filter\" field can only be specified when one `event` is supplied",
+                )),
+                (Some(_), Some(_), _) => Err(Error::validate(
+                    "\"as\",\"filter\" fields can only be specified when one `event` is supplied",
+                )),
+                (None, None, _) => {
+                    Ok(events.iter().map(|event| CapabilityId::Event(event)).collect())
+                }
+            };
         }
 
         // Offers rules prohibit using the "as" clause for storage; this is validated outside the
@@ -1121,7 +1140,9 @@ mod tests {
                   { "storage": "cache", "as": "/tmp" },
                   { "storage": "meta" },
                   { "runner": "elf" },
-                  { "event": "started", "from": "framework" },
+                  { "event": [ "started", "stopped"], "from": "realm" },
+                  { "event": [ "launched"], "from": "framework" },
+                  { "event": "destroyed", "from": "framework", "as": "destroyed_x" },
                   {
                     "event": "capability_ready_diagnostics",
                     "as": "capability_ready",
@@ -1271,6 +1292,43 @@ mod tests {
                 ],
             }),
             result = Err(Error::validate("\"filter\" can only be used with \"event\"")),
+        },
+        test_cml_use_bad_as_in_event => {
+            input = json!({
+                "use": [
+                    {
+                        "event": ["destroyed", "stopped"],
+                        "from": "realm",
+                        "as": "gone"
+                    }
+                ]
+            }),
+            result = Err(Error::validate("\"as\" field can only be specified when one `event` is supplied")),
+        },
+        test_cml_use_bad_filter_in_event => {
+            input = json!({
+                "use": [
+                    {
+                        "event": ["destroyed", "stopped"],
+                        "filter": {"path": "/diagnostics"},
+                        "from": "realm"
+                    }
+                ]
+            }),
+            result = Err(Error::validate("\"filter\" field can only be specified when one `event` is supplied")),
+        },
+        test_cml_use_bad_filter_and_as_in_event => {
+            input = json!({
+                "use": [
+                    {
+                        "event": ["destroyed", "stopped"],
+                        "from": "framework",
+                        "as": "gone",
+                        "filter": {"path": "/diagnostics"}
+                    }
+                ]
+            }),
+            result = Err(Error::validate("\"as\",\"filter\" fields can only be specified when one `event` is supplied")),
         },
         // expose
         test_cml_expose => {

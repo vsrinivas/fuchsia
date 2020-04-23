@@ -174,14 +174,30 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
         } else if let Some(p) = use_.runner() {
             out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
         } else if let Some(p) = use_.event() {
-            let target_id = one_target_capability_id(use_, use_)?;
             let source = extract_use_event_source(use_)?;
-            out_uses.push(cm::Use::Event(cm::UseEvent {
-                source,
-                source_name: cm::Name::new(p.clone())?,
-                target_name: cm::Name::new(target_id)?,
-                filter: use_.filter.clone(),
-            }));
+            let target_ids =
+                all_target_capability_ids(use_, use_).ok_or(Error::internal("no capability"))?;
+            let source_ids = p.to_vec();
+            for target_id in target_ids {
+                let target_name = cm::Name::new(target_id.clone())?;
+                // When multiple source names are provided, there is no way to alias each one, so
+                // source_name == target_name,
+                // When one source name is provided, source_name may be aliased to a different
+                // target_name, so we use source_names[0] to derive the source_name.
+                let source_name = if source_ids.len() == 1 {
+                    cm::Name::new(source_ids[0].clone())?
+                } else {
+                    target_name.clone()
+                };
+                out_uses.push(cm::Use::Event(cm::UseEvent {
+                    source: source.clone(),
+                    source_name,
+                    target_name,
+                    // We have already validated that none will be present if we were using many
+                    // events.
+                    filter: use_.filter.clone(),
+                }));
+            }
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
         };
@@ -365,15 +381,28 @@ fn translate_offer(
                     target_name: cm::Name::new(target_id)?,
                 }));
             }
-        } else if let Some(e) = offer.event() {
+        } else if let Some(p) = offer.event() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
+            let source_ids = p.to_vec();
             for (target, target_id) in targets {
+                // When multiple source names are provided, there is no way to alias each one, so
+                // source_name == target_name.
+                // When one source name is provided, source_name may be aliased to a different
+                // source_name, so we source_ids[0] to derive the source_name.
+                let target_name = cm::Name::new(target_id)?;
+                let source_name = if source_ids.len() == 1 {
+                    cm::Name::new(source_ids[0].clone())?
+                } else {
+                    target_name.clone()
+                };
                 out_offers.push(cm::Offer::Event(cm::OfferEvent {
                     source: source.clone(),
-                    source_name: cm::Name::new(e.clone())?,
+                    source_name,
                     target,
-                    target_name: cm::Name::new(target_id)?,
+                    target_name,
+                    // We have already validated that none will be present if we were using many
+                    // events.
                     filter: offer.filter.clone(),
                 }));
             }
@@ -743,7 +772,7 @@ where
         } else if let Some(p) = in_obj.resolver() {
             Some(OneOrMany::One(p.to_string()))
         } else if let Some(p) = in_obj.event() {
-            Some(OneOrMany::One(p.clone()))
+            Some(p.clone())
         } else if let Some(type_) = in_obj.storage() {
             match type_.as_str() {
                 "data" => Some(OneOrMany::One("/data".to_string())),
@@ -906,7 +935,8 @@ mod tests {
                     { "storage": "cache", "as": "/tmp" },
                     { "runner": "elf" },
                     { "runner": "web" },
-                    { "event": "started", "from": "framework" },
+                    { "event": "destroyed", "from": "realm" },
+                    { "event": ["started", "stopped"], "from": "framework" },
                     {
                         "event": "capability_ready",
                         "as": "diagnostics",
@@ -1002,10 +1032,30 @@ mod tests {
         {
             "event": {
                 "source": {
+                    "realm": {}
+                },
+                "source_name": "destroyed",
+                "target_name": "destroyed",
+                "filter": null
+            }
+        },
+        {
+            "event": {
+                "source": {
                     "framework": {}
                 },
                 "source_name": "started",
                 "target_name": "started",
+                "filter": null
+            }
+        },
+        {
+            "event": {
+                "source": {
+                    "framework": {}
+                },
+                "source_name": "stopped",
+                "target_name": "stopped",
                 "filter": null
             }
         },
@@ -1286,15 +1336,21 @@ mod tests {
                         "as": "elf-renamed",
                     },
                     {
-                        "event": "stopped",
+                        "event": "destroyed",
+                        "from": "framework",
+                        "to": [ "#netstack"],
+                        "as": "destroyed_net"
+                    },
+                    {
+                        "event": [ "stopped", "started" ],
                         "from": "realm",
                         "to": [ "#modular" ],
                     },
                     {
-                        "event": "started",
+                        "event": "capability_ready",
                         "from": "realm",
                         "to": [ "#netstack" ],
-                        "as": "started-modular",
+                        "as": "net-ready",
                         "filter": {
                             "path": [
                                 "/diagnostics",
@@ -1568,6 +1624,21 @@ mod tests {
         {
             "event": {
                 "source": {
+                    "framework": {}
+                },
+                "source_name": "destroyed",
+                "target": {
+                    "child": {
+                        "name": "netstack"
+                    }
+                },
+                "target_name": "destroyed_net",
+                "filter": null
+            }
+        },
+        {
+            "event": {
+                "source": {
                     "realm": {}
                 },
                 "source_name": "stopped",
@@ -1587,11 +1658,26 @@ mod tests {
                 },
                 "source_name": "started",
                 "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_name": "started",
+                "filter": null
+            }
+        },
+        {
+            "event": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "capability_ready",
+                "target": {
                     "child": {
                         "name": "netstack"
                     }
                 },
-                "target_name": "started-modular",
+                "target_name": "net-ready",
                 "filter": {
                     "path": [
                         "/diagnostics",

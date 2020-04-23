@@ -282,7 +282,7 @@ pub struct Use {
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
     pub subdir: Option<String>,
-    pub event: Option<String>,
+    pub event: Option<OneOrMany<String>>,
     pub filter: Option<Map<String, Value>>,
 }
 
@@ -308,7 +308,7 @@ pub struct Offer {
     pub storage: Option<String>,
     pub runner: Option<String>,
     pub resolver: Option<Name>,
-    pub event: Option<String>,
+    pub event: Option<OneOrMany<String>>,
     pub from: OneOrMany<Ref>,
     pub to: Vec<Ref>,
     pub r#as: Option<String>,
@@ -363,7 +363,7 @@ pub trait CapabilityClause {
     fn storage(&self) -> &Option<String>;
     fn runner(&self) -> &Option<String>;
     fn resolver(&self) -> &Option<Name>;
-    fn event(&self) -> &Option<String>;
+    fn event(&self) -> &Option<OneOrMany<String>>;
 
     /// Returns the name of the capability for display purposes.
     /// If `service()` returns `Some`, the capability name must be "service", etc.
@@ -372,6 +372,10 @@ pub trait CapabilityClause {
 
 pub trait AsClause {
     fn r#as(&self) -> Option<&String>;
+}
+
+pub trait FilterClause {
+    fn filter(&self) -> Option<&Map<String, Value>>;
 }
 
 impl CapabilityClause for Use {
@@ -393,7 +397,7 @@ impl CapabilityClause for Use {
     fn resolver(&self) -> &Option<Name> {
         &None
     }
-    fn event(&self) -> &Option<String> {
+    fn event(&self) -> &Option<OneOrMany<String>> {
         &self.event
     }
     fn capability_name(&self) -> &'static str {
@@ -412,6 +416,12 @@ impl CapabilityClause for Use {
         } else {
             ""
         }
+    }
+}
+
+impl FilterClause for Use {
+    fn filter(&self) -> Option<&Map<String, Value>> {
+        self.filter.as_ref()
     }
 }
 
@@ -448,7 +458,7 @@ impl CapabilityClause for Expose {
     fn resolver(&self) -> &Option<Name> {
         &self.resolver
     }
-    fn event(&self) -> &Option<String> {
+    fn event(&self) -> &Option<OneOrMany<String>> {
         &None
     }
     fn capability_name(&self) -> &'static str {
@@ -471,6 +481,12 @@ impl CapabilityClause for Expose {
 impl AsClause for Expose {
     fn r#as(&self) -> Option<&String> {
         self.r#as.as_ref()
+    }
+}
+
+impl FilterClause for Expose {
+    fn filter(&self) -> Option<&Map<String, Value>> {
+        None
     }
 }
 
@@ -499,7 +515,7 @@ impl CapabilityClause for Offer {
     fn resolver(&self) -> &Option<Name> {
         &self.resolver
     }
-    fn event(&self) -> &Option<String> {
+    fn event(&self) -> &Option<OneOrMany<String>> {
         &self.event
     }
     fn capability_name(&self) -> &'static str {
@@ -524,6 +540,12 @@ impl CapabilityClause for Offer {
 impl AsClause for Offer {
     fn r#as(&self) -> Option<&String> {
         self.r#as.as_ref()
+    }
+}
+
+impl FilterClause for Offer {
+    fn filter(&self) -> Option<&Map<String, Value>> {
+        self.filter.as_ref()
     }
 }
 

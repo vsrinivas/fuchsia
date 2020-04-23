@@ -24,15 +24,11 @@
             rights: [ "r*" ],
         },
         {
-            event: "stopped",
-            from: "framework",
-        },
-        {
-            event: "marked_for_destruction",
-            from: "framework",
-        },
-        {
-            event: "destroyed",
+            event: [
+                "destroyed",
+                "marked_for_destruction",
+                "stopped",
+            ],
             from: "framework",
         },
     ],

@@ -33,7 +33,27 @@
                     "framework": {}
                 },
                 "source_name": "started",
-                "target_name": "started",
+                "target_name": "began",
+                "filter": null
+            }
+        },
+        {
+            "event": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "destroyed",
+                "target_name": "destroyed",
+                "filter": null
+            }
+        },
+        {
+            "event": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "stopped",
+                "target_name": "stopped",
                 "filter": null
             }
         },

@@ -19,15 +19,11 @@
             from: "framework",
         },
         {
-            event: "started",
-            from: "framework",
-        },
-        {
-            event: "running",
-            from: "framework",
-        },
-        {
-            event: "marked_for_destruction",
+            event: [
+                "marked_for_destruction",
+                "running",
+                "started",
+            ],
             from: "framework",
         },
     ],

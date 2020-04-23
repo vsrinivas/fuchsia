@@ -30,6 +30,14 @@
         {
             event: "started",
             from: "framework",
+            as: "began",
+        },
+        {
+            event: [
+                "destroyed",
+                "stopped",
+            ],
+            from: "realm",
         },
         {
             event: "capability_ready",

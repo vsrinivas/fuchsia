@@ -53,6 +53,14 @@
       "minLength": 1,
       "maxLength": 100
     },
+    "name-clause-multiple": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/name-clause"
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
     "storage-type-clause": {
       "type": "string",
       "enum": [
@@ -257,10 +265,13 @@
           },
           "event": {
             "title": "Used event name",
-            "description": "The name of the event",
-            "allOf": [
+            "description": "The name of an event or a list of event names",
+            "oneOf": [
                 {
                     "$ref": "#/definitions/name-clause"
+                },
+                {
+                    "$ref": "#/definitions/name-clause-multiple"
                 }
             ],
             "examples": [
@@ -675,10 +686,13 @@
           },
           "event": {
             "title": "Offered event name",
-            "description": "The name of the event",
-            "allOf": [
+            "description": "The name of an event or a list of event names",
+            "oneOf": [
                 {
                     "$ref": "#/definitions/name-clause"
+                },
+                {
+                    "$ref": "#/definitions/name-clause-multiple"
                 }
             ]
           },

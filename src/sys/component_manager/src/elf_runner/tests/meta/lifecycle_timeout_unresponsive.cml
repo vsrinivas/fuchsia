@@ -26,11 +26,10 @@
             ],
         },
         {
-            event: "stopped",
-            from: "framework",
-        },
-        {
-            event: "destroyed",
+            event: [
+                "destroyed",
+                "stopped",
+            ],
             from: "framework",
         },
     ],

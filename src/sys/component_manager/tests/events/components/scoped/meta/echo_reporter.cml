@@ -20,11 +20,10 @@
             from: "framework",
         },
         {
-            event: "capability_routed",
-            from: "framework",
-        },
-        {
-            event: "started",
+            event: [
+                "capability_routed",
+                "started",
+            ],
             from: "framework",
         },
     ],

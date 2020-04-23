@@ -51,7 +51,19 @@ fn main() {
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Framework(FrameworkRef {})),
                 source_name: Some("started".to_string()),
-                target_name: Some("started".to_string()),
+                target_name: Some("began".to_string()),
+                filter: None,
+            }),
+            UseDecl::Event(UseEventDecl {
+                source: Some(Ref::Realm(RealmRef {})),
+                source_name: Some("destroyed".to_string()),
+                target_name: Some("destroyed".to_string()),
+                filter: None,
+            }),
+            UseDecl::Event(UseEventDecl {
+                source: Some(Ref::Realm(RealmRef {})),
+                source_name: Some("stopped".to_string()),
+                target_name: Some("stopped".to_string()),
                 filter: None,
             }),
             UseDecl::Event(UseEventDecl {
