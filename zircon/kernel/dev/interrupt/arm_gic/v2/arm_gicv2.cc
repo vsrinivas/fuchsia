@@ -14,7 +14,6 @@
 #include <inttypes.h>
 #include <lib/ktrace.h>
 #include <lib/system-topology.h>
-#include <reg.h>
 #include <sys/types.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>

@@ -15,7 +15,6 @@
 #include <lib/fixed_point.h>
 #include <platform.h>
 #include <pow2.h>
-#include <reg.h>
 #include <sys/types.h>
 #include <trace.h>
 #include <zircon/time.h>

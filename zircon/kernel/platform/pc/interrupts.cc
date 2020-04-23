@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <debug.h>
 #include <lib/acpi_tables.h>
-#include <reg.h>
 #include <sys/types.h>
 #include <trace.h>
 #include <zircon/types.h>

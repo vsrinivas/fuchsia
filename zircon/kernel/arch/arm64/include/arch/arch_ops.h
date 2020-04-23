@@ -10,7 +10,6 @@
 
 #ifndef __ASSEMBLER__
 
-#include <reg.h>
 #include <stdbool.h>
 #include <zircon/compiler.h>
 

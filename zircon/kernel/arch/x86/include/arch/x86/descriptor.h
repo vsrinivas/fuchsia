@@ -42,7 +42,6 @@
 
 #ifndef __ASSEMBLER__
 
-#include <reg.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 

@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_MP_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_MP_H_
 
-#include <reg.h>
 #include <zircon/compiler.h>
 
 #include <arch/arm64.h>

@@ -12,7 +12,6 @@
 #include <err.h>
 #include <lib/cbuf.h>
 #include <platform.h>
-#include <reg.h>
 #include <sys/types.h>
 #include <trace.h>
 
