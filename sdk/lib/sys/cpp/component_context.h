@@ -48,7 +48,7 @@ namespace sys {
 // ```
 // int main(int argc, const char** argv) {
 //   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-//   auto context = sys::ComponentContext::Create();
+//   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 //   my::App app(std::move(context))
 //   loop.Run();
 //   return 0;
@@ -57,19 +57,19 @@ namespace sys {
 class ComponentContext final {
  public:
   // Creates a component context that uses |svc| for incoming services. Callers
-  // can call |OutgoingDirectory::Serve()| if they wish to publish outgoing
-  // directory.
+  // can call |OutgoingDirectory::Serve()| if they wish to publish the outgoing
+  // directory to a channel they provide.
   //
   // This constructor is rarely used directly. Instead, most clients create a
   // component context using the |Create()| static method.
   explicit ComponentContext(std::shared_ptr<ServiceDirectory> svc,
                             async_dispatcher_t* dispatcher = nullptr);
 
-  // Creates a component context that uses |svc| for incoming services and
-  // serves outgoing requests over |directory_request|. Callers should be
-  // careful to publish outgoing service in |outgoing()| before |dispatcher|
-  // starts processing incoming requests for the outgoing services.
-  ComponentContext(std::shared_ptr<ServiceDirectory> svc, zx::channel directory_request,
+  // Creates a component context that uses |svc| for incoming services and immediately
+  // binds the local outgoing directory implementation to |outgoing_directory_request|. Callers
+  // SHOULD make all modifications to |outgoing()| before |dispatcher| starts processing incoming
+  // requests. Exceptions to this guideline are rare.
+  ComponentContext(std::shared_ptr<ServiceDirectory> svc, zx::channel outgoing_directory_request,
                    async_dispatcher_t* dispatcher = nullptr);
 
   ~ComponentContext();
@@ -78,7 +78,12 @@ class ComponentContext final {
   ComponentContext(const ComponentContext&) = delete;
   ComponentContext& operator=(const ComponentContext&) = delete;
 
-  // Creates a component context from the process startup info.
+  // Creates a component context from the process startup info and immediately
+  // binds the startup handle PA_DIRECTORY_REQUEST to the local outgoing directory
+  // implementation.
+  //
+  // Callers SHOULD make all modifications to |outgoing()| before the thread default
+  // async_dispatcher_t starts processing incoming requests. Exceptions to this guideline are rare.
   //
   // Call this function once during process initialization to retrieve the
   // handles supplied to the component by the component manager. This function
@@ -98,12 +103,18 @@ class ComponentContext final {
   // ```
   // int main(int argc, const char** argv) {
   //   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  //   auto context = sys::ComponentContext::Create();
+  //   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   //   my::App app(std::move(context))
   //   loop.Run();
   //   return 0;
   // }
   // ```
+  static std::unique_ptr<ComponentContext> CreateAndServeOutgoingDirectory();
+
+  // STOP! Use CreateAndServeOutgoingDirectory().
+  //
+  // Currently equivalent to Create(). Exists to support a transition away from
+  // automatically serving outgoing() on construction. See fxbug.dev/4741.
   static std::unique_ptr<ComponentContext> Create();
 
   // The component's incoming directory of services from its namespace.
@@ -149,6 +160,7 @@ class ComponentContext final {
  private:
   std::shared_ptr<ServiceDirectory> svc_;
   std::shared_ptr<OutgoingDirectory> outgoing_;
+  zx::channel outgoing_directory_request;
 };
 
 }  // namespace sys

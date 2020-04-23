@@ -23,10 +23,14 @@ ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
 
 ComponentContext::~ComponentContext() = default;
 
-std::unique_ptr<ComponentContext> ComponentContext::Create() {
+std::unique_ptr<ComponentContext> ComponentContext::CreateAndServeOutgoingDirectory() {
   zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
   return std::make_unique<ComponentContext>(ServiceDirectory::CreateFromNamespace(),
                                             zx::channel(directory_request));
+}
+
+std::unique_ptr<ComponentContext> ComponentContext::Create() {
+  return CreateAndServeOutgoingDirectory();
 }
 
 }  // namespace sys
