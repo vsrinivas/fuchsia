@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_SYSCONFIG_SYNC_CLIENT_C_H_
+#define LIB_SYSCONFIG_SYNC_CLIENT_C_H_
 
 #include <zircon/types.h>
 
@@ -46,7 +47,9 @@ zx_status_t sysconfig_read_partition(sysconfig_sync_client_t* client,
                                      zx_off_t vmo_offset);
 
 // Returns the size of the partition specified.
-size_t sysconfig_get_partition_size(sysconfig_sync_client_t* client,
-                                    sysconfig_partition_t partition);
+zx_status_t sysconfig_get_partition_size(sysconfig_sync_client_t* client,
+                                         sysconfig_partition_t partition, size_t* out);
 
 __END_CDECLS
+
+#endif  // LIB_SYSCONFIG_SYNC_CLIENT_C_H_

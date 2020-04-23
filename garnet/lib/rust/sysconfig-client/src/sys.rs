@@ -51,5 +51,6 @@ extern "C" {
     pub fn sysconfig_get_partition_size(
         client: *mut sysconfig_sync_client_t,
         partition: sysconfig_partition_t,
-    ) -> usize;
+        out: *mut usize,
+    ) -> zx_status_t;
 }

@@ -350,13 +350,11 @@ zx::channel SkipBlockPartitionClient::GetChannel() {
 fbl::unique_fd SkipBlockPartitionClient::block_fd() { return fbl::unique_fd(); }
 
 zx_status_t SysconfigPartitionClient::GetBlockSize(size_t* out_size) {
-  *out_size = client_.GetPartitionSize(partition_);
-  return ZX_OK;
+  return client_.GetPartitionSize(partition_, out_size);
 }
 
 zx_status_t SysconfigPartitionClient::GetPartitionSize(size_t* out_size) {
-  *out_size = client_.GetPartitionSize(partition_);
-  return ZX_OK;
+  return client_.GetPartitionSize(partition_, out_size);
 }
 
 zx_status_t SysconfigPartitionClient::Read(const zx::vmo& vmo, size_t size) {
@@ -364,7 +362,12 @@ zx_status_t SysconfigPartitionClient::Read(const zx::vmo& vmo, size_t size) {
 }
 
 zx_status_t SysconfigPartitionClient::Write(const zx::vmo& vmo, size_t size) {
-  if (size != client_.GetPartitionSize(partition_)) {
+  size_t partition_size;
+  if (auto status = client_.GetPartitionSize(partition_, &partition_size); status != ZX_OK) {
+    return status;
+  }
+
+  if (size != partition_size) {
     return ZX_ERR_INVALID_ARGS;
   }
   return client_.WritePartition(partition_, vmo, 0);

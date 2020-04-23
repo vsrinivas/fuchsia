@@ -84,9 +84,11 @@ pub unsafe fn sysconfig_read_partition(
 pub unsafe fn sysconfig_get_partition_size(
     client: *mut sysconfig_sync_client_t,
     partition: SysconfigPartition,
-) -> usize {
+    out: *mut usize,
+) -> zx_status_t {
     (*client).partition = partition;
-    (*client).partition_size
+    *out = (*client).partition_size;
+    zx::Status::OK.into_raw()
 }
 
 unsafe fn vmo_handle_to_vec(vmo: zx_handle_t) -> Vec<u8> {

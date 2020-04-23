@@ -4,13 +4,16 @@
 
 // clang-format off
 #include <lib/sysconfig/sync-client.h>
+#include <lib/sysconfig/sysconfig-header.h>
 // clang-format on
 
+#include <array>
 #include <dirent.h>
 #include <fcntl.h>
 
 #include <fbl/algorithm.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <lib/cksum.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fdio/cpp/caller.h>
@@ -18,6 +21,7 @@
 #include <lib/zx/time.h>
 #include <string.h>
 #include <zircon/hw/gpt.h>
+#include <zircon/status.h>
 
 namespace sysconfig {
 
@@ -39,6 +43,20 @@ struct AstroSysconfigPartition {
 } __PACKED;
 
 static_assert(sizeof(AstroSysconfigPartition) == 256 * kKilobyte);
+
+constexpr size_t kAstroSysconfigPartitionSize = sizeof(AstroSysconfigPartition);
+
+const sysconfig_header kLegacyLayout = {
+    .magic = SYSCONFIG_HEADER_MAGIC_ARRAY,
+    .sysconfig_data = {offsetof(AstroSysconfigPartition, sysconfig), kSysconfigSize},
+    .abr_metadata = {offsetof(AstroSysconfigPartition, abr_metadata), kABRMetadtaSize},
+    .vb_metadata_a = {offsetof(AstroSysconfigPartition, vb_metadata_a), kVerifiedBootMetadataSize},
+    .vb_metadata_b = {offsetof(AstroSysconfigPartition, vb_metadata_b), kVerifiedBootMetadataSize},
+    .vb_metadata_r = {offsetof(AstroSysconfigPartition, vb_metadata_r), kVerifiedBootMetadataSize},
+    .crc_value = 2716817057,  // pre-calculated crc
+};
+
+constexpr size_t kAstroPageSize = 4 * kKilobyte;
 
 zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
                                    std::optional<skipblock::SkipBlock::SyncClient>* out) {
@@ -121,6 +139,178 @@ zx_status_t CheckIfAstro(const fbl::unique_fd& devfs_root) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+// <memory> should be the starting address of a sysconfig_header structure.
+// Since header is located at page 0, it can also be the starting address of the partition.
+// If the header in the memory is not valid, it will return the default header provided by the
+// caller.
+std::unique_ptr<sysconfig_header> ParseHeader(const void* memory,
+                                              const sysconfig_header& default_header) {
+  auto ret = std::make_unique<sysconfig_header>();
+  memcpy(ret.get(), memory, sizeof(sysconfig_header));
+  if (!sysconfig_header_valid(ret.get(), kAstroPageSize, kAstroSysconfigPartitionSize)) {
+    fprintf(stderr, "ParseHeader: Falling back to default header.\n");
+    memcpy(ret.get(), &default_header, sizeof(sysconfig_header));
+  }
+
+  return ret;
+}
+
+sysconfig_subpartition GetSubpartitionInfo(const sysconfig_header& header,
+                                           SyncClient::PartitionType partition) {
+  switch (partition) {
+    case SyncClient::PartitionType::kSysconfig:
+      return header.sysconfig_data;
+    case SyncClient::PartitionType::kABRMetadata:
+      return header.abr_metadata;
+    case SyncClient::PartitionType::kVerifiedBootMetadataA:
+      return header.vb_metadata_a;
+    case SyncClient::PartitionType::kVerifiedBootMetadataB:
+      return header.vb_metadata_b;
+    case SyncClient::PartitionType::kVerifiedBootMetadataR:
+      return header.vb_metadata_r;
+  }
+  ZX_ASSERT(false);  // Unreachable.
+}
+
+struct PartitionTypeAndInfo {
+  SyncClient::PartitionType id;
+  uint64_t offset;
+  uint64_t size;
+
+  PartitionTypeAndInfo() {}
+
+  // Why not use a sysconfig_subpartition member?
+  // Because sysconfig_subpartition is declared with "packed" atrribute. This has been seen
+  // to cause alignment issue on some platforms if used directly as member.
+  PartitionTypeAndInfo(SyncClient::PartitionType part, sysconfig_subpartition info)
+      : id(part), offset(info.offset), size(info.size) {}
+};
+
+using PartitionTypeAndInfoArray = std::array<PartitionTypeAndInfo, 5>;
+
+PartitionTypeAndInfoArray SortSubpartitions(const sysconfig_header& header) {
+  using PartitionType = SyncClient::PartitionType;
+  PartitionTypeAndInfoArray ret = {{
+      PartitionTypeAndInfo(PartitionType::kSysconfig, header.sysconfig_data),
+      PartitionTypeAndInfo(PartitionType::kABRMetadata, header.abr_metadata),
+      PartitionTypeAndInfo(PartitionType::kVerifiedBootMetadataA, header.vb_metadata_a),
+      PartitionTypeAndInfo(PartitionType::kVerifiedBootMetadataB, header.vb_metadata_b),
+      PartitionTypeAndInfo(PartitionType::kVerifiedBootMetadataR, header.vb_metadata_r),
+  }};
+  std::sort(ret.begin(), ret.end(),
+            [](const auto& l, const auto& r) { return l.offset < r.offset; });
+  return ret;
+}
+
+// Rotate <mem> to the left by <rotate> unit
+void RotateMemoryLeft(uint8_t* mem, size_t len, size_t rotate) {
+  /**
+   * Example: rotate "123456789" 3 units to the left, into "456789123"
+   *
+   * Step 1: reverse the entire array -> "987654321"
+   * Step 2: reverse the first (9 - 3) units -> "456789321"
+   * Step 3: reverse the last 3 units -> "456789123"
+   */
+  std::reverse(mem, mem + len);
+  std::reverse(mem, mem + len - rotate);
+  std::reverse(mem + len - rotate, mem + len);
+}
+
+struct PartitionTransformInfo {
+  PartitionTypeAndInfoArray current;
+  PartitionTypeAndInfoArray target_sorted;
+
+  PartitionTransformInfo(const sysconfig_header& current_header,
+                         const sysconfig_header& target_header) {
+    current = SortSubpartitions(current_header);
+    target_sorted = SortSubpartitions(target_header);
+  }
+
+  PartitionTypeAndInfo GetCurrentInfo(SyncClient::PartitionType id) {
+    auto res = std::find_if(current.begin(), current.end(),
+                            [id](const auto& ele) { return ele.id == id; });
+    ZX_ASSERT(res != current.end());
+    return *res;
+  }
+
+  PartitionTypeAndInfo GetTargetInfo(SyncClient::PartitionType id) {
+    auto res = std::find_if(target_sorted.begin(), target_sorted.end(),
+                            [id](const auto& ele) { return ele.id == id; });
+    ZX_ASSERT(res != target_sorted.end());
+    return *res;
+  }
+};
+
+// Update sysconfig layout according to a new header in place.
+void UpdateSysconfigLayout(void* start, size_t len, const sysconfig_header& current_header,
+                           const sysconfig_header& target_header) {
+  /**
+   * Example:
+   * Existing layout: AAAAAABCCCCCCCC
+   * Target layout:   XAACCCCCCCCBBBB ('X' means not belonging to any sub-partition)
+   *
+   * Step 1: Shrink partition A -> "AAXXXXBCCCCCCCC"
+   * Step 2: Pack all sub-partitions to the right -> "XXXXAABCCCCCCCC"
+   * Step 3: Reorder sub-partitions in packed region -> "XXXXAACCCCCCCCB"
+   * Step 4: Move all sub-partitions to target offset in their order. Size of B increases
+   * naturally. -> "XAACCCCCCCCBXXX"
+   *
+   * The average run-time of the algorithm is approximately 2ms in release build.
+   */
+
+  auto mem = static_cast<uint8_t*>(start);
+  PartitionTransformInfo info(current_header, target_header);
+
+  // Step 1: Shrink sub-partitions sizes to target.
+  for (auto& current : info.current) {
+    current.size = std::min(current.size, info.GetTargetInfo(current.id).size);
+  }
+
+  // Step 2: Pack all sub-partitions to the right.
+  size_t move_right_copy_index = len;
+  for (auto iter = info.current.rbegin(); iter != info.current.rend(); iter++) {
+    move_right_copy_index -= iter->size;
+    memmove(&mem[move_right_copy_index], &mem[iter->offset], iter->size);
+    iter->offset = move_right_copy_index;
+  }
+
+  // Step 3: Order sub-partitions according to the target header, by rotating the memory.
+  size_t seg_offset = move_right_copy_index;
+  for (auto& target : info.target_sorted) {
+    PartitionTypeAndInfo target_part_in_current = info.GetCurrentInfo(target.id);
+    // Rotate this sub-partition to the first position in the segment.
+    uint8_t* seg_start = &mem[seg_offset];
+    size_t seg_len = len - seg_offset;
+    size_t rotate = target_part_in_current.offset - seg_offset;
+    if (rotate != 0) {
+      RotateMemoryLeft(seg_start, seg_len, rotate);
+      // Update offset after rotation.
+      for (auto& current : info.current) {
+        if (current.offset >= seg_offset) {
+          current.offset = (current.offset - seg_offset + seg_len - rotate) % seg_len + seg_offset;
+        }
+      }
+    }
+    seg_offset += target_part_in_current.size;
+  }
+
+  // Step 4: Move sub-partitions to their target offsets. Sizes increase naturally.
+  size_t end_of_prev_part = 0;
+  for (auto& target : info.target_sorted) {
+    PartitionTypeAndInfo target_part_in_current = info.GetCurrentInfo(target.id);
+    memset(&mem[end_of_prev_part], 0xff, target.offset - end_of_prev_part);
+    if (target.offset != target_part_in_current.offset) {
+      memmove(&mem[target.offset], &mem[target_part_in_current.offset],
+              target_part_in_current.size);
+    }
+    // Note: We set end_or_prev_part to be target offset + old size so that
+    // if target size > old size, next iteration will set the expanded memory to 0xff.
+    end_of_prev_part = target.offset + target_part_in_current.size;
+  }
+  // Set the remaining part after all sub-partitions of 0xff, if there is any.
+  memset(&mem[end_of_prev_part], 0xff, len - end_of_prev_part);
+}
+
 }  // namespace
 
 zx_status_t SyncClient::Create(std::optional<SyncClient>* out) {
@@ -151,8 +341,43 @@ zx_status_t SyncClient::Create(const fbl::unique_fd& devfs_root, std::optional<S
   return ZX_OK;
 }
 
+const sysconfig_header* SyncClient::GetHeader(zx_status_t* status_out) {
+  if (header_) {
+    return header_.get();
+  }
+
+  if (auto status = LoadFromStorage(); status != ZX_OK) {
+    fprintf(stderr, "ReadHeader: Failed to read header from storage. %s.\n",
+            zx_status_get_string(status));
+    if (status_out) {
+      *status_out = status;
+    }
+    return nullptr;
+  }
+
+  header_ = ParseHeader(read_mapper_.start(), kLegacyLayout);
+  return header_.get();
+}
+
 zx_status_t SyncClient::WritePartition(PartitionType partition, const zx::vmo& vmo,
                                        zx_off_t vmo_offset) {
+  const sysconfig_header* header;
+  zx_status_t status;
+  if ((header = GetHeader(&status)) == nullptr) {
+    // In case there is acutally a valid header in the storage, but just that we fail to read due to
+    // transient error, refuse to perform any write to avoid compromising the partition, bootloader
+    // etc.
+    fprintf(stderr,
+            "WritePartition: error while reading for header. Refuse to perform any write. %s\n",
+            zx_status_get_string(status));
+    return status;
+  }
+
+  auto partition_info = GetSubpartitionInfo(*header, partition);
+  return Write(partition_info.offset, partition_info.size, vmo, vmo_offset);
+}
+
+zx_status_t SyncClient::Write(size_t offset, size_t len, const zx::vmo& vmo, zx_off_t vmo_offset) {
   zx::vmo dup;
   if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
     return status;
@@ -160,8 +385,8 @@ zx_status_t SyncClient::WritePartition(PartitionType partition, const zx::vmo& v
   skipblock::WriteBytesOperation operation = {
       .vmo = std::move(dup),
       .vmo_offset = vmo_offset,
-      .offset = GetPartitionOffset(partition),
-      .size = GetPartitionSize(partition),
+      .offset = offset,
+      .size = len,
   };
   printf("sysconfig: ADDING ERASE CYCLE TO SYSCONFIG\n");
   auto result = skip_block_.WriteBytes(std::move(operation));
@@ -181,6 +406,27 @@ zx_status_t SyncClient::InitializeReadMapper() {
 
 zx_status_t SyncClient::ReadPartition(PartitionType partition, const zx::vmo& vmo,
                                       zx_off_t vmo_offset) {
+  const sysconfig_header* header;
+  zx_status_t status;
+  if ((header = GetHeader(&status)) == nullptr) {
+    fprintf(stderr, "ReadPartition: error while reading for header. %s\n",
+            zx_status_get_string(status));
+    return status;
+  }
+
+  auto partition_info = GetSubpartitionInfo(*header, partition);
+  return Read(partition_info.offset, partition_info.size, vmo, vmo_offset);
+}
+
+zx_status_t SyncClient::Read(size_t offset, size_t len, const zx::vmo& vmo, zx_off_t vmo_offset) {
+  if (auto status = LoadFromStorage(); status != ZX_OK) {
+    fprintf(stderr, "Failed to read content from storage. %s\n", zx_status_get_string(status));
+    return status;
+  }
+  return vmo.write(reinterpret_cast<uint8_t*>(read_mapper_.start()) + offset, vmo_offset, len);
+}
+
+zx_status_t SyncClient::LoadFromStorage() {
   // Lazily create read mapper.
   if (read_mapper_.start() == nullptr) {
     zx_status_t status = InitializeReadMapper();
@@ -206,38 +452,86 @@ zx_status_t SyncClient::ReadPartition(PartitionType partition, const zx::vmo& vm
     return status;
   }
 
-  return vmo.write(reinterpret_cast<uint8_t*>(read_mapper_.start()) + GetPartitionOffset(partition),
-                   vmo_offset, GetPartitionSize(partition));
+  return ZX_OK;
 }
 
-size_t SyncClient::GetPartitionSize(PartitionType partition) {
-  switch (partition) {
-    case PartitionType::kSysconfig:
-      return kSysconfigSize;
-    case PartitionType::kABRMetadata:
-      return kABRMetadtaSize;
-    case PartitionType::kVerifiedBootMetadataA:
-    case PartitionType::kVerifiedBootMetadataB:
-    case PartitionType::kVerifiedBootMetadataR:
-      return kVerifiedBootMetadataSize;
+zx_status_t SyncClient::GetPartitionSize(PartitionType partition, size_t* out) {
+  const sysconfig_header* header;
+  zx_status_t status;
+  if ((header = GetHeader(&status)) == nullptr) {
+    fprintf(stderr, "GetPartitionSize: error while reading for header. %s\n",
+            zx_status_get_string(status));
+    return status;
   }
-  ZX_ASSERT(false);  // Unreachable.
+  *out = GetSubpartitionInfo(*header, partition).size;
+  return ZX_OK;
 }
 
-size_t SyncClient::GetPartitionOffset(PartitionType partition) {
-  switch (partition) {
-    case PartitionType::kSysconfig:
-      return offsetof(AstroSysconfigPartition, sysconfig);
-    case PartitionType::kABRMetadata:
-      return offsetof(AstroSysconfigPartition, abr_metadata);
-    case PartitionType::kVerifiedBootMetadataA:
-      return offsetof(AstroSysconfigPartition, vb_metadata_a);
-    case PartitionType::kVerifiedBootMetadataB:
-      return offsetof(AstroSysconfigPartition, vb_metadata_b);
-    case PartitionType::kVerifiedBootMetadataR:
-      return offsetof(AstroSysconfigPartition, vb_metadata_r);
+zx_status_t SyncClient::GetPartitionOffset(PartitionType partition, size_t* out) {
+  const sysconfig_header* header;
+  zx_status_t status;
+  if ((header = GetHeader(&status)) == nullptr) {
+    fprintf(stderr, "GetPartitionOffset: error while reading for header. %s\n",
+            zx_status_get_string(status));
+    return status;
   }
-  ZX_ASSERT(false);  // Unreachable.
+  *out = GetSubpartitionInfo(*header, partition).offset;
+  return ZX_OK;
+}
+
+zx_status_t SyncClient::UpdateLayout(const sysconfig_header& target_header) {
+  zx_status_t status_get_header;
+  auto current_header = GetHeader(&status_get_header);
+  if (current_header == nullptr) {
+    fprintf(stderr, "UpdateLayout: Failed to read current header. %s\n",
+            zx_status_get_string(status_get_header));
+    return status_get_header;
+  }
+
+  if (sysconfig_header_equal(&target_header, current_header)) {
+    fprintf(stderr,
+            "UpdateLayout: Already orgianized according to the specified layout. Skipping.\n");
+    return ZX_OK;
+  }
+
+  sysconfig_header header = target_header;
+  update_sysconfig_header_magic_and_crc(&header);
+
+  // Refuse to update to an invalid header in the first place
+  if (!sysconfig_header_valid(&header, kAstroPageSize, kAstroSysconfigPartitionSize)) {
+    fprintf(stderr, "UpdateLayout: Header is invalid. Refuse to update\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Read the entire partition in to read_mapper_
+  if (auto status = LoadFromStorage(); status != ZX_OK) {
+    fprintf(stderr, "UpdateLayout: Failed to load from storage. %s\n",
+            zx_status_get_string(status));
+    return status;
+  }
+
+  UpdateSysconfigLayout(read_mapper_.start(), read_mapper_.size(), *current_header, target_header);
+
+  // Write the header, if it is not the legacy one.
+  zx_status_t status_write;
+  if (!sysconfig_header_equal(&header, &kLegacyLayout) &&
+      (status_write = read_mapper_.vmo().write(&header, 0, sizeof(header))) != ZX_OK) {
+    fprintf(stderr, "failed to write header to vmo. %s\n", zx_status_get_string(status_write));
+    return status_write;
+  }
+
+  if (auto status = Write(0, kAstroSysconfigPartitionSize, read_mapper_.vmo(), 0);
+      status != ZX_OK) {
+    fprintf(stderr, "UpdateLayout: failed to write to storage. %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  header_ = std::make_unique<sysconfig_header>(header);
+  return ZX_OK;
 }
 
 }  // namespace sysconfig
+
+uint32_t sysconfig_header_crc32(uint32_t crc, const uint8_t* buf, size_t len) {
+  return crc32(crc, buf, len);
+}

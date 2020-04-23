@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_SYSCONFIG_SYNC_CLIENT_H_
+#define LIB_SYSCONFIG_SYNC_CLIENT_H_
 
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -12,6 +13,8 @@
 #include <optional>
 
 #include <fbl/unique_fd.h>
+
+#include "sysconfig-header.h"
 
 namespace sysconfig {
 
@@ -51,7 +54,18 @@ class __EXPORT SyncClient {
   zx_status_t ReadPartition(PartitionType partition, const zx::vmo& vmo, zx_off_t vmo_offset);
 
   // Returns the size of the partition specified.
-  size_t GetPartitionSize(PartitionType partition);
+  zx_status_t GetPartitionSize(PartitionType partition, size_t* out);
+
+  zx_status_t GetPartitionOffset(PartitionType partition, size_t* out);
+
+  // Use caution when updating layout in multi-threaded context.
+  // It's dangerous to update layout and header while there are other instances of SyncClient
+  // in use.
+  // In particular, SyncClient caches header from storage after the first time it reads it. If
+  // layout is changed afterwards by some other instance of SyncClient, it will not be aware of it.
+  // Thus make sure that you only effectively update layout in a state where no other SyncClient is
+  // created and in use.
+  zx_status_t UpdateLayout(const sysconfig_header& target_header);
 
   // No copy.
   SyncClient(const SyncClient&) = delete;
@@ -60,17 +74,29 @@ class __EXPORT SyncClient {
   SyncClient(SyncClient&&) = default;
   SyncClient& operator=(SyncClient&&) = default;
 
+  const sysconfig_header* GetHeader(zx_status_t* status_out = nullptr);
+
  private:
   SyncClient(::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient skip_block)
       : skip_block_(std::move(skip_block)) {}
 
   zx_status_t InitializeReadMapper();
-  size_t GetPartitionOffset(PartitionType partition);
+
+  zx_status_t Write(size_t offset, size_t len, const zx::vmo& vmo, zx_off_t vmo_offset);
+
+  zx_status_t Read(size_t offset, size_t len, const zx::vmo& vmo, zx_off_t vmo_offset);
+
+  zx_status_t LoadFromStorage();
 
   ::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient skip_block_;
 
   // Lazily initialized on reads.
   fzl::OwnedVmoMapper read_mapper_;
+
+  // Once loaded from storage, the header will be cached here
+  std::unique_ptr<sysconfig_header> header_;
 };
 
 }  // namespace sysconfig
+
+#endif  // LIB_SYSCONFIG_SYNC_CLIENT_H_

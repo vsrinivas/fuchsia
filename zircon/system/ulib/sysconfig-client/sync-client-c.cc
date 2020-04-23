@@ -59,12 +59,11 @@ __EXPORT
 zx_status_t sysconfig_read_partition(sysconfig_sync_client_t* client,
                                      sysconfig_partition_t partition, zx_handle_t vmo,
                                      zx_off_t vmo_offset) {
-  return client->cpp_client->ReadPartition(Translate(partition), *zx::unowned_vmo(vmo),
-                                            vmo_offset);
+  return client->cpp_client->ReadPartition(Translate(partition), *zx::unowned_vmo(vmo), vmo_offset);
 }
 
 __EXPORT
-size_t sysconfig_get_partition_size(sysconfig_sync_client_t* client,
-                                    sysconfig_partition_t partition) {
-  return client->cpp_client->GetPartitionSize(Translate(partition));
+zx_status_t sysconfig_get_partition_size(sysconfig_sync_client_t* client,
+                                         sysconfig_partition_t partition, size_t* out) {
+  return client->cpp_client->GetPartitionSize(Translate(partition), out);
 }

@@ -36,7 +36,7 @@ impl SysconfigSyncClient {
     }
 
     fn read_partition(&self, partition: SysconfigPartition) -> Result<Vec<u8>, zx::Status> {
-        let size = self.get_partition_size(partition);
+        let size = self.get_partition_size(partition)?;
         let vmo = Vmo::create(size as u64)?;
         assert!(!self.0.is_null());
         // Requires that `self.0` is pointing to a valid `sysconfig_sync_client_t`.
@@ -53,7 +53,7 @@ impl SysconfigSyncClient {
         partition: SysconfigPartition,
         data: &[u8],
     ) -> Result<(), zx::Status> {
-        let size = self.get_partition_size(partition);
+        let size = self.get_partition_size(partition)?;
         if data.len() > size {
             return Err(zx::Status::OUT_OF_RANGE);
         }
@@ -66,10 +66,12 @@ impl SysconfigSyncClient {
         Ok(())
     }
 
-    fn get_partition_size(&self, partition: SysconfigPartition) -> usize {
+    fn get_partition_size(&self, partition: SysconfigPartition) -> Result<usize, zx::Status> {
         assert!(!self.0.is_null());
+        let mut out: usize = 0;
         // Requires that `self.0` is pointing to a valid `sysconfig_sync_client_t`.
-        unsafe { sysconfig_get_partition_size(self.0, partition) }
+        zx::ok(unsafe { sysconfig_get_partition_size(self.0, partition, &mut out) })?;
+        Ok(out)
     }
 }
 
@@ -111,10 +113,8 @@ mod tests {
         let client = SysconfigSyncClient::new(fd).unwrap();
         unsafe {
             assert_eq!((*client.0).devfs_root, fd);
-            assert_eq!(
-                (*client.0).partition_size,
-                client.get_partition_size(SysconfigPartition::VerifiedBootMetadataA)
-            );
+            let part_size = client.get_partition_size(SysconfigPartition::VerifiedBootMetadataA);
+            assert_eq!((*client.0).partition_size, part_size.unwrap());
             assert_eq!((*client.0).partition, SysconfigPartition::VerifiedBootMetadataA);
         }
     }

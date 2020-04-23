@@ -40,7 +40,11 @@ zx_status_t ClearSysconfig(const fbl::unique_fd& devfs_root) {
     return status;
   }
   constexpr auto kPartition = sysconfig::SyncClient::PartitionType::kSysconfig;
-  size_t size = client->GetPartitionSize(kPartition);
+  size_t size;
+  if (auto status_get_size = client->GetPartitionSize(kPartition, &size) != ZX_OK) {
+    fprintf(stderr, "Failed to get partition size. %s\n", zx_status_get_string(status_get_size));
+    return status_get_size;
+  }
 
   // We assume the vmo is zero initialized.
   zx::vmo vmo;
