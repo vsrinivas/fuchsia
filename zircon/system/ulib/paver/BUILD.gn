@@ -31,6 +31,7 @@ zx_library("paver") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_llcpp",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//src/devices/lib/amlogic",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/cksum",
@@ -53,7 +54,6 @@ zx_library("paver") {
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block-volume:llcpp",
-    "//zircon/system/fidl/fuchsia-paver:llcpp",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
     "//zircon/system/ulib/chromeos-disk-setup",
     "//zircon/system/ulib/libabr",

@@ -12,6 +12,7 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -37,7 +38,6 @@ rustc_test("driver") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
-    "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
   ]
 }
 

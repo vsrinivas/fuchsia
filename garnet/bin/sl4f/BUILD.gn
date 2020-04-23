@@ -46,6 +46,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
     "//sdk/fidl/fuchsia.power:fuchsia.power.test-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
@@ -106,7 +107,6 @@ rustc_library("lib") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
-    "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
   ]
 
   test_deps = [

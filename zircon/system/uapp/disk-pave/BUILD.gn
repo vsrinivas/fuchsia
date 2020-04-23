@@ -34,6 +34,7 @@ executable("install-disk-image") {
     "payload-streamer.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -42,7 +43,6 @@ executable("install-disk-image") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-paver:llcpp",
     "//zircon/system/ulib/paver",
   ]
 }
@@ -69,6 +69,7 @@ test("install-disk-image-test") {
   ]
   include_dirs = [ "." ]
   deps = [
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-cpp",
@@ -79,7 +80,6 @@ test("install-disk-image-test") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-paver:llcpp",
   ]
 }
 

@@ -12,6 +12,7 @@ rustc_test("driver") {
 
   deps = [
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//src/lib/fdio/rust:fdio",
@@ -32,7 +33,6 @@ rustc_test("driver") {
     "//third_party/rust_crates:tempfile",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
-    "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
   ]
 }
