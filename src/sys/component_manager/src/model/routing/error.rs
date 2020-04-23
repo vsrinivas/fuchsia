@@ -104,12 +104,28 @@ pub enum RoutingError {
     StorageFromComponentManagerNotFound { capability_id: String },
 
     #[error(
+        "A `use from realm` declaration was found at `{}` for `{}`, but no matching \
+        `use` declaration was found in the parent",
+        moniker,
+        capability_id
+    )]
+    UseFromRealmNotFound { moniker: AbsoluteMoniker, capability_id: String },
+
+    #[error(
         "An `offer from realm` declaration was found at `{}` for `{}`, but no matching \
         `offer` declaration was found in the parent",
         moniker,
         capability_id
     )]
     OfferFromRealmNotFound { moniker: AbsoluteMoniker, capability_id: String },
+
+    #[error(
+        "A `storage` declaration with a backing directory from `realm` was found at `{}` for `{}`,
+        but no matching `storage` declaration was found in the parent",
+        moniker,
+        capability_id
+    )]
+    StorageFromRealmNotFound { moniker: AbsoluteMoniker, capability_id: String },
 
     #[error(
         "An `offer from #{}` declaration was found at `{}` for `{}`, but no matching child was \
@@ -297,11 +313,28 @@ impl RoutingError {
         Self::StorageFromComponentManagerNotFound { capability_id: capability_id.into() }
     }
 
+    pub fn use_from_realm_not_found(
+        moniker: &AbsoluteMoniker,
+        capability_id: impl Into<String>,
+    ) -> Self {
+        Self::UseFromRealmNotFound { moniker: moniker.clone(), capability_id: capability_id.into() }
+    }
+
     pub fn offer_from_realm_not_found(
         moniker: &AbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::OfferFromRealmNotFound {
+            moniker: moniker.clone(),
+            capability_id: capability_id.into(),
+        }
+    }
+
+    pub fn storage_from_realm_not_found(
+        moniker: &AbsoluteMoniker,
+        capability_id: impl Into<String>,
+    ) -> Self {
+        Self::StorageFromRealmNotFound {
             moniker: moniker.clone(),
             capability_id: capability_id.into(),
         }

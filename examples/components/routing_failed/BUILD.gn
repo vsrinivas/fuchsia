@@ -1,20 +1,20 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/package.gni")
 
-package("components-routing-example") {
+package("components-routing-failed-example") {
   deps = [
-    "//examples/components/routing/echo_client",
-    "//examples/components/routing/echo_server",
+    "//examples/components/routing_failed/echo_client",
+    "//examples/components/routing_failed/echo_server",
   ]
   binaries = [
     {
-      name = "echo_server"
+      name = "routing_failed_echo_server"
     },
     {
-      name = "echo_client"
+      name = "routing_failed_echo_client"
     },
   ]
   meta = [

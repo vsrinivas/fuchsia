@@ -667,11 +667,30 @@ async fn walk_offer_chain<'a>(
         let decl = cur_realm_state.decl();
         let last_child_moniker = pos.last_child_moniker.as_ref().expect("no child moniker");
         let offer =
-            pos.capability.find_offer_source(decl, last_child_moniker).ok_or_else(|| {
-                ModelError::from(RoutingError::offer_from_realm_not_found(
-                    &pos.abs_last_child_moniker(),
-                    pos.capability.source_id(),
-                ))
+            pos.capability.find_offer_source(decl, last_child_moniker).ok_or_else(|| match pos
+                .capability
+            {
+                ComponentCapability::Use(_) => {
+                    ModelError::from(RoutingError::use_from_realm_not_found(
+                        &pos.abs_last_child_moniker(),
+                        pos.capability.source_id(),
+                    ))
+                }
+                ComponentCapability::Offer(_) => {
+                    ModelError::from(RoutingError::offer_from_realm_not_found(
+                        &pos.abs_last_child_moniker(),
+                        pos.capability.source_id(),
+                    ))
+                }
+                ComponentCapability::Storage(_) => {
+                    ModelError::from(RoutingError::storage_from_realm_not_found(
+                        &pos.abs_last_child_moniker(),
+                        pos.capability.source_id(),
+                    ))
+                }
+                _ => {
+                    panic!("Invalid offer target: {:?}", pos.capability);
+                }
             })?;
         let source = match offer {
             OfferDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
@@ -1045,7 +1064,7 @@ pub(super) fn report_routing_failure(
         _ => format!("{}", err),
     };
     error!(
-        "Failed to route `{}` `{}` from component `{}`: {}",
+        "Failed to route {} `{}` from component `{}`: {}",
         cap.type_name(),
         cap.source_id(),
         target_moniker,
