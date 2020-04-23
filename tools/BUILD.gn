@@ -11,7 +11,7 @@ group("tools") {
     "//tools/blackout:all",
     "//tools/bootserver_old:host($host_toolchain)",
     "//tools/build",
-    "//tools/create",
+    "//tools/create:install($host_toolchain)",
     "//tools/debroot($host_toolchain)",
     "//tools/fidl/fidldoc($host_toolchain)",
     "//tools/fidlcat:fidlcat_host",
