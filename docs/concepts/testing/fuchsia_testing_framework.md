@@ -28,19 +28,19 @@ The test suite protocol, [`fuchsia.test.Suite`][fidl-test-suite], is the
 protocol implemented by a test that the test manager uses to run tests and
 obtain information about them. Most commonly, the test code itself (i.e., the
 [test driver](#test-roles)) is written using a language-specific test library,
-and the protocol is implemented by a [test adapter](#test-adapter) on the test's
+and the protocol is implemented by a [test runner](#test-runner) on the test's
 behalf.
 
-## Test adapters
+## Test runners
 
 The [fuchsia.test.Suite](#test-suite-protocol) protocol is the way for
 [Components v2](#glossary-components-v2) tests to enumerate their test cases and
 report results. This differs from [Components v1](#glossary-components-v1),
 where test results are reported through stdout and exit codes. Most commonly, a
 test will not implement the `fuchsia.test.Suite` protocol from scratch, but
-would instead use a *test adapter* that integrates a language-native testing
+would instead use a *test runner* that integrates a language-native testing
 library with the protocol. The the does this by declaring it uses the
-appropriate test adapter runner in the [test driver][test-roles]'s manifest. For
+appropriate test runner in the [test driver][test-roles]'s manifest. For
 example, for a C++ gtest, the test driver's manifest would contain the
 following:
 
@@ -50,9 +50,9 @@ following:
     ...
     "use": [
         ...
-        // Use the gtest adapter
+        // Use the gtest runner
         {
-            "runner": "gtest_adapter",
+            "runner": "gtest_runner",
         },
     ],
     "expose": [
@@ -68,10 +68,10 @@ following:
 
 However, it's cumbersome for a test to manually implement this protocol. For
 this reason, the Fuchsia Testing Frameworks provides a set of special runners
-called *test adapters*. A test adapter integrates a [test driver](#test-roles)
+called *test runners*. A test runner integrates a [test driver](#test-roles)
 that uses a language-native test library (such as C++ `gtest` or rust `libtest`)
 with the test suite protocol. If your component declares it uses the appropriate
-test adapter in its [component manifest][manifests], you can write your test
+test runner in its [component manifest][manifests], you can write your test
 natively against the language-specific test library and do not need to manually
 export results under the test suite protocol.
 
@@ -92,7 +92,7 @@ Components in the [test realm](#tests-as-components) may play various roles in
 the test, as follows:
 
 -   Test driver: The component that actually runs the test, and implements
-    (either directly or through a [test adapter](#test-adapters)) the
+    (either directly or through a [test runner](#test-runners)) the
     [`fuchsia.test.Suite`][test-suite-protocol] protocol. This role may be, but
     is not necessarily, owned by the [test root](#tests-as-components).
 -   Capability provider: A component that provides a capability which the test
