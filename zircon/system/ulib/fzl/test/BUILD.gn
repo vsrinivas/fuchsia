@@ -30,6 +30,7 @@ test("fzl-zxtest") {
     "vmo-pool-tests.cc",
   ]
   deps = [
+    "//src/devices/testing/fake-bti",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -42,7 +43,6 @@ test("fzl-zxtest") {
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake-bti",
     "//zircon/system/fidl/fuchsia-io:c",
   ]
 }

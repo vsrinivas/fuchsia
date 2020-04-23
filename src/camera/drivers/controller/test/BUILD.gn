@@ -19,10 +19,10 @@ executable("test") {
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller:source",
     "//src/camera/drivers/test_utils",
+    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-testing",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
   if (internal_access) {
     defines = [ "INTERNAL_ACCESS" ]

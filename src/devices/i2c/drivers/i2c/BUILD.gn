@@ -42,6 +42,7 @@ test("i2c-test") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
@@ -50,7 +51,6 @@ test("i2c-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

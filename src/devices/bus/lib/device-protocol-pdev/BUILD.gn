@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("device-protocol-pdev") {
+  sdk = "source"
+  sdk_headers = [ "lib/device-protocol/pdev.h" ]
+  sources = [ "pdev.cc" ]
+  public_deps = [
+    # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/platform/device.h>.
+    "//sdk/banjo/ddk.protocol.platform.device",
+
+    # Banjo protocols have #include <ddk/driver.h>.
+    "//zircon/public/lib/ddk",
+
+    # Banjo protocols have #include <ddktl/device-internal.h>.
+    "//zircon/public/lib/ddktl",
+  ]
+
+  deps = [
+    # pdev.cpp has #include <lib/mmio/mmio.h>.
+    "//zircon/public/lib/mmio",
+  ]
+}

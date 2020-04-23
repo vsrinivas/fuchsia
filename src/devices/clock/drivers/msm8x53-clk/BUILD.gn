@@ -20,7 +20,9 @@ driver_module("msm8x53-clk") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
+    "//src/devices/lib/msm8x53",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -31,8 +33,6 @@ driver_module("msm8x53-clk") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/msm8x53",
   ]
 }
 
@@ -53,6 +53,10 @@ test("msm8x53-clk-test") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/msm8x53",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-mmio-reg",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -65,10 +69,6 @@ test("msm8x53-clk-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/dev/lib/mock-mmio-reg",
-    "//zircon/system/dev/lib/msm8x53",
   ]
 }
 

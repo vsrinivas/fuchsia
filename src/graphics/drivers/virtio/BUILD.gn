@@ -51,13 +51,13 @@ test("virtio-gpu-test") {
   deps = [
     ":gpu_lib",
     "//src/devices/bus/lib/virtio",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake-bti",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

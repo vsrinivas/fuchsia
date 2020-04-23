@@ -1,0 +1,109 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":usb-desc-lib-test",
+    ":usb-request-cpp-test",
+    ":usb-wrapper-test",
+  ]
+}
+
+test("usb-request-cpp-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  output_name = "usb-request-cpp-test"
+  sources = [ "request-cpp-test.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.usb",
+    "//sdk/banjo/ddk.protocol.usb.function",
+    "//sdk/banjo/ddk.protocol.usb.request",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/usb/lib/usb",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+test("usb-wrapper-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  output_name = "usb-wrapper-test"
+  sources = [ "usb-wrapper-test.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/ddk.protocol.usb",
+    "//sdk/banjo/ddk.protocol.usb.composite",
+    "//src/devices/lib/driver",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/usb/lib/usb",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+test("usb-desc-lib-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  output_name = "usb-desc-lib-test"
+  sources = [ "usb-desc-lib-test.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.usb",
+    "//sdk/banjo/ddk.protocol.usb.composite",
+    "//src/devices/usb/lib/usb",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+migrated_manifest("usb-request-cpp-test-manifest") {
+  deps = [ ":usb-request-cpp-test" ]
+}
+
+migrated_manifest("usb-wrapper-test-manifest") {
+  deps = [ ":usb-wrapper-test" ]
+}
+
+migrated_manifest("usb-desc-lib-test-manifest") {
+  deps = [ ":usb-desc-lib-test" ]
+}

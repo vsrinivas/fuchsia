@@ -18,12 +18,12 @@ driver_module("aml-pwm-init") {
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.pwm",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/dev/lib/amlogic",
   ]
 }
 
@@ -40,6 +40,8 @@ test("aml-pwm-init-test") {
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//sdk/banjo/ddk.protocol.pwm",
     "//sdk/banjo/ddk.protocol.pwm:ddk.protocol.pwm_mock",
+    "//src/devices/lib/amlogic",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -47,8 +49,6 @@ test("aml-pwm-init-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

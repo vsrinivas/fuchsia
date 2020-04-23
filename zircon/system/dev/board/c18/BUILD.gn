@@ -34,11 +34,11 @@ driver_module("c18") {
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
+    "//src/devices/lib/mt8167",
+    "//src/devices/lib/mt8183",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/mt8167",
-    "//zircon/system/dev/lib/mt8183",
   ]
 
   # TODO(47406): restore some form of data dependency on c18

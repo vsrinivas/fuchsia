@@ -20,6 +20,7 @@ driver_module("aml-cpu") {
     "//sdk/banjo/ddk.protocol.thermal",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_llcpp",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -28,7 +29,6 @@ driver_module("aml-cpu") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/amlogic",
     "//zircon/system/fidl/fuchsia-device:llcpp",
   ]
 }
@@ -58,6 +58,8 @@ test("aml-cpu-test") {
     "//sdk/banjo/ddk.protocol.thermal",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_llcpp",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
+    "//src/devices/lib/amlogic",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -67,8 +69,6 @@ test("aml-cpu-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/fidl/fuchsia-device:llcpp",
   ]
 }

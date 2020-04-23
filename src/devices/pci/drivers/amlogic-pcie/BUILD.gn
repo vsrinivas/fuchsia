@@ -23,6 +23,8 @@ driver_module("amlogic-pcie") {
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -30,8 +32,6 @@ driver_module("amlogic-pcie") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/pci/designware",
   ]
 }

@@ -37,6 +37,7 @@ test("hid-input-report-test-bin") {
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/lib/driver",
+    "//src/devices/testing/fake_ddk",
     "//src/ui/input/lib/hid-input-report",
     "//src/ui/input/lib/input-report-instance-driver",
     "//zircon/public/lib/ddk",
@@ -45,7 +46,6 @@ test("hid-input-report-test-bin") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]

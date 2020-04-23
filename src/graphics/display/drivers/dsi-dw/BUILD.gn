@@ -18,6 +18,8 @@ driver_module("dsi-dw") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",
@@ -28,8 +30,6 @@ driver_module("dsi-dw") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/ulib/mipi-dsi",
   ]

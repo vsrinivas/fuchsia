@@ -15,10 +15,10 @@ driver_module("nvme") {
   deps = [
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
+    "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/dev/lib/device-protocol-pci",
   ]
 }
 

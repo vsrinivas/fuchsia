@@ -793,7 +793,7 @@ Refer to zircon/system/public/zircon/syscalls/log.h for levels.
 
 **Current value (from the default):** `"0x7"`
 
-From //zircon/system/dev/lib/fake_ddk/BUILD.gn:23
+From //src/devices/testing/fake_ddk/BUILD.gn:23
 
 ### enable_api_diff
 Detect dart API changes
@@ -815,7 +815,7 @@ Enable printing of in driver logs in unittests.
 
 **Current value (from the default):** `true`
 
-From //zircon/system/dev/lib/fake_ddk/BUILD.gn:19
+From //src/devices/testing/fake_ddk/BUILD.gn:19
 
 ### enable_frame_pointers
 Controls whether the compiler emits full stack frames for function calls.

@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("device-protocol-pci") {
+  sdk = "source"
+  sdk_headers = [ "lib/device-protocol/pci.h" ]
+  sources = [ "pci.cc" ]
+  deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/mmio",
+  ]
+  public_deps = [
+    # <lib/device-protocol/pci.h> has #include <ddk/protocol/pci.h>
+    "//sdk/banjo/ddk.protocol.pci",
+
+    # <lib/device-protocol/pci.h> has #include <zircon/syscalls.h>
+    "//zircon/public/lib/zx",
+  ]
+}

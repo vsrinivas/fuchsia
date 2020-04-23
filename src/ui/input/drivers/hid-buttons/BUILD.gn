@@ -52,9 +52,9 @@ test("hid-buttons-test") {
   deps = [
     ":common",
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

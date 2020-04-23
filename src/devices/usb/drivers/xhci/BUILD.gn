@@ -35,7 +35,10 @@ driver_module("xhci") {
     "//sdk/banjo/ddk.protocol.usb.hub",
     "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/fidl/fuchsia.usb.debug:fuchsia.usb.debug_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
+    "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -43,9 +46,6 @@ driver_module("xhci") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/device-protocol-pci",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/usb",
     "//zircon/system/ulib/xdc-server-utils",
   ]
 }

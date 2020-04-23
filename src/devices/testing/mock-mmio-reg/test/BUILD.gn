@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":mock-mmio-reg" ]
+}
+
+test("mock-mmio-reg") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [ "mock-mmio-reg-test.cc" ]
+  deps = [
+    "//src/devices/testing/mock-mmio-reg",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("mock-mmio-reg-package") {
+  package_name = "mock-mmio-reg"
+  deps = [ ":mock-mmio-reg" ]
+
+  tests = [
+    {
+      name = "mock-mmio-reg"
+      dest = "mock-mmio-reg-test"
+    },
+  ]
+}

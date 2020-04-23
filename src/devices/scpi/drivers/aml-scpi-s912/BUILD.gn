@@ -27,6 +27,8 @@ driver_module("aml-scpi-s912.mailbox") {
     "//sdk/banjo/ddk.protocol.mailbox",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -34,8 +36,6 @@ driver_module("aml-scpi-s912.mailbox") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 
@@ -53,14 +53,14 @@ driver_module("scpi") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.scpi",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 

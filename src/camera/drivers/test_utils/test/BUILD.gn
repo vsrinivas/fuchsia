@@ -12,6 +12,7 @@ executable("test_utils_test") {
   sources = [ "fake_buffer_collection_test.cc" ]
   deps = [
     "//src/camera/drivers/test_utils",
+    "//src/devices/testing/fake-bti",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
@@ -21,7 +22,6 @@ executable("test_utils_test") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake-bti",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
 }

@@ -17,6 +17,8 @@ driver_module("ti-lp8556") {
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -28,8 +30,6 @@ driver_module("ti-lp8556") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/device-protocol-i2c-channel",
-    "//zircon/system/dev/lib/device-protocol-pdev",
   ]
 }
 
@@ -46,6 +46,11 @@ test("ti-lp8556-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/i2c/testing/mock-i2c",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-mmio-reg",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
@@ -56,11 +61,6 @@ test("ti-lp8556-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/device-protocol-i2c-channel",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/dev/lib/mock-i2c",
-    "//zircon/system/dev/lib/mock-mmio-reg",
   ]
 }
 

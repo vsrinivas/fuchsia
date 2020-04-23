@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("fake-object") {
+  sdk = "shared"
+  sdk_headers = [ "lib/fake-object/object.h" ]
+  testonly = true
+  shared = true
+  sources = [
+    "fake-handle.cc",
+    "fake-object.cc",
+  ]
+  public_deps = [ "//zircon/public/lib/zircon-internal" ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}

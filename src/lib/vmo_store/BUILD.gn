@@ -31,10 +31,10 @@ executable("test_bin") {
   ]
   deps = [
     ":vmo_store",
+    "//src/devices/testing/fake-bti",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
     "//third_party/googletest:gtest",
-    "//zircon/system/dev/lib/fake-bti",
   ]
 }
 

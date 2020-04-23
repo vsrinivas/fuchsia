@@ -115,7 +115,7 @@ keepGoing:;
 
   zx_paddr_t addrs;
   zx::pmt pmt;
-  // When running a unit test, the zircon/system/dev/lib/fake-bti provides a fake zx_bti_pin() that
+  // When running a unit test, the src/devices/testing/fake-bti provides a fake zx_bti_pin() that
   // should tolerate ZX_BTI_CONTIGUOUS here despite the local_contiguous_vmo not actually having
   // info.flags ZX_INFO_VMO_CONTIGUOUS.
   status = parent_device_->bti().pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,

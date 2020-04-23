@@ -23,7 +23,9 @@ driver_module("asix-88179") {
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.request",
+    "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
@@ -31,8 +33,6 @@ driver_module("asix-88179") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/dev/lib/dev-operation",
-    "//zircon/system/dev/lib/usb",
   ]
 }
 
@@ -56,13 +56,13 @@ driver_module("fake-asix-88179") {
     "//sdk/banjo/ddk.protocol.usb.function",
     "//sdk/banjo/ddk.protocol.usb.request",
     "//src/devices/lib/driver",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/dev/lib/usb",
     "//zircon/system/ulib/inet6",
   ]
 }

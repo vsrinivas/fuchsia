@@ -38,7 +38,9 @@ driver_module("luis") {
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
+    "//src/devices/lib/as370",
     "//src/devices/lib/driver",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -46,8 +48,6 @@ driver_module("luis") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/as370",
-    "//zircon/system/dev/lib/usb",
   ]
 }
 

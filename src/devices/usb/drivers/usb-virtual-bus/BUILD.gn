@@ -27,13 +27,13 @@ driver_module("usb-virtual-bus") {
     "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
     "//src/devices/lib/driver",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/usb",
   ]
 }
 

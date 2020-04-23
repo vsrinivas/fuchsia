@@ -2,38 +2,3 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
-import("//build/test/test_package.gni")
-
-test("operation") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [
-    "operation-list-test.cc",
-    "operation-pool-test.cc",
-    "operation-queue-test.cc",
-    "operation-test.cc",
-  ]
-  deps = [
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/dev-operation",
-    "//zircon/system/dev/lib/fake_ddk",
-  ]
-
-  # TODO(47419): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-unittest_package("operation-package") {
-  package_name = "operation"
-  deps = [ ":operation" ]
-
-  tests = [
-    {
-      name = "operation"
-      dest = "operation-test"
-    },
-  ]
-}

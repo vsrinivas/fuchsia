@@ -19,7 +19,12 @@ driver_module("aml-ethernet-s912") {
     "//sdk/banjo/ddk.protocol.ethernet.board",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
@@ -30,11 +35,6 @@ driver_module("aml-ethernet-s912") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/device-protocol-i2c-channel",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
-    "//zircon/system/dev/lib/usb",
   ]
 }
 

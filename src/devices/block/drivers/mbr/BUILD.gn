@@ -46,6 +46,7 @@ test("mbr-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.block.partition",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -56,7 +57,6 @@ test("mbr-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

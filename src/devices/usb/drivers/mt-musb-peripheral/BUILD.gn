@@ -19,7 +19,12 @@ driver_module("mt-musb-peripheral") {
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.dci",
     "//sdk/banjo/ddk.protocol.usb.request",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
+    "//src/devices/lib/mt8167",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -29,11 +34,6 @@ driver_module("mt-musb-peripheral") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/dev-operation",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
-    "//zircon/system/dev/lib/mt8167",
-    "//zircon/system/dev/lib/usb",
   ]
 }
 

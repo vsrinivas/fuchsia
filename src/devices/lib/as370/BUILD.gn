@@ -1,0 +1,44 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("as370") {
+  sdk = "source"
+  sdk_headers = [
+    "soc/as370/as370-audio-regs.h",
+    "soc/as370/as370-clk-regs.h",
+    "soc/as370/as370-clk.h",
+    "soc/as370/as370-dhub-regs.h",
+    "soc/as370/as370-dma.h",
+    "soc/as370/as370-gpio.h",
+    "soc/as370/as370-hw.h",
+    "soc/as370/as370-i2c.h",
+    "soc/as370/as370-nand.h",
+    "soc/as370/as370-power-regs.h",
+    "soc/as370/as370-power.h",
+    "soc/as370/as370-reset.h",
+    "soc/as370/as370-thermal.h",
+    "soc/as370/as370-usb.h",
+    "soc/as370/audio-dsp.h",
+    "soc/as370/syn-audio-in.h",
+    "soc/as370/syn-audio-out.h",
+  ]
+  sources = [
+    "audio-dsp.cc",
+    "syn-audio-in.cc",
+    "syn-audio-out.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.shareddma",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+  ]
+}

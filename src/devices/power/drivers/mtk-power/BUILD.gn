@@ -19,7 +19,9 @@ driver_module("mtk-power") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.powerimpl",
+    "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
+    "//src/devices/lib/mt8167",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -29,8 +31,6 @@ driver_module("mtk-power") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/mt8167",
   ]
 }
 
@@ -45,6 +45,10 @@ test("mtk-power-test") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.powerimpl",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/mt8167",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-mmio-reg",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -54,10 +58,6 @@ test("mtk-power-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/dev/lib/mock-mmio-reg",
-    "//zircon/system/dev/lib/mt8167",
   ]
 }
 

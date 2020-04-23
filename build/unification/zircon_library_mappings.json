@@ -5,7 +5,7 @@
     "sdk": false
   },
   {
-    "label": "//zircon/system/dev/lib/pci:pci",
+    "label": "//src/devices/pci/lib/pci:pci",
     "name": "pci",
     "sdk": false
   },

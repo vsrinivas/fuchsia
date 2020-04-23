@@ -17,14 +17,14 @@ driver_module("aml-gxl-gpio") {
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 

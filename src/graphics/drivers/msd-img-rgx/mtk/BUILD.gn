@@ -35,6 +35,8 @@ template("driver_source_template") {
       "//sdk/banjo/ddk.protocol.composite",
       "//sdk/banjo/ddk.protocol.platform.device",
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+      "//src/devices/bus/lib/device-protocol-pdev",
+      "//src/devices/bus/lib/device-protocol-platform-device",
       "//src/devices/lib/driver",
       "//src/graphics/lib/magma/src/magma_util:macros",
       "//src/graphics/lib/magma/src/magma_util/platform:logger",
@@ -47,8 +49,6 @@ template("driver_source_template") {
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/ddktl",
       "//zircon/public/lib/mmio",
-      "//zircon/system/dev/lib/device-protocol-pdev",
-      "//zircon/system/dev/lib/device-protocol-platform-device",
       "//zircon/system/ulib/fidl-utils",
     ]
     if (invoker.developer_build) {

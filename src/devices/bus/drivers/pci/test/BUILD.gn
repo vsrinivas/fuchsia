@@ -32,8 +32,8 @@ test("pci-unit") {
   ]
   deps = [
     "//src/devices/bus/drivers/pci:user_pci",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

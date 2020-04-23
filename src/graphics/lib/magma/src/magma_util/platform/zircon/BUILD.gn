@@ -118,9 +118,9 @@ source_set("device") {
     "$zircon_build_root/public/lib/zx",
     "..:device_header",
     "//sdk/banjo/ddk.protocol.composite",
+    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
-    "//zircon/system/dev/lib/device-protocol-pci",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
+    "//src/devices/pci/lib/device-protocol-pci",
   ]
 }
 

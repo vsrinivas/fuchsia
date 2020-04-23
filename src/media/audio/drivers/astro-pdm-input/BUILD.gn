@@ -17,6 +17,8 @@ driver_module("astro-pdm-input") {
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -27,8 +29,6 @@ driver_module("astro-pdm-input") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/audio/lib/simple-audio-stream",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
   ]

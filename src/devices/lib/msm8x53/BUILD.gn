@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("msm8x53") {
+  sdk = "source"
+  sdk_headers = [
+    "soc/msm8x53/msm8x53-clock.h",
+    "soc/msm8x53/msm8x53-gpio.h",
+    "soc/msm8x53/msm8x53-hw.h",
+    "soc/msm8x53/msm8x53-power-regs.h",
+    "soc/msm8x53/msm8x53-power.h",
+    "soc/msm8x53/msm8x53-sdhci.h",
+  ]
+  sources = []
+}

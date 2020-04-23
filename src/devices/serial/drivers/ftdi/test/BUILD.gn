@@ -16,13 +16,13 @@ test("ftdi-i2c-test") {
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/dev/lib/usb",
   ]
 }
 
@@ -44,11 +44,11 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/usb",
   ]
 }
 

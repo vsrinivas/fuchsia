@@ -34,13 +34,13 @@ driver_module("ddk-test") {
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.request",
     "//src/devices/lib/driver",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/fake-bti",
-    "//zircon/system/dev/lib/usb",
   ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.

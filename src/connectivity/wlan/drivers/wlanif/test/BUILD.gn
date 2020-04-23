@@ -68,12 +68,12 @@ executable("device_unittest") {
     "//src/connectivity/wlan/drivers/wlanif:test_source",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/devices/lib/driver",
+    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

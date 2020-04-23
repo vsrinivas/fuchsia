@@ -21,6 +21,8 @@ driver_module("qcom-gpio") {
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",
@@ -29,8 +31,6 @@ driver_module("qcom-gpio") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 
@@ -45,6 +45,10 @@ test("qcom-gpio-test") {
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-mmio-reg",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -53,10 +57,6 @@ test("qcom-gpio-test") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
-    "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/dev/lib/mock-mmio-reg",
   ]
 }
 

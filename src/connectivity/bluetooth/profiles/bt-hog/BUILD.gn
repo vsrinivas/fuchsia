@@ -17,10 +17,10 @@ driver_module("driver") {
   deps = [
     "//sdk/banjo/ddk.protocol.bt.gattsvc",
     "//sdk/banjo/ddk.protocol.hidbus",
+    "//src/connectivity/bluetooth/lib/device-protocol-bt-gatt-svc",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/device-protocol-bt-gatt-svc",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

@@ -29,6 +29,9 @@ driver_module("aml-thermal-s905d2g") {
     "//sdk/banjo/ddk.protocol.scpi",
     "//sdk/banjo/ddk.protocol.thermal",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -40,9 +43,6 @@ driver_module("aml-thermal-s905d2g") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/ulib/fidl-utils",
   ]
 }
@@ -68,6 +68,11 @@ test("aml-thermal-s905d2g-test") {
     "//sdk/banjo/ddk.protocol.scpi",
     "//sdk/banjo/ddk.protocol.thermal",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/amlogic",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-mmio-reg",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -79,11 +84,6 @@ test("aml-thermal-s905d2g-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
-    "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/dev/lib/mock-mmio-reg",
     "//zircon/system/ulib/fidl-utils",
   ]
 }

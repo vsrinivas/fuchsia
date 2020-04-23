@@ -28,11 +28,11 @@ test("aml-rawnand-unittest") {
   ]
   deps = [
     "..:common",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-mmio-reg",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake-bti",
-    "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/dev/lib/mock-mmio-reg",
   ]
 }
 

@@ -9,10 +9,10 @@
 The `usb` class contains several subclasses providing access to the interfaces, descriptors,
 and endpoints of the usb device. The subclasses included are:
 
-*   [`InterfaceList`](/zircon/system/dev/lib/usb/include/usb/usb.h#311)
-*   [`Interface`](/zircon/system/dev/lib/usb/include/usb/usb.h#290)
-*   [`DescriptorList`](/zircon/system/dev/lib/usb/include/usb/usb.h#166)
-*   [`EndpointList`](/zircon/system/dev/lib/usb/include/usb/usb.h#266)
+*   [`InterfaceList`](/src/devices/usb/lib/usb/include/usb/usb.h#311)
+*   [`Interface`](/src/devices/usb/lib/usb/include/usb/usb.h#290)
+*   [`DescriptorList`](/src/devices/usb/lib/usb/include/usb/usb.h#166)
+*   [`EndpointList`](/src/devices/usb/lib/usb/include/usb/usb.h#266)
 
 USB descriptor report all of the device's attributes. An endpoint is a specific type of descriptor
 that describes the terminus of a communication flow between the host and the device.

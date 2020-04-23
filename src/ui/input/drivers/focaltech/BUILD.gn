@@ -19,6 +19,7 @@ driver_module("focaltech") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.test",
     "//src/devices/lib/driver",
+    "//src/devices/lib/focaltech",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
@@ -27,7 +28,6 @@ driver_module("focaltech") {
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/focaltech",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid",
   ]

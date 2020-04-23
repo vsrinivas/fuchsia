@@ -133,6 +133,7 @@ driver_module("platform-bus-x86") {
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//src/devices/lib/driver",
+    "//src/devices/pci/lib/pci",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -142,7 +143,6 @@ driver_module("platform-bus-x86") {
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/pci",
     "//zircon/system/fidl/fuchsia-sysinfo:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/ulib/driver-unit-test",
@@ -185,6 +185,7 @@ test("x86-battery-test") {
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//src/devices/lib/driver",
+    "//src/devices/pci/lib/pci",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -192,7 +193,6 @@ test("x86-battery-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/pci",
     "//zircon/system/ulib/hid",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
@@ -224,6 +224,8 @@ test("x86-lid-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/banjo/ddk.protocol.hidbus",
+    "//src/devices/testing/fake_ddk",
+    "//src/ui/input/testing/mock-hidbus-ifc",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -231,8 +233,6 @@ test("x86-lid-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/dev/lib/mock-hidbus-ifc",
     "//zircon/system/ulib/hid",
   ]
 }
@@ -300,10 +300,10 @@ test("x86-board-test") {
   deps = [
     ":iommu",
     ":smbios",
+    "//src/devices/testing/fake_ddk",
     "//third_party/acpica",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -333,6 +333,7 @@ test("x86-thermal-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/testing/fake_ddk",
     "//third_party/acpica",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
@@ -342,7 +343,6 @@ test("x86-thermal-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -375,6 +375,8 @@ test("x86-cros-ec-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/banjo/ddk.protocol.hidbus",
+    "//src/devices/testing/fake_ddk",
+    "//src/ui/input/testing/mock-hidbus-ifc",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -382,8 +384,6 @@ test("x86-cros-ec-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/dev/lib/mock-hidbus-ifc",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
     "//zircon/third_party/ulib/chromiumos-platform-ec",

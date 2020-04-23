@@ -16,8 +16,8 @@ source_set("virtio_ethernet_lib") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.ethernet",
     "//src/devices/bus/lib/virtio",
+    "//src/devices/lib/dev-operation",
     "//zircon/public/lib/ddktl",
-    "//zircon/system/dev/lib/dev-operation",
   ]
 }
 
@@ -45,12 +45,12 @@ test("virtio-ethernet-test") {
   sources = [ "ethernet_test.cc" ]
   deps = [
     ":virtio_ethernet_lib",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/fake-bti",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

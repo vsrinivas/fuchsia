@@ -79,11 +79,11 @@ driver_module("test-board") {
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/system/dev/lib/amlogic",
   ]
 }
 

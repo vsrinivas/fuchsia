@@ -1,0 +1,15 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("hi3660") {
+  sdk = "source"
+  sdk_headers = [
+    "soc/hi3660/hi3660-hw.h",
+    "soc/hi3660/hi3660-pinmux.h",
+    "soc/hi3660/hi3660-regs.h",
+  ]
+  sources = []
+}

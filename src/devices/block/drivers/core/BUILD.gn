@@ -38,6 +38,7 @@ test("core-unittest") {
   ]
   deps = [
     ":shared",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
@@ -45,7 +46,6 @@ test("core-unittest") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/dev/lib/fake_ddk",
     "//zircon/system/ulib/io-scheduler",
   ]
 }
@@ -64,6 +64,7 @@ source_set("shared") {
   deps = [
     "//sdk/banjo/ddk.protocol.block.partition",
     "//sdk/banjo/ddk.protocol.block.volume",
+    "//src/devices/lib/dev-operation",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -73,7 +74,6 @@ source_set("shared") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/dev/lib/dev-operation",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
     "//zircon/system/fidl/fuchsia-hardware-block-volume:c",

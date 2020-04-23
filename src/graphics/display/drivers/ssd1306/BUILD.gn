@@ -15,6 +15,7 @@ driver_module("ssd1306") {
   deps = [
     "//sdk/banjo/ddk.protocol.dotmatrixdisplay",
     "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_c",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -22,7 +23,6 @@ driver_module("ssd1306") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/device-protocol-i2c-channel",
   ]
 }
 

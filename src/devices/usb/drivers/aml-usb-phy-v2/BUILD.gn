@@ -15,6 +15,8 @@ driver_module("aml-usb-phy-v2") {
   deps = [
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.usb.phy",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -22,8 +24,6 @@ driver_module("aml-usb-phy-v2") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/device-protocol-pdev",
   ]
 }
 

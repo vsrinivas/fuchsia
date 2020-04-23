@@ -20,6 +20,9 @@ driver_module("aml-uart") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -30,9 +33,6 @@ driver_module("aml-uart") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 
@@ -51,6 +51,11 @@ test("aml-uart-test") {
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/amlogic",
+    "//src/devices/testing/fake-mmio-reg",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -61,11 +66,6 @@ test("aml-uart-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/amlogic",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/device-protocol-platform-device",
-    "//zircon/system/dev/lib/fake-mmio-reg",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

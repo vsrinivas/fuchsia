@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("pci") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/pci/pio.h",
+    "lib/pci/root.h",
+  ]
+  sources = [ "pio.cc" ]
+  deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/zx",
+  ]
+}

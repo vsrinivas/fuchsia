@@ -1,0 +1,11 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("mock-i2c") {
+  sdk = "source"
+  sdk_headers = [ "lib/mock-i2c/mock-i2c.h" ]
+  sources = []
+}

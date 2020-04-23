@@ -45,8 +45,8 @@ driver_module("e1000") {
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
+    "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/ddk",
-    "//zircon/system/dev/lib/device-protocol-pci",
   ]
 }
 

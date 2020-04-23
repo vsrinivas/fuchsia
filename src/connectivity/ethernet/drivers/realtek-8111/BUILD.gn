@@ -18,9 +18,9 @@ driver_module("realtek-8111") {
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
+    "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/dev/lib/device-protocol-pci",
   ]
 }
 

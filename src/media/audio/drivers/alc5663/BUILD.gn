@@ -11,6 +11,7 @@ source_set("shared") {
   defines = [ "_ALL_SOURCE" ]
   sources = [ "alc5663.cc" ]
   public_deps = [
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/fbl",
@@ -19,7 +20,6 @@ source_set("shared") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/lib/device-protocol-i2c-channel",
   ]
 }
 

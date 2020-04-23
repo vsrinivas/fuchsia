@@ -50,6 +50,9 @@ test("bt-hci-broadcom-test") {
     "//sdk/banjo/ddk.protocol.bt.hci",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/testing/mock-sdio",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -60,9 +63,6 @@ test("bt-hci-broadcom-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/device-protocol-pdev",
-    "//zircon/system/dev/lib/fake_ddk",
-    "//zircon/system/dev/lib/mock-sdio",
   ]
 }
 
