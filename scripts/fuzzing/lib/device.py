@@ -28,15 +28,19 @@ class Device(object):
     @classmethod
     def from_args(cls, host, args):
         """Constructs a Device from command line arguments."""
-        netaddr_cmd = ['netaddr', '--fuchsia', '--nowait']
+        device_finder_cmd = ['device-finder', 'list']
         default_device = '{}.device'.format(host.build_dir)
-        if args.device:
-            netaddr_cmd.append(args.device)
-        elif os.path.exists(default_device):
-            with open(default_device) as f:
-                netaddr_cmd.append(f.read().strip())
+        if args.device or os.path.exists(default_device):
+            device_finder_cmd = ['device-finder', 'resolve']
+            if args.device:
+                device_finder_cmd.append(args.device)
+            else:
+                with open(default_device) as f:
+                    device_finder_cmd.append(f.read().strip())
         try:
-            netaddr = host.zircon_tool(netaddr_cmd)
+            netaddr = host.fx_command(device_finder_cmd)
+            if len(netaddr.split('\n')) > 1:
+                raise RuntimeError('Multiple devices found; set a device with `fx set-device`.')
         except subprocess.CalledProcessError:
             raise RuntimeError('Unable to find device; try `fx set-device`.')
         device = cls(host, netaddr)

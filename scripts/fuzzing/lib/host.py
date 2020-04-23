@@ -122,6 +122,18 @@ class Host(object):
     def create_process(self, args, **kwargs):
         return Process(args, **kwargs)
 
+    def fx_command(self, cmd, logfile=None):
+        """Executes an `fx` command."""
+        fx_bin = Host.join('.jiri_root', 'bin', 'fx')
+        p = self.create_process([fx_bin] + cmd)
+        if logfile:
+            p.stdout = logfile
+            p.stderr = subprocess.STDOUT
+            p.popen()
+        else:
+            p.stderr = Host.DEVNULL
+            return p.check_output().strip()
+
     def zircon_tool(self, cmd, logfile=None):
         """Executes a tool found in the ZIRCON_BUILD_DIR."""
         if not self._zxtools:

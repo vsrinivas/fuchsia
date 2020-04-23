@@ -157,6 +157,12 @@ class TestHost(unittest.TestCase):
         line = host.zircon_tool(['merkleroot', path])
         self.assertRegexpMatches(line, r'[0-9a-f]* - ' + path)
 
+    def test_fx_command(self):
+        mock = MockHost()
+        mock.fx_command(['device-finder',  'list'])
+        fx_bin = Host.join('.jiri_root', 'bin', 'fx')
+        self.assertIn('{} device-finder list'.format(fx_bin), mock.history)
+
     def test_killall(self):
         mock = MockHost()
         mock.killall('mock_tool')

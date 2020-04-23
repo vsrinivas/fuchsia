@@ -15,7 +15,7 @@ class MockProcess(Process):
 
     def __init__(self, host, args, **kwargs):
         self.host = host
-        self.response = None
+        self.response = ''
         super(MockProcess, self).__init__(args, **kwargs)
 
     def popen(self):
