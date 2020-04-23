@@ -406,7 +406,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:92
+From //products/core.gni:95
 
 **Overridden from the default:** `[]`
 
@@ -414,7 +414,7 @@ From //BUILD.gn:29
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/core.gni:92
+From //products/core.gni:95
 
 **Overridden from the default:** `[]`
 
@@ -615,7 +615,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/2ce81c56d71471b7172f846b3b04f818b48ed76b/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/6ac1c5e7ce2190835d1fe677478ed56ac158e87c/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -630,7 +630,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/2ce81c56d71471b7172f846b3b04f818b48ed76b/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/6ac1c5e7ce2190835d1fe677478ed56ac158e87c/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -680,7 +680,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/2ce81c56d71471b7172f846b3b04f818b48ed76b/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/6ac1c5e7ce2190835d1fe677478ed56ac158e87c/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -793,7 +793,7 @@ Refer to zircon/system/public/zircon/syscalls/log.h for levels.
 
 **Current value (from the default):** `"0x7"`
 
-From //src/devices/testing/fake_ddk/BUILD.gn:23
+From //src/devices/testing/fake_ddk/BUILD.gn:13
 
 ### enable_api_diff
 Detect dart API changes
@@ -815,7 +815,7 @@ Enable printing of in driver logs in unittests.
 
 **Current value (from the default):** `true`
 
-From //src/devices/testing/fake_ddk/BUILD.gn:19
+From //src/devices/testing/fake_ddk/BUILD.gn:9
 
 ### enable_frame_pointers
 Controls whether the compiler emits full stack frames for function calls.
@@ -977,7 +977,7 @@ From //build/unification/images/BUILD.gn:14
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/2ce81c56d71471b7172f846b3b04f818b48ed76b/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/6ac1c5e7ce2190835d1fe677478ed56ac158e87c/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -992,14 +992,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/2ce81c56d71471b7172f846b3b04f818b48ed76b/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/6ac1c5e7ce2190835d1fe677478ed56ac158e87c/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/2ce81c56d71471b7172f846b3b04f818b48ed76b/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/6ac1c5e7ce2190835d1fe677478ed56ac158e87c/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1299,17 +1299,17 @@ List of kernel command line arguments to bake into the boot image.
 See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "console.shell=true", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "arm64"`:** `["console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
-From //products/core.gni:14
+From //products/core.gni:17
 
 **Overridden from the default:** `[]`
 
 From //build/images/args.gni:23
 
-**Current value for `target_cpu = "x64"`:** `["kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "console.shell=true", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "x64"`:** `["console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
-From //products/core.gni:14
+From //products/core.gni:17
 
 **Overridden from the default:** `[]`
 
@@ -1656,7 +1656,7 @@ A list of labels for meta packages to be included in the monolith.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:16
+From //products/core.gni:19
 
 **Overridden from the default:** `[]`
 
@@ -1664,7 +1664,7 @@ From //build/images/args.gni:61
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:16
+From //products/core.gni:19
 
 **Overridden from the default:** `[]`
 
@@ -2264,7 +2264,7 @@ The other fields are the variant's effects as defined in
 From //build/config/BUILDCONFIG.gn:99
 
 ### ubsan_default_options
-Default [UndefinedBehaviorSanitizer](https://llvm.org/docs/UndefinedBehaviorSanitizer.html)
+Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
 options (before the `UBSAN_OPTIONS` environment variable is read at
 runtime).  This can be set as a build argument to affect most "ubsan"
 variants in `known_variants` (which see), or overridden in
@@ -2301,7 +2301,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/dev_finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:94
+From //products/core.gni:97
 
 **Overridden from the default:** `[]`
 
@@ -2309,7 +2309,7 @@ From //BUILD.gn:43
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/dev_finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:94
+From //products/core.gni:97
 
 **Overridden from the default:** `[]`
 
@@ -2323,7 +2323,7 @@ debug archives in tar.bzip2 format into the .build-id directory
 
 **Current value (from the default):** `false`
 
-From //build/packages/prebuilt_package.gni:11
+From //build/packages/prebuilt_package.gni:13
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
@@ -2777,5 +2777,5 @@ difficulty of sharing configs between builds.
 
 **Current value (from the default):** `false`
 
-From //src/devices/board/drivers/x86/BUILD.gn:25
+From //src/devices/board/drivers/x86/BUILD.gn:15
 
