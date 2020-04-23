@@ -97,12 +97,14 @@ TEST_F(SceneGraphTest, RequestFocusChange) {
     ViewTreeUpdates updates;
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
                                          .may_receive_focus = [] { return true; },
+                                         .is_input_suppressed = [] { return false; },
                                          .global_transform = NoGlobalTransform(),
                                          .add_annotation_view_holder = DummyAddAnnotation(),
                                          .session_id = 1u});
     updates.push_back(ViewTreeNewAttachNode{.koid = 1111u});
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(child_view_pair.view_ref),
                                          .may_receive_focus = [] { return true; },
+                                         .is_input_suppressed = [] { return false; },
                                          .global_transform = NoGlobalTransform(),
                                          .add_annotation_view_holder = DummyAddAnnotation(),
                                          .session_id = 2u});
@@ -137,12 +139,14 @@ TEST_F(SceneGraphTest, RequestFocusChangeButMayNotReceiveFocus) {
     ViewTreeUpdates updates;
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
                                          .may_receive_focus = [] { return true; },
+                                         .is_input_suppressed = [] { return false; },
                                          .global_transform = NoGlobalTransform(),
                                          .add_annotation_view_holder = DummyAddAnnotation(),
                                          .session_id = 1u});
     updates.push_back(ViewTreeNewAttachNode{.koid = 1111u});
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(child_view_pair.view_ref),
                                          .may_receive_focus = [] { return false; },  // Different!
+                                         .is_input_suppressed = [] { return false; },
                                          .global_transform = NoGlobalTransform(),
                                          .add_annotation_view_holder = DummyAddAnnotation(),
                                          .session_id = 2u});

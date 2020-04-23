@@ -75,9 +75,7 @@ void SceneGraph::ProcessViewTreeUpdates() {
   // Process all updates.
   for (auto& update : view_tree_updates_) {
     if (auto ptr = std::get_if<ViewTreeNewRefNode>(&update)) {
-      view_tree_.NewRefNode(std::move(ptr->view_ref), ptr->event_reporter,
-                            std::move(ptr->may_receive_focus), std::move(ptr->global_transform),
-                            std::move(ptr->add_annotation_view_holder), ptr->session_id);
+      view_tree_.NewRefNode(std::move(*ptr));
     } else if (const auto ptr = std::get_if<ViewTreeNewAttachNode>(&update)) {
       view_tree_.NewAttachNode(ptr->koid);
     } else if (const auto ptr = std::get_if<ViewTreeDeleteNode>(&update)) {

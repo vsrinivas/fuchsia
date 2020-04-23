@@ -25,6 +25,9 @@ namespace scenic_impl::gfx {
 // Forward declaration to avoid circular include.
 class ViewHolder;
 
+// Forward declaration to keep implementation at bottom of class.
+struct ViewTreeNewRefNode;
+
 // Represent the tree of ViewRefs in a scene graph, and maintain the global "focus chain".
 //
 // Types. A tree Node is either a RefNode or a AttachNode [1]. RefNode owns a
@@ -80,6 +83,9 @@ class ViewTree {
 
     // Park a callback that returns whether a view may currently receive focus.
     fit::function<bool()> may_receive_focus;
+
+    // Park a callback that returns whether a view may currently receive input.
+    fit::function<bool()> is_input_suppressed;
 
     // Park a callback that returns the current global transform of the node.
     fit::function<std::optional<glm::mat4>()> global_transform;
@@ -155,10 +161,19 @@ class ViewTree {
   bool IsRefNode(zx_koid_t koid) const;
 
   // Return true if koid has "may receive focus" property set to true.
+  // Returns true by default if not connected to the scene, since a disconnected view can never
+  // receive focus anyway.
   // Pre: koid exists in nodes_ map
   // Pre: koid is a valid RefNode
   // NOTE: Scene connectivity is not required.
   bool MayReceiveFocus(zx_koid_t koid) const;
+
+  // Return true if the koid or any of its ancestors has input suppressed
+  // (hit_test_behavior set to kSuppress).
+  // Pre: koid exists in nodes_ map
+  // Pre: koid is a valid RefNode
+  // NOTE: Scene connectivity is not required.
+  bool IsInputSuppressed(zx_koid_t koid) const;
 
   // Try creating an annotation ViewHolder as the child of the View "koid" refers to.
   // Return the creation result enum.
@@ -178,13 +193,8 @@ class ViewTree {
 
   // Pre: view_ref is a valid ViewRef
   // Pre: view_ref not in nodes_ map
-  // Pre: may_receive_focus is a non-null callback
-  // Pre: global_transform is a non-null callback
-  void NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWeakPtr reporter,
-                  fit::function<bool()> may_receive_focus,
-                  fit::function<std::optional<glm::mat4>()> global_transform,
-                  fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder,
-                  scheduling::SessionId session_id = 0u);
+  // Pre: all callbacks are non-null
+  void NewRefNode(ViewTreeNewRefNode new_node);
 
   // Pre: koid is a valid KOID
   // Pre: koid not in nodes_ map
@@ -263,6 +273,7 @@ struct ViewTreeNewRefNode {
   fuchsia::ui::views::ViewRef view_ref;
   EventReporterWeakPtr event_reporter;
   fit::function<bool()> may_receive_focus;
+  fit::function<bool()> is_input_suppressed;
   fit::function<std::optional<glm::mat4>()> global_transform;
   fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
   scheduling::SessionId session_id = 0u;

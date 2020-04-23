@@ -49,6 +49,8 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
     // Scene may *always* receive focus when connected to a compositor. If it is not actually
     // connected to a compositor, the request-focus policy will ensure it is never sent focus.
     fit::function<bool()> may_receive_focus = [] { return true; };
+    // Scene is *never* input suppressed.
+    fit::function<bool()> is_input_suppressed = [] { return false; };
     fit::function<std::optional<glm::mat4>()> global_transform = [weak_ptr = GetWeakPtr()] {
       return weak_ptr ? std::optional<glm::mat4>{weak_ptr->GetGlobalTransform()} : std::nullopt;
     };
@@ -62,6 +64,7 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
           ViewTreeNewRefNode{.view_ref = std::move(clone),
                              .event_reporter = std::move(event_reporter),
                              .may_receive_focus = std::move(may_receive_focus),
+                             .is_input_suppressed = std::move(is_input_suppressed),
                              .global_transform = std::move(global_transform),
                              .add_annotation_view_holder = std::move(add_annotation_view_holder),
                              .session_id = session_id});

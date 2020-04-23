@@ -135,6 +135,11 @@ bool ViewTree::MayReceiveFocus(zx_koid_t koid) const {
   return std::get_if<RefNode>(&nodes_.at(koid))->may_receive_focus();
 }
 
+bool ViewTree::IsInputSuppressed(zx_koid_t koid) const {
+  FXL_DCHECK(IsTracked(koid) && IsRefNode(koid)) << "precondition";
+  return std::get_if<RefNode>(&nodes_.at(koid))->is_input_suppressed();
+}
+
 std::optional<glm::mat4> ViewTree::GlobalTransformOf(zx_koid_t koid) const {
   if (!IsTracked(koid) || !IsRefNode(koid)) {
     return std::nullopt;
@@ -404,30 +409,29 @@ ViewTree::FocusChangeStatus ViewTree::RequestFocusChange(const zx_koid_t request
   return ViewTree::FocusChangeStatus::kAccept;
 }
 
-void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWeakPtr reporter,
-                          fit::function<bool()> may_receive_focus,
-                          fit::function<std::optional<glm::mat4>()> global_transform,
-                          fit::function<void(ViewHolderPtr)> add_annotation_view_holder,
-                          scheduling::SessionId session_id) {
-  const zx_koid_t koid = utils::ExtractKoid(view_ref);
+void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
+  const zx_koid_t koid = utils::ExtractKoid(new_node.view_ref);
   FXL_DCHECK(IsValid(koid)) << "precondition";
   FXL_DCHECK(!IsTracked(koid)) << "precondition";
-  FXL_DCHECK(may_receive_focus) << "precondition";           // Callback exists.
-  FXL_DCHECK(global_transform) << "precondition";            // Callback exists.
-  FXL_DCHECK(add_annotation_view_holder) << "precondition";  // Callback exists.
-  FXL_DCHECK(session_id != scheduling::kInvalidSessionId) << "precondition";
+  FXL_DCHECK(new_node.may_receive_focus) << "precondition";           // Callback exists.
+  FXL_DCHECK(new_node.is_input_suppressed) << "precondition";         // Callback exists.
+  FXL_DCHECK(new_node.global_transform) << "precondition";            // Callback exists.
+  FXL_DCHECK(new_node.add_annotation_view_holder) << "precondition";  // Callback exists.
+  FXL_DCHECK(new_node.session_id != scheduling::kInvalidSessionId) << "precondition";
 
   if (!IsValid(koid) || IsTracked(koid))
     return;  // Bail.
 
-  nodes_[koid] = RefNode{.view_ref = std::move(view_ref),
-                         .event_reporter = reporter,
-                         .may_receive_focus = std::move(may_receive_focus),
-                         .global_transform = std::move(global_transform),
-                         .add_annotation_view_holder = std::move(add_annotation_view_holder),
-                         .session_id = session_id};
+  nodes_[koid] =
+      RefNode{.view_ref = std::move(new_node.view_ref),
+              .event_reporter = new_node.event_reporter,
+              .may_receive_focus = std::move(new_node.may_receive_focus),
+              .is_input_suppressed = std::move(new_node.is_input_suppressed),
+              .global_transform = std::move(new_node.global_transform),
+              .add_annotation_view_holder = std::move(new_node.add_annotation_view_holder),
+              .session_id = new_node.session_id};
 
-  ref_node_koids_.insert({session_id, koid});
+  ref_node_koids_.insert({new_node.session_id, koid});
 
   FXL_DCHECK(IsStateValid()) << "postcondition";
 }

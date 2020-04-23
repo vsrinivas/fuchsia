@@ -19,6 +19,20 @@
 namespace scenic_impl {
 namespace gfx {
 
+namespace {
+
+bool IsInputSuppressed(Node* node) {
+  if (!node)
+    return false;  // Checked all ancestors.
+
+  if (node->hit_test_behavior() == fuchsia::ui::gfx::HitTestBehavior::kSuppress)
+    return true;
+
+  return IsInputSuppressed(node->parent());
+}
+
+}  // namespace
+
 using fuchsia::ui::views::ViewHolderToken;
 using fuchsia::ui::views::ViewRef;
 using fuchsia::ui::views::ViewRefControl;
@@ -59,6 +73,12 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
       return true;
     };
 
+    fit::function<bool()> is_input_suppressed = [view_ptr = GetWeakPtr()] {
+      if (!view_ptr)
+        return false;
+      return IsInputSuppressed(view_ptr->GetViewNode());
+    };
+
     fit::function<std::optional<glm::mat4>()> global_transform = [weak_ptr = GetWeakPtr()] {
       // Return the global transform if the view is still alive and attached to a scene.
       return weak_ptr && weak_ptr->GetViewNode()->scene()
@@ -92,6 +112,7 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
           ViewTreeNewRefNode{.view_ref = std::move(clone),
                              .event_reporter = std::move(reporter),
                              .may_receive_focus = std::move(may_receive_focus),
+                             .is_input_suppressed = std::move(is_input_suppressed),
                              .global_transform = std::move(global_transform),
                              .add_annotation_view_holder = std::move(create_callback),
                              .session_id = session->id()});
