@@ -41,7 +41,7 @@ cd "${FUCHSIA_DIR}"
 while read -r lib_path; do
     lib_name="$( basename "${lib_path}" )"
     json_name=${lib_name}.test.json.golden
-    coding_tables_name=$( echo "${src_name}" | cut -f 1 -d '.').test.tables.c.golden
+    coding_tables_name=$( echo "${lib_name}" | cut -f 1 -d '.').test.tables.c.golden
 
     JSONIR_GOLDENS+=("${json_name}")
 

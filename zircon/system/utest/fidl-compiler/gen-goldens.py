@@ -23,6 +23,10 @@ std::map<std::string, std::string> Goldens::json_ = {{
 {json}
 }};
 
+std::map<std::string, std::string> Goldens::tables_ = {{
+{tables}
+}};
+
 std::map<std::string, std::string> Goldens::fidl_ = {{
 {fidl}
 }};
@@ -32,10 +36,12 @@ std::map<std::string, std::string> Goldens::fidl_ = {{
 def get_testname(filename):
     """
     Return a standardized test name given a filename corresponding to a golden
-    JSON file, a fidl file, or an order.txt file.
+    JSON file, a coding tables file, a fidl file, or an order.txt file.
     >>> get_testname('foo/bar/testdata/mytest/order.txt')
     'mytest'
     >>> get_testname('foo/bar/goldens/mytest.test.json.golden')
+    'mytest'
+    >>> get_testname('foo/bar/goldens/mytest.test.tables.c.golden')
     'mytest'
     >>> get_testname('foo/bar/testdata/mytest.test.fidl')
     'mytest'
@@ -63,21 +69,23 @@ def format_str(s, delimiter=None):
 
 def get_goldens_cc(inputs):
     # group the filenames by test, for each test, we keep track of:
-    # the json for that test, the list of FIDL files, their dependency order,
+    # the json for that test, the coding tables for that test,
+    # the list of FIDL files, their dependency order,
     # and the contents of those FIDL files.
     testname_to_order = {}
     testname_to_fidl_files = defaultdict(list)
-    testname_to_golden = {}
+    json_testname_to_golden = {}
+    tables_testname_to_golden = {}
     fidl_file_contents = {}
     for filename in inputs:
-        # ignore table goldens
-        if filename.endswith('.tables.c.golden'):
-            continue
         testname = get_testname(filename)
         if filename.endswith('order.txt'):
             testname_to_order[testname] = open(filename, 'r').read().split()
         elif '/goldens/' in filename:
-            testname_to_golden[testname] = open(filename, 'r').read()
+            if filename.endswith('.json.golden'):
+                json_testname_to_golden[testname] = open(filename, 'r').read()
+            elif filename.endswith('.tables.c.golden'):
+                tables_testname_to_golden[testname] = open(filename, 'r').read()
         elif '/testdata/' in filename:
             name = os.path.basename(filename)
             file_key = testname + '/' + name
@@ -87,9 +95,10 @@ def get_goldens_cc(inputs):
             raise RuntimeError('Unknown path: ' + filename)
     # each test has exactly one golden, and at least one fidl file, so the
     # keys for these two dicts should contain the exact same test names
-    missing_goldens = set(testname_to_golden.keys()) - set(testname_to_fidl_files.keys())
+    goldens = set(json_testname_to_golden.keys()).union(set(tables_testname_to_golden.keys()))
+    missing_goldens = goldens - set(testname_to_fidl_files.keys())
     assert len(missing_goldens) == 0, missing_goldens
-    missing_fidls = set(testname_to_fidl_files.keys()) - set(testname_to_golden.keys())
+    missing_fidls = set(testname_to_fidl_files.keys()) - goldens
     assert len(missing_fidls) == 0, missing_fidls
 
     # sort the list of FIDL files per test by dependency order
@@ -100,16 +109,23 @@ def get_goldens_cc(inputs):
     # output C++ file
     dep_order = []
     json = []
+    tables = []
     fidl = []
-    for testname in testname_to_golden:
+    for testname in testname_to_fidl_files:
         dep_order.append(
             '\t{{{0}, {1}}},'.format(
                 format_str(testname),
                 format_list(testname_to_fidl_files[testname])))
+    for testname in json_testname_to_golden:
         json.append(
             '\t{{{0}, {1}}},'.format(
                 format_str(testname),
-                format_str(testname_to_golden[testname], delimiter='JSON')))
+                format_str(json_testname_to_golden[testname], delimiter='JSON')))
+    for testname in tables_testname_to_golden:
+        tables.append(
+            '\t{{{0}, {1}}},'.format(
+                format_str(testname),
+                format_str(tables_testname_to_golden[testname], delimiter='C')))
     for filename, contents in fidl_file_contents.items():
         fidl.append(
             '\t{{{0}, {1}}},'.format(
@@ -117,6 +133,7 @@ def get_goldens_cc(inputs):
     return GOLDENS_TMPL.format(
         dep_order='\n'.join(dep_order),
         json='\n'.join(json),
+        tables='\n'.join(tables),
         fidl='\n'.join(fidl))
 
 

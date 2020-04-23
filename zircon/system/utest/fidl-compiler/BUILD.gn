@@ -176,6 +176,7 @@ if (current_toolchain == default_toolchain) {
       "strictness_tests.cc",
       "structs_tests.cc",
       "table_tests.cc",
+      "tables_generator_tests.cc",
       "type_alias_tests.cc",
       "types_tests.cc",
       "typeshape_tests.cc",

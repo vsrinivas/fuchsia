@@ -23,6 +23,8 @@ class Goldens {
   static std::map<std::string, std::vector<std::string>>& order() { return dep_order_; }
   // Map from test name to the json golden for that test
   static std::map<std::string, std::string>& json() { return json_; }
+  // Map from test name to the coding tables golden for that test
+  static std::map<std::string, std::string>& tables() { return tables_; }
   // Map from fidl filename to the fidl contents of that file
   static std::map<std::string, std::string>& fidl() { return fidl_; }
 
@@ -41,6 +43,7 @@ class Goldens {
  private:
   static std::map<std::string, std::vector<std::string>> dep_order_;
   static std::map<std::string, std::string> json_;
+  static std::map<std::string, std::string> tables_;
   static std::map<std::string, std::string> fidl_;
 };
 

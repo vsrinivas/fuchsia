@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,14 +8,13 @@
 
 #include "goldens.h"
 #include "goldens_test.h"
-#include "test_library.h"
 
 namespace {
 
-bool check_json_goldens() {
+bool check_tables_goldens() {
   BEGIN_TEST;
 
-  auto result = check_goldens(Generator::kJson);
+  auto result = check_goldens(Generator::kTables);
 
   // Add a sanity check that we have checked at least some number of goldens
   // so that the test doesn't silently pass if the goldens have moved and this
@@ -28,6 +27,6 @@ bool check_json_goldens() {
 
 }  // namespace
 
-BEGIN_TEST_CASE(json_generator_tests)
-RUN_TEST(check_json_goldens)
-END_TEST_CASE(json_generator_tests)
+BEGIN_TEST_CASE(tables_generator_tests)
+RUN_TEST(check_tables_goldens)
+END_TEST_CASE(tables_generator_tests)

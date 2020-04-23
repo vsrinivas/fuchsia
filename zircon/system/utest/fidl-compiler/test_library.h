@@ -11,6 +11,7 @@
 #include <fidl/linter.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
+#include <fidl/tables_generator.h>
 
 static std::unique_ptr<fidl::SourceFile> MakeSourceFile(const std::string& filename,
                                                         const std::string& raw_source_code) {
@@ -137,6 +138,12 @@ class TestLibrary final {
   std::string GenerateJSON() {
     auto json_generator = fidl::JSONGenerator(library_.get());
     auto out = json_generator.Produce();
+    return out.str();
+  }
+
+  std::string GenerateTables() {
+    auto tables_generator = fidl::TablesGenerator(library_.get());
+    auto out = tables_generator.Produce();
     return out.str();
   }
 
