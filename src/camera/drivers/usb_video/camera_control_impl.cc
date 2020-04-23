@@ -64,7 +64,7 @@ void ControlImpl::CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_coll
   zx_status_t status = usb_video_stream_->CreateStream(std::move(buffer_collection), frame_rate);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to set format. Closing channel.\n");
+    zxlogf(ERROR, "Failed to set format. Closing channel.");
     binding_.Unbind();  // Close the channel on error.
     return;
   }
@@ -79,7 +79,7 @@ void ControlImpl::StreamImpl::OnFrameAvailable(const fuchsia::camera::FrameAvail
 void ControlImpl::StreamImpl::Start() {
   zx_status_t status = owner_.usb_video_stream_->StartStreaming();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to start. Closing channel.\n");
+    zxlogf(ERROR, "Failed to start. Closing channel.");
     binding_.Unbind();  // Close the channel on error.
   }
 }
@@ -87,7 +87,7 @@ void ControlImpl::StreamImpl::Start() {
 void ControlImpl::StreamImpl::Stop() {
   zx_status_t status = owner_.usb_video_stream_->StopStreaming();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to stop. Closing channel.\n");
+    zxlogf(ERROR, "Failed to stop. Closing channel.");
     binding_.Unbind();  // Close the channel on error.
   }
 }
@@ -95,7 +95,7 @@ void ControlImpl::StreamImpl::Stop() {
 void ControlImpl::StreamImpl::ReleaseFrame(uint32_t buffer_index) {
   zx_status_t status = owner_.usb_video_stream_->FrameRelease(buffer_index);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to release frame. Closing channel.\n");
+    zxlogf(ERROR, "Failed to release frame. Closing channel.");
     binding_.Unbind();  // Close the channel on error.
   }
 }

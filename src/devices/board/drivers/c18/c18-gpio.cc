@@ -55,13 +55,13 @@ zx_status_t C18::GpioInit() {
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
 
   status = device_get_protocol(parent(), ZX_PROTOCOL_GPIO_IMPL, &gpio_impl_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_get_protocol failed %d", __func__, status);
     return status;
   }
 

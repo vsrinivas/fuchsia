@@ -58,15 +58,15 @@ zx_status_t Color::Config() {
 
 void Color::PrintRegisters() {
   ZX_DEBUG_ASSERT(initialized_);
-  zxlogf(INFO, "Dumping Color Registers\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "COLOR_MAIN = 0x%x\n", color_mmio_->Read32(COLOR_MAIN));
-  zxlogf(INFO, "COLOR_START = 0x%x\n", color_mmio_->Read32(COLOR_START));
-  zxlogf(INFO, "COLOR_WIDTH = 0x%x\n", color_mmio_->Read32(COLOR_WIDTH));
-  zxlogf(INFO, "COLOR_HEIGHT = 0x%x\n", color_mmio_->Read32(COLOR_HEIGHT));
-  zxlogf(INFO, "COLOR_CM1_EN = 0x%x\n", color_mmio_->Read32(COLOR_CM1_EN));
-  zxlogf(INFO, "COLOR_CM2_EN = 0x%x\n", color_mmio_->Read32(COLOR_CM2_EN));
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "Dumping Color Registers");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "COLOR_MAIN = 0x%x", color_mmio_->Read32(COLOR_MAIN));
+  zxlogf(INFO, "COLOR_START = 0x%x", color_mmio_->Read32(COLOR_START));
+  zxlogf(INFO, "COLOR_WIDTH = 0x%x", color_mmio_->Read32(COLOR_WIDTH));
+  zxlogf(INFO, "COLOR_HEIGHT = 0x%x", color_mmio_->Read32(COLOR_HEIGHT));
+  zxlogf(INFO, "COLOR_CM1_EN = 0x%x", color_mmio_->Read32(COLOR_CM1_EN));
+  zxlogf(INFO, "COLOR_CM2_EN = 0x%x", color_mmio_->Read32(COLOR_CM2_EN));
+  zxlogf(INFO, "######################\n");
 }
 
 }  // namespace mt8167s_display

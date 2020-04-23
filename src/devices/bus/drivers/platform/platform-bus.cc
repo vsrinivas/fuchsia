@@ -135,7 +135,7 @@ zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev
     proto_completion_mutex_.Release();
     zx_status_t status = sync_completion_wait(&proto_completion_, ZX_SEC(10));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s sync_completion_wait(protocol %08x) failed: %d\n", __FUNCTION__, proto_id,
+      zxlogf(ERROR, "%s sync_completion_wait(protocol %08x) failed: %d", __FUNCTION__, proto_id,
              status);
       return status;
     }
@@ -195,7 +195,7 @@ zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
   fbl::AutoLock lock(&board_info_lock_);
   if (info->board_name[0]) {
     strlcpy(board_info_.board_name, info->board_name, sizeof(board_info_.board_name));
-    zxlogf(INFO, "PlatformBus: set board name to \"%s\"\n", board_info_.board_name);
+    zxlogf(INFO, "PlatformBus: set board name to \"%s\"", board_info_.board_name);
 
     std::vector<GetBoardNameCompleter::Async> completer_tmp_;
     // Respond to pending boardname requests, if any.
@@ -214,7 +214,7 @@ zx_status_t PlatformBus::PBusSetBootloaderInfo(const pbus_bootloader_info_t* inf
   fbl::AutoLock lock(&bootloader_info_lock_);
   if (info->vendor[0]) {
     strlcpy(bootloader_info_.vendor, info->vendor, sizeof(bootloader_info_.vendor));
-    zxlogf(INFO, "PlatformBus: set bootloader vendor to \"%s\"\n", bootloader_info_.vendor);
+    zxlogf(INFO, "PlatformBus: set bootloader vendor to \"%s\"", bootloader_info_.vendor);
 
     std::vector<GetBootloaderVendorCompleter::Async> completer_tmp_;
     // Respond to pending boardname requests, if any.
@@ -244,7 +244,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
   // The index must be greater than zero to specify one of the other fragments, or UINT32_MAX
   // to create a new devhost.
   if (coresident_device_index == 0) {
-    zxlogf(ERROR, "%s: coresident_device_index cannot be zero\n", __func__);
+    zxlogf(ERROR, "%s: coresident_device_index cannot be zero", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -414,14 +414,14 @@ static void InitCpuTrace(zx_device_t* parent, const zx::iommu& dummy_iommu) {
   zx_status_t status = zx::bti::create(dummy_iommu, 0, CPU_TRACE_BTI_ID, &cpu_trace_bti);
   if (status != ZX_OK) {
     // This is not fatal.
-    zxlogf(ERROR, "platform-bus: error %d in bti_create(cpu_trace_bti)\n", status);
+    zxlogf(ERROR, "platform-bus: error %d in bti_create(cpu_trace_bti)", status);
     return;
   }
 
   status = publish_cpu_trace(cpu_trace_bti.release(), parent);
   if (status != ZX_OK) {
     // This is not fatal.
-    zxlogf(INFO, "publish_cpu_trace returned %d\n", status);
+    zxlogf(INFO, "publish_cpu_trace returned %d", status);
   }
 }
 
@@ -502,16 +502,16 @@ zx_status_t PlatformBus::GetBoardInfo(zbi_board_info_t* board_info) {
   uint32_t len;
   zx_status_t status = GetBootItem(ZBI_TYPE_DRV_BOARD_INFO, 0, &vmo, &len);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Boot Item ZBI_TYPE_DRV_BOARD_INFO not found\n");
+    zxlogf(ERROR, "Boot Item ZBI_TYPE_DRV_BOARD_INFO not found");
     return status;
   }
   if (!vmo.is_valid()) {
-    zxlogf(ERROR, "Invalid zbi_board_info_t VMO\n");
+    zxlogf(ERROR, "Invalid zbi_board_info_t VMO");
     return ZX_ERR_UNAVAILABLE;
   }
   status = vmo.read(board_info, 0, std::min<uint64_t>(len, sizeof(*board_info)));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read zbi_board_info_t VMO\n");
+    zxlogf(ERROR, "Failed to read zbi_board_info_t VMO");
   }
   return status;
 }
@@ -575,7 +575,7 @@ zx_status_t PlatformBus::Init() {
     if (status != ZX_OK) {
       return status;
     }
-    zxlogf(INFO, "platform bus: VID: %u PID: %u board: \"%s\"\n", platform_id.vid, platform_id.pid,
+    zxlogf(INFO, "platform bus: VID: %u PID: %u board: \"%s\"", platform_id.vid, platform_id.pid,
            platform_id.board_name);
     board_info_.vid = platform_id.vid;
     board_info_.pid = platform_id.pid;
@@ -588,7 +588,7 @@ zx_status_t PlatformBus::Init() {
     board_info_.vid = PDEV_VID_INTEL;
     board_info_.pid = PDEV_PID_X86;
 #else
-    zxlogf(ERROR, "platform_bus: ZBI_TYPE_PLATFORM_ID not found\n");
+    zxlogf(ERROR, "platform_bus: ZBI_TYPE_PLATFORM_ID not found");
     return ZX_ERR_INTERNAL;
 #endif
   }

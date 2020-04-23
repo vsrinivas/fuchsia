@@ -14,7 +14,7 @@
 namespace {
 
 zx_status_t FtlDriverBind(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "FTL: Binding. Version 1.2.04 (update to NDM v2)\n");
+  zxlogf(INFO, "FTL: Binding. Version 1.2.04 (update to NDM v2)");
   fbl::AllocChecker checker;
   std::unique_ptr<ftl::BlockDevice> device(new (&checker) ftl::BlockDevice(parent));
   if (!checker.check()) {

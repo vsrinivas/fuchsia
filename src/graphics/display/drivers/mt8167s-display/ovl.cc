@@ -262,70 +262,70 @@ zx_status_t Ovl::Config(uint8_t layer, OvlConfig& cfg) {
 }
 
 void Ovl::PrintRegisters() {
-  zxlogf(INFO, "Dumping OVL Registers:\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "OVL_STA = 0x%x\n", ovl_mmio_->Read32(OVL_STA));
-  zxlogf(INFO, "OVL_INTEN = 0x%x\n", ovl_mmio_->Read32(OVL_INTEN));
-  zxlogf(INFO, "OVL_INTSTA = 0x%x\n", ovl_mmio_->Read32(OVL_INTSTA));
-  zxlogf(INFO, "OVL_EN = 0x%x\n", ovl_mmio_->Read32(OVL_EN));
-  zxlogf(INFO, "OVL_TRIG = 0x%x\n", ovl_mmio_->Read32(OVL_TRIG));
-  zxlogf(INFO, "OVL_RST = 0x%x\n", ovl_mmio_->Read32(OVL_RST));
-  zxlogf(INFO, "OVL_ROI_SIZE = 0x%x\n", ovl_mmio_->Read32(OVL_ROI_SIZE));
-  zxlogf(INFO, "OVL_DATAPATH_CON = 0x%x\n", ovl_mmio_->Read32(OVL_DATAPATH_CON));
-  zxlogf(INFO, "OVL_ROI_BGCLR = 0x%x\n", ovl_mmio_->Read32(OVL_ROI_BGCLR));
-  zxlogf(INFO, "OVL_SRC_CON = 0x%x\n", ovl_mmio_->Read32(OVL_SRC_CON));
-  zxlogf(INFO, "OVL_Lx_CON0123 = 0x%x, 0x%x, 0x%x, 0x%x\n", ovl_mmio_->Read32(OVL_Lx_CON(0)),
+  zxlogf(INFO, "Dumping OVL Registers:");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "OVL_STA = 0x%x", ovl_mmio_->Read32(OVL_STA));
+  zxlogf(INFO, "OVL_INTEN = 0x%x", ovl_mmio_->Read32(OVL_INTEN));
+  zxlogf(INFO, "OVL_INTSTA = 0x%x", ovl_mmio_->Read32(OVL_INTSTA));
+  zxlogf(INFO, "OVL_EN = 0x%x", ovl_mmio_->Read32(OVL_EN));
+  zxlogf(INFO, "OVL_TRIG = 0x%x", ovl_mmio_->Read32(OVL_TRIG));
+  zxlogf(INFO, "OVL_RST = 0x%x", ovl_mmio_->Read32(OVL_RST));
+  zxlogf(INFO, "OVL_ROI_SIZE = 0x%x", ovl_mmio_->Read32(OVL_ROI_SIZE));
+  zxlogf(INFO, "OVL_DATAPATH_CON = 0x%x", ovl_mmio_->Read32(OVL_DATAPATH_CON));
+  zxlogf(INFO, "OVL_ROI_BGCLR = 0x%x", ovl_mmio_->Read32(OVL_ROI_BGCLR));
+  zxlogf(INFO, "OVL_SRC_CON = 0x%x", ovl_mmio_->Read32(OVL_SRC_CON));
+  zxlogf(INFO, "OVL_Lx_CON0123 = 0x%x, 0x%x, 0x%x, 0x%x", ovl_mmio_->Read32(OVL_Lx_CON(0)),
          ovl_mmio_->Read32(OVL_Lx_CON(1)), ovl_mmio_->Read32(OVL_Lx_CON(2)),
          ovl_mmio_->Read32(OVL_Lx_CON(3)));
-  zxlogf(INFO, "OVL_Lx_SRCKEY0123 = 0x%x, 0x%x, 0x%x, 0x%x\n", ovl_mmio_->Read32(OVL_Lx_SRCKEY(0)),
+  zxlogf(INFO, "OVL_Lx_SRCKEY0123 = 0x%x, 0x%x, 0x%x, 0x%x", ovl_mmio_->Read32(OVL_Lx_SRCKEY(0)),
          ovl_mmio_->Read32(OVL_Lx_SRCKEY(1)), ovl_mmio_->Read32(OVL_Lx_SRCKEY(2)),
          ovl_mmio_->Read32(OVL_Lx_SRCKEY(3)));
-  zxlogf(INFO, "OVL_Lx_SRC_SIZE0123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_Lx_SRC_SIZE0123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_Lx_SRC_SIZE(0)), ovl_mmio_->Read32(OVL_Lx_SRC_SIZE(1)),
          ovl_mmio_->Read32(OVL_Lx_SRC_SIZE(2)), ovl_mmio_->Read32(OVL_Lx_SRC_SIZE(3)));
-  zxlogf(INFO, "OVL_Lx_OFFSET0123 = 0x%x, 0x%x, 0x%x, 0x%x\n", ovl_mmio_->Read32(OVL_Lx_OFFSET(0)),
+  zxlogf(INFO, "OVL_Lx_OFFSET0123 = 0x%x, 0x%x, 0x%x, 0x%x", ovl_mmio_->Read32(OVL_Lx_OFFSET(0)),
          ovl_mmio_->Read32(OVL_Lx_OFFSET(1)), ovl_mmio_->Read32(OVL_Lx_OFFSET(2)),
          ovl_mmio_->Read32(OVL_Lx_OFFSET(3)));
-  zxlogf(INFO, "OVL_Lx_ADDR0123 = 0x%x, 0x%x, 0x%x, 0x%x\n", ovl_mmio_->Read32(OVL_Lx_ADDR(0)),
+  zxlogf(INFO, "OVL_Lx_ADDR0123 = 0x%x, 0x%x, 0x%x, 0x%x", ovl_mmio_->Read32(OVL_Lx_ADDR(0)),
          ovl_mmio_->Read32(OVL_Lx_ADDR(1)), ovl_mmio_->Read32(OVL_Lx_ADDR(2)),
          ovl_mmio_->Read32(OVL_Lx_ADDR(3)));
-  zxlogf(INFO, "OVL_Lx_PITCH0123 = 0x%x, 0x%x, 0x%x, 0x%x\n", ovl_mmio_->Read32(OVL_Lx_PITCH(0)),
+  zxlogf(INFO, "OVL_Lx_PITCH0123 = 0x%x, 0x%x, 0x%x, 0x%x", ovl_mmio_->Read32(OVL_Lx_PITCH(0)),
          ovl_mmio_->Read32(OVL_Lx_PITCH(1)), ovl_mmio_->Read32(OVL_Lx_PITCH(2)),
          ovl_mmio_->Read32(OVL_Lx_PITCH(3)));
-  zxlogf(INFO, "OVL_Lx_TILE0123 = 0x%x, 0x%x, 0x%x, 0x%x\n", ovl_mmio_->Read32(OVL_Lx_TILE(0)),
+  zxlogf(INFO, "OVL_Lx_TILE0123 = 0x%x, 0x%x, 0x%x, 0x%x", ovl_mmio_->Read32(OVL_Lx_TILE(0)),
          ovl_mmio_->Read32(OVL_Lx_TILE(1)), ovl_mmio_->Read32(OVL_Lx_TILE(2)),
          ovl_mmio_->Read32(OVL_Lx_TILE(3)));
-  zxlogf(INFO, "OVL_RDMAx_CTRL0123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_RDMAx_CTRL0123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_RDMAx_CTRL(0)), ovl_mmio_->Read32(OVL_RDMAx_CTRL(1)),
          ovl_mmio_->Read32(OVL_RDMAx_CTRL(2)), ovl_mmio_->Read32(OVL_RDMAx_CTRL(3)));
-  zxlogf(INFO, "OVL_RDMAx_MEM_GMC_SETTING0123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_RDMAx_MEM_GMC_SETTING0123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_RDMAx_MEM_GMC_SETTING(0)),
          ovl_mmio_->Read32(OVL_RDMAx_MEM_GMC_SETTING(1)),
          ovl_mmio_->Read32(OVL_RDMAx_MEM_GMC_SETTING(2)),
          ovl_mmio_->Read32(OVL_RDMAx_MEM_GMC_SETTING(3)));
-  zxlogf(INFO, "OVL_RDMAx_MEM_SLOW_CON0123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_RDMAx_MEM_SLOW_CON0123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_RDMAx_MEM_SLOW_CON(0)), ovl_mmio_->Read32(OVL_RDMAx_MEM_SLOW_CON(1)),
          ovl_mmio_->Read32(OVL_RDMAx_MEM_SLOW_CON(2)),
          ovl_mmio_->Read32(OVL_RDMAx_MEM_SLOW_CON(3)));
-  zxlogf(INFO, "OVL_RDMAx_FIFO_CTRL0123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_RDMAx_FIFO_CTRL0123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_RDMAx_FIFO_CTRL(0)), ovl_mmio_->Read32(OVL_RDMAx_FIFO_CTRL(1)),
          ovl_mmio_->Read32(OVL_RDMAx_FIFO_CTRL(2)), ovl_mmio_->Read32(OVL_RDMAx_FIFO_CTRL(3)));
-  zxlogf(INFO, "OVL_Lx_Y2R_PARA_R00123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_Lx_Y2R_PARA_R00123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_R0(0)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_R0(1)),
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_R0(2)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_R0(3)));
-  zxlogf(INFO, "OVL_Lx_Y2R_PARA_R10123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_Lx_Y2R_PARA_R10123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_R1(0)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_R1(1)),
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_R1(2)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_R1(3)));
-  zxlogf(INFO, "OVL_Lx_Y2R_PARA_G00123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_Lx_Y2R_PARA_G00123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_G0(0)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_G0(1)),
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_G0(2)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_G0(3)));
-  zxlogf(INFO, "OVL_Lx_Y2R_PARA_G10123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_Lx_Y2R_PARA_G10123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_G1(0)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_G1(1)),
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_G1(2)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_G1(3)));
-  zxlogf(INFO, "OVL_Lx_Y2R_PARA_B00123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_Lx_Y2R_PARA_B00123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_B0(0)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_B0(1)),
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_B0(2)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_B0(3)));
-  zxlogf(INFO, "OVL_Lx_Y2R_PARA_B10123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_Lx_Y2R_PARA_B10123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_B1(0)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_B1(1)),
          ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_B1(2)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_B1(3)));
   zxlogf(
@@ -344,22 +344,22 @@ void Ovl::PrintRegisters() {
       INFO, "OVL_Lx_Y2R_PARA_RGB_A_10123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
       ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_RGB_A_1(0)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_RGB_A_1(1)),
       ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_RGB_A_1(2)), ovl_mmio_->Read32(OVL_Lx_Y2R_PARA_RGB_A_1(3)));
-  zxlogf(INFO, "OVL_DEBUG_MON_SEL = 0x%x\n", ovl_mmio_->Read32(OVL_DEBUG_MON_SEL));
-  zxlogf(INFO, "OVL_RDMAx_MEM_GMC_S20123 = 0x%x, 0x%x, 0x%x, 0x%x\n",
+  zxlogf(INFO, "OVL_DEBUG_MON_SEL = 0x%x", ovl_mmio_->Read32(OVL_DEBUG_MON_SEL));
+  zxlogf(INFO, "OVL_RDMAx_MEM_GMC_S20123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_RDMAx_MEM_GMC_S2(0)), ovl_mmio_->Read32(OVL_RDMAx_MEM_GMC_S2(1)),
          ovl_mmio_->Read32(OVL_RDMAx_MEM_GMC_S2(2)), ovl_mmio_->Read32(OVL_RDMAx_MEM_GMC_S2(3)));
-  zxlogf(INFO, "OVL_DUMMY_REG = 0x%x\n", ovl_mmio_->Read32(OVL_DUMMY_REG));
-  zxlogf(INFO, "OVL_SMI_DBG = 0x%x\n", ovl_mmio_->Read32(OVL_SMI_DBG));
-  zxlogf(INFO, "OVL_GREQ_LAYER_CNT = 0x%x\n", ovl_mmio_->Read32(OVL_GREQ_LAYER_CNT));
-  zxlogf(INFO, "OVL_FLOW_CTRL_DBG = 0x%x\n", ovl_mmio_->Read32(OVL_FLOW_CTRL_DBG));
-  zxlogf(INFO, "OVL_ADDCON_DBG = 0x%x\n", ovl_mmio_->Read32(OVL_ADDCON_DBG));
-  zxlogf(INFO, "OVL_RDMAx_DBG0123 = 0x%x, 0x%x, 0x%x, 0x%x\n", ovl_mmio_->Read32(OVL_RDMAx_DBG(0)),
+  zxlogf(INFO, "OVL_DUMMY_REG = 0x%x", ovl_mmio_->Read32(OVL_DUMMY_REG));
+  zxlogf(INFO, "OVL_SMI_DBG = 0x%x", ovl_mmio_->Read32(OVL_SMI_DBG));
+  zxlogf(INFO, "OVL_GREQ_LAYER_CNT = 0x%x", ovl_mmio_->Read32(OVL_GREQ_LAYER_CNT));
+  zxlogf(INFO, "OVL_FLOW_CTRL_DBG = 0x%x", ovl_mmio_->Read32(OVL_FLOW_CTRL_DBG));
+  zxlogf(INFO, "OVL_ADDCON_DBG = 0x%x", ovl_mmio_->Read32(OVL_ADDCON_DBG));
+  zxlogf(INFO, "OVL_RDMAx_DBG0123 = 0x%x, 0x%x, 0x%x, 0x%x", ovl_mmio_->Read32(OVL_RDMAx_DBG(0)),
          ovl_mmio_->Read32(OVL_RDMAx_DBG(1)), ovl_mmio_->Read32(OVL_RDMAx_DBG(2)),
          ovl_mmio_->Read32(OVL_RDMAx_DBG(3)));
-  zxlogf(INFO, "OVL_Lx_CLR0123 = 0x%x, 0x%x, 0x%x, 0x%x\n", ovl_mmio_->Read32(OVL_Lx_CLR(0)),
+  zxlogf(INFO, "OVL_Lx_CLR0123 = 0x%x, 0x%x, 0x%x, 0x%x", ovl_mmio_->Read32(OVL_Lx_CLR(0)),
          ovl_mmio_->Read32(OVL_Lx_CLR(1)), ovl_mmio_->Read32(OVL_Lx_CLR(2)),
          ovl_mmio_->Read32(OVL_Lx_CLR(3)));
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "######################\n");
 }
 
 }  // namespace mt8167s_display

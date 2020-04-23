@@ -196,7 +196,7 @@ zx_status_t UsbCdcAcmDevice::SerialImplSetNotifyCallback(const serial_notify_t* 
 void UsbCdcAcmDevice::ReadComplete(usb_request_t* request) {
   usb::Request<> req(request, parent_req_size_);
   if (req.request()->response.status == ZX_ERR_IO_NOT_PRESENT) {
-    zxlogf(INFO, "usb-cdc-acm: remote closed\n");
+    zxlogf(INFO, "usb-cdc-acm: remote closed");
     return;
   }
 
@@ -215,7 +215,7 @@ void UsbCdcAcmDevice::ReadComplete(usb_request_t* request) {
 void UsbCdcAcmDevice::WriteComplete(usb_request_t* request) {
   usb::Request<> req(request, parent_req_size_);
   if (req.request()->response.status == ZX_ERR_IO_NOT_PRESENT) {
-    zxlogf(INFO, "usb-cdc-acm: remote closed\n");
+    zxlogf(INFO, "usb-cdc-acm: remote closed");
     return;
   }
 
@@ -243,7 +243,7 @@ zx_status_t UsbCdcAcmDevice::ConfigureDevice(uint32_t baud_rate, uint32_t flags)
                                    kUsbCdcAcmGetLineCoding, 0, 0, ZX_TIME_INFINITE, &coding,
                                    sizeof(coding), &coding_length);
     if (coding_length != sizeof(coding)) {
-      zxlogf(SPEW, "usb-cdc-acm: failed to fetch line coding\n");
+      zxlogf(SPEW, "usb-cdc-acm: failed to fetch line coding");
     }
     if (status != ZX_OK) {
       return status;
@@ -338,7 +338,7 @@ zx_status_t UsbCdcAcmDevice::Bind() {
   }
 
   if (!bulk_in_address || !bulk_out_address) {
-    zxlogf(ERROR, "usb-cdc-acm: Bind() could not find bulk-in and bulk-out endpoints\n");
+    zxlogf(ERROR, "usb-cdc-acm: Bind() could not find bulk-in and bulk-out endpoints");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -348,7 +348,7 @@ zx_status_t UsbCdcAcmDevice::Bind() {
 
   status = ConfigureDevice(kDefaultBaudRate, kDefaultConfig);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb-cdc-acm: failed to set default baud rate: %d\n", status);
+    zxlogf(ERROR, "usb-cdc-acm: failed to set default baud rate: %d", status);
     return status;
   }
 
@@ -356,7 +356,7 @@ zx_status_t UsbCdcAcmDevice::Bind() {
 
   status = DdkAdd("usb-cdc-acm");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb-cdc-acm: failed to create device: %d\n", status);
+    zxlogf(ERROR, "usb-cdc-acm: failed to create device: %d", status);
     return status;
   }
 
@@ -365,7 +365,7 @@ zx_status_t UsbCdcAcmDevice::Bind() {
     std::optional<usb::Request<>> request;
     status = usb::Request<>::Alloc(&request, kUsbBufferSize, bulk_in_addr_, parent_req_size_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "usb-cdc-acm: allocating reads failed %d\n", status);
+      zxlogf(ERROR, "usb-cdc-acm: allocating reads failed %d", status);
       return status;
     }
     usb_client_.RequestQueue(request->take(), &read_request_complete_);
@@ -375,7 +375,7 @@ zx_status_t UsbCdcAcmDevice::Bind() {
     std::optional<usb::Request<>> request;
     status = usb::Request<>::Alloc(&request, kUsbBufferSize, bulk_out_addr_, parent_req_size_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "usb-cdc-acm: allocating writes failed %d\n", status);
+      zxlogf(ERROR, "usb-cdc-acm: allocating writes failed %d", status);
       return status;
     }
     free_write_queue_.push(*std::move(request));
@@ -396,7 +396,7 @@ zx_status_t cdc_acm_bind(void* /*ctx*/, zx_device_t* device) {
   }
   auto status = dev->Bind();
   if (status != ZX_OK) {
-    zxlogf(INFO, "usb-cdc-acm: failed to add serial driver %d\n", status);
+    zxlogf(INFO, "usb-cdc-acm: failed to add serial driver %d", status);
   }
 
   // Devmgr is now in charge of the memory for dev.

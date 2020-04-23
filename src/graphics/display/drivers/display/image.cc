@@ -45,7 +45,7 @@ void Image::PrepareFences(fbl::RefPtr<FenceReference>&& wait,
   if (wait_fence_) {
     zx_status_t status = wait_fence_->StartReadyWait();
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to start waiting %d\n", status);
+      zxlogf(ERROR, "Failed to start waiting %d", status);
       // Mark the image as ready. Displaying garbage is better than hanging or crashing.
       wait_fence_ = nullptr;
     }

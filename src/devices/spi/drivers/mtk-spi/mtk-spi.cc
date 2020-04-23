@@ -111,7 +111,7 @@ zx_status_t MtkSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   zx_status_t status = ZX_OK;
   // Using FIFO for now, could also support DMA
   if ((status = FifoExchange(txdata, out_rxdata, data_size)) != ZX_OK) {
-    zxlogf(ERROR, "%s: FifoExchange failed with %d\n", __func__, status);
+    zxlogf(ERROR, "%s: FifoExchange failed with %d", __func__, status);
     return status;
   }
 
@@ -150,7 +150,7 @@ zx_status_t MtkSpi::Init() {
 zx_status_t MtkSpi::Create(void* ctx, zx_device_t* device) {
   ddk::PDev pdev(device);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: Could not get pdev protocol\n", __func__);
+    zxlogf(ERROR, "%s: Could not get pdev protocol", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -158,27 +158,27 @@ zx_status_t MtkSpi::Create(void* ctx, zx_device_t* device) {
   size_t metadata_size, actual;
   if ((status = device_get_metadata_size(device, DEVICE_METADATA_SPI_CHANNELS, &metadata_size)) !=
       ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __func__, status);
     return ZX_ERR_INTERNAL;
   }
   auto channel_count = metadata_size / sizeof(spi_channel_t);
   fbl::AllocChecker ac;
   std::unique_ptr<spi_channel_t[]> channels(new (&ac) spi_channel_t[channel_count]);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: out of memory\n", __func__);
+    zxlogf(ERROR, "%s: out of memory", __func__);
     return ZX_ERR_NO_MEMORY;
   }
   status = device_get_metadata(device, DEVICE_METADATA_SPI_CHANNELS, channels.get(), metadata_size,
                                &actual);
   if (status != ZX_OK || actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, status);
     return ZX_ERR_INTERNAL;
   }
 
   for (uint32_t i = 0; i < channel_count; i++) {
     std::optional<ddk::MmioBuffer> mmio;
     if ((status = pdev.MapMmio(i, &mmio)) != ZX_OK) {
-      zxlogf(ERROR, "%s: could not map mmio %d\n", __func__, status);
+      zxlogf(ERROR, "%s: could not map mmio %d", __func__, status);
       return status;
     }
 
@@ -189,7 +189,7 @@ zx_status_t MtkSpi::Create(void* ctx, zx_device_t* device) {
     }
 
     if ((status = spi->Init()) != ZX_OK) {
-      zxlogf(ERROR, "%s could not init %d\n", __func__, status);
+      zxlogf(ERROR, "%s could not init %d", __func__, status);
       return status;
     }
 
@@ -197,7 +197,7 @@ zx_status_t MtkSpi::Create(void* ctx, zx_device_t* device) {
     sprintf(devname, "mtk-spi-%d", channels[i].bus_id);
     status = spi->DdkAdd(devname);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkDeviceAdd failed for %s\n", __func__, devname);
+      zxlogf(ERROR, "%s: DdkDeviceAdd failed for %s", __func__, devname);
       return status;
     }
     auto* ptr = spi.release();
@@ -207,7 +207,7 @@ zx_status_t MtkSpi::Create(void* ctx, zx_device_t* device) {
     status = ptr->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &channels[i].bus_id,
                                  sizeof channels[i].bus_id);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAddMetadata failed for %s\n", __func__, devname);
+      zxlogf(ERROR, "%s: DdkAddMetadata failed for %s", __func__, devname);
       return status;
     }
 

@@ -67,7 +67,7 @@ zx_status_t SerialDevice::WorkerThread() {
           in_buffer_offset = 0;
         }
       } else if (status != ZX_ERR_SHOULD_WAIT && status != ZX_ERR_PEER_CLOSED) {
-        zxlogf(ERROR, "platform_serial_thread: zx::socket::write returned %s\n",
+        zxlogf(ERROR, "platform_serial_thread: zx::socket::write returned %s",
                zx_status_get_string(status));
         break;
       }
@@ -86,7 +86,7 @@ zx_status_t SerialDevice::WorkerThread() {
           out_buffer_offset = 0;
         }
       } else if (status != ZX_ERR_SHOULD_WAIT && status != ZX_ERR_PEER_CLOSED) {
-        zxlogf(ERROR, "platform_serial_thread: serial_impl_write returned %s\n",
+        zxlogf(ERROR, "platform_serial_thread: serial_impl_write returned %s",
                zx_status_get_string(status));
         break;
       }
@@ -105,7 +105,7 @@ zx_status_t SerialDevice::WorkerThread() {
 
     zx_status_t status = zx::handle::wait_many(items, countof(items), zx::time::infinite());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "platform_serial_thread: zx_object_wait_many returned %s\n",
+      zxlogf(ERROR, "platform_serial_thread: zx_object_wait_many returned %s",
              zx_status_get_string(status));
       break;
     }
@@ -121,7 +121,7 @@ zx_status_t SerialDevice::WorkerThread() {
                             sizeof(in_buffer) - buffer_read_start_idx, &length);
 
       if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_serial_thread: serial_impl_read returned %s\n",
+        zxlogf(ERROR, "platform_serial_thread: serial_impl_read returned %s",
                zx_status_get_string(status));
         break;
       }
@@ -134,7 +134,7 @@ zx_status_t SerialDevice::WorkerThread() {
       status = socket_.read(0, out_buffer + buffer_read_start_idx,
                             sizeof(out_buffer) - buffer_read_start_idx, &length);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "serial_out_thread: zx::socket::read returned %s\n",
+        zxlogf(ERROR, "serial_out_thread: zx::socket::read returned %s",
                zx_status_get_string(status));
         break;
       }
@@ -267,7 +267,7 @@ zx_status_t SerialDevice::DdkClose(uint32_t flags) {
     open_ = false;
     return ZX_OK;
   } else {
-    zxlogf(ERROR, "SerialDevice::DdkClose called when not open\n");
+    zxlogf(ERROR, "SerialDevice::DdkClose called when not open");
     return ZX_ERR_BAD_STATE;
   }
 }
@@ -378,7 +378,7 @@ zx_status_t SerialDevice::Create(void* ctx, zx_device_t* dev) {
   std::unique_ptr<SerialDevice> sdev(new (&ac) SerialDevice(dev));
 
   if (!ac.check()) {
-    zxlogf(ERROR, "SerialDevice::Create: no memory to allocate serial device!\n");
+    zxlogf(ERROR, "SerialDevice::Create: no memory to allocate serial device!");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -388,7 +388,7 @@ zx_status_t SerialDevice::Create(void* ctx, zx_device_t* dev) {
   }
 
   if ((status = sdev->Bind()) != ZX_OK) {
-    zxlogf(ERROR, "SerialDevice::Create: Bind failed\n");
+    zxlogf(ERROR, "SerialDevice::Create: Bind failed");
     sdev.release()->DdkRelease();
     return status;
   }
@@ -401,14 +401,14 @@ zx_status_t SerialDevice::Create(void* ctx, zx_device_t* dev) {
 
 zx_status_t SerialDevice::Init() {
   if (!serial_.is_valid()) {
-    zxlogf(ERROR, "SerialDevice::Init: ZX_PROTOCOL_SERIAL_IMPL not available\n");
+    zxlogf(ERROR, "SerialDevice::Init: ZX_PROTOCOL_SERIAL_IMPL not available");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   serial_port_info_t info;
   zx_status_t status = serial_.GetInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "SerialDevice::Init: SerialImpl::GetInfo failed %d\n", status);
+    zxlogf(ERROR, "SerialDevice::Init: SerialImpl::GetInfo failed %d", status);
     return status;
   }
   serial_class_ = info.serial_class;

@@ -52,31 +52,31 @@ int C18::Thread() {
 
   status = SocInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s:%d SocInit() failed.\n", __PRETTY_FUNCTION__, __LINE__);
+    zxlogf(ERROR, "%s:%d SocInit() failed.", __PRETTY_FUNCTION__, __LINE__);
     return -1;
   }
 
   status = GpioInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s:%d GpioInit() failed.\n", __PRETTY_FUNCTION__, __LINE__);
+    zxlogf(ERROR, "%s:%d GpioInit() failed.", __PRETTY_FUNCTION__, __LINE__);
     return -1;
   }
 
   status = Msdc0Init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s:%d Msdc0Init() failed.\n", __PRETTY_FUNCTION__, __LINE__);
+    zxlogf(ERROR, "%s:%d Msdc0Init() failed.", __PRETTY_FUNCTION__, __LINE__);
     return -1;
   }
 
   status = SpiInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s:%d SpiInit() failed.\n", __PRETTY_FUNCTION__, __LINE__);
+    zxlogf(ERROR, "%s:%d SpiInit() failed.", __PRETTY_FUNCTION__, __LINE__);
     return -1;
   }
 
   status = pbus_.DeviceAdd(&rtc_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d", __func__, status);
     return -1;
   }
 

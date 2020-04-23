@@ -86,26 +86,26 @@ zx_status_t Dither::Config() {
 
 void Dither::PrintRegisters() {
   ZX_DEBUG_ASSERT(initialized_);
-  zxlogf(INFO, "Dumping Dither Registers\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "DITHER_EN = 0x%x\n", dither_mmio_->Read32(DITHER_EN));
-  zxlogf(INFO, "DITHER_CFG = 0x%x\n", dither_mmio_->Read32(DITHER_CFG));
-  zxlogf(INFO, "DITHER_SIZE = 0x%x\n", dither_mmio_->Read32(DITHER_SIZE));
-  zxlogf(INFO, "DISP_REG_DITHER_0 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(0)));
-  zxlogf(INFO, "DISP_REG_DITHER_5 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(5)));
-  zxlogf(INFO, "DISP_REG_DITHER_6 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(6)));
-  zxlogf(INFO, "DISP_REG_DITHER_7 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(7)));
-  zxlogf(INFO, "DISP_REG_DITHER_8 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(8)));
-  zxlogf(INFO, "DISP_REG_DITHER_9 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(9)));
-  zxlogf(INFO, "DISP_REG_DITHER_10 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(10)));
-  zxlogf(INFO, "DISP_REG_DITHER_11 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(11)));
-  zxlogf(INFO, "DISP_REG_DITHER_12 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(12)));
-  zxlogf(INFO, "DISP_REG_DITHER_13 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(13)));
-  zxlogf(INFO, "DISP_REG_DITHER_14 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(14)));
-  zxlogf(INFO, "DISP_REG_DITHER_15 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(15)));
-  zxlogf(INFO, "DISP_REG_DITHER_16 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(16)));
-  zxlogf(INFO, "DISP_REG_DITHER_17 = 0x%x\n", dither_mmio_->Read32(DISP_REG_DITHER(17)));
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "Dumping Dither Registers");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "DITHER_EN = 0x%x", dither_mmio_->Read32(DITHER_EN));
+  zxlogf(INFO, "DITHER_CFG = 0x%x", dither_mmio_->Read32(DITHER_CFG));
+  zxlogf(INFO, "DITHER_SIZE = 0x%x", dither_mmio_->Read32(DITHER_SIZE));
+  zxlogf(INFO, "DISP_REG_DITHER_0 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(0)));
+  zxlogf(INFO, "DISP_REG_DITHER_5 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(5)));
+  zxlogf(INFO, "DISP_REG_DITHER_6 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(6)));
+  zxlogf(INFO, "DISP_REG_DITHER_7 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(7)));
+  zxlogf(INFO, "DISP_REG_DITHER_8 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(8)));
+  zxlogf(INFO, "DISP_REG_DITHER_9 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(9)));
+  zxlogf(INFO, "DISP_REG_DITHER_10 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(10)));
+  zxlogf(INFO, "DISP_REG_DITHER_11 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(11)));
+  zxlogf(INFO, "DISP_REG_DITHER_12 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(12)));
+  zxlogf(INFO, "DISP_REG_DITHER_13 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(13)));
+  zxlogf(INFO, "DISP_REG_DITHER_14 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(14)));
+  zxlogf(INFO, "DISP_REG_DITHER_15 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(15)));
+  zxlogf(INFO, "DISP_REG_DITHER_16 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(16)));
+  zxlogf(INFO, "DISP_REG_DITHER_17 = 0x%x", dither_mmio_->Read32(DISP_REG_DITHER(17)));
+  zxlogf(INFO, "######################\n");
 }
 
 }  // namespace mt8167s_display

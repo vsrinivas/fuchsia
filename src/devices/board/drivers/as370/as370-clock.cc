@@ -55,7 +55,7 @@ zx_status_t As370::ClockInit() {
 
   auto status = pbus_.DeviceAdd(&dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
   }
 

@@ -165,7 +165,7 @@ zx_status_t InputDevice::Init() {
   // Allocate the main vring
   zx_status_t status = vring_.Init(0, kEventCount);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to allocate vring: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "Failed to allocate vring: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -176,7 +176,7 @@ zx_status_t InputDevice::Init() {
     status = io_buffer_init(&buffers_[id], bti_.get(), sizeof(virtio_input_event_t),
                             IO_BUFFER_RO | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to allocate I/O buffers: %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "Failed to allocate I/O buffers: %s", zx_status_get_string(status));
       return status;
     }
   }
@@ -187,7 +187,7 @@ zx_status_t InputDevice::Init() {
   for (uint16_t i = 0; i < kEventCount; ++i) {
     desc = vring_.AllocDescChain(1, &id);
     if (desc == nullptr) {
-      zxlogf(ERROR, "Failed to allocate descriptor chain\n");
+      zxlogf(ERROR, "Failed to allocate descriptor chain");
       return ZX_ERR_NO_RESOURCES;
     }
     ZX_ASSERT(id < kEventCount);
@@ -205,7 +205,7 @@ zx_status_t InputDevice::Init() {
 
   status = DdkAdd("virtio-input");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to add device: %s\n", tag(), zx_status_get_string(status));
+    zxlogf(ERROR, "%s: failed to add device: %s", tag(), zx_status_get_string(status));
     return status;
   }
   device_ = zxdev();

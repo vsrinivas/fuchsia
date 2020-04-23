@@ -45,7 +45,7 @@ zx_status_t Harriet::Create(zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   uint8_t intf_num = intf_desc->bInterfaceNumber;
-  zxlogf(TRACE, "found intf %u\n", intf_num);
+  zxlogf(TRACE, "found intf %u", intf_num);
 
   for (auto& intf : *intfs) {
     auto ep_itr = intf.GetEndpointList().cbegin();
@@ -54,12 +54,12 @@ zx_status_t Harriet::Create(zx_device_t* parent) {
       switch (ep_type) {
         case USB_ENDPOINT_BULK:
         case USB_ENDPOINT_INTERRUPT:
-          zxlogf(TRACE, "%s %s EP 0x%x\n", ep_type == USB_ENDPOINT_BULK ? "BULK" : "INTERRUPT",
+          zxlogf(TRACE, "%s %s EP 0x%x", ep_type == USB_ENDPOINT_BULK ? "BULK" : "INTERRUPT",
                  usb_ep_direction(&ep_itr->descriptor) == USB_ENDPOINT_OUT ? "OUT" : "IN",
                  ep_itr->descriptor.bEndpointAddress);
           break;
         default:
-          zxlogf(TRACE, "found additional unexpected EP, type: %u addr 0x%x\n", ep_type,
+          zxlogf(TRACE, "found additional unexpected EP, type: %u addr 0x%x", ep_type,
                  ep_itr->descriptor.bEndpointAddress);
       }
     } while (ep_itr++ != intf.GetEndpointList().end());
@@ -80,7 +80,7 @@ zx_status_t Harriet::Create(zx_device_t* parent) {
 }
 
 zx_status_t harriet_bind(void* ctx, zx_device_t* parent) {
-  zxlogf(TRACE, "harriet_bind\n");
+  zxlogf(TRACE, "harriet_bind");
   return usb_harriet::Harriet::Create(parent);
 }
 

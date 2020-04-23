@@ -161,22 +161,22 @@ zx_status_t FakeUsbAx88179Function::Bind() {
 
   zx_status_t status = function_.AllocInterface(&descriptor_.interface.bInterfaceNumber);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_interface failed\n");
+    zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_interface failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_IN, &descriptor_.bulk_in.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_ep failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_ep failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_IN, &descriptor_.intr_ep.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeUsbAx88179Function: usb_function_alloc_ep failed");
     return status;
   }
 
@@ -230,7 +230,7 @@ zx_status_t FakeUsbAx88179Function::UsbFunctionInterfaceSetConfigured(bool confi
     configured_ = true;
 
     if ((status = function_.ConfigEp(&descriptor_.intr_ep, nullptr)) != ZX_OK) {
-      zxlogf(ERROR, "usb-ax88179-function: usb_function_config_ep failed\n");
+      zxlogf(ERROR, "usb-ax88179-function: usb_function_config_ep failed");
     }
   } else {
     configured_ = false;
@@ -257,7 +257,7 @@ zx_status_t FakeUsbAx88179Function::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn)
 }
 
 zx_status_t bind(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "FakeUsbAx88179Function: binding driver\n");
+  zxlogf(INFO, "FakeUsbAx88179Function: binding driver");
   auto dev = std::make_unique<FakeUsbAx88179Function>(parent);
   zx_status_t status = dev->Bind();
   if (status == ZX_OK) {

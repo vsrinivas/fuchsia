@@ -24,12 +24,12 @@ zx_status_t HiEdid::EdidGetNumDtd(const uint8_t* edid_buf_, uint8_t* num_dtd) {
   start_ext = &edid_buf_[128];
 
   if (start_ext[0] != 0x2) {
-    zxlogf(ERROR, "%s: Unknown tag! %d\n", __FUNCTION__, start_ext[0]);
+    zxlogf(ERROR, "%s: Unknown tag! %d", __FUNCTION__, start_ext[0]);
     return ZX_ERR_WRONG_TYPE;
   }
 
   if (start_ext[2] == 0) {
-    zxlogf(ERROR, "%s: Invalid DTD pointer! 0x%x\n", __FUNCTION__, start_ext[2]);
+    zxlogf(ERROR, "%s: Invalid DTD pointer! 0x%x", __FUNCTION__, start_ext[2]);
     return ZX_ERR_WRONG_TYPE;
   }
 
@@ -44,22 +44,22 @@ zx_status_t HiEdid::EdidGetNumDtd(const uint8_t* edid_buf_, uint8_t* num_dtd) {
 }
 
 void HiEdid::EdidDumpDispTiming(const DisplayTiming* d) {
-  zxlogf(INFO, "%s\n", __FUNCTION__);
+  zxlogf(INFO, "%s", __FUNCTION__);
 
-  zxlogf(INFO, "pixel_clk = 0x%x\n", d->pixel_clk);
-  zxlogf(INFO, "HActive = 0x%x\n", d->HActive);
-  zxlogf(INFO, "HBlanking = 0x%x\n", d->HBlanking);
-  zxlogf(INFO, "VActive = 0x%x\n", d->VActive);
-  zxlogf(INFO, "VBlanking = 0x%x\n", d->VBlanking);
-  zxlogf(INFO, "HSyncOffset = 0x%x\n", d->HSyncOffset);
-  zxlogf(INFO, "HSyncPulseWidth = 0x%x\n", d->HSyncPulseWidth);
-  zxlogf(INFO, "VSyncOffset = 0x%x\n", d->VSyncOffset);
-  zxlogf(INFO, "VSyncPulseWidth = 0x%x\n", d->VSyncPulseWidth);
-  zxlogf(INFO, "HImageSize = 0x%x\n", d->HImageSize);
-  zxlogf(INFO, "VImageSize = 0x%x\n", d->VImageSize);
-  zxlogf(INFO, "HBorder = 0x%x\n", d->HBorder);
-  zxlogf(INFO, "VBorder = 0x%x\n", d->VBorder);
-  zxlogf(INFO, "Flags = 0x%x\n", d->Flags);
+  zxlogf(INFO, "pixel_clk = 0x%x", d->pixel_clk);
+  zxlogf(INFO, "HActive = 0x%x", d->HActive);
+  zxlogf(INFO, "HBlanking = 0x%x", d->HBlanking);
+  zxlogf(INFO, "VActive = 0x%x", d->VActive);
+  zxlogf(INFO, "VBlanking = 0x%x", d->VBlanking);
+  zxlogf(INFO, "HSyncOffset = 0x%x", d->HSyncOffset);
+  zxlogf(INFO, "HSyncPulseWidth = 0x%x", d->HSyncPulseWidth);
+  zxlogf(INFO, "VSyncOffset = 0x%x", d->VSyncOffset);
+  zxlogf(INFO, "VSyncPulseWidth = 0x%x", d->VSyncPulseWidth);
+  zxlogf(INFO, "HImageSize = 0x%x", d->HImageSize);
+  zxlogf(INFO, "VImageSize = 0x%x", d->VImageSize);
+  zxlogf(INFO, "HBorder = 0x%x", d->HBorder);
+  zxlogf(INFO, "VBorder = 0x%x", d->VBorder);
+  zxlogf(INFO, "Flags = 0x%x", d->Flags);
 }
 
 zx_status_t HiEdid::EdidParseStdDisplayTiming(const uint8_t* edid_buf_, DetailedTiming* raw,
@@ -112,12 +112,12 @@ zx_status_t HiEdid::EdidParseDisplayTiming(const uint8_t* edid_buf_, DetailedTim
   start_ext = &edid_buf_[128];
 
   if (start_ext[0] != 0x2) {
-    zxlogf(ERROR, "%s: Unknown tag! %d\n", __FUNCTION__, start_ext[0]);
+    zxlogf(ERROR, "%s: Unknown tag! %d", __FUNCTION__, start_ext[0]);
     return ZX_ERR_WRONG_TYPE;
   }
 
   if (start_ext[2] == 0) {
-    zxlogf(ERROR, "%s: Invalid DTD pointer! 0x%x\n", __FUNCTION__, start_ext[2]);
+    zxlogf(ERROR, "%s: Invalid DTD pointer! 0x%x", __FUNCTION__, start_ext[2]);
     return ZX_ERR_WRONG_TYPE;
   }
 

@@ -22,13 +22,13 @@ static void dwc3_handle_ep_event(dwc3_t* dwc, uint32_t event) {
       dwc3_ep_xfer_complete(dwc, ep_num);
       break;
     case DEPEVT_XFER_IN_PROGRESS:
-      zxlogf(TRACE, "DEPEVT_XFER_IN_PROGRESS ep_num: %u status %u\n", ep_num, status);
+      zxlogf(TRACE, "DEPEVT_XFER_IN_PROGRESS ep_num: %u status %u", ep_num, status);
       break;
     case DEPEVT_XFER_NOT_READY:
       dwc3_ep_xfer_not_ready(dwc, ep_num, DEPEVT_XFER_NOT_READY_STAGE(event));
       break;
     case DEPEVT_STREAM_EVT:
-      zxlogf(TRACE, "DEPEVT_STREAM_EVT ep_num: %u status %u\n", ep_num, status);
+      zxlogf(TRACE, "DEPEVT_STREAM_EVT ep_num: %u status %u", ep_num, status);
       break;
     case DEPEVT_CMD_CMPLT: {
       unsigned cmd_type = DEPEVT_CMD_CMPLT_CMD_TYPE(event);
@@ -39,13 +39,13 @@ static void dwc3_handle_ep_event(dwc3_t* dwc, uint32_t event) {
       break;
     }
     default:
-      zxlogf(ERROR, "dwc3_handle_ep_event: unknown event type %u\n", type);
+      zxlogf(ERROR, "dwc3_handle_ep_event: unknown event type %u", type);
       break;
   }
 }
 
 static void dwc3_handle_event(dwc3_t* dwc, uint32_t event) {
-  zxlogf(LTRACE, "dwc3_handle_event %08X\n", event);
+  zxlogf(LTRACE, "dwc3_handle_event %08X", event);
   if (!(event & DEPEVT_NON_EP)) {
     dwc3_handle_ep_event(dwc, event);
     return;
@@ -56,121 +56,121 @@ static void dwc3_handle_event(dwc3_t* dwc, uint32_t event) {
 
   switch (type) {
     case DEVT_DISCONNECT:
-      zxlogf(TRACE, "DEVT_DISCONNECT\n");
+      zxlogf(TRACE, "DEVT_DISCONNECT");
       break;
     case DEVT_USB_RESET:
-      zxlogf(TRACE, "DEVT_USB_RESET\n");
+      zxlogf(TRACE, "DEVT_USB_RESET");
       dwc3_usb_reset(dwc);
       break;
     case DEVT_CONNECTION_DONE:
-      zxlogf(TRACE, "DEVT_CONNECTION_DONE\n");
+      zxlogf(TRACE, "DEVT_CONNECTION_DONE");
       dwc3_connection_done(dwc);
       break;
     case DEVT_LINK_STATE_CHANGE:
       zxlogf(TRACE, "DEVT_LINK_STATE_CHANGE: ");
       switch (info) {
         case DSTS::USBLNKST_U0 | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS::USBLNKST_U0\n");
+          zxlogf(TRACE, "DSTS::USBLNKST_U0");
           break;
         case DSTS::USBLNKST_U1 | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_U1\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_U1");
           break;
         case DSTS::USBLNKST_U2 | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_U2\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_U2");
           break;
         case DSTS::USBLNKST_U3 | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_U3\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_U3");
           break;
         case DSTS::USBLNKST_ESS_DIS | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_ESS_DIS\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_ESS_DIS");
           break;
         case DSTS::USBLNKST_RX_DET | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_RX_DET\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_RX_DET");
           break;
         case DSTS::USBLNKST_ESS_INACT | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_ESS_INACT\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_ESS_INACT");
           break;
         case DSTS::USBLNKST_POLL | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_POLL\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_POLL");
           break;
         case DSTS::USBLNKST_RECOV | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_RECOV\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_RECOV");
           break;
         case DSTS::USBLNKST_HRESET | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_HRESET\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_HRESET");
           break;
         case DSTS::USBLNKST_CMPLY | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_CMPLY\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_CMPLY");
           break;
         case DSTS::USBLNKST_LPBK | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_LPBK\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_LPBK");
           break;
         case DSTS::USBLNKST_RESUME_RESET | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(TRACE, "DSTS_USBLNKST_RESUME_RESET\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_RESUME_RESET");
           break;
         case DSTS::USBLNKST_ON:
-          zxlogf(TRACE, "DSTS_USBLNKST_ON\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_ON");
           break;
         case DSTS::USBLNKST_SLEEP:
-          zxlogf(TRACE, "DSTS_USBLNKST_SLEEP\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_SLEEP");
           break;
         case DSTS::USBLNKST_SUSPEND:
-          zxlogf(TRACE, "DSTS_USBLNKST_SUSPEND\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_SUSPEND");
           break;
         case DSTS::USBLNKST_DISCONNECTED:
-          zxlogf(TRACE, "DSTS_USBLNKST_DISCONNECTED\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_DISCONNECTED");
           break;
         case DSTS::USBLNKST_EARLY_SUSPEND:
-          zxlogf(TRACE, "DSTS_USBLNKST_EARLY_SUSPEND\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_EARLY_SUSPEND");
           break;
         case DSTS::USBLNKST_RESET:
-          zxlogf(TRACE, "DSTS_USBLNKST_RESET\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_RESET");
           break;
         case DSTS::USBLNKST_RESUME:
-          zxlogf(TRACE, "DSTS_USBLNKST_RESUME\n");
+          zxlogf(TRACE, "DSTS_USBLNKST_RESUME");
           break;
         default:
-          zxlogf(ERROR, "unknown state %d\n", info);
+          zxlogf(ERROR, "unknown state %d", info);
           break;
       }
       break;
     case DEVT_REMOTE_WAKEUP:
-      zxlogf(TRACE, "DEVT_REMOTE_WAKEUP\n");
+      zxlogf(TRACE, "DEVT_REMOTE_WAKEUP");
       break;
     case DEVT_HIBERNATE_REQUEST:
-      zxlogf(TRACE, "DEVT_HIBERNATE_REQUEST\n");
+      zxlogf(TRACE, "DEVT_HIBERNATE_REQUEST");
       break;
     case DEVT_SUSPEND_ENTRY:
-      zxlogf(TRACE, "DEVT_SUSPEND_ENTRY\n");
+      zxlogf(TRACE, "DEVT_SUSPEND_ENTRY");
       // TODO(voydanoff) is this the best way to detect disconnect?
       dwc3_disconnected(dwc);
       break;
     case DEVT_SOF:
-      zxlogf(TRACE, "DEVT_SOF\n");
+      zxlogf(TRACE, "DEVT_SOF");
       break;
     case DEVT_ERRATIC_ERROR:
-      zxlogf(TRACE, "DEVT_ERRATIC_ERROR\n");
+      zxlogf(TRACE, "DEVT_ERRATIC_ERROR");
       break;
     case DEVT_COMMAND_COMPLETE:
-      zxlogf(TRACE, "DEVT_COMMAND_COMPLETE\n");
+      zxlogf(TRACE, "DEVT_COMMAND_COMPLETE");
       break;
     case DEVT_EVENT_BUF_OVERFLOW:
-      zxlogf(TRACE, "DEVT_EVENT_BUF_OVERFLOW\n");
+      zxlogf(TRACE, "DEVT_EVENT_BUF_OVERFLOW");
       break;
     case DEVT_VENDOR_TEST_LMP:
-      zxlogf(TRACE, "DEVT_VENDOR_TEST_LMP\n");
+      zxlogf(TRACE, "DEVT_VENDOR_TEST_LMP");
       break;
     case DEVT_STOPPED_DISCONNECT:
-      zxlogf(TRACE, "DEVT_STOPPED_DISCONNECT\n");
+      zxlogf(TRACE, "DEVT_STOPPED_DISCONNECT");
       break;
     case DEVT_L1_RESUME_DETECT:
-      zxlogf(TRACE, "DEVT_L1_RESUME_DETECT\n");
+      zxlogf(TRACE, "DEVT_L1_RESUME_DETECT");
       break;
     case DEVT_LDM_RESPONSE:
-      zxlogf(TRACE, "DEVT_LDM_RESPONSE\n");
+      zxlogf(TRACE, "DEVT_LDM_RESPONSE");
       break;
     default:
-      zxlogf(ERROR, "dwc3_handle_event: unknown event type %u\n", type);
+      zxlogf(ERROR, "dwc3_handle_event: unknown event type %u", type);
       break;
   }
 }
@@ -179,7 +179,7 @@ static int dwc3_irq_thread(void* arg) {
   auto* dwc = static_cast<dwc3_t*>(arg);
   auto* mmio = dwc3_mmio(dwc);
 
-  zxlogf(TRACE, "dwc3_irq_thread start\n");
+  zxlogf(TRACE, "dwc3_irq_thread start");
 
   auto* ring_start = static_cast<uint32_t*>(io_buffer_virt(&dwc->event_buffer));
   auto* ring_end = ring_start + EVENT_BUFFER_SIZE / sizeof(*ring_start);
@@ -200,7 +200,7 @@ static int dwc3_irq_thread(void* arg) {
     }
     zx_status_t status = dwc->irq_handle.wait(nullptr);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "dwc3_irq_thread: zx_interrupt_wait returned %d\n", status);
+      zxlogf(ERROR, "dwc3_irq_thread: zx_interrupt_wait returned %d", status);
       break;
     }
     // read number of new bytes in the event buffer
@@ -222,7 +222,7 @@ static int dwc3_irq_thread(void* arg) {
     }
   }
 
-  zxlogf(TRACE, "dwc3_irq_thread done\n");
+  zxlogf(TRACE, "dwc3_irq_thread done");
   return 0;
 }
 

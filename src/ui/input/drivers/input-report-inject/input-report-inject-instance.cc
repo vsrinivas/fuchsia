@@ -23,7 +23,7 @@ void InputReportInjectInstance::SendInputReports(
     ::fidl::VectorView<fuchsia_input_report::InputReport> reports,
     SendInputReportsCompleter::Sync completer) {
   if (child_ == nullptr) {
-    zxlogf(ERROR, "InputInject: Must call MakeDevice before calling SendInputReports!\n");
+    zxlogf(ERROR, "InputInject: Must call MakeDevice before calling SendInputReports!");
     completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
   }

@@ -81,7 +81,7 @@ zx_status_t Mt8167::TouchInit() {
 
   zx_status_t status = DdkAddComposite("touch", &ft_comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to add touch device: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Failed to add touch device: %d", __FUNCTION__, status);
   }
 
   return status;

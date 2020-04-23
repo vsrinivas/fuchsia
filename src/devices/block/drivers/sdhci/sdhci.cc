@@ -133,7 +133,7 @@ zx_status_t Sdhci::WaitForReset(const SoftwareReset mask) {
     zx::nanosleep(zx::deadline_after(kWaitYieldTime));
   } while (zx::clock::get_monotonic() <= deadline);
 
-  zxlogf(ERROR, "sdhci: timed out while waiting for reset\n");
+  zxlogf(ERROR, "sdhci: timed out while waiting for reset");
   return ZX_ERR_TIMED_OUT;
 }
 
@@ -146,7 +146,7 @@ zx_status_t Sdhci::WaitForInhibit(const PresentState mask) const {
     zx::nanosleep(zx::deadline_after(kWaitYieldTime));
   } while (zx::clock::get_monotonic() <= deadline);
 
-  zxlogf(ERROR, "sdhci: timed out while waiting for command/data inhibit\n");
+  zxlogf(ERROR, "sdhci: timed out while waiting for command/data inhibit");
   return ZX_ERR_TIMED_OUT;
 }
 
@@ -159,12 +159,12 @@ zx_status_t Sdhci::WaitForInternalClockStable() const {
     zx::nanosleep(zx::deadline_after(kWaitYieldTime));
   } while (zx::clock::get_monotonic() <= deadline);
 
-  zxlogf(ERROR, "sdhci: timed out while waiting for internal clock to stabilize\n");
+  zxlogf(ERROR, "sdhci: timed out while waiting for internal clock to stabilize");
   return ZX_ERR_TIMED_OUT;
 }
 
 void Sdhci::CompleteRequestLocked(sdmmc_req_t* req, zx_status_t status) {
-  zxlogf(TRACE, "sdhci: complete cmd 0x%08x status %d\n", req->cmd_idx, status);
+  zxlogf(TRACE, "sdhci: complete cmd 0x%08x status %d", req->cmd_idx, status);
 
   // Disable irqs when no pending transfer
   InterruptSignalEnable::Get().FromValue(0).WriteTo(&regs_mmio_buffer_);
@@ -179,10 +179,10 @@ void Sdhci::CompleteRequestLocked(sdmmc_req_t* req, zx_status_t status) {
 }
 
 void Sdhci::CmdStageCompleteLocked() {
-  zxlogf(TRACE, "sdhci: got CMD_CPLT interrupt\n");
+  zxlogf(TRACE, "sdhci: got CMD_CPLT interrupt");
 
   if (!cmd_req_) {
-    zxlogf(TRACE, "sdhci: spurious CMD_CPLT interrupt!\n");
+    zxlogf(TRACE, "sdhci: spurious CMD_CPLT interrupt!");
     return;
   }
 
@@ -222,10 +222,10 @@ void Sdhci::CmdStageCompleteLocked() {
 }
 
 void Sdhci::DataStageReadReadyLocked() {
-  zxlogf(TRACE, "sdhci: got BUFF_READ_READY interrupt\n");
+  zxlogf(TRACE, "sdhci: got BUFF_READ_READY interrupt");
 
   if (!data_req_ || !SdmmcCmdHasData(data_req_->cmd_flags)) {
-    zxlogf(TRACE, "sdhci: spurious BUFF_READ_READY interrupt!\n");
+    zxlogf(TRACE, "sdhci: spurious BUFF_READ_READY interrupt!");
     return;
   }
 
@@ -245,10 +245,10 @@ void Sdhci::DataStageReadReadyLocked() {
 }
 
 void Sdhci::DataStageWriteReadyLocked() {
-  zxlogf(TRACE, "sdhci: got BUFF_WRITE_READY interrupt\n");
+  zxlogf(TRACE, "sdhci: got BUFF_WRITE_READY interrupt");
 
   if (!data_req_ || !SdmmcCmdHasData(data_req_->cmd_flags)) {
-    zxlogf(TRACE, "sdhci: spurious BUFF_WRITE_READY interrupt!\n");
+    zxlogf(TRACE, "sdhci: spurious BUFF_WRITE_READY interrupt!");
     return;
   }
 
@@ -262,9 +262,9 @@ void Sdhci::DataStageWriteReadyLocked() {
 }
 
 void Sdhci::TransferCompleteLocked() {
-  zxlogf(TRACE, "sdhci: got XFER_CPLT interrupt\n");
+  zxlogf(TRACE, "sdhci: got XFER_CPLT interrupt");
   if (!data_req_) {
-    zxlogf(TRACE, "sdhci: spurious XFER_CPLT interrupt!\n");
+    zxlogf(TRACE, "sdhci: spurious XFER_CPLT interrupt!");
     return;
   }
   if (cmd_req_) {
@@ -294,7 +294,7 @@ int Sdhci::IrqThread() {
     zx_status_t wait_res = WaitForInterrupt();
     if (wait_res != ZX_OK) {
       if (wait_res != ZX_ERR_CANCELED) {
-        zxlogf(ERROR, "sdhci: interrupt wait failed with retcode = %d\n", wait_res);
+        zxlogf(ERROR, "sdhci: interrupt wait failed with retcode = %d", wait_res);
       }
       break;
     }
@@ -303,7 +303,7 @@ int Sdhci::IrqThread() {
     // 1s into the IRQs that fired.
     auto irq = InterruptStatus::Get().ReadFrom(&regs_mmio_buffer_).WriteTo(&regs_mmio_buffer_);
 
-    zxlogf(TRACE, "got irq 0x%08x en 0x%08x\n", irq.reg_value(),
+    zxlogf(TRACE, "got irq 0x%08x en 0x%08x", irq.reg_value(),
            InterruptSignalEnable::Get().ReadFrom(&regs_mmio_buffer_).reg_value());
 
     fbl::AutoLock lock(&mtx_);
@@ -325,7 +325,7 @@ int Sdhci::IrqThread() {
     if (irq.ErrorInterrupt()) {
       if (driver_get_log_flags() & DDK_LOG_TRACE) {
         if (irq.adma_error()) {
-          zxlogf(TRACE, "sdhci: ADMA error 0x%x ADMAADDR0 0x%x ADMAADDR1 0x%x\n",
+          zxlogf(TRACE, "sdhci: ADMA error 0x%x ADMAADDR0 0x%x ADMAADDR1 0x%x",
                  AdmaErrorStatus::Get().ReadFrom(&regs_mmio_buffer_).reg_value(),
                  AdmaSystemAddress::Get(0).ReadFrom(&regs_mmio_buffer_).reg_value(),
                  AdmaSystemAddress::Get(1).ReadFrom(&regs_mmio_buffer_).reg_value());
@@ -349,7 +349,7 @@ zx_status_t Sdhci::PinRequestPages(sdmmc_req_t* req, zx_paddr_t* phys, size_t pa
   zx_status_t st = bti_.pin(options, *dma_vmo, req->buf_offset & ~kPageMask, pagecount * PAGE_SIZE,
                             phys, pagecount, &pmt);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdhci: error %d bti_pin\n", st);
+    zxlogf(ERROR, "sdhci: error %d bti_pin", st);
     return st;
   }
   if (req->cmd_flags & SDMMC_CMD_READ) {
@@ -358,7 +358,7 @@ zx_status_t Sdhci::PinRequestPages(sdmmc_req_t* req, zx_paddr_t* phys, size_t pa
     st = dma_vmo->op_range(ZX_VMO_OP_CACHE_CLEAN, req->buf_offset, req_len, nullptr, 0);
   }
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdhci: cache clean failed with error  %d\n", st);
+    zxlogf(ERROR, "sdhci: cache clean failed with error  %d", st);
     return st;
   }
   // cache this for zx_pmt_unpin() later
@@ -375,7 +375,7 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
   const uint64_t req_len = req->blockcount * req->blocksize;
   const size_t pagecount = ((req->buf_offset & kPageMask) + req_len + kPageMask) / PAGE_SIZE;
   if (pagecount > SDMMC_PAGES_COUNT) {
-    zxlogf(ERROR, "sdhci: too many pages %lu vs %lu\n", pagecount, SDMMC_PAGES_COUNT);
+    zxlogf(ERROR, "sdhci: too many pages %lu vs %lu", pagecount, SDMMC_PAGES_COUNT);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -411,19 +411,19 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
         desc->attr = Adma2DescriptorAttributes::Get(desc->attr).set_end(1).reg_value();
         break;
       } else {
-        zxlogf(TRACE, "sdhci: empty descriptor list!\n");
+        zxlogf(TRACE, "sdhci: empty descriptor list!");
         return ZX_ERR_NOT_SUPPORTED;
       }
     } else if (length > kMaxDescriptorLength) {
-      zxlogf(TRACE, "sdhci: chunk size > %zu is unsupported\n", length);
+      zxlogf(TRACE, "sdhci: chunk size > %zu is unsupported", length);
       return ZX_ERR_NOT_SUPPORTED;
     } else if ((++count) > kDmaDescCount) {
-      zxlogf(TRACE, "sdhci: request with more than %zd chunks is unsupported\n", length);
+      zxlogf(TRACE, "sdhci: request with more than %zd chunks is unsupported", length);
       return ZX_ERR_NOT_SUPPORTED;
     }
 
     if ((paddr & kPhysAddrMask) != paddr) {
-      zxlogf(ERROR, "sdhci: 64-bit physical address supplied for 32-bit DMA\n");
+      zxlogf(ERROR, "sdhci: 64-bit physical address supplied for 32-bit DMA");
       return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -461,10 +461,10 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
     DescriptorType* desc = descs;
     do {
       if constexpr (sizeof(desc->address) == sizeof(uint32_t)) {
-        zxlogf(SPEW, "desc: addr=0x%" PRIx32 " length=0x%04x attr=0x%04x\n", desc->address,
+        zxlogf(SPEW, "desc: addr=0x%" PRIx32 " length=0x%04x attr=0x%04x", desc->address,
                desc->length, desc->attr);
       } else {
-        zxlogf(SPEW, "desc: addr=0x%" PRIx64 " length=0x%04x attr=0x%04x\n", desc->address,
+        zxlogf(SPEW, "desc: addr=0x%" PRIx64 " length=0x%04x attr=0x%04x", desc->address,
                desc->length, desc->attr);
       }
     } while (!Adma2DescriptorAttributes::Get((desc++)->attr).end());
@@ -472,19 +472,19 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
 
   zx_paddr_t desc_phys = iobuf_.phys();
   if ((desc_phys & kPhysAddrMask) != desc_phys) {
-    zxlogf(ERROR, "sdhci: 64-bit physical address supplied for 32-bit DMA\n");
+    zxlogf(ERROR, "sdhci: 64-bit physical address supplied for 32-bit DMA");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if ((st = iobuf_.CacheOp(ZX_VMO_OP_CACHE_CLEAN, 0, count * sizeof(DescriptorType))) != ZX_OK) {
-    zxlogf(ERROR, "sdhci: cache clean failed with error %d\n", st);
+    zxlogf(ERROR, "sdhci: cache clean failed with error %d", st);
     return st;
   }
 
   AdmaSystemAddress::Get(0).FromValue(Lo32(desc_phys)).WriteTo(&regs_mmio_buffer_);
   AdmaSystemAddress::Get(1).FromValue(Hi32(desc_phys)).WriteTo(&regs_mmio_buffer_);
 
-  zxlogf(SPEW, "sdhci: descs at 0x%x 0x%x\n", Lo32(desc_phys), Hi32(desc_phys));
+  zxlogf(SPEW, "sdhci: descs at 0x%x 0x%x", Lo32(desc_phys), Hi32(desc_phys));
 
   return ZX_OK;
 }
@@ -500,11 +500,11 @@ zx_status_t Sdhci::StartRequestLocked(sdmmc_req_t* req) {
   PrepareCmd(req, &transfer_mode, &command);
 
   if (req->use_dma && !SupportsAdma2()) {
-    zxlogf(TRACE, "sdhci: host does not support DMA\n");
+    zxlogf(TRACE, "sdhci: host does not support DMA");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zxlogf(TRACE, "sdhci: start_req cmd=0x%08x (data %d dma %d bsy %d) blkcnt %u blksiz %u\n",
+  zxlogf(TRACE, "sdhci: start_req cmd=0x%08x (data %d dma %d bsy %d) blkcnt %u blksiz %u",
          command.reg_value(), has_data, req->use_dma, SdmmcCmdRspBusy(req->cmd_flags), blkcnt,
          blksiz);
 
@@ -532,7 +532,7 @@ zx_status_t Sdhci::StartRequestLocked(sdmmc_req_t* req) {
       }
 
       if (st != ZX_OK) {
-        zxlogf(ERROR, "sdhci: failed to build DMA descriptor\n");
+        zxlogf(ERROR, "sdhci: failed to build DMA descriptor");
         return st;
       }
       transfer_mode.set_dma_enable(1);
@@ -587,14 +587,14 @@ zx_status_t Sdhci::FinishRequest(sdmmc_req_t* req) {
       st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, req->buf_offset, req_len,
                            nullptr, 0);
       if (st != ZX_OK) {
-        zxlogf(ERROR, "sdhci: cache clean failed with error  %d\n", st);
+        zxlogf(ERROR, "sdhci: cache clean failed with error  %d", st);
         return st;
       }
     }
     st = zx_pmt_unpin(req->pmt);
     req->pmt = ZX_HANDLE_INVALID;
     if (st != ZX_OK) {
-      zxlogf(ERROR, "sdhci: error %d in pmt_unpin\n", st);
+      zxlogf(ERROR, "sdhci: error %d in pmt_unpin", st);
       return st;
     }
   }
@@ -616,7 +616,7 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
 
   // Validate the controller supports the requested voltage
   if ((voltage == SDMMC_VOLTAGE_V330) && !(info_.caps & SDMMC_HOST_CAP_VOLTAGE_330)) {
-    zxlogf(TRACE, "sdhci: 3.3V signal voltage not supported\n");
+    zxlogf(TRACE, "sdhci: 3.3V signal voltage not supported");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -632,7 +632,7 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
       break;
     }
     default:
-      zxlogf(ERROR, "sdhci: unknown signal voltage value %u\n", voltage);
+      zxlogf(ERROR, "sdhci: unknown signal voltage value %u", voltage);
       return ZX_ERR_INVALID_ARGS;
   }
 
@@ -645,7 +645,7 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
   zx::nanosleep(zx::deadline_after(kVoltageStabilizationTime));
 
   if (ctrl2.ReadFrom(&regs_mmio_buffer_).voltage_1v8_signalling_enable() != voltage_1v8_value) {
-    zxlogf(ERROR, "sdhci: voltage regulator output did not become stable\n");
+    zxlogf(ERROR, "sdhci: voltage regulator output did not become stable");
     // Cut power to the card if the voltage switch failed.
     PowerControl::Get()
         .ReadFrom(&regs_mmio_buffer_)
@@ -654,7 +654,7 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
     return ZX_ERR_INTERNAL;
   }
 
-  zxlogf(TRACE, "sdhci: switch signal voltage to %d\n", voltage);
+  zxlogf(TRACE, "sdhci: switch signal voltage to %d", voltage);
 
   return ZX_OK;
 }
@@ -663,7 +663,7 @@ zx_status_t Sdhci::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
   fbl::AutoLock lock(&mtx_);
 
   if ((bus_width == SDMMC_BUS_WIDTH_EIGHT) && !(info_.caps & SDMMC_HOST_CAP_BUS_WIDTH_8)) {
-    zxlogf(TRACE, "sdhci: 8-bit bus width not supported\n");
+    zxlogf(TRACE, "sdhci: 8-bit bus width not supported");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -680,13 +680,13 @@ zx_status_t Sdhci::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
       ctrl1.set_extended_data_transfer_width(1).set_data_transfer_width_4bit(0);
       break;
     default:
-      zxlogf(ERROR, "sdhci: unknown bus width value %u\n", bus_width);
+      zxlogf(ERROR, "sdhci: unknown bus width value %u", bus_width);
       return ZX_ERR_INVALID_ARGS;
   }
 
   ctrl1.WriteTo(&regs_mmio_buffer_);
 
-  zxlogf(TRACE, "sdhci: set bus width to %d\n", bus_width);
+  zxlogf(TRACE, "sdhci: set bus width to %d", bus_width);
 
   return ZX_OK;
 }
@@ -720,7 +720,7 @@ zx_status_t Sdhci::SdmmcSetBusFreq(uint32_t bus_freq) {
   // Turn the SD clock back on.
   clock.set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
 
-  zxlogf(TRACE, "sdhci: set bus frequency to %u\n", bus_freq);
+  zxlogf(TRACE, "sdhci: set bus frequency to %u", bus_freq);
 
   return ZX_OK;
 }
@@ -762,12 +762,12 @@ zx_status_t Sdhci::SdmmcSetTiming(sdmmc_timing_t timing) {
       ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr50);
       break;
     default:
-      zxlogf(ERROR, "sdhci: unknown timing value %u\n", timing);
+      zxlogf(ERROR, "sdhci: unknown timing value %u", timing);
       return ZX_ERR_INVALID_ARGS;
   }
   ctrl2.WriteTo(&regs_mmio_buffer_);
 
-  zxlogf(TRACE, "sdhci: set bus timing to %d\n", timing);
+  zxlogf(TRACE, "sdhci: set bus timing to %d", timing);
 
   return ZX_OK;
 }
@@ -806,7 +806,7 @@ zx_status_t Sdhci::SdmmcRequest(sdmmc_req_t* req) {
 }
 
 zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
-  zxlogf(TRACE, "sdhci: perform tuning\n");
+  zxlogf(TRACE, "sdhci: perform tuning");
 
   uint16_t blocksize;
   auto ctrl2 = HostControl2::Get().FromValue(0);
@@ -838,7 +838,7 @@ zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
   for (int count = 0; (count < kMaxTuningCount) && ctrl2.execute_tuning(); count++) {
     zx_status_t st = SdmmcRequest(&req);
     if (st != ZX_OK) {
-      zxlogf(ERROR, "sdhci: MMC_SEND_TUNING_BLOCK error, retcode = %d\n", req.status);
+      zxlogf(ERROR, "sdhci: MMC_SEND_TUNING_BLOCK error, retcode = %d", req.status);
       return st;
     }
 
@@ -853,7 +853,7 @@ zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
 
   const bool fail = ctrl2.execute_tuning() || !ctrl2.use_tuned_clock();
 
-  zxlogf(TRACE, "sdhci: tuning fail %d\n", fail);
+  zxlogf(TRACE, "sdhci: tuning fail %d", fail);
 
   return fail ? ZX_ERR_IO : ZX_OK;
 }
@@ -890,11 +890,11 @@ zx_status_t Sdhci::Init() {
   const uint16_t vrsn =
       HostControllerVersion::Get().ReadFrom(&regs_mmio_buffer_).specification_version();
   if (vrsn < HostControllerVersion::kSpecificationVersion300) {
-    zxlogf(ERROR, "sdhci: SD version is %u, only version %u is supported\n", vrsn,
+    zxlogf(ERROR, "sdhci: SD version is %u, only version %u is supported", vrsn,
            HostControllerVersion::kSpecificationVersion300);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zxlogf(TRACE, "sdhci: controller version %d\n", vrsn);
+  zxlogf(TRACE, "sdhci: controller version %d", vrsn);
 
   auto caps0 = Capabilities0::Get().ReadFrom(&regs_mmio_buffer_);
   auto caps1 = Capabilities1::Get().ReadFrom(&regs_mmio_buffer_);
@@ -905,7 +905,7 @@ zx_status_t Sdhci::Init() {
     base_clock_ = sdhci_.GetBaseClock();
   }
   if (base_clock_ == 0) {
-    zxlogf(ERROR, "sdhci: base clock is 0!\n");
+    zxlogf(ERROR, "sdhci: base clock is 0!");
     return ZX_ERR_INTERNAL;
   }
 
@@ -972,7 +972,7 @@ zx_status_t Sdhci::Init() {
     }
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "sdhci: error allocating DMA descriptors\n");
+      zxlogf(ERROR, "sdhci: error allocating DMA descriptors");
       return status;
     }
     info_.max_transfer_size = kDmaDescCount * PAGE_SIZE;
@@ -1027,7 +1027,7 @@ zx_status_t Sdhci::Init() {
   if (thrd_create_with_name(
           &irq_thread_, [](void* arg) -> int { return reinterpret_cast<Sdhci*>(arg)->IrqThread(); },
           this, "sdhci_irq_thread") != thrd_success) {
-    zxlogf(ERROR, "sdhci: failed to create irq thread\n");
+    zxlogf(ERROR, "sdhci: failed to create irq thread");
     return ZX_ERR_INTERNAL;
   }
 
@@ -1045,27 +1045,27 @@ zx_status_t Sdhci::Create(void* ctx, zx_device_t* parent) {
   zx_off_t vmo_offset = 0;
   zx_status_t status = sdhci.GetMmio(&vmo, &vmo_offset);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "sdhci: error %d in get_mmio\n", status);
+    zxlogf(ERROR, "sdhci: error %d in get_mmio", status);
     return status;
   }
   std::optional<ddk::MmioBuffer> regs_mmio_buffer;
   status = ddk::MmioBuffer::Create(vmo_offset, kRegisterSetSize, std::move(vmo),
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &regs_mmio_buffer);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "sdhci: error %d in mmio_buffer_init\n", status);
+    zxlogf(ERROR, "sdhci: error %d in mmio_buffer_init", status);
     return status;
   }
   zx::bti bti;
   status = sdhci.GetBti(0, &bti);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "sdhci: error %d in get_bti\n", status);
+    zxlogf(ERROR, "sdhci: error %d in get_bti", status);
     return status;
   }
 
   zx::interrupt irq;
   status = sdhci.GetInterrupt(&irq);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "sdhci: error %d in get_interrupt\n", status);
+    zxlogf(ERROR, "sdhci: error %d in get_interrupt", status);
     return status;
   }
 
@@ -1073,7 +1073,7 @@ zx_status_t Sdhci::Create(void* ctx, zx_device_t* parent) {
   uint64_t quirks = sdhci.GetQuirks(&dma_boundary_alignment);
 
   if ((quirks & SDHCI_QUIRK_USE_DMA_BOUNDARY_ALIGNMENT) && dma_boundary_alignment == 0) {
-    zxlogf(ERROR, "sdhci: DMA boundary alignment is zero\n");
+    zxlogf(ERROR, "sdhci: DMA boundary alignment is zero");
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -1088,13 +1088,13 @@ zx_status_t Sdhci::Create(void* ctx, zx_device_t* parent) {
   // initialize the controller
   status = dev->Init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SDHCI Controller init failed\n", __func__);
+    zxlogf(ERROR, "%s: SDHCI Controller init failed", __func__);
     return status;
   }
 
   status = dev->DdkAdd("sdhci");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SDMMC device_add failed.\n", __func__);
+    zxlogf(ERROR, "%s: SDMMC device_add failed.", __func__);
     dev->irq_.destroy();
     thrd_join(dev->irq_thread_, nullptr);
     return status;

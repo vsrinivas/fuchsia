@@ -28,11 +28,11 @@ uint32_t Alc5514Device::ReadReg(uint32_t addr) {
   uint32_t val = 0;
   zx_status_t status = i2c_write_read_sync(&i2c_, &buf, sizeof(buf), &val, sizeof(val));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5514: could not read reg addr: 0x%08x  status: %d\n", addr, status);
+    zxlogf(ERROR, "alc5514: could not read reg addr: 0x%08x  status: %d", addr, status);
     return -1;
   }
 
-  zxlogf(SPEW, "alc5514: register 0x%08x read 0x%08x\n", addr, betoh32(val));
+  zxlogf(SPEW, "alc5514: register 0x%08x read 0x%08x", addr, betoh32(val));
   return betoh32(val);
 }
 
@@ -42,11 +42,11 @@ void Alc5514Device::WriteReg(uint32_t addr, uint32_t val) {
   buf[1] = htobe32(val);
   zx_status_t status = i2c_write_sync(&i2c_, buf, sizeof(buf));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5514: could not write reg addr/val: 0x%08x/0x%08x status: %d\n", addr, val,
+    zxlogf(ERROR, "alc5514: could not write reg addr/val: 0x%08x/0x%08x status: %d", addr, val,
            status);
   }
 
-  zxlogf(SPEW, "alc5514: register 0x%08x write 0x%08x\n", addr, val);
+  zxlogf(SPEW, "alc5514: register 0x%08x write 0x%08x", addr, val);
 }
 
 void Alc5514Device::UpdateReg(uint32_t addr, uint32_t mask, uint32_t bits) {
@@ -64,7 +64,7 @@ void Alc5514Device::DumpRegs() {
       VERSION_ID,        DEVICE_ID,
   };
   for (uint i = 0; i < fbl::count_of(REGS); i++) {
-    zxlogf(INFO, "%04x: %08x\n", REGS[i], ReadReg(REGS[i]));
+    zxlogf(INFO, "%04x: %08x", REGS[i], ReadReg(REGS[i]));
   }
 }
 
@@ -81,7 +81,7 @@ zx_status_t Alc5514Device::Initialize() {
     device = ReadReg(DEVICE_ID);
   }
   if (device != DEVICE_ID_ALC5514) {
-    zxlogf(INFO, "Device ID 0x%08x not supported\n", device);
+    zxlogf(INFO, "Device ID 0x%08x not supported", device);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -176,7 +176,7 @@ zx_status_t Alc5514Device::Initialize() {
 zx_status_t Alc5514Device::Bind() {
   zx_status_t st = device_get_protocol(parent(), ZX_PROTOCOL_I2C, &i2c_);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "alc5514: could not get I2C protocol: %d\n", st);
+    zxlogf(ERROR, "alc5514: could not get I2C protocol: %d", st);
     return st;
   }
 
@@ -192,7 +192,7 @@ zx_status_t Alc5514Device::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<Alc5514Device> dev(new (&ac) Alc5514Device(parent));
   if (!ac.check()) {
-    zxlogf(ERROR, "alc5514: out of memory attempting to allocate device\n");
+    zxlogf(ERROR, "alc5514: out of memory attempting to allocate device");
     return ZX_ERR_NO_MEMORY;
   }
 

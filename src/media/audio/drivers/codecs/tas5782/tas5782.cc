@@ -75,7 +75,7 @@ zx_status_t Tas5782::ResetAndInitialize() {
   for (auto& i : defaults) {
     auto status = WriteReg(i[0], i[1]);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s Failed to write I2C register 0x%02X\n", __FILE__, i[0]);
+      zxlogf(ERROR, "%s Failed to write I2C register 0x%02X", __FILE__, i[0]);
       return status;
     }
   }
@@ -116,7 +116,7 @@ zx_status_t Tas5782::Create(zx_device_t* parent) {
 
   auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Could not get composite protocol\n", __FILE__);
+    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -125,7 +125,7 @@ zx_status_t Tas5782::Create(zx_device_t* parent) {
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   // Only I2C fragment is required.
   if (actual < 1) {
-    zxlogf(ERROR, "%s Could not get fragments\n", __FILE__);
+    zxlogf(ERROR, "%s Could not get fragments", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -134,7 +134,7 @@ zx_status_t Tas5782::Create(zx_device_t* parent) {
                                                         fragments[FRAGMENT_RESET_GPIO],
                                                         fragments[FRAGMENT_MUTE_GPIO]));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s Could not allocate memory\n", __FILE__);
+    zxlogf(ERROR, "%s Could not allocate memory", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
   status = dev->Bind();
@@ -188,13 +188,13 @@ void Tas5782::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format
 
   // Only allow 2 channels.
   if (format->number_of_channels != 2) {
-    zxlogf(ERROR, "%s DAI format number of channels not supported\n", __FILE__);
+    zxlogf(ERROR, "%s DAI format number of channels not supported", __FILE__);
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }
   if (format->channels_to_use_count != 2 || format->channels_to_use_list == nullptr ||
       format->channels_to_use_list[0] != 0 || format->channels_to_use_list[1] != 1) {
-    zxlogf(ERROR, "%s DAI format channels to use not supported\n", __FILE__);
+    zxlogf(ERROR, "%s DAI format channels to use not supported", __FILE__);
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }
@@ -202,7 +202,7 @@ void Tas5782::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format
   // Only I2S.
   if (format->sample_format != SAMPLE_FORMAT_PCM_SIGNED ||
       format->justify_format != JUSTIFY_FORMAT_JUSTIFY_I2S) {
-    zxlogf(ERROR, "%s DAI format format not supported\n", __FILE__);
+    zxlogf(ERROR, "%s DAI format format not supported", __FILE__);
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }
@@ -215,7 +215,7 @@ void Tas5782::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format
     }
   }
   if (i == kSupportedDaiFormats.frame_rates_count) {
-    zxlogf(ERROR, "%s DAI format rates not supported\n", __FILE__);
+    zxlogf(ERROR, "%s DAI format rates not supported", __FILE__);
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }
@@ -240,7 +240,7 @@ void Tas5782::CodecGetGainFormat(codec_get_gain_format_callback callback, void* 
 void Tas5782::CodecSetGainState(const gain_state_t* gain_state,
                                 codec_set_gain_state_callback callback, void* cookie) {
   if (!initialized_) {
-    zxlogf(ERROR, "%s Couldn't set gain, not initialized yet\n", __FILE__);
+    zxlogf(ERROR, "%s Couldn't set gain, not initialized yet", __FILE__);
     callback(cookie);
     return;
   }

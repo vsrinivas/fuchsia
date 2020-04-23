@@ -75,7 +75,7 @@ zx_status_t Sherlock::LightInit() {
 
   zx_status_t status = DdkAddComposite("SherlockLightSensor", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddComposite failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAddComposite failed: %d", __func__, status);
     return status;
   }
 
@@ -157,26 +157,26 @@ zx_status_t Sherlock::LightInit() {
   // Enable the Amber LED so it will be controlled by PWM.
   status = gpio_impl_.SetAltFunction(GPIO_AMBER_LED, 3);  // Set as GPIO.
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Configure mute LED GPIO failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Configure mute LED GPIO failed %d", __func__, status);
   }
   status = gpio_impl_.ConfigOut(GPIO_AMBER_LED, 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d", __func__, status);
   }
   // Enable the Green LED so it will be controlled by PWM.
   status = gpio_impl_.SetAltFunction(GPIO_GREEN_LED, 4);  // Set as PWM.
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Configure mute LED GPIO failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Configure mute LED GPIO failed %d", __func__, status);
   }
   status = gpio_impl_.ConfigOut(GPIO_GREEN_LED, 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d", __func__, status);
   }
 
   status =
       pbus_.CompositeDeviceAdd(&light_dev, light_fragments, countof(light_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 

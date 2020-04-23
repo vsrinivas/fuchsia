@@ -55,7 +55,7 @@ static void sent_fake_at_msg(zx::channel& channel, uint8_t* resp, uint32_t resp_
   zx_status_t status;
   status = channel.write(0, resp, resp_size, NULL, 0);
   if (status < 0) {
-    zxlogf(ERROR, "at-fake-transport: failed to write message to channel: %s\n",
+    zxlogf(ERROR, "at-fake-transport: failed to write message to channel: %s",
            zx_status_get_string(status));
   }
 }
@@ -72,7 +72,7 @@ void AtDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
     msg.timestamp = zx_clock_get_monotonic();
     memcpy(msg.opaque_bytes.data_, snoop_data, current_length);
     snoop_msg.set_qmi_message(fidl::unowned_ptr(&msg));
-    zxlogf(INFO, "at-fake-transport: snoop msg %u %u %u %u sent\n", msg.opaque_bytes.data_[0],
+    zxlogf(INFO, "at-fake-transport: snoop msg %u %u %u %u sent", msg.opaque_bytes.data_[0],
            msg.opaque_bytes.data_[1], msg.opaque_bytes.data_[2], msg.opaque_bytes.data_[3]);
     fidl_tel_snoop::Publisher::Call::SendMessage(zx::unowned_channel(GetCtrlSnoopChannel().get()),
                                                  std::move(snoop_msg));
@@ -80,12 +80,12 @@ void AtDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
 }
 
 void AtDevice::ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint32_t resp_size) {
-  zxlogf(INFO, "at-fake-driver: req %u %u %u %u with len %u\n", req[0], req[1], req[2], req[3],
+  zxlogf(INFO, "at-fake-driver: req %u %u %u %u with len %u", req[0], req[1], req[2], req[3],
          req_size);
   if (0 == memcmp(req, kAtCmdReqAtdStr.c_str(), kAtCmdReqAtdStr.size())) {
     resp_size = std::min(kAtCmdRespNoCarrier.size(), static_cast<std::size_t>(resp_size));
     memcpy(resp, kAtCmdRespNoCarrier.c_str(), resp_size);
-    zxlogf(INFO, "at-fake-driver: resp %u %u %u %u with len %u\n", resp[0], resp[1], resp[2],
+    zxlogf(INFO, "at-fake-driver: resp %u %u %u %u with len %u", resp[0], resp[1], resp[2],
            resp[3], resp_size);
     sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
     SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
@@ -112,7 +112,7 @@ void AtDevice::ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint
     SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
 
   } else {
-    zxlogf(ERROR, "at-fake-driver: unexpected at msg received\n");
+    zxlogf(ERROR, "at-fake-driver: unexpected at msg received");
     resp_size = std::min(kAtCmdRespErr.size(), static_cast<std::size_t>(resp_size));
     memcpy(resp, kAtCmdRespErr.c_str(), resp_size);
     sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
@@ -128,23 +128,23 @@ static int at_fake_transport_thread(void* cookie) {
   uint8_t resp_buf[kTelCtrlPlanePktMax];
 
   zx_port_packet_t packet;
-  zxlogf(INFO, "at-fake-transport: event loop initialized\n");
+  zxlogf(INFO, "at-fake-transport: event loop initialized");
   while (true) {
     zx_status_t status = device_ptr->GetCtrlChannelPort().wait(zx::time::infinite(), &packet);
     if (status == ZX_ERR_TIMED_OUT) {
-      zxlogf(ERROR, "at-fake-transport: timed out: %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "at-fake-transport: timed out: %s", zx_status_get_string(status));
     } else if (status == ZX_OK) {
       switch (packet.key) {
         case tel_fake::kChannelMsg:
           if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
-            zxlogf(ERROR, "at-fake-transport: channel closed\n");
+            zxlogf(ERROR, "at-fake-transport: channel closed");
             status = device_ptr->CloseCtrlChannel();
             continue;
           }
           status = device_ptr->GetCtrlChannel().read(0, req_buf, NULL, kTelCtrlPlanePktMax, 0,
                                                      &req_len, NULL);
           if (status != ZX_OK) {
-            zxlogf(ERROR, "at-fake-transport: failed to read channel: %s\n",
+            zxlogf(ERROR, "at-fake-transport: failed to read channel: %s",
                    zx_status_get_string(status));
             return status;
           }
@@ -161,11 +161,11 @@ static int at_fake_transport_thread(void* cookie) {
           device_ptr->EventLoopCleanup();
           return 0;
         default:
-          zxlogf(ERROR, "at-fake-transport: at_port undefined key %lu\n", packet.key);
+          zxlogf(ERROR, "at-fake-transport: at_port undefined key %lu", packet.key);
           assert(0);
       }
     } else {
-      zxlogf(ERROR, "at-fake-transport: at_port err %d\n", status);
+      zxlogf(ERROR, "at-fake-transport: at_port err %d", status);
       assert(0);
     }
   }
@@ -176,7 +176,7 @@ zx_status_t AtDevice::Bind() {
   // create a port to watch at messages
   zx_status_t status = zx::port::create(0, &GetCtrlChannelPort());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "at-fake-transport: failed to create a port: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "at-fake-transport: failed to create a port: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -191,11 +191,11 @@ zx_status_t AtDevice::Bind() {
   args.proto_id = ZX_PROTOCOL_AT_TRANSPORT;
   status = device_add(GetParentDevice(), &args, &GetTelDevPtr());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "at-fake-transport: could not add device: %d\n", status);
+    zxlogf(ERROR, "at-fake-transport: could not add device: %d", status);
     zx_port_packet_t packet = {};
     packet.key = tel_fake::kTerminateMsg;
     GetCtrlChannelPort().queue(&packet);
-    zxlogf(INFO, "at-fake-transport: joining thread\n");
+    zxlogf(INFO, "at-fake-transport: joining thread");
     GetCtrlThrd().join();
     return status;
   }

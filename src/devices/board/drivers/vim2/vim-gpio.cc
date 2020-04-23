@@ -125,13 +125,13 @@ zx_status_t Vim::GpioInit() {
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "GpioInit: pbus_protocol_device_add failed: %d\n", status);
+    zxlogf(ERROR, "GpioInit: pbus_protocol_device_add failed: %d", status);
     return status;
   }
 
   gpio_impl_ = ddk::GpioImplProtocolClient(parent());
   if (!gpio_impl_.is_valid()) {
-    zxlogf(ERROR, "%s: device_get_protocol failed\n", __func__);
+    zxlogf(ERROR, "%s: device_get_protocol failed", __func__);
     return ZX_ERR_INTERNAL;
   }
 
@@ -171,7 +171,7 @@ zx_status_t Vim::GpioInit() {
 
   status = pbus_.CompositeDeviceAdd(&light_dev, fragments, fbl::count_of(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "GpioInit could not add gpio_light_dev: %d\n", status);
+    zxlogf(ERROR, "GpioInit could not add gpio_light_dev: %d", status);
     return status;
   }
 

@@ -50,14 +50,14 @@ zx_status_t Bma253::GetInputReport(bma253_input_rpt_t* report) {
     status =
         i2c_.ReadSync(kAccdAddress, reinterpret_cast<uint8_t*>(accel_data), sizeof(accel_data));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to read acceleration registers\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to read acceleration registers", __FILE__);
       return status;
     }
 
     status =
         i2c_.ReadSync(kAccdTempAddress, reinterpret_cast<uint8_t*>(&temp_data), sizeof(temp_data));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to read temperature register\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to read temperature register", __FILE__);
       return status;
     }
   }
@@ -74,21 +74,21 @@ zx_status_t Bma253::Create(void* ctx, zx_device_t* parent) {
   i2c_protocol_t i2c;
   auto status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_I2C\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_I2C", __FILE__);
     return status;
   }
 
   zx::port port;
   status = zx::port::create(0, &port);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to create port\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to create port", __FILE__);
     return status;
   }
 
   fbl::AllocChecker ac;
   std::unique_ptr<Bma253> device(new (&ac) Bma253(parent, &i2c, std::move(port)));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Bma253 alloc failed\n", __FILE__);
+    zxlogf(ERROR, "%s: Bma253 alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -97,7 +97,7 @@ zx_status_t Bma253::Create(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = device->DdkAdd("bma253")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    zxlogf(ERROR, "%s: DdkAdd failed", __FILE__);
     return status;
   }
 
@@ -111,7 +111,7 @@ zx_status_t Bma253::Init() {
   for (size_t i = 0; i < countof(kDefaultRegValues); i++) {
     zx_status_t status = i2c_.WriteSync(kDefaultRegValues[i], sizeof(kDefaultRegValues[i]));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to configure sensor\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to configure sensor", __FILE__);
       return status;
     }
   }

@@ -83,13 +83,13 @@ static int aml_i2c_irq_thread(void* arg) {
   while (1) {
     status = zx_interrupt_wait(dev->irq, NULL);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "i2c: interrupt error\n");
+      zxlogf(ERROR, "i2c: interrupt error");
       continue;
     }
     uint32_t reg = readl(&dev->virt_regs->control);
     if (reg & AML_I2C_CONTROL_REG_ERR) {
       zx_object_signal(dev->event, 0, I2C_ERROR_SIGNAL);
-      zxlogf(ERROR, "i2c: error on bus\n");
+      zxlogf(ERROR, "i2c: error on bus");
     } else {
       zx_object_signal(dev->event, 0, I2C_TXN_COMPLETE_SIGNAL);
     }
@@ -249,7 +249,7 @@ static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index) {
   status = pdev_map_mmio_buffer(&i2c->pdev, index, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                 &device->regs_iobuff);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml_i2c_dev_init: pdev_map_mmio_buffer failed %d\n", status);
+    zxlogf(ERROR, "aml_i2c_dev_init: pdev_map_mmio_buffer failed %d", status);
     return status;
   }
 
@@ -353,19 +353,19 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &i2c->pdev)) != ZX_OK) {
-    zxlogf(ERROR, "aml_i2c_bind: ZX_PROTOCOL_PDEV not available\n");
+    zxlogf(ERROR, "aml_i2c_bind: ZX_PROTOCOL_PDEV not available");
     goto fail;
   }
 
   pdev_device_info_t info;
   status = pdev_get_device_info(&i2c->pdev, &info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml_i2c_bind: pdev_get_device_info failed\n");
+    zxlogf(ERROR, "aml_i2c_bind: pdev_get_device_info failed");
     goto fail;
   }
 
   if (info.mmio_count != info.irq_count) {
-    zxlogf(ERROR, "aml_i2c_bind: mmio_count %u does not matchirq_count %u\n", info.mmio_count,
+    zxlogf(ERROR, "aml_i2c_bind: mmio_count %u does not matchirq_count %u", info.mmio_count,
            info.irq_count);
     status = ZX_ERR_INVALID_ARGS;
     goto fail;
@@ -379,7 +379,7 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
   for (unsigned i = 0; i < i2c->dev_count; i++) {
     zx_status_t status = aml_i2c_dev_init(i2c, i);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml_i2c_bind: aml_i2c_dev_init failed: %d\n", status);
+      zxlogf(ERROR, "aml_i2c_bind: aml_i2c_dev_init failed: %d", status);
       goto fail;
     }
   }
@@ -395,7 +395,7 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
 
   status = device_add(parent, &args, &i2c->zxdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml_i2c_bind: device_add failed\n");
+    zxlogf(ERROR, "aml_i2c_bind: device_add failed");
     goto fail;
   }
 

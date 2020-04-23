@@ -89,13 +89,13 @@ void AmlTSensor::UpdateFallThresholdIrq(uint32_t irq) {
 }
 
 int AmlTSensor::TripPointIrqHandler() {
-  zxlogf(INFO, "%s start\n", __func__);
+  zxlogf(INFO, "%s start", __func__);
   zx_status_t status = ZX_OK;
 
   // Notify thermal daemon about the default settings.
   status = NotifyThermalDaemon();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-tsensor: Failed to send packet via port\n");
+    zxlogf(ERROR, "aml-tsensor: Failed to send packet via port");
     return status;
   }
 
@@ -145,7 +145,7 @@ int AmlTSensor::TripPointIrqHandler() {
     // Notify thermal daemon about new trip point.
     status = NotifyThermalDaemon();
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-tsensor: Failed to send packet via port\n");
+      zxlogf(ERROR, "aml-tsensor: Failed to send packet via port");
       return status;
     }
   }
@@ -356,21 +356,21 @@ zx_status_t AmlTSensor::Create(zx_device_t* parent,
   mmio_buffer_t mmio;
   status = pdev_map_mmio_buffer(&pdev_, kPllMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
+    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
   pll_mmio_ = ddk::MmioBuffer(mmio);
 
   status = pdev_map_mmio_buffer(&pdev_, kAoMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
+    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
   ao_mmio_ = ddk::MmioBuffer(mmio);
 
   status = pdev_map_mmio_buffer(&pdev_, kHiuMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d\n", status);
+    zxlogf(ERROR, "aml-tsensor: could not map periph mmio: %d", status);
     return status;
   }
   hiu_mmio_ = ddk::MmioBuffer(mmio);
@@ -378,7 +378,7 @@ zx_status_t AmlTSensor::Create(zx_device_t* parent,
   // Map tsensor interrupt.
   status = pdev_get_interrupt(&pdev_, 0, 0, tsensor_irq_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-tsensor: could not map tsensor interrupt\n");
+    zxlogf(ERROR, "aml-tsensor: could not map tsensor interrupt");
     return status;
   }
 
@@ -408,7 +408,7 @@ zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo th
   // Create a port to send messages to thermal daemon.
   zx_status_t status = zx_port_create(0, &port_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-tsensor: Unable to create port\n");
+    zxlogf(ERROR, "aml-tsensor: Unable to create port");
     return status;
   }
 

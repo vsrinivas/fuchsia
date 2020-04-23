@@ -175,7 +175,7 @@ static zx_status_t pci_op_get_next_capability(void* ctx, uint8_t type, uint8_t i
   while (cap_offset != 0 && limit--) {
     uint32_t type_id = 0;
     if ((st = pci_op_config_read(ctx, cap_offset, sizeof(uint8_t), &type_id)) != ZX_OK) {
-      zxlogf(ERROR, "%s: error reading type from cap offset %#x: %d\n", __func__, cap_offset, st);
+      zxlogf(ERROR, "%s: error reading type from cap offset %#x: %d", __func__, cap_offset, st);
       return st;
     }
 
@@ -187,11 +187,11 @@ static zx_status_t pci_op_get_next_capability(void* ctx, uint8_t type, uint8_t i
     // We didn't find the right type, move on, but ensure we're still
     // within the first 256 bytes of standard config space.
     if (cap_offset >= UINT8_MAX) {
-      zxlogf(ERROR, "%s: %#x is an invalid capability offset!\n", __func__, cap_offset);
+      zxlogf(ERROR, "%s: %#x is an invalid capability offset!", __func__, cap_offset);
       return ZX_ERR_BAD_STATE;
     }
     if ((st = pci_op_config_read(ctx, cap_offset + 1, sizeof(uint8_t), &cap_offset)) != ZX_OK) {
-      zxlogf(ERROR, "%s: error reading next cap from cap offset %#x: %d\n", __func__,
+      zxlogf(ERROR, "%s: error reading next cap from cap offset %#x: %d", __func__,
              cap_offset + 1, st);
       return ZX_ERR_BAD_STATE;
     }
@@ -227,7 +227,7 @@ static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_
       // Please do not use get_root_resource() in new code. See ZX-1467.
       st = zx_ioports_request(get_root_resource(), out_bar->addr, out_bar->size);
       if (st != ZX_OK) {
-        zxlogf(ERROR, "Failed to map IO window for bar into process: %d\n", st);
+        zxlogf(ERROR, "Failed to map IO window for bar into process: %d", st);
         return st;
       }
 #else

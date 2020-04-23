@@ -130,7 +130,7 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
     }
     case USB_VIDEO_VS_FORMAT_MJPEG: {
       usb_video_vs_mjpeg_format_desc* mjpeg_desc = (usb_video_vs_mjpeg_format_desc*)format_desc;
-      zxlogf(TRACE, "USB_VIDEO_VS_FORMAT_MJPEG bNumFrameDescriptors %u bmFlags %d\n",
+      zxlogf(TRACE, "USB_VIDEO_VS_FORMAT_MJPEG bNumFrameDescriptors %u bmFlags %d",
              mjpeg_desc->bNumFrameDescriptors, mjpeg_desc->bmFlags);
 
       want_frame_type = USB_VIDEO_VS_FRAME_MJPEG;
@@ -143,7 +143,7 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
     }
     // TODO(jocelyndang): handle other formats.
     default:
-      zxlogf(ERROR, "unsupported format bDescriptorSubtype %u\n", format_desc->bDescriptorSubtype);
+      zxlogf(ERROR, "unsupported format bDescriptorSubtype %u", format_desc->bDescriptorSubtype);
       return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -175,7 +175,7 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
 
         // Intervals are specified in 100 ns units.
         double framesPerSec = 1 / (desc->dwDefaultFrameInterval * 100 / 1e9);
-        zxlogf(TRACE, "%s (%u x %u) %.2f frames / sec\n",
+        zxlogf(TRACE, "%s (%u x %u) %.2f frames / sec",
                format_desc->bDescriptorSubtype == USB_VIDEO_VS_FRAME_UNCOMPRESSED
                    ? "USB_VIDEO_VS_FRAME_UNCOMPRESSED"
                    : "USB_VIDEO_VS_FRAME_MJPEG",
@@ -195,14 +195,14 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
         formats_.push_back(frame_desc);
       } break;
       default:
-        zxlogf(ERROR, "unhandled frame type: %u\n", format_desc->bDescriptorSubtype);
+        zxlogf(ERROR, "unhandled frame type: %u", format_desc->bDescriptorSubtype);
         return ZX_ERR_NOT_SUPPORTED;
     }
     usb_desc_iter_advance(iter);
     num_frame_descs_found++;
   }
   if (num_frame_descs_found != want_num_frame_descs) {
-    zxlogf(ERROR, "missing %u frame descriptors\n", want_num_frame_descs - num_frame_descs_found);
+    zxlogf(ERROR, "missing %u frame descriptors", want_num_frame_descs - num_frame_descs_found);
     return ZX_ERR_INTERNAL;
   }
   // TODO(jocelyndang); parse still image frame and color matching descriptors.

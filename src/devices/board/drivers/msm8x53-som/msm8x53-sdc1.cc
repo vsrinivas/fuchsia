@@ -39,7 +39,7 @@ zx_status_t Msm8x53::Sdc1Init() {
 
   zx_status_t status = pbus_.DeviceAdd(&sdc1_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
   }
 
   return status;

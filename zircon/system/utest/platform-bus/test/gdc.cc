@@ -95,11 +95,11 @@ class TestGdcDevice : public DeviceType,
 zx_status_t TestGdcDevice::Create(zx_device_t* parent) {
   auto dev = std::make_unique<TestGdcDevice>(parent);
 
-  zxlogf(INFO, "TestGdcDevice::Create: %s \n", DRIVER_NAME);
+  zxlogf(INFO, "TestGdcDevice::Create: %s ", DRIVER_NAME);
 
   auto status = dev->DdkAdd("test-gdc");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
     return status;
   }
   // devmgr is now in charge of dev.

@@ -69,7 +69,7 @@ zx_status_t TestBoard::I2cInit() {
 
   zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
 

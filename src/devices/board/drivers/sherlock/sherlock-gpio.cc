@@ -133,7 +133,7 @@ static pbus_dev_t gpio_dev = []() {
 zx_status_t Sherlock::GpioInit() {
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __func__, status);
     return status;
   }
 // This test binds to system/dev/gpio/gpio-test to check that GPIOs work at all.
@@ -157,14 +157,14 @@ zx_status_t Sherlock::GpioInit() {
   gpio_test_dev.gpio_list = gpio_test_gpios;
   gpio_test_dev.gpio_count = countof(gpio_test_gpios);
   if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not add gpio_test_dev %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Could not add gpio_test_dev %d", __FUNCTION__, status);
     return status;
   }
 #endif
 
   gpio_impl_ = ddk::GpioImplProtocolClient(parent());
   if (!gpio_impl_.is_valid()) {
-    zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_get_protocol failed %d", __func__, status);
     return ZX_ERR_INTERNAL;
   }
 

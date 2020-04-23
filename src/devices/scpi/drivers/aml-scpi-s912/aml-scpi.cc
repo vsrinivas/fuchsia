@@ -165,16 +165,16 @@ zx_status_t AmlSCPI::ScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* out_opps)
     return status;
   }
 
-  zxlogf(INFO, "Cluster %u details\n", power_domain);
-  zxlogf(INFO, "Number of operating_points %u\n", aml_dvfs_info.operating_points);
-  zxlogf(INFO, "latency %u uS\n", aml_dvfs_info.latency);
+  zxlogf(INFO, "Cluster %u details", power_domain);
+  zxlogf(INFO, "Number of operating_points %u", aml_dvfs_info.operating_points);
+  zxlogf(INFO, "latency %u uS", aml_dvfs_info.latency);
 
   for (uint32_t i = 0; i < out_opps->count; i++) {
     out_opps->opp[i].freq_hz = aml_dvfs_info.opp[i].freq_hz;
     out_opps->opp[i].volt_uv = aml_dvfs_info.opp[i].volt_uv;
     zxlogf(INFO, "Operating point %d - ", i);
     zxlogf(INFO, "Freq %.4f Ghz ", (out_opps->opp[i].freq_hz) / (double)1000000000);
-    zxlogf(INFO, "Voltage %.4f V\n", (out_opps->opp[i].volt_uv) / (double)1000);
+    zxlogf(INFO, "Voltage %.4f V", (out_opps->opp[i].volt_uv) / (double)1000);
   }
 
   scpi_opp[power_domain] = static_cast<scpi_opp_t*>(calloc(1, sizeof(scpi_opp_t)));
@@ -271,7 +271,7 @@ zx_status_t AmlSCPI::Create(zx_device_t* parent) {
   zx_status_t status = ZX_ERR_INTERNAL;
   // Get ZX_PROTOCOL_MAILBOX protocol.
   if (!scpi_device->mailbox_.is_valid()) {
-    zxlogf(ERROR, "dwmac: could not obtain ZX_PROTOCOL_MAILBOX protocol: %d\n", status);
+    zxlogf(ERROR, "dwmac: could not obtain ZX_PROTOCOL_MAILBOX protocol: %d", status);
     return status;
   }
 
@@ -279,10 +279,10 @@ zx_status_t AmlSCPI::Create(zx_device_t* parent) {
 
   status = scpi_device->Bind();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-scpi driver failed to get added: %d\n", status);
+    zxlogf(ERROR, "aml-scpi driver failed to get added: %d", status);
     return status;
   } else {
-    zxlogf(INFO, "aml-scpi driver added\n");
+    zxlogf(INFO, "aml-scpi driver added");
   }
 
   // scpi_device intentionally leaked as it is now held by DevMgr

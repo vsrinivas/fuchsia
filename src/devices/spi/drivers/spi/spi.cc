@@ -60,7 +60,7 @@ void SpiDevice::AddChildren() {
   size_t metadata_size;
   auto status = device_get_metadata_size(zxdev(), DEVICE_METADATA_SPI_CHANNELS, &metadata_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __func__, status);
     return;
   }
   auto channel_count = metadata_size / sizeof(spi_channel_t);
@@ -68,7 +68,7 @@ void SpiDevice::AddChildren() {
   fbl::AllocChecker ac;
   std::unique_ptr<spi_channel_t[]> channels(new (&ac) spi_channel_t[channel_count]);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: out of memory\n", __func__);
+    zxlogf(ERROR, "%s: out of memory", __func__);
     return;
   }
 
@@ -76,7 +76,7 @@ void SpiDevice::AddChildren() {
   status = device_get_metadata(zxdev(), DEVICE_METADATA_SPI_CHANNELS, channels.get(), metadata_size,
                                &actual);
   if (status != ZX_OK || actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, status);
     return;
   }
 
@@ -96,7 +96,7 @@ void SpiDevice::AddChildren() {
     fbl::AllocChecker ac;
     auto dev = fbl::MakeRefCountedChecked<SpiChild>(&ac, zxdev(), spi_, &channel);
     if (!ac.check()) {
-      zxlogf(ERROR, "%s: out of memory\n", __func__);
+      zxlogf(ERROR, "%s: out of memory", __func__);
       return;
     }
 
@@ -125,7 +125,7 @@ void SpiDevice::AddChildren() {
     }
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAdd failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s: DdkAdd failed %d", __func__, status);
       return;
     }
 

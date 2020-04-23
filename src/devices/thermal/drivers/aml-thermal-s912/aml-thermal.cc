@@ -32,7 +32,7 @@ enum {
 }  // namespace
 
 zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
-  zxlogf(INFO, "aml_thermal: driver begin...\n");
+  zxlogf(INFO, "aml_thermal: driver begin...");
   zx_status_t status;
 
   ddk::CompositeProtocolClient composite(device);

@@ -28,31 +28,31 @@ class TestSpiDevice : public DeviceType,
     pdev_protocol_t pdev;
     zx_status_t status;
 
-    zxlogf(INFO, "TestSpiDevice::Create: %s \n", DRIVER_NAME);
+    zxlogf(INFO, "TestSpiDevice::Create: %s ", DRIVER_NAME);
 
     status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV\n", __func__);
+      zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV", __func__);
       return status;
     }
 
     status = dev->DdkAdd("test-spi");
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
       return status;
     }
 
     status = dev->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &dev->bus_id_,
                                  sizeof dev->bus_id_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAddMetadata failed: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: DdkAddMetadata failed: %d", __func__, status);
       return status;
     }
 
     // devmgr is now in charge of dev.
     __UNUSED auto ptr = dev.release();
 
-    zxlogf(ERROR, "%s: returning ZX_OK\n", __func__);
+    zxlogf(ERROR, "%s: returning ZX_OK", __func__);
     return ZX_OK;
   }
 

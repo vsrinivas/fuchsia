@@ -63,11 +63,11 @@ bool Control::BusError() {
   // TODO(hansens) implement proper control NAK-retry logic.
   auto reg = regs::CSR0_HOST::Get().ReadFrom(&usb_);
   if (reg.error())
-    zxlogf(ERROR, "usb device error\n");
+    zxlogf(ERROR, "usb device error");
   if (reg.naktimeout())
-    zxlogf(ERROR, "usb device naktimeout\n");
+    zxlogf(ERROR, "usb device naktimeout");
   if (reg.rxstall())
-    zxlogf(ERROR, "usb device rxstall\n");
+    zxlogf(ERROR, "usb device rxstall");
   return reg.error() || reg.naktimeout() || reg.rxstall();
 }
 
@@ -265,20 +265,20 @@ bool BulkBase::BusError() {
   if (dir_ == BulkDirection::IN) {
     auto reg = regs::RXCSR_HOST::Get(ep_).ReadFrom(&usb_);
     if (reg.error())
-      zxlogf(ERROR, "usb device RX error\n");
+      zxlogf(ERROR, "usb device RX error");
     if (reg.dataerr_naktimeout())
-      zxlogf(ERROR, "usb device RX naktimeout\n");
+      zxlogf(ERROR, "usb device RX naktimeout");
     if (reg.rxstall())
-      zxlogf(ERROR, "usb device RX rxstall\n");
+      zxlogf(ERROR, "usb device RX rxstall");
     ret = reg.error() || reg.dataerr_naktimeout() || reg.rxstall();
   } else {
     auto reg = regs::TXCSR_HOST::Get(ep_).ReadFrom(&usb_);
     if (reg.error())
-      zxlogf(ERROR, "usb device TX error\n");
+      zxlogf(ERROR, "usb device TX error");
     if (reg.naktimeout_incomptx())
-      zxlogf(ERROR, "usb device TX naktimeout\n");
+      zxlogf(ERROR, "usb device TX naktimeout");
     if (reg.rxstall())
-      zxlogf(ERROR, "usb device TX rxstall\n");
+      zxlogf(ERROR, "usb device TX rxstall");
     ret = reg.error() || reg.naktimeout_incomptx() || reg.rxstall();
   }
   return ret;

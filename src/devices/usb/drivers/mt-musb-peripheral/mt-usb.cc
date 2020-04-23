@@ -32,7 +32,7 @@ using namespace board_mt8167;  // Hardware registers.
 MtUsb::Endpoint* MtUsb::EndpointFromAddress(uint8_t addr) {
   size_t ep_num = addr & USB_ENDPOINT_NUM_MASK;
   if (ep_num == 0 || ep_num > NUM_EPS) {
-    zxlogf(ERROR, "%s: invalid endpoint address %02x\n", __func__, addr);
+    zxlogf(ERROR, "%s: invalid endpoint address %02x", __func__, addr);
     return nullptr;
   }
 
@@ -225,7 +225,7 @@ zx_status_t MtUsb::HandleEp0() {
         if (actual != sizeof(cur_setup_)) {
           return ZX_ERR_IO_INVALID;
         }
-        zxlogf(TRACE, "SETUP bmRequestType %x bRequest %u wValue %u wIndex %u wLength %u\n",
+        zxlogf(TRACE, "SETUP bmRequestType %x bRequest %u wValue %u wIndex %u wLength %u",
                setup->bmRequestType, setup->bRequest, setup->wValue, setup->wIndex, setup->wLength);
 
         if (setup->wLength > 0 && (setup->bmRequestType & USB_DIR_MASK) == USB_DIR_OUT) {
@@ -250,7 +250,7 @@ zx_status_t MtUsb::HandleEp0() {
             configuration_ = 0;
             auto status = dci_intf_->Control(setup, nullptr, 0, nullptr, 0, &actual);
             if (status != ZX_OK) {
-              zxlogf(ERROR, "%s: USB_REQ_SET_CONFIGURATION Control returned %d\n", __func__,
+              zxlogf(ERROR, "%s: USB_REQ_SET_CONFIGURATION Control returned %d", __func__,
                      status);
               return status;
             }
@@ -309,7 +309,7 @@ zx_status_t MtUsb::HandleEp0() {
               dci_intf_->Control(&cur_setup_, ep0_data_, ep0_data_length_, nullptr, 0, nullptr);
           ep0_state_ = EP0_IDLE;
           if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: Control returned %d\n", __func__, status);
+            zxlogf(ERROR, "%s: Control returned %d", __func__, status);
             return status;
           }
         }
@@ -359,7 +359,7 @@ void MtUsb::HandleEndpointTxLocked(Endpoint* ep) {
       void* vaddr;
       auto status = usb_request_mmap(req, &vaddr);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: usb_request_mmap failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: usb_request_mmap failed %d", __func__, status);
         req->response.status = status;
         req->response.actual = 0;
         ep->complete_reqs.push(Request(ep->current_req, sizeof(usb_request_t)));
@@ -408,7 +408,7 @@ void MtUsb::HandleEndpointRxLocked(Endpoint* ep) {
     void* vaddr;
     auto status = usb_request_mmap(req, &vaddr);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: usb_request_mmap failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s: usb_request_mmap failed %d", __func__, status);
       req->response.status = status;
       req->response.actual = 0;
       ep->complete_reqs.push(Request(ep->current_req, sizeof(usb_request_t)));
@@ -489,7 +489,7 @@ void MtUsb::FifoRead(uint8_t ep_index, void* buf, size_t buflen, size_t* actual)
 
   size_t count = RXCOUNT::Get(ep_index).ReadFrom(mmio).rxcount();
   if (count > buflen) {
-    zxlogf(ERROR, "%s: buffer too small: buflen %zu rxcount %zu\n", __func__, buflen, count);
+    zxlogf(ERROR, "%s: buffer too small: buflen %zu rxcount %zu", __func__, buflen, count);
     count = buflen;
   }
 
@@ -577,10 +577,10 @@ int MtUsb::IrqThread() {
     if (status == ZX_ERR_CANCELED) {
       return 0;
     } else if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: irq_.wait failed: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: irq_.wait failed: %d", __func__, status);
       return -1;
     }
-    zxlogf(TRACE, " \n%s: got interrupt!\n", __func__);
+    zxlogf(TRACE, " \n%s: got interrupt!", __func__);
 
     // Write back these registers to acknowledge the interrupts
     auto intrtx = INTRTX::Get().ReadFrom(mmio).WriteTo(mmio);
@@ -697,7 +697,7 @@ zx_status_t MtUsb::UsbDciSetInterface(const usb_dci_interface_protocol_t* interf
   // TODO - handle interface == nullptr for tear down path?
 
   if (dci_intf_.has_value()) {
-    zxlogf(ERROR, "%s: dci_intf_ already set\n", __func__);
+    zxlogf(ERROR, "%s: dci_intf_ already set", __func__);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -724,7 +724,7 @@ zx_status_t MtUsb::UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
   }
   auto ep_num = ep->ep_num;
 
-  zxlogf(TRACE, "%s address %02x ep_num %u direction %u\n", __func__, ep_address, ep_num,
+  zxlogf(TRACE, "%s address %02x ep_num %u direction %u", __func__, ep_address, ep_num,
          ep->direction);
 
   fbl::AutoLock lock(&ep->lock);
@@ -789,7 +789,7 @@ zx_status_t MtUsb::UsbDciDisableEp(uint8_t ep_address) {
 
   auto ep_num = ep->ep_num;
 
-  zxlogf(TRACE, "%s address %02x ep_num %u direction %u\n", __func__, ep_address, ep_num,
+  zxlogf(TRACE, "%s address %02x ep_num %u direction %u", __func__, ep_address, ep_num,
          ep->direction);
 
   fbl::AutoLock lock(&ep->lock);

@@ -65,7 +65,7 @@ static const pbus_dev_t sysmem_dev = [] {
 zx_status_t Sherlock::SysmemInit() {
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_SYSMEM, &sysmem_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __func__, status);
     return status;
   }
 

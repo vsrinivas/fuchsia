@@ -20,7 +20,7 @@ class CrashDevice : public CrashDeviceType {
   explicit CrashDevice(zx_device_t* parent) : CrashDeviceType(parent) {}
 
   zx_status_t DdkOpen(zx_device_t** out, uint32_t flags) {
-    zxlogf(INFO, "Crash-device open, will crash on purpose!\n");
+    zxlogf(INFO, "Crash-device open, will crash on purpose!");
     // We crash using a bad access here instead of just asserting false because there are some bots
     // in CQ that are looking for the ASSERT FAILED message to mark runs as failed.
     int* x = nullptr;
@@ -31,11 +31,11 @@ class CrashDevice : public CrashDeviceType {
   void DdkRelease() { delete this; }
 
   static zx_status_t Create(void* ctx, zx_device_t* parent) {
-    zxlogf(INFO, "CrashDevice::Create\n");
+    zxlogf(INFO, "CrashDevice::Create");
     auto dev = std::unique_ptr<CrashDevice>(new CrashDevice(parent));
     zx_status_t status = dev->DdkAdd("crash-device");
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: could not add device: %d", __func__, status);
     } else {
       // devmgr owns the memory now
       __UNUSED auto* ptr = dev.release();

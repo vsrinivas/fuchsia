@@ -107,7 +107,7 @@ zx_status_t Astro::TouchInit() {
 
     zx_status_t status = DdkAddComposite("gt92xx-touch", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(INFO, "astro_touch_init(gt92xx): composite_device_add failed: %d\n", status);
+      zxlogf(INFO, "astro_touch_init(gt92xx): composite_device_add failed: %d", status);
       return status;
     }
   } else {
@@ -129,7 +129,7 @@ zx_status_t Astro::TouchInit() {
 
     zx_status_t status = DdkAddComposite("ft3x27-touch", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s(ft3x27): CompositeDeviceAdd failed: %d\n", __func__, status);
+      zxlogf(ERROR, "%s(ft3x27): CompositeDeviceAdd failed: %d", __func__, status);
       return status;
     }
   }

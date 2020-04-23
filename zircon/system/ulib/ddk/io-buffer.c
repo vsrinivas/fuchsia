@@ -43,7 +43,7 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_ha
 
   zx_status_t status = zx_vmar_map(zx_vmar_root_self(), map_options, 0, vmo_handle, 0, size, &virt);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu\n", status, size);
+    zxlogf(ERROR, "io_buffer: zx_vmar_map failed %d size: %zu", status, size);
     zx_handle_close(vmo_handle);
     return status;
   }
@@ -57,7 +57,7 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_ha
     ZX_DEBUG_ASSERT(offset == 0);
     status = pin_contig_buffer(bti_handle, vmo_handle, size, &phys, &pmt_handle);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "io_buffer: init pin failed %d size: %zu\n", status, size);
+      zxlogf(ERROR, "io_buffer: init pin failed %d size: %zu", status, size);
       zx_vmar_unmap(zx_vmar_root_self(), virt, size);
       zx_handle_close(vmo_handle);
       return status;
@@ -98,14 +98,14 @@ zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, zx_handle_t bti, size_t 
     status = zx_vmo_create(size, 0, &vmo_handle);
   }
   if (status != ZX_OK) {
-    zxlogf(ERROR, "io_buffer: zx_vmo_create failed %d\n", status);
+    zxlogf(ERROR, "io_buffer: zx_vmo_create failed %d", status);
     return status;
   }
 
   if (flags & IO_BUFFER_UNCACHED) {
     status = zx_vmo_set_cache_policy(vmo_handle, ZX_CACHE_POLICY_UNCACHED);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "io_buffer: zx_vmo_set_cache_policy failed %d\n", status);
+      zxlogf(ERROR, "io_buffer: zx_vmo_set_cache_policy failed %d", status);
       zx_handle_close(vmo_handle);
       return status;
     }
@@ -208,7 +208,7 @@ zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
 
   zx_paddr_t* paddrs = malloc(pages * sizeof(zx_paddr_t));
   if (paddrs == NULL) {
-    zxlogf(ERROR, "io_buffer: out of memory\n");
+    zxlogf(ERROR, "io_buffer: out of memory");
     return ZX_ERR_NO_MEMORY;
   }
 

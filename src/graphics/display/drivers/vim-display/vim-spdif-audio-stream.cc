@@ -94,7 +94,7 @@ zx_status_t Vim2SpdifAudioStream::ChangeFormat(const audio_proto::StreamSetFmtRe
   // This should never happen (As we are not advertising any frame rates which
   // are not in the LUT), but JiC.
   if (!N) {
-    zxlogf(ERROR, "Failed to find starting N value for audio frame rate (%u).\n",
+    zxlogf(ERROR, "Failed to find starting N value for audio frame rate (%u).",
            req.frames_per_second);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -115,7 +115,7 @@ zx_status_t Vim2SpdifAudioStream::ChangeFormat(const audio_proto::StreamSetFmtRe
   uint32_t denom = req.frames_per_second << 4;
 
   if (numer % denom) {
-    zxlogf(ERROR, "Failed to find CTS value (pclk %u, N %u, frame_rate %u)\n",
+    zxlogf(ERROR, "Failed to find CTS value (pclk %u, N %u, frame_rate %u)",
            display_->p->timings.pfreq, N, req.frames_per_second);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -132,7 +132,7 @@ zx_status_t Vim2SpdifAudioStream::ChangeFormat(const audio_proto::StreamSetFmtRe
       bits_per_sample = 24;
       break;
     default:
-      zxlogf(ERROR, "Unsupported requested sample format (0x%08x)!\n", req.sample_format);
+      zxlogf(ERROR, "Unsupported requested sample format (0x%08x)!", req.sample_format);
       return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -143,7 +143,7 @@ zx_status_t Vim2SpdifAudioStream::ChangeFormat(const audio_proto::StreamSetFmtRe
   zx_status_t res;
   res = vim2_display_configure_audio_mode(display_, N, CTS, req.frames_per_second, bits_per_sample);
   if (res != ZX_OK) {
-    zxlogf(ERROR, "Failed to configure VIM2 HDMI TX audio parameters! (res %d)\n", res);
+    zxlogf(ERROR, "Failed to configure VIM2 HDMI TX audio parameters! (res %d)", res);
     return res;
   }
 
@@ -199,14 +199,14 @@ zx_status_t Vim2SpdifAudioStream::Init() {
   zx_status_t res;
 
   if (!regs_) {
-    zxlogf(ERROR, "null or invalid registers in %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "null or invalid registers in %s", __PRETTY_FUNCTION__);
     return ZX_ERR_INVALID_ARGS;
   }
 
   Disable(*regs_);
 
   if (!ring_buffer_vmo_ || !ring_buffer_vmo_->vmo().is_valid()) {
-    zxlogf(ERROR, "Bad ring buffer VMO passed to %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Bad ring buffer VMO passed to %s", __PRETTY_FUNCTION__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -215,7 +215,7 @@ zx_status_t Vim2SpdifAudioStream::Init() {
       (pinned_ring_buffer_.region(0).size < PAGE_SIZE) ||
       ((pinned_ring_buffer_.region(0).phys_addr + pinned_ring_buffer_.region(0).size) >=
        std::numeric_limits<uint32_t>::max())) {
-    zxlogf(ERROR, "Bad ring buffer scatter/gather list passed to %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Bad ring buffer scatter/gather list passed to %s", __PRETTY_FUNCTION__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -344,7 +344,7 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
     fbl::AllocChecker ac;
     supported_formats_.push_back(range, &ac);
     if (!ac.check()) {
-      zxlogf(ERROR, "Out of memory attempting to construct supported format list.\n");
+      zxlogf(ERROR, "Out of memory attempting to construct supported format list.");
       return ZX_ERR_NO_MEMORY;
     }
   }
@@ -456,7 +456,7 @@ void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fm
   // default to 48K.
   if (rate_ndx >= fbl::count_of(RATE_LUT)) {
     constexpr uint32_t DEFAULT_RATE_NDX = 1;
-    zxlogf(WARN, "Failed to find requested frame rate (%u) in LUT!  Defaulting to 48000\n",
+    zxlogf(WARN, "Failed to find requested frame rate (%u) in LUT!  Defaulting to 48000",
            frame_rate);
     static_assert(DEFAULT_RATE_NDX < fbl::count_of(RATE_LUT), "Invalid default rate index!");
     rate_ndx = DEFAULT_RATE_NDX;
@@ -522,7 +522,7 @@ void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fm
       break;
 
     default:
-      zxlogf(WARN, "Unsupported format (0x%08x), defaulting to PCM16\n", fmt);
+      zxlogf(WARN, "Unsupported format (0x%08x), defaulting to PCM16", fmt);
       __FALLTHROUGH;
     case AUDIO_SAMPLE_FORMAT_16BIT:
       mctrl |= AIU_958_MCTRL_16BIT_MODE;

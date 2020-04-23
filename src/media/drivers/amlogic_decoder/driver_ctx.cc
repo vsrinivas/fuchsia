@@ -56,7 +56,7 @@ zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
   // At least for now, the DeviceCtx stays allocated for the life of the
   // devhost process.
   device.release();
-  zxlogf(INFO, "[amlogic_video_bind] bound\n");
+  zxlogf(INFO, "[amlogic_video_bind] bound");
   return ZX_OK;
 }
 

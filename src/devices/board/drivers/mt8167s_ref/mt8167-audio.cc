@@ -264,7 +264,7 @@ zx_status_t Mt8167::AudioInit() {
       ddk::MmioBuffer::Create(MT8167_PMIC_WRAP_BASE, MT8167_PMIC_WRAP_SIZE, *root_resource,
                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &pmic_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: PMIC MmioBuffer::Create failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: PMIC MmioBuffer::Create failed %d", __FUNCTION__, status);
     return status;
   }
 
@@ -284,7 +284,7 @@ zx_status_t Mt8167::AudioInit() {
   // instead of in those drivers.
   ddk::ClockImplProtocolClient clock = parent();
   if (!clock.is_valid()) {
-    zxlogf(ERROR, "%s: could not get CLOCK_IMPL protocol\n", __func__);
+    zxlogf(ERROR, "%s: could not get CLOCK_IMPL protocol", __func__);
     return ZX_ERR_INTERNAL;
   }
   clock.Enable(kClkRgAud1);
@@ -306,14 +306,14 @@ zx_status_t Mt8167::AudioInit() {
 
     status = DdkAddComposite("audio-tas5782", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAddComposite failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: DdkAddComposite failed %d", __FUNCTION__, status);
       return status;
     }
 
     status = pbus_.CompositeDeviceAdd(&controller_out, mt8167s_controller_fragments,
                                       countof(mt8167s_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d", __FUNCTION__, status);
       return status;
     }
   } else {
@@ -332,20 +332,20 @@ zx_status_t Mt8167::AudioInit() {
 
     status = DdkAddComposite("audio-tas5805", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAddComposite failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: DdkAddComposite failed %d", __FUNCTION__, status);
       return status;
     }
 
     status = pbus_.CompositeDeviceAdd(&controller_out, cleo_controller_fragments,
                                       countof(cleo_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d", __FUNCTION__, status);
       return status;
     }
   }
   status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
   return ZX_OK;

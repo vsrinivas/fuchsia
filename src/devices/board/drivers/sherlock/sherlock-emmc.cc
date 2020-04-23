@@ -135,7 +135,7 @@ zx_status_t Sherlock::EmmcInit() {
 
   auto status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;
   }
 

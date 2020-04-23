@@ -108,7 +108,7 @@ class Instance : public InstanceType {
     );
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: failed to DdkAdd child driver: %d\n", kTag, status);
+      zxlogf(ERROR, "%s: failed to DdkAdd child driver: %d", kTag, status);
       return status;
     }
 
@@ -169,20 +169,20 @@ AddressSpaceDevice::~AddressSpaceDevice() = default;
 
 zx_status_t AddressSpaceDevice::Bind() {
   if (!pci_.is_valid()) {
-    zxlogf(ERROR, "%s: no pci protocol\n", kTag);
+    zxlogf(ERROR, "%s: no pci protocol", kTag);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   zx_status_t status = pci_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to get BTI: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to get BTI: %d", kTag, status);
     return status;
   }
 
   zx_pci_bar_t control_bar;
   status = pci_.GetBar(PCI_CONTROL_BAR_ID, &control_bar);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: get_bar: could not get control BAR\n", kTag);
+    zxlogf(ERROR, "%s: get_bar: could not get control BAR", kTag);
     return status;
   }
   ZX_DEBUG_ASSERT(control_bar.type == ZX_PCI_BAR_TYPE_MMIO);
@@ -192,14 +192,14 @@ zx_status_t AddressSpaceDevice::Bind() {
   status = ddk::MmioBuffer::Create(0, control_bar.size, zx::vmo(control_bar.handle),
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to create MMIO buffer: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to create MMIO buffer: %d", kTag, status);
     return status;
   }
 
   zx_pci_bar_t area_bar;
   status = pci_.GetBar(PCI_AREA_BAR_ID, &area_bar);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: get_bar: could not get area BAR: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: get_bar: could not get area BAR: %d", kTag, status);
     return status;
   }
   ZX_DEBUG_ASSERT(area_bar.type == ZX_PCI_BAR_TYPE_MMIO);
@@ -259,13 +259,13 @@ zx_status_t AddressSpaceDevice::PinBlock(uint64_t offset, uint64_t size, zx_padd
   auto status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS, dma_region_,
                          offset, size, paddr, 1, pmt);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: zx_bti_pin failed:  %d\n", kTag, status);
+    zxlogf(ERROR, "%s: zx_bti_pin failed:  %d", kTag, status);
     return status;
   }
 
   status = dma_region_.create_child(ZX_VMO_CHILD_SLICE, offset, size, vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: x_vmo_create_child failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: x_vmo_create_child failed: %d", kTag, status);
     return status;
   }
 
@@ -280,7 +280,7 @@ zx_status_t AddressSpaceDevice::CreateChildDriver(ddk::IoBuffer* io_buffer, uint
   zx_status_t status = io_buffer->Init(bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to io_buffer.Init. status: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to io_buffer.Init. status: %d", kTag, status);
     return status;
   }
 
@@ -303,7 +303,7 @@ zx_status_t AddressSpaceDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
 
   zx_status_t status = instance->Bind();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to init instance: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to init instance: %d", kTag, status);
     return status;
   }
 
@@ -349,7 +349,7 @@ zx_status_t AddressSpaceChildDriver::FidlAllocateBlock(uint64_t size, fidl_txn_t
   uint64_t offset;
   uint32_t result = device_->AllocateBlock(&size, &offset);
   if (result) {
-    zxlogf(ERROR, "%s: failed to allocate block: %lu %d\n", kTag, size, result);
+    zxlogf(ERROR, "%s: failed to allocate block: %lu %d", kTag, size, result);
     return fuchsia_hardware_goldfish_AddressSpaceChildDriverAllocateBlock_reply(
         txn, ZX_ERR_INTERNAL, 0, ZX_HANDLE_INVALID);
   }
@@ -361,7 +361,7 @@ zx_status_t AddressSpaceChildDriver::FidlAllocateBlock(uint64_t size, fidl_txn_t
   zx::vmo vmo;
   zx_status_t status = device_->PinBlock(offset, size, &paddr, &pmt, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to pin block: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to pin block: %d", kTag, status);
     return status;
   }
 
@@ -376,13 +376,13 @@ zx_status_t AddressSpaceChildDriver::FidlDeallocateBlock(uint64_t paddr, fidl_tx
 
   auto it = allocated_blocks_.find(paddr);
   if (it == allocated_blocks_.end()) {
-    zxlogf(ERROR, "%s: invalid block: %lu\n", kTag, paddr);
+    zxlogf(ERROR, "%s: invalid block: %lu", kTag, paddr);
     return ZX_ERR_INVALID_ARGS;
   }
 
   uint32_t result = device_->DeallocateBlock(it->second.offset);
   if (result) {
-    zxlogf(ERROR, "%s: failed to deallocate block: %lu %d\n", kTag, paddr, result);
+    zxlogf(ERROR, "%s: failed to deallocate block: %lu %d", kTag, paddr, result);
     return fuchsia_hardware_goldfish_AddressSpaceChildDriverDeallocateBlock_reply(txn,
                                                                                   ZX_ERR_INTERNAL);
   }
@@ -413,7 +413,7 @@ zx_status_t AddressSpaceChildDriver::FidlClaimSharedBlock(uint64_t offset, uint6
   zx::vmo vmo;
   zx_status_t status = device_->PinBlock(offset, size, &paddr, &pmt, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to pin block: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to pin block: %d", kTag, status);
     return status;
   }
 

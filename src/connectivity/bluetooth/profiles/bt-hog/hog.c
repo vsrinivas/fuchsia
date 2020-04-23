@@ -21,7 +21,7 @@
 
 static zx_status_t hogd_hid_query(void* ctx, uint32_t options,
                                   hid_info_t* info) {
-  zxlogf(TRACE, "bt_hog hog_hid_query, ctx: %p, options: %i\n", ctx, options);
+  zxlogf(TRACE, "bt_hog hog_hid_query, ctx: %p, options: %i", ctx, options);
   hogd_device_t* child = (hogd_device_t*)ctx;
   switch (child->device_type) {
     case HOGD_DEVICE_BOOT_KEYBOARD:
@@ -43,7 +43,7 @@ static zx_status_t hogd_hid_query(void* ctx, uint32_t options,
 }
 
 static zx_status_t hogd_hid_start(void* ctx, const hidbus_ifc_protocol_t* ifc) {
-  zxlogf(TRACE, "bt_hog hog_hid_start, ctx: %p, cookie: %p\n", ctx, ifc->ctx);
+  zxlogf(TRACE, "bt_hog hog_hid_start, ctx: %p, cookie: %p", ctx, ifc->ctx);
   hogd_device_t* child = (hogd_device_t*)ctx;
   mtx_lock(&child->lock);
   if (child->ifc.ops) {
@@ -58,14 +58,14 @@ static zx_status_t hogd_hid_start(void* ctx, const hidbus_ifc_protocol_t* ifc) {
 
 static void hogd_hid_stop(void* ctx) {
   // TODO(zbowling): Implement stop. It's not entirely clear what we should do.
-  zxlogf(TRACE, "bt_hog hogd_hid_stop, ctx: %p\n", ctx);
+  zxlogf(TRACE, "bt_hog hogd_hid_stop, ctx: %p", ctx);
 }
 
 static zx_status_t hogd_hid_get_descriptor(void* ctx, hid_description_type_t desc_type,
                                            void* out_data_buffer, size_t data_size,
                                            size_t* out_data_actual) {
   hogd_device_t* hogd_child = (hogd_device_t*)ctx;
-  zxlogf(TRACE, "bt_hog hogd_hid_get_descriptor, ctx: %p, desc_type: %u\n", ctx,
+  zxlogf(TRACE, "bt_hog hogd_hid_get_descriptor, ctx: %p, desc_type: %u", ctx,
          desc_type);
   if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
     return ZX_ERR_NOT_FOUND;
@@ -133,20 +133,20 @@ static zx_status_t hogd_hid_set_report(void* ctx, uint8_t rpt_type,
 
 static zx_status_t hogd_hid_get_idle(void* ctx, uint8_t rpt_id,
                                      uint8_t* duration) {
-  zxlogf(TRACE, "bt_hog hogd_hid_get_idle, ctx: %p, rpt_id: %u\n", ctx, rpt_id);
+  zxlogf(TRACE, "bt_hog hogd_hid_get_idle, ctx: %p, rpt_id: %u", ctx, rpt_id);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t hogd_hid_set_idle(void* ctx, uint8_t rpt_id,
                                      uint8_t duration) {
-  zxlogf(TRACE, "bt_hog hogd_hid_set_idle, ctx: %p, rpt_id: %u, duration: %u\n",
+  zxlogf(TRACE, "bt_hog hogd_hid_set_idle, ctx: %p, rpt_id: %u, duration: %u",
          ctx, rpt_id, duration);
   // TODO(zbowling): wire into org.bluetooth.characteristic.hid_control_point
   return ZX_OK;
 }
 
 static zx_status_t hogd_hid_get_protocol(void* ctx, uint8_t* protocol) {
-  zxlogf(TRACE, "bt_hog hogd_hid_get_protocol, ctx: %p\n", ctx);
+  zxlogf(TRACE, "bt_hog hogd_hid_get_protocol, ctx: %p", ctx);
   // TODO(zbowling): Support report mode.
   // Querying the actual protocol mode on the device is async on BT and hidbus
   // is sync.
@@ -155,7 +155,7 @@ static zx_status_t hogd_hid_get_protocol(void* ctx, uint8_t* protocol) {
 }
 
 static zx_status_t hogd_hid_set_protocol(void* ctx, uint8_t protocol) {
-  zxlogf(TRACE, "bt_hog hogd_hid_set_protocol, ctx: %p, protocol: %u\n", ctx,
+  zxlogf(TRACE, "bt_hog hogd_hid_set_protocol, ctx: %p, protocol: %u", ctx,
          protocol);
   // We are explicitly setting BOOT protocol internally so ignore attempts to
   // change it until report mode is fully implemented.
@@ -163,7 +163,7 @@ static zx_status_t hogd_hid_set_protocol(void* ctx, uint8_t protocol) {
 }
 
 static void hogd_release(void* ctx) {
-  zxlogf(TRACE, "bt_hog hogd_release, ctx: %p\n", ctx);
+  zxlogf(TRACE, "bt_hog hogd_release, ctx: %p", ctx);
   hogd_t* hogd = (hogd_t*)ctx;
   if (hogd->hid_descriptor)
     free(hogd->hid_descriptor);
@@ -172,20 +172,20 @@ static void hogd_release(void* ctx) {
 }
 
 static void hogd_unbind(void* ctx) {
-  zxlogf(TRACE, "bt_hog hogd_unbind, ctx: %p\n", ctx);
+  zxlogf(TRACE, "bt_hog hogd_unbind, ctx: %p", ctx);
   hogd_t* hogd = (hogd_t*)ctx;
   // We are unbinding so we should stop receiving notifications on this device.
   bt_gatt_svc_stop(&hogd->gatt_svc);
 }
 
 static void hogd_child_release(void* ctx) {
-  zxlogf(TRACE, "bt_hog hogd_child_release, ctx: %p\n", ctx);
+  zxlogf(TRACE, "bt_hog hogd_child_release, ctx: %p", ctx);
   hogd_device_t* child = (hogd_device_t*)ctx;
   child->is_initialized = false;
 }
 
 static void hogd_child_unbind(void* ctx) {
-  zxlogf(TRACE, "bt_hog hogd_child_unbind, ctx: %p\n", ctx);
+  zxlogf(TRACE, "bt_hog hogd_child_unbind, ctx: %p", ctx);
   hogd_device_t* child = (hogd_device_t*)ctx;
   child->is_initialized = false;
   // TODO(zbowling): Explicitly remove any notifications we are still receiving.
@@ -219,9 +219,9 @@ static zx_protocol_device_t hogd_child_dev_ops = {
 // Catch-all handler for status callbacks we can't handle explicitly.
 static void hogd_noop_status(void* ctx, const bt_gatt_status_t* status,
                              bt_gatt_id_t id) {
-  zxlogf(TRACE, "bt_hog hogd_noop_status, ctx: %p\n", ctx);
+  zxlogf(TRACE, "bt_hog hogd_noop_status, ctx: %p", ctx);
   if (!BT_HOG_STATUS_OK(status)) {
-    zxlogf(ERROR, "bt_hog status, att_ecode: %u, id: %lu\n", status->att_ecode,
+    zxlogf(ERROR, "bt_hog status, att_ecode: %u, id: %lu", status->att_ecode,
            id);
   }
 }
@@ -233,17 +233,17 @@ static inline void hogd_log_blob(const char* name, const uint8_t* value,
     for (size_t i = 0; i < len; i++) {
       zxlogf(SPEW, "%x ", value[i]);
     }
-    zxlogf(SPEW, "\n");
+    zxlogf(SPEW, "");
   }
 }
 
 static void hogd_report_notification(void* ctx, bt_gatt_id_t id,
                                      const void* value, size_t len) {
-  zxlogf(TRACE, "bt_hog hogd_report_notification, ctx: %p, id: %lu\n", ctx, id);
+  zxlogf(TRACE, "bt_hog hogd_report_notification, ctx: %p, id: %lu", ctx, id);
   hogd_log_blob("bt_hog input event", value, len);
   hogd_device_t* child = (hogd_device_t*)ctx;
   if (!child) {
-    zxlogf(ERROR, "bt_hog received input event for an uninitialized device\n");
+    zxlogf(ERROR, "bt_hog received input event for an uninitialized device");
     return;
   }
 
@@ -288,7 +288,7 @@ static zx_status_t hogd_initialize_boot_device(hogd_device_t* child,
 
   status = device_add(parent->bus_dev, &args, &child->dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "bt_hog failed to create child device, status: %i\n", status);
+    zxlogf(ERROR, "bt_hog failed to create child device, status: %i", status);
     return status;
   }
 
@@ -307,7 +307,7 @@ static zx_status_t hogd_initialize_boot_device(hogd_device_t* child,
 static void hogd_on_read_report_map(void* ctx, const bt_gatt_status_t* status,
                                     bt_gatt_id_t id, const void* value,
                                     size_t len) {
-  zxlogf(TRACE, "bt_hog hogd_on_read_report_map, ctx: %p, id: %lu\n", ctx, id);
+  zxlogf(TRACE, "bt_hog hogd_on_read_report_map, ctx: %p, id: %lu", ctx, id);
   hogd_t* hogd = (hogd_t*)ctx;
   if (!BT_HOG_STATUS_OK(status) || value == NULL || len == 0) {
     zxlogf(ERROR,
@@ -410,7 +410,7 @@ static void hogd_connect(void* ctx, const bt_gatt_status_t* status,
         bt_gatt_compare_uuid(&characteristics[chi].type, &kiruuid) == 0) {
       hogd->boot_keyboard_device.has_input_report_id = true;
       hogd->boot_keyboard_device.input_report_id = characteristics[chi].id;
-      zxlogf(SPEW, "bt_hog boot keyboard input report id %lu\n",
+      zxlogf(SPEW, "bt_hog boot keyboard input report id %lu",
              characteristics[chi].id);
       continue;
     }
@@ -434,7 +434,7 @@ static void hogd_connect(void* ctx, const bt_gatt_status_t* status,
     // Report characteristic. In report mode both the input and out descriptors
     // are the same ID.
     if (bt_gatt_compare_uuid(&characteristics[chi].type, &ruuid) == 0) {
-      zxlogf(SPEW, "bt_hog report characteristic - handler id: %lu\n",
+      zxlogf(SPEW, "bt_hog report characteristic - handler id: %lu",
              characteristics[chi].id);
       continue;
     }
@@ -464,7 +464,7 @@ zx_status_t bt_hog_bind(void* ctx, zx_device_t* device) {
   zx_status_t status =
       device_get_protocol(device, ZX_PROTOCOL_BT_GATT_SVC, &hogd->gatt_svc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "bt_hog driver has failed to get GATT service protocol\n");
+    zxlogf(ERROR, "bt_hog driver has failed to get GATT service protocol");
     return status;
   }
 

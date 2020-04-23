@@ -12,10 +12,10 @@ namespace ddk {
 void PDev::ShowInfo() {
   pdev_device_info_t info;
   if (GetDeviceInfo(&info) == ZX_OK) {
-    zxlogf(INFO, "VID:PID:DID         = %04x:%04x:%04x\n", info.vid, info.pid, info.did);
-    zxlogf(INFO, "mmio count          = %d\n", info.mmio_count);
-    zxlogf(INFO, "irq count           = %d\n", info.irq_count);
-    zxlogf(INFO, "bti count           = %d\n", info.bti_count);
+    zxlogf(INFO, "VID:PID:DID         = %04x:%04x:%04x", info.vid, info.pid, info.did);
+    zxlogf(INFO, "mmio count          = %d", info.mmio_count);
+    zxlogf(INFO, "irq count           = %d", info.irq_count);
+    zxlogf(INFO, "bti count           = %d", info.bti_count);
   }
 }
 

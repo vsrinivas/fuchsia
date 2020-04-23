@@ -44,7 +44,7 @@ zx_status_t AmlCpuFrequency::Create(
     const aml_thermal_info_t& thermal_info) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "aml-cpufreq: failed to get composite protocol\n");
+    zxlogf(ERROR, "aml-cpufreq: failed to get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -67,27 +67,27 @@ zx_status_t AmlCpuFrequency::Create(
   composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
 
   if (actual < (num_clocks + num_pwms + 1)) {
-    zxlogf(ERROR, "aml-cpufreq: not enough fragments\n");
+    zxlogf(ERROR, "aml-cpufreq: not enough fragments");
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::PDev pdev(fragments[0]);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "aml-cpufreq: failed to get pdev protocol\n");
+    zxlogf(ERROR, "aml-cpufreq: failed to get pdev protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Initialized the MMIOs
   zx_status_t status = pdev.MapMmio(kHiuMmio, &hiu_mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: could not map periph mmio: %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: could not map periph mmio: %d", status);
     return status;
   }
 
   // HIU Init.
   status = s905d2_hiu_init(&hiu_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: hiu_init failed: %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: hiu_init failed: %d", status);
     return status;
   }
 
@@ -99,13 +99,13 @@ zx_status_t AmlCpuFrequency::Create(
     ddk::ClockProtocolClient clock;
     status = ddk::ClockProtocolClient::CreateFromDevice(fragments[num_pwms + i + 1], &clock);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
+      zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol");
       return status;
     }
 
     status = clock.Enable();
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to enable clock, status = %d\n", status);
+      zxlogf(ERROR, "aml-cpufreq: failed to enable clock, status = %d", status);
       return status;
     }
   }
@@ -121,7 +121,7 @@ zx_status_t AmlCpuFrequency::Init() {
   zx_status_t status = SetFrequency(fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
                                     kFrequencyThreshold);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d", status);
     return status;
   }
 
@@ -129,7 +129,7 @@ zx_status_t AmlCpuFrequency::Init() {
     status = SetFrequency(fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
                           kFrequencyThreshold);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d\n", status);
+      zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d", status);
       return status;
     }
   }
@@ -137,21 +137,21 @@ zx_status_t AmlCpuFrequency::Init() {
   // SYS PLL Init.
   status = s905d2_pll_init(&hiu_, &sys_pll_, SYS_PLL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: s905d2_pll_init failed: %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: s905d2_pll_init failed: %d", status);
     return status;
   }
 
   // Set the SYS PLL to some known rate, before enabling the PLL.
   status = s905d2_pll_set_rate(&sys_pll_, kMaxCPUBFrequency);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to set SYS_PLL rate, status = %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: failed to set SYS_PLL rate, status = %d", status);
     return status;
   }
 
   // Enable SYS PLL.
   status = s905d2_pll_ena(&sys_pll_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: s905d2_pll_ena failed: %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: s905d2_pll_ena failed: %d", status);
     return status;
   }
 
@@ -159,21 +159,21 @@ zx_status_t AmlCpuFrequency::Init() {
     // SYS1 PLL Init.
     status = s905d2_pll_init(&hiu_, &sys1_pll_, SYS1_PLL);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: s905d2_pll_init failed: %d\n", status);
+      zxlogf(ERROR, "aml-cpufreq: s905d2_pll_init failed: %d", status);
       return status;
     }
 
     // Set the SYS1 PLL to some known rate, before enabling the PLL.
     status = s905d2_pll_set_rate(&sys1_pll_, kMaxCPUFrequency);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to set SYS1_PLL rate, status = %d\n", status);
+      zxlogf(ERROR, "aml-cpufreq: failed to set SYS1_PLL rate, status = %d", status);
       return status;
     }
 
     // Enable SYS1 PLL.
     status = s905d2_pll_ena(&sys1_pll_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: s905d2_pll_ena failed: %d\n", status);
+      zxlogf(ERROR, "aml-cpufreq: s905d2_pll_ena failed: %d", status);
       return status;
     }
   }
@@ -219,7 +219,7 @@ zx_status_t AmlCpuFrequency::ConfigureCpuFixedPLL(uint32_t new_rate, uint32_t of
 
   zx_status_t status = WaitForBusyCpu(offset);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to wait for busy, status = %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: failed to wait for busy, status = %d", status);
     return status;
   }
 
@@ -250,14 +250,14 @@ zx_status_t AmlCpuFrequency::ConfigureSys1PLL(uint32_t new_rate, uint32_t offset
   // So no need to validate it here.
   zx_status_t status = s905d2_pll_set_rate(&sys1_pll_, new_rate);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to set SYS1_PLL rate, status = %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: failed to set SYS1_PLL rate, status = %d", status);
     return status;
   }
 
   // Now we need to change the final mux to select input as SYS_PLL.
   status = WaitForBusyCpu(offset);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to wait for busy, status = %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: failed to wait for busy, status = %d", status);
     return status;
   }
 
@@ -273,14 +273,14 @@ zx_status_t AmlCpuFrequency::ConfigureSysPLL(uint32_t new_rate, uint32_t offset)
   // So no need to validate it here.
   zx_status_t status = s905d2_pll_set_rate(&sys_pll_, new_rate);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to set SYS_PLL rate, status = %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: failed to set SYS_PLL rate, status = %d", status);
     return status;
   }
 
   // Now we need to change the final mux to select input as SYS_PLL.
   status = WaitForBusyCpu(offset);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to wait for busy, status = %d\n", status);
+    zxlogf(ERROR, "aml-cpufreq: failed to wait for busy, status = %d", status);
     return status;
   }
 
@@ -303,7 +303,7 @@ zx_status_t AmlCpuFrequency::SetBigClusterFrequency(uint32_t new_rate, uint32_t 
     // Let's first switch to 1GHz
     status = SetBigClusterFrequency(kFrequencyThreshold, offset);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq to intermediate freq, status = %d\n",
+      zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq to intermediate freq, status = %d",
              status);
       return status;
     }
@@ -341,7 +341,7 @@ zx_status_t AmlCpuFrequency::SetLittleClusterFrequency(uint32_t new_rate, uint32
     // Let's first switch to 1GHz
     status = SetLittleClusterFrequency(kFrequencyThreshold, offset);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq to intermediate freq, status = %d\n",
+      zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq to intermediate freq, status = %d",
              status);
       return status;
     }

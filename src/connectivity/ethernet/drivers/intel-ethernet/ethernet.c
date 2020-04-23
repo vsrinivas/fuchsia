@@ -73,7 +73,7 @@ static int irq_thread(void* arg) {
     if (irq & ETH_IRQ_LSC) {
       bool was_online = edev->online;
       bool online = eth_status_online(&edev->eth);
-      zxlogf(TRACE, "intel-eth: ETH_IRQ_LSC fired: %d->%d\n", was_online, online);
+      zxlogf(TRACE, "intel-eth: ETH_IRQ_LSC fired: %d->%d", was_online, online);
       if (online != was_online) {
         edev->online = online;
         if (edev->ifc.ops) {

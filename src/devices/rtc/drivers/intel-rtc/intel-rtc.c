@@ -207,7 +207,7 @@ static zx_status_t intel_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc
   // TODO(kulakowski) This isn't the place for this long term.
   zx_status_t status = set_utc_offset(rtc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
+    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
   }
   return ZX_OK;
 }
@@ -262,7 +262,7 @@ static zx_status_t intel_rtc_bind(void* ctx, zx_device_t* parent) {
   sanitize_rtc(NULL, &rtc, intel_rtc_get, intel_rtc_set);
   status = set_utc_offset(&rtc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
+    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
   }
 
   return ZX_OK;

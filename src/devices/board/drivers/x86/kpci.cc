@@ -544,7 +544,7 @@ zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
     // Please do not use get_root_resource() in new code. See ZX-1467.
     zx_status_t status = pci_report_current_resources(get_root_resource());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!\n");
+      zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!");
     }
 
     // Initialize kernel PCI driver
@@ -552,14 +552,14 @@ zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
     uint32_t arg_size;
     status = get_pci_init_arg(&arg, &arg_size);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "acpi: erorr %d in get_pci_init_arg\n", status);
+      zxlogf(ERROR, "acpi: erorr %d in get_pci_init_arg", status);
       return AE_ERROR;
     }
 
     // Please do not use get_root_resource() in new code. See ZX-1467.
     status = zx_pci_init(get_root_resource(), arg, arg_size);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "acpi: error %d in zx_pci_init\n", status);
+      zxlogf(ERROR, "acpi: error %d in zx_pci_init", status);
       return AE_ERROR;
     }
 
@@ -581,6 +581,6 @@ zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
            (const char*)&info->Name, status);
   }
 
-  zxlogf(TRACE, "acpi: found pci root #%u\n", ctx->last_pci());
+  zxlogf(TRACE, "acpi: found pci root #%u", ctx->last_pci());
   return ZX_OK;
 }

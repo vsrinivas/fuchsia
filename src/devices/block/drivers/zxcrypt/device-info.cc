@@ -63,7 +63,7 @@ DeviceInfo::~DeviceInfo() {
   base = nullptr;
   zx_status_t rc = zx::vmar::root_self()->unmap(address, Volume::kBufferSize);
   if (rc != ZX_OK) {
-    zxlogf(WARN, "failed to unmap %" PRIu32 " bytes at %" PRIuPTR ": %s\n", Volume::kBufferSize,
+    zxlogf(WARN, "failed to unmap %" PRIu32 " bytes at %" PRIuPTR ": %s", Volume::kBufferSize,
            address, zx_status_get_string(rc));
   }
 }
@@ -75,7 +75,7 @@ zx_status_t DeviceInfo::Reserve(size_t size) {
   zx_status_t rc;
 
   if ((rc = zx::vmo::create(size, 0, &vmo)) != ZX_OK) {
-    zxlogf(ERROR, "zx::vmo::create failed: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "zx::vmo::create failed: %s", zx_status_get_string(rc));
     return rc;
   }
   auto cleanup = fbl::MakeAutoCall([this]() { vmo.reset(); });
@@ -83,7 +83,7 @@ zx_status_t DeviceInfo::Reserve(size_t size) {
   constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   uintptr_t address;
   if ((rc = zx::vmar::root_self()->map(0, vmo, 0, size, flags, &address)) != ZX_OK) {
-    zxlogf(ERROR, "zx::vmar::map failed: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "zx::vmar::map failed: %s", zx_status_get_string(rc));
     return rc;
   }
   base = reinterpret_cast<uint8_t*>(address);

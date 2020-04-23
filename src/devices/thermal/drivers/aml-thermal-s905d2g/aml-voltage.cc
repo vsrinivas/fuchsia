@@ -33,7 +33,7 @@ zx_status_t AmlVoltageRegulator::Create(
     const aml_thermal_info_t* thermal_info) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "aml-voltage: failed to get composite protocol\n");
+    zxlogf(ERROR, "aml-voltage: failed to get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -42,30 +42,30 @@ zx_status_t AmlVoltageRegulator::Create(
   zx_device_t* fragments[FRAGMENT_COUNT];
   composite.GetFragments(fragments, countof(fragments), &actual);
   if (actual < 1) {
-    zxlogf(ERROR, "%s: failed to get pdev fragment\n", __func__);
+    zxlogf(ERROR, "%s: failed to get pdev fragment", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "aml-voltage: failed to get pdev protocol\n");
+    zxlogf(ERROR, "aml-voltage: failed to get pdev protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   pdev_device_info_t device_info;
   zx_status_t status = pdev.GetDeviceInfo(&device_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-voltage: failed to get GetDeviceInfo \n");
+    zxlogf(ERROR, "aml-voltage: failed to get GetDeviceInfo ");
     return status;
   }
 
   big_cluster_pwm_ = ddk::PwmProtocolClient(fragments[FRAGMENT_PWM_BIG_CLUSTER]);
   if (!big_cluster_pwm_.is_valid()) {
-    zxlogf(ERROR, "%s: failed to get big cluster PWM fragment\n", __func__);
+    zxlogf(ERROR, "%s: failed to get big cluster PWM fragment", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
   if ((status = big_cluster_pwm_.Enable()) != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+    zxlogf(ERROR, "%s: Could not enable PWM", __func__);
     return status;
   }
 
@@ -73,11 +73,11 @@ zx_status_t AmlVoltageRegulator::Create(
   if (big_little_) {
     little_cluster_pwm_ = ddk::PwmProtocolClient(fragments[FRAGMENT_PWM_LITTLE_CLUSTER]);
     if (!little_cluster_pwm_.is_valid()) {
-      zxlogf(ERROR, "%s: failed to get little cluster PWM fragment\n", __func__);
+      zxlogf(ERROR, "%s: failed to get little cluster PWM fragment", __func__);
       return ZX_ERR_NOT_SUPPORTED;
     }
     if ((status = little_cluster_pwm_.Enable()) != ZX_OK) {
-      zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+      zxlogf(ERROR, "%s: Could not enable PWM", __func__);
       return status;
     }
   }
@@ -94,14 +94,14 @@ zx_status_t AmlVoltageRegulator::Init(
 
   big_cluster_pwm_ = ddk::PwmProtocolClient(big_cluster_pwm);
   if ((status = big_cluster_pwm_.Enable()) != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+    zxlogf(ERROR, "%s: Could not enable PWM", __func__);
     return status;
   }
 
   if (big_little_) {
     little_cluster_pwm_ = ddk::PwmProtocolClient(little_cluster_pwm);
     if ((status = little_cluster_pwm_.Enable()) != ZX_OK) {
-      zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+      zxlogf(ERROR, "%s: Could not enable PWM", __func__);
       return status;
     }
   }
@@ -176,7 +176,7 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
                         static_cast<float>(thermal_info_.voltage_table[target_index].duty_cycle),
                         &on, sizeof(on)};
     if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Could not initialize PWM\n", __func__);
+      zxlogf(ERROR, "%s: Could not initialize PWM", __func__);
       return status;
     }
     usleep(kSleep);
@@ -208,7 +208,7 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
         static_cast<float>(thermal_info_.voltage_table[*current_voltage_index].duty_cycle), &on,
         sizeof(on)};
     if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Could not initialize PWM\n", __func__);
+      zxlogf(ERROR, "%s: Could not initialize PWM", __func__);
       return status;
     }
     usleep(kSleep);

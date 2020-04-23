@@ -23,13 +23,13 @@ zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
   std::unique_ptr<DdkFidlDevice> test_dev(new (&ac) DdkFidlDevice(dev));
 
   if (!ac.check()) {
-    zxlogf(ERROR, "DdkFidlDevice::Create: no memory to allocate device!\n");
+    zxlogf(ERROR, "DdkFidlDevice::Create: no memory to allocate device!");
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status;
   if ((status = test_dev->Bind()) != ZX_OK) {
-    zxlogf(ERROR, "DdkFidlDevice::Create: Bind failed\n");
+    zxlogf(ERROR, "DdkFidlDevice::Create: Bind failed");
     test_dev.release()->DdkRelease();
     return status;
   }

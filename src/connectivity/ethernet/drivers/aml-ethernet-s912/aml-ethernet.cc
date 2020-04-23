@@ -47,7 +47,7 @@ zx_status_t AmlEthernet::InitPdev() {
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get composite protocol\n");
+    zxlogf(ERROR, "Could not get composite protocol");
     return status;
   }
 
@@ -60,7 +60,7 @@ zx_status_t AmlEthernet::InitPdev() {
     if (actual == (fbl::count_of(fragments) - 1)) {
       has_reset_ = false;
     } else {
-      zxlogf(ERROR, "could not get fragments\n");
+      zxlogf(ERROR, "could not get fragments");
       return ZX_ERR_NOT_SUPPORTED;
     }
   }
@@ -68,7 +68,7 @@ zx_status_t AmlEthernet::InitPdev() {
   pdev_protocol_t pdev;
   status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get PDEV protocol\n");
+    zxlogf(ERROR, "Could not get PDEV protocol");
     return status;
   }
   pdev_ = &pdev;
@@ -76,7 +76,7 @@ zx_status_t AmlEthernet::InitPdev() {
   i2c_protocol_t i2c;
   status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get I2C protocol\n");
+    zxlogf(ERROR, "Could not get I2C protocol");
     return status;
   }
   i2c_ = &i2c;
@@ -85,7 +85,7 @@ zx_status_t AmlEthernet::InitPdev() {
   if (has_reset_) {
     status = device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &gpio);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Could not get GPIO protocol\n");
+      zxlogf(ERROR, "Could not get GPIO protocol");
       return status;
     }
     gpios_[PHY_RESET] = &gpio;
@@ -93,7 +93,7 @@ zx_status_t AmlEthernet::InitPdev() {
 
   status = device_get_protocol(fragments[FRAGMENT_INTR_GPIO], ZX_PROTOCOL_GPIO, &gpio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get GPIO protocol\n");
+    zxlogf(ERROR, "Could not get GPIO protocol");
     return status;
   }
   gpios_[PHY_INTR] = &gpio;
@@ -101,14 +101,14 @@ zx_status_t AmlEthernet::InitPdev() {
   // Map amlogic peripheral control registers.
   status = pdev_.MapMmio(MMIO_PERIPH, &periph_mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-dwmac: could not map periph mmio: %d\n", status);
+    zxlogf(ERROR, "aml-dwmac: could not map periph mmio: %d", status);
     return status;
   }
 
   // Map HHI regs (clocks and power domains).
   status = pdev_.MapMmio(MMIO_HHI, &hhi_mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-dwmac: could not map hiu mmio: %d\n", status);
+    zxlogf(ERROR, "aml-dwmac: could not map hiu mmio: %d", status);
     return status;
   }
 
@@ -140,7 +140,7 @@ zx_status_t AmlEthernet::Bind() {
   uint8_t write_buf[2] = {MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE};
   zx_status_t status = i2c_.WriteSync(write_buf, sizeof(write_buf));
   if (status) {
-    zxlogf(ERROR, "aml-ethernet: WOL reset enable to MCU failed: %d\n", status);
+    zxlogf(ERROR, "aml-ethernet: WOL reset enable to MCU failed: %d", status);
     return status;
   }
 
@@ -150,7 +150,7 @@ zx_status_t AmlEthernet::Bind() {
   status = device_get_metadata(parent(), DEVICE_METADATA_ETH_MAC_DEVICE, &mac_info,
                                sizeof(eth_dev_metadata_t), &actual);
   if (status != ZX_OK || actual != sizeof(eth_dev_metadata_t)) {
-    zxlogf(ERROR, "aml-ethernet: Could not get MAC metadata %d\n", status);
+    zxlogf(ERROR, "aml-ethernet: Could not get MAC metadata %d", status);
     return status;
   }
 
@@ -167,7 +167,7 @@ void AmlEthernet::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 void AmlEthernet::DdkRelease() { delete this; }
 
 zx_status_t AmlEthernet::Create(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "aml-ethernet: adding driver\n");
+  zxlogf(INFO, "aml-ethernet: adding driver");
   fbl::AllocChecker ac;
   auto eth_device = fbl::make_unique_checked<AmlEthernet>(&ac, parent);
   if (!ac.check()) {
@@ -176,16 +176,16 @@ zx_status_t AmlEthernet::Create(void* ctx, zx_device_t* parent) {
 
   zx_status_t status = eth_device->InitPdev();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-ethernet: failed to init platform device\n");
+    zxlogf(ERROR, "aml-ethernet: failed to init platform device");
     return status;
   }
 
   status = eth_device->Bind();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-ethernet driver failed to get added: %d\n", status);
+    zxlogf(ERROR, "aml-ethernet driver failed to get added: %d", status);
     return status;
   } else {
-    zxlogf(INFO, "aml-ethernet driver added\n");
+    zxlogf(INFO, "aml-ethernet driver added");
   }
 
   // eth_device intentionally leaked as it is now held by DevMgr

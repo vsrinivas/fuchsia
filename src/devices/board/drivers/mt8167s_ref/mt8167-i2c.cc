@@ -215,7 +215,7 @@ zx_status_t Mt8167::I2cInit() {
 
   auto status = pbus_.CompositeDeviceAdd(&i2c_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
 

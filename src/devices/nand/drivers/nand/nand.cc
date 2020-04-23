@@ -41,14 +41,14 @@ zx_status_t NandDevice::ReadPage(void* data, void* oob, uint32_t nand_page,
     status = raw_nand_.ReadPageHwecc(nand_page, data, nand_info_.page_size, nullptr, oob,
                                      nand_info_.oob_size, nullptr, corrected_bits);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Retrying Read@%u\n", __func__, nand_page);
+      zxlogf(ERROR, "%s: Retrying Read@%u", __func__, nand_page);
     }
   }
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Read error %d, exhausted all retries\n", __func__, status);
+    zxlogf(ERROR, "%s: Read error %d, exhausted all retries", __func__, status);
   }
   if (retry > 1) {
-    zxlogf(INFO, "%s: Successfuly read@%u on retry %zd\n", __func__, nand_page, retry - 1);
+    zxlogf(INFO, "%s: Successfuly read@%u on retry %zd", __func__, nand_page, retry - 1);
   }
   return status;
 }
@@ -60,7 +60,7 @@ zx_status_t NandDevice::EraseOp(nand_operation_t* nand_op) {
     nand_page = (nand_op->erase.first_block + i) * nand_info_.pages_per_block;
     zx_status_t status = raw_nand_.EraseBlock(nand_page);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "nand: Erase of block %u failed\n", nand_op->erase.first_block + i);
+      zxlogf(ERROR, "nand: Erase of block %u failed", nand_op->erase.first_block + i);
       return status;
     }
   }
@@ -80,7 +80,7 @@ zx_status_t NandDevice::MapVmos(const nand_operation_t& nand_op, fzl::VmoMapper*
                        nand_op.rw.length * nand_info_.page_size + page_offset_bytes,
                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "nand: Cannot map data vmo: %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "nand: Cannot map data vmo: %s", zx_status_get_string(status));
       return status;
     }
     *vaddr_data = reinterpret_cast<uint8_t*>(data->start()) + page_offset_bytes;
@@ -97,7 +97,7 @@ zx_status_t NandDevice::MapVmos(const nand_operation_t& nand_op, fzl::VmoMapper*
                       nand_op.rw.length * nand_info_.oob_size + page_offset_bytes,
                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "nand: Cannot map oob vmo: %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "nand: Cannot map oob vmo: %s", zx_status_get_string(status));
       return status;
     }
     *vaddr_oob = reinterpret_cast<uint8_t*>(oob->start()) + page_offset_bytes;
@@ -122,7 +122,7 @@ zx_status_t NandDevice::ReadOp(nand_operation_t* nand_op) {
     status = ReadPage(vaddr_data, vaddr_oob, nand_op->rw.offset_nand + i, &ecc_correct,
                       kNandReadRetries);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "nand: Read data error %d at page offset %u\n", status,
+      zxlogf(ERROR, "nand: Read data error %d at page offset %u", status,
              nand_op->rw.offset_nand + i);
       break;
     } else {
@@ -156,7 +156,7 @@ zx_status_t NandDevice::WriteOp(nand_operation_t* nand_op) {
     status = raw_nand_.WritePageHwecc(vaddr_data, nand_info_.page_size, vaddr_oob,
                                       nand_info_.oob_size, nand_op->rw.offset_nand + i);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "nand: Write data error %d at page offset %u\n", status,
+      zxlogf(ERROR, "nand: Write data error %d at page offset %u", status,
              nand_op->rw.offset_nand + i);
       break;
     }
@@ -210,7 +210,7 @@ zx_status_t NandDevice::WorkerThread() {
     }
   }
 
-  zxlogf(TRACE, "nand: worker thread terminated\n");
+  zxlogf(TRACE, "nand: worker thread terminated");
   return ZX_OK;
 }
 
@@ -221,8 +221,8 @@ void NandDevice::NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op
 
 void NandDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie) {
   if (completion_cb == nullptr) {
-    zxlogf(TRACE, "nand: nand op %p completion_cb unset!\n", op);
-    zxlogf(TRACE, "nand: cannot queue command!\n");
+    zxlogf(TRACE, "nand: nand op %p completion_cb unset!", op);
+    zxlogf(TRACE, "nand: cannot queue command!");
     return;
   }
 
@@ -285,12 +285,12 @@ NandDevice::~NandDevice() {
 
 // static
 zx_status_t NandDevice::Create(void* ctx, zx_device_t* parent) {
-  zxlogf(ERROR, "NandDevice::Create: Starting...!\n");
+  zxlogf(ERROR, "NandDevice::Create: Starting...!");
 
   fbl::AllocChecker ac;
   std::unique_ptr<NandDevice> dev(new (&ac) NandDevice(parent));
   if (!ac.check()) {
-    zxlogf(ERROR, "nand: no memory to allocate nand device!\n");
+    zxlogf(ERROR, "nand: no memory to allocate nand device!");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -312,13 +312,13 @@ zx_status_t NandDevice::Create(void* ctx, zx_device_t* parent) {
 
 zx_status_t NandDevice::Init() {
   if (!raw_nand_.is_valid()) {
-    zxlogf(ERROR, "nand: failed to get raw_nand protocol\n");
+    zxlogf(ERROR, "nand: failed to get raw_nand protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   zx_status_t status = raw_nand_.GetNandInfo(&nand_info_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "nand: get_nand_info returned error %d\n", status);
+    zxlogf(ERROR, "nand: get_nand_info returned error %d", status);
     return status;
   }
 

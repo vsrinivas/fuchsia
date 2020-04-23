@@ -125,7 +125,7 @@ zx_status_t Mt8167::ButtonsInit() {
 
     zx_status_t status = DdkAddComposite("mt8167-buttons", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
       return status;
     }
   } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
@@ -156,7 +156,7 @@ zx_status_t Mt8167::ButtonsInit() {
 
     zx_status_t status = DdkAddComposite("mt8167-buttons", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
       return status;
     }
   } else {

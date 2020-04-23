@@ -43,26 +43,26 @@ bool Cy8cmbr3108::Test() {
   auto status_reg = SENSOR_EN::Get().FromValue(0);
   zx_status_t status = RegisterOp(READ, status_reg);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read sensor status :%d\n", status);
+    zxlogf(ERROR, "Failed to read sensor status :%d", status);
     ShutDown();
     return false;
   }
-  zxlogf(INFO, "Sensors enabled : 0x%x\n", status_reg.reg_value());
+  zxlogf(INFO, "Sensors enabled : 0x%x", status_reg.reg_value());
   zxlogf(INFO, "Touch the sensors to execute the test..");
 
   auto button = BUTTON_STAT::Get().FromValue(0);
   for (uint32_t i = 0; i < 100; i++) {
     status = RegisterOp(READ, button);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to get button status :%d\n", status);
+      zxlogf(ERROR, "Failed to get button status :%d", status);
       ShutDown();
       return false;
     }
-    zxlogf(INFO, "Button stat register - 0x%x\n", button.reg_value());
+    zxlogf(INFO, "Button stat register - 0x%x", button.reg_value());
     zx::nanosleep(zx::deadline_after(zx::duration(ZX_MSEC(200))));
   }
 
-  zxlogf(INFO, "Cypress touch test passed\n");
+  zxlogf(INFO, "Cypress touch test passed");
   ShutDown();
   return true;
 }
@@ -71,14 +71,14 @@ int Cy8cmbr3108::Thread() {
   while (1) {
     zx_port_packet_t packet;
     zx_status_t status = port_.wait(zx::time::infinite(), &packet);
-    zxlogf(TRACE, "%s msg received on port key %lu\n", __FUNCTION__, packet.key);
+    zxlogf(TRACE, "%s msg received on port key %lu", __FUNCTION__, packet.key);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s port wait failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s port wait failed %d", __FUNCTION__, status);
       return thrd_error;
     }
 
     if (packet.key == kPortKeyShutDown) {
-      zxlogf(INFO, "Cy8cmbr3108 thread shutting down\n");
+      zxlogf(INFO, "Cy8cmbr3108 thread shutting down");
       return thrd_success;
     }
 
@@ -86,7 +86,7 @@ int Cy8cmbr3108::Thread() {
     size_t out_len;
     status = HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, &input_rpt, sizeof(input_rpt), &out_len);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s HidbusGetReport failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s HidbusGetReport failed %d", __FUNCTION__, status);
     } else {
       fbl::AutoLock lock(&client_lock_);
       if (client_.is_valid()) {
@@ -188,7 +188,7 @@ zx_status_t Cy8cmbr3108::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void*
   auto button_reg = BUTTON_STAT::Get().FromValue(0);
   auto status = RegisterOp(READ, button_reg);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Failed to read button register %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Failed to read button register %d", __FUNCTION__, status);
     return status;
   }
 
@@ -199,7 +199,7 @@ zx_status_t Cy8cmbr3108::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void*
       new_value = true;
     }
 
-    zxlogf(TRACE, "%s new value %u for button %lu\n", __FUNCTION__, new_value, i);
+    zxlogf(TRACE, "%s new value %u for button %lu", __FUNCTION__, new_value, i);
     fill_visalia_touch_buttons_report(buttons_[i].id, new_value, &input_rpt);
   }
   auto out = static_cast<visalia_touch_buttons_input_rpt_t*>(data);
@@ -246,7 +246,7 @@ zx_status_t Cy8cmbr3108::InitializeProtocols() {
   composite_protocol_t composite;
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed\n", __func__);
+    zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed", __func__);
     return status;
   }
 
@@ -262,13 +262,13 @@ zx_status_t Cy8cmbr3108::InitializeProtocols() {
   // Get I2C and GPIO protocol.
   i2c_ = ddk::I2cProtocolClient(fragments[kI2cFragment]);
   if (!i2c_.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found, err=%d\n", __func__, status);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found, err=%d", __func__, status);
     return status;
   }
 
   touch_gpio_ = ddk::GpioProtocolClient(fragments[kTouchGpioFragment]);
   if (!touch_gpio_.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_GPIO not found, err=%d\n", __func__, status);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_GPIO not found, err=%d", __func__, status);
     return status;
   }
 
@@ -276,7 +276,7 @@ zx_status_t Cy8cmbr3108::InitializeProtocols() {
   actual = 0;
   status = device_get_metadata_size(parent(), DEVICE_METADATA_PRIVATE, &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s device_get_metadata_size failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s device_get_metadata_size failed %d", __FILE__, status);
     return ZX_OK;
   }
 
@@ -291,7 +291,7 @@ zx_status_t Cy8cmbr3108::InitializeProtocols() {
   status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, buttons_.get(),
                                buttons_.size() * sizeof(touch_button_config_t), &actual);
   if (status != ZX_OK || actual != buttons_.size() * sizeof(touch_button_config_t)) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
     return status;
   }
 
@@ -304,7 +304,7 @@ zx_status_t Cy8cmbr3108::Init() {
 
   zx_status_t status = InitializeProtocols();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to initialize protocols %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s failed to initialize protocols %d", __FUNCTION__, status);
     return status;
   }
 
@@ -313,31 +313,31 @@ zx_status_t Cy8cmbr3108::Init() {
 
   status = touch_gpio_.SetAltFunction(0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to SetAltFunction touch GPIO %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s failed to SetAltFunction touch GPIO %d", __FUNCTION__, status);
     return status;
   }
 
   status = touch_gpio_.ConfigIn(GPIO_NO_PULL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s:failed to ConfigIn touch GPIO %d\n", __func__, status);
+    zxlogf(ERROR, "%s:failed to ConfigIn touch GPIO %d", __func__, status);
     return status;
   }
 
   status = touch_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_HIGH, &touch_irq_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to GetInterrupt touch GPIO %d\n", __func__, status);
+    zxlogf(ERROR, "%s: failed to GetInterrupt touch GPIO %d", __func__, status);
     return status;
   }
 
   status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s port_create failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s port_create failed %d", __FUNCTION__, status);
     return status;
   }
 
   status = touch_irq_.bind(port_, kPortKeyTouchIrq, 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s zx_interrupt_bind failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s zx_interrupt_bind failed %d", __FUNCTION__, status);
     return status;
   }
 
@@ -354,7 +354,7 @@ zx_status_t Cy8cmbr3108::Init() {
 zx_status_t Cy8cmbr3108::Bind() {
   zx_status_t status = DdkAdd("cy8cmbr3108");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s DdkAdd failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s DdkAdd failed: %d", __FUNCTION__, status);
   }
 
   return status;

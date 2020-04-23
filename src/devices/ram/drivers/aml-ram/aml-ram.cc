@@ -133,7 +133,7 @@ zx_status_t ReadBandwithCounters(ddk::MmioBuffer& mmio, const BwPorts& ports, zx
   auto counter_2 = mmio.Read32(MEMBW_C2_GRANT_CNT);
   auto counter_3 = mmio.Read32(MEMBW_C3_GRANT_CNT);
 
-  zxlogf(TRACE, "aml-ram: bw:%g %g %g %g %g cz:%d\n", CalcBandwidth(counter_all),
+  zxlogf(TRACE, "aml-ram: bw:%g %g %g %g %g cz:%d", CalcBandwidth(counter_all),
          CalcBandwidth(counter_0), CalcBandwidth(counter_1), CalcBandwidth(counter_2),
          CalcBandwidth(counter_3), count);
 
@@ -146,20 +146,20 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
   ddk::PDev pdev(parent);
   std::optional<ddk::MmioBuffer> mmio;
   if ((status = pdev.MapMmio(0, &mmio)) != ZX_OK) {
-    zxlogf(ERROR, "aml-ram: Failed to map mmio, st = %d\n", status);
+    zxlogf(ERROR, "aml-ram: Failed to map mmio, st = %d", status);
     return status;
   }
 
   fbl::AllocChecker ac;
   auto device = fbl::make_unique_checked<AmlRam>(&ac, parent, *std::move(mmio));
   if (!ac.check()) {
-    zxlogf(ERROR, "aml-ram: Failed to allocate device memory\n");
+    zxlogf(ERROR, "aml-ram: Failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
   }
 
   status = device->DdkAdd("ram", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-ram: Failed to add ram device, st = %d\n", status);
+    zxlogf(ERROR, "aml-ram: Failed to add ram device, st = %d", status);
     return status;
   }
 
@@ -207,7 +207,7 @@ void AmlRam::ReadLoop() {
   for (;;) {
     auto status = ReadBandwithCounters(mmio_, kPorts, shutdown_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-ram: error reading counters, st =%d\n", status);
+      zxlogf(ERROR, "aml-ram: error reading counters, st =%d", status);
       return;
     }
 
@@ -216,11 +216,11 @@ void AmlRam::ReadLoop() {
     if (status == ZX_ERR_TIMED_OUT) {
       continue;
     } else if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-ram: error in wait_one, st =%d\n", status);
+      zxlogf(ERROR, "aml-ram: error in wait_one, st =%d", status);
       return;
     } else {
       // Normal shutdown.
-      zxlogf(TRACE, "aml-ram: loop shutdown\n");
+      zxlogf(TRACE, "aml-ram: loop shutdown");
       return;
     }
   };

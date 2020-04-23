@@ -74,7 +74,7 @@ zx_status_t Msm8x53Power::ReadPMICReg(uint32_t reg_addr, uint32_t* reg_value) {
   }
   if (status ^ PmicArbCoreChannelCmdStatus::kPmicArbCmdDone) {
     // Cmd completed with an error
-    zxlogf(ERROR, "%s Unable to read Pmic Reg: 0x%x status: 0x%x\n", __FUNCTION__, reg_addr,
+    zxlogf(ERROR, "%s Unable to read Pmic Reg: 0x%x status: 0x%x", __FUNCTION__, reg_addr,
            status);
     return ZX_ERR_IO;
   }
@@ -139,7 +139,7 @@ zx_status_t Msm8x53Power::WritePMICReg(uint32_t reg_addr, uint32_t value) {
   }
   if (status ^ PmicArbCoreChannelCmdStatus::kPmicArbCmdDone) {
     // Cmd completed with an error
-    zxlogf(ERROR, "%s Unable to write PMIC Reg 0x%x status:0x%x\n", __FUNCTION__, reg_addr, status);
+    zxlogf(ERROR, "%s Unable to write PMIC Reg 0x%x status:0x%x", __FUNCTION__, reg_addr, status);
     return ZX_ERR_IO;
   }
 
@@ -241,7 +241,7 @@ void Msm8x53Power::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 zx_status_t Msm8x53Power::PmicArbInit() {
   // Read version
   static uint32_t pmic_arb_ver = PmicArbVersion::Get().ReadFrom(&core_mmio_).arb_version();
-  zxlogf(ERROR, "%s Pmic Arbiter version: 0x%x\n", __FUNCTION__, pmic_arb_ver);
+  zxlogf(ERROR, "%s Pmic Arbiter version: 0x%x", __FUNCTION__, pmic_arb_ver);
   if (pmic_arb_ver != kPmicArbVersionTwo) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -269,42 +269,42 @@ zx_status_t Msm8x53Power::Create(void* ctx, zx_device_t* parent) {
 
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s Could not get pdev: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Could not get pdev: %d", __FUNCTION__, status);
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> core_mmio;
   status = pdev.MapMmio(kPmicArbCoreMmioIndex, &core_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Failed to get core mmio: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Failed to get core mmio: %d", __FUNCTION__, status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> chnls_mmio;
   status = pdev.MapMmio(kPmicArbChnlsMmioIndex, &chnls_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Failed to get core mmio: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Failed to get core mmio: %d", __FUNCTION__, status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> obsvr_mmio;
   status = pdev.MapMmio(kPmicArbObsrvrMmioIndex, &obsvr_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Failed to get core mmio: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Failed to get core mmio: %d", __FUNCTION__, status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> intr_mmio;
   status = pdev.MapMmio(kPmicArbIntrMmioIndex, &intr_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Failed to get core mmio: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Failed to get core mmio: %d", __FUNCTION__, status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> cfg_mmio;
   status = pdev.MapMmio(kPmicArbCnfgMmioIndex, &cfg_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Failed to get core mmio: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Failed to get core mmio: %d", __FUNCTION__, status);
     return status;
   }
 

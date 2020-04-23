@@ -98,18 +98,18 @@ zx_status_t TestBoard::PowerInit() {
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_POWER_IMPL, &power_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
   status = DdkAddComposite("composite-pd-1", &power_domain_1_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddComposite for power domain 1 failed: %d \n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: DdkAddComposite for power domain 1 failed: %d ", __FUNCTION__, status);
     return status;
   }
 
   status = DdkAddComposite("composite-pd-3", &power_domain_3_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddComposite for power domain 3 failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: DdkAddComposite for power domain 3 failed: %d", __FUNCTION__, status);
     return status;
   }
 

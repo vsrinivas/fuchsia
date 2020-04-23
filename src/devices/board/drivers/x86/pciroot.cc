@@ -31,7 +31,7 @@ static ACPI_STATUS find_pci_child_callback(ACPI_HANDLE object, uint32_t nesting_
   ACPI_DEVICE_INFO* info;
   ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
   if (acpi_status != AE_OK) {
-    zxlogf(TRACE, "bus-acpi: AcpiGetObjectInfo failed %d\n", acpi_status);
+    zxlogf(TRACE, "bus-acpi: AcpiGetObjectInfo failed %d", acpi_status);
     return acpi_status;
   }
   ACPI_FREE(info);
@@ -135,7 +135,7 @@ static zx_status_t pciroot_op_get_auxdata(void* context, const char* args, void*
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zxlogf(SPEW, "bus-acpi: get_auxdata type '%s' device %02x:%02x:%02x\n", type, bus_id, dev_id,
+  zxlogf(SPEW, "bus-acpi: get_auxdata type '%s' device %02x:%02x:%02x", type, bus_id, dev_id,
          func_id);
 
   if (strcmp(type, "i2c-child")) {
@@ -177,7 +177,7 @@ static zx_status_t pciroot_op_get_auxdata(void* context, const char* args, void*
 
   *actual = ctx.i * sizeof(auxdata_i2c_device_t);
 
-  zxlogf(SPEW, "bus-acpi: get_auxdata '%s' %u devs actual %zu\n", args, ctx.i, *actual);
+  zxlogf(SPEW, "bus-acpi: get_auxdata '%s' %u devs actual %zu", args, ctx.i, *actual);
 
   return ZX_OK;
 }
@@ -324,7 +324,7 @@ zx_status_t Pciroot::PcirootGetAddressSpace(size_t size, zx_paddr_t in_base,
   }
 
   if (status != ZX_OK) {
-    zxlogf(TRACE, "pciroot: failed to get region { %#lx-%#lx, type = %s, low = %d }: %d.\n",
+    zxlogf(TRACE, "pciroot: failed to get region { %#lx-%#lx, type = %s, low = %d }: %d.",
            in_base, in_base + size, (type == PCI_ADDRESS_SPACE_MMIO) ? "mmio" : "io", low, status);
     return status;
   }
@@ -348,7 +348,7 @@ zx_status_t Pciroot::PcirootGetAddressSpace(size_t size, zx_paddr_t in_base,
   // Discard the lifecycle aspect of the returned pointer, we'll be tracking it on the bus
   // side of things.
   region_uptr.release();
-  zxlogf(TRACE, "pciroot: assigned [ %#lx-%#lx, type = %s, size = %#lx ] to bus driver.\n",
+  zxlogf(TRACE, "pciroot: assigned [ %#lx-%#lx, type = %s, size = %#lx ] to bus driver.",
          *out_base, *out_base + size, (type == PCI_ADDRESS_SPACE_MMIO) ? "mmio" : "io", size);
   return ZX_OK;
 }

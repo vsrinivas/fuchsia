@@ -92,18 +92,18 @@ zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handl
   auto wait_result =
       sysmem::BufferCollection::Call::WaitForBuffersAllocated(zx::unowned_channel(handle));
   if (!wait_result.ok()) {
-    zxlogf(ERROR, "%s: failed to WaitForBuffersAllocated %d\n", tag(), wait_result.status());
+    zxlogf(ERROR, "%s: failed to WaitForBuffersAllocated %d", tag(), wait_result.status());
     return wait_result.status();
   }
   if (wait_result->status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to WaitForBuffersAllocated call %d\n", tag(), wait_result->status);
+    zxlogf(ERROR, "%s: failed to WaitForBuffersAllocated call %d", tag(), wait_result->status);
     return wait_result->status;
   }
 
   sysmem::BufferCollectionInfo_2& collection_info = wait_result->buffer_collection_info;
 
   if (!collection_info.settings.has_image_format_constraints) {
-    zxlogf(ERROR, "%s: bad image format constraints\n", tag());
+    zxlogf(ERROR, "%s: bad image format constraints", tag());
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -124,7 +124,7 @@ zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handl
          sizeof(format_constraints));
   uint32_t minimum_row_bytes;
   if (!ImageFormatMinimumRowBytes(&format_constraints, image->width, &minimum_row_bytes)) {
-    zxlogf(ERROR, "%s: Invalid image width %d for collection\n", tag(), image->width);
+    zxlogf(ERROR, "%s: Invalid image width %d for collection", tag(), image->width);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -165,19 +165,19 @@ zx_status_t GpuDevice::Import(zx::vmo vmo, image_t* image, size_t offset, uint32
   zx_status_t status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, offset, size, &paddr, 1,
                                 &import_data->pmt);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to pin vmo\n", tag());
+    zxlogf(ERROR, "%s: failed to pin vmo", tag());
     return status;
   }
 
   status = allocate_2d_resource(&import_data->resource_id, row_bytes / pixel_size, image->height);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to allocate 2d resource\n", tag());
+    zxlogf(ERROR, "%s: failed to allocate 2d resource", tag());
     return status;
   }
 
   status = attach_backing(import_data->resource_id, paddr, size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to attach backing store\n", tag());
+    zxlogf(ERROR, "%s: failed to attach backing store", tag());
     return status;
   }
 
@@ -544,7 +544,7 @@ void GpuDevice::virtio_gpu_flusher() {
       uint32_t res_id = displayed_fb_ ? displayed_fb_->resource_id : 0;
       zx_status_t status = set_scanout(pmode_id_, res_id, pmode_.r.width, pmode_.r.height);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: failed to set scanout: %d\n", tag(), status);
+        zxlogf(ERROR, "%s: failed to set scanout: %d", tag(), status);
         continue;
       }
     }
@@ -567,12 +567,12 @@ zx_status_t GpuDevice::virtio_gpu_start() {
   // Get the display info and see if we find a valid pmode
   zx_status_t status = get_display_info();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to get display info\n", tag());
+    zxlogf(ERROR, "%s: failed to get display info", tag());
     return status;
   }
 
   if (pmode_id_ < 0) {
-    zxlogf(ERROR, "%s: failed to find a pmode, exiting\n", tag());
+    zxlogf(ERROR, "%s: failed to find a pmode, exiting", tag());
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -606,7 +606,7 @@ zx_status_t GpuDevice::Init() {
 
   zx_status_t status = device_get_protocol(bus_device(), ZX_PROTOCOL_SYSMEM, &sysmem_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not get Display SYSMEM protocol\n", tag());
+    zxlogf(ERROR, "%s: Could not get Display SYSMEM protocol", tag());
     return status;
   }
 
@@ -627,14 +627,14 @@ zx_status_t GpuDevice::Init() {
   // Allocate the main vring
   status = vring_.Init(0, 16);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to allocate vring\n", tag());
+    zxlogf(ERROR, "%s: failed to allocate vring", tag());
     return status;
   }
 
   // Allocate a GPU request
   status = io_buffer_init(&gpu_req_, bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: cannot alloc gpu_req buffers %d\n", tag(), status);
+    zxlogf(ERROR, "%s: cannot alloc gpu_req buffers %d", tag(), status);
     return status;
   }
 

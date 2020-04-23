@@ -182,11 +182,11 @@ static const pbus_dev_t hikey960_gpio_dev = {
 };
 
 zx_status_t hikey960_gpio_init(hikey960_t* hikey) {
-  zxlogf(INFO, "pbus_protocol_device_add\n");
+  zxlogf(INFO, "pbus_protocol_device_add");
   zx_status_t status =
       pbus_protocol_device_add(&hikey->pbus, ZX_PROTOCOL_GPIO_IMPL, &hikey960_gpio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hikey960_gpio_init: pbus_protocol_device_add failed: %d\n", status);
+    zxlogf(ERROR, "hikey960_gpio_init: pbus_protocol_device_add failed: %d", status);
   }
   return status;
 }

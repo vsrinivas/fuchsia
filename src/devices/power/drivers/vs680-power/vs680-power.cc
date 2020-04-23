@@ -63,7 +63,7 @@ namespace power {
 zx_status_t Vs680Power::Create(void* ctx, zx_device_t* parent) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get composite protocol\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get composite protocol", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -71,26 +71,26 @@ zx_status_t Vs680Power::Create(void* ctx, zx_device_t* parent) {
   size_t fragment_count;
   composite.GetFragments(&pmic_i2c_dev, 1, &fragment_count);
   if (fragment_count != 1) {
-    zxlogf(ERROR, "%s: Failed to get PMIC I2C device\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get PMIC I2C device", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::I2cProtocolClient pmic_i2c(pmic_i2c_dev);
   if (!pmic_i2c.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get I2C fragment\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get I2C fragment", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   fbl::AllocChecker ac;
   std::unique_ptr<Vs680Power> device(new (&ac) Vs680Power(parent, pmic_i2c));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Failed to allocate device memory\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to allocate device memory", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status = device->DdkAdd("vs680-power", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __FILE__, status);
     return status;
   }
 
@@ -140,25 +140,25 @@ zx_status_t Vs680Power::PowerImplRequestVoltage(uint32_t index, uint32_t voltage
   auto syscntrl = SysCntrlReg1::Get().FromValue(0);
   zx_status_t status = syscntrl.ReadFrom(pmic_i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to read from SysCntrlReg1: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to read from SysCntrlReg1: %d", __FILE__, status);
     return status;
   }
 
   if ((status = syscntrl.set_go_bit(1).WriteTo(pmic_i2c_)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to write to SysCntrlReg1: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to write to SysCntrlReg1: %d", __FILE__, status);
     return status;
   }
 
   auto vsel = VSel::Get().FromValue(0);
   if ((status = vsel.ReadFrom(pmic_i2c_)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to read from VSel: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to read from VSel: %d", __FILE__, status);
     return status;
   }
 
   const uint8_t old_voltage_sel = vsel.voltage();
 
   if ((status = vsel.set_voltage_microvolts(voltage).WriteTo(pmic_i2c_)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to write to VSel: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to write to VSel: %d", __FILE__, status);
     return status;
   }
 
@@ -166,11 +166,11 @@ zx_status_t Vs680Power::PowerImplRequestVoltage(uint32_t index, uint32_t voltage
       std::max(old_voltage_sel, vsel.voltage()) - std::min(old_voltage_sel, vsel.voltage());
   if (voltage_sel_delta <= SysCntrlReg1::kGoBitResetThreshold) {
     if ((status = syscntrl.ReadFrom(pmic_i2c_)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to read from SysCntrlReg1: %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s: Failed to read from SysCntrlReg1: %d", __FILE__, status);
       return status;
     }
     if ((status = syscntrl.set_go_bit(0).WriteTo(pmic_i2c_)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to write to SysCntrlReg1: %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s: Failed to write to SysCntrlReg1: %d", __FILE__, status);
       return status;
     }
   }
@@ -189,7 +189,7 @@ zx_status_t Vs680Power::PowerImplGetCurrentVoltage(uint32_t index, uint32_t* out
   auto vsel = VSel::Get().FromValue(0);
   zx_status_t status = vsel.ReadFrom(pmic_i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to read from VSel: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to read from VSel: %d", __FILE__, status);
     return status;
   }
 

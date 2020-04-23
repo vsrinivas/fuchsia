@@ -36,7 +36,7 @@ static zx_protocol_device_t test_device_protocol = {
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
-  zxlogf(INFO, "test_bind: %s \n", DRIVER_NAME);
+  zxlogf(INFO, "test_bind: %s ", DRIVER_NAME);
 
   test_t* test = calloc(1, sizeof(test_t));
   if (!test) {
@@ -62,7 +62,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
   status = device_add(parent, &args, &test->zxdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_add failed: %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: device_add failed: %d", DRIVER_NAME, status);
     free(test);
     return status;
   }

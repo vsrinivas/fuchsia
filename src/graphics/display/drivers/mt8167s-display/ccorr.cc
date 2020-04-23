@@ -52,12 +52,12 @@ zx_status_t Ccorr::Config() {
 
 void Ccorr::PrintRegisters() {
   ZX_DEBUG_ASSERT(initialized_);
-  zxlogf(INFO, "Dumping Ccorr Registers\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "CCORR_EN = 0x%x\n", ccorr_mmio_->Read32(CCORR_EN));
-  zxlogf(INFO, "CCORR_CFG = 0x%x\n", ccorr_mmio_->Read32(CCORR_CFG));
-  zxlogf(INFO, "CCORR_SIZE = 0x%x\n", ccorr_mmio_->Read32(CCORR_SIZE));
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "Dumping Ccorr Registers");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "CCORR_EN = 0x%x", ccorr_mmio_->Read32(CCORR_EN));
+  zxlogf(INFO, "CCORR_CFG = 0x%x", ccorr_mmio_->Read32(CCORR_CFG));
+  zxlogf(INFO, "CCORR_SIZE = 0x%x", ccorr_mmio_->Read32(CCORR_SIZE));
+  zxlogf(INFO, "######################\n");
 }
 
 }  // namespace mt8167s_display

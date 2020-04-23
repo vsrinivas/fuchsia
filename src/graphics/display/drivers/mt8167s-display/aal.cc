@@ -52,12 +52,12 @@ zx_status_t Aal::Config() {
 
 void Aal::PrintRegisters() {
   ZX_DEBUG_ASSERT(initialized_);
-  zxlogf(INFO, "Dumping Aal Registers\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "AAL_EN = 0x%x\n", aal_mmio_->Read32(AAL_EN));
-  zxlogf(INFO, "AAL_CFG = 0x%x\n", aal_mmio_->Read32(AAL_CFG));
-  zxlogf(INFO, "AAL_SIZE = 0x%x\n", aal_mmio_->Read32(AAL_SIZE));
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "Dumping Aal Registers");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "AAL_EN = 0x%x", aal_mmio_->Read32(AAL_EN));
+  zxlogf(INFO, "AAL_CFG = 0x%x", aal_mmio_->Read32(AAL_CFG));
+  zxlogf(INFO, "AAL_SIZE = 0x%x", aal_mmio_->Read32(AAL_SIZE));
+  zxlogf(INFO, "######################\n");
 }
 
 }  // namespace mt8167s_display

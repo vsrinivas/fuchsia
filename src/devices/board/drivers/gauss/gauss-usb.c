@@ -57,7 +57,7 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus) {
                                 // Please do not use get_root_resource() in new code. See ZX-1467.
                                 get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "gauss_usb_init io_buffer_init_physical failed %d\n", status);
+    zxlogf(ERROR, "gauss_usb_init io_buffer_init_physical failed %d", status);
     return status;
   }
 
@@ -65,7 +65,7 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus) {
   status = zx_interrupt_create(get_root_resource(), USB_PHY_IRQ, ZX_INTERRUPT_MODE_DEFAULT,
                                &bus->usb_phy_irq_handle);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "gauss_usb_init zx_interrupt_create failed %d\n", status);
+    zxlogf(ERROR, "gauss_usb_init zx_interrupt_create failed %d", status);
     mmio_buffer_release(&bus->usb_phy);
     return status;
   }
@@ -103,7 +103,7 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus) {
   writel(temp, addr + USB_R5_OFFSET);
 
   if ((status = pbus_device_add(&bus->pbus, &xhci_dev)) != ZX_OK) {
-    zxlogf(ERROR, "a113_usb_init could not add xhci_dev: %d\n", status);
+    zxlogf(ERROR, "a113_usb_init could not add xhci_dev: %d", status);
     return status;
   }
 

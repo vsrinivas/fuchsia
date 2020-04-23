@@ -241,7 +241,7 @@ zx_status_t SocketDevice::Init() {
   DeviceReset();
   DriverStatusAck();
   if (!DeviceFeatureSupported(VIRTIO_F_VERSION_1)) {
-    zxlogf(ERROR, "%s: Legacy virtio interface is not supported by this driver\n", tag());
+    zxlogf(ERROR, "%s: Legacy virtio interface is not supported by this driver", tag());
     return ZX_ERR_NOT_SUPPORTED;
   }
   DriverFeatureAck(VIRTIO_F_VERSION_1);
@@ -254,24 +254,24 @@ zx_status_t SocketDevice::Init() {
   zx_status_t rc;
   rc = event_.Init(kEventId, bti());
   if (rc != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to allocate event ring: %s\n", tag(), zx_status_get_string(rc));
+    zxlogf(ERROR, "%s: Failed to allocate event ring: %s", tag(), zx_status_get_string(rc));
     return rc;
   }
   rc = rx_.Init(kRxId, bti());
   if (rc != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to allocate rx ring: %s\n", tag(), zx_status_get_string(rc));
+    zxlogf(ERROR, "%s: Failed to allocate rx ring: %s", tag(), zx_status_get_string(rc));
     return rc;
   }
   rc = tx_.Init(kTxId, bti());
   if (rc != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to allocate tx ring: %s\n", tag(), zx_status_get_string(rc));
+    zxlogf(ERROR, "%s: Failed to allocate tx ring: %s", tag(), zx_status_get_string(rc));
     return rc;
   }
   // Determine our bti contiguity.
   zx_info_bti_t bti_info;
   rc = bti_.get_info(ZX_INFO_BTI, &bti_info, sizeof(bti_info), nullptr, nullptr);
   if (rc != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to determine BTI contiguity\n", tag());
+    zxlogf(ERROR, "%s: Failed to determine BTI contiguity", tag());
     return rc;
   }
   bti_contiguity_ = bti_info.minimum_contiguity;
@@ -282,14 +282,14 @@ zx_status_t SocketDevice::Init() {
   // Start out dispatcher for connections
   rc = dispatch_loop_.StartThread("virtio-vsock-connection");
   if (rc != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to start dispatch thread: %s\n", tag(), zx_status_get_string(rc));
+    zxlogf(ERROR, "%s: Failed to start dispatch thread: %s", tag(), zx_status_get_string(rc));
     return rc;
   }
 
   // Setup our timer for retrying TX operations.
   rc = zx::timer::create(ZX_TIMER_SLACK_CENTER, ZX_CLOCK_MONOTONIC, &tx_retry_timer_);
   if (rc != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to create timer: %s\n", tag(), zx_status_get_string(rc));
+    zxlogf(ERROR, "%s: Failed to create timer: %s", tag(), zx_status_get_string(rc));
     return rc;
   }
   timer_wait_handler_.set_object(tx_retry_timer_.get());
@@ -298,7 +298,7 @@ zx_status_t SocketDevice::Init() {
   // Initialize the zx_device and publish us.
   zx_status_t status = DdkAdd("virtio-vsock");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to add device: %s\n", tag(), zx_status_get_string(status));
+    zxlogf(ERROR, "%s: failed to add device: %s", tag(), zx_status_get_string(status));
     return status;
   }
   device_ = zxdev();
@@ -331,7 +331,7 @@ void SocketDevice::IrqRingUpdate() {
             if (event->id == VIRTIO_VSOCK_EVENT_TRANSPORT_RESET) {
               TransportResetLocked();
             } else {
-              zxlogf(ERROR, "%s: Received unknown event: %d\n", tag(), event->id);
+              zxlogf(ERROR, "%s: Received unknown event: %d", tag(), event->id);
             }
           });
 
@@ -362,7 +362,7 @@ void SocketDevice::IrqConfigChange() {
 
 void SocketDevice::ProcessRxDescriptor(virtio_vsock_hdr_t* header, void* data, uint32_t data_len) {
   if (header->dst_cid != cid_) {
-    zxlogf(ERROR, " %s: Received message for cid %d, but believe our cid is %d\n", tag(),
+    zxlogf(ERROR, " %s: Received message for cid %d, but believe our cid is %d", tag(),
            static_cast<uint32_t>(header->dst_cid), cid_);
     return;
   }
@@ -401,7 +401,7 @@ void SocketDevice::UpdateRxRingLocked() {
 void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key, uint16_t op) {
   switch (op) {
     case VIRTIO_VSOCK_OP_INVALID:
-      zxlogf(ERROR, "%s: Received invalid op\n", tag());
+      zxlogf(ERROR, "%s: Received invalid op", tag());
       break;
     case VIRTIO_VSOCK_OP_REQUEST:
       // Don't care if we have a connection or not, just send it to the
@@ -411,7 +411,7 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
     case VIRTIO_VSOCK_OP_RESPONSE: {
       // Check for existing partial connection.
       if (conn == connections_.end()) {
-        zxlogf(ERROR, "%s: Received response for unknown connection\n", tag());
+        zxlogf(ERROR, "%s: Received response for unknown connection", tag());
         // We weren't trying to make a connection, so reject this
         SendRstLocked(key);
         break;
@@ -454,10 +454,10 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
       break;
     case VIRTIO_VSOCK_OP_RW:
       // This case should've gone to RxOp_Data
-      zxlogf(ERROR, "%s: OP_RW not handled here\n", tag());
+      zxlogf(ERROR, "%s: OP_RW not handled here", tag());
       break;
     default:
-      zxlogf(ERROR, "%s: Unexpected op %d from host\n", tag(), op);
+      zxlogf(ERROR, "%s: Unexpected op %d from host", tag(), op);
       break;
   }
 }
@@ -600,12 +600,12 @@ void SocketDevice::EnableTxRetryTimerLocked() {
   if (!have_timer_) {
     zx_status_t status = tx_retry_timer_.set(zx::deadline_after(zx::sec(1)), zx::sec(1));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to set timer %s\n", tag(), zx_status_get_string(status));
+      zxlogf(ERROR, "%s: Failed to set timer %s", tag(), zx_status_get_string(status));
       return;
     }
     status = timer_wait_handler_.Begin(dispatch_loop_.dispatcher());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to wait for timer %s\n", tag(), zx_status_get_string(status));
+      zxlogf(ERROR, "%s: Failed to wait for timer %s", tag(), zx_status_get_string(status));
       return;
     }
     have_timer_ = true;
@@ -674,7 +674,7 @@ void SocketDevice::ReleaseLocked() {
 
 void SocketDevice::TransportResetLocked() {
   // shit this is complicated, just reload the cid for now
-  zxlogf(INFO, "%s: Received transport reset!\n", tag());
+  zxlogf(INFO, "%s: Received transport reset!", tag());
   for (auto& it : connections_) {
     it.Close(dispatch_loop_.dispatcher());
   }
@@ -748,9 +748,9 @@ void SocketDevice::RxIoBufferRing::ProcessDescriptors(F func) {
     uint16_t last_id = static_cast<uint16_t>(used_elem->id);
     struct vring_desc* desc = ring_.DescFromIndex(last_id);
     if (desc->len < sizeof(H)) {
-      zxlogf(ERROR, "Descriptor is too short\n");
+      zxlogf(ERROR, "Descriptor is too short");
     } else if ((desc->flags & VRING_DESC_F_NEXT) != 0) {
-      zxlogf(ERROR, "Chained descriptors are not supported\n");
+      zxlogf(ERROR, "Chained descriptors are not supported");
     } else {
       func(reinterpret_cast<H*>(GetRawDesc(last_id, sizeof(H))), GetRawDesc(last_id, 0, sizeof(H)),
            static_cast<uint32_t>(used_elem->len - sizeof(H)));
@@ -892,7 +892,7 @@ void SocketDevice::Connection::UpdateCredit(uint32_t buf, uint32_t fwd) {
 
 void SocketDevice::Connection::MakeActive(async_dispatcher_t* disp) {
   if (state_ != Connection::CON_WAIT_RESPONSE) {
-    zxlogf(ERROR, "Received response for already established connection\n");
+    zxlogf(ERROR, "Received response for already established connection");
     return;
   }
   BeginWait(disp);

@@ -152,7 +152,7 @@ static const device_fragment_t dwc2_fragments[] = {
 zx_status_t Luis::UsbInit() {
   auto status = pbus_.DeviceAdd(&usb_phy_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
   }
 
@@ -182,7 +182,7 @@ zx_status_t Luis::UsbInit() {
   status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
   free(config);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;
   }
 

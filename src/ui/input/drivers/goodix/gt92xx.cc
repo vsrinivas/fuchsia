@@ -65,14 +65,14 @@ fbl::Vector<uint8_t> Gt92xxDevice::GetConfData() {
 int Gt92xxDevice::Thread() {
   zx_status_t status;
   zx::time timestamp;
-  zxlogf(INFO, "gt92xx: entering irq thread\n");
+  zxlogf(INFO, "gt92xx: entering irq thread");
   while (true) {
     status = irq_.wait(&timestamp);
     if (!running_.load()) {
       return ZX_OK;
     }
     if (status != ZX_OK) {
-      zxlogf(ERROR, "gt92xx: Interrupt error %d\n", status);
+      zxlogf(ERROR, "gt92xx: Interrupt error %d", status);
     }
     TRACE_DURATION("input", "Gt92xxDevice Read");
     uint8_t touch_stat = 0;
@@ -114,20 +114,20 @@ int Gt92xxDevice::Thread() {
         }
       }
     } else {
-      zxlogf(ERROR, "gt92xx: Errant interrupt, no report ready - %x\n", touch_stat);
+      zxlogf(ERROR, "gt92xx: Errant interrupt, no report ready - %x", touch_stat);
     }
   }
-  zxlogf(INFO, "gt92xx: exiting\n");
+  zxlogf(INFO, "gt92xx: exiting");
   return 0;
 }
 
 zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
-  zxlogf(INFO, "gt92xx: driver started...\n");
+  zxlogf(INFO, "gt92xx: driver started...");
 
   composite_protocol_t composite;
   auto status = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get composite protocol\n");
+    zxlogf(ERROR, "Could not get composite protocol");
     return status;
   }
 
@@ -135,28 +135,28 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
   size_t actual;
   composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
   if (actual != fbl::count_of(fragments)) {
-    zxlogf(ERROR, "could not get fragments\n");
+    zxlogf(ERROR, "could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   i2c_protocol_t i2c;
   status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: failed to acquire i2c\n");
+    zxlogf(ERROR, "focaltouch: failed to acquire i2c");
     return status;
   }
 
   gpio_protocol_t int_gpio;
   status = device_get_protocol(fragments[FRAGMENT_INT_GPIO], ZX_PROTOCOL_GPIO, &int_gpio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
+    zxlogf(ERROR, "focaltouch: failed to acquire gpio");
     return status;
   }
 
   gpio_protocol_t reset_gpio;
   status = device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &reset_gpio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
+    zxlogf(ERROR, "focaltouch: failed to acquire gpio");
     return status;
   }
 
@@ -164,7 +164,7 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
 
   status = goodix_dev->Init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not initialize gt92xx hardware %d\n", status);
+    zxlogf(ERROR, "Could not initialize gt92xx hardware %d", status);
     return status;
   }
 
@@ -178,10 +178,10 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
 
   status = goodix_dev->DdkAdd("gt92xx HidDevice");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "gt92xx: Could not create hid device: %d\n", status);
+    zxlogf(ERROR, "gt92xx: Could not create hid device: %d", status);
     return status;
   } else {
-    zxlogf(INFO, "gt92xx: Added hid device\n");
+    zxlogf(INFO, "gt92xx: Added hid device");
   }
 
   cleanup.cancel();
@@ -198,7 +198,7 @@ zx_status_t Gt92xxDevice::Init() {
 
   uint8_t fw = Read(GT_REG_FIRMWARE);
   if (fw != GT_FIRMWARE_MAGIC) {
-    zxlogf(ERROR, "Invalid gt92xx firmware configuration!\n");
+    zxlogf(ERROR, "Invalid gt92xx firmware configuration!");
     return ZX_ERR_BAD_STATE;
   }
   // Device requires 50ms delay after this check (per datasheet)
@@ -321,11 +321,11 @@ void Gt92xxDevice::HidbusStop() {
 zx_status_t Gt92xxDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
   fbl::AutoLock lock(&client_lock_);
   if (client_.is_valid()) {
-    zxlogf(ERROR, "gt92xx: Already bound!\n");
+    zxlogf(ERROR, "gt92xx: Already bound!");
     return ZX_ERR_ALREADY_BOUND;
   } else {
     client_ = ddk::HidbusIfcProtocolClient(ifc);
-    zxlogf(INFO, "gt92xx: started\n");
+    zxlogf(INFO, "gt92xx: started");
   }
   return ZX_OK;
 }

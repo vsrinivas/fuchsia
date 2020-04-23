@@ -104,7 +104,7 @@ zx_status_t Msm8x53::PilInit() {
 
   auto status = pbus_.CompositeDeviceAdd(&dev, fragments, fbl::count_of(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not add dev %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Could not add dev %d", __func__, status);
     return status;
   }
 

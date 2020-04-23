@@ -54,7 +54,7 @@ class DeviceConnector : public llcpp::fuchsia::wlan::device::Connector::Interfac
 PhyDevice::PhyDevice(zx_device_t* device) : parent_(device) {}
 
 zx_status_t PhyDevice::Bind() {
-  zxlogf(INFO, "wlan::testing::phy::PhyDevice::Bind()\n");
+  zxlogf(INFO, "wlan::testing::phy::PhyDevice::Bind()");
 
   dispatcher_ = std::make_unique<wlan::common::Dispatcher<wlan_device::Phy>>(wlanphy_async_t());
 
@@ -75,14 +75,14 @@ zx_status_t PhyDevice::Bind() {
 }
 
 void PhyDevice::Unbind() {
-  zxlogf(INFO, "wlan::testing::PhyDevice::Unbind()\n");
+  zxlogf(INFO, "wlan::testing::PhyDevice::Unbind()");
   std::lock_guard<std::mutex> guard(lock_);
   dispatcher_.reset();
   device_remove_deprecated(zxdev_);
 }
 
 void PhyDevice::Release() {
-  zxlogf(INFO, "wlan::testing::PhyDevice::Release()\n");
+  zxlogf(INFO, "wlan::testing::PhyDevice::Release()");
   delete this;
 }
 
@@ -168,14 +168,14 @@ wlan_device::PhyInfo get_info() {
 }  // namespace
 
 void PhyDevice::Query(QueryCallback callback) {
-  zxlogf(INFO, "wlan::testing::phy::PhyDevice::Query()\n");
+  zxlogf(INFO, "wlan::testing::phy::PhyDevice::Query()");
   wlan_device::QueryResponse resp;
   resp.info = get_info();
   callback(std::move(resp));
 }
 
 void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallback callback) {
-  zxlogf(INFO, "CreateRequest: role=%u\n", req.role);
+  zxlogf(INFO, "CreateRequest: role=%u", req.role);
   std::lock_guard<std::mutex> guard(lock_);
   wlan_device::CreateIfaceResponse resp;
 
@@ -221,7 +221,7 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCall
   auto macdev = std::make_unique<IfaceDevice>(zxdev_, role);
   zx_status_t status = macdev->Bind();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "could not bind child wlanmac device: %d\n", status);
+    zxlogf(ERROR, "could not bind child wlanmac device: %d", status);
     resp.status = status;
     callback(std::move(resp));
     return;
@@ -241,7 +241,7 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCall
 }
 
 void PhyDevice::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceCallback callback) {
-  zxlogf(INFO, "DestroyRequest: id=%u\n", req.id);
+  zxlogf(INFO, "DestroyRequest: id=%u", req.id);
 
   wlan_device::DestroyIfaceResponse resp;
 
@@ -263,17 +263,17 @@ void PhyDevice::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceC
 }
 
 void PhyDevice::SetCountry(wlan_device::CountryCode req, SetCountryCallback callback) {
-  zxlogf(INFO, "testing/PHY: SetCountry [%s]\n", wlan::common::Alpha2ToStr(req.alpha2).c_str());
+  zxlogf(INFO, "testing/PHY: SetCountry [%s]", wlan::common::Alpha2ToStr(req.alpha2).c_str());
   callback(ZX_OK);
 }
 
 void PhyDevice::GetCountry(GetCountryCallback callback) {
-  zxlogf(INFO, "testing/PHY: GetCountry\n");
+  zxlogf(INFO, "testing/PHY: GetCountry");
   callback(fit::error(ZX_ERR_NOT_SUPPORTED));
 }
 
 void PhyDevice::ClearCountry(ClearCountryCallback callback) {
-  zxlogf(INFO, "testing/PHY: ClearCountry\n");
+  zxlogf(INFO, "testing/PHY: ClearCountry");
   callback(ZX_OK);
 }
 

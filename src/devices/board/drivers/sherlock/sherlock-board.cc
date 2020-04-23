@@ -26,10 +26,10 @@ zx_status_t Sherlock::BoardInit() {
 
   pbus_board_info_t info = {};
   info.board_revision = id0 + (id1 << 1) + (id2 << 2) + (id3 << 3) + (id4 << 4);
-  zxlogf(TRACE, "%s: PBusSetBoardInfo to %X\n", __func__, info.board_revision);
+  zxlogf(TRACE, "%s: PBusSetBoardInfo to %X", __func__, info.board_revision);
   zx_status_t status = pbus_.SetBoardInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: PBusSetBoardInfo failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: PBusSetBoardInfo failed %d", __func__, status);
     return status;
   }
   return ZX_OK;

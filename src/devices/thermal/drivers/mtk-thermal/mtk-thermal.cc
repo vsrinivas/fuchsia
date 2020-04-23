@@ -61,7 +61,7 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
 
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_COMPOSITE not available\n", __FILE__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_COMPOSITE not available", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -69,49 +69,49 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
   size_t actual;
   composite.GetFragments(&pdev_fragment, 1, &actual);
   if (actual != 1) {
-    zxlogf(ERROR, "%s: could not get pdev_fragment\n", __FILE__);
+    zxlogf(ERROR, "%s: could not get pdev_fragment", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(pdev_fragment);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   pdev_device_info_t info;
   if ((status = pdev.GetDeviceInfo(&info)) != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_get_device_info failed\n", __FILE__);
+    zxlogf(ERROR, "%s: pdev_get_device_info failed", __FILE__);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   if ((status = pdev.MapMmio(0, &mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MapMmio failed", __FILE__);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> fuse_mmio;
   if ((status = pdev.MapMmio(1, &fuse_mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MapMmio failed", __FILE__);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> pll_mmio;
   if ((status = pdev.MapMmio(2, &pll_mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MapMmio failed", __FILE__);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> pmic_mmio;
   if ((status = pdev.MapMmio(3, &pmic_mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MapMmio failed", __FILE__);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> infracfg_mmio;
   if ((status = pdev.MapMmio(4, &infracfg_mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MapMmio failed", __FILE__);
     return status;
   }
 
@@ -119,19 +119,19 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
   status = device_get_metadata(parent, DEVICE_METADATA_THERMAL_CONFIG, &thermal_info,
                                sizeof(thermal_info), &actual);
   if (status != ZX_OK || actual != sizeof(thermal_info)) {
-    zxlogf(ERROR, "%s: device_get_metadata failed\n", __FILE__);
+    zxlogf(ERROR, "%s: device_get_metadata failed", __FILE__);
     return status == ZX_OK ? ZX_ERR_INTERNAL : status;
   }
 
   zx::interrupt irq;
   if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get interrupt\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get interrupt", __FILE__);
     return status;
   }
 
   zx::port port;
   if ((status = zx::port::create(0, &port)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to create port\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to create port", __FILE__);
     return status;
   }
 
@@ -143,7 +143,7 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
       TempCalibration1::Get().ReadFrom(&(*fuse_mmio)),
       TempCalibration2::Get().ReadFrom(&(*fuse_mmio))));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: MtkThermal alloc failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MtkThermal alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -152,7 +152,7 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
   }
 
   if ((status = device->DdkAdd("mtk-thermal")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    zxlogf(ERROR, "%s: DdkAdd failed", __FILE__);
     return status;
   }
 
@@ -176,13 +176,13 @@ zx_status_t MtkThermal::Init() {
     clock_protocol_t clock;
     auto status = device_get_protocol(fragments[i], ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to get clock %u\n", __FILE__, i);
+      zxlogf(ERROR, "%s: Failed to get clock %u", __FILE__, i);
       return status;
     }
 
     status = clock_enable(&clock);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to enable clock %u\n", __FILE__, i);
+      zxlogf(ERROR, "%s: Failed to enable clock %u", __FILE__, i);
       return status;
     }
   }
@@ -495,7 +495,7 @@ zx_status_t MtkThermal::SetTripPoint(size_t trip_pt) {
 
   zx_status_t status = port_.queue(&packet);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Faild to queue packet\n", __FILE__);
+    zxlogf(ERROR, "%s: Faild to queue packet", __FILE__);
     return status;
   }
 
@@ -558,7 +558,7 @@ int MtkThermal::Thread() {
     if (status == ZX_ERR_CANCELED) {
       return thrd_success;
     } else if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: IRQ wait failed\n", __FILE__);
+      zxlogf(ERROR, "%s: IRQ wait failed", __FILE__);
       return thrd_error;
     }
 
@@ -576,7 +576,7 @@ int MtkThermal::Thread() {
     if (int_status.stage_3()) {
       trip_pt = thermal_info_.num_trip_points - 1;
       if (SetDvfsOpp(0) != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to set safe operating point\n", __FILE__);
+        zxlogf(ERROR, "%s: Failed to set safe operating point", __FILE__);
         return thrd_error;
       }
     } else if (int_status.hot_0() || int_status.hot_1() || int_status.hot_2()) {

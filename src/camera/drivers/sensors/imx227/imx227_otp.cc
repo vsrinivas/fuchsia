@@ -22,7 +22,7 @@ fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
   zx_status_t status =
       mapper.CreateAndMap(OTP_TOTAL_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to create and map VMO\n", __func__);
+    zxlogf(ERROR, "%s: failed to create and map VMO", __func__);
     return fit::error(status);
   }
 
@@ -35,7 +35,7 @@ fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
     // TODO(nzo): does this check need to be in the loop?
     if (!ValidateSensorID()) {
       status = ZX_ERR_INTERNAL;
-      zxlogf(ERROR, "%s: could not read Sensor ID\n", __func__);
+      zxlogf(ERROR, "%s: could not read Sensor ID", __func__);
       return fit::error(status);
     }
 
@@ -47,14 +47,14 @@ fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
     const auto kReadStatus = Read8(OTP_ACCESS_STATUS);
     if (kReadStatus != 1) {
       status = ZX_ERR_IO;
-      zxlogf(ERROR, "%s: read access could not be verified, access is %x\n", __func__, kReadStatus);
+      zxlogf(ERROR, "%s: read access could not be verified, access is %x", __func__, kReadStatus);
       return fit::error(status);
     }
 
     status = i2c_.WriteReadSync(reinterpret_cast<const uint8_t*>(&kPageStartRegister),
                                 sizeof(kPageStartRegister), dest, OTP_PAGE_SIZE);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: failed to read from I2C channel\n", __func__);
+      zxlogf(ERROR, "%s: failed to read from I2C channel", __func__);
       return fit::error(status);
     }
 
@@ -88,12 +88,12 @@ bool Imx227Device::OtpValidate(const zx::vmo* vmo) {
   checksum &= kChecksumMask;
 
   if (checksum != checksum_target) {
-    zxlogf(ERROR, "%s: checksum validation failed. Expected 0x%x, calculated 0x%x\n", __func__,
+    zxlogf(ERROR, "%s: checksum validation failed. Expected 0x%x, calculated 0x%x", __func__,
            checksum_target, checksum);
     return false;
   }
 
-  zxlogf(INFO, "%s: ID %d, built on %d-%d-%d (mm-dd-yyyy), in factory %x\n", __func__, kId, kMonth,
+  zxlogf(INFO, "%s: ID %d, built on %d-%d-%d (mm-dd-yyyy), in factory %x", __func__, kId, kMonth,
          kDay, kYear, kFactory);
   return true;
 }

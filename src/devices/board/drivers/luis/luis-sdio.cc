@@ -93,7 +93,7 @@ zx_status_t Luis::SdioInit() {
   zx_status_t status = pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments,
                                                 fbl::count_of(sdio_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d", __func__, status);
   }
 
   return status;

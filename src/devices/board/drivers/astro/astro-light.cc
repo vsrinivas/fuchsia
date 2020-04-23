@@ -80,7 +80,7 @@ zx_status_t Astro::LightInit() {
 
   zx_status_t status = DdkAddComposite("tcs3400-light", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s(tcs-3400): DdkAddComposite failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s(tcs-3400): DdkAddComposite failed: %d", __func__, status);
     return status;
   }
 
@@ -143,20 +143,20 @@ zx_status_t Astro::LightInit() {
   // Enable the Amber LED so it will be controlled by PWM.
   status = gpio_impl_.SetAltFunction(GPIO_AMBER_LED, 3);  // Set as PWM.
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Configure mute LED GPIO failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Configure mute LED GPIO failed %d", __func__, status);
   }
 
   // GPIO must be set to default out otherwise could cause light to not work
   // on certain reboots.
   status = gpio_impl_.ConfigOut(GPIO_AMBER_LED, 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d", __func__, status);
   }
 
   status =
       pbus_.CompositeDeviceAdd(&light_dev, light_fragments, countof(light_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 

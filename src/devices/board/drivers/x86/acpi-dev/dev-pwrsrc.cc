@@ -40,7 +40,7 @@ zx_status_t call_PSR(acpi_pwrsrc_device_t* dev) {
     } else {
       dev->info.state &= ~POWER_STATE_ONLINE;
     }
-    zxlogf(TRACE, "acpi-pwrsrc: call_PSR state change 0x%x -> 0x%x\n", state, dev->info.state);
+    zxlogf(TRACE, "acpi-pwrsrc: call_PSR state change 0x%x -> 0x%x", state, dev->info.state);
     if (state != dev->info.state) {
       zx_object_signal(dev->event, 0, ZX_USER_SIGNAL_0);
     }
@@ -51,7 +51,7 @@ zx_status_t call_PSR(acpi_pwrsrc_device_t* dev) {
 
 static void acpi_pwrsrc_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   acpi_pwrsrc_device_t* dev = static_cast<acpi_pwrsrc_device_t*>(ctx);
-  zxlogf(TRACE, "acpi-pwrsrc: notify got event 0x%x\n", value);
+  zxlogf(TRACE, "acpi-pwrsrc: notify got event 0x%x", value);
 
   // TODO(fxbug.dev/37719): there seems to exist an ordering problem in
   // some ACPI EC firmware such that the event notification takes place before
@@ -148,7 +148,7 @@ zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
                                                      acpi_pwrsrc::acpi_pwrsrc_notify, dev);
 
   if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi-pwrsrc: could not install notify handler\n");
+    zxlogf(ERROR, "acpi-pwrsrc: could not install notify handler");
     acpi_pwrsrc_release(dev);
     return acpi_to_zx_status(acpi_status);
   }
@@ -164,12 +164,12 @@ zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
 
   status = device_add(parent, &args, &dev->zxdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi-pwrsrc: could not add device! err=%d\n", status);
+    zxlogf(ERROR, "acpi-pwrsrc: could not add device! err=%d", status);
     acpi_pwrsrc_release(dev);
     return status;
   }
 
-  zxlogf(TRACE, "acpi-pwrsrc: initialized\n");
+  zxlogf(TRACE, "acpi-pwrsrc: initialized");
 
   return ZX_OK;
 }

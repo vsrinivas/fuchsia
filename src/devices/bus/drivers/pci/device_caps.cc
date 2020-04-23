@@ -88,7 +88,7 @@ bool CapabilityCycleExists(const Config& cfg,
       }
       zxlogf(ERROR, "%#x", cap->base());
     }
-    zxlogf(ERROR, " -> %#x\n", offset);
+    zxlogf(ERROR, " -> %#x", offset);
     return true;
   }
 

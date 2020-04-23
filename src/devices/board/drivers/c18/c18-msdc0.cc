@@ -88,7 +88,7 @@ zx_status_t C18::Msdc0Init() {
 
   status = pbus_.CompositeDeviceAdd(&msdc0_dev, fragments, fbl::count_of(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC0 failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC0 failed: %d", __FUNCTION__, status);
   }
 
   return status;

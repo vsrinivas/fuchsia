@@ -116,53 +116,53 @@ zx_status_t DispRdma::Config() {
 
 void DispRdma::Dump() {
   ZX_DEBUG_ASSERT(initialized_);
-  zxlogf(INFO, "Dumping DISP RDMA Registers\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "DISP_RDMA_INT_ENABLE = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_INT_ENABLE));
-  zxlogf(INFO, "DISP_RDMA_INT_STATUS = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_INT_STATUS));
-  zxlogf(INFO, "DISP_RDMA_GLOBAL_CON = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_GLOBAL_CON));
-  zxlogf(INFO, "DISP_RDMA_SIZE_CON0 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_SIZE_CON0));
-  zxlogf(INFO, "DISP_RDMA_SIZE_CON1 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_SIZE_CON1));
-  zxlogf(INFO, "DISP_RDMA_TARGET_LINE = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_TARGET_LINE));
-  zxlogf(INFO, "DISP_RDMA_MEM_CON = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_MEM_CON));
-  zxlogf(INFO, "DISP_RDMA_MEM_SRC_PITCH = 0x%x\n",
+  zxlogf(INFO, "Dumping DISP RDMA Registers");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "DISP_RDMA_INT_ENABLE = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_INT_ENABLE));
+  zxlogf(INFO, "DISP_RDMA_INT_STATUS = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_INT_STATUS));
+  zxlogf(INFO, "DISP_RDMA_GLOBAL_CON = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_GLOBAL_CON));
+  zxlogf(INFO, "DISP_RDMA_SIZE_CON0 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_SIZE_CON0));
+  zxlogf(INFO, "DISP_RDMA_SIZE_CON1 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_SIZE_CON1));
+  zxlogf(INFO, "DISP_RDMA_TARGET_LINE = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_TARGET_LINE));
+  zxlogf(INFO, "DISP_RDMA_MEM_CON = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_MEM_CON));
+  zxlogf(INFO, "DISP_RDMA_MEM_SRC_PITCH = 0x%x",
          disp_rdma_mmio_->Read32(DISP_RDMA_MEM_SRC_PITCH));
-  zxlogf(INFO, "DISP_RDMA_MEM_GMC_SETTING_0 = 0x%x\n",
+  zxlogf(INFO, "DISP_RDMA_MEM_GMC_SETTING_0 = 0x%x",
          disp_rdma_mmio_->Read32(DISP_RDMA_MEM_GMC_SETTING_0));
-  zxlogf(INFO, "DISP_RDMA_MEM_SLOW_CON = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_MEM_SLOW_CON));
-  zxlogf(INFO, "DISP_RDMA_MEM_GMC_SETTING_1 = 0x%x\n",
+  zxlogf(INFO, "DISP_RDMA_MEM_SLOW_CON = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_MEM_SLOW_CON));
+  zxlogf(INFO, "DISP_RDMA_MEM_GMC_SETTING_1 = 0x%x",
          disp_rdma_mmio_->Read32(DISP_RDMA_MEM_GMC_SETTING_1));
-  zxlogf(INFO, "DISP_RDMA_FIFO_CON = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_FIFO_CON));
-  zxlogf(INFO, "DISP_RDMA_FIFO_LOG = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_FIFO_LOG));
-  zxlogf(INFO, "DISP_RDMA_C00 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_C00));
-  zxlogf(INFO, "DISP_RDMA_C01 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_C01));
-  zxlogf(INFO, "DISP_RDMA_C02 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_C02));
-  zxlogf(INFO, "DISP_RDMA_C10 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_C10));
-  zxlogf(INFO, "DISP_RDMA_C11 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_C11));
-  zxlogf(INFO, "DISP_RDMA_C12 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_C12));
-  zxlogf(INFO, "DISP_RDMA_C20 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_C20));
-  zxlogf(INFO, "DISP_RDMA_C21 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_C21));
-  zxlogf(INFO, "DISP_RDMA_C22 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_C22));
-  zxlogf(INFO, "DISP_RDMA_PRE_ADD_0 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_PRE_ADD_0));
-  zxlogf(INFO, "DISP_RDMA_PRE_ADD_1 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_PRE_ADD_1));
-  zxlogf(INFO, "DISP_RDMA_PRE_ADD_2 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_PRE_ADD_2));
-  zxlogf(INFO, "DISP_RDMA_POST_ADD_0 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_POST_ADD_0));
-  zxlogf(INFO, "DISP_RDMA_POST_ADD_1 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_POST_ADD_1));
-  zxlogf(INFO, "DISP_RDMA_POST_ADD_2 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_POST_ADD_2));
-  zxlogf(INFO, "DISP_RDMA_DUMMY = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_DUMMY));
-  zxlogf(INFO, "DISP_RDMA_DEBUG_OUT_SEL = 0x%x\n",
+  zxlogf(INFO, "DISP_RDMA_FIFO_CON = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_FIFO_CON));
+  zxlogf(INFO, "DISP_RDMA_FIFO_LOG = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_FIFO_LOG));
+  zxlogf(INFO, "DISP_RDMA_C00 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_C00));
+  zxlogf(INFO, "DISP_RDMA_C01 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_C01));
+  zxlogf(INFO, "DISP_RDMA_C02 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_C02));
+  zxlogf(INFO, "DISP_RDMA_C10 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_C10));
+  zxlogf(INFO, "DISP_RDMA_C11 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_C11));
+  zxlogf(INFO, "DISP_RDMA_C12 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_C12));
+  zxlogf(INFO, "DISP_RDMA_C20 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_C20));
+  zxlogf(INFO, "DISP_RDMA_C21 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_C21));
+  zxlogf(INFO, "DISP_RDMA_C22 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_C22));
+  zxlogf(INFO, "DISP_RDMA_PRE_ADD_0 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_PRE_ADD_0));
+  zxlogf(INFO, "DISP_RDMA_PRE_ADD_1 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_PRE_ADD_1));
+  zxlogf(INFO, "DISP_RDMA_PRE_ADD_2 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_PRE_ADD_2));
+  zxlogf(INFO, "DISP_RDMA_POST_ADD_0 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_POST_ADD_0));
+  zxlogf(INFO, "DISP_RDMA_POST_ADD_1 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_POST_ADD_1));
+  zxlogf(INFO, "DISP_RDMA_POST_ADD_2 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_POST_ADD_2));
+  zxlogf(INFO, "DISP_RDMA_DUMMY = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_DUMMY));
+  zxlogf(INFO, "DISP_RDMA_DEBUG_OUT_SEL = 0x%x",
          disp_rdma_mmio_->Read32(DISP_RDMA_DEBUG_OUT_SEL));
-  zxlogf(INFO, "DISP_RDMA_BG_CON_0 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_BG_CON_0));
-  zxlogf(INFO, "DISP_RDMA_BG_CON_1 = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_BG_CON_1));
-  zxlogf(INFO, "DISP_RDMA_THRESHOLD_FOR_SODI = 0x%x\n",
+  zxlogf(INFO, "DISP_RDMA_BG_CON_0 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_BG_CON_0));
+  zxlogf(INFO, "DISP_RDMA_BG_CON_1 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_BG_CON_1));
+  zxlogf(INFO, "DISP_RDMA_THRESHOLD_FOR_SODI = 0x%x",
          disp_rdma_mmio_->Read32(DISP_RDMA_THRESHOLD_FOR_SODI));
-  zxlogf(INFO, "DISP_RDMA_IN_P_CNT = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_IN_P_CNT));
-  zxlogf(INFO, "DISP_RDMA_IN_LINE_CNT = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_IN_LINE_CNT));
-  zxlogf(INFO, "DISP_RDMA_OUT_P_CNT = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_OUT_P_CNT));
-  zxlogf(INFO, "DISP_RDMA_OUT_LINE_CNT = 0x%x\n", disp_rdma_mmio_->Read32(DISP_RDMA_OUT_LINE_CNT));
-  zxlogf(INFO, "DISP_RDMA_MEM_START_ADDR = 0x%x\n",
+  zxlogf(INFO, "DISP_RDMA_IN_P_CNT = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_IN_P_CNT));
+  zxlogf(INFO, "DISP_RDMA_IN_LINE_CNT = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_IN_LINE_CNT));
+  zxlogf(INFO, "DISP_RDMA_OUT_P_CNT = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_OUT_P_CNT));
+  zxlogf(INFO, "DISP_RDMA_OUT_LINE_CNT = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_OUT_LINE_CNT));
+  zxlogf(INFO, "DISP_RDMA_MEM_START_ADDR = 0x%x",
          disp_rdma_mmio_->Read32(DISP_RDMA_MEM_START_ADDR));
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "######################\n");
 }
 
 }  // namespace mt8167s_display

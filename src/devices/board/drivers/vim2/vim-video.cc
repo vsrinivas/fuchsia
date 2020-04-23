@@ -114,7 +114,7 @@ zx_status_t Vim::VideoInit() {
 
   if ((status = pbus_.CompositeDeviceAdd(&video_dev, fragments, countof(fragments), UINT32_MAX)) !=
       ZX_OK) {
-    zxlogf(ERROR, "VideoInit: CompositeDeviceAdd() failed for video: %d\n", status);
+    zxlogf(ERROR, "VideoInit: CompositeDeviceAdd() failed for video: %d", status);
     return status;
   }
 

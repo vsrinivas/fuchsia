@@ -45,7 +45,7 @@ zx_status_t SerialPpp::Create(void* /*ctx*/, zx_device_t* parent) {
 
   auto status = dev->Init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Init failed\n", __func__);
+    zxlogf(ERROR, "%s: Init failed", __func__);
     return status;
   }
 

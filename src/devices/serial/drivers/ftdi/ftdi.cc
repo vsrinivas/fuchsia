@@ -45,7 +45,7 @@
 namespace {
 
 static zx_status_t FtdiBindFail(zx_status_t status) {
-  zxlogf(ERROR, "ftdi_bind failed: %d\n", status);
+  zxlogf(ERROR, "ftdi_bind failed: %d", status);
   return status;
 }
 
@@ -78,7 +78,7 @@ void FtdiDevice::CheckStateLocked() {
 void FtdiDevice::ReadComplete(usb_request_t* request) {
   usb::Request<> req(request, parent_req_size_);
   if (req.request()->response.status == ZX_ERR_IO_NOT_PRESENT) {
-    zxlogf(INFO, "FTDI: remote closed\n");
+    zxlogf(INFO, "FTDI: remote closed");
     return;
   }
 
@@ -285,7 +285,7 @@ zx_status_t FtdiDevice::SetBitMode(uint8_t line_mask, uint8_t mode) {
       usb_client_.ControlOut(USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, kFtdiSioSetBitmode,
                              val, 0, ZX_TIME_INFINITE, NULL, 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTDI set bitmode failed with %d\n", status);
+    zxlogf(ERROR, "FTDI set bitmode failed with %d", status);
     return status;
   }
 
@@ -348,12 +348,12 @@ void FtdiDevice::CreateI2C(::llcpp::fuchsia::hardware::ftdi::I2cBusLayout layout
   // Set the chip to run in MPSSE mode.
   zx_status_t status = this->SetBitMode(0, 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTDI: setting bitmode 0 failed\n");
+    zxlogf(ERROR, "FTDI: setting bitmode 0 failed");
     return;
   }
   status = this->SetBitMode(0, 2);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTDI: setting bitmode 2 failed\n");
+    zxlogf(ERROR, "FTDI: setting bitmode 2 failed");
     return;
   }
 
@@ -367,7 +367,7 @@ zx_status_t FtdiDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t ftdi_bind_fail(zx_status_t status) {
-  zxlogf(ERROR, "ftdi_bind failed: %d\n", status);
+  zxlogf(ERROR, "ftdi_bind failed: %d", status);
   return status;
 }
 
@@ -405,7 +405,7 @@ zx_status_t FtdiDevice::Bind() {
   }
 
   if (!bulk_in_addr || !bulk_out_addr) {
-    zxlogf(ERROR, "FTDI: could not find all endpoints\n");
+    zxlogf(ERROR, "FTDI: could not find all endpoints");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -416,7 +416,7 @@ zx_status_t FtdiDevice::Bind() {
     std::optional<usb::Request<>> req;
     status = usb::Request<>::Alloc(&req, USB_BUF_SIZE, bulk_in_addr, parent_req_size_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "FTDI allocating reads failed %d\n", status);
+      zxlogf(ERROR, "FTDI allocating reads failed %d", status);
       return FtdiBindFail(status);
     }
     free_read_queue_.push(*std::move(req));
@@ -425,7 +425,7 @@ zx_status_t FtdiDevice::Bind() {
     std::optional<usb::Request<>> req;
     status = usb::Request<>::Alloc(&req, USB_BUF_SIZE, bulk_out_addr, parent_req_size_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "FTDI allocating writes failed %d\n", status);
+      zxlogf(ERROR, "FTDI allocating writes failed %d", status);
       return FtdiBindFail(status);
     }
     free_write_queue_.push(*std::move(req));
@@ -433,13 +433,13 @@ zx_status_t FtdiDevice::Bind() {
 
   status = Reset();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTDI reset failed %d\n", status);
+    zxlogf(ERROR, "FTDI reset failed %d", status);
     return FtdiBindFail(status);
   }
 
   status = SetBaudrate(115200);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTDI: set baudrate failed\n");
+    zxlogf(ERROR, "FTDI: set baudrate failed");
     return FtdiBindFail(status);
   }
 
@@ -447,7 +447,7 @@ zx_status_t FtdiDevice::Bind() {
 
   status = DdkAdd("ftdi-uart");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ftdi_uart: device_add failed\n");
+    zxlogf(ERROR, "ftdi_uart: device_add failed");
     return FtdiBindFail(status);
   }
 
@@ -468,7 +468,7 @@ zx_status_t FtdiDevice::Bind() {
   bulk_in_addr_ = bulk_in_addr;
   bulk_out_addr_ = bulk_out_addr;
 
-  zxlogf(INFO, "ftdi bind successful\n");
+  zxlogf(INFO, "ftdi bind successful");
   return status;
 }
 

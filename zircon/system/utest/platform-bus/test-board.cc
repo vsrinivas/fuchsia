@@ -34,42 +34,42 @@ int TestBoard::Thread() {
 
   status = GpioInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GpioInit failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: GpioInit failed: %d", __func__, status);
   }
 
   status = I2cInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: I2cInit failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: I2cInit failed: %d", __func__, status);
   }
 
   status = SpiInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SpiInit failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: SpiInit failed: %d", __func__, status);
   }
 
   status = ClockInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ClockInit failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ClockInit failed: %d", __func__, status);
   }
 
   status = PowerInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: PowerInit failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: PowerInit failed: %d", __func__, status);
   }
 
   status = TestInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: TestInit failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: TestInit failed: %d", __func__, status);
   }
 
   status = AudioCodecInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CodecInit failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CodecInit failed: %d", __func__, status);
   }
 
   status = PwmInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: PwmInit failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: PwmInit failed: %d", __func__, status);
   }
 
   return 0;
@@ -95,7 +95,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
 
   zx_status_t status = board->DdkAdd("test-board", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "TestBoard::Create: DdkAdd failed: %d\n", status);
+    zxlogf(ERROR, "TestBoard::Create: DdkAdd failed: %d", status);
     return status;
   }
 
@@ -223,7 +223,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
 
   status = pbus_composite_device_add(&pbus, &pdev, composite, fbl::count_of(composite), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d\n", status);
+    zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
   }
 
   device_fragment_t composite2[] = {
@@ -246,7 +246,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       pbus_composite_device_add(&pbus, &pdev2, composite2, fbl::count_of(composite2), UINT32_MAX);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d\n", status);
+    zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
   }
 
   return status;

@@ -105,7 +105,7 @@ void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync co
     }
   }
   if (!found) {
-    zxlogf(ERROR, "Could not find child: id %lu\n", id);
+    zxlogf(ERROR, "Could not find child: id %lu", id);
     completer.ReplyError(ZX_ERR_NOT_FOUND);
     return;
   }
@@ -124,7 +124,7 @@ void TestLifecycleDriver::AsyncRemoveChild(uint64_t id, AsyncRemoveChildComplete
     }
   }
   if (!found) {
-    zxlogf(ERROR, "Could not find child: id %lu\n", id);
+    zxlogf(ERROR, "Could not find child: id %lu", id);
     completer.ReplyError(ZX_ERR_NOT_FOUND);
     return;
   }
@@ -140,7 +140,7 @@ void TestLifecycleDriver::CompleteUnbind(uint64_t child_id,
       return;
     }
   }
-  zxlogf(ERROR, "Could not find child: id %lu\n", child_id);
+  zxlogf(ERROR, "Could not find child: id %lu", child_id);
   completer.ReplyError(ZX_ERR_NOT_FOUND);
   return;
 }
@@ -155,7 +155,7 @@ void TestLifecycleDriver::CompleteChildInit(uint64_t id,
     }
   }
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to complete child init: id %lu\n", id);
+    zxlogf(ERROR, "Failed to complete child init: id %lu", id);
     completer.ReplyError(status);
     return;
   }

@@ -68,7 +68,7 @@ zx_status_t InitBuffers(const zx::bti& bti, std::unique_ptr<io_buffer_t[]>* out)
   fbl::AllocChecker ac;
   std::unique_ptr<io_buffer_t[]> bufs(new (&ac) io_buffer_t[kNumIoBufs]);
   if (!ac.check()) {
-    zxlogf(ERROR, "out of memory!\n");
+    zxlogf(ERROR, "out of memory!");
     return ZX_ERR_NO_MEMORY;
   }
   memset(bufs.get(), 0, sizeof(io_buffer_t) * kNumIoBufs);
@@ -76,7 +76,7 @@ zx_status_t InitBuffers(const zx::bti& bti, std::unique_ptr<io_buffer_t[]>* out)
   for (uint16_t id = 0; id < kNumIoBufs; ++id) {
     if ((rc = io_buffer_init(&bufs[id], bti.get(), buf_size, IO_BUFFER_RW | IO_BUFFER_CONTIG)) !=
         ZX_OK) {
-      zxlogf(ERROR, "failed to allocate I/O buffers: %s\n", zx_status_get_string(rc));
+      zxlogf(ERROR, "failed to allocate I/O buffers: %s", zx_status_get_string(rc));
       return rc;
     }
   }
@@ -183,7 +183,7 @@ zx_status_t EthernetDevice::Init() {
   // TODO(aarongreen): Check additional features bits and ack/nak them
   rc = DeviceStatusFeaturesOk();
   if (rc != ZX_OK) {
-    zxlogf(ERROR, "%s: Feature negotiation failed (%d)\n", tag(), rc);
+    zxlogf(ERROR, "%s: Feature negotiation failed (%d)", tag(), rc);
     return rc;
   }
 
@@ -194,7 +194,7 @@ zx_status_t EthernetDevice::Init() {
   uint16_t num_descs = static_cast<uint16_t>(kBacklog & 0xffff);
   if ((rc = InitBuffers(bti_, &bufs_)) != ZX_OK || (rc = rx_.Init(kRxId, num_descs)) != ZX_OK ||
       (rc = tx_.Init(kTxId, num_descs)) != ZX_OK) {
-    zxlogf(ERROR, "failed to allocate virtqueue: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "failed to allocate virtqueue: %s", zx_status_get_string(rc));
     return rc;
   }
 
@@ -228,7 +228,7 @@ zx_status_t EthernetDevice::Init() {
   // Initialize the zx_device and publish us
   auto status = DdkAdd("virtio-net");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to add device: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "failed to add device: %s", zx_status_get_string(rc));
     return status;
   }
   device_ = zxdev();
@@ -375,7 +375,7 @@ void EthernetDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* ne
   size_t length = op.operation()->data_size;
   // First, validate the packet
   if (!data || length > kEthFrameSize) {
-    zxlogf(ERROR, "dropping packet; invalid packet\n");
+    zxlogf(ERROR, "dropping packet; invalid packet");
     op.Complete(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -402,7 +402,7 @@ void EthernetDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* ne
   if (!desc) {
     tx_failed_descriptor_alloc_++;
     if (tx_failed_descriptor_alloc_ == 1 || (tx_failed_descriptor_alloc_ % kFailureWarnRate) == 0) {
-      zxlogf(WARN, "transmit dropping packet; out of descriptors, %lu pending (%lu times)\n",
+      zxlogf(WARN, "transmit dropping packet; out of descriptors, %lu pending (%lu times)",
              unkicked_, tx_failed_descriptor_alloc_);
     }
     tx_.Kick();

@@ -104,7 +104,7 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
   // Get the platform device protocol and try to map all the MMIO regions.
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "aml-clk: failed to get pdev protocol\n");
+    zxlogf(ERROR, "aml-clk: failed to get pdev protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -116,13 +116,13 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
   // Figure out which of the varieties we're dealing with.
   status = pdev.MapMmio(kHiuMmio, &hiu_mmio);
   if (status != ZX_OK || !hiu_mmio) {
-    zxlogf(ERROR, "aml-clk: failed to map HIU regs, status = %d\n", status);
+    zxlogf(ERROR, "aml-clk: failed to map HIU regs, status = %d", status);
     return status;
   }
 
   status = pdev.MapMmio(kDosbusMmio, &dosbus_mmio);
   if (status != ZX_OK || !dosbus_mmio) {
-    zxlogf(ERROR, "aml-clk: failed to map DOS regs, status = %d\n", status);
+    zxlogf(ERROR, "aml-clk: failed to map DOS regs, status = %d", status);
     return status;
   }
 
@@ -131,21 +131,21 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
   pdev_device_info_t info;
   status = pdev.GetDeviceInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-clk: failed to get pdev device info, status = %d\n", status);
+    zxlogf(ERROR, "aml-clk: failed to get pdev device info, status = %d", status);
     return status;
   }
 
   if (info.mmio_count > kMsrMmio) {
     status = pdev.MapMmio(kMsrMmio, &msr_mmio);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-clk: failed to map MSR regs, status = %d\n", status);
+      zxlogf(ERROR, "aml-clk: failed to map MSR regs, status = %d", status);
       return status;
     }
   }
 
   ddk::PBusProtocolClient pbus(parent);
   if (!pbus.is_valid()) {
-    zxlogf(ERROR, "aml-clk: failed to get platform bus protocol\n");
+    zxlogf(ERROR, "aml-clk: failed to get platform bus protocol");
     return ZX_ERR_INTERNAL;
   }
 
@@ -154,7 +154,7 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
 
   status = clock_device->DdkAdd("clocks");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-clk: Could not create clock device: %d\n", status);
+    zxlogf(ERROR, "aml-clk: Could not create clock device: %d", status);
     return status;
   }
 
@@ -316,17 +316,17 @@ zx_status_t AmlClock::IsSupportedMux(const uint32_t id, const uint16_t kSupporte
   const uint16_t type = static_cast<uint16_t>(aml_clk_common::AmlClkType(id));
 
   if ((type & kSupportedMask) == 0) {
-    zxlogf(ERROR, "%s: Unsupported mux type for operation, clkid = %u\n", __func__, id);
+    zxlogf(ERROR, "%s: Unsupported mux type for operation, clkid = %u", __func__, id);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (!muxes_ || mux_count_ == 0) {
-    zxlogf(ERROR, "%s: Platform does not have mux support.\n", __func__);
+    zxlogf(ERROR, "%s: Platform does not have mux support.", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (index >= mux_count_) {
-    zxlogf(ERROR, "%s: Mux index out of bounds, count = %lu, idx = %u\n", __func__, mux_count_,
+    zxlogf(ERROR, "%s: Mux index out of bounds, count = %lu, idx = %u", __func__, mux_count_,
            index);
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -348,7 +348,7 @@ zx_status_t AmlClock::ClockImplSetInput(uint32_t id, uint32_t idx) {
   const meson_clk_mux_t& mux = muxes_[index];
 
   if (idx >= mux.n_inputs) {
-    zxlogf(ERROR, "%s: mux input index out of bounds, max = %u, idx = %u.\n", __func__,
+    zxlogf(ERROR, "%s: mux input index out of bounds, max = %u, idx = %u.", __func__,
            mux.n_inputs, idx);
     return ZX_ERR_OUT_OF_RANGE;
   }

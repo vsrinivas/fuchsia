@@ -43,7 +43,7 @@ zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start, size_t shar
   const zx_paddr_t shared_mem_end =
       fbl::round_down(shared_mem_start + shared_mem_size, static_cast<uint32_t>(PAGE_SIZE));
   if (shared_mem_end <= shared_mem_start) {
-    zxlogf(ERROR, "optee: no shared memory available from secure world\n");
+    zxlogf(ERROR, "optee: no shared memory available from secure world");
     return ZX_ERR_NO_RESOURCES;
   }
   shared_mem_size = shared_mem_end - shared_mem_start;
@@ -51,7 +51,7 @@ zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start, size_t shar
   std::optional<ddk::MmioPinnedBuffer> pinned;
   zx_status_t status = secure_world_memory.Pin(bti, &pinned);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: unable to pin secure world memory\n");
+    zxlogf(ERROR, "optee: unable to pin secure world memory");
     return status;
   }
 
@@ -64,12 +64,12 @@ zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start, size_t shar
 
   if ((shared_mem_start < secure_world_paddr) ||
       (shared_mem_end > secure_world_paddr + secure_world_size)) {
-    zxlogf(ERROR, "optee: shared memory not within secure os memory\n");
+    zxlogf(ERROR, "optee: shared memory not within secure os memory");
     return ZX_ERR_INTERNAL;
   }
 
   if (shared_mem_size < 2 * kDriverPoolSize) {
-    zxlogf(ERROR, "optee: shared memory is not large enough\n");
+    zxlogf(ERROR, "optee: shared memory is not large enough");
     return ZX_ERR_NO_RESOURCES;
   }
 

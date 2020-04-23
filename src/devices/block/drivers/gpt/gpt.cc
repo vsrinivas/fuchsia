@@ -191,7 +191,7 @@ zx_status_t PartitionDevice::Add(uint32_t partition_number, uint32_t flags) {
 
   zx_status_t status = DdkAdd(name);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "gpt: DdkAdd failed (%d)\n", status);
+    zxlogf(ERROR, "gpt: DdkAdd failed (%d)", status);
   }
   return status;
 }
@@ -214,7 +214,7 @@ zx_status_t ReadBlocks(block_impl_protocol_t* block_protocol, size_t block_op_si
   block_op_t* bop = reinterpret_cast<block_op_t*>(bop_buffer.get());
   zx::vmo vmo;
   if ((status = zx::vmo::create(block_count * block_info.block_size, 0, &vmo)) != ZX_OK) {
-    zxlogf(ERROR, "gpt: VMO create failed(%d)\n", status);
+    zxlogf(ERROR, "gpt: VMO create failed(%d)", status);
     return status;
   }
 
@@ -227,7 +227,7 @@ zx_status_t ReadBlocks(block_impl_protocol_t* block_protocol, size_t block_op_si
   block_protocol->ops->queue(block_protocol->ctx, bop, gpt_read_sync_complete, &completion);
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
   if (bop->command != ZX_OK) {
-    zxlogf(ERROR, "gpt: error %d reading GPT\n", bop->command);
+    zxlogf(ERROR, "gpt: error %d reading GPT", bop->command);
     return bop->command;
   }
 
@@ -248,7 +248,7 @@ zx_status_t PartitionTable::Create(zx_device_t* parent, TableRef* out,
   fbl::AllocChecker ac;
   TableRef tab = fbl::AdoptRef(new (&ac) PartitionTable(parent));
   if (!ac.check()) {
-    zxlogf(ERROR, "gpt: out of memory\n");
+    zxlogf(ERROR, "gpt: out of memory");
     return ZX_ERR_NO_MEMORY;
   }
   tab->devices_ = devices;
@@ -264,16 +264,16 @@ zx_status_t PartitionTable::Bind() {
   // TODO(http://fxb/33999): We should not continue loading the driver here. Upper layer
   //                may rely on guid to take action on a partition.
   if (status != ZX_OK) {
-    zxlogf(INFO, "gpt: device_get_metadata failed (%d)\n", status);
+    zxlogf(INFO, "gpt: device_get_metadata failed (%d)", status);
   } else if (actual % sizeof(guid_map_[0]) != 0) {
-    zxlogf(INFO, "gpt: GUID map size is invalid (%lu)\n", actual);
+    zxlogf(INFO, "gpt: GUID map size is invalid (%lu)", actual);
   } else {
     guid_map_entries_ = actual / sizeof(guid_map_[0]);
   }
 
   block_impl_protocol_t block_protocol;
   if (device_get_protocol(parent_, ZX_PROTOCOL_BLOCK, &block_protocol) != ZX_OK) {
-    zxlogf(ERROR, "gpt: ERROR: block device '%s': does not support block protocol\n",
+    zxlogf(ERROR, "gpt: ERROR: block device '%s': does not support block protocol",
            device_get_name(parent_));
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -284,23 +284,23 @@ zx_status_t PartitionTable::Bind() {
 
   auto result = MinimumBlocksPerCopy(block_info.block_size);
   if (result.is_error()) {
-    zxlogf(ERROR, "gpt: block_size(%u) minimum blocks failed: %d\n", block_info.block_size,
+    zxlogf(ERROR, "gpt: block_size(%u) minimum blocks failed: %d", block_info.block_size,
            result.error());
     return result.error();
   } else if (result.value() > UINT32_MAX) {
-    zxlogf(ERROR, "gpt: number of blocks(%lu) required for gpt is too large!\n", result.value());
+    zxlogf(ERROR, "gpt: number of blocks(%lu) required for gpt is too large!", result.value());
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   auto minimum_device_blocks = MinimumBlockDeviceSize(block_info.block_size);
   if (minimum_device_blocks.is_error()) {
-    zxlogf(ERROR, "gpt: failed to get minimum device blocks for block_size(%u)\n",
+    zxlogf(ERROR, "gpt: failed to get minimum device blocks for block_size(%u)",
            block_info.block_size);
     return minimum_device_blocks.error();
   }
 
   if (block_info.block_count <= minimum_device_blocks.value()) {
-    zxlogf(ERROR, "gpt: block device too small to hold GPT required:%lu found:%lu\n",
+    zxlogf(ERROR, "gpt: block device too small to hold GPT required:%lu found:%lu",
            minimum_device_blocks.value(), block_info.block_count);
     return minimum_device_blocks.error();
   }
@@ -313,7 +313,7 @@ zx_status_t PartitionTable::Bind() {
   // sanity check the default txn size with the block size
   if ((kMaxPartitionTableSize % block_info.block_size) ||
       (kMaxPartitionTableSize < block_info.block_size)) {
-    zxlogf(ERROR, "gpt: default txn size=%lu is not aligned to blksize=%u!\n",
+    zxlogf(ERROR, "gpt: default txn size=%lu is not aligned to blksize=%u!",
            kMaxPartitionTableSize, block_info.block_size);
     return ZX_ERR_BAD_STATE;
   }
@@ -325,11 +325,11 @@ zx_status_t PartitionTable::Bind() {
 
   if ((status = GptDevice::Load(buffer.get(), gpt_buffer_size, block_info.block_size,
                                 block_info.block_count, &gpt)) != ZX_OK) {
-    zxlogf(ERROR, "gpt: failed to load gpt- %s\n", HeaderStatusToCString(status));
+    zxlogf(ERROR, "gpt: failed to load gpt- %s", HeaderStatusToCString(status));
     return status;
   }
 
-  zxlogf(SPEW, "gpt: found gpt header\n");
+  zxlogf(SPEW, "gpt: found gpt header");
 
   bool has_partition = false;
   unsigned int partitions;
@@ -347,7 +347,7 @@ zx_status_t PartitionTable::Bind() {
     fbl::AllocChecker ac;
     std::unique_ptr<PartitionDevice> device(new (&ac) PartitionDevice(parent_, &block_protocol));
     if (!ac.check()) {
-      zxlogf(ERROR, "gpt: out of memory\n");
+      zxlogf(ERROR, "gpt: out of memory");
       return ZX_ERR_NO_MEMORY;
     }
 
@@ -381,7 +381,7 @@ zx_status_t PartitionTable::Bind() {
     auto dummy = std::make_unique<DummyDevice>(parent_);
     status = dummy->DdkAdd("dummy", DEVICE_ADD_NON_BINDABLE);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "gpt: failed to add dummy %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "gpt: failed to add dummy %s", zx_status_get_string(status));
       return status;
     }
     // Dummy is managed by ddk.

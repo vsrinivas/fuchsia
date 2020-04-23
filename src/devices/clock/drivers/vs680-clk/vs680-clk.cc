@@ -17,7 +17,7 @@ namespace clk {
 zx_status_t Vs680Clk::Create(void* ctx, zx_device_t* parent) {
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: failed to get pdev\n", __FILE__);
+    zxlogf(ERROR, "%s: failed to get pdev", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -25,15 +25,15 @@ zx_status_t Vs680Clk::Create(void* ctx, zx_device_t* parent) {
 
   zx_status_t status = pdev.MapMmio(vs680::kAvioMmio, &avio_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to map AVIO MMIO: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: failed to map AVIO MMIO: %d", __FILE__, status);
     return status;
   }
   if ((status = pdev.MapMmio(vs680::kCpuPllMmio, &cpu_pll_mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to map CPUPLL MMIO: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: failed to map CPUPLL MMIO: %d", __FILE__, status);
     return status;
   }
   if ((status = pdev.MapMmio(vs680::kChipCtrlMmio, &chip_ctrl_mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to map chip ctrl MMIO: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: failed to map chip ctrl MMIO: %d", __FILE__, status);
     return status;
   }
 
@@ -41,7 +41,7 @@ zx_status_t Vs680Clk::Create(void* ctx, zx_device_t* parent) {
                                                 *std::move(cpu_pll_mmio), *std::move(avio_mmio)));
 
   if ((status = device->DdkAdd("vs680-clk")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed %d", __FILE__, status);
     return status;
   }
 

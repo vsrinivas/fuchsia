@@ -37,13 +37,13 @@ zx_status_t InputReport::GetReport(hid_input_report::Device* device,
   zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, device->InputReportId(),
                                          report_data.data(), report_data.size(), &report_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hid-input-report: Failed to GET report (%s)\n", zx_status_get_string(status));
+    zxlogf(ERROR, "hid-input-report: Failed to GET report (%s)", zx_status_get_string(status));
     return status;
   }
 
   if (device->ParseInputReport(report_data.data(), report_size, out_input_report) !=
       hid_input_report::ParseResult::kOk) {
-    zxlogf(ERROR, "ReceiveReport: Device failed to parse GET report correctly\n");
+    zxlogf(ERROR, "ReceiveReport: Device failed to parse GET report correctly");
     return ZX_ERR_INTERNAL;
   }
   out_input_report->time = zx_clock_get_monotonic();
@@ -95,7 +95,7 @@ void InputReport::HidReportListenerReceiveReport(const uint8_t* report, size_t r
 
     if (device->ParseInputReport(report, report_size, &input_report) !=
         hid_input_report::ParseResult::kOk) {
-      zxlogf(ERROR, "ReceiveReport: Device failed to parse report correctly\n");
+      zxlogf(ERROR, "ReceiveReport: Device failed to parse report correctly");
       continue;
     }
 
@@ -168,13 +168,13 @@ zx_status_t InputReport::Bind() {
   hid::DeviceDescriptor* dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(report_desc, report_desc_size, &dev_desc);
   if (parse_res != hid::ParseResult::kParseOk) {
-    zxlogf(ERROR, "hid-parser: parsing report descriptor failed with error %d\n", int(parse_res));
+    zxlogf(ERROR, "hid-parser: parsing report descriptor failed with error %d", int(parse_res));
     return false;
   }
 
   auto count = dev_desc->rep_count;
   if (count == 0) {
-    zxlogf(ERROR, "No report descriptors found \n");
+    zxlogf(ERROR, "No report descriptors found ");
     return false;
   }
 
@@ -190,7 +190,7 @@ zx_status_t InputReport::Bind() {
 
   // If we never parsed a single device correctly then fail.
   if (devices_.size() == 0) {
-    zxlogf(ERROR, "Can't process HID report descriptor for, all parsing attempts failed.\n");
+    zxlogf(ERROR, "Can't process HID report descriptor for, all parsing attempts failed.");
     return ZX_ERR_INTERNAL;
   }
 

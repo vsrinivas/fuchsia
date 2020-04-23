@@ -96,24 +96,24 @@ zx_status_t AmlGpu::Gp0Init() {
   // HIU Init.
   zx_status_t status = s905d2_hiu_init(hiu_dev_.get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml_gp0_init: hiu_init failed: %d\n", status);
+    zxlogf(ERROR, "aml_gp0_init: hiu_init failed: %d", status);
     return status;
   }
 
   status = s905d2_pll_init(hiu_dev_.get(), gp0_pll_dev_.get(), GP0_PLL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml_gp0_init: pll_init failed: %d\n", status);
+    zxlogf(ERROR, "aml_gp0_init: pll_init failed: %d", status);
     return status;
   }
 
   status = s905d2_pll_set_rate(gp0_pll_dev_.get(), 846000000);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml_gp0_init: pll_set_rate failed: %d\n", status);
+    zxlogf(ERROR, "aml_gp0_init: pll_set_rate failed: %d", status);
     return status;
   }
   status = s905d2_pll_ena(gp0_pll_dev_.get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml_gp0_init: pll_ena failed: %d\n", status);
+    zxlogf(ERROR, "aml_gp0_init: pll_ena failed: %d", status);
     return status;
   }
   return ZX_OK;

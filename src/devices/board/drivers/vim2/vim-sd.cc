@@ -73,7 +73,7 @@ zx_status_t Vim::SdInit() {
   gpio_impl_.SetAltFunction(S912_SDCARD_CMD, S912_SDCARD_CMD_FN);
 
   if ((status = pbus_.DeviceAdd(&sd_dev)) != ZX_OK) {
-    zxlogf(ERROR, "SdInit could not add sd_dev: %d\n", status);
+    zxlogf(ERROR, "SdInit could not add sd_dev: %d", status);
     return status;
   }
 

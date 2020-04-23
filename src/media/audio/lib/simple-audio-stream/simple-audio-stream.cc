@@ -47,7 +47,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
     ScopedToken t(domain_token());
     res = Init();
     if (res != ZX_OK) {
-      zxlogf(ERROR, "Init failure in %s (res %d)\n", __PRETTY_FUNCTION__, res);
+      zxlogf(ERROR, "Init failure in %s (res %d)", __PRETTY_FUNCTION__, res);
       return res;
     }
     // If no subclass has set this, we need to do so here.
@@ -61,7 +61,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
 
   res = PublishInternal();
   if (res != ZX_OK) {
-    zxlogf(ERROR, "Publish failure in %s (res %d)\n", __PRETTY_FUNCTION__, res);
+    zxlogf(ERROR, "Publish failure in %s (res %d)", __PRETTY_FUNCTION__, res);
     return res;
   }
 
@@ -71,7 +71,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
 zx_status_t SimpleAudioStream::PublishInternal() {
   device_name_[sizeof(device_name_) - 1] = 0;
   if (!strlen(device_name_)) {
-    zxlogf(ERROR, "Zero-length device name in %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Zero-length device name in %s", __PRETTY_FUNCTION__);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -179,7 +179,7 @@ void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
   zx::channel stream_channel_remote;
   auto status = zx::channel::create(0, &stream_channel_local, &stream_channel_remote);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not create channel in %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Could not create channel in %s", __PRETTY_FUNCTION__);
     completer.Close(ZX_ERR_NO_MEMORY);
     return;
   }
@@ -197,7 +197,7 @@ void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
   });
   status = stream_channel->BeginWait(loop_.dispatcher());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not begin wait in %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Could not begin wait in %s", __PRETTY_FUNCTION__);
     completer.Close(ZX_ERR_NO_MEMORY);
     // We let stream_channel_remote go out of scope to trigger channel deactivation via peer close.
     return;
@@ -215,7 +215,7 @@ void SimpleAudioStream::StreamChannelSignalled(async_dispatcher_t* dispatcher,
                                                StreamChannel* channel, bool privileged) {
   if (status != ZX_OK) {
     if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
-      zxlogf(ERROR, "%s handler error %d\n", __PRETTY_FUNCTION__, status);
+      zxlogf(ERROR, "%s handler error %d", __PRETTY_FUNCTION__, status);
     }
     return;
   }
@@ -224,7 +224,7 @@ void SimpleAudioStream::StreamChannelSignalled(async_dispatcher_t* dispatcher,
   if (readable_asserted) {
     zx_status_t status = ProcessStreamChannel(channel, privileged);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s processing stream channel error %d\n", __PRETTY_FUNCTION__, status);
+      zxlogf(ERROR, "%s processing stream channel error %d", __PRETTY_FUNCTION__, status);
       return;
     }
     if (!peer_closed_asserted) {
@@ -240,12 +240,12 @@ void SimpleAudioStream::StreamChannelSignalled(async_dispatcher_t* dispatcher,
 #define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                    \
   case _cmd:                                                                 \
     if (req_size != sizeof(req._payload)) {                                  \
-      zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)\n", req_size, \
+      zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)", req_size, \
              sizeof(req._payload));                                          \
       return ZX_ERR_INVALID_ARGS;                                            \
     }                                                                        \
     if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                \
-      zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "\n");              \
+      zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "");              \
       return ZX_ERR_INVALID_ARGS;                                            \
     }                                                                        \
     return _handler(std::move(channel), req._payload, ##__VA_ARGS__);
@@ -272,7 +272,7 @@ zx_status_t SimpleAudioStream::ProcessStreamChannel(StreamChannel* channel, bool
     return res;
 
   if ((req_size < sizeof(req.hdr) || (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID))) {
-    zxlogf(ERROR, "Bad request in %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Bad request in %s", __PRETTY_FUNCTION__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -288,7 +288,7 @@ zx_status_t SimpleAudioStream::ProcessStreamChannel(StreamChannel* channel, bool
     HREQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, OnGetUniqueId, false);
     HREQ(AUDIO_STREAM_CMD_GET_STRING, get_string, OnGetString, false);
     default:
-      zxlogf(ERROR, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
+      zxlogf(ERROR, "Unrecognized stream command 0x%04x", req.hdr.cmd);
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -313,7 +313,7 @@ zx_status_t SimpleAudioStream::ProcessRingBufferChannel(Channel* channel) {
     return res;
 
   if ((req_size < sizeof(req.hdr) || (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID))) {
-    zxlogf(ERROR, "Bad request in %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Bad request in %s", __PRETTY_FUNCTION__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -325,7 +325,7 @@ zx_status_t SimpleAudioStream::ProcessRingBufferChannel(Channel* channel) {
     HREQ(AUDIO_RB_CMD_START, rb_start, OnStart, false);
     HREQ(AUDIO_RB_CMD_STOP, rb_stop, OnStop, false);
     default:
-      zxlogf(ERROR, "Unrecognized ring buffer command 0x%04x\n", req.hdr.cmd);
+      zxlogf(ERROR, "Unrecognized ring buffer command 0x%04x", req.hdr.cmd);
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -361,7 +361,7 @@ zx_status_t SimpleAudioStream::OnGetStreamFormats(StreamChannel* channel,
   audio_proto::StreamGetFmtsResp resp = {};
 
   if (supported_formats_.size() > std::numeric_limits<uint16_t>::max()) {
-    zxlogf(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
+    zxlogf(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!",
            supported_formats_.size());
     return ZX_ERR_INTERNAL;
   }
@@ -382,7 +382,7 @@ zx_status_t SimpleAudioStream::OnGetStreamFormats(StreamChannel* channel,
 
     res = channel->Write(&resp, sizeof(resp));
     if (res != ZX_OK) {
-      zxlogf(ERROR, "Failed to send get stream formats response (res %d)\n", res);
+      zxlogf(ERROR, "Failed to send get stream formats response (res %d)", res);
       return res;
     }
 
@@ -405,7 +405,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(StreamChannel* channel,
 
   // Only the privileged stream channel is allowed to change the format.
   if (!privileged) {
-    zxlogf(ERROR, "Unprivileged channel cannot SetStreamFormat\n");
+    zxlogf(ERROR, "Unprivileged channel cannot SetStreamFormat");
     resp.result = ZX_ERR_ACCESS_DENIED;
     goto finished;
   }
@@ -420,7 +420,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(StreamChannel* channel,
   }
 
   if (!found_one) {
-    zxlogf(ERROR, "Could not find a suitable format in %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Could not find a suitable format in %s", __PRETTY_FUNCTION__);
     resp.result = ZX_ERR_INVALID_ARGS;
     goto finished;
   }
@@ -428,7 +428,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(StreamChannel* channel,
   // Determine the frame size.
   frame_size_ = audio::utils::ComputeFrameSize(req.channels, req.sample_format);
   if (!frame_size_) {
-    zxlogf(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)\n", req.channels,
+    zxlogf(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)", req.channels,
            req.sample_format);
     resp.result = ZX_ERR_INTERNAL;
     goto finished;
@@ -447,7 +447,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(StreamChannel* channel,
   // Actually attempt to change the format.
   resp.result = ChangeFormat(req);
   if (resp.result != ZX_OK) {
-    zxlogf(ERROR, "Could not ChangeFormat in %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Could not ChangeFormat in %s", __PRETTY_FUNCTION__);
     goto finished;
   }
 
@@ -455,7 +455,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(StreamChannel* channel,
   // bind it to us.
   resp.result = zx::channel::create(0, &rb_channel_local, &rb_channel_remote);
   if (resp.result != ZX_OK) {
-    zxlogf(ERROR, "Could not create channel in %s\n", __PRETTY_FUNCTION__);
+    zxlogf(ERROR, "Could not create channel in %s", __PRETTY_FUNCTION__);
     goto finished;
   }
   {
@@ -471,7 +471,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(StreamChannel* channel,
     });
     resp.result = rb_channel_->BeginWait(loop_.dispatcher());
     if (resp.result != ZX_OK) {
-      zxlogf(ERROR, "Could not begin wait %s\n", __PRETTY_FUNCTION__);
+      zxlogf(ERROR, "Could not begin wait %s", __PRETTY_FUNCTION__);
       // We let rb_channel_remote go out of scope to trigger channel deactivation via closing.
     }
   }
@@ -489,7 +489,7 @@ void SimpleAudioStream::RingBufferSignalled(async_dispatcher_t* dispatcher, asyn
                                             Channel* channel) {
   if (status != ZX_OK) {
     if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
-      zxlogf(ERROR, "%s handler error %d\n", __PRETTY_FUNCTION__, status);
+      zxlogf(ERROR, "%s handler error %d", __PRETTY_FUNCTION__, status);
     }
     return;
   }
@@ -499,7 +499,7 @@ void SimpleAudioStream::RingBufferSignalled(async_dispatcher_t* dispatcher, asyn
     {
       zx_status_t status = ProcessRingBufferChannel(channel);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s processing ring buffer channel error %d\n", __PRETTY_FUNCTION__, status);
+        zxlogf(ERROR, "%s processing ring buffer channel error %d", __PRETTY_FUNCTION__, status);
         return;
       }
     }

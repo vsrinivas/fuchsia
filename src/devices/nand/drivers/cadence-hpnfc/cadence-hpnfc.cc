@@ -88,26 +88,26 @@ namespace rawnand {
 zx_status_t CadenceHpnfc::Create(void* ctx, zx_device_t* parent) {
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PLATFORM_DEVICE\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PLATFORM_DEVICE", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   zx_status_t status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to map MMIO: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to map MMIO: %d", __FILE__, status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> fifo_mmio;
   if ((status = pdev.MapMmio(1, &fifo_mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to map FIFO MMIO: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to map FIFO MMIO: %d", __FILE__, status);
     return status;
   }
 
   zx::interrupt interrupt;
   if ((status = pdev.GetInterrupt(0, &interrupt)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get interrupt: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to get interrupt: %d", __FILE__, status);
     return status;
   }
 
@@ -115,7 +115,7 @@ zx_status_t CadenceHpnfc::Create(void* ctx, zx_device_t* parent) {
   auto device = fbl::make_unique_checked<CadenceHpnfc>(&ac, parent, *std::move(mmio),
                                                        *std::move(fifo_mmio), std::move(interrupt));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Failed to allocate device memory\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to allocate device memory", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -140,7 +140,7 @@ zx_status_t CadenceHpnfc::Create(void* ctx, zx_device_t* parent) {
 zx_status_t CadenceHpnfc::Bind() {
   zx_status_t status = DdkAdd("cadence-hpnfc");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __FILE__, status);
   }
   return status;
 }
@@ -165,7 +165,7 @@ bool CadenceHpnfc::WaitForThread() {
 
 zx_status_t CadenceHpnfc::WaitForSdmaTrigger() {
   if (sync_completion_wait(&completion_, zx::sec(10).get()) != ZX_OK) {
-    zxlogf(ERROR, "%s: Timed out waiting for FIFO data\n", __FILE__);
+    zxlogf(ERROR, "%s: Timed out waiting for FIFO data", __FILE__);
     return ZX_ERR_TIMED_OUT;
   }
 
@@ -180,7 +180,7 @@ zx_status_t CadenceHpnfc::WaitForSdmaTrigger() {
 
 bool CadenceHpnfc::WaitForCommandComplete() {
   if (sync_completion_wait(&completion_, zx::sec(10).get()) != ZX_OK) {
-    zxlogf(ERROR, "%s: Timed out waiting for command to complete\n", __FILE__);
+    zxlogf(ERROR, "%s: Timed out waiting for command to complete", __FILE__);
     return false;
   }
 
@@ -200,7 +200,7 @@ zx_status_t CadenceHpnfc::StartInterruptThread() {
       [](void* ctx) -> int { return reinterpret_cast<CadenceHpnfc*>(ctx)->InterruptThread(); },
       this, "cadence-hpnfc-thread");
   if (thread_status != thrd_success) {
-    zxlogf(ERROR, "%s: Failed to create interrupt thread\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to create interrupt thread", __FILE__);
     return thrd_status_to_zx_status(thread_status);
   }
 
@@ -250,7 +250,7 @@ zx_status_t CadenceHpnfc::Init() {
     return ZX_ERR_TIMED_OUT;
 
   if (PopulateNandInfoOnfi() != ZX_OK && PopulateNandInfoJedec() != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get NAND device info\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get NAND device info", __FILE__);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -323,7 +323,7 @@ zx_status_t CadenceHpnfc::PopulateNandInfoJedec() {
   uint8_t jedec_id[kJedecIdSize] = {};
   zx_status_t status = DoGenericCommand(kInstructionTypeReadId, jedec_id, sizeof(jedec_id));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to read ID: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to read ID: %d", __FILE__, status);
     return status;
   }
 
@@ -340,7 +340,7 @@ zx_status_t CadenceHpnfc::PopulateNandInfoJedec() {
       const uint64_t capacity = static_cast<uint64_t>(nand_info_.page_size) *
                                 nand_info_.pages_per_block * nand_info_.num_blocks;
 
-      zxlogf(INFO, "CadenceHpnfc: Found NAND device %s with capacity %ld MiB\n",
+      zxlogf(INFO, "CadenceHpnfc: Found NAND device %s with capacity %ld MiB",
              kJedecIdMap[i].device, capacity / kBytesToMebibytes);
 
       return ZX_OK;
@@ -355,7 +355,7 @@ zx_status_t CadenceHpnfc::PopulateNandInfoOnfi() {
   zx_status_t status =
       DoGenericCommand(kInstructionTypeReadParameterPage, parameter_page, sizeof(parameter_page));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to read parameter page: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to read parameter page: %d", __FILE__, status);
     return status;
   }
 
@@ -397,7 +397,7 @@ zx_status_t CadenceHpnfc::PopulateNandInfoOnfi() {
   char* const first_space = reinterpret_cast<char*>(memchr(model, ' ', kDeviceModelSize));
   model[first_space ? (first_space - model) : kDeviceModelSize] = '\0';
 
-  zxlogf(INFO, "CadenceHpnfc: Found NAND device %s with capacity %ld MiB\n", model,
+  zxlogf(INFO, "CadenceHpnfc: Found NAND device %s with capacity %ld MiB", model,
          capacity / kBytesToMebibytes);
 
   return ZX_OK;
@@ -459,7 +459,7 @@ zx_status_t CadenceHpnfc::RawNandReadPageHwecc(uint32_t nandpage, void* out_data
 
   const uint32_t sdma_size = SdmaSize::Get().ReadFrom(&mmio_).reg_value();
   if (sdma_size != nand_info_.page_size + nand_info_.oob_size) {
-    zxlogf(ERROR, "%s: Expected %u bytes in FIFO, got %u\n", __FILE__,
+    zxlogf(ERROR, "%s: Expected %u bytes in FIFO, got %u", __FILE__,
            nand_info_.page_size + nand_info_.oob_size, sdma_size);
     return ZX_ERR_IO;
   }
@@ -517,7 +517,7 @@ zx_status_t CadenceHpnfc::RawNandWritePageHwecc(const void* data_buffer, size_t 
 
   const uint32_t sdma_size = SdmaSize::Get().ReadFrom(&mmio_).reg_value();
   if (SdmaSize::Get().ReadFrom(&mmio_).reg_value() != nand_info_.page_size + nand_info_.oob_size) {
-    zxlogf(ERROR, "%s: Expected %u bytes in FIFO, got %u\n", __FILE__,
+    zxlogf(ERROR, "%s: Expected %u bytes in FIFO, got %u", __FILE__,
            nand_info_.page_size + nand_info_.oob_size, sdma_size);
     return ZX_ERR_IO;
   }
@@ -569,7 +569,7 @@ int CadenceHpnfc::InterruptThread() {
       break;
     }
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Interrupt wait failed: %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s: Interrupt wait failed: %d", __FILE__, status);
       return thrd_error;
     }
 

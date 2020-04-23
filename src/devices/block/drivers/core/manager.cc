@@ -57,7 +57,7 @@ zx_status_t Manager::CloseFifoServer() {
       JoinServer();
       break;
     case ThreadState::Joinable:
-      zxlogf(ERROR, "block: Joining un-closed FIFO server\n");
+      zxlogf(ERROR, "block: Joining un-closed FIFO server");
       JoinServer();
       break;
     case ThreadState::None:

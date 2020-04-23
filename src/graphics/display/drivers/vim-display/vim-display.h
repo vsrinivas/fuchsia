@@ -32,7 +32,7 @@ __BEGIN_CDECLS
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_SPEW(fmt, ...) zxlogf(SPEW, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define DISP_TRACE zxlogf(INFO, "[%s %d]\n", __func__, __LINE__)
+#define DISP_TRACE zxlogf(INFO, "[%s %d]", __func__, __LINE__)
 
 #define NUM_CANVAS_ENTRIES 256
 #define CANVAS_BYTE_STRIDE 32

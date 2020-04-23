@@ -236,14 +236,14 @@ static const device_fragment_t dwc2_fragments[] = {
 zx_status_t Nelson::UsbInit() {
   zx_status_t status = pbus_.DeviceAdd(&usb_phy_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd(usb_phy) failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd(usb_phy) failed %d", __func__, status);
     return status;
   }
 
   // Add XHCI and DWC2 to the same devhost as the aml-usb-phy.
   status = pbus_.CompositeDeviceAdd(&xhci_dev, xhci_fragments, countof(xhci_fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d", __func__, status);
     return status;
   }
 
@@ -274,7 +274,7 @@ zx_status_t Nelson::UsbInit() {
   status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
   free(config);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d", __func__, status);
     return status;
   }
 

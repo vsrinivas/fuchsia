@@ -43,7 +43,7 @@ using llcpp::fuchsia::hardware::thermal::OperatingPoint;
 zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get composite protocol\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get composite protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -51,32 +51,32 @@ zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
   size_t fragment_count = 0;
   composite.GetFragments(fragments, FRAGMENT_COUNT, &fragment_count);
   if (fragment_count < FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: Failed to get fragments\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get fragments", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get platform device protocol\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get platform device protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::ClockProtocolClient cpu_clock(fragments[FRAGMENT_CPU_CLOCK]);
   if (!cpu_clock.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get clock protocol\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get clock protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::PowerProtocolClient cpu_power(fragments[FRAGMENT_CPU_POWER]);
   if (!cpu_clock.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get power protocol\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get power protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   zx_status_t status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to map MMIO: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to map MMIO: %d", __func__, status);
     return status;
   }
 
@@ -84,11 +84,11 @@ zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
   ThermalDeviceInfo device_info = {};
   if ((status = device_get_metadata(parent, DEVICE_METADATA_THERMAL_CONFIG, &device_info,
                                     sizeof(device_info), &actual_size)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get metadata: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to get metadata: %d", __func__, status);
     return status;
   }
   if (actual_size != sizeof(device_info)) {
-    zxlogf(ERROR, "%s: Metadata size mismatch\n", __func__);
+    zxlogf(ERROR, "%s: Metadata size mismatch", __func__);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -96,7 +96,7 @@ zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
   auto device = fbl::make_unique_checked<As370Thermal>(&ac, parent, *std::move(mmio), device_info,
                                                        cpu_clock, cpu_power);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Failed to allocate device memory\n", __func__);
+    zxlogf(ERROR, "%s: Failed to allocate device memory", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -105,7 +105,7 @@ zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = device->DdkAdd("as370-thermal")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
     return status;
   }
 
@@ -157,7 +157,7 @@ void As370Thermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync co
 
   PvtCtrl::Get().FromValue(0).set_power_down(1).WriteTo(&mmio_);
   if (pvt_status.eoc() == 0) {
-    zxlogf(ERROR, "%s: Timed out waiting for temperature reading\n", __func__);
+    zxlogf(ERROR, "%s: Timed out waiting for temperature reading", __func__);
     completer.Reply(ZX_ERR_TIMED_OUT, 0.0f);
   } else {
     completer.Reply(ZX_OK, SensorReadingToTemperature(pvt_status.data()));
@@ -220,31 +220,31 @@ zx_status_t As370Thermal::SetOperatingPoint(uint16_t op_idx) {
   uint32_t actual_voltage = 0;
   if (opps[op_idx].freq_hz > opps[operating_point_].freq_hz) {
     if ((status = cpu_power_.RequestVoltage(opps[op_idx].volt_uv, &actual_voltage)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to set voltage: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: Failed to set voltage: %d", __func__, status);
       return status;
     }
     if (actual_voltage != opps[op_idx].volt_uv) {
-      zxlogf(ERROR, "%s: Failed to set exact voltage: set %u, wanted %u\n", __func__,
+      zxlogf(ERROR, "%s: Failed to set exact voltage: set %u, wanted %u", __func__,
              actual_voltage, opps[op_idx].volt_uv);
       return ZX_ERR_BAD_STATE;
     }
 
     if ((status = cpu_clock_.SetRate(opps[op_idx].freq_hz)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to set CPU frequency: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: Failed to set CPU frequency: %d", __func__, status);
       return status;
     }
   } else {
     if ((status = cpu_clock_.SetRate(opps[op_idx].freq_hz)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to set CPU frequency: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: Failed to set CPU frequency: %d", __func__, status);
       return status;
     }
 
     if ((status = cpu_power_.RequestVoltage(opps[op_idx].volt_uv, &actual_voltage)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to set voltage: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: Failed to set voltage: %d", __func__, status);
       return status;
     }
     if (actual_voltage != opps[op_idx].volt_uv) {
-      zxlogf(ERROR, "%s: Failed to set exact voltage: set %u, wanted %u\n", __func__,
+      zxlogf(ERROR, "%s: Failed to set exact voltage: set %u, wanted %u", __func__,
              actual_voltage, opps[op_idx].volt_uv);
       return ZX_ERR_BAD_STATE;
     }

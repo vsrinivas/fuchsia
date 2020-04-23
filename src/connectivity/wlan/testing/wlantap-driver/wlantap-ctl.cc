@@ -111,7 +111,7 @@ zx_status_t wlantapctl_bind(void* ctx, zx_device_t* parent) {
                             .ops = &device_ops};
   zx_status_t status = device_add(parent, &args, &wlantapctl->device_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: could not add device: %d", __func__, status);
     return status;
   }
   // Transfer ownership to devmgr

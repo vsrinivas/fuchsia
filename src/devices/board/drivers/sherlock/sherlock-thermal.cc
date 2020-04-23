@@ -276,7 +276,7 @@ zx_status_t Sherlock::ThermalInit() {
 
   zx_status_t status = gpio_impl_.ConfigOut(T931_GPIOE(1), 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ConfigOut failed: %d", __func__, status);
     return status;
   }
 
@@ -286,13 +286,13 @@ zx_status_t Sherlock::ThermalInit() {
 
   status = gpio_impl_.ConfigOut(T931_GPIOE(2), 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ConfigOut failed: %d", __func__, status);
     return status;
   }
 
   status = pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
   }
   return status;

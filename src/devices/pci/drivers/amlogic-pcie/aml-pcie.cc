@@ -94,7 +94,7 @@ bool AmlPcie::IsLinkUp() {
 zx_status_t AmlPcie::AwaitLinkUp() {
   for (unsigned int i = 0; i < 500000; i++) {
     if (IsLinkUp()) {
-      zxlogf(SPEW, "aml_dw: pcie link up okay\n");
+      zxlogf(SPEW, "aml_dw: pcie link up okay");
       return ZX_OK;
     }
     zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
@@ -160,7 +160,7 @@ zx_status_t AmlPcie::EstablishLink(const iatu_translation_entry_t* cfg,
 
   st = SetupRootComplex(cfg, io, mem);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to setup root complex, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to setup root complex, st = %d", st);
     return st;
   }
 
@@ -168,7 +168,7 @@ zx_status_t AmlPcie::EstablishLink(const iatu_translation_entry_t* cfg,
 
   st = AwaitLinkUp();
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed awaiting link up, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed awaiting link up, st = %d", st);
     return st;
   }
 

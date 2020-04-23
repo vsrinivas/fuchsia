@@ -48,7 +48,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Could not get composite protocol\n", __FILE__);
+    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
     return status;
   }
 
@@ -56,18 +56,18 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   size_t actual;
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s could not get fragments\n", __FILE__);
+    zxlogf(ERROR, "%s could not get fragments", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   pdev_ = fragments[FRAGMENT_PDEV];
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "%s could not get pdev\n", __FILE__);
+    zxlogf(ERROR, "%s could not get pdev", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
   clks_[kAvpll0Clk] = fragments[FRAGMENT_CLOCK];
   if (!clks_[kAvpll0Clk].is_valid()) {
-    zxlogf(ERROR, "%s GetClk failed\n", __FILE__);
+    zxlogf(ERROR, "%s GetClk failed", __FILE__);
     return status;
   }
   // PLL0 = 196.608MHz = e.g. 48K (FSYNC) * 64 (BCLK) * 8 (MCLK) * 8.
@@ -77,7 +77,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   ddk::SharedDmaProtocolClient dma;
   dma = fragments[FRAGMENT_SHARED_DMA];
   if (!dma.is_valid()) {
-    zxlogf(ERROR, "%s could not get DMA\n", __FILE__);
+    zxlogf(ERROR, "%s could not get DMA", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -98,7 +98,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   lib_ = SynAudioOutDevice::Create(*std::move(mmio_global), *std::move(mmio_avio_global),
                                    *std::move(mmio_i2s), dma);
   if (lib_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create Syn audio device\n", __FILE__);
+    zxlogf(ERROR, "%s failed to create Syn audio device", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -107,7 +107,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
       kWantedFrameRate * sizeof(uint16_t) * kNumberOfChannels, ZX_PAGE_SIZE);
   status = InitBuffer(kRingBufferSize);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to Init buffer %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s failed to Init buffer %d", __FILE__, status);
     return status;
   }
 
@@ -149,7 +149,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   format.bits_per_channel = kWantedBitsPerChannel;
   status = codec_.SetDaiFormat(format);
   if (status == ZX_OK) {
-    zxlogf(INFO, "audio: as370 audio output initialized\n");
+    zxlogf(INFO, "audio: as370 audio output initialized");
   }
   return status;
 }
@@ -162,7 +162,7 @@ zx_status_t As370AudioStreamOut::Init() {
 
   status = AddFormats();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not add formats\n", __FILE__);
+    zxlogf(ERROR, "%s could not add formats", __FILE__);
     return status;
   }
 
@@ -170,7 +170,7 @@ zx_status_t As370AudioStreamOut::Init() {
   gain_state_t state = {};
   status = codec_.GetGainState(&state);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get gain state\n", __FILE__);
+    zxlogf(ERROR, "%s could not get gain state", __FILE__);
     return status;
   }
   cur_gain_state_.cur_gain = state.gain;
@@ -180,7 +180,7 @@ zx_status_t As370AudioStreamOut::Init() {
   gain_format_t format = {};
   status = codec_.GetGainFormat(&format);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get gain format\n", __FILE__);
+    zxlogf(ERROR, "%s could not get gain format", __FILE__);
     return status;
   }
 
@@ -309,7 +309,7 @@ zx_status_t As370AudioStreamOut::AddFormats() {
 zx_status_t As370AudioStreamOut::InitBuffer(size_t size) {
   auto status = lib_->GetBuffer(size, &ring_buffer_vmo_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get ring buffer\n", __FILE__);
+    zxlogf(ERROR, "%s could not get ring buffer", __FILE__);
   }
   return status;
 }

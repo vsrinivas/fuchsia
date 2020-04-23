@@ -111,11 +111,11 @@ zx_status_t AcpiTbmcDevice::CallTbmcMethod() {
   ACPI_STATUS acpi_status = AcpiEvaluateObjectTyped(acpi_handle_, const_cast<char*>("TBMC"),
                                                     nullptr, &buffer, ACPI_TYPE_INTEGER);
   if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi-tbmc: TBMC failed: %d\n", acpi_status);
+    zxlogf(ERROR, "acpi-tbmc: TBMC failed: %d", acpi_status);
     return acpi_to_zx_status(acpi_status);
   }
 
-  zxlogf(TRACE, "acpi-tbmc: TMBC returned 0x%llx\n", obj.Integer.Value);
+  zxlogf(TRACE, "acpi-tbmc: TMBC returned 0x%llx", obj.Integer.Value);
 
   fbl::AutoLock guard(&lock_);
 
@@ -134,7 +134,7 @@ zx_status_t AcpiTbmcDevice::CallTbmcMethod() {
 void AcpiTbmcDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   auto dev = reinterpret_cast<AcpiTbmcDevice*>(ctx);
 
-  zxlogf(TRACE, "acpi-tbmc: got event 0x%x\n", value);
+  zxlogf(TRACE, "acpi-tbmc: got event 0x%x", value);
   switch (value) {
     case 0x80:
       // Tablet mode has changed
@@ -145,7 +145,7 @@ void AcpiTbmcDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx) 
 
 zx_status_t AcpiTbmcDevice::QueueHidReportLocked() {
   if (client_.is_valid()) {
-    zxlogf(TRACE, "acpi-tbmc:  queueing report\n");
+    zxlogf(TRACE, "acpi-tbmc:  queueing report");
     uint8_t report = tablet_mode_;
     client_.IoQueue(&report, sizeof(report), zx_clock_get_monotonic());
   }
@@ -153,7 +153,7 @@ zx_status_t AcpiTbmcDevice::QueueHidReportLocked() {
 }
 
 zx_status_t AcpiTbmcDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
-  zxlogf(TRACE, "acpi-tbmc: hid bus query\n");
+  zxlogf(TRACE, "acpi-tbmc: hid bus query");
 
   info->dev_num = 0;
   info->device_class = HID_DEVICE_CLASS_OTHER;
@@ -162,7 +162,7 @@ zx_status_t AcpiTbmcDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
 }
 
 zx_status_t AcpiTbmcDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
-  zxlogf(TRACE, "acpi-tbmc: hid bus start\n");
+  zxlogf(TRACE, "acpi-tbmc: hid bus start");
 
   fbl::AutoLock guard(&lock_);
   if (client_.is_valid()) {
@@ -173,7 +173,7 @@ zx_status_t AcpiTbmcDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
 }
 
 void AcpiTbmcDevice::HidbusStop() {
-  zxlogf(TRACE, "acpi-tbmc: hid bus stop\n");
+  zxlogf(TRACE, "acpi-tbmc: hid bus stop");
 
   fbl::AutoLock guard(&lock_);
   client_.clear();
@@ -182,7 +182,7 @@ void AcpiTbmcDevice::HidbusStop() {
 zx_status_t AcpiTbmcDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
                                                 void* out_data_buffer, size_t data_size,
                                                 size_t* out_data_actual) {
-  zxlogf(TRACE, "acpi-tbmc: hid bus get descriptor\n");
+  zxlogf(TRACE, "acpi-tbmc: hid bus get descriptor");
 
   if (out_data_buffer == nullptr || out_data_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -241,7 +241,7 @@ zx_status_t AcpiTbmcDevice::HidbusGetProtocol(uint8_t* protocol) { return ZX_ERR
 zx_status_t AcpiTbmcDevice::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
 void AcpiTbmcDevice::DdkRelease() {
-  zxlogf(INFO, "acpi-tbmc: release\n");
+  zxlogf(INFO, "acpi-tbmc: release");
   delete this;
 }
 
@@ -260,7 +260,7 @@ zx_status_t AcpiTbmcDevice::Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
   ACPI_STATUS acpi_status =
       AcpiInstallNotifyHandler(acpi_handle, ACPI_DEVICE_NOTIFY, NotifyHandler, dev.get());
   if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi-tbmc: could not install notify handler\n");
+    zxlogf(ERROR, "acpi-tbmc: could not install notify handler");
     return acpi_to_zx_status(acpi_status);
   }
 
@@ -269,7 +269,7 @@ zx_status_t AcpiTbmcDevice::Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
 }
 
 zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
-  zxlogf(TRACE, "acpi-tbmc: init\n");
+  zxlogf(TRACE, "acpi-tbmc: init");
 
   std::unique_ptr<AcpiTbmcDevice> dev;
   zx_status_t status = AcpiTbmcDevice::Create(parent, acpi_handle, &dev);
@@ -285,6 +285,6 @@ zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   // devmgr is now in charge of the memory for dev
   __UNUSED auto ptr = dev.release();
 
-  zxlogf(INFO, "acpi-tbmc: initialized\n");
+  zxlogf(INFO, "acpi-tbmc: initialized");
   return ZX_OK;
 }

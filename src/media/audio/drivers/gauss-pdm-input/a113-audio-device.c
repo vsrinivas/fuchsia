@@ -13,10 +13,10 @@
 #include <hw/reg.h>
 
 #define REGDUMPEEAUDIO(regval) \
-  zxlogf(INFO, #regval " = 0x%08x\n", a113_ee_audio_read(audio_device, regval))
+  zxlogf(INFO, #regval " = 0x%08x", a113_ee_audio_read(audio_device, regval))
 
 #define REGDUMPPDM(regval) \
-  zxlogf(INFO, #regval " = 0x%08x\n", a113_ee_audio_read(audio_device, regval))
+  zxlogf(INFO, #regval " = 0x%08x", a113_ee_audio_read(audio_device, regval))
 
 void a113_pdm_dump_registers(a113_audio_device_t* audio_device) {
   REGDUMPPDM(PDM_CTRL);
@@ -95,7 +95,7 @@ zx_status_t a113_audio_device_init(a113_audio_device_t* audio_device, zx_device_
   status = pdev_map_mmio_buffer(&audio_device->pdev, 0 /* EE_AUDIO */,
                                 ZX_CACHE_POLICY_UNCACHED_DEVICE, &audio_device->ee_audio_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "a113_audio_device_init: pdev_map_mmio_buffer failed\n");
+    zxlogf(ERROR, "a113_audio_device_init: pdev_map_mmio_buffer failed");
     goto init_fail;
   }
 
@@ -110,7 +110,7 @@ zx_status_t a113_audio_device_init(a113_audio_device_t* audio_device, zx_device_
   status = pdev_map_mmio_buffer(&audio_device->pdev, 1 /* PDM */, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                 &audio_device->pdm_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "a113_audio_device_init: pdev_map_mmio_buffer failed\n");
+    zxlogf(ERROR, "a113_audio_device_init: pdev_map_mmio_buffer failed");
     goto init_fail;
   }
 

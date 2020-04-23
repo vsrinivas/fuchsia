@@ -80,7 +80,7 @@ zx_status_t NelsonAudioStreamIn::InitPDev() {
   composite_protocol_t composite = {};
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Could not get composite protocol\n", __FILE__);
+    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
     return status;
   }
 
@@ -88,25 +88,25 @@ zx_status_t NelsonAudioStreamIn::InitPDev() {
   size_t actual = 0;
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s could not get fragments\n", __FILE__);
+    zxlogf(ERROR, "%s could not get fragments", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   pdev_ = fragments[FRAGMENT_PDEV];
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "%s could not get pdev\n", __FILE__);
+    zxlogf(ERROR, "%s could not get pdev", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not obtain bti %d", __FUNCTION__, status);
     return status;
   }
 
   clks_[kHifiPllClk] = fragments[FRAGMENT_APLL_CLOCK];
   if (!clks_[kHifiPllClk].is_valid()) {
-    zxlogf(ERROR, "%s could not get clk\n", __FILE__);
+    zxlogf(ERROR, "%s could not get clk", __FILE__);
     return status;
   }
 
@@ -117,19 +117,19 @@ zx_status_t NelsonAudioStreamIn::InitPDev() {
   std::optional<ddk::MmioBuffer> mmio0, mmio1;
   status = pdev_.MapMmio(0, &mmio0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not map mmio %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not map mmio %d", __FUNCTION__, status);
     return status;
   }
   status = pdev_.MapMmio(1, &mmio1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not map mmio %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not map mmio %d", __FUNCTION__, status);
     return status;
   }
 
   lib_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL, 7, 499, TODDR_B,
                               AmlVersion::kS905D3G);
   if (lib_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create audio device\n", __FUNCTION__);
+    zxlogf(ERROR, "%s failed to create audio device", __FUNCTION__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -226,7 +226,7 @@ zx_status_t NelsonAudioStreamIn::AddFormats() {
   fbl::AllocChecker ac;
   supported_formats_.reserve(1, &ac);
   if (!ac.check()) {
-    zxlogf(ERROR, "Out of memory, can not create supported formats list\n");
+    zxlogf(ERROR, "Out of memory, can not create supported formats list");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -247,13 +247,13 @@ zx_status_t NelsonAudioStreamIn::InitBuffer(size_t size) {
   zx_status_t status;
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
     return status;
   }
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __func__, status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {

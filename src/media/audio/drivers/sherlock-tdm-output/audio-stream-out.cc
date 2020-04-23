@@ -48,19 +48,19 @@ zx_status_t SherlockAudioStreamOut::InitCodecs() {
 
   auto status = codecs_[0]->Init(0, frames_per_second_);  // Use TDM slot 0.
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to initialize codec 0\n", __FILE__);
+    zxlogf(ERROR, "%s failed to initialize codec 0", __FILE__);
     audio_en_.Write(0);
     return status;
   }
   status = codecs_[1]->Init(1, frames_per_second_);  // Use TDM slot 1.
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to initialize codec 1\n", __FILE__);
+    zxlogf(ERROR, "%s failed to initialize codec 1", __FILE__);
     audio_en_.Write(0);
     return status;
   }
   status = codecs_[2]->Init(0, frames_per_second_);  // Use TDM slot 0.
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to initialize codec 2\n", __FILE__);
+    zxlogf(ERROR, "%s failed to initialize codec 2", __FILE__);
     audio_en_.Write(0);
     return status;
   }
@@ -73,7 +73,7 @@ zx_status_t SherlockAudioStreamOut::InitHW() {
 
   auto status = InitCodecs();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not init codecs - %d\n", __func__, status);
+    zxlogf(ERROR, "%s could not init codecs - %d", __func__, status);
     return status;
   }
 
@@ -99,21 +99,21 @@ zx_status_t SherlockAudioStreamOut::InitHW() {
   // Tweeters: Lane 0, unmask TDM slots 0 & 1 (L+R FRDDR slots 0 & 1).
   status = aml_audio_->ConfigTdmOutLane(0, 0x00000003);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure TDM out lane0 %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not configure TDM out lane0 %d", __FILE__, status);
     return status;
   }
 
   // Woofer: Lane 1, unmask TDM slot 0 & 1 (Woofer FRDDR slots 2 & 3).
   status = aml_audio_->ConfigTdmOutLane(1, 0x00000003);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure TDM out lane1 %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not configure TDM out lane1 %d", __FILE__, status);
     return status;
   }
 
   // mclk = T931_HIFI_PLL_RATE/125 = 1536MHz/125 = 12.288MHz.
   status = aml_audio_->SetMclkDiv(124);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure MCLK %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not configure MCLK %d", __FILE__, status);
     return status;
   }
 
@@ -124,7 +124,7 @@ zx_status_t SherlockAudioStreamOut::InitHW() {
   // for 96kHz: sclk = 12.288MHz/2 = 6.144MHz, 32L + 32R sclks = 64 sclks.
   status = aml_audio_->SetSclkDiv((12'288'000 / (frames_per_second_ * 64)) - 1, 31, 63, false);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure SCLK %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
     return status;
   }
 
@@ -139,7 +139,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get composite protocol\n");
+    zxlogf(ERROR, "Could not get composite protocol");
     return status;
   }
 
@@ -147,7 +147,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   size_t actual;
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   if (actual < countof(fragments) - 1) {
-    zxlogf(ERROR, "could not get fragments\n");
+    zxlogf(ERROR, "could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -159,12 +159,12 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codecs_types_,
                                sizeof(metadata::Codec), &actual);
   if (status != ZX_OK || sizeof(metadata::Codec) != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
     return status;
   }
 
   if (codecs_types_ == metadata::Codec::Tas5720x3) {
-    zxlogf(INFO, "audio: using 3 Tas5720 codecs\n");
+    zxlogf(INFO, "audio: using 3 Tas5720 codecs");
     fbl::AllocChecker ac;
     codecs_ = fbl::Array(new (&ac) std::unique_ptr<Tas5720>[3], 3);
     if (!ac.check()) {
@@ -173,12 +173,12 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
     for (uint32_t i = 0; i < 3; ++i) {
       codecs_[i] = Tas5720::Create(fragments[FRAGMENT_I2C_0 + i]);
       if (!codecs_[i]) {
-        zxlogf(ERROR, "%s could not get tas5720\n", __func__);
+        zxlogf(ERROR, "%s could not get tas5720", __func__);
         return ZX_ERR_NO_RESOURCES;
       }
     }
   } else {
-    zxlogf(ERROR, "%s invalid or unsupported codec\n", __func__);
+    zxlogf(ERROR, "%s invalid or unsupported codec", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -186,13 +186,13 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   audio_en_ = fragments[FRAGMENT_ENABLE_GPIO];
 
   if (!audio_fault_.is_valid() || !audio_en_.is_valid()) {
-    zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
+    zxlogf(ERROR, "%s failed to allocate gpio", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
+    zxlogf(ERROR, "%s could not obtain bti - %d", __func__, status);
     return status;
   }
 
@@ -203,7 +203,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   }
   aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_C, FRDDR_A, MCLK_C);
   if (aml_audio_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create tdm device\n", __func__);
+    zxlogf(ERROR, "%s failed to create tdm device", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -407,7 +407,7 @@ zx_status_t SherlockAudioStreamOut::AddFormats() {
   fbl::AllocChecker ac;
   supported_formats_.reserve(1, &ac);
   if (!ac.check()) {
-    zxlogf(ERROR, "Out of memory, can not create supported formats list\n");
+    zxlogf(ERROR, "Out of memory, can not create supported formats list");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -433,13 +433,13 @@ zx_status_t SherlockAudioStreamOut::InitBuffer(size_t size) {
   // init again (say the devhost is restarted).
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
     return status;
   }
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __func__, status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {

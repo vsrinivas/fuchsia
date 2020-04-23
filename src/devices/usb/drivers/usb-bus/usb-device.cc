@@ -121,7 +121,7 @@ bool UsbDevice::UpdateEndpoint(Endpoint* ep, usb_request_t* completed_req) {
 
   std::optional<size_t> completed_req_idx = ep->pending_reqs.find(&unowned);
   if (!completed_req_idx.has_value()) {
-    zxlogf(ERROR, "could not find completed req %p in pending list of endpoint: 0x%x\n",
+    zxlogf(ERROR, "could not find completed req %p in pending list of endpoint: 0x%x",
            unowned.request(), completed_req->header.ep_address);
     // This should never happen, but we should probably still do a callback.
     return true;
@@ -180,7 +180,7 @@ void UsbDevice::RequestComplete(usb_request_t* req) {
   }
   auto* ep = GetEndpoint(req->header.ep_address);
   if (!ep) {
-    zxlogf(ERROR, "could not find endpoint with address 0x%x\n", req->header.ep_address);
+    zxlogf(ERROR, "could not find endpoint with address 0x%x", req->header.ep_address);
     // This should never happen, but we should probably still do a callback.
     QueueCallback(req);
     return;
@@ -410,7 +410,7 @@ void UsbDevice::UsbRequestQueue(usb_request_t* req, const usb_request_complete_t
 
   auto* ep = GetEndpoint(req->header.ep_address);
   if (!ep) {
-    zxlogf(ERROR, "could not find endpoint with address 0x%x\n", req->header.ep_address);
+    zxlogf(ERROR, "could not find endpoint with address 0x%x", req->header.ep_address);
   }
 
   {
@@ -473,7 +473,7 @@ zx_status_t UsbDevice::UsbResetDevice() {
     fbl::AutoLock lock(&state_lock_);
 
     if (resetting_) {
-      zxlogf(ERROR, "%s: resetting_ already set\n", __func__);
+      zxlogf(ERROR, "%s: resetting_ already set", __func__);
       return ZX_ERR_BAD_STATE;
     }
     resetting_ = true;
@@ -612,7 +612,7 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
   if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
     zx_status_t reset_result = hci_.ResetEndpoint(device_id_, 0);
     if (reset_result != ZX_OK) {
-      zxlogf(ERROR, "failed to reset endpoint, err: %d\n", reset_result);
+      zxlogf(ERROR, "failed to reset endpoint, err: %d", reset_result);
       return result;
     }
     result = GetDescriptor(USB_DT_STRING, desc_id, le16toh(lang_id), &string_desc,
@@ -620,7 +620,7 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
     if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
       reset_result = hci_.ResetEndpoint(device_id_, 0);
       if (reset_result != ZX_OK) {
-        zxlogf(ERROR, "failed to reset endpoint, err: %d\n", reset_result);
+        zxlogf(ERROR, "failed to reset endpoint, err: %d", reset_result);
         return result;
       }
     }
@@ -766,7 +766,7 @@ zx_status_t UsbDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 zx_status_t UsbDevice::HubResetPort(uint32_t port) {
   if (!hub_intf_.is_valid()) {
-    zxlogf(ERROR, "hub interface not set in usb_bus_reset_hub_port\n");
+    zxlogf(ERROR, "hub interface not set in usb_bus_reset_hub_port");
     return ZX_ERR_BAD_STATE;
   }
   return hub_intf_.ResetPort(port);
@@ -805,7 +805,7 @@ zx_status_t UsbDevice::Init() {
     status = ZX_ERR_IO;
   }
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetDescriptor(USB_DT_DEVICE) failed\n", __func__);
+    zxlogf(ERROR, "%s: GetDescriptor(USB_DT_DEVICE) failed", __func__);
     return status;
   }
 
@@ -828,7 +828,7 @@ zx_status_t UsbDevice::Init() {
       status = ZX_ERR_IO;
     }
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: GetDescriptor(USB_DT_CONFIG) failed\n", __func__);
+      zxlogf(ERROR, "%s: GetDescriptor(USB_DT_CONFIG) failed", __func__);
       return status;
     }
     uint16_t config_desc_size = letoh16(config_desc_header.wTotalLength);
@@ -844,7 +844,7 @@ zx_status_t UsbDevice::Init() {
       status = ZX_ERR_IO;
     }
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: GetDescriptor(USB_DT_CONFIG) failed\n", __func__);
+      zxlogf(ERROR, "%s: GetDescriptor(USB_DT_CONFIG) failed", __func__);
       return status;
     }
   }
@@ -860,7 +860,7 @@ zx_status_t UsbDevice::Init() {
     override++;
   }
   if (configuration > num_configurations) {
-    zxlogf(ERROR, "usb_device_add: override configuration number out of range\n");
+    zxlogf(ERROR, "usb_device_add: override configuration number out of range");
     return ZX_ERR_INTERNAL;
   }
   current_config_index_ = static_cast<uint8_t>(configuration - 1);
@@ -872,10 +872,10 @@ zx_status_t UsbDevice::Init() {
       UsbControlOut(USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_REQ_SET_CONFIGURATION,
                     config_desc->bConfigurationValue, 0, ZX_TIME_INFINITE, nullptr, 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: USB_REQ_SET_CONFIGURATION failed\n", __func__);
+    zxlogf(ERROR, "%s: USB_REQ_SET_CONFIGURATION failed", __func__);
     return status;
   }
-  zxlogf(INFO, "* found USB device (0x%04x:0x%04x, USB %x.%x) config %u\n", device_desc_.idVendor,
+  zxlogf(INFO, "* found USB device (0x%04x:0x%04x, USB %x.%x) config %u", device_desc_.idVendor,
          device_desc_.idProduct, device_desc_.bcdUSB >> 8, device_desc_.bcdUSB & 0xff,
          configuration);
 
@@ -907,7 +907,7 @@ zx_status_t UsbDevice::Reinitialize() {
   fbl::AutoLock lock(&state_lock_);
 
   if (resetting_) {
-    zxlogf(ERROR, "%s: resetting_ not set\n", __func__);
+    zxlogf(ERROR, "%s: resetting_ not set", __func__);
     return ZX_ERR_BAD_STATE;
   }
   resetting_ = false;
@@ -918,7 +918,7 @@ zx_status_t UsbDevice::Reinitialize() {
       UsbControlOut(USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_REQ_SET_CONFIGURATION,
                     descriptor->bConfigurationValue, 0, ZX_TIME_INFINITE, nullptr, 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "could not restore configuration to %u, got err: %d\n",
+    zxlogf(ERROR, "could not restore configuration to %u, got err: %d",
            descriptor->bConfigurationValue, status);
     return status;
   }

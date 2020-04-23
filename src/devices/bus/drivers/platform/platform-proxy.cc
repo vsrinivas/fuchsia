@@ -34,7 +34,7 @@ zx_status_t PlatformProxy::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
 
   zx_status_t status = zx::vmo::create_physical(mmio.resource, vmo_base, vmo_size, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s %s: creating vmo failed %d\n", name_, __FUNCTION__, status);
+    zxlogf(ERROR, "%s %s: creating vmo failed %d", name_, __FUNCTION__, status);
     return status;
   }
 
@@ -42,7 +42,7 @@ zx_status_t PlatformProxy::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
   snprintf(name, sizeof(name), "%s mmio %u", name_, index);
   status = vmo.set_property(ZX_PROP_NAME, name, sizeof(name));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s %s: setting vmo name failed %d\n", name_, __FUNCTION__, status);
+    zxlogf(ERROR, "%s %s: setting vmo name failed %d", name_, __FUNCTION__, status);
     return status;
   }
 
@@ -64,7 +64,7 @@ zx_status_t PlatformProxy::PDevGetInterrupt(uint32_t index, uint32_t flags,
   }
   zx_status_t status = zx::interrupt::create(irq->resource, irq->irq, flags, out_irq);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s %s: creating interrupt failed: %d\n", name_, __FUNCTION__, status);
+    zxlogf(ERROR, "%s %s: creating interrupt failed: %d", name_, __FUNCTION__, status);
     return status;
   }
 
@@ -140,18 +140,18 @@ zx_status_t PlatformProxy::Rpc(const platform_proxy_req_t* req, size_t req_lengt
     // to also fail.
     //
     // TODO(ZX-3833): Make this less likely and/or handle differently.
-    zxlogf(ERROR, "PlatformProxy::Rpc rpc_channel_.call failed - status: %d\n", status);
+    zxlogf(ERROR, "PlatformProxy::Rpc rpc_channel_.call failed - status: %d", status);
     return status;
   }
 
   status = resp->status;
 
   if (status == ZX_OK && resp_size < sizeof(*resp)) {
-    zxlogf(ERROR, "PlatformProxy::Rpc resp_size too short: %u\n", resp_size);
+    zxlogf(ERROR, "PlatformProxy::Rpc resp_size too short: %u", resp_size);
     status = ZX_ERR_INTERNAL;
     goto fail;
   } else if (status == ZX_OK && handle_count != out_handle_count) {
-    zxlogf(ERROR, "PlatformProxy::Rpc handle count %u expected %zu\n", handle_count,
+    zxlogf(ERROR, "PlatformProxy::Rpc handle count %u expected %zu", handle_count,
            out_handle_count);
     status = ZX_ERR_INTERNAL;
     goto fail;
@@ -223,7 +223,7 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
       return ZX_ERR_NO_MEMORY;
     }
 
-    zxlogf(SPEW, "%s: received MMIO %u (base %#lx length %#lx handle %#x)\n", name_, i, mmio.base,
+    zxlogf(SPEW, "%s: received MMIO %u (base %#lx length %#lx handle %#x)", name_, i, mmio.base,
            mmio.length, mmio.resource.get());
   }
 
@@ -249,7 +249,7 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
       return ZX_ERR_NO_MEMORY;
     }
 
-    zxlogf(SPEW, "%s: received IRQ %u (irq %#x handle %#x)\n", name_, i, irq.irq,
+    zxlogf(SPEW, "%s: received IRQ %u (irq %#x handle %#x)", name_, i, irq.irq,
            irq.resource.get());
   }
 

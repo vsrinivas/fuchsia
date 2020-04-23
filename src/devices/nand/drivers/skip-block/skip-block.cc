@@ -128,7 +128,7 @@ zx_status_t SkipBlockDevice::Create(void*, zx_device_t* parent) {
   // Get NAND protocol.
   ddk::NandProtocolClient nand(parent);
   if (!nand.is_valid()) {
-    zxlogf(ERROR, "skip-block: parent device '%s': does not support nand protocol\n",
+    zxlogf(ERROR, "skip-block: parent device '%s': does not support nand protocol",
            device_get_name(parent));
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -136,7 +136,7 @@ zx_status_t SkipBlockDevice::Create(void*, zx_device_t* parent) {
   // Get bad block protocol.
   ddk::BadBlockProtocolClient bad_block(parent);
   if (!bad_block.is_valid()) {
-    zxlogf(ERROR, "skip-block: parent device '%s': does not support bad_block protocol\n",
+    zxlogf(ERROR, "skip-block: parent device '%s': does not support bad_block protocol",
            device_get_name(parent));
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -146,12 +146,12 @@ zx_status_t SkipBlockDevice::Create(void*, zx_device_t* parent) {
   zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &copy_count,
                                            sizeof(copy_count), &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "skip-block: parent device '%s' has no private metadata\n",
+    zxlogf(ERROR, "skip-block: parent device '%s' has no private metadata",
            device_get_name(parent));
     return status;
   }
   if (actual != sizeof(copy_count)) {
-    zxlogf(ERROR, "skip-block: Private metadata is of size %zu, expected to be %zu\n", actual,
+    zxlogf(ERROR, "skip-block: Private metadata is of size %zu, expected to be %zu", actual,
            sizeof(copy_count));
     return ZX_ERR_INTERNAL;
   }
@@ -198,12 +198,12 @@ zx_status_t SkipBlockDevice::GetBadBlockList(fbl::Array<uint32_t>* bad_blocks) {
 }
 
 zx_status_t SkipBlockDevice::Bind() {
-  zxlogf(INFO, "skip-block: Binding to %s\n", device_get_name(parent()));
+  zxlogf(INFO, "skip-block: Binding to %s", device_get_name(parent()));
 
   fbl::AutoLock al(&lock_);
 
   if (sizeof(nand_operation_t) > parent_op_size_) {
-    zxlogf(ERROR, "skip-block: parent op size, %zu, is smaller than minimum op size: %zu\n",
+    zxlogf(ERROR, "skip-block: parent op size, %zu, is smaller than minimum op size: %zu",
            parent_op_size_, sizeof(nand_operation_t));
     return ZX_ERR_INTERNAL;
   }
@@ -217,7 +217,7 @@ zx_status_t SkipBlockDevice::Bind() {
   fbl::Array<uint32_t> bad_blocks;
   const zx_status_t status = GetBadBlockList(&bad_blocks);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "skip-block: Failed to get bad block list\n");
+    zxlogf(ERROR, "skip-block: Failed to get bad block list");
     return status;
   }
   block_map_ = LogicalToPhysicalMap(copy_count_, nand_info_.num_blocks, std::move(bad_blocks));
@@ -280,7 +280,7 @@ zx_status_t SkipBlockDevice::ValidateOperationLocked(const WriteBytesOperation& 
 zx_status_t SkipBlockDevice::ReadLocked(ReadWriteOperation op) {
   for (uint32_t copy = 0; copy < copy_count_; copy++) {
     if (block_map_.AvailableBlockCount(copy) < op.block_count) {
-      zxlogf(INFO, "skipblock: copy %u too small, skipping read attempt.\n", copy);
+      zxlogf(INFO, "skipblock: copy %u too small, skipping read attempt.", copy);
       continue;
     }
 
@@ -318,15 +318,15 @@ zx_status_t SkipBlockDevice::ReadLocked(ReadWriteOperation op) {
     op = std::move(op_context.op);
     if (op_context.status == ZX_OK) {
       if (copy != 0) {
-        zxlogf(INFO, "skipblock: Successfully read block %d, copy %d\n", op_context.current_block,
+        zxlogf(INFO, "skipblock: Successfully read block %d, copy %d", op_context.current_block,
                copy);
       }
       return ZX_OK;
     }
-    zxlogf(WARN, "skipblock: Failed to read block %d, copy %d, with status %s\n",
+    zxlogf(WARN, "skipblock: Failed to read block %d, copy %d, with status %s",
            op_context.current_block, copy, zx_status_get_string(op_context.status));
   }
-  zxlogf(ERROR, "skipblock: Failed to read any copies of block %d\n", op.block);
+  zxlogf(ERROR, "skipblock: Failed to read any copies of block %d", op.block);
   return ZX_ERR_IO;
 }
 
@@ -381,10 +381,10 @@ zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_
       sync_completion_wait(&completion, ZX_TIME_INFINITE);
       op = std::move(op_context.op);
       if (op_context.mark_bad) {
-        zxlogf(ERROR, "Failed to erase/write block %u, marking bad\n", op_context.physical_block);
+        zxlogf(ERROR, "Failed to erase/write block %u, marking bad", op_context.physical_block);
         status = bad_block_.MarkBlockBad(op_context.physical_block);
         if (status != ZX_OK) {
-          zxlogf(ERROR, "skip-block: Failed to mark block bad\n");
+          zxlogf(ERROR, "skip-block: Failed to mark block bad");
           return status;
         }
         // Logical to physical mapping has changed, so we need to re-initialize block_map_.
@@ -397,7 +397,7 @@ zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_
         continue;
       }
       if (op_context.status != ZX_OK) {
-        zxlogf(ERROR, "Failed to write block %d, copy %d with status %s\n",
+        zxlogf(ERROR, "Failed to write block %d, copy %d with status %s",
                op_context.current_block, copy, zx_status_get_string(op_context.status));
         break;
       }

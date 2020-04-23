@@ -55,13 +55,13 @@ zx_status_t HisiClock::Create(const char* name, const Gate gate_list[], const si
 
   st = device->Init();
   if (st != ZX_OK) {
-    zxlogf(ERROR, "HisiClock::Create: failed to init device, rc = %d\n", st);
+    zxlogf(ERROR, "HisiClock::Create: failed to init device, rc = %d", st);
     return st;
   }
 
   st = device->DdkAdd(name);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "HisiClock::Create: failed to add device, rc = %d\n", st);
+    zxlogf(ERROR, "HisiClock::Create: failed to add device, rc = %d", st);
     return st;
   }
 
@@ -162,19 +162,19 @@ zx_status_t HisiClock::Init() {
 
   ddk::PDev pdev(parent());
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "HisiClock::Init: failed to get pdev protocol\n");
+    zxlogf(ERROR, "HisiClock::Init: failed to get pdev protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
   st = pdev.MapMmio(0, &peri_crg_mmio_);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "HisiClock::Init: map peri crg mmio failed, st = %d\n", st);
+    zxlogf(ERROR, "HisiClock::Init: map peri crg mmio failed, st = %d", st);
     return st;
   }
 
   st = pdev.MapMmio(1, &sctrl_mmio_);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "HisiClock::Init: map sctrl mmio failed, st = %d\n", st);
+    zxlogf(ERROR, "HisiClock::Init: map sctrl mmio failed, st = %d", st);
     return st;
   }
 

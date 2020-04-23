@@ -28,28 +28,28 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
   auto netdev = fbl::make_unique_checked<NetworkDevice>(&ac, parent);
 
   if (!ac.check()) {
-    zxlogf(ERROR, "network-device: No memory\n");
+    zxlogf(ERROR, "network-device: No memory");
     return ZX_ERR_NO_MEMORY;
   }
 
   thrd_t thread;
   zx_status_t status;
   if ((status = netdev->loop_.StartThread("network-device-handler", &thread)) != ZX_OK) {
-    zxlogf(ERROR, "network-device: Failed to create handler thread\n");
+    zxlogf(ERROR, "network-device: Failed to create handler thread");
     return status;
   }
   netdev->loop_thread_ = thread;
 
   ddk::NetworkDeviceImplProtocolClient netdevice_impl(parent);
   if (!netdevice_impl.is_valid()) {
-    zxlogf(ERROR, "network-device: Bind failed, protocol not available\n");
+    zxlogf(ERROR, "network-device: Bind failed, protocol not available");
     return ZX_ERR_NOT_FOUND;
   }
 
   if ((status = NetworkDeviceInterface::Create(netdev->loop_.dispatcher(), netdevice_impl,
                                                device_get_name(parent), &netdev->device_)) !=
       ZX_OK) {
-    zxlogf(ERROR, "network-device: Failed to create inner device %s\n",
+    zxlogf(ERROR, "network-device: Failed to create inner device %s",
            zx_status_get_string(status));
     return status;
   }
@@ -58,7 +58,7 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
   ddk::MacAddrImplProtocolClient mac_impl(parent);
   if (mac_impl.is_valid()) {
     if ((status = MacAddrDeviceInterface::Create(mac_impl, &netdev->mac_)) != ZX_OK) {
-      zxlogf(ERROR, "network-device: Failed to create inner mac device: %s\n",
+      zxlogf(ERROR, "network-device: Failed to create inner mac device: %s",
              zx_status_get_string(status));
       return status;
     }
@@ -66,7 +66,7 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
 
   if ((status = netdev->DdkAdd("network-device", 0, nullptr, 0, ZX_PROTOCOL_NETWORK_DEVICE)) !=
       ZX_OK) {
-    zxlogf(ERROR, "network-device: Failed to bind %d\n", status);
+    zxlogf(ERROR, "network-device: Failed to bind %d", status);
     return status;
   }
 
@@ -84,7 +84,7 @@ zx_status_t NetworkDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 void NetworkDevice::DdkUnbindNew(ddk::UnbindTxn unbindTxn) {
-  zxlogf(TRACE, "network-device: DdkUnbind\n");
+  zxlogf(TRACE, "network-device: DdkUnbind");
   device_->Teardown([this, txn = std::move(unbindTxn)]() mutable {
     if (mac_) {
       mac_->Teardown([txn = std::move(txn)]() mutable { txn.Reply(); });
@@ -95,7 +95,7 @@ void NetworkDevice::DdkUnbindNew(ddk::UnbindTxn unbindTxn) {
 }
 
 void NetworkDevice::DdkRelease() {
-  zxlogf(TRACE, "network-device: DdkRelease\n");
+  zxlogf(TRACE, "network-device: DdkRelease");
   delete this;
 }
 

@@ -63,7 +63,7 @@ zx_status_t Mt8167::BacklightInit() {
 
   auto status = DdkAddComposite("sgm37603a", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to add SGM37603A device: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Failed to add SGM37603A device: %d", __FUNCTION__, status);
   }
 
   return ZX_OK;

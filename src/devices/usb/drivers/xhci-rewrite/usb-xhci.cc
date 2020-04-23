@@ -1873,7 +1873,7 @@ zx_status_t UsbXhci::Init() {
       device_get_profile(zxdev_, /*HIGH_PRIORITY*/ 31, "src/devices/usb/drivers/xhci/usb-xhci",
                          profile_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(WARN, "Failed to obtain scheduler profile for high priority completer (res %d)\n",
+    zxlogf(WARN, "Failed to obtain scheduler profile for high priority completer (res %d)",
            status);
   }
   thrd_t init_thread;
@@ -1947,7 +1947,7 @@ zx_status_t UsbXhci::Create(void* ctx, zx_device_t* parent) {
     }
     dev->pdev_ = fragments[PDEV];
     if (!dev->pdev_.is_valid()) {
-      zxlogf(ERROR, "UsbXhci::Init: could not get platform device protocol\n");
+      zxlogf(ERROR, "UsbXhci::Init: could not get platform device protocol");
       return ZX_ERR_NOT_SUPPORTED;
     }
   }

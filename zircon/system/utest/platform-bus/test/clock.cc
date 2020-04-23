@@ -53,7 +53,7 @@ zx_status_t TestClockDevice::Init() {
   pbus_protocol_t pbus;
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d", __func__, status);
     return status;
   }
   clock_impl_protocol_t clock_proto = {
@@ -62,7 +62,7 @@ zx_status_t TestClockDevice::Init() {
   };
   status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL, &clock_proto, sizeof(clock_proto));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s pbus_register_protocol failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s pbus_register_protocol failed %d", __func__, status);
     return status;
   }
   return ZX_OK;
@@ -77,13 +77,13 @@ zx_status_t TestClockDevice::Create(zx_device_t* parent) {
 
   status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV\n", __func__);
+    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV", __func__);
     return status;
   }
 
   status = dev->DdkAdd("test-clock");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
     return status;
   }
   // devmgr is now in charge of dev.

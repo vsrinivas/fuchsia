@@ -84,7 +84,7 @@ fuchsia_virtualaudio_Forwarder_ops_t VirtualAudioControlImpl::fidl_ops_ = {
 // forwarding the server-side binding to us.
 zx_status_t VirtualAudioControlImpl::SendControl(zx::channel control_request_channel) {
   if (!control_request_channel.is_valid()) {
-    zxlogf(ERROR, "%s: channel from request handle is invalid\n", __func__);
+    zxlogf(ERROR, "%s: channel from request handle is invalid", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -100,7 +100,7 @@ zx_status_t VirtualAudioControlImpl::SendControl(zx::channel control_request_cha
 // forwarding the server-side binding to us.
 zx_status_t VirtualAudioControlImpl::SendInput(zx::channel input_request_channel) {
   if (!input_request_channel.is_valid()) {
-    zxlogf(ERROR, "%s: channel from request handle is invalid\n", __func__);
+    zxlogf(ERROR, "%s: channel from request handle is invalid", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -119,7 +119,7 @@ zx_status_t VirtualAudioControlImpl::SendInput(zx::channel input_request_channel
 
 zx_status_t VirtualAudioControlImpl::SendOutput(zx::channel output_request_channel) {
   if (!output_request_channel.is_valid()) {
-    zxlogf(ERROR, "%s: channel from request handle is invalid\n", __func__);
+    zxlogf(ERROR, "%s: channel from request handle is invalid", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 

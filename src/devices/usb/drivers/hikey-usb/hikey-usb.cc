@@ -42,7 +42,7 @@ zx_status_t HikeyUsb::Create(zx_device_t* parent) {
 zx_status_t HikeyUsb::Init() {
   ddk::CompositeProtocolClient composite(parent_);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "HikeyUsb::Could not get composite protocol\n");
+    zxlogf(ERROR, "HikeyUsb::Could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -50,7 +50,7 @@ zx_status_t HikeyUsb::Init() {
   size_t actual;
   composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
   if (actual != fbl::count_of(fragments)) {
-    zxlogf(ERROR, "HikeyUsb::Could not get fragments\n");
+    zxlogf(ERROR, "HikeyUsb::Could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 

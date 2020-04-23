@@ -92,11 +92,11 @@ class TestAudioCodecDevice : public DeviceType,
 zx_status_t TestAudioCodecDevice::Create(zx_device_t* parent) {
   auto dev = std::make_unique<TestAudioCodecDevice>(parent);
 
-  zxlogf(INFO, "TestAudioCodecDevice::Create: %s \n", DRIVER_NAME);
+  zxlogf(INFO, "TestAudioCodecDevice::Create: %s ", DRIVER_NAME);
 
   auto status = dev->DdkAdd("test-codec");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
     return status;
   }
   // devmgr is now in charge of dev.

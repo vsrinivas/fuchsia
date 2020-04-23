@@ -226,7 +226,7 @@ void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len, zx_time_t ti
       // the rest of this payload and hope that the next one gets us back
       // on track.
       if (!rpt_sz) {
-        zxlogf(ERROR, "%s: failed to find input report size (report id %u)\n", hid->name_.data(),
+        zxlogf(ERROR, "%s: failed to find input report size (report id %u)", hid->name_.data(),
                buf[0]);
         break;
       }
@@ -387,7 +387,7 @@ zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
   zx_status_t status = ZX_OK;
 
   if ((status = hidbus_.Query(0, &info_)) < 0) {
-    zxlogf(ERROR, "hid: bind: hidbus query failed: %d\n", status);
+    zxlogf(ERROR, "hid: bind: hidbus query failed: %d", status);
     return status;
   }
 
@@ -396,39 +396,39 @@ zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
 
   status = SetReportDescriptor();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hid: could not retrieve HID report descriptor: %d\n", status);
+    zxlogf(ERROR, "hid: could not retrieve HID report descriptor: %d", status);
     return status;
   }
 
   status = ProcessReportDescriptor();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hid: could not parse hid report descriptor: %d\n", status);
+    zxlogf(ERROR, "hid: could not parse hid report descriptor: %d", status);
     return status;
   }
 
   status = InitReassemblyBuffer();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hid: failed to initialize reassembly buffer: %d\n", status);
+    zxlogf(ERROR, "hid: failed to initialize reassembly buffer: %d", status);
     return status;
   }
 
   // TODO: delay calling start until we've been opened by someone
   status = hidbus_.Start(this, &hid_ifc_ops);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hid: could not start hid device: %d\n", status);
+    zxlogf(ERROR, "hid: could not start hid device: %d", status);
     ReleaseReassemblyBuffer();
     return status;
   }
 
   status = hidbus_.SetIdle(0, 0);
   if (status != ZX_OK) {
-    zxlogf(TRACE, "hid: [W] set_idle failed for %s: %d\n", name_.data(), status);
+    zxlogf(TRACE, "hid: [W] set_idle failed for %s: %d", name_.data(), status);
     // continue anyway
   }
 
   status = DdkAdd(name_.data());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hid: device_add failed for HID device: %d\n", status);
+    zxlogf(ERROR, "hid: device_add failed for HID device: %d", status);
     ReleaseReassemblyBuffer();
     return status;
   }
@@ -442,7 +442,7 @@ static zx_status_t hid_bind(void* ctx, zx_device_t* parent) {
 
   hidbus_protocol_t hidbus;
   if (device_get_protocol(parent, ZX_PROTOCOL_HIDBUS, &hidbus)) {
-    zxlogf(ERROR, "hid: bind: no hidbus protocol\n");
+    zxlogf(ERROR, "hid: bind: no hidbus protocol");
     return ZX_ERR_INTERNAL;
   }
 

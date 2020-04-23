@@ -192,7 +192,7 @@ static zx_status_t hisi_ufs_bind(void* ctx, zx_device_t* parent) {
   ufshc_dev_t* dev;
   zx_status_t status;
 
-  zxlogf(INFO, "hisi_ufs_bind\n");
+  zxlogf(INFO, "hisi_ufs_bind");
 
   dev = calloc(1, sizeof(ufshc_dev_t));
   if (!dev) {

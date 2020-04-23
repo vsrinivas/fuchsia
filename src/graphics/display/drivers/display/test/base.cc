@@ -96,7 +96,7 @@ bool TestBase::RunLoopWithTimeoutOrUntil(fit::function<bool()>&& condition, zx::
     }
     zx::nanosleep(zx::deadline_after(step));
     if (self->Post(dispatcher) != ZX_OK) {
-      zxlogf(INFO, "Deleted task due to dispatcher shutdown\n");
+      zxlogf(INFO, "Deleted task due to dispatcher shutdown");
       delete done;
       delete self;
     }

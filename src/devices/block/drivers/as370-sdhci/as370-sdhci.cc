@@ -48,14 +48,14 @@ zx_status_t I2cModifyBit(ddk::I2cChannel& i2c, uint8_t reg, uint8_t set_mask, ui
   uint8_t reg_value = 0;
   zx_status_t status = i2c.ReadSync(reg, &reg_value, sizeof(reg_value));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to read from I2C register 0x%02x: %d\n", __FILE__, reg, status);
+    zxlogf(ERROR, "%s: Failed to read from I2C register 0x%02x: %d", __FILE__, reg, status);
     return status;
   }
 
   reg_value = (reg_value | set_mask) & ~clear_mask;
   const uint8_t write_buf[] = {reg, reg_value};
   if ((status = i2c.WriteSync(write_buf, sizeof(write_buf))) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to write to I2C register 0x%02x: %d\n", __FILE__, reg, status);
+    zxlogf(ERROR, "%s: Failed to write to I2C register 0x%02x: %d", __FILE__, reg, status);
     return status;
   }
 
@@ -90,7 +90,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
     composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
 
     if (fragment_count != fbl::count_of(fragments)) {
-      zxlogf(ERROR, "%s: Could not get fragments: expected %zu, got %zu\n", __FILE__,
+      zxlogf(ERROR, "%s: Could not get fragments: expected %zu, got %zu", __FILE__,
              fbl::count_of(fragments), fragment_count);
       return ZX_ERR_NO_RESOURCES;
     }
@@ -101,13 +101,13 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
     //                   when we get new hardware.
     ddk::I2cChannel expander2(fragments[FRAGMENT_EXPANDER_2]);
     if (!expander2.is_valid()) {
-      zxlogf(ERROR, "%s: Could not get I2C fragment\n", __FILE__);
+      zxlogf(ERROR, "%s: Could not get I2C fragment", __FILE__);
       return ZX_ERR_NO_RESOURCES;
     }
 
     ddk::I2cChannel expander3(fragments[FRAGMENT_EXPANDER_3]);
     if (!expander3.is_valid()) {
-      zxlogf(ERROR, "%s: Could not get I2C fragment\n", __FILE__);
+      zxlogf(ERROR, "%s: Could not get I2C fragment", __FILE__);
       return ZX_ERR_NO_RESOURCES;
     }
 
@@ -120,14 +120,14 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
     // says it is 200 MHz. Correct it so that the bus clock can be set properly.
     ddk::ClockProtocolClient clock(fragments[FRAGMENT_SD0_CLOCK]);
     if (clock.is_valid() && (status = clock.SetRate(kVs680CoreClockFreqHz)) != ZX_OK) {
-      zxlogf(WARN, "%s: Failed to set core clock frequency: %d\n", __FILE__, status);
+      zxlogf(WARN, "%s: Failed to set core clock frequency: %d", __FILE__, status);
     }
   } else {
     pdev = ddk::PDev(parent);
   }
 
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   } else {
     pdev.ShowInfo();
@@ -136,25 +136,25 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
   std::optional<ddk::MmioBuffer> core_mmio;
 
   if ((status = pdev.MapMmio(0, &core_mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MapMmio failed", __FILE__);
     return status;
   }
   zx::interrupt irq;
   if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to map interrupt\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to map interrupt", __FILE__);
     return status;
   }
 
   pdev_device_info_t device_info;
   status = pdev.GetDeviceInfo(&device_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetDeviceInfo failed\n", __FILE__);
+    zxlogf(ERROR, "%s: GetDeviceInfo failed", __FILE__);
     return status;
   }
 
   zx::bti bti;
   if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get BTI: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to get BTI: %d", __FILE__, status);
     return status;
   }
 
@@ -169,7 +169,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
   std::unique_ptr<As370Sdhci> device(new (&ac) As370Sdhci(
       parent, *std::move(core_mmio), std::move(irq), device_info.did, std::move(bti)));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: As370Sdhci alloc failed\n", __FILE__);
+    zxlogf(ERROR, "%s: As370Sdhci alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -183,7 +183,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = device->DdkAdd(device_name)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    zxlogf(ERROR, "%s: DdkAdd failed", __FILE__);
     return status;
   }
 

@@ -47,7 +47,7 @@ zx_status_t Mt8167::ClkInit() {
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd clk failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd clk failed %d", __FUNCTION__, status);
   }
 
   return status;

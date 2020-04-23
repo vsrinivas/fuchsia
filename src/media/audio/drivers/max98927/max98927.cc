@@ -28,11 +28,11 @@ uint8_t Max98927Device::ReadReg(uint16_t addr) {
   uint8_t val = 0;
   zx_status_t status = i2c_write_read_sync(&i2c_, &buf, sizeof(buf), &val, sizeof(val));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "max98927: could not read reg addr: 0x%04X  status: %d\n", addr, status);
+    zxlogf(ERROR, "max98927: could not read reg addr: 0x%04X  status: %d", addr, status);
     return -1;
   }
 
-  zxlogf(SPEW, "max98927: register 0x%04x read 0x%02x\n", addr, val);
+  zxlogf(SPEW, "max98927: register 0x%04x read 0x%02x", addr, val);
   return val;
 }
 
@@ -43,10 +43,10 @@ void Max98927Device::WriteReg(uint16_t addr, uint8_t val) {
   buf[2] = val;
   zx_status_t status = i2c_write_sync(&i2c_, buf, sizeof(buf));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5514: could not write reg addr/val: 0x%04x/0x%02x  status: %d\n", addr, val,
+    zxlogf(ERROR, "alc5514: could not write reg addr/val: 0x%04x/0x%02x  status: %d", addr, val,
            status);
   }
-  zxlogf(SPEW, "max98927: register 0x%04x write 0x%02x\n", addr, val);
+  zxlogf(SPEW, "max98927: register 0x%04x write 0x%02x", addr, val);
 }
 
 void Max98927Device::DumpRegs() {
@@ -60,12 +60,12 @@ void Max98927Device::DumpRegs() {
   uint8_t out[last];
   zx_status_t status = i2c_write_read_sync(&i2c_, &buf, sizeof(buf), out, sizeof(out));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "max98927: could not read regs status: %d\n", status);
+    zxlogf(ERROR, "max98927: could not read regs status: %d", status);
   }
 
-  zxlogf(INFO, "max98927: register dump\n");
+  zxlogf(INFO, "max98927: register dump");
   for (uint16_t i = 0; i < last; i++) {
-    zxlogf(INFO, "    [%04x]: 0x%02x\n", i + 1, out[i]);
+    zxlogf(INFO, "    [%04x]: 0x%02x", i + 1, out[i]);
   }
 }
 
@@ -110,7 +110,7 @@ void Max98927Device::Test() {
   // Generate a tone. Must do before AMP_ENABLE.AMP_ENABLE_EN and BROWNOUT_EN.AMP_DSP_EN.
   WriteReg(TONE_GEN_DC_CFG, 0x6);  // fs/64 @ 48kHz = 750Hz
 
-  zxlogf(INFO, "max98927: playing test tone...\n");
+  zxlogf(INFO, "max98927: playing test tone...");
 
   // Enable for 2 secs. The datasheet recommends GLOBAL_ENABLE then AMP_ENABLE, but
   // the part errors when the bits are toggled in that order.
@@ -126,7 +126,7 @@ void Max98927Device::Test() {
   WriteReg(TONE_GEN_DC_CFG, 0);
   WriteReg(PCM_RX_EN_A, 0);
 
-  zxlogf(INFO, "max98927: test tone done\n");
+  zxlogf(INFO, "max98927: test tone done");
 }
 
 void Max98927Device::Enable() {
@@ -214,7 +214,7 @@ zx_status_t Max98927Device::Initialize() {
 zx_status_t Max98927Device::Bind() {
   zx_status_t st = device_get_protocol(parent(), ZX_PROTOCOL_I2C, &i2c_);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "max98927: could not get I2C protocol: %d\n", st);
+    zxlogf(ERROR, "max98927: could not get I2C protocol: %d", st);
     return st;
   }
 
@@ -233,7 +233,7 @@ zx_status_t Max98927Device::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<Max98927Device> dev(new (&ac) Max98927Device(parent));
   if (!ac.check()) {
-    zxlogf(ERROR, "max98927: out of memory attempting to allocate device\n");
+    zxlogf(ERROR, "max98927: out of memory attempting to allocate device");
     return ZX_ERR_NO_MEMORY;
   }
 

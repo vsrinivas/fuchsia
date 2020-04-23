@@ -16,7 +16,7 @@
 zx_status_t SanitizePartitionMap(zbi_partition_map_t* pmap,
                                  const fuchsia_hardware_nand_Info& nand_info) {
   if (pmap->partition_count == 0) {
-    zxlogf(ERROR, "nandpart: partition count is zero\n");
+    zxlogf(ERROR, "nandpart: partition count is zero");
     return ZX_ERR_INTERNAL;
   }
 
@@ -47,7 +47,7 @@ zx_status_t SanitizePartitionMap(zbi_partition_map_t* pmap,
   // 3) Partitions should not be overlapping.
   for (auto *part = begin, *next = begin + 1; next != end; part++, next++) {
     if (part->last_block >= next->first_block) {
-      zxlogf(ERROR, "nandpart: partition %s [%lu, %lu] overlaps partition %s [%lu, %lu]\n",
+      zxlogf(ERROR, "nandpart: partition %s [%lu, %lu] overlaps partition %s [%lu, %lu]",
              part->name, part->first_block, part->last_block, next->name, next->first_block,
              next->last_block);
       return ZX_ERR_INTERNAL;
@@ -66,7 +66,7 @@ zx_status_t SanitizePartitionMap(zbi_partition_map_t* pmap,
 
       if (fbl::round_down(first_byte_offset, erase_block_size) != first_byte_offset ||
           fbl::round_down(last_byte_offset, erase_block_size) != last_byte_offset) {
-        zxlogf(ERROR, "nandpart: partition %s size is not a multiple of erase_block_size\n",
+        zxlogf(ERROR, "nandpart: partition %s size is not a multiple of erase_block_size",
                part->name);
         return ZX_ERR_INTERNAL;
       }

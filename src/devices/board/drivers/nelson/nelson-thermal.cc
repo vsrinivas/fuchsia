@@ -285,19 +285,19 @@ zx_status_t Nelson::ThermalInit() {
   // function 3 which puts in PWM_D mode.
   zx_status_t status = gpio_impl_.ConfigOut(S905D3_PWM_D_PIN, 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ConfigOut failed: %d", __func__, status);
     return status;
   }
 
   status = gpio_impl_.SetAltFunction(S905D3_PWM_D_PIN, S905D3_PWM_D_FN);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SetAltFunction failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: SetAltFunction failed: %d", __func__, status);
     return status;
   }
 
   status = pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

@@ -65,7 +65,7 @@ static pbus_dev_t mali_dev = []() {
 zx_status_t Sherlock::MaliInit() {
   zx_status_t status = pbus_.DeviceAdd(&mali_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::MaliInit: pbus_device_add failed: %d\n", status);
+    zxlogf(ERROR, "Sherlock::MaliInit: pbus_device_add failed: %d", status);
     return status;
   }
   return status;

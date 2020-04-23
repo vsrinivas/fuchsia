@@ -92,7 +92,7 @@ static zx_status_t hikey960_init(hikey960_t* hikey, zx_handle_t resource) {
   return ZX_OK;
 
 fail:
-  zxlogf(ERROR, "hikey960_init failed %d\n", status);
+  zxlogf(ERROR, "hikey960_init failed %d", status);
   hikey960_mmio_release(hikey);
   return status;
 }
@@ -132,17 +132,17 @@ static int hikey960_start_thread(void* arg) {
   // must be after hikey960_i2c_init
   status = hikey960_dsi_init(hikey);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hikey960_dsi_init failed\n");
+    zxlogf(ERROR, "hikey960_dsi_init failed");
   }
 
   if ((status = hikey960_add_devices(hikey)) != ZX_OK) {
-    zxlogf(ERROR, "hikey960_bind: hikey960_add_devices failed!\n");
+    zxlogf(ERROR, "hikey960_bind: hikey960_add_devices failed!");
   }
 
   return ZX_OK;
 
 fail:
-  zxlogf(ERROR, "hikey960_start_thread failed, not all devices have been initialized\n");
+  zxlogf(ERROR, "hikey960_start_thread failed, not all devices have been initialized");
   return status;
 }
 
@@ -162,12 +162,12 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
   iommu_protocol_t iommu;
   status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &iommu);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hikey960_bind: could not get ZX_PROTOCOL_IOMMU\n");
+    zxlogf(ERROR, "hikey960_bind: could not get ZX_PROTOCOL_IOMMU");
     goto fail;
   }
   status = iommu_get_bti(&iommu, 0, BTI_BOARD, &hikey->bti_handle);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hikey960_bind: iommu_get_bti failed: %d\n", status);
+    zxlogf(ERROR, "hikey960_bind: iommu_get_bti failed: %d", status);
     return status;
   }
 
@@ -178,7 +178,7 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
   zx_handle_t resource = get_root_resource();
   status = hikey960_init(hikey, resource);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hikey960_bind: hikey960_init failed %d\n", status);
+    zxlogf(ERROR, "hikey960_bind: hikey960_init failed %d", status);
     goto fail;
   }
 
@@ -206,7 +206,7 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 
 fail:
-  zxlogf(ERROR, "hikey960_bind failed %d\n", status);
+  zxlogf(ERROR, "hikey960_bind failed %d", status);
   hikey960_release(hikey);
   return status;
 }

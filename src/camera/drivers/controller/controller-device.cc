@@ -148,37 +148,37 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
   size_t actual;
   composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
   if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: Could not get fragments\n", __func__);
+    zxlogf(ERROR, "%s: Could not get fragments", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::GdcProtocolClient gdc(fragments[FRAGMENT_GDC]);
   if (!gdc.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_GDC not available\n", __func__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_GDC not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::Ge2dProtocolClient ge2d(fragments[FRAGMENT_GE2D]);
   if (!ge2d.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_GE2D not available\n", __func__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_GE2D not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::IspProtocolClient isp(fragments[FRAGMENT_ISP]);
   if (!isp.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_ISP not available\n", __func__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_ISP not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::SysmemProtocolClient sysmem(fragments[FRAGMENT_SYSMEM]);
   if (!sysmem.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_SYSMEM not available\n", __func__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_SYSMEM not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::ButtonsProtocolClient buttons(fragments[FRAGMENT_BUTTONS]);
   if (!buttons.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_BUTTONS not available\n", __func__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_BUTTONS not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
   zx::event event;
@@ -194,7 +194,7 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
 
   status = controller->StartThread();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not start loop thread\n", __func__);
+    zxlogf(ERROR, "%s: Could not start loop thread", __func__);
     return status;
   }
 

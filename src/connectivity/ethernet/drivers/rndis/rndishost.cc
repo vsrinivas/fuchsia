@@ -37,15 +37,15 @@
 static bool command_succeeded(const void* buf, uint32_t type, size_t length) {
   const auto* header = static_cast<const rndis_header_complete*>(buf);
   if (header->msg_type != type) {
-    zxlogf(DEBUG1, "Bad type: Actual: %x, Expected: %x.\n", header->msg_type, type);
+    zxlogf(DEBUG1, "Bad type: Actual: %x, Expected: %x.", header->msg_type, type);
     return false;
   }
   if (header->msg_length != length) {
-    zxlogf(DEBUG1, "Bad length: Actual: %u, Expected: %zu.\n", header->msg_length, length);
+    zxlogf(DEBUG1, "Bad length: Actual: %u, Expected: %zu.", header->msg_length, length);
     return false;
   }
   if (header->status != RNDIS_STATUS_SUCCESS) {
-    zxlogf(DEBUG1, "Bad status: %x.\n", header->status);
+    zxlogf(DEBUG1, "Bad status: %x.", header->status);
     return false;
   }
   return true;
@@ -72,12 +72,12 @@ zx_status_t RndisHost::ReceiveControlMessage(uint32_t request_id) {
                      USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, control_intf_, RNDIS_CONTROL_TIMEOUT,
                      control_receive_buffer_, sizeof(control_receive_buffer_), &len_read);
   if (len_read == 0) {
-    zxlogf(ERROR, "rndishost received a zero-length response on the control channel\n");
+    zxlogf(ERROR, "rndishost received a zero-length response on the control channel");
     return ZX_ERR_IO_REFUSED;
   }
   const auto* header = reinterpret_cast<rndis_header*>(control_receive_buffer_);
   if (header->request_id != request_id) {
-    zxlogf(ERROR, "rndishost received wrong packet ID on control channel: got %d, wanted %d\n",
+    zxlogf(ERROR, "rndishost received wrong packet ID on control channel: got %d, wanted %d",
            header->request_id, request_id);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
@@ -97,7 +97,7 @@ void RndisHost::Recv(usb_request_t* request) {
   void* read_data;
   zx_status_t status = usb_request_mmap(request, &read_data);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rndishost receive: usb_request_mmap failed: %d\n", status);
+    zxlogf(ERROR, "rndishost receive: usb_request_mmap failed: %d", status);
     return;
   }
 
@@ -106,7 +106,7 @@ void RndisHost::Recv(usb_request_t* request) {
     const auto* header = static_cast<const rndis_packet_header*>(read_data);
 
     if (header->msg_type != RNDIS_PACKET_MSG) {
-      zxlogf(ERROR, "rndishost receive: bad data packet type %u\n", header->msg_type);
+      zxlogf(ERROR, "rndishost receive: bad data packet type %u", header->msg_type);
       return;
     }
     if (header->msg_length > remaining) {
@@ -163,7 +163,7 @@ void RndisHost::ReadComplete(usb_request_t* request) {
 
   fbl::AutoLock lock(&mutex_);
   if (request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "rndis_read_complete usb_reset_endpoint\n");
+    zxlogf(TRACE, "rndis_read_complete usb_reset_endpoint");
     usb_.ResetEndpoint(bulk_in_addr_);
   } else if (request->response.status == ZX_ERR_IO_INVALID) {
     zxlogf(TRACE,
@@ -178,7 +178,7 @@ void RndisHost::ReadComplete(usb_request_t* request) {
   if (request->response.status == ZX_OK && ifc_.ops) {
     Recv(request);
   } else {
-    zxlogf(DEBUG1, "rndis read complete: bad status = %d\n", request->response.status);
+    zxlogf(DEBUG1, "rndis read complete: bad status = %d", request->response.status);
   }
 
   // TODO: Only usb_request_queue if the device is online.
@@ -194,14 +194,14 @@ void RndisHost::ReadComplete(usb_request_t* request) {
 
 void RndisHost::WriteComplete(usb_request_t* request) {
   if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
-    zxlogf(ERROR, "rndis_write_complete zx_err_io_not_present\n");
+    zxlogf(ERROR, "rndis_write_complete zx_err_io_not_present");
     usb_request_release(request);
     return;
   }
 
   fbl::AutoLock lock(&mutex_);
   if (request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "rndishost usb_reset_endpoint\n");
+    zxlogf(TRACE, "rndishost usb_reset_endpoint");
     usb_.ResetEndpoint(bulk_out_addr_);
   } else if (request->response.status == ZX_ERR_IO_INVALID) {
     zxlogf(TRACE,
@@ -277,7 +277,7 @@ void RndisHost::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
 
   usb_request_t* req = usb_req_list_remove_head(&free_write_reqs_, parent_req_size_);
   if (req == nullptr) {
-    zxlogf(TRACE, "rndishost dropped a packet\n");
+    zxlogf(TRACE, "rndishost dropped a packet");
     status = ZX_ERR_NO_RESOURCES;
     goto done;
   }
@@ -307,7 +307,7 @@ done:
 
 zx_status_t RndisHost::PrepareDataPacket(usb_request_t* req, const void* data, size_t data_length) {
   if (data_length > RNDIS_MAX_DATA_SIZE) {
-    zxlogf(ERROR, "rndishost: data packet too large (%zu bytes, maximum %u)\n", data_length,
+    zxlogf(ERROR, "rndishost: data packet too large (%zu bytes, maximum %u)", data_length,
            RNDIS_MAX_DATA_SIZE);
     return ZX_ERR_IO_OVERRUN;
   }
@@ -322,7 +322,7 @@ zx_status_t RndisHost::PrepareDataPacket(usb_request_t* req, const void* data, s
 
   ssize_t bytes_copied = usb_request_copy_to(req, &header, sizeof(header), 0);
   if (bytes_copied < 0) {
-    zxlogf(ERROR, "rndishost: failed to copy request header into send txn (error %zd)\n",
+    zxlogf(ERROR, "rndishost: failed to copy request header into send txn (error %zd)",
            bytes_copied);
     return ZX_ERR_IO;
   }
@@ -336,7 +336,7 @@ zx_status_t RndisHost::PrepareDataPacket(usb_request_t* req, const void* data, s
 
   bytes_copied = usb_request_copy_to(req, data, data_length, sizeof(header));
   if (bytes_copied < 0) {
-    zxlogf(ERROR, "rndishost: failed to copy data into send txn (error %zd)\n", bytes_copied);
+    zxlogf(ERROR, "rndishost: failed to copy data into send txn (error %zd)", bytes_copied);
     return ZX_ERR_IO;
   }
   if (static_cast<size_t>(bytes_copied) < data_length) {
@@ -389,17 +389,17 @@ zx_status_t RndisHost::InitializeDevice() {
 
   zx_status_t status = Command(&init);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rndishost bad status on initial message. %d\n", status);
+    zxlogf(ERROR, "rndishost bad status on initial message. %d", status);
     return status;
   }
 
   rndis_init_complete* init_cmplt = reinterpret_cast<rndis_init_complete*>(control_receive_buffer_);
   if (!command_succeeded(init_cmplt, RNDIS_INITIALIZE_CMPLT)) {
-    zxlogf(ERROR, "rndishost initialization failed.\n");
+    zxlogf(ERROR, "rndishost initialization failed.");
     return ZX_ERR_IO;
   }
 
-  zxlogf(INFO, "rndishost maximum bus transfer size: %u bytes\n", init_cmplt->max_xfer_size);
+  zxlogf(INFO, "rndishost maximum bus transfer size: %u bytes", init_cmplt->max_xfer_size);
   return ZX_OK;
 }
 
@@ -414,13 +414,13 @@ zx_status_t RndisHost::QueryDevice(uint32_t oid, void* info_buffer_out,
 
   zx_status_t status = SendControlCommand(&query);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rndishost failed to issue query: %d\n", status);
+    zxlogf(ERROR, "rndishost failed to issue query: %d", status);
     return status;
   }
 
   status = ReceiveControlMessage(query.request_id);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rndishost failed to receive query response: %d\n", status);
+    zxlogf(ERROR, "rndishost failed to receive query response: %d", status);
     return status;
   }
 
@@ -434,7 +434,7 @@ zx_status_t RndisHost::QueryDevice(uint32_t oid, void* info_buffer_out,
   // info_buffer_offset and info_buffer_length determine where the query result is in the response
   // buffer. Check that the length of the result matches what we expect.
   if (query_cmplt->info_buffer_length != expected_info_buffer_length) {
-    zxlogf(ERROR, "rndishost expected info buffer of size %zu, got %u\n",
+    zxlogf(ERROR, "rndishost expected info buffer of size %zu, got %u",
            expected_info_buffer_length, query_cmplt->info_buffer_length);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
@@ -483,7 +483,7 @@ zx_status_t RndisHost::SetDeviceOid(uint32_t oid, const void* data, size_t data_
   set.oid = oid;
   if (data_length > 0) {
     if (data_length > sizeof(set.info_buffer)) {
-      zxlogf(ERROR, "rndishost attempted to set OID %u with size %zu bytes (maximum is %zu)\n", oid,
+      zxlogf(ERROR, "rndishost attempted to set OID %u with size %zu bytes (maximum is %zu)", oid,
              data_length, sizeof(set.info_buffer));
       return ZX_ERR_INVALID_ARGS;
     }
@@ -496,7 +496,7 @@ zx_status_t RndisHost::SetDeviceOid(uint32_t oid, const void* data, size_t data_
 
   zx_status_t status = Command(&set);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rndishost issuing set command failed: %d\n", status);
+    zxlogf(ERROR, "rndishost issuing set command failed: %d", status);
     return status;
   }
 
@@ -516,18 +516,18 @@ zx_status_t RndisHost::StartThread() {
 
   status = QueryDevice(OID_802_3_PERMANENT_ADDRESS, mac_addr_, sizeof(mac_addr_));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rndishost could not obtain device physical address: %d\n", status);
+    zxlogf(ERROR, "rndishost could not obtain device physical address: %d", status);
     goto fail;
   }
-  zxlogf(INFO, "rndishost MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac_addr_[0], mac_addr_[1],
+  zxlogf(INFO, "rndishost MAC address: %02x:%02x:%02x:%02x:%02x:%02x", mac_addr_[0], mac_addr_[1],
          mac_addr_[2], mac_addr_[3], mac_addr_[4], mac_addr_[5]);
 
   status = QueryDevice(OID_GEN_MAXIMUM_FRAME_SIZE, &mtu_, sizeof(mtu_));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rndishost could not obtain maximum frame size: %d\n", status);
+    zxlogf(ERROR, "rndishost could not obtain maximum frame size: %d", status);
     goto fail;
   }
-  zxlogf(INFO, "rndishost maximum frame size: %u bytes\n", mtu_);
+  zxlogf(INFO, "rndishost maximum frame size: %u bytes", mtu_);
 
   {
     // The device's packet filter is initialized to 0, which blocks all traffic. Enable network
@@ -536,7 +536,7 @@ zx_status_t RndisHost::StartThread() {
                             RNDIS_PACKET_TYPE_ALL_MULTICAST | RNDIS_PACKET_TYPE_PROMISCUOUS;
     status = SetDeviceOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "rndishost failed to set packet filter\n");
+      zxlogf(ERROR, "rndishost failed to set packet filter");
       goto fail;
     }
   }
@@ -557,7 +557,7 @@ zx_status_t RndisHost::StartThread() {
   }
 
   DdkMakeVisible();
-  zxlogf(INFO, "rndishost ready\n");
+  zxlogf(INFO, "rndishost ready");
   return ZX_OK;
 
 fail:
@@ -594,7 +594,7 @@ zx_status_t RndisHost::AddDevice() {
   status = DdkAdd("rndishost", DEVICE_ADD_INVISIBLE, nullptr, 0, ZX_PROTOCOL_ETHERNET_IMPL);
   if (status != ZX_OK) {
     lock.release();
-    zxlogf(ERROR, "rndishost: failed to create device: %d\n", status);
+    zxlogf(ERROR, "rndishost: failed to create device: %d", status);
     return status;
   }
 
@@ -670,7 +670,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
   }
 
   if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
-    zxlogf(ERROR, "rndishost couldn't find endpoints\n");
+    zxlogf(ERROR, "rndishost couldn't find endpoints");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -686,7 +686,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
     // devmgr is now in charge of the memory for dev, so we don't own it any more.
     dev.release();
   } else {
-    zxlogf(ERROR, "rndishost_bind failed: %d\n", status);
+    zxlogf(ERROR, "rndishost_bind failed: %d", status);
   }
   return status;
 }

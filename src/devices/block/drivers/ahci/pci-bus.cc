@@ -26,7 +26,7 @@ zx_status_t PciBus::RegWrite(size_t offset, uint32_t val) {
 zx_status_t PciBus::Configure(zx_device_t* parent) {
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PCI, &pci_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error getting pci config information\n");
+    zxlogf(ERROR, "ahci: error getting pci config information");
     return status;
   }
 
@@ -34,7 +34,7 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
   mmio_buffer_t buf;
   status = pci_map_bar_buffer(&pci_, 5u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error %d mapping pci register window\n", status);
+    zxlogf(ERROR, "ahci: error %d mapping pci register window", status);
     return status;
   }
   mmio_ = ddk::MmioBuffer(buf);
@@ -42,13 +42,13 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
   zx_pcie_device_info_t config;
   status = pci_get_device_info(&pci_, &config);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error getting pci config information\n");
+    zxlogf(ERROR, "ahci: error getting pci config information");
     return status;
   }
 
   // TODO: move this to SATA.
   if (config.sub_class != 0x06 && config.base_class == 0x01) {  // SATA
-    zxlogf(ERROR, "ahci: device class 0x%x unsupported\n", config.sub_class);
+    zxlogf(ERROR, "ahci: device class 0x%x unsupported", config.sub_class);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -56,7 +56,7 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
   // ahci controller is bus master
   status = pci_enable_bus_master(&pci_, true);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error %d enabling bus master\n", status);
+    zxlogf(ERROR, "ahci: error %d enabling bus master", status);
     return status;
   }
 
@@ -68,36 +68,36 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
   if (status == ZX_ERR_NOT_SUPPORTED) {
     status = pci_query_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "ahci: neither MSI nor legacy interrupts are supported\n");
+      zxlogf(ERROR, "ahci: neither MSI nor legacy interrupts are supported");
       return status;
     }
     irq_mode = ZX_PCIE_IRQ_MODE_LEGACY;
   }
 
   if (irq_cnt == 0) {
-    zxlogf(ERROR, "ahci: no interrupts available\n");
+    zxlogf(ERROR, "ahci: no interrupts available");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  zxlogf(INFO, "ahci: pci using %s interrupt\n",
+  zxlogf(INFO, "ahci: pci using %s interrupt",
          (irq_mode == ZX_PCIE_IRQ_MODE_MSI) ? "MSI" : "legacy");
   status = pci_set_irq_mode(&pci_, irq_mode, 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error %d setting irq mode\n", status);
+    zxlogf(ERROR, "ahci: error %d setting irq mode", status);
     return status;
   }
 
   // Get bti handle.
   status = pci_get_bti(&pci_, 0, bti_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error %d getting bti handle\n", status);
+    zxlogf(ERROR, "ahci: error %d getting bti handle", status);
     return status;
   }
 
   // Get irq handle.
   status = pci_map_interrupt(&pci_, 0, irq_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error %d getting irq handle\n", status);
+    zxlogf(ERROR, "ahci: error %d getting irq handle", status);
     return status;
   }
   return ZX_OK;

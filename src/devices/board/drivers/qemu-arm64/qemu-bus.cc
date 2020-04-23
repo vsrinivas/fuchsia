@@ -28,12 +28,12 @@ static bool use_fake_display() {
 
 int QemuArm64::Thread() {
   zx_status_t status;
-  zxlogf(INFO, "qemu-bus thread running \n");
+  zxlogf(INFO, "qemu-bus thread running ");
 
   if (use_fake_display()) {
     status = DisplayInit();
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DisplayInit() failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s: DisplayInit() failed %d", __func__, status);
       return thrd_error;
     }
     zxlogf(INFO, "qemu.use_fake_display=1, disabling goldfish-display");
@@ -42,25 +42,25 @@ int QemuArm64::Thread() {
 
   status = PciInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: PciInit() failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: PciInit() failed %d", __func__, status);
     return thrd_error;
   }
 
   status = SysmemInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SysmemInit() failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: SysmemInit() failed %d", __func__, status);
     return thrd_error;
   }
 
   status = PciAdd();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: PciAdd() failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: PciAdd() failed %d", __func__, status);
     return thrd_error;
   }
 
   status = RtcInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: RtcInit() failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: RtcInit() failed %d", __func__, status);
     return thrd_error;
   }
 
@@ -76,7 +76,7 @@ zx_status_t QemuArm64::Start() {
 zx_status_t QemuArm64::Create(void* ctx, zx_device_t* parent) {
   ddk::PBusProtocolClient pbus(parent);
   if (!pbus.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PBUS\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PBUS", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -87,7 +87,7 @@ zx_status_t QemuArm64::Create(void* ctx, zx_device_t* parent) {
   }
   zx_status_t status;
   if ((status = board->DdkAdd("qemu-bus", DEVICE_ADD_NON_BINDABLE)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed %d", __func__, status);
     return status;
   }
 

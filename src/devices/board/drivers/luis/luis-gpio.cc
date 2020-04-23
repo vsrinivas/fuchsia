@@ -545,12 +545,12 @@ zx_status_t Luis::GpioInit() {
 
   auto status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
     return status;
   }
   gpio_impl_ = ddk::GpioImplProtocolClient(parent());
   if (!gpio_impl_.is_valid()) {
-    zxlogf(ERROR, "%s: device_get_protocol failed\n", __func__);
+    zxlogf(ERROR, "%s: device_get_protocol failed", __func__);
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;

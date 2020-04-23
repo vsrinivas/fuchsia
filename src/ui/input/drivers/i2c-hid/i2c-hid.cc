@@ -79,7 +79,7 @@ zx_status_t I2cHidbus::Reset(bool force) {
   zx_status_t status = i2c_.WriteSync(buf, sizeof(buf));
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-hid: could not issue reset: %d\n", status);
+    zxlogf(ERROR, "i2c-hid: could not issue reset: %d", status);
     return status;
   }
 
@@ -113,13 +113,13 @@ zx_status_t I2cHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* d
   zx_status_t status =
       i2c_.WriteReadSync(command_bytes, command_bytes_index, report.data(), report.size());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-hid: could not issue get_report: %d\n", status);
+    zxlogf(ERROR, "i2c-hid: could not issue get_report: %d", status);
     return status;
   }
 
   uint16_t response_len = static_cast<uint16_t>(report[0] + (report[1] << 8U));
   if (response_len != len + 2) {
-    zxlogf(ERROR, "i2c-hid: response_len %d != len: %ld\n", response_len, len + 2);
+    zxlogf(ERROR, "i2c-hid: response_len %d != len: %ld", response_len, len + 2);
   }
 
   uint16_t report_len = response_len - 2;
@@ -159,7 +159,7 @@ zx_status_t I2cHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const v
   // Send the command.
   zx_status_t status = i2c_.WriteSync(command_bytes.data(), command_bytes_index);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-hid: could not issue set_report: %d\n", status);
+    zxlogf(ERROR, "i2c-hid: could not issue set_report: %d", status);
     return status;
   }
   return ZX_OK;
@@ -213,7 +213,7 @@ zx_status_t I2cHidbus::HidbusGetDescriptor(hid_description_type_t desc_type, voi
   zx_status_t status = i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(uint16_t),
                                           static_cast<uint8_t*>(out_data_buffer), desc_len);
   if (status < 0) {
-    zxlogf(ERROR, "i2c-hid: could not read HID report descriptor from reg 0x%04x: %d\n", desc_reg,
+    zxlogf(ERROR, "i2c-hid: could not read HID report descriptor from reg 0x%04x: %d", desc_reg,
            status);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -224,11 +224,11 @@ zx_status_t I2cHidbus::HidbusGetDescriptor(hid_description_type_t desc_type, voi
 
 // TODO(teisenbe/tkilbourn): Remove this once we pipe IRQs from ACPI
 int I2cHidbus::WorkerThreadNoIrq() {
-  zxlogf(INFO, "i2c-hid: using noirq\n");
+  zxlogf(INFO, "i2c-hid: using noirq");
 
   zx_status_t status = Reset(true);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-hid: failed to reset i2c device\n");
+    zxlogf(ERROR, "i2c-hid: failed to reset i2c device");
     return 0;
   }
 
@@ -269,12 +269,12 @@ int I2cHidbus::WorkerThreadNoIrq() {
         if (status == ZX_ERR_TIMED_OUT) {
           zx_time_t now = zx_clock_get_monotonic();
           if (now - last_timeout_warning > kMinTimeBetweenWarnings) {
-            zxlogf(TRACE, "i2c-hid: device_read timed out\n");
+            zxlogf(TRACE, "i2c-hid: device_read timed out");
             last_timeout_warning = now;
           }
           continue;
         }
-        zxlogf(ERROR, "i2c-hid: device_read failure %d\n", status);
+        zxlogf(ERROR, "i2c-hid: device_read failure %d", status);
         continue;
       }
 
@@ -289,7 +289,7 @@ int I2cHidbus::WorkerThreadNoIrq() {
       dedupe = true;
 
       if (report_len == 0x0) {
-        zxlogf(TRACE, "i2c-hid reset detected\n");
+        zxlogf(TRACE, "i2c-hid reset detected");
         // Either host or device reset.
         i2c_pending_reset_ = false;
         i2c_reset_cnd_.Broadcast();
@@ -297,7 +297,7 @@ int I2cHidbus::WorkerThreadNoIrq() {
       }
 
       if (i2c_pending_reset_) {
-        zxlogf(INFO, "i2c-hid: received event while waiting for reset? %u\n", report_len);
+        zxlogf(INFO, "i2c-hid: received event while waiting for reset? %u", report_len);
         continue;
       }
 
@@ -307,7 +307,7 @@ int I2cHidbus::WorkerThreadNoIrq() {
       }
 
       if ((report_len < 2) || (report_len > len)) {
-        zxlogf(ERROR, "i2c-hid: bad report len (rlen %hu, bytes read %d)!!!\n", report_len, len);
+        zxlogf(ERROR, "i2c-hid: bad report len (rlen %hu, bytes read %d)!!!", report_len, len);
         continue;
       }
     }
@@ -326,11 +326,11 @@ int I2cHidbus::WorkerThreadNoIrq() {
 }
 
 int I2cHidbus::WorkerThreadIrq() {
-  zxlogf(TRACE, "i2c-hid: using irq\n");
+  zxlogf(TRACE, "i2c-hid: using irq");
 
   zx_status_t status = Reset(true);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-hid: failed to reset i2c device\n");
+    zxlogf(ERROR, "i2c-hid: failed to reset i2c device");
     return 0;
   }
 
@@ -345,7 +345,7 @@ int I2cHidbus::WorkerThreadIrq() {
     zx_status_t status = irq_.wait(&timestamp);
     if (status != ZX_OK) {
       if (status != ZX_ERR_CANCELED) {
-        zxlogf(ERROR, "i2c-hid: interrupt wait failed %d\n", status);
+        zxlogf(ERROR, "i2c-hid: interrupt wait failed %d", status);
       }
       break;
     }
@@ -364,18 +364,18 @@ int I2cHidbus::WorkerThreadIrq() {
         if (status == ZX_ERR_TIMED_OUT) {
           zx_time_t now = zx_clock_get_monotonic();
           if (now - last_timeout_warning > kMinTimeBetweenWarnings) {
-            zxlogf(TRACE, "i2c-hid: device_read timed out\n");
+            zxlogf(TRACE, "i2c-hid: device_read timed out");
             last_timeout_warning = now;
           }
           continue;
         }
-        zxlogf(ERROR, "i2c-hid: device_read failure %d\n", status);
+        zxlogf(ERROR, "i2c-hid: device_read failure %d", status);
         continue;
       }
 
       report_len = letoh16(*(uint16_t*)buf);
       if (report_len == 0x0) {
-        zxlogf(TRACE, "i2c-hid reset detected\n");
+        zxlogf(TRACE, "i2c-hid reset detected");
         // Either host or device reset.
         i2c_pending_reset_ = false;
         i2c_reset_cnd_.Broadcast();
@@ -383,12 +383,12 @@ int I2cHidbus::WorkerThreadIrq() {
       }
 
       if (i2c_pending_reset_) {
-        zxlogf(INFO, "i2c-hid: received event while waiting for reset? %u\n", report_len);
+        zxlogf(INFO, "i2c-hid: received event while waiting for reset? %u", report_len);
         continue;
       }
 
       if ((report_len < 2) || (report_len > len)) {
-        zxlogf(ERROR, "i2c-hid: bad report len (report_len %hu, bytes_read %d)!!!\n", report_len,
+        zxlogf(ERROR, "i2c-hid: bad report len (report_len %hu, bytes_read %d)!!!", report_len,
                len);
         continue;
       }
@@ -439,7 +439,7 @@ zx_status_t I2cHidbus::ReadI2cHidDesc(I2cHidDesc* hiddesc) {
 
   status = i2c_.WriteReadSync(buf, sizeof(buf), out, sizeof(out));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-hid: could not read HID descriptor: %d\n", status);
+    zxlogf(ERROR, "i2c-hid: could not read HID descriptor: %d", status);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -452,22 +452,22 @@ zx_status_t I2cHidbus::ReadI2cHidDesc(I2cHidDesc* hiddesc) {
 
   status = i2c_.WriteReadSync(buf, sizeof(buf), reinterpret_cast<uint8_t*>(hiddesc), desc_len);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-hid: could not read HID descriptor: %d\n", status);
+    zxlogf(ERROR, "i2c-hid: could not read HID descriptor: %d", status);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zxlogf(TRACE, "i2c-hid: desc:\n");
-  zxlogf(TRACE, "  report desc len: %u\n", letoh16(hiddesc->wReportDescLength));
-  zxlogf(TRACE, "  report desc reg: %u\n", letoh16(hiddesc->wReportDescRegister));
-  zxlogf(TRACE, "  input reg:       %u\n", letoh16(hiddesc->wInputRegister));
-  zxlogf(TRACE, "  max input len:   %u\n", letoh16(hiddesc->wMaxInputLength));
-  zxlogf(TRACE, "  output reg:      %u\n", letoh16(hiddesc->wOutputRegister));
-  zxlogf(TRACE, "  max output len:  %u\n", letoh16(hiddesc->wMaxOutputLength));
-  zxlogf(TRACE, "  command reg:     %u\n", letoh16(hiddesc->wCommandRegister));
-  zxlogf(TRACE, "  data reg:        %u\n", letoh16(hiddesc->wDataRegister));
-  zxlogf(TRACE, "  vendor id:       %x\n", hiddesc->wVendorID);
-  zxlogf(TRACE, "  product id:      %x\n", hiddesc->wProductID);
-  zxlogf(TRACE, "  version id:      %x\n", hiddesc->wVersionID);
+  zxlogf(TRACE, "i2c-hid: desc:");
+  zxlogf(TRACE, "  report desc len: %u", letoh16(hiddesc->wReportDescLength));
+  zxlogf(TRACE, "  report desc reg: %u", letoh16(hiddesc->wReportDescRegister));
+  zxlogf(TRACE, "  input reg:       %u", letoh16(hiddesc->wInputRegister));
+  zxlogf(TRACE, "  max input len:   %u", letoh16(hiddesc->wMaxInputLength));
+  zxlogf(TRACE, "  output reg:      %u", letoh16(hiddesc->wOutputRegister));
+  zxlogf(TRACE, "  max output len:  %u", letoh16(hiddesc->wMaxOutputLength));
+  zxlogf(TRACE, "  command reg:     %u", letoh16(hiddesc->wCommandRegister));
+  zxlogf(TRACE, "  data reg:        %u", letoh16(hiddesc->wDataRegister));
+  zxlogf(TRACE, "  vendor id:       %x", hiddesc->wVendorID);
+  zxlogf(TRACE, "  product id:      %x", hiddesc->wProductID);
+  zxlogf(TRACE, "  version id:      %x", hiddesc->wVersionID);
 
   return ZX_OK;
 }
@@ -495,7 +495,7 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
         break;
       }
       zx::nanosleep(zx::deadline_after(zx::msec(100)));
-      zxlogf(INFO, "i2c-hid: Retrying reading HID descriptor\n");
+      zxlogf(INFO, "i2c-hid: Retrying reading HID descriptor");
     }
     if (status != ZX_OK) {
       dev->DdkRemoveDeprecated();
@@ -519,7 +519,7 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
 
   status = DdkAdd("i2c-hid", DEVICE_ADD_INVISIBLE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-hid: could not add device: %d\n", status);
+    zxlogf(ERROR, "i2c-hid: could not add device: %d", status);
     return status;
   }
 
@@ -538,7 +538,7 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* parent) {
 
   ddk::I2cChannel i2c(parent);
   if (!i2c.is_valid()) {
-    zxlogf(ERROR, "I2c-Hid: Could not get i2c protocol\n");
+    zxlogf(ERROR, "I2c-Hid: Could not get i2c protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 

@@ -31,30 +31,30 @@
 namespace dw_i2c {
 
 zx_status_t DwI2cBus::Dumpstate() {
-  zxlogf(INFO, "DW_kI2cEnable_STATUS = \t0x%x\n",
+  zxlogf(INFO, "DW_kI2cEnable_STATUS = \t0x%x",
          EnableStatusReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_kI2cEnable = \t0x%x\n", EnableReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_CON = \t0x%x\n", ControlReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_TAR = \t0x%x\n", TargetAddressReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_HS_MADDR = \t0x%x\n", HSMasterAddrReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_SS_SCL_HCNT = \t0x%x\n",
+  zxlogf(INFO, "DW_kI2cEnable = \t0x%x", EnableReg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_CON = \t0x%x", ControlReg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_TAR = \t0x%x", TargetAddressReg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_HS_MADDR = \t0x%x", HSMasterAddrReg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_SS_SCL_HCNT = \t0x%x",
          StandardSpeedSclHighCountReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_SS_SCL_LCNT = \t0x%x\n",
+  zxlogf(INFO, "DW_I2C_SS_SCL_LCNT = \t0x%x",
          StandardSpeedSclLowCountReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_FS_SCL_HCNT = \t0x%x\n",
+  zxlogf(INFO, "DW_I2C_FS_SCL_HCNT = \t0x%x",
          FastSpeedSclHighCountReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_FS_SCL_LCNT = \t0x%x\n",
+  zxlogf(INFO, "DW_I2C_FS_SCL_LCNT = \t0x%x",
          FastSpeedSclLowCountReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_INTR_MASK = \t0x%x\n", InterruptMaskReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_RAW_INTR_STAT = \t0x%x\n",
+  zxlogf(INFO, "DW_I2C_INTR_MASK = \t0x%x", InterruptMaskReg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_RAW_INTR_STAT = \t0x%x",
          RawInterruptStatusReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_RX_TL = \t0x%x\n", RxFifoThresholdReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_TX_TL = \t0x%x\n", TxFifoThresholdReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_STATUS = \t0x%x\n", StatusReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_TXFLR = \t0x%x\n", TxFifoLevelReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_RXFLR = \t0x%x\n", RxFifoLevelReg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_COMP_PARAM_1 = \t0x%x\n", CompParam1Reg::Get().ReadFrom(&mmio_).reg_value());
-  zxlogf(INFO, "DW_I2C_TX_ABRT_SOURCE = \t0x%x\n",
+  zxlogf(INFO, "DW_I2C_RX_TL = \t0x%x", RxFifoThresholdReg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_TX_TL = \t0x%x", TxFifoThresholdReg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_STATUS = \t0x%x", StatusReg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_TXFLR = \t0x%x", TxFifoLevelReg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_RXFLR = \t0x%x", RxFifoLevelReg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_COMP_PARAM_1 = \t0x%x", CompParam1Reg::Get().ReadFrom(&mmio_).reg_value());
+  zxlogf(INFO, "DW_I2C_TX_ABRT_SOURCE = \t0x%x",
          TxAbrtSourceReg::Get().ReadFrom(&mmio_).reg_value());
   return ZX_OK;
 }
@@ -75,7 +75,7 @@ zx_status_t DwI2cBus::EnableAndWait(bool enable) {
     zx_nanosleep(zx_deadline_after(kPollSleep));
   } while (poll++ < kMaxPoll);
 
-  zxlogf(ERROR, "%s: Could not %s I2C contoller! DW_kI2cEnable_STATUS = 0x%x\n", __FUNCTION__,
+  zxlogf(ERROR, "%s: Could not %s I2C contoller! DW_kI2cEnable_STATUS = 0x%x", __FUNCTION__,
          enable ? "enable" : "disable", EnableStatusReg::Get().ReadFrom(&mmio_).enable());
   Dumpstate();
 
@@ -120,7 +120,7 @@ InterruptStatusReg DwI2cBus::ReadAndClearIrq() {
 
   if (irq.tx_abrt()) {
     // ABRT_SOURCE should be read before clearing TX_ABRT.
-    zxlogf(ERROR, "dw-i2c: error on bus - Abort source 0x%x\n",
+    zxlogf(ERROR, "dw-i2c: error on bus - Abort source 0x%x",
            TxAbrtSourceReg::Get().ReadFrom(&mmio_).reg_value());
     ClearTxAbrtReg::Get().ReadFrom(&mmio_);
   }
@@ -143,7 +143,7 @@ int DwI2cBus::IrqThread() {
   while (1) {
     status = irq_.wait(nullptr);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: irq wait failed, retcode = %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: irq wait failed, retcode = %d", __FUNCTION__, status);
       return status;
     }
 
@@ -156,7 +156,7 @@ int DwI2cBus::IrqThread() {
 
     if (reg.tx_abrt()) {
       if (event_.signal(0, kErrorSignal) != ZX_OK) {
-        zxlogf(ERROR, "Failure signaling I2C error - %d\n", status);
+        zxlogf(ERROR, "Failure signaling I2C error - %d", status);
       }
       ops_ = nullptr;
     }
@@ -164,7 +164,7 @@ int DwI2cBus::IrqThread() {
     if (reg.rx_full()) {
       if (Receive() != ZX_OK) {
         if (event_.signal(0, kErrorSignal) != ZX_OK) {
-          zxlogf(ERROR, "Failure signaling I2C error - %d\n", status);
+          zxlogf(ERROR, "Failure signaling I2C error - %d", status);
         }
         ops_ = nullptr;
       }
@@ -173,7 +173,7 @@ int DwI2cBus::IrqThread() {
     if (reg.tx_empty()) {
       if (Transmit() != ZX_OK) {
         if (event_.signal(0, kErrorSignal) != ZX_OK) {
-          zxlogf(ERROR, "Failure signaling I2C error - %d\n", status);
+          zxlogf(ERROR, "Failure signaling I2C error - %d", status);
         }
         ops_ = nullptr;
       }
@@ -183,7 +183,7 @@ int DwI2cBus::IrqThread() {
       // Signal complete when all tx/rx are complete.
       if (tx_op_idx_ == ops_count_ && rx_pending_ == 0) {
         if (event_.signal(0, kTransactionCompleteSignal) != ZX_OK) {
-          zxlogf(ERROR, "Failure signaling I2C error - %d\n", status);
+          zxlogf(ERROR, "Failure signaling I2C error - %d", status);
         }
         ops_ = nullptr;
       }
@@ -224,12 +224,12 @@ zx_status_t DwI2cBus::Transact(const i2c_impl_op_t* rws, size_t count) {
 
   auto status = WaitBusBusy();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "I2C bus wait failed %d\n", status);
+    zxlogf(ERROR, "I2C bus wait failed %d", status);
     return status;
   }
   status = SetSlaveAddress(rws[0].address);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "I2C set address failed %d\n", status);
+    zxlogf(ERROR, "I2C set address failed %d", status);
     return status;
   }
 
@@ -237,7 +237,7 @@ zx_status_t DwI2cBus::Transact(const i2c_impl_op_t* rws, size_t count) {
   SetOpsHelper(rws, count);
   status = Enable();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "I2C device enable failed %d\n", status);
+    zxlogf(ERROR, "I2C device enable failed %d", status);
     return status;
   }
   event_.signal(kTransactionCompleteSignal | kErrorSignal, 0);
@@ -248,7 +248,7 @@ zx_status_t DwI2cBus::Transact(const i2c_impl_op_t* rws, size_t count) {
 
   auto disable_ret = Disable();
   if (disable_ret != ZX_OK) {
-    zxlogf(ERROR, "I2C device disable failed %d\n", disable_ret);
+    zxlogf(ERROR, "I2C device disable failed %d", disable_ret);
   }
   return status;
 }
@@ -267,7 +267,7 @@ zx_status_t DwI2cBus::SetSlaveAddress(uint16_t addr) {
 
 zx_status_t DwI2cBus::Receive() {
   if (rx_pending_ == 0) {
-    zxlogf(ERROR, "dw-i2c: Bytes received without being requested\n");
+    zxlogf(ERROR, "dw-i2c: Bytes received without being requested");
     return ZX_ERR_IO_OVERRUN;
   }
 
@@ -291,7 +291,7 @@ zx_status_t DwI2cBus::Receive() {
   }
 
   if (avail_read != 0) {
-    zxlogf(ERROR, "dw-i2c: %d more bytes received than requested\n", avail_read);
+    zxlogf(ERROR, "dw-i2c: %d more bytes received than requested", avail_read);
     return ZX_ERR_IO_OVERRUN;
   }
 
@@ -374,7 +374,7 @@ zx_status_t DwI2cBus::HostInit() {
   auto dw_comp_type = CompTypeReg::Get().ReadFrom(&mmio_).reg_value();
 
   if (dw_comp_type != kDwCompTypeNum) {
-    zxlogf(ERROR, "%s: Incompatible IP Block detected. Expected = 0x%x, Actual = 0x%x\n",
+    zxlogf(ERROR, "%s: Incompatible IP Block detected. Expected = 0x%x, Actual = 0x%x",
            __FUNCTION__, kDwCompTypeNum, dw_comp_type);
 
     return ZX_ERR_NOT_SUPPORTED;
@@ -488,7 +488,7 @@ int DwI2c::TestThread() {
   uint8_t data_write = 0;
   uint8_t data_read;
 #if 0
-  zxlogf(INFO, "Finding I2c devices\n");
+  zxlogf(INFO, "Finding I2c devices");
   // Find all available devices.
   for (uint32_t i = 0x0; i <= 0x7f; i++) {
     addr = static_cast<uint8_t>(i);
@@ -503,11 +503,11 @@ int DwI2c::TestThread() {
 
     status = I2cImplTransact(0, ops, countof(ops));
     if (status == ZX_OK) {
-      zxlogf(INFO, "I2C device found at address: 0x%02X\n", addr);
+      zxlogf(INFO, "I2C device found at address: 0x%02X", addr);
     }
   }
 #endif
-  zxlogf(INFO, "I2C: Testing PMIC ping\n");
+  zxlogf(INFO, "I2C: Testing PMIC ping");
 
   // Test multiple reads from a known device.
   for (uint32_t i = 0; i < 10; i++) {
@@ -526,19 +526,19 @@ int DwI2c::TestThread() {
     if (status == ZX_OK) {
       // Check with reset value of PMIC registers.
       if (data_read != valid_value) {
-        zxlogf(INFO, "I2C test: PMIC register value does not matched - %x\n", data_read);
+        zxlogf(INFO, "I2C test: PMIC register value does not matched - %x", data_read);
         pass = false;
       }
     } else {
-      zxlogf(INFO, "I2C test: PMIC ping failed : %d\n", status);
+      zxlogf(INFO, "I2C test: PMIC ping failed : %d", status);
       pass = false;
     }
   }
 
   if (pass) {
-    zxlogf(INFO, "DW I2C test for AS370 passed\n");
+    zxlogf(INFO, "DW I2C test for AS370 passed");
   } else {
-    zxlogf(ERROR, "DW I2C test for AS370 failed\n");
+    zxlogf(ERROR, "DW I2C test for AS370 failed");
   }
   return 0;
 }
@@ -618,18 +618,18 @@ zx_status_t DwI2c::Create(void* ctx, zx_device_t* parent) {
 
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PDEV\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PDEV", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   pdev_device_info_t info;
   if ((status = pdev.GetDeviceInfo(&info)) != ZX_OK) {
-    zxlogf(ERROR, "dw_i2c: pdev_get_device_info failed\n");
+    zxlogf(ERROR, "dw_i2c: pdev_get_device_info failed");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (info.mmio_count != info.irq_count) {
-    zxlogf(ERROR, "dw_i2c: mmio_count %u does not matchirq_count %u\n", info.mmio_count,
+    zxlogf(ERROR, "dw_i2c: mmio_count %u does not matchirq_count %u", info.mmio_count,
            info.irq_count);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -639,7 +639,7 @@ zx_status_t DwI2c::Create(void* ctx, zx_device_t* parent) {
   for (uint32_t i = 0; i < info.mmio_count; i++) {
     std::optional<ddk::MmioBuffer> mmio;
     if ((status = pdev.MapMmio(i, &mmio)) != ZX_OK) {
-      zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed %d", __FUNCTION__, status);
       return status;
     }
 
@@ -654,7 +654,7 @@ zx_status_t DwI2c::Create(void* ctx, zx_device_t* parent) {
     }
 
     if ((status = i2c_bus->Init()) != ZX_OK) {
-      zxlogf(ERROR, "dw_i2c: dw_i2c bus init failed: %d\n", status);
+      zxlogf(ERROR, "dw_i2c: dw_i2c bus init failed: %d", status);
       return ZX_ERR_INTERNAL;
     }
 
@@ -666,12 +666,12 @@ zx_status_t DwI2c::Create(void* ctx, zx_device_t* parent) {
 
   auto dev = fbl::make_unique_checked<DwI2c>(&ac, parent, std::move(bus_list));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s ZX_ERR_NO_MEMORY\n", __FUNCTION__);
+    zxlogf(ERROR, "%s ZX_ERR_NO_MEMORY", __FUNCTION__);
     return ZX_ERR_NO_MEMORY;
   }
 
   if ((status = dev->DdkAdd("dw-i2c")) != ZX_OK) {
-    zxlogf(ERROR, "%s DdkAdd failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s DdkAdd failed: %d", __FUNCTION__, status);
     dev->ShutDown();
     return status;
   }

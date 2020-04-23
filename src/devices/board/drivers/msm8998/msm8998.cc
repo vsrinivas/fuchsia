@@ -22,14 +22,14 @@ zx_status_t Msm8998::Create(void* ctx, zx_device_t* parent) {
 
   auto status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_get_protocol failed %d", __func__, status);
     return status;
   }
 
   auto board = std::make_unique<Msm8998>(parent, &pbus);
   status = board->DdkAdd("msm8998", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed %d", __func__, status);
     return status;
   }
 
@@ -45,27 +45,27 @@ zx_status_t Msm8998::Create(void* ctx, zx_device_t* parent) {
 int Msm8998::Thread() {
   /*
       if (GpioInit() != ZX_OK) {
-          zxlogf(ERROR, "GpioInit() failed\n");
+          zxlogf(ERROR, "GpioInit() failed");
           return -1;
       }
 
       if (ClockInit() != ZX_OK) {
-          zxlogf(ERROR, "ClockInit failed\n");
+          zxlogf(ERROR, "ClockInit failed");
           return -1;
       }
 
       if (PowerInit() != ZX_OK) {
-          zxlogf(ERROR, "PowerInit() failed\n");
+          zxlogf(ERROR, "PowerInit() failed");
           return -1;
       }
 
       if (PilInit() != ZX_OK) {
-          zxlogf(ERROR, "PilInit() failed\n");
+          zxlogf(ERROR, "PilInit() failed");
           return -1;
       }
 
       if (Sdc1Init() != ZX_OK) {
-          zxlogf(ERROR, "Sdc1Init() failed\n");
+          zxlogf(ERROR, "Sdc1Init() failed");
           return -1;
       }
   */

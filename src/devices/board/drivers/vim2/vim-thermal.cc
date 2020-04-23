@@ -213,7 +213,7 @@ zx_status_t Vim::ThermalInit() {
   zx_status_t status = pbus_.DeviceAdd(&mailbox_dev);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ThermalInit: pbus_device_add failed: %d\n", status);
+    zxlogf(ERROR, "ThermalInit: pbus_device_add failed: %d", status);
     return status;
   }
 
@@ -236,7 +236,7 @@ zx_status_t Vim::ThermalInit() {
 
   status = DdkAddComposite("vim-thermal", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_add_composite failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_add_composite failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

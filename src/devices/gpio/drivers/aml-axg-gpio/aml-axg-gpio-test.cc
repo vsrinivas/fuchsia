@@ -64,7 +64,7 @@ class FakeAmlAxgGpio : public AmlAxgGpio {
         gpio_interrupt = &s905d2_interrupt_block;
         break;
       default:
-        zxlogf(ERROR, "FakeAmlAxgGpio::Create: unsupported SOC PID %u\n", info.pid);
+        zxlogf(ERROR, "FakeAmlAxgGpio::Create: unsupported SOC PID %u", info.pid);
         return nullptr;
     }
 
@@ -72,7 +72,7 @@ class FakeAmlAxgGpio : public AmlAxgGpio {
 
     fbl::Array<uint16_t> irq_info(new (&ac) uint16_t[info.irq_count], info.irq_count);
     if (!ac.check()) {
-      zxlogf(ERROR, "FakeAmlAxgGpio::Create: irq_info alloc failed\n");
+      zxlogf(ERROR, "FakeAmlAxgGpio::Create: irq_info alloc failed");
       return nullptr;
     }
     for (uint32_t i = 0; i < info.irq_count; i++) {
@@ -87,7 +87,7 @@ class FakeAmlAxgGpio : public AmlAxgGpio {
         std::move(mmio_gpio), std::move(mmio_gpio_a0), std::move(mmio_interrupt), gpio_blocks,
         gpio_interrupt, block_count, std::move(info), std::move(irq_info)));
     if (!ac.check()) {
-      zxlogf(ERROR, "FakeAmlAxgGpio::Create: device object alloc failed\n");
+      zxlogf(ERROR, "FakeAmlAxgGpio::Create: device object alloc failed");
       return nullptr;
     }
 
@@ -111,35 +111,35 @@ class A113AmlAxgGpioTest : public zxtest::Test {
 
     gpio_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: gpio_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: gpio_regs_ alloc failed");
       return;
     }
     mock_mmio_gpio_ =
         new (&ac) ddk_mock::MockMmioRegRegion(gpio_regs_.get(), sizeof(uint32_t), kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_gpio_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_gpio_ alloc failed");
       return;
     }
     gpio_a0_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: gpio_a0_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: gpio_a0_regs_ alloc failed");
       return;
     }
     mock_mmio_gpio_a0_ =
         new (&ac) ddk_mock::MockMmioRegRegion(gpio_a0_regs_.get(), sizeof(uint32_t), kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_gpio_a0_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_gpio_a0_ alloc failed");
       return;
     }
     interrupt_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: interrupt_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: interrupt_regs_ alloc failed");
       return;
     }
     mock_mmio_interrupt_ = new (&ac)
         ddk_mock::MockMmioRegRegion(interrupt_regs_.get(), sizeof(uint32_t), kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_interrupt_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_interrupt_ alloc failed");
       return;
     }
 
@@ -173,35 +173,35 @@ class S905d2AmlAxgGpioTest : public zxtest::Test {
 
     gpio_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: gpio_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: gpio_regs_ alloc failed");
       return;
     }
     mock_mmio_gpio_ =
         new (&ac) ddk_mock::MockMmioRegRegion(gpio_regs_.get(), sizeof(uint32_t), kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_gpio_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_gpio_ alloc failed");
       return;
     }
     gpio_a0_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: gpio_a0_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: gpio_a0_regs_ alloc failed");
       return;
     }
     mock_mmio_gpio_a0_ =
         new (&ac) ddk_mock::MockMmioRegRegion(gpio_a0_regs_.get(), sizeof(uint32_t), kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_gpio_a0_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_gpio_a0_ alloc failed");
       return;
     }
     interrupt_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kGpioRegSize], kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: interrupt_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: interrupt_regs_ alloc failed");
       return;
     }
     mock_mmio_interrupt_ = new (&ac)
         ddk_mock::MockMmioRegRegion(interrupt_regs_.get(), sizeof(uint32_t), kGpioRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_interrupt_ alloc failed\n");
+      zxlogf(ERROR, "AmlAxgGpioTest::SetUp: mock_mmio_interrupt_ alloc failed");
       return;
     }
 

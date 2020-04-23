@@ -43,7 +43,7 @@ static const pbus_dev_t canvas_dev = []() {
 zx_status_t Astro::CanvasInit() {
   zx_status_t status = pbus_.DeviceAdd(&canvas_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

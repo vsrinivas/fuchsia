@@ -43,7 +43,7 @@ zx_status_t Sherlock::AudioInit() {
   pdev_board_info_t board_info = {};
   zx_status_t status = pbus_.GetBoardInfo(&board_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBoardInfo failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: GetBoardInfo failed %d", __FILE__, status);
     return status;
   }
 
@@ -51,7 +51,7 @@ zx_status_t Sherlock::AudioInit() {
   metadata::Codec out_codec = metadata::Codec::Tas5720x3;
   if (board_info.board_revision < BOARD_REV_EVT1) {
     // For audio we don't support boards revision lower than EVT.
-    zxlogf(WARN, "%s: Board revision unsupported, skipping audio initialization.\n", __FILE__);
+    zxlogf(WARN, "%s: Board revision unsupported, skipping audio initialization.", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -153,19 +153,19 @@ zx_status_t Sherlock::AudioInit() {
 
   status = clk_impl_.Disable(g12b_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d", __func__, status);
     return status;
   }
 
   status = clk_impl_.SetRate(g12b_clk::CLK_HIFI_PLL, T931_HIFI_PLL_RATE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d\n", __func__, status);
+    zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d", __func__, status);
     return status;
   }
 
   status = clk_impl_.Enable(g12b_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Enable(CLK_HIFI_PLL) failed, st = %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Enable(CLK_HIFI_PLL) failed, st = %d", __func__, status);
     return status;
   }
 
@@ -184,12 +184,12 @@ zx_status_t Sherlock::AudioInit() {
 
   status = pbus_.CompositeDeviceAdd(&tdm_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
   status = pbus_.DeviceAdd(&pdm_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
   return ZX_OK;

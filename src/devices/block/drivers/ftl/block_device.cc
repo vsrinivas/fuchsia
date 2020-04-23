@@ -102,16 +102,16 @@ BlockDevice::~BlockDevice() {
 }
 
 zx_status_t BlockDevice::Bind() {
-  zxlogf(INFO, "FTL: parent: '%s'\n", device_get_name(parent()));
+  zxlogf(INFO, "FTL: parent: '%s'", device_get_name(parent()));
 
   if (device_get_protocol(parent(), ZX_PROTOCOL_NAND, &parent_) != ZX_OK) {
-    zxlogf(ERROR, "FTL: device '%s' does not support nand protocol\n", device_get_name(parent()));
+    zxlogf(ERROR, "FTL: device '%s' does not support nand protocol", device_get_name(parent()));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Get the optional bad block protocol.
   if (device_get_protocol(parent(), ZX_PROTOCOL_BAD_BLOCK, &bad_block_) != ZX_OK) {
-    zxlogf(WARN, "FTL: Parent device '%s': does not support bad_block protocol\n",
+    zxlogf(WARN, "FTL: Parent device '%s': does not support bad_block protocol",
            device_get_name(parent()));
   }
 
@@ -157,7 +157,7 @@ zx_status_t BlockDevice::Suspend() {
 }
 
 void BlockDevice::DdkSuspendNew(ddk::SuspendTxn txn) {
-  zxlogf(INFO, "FTL: Suspend\n");
+  zxlogf(INFO, "FTL: Suspend");
   zx_status_t status = Suspend();
   txn.Reply(status, txn.requested_state());
 }
@@ -178,7 +178,7 @@ zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
 }
 
 void BlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
-  zxlogf(TRACE, "FTL: Query\n");
+  zxlogf(TRACE, "FTL: Query");
   memset(info_out, 0, sizeof(*info_out));
   info_out->block_count = params_.num_pages;
   info_out->block_size = params_.page_size;
@@ -189,7 +189,7 @@ void BlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_o
 
 void BlockDevice::BlockImplQueue(block_op_t* operation, block_impl_queue_callback completion_cb,
                                  void* cookie) {
-  zxlogf(TRACE, "FTL: Queue\n");
+  zxlogf(TRACE, "FTL: Queue");
   uint32_t max_pages = params_.num_pages;
   switch (operation->command) {
     case BLOCK_OP_WRITE:
@@ -246,14 +246,14 @@ zx_status_t BlockDevice::BlockPartitionGetName(char* out_name, size_t capacity) 
 
 bool BlockDevice::OnVolumeAdded(uint32_t page_size, uint32_t num_pages) {
   params_ = {page_size, num_pages};
-  zxlogf(INFO, "FTL: %d pages of %d bytes\n", num_pages, page_size);
+  zxlogf(INFO, "FTL: %d pages of %d bytes", num_pages, page_size);
   return true;
 }
 
 zx_status_t BlockDevice::Format() {
   zx_status_t status = volume_->Format();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTL: format failed\n");
+    zxlogf(ERROR, "FTL: format failed");
   }
   return status;
 }
@@ -262,7 +262,7 @@ bool BlockDevice::InitFtl() {
   std::unique_ptr<NandDriver> driver = NandDriver::Create(&parent_, &bad_block_);
   const char* error = driver->Init();
   if (error) {
-    zxlogf(ERROR, "FTL: %s\n", error);
+    zxlogf(ERROR, "FTL: %s", error);
     return false;
   }
   memcpy(guid_, driver->info().partition_guid, ZBI_PARTITION_GUID_LEN);
@@ -273,24 +273,24 @@ bool BlockDevice::InitFtl() {
 
   error = volume_->Init(std::move(driver));
   if (error) {
-    zxlogf(ERROR, "FTL: %s\n", error);
+    zxlogf(ERROR, "FTL: %s", error);
     return false;
   }
 
   Volume::Stats stats;
   if (volume_->GetStats(&stats) == ZX_OK) {
-    zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%\n", stats.wear_count,
+    zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%", stats.wear_count,
            stats.garbage_level);
     wear_count_ = inspector_.GetRoot().CreateUint("wear_count", stats.wear_count);
     if (stats.wear_count) {
       // TODO(35898): Remove this code when troubleshooting is over.
       for (uint32_t i = 0; i < fbl::count_of(stats.wear_histogram); i++) {
-        zxlogf(INFO, "FTL: Wear bucket %02u: %04u\n", i, stats.wear_histogram[i]);
+        zxlogf(INFO, "FTL: Wear bucket %02u: %04u", i, stats.wear_histogram[i]);
       }
     }
   }
 
-  zxlogf(INFO, "FTL: InitFtl ok\n");
+  zxlogf(INFO, "FTL: InitFtl ok");
   return true;
 }
 
@@ -400,19 +400,19 @@ zx_status_t BlockDevice::ReadWriteData(block_op_t* operation) {
   }
 
   if (operation->command == BLOCK_OP_WRITE) {
-    zxlogf(SPEW, "FTL: BLK To write %d blocks at %d :\n", operation->rw.length, offset);
+    zxlogf(SPEW, "FTL: BLK To write %d blocks at %d :", operation->rw.length, offset);
     status = volume_->Write(offset, operation->rw.length, mapper.start());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "FTL: Failed to write to ftl\n");
+      zxlogf(ERROR, "FTL: Failed to write to ftl");
       return status;
     }
   }
 
   if (operation->command == BLOCK_OP_READ) {
-    zxlogf(SPEW, "FTL: BLK To read %d blocks at %d :\n", operation->rw.length, offset);
+    zxlogf(SPEW, "FTL: BLK To read %d blocks at %d :", operation->rw.length, offset);
     status = volume_->Read(offset, operation->rw.length, mapper.start());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "FTL: Failed to read from ftl\n");
+      zxlogf(ERROR, "FTL: Failed to read from ftl");
       return status;
     }
   }
@@ -427,10 +427,10 @@ zx_status_t BlockDevice::TrimData(block_op_t* operation) {
   }
 
   ZX_DEBUG_ASSERT(operation->command == BLOCK_OP_TRIM);
-  zxlogf(SPEW, "FTL: BLK To trim %d blocks at %d :\n", operation->trim.length, offset);
+  zxlogf(SPEW, "FTL: BLK To trim %d blocks at %d :", operation->trim.length, offset);
   zx_status_t status = volume_->Trim(offset, operation->trim.length);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTL: Failed to trim\n");
+    zxlogf(ERROR, "FTL: Failed to trim");
     return status;
   }
 
@@ -440,11 +440,11 @@ zx_status_t BlockDevice::TrimData(block_op_t* operation) {
 zx_status_t BlockDevice::Flush() {
   zx_status_t status = volume_->Flush();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FTL: flush failed\n");
+    zxlogf(ERROR, "FTL: flush failed");
     return status;
   }
 
-  zxlogf(SPEW, "FTL: Finished flush\n");
+  zxlogf(SPEW, "FTL: Finished flush");
   return status;
 }
 

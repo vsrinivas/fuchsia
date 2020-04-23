@@ -73,7 +73,7 @@ zx_status_t MbrReadHeader(const ddk::BlockProtocolClient& parent_proto, mbr::Mbr
   zx::vmo vmo;
   auto status = zx::vmo::create(iosize, 0, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "mbr: cannot allocate vmo: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "mbr: cannot allocate vmo: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -85,7 +85,7 @@ zx_status_t MbrReadHeader(const ddk::BlockProtocolClient& parent_proto, mbr::Mbr
   bop->rw.offset_dev = 0;
   bop->rw.offset_vmo = 0;
 
-  zxlogf(SPEW, "mbr: Reading header from parent block device\n");
+  zxlogf(SPEW, "mbr: Reading header from parent block device");
 
   parent_proto.Queue(
       bop,
@@ -97,18 +97,18 @@ zx_status_t MbrReadHeader(const ddk::BlockProtocolClient& parent_proto, mbr::Mbr
   sync_completion_wait(&read_complete, ZX_TIME_INFINITE);
 
   if ((status = bop->command) != ZX_OK) {
-    zxlogf(ERROR, "mbr: could not read mbr from device: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "mbr: could not read mbr from device: %s", zx_status_get_string(status));
     return status;
   }
 
   uint8_t buffer[mbr::kMbrSize];
   if ((status = vmo.read(buffer, 0, sizeof(buffer))) != ZX_OK) {
-    zxlogf(ERROR, "mbr: Failed to read MBR header: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "mbr: Failed to read MBR header: %s", zx_status_get_string(status));
     return status;
   }
 
   if ((status = mbr::Parse(buffer, sizeof(buffer), mbr_out)) != ZX_OK) {
-    zxlogf(ERROR, "mbr: Failed to parse MBR: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "mbr: Failed to parse MBR: %s", zx_status_get_string(status));
     return status;
   }
   return ZX_OK;
@@ -171,7 +171,7 @@ zx_status_t MbrDevice::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_g
       return ZX_OK;
     }
     default: {
-      zxlogf(ERROR, "mbr: Partition type 0x%02x unsupported\n", partition_.type);
+      zxlogf(ERROR, "mbr: Partition type 0x%02x unsupported", partition_.type);
       return ZX_ERR_NOT_SUPPORTED;
     }
   }
@@ -220,7 +220,7 @@ zx_status_t MbrDevice::Create(zx_device_t* parent,
   }
   ddk::BlockProtocolClient parent_proto(parent);
   if (!parent_proto.is_valid()) {
-    zxlogf(ERROR, "mbr: ERROR: Parent device '%s' does not support ZX_PROTOCOL_BLOCK\n",
+    zxlogf(ERROR, "mbr: ERROR: Parent device '%s' does not support ZX_PROTOCOL_BLOCK",
            device_get_name(parent));
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -248,11 +248,11 @@ zx_status_t MbrDevice::Create(zx_device_t* parent,
       return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zxlogf(INFO, "mbr: found partition, entry = %d, type = 0x%02X, start = %u, length = 0x%X\n",
+    zxlogf(INFO, "mbr: found partition, entry = %d, type = 0x%02X, start = %u, length = 0x%X",
            i + 1, entry.type, entry.start_sector_lba, entry.num_sectors);
 
     if (!MbrDevice::SupportsPartitionType(entry.type)) {
-      zxlogf(WARN, "mbr: Not mounting partition %d, unsupported type 0x%02x\n", i, entry.type);
+      zxlogf(WARN, "mbr: Not mounting partition %d, unsupported type 0x%02x", i, entry.type);
       continue;
     }
 
@@ -265,13 +265,13 @@ zx_status_t MbrDevice::Create(zx_device_t* parent,
     auto device =
         fbl::make_unique_checked<MbrDevice>(&ac, parent, name, entry, info, block_op_size);
     if (!ac.check()) {
-      zxlogf(ERROR, "mbr: Failed to allocate partition device\n");
+      zxlogf(ERROR, "mbr: Failed to allocate partition device");
       return ZX_ERR_NO_MEMORY;
     }
 
     devices_out->push_back(std::move(device), &ac);
     if (!ac.check()) {
-      zxlogf(ERROR, "mbr: Failed to allocate partition device\n");
+      zxlogf(ERROR, "mbr: Failed to allocate partition device");
       return ZX_ERR_NO_MEMORY;
     }
   }
@@ -284,7 +284,7 @@ zx_status_t MbrDevice::Bind(std::unique_ptr<MbrDevice> device) {
   }
   zx_status_t status;
   if ((status = device->DdkAdd(device->Name().c_str())) != ZX_OK) {
-    zxlogf(ERROR, "mbr: Failed to add partition device: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "mbr: Failed to add partition device: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -303,7 +303,7 @@ zx_status_t CreateAndBind(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   devices.reserve(mbr::kMbrNumPartitions, &ac);
   if (!ac.check()) {
-    zxlogf(ERROR, "mbr: Failed to allocate devices container\n");
+    zxlogf(ERROR, "mbr: Failed to allocate devices container");
     return ZX_ERR_NO_MEMORY;
   }
   zx_status_t status;

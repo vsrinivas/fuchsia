@@ -151,7 +151,7 @@ zx_status_t Astro::RawNandInit() {
 
   status = pbus_.DeviceAdd(&raw_nand_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;
   }
 

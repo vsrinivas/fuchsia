@@ -211,7 +211,7 @@ void VirtualAudioStream::HandleFormatRequests() {
     }
 
     if (frames_per_second == 0) {
-      zxlogf(WARN, "Format is not set - should not be calling GetFormat\n");
+      zxlogf(WARN, "Format is not set - should not be calling GetFormat");
       return;
     }
 
@@ -234,7 +234,7 @@ void VirtualAudioStream::HandleBufferRequests() {
 
     if (fbl::AutoLock lock(&wakeup_queue_lock_); !buffer_queue_.empty()) {
       if (!ring_buffer_vmo_.is_valid()) {
-        zxlogf(WARN, "Buffer is not set - should not be retrieving ring buffer\n");
+        zxlogf(WARN, "Buffer is not set - should not be retrieving ring buffer");
         return;
       }
       status = ring_buffer_vmo_.duplicate(
@@ -250,7 +250,7 @@ void VirtualAudioStream::HandleBufferRequests() {
     }
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s failed to duplicate VMO handle - %d\n", __func__, status);
+      zxlogf(ERROR, "%s failed to duplicate VMO handle - %d", __func__, status);
       return;
     }
 
@@ -283,7 +283,7 @@ void VirtualAudioStream::HandlePositionRequests() {
     }
 
     if (start_time.get() == 0) {
-      zxlogf(WARN, "Stream is not started -- should not be calling GetPosition\n");
+      zxlogf(WARN, "Stream is not started -- should not be calling GetPosition");
       return;
     }
 
@@ -365,13 +365,13 @@ zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBu
       ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to create ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to create ring buffer vmo - %d", __func__, status);
     return status;
   }
   status = ring_buffer_vmo_.duplicate(
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, out_buffer);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to duplicate VMO handle for out param - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to duplicate VMO handle for out param - %d", __func__, status);
     return status;
   }
 
@@ -398,7 +398,7 @@ zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBu
   status = ring_buffer_vmo_.duplicate(
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &duplicate_vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to duplicate VMO handle for notification - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to duplicate VMO handle for notification - %d", __func__, status);
     return status;
   }
   parent_->NotifyBufferCreated(std::move(duplicate_vmo), num_ring_buffer_frames_,

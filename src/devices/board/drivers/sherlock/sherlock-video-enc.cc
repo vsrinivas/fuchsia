@@ -84,12 +84,12 @@ static pbus_dev_t video_enc_dev = []() {
 }();
 
 zx_status_t Sherlock::VideoEncInit() {
-  zxlogf(INFO, "video-enc init\n");
+  zxlogf(INFO, "video-enc init");
 
   zx_status_t status =
       pbus_.CompositeDeviceAdd(&video_enc_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::VideoEncInit: CompositeDeviceAdd() failed for video: %d\n", status);
+    zxlogf(ERROR, "Sherlock::VideoEncInit: CompositeDeviceAdd() failed for video: %d", status);
     return status;
   }
   return ZX_OK;

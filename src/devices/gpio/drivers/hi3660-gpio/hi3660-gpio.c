@@ -29,7 +29,7 @@ static pl061_gpios_t* find_gpio(hi3660_gpio_t* gpio, uint32_t index) {
       return gpios;
     }
   }
-  zxlogf(ERROR, "find_gpio failed for index %u\n", index);
+  zxlogf(ERROR, "find_gpio failed for index %u", index);
   return NULL;
 }
 
@@ -65,7 +65,7 @@ static zx_status_t hi3660_gpio_read(void* ctx, uint32_t index, uint8_t* out_valu
 }
 
 static zx_status_t hi3660_gpio_write(void* ctx, uint32_t index, uint8_t value) {
-  zxlogf(INFO, "hi3660_gpio_write %u - %u\n", index, value);
+  zxlogf(INFO, "hi3660_gpio_write %u - %u", index, value);
 
   hi3660_gpio_t* gpio = ctx;
   pl061_gpios_t* gpios = find_gpio(gpio, index);
@@ -162,11 +162,11 @@ static zx_status_t hi3660_gpio_bind(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev)) != ZX_OK) {
-    zxlogf(ERROR, "hi3660_gpio_bind: ZX_PROTOCOL_PDEV not available\n");
+    zxlogf(ERROR, "hi3660_gpio_bind: ZX_PROTOCOL_PDEV not available");
     return status;
   }
   if ((status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus)) != ZX_OK) {
-    zxlogf(ERROR, "hi3660_gpio_bind: ZX_PROTOCOL_PBUS not available\n");
+    zxlogf(ERROR, "hi3660_gpio_bind: ZX_PROTOCOL_PBUS not available");
     return status;
   }
 
@@ -182,7 +182,7 @@ static zx_status_t hi3660_gpio_bind(void* ctx, zx_device_t* parent) {
 
     status = pdev_map_mmio_buffer(&pdev, i, ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpios->buffer);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "pdev_map_mmio_buffer: mmio_buffer_init_physical failed %d\n", status);
+      zxlogf(ERROR, "pdev_map_mmio_buffer: mmio_buffer_init_physical failed %d", status);
       free(gpios);
       return status;
     }
@@ -208,7 +208,7 @@ static zx_status_t hi3660_gpio_bind(void* ctx, zx_device_t* parent) {
 
   status = device_add(parent, &args, &gpio->zxdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hi3660_gpio_bind: device_add failed\n");
+    zxlogf(ERROR, "hi3660_gpio_bind: device_add failed");
     return status;
   }
 

@@ -74,7 +74,7 @@ zx_status_t Disk::Bind() {
   for (int i = 0; i < 16; i++) {
     zxlogf(INFO, "%c", inquiry_data.product_id[i]);
   }
-  zxlogf(INFO, "\n");
+  zxlogf(INFO, "");
 
   removable_ = (inquiry_data.removable & 0x80);
 
@@ -95,7 +95,7 @@ zx_status_t Disk::Bind() {
   blocks_ = htobe64(read_capacity_data.returned_logical_block_address) + 1;
   block_size_ = ntohl(read_capacity_data.block_length_in_bytes);
 
-  zxlogf(INFO, "%ld blocks of %d bytes\n", blocks_, block_size_);
+  zxlogf(INFO, "%ld blocks of %d bytes", blocks_, block_size_);
 
   return DdkAdd(tag_);
 }

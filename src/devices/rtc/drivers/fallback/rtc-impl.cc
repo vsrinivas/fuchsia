@@ -87,7 +87,7 @@ class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC>
     if (!is_isolated_for_testing) {
       auto status = set_utc_offset(&rtc_last_);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
+        zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
       }
     }
 

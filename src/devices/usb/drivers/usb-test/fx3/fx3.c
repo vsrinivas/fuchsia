@@ -62,7 +62,7 @@ static zx_status_t fx3_validate_image_header(fx3_t* fx3, zx_handle_t fw_vmo) {
   if (header[0] != 'C' || header[1] != 'Y') {
     return ZX_ERR_BAD_STATE;
   }
-  zxlogf(TRACE, "image header: ctl 0x%02x type 0x%02x\n", header[2], header[3]);
+  zxlogf(TRACE, "image header: ctl 0x%02x type 0x%02x", header[2], header[3]);
   return ZX_OK;
 }
 
@@ -99,18 +99,18 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo, size_t fw_s
   size_t vmo_size;
   zx_status_t status = zx_vmo_get_size(fw_vmo, &vmo_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to get firmware vmo size, err: %d\n", status);
+    zxlogf(ERROR, "failed to get firmware vmo size, err: %d", status);
     return ZX_ERR_INVALID_ARGS;
   }
   if (vmo_size < fw_size) {
-    zxlogf(ERROR, "invalid vmo, vmo size was %lu, fw size was %lu\n", vmo_size, fw_size);
+    zxlogf(ERROR, "invalid vmo, vmo size was %lu, fw size was %lu", vmo_size, fw_size);
     return ZX_ERR_INVALID_ARGS;
   }
   // The fwloader expects the firmware image file to be in the format shown in
   // EZ-USB/FX3 Boot Options, Table 14.
   status = fx3_validate_image_header(fx3, fw_vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "invalid firmware image header, err: %d\n", status);
+    zxlogf(ERROR, "invalid firmware image header, err: %d", status);
     return status;
   }
 
@@ -131,7 +131,7 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo, size_t fw_s
       return status;
     }
     offset += sizeof(ram_addr);
-    zxlogf(TRACE, "section len %u B ram addr 0x%x\n", len_dwords * 4, ram_addr);
+    zxlogf(TRACE, "section len %u B ram addr 0x%x", len_dwords * 4, ram_addr);
 
     if (len_dwords == 0) {
       // Reached termination of image.
@@ -139,7 +139,7 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo, size_t fw_s
     }
     status = fx3_write_section(fx3, fw_vmo, offset, len_dwords * 4, ram_addr, &checksum);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "fx3_write_section failed, err: %d\n", status);
+      zxlogf(ERROR, "fx3_write_section failed, err: %d", status);
       return status;
     }
     offset += (len_dwords * 4);
@@ -151,11 +151,11 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo, size_t fw_s
   uint32_t expected_checksum;
   status = zx_vmo_read(fw_vmo, &expected_checksum, offset, sizeof(expected_checksum));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "could not read expected checksum, err: %d\n", status);
+    zxlogf(ERROR, "could not read expected checksum, err: %d", status);
     return status;
   }
   if (checksum != expected_checksum) {
-    zxlogf(ERROR, "got bad checksum %u, want %u\n", checksum, expected_checksum);
+    zxlogf(ERROR, "got bad checksum %u, want %u", checksum, expected_checksum);
     return ZX_ERR_BAD_STATE;
   }
   status = fx3_program_entry(fx3, ram_addr);
@@ -164,10 +164,10 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo, size_t fw_s
   } else if (status == ZX_ERR_IO_REFUSED) {
     // When using the second stage bootloader, the control request may send an error code
     // back after we jump to the program entry.
-    zxlogf(TRACE, "fx3_program_entry got expected err: %d\n", status);
+    zxlogf(TRACE, "fx3_program_entry got expected err: %d", status);
     return ZX_OK;
   } else {
-    zxlogf(ERROR, "fx3_program_entry got unexpected err: %d\n", status);
+    zxlogf(ERROR, "fx3_program_entry got unexpected err: %d", status);
     return status;
   }
 }
@@ -186,7 +186,7 @@ static zx_status_t fidl_LoadPrebuiltFirmware(void* ctx,
       fw_path = TESTER_FIRMWARE_PATH;
       break;
     default:
-      zxlogf(ERROR, "unsupported firmware type: %u\n", type);
+      zxlogf(ERROR, "unsupported firmware type: %u", type);
       return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -226,7 +226,7 @@ static zx_status_t fx3_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
 static void fx3_free(fx3_t* ctx) { free(ctx); }
 
 static void fx3_unbind(void* ctx) {
-  zxlogf(INFO, "fx3_unbind\n");
+  zxlogf(INFO, "fx3_unbind");
   fx3_t* fx3 = ctx;
 
   device_unbind_reply(fx3->zxdev);
@@ -245,7 +245,7 @@ static zx_protocol_device_t fx3_device_protocol = {
 };
 
 static zx_status_t fx3_bind(void* ctx, zx_device_t* device) {
-  zxlogf(TRACE, "fx3_bind\n");
+  zxlogf(TRACE, "fx3_bind");
 
   fx3_t* fx3 = calloc(1, sizeof(fx3_t));
   if (!fx3) {

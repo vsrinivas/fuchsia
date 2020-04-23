@@ -33,7 +33,7 @@ zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
 
   auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_COMPOSITE\n", __FILE__);
+    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_COMPOSITE", __FILE__);
     return status;
   }
 
@@ -41,28 +41,28 @@ zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
   size_t actual;
   composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
   if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: could not get our fragments\n", __FILE__);
+    zxlogf(ERROR, "%s: could not get our fragments", __FILE__);
     return ZX_ERR_INTERNAL;
   }
 
   i2c_protocol_t i2c;
   status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C\n", __FILE__);
+    zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C", __FILE__);
     return status;
   }
 
   gpio_protocol_t reset_gpio;
   status = device_get_protocol(fragments[FRAGMENT_GPIO], ZX_PROTOCOL_GPIO, &reset_gpio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO\n", __FILE__);
+    zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO", __FILE__);
     return status;
   }
 
   fbl::AllocChecker ac;
   std::unique_ptr<Sgm37603a> device(new (&ac) Sgm37603a(parent, &i2c, &reset_gpio));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Sgm37603a alloc failed\n", __FILE__);
+    zxlogf(ERROR, "%s: Sgm37603a alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -72,7 +72,7 @@ zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = device->DdkAdd("sgm37603a")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    zxlogf(ERROR, "%s: DdkAdd failed", __FILE__);
     return status;
   }
 
@@ -84,7 +84,7 @@ zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
 zx_status_t Sgm37603a::EnableBacklight() {
   zx_status_t status = reset_gpio_.ConfigOut(1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to enable backlight driver\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to enable backlight driver", __FILE__);
     return status;
   }
 
@@ -93,7 +93,7 @@ zx_status_t Sgm37603a::EnableBacklight() {
   for (size_t i = 0; i < countof(kDefaultRegValues); i++) {
     status = i2c_.WriteSync(kDefaultRegValues[i], sizeof(kDefaultRegValues[i]));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to configure backlight driver\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to configure backlight driver", __FILE__);
       return status;
     }
   }
@@ -104,7 +104,7 @@ zx_status_t Sgm37603a::EnableBacklight() {
 zx_status_t Sgm37603a::DisableBacklight() {
   zx_status_t status = reset_gpio_.ConfigOut(0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to disable backlight driver\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to disable backlight driver", __FILE__);
     return status;
   }
 
@@ -183,7 +183,7 @@ zx_status_t Sgm37603a::SetBacklightState(bool power, double brightness) {
   for (size_t i = 0; i < countof(brightness_regs); i++) {
     zx_status_t status = i2c_.WriteSync(brightness_regs[i], sizeof(brightness_regs[i]));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to set brightness register\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to set brightness register", __FILE__);
       return status;
     }
   }

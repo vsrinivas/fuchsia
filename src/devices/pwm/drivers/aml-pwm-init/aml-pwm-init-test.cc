@@ -29,7 +29,7 @@ class FakePwmInitDevice : public PwmInitDevice {
                                                               ddk::GpioProtocolClient(wifi_gpio),
                                                               ddk::GpioProtocolClient(bt_gpio));
     if (!ac.check()) {
-      zxlogf(ERROR, "%s: device object alloc failed\n", __func__);
+      zxlogf(ERROR, "%s: device object alloc failed", __func__);
       return nullptr;
     }
     EXPECT_OK(device->Init());

@@ -62,7 +62,7 @@ zx_status_t SynapticsBadBlock::Create(Config config, fbl::RefPtr<BadBlock>* out)
   nand.Query(&nand_info, &parent_op_size);
 
   if (nand_info.oob_size < kOobSize) {
-    zxlogf(ERROR, "%s: NAND supports only %u OOB bytes, at least %zu are needed\n", __func__,
+    zxlogf(ERROR, "%s: NAND supports only %u OOB bytes, at least %zu are needed", __func__,
            nand_info.oob_size, kOobSize);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -73,20 +73,20 @@ zx_status_t SynapticsBadBlock::Create(Config config, fbl::RefPtr<BadBlock>* out)
   fbl::AllocChecker ac;
   fbl::Array<uint8_t> nand_op(new (&ac) uint8_t[parent_op_size], parent_op_size);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Failed to allocate memory for operation\n", __func__);
+    zxlogf(ERROR, "%s: Failed to allocate memory for operation", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
   zx::vmo data_vmo;
   zx_status_t status = zx::vmo::create(nand_info.page_size, 0, &data_vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to create VMO: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to create VMO: %d", __func__, status);
     return status;
   }
 
   zx::vmo oob_vmo;
   if ((status = zx::vmo::create(nand_info.oob_size, 0, &oob_vmo)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to create VMO: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to create VMO: %d", __func__, status);
     return status;
   }
 
@@ -94,7 +94,7 @@ zx_status_t SynapticsBadBlock::Create(Config config, fbl::RefPtr<BadBlock>* out)
                                                        nand_info, std::move(data_vmo),
                                                        std::move(oob_vmo), std::move(nand_op));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Failed to allocate memory for SynapticsBadBlock\n", __func__);
+    zxlogf(ERROR, "%s: Failed to allocate memory for SynapticsBadBlock", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -129,7 +129,7 @@ zx_status_t SynapticsBadBlock::GetBadBlockList(uint32_t first_block, uint32_t la
   fbl::AllocChecker ac;
   bad_blocks->reset(new (&ac) uint32_t[bad_block_count], bad_block_count);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Failed to allocate memory for bad block array\n", __func__);
+    zxlogf(ERROR, "%s: Failed to allocate memory for bad block array", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -177,7 +177,7 @@ zx_status_t SynapticsBadBlock::MarkBlockBad(uint32_t block) {
       continue;
     }
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: No good bad block table blocks left\n", __func__);
+      zxlogf(ERROR, "%s: No good bad block table blocks left", __func__);
       return ZX_ERR_IO_DATA_LOSS;
     }
 
@@ -189,7 +189,7 @@ zx_status_t SynapticsBadBlock::MarkBlockBad(uint32_t block) {
       bbt_version_++;
     } else {
       if (status != ZX_OK) {
-        zxlogf(WARN, "%s: Only one good bad block table block left\n", __func__);
+        zxlogf(WARN, "%s: Only one good bad block table block left", __func__);
       }
 
       break;
@@ -231,7 +231,7 @@ zx_status_t SynapticsBadBlock::ReadBadBlockTablePattern(uint32_t block,
 
   uint8_t oob_buffer[kPatternSize + sizeof(*out_version)];
   if ((status = oob_vmo_.read(oob_buffer, kTablePatternOffset, sizeof(oob_buffer))) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to read VMO: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to read VMO: %d", __func__, status);
     return status;
   }
 
@@ -270,7 +270,7 @@ uint32_t SynapticsBadBlock::FindBadBlockTable() {
 zx_status_t SynapticsBadBlock::ReadBadBlockTable() {
   uint32_t table_block = FindBadBlockTable();
   if (!IsBlockValid(table_block)) {
-    zxlogf(ERROR, "%s: No bad block table found\n", __func__);
+    zxlogf(ERROR, "%s: No bad block table found", __func__);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -279,7 +279,7 @@ zx_status_t SynapticsBadBlock::ReadBadBlockTable() {
   fbl::AllocChecker ac;
   bbt_contents_.reset(new (&ac) uint8_t[bad_block_table_size], bad_block_table_size);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Failed to allocate memory for bad block table\n", __func__);
+    zxlogf(ERROR, "%s: Failed to allocate memory for bad block table", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -289,7 +289,7 @@ zx_status_t SynapticsBadBlock::ReadBadBlockTable() {
   }
 
   if ((status = data_vmo_.read(bbt_contents_.data(), 0, bbt_contents_.size())) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to read VMO: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to read VMO: %d", __func__, status);
   }
 
   return status;
@@ -298,13 +298,13 @@ zx_status_t SynapticsBadBlock::ReadBadBlockTable() {
 zx_status_t SynapticsBadBlock::WriteBadBlockTableToVmo() {
   zx_status_t status = data_vmo_.write(bbt_contents_.data(), 0, bbt_contents_.size());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to write VMO: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to write VMO: %d", __func__, status);
     return status;
   }
 
   if ((status = oob_vmo_.write(&bbt_version_, kTableVersionOffset, sizeof(bbt_version_))) !=
       ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to write VMO: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to write VMO: %d", __func__, status);
   }
 
   return status;
@@ -315,7 +315,7 @@ zx_status_t SynapticsBadBlock::WriteBadBlockTable(uint32_t block, uint32_t excep
                                                   uint32_t* out_block) {
   zx_status_t status = oob_vmo_.write(pattern, kTablePatternOffset, kPatternSize);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to write VMO: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to write VMO: %d", __func__, status);
     return status;
   }
 
@@ -351,7 +351,7 @@ zx_status_t SynapticsBadBlock::ReadFirstPage(uint32_t block) {
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
   if (op_ctx.status != ZX_OK) {
-    zxlogf(ERROR, "%s: NAND read failed: %d\n", __func__, op_ctx.status);
+    zxlogf(ERROR, "%s: NAND read failed: %d", __func__, op_ctx.status);
   }
 
   return op_ctx.status;
@@ -371,7 +371,7 @@ zx_status_t SynapticsBadBlock::WriteFirstPage(uint32_t block) {
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
   if (op_ctx.status != ZX_OK) {
-    zxlogf(ERROR, "%s: NAND erase failed: %d\n", __func__, op_ctx.status);
+    zxlogf(ERROR, "%s: NAND erase failed: %d", __func__, op_ctx.status);
     return op_ctx.status;
   }
 
@@ -390,7 +390,7 @@ zx_status_t SynapticsBadBlock::WriteFirstPage(uint32_t block) {
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
   if (op_ctx.status != ZX_OK) {
-    zxlogf(ERROR, "%s: NAND write failed: %d\n", __func__, op_ctx.status);
+    zxlogf(ERROR, "%s: NAND write failed: %d", __func__, op_ctx.status);
   }
 
   return op_ctx.status;

@@ -39,10 +39,10 @@ namespace usb_xhci {
 #define PDEV_IRQ_INDEX 0
 
 zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed) {
-  zxlogf(TRACE, "xhci_add_new_device\n");
+  zxlogf(TRACE, "xhci_add_new_device");
 
   if (!xhci->bus.ops) {
-    zxlogf(ERROR, "no bus device in xhci_add_device\n");
+    zxlogf(ERROR, "no bus device in xhci_add_device");
     return ZX_ERR_INTERNAL;
   }
 
@@ -50,10 +50,10 @@ zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
 }
 
 void xhci_remove_device(xhci_t* xhci, int slot_id) {
-  zxlogf(TRACE, "xhci_remove_device %d\n", slot_id);
+  zxlogf(TRACE, "xhci_remove_device %d", slot_id);
 
   if (!xhci->bus.ops) {
-    zxlogf(ERROR, "no bus device in xhci_remove_device\n");
+    zxlogf(ERROR, "no bus device in xhci_remove_device");
     return;
   }
 
@@ -120,7 +120,7 @@ zx_status_t UsbXhci::UsbHciResetDevice(uint32_t hub_address, uint32_t device_id)
     // Convert real port number to virtual root hub number.
     port = xhci->rh_port_map[port - 1] + 1;
   }
-  zxlogf(TRACE, "xhci_reset_device slot_id: %u port: %u hub_address: %u\n", device_id, port,
+  zxlogf(TRACE, "xhci_reset_device slot_id: %u port: %u hub_address: %u", device_id, port,
          hub_address);
 
   return usb_bus_interface_reset_port(&xhci->bus, hub_address, port, false);
@@ -188,13 +188,13 @@ void UsbXhci::DdkSuspendNew(ddk::SuspendTxn txn) {
 }
 
 void UsbXhci::DdkUnbindNew(ddk::UnbindTxn txn) {
-  zxlogf(INFO, "UsbXhci::DdkUnbind\n");
+  zxlogf(INFO, "UsbXhci::DdkUnbind");
   xhci_shutdown(xhci_.get());
   txn.Reply();
 }
 
 void UsbXhci::DdkRelease() {
-  zxlogf(INFO, "UsbXhci::DdkRelease\n");
+  zxlogf(INFO, "UsbXhci::DdkRelease");
   delete this;
 }
 
@@ -222,24 +222,24 @@ int UsbXhci::CompleterThread(void* arg) {
     wait_res = interrupt.wait(nullptr);
     if (wait_res != ZX_OK) {
       if (wait_res != ZX_ERR_CANCELED) {
-        zxlogf(ERROR, "unexpected zx_interrupt_wait failure (%d)\n", wait_res);
+        zxlogf(ERROR, "unexpected zx_interrupt_wait failure (%d)", wait_res);
       }
       break;
     }
     if (xhci->suspended.load()) {
       // TODO(ravoorir): Remove this hack once the interrupt signalling bug
       // is resolved.
-      zxlogf(ERROR, "race in zx_interrupt_cancel triggered. Kick off workaround for now\n");
+      zxlogf(ERROR, "race in zx_interrupt_cancel triggered. Kick off workaround for now");
       break;
     }
     xhci_handle_interrupt(xhci, interrupter);
   }
-  zxlogf(TRACE, "xhci completer %u thread done\n", interrupter);
+  zxlogf(TRACE, "xhci completer %u thread done", interrupter);
   return 0;
 }
 
 int UsbXhci::StartThread() {
-  zxlogf(TRACE, "%s start\n", __func__);
+  zxlogf(TRACE, "%s start", __func__);
 
   auto cleanup = fbl::MakeAutoCall([this]() { DdkRemoveDeprecated(); });
 
@@ -267,7 +267,7 @@ int UsbXhci::StartThread() {
     status = xdc_bind(zxdev(), xhci_->bti_handle.get(), xhci_->mmio->get());
     // XDC is not required for functioning XHCI. Not all boards support XDC.
     if (status != ZX_OK) {
-      zxlogf(ERROR, "xhci_start: xdc_bind failed %d\n", status);
+      zxlogf(ERROR, "xhci_start: xdc_bind failed %d", status);
     }
     status = ZX_OK;
   }
@@ -283,7 +283,7 @@ int UsbXhci::StartThread() {
                           "xhci_completer_thread");
   }
 
-  zxlogf(TRACE, "%s done\n", __func__);
+  zxlogf(TRACE, "%s done", __func__);
   cleanup.cancel();
   return 0;
 }
@@ -306,7 +306,7 @@ zx_status_t UsbXhci::FinishBind() {
       "src/devices/usb/drivers/xhci/usb-xhci", xhci_->profile_handle.reset_and_get_address());
 
   if (status != ZX_OK) {
-    zxlogf(WARN, "Failed to obtain scheduler profile for high priority completer (res %d)\n",
+    zxlogf(WARN, "Failed to obtain scheduler profile for high priority completer (res %d)",
            status);
   }
 
@@ -342,7 +342,7 @@ zx_status_t UsbXhci::InitPci() {
   mmio_buffer_t mmio;
   status = pci_map_bar_buffer(&pci, 0u, ZX_CACHE_POLICY_UNCACHED, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not map bar\n", __func__);
+    zxlogf(ERROR, "%s could not map bar", __func__);
     return status;
   }
   xhci_->mmio = ddk::MmioBuffer(mmio);
@@ -351,7 +351,7 @@ zx_status_t UsbXhci::InitPci() {
   irq_cnt = 0;
   status = pci_.QueryIrqMode(ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "pci_query_irq_mode failed %d\n", status);
+    zxlogf(ERROR, "pci_query_irq_mode failed %d", status);
     return status;
   }
 
@@ -365,7 +365,7 @@ zx_status_t UsbXhci::InitPci() {
   mode = XHCI_PCI_MSI;
   status = pci_.SetIrqMode(ZX_PCIE_IRQ_MODE_MSI, irq_cnt);
   if (status < 0) {
-    zxlogf(ERROR, "MSI interrupts not available, irq_cnt: %d, err: %d\n", irq_cnt, status);
+    zxlogf(ERROR, "MSI interrupts not available, irq_cnt: %d, err: %d", irq_cnt, status);
     zx_status_t status_legacy = pci_.SetIrqMode(ZX_PCIE_IRQ_MODE_LEGACY, 1);
 
     if (status_legacy < 0) {
@@ -384,7 +384,7 @@ zx_status_t UsbXhci::InitPci() {
     // register for interrupts
     status = pci_.MapInterrupt(i, &xhci_->irq_handles[i]);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "usb_xhci_bind map_interrupt failed %d\n", status);
+      zxlogf(ERROR, "usb_xhci_bind map_interrupt failed %d", status);
       return status;
     }
   }
@@ -421,13 +421,13 @@ zx_status_t UsbXhci::InitPdev() {
   // TODO(voydanoff) find a C++ way to do this
   status = pdev_.MapMmio(PDEV_MMIO_INDEX, &xhci_->mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_map_mmio failed\n", __func__);
+    zxlogf(ERROR, "%s: pdev_map_mmio failed", __func__);
     return status;
   }
 
   status = pdev_.GetInterrupt(PDEV_IRQ_INDEX, &xhci_->irq_handles[0]);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_map_interrupt failed\n", __func__);
+    zxlogf(ERROR, "%s: pdev_map_interrupt failed", __func__);
     return status;
   }
 
@@ -459,7 +459,7 @@ zx_status_t UsbXhci::Init() {
     }
     pdev_ = pdev_device;
     if (!pdev_.is_valid()) {
-      zxlogf(ERROR, "UsbXhci::Init: could not get platform device protocol\n");
+      zxlogf(ERROR, "UsbXhci::Init: could not get platform device protocol");
       return ZX_ERR_NOT_SUPPORTED;
     }
 

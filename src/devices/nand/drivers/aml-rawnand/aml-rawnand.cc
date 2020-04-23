@@ -197,7 +197,7 @@ zx_status_t AmlRawNand::AmlWaitCmdFinish(zx::duration timeout, zx::duration firs
     }
   }
   if (ret == ZX_ERR_TIMED_OUT)
-    zxlogf(ERROR, "wait for empty cmd FIFO time out\n");
+    zxlogf(ERROR, "wait for empty cmd FIFO time out");
   return ret;
 }
 
@@ -323,7 +323,7 @@ zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
     info = reinterpret_cast<struct AmlInfoFormat*>(AmlInfoPtr(i));
     if (info->ecc.eccerr_cnt == AML_ECC_UNCORRECTABLE_CNT) {
       if (!controller_params_.rand_mode) {
-        zxlogf(ERROR, "%s: ECC failure (non-randomized)@%u\n", __func__, nand_page);
+        zxlogf(ERROR, "%s: ECC failure (non-randomized)@%u", __func__, nand_page);
         stats.failed++;
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
@@ -342,12 +342,12 @@ zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
       // depend on the quality of the NAND, the wear of the NAND etc.
       zero_bits = info->zero_bits & AML_ECC_UNCORRECTABLE_CNT;
       if (zero_bits >= controller_params_.ecc_strength) {
-        zxlogf(ERROR, "%s: ECC failure (randomized)@%u zero_bits=%u\n", __func__, nand_page,
+        zxlogf(ERROR, "%s: ECC failure (randomized)@%u zero_bits=%u", __func__, nand_page,
                zero_bits);
         stats.failed++;
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
-      zxlogf(INFO, "%s: Blank Page@%u\n", __func__, nand_page);
+      zxlogf(INFO, "%s: Blank Page@%u", __func__, nand_page);
       continue;
     }
     stats.ecc_corrected += info->ecc.eccerr_cnt;
@@ -383,7 +383,7 @@ zx_status_t AmlRawNand::AmlQueueRB() {
   AmlCmdIdle(2);
   status = sync_completion_wait(&req_completion_, ZX_SEC(1));
   if (status == ZX_ERR_TIMED_OUT) {
-    zxlogf(ERROR, "%s: Request timed out, not woken up from irq\n", __func__);
+    zxlogf(ERROR, "%s: Request timed out, not woken up from irq", __func__);
   }
   return status;
 }
@@ -537,17 +537,17 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
 
   status = AmlWaitDmaFinish();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: AmlWaitDmaFinish failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: AmlWaitDmaFinish failed %d", __func__, status);
     return status;
   }
   status = AmlQueueRB();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: AmlQueueRB failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: AmlQueueRB failed %d", __func__, status);
     return ZX_ERR_INTERNAL;
   }
   status = AmlCheckECCPages(ecc_pages);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: AmlCheckECCPages failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: AmlCheckECCPages failed %d", __func__, status);
     return status;
   }
 
@@ -565,7 +565,7 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
     status = AmlGetOOBByte(reinterpret_cast<uint8_t*>(oob), oob_actual);
   status = AmlGetECCCorrections(ecc_pages, nand_page, ecc_correct);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Uncorrectable ECC error on read\n", __func__);
+    zxlogf(ERROR, "%s: Uncorrectable ECC error on read", __func__);
     *ecc_correct = controller_params_.ecc_strength + 1;
   }
   return status;
@@ -594,7 +594,7 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
     // Writing the wrong OOB bytes will brick the device, raise an error if
     // the caller tried to provide their own here.
     if (oob != nullptr) {
-      zxlogf(ERROR, "%s: Cannot write provided OOB, page %u requires specific OOB bytes\n",
+      zxlogf(ERROR, "%s: Cannot write provided OOB, page %u requires specific OOB bytes",
              __func__, nand_page);
       return ZX_ERR_INVALID_ARGS;
     }
@@ -627,7 +627,7 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
 
   status = AmlWaitDmaFinish();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: error from wait_dma_finish\n", __func__);
+    zxlogf(ERROR, "%s: error from wait_dma_finish", __func__);
     return status;
   }
   onfi_->OnfiCommand(NAND_CMD_PAGEPROG, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
@@ -643,7 +643,7 @@ zx_status_t AmlRawNand::RawNandEraseBlock(uint32_t nand_page) {
 
   // nandblock has to be erasesize_ aligned.
   if (nand_page % erasesize_pages_) {
-    zxlogf(ERROR, "%s: NAND block %u must be a erasesize_pages (%u) multiple\n", __func__,
+    zxlogf(ERROR, "%s: NAND block %u must be a erasesize_pages (%u) multiple", __func__,
            nand_page, erasesize_pages_);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -675,11 +675,11 @@ zx_status_t AmlRawNand::AmlGetFlashType() {
   for (uint32_t i = 0; i < sizeof(id_data); i++)
     id_data[i] = AmlReadByte();
   if (id_data[0] != nand_maf_id || id_data[1] != nand_dev_id) {
-    zxlogf(ERROR, "second ID read did not match %02x,%02x against %02x,%02x\n", nand_maf_id,
+    zxlogf(ERROR, "second ID read did not match %02x,%02x against %02x,%02x", nand_maf_id,
            nand_dev_id, id_data[0], id_data[1]);
   }
 
-  zxlogf(INFO, "%s: manufacturer_id = %x, device_ide = %x, extended_id = %x\n", __func__,
+  zxlogf(INFO, "%s: manufacturer_id = %x, device_ide = %x, extended_id = %x", __func__,
          nand_maf_id, nand_dev_id, id_data[3]);
   nand_chip = onfi_->FindNandChipTable(nand_maf_id, nand_dev_id);
   if (nand_chip == nullptr) {
@@ -733,12 +733,12 @@ zx_status_t AmlRawNand::AmlGetFlashType() {
 }
 
 int AmlRawNand::IrqThread() {
-  zxlogf(INFO, "aml_raw_nand_irq_thread start\n");
+  zxlogf(INFO, "aml_raw_nand_irq_thread start");
 
   while (1) {
     zx::time timestamp;
     if (irq_.wait(&timestamp) != ZX_OK) {
-      zxlogf(ERROR, "%s: IRQ wait failed\n", __FILE__);
+      zxlogf(ERROR, "%s: IRQ wait failed", __FILE__);
       return thrd_error;
     }
 
@@ -783,7 +783,7 @@ zx_status_t AmlRawNand::AmlReadPage0(void* data, size_t data_size, void* oob, si
                                   ecc_correct);
   } while (status != ZX_OK && --retries > 0);
   if (status != ZX_OK)
-    zxlogf(ERROR, "%s: Read error\n", __func__);
+    zxlogf(ERROR, "%s: Read error", __func__);
   return status;
 }
 
@@ -803,7 +803,7 @@ zx_status_t AmlRawNand::AmlNandInitFromPage0() {
   }
   if (status != ZX_OK) {
     // Could not read any of the page0 copies. This is a fatal error.
-    zxlogf(ERROR, "%s: Page0 Read (all copies) failed\n", __func__);
+    zxlogf(ERROR, "%s: Page0 Read (all copies) failed", __func__);
     return status;
   }
 
@@ -813,11 +813,11 @@ zx_status_t AmlRawNand::AmlNandInitFromPage0() {
 
   controller_params_.ecc_strength = AmlGetEccStrength(controller_params_.bch_mode);
   if (controller_params_.ecc_strength < 0) {
-    zxlogf(INFO, "%s: BAD ECC strength computed from BCH Mode\n", __func__);
+    zxlogf(INFO, "%s: BAD ECC strength computed from BCH Mode", __func__);
     return ZX_ERR_BAD_STATE;
   }
 
-  zxlogf(INFO, "%s: NAND BCH Mode is %s\n", __func__, AmlEccString(controller_params_.bch_mode));
+  zxlogf(INFO, "%s: NAND BCH Mode is %s", __func__, AmlEccString(controller_params_.bch_mode));
   return ZX_OK;
 }
 
@@ -829,14 +829,14 @@ zx_status_t AmlRawNand::AmlRawNandAllocBufs() {
   zx_status_t status = data_buffer_.Init(bti_.get(), writesize_,
                                          IO_BUFFER_UNCACHED | IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "raw_nand_test_allocbufs: io_buffer_init(data_buffer_) failed\n");
+    zxlogf(ERROR, "raw_nand_test_allocbufs: io_buffer_init(data_buffer_) failed");
     return status;
   }
   ZX_DEBUG_ASSERT(writesize_ > 0);
   status = info_buffer_.Init(bti_.get(), writesize_,
                              IO_BUFFER_UNCACHED | IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "raw_nand_test_allocbufs: io_buffer_init(info_buffer_) failed\n");
+    zxlogf(ERROR, "raw_nand_test_allocbufs: io_buffer_init(info_buffer_) failed");
     return status;
   }
   data_buf_ = data_buffer_.virt();
@@ -902,7 +902,7 @@ zx_status_t AmlRawNand::Init() {
               [this]() -> uint8_t { return AmlReadByte(); });
   auto cb = [](void* arg) -> int { return reinterpret_cast<AmlRawNand*>(arg)->IrqThread(); };
   if (thrd_create_with_name(&irq_thread_, cb, this, "aml_raw_nand_irq_thread") != thrd_success) {
-    zxlogf(ERROR, "%s: Failed to create IRQ thread\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to create IRQ thread", __FILE__);
     return ZX_ERR_INTERNAL;
   }
 
@@ -911,7 +911,7 @@ zx_status_t AmlRawNand::Init() {
   AmlClockInit();
   zx_status_t status = AmlNandInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml_raw_nand: AmlNandInit() failed - This is FATAL\n");
+    zxlogf(ERROR, "aml_raw_nand: AmlNandInit() failed - This is FATAL");
     CleanUpIrq();
   }
   return status;
@@ -920,7 +920,7 @@ zx_status_t AmlRawNand::Init() {
 zx_status_t AmlRawNand::Bind() {
   zx_status_t status = DdkAdd("aml-raw_nand");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    zxlogf(ERROR, "%s: DdkAdd failed", __FILE__);
     CleanUpIrq();
   }
   return status;
@@ -931,13 +931,13 @@ zx_status_t AmlRawNand::Create(void* ctx, zx_device_t* parent) {
 
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   zx::bti bti;
   if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_get_bti failed\n", __FILE__);
+    zxlogf(ERROR, "%s: pdev_get_bti failed", __FILE__);
     return status;
   }
 
@@ -946,20 +946,20 @@ zx_status_t AmlRawNand::Create(void* ctx, zx_device_t* parent) {
   std::optional<ddk::MmioBuffer> mmio_nandreg;
   status = pdev.MapMmio(NandRegWindow, &mmio_nandreg);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev.MapMmio nandreg failed\n", __FILE__);
+    zxlogf(ERROR, "%s: pdev.MapMmio nandreg failed", __FILE__);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> mmio_clockreg;
   status = pdev.MapMmio(ClockRegWindow, &mmio_clockreg);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev.MapMmio clockreg failed\n", __FILE__);
+    zxlogf(ERROR, "%s: pdev.MapMmio clockreg failed", __FILE__);
     return status;
   }
 
   zx::interrupt irq;
   if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to map interrupt\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to map interrupt", __FILE__);
     return status;
   }
   fbl::AllocChecker ac;
@@ -968,7 +968,7 @@ zx_status_t AmlRawNand::Create(void* ctx, zx_device_t* parent) {
                            std::move(bti), std::move(irq), std::make_unique<Onfi>()));
 
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: AmlRawNand alloc failed\n", __FILE__);
+    zxlogf(ERROR, "%s: AmlRawNand alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 

@@ -214,7 +214,7 @@ zx_status_t Sherlock::SdioInit() {
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ddk::MmioBuffer::Create() error: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ddk::MmioBuffer::Create() error: %d", __func__, status);
     return status;
   }
 
@@ -241,7 +241,7 @@ zx_status_t Sherlock::SdioInit() {
   status = pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments, fbl::count_of(sdio_fragments),
                                     UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d", __func__, status);
     return status;
   }
 
@@ -264,7 +264,7 @@ zx_status_t Sherlock::SdioInit() {
 
   status = DdkAddComposite("wifi", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_add_composite failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_add_composite failed: %d", __func__, status);
     return status;
   }
 

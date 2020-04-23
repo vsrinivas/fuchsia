@@ -65,7 +65,7 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
   }
   uint8_t* read_buffer = malloc(MAX_TRANSFER_SIZE);
   if (read_buffer == NULL) {
-    zxlogf(ERROR, "intel-i2c-controller: out of memory\n");
+    zxlogf(ERROR, "intel-i2c-controller: out of memory");
     transact_cb(cookie, ZX_ERR_NO_MEMORY, NULL, 0);
     return;
   }
@@ -88,7 +88,7 @@ static void intel_i2c_transact(void* ctx, const i2c_op_t ops[], size_t cnt,
   }
   zx_status_t status = intel_serialio_i2c_subordinate_transfer(subordinate, segs, cnt);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "intel-i2c-controller: intel_serialio_i2c_subordinate_transfer: %d\n", status);
+    zxlogf(ERROR, "intel-i2c-controller: intel_serialio_i2c_subordinate_transfer: %d", status);
     free(read_buffer);
     transact_cb(cookie, status, NULL, 0);
     return;
@@ -206,7 +206,7 @@ static zx_status_t intel_serialio_i2c_add_subordinate(intel_serialio_i2c_device_
 
   zx_device_prop_t props[8];
   if (countof(props) < 3 + propcount) {
-    zxlogf(ERROR, "i2c: subordinate at 0x%02x has too many props! (%u)\n", address, propcount);
+    zxlogf(ERROR, "i2c: subordinate at 0x%02x has too many props! (%u)", address, propcount);
     status = ZX_ERR_INVALID_ARGS;
     goto fail;
   }
@@ -267,7 +267,7 @@ static zx_status_t intel_serialio_i2c_remove_subordinate(intel_serialio_i2c_devi
   if (status < 0)
     goto remove_subordinate_finish;
   if (subordinate->chip_address_width != width) {
-    zxlogf(ERROR, "Chip address width mismatch.\n");
+    zxlogf(ERROR, "Chip address width mismatch.");
     status = ZX_ERR_NOT_FOUND;
     goto remove_subordinate_finish;
   }
@@ -369,22 +369,22 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
   for (;;) {
     status = zx_interrupt_wait(dev->irq_handle, NULL);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "i2c: error waiting for interrupt: %d\n", status);
+      zxlogf(ERROR, "i2c: error waiting for interrupt: %d", status);
       break;
     }
     uint32_t intr_stat = readl(&dev->regs->intr_stat);
-    zxlogf(SPEW, "Received i2c interrupt: %x %x\n", intr_stat, readl(&dev->regs->raw_intr_stat));
+    zxlogf(SPEW, "Received i2c interrupt: %x %x", intr_stat, readl(&dev->regs->raw_intr_stat));
     if (intr_stat & (1u << INTR_RX_UNDER)) {
       // If we hit an underflow, it's a bug.
       zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
       readl(&dev->regs->clr_rx_under);
-      zxlogf(ERROR, "i2c: rx underflow detected!\n");
+      zxlogf(ERROR, "i2c: rx underflow detected!");
     }
     if (intr_stat & (1u << INTR_RX_OVER)) {
       // If we hit an overflow, it's a bug.
       zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
       readl(&dev->regs->clr_rx_over);
-      zxlogf(ERROR, "i2c: rx overflow detected!\n");
+      zxlogf(ERROR, "i2c: rx overflow detected!");
     }
     if (intr_stat & (1u << INTR_RX_FULL)) {
       mtx_lock(&dev->irq_mask_mutex);
@@ -396,7 +396,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
       // If we hit an overflow, it's a bug.
       zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
       readl(&dev->regs->clr_tx_over);
-      zxlogf(ERROR, "i2c: tx overflow detected!\n");
+      zxlogf(ERROR, "i2c: tx overflow detected!");
     }
     if (intr_stat & (1u << INTR_TX_EMPTY)) {
       mtx_lock(&dev->irq_mask_mutex);
@@ -405,7 +405,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
       mtx_unlock(&dev->irq_mask_mutex);
     }
     if (intr_stat & (1u << INTR_TX_ABORT)) {
-      zxlogf(ERROR, "i2c: tx abort detected: 0x%08x\n", readl(&dev->regs->tx_abrt_source));
+      zxlogf(ERROR, "i2c: tx abort detected: 0x%08x", readl(&dev->regs->tx_abrt_source));
       zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
       readl(&dev->regs->clr_tx_abort);
     }
@@ -414,7 +414,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
       mtx_lock(&dev->irq_mask_mutex);
       RMWREG32(&dev->regs->intr_mask, INTR_ACTIVITY, 1, 0);
       mtx_unlock(&dev->irq_mask_mutex);
-      zxlogf(INFO, "i2c: spurious activity irq\n");
+      zxlogf(INFO, "i2c: spurious activity irq");
     }
     if (intr_stat & (1u << INTR_STOP_DETECTION)) {
       zx_object_signal(dev->event_handle, 0, STOP_DETECTED_SIGNAL);
@@ -428,7 +428,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
       mtx_lock(&dev->irq_mask_mutex);
       RMWREG32(&dev->regs->intr_mask, INTR_GENERAL_CALL, 1, 0);
       mtx_unlock(&dev->irq_mask_mutex);
-      zxlogf(INFO, "i2c: spurious general call irq\n");
+      zxlogf(INFO, "i2c: spurious general call irq");
     }
   }
   return 0;
@@ -567,7 +567,7 @@ zx_status_t intel_serialio_i2c_set_tx_fifo_threshold(intel_serialio_i2c_device_t
 static void intel_serialio_i2c_unbind(void* ctx) {
   intel_serialio_i2c_device_t* dev = ctx;
   if (dev) {
-    zxlogf(INFO, "intel-i2c: unbind irq_handle %d irq_thread %p\n", dev->irq_handle,
+    zxlogf(INFO, "intel-i2c: unbind irq_handle %d irq_thread %p", dev->irq_handle,
            dev->irq_thread);
     if ((dev->irq_handle != ZX_HANDLE_INVALID) && dev->irq_thread) {
       zx_interrupt_destroy(dev->irq_handle);
@@ -766,7 +766,7 @@ static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent, pci_
            child->protocol_id);
 
     if (bus_speed && bus_speed != child->bus_speed) {
-      zxlogf(ERROR, "i2c: cannot add devices with different bus speeds (%u, %u)\n", bus_speed,
+      zxlogf(ERROR, "i2c: cannot add devices with different bus speeds (%u, %u)", bus_speed,
              child->bus_speed);
     }
     if (!bus_speed) {
@@ -801,7 +801,7 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
 
   zx_status_t status = pci_map_bar_buffer(&pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &device->mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c: failed to mape pci bar 0: %d\n", status);
+    zxlogf(ERROR, "i2c: failed to mape pci bar 0: %d", status);
     goto fail;
   }
   device->regs = device->mmio.vaddr;
@@ -809,20 +809,20 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
   // set msi irq mode
   status = pci_set_irq_mode(&pci, ZX_PCIE_IRQ_MODE_LEGACY, 1);
   if (status < 0) {
-    zxlogf(ERROR, "i2c: failed to set irq mode: %d\n", status);
+    zxlogf(ERROR, "i2c: failed to set irq mode: %d", status);
     goto fail;
   }
 
   // get irq handle
   status = pci_map_interrupt(&pci, 0, &device->irq_handle);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c: failed to get irq handle: %d\n", status);
+    zxlogf(ERROR, "i2c: failed to get irq handle: %d", status);
     goto fail;
   }
 
   status = zx_event_create(0, &device->event_handle);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c: failed to create event handle: %d\n", status);
+    zxlogf(ERROR, "i2c: failed to create event handle: %d", status);
     goto fail;
   }
 
@@ -830,7 +830,7 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
   int ret =
       thrd_create_with_name(&device->irq_thread, intel_serialio_i2c_irq_thread, device, "i2c-irq");
   if (ret != thrd_success) {
-    zxlogf(ERROR, "i2c: failed to create irq thread: %d\n", ret);
+    zxlogf(ERROR, "i2c: failed to create irq thread: %d", ret);
     goto fail;
   }
 
@@ -839,13 +839,13 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
 
   status = intel_serialio_i2c_device_specific_init(device, device_id);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c: device specific init failed: %d\n", status);
+    zxlogf(ERROR, "i2c: device specific init failed: %d", status);
     goto fail;
   }
 
   status = intel_serialio_compute_bus_timing(device);
   if (status < 0) {
-    zxlogf(ERROR, "i2c: compute bus timing failed: %d\n", status);
+    zxlogf(ERROR, "i2c: compute bus timing failed: %d", status);
     goto fail;
   }
 
@@ -876,7 +876,7 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
   // nobody else can see this controller yet.
   status = intel_serialio_i2c_reset_controller(device);
   if (status < 0) {
-    zxlogf(ERROR, "i2c: reset controller failed: %d\n", status);
+    zxlogf(ERROR, "i2c: reset controller failed: %d", status);
     goto fail;
   }
 
@@ -892,7 +892,7 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
 
   status = device_add(dev, &args, &device->zxdev);
   if (status < 0) {
-    zxlogf(ERROR, "device add failed: %d\n", status);
+    zxlogf(ERROR, "device add failed: %d", status);
     goto fail;
   }
 

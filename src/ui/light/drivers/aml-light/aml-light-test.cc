@@ -28,7 +28,7 @@ class FakeAmlLight : public AmlLight {
     fbl::AllocChecker ac;
     auto device = fbl::make_unique_checked<FakeAmlLight>(&ac);
     if (!ac.check()) {
-      zxlogf(ERROR, "%s: device object alloc failed\n", __func__);
+      zxlogf(ERROR, "%s: device object alloc failed", __func__);
       return nullptr;
     }
     device->lights_.emplace_back(

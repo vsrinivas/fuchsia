@@ -102,7 +102,7 @@ zx_status_t Device::Create(void* ctx, zx_device_t* parent, std::unique_ptr<Devic
   i2c_protocol_t i2c;
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "tpm: could not get I2C protocol: %d\n", status);
+    zxlogf(ERROR, "tpm: could not get I2C protocol: %d", status);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -172,7 +172,7 @@ zx_status_t Device::Suspend(uint8_t requested_state, bool wakeup_enabled, uint8_
   if (suspend_reason == DEVICE_SUSPEND_REASON_SUSPEND_RAM) {
     zx_status_t status = ShutdownLocked(TPM_SU_STATE);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "tpm: Failed to save state: %d\n", status);
+      zxlogf(ERROR, "tpm: Failed to save state: %d", status);
       *out_state = DEV_POWER_STATE_D0;
       return status;
     }
@@ -180,7 +180,7 @@ zx_status_t Device::Suspend(uint8_t requested_state, bool wakeup_enabled, uint8_
 
   zx_status_t status = ReleaseLocalityLocked(0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "tpm: Failed to release locality: %d\n", status);
+    zxlogf(ERROR, "tpm: Failed to release locality: %d", status);
     *out_state = DEV_POWER_STATE_D0;
     return status;
   }
@@ -214,7 +214,7 @@ zx_status_t Device::Bind() {
 zx_status_t Device::Init() {
   zx_status_t status = iface_->Validate();
   if (status != ZX_OK) {
-    zxlogf(TRACE, "tpm: did not pass driver validation\n");
+    zxlogf(TRACE, "tpm: did not pass driver validation");
     return status;
   }
 
@@ -227,13 +227,13 @@ zx_status_t Device::Init() {
     // we need to wait up to 30ms for the TPM_ACCESS register to be valid.
     status = RequestLocalityLocked(0);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "tpm: Failed to request use: %d\n", status);
+      zxlogf(ERROR, "tpm: Failed to request use: %d", status);
       return status;
     }
 
     status = WaitForLocalityLocked(0);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "tpm: Waiting for locality failed: %d\n", status);
+      zxlogf(ERROR, "tpm: Waiting for locality failed: %d", status);
       return status;
     }
   }
@@ -260,7 +260,7 @@ zx_status_t Device::InitThread() {
     zx_cprng_add_entropy(buf, bytes_read);
     mandatory_memset(buf, 0, sizeof(buf));
   } else {
-    zxlogf(ERROR, "tpm: Failed to add entropy to kernel CPRNG\n");
+    zxlogf(ERROR, "tpm: Failed to add entropy to kernel CPRNG");
   }
 
   cleanup.cancel();

@@ -57,17 +57,17 @@ zx_status_t Adv7533::Adv7533Init(pdev_protocol_t* pdev_) {
 
   if ((status = pdev_get_protocol(pdev_, ZX_PROTOCOL_I2C, 0, &i2c_dev.i2c_main,
                                   sizeof(i2c_dev.i2c_main), &actual)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
+    zxlogf(ERROR, "%s: Could not obtain I2C Protocol", __FUNCTION__);
     return status;
   }
   if ((status = pdev_get_protocol(pdev_, ZX_PROTOCOL_I2C, 1, &i2c_dev.i2c_cec,
                                   sizeof(i2c_dev.i2c_cec), &actual)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
+    zxlogf(ERROR, "%s: Could not obtain I2C Protocol", __FUNCTION__);
     return status;
   }
   if ((status = pdev_get_protocol(pdev_, ZX_PROTOCOL_I2C, 2, &i2c_dev.i2c_edid,
                                   sizeof(i2c_dev.i2c_edid), &actual)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
+    zxlogf(ERROR, "%s: Could not obtain I2C Protocol", __FUNCTION__);
     return status;
   }
 
@@ -75,7 +75,7 @@ zx_status_t Adv7533::Adv7533Init(pdev_protocol_t* pdev_) {
   for (uint32_t i = 0; i < countof(gpios); i++) {
     if ((status = pdev_get_protocol(pdev_, ZX_PROTOCOL_GPIO, i, &gpios[i], sizeof(gpios[i]),
                                     &actual)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Could not obtain GPIO Protocol\n", __FUNCTION__);
+      zxlogf(ERROR, "%s: Could not obtain GPIO Protocol", __FUNCTION__);
       return status;
     }
   }
@@ -84,7 +84,7 @@ zx_status_t Adv7533::Adv7533Init(pdev_protocol_t* pdev_) {
   HdmiGpioInit();
 
   Adv7533MainChannelRead(ADV7533_REG_CHIP_REVISION, 1);
-  zxlogf(INFO, "%s: HDMI Ver 0x%x\n", __FUNCTION__, write_buf_[0]);
+  zxlogf(INFO, "%s: HDMI Ver 0x%x", __FUNCTION__, write_buf_[0]);
 
   /* Write ADV7533 fixed register values */
   for (uint32_t i = 0; i < sizeof(kAdv7533FixedRegs); i += 2) {
@@ -117,7 +117,7 @@ zx_status_t Adv7533::Adv7533Init(pdev_protocol_t* pdev_) {
 
   Adv7533MainChannelRead(ADV7533_REG_STATUS, 1);
   if ((write_buf_[0] & REG_STATUS_HPD_DET) == 0) {
-    zxlogf(INFO, "%s: No external disp_intf_ detected\n", __FUNCTION__);
+    zxlogf(INFO, "%s: No external disp_intf_ detected", __FUNCTION__);
     return ZX_ERR_IO_NOT_PRESENT;
   }
 
@@ -146,7 +146,7 @@ zx_status_t Adv7533::Adv7533Init(pdev_protocol_t* pdev_) {
   while (g && timeout--) {
     zx_nanosleep(zx_deadline_after(ZX_USEC(kAdvDelay)));
     if (timeout <= 0) {
-      zxlogf(ERROR, "Adv7533 EDID not ready\n");
+      zxlogf(ERROR, "Adv7533 EDID not ready");
       return ZX_ERR_TIMED_OUT;
     }
   }
@@ -154,9 +154,9 @@ zx_status_t Adv7533::Adv7533Init(pdev_protocol_t* pdev_) {
   /* Interrupt fired. Let's see if EDID is ready to be read */
   Adv7533MainChannelRead(ADV7533_REG_DDC_STATUS, 1);
   if (write_buf_[0] != REG_DDC_STATUS_EDID_READY) {
-    zxlogf(ERROR, "%s: EDID not ready!!!!\n", __FUNCTION__);
+    zxlogf(ERROR, "%s: EDID not ready!!!!", __FUNCTION__);
     Adv7533MainChannelRead(ADV7533_REG_INT0, 2);
-    zxlogf(ERROR, "%s: INTR REGS: ADV7533_REG_INT0 = 0x%x, ADV7533_REG_INT1 = 0x%x\n", __FUNCTION__,
+    zxlogf(ERROR, "%s: INTR REGS: ADV7533_REG_INT0 = 0x%x, ADV7533_REG_INT1 = 0x%x", __FUNCTION__,
            write_buf_[0], write_buf_[1]);
     return ZX_ERR_INTERNAL;
   }
@@ -169,7 +169,7 @@ zx_status_t Adv7533::Adv7533Init(pdev_protocol_t* pdev_) {
   edid::BaseEdid* EdidBuf = (edid::BaseEdid*)edid_buf_;
 
   if (EdidBuf->num_extensions) {
-    zxlogf(INFO, "EDID has extension. Continue Reading\n");
+    zxlogf(INFO, "EDID has extension. Continue Reading");
     for (int h = 128; h < 256; h += 32) {
       Adv7533EdidChannelRead((uint8_t)h, 32);
       memcpy(&edid_buf_[h], &write_buf_[0], 32);

@@ -93,7 +93,7 @@ void TestRequest::RequestCompleteCallback(void* ctx, usb_request_t* request) {
   ZX_DEBUG_ASSERT(ctx != nullptr);
   auto test_req = reinterpret_cast<TestRequest*>(ctx);
   test_req->got_cb_ = true;
-  zxlogf(TRACE, "%p: complete callback\n", request);
+  zxlogf(TRACE, "%p: complete callback", request);
   sync_completion_signal(&test_req->completion_);
 }
 
@@ -114,12 +114,12 @@ zx_status_t TestRequest::WaitComplete(usb_protocol_t* usb) {
     // Cancel the request before returning.
     status = usb_cancel_all(usb, req->header.ep_address);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "failed to cancel usb transfers, err: %d\n", status);
+      zxlogf(ERROR, "failed to cancel usb transfers, err: %d", status);
       return ZX_ERR_TIMED_OUT;
     }
     status = sync_completion_wait(&completion_, ZX_TIME_INFINITE);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "failed to wait for request completion after cancelling request\n");
+      zxlogf(ERROR, "failed to wait for request completion after cancelling request");
     }
     return ZX_ERR_TIMED_OUT;
   } else {
@@ -185,7 +185,7 @@ zx_status_t UsbTester::AllocIsochTestReqs(size_t num_reqs, size_t len, uint8_t e
       // Zero length isoch requests will fail.
       test_req->Get()->header.length = 0;
     }
-    zxlogf(SPEW, "%lu (%p): set callback=%d, set_error=%d expect_cb=%d\n", i, test_req->Get(),
+    zxlogf(SPEW, "%lu (%p): set callback=%d, set_error=%d expect_cb=%d", i, test_req->Get(),
            req_opts.set_cb, req_opts.set_error, req_opts.expect_cb);
     out_test_reqs->push_back(std::move(test_req.value()));
   }
@@ -230,7 +230,7 @@ zx_status_t UsbTester::SetModeFwloader() {
       usb_control_out(&usb_, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                       USB_TESTER_SET_MODE_FWLOADER, 0, 0, ZX_SEC(kReqTimeoutSecs), nullptr, 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to set mode fwloader, err: %d\n", status);
+    zxlogf(ERROR, "failed to set mode fwloader, err: %d", status);
     return status;
   }
   return ZX_OK;
@@ -242,7 +242,7 @@ zx_status_t TestRequest::GetDataUnscattered(fbl::Array<uint8_t>* out_data) {
   fbl::Array<uint8_t> buf(new (&ac) uint8_t[len], len);
 
   if (!ac.check()) {
-    zxlogf(ERROR, "GetDataUnscattered: could not allocate buffer of size %lu\n", len);
+    zxlogf(ERROR, "GetDataUnscattered: could not allocate buffer of size %lu", len);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -322,7 +322,7 @@ zx_status_t UsbTester::VerifyLoopback(const fbl::Vector<TestRequest>& out_reqs,
     usb_request_t* in_usb_req = in_req.Get();
     // You can't transfer an isochronous request of length zero.
     if (in_usb_req->response.status != ZX_OK || in_usb_req->response.actual == 0) {
-      zxlogf(TRACE, "skipping isoch req, status %d, read len %lu\n", in_usb_req->response.status,
+      zxlogf(TRACE, "skipping isoch req, status %d, read len %lu", in_usb_req->response.status,
              in_usb_req->response.actual);
       continue;
     }
@@ -354,7 +354,7 @@ zx_status_t UsbTester::VerifyLoopback(const fbl::Vector<TestRequest>& out_reqs,
       num_passed++;
     } else {
       // Maybe IN data was corrupted.
-      zxlogf(TRACE, "could not find matching isoch req\n");
+      zxlogf(TRACE, "could not find matching isoch req");
     }
   }
   *out_num_passed = num_passed;
@@ -368,7 +368,7 @@ zx_status_t UsbTester::VerifyCallbacks(const fbl::Vector<TestRequest>& reqs) {
   for (auto& req : reqs) {
     if (req.Get()->response.status == ZX_OK) {
       if (req.expect_cb() != req.got_cb()) {
-        zxlogf(ERROR, "%lu (%p): %s\n", i, req.Get(),
+        zxlogf(ERROR, "%lu (%p): %s", i, req.Get(),
                req.expect_cb() ? "missing callback" : "got unexpected callback");
         return ZX_ERR_IO;
       }
@@ -376,7 +376,7 @@ zx_status_t UsbTester::VerifyCallbacks(const fbl::Vector<TestRequest>& reqs) {
       // Requests with errors should always get callbacks. Sometimes isochronous
       // requests may fail unexpectedly.
       if (!req.got_cb()) {
-        zxlogf(ERROR, "%lu (%p): missing callback for erroneous request\n", i, req.Get());
+        zxlogf(ERROR, "%lu (%p): missing callback for erroneous request", i, req.Get());
         return ZX_ERR_IO;
       }
     }
@@ -387,10 +387,10 @@ zx_status_t UsbTester::VerifyCallbacks(const fbl::Vector<TestRequest>& reqs) {
     i++;
   }
   if (num_completions != reqs.size()) {
-    zxlogf(ERROR, "wanted %lu completions, got %lu\n", reqs.size(), num_completions);
+    zxlogf(ERROR, "wanted %lu completions, got %lu", reqs.size(), num_completions);
     return ZX_ERR_IO;
   }
-  zxlogf(TRACE, "got %lu/%lu callbacks\n", num_cbs, i);
+  zxlogf(TRACE, "got %lu/%lu callbacks", num_cbs, i);
   return ZX_OK;
 }
 
@@ -400,7 +400,7 @@ zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_IsochTest
   uint16_t packet_size =
       fbl::min(params->packet_size, fbl::min(intf->in_max_packet, intf->out_max_packet));
   if (packet_size < params->packet_size) {
-    zxlogf(ERROR, "requested packet size %u, using max packet size %u\n", params->packet_size,
+    zxlogf(ERROR, "requested packet size %u, using max packet size %u", params->packet_size,
            packet_size);
   }
   size_t num_reqs = params->num_packets;
@@ -411,11 +411,11 @@ zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_IsochTest
 
   zx_status_t status = usb_set_interface(&usb_, intf->intf_num, intf->alt_setting);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb_set_interface got err: %d\n", status);
+    zxlogf(ERROR, "usb_set_interface got err: %d", status);
     return status;
   }
 
-  zxlogf(TRACE, "allocating %lu reqs of packet size %u, total bytes %lu\n", num_reqs, packet_size,
+  zxlogf(TRACE, "allocating %lu reqs of packet size %u, total bytes %lu", num_reqs, packet_size,
          total_len);
 
   fbl::Vector<TestRequest> in_reqs;
@@ -443,7 +443,7 @@ zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_IsochTest
   // Adds some delay so we don't miss the scheduled start frame.
   uint64_t start_frame;
   start_frame = frame + kIsochStartFrameDelay;
-  zxlogf(TRACE, "scheduling isoch loopback to start on frame %lu\n", start_frame);
+  zxlogf(TRACE, "scheduling isoch loopback to start on frame %lu", start_frame);
 
   QueueTestReqs(in_reqs, start_frame);
   QueueTestReqs(out_reqs, start_frame);
@@ -462,12 +462,12 @@ zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_IsochTest
   }
   result->num_passed = num_passed;
   result->num_packets = num_reqs;
-  zxlogf(TRACE, "%lu / %lu passed\n", num_passed, num_reqs);
+  zxlogf(TRACE, "%lu / %lu passed", num_passed, num_reqs);
 
 done:
   zx_status_t res = usb_set_interface(&usb_, intf->intf_num, 0);
   if (res != ZX_OK) {
-    zxlogf(ERROR, "could not switch back to isoch interface default alternate setting\n");
+    zxlogf(ERROR, "could not switch back to isoch interface default alternate setting");
   }
   return status;
 }
@@ -557,10 +557,10 @@ zx_status_t UsbTester::Create(zx_device_t* parent) {
         case USB_ENDPOINT_BULK:
           if (usb_ep_direction(endp) == USB_ENDPOINT_IN) {
             bulk_in_addr = endp->bEndpointAddress;
-            zxlogf(TRACE, "usb_tester found bulk in ep: %x\n", bulk_in_addr);
+            zxlogf(TRACE, "usb_tester found bulk in ep: %x", bulk_in_addr);
           } else {
             bulk_out_addr = endp->bEndpointAddress;
-            zxlogf(TRACE, "usb_tester found bulk out ep: %x\n", bulk_out_addr);
+            zxlogf(TRACE, "usb_tester found bulk out ep: %x", bulk_out_addr);
           }
           break;
         case USB_ENDPOINT_ISOCHRONOUS:
@@ -580,7 +580,7 @@ zx_status_t UsbTester::Create(zx_device_t* parent) {
       }
       status = usb_enable_endpoint(&usb, endp, ss_comp_desc, true);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: usb_enable_endpoint failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: usb_enable_endpoint failed %d", __FUNCTION__, status);
         return status;
       }
       endp = usb_desc_iter_next_endpoint(&iter);
@@ -588,7 +588,7 @@ zx_status_t UsbTester::Create(zx_device_t* parent) {
     if (isoch_intf.in_addr && isoch_intf.out_addr) {
       // Found isoch loopback endpoints.
       isoch_loopback_intf = isoch_intf;
-      zxlogf(TRACE, "usb tester found isoch loopback eps: %x (%u) %x (%u), intf %u %u\n",
+      zxlogf(TRACE, "usb tester found isoch loopback eps: %x (%u) %x (%u), intf %u %u",
              isoch_intf.in_addr, isoch_intf.in_max_packet, isoch_intf.out_addr,
              isoch_intf.out_max_packet, isoch_intf.intf_num, isoch_intf.alt_setting);
     }
@@ -598,11 +598,11 @@ zx_status_t UsbTester::Create(zx_device_t* parent) {
 
   // Check we found the pair of bulk endpoints and isoch endpoints.
   if (!bulk_in_addr || !bulk_out_addr) {
-    zxlogf(ERROR, "usb tester could not find bulk endpoints\n");
+    zxlogf(ERROR, "usb tester could not find bulk endpoints");
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (!isoch_loopback_intf.in_addr || !isoch_loopback_intf.out_addr) {
-    zxlogf(ERROR, "usb tester could not find isoch endpoints\n");
+    zxlogf(ERROR, "usb tester could not find isoch endpoints");
   }
 
   fbl::AllocChecker ac;
@@ -621,7 +621,7 @@ zx_status_t UsbTester::Create(zx_device_t* parent) {
 }
 
 extern "C" zx_status_t usb_tester_bind(void* ctx, zx_device_t* parent) {
-  zxlogf(TRACE, "usb_tester_bind\n");
+  zxlogf(TRACE, "usb_tester_bind");
   return usb::UsbTester::Create(parent);
 }
 

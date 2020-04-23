@@ -32,7 +32,7 @@ zx_status_t Rtl8821cDevice::Create(std::unique_ptr<Bus> bus, std::unique_ptr<Dev
 }
 
 zx_status_t Rtl8821cDevice::CreateWlanMac(zx_device_t* parent_device, WlanMac** wlan_mac) {
-  zxlogf(ERROR, "rtl88xx: Rtl8821cDevice::CreateWlanMac() not implemented\n");
+  zxlogf(ERROR, "rtl88xx: Rtl8821cDevice::CreateWlanMac() not implemented");
   return ZX_ERR_NOT_SUPPORTED;
 }
 

@@ -126,20 +126,20 @@ static pbus_dev_t gpio_dev = []() {
 zx_status_t Nelson::GpioInit() {
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
     return status;
   }
 
   gpio_impl_ = ddk::GpioImplProtocolClient(parent());
   if (!gpio_impl_.is_valid()) {
-    zxlogf(ERROR, "%s: GpioImplProtocolClient failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: GpioImplProtocolClient failed %d", __func__, status);
     return ZX_ERR_INTERNAL;
   }
 
   // Enable mute LED so it will be controlled by mute switch.
   status = gpio_impl_.ConfigOut(S905D3_GPIOAO(11), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ConfigOut failed: %d", __func__, status);
   }
 
 #ifdef GPIO_TEST
@@ -164,7 +164,7 @@ zx_status_t Nelson::GpioInit() {
   }();
 
   if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd gpio_test failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd gpio_test failed: %d", __func__, status);
     return status;
   }
 #endif

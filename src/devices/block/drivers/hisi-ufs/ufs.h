@@ -497,13 +497,13 @@ static inline int32_t find_first_zero_bit(ulong* addr, uint8_t bits) {
 
 #ifdef UFS_DEBUG
 static inline void dbg_dump_buffer(uint8_t* buf, uint32_t len, const char* name) {
-  zxlogf(INFO, "%s_buffer:\n", name);
+  zxlogf(INFO, "%s_buffer:", name);
   for (uint32_t index = 0; index < len; index++) {
     zxlogf(INFO, "buf[%d]=0x%x ", index, buf[index]);
     if (index && !(index % 10))
-      zxlogf(INFO, "\n");
+      zxlogf(INFO, "");
   }
-  zxlogf(INFO, "\n");
+  zxlogf(INFO, "");
 }
 #else
 static inline void dbg_dump_buffer(uint8_t* buf, uint32_t len, const char* name) {}

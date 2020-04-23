@@ -97,13 +97,13 @@ zx_status_t As370::PowerInit() {
 
   status = DdkAddComposite("power", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed %d", __FUNCTION__, status);
     return status;
   }
 
   status = DdkAddComposite("composite-pd-kBuckSoC", &power_domain_kBuckSoC_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd for power domain kBuckSoC failed %d\n", __FUNCTION__,
+    zxlogf(ERROR, "%s: CompositeDeviceAdd for power domain kBuckSoC failed %d", __FUNCTION__,
            status);
     return status;
   }

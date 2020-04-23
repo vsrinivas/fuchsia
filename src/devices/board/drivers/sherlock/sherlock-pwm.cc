@@ -101,7 +101,7 @@ static const device_fragment_t composite[] = {
 zx_status_t Sherlock::PwmInit() {
   zx_status_t status = pbus_.DeviceAdd(&pwm_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
   }
 
@@ -124,7 +124,7 @@ zx_status_t Sherlock::PwmInit() {
 
   status = DdkAddComposite("pwm-init", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddComposite failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAddComposite failed: %d", __func__, status);
     return status;
   }
 

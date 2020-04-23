@@ -66,12 +66,12 @@ zx_status_t As370::SdioInit() {
 
   status = gpio_impl_.ConfigOut(63, 1);  // Disable WLAN Powerdown
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SDIO Power/WLAN Enable error: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: SDIO Power/WLAN Enable error: %d", __func__, status);
   }
 
   status = pbus_.DeviceAdd(&sdio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd() error: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd() error: %d", __func__, status);
   }
 
   return status;

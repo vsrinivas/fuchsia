@@ -80,7 +80,7 @@ static zx_status_t pcf8563_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* r
 
   zx_status_t status = set_utc_offset(rtc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
+    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
   }
 
   return ZX_OK;
@@ -112,13 +112,13 @@ static zx_protocol_device_t pcf8563_rtc_device_proto = {.version = DEVICE_OPS_VE
 static zx_status_t pcf8563_bind(void* ctx, zx_device_t* parent) {
   pcf8563_context* context = calloc(1, sizeof *context);
   if (!context) {
-    zxlogf(ERROR, "%s: failed to create device context\n", __FUNCTION__);
+    zxlogf(ERROR, "%s: failed to create device context", __FUNCTION__);
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &context->i2c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to acquire i2c\n", __FUNCTION__);
+    zxlogf(ERROR, "%s: failed to acquire i2c", __FUNCTION__);
     free(context);
     return status;
   }
@@ -140,7 +140,7 @@ static zx_status_t pcf8563_bind(void* ctx, zx_device_t* parent) {
   sanitize_rtc(context, &rtc, pcf8563_rtc_get, pcf8563_rtc_set);
   status = set_utc_offset(&rtc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
+    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
   }
 
   return ZX_OK;

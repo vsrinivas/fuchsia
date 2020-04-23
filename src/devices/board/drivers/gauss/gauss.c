@@ -86,17 +86,17 @@ static int gauss_start_thread(void* arg) {
 
   // Sysmem is started early so zx_vmo_create_contiguous() works.
   if ((status = gauss_sysmem_init(bus)) != ZX_OK) {
-    zxlogf(ERROR, "gauss_sysmem_init failed: %d\n", status);
+    zxlogf(ERROR, "gauss_sysmem_init failed: %d", status);
     goto fail;
   }
 
   if ((status = gauss_clk_init(bus)) != ZX_OK) {
-    zxlogf(ERROR, "gauss_clk_init failed: %d\n", status);
+    zxlogf(ERROR, "gauss_clk_init failed: %d", status);
     goto fail;
   }
 
   if ((status = gauss_gpio_init(bus)) != ZX_OK) {
-    zxlogf(ERROR, "gauss_gpio_init failed: %d\n", status);
+    zxlogf(ERROR, "gauss_gpio_init failed: %d", status);
     goto fail;
   }
 
@@ -122,13 +122,13 @@ static int gauss_start_thread(void* arg) {
   gpio_impl_config_out(&bus->gpio, SPK_MUTEn, 1);
 
   if ((status = gauss_i2c_init(bus)) != ZX_OK) {
-    zxlogf(ERROR, "gauss_i2c_init failed: %d\n", status);
+    zxlogf(ERROR, "gauss_i2c_init failed: %d", status);
     goto fail;
   }
 
   status = a113_clk_init(&bus->clocks);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "a113_clk_init failed: %d\n", status);
+    zxlogf(ERROR, "a113_clk_init failed: %d", status);
     goto fail;
   }
 
@@ -137,32 +137,32 @@ static int gauss_start_thread(void* arg) {
   uint64_t actual_freq;
   a113_clk_set_mpll2(bus->clocks, GAUSS_TDM_CLK_SRC_FREQ, &actual_freq);
 
-  zxlogf(INFO, "Requested sample rate = %d, actual = %ld\n", GAUSS_TDM_SAMPLE_RATE,
+  zxlogf(INFO, "Requested sample rate = %d, actual = %ld", GAUSS_TDM_SAMPLE_RATE,
          actual_freq / GAUSS_TDM_CLK_N);
 
   if ((status = gauss_pcie_init(bus)) != ZX_OK) {
-    zxlogf(ERROR, "gauss_pcie_init failed: %d\n", status);
+    zxlogf(ERROR, "gauss_pcie_init failed: %d", status);
   }
   if ((status = gauss_usb_init(bus)) != ZX_OK) {
-    zxlogf(ERROR, "gauss_usb_init failed: %d\n", status);
+    zxlogf(ERROR, "gauss_usb_init failed: %d", status);
   }
   if ((status = gauss_audio_init(bus)) != ZX_OK) {
-    zxlogf(ERROR, "gauss_audio_init failed: %d\n", status);
+    zxlogf(ERROR, "gauss_audio_init failed: %d", status);
   }
 
 #if I2C_TEST
   if ((status = pbus_device_add(&bus->pbus, &i2c_test_dev, 0)) != ZX_OK) {
-    zxlogf(ERROR, "a113_i2c_init could not add i2c_test_dev: %d\n", status);
+    zxlogf(ERROR, "a113_i2c_init could not add i2c_test_dev: %d", status);
   }
 #endif
 
   if ((status = gauss_raw_nand_init(bus)) != ZX_OK) {
-    zxlogf(ERROR, "gauss_raw_nand_init failed: %d\n", status);
+    zxlogf(ERROR, "gauss_raw_nand_init failed: %d", status);
   }
 
   return ZX_OK;
 fail:
-  zxlogf(ERROR, "gauss_start_thread failed, not all devices have been initialized\n");
+  zxlogf(ERROR, "gauss_start_thread failed, not all devices have been initialized");
   return status;
 }
 
@@ -180,12 +180,12 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
   // get dummy IOMMU implementation in the platform bus
   status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &bus->iommu);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "gauss_bus_bind: could not get ZX_PROTOCOL_IOMMU\n");
+    zxlogf(ERROR, "gauss_bus_bind: could not get ZX_PROTOCOL_IOMMU");
     goto fail;
   }
   status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bus->bti_handle);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "gauss_bus_bind: iommu_get_bti failed: %d\n", status);
+    zxlogf(ERROR, "gauss_bus_bind: iommu_get_bti failed: %d", status);
     goto fail;
   }
 

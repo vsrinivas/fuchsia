@@ -49,12 +49,12 @@ zx_status_t Gamma::Config() {
 
 void Gamma::PrintRegisters() {
   ZX_DEBUG_ASSERT(initialized_);
-  zxlogf(INFO, "Dumping Gamma Registers\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "GAMMA_EN = 0x%x\n", gamma_mmio_->Read32(GAMMA_EN));
-  zxlogf(INFO, "GAMMA_CFG = 0x%x\n", gamma_mmio_->Read32(GAMMA_CFG));
-  zxlogf(INFO, "GAMMA_SIZE = 0x%x\n", gamma_mmio_->Read32(GAMMA_SIZE));
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "Dumping Gamma Registers");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "GAMMA_EN = 0x%x", gamma_mmio_->Read32(GAMMA_EN));
+  zxlogf(INFO, "GAMMA_CFG = 0x%x", gamma_mmio_->Read32(GAMMA_CFG));
+  zxlogf(INFO, "GAMMA_SIZE = 0x%x", gamma_mmio_->Read32(GAMMA_SIZE));
+  zxlogf(INFO, "######################\n");
 }
 
 }  // namespace mt8167s_display

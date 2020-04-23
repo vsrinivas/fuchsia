@@ -41,23 +41,23 @@ zx_status_t UsbTest::Init() {
 
   status = function_.AllocInterface(&descriptors_.intf.bInterfaceNumber);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: usb_function_alloc_interface failed\n", __func__);
+    zxlogf(ERROR, "%s: usb_function_alloc_interface failed", __func__);
     return status;
   }
 
   status = function_.AllocEp(USB_DIR_OUT, &bulk_out_addr_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: usb_function_alloc_ep failed\n", __func__);
+    zxlogf(ERROR, "%s: usb_function_alloc_ep failed", __func__);
     return status;
   }
   status = function_.AllocEp(USB_DIR_IN, &bulk_in_addr_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: usb_function_alloc_ep failed\n", __func__);
+    zxlogf(ERROR, "%s: usb_function_alloc_ep failed", __func__);
     return status;
   }
   status = function_.AllocEp(USB_DIR_IN, &intr_addr_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: usb_function_alloc_ep failed\n", __func__);
+    zxlogf(ERROR, "%s: usb_function_alloc_ep failed", __func__);
     return status;
   }
 
@@ -98,7 +98,7 @@ zx_status_t UsbTest::Init() {
   DdkAdd("usb-function-test", DEVICE_ADD_NON_BINDABLE);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: add_device failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: add_device failed %d", __func__, status);
     return status;
   }
 
@@ -108,14 +108,14 @@ zx_status_t UsbTest::Init() {
 }
 
 void UsbTest::TestIntrComplete(usb_request_t* req) {
-  zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
+  zxlogf(LTRACE, "%s %d %ld", __func__, req->response.status, req->response.actual);
 
   fbl::AutoLock lock(&lock_);
   intr_reqs_.push(usb::Request<void>(req, parent_req_size_));
 }
 
 void UsbTest::TestBulkOutComplete(usb_request_t* req) {
-  zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
+  zxlogf(LTRACE, "%s %d %ld", __func__, req->response.status, req->response.actual);
 
   if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
     fbl::AutoLock lock(&lock_);
@@ -144,10 +144,10 @@ void UsbTest::TestBulkOutComplete(usb_request_t* req) {
       usb_request_cache_flush(in_req->request(), 0, in_req->request()->response.actual);
       function_.RequestQueue(in_req->take(), &complete);
     } else {
-      zxlogf(ERROR, "%s: no bulk in request available\n", __func__);
+      zxlogf(ERROR, "%s: no bulk in request available", __func__);
     }
   } else {
-    zxlogf(ERROR, "%s: usb_read_complete called with status %d\n", __func__, req->response.status);
+    zxlogf(ERROR, "%s: usb_read_complete called with status %d", __func__, req->response.status);
   }
 
   // Requeue read.
@@ -160,7 +160,7 @@ void UsbTest::TestBulkOutComplete(usb_request_t* req) {
 }
 
 void UsbTest::TestBulkInComplete(usb_request_t* req) {
-  zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
+  zxlogf(LTRACE, "%s %d %ld", __func__, req->response.status, req->response.actual);
 
   fbl::AutoLock lock(&lock_);
   bulk_in_reqs_.push(usb::Request<void>(req, parent_req_size_));
@@ -181,7 +181,7 @@ zx_status_t UsbTest::UsbFunctionInterfaceControl(const usb_setup_t* setup, const
                                                  size_t read_size, size_t* out_read_actual) {
   size_t length = le16toh(setup->wLength);
 
-  zxlogf(TRACE, "%s\n", __func__);
+  zxlogf(TRACE, "%s", __func__);
   if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
       setup->bRequest == USB_PERIPHERAL_TEST_SET_DATA) {
     if (length > sizeof(test_data_)) {
@@ -204,7 +204,7 @@ zx_status_t UsbTest::UsbFunctionInterfaceControl(const usb_setup_t* setup, const
     std::optional<usb::Request<void>> req = intr_reqs_.pop();
     lock_.Release();
     if (!req) {
-      zxlogf(ERROR, "%s: no interrupt request available\n", __func__);
+      zxlogf(ERROR, "%s: no interrupt request available", __func__);
       // TODO(voydanoff) maybe stall in this case?
       return ZX_OK;
     }
@@ -224,14 +224,14 @@ zx_status_t UsbTest::UsbFunctionInterfaceControl(const usb_setup_t* setup, const
 }
 
 zx_status_t UsbTest::UsbFunctionInterfaceSetConfigured(bool configured, usb_speed_t speed) {
-  zxlogf(TRACE, "%s: %d %d\n", __func__, configured, speed);
+  zxlogf(TRACE, "%s: %d %d", __func__, configured, speed);
   zx_status_t status;
 
   if (configured) {
     if ((status = function_.ConfigEp(&descriptors_.intr_ep, NULL)) != ZX_OK ||
         (status = function_.ConfigEp(&descriptors_.bulk_out_ep, NULL)) != ZX_OK ||
         (status = function_.ConfigEp(&descriptors_.bulk_in_ep, NULL)) != ZX_OK) {
-      zxlogf(ERROR, "%s: function_.ConfigEp( failed\n", __func__);
+      zxlogf(ERROR, "%s: function_.ConfigEp( failed", __func__);
       return status;
     }
   } else {
@@ -265,17 +265,17 @@ zx_status_t UsbTest::UsbFunctionInterfaceSetInterface(uint8_t interface, uint8_t
 }
 
 void UsbTest::DdkUnbindNew(ddk::UnbindTxn txn) {
-  zxlogf(TRACE, "%s\n", __func__);
+  zxlogf(TRACE, "%s", __func__);
   txn.Reply();
 }
 
 void UsbTest::DdkRelease() {
-  zxlogf(TRACE, "%s\n", __func__);
+  zxlogf(TRACE, "%s", __func__);
   delete this;
 }
 
 zx_status_t UsbTest::Create(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "%s\n", __func__);
+  zxlogf(INFO, "%s", __func__);
   fbl::AllocChecker ac;
   std::unique_ptr<UsbTest> test(new (&ac) UsbTest(parent));
   if (!ac.check()) {

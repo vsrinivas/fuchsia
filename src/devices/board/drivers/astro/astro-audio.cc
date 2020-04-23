@@ -112,19 +112,19 @@ zx_status_t Astro::AudioInit() {
 
   status = clk_impl_.Disable(g12a_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d", __func__, status);
     return status;
   }
 
   status = clk_impl_.SetRate(g12a_clk::CLK_HIFI_PLL, 3072000000);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d\n", __func__, status);
+    zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d", __func__, status);
     return status;
   }
 
   status = clk_impl_.Enable(g12a_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Enable(CLK_HIFI_PLL) failed, st = %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Enable(CLK_HIFI_PLL) failed, st = %d", __func__, status);
     return status;
   }
 
@@ -146,13 +146,13 @@ zx_status_t Astro::AudioInit() {
 
   status = pbus_.CompositeDeviceAdd(&tdm_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 
   status = pbus_.DeviceAdd(&pdm_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;
   }
 

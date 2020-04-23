@@ -372,7 +372,7 @@ zx_status_t Device::RecvRespLocked(Locality loc, uint8_t* resp, size_t max_len, 
   bool more_data = true;
   size_t bytes_recvd = 0;
   while (more_data) {
-    zxlogf(TRACE, "Reading response, %zu bytes read\n", bytes_recvd);
+    zxlogf(TRACE, "Reading response, %zu bytes read", bytes_recvd);
     uint16_t burst_count;
     status = GetBurstCount(iface_.get(), loc, &burst_count);
     if (status != ZX_OK) {

@@ -45,7 +45,7 @@ X86::~X86() {
 int X86::Thread() {
   zx_status_t status = SysmemInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SysmemInit() failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: SysmemInit() failed: %d", __func__, status);
     return status;
   }
   return publish_acpi_devices(parent(), sys_root_, zxdev());
@@ -85,7 +85,7 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* ou
   zx_device_t* sys_root = device_get_parent(parent);
 #pragma GCC diagnostic pop
   if (sys_root == NULL) {
-    zxlogf(ERROR, "%s: failed to find parent node of platform (expected sys)\n", __func__);
+    zxlogf(ERROR, "%s: failed to find parent node of platform (expected sys)", __func__);
     return ZX_ERR_INTERNAL;
   }
 
@@ -117,9 +117,9 @@ zx_status_t X86::CreateAndBind(void* ctx, zx_device_t* parent) {
 template <size_t N>
 static void SetField(const char* label, const std::string& value, char (&out)[N]) {
   if (value.empty()) {
-    zxlogf(ERROR, "acpi: smbios %s could not be read\n", label);
+    zxlogf(ERROR, "acpi: smbios %s could not be read", label);
   } else if (value.size() >= N) {
-    zxlogf(INFO, "acpi: smbios %s too big for sysinfo: %s\n", label, value.data());
+    zxlogf(INFO, "acpi: smbios %s too big for sysinfo: %s", label, value.data());
   } else {
     strlcpy(out, value.data(), N);
   }
@@ -129,7 +129,7 @@ zx_status_t X86::Bind() {
   // Do early init of ACPICA etc.
   zx_status_t status = EarlyInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to perform early initialization %d \n", __func__, status);
+    zxlogf(ERROR, "%s: failed to perform early initialization %d ", __func__, status);
     return status;
   }
 
@@ -138,7 +138,7 @@ zx_status_t X86::Bind() {
   status = DdkAdd("acpi", DEVICE_ADD_NON_BINDABLE);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi: error %d in device_add(sys/platform/acpi)\n", status);
+    zxlogf(ERROR, "acpi: error %d in device_add(sys/platform/acpi)", status);
     return status;
   }
 
@@ -156,13 +156,13 @@ zx_status_t X86::Bind() {
   // Inform the platform bus of our board info.
   status = pbus_.SetBoardInfo(&board_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "SetBoardInfo failed: %d\n", status);
+    zxlogf(ERROR, "SetBoardInfo failed: %d", status);
   }
 
   // Inform the platform bus of our bootloader info.
   status = pbus_.SetBootloaderInfo(&bootloader_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "SetBootloaderInfo failed: %d\n", status);
+    zxlogf(ERROR, "SetBootloaderInfo failed: %d", status);
   }
 
   // Set the "sys" suspend op in platform-bus.
@@ -174,7 +174,7 @@ zx_status_t X86::Bind() {
   pbus_sys_suspend_t suspend = {sys_device_suspend, NULL};
   status = pbus_.RegisterSysSuspendCallback(&suspend);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not register suspend callback: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Could not register suspend callback: %d", __func__, status);
   }
 
   // Start up our protocol helpers and platform devices.

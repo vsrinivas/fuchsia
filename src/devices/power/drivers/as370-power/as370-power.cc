@@ -57,7 +57,7 @@ bool As370Power::Test() {
   // Default status - enabled
   status = PowerImplGetPowerDomainStatus(kBuckSoC, &regulator_status);
   if ((status != ZX_OK) || (regulator_status != POWER_DOMAIN_STATUS_ENABLED)) {
-    zxlogf(ERROR, "Get power domain status kBuckSoC failed : %d\n", status);
+    zxlogf(ERROR, "Get power domain status kBuckSoC failed : %d", status);
     return false;
   }
 
@@ -66,14 +66,14 @@ bool As370Power::Test() {
   uint32_t max_voltage = 0;
   status = PowerImplGetSupportedVoltageRange(kBuckSoC, &min_voltage, &max_voltage);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Get supported voltage range kBuckSoC failed : %d\n", status);
+    zxlogf(ERROR, "Get supported voltage range kBuckSoC failed : %d", status);
     return false;
   }
 
   // Check default voltage
   status = PowerImplGetCurrentVoltage(kBuckSoC, &curr_voltage);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Get current voltage kBuckSoC failed : %d\n", status);
+    zxlogf(ERROR, "Get current voltage kBuckSoC failed : %d", status);
     return false;
   }
 
@@ -81,7 +81,7 @@ bool As370Power::Test() {
   // Note: Disable regulator seems to not work at hardware level
   status = PowerImplDisablePowerDomain(kBuckSoC);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Disable power domain kBuckSoC failed : %d\n", status);
+    zxlogf(ERROR, "Disable power domain kBuckSoC failed : %d", status);
     return false;
   }
 
@@ -89,12 +89,12 @@ bool As370Power::Test() {
   uint32_t set_voltage = min_voltage;
   status = PowerImplRequestVoltage(kBuckSoC, set_voltage, &set_voltage);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Request voltage kBuckSoC failed : %d\n", status);
+    zxlogf(ERROR, "Request voltage kBuckSoC failed : %d", status);
     return false;
   }
 #endif
 
-  zxlogf(INFO, "as370-power test passed\n");
+  zxlogf(INFO, "as370-power test passed");
 
   return true;
 }
@@ -107,13 +107,13 @@ zx_status_t As370BuckRegulator::Enable() {
   auto buck_reg = BuckRegulatorRegister::Get().FromValue(0);
   zx_status_t status = buck_reg.ReadFrom(i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Reading PMIC reg failed: %d", __FUNCTION__, status);
     return status;
   }
 
   status = buck_reg.set_buck_enable(1).WriteTo(i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Writing PMIC reg failed: %d", __FUNCTION__, status);
     return status;
   }
 
@@ -128,13 +128,13 @@ zx_status_t As370BuckRegulator::Disable() {
   auto buck_reg = BuckRegulatorRegister::Get().FromValue(0);
   zx_status_t status = buck_reg.ReadFrom(i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Reading PMIC reg failed: %d", __FUNCTION__, status);
     return status;
   }
 
   status = buck_reg.set_buck_enable(0).WriteTo(i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Writing PMIC reg failed: %d", __FUNCTION__, status);
     return status;
   }
 
@@ -145,11 +145,11 @@ zx_status_t As370BuckRegulator::Disable() {
 zx_status_t As370BuckRegulator::GetVoltageSelector(uint32_t set_voltage, uint32_t* actual_voltage,
                                                    uint8_t* selector) {
   if (set_voltage < BuckRegulatorRegister::kMinVoltage) {
-    zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
+    zxlogf(ERROR, "%s Voltage :%x is not a supported voltage", __FUNCTION__, set_voltage);
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (set_voltage > BuckRegulatorRegister::kMaxVoltage) {
-    zxlogf(ERROR, "%s Voltage :%x is not a supported voltage\n", __FUNCTION__, set_voltage);
+    zxlogf(ERROR, "%s Voltage :%x is not a supported voltage", __FUNCTION__, set_voltage);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -178,13 +178,13 @@ zx_status_t As370BuckRegulator::RequestVoltage(uint32_t voltage, uint32_t* actua
   auto buck_reg = BuckRegulatorRegister::Get().FromValue(0);
   status = buck_reg.ReadFrom(i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Reading PMIC reg failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Reading PMIC reg failed: %d", __FUNCTION__, status);
     return status;
   }
 
   status = buck_reg.set_voltage(selector).WriteTo(i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Writing PMIC reg failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s Writing PMIC reg failed: %d", __FUNCTION__, status);
     return status;
   }
 
@@ -258,7 +258,7 @@ zx_status_t As370Power::InitializePowerDomains(const ddk::I2cProtocolClient& i2c
     if (domain_params.type == BUCK) {
       power_domains_[i] = std::make_unique<As370BuckRegulator>(domain_params.enabled, i2c);
     } else {
-      zxlogf(ERROR, "Invalid power domain type :%d\n", domain_params.type);
+      zxlogf(ERROR, "Invalid power domain type :%d", domain_params.type);
       return ZX_ERR_INTERNAL;
     }
   }
@@ -270,7 +270,7 @@ zx_status_t As370Power::InitializeProtocols(ddk::I2cProtocolClient* i2c) {
   composite_protocol_t composite;
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed\n", __func__);
+    zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed", __func__);
     return status;
   }
 
@@ -285,7 +285,7 @@ zx_status_t As370Power::InitializeProtocols(ddk::I2cProtocolClient* i2c) {
 
   *i2c = ddk::I2cProtocolClient(fragments[kI2cFragment]);
   if (!i2c->is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found, err=%d\n", __func__, status);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found, err=%d", __func__, status);
     return status;
   }
 
@@ -297,13 +297,13 @@ zx_status_t As370Power::Init() {
 
   zx_status_t status = InitializeProtocols(&i2c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to initialize protocols\n");
+    zxlogf(ERROR, "Failed to initialize protocols");
     return status;
   }
 
   status = InitializePowerDomains(i2c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to initialize power domains\n");
+    zxlogf(ERROR, "Failed to initialize power domains");
     return status;
   }
   return ZX_OK;
@@ -312,7 +312,7 @@ zx_status_t As370Power::Init() {
 zx_status_t As370Power::Bind() {
   zx_status_t status = DdkAdd("as370-power", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s DdkAdd failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s DdkAdd failed: %d", __FUNCTION__, status);
   }
 
   return status;

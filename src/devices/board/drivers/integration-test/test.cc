@@ -132,7 +132,7 @@ zx_status_t TestBoard::FetchAndDeserialize() {
   pbus_bootloader_info_t bootloader_info{.vendor = "coreboot"};
   status = pbus_.SetBootloaderInfo(&bootloader_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "SetBootloaderInfo failed: %d\n", status);
+    zxlogf(ERROR, "SetBootloaderInfo failed: %d", status);
     return status;
   }
 
@@ -143,7 +143,7 @@ int TestBoard::Thread() {
   for (const auto& device : devices_) {
     zx_status_t status = pbus_.DeviceAdd(&device);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to add device.\n");
+      zxlogf(ERROR, "Failed to add device.");
     }
   }
   return 0;
@@ -169,13 +169,13 @@ zx_status_t TestBoard::Create(void* ctx, zx_device_t* parent) {
 
   zx_status_t status = board->FetchAndDeserialize();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "TestBoard::Create: FetchAndDeserialize failed: %d\n", status);
+    zxlogf(ERROR, "TestBoard::Create: FetchAndDeserialize failed: %d", status);
     return status;
   }
 
   status = board->DdkAdd("test-board", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "TestBoard::Create: DdkAdd failed: %d\n", status);
+    zxlogf(ERROR, "TestBoard::Create: DdkAdd failed: %d", status);
     return status;
   }
 

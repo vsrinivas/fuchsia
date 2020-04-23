@@ -52,13 +52,13 @@ zx_status_t I2cCr50Interface::Validate() {
 
 zx_status_t I2cCr50Interface::WaitForIrqLocked() {
   if (irq_) {
-    zxlogf(TRACE, "tpm: Waiting for IRQ\n");
+    zxlogf(TRACE, "tpm: Waiting for IRQ");
     zx_status_t status = zx_interrupt_wait(irq_.get(), nullptr);
     if (status != ZX_OK) {
       return status;
     }
 
-    zxlogf(TRACE, "tpm: Received IRQ\n");
+    zxlogf(TRACE, "tpm: Received IRQ");
   } else {
     zx::nanosleep(zx::deadline_after(kNoIrqTimeout));
   }
@@ -66,31 +66,31 @@ zx_status_t I2cCr50Interface::WaitForIrqLocked() {
 }
 
 zx_status_t I2cCr50Interface::ReadAccess(Locality loc, uint8_t* access) {
-  zxlogf(TRACE, "tpm: Reading Access\n");
+  zxlogf(TRACE, "tpm: Reading Access");
   zx_status_t status = RegisterRead(RegisterAccess(loc), access);
-  zxlogf(TRACE, "tpm: Read access: %08x %d\n", *access, status);
+  zxlogf(TRACE, "tpm: Read access: %08x %d", *access, status);
   return status;
 }
 
 zx_status_t I2cCr50Interface::WriteAccess(Locality loc, uint8_t access) {
-  zxlogf(TRACE, "tpm: Writing Access\n");
+  zxlogf(TRACE, "tpm: Writing Access");
   return RegisterWrite(RegisterAccess(loc), access);
 }
 
 zx_status_t I2cCr50Interface::ReadStatus(Locality loc, uint32_t* sts) {
-  zxlogf(TRACE, "tpm: Reading Status\n");
+  zxlogf(TRACE, "tpm: Reading Status");
   zx_status_t status = RegisterRead(RegisterStatus(loc), sts);
-  zxlogf(TRACE, "tpm: Read status: %08x %d\n", *sts, status);
+  zxlogf(TRACE, "tpm: Read status: %08x %d", *sts, status);
   return status;
 }
 
 zx_status_t I2cCr50Interface::WriteStatus(Locality loc, uint32_t sts) {
-  zxlogf(TRACE, "tpm: Writing Status\n");
+  zxlogf(TRACE, "tpm: Writing Status");
   return RegisterWrite(RegisterStatus(loc), sts);
 }
 
 zx_status_t I2cCr50Interface::ReadDidVid(uint16_t* vid, uint16_t* did) {
-  zxlogf(TRACE, "tpm: Reading DidVid\n");
+  zxlogf(TRACE, "tpm: Reading DidVid");
   uint32_t value;
   zx_status_t status = RegisterRead(RegisterDidVid(0), &value);
   if (status != ZX_OK) {
@@ -102,12 +102,12 @@ zx_status_t I2cCr50Interface::ReadDidVid(uint16_t* vid, uint16_t* did) {
 }
 
 zx_status_t I2cCr50Interface::ReadDataFifo(Locality loc, uint8_t* buf, size_t len) {
-  zxlogf(TRACE, "tpm: Reading %zu bytes from DataFifo\n", len);
+  zxlogf(TRACE, "tpm: Reading %zu bytes from DataFifo", len);
   return RegisterRead(RegisterDataFifo(loc), buf, len);
 }
 
 zx_status_t I2cCr50Interface::WriteDataFifo(Locality loc, const uint8_t* buf, size_t len) {
-  zxlogf(TRACE, "tpm: Writing %zu bytes to DataFifo\n", len);
+  zxlogf(TRACE, "tpm: Writing %zu bytes to DataFifo", len);
   return RegisterWrite(RegisterDataFifo(loc), buf, len);
 }
 
@@ -122,7 +122,7 @@ zx_status_t I2cCr50Interface::I2cReadLocked(uint8_t* val, size_t len) {
   zx_status_t status;
   for (size_t attempt = 0; attempt < kNumI2cTries; ++attempt) {
     if (attempt) {
-      zxlogf(TRACE, "i2c-tpm: Retrying read\n");
+      zxlogf(TRACE, "i2c-tpm: Retrying read");
       zx::nanosleep(zx::deadline_after(kI2cRetryDelay));
     }
 
@@ -145,7 +145,7 @@ zx_status_t I2cCr50Interface::I2cWriteLocked(const uint8_t* val, size_t len) {
   zx_status_t status;
   for (size_t attempt = 0; attempt < kNumI2cTries; ++attempt) {
     if (attempt) {
-      zxlogf(TRACE, "i2c-tpm: Retrying write\n");
+      zxlogf(TRACE, "i2c-tpm: Retrying write");
       zx::nanosleep(zx::deadline_after(kI2cRetryDelay));
     }
 
@@ -167,19 +167,19 @@ zx_status_t I2cCr50Interface::RegisterRead(const I2cRegister<uint8_t[]>& reg, ui
 
   zx_status_t status = I2cWriteLocked(&reg.addr, 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-tpm: writing address failed\n");
+    zxlogf(ERROR, "i2c-tpm: writing address failed");
     return status;
   }
 
   status = WaitForIrqLocked();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-tpm: waiting for IRQ failed\n");
+    zxlogf(ERROR, "i2c-tpm: waiting for IRQ failed");
     return status;
   }
 
   status = I2cReadLocked(out, len);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-tpm: read from %#x failed\n", reg.addr);
+    zxlogf(ERROR, "i2c-tpm: read from %#x failed", reg.addr);
     return status;
   }
 
@@ -198,14 +198,14 @@ zx_status_t I2cCr50Interface::RegisterWrite(const I2cRegister<uint8_t[]>& reg, c
 
   zx_status_t status = I2cWriteLocked(buf.get(), msg_len);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-tpm: write to %#x failed\n", reg.addr);
+    zxlogf(ERROR, "i2c-tpm: write to %#x failed", reg.addr);
     return status;
   }
 
   // Wait for IRQ indicating write received
   status = WaitForIrqLocked();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "i2c-tpm: waiting for IRQ failed\n");
+    zxlogf(ERROR, "i2c-tpm: waiting for IRQ failed");
     return status;
   }
 

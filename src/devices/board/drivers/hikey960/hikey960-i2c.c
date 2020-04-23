@@ -94,7 +94,7 @@ static const pbus_dev_t i2c_dev = {
 zx_status_t hikey960_i2c_init(hikey960_t* bus) {
   zx_status_t status = pbus_device_add(&bus->pbus, &i2c_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hikey960_i2c_init: pbus_device_add failed: %d\n", status);
+    zxlogf(ERROR, "hikey960_i2c_init: pbus_device_add failed: %d", status);
     return status;
   }
 

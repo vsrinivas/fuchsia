@@ -49,7 +49,7 @@ static void ReplyQmiMsg(const void* req, uint32_t req_size, void* resp, size_t r
     *resp_size = std::min(sizeof(kQmiImeiResp), resp_buf_size);
     memcpy(resp, kQmiImeiResp, *resp_size);
   } else {
-    zxlogf(INFO, "FakeUsbQmiFunction: unknown cmd received: %u,%u,%u,%u,%u,%u,%u,%u\n", msg[0],
+    zxlogf(INFO, "FakeUsbQmiFunction: unknown cmd received: %u,%u,%u,%u,%u,%u,%u,%u", msg[0],
            msg[1], msg[2], msg[3], msg[4], msg[5], msg[6], msg[7]);
     *resp_size = std::min(sizeof(kQmiNonsenseResp), resp_buf_size);
     memcpy(resp, kQmiNonsenseResp, *resp_size);
@@ -66,7 +66,7 @@ void FakeUsbQmiFunction::UsbFunctionInterfaceGetDescriptors(void* out_descriptor
 void FakeUsbQmiFunction::QmiCompletionCallback(usb_request_t* req) {
   assert(usb_int_req_.has_value() == false);
   usb_int_req_ = usb_req_temp_;
-  zxlogf(INFO, "FakeUsbQmiFunction: interrupt sent successfully\n");
+  zxlogf(INFO, "FakeUsbQmiFunction: interrupt sent successfully");
 }
 
 zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(const usb_setup_t* setup,
@@ -74,7 +74,7 @@ zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(const usb_setup_t* s
                                                             size_t write_size,
                                                             void* out_read_buffer, size_t read_size,
                                                             size_t* out_read_actual) {
-  zxlogf(INFO, "FakeUsbQmiFunction: received write buffer in endpoint, req_type:x%X\n",
+  zxlogf(INFO, "FakeUsbQmiFunction: received write buffer in endpoint, req_type:x%X",
          setup->bmRequestType);
   if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
     if (setup->bRequest == 0) {
@@ -94,7 +94,7 @@ zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(const usb_setup_t* s
         usb_int_req_.reset();
         function_.RequestQueue(req, &complete);
       } else {
-        zxlogf(ERROR, "FakeUsbQmiFunction: interrupt req not queued\n");
+        zxlogf(ERROR, "FakeUsbQmiFunction: interrupt req not queued");
       }
       return ZX_OK;
     }
@@ -102,7 +102,7 @@ zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(const usb_setup_t* s
   if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
     memcpy(out_read_buffer, tx_data_, tx_size_);
     *out_read_actual = tx_size_;
-    zxlogf(INFO, "FakeUsbQmiFunction: successfully txed data\n");
+    zxlogf(INFO, "FakeUsbQmiFunction: successfully txed data");
     return ZX_OK;
   }
   if (out_read_actual) {
@@ -168,32 +168,32 @@ zx_status_t FakeUsbQmiFunction::Bind() {
     descriptor_.interface_dummy[i].bLength = sizeof(usb_interface_descriptor_t);
     zx_status_t status = function_.AllocInterface(&descriptor_.interface_dummy[i].bInterfaceNumber);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_interface failed\n");
+      zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_interface failed");
       return status;
     }
   }
   zx_status_t status = function_.AllocInterface(&descriptor_.interface.bInterfaceNumber);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_interface failed\n");
+    zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_interface failed");
     return status;
   }
   assert(descriptor_.interface.bInterfaceNumber == 8);
   status = function_.AllocEp(USB_DIR_IN, &descriptor_.interrupt.bEndpointAddress);
   assert(descriptor_.interrupt.bEndpointAddress != 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_ep failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_IN, &descriptor_.bulk_in.bEndpointAddress);
   assert(descriptor_.bulk_in.bEndpointAddress != 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_ep failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.bEndpointAddress);
   assert(descriptor_.bulk_out.bEndpointAddress != 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeUsbQmiFunction: usb_function_alloc_ep failed");
     return status;
   }
   usb_request_t* usb_int_req_ptr;

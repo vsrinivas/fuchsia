@@ -192,7 +192,7 @@ zx_status_t HiDisplay::SetupDisplayInterface() {
   }
 
   if ((status = adv7533_->Adv7533Init(&pdev_)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Error in ADV7533 Initialization %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Error in ADV7533 Initialization %d", __FUNCTION__, status);
     return status;
   }
 
@@ -203,12 +203,12 @@ zx_status_t HiDisplay::SetupDisplayInterface() {
   }
 
   if ((status = dsi_->DsiInit(parent_)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Error in MIPI DSI Initialization %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Error in MIPI DSI Initialization %d", __FUNCTION__, status);
     return status;
   }
 
   if ((status = dsi_->GetDisplayResolution(width_, height_)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Panel not connected : %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Panel not connected : %d", __FUNCTION__, status);
     return status;
   }
 

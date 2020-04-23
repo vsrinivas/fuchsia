@@ -88,12 +88,12 @@ zx_status_t Luis::PowerInit() {
 
   zx_status_t status = DdkAddComposite("power", &power_impl_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to add power composite device: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to add power composite device: %d", __func__, status);
     return status;
   }
 
   if ((status = DdkAddComposite("composite-pd-vcpu", &power_domain_vcpu_desc)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to add VCPU composite device: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to add VCPU composite device: %d", __func__, status);
     return status;
   }
 

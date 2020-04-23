@@ -18,7 +18,7 @@ namespace board_luis {
 zx_status_t Luis::I2cInit() {
   ddk::GpioImplProtocolClient gpio(parent());
   if (!gpio.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to create GPIO protocol client\n", __func__);
+    zxlogf(ERROR, "%s: Failed to create GPIO protocol client", __func__);
     return ZX_ERR_INTERNAL;
   }
 
@@ -27,7 +27,7 @@ zx_status_t Luis::I2cInit() {
       (status = gpio.SetAltFunction(vs680::kI2c0Scl, vs680::kI2c0AltFunction)) != ZX_OK ||
       (status = gpio.SetAltFunction(vs680::kI2c1Sda, vs680::kI2c1AltFunction)) != ZX_OK ||
       (status = gpio.SetAltFunction(vs680::kI2c1Scl, vs680::kI2c1AltFunction)) != ZX_OK) {
-    zxlogf(ERROR, "%s: GPIO SetAltFunction failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: GPIO SetAltFunction failed %d", __func__, status);
     return status;
   }
 
@@ -101,7 +101,7 @@ zx_status_t Luis::I2cInit() {
   i2c_dev.metadata_count = fbl::count_of(i2c_metadata);
 
   if ((status = pbus_.DeviceAdd(&i2c_dev)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
   }
 

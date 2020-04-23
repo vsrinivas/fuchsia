@@ -73,7 +73,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, Controller* controll
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(512, 0, &vmo);
   if (status != ZX_OK) {
-    zxlogf(TRACE, "sata: error %d allocating vmo\n", status);
+    zxlogf(TRACE, "sata: error %d allocating vmo", status);
     return status;
   }
 
@@ -92,7 +92,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, Controller* controll
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
   if (txn.status != ZX_OK) {
-    zxlogf(ERROR, "%s: error %d in device identify\n", name, txn.status);
+    zxlogf(ERROR, "%s: error %d in device identify", name, txn.status);
     return txn.status;
   }
 
@@ -101,7 +101,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, Controller* controll
   sata_devinfo_response_t devinfo;
   status = vmo.read(&devinfo, 0, sizeof(devinfo));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "sata: error %d in vmo_read\n", status);
+    zxlogf(ERROR, "sata: error %d in vmo_read", status);
     return ZX_ERR_INTERNAL;
   }
   vmo.reset();
@@ -112,10 +112,10 @@ static zx_status_t sata_device_identify(sata_device_t* dev, Controller* controll
   string_fix(devinfo.firmware_rev.word, sizeof(devinfo.firmware_rev.word));
   string_fix(devinfo.model_id.word, sizeof(devinfo.model_id.word));
 
-  zxlogf(INFO, "%s: dev info\n", name);
-  zxlogf(INFO, "  serial=%.*s\n", SATA_DEVINFO_SERIAL_LEN, devinfo.serial.string);
-  zxlogf(INFO, "  firmware rev=%.*s\n", SATA_DEVINFO_FW_REV_LEN, devinfo.firmware_rev.string);
-  zxlogf(INFO, "  model id=%.*s\n", SATA_DEVINFO_MODEL_ID_LEN, devinfo.model_id.string);
+  zxlogf(INFO, "%s: dev info", name);
+  zxlogf(INFO, "  serial=%.*s", SATA_DEVINFO_SERIAL_LEN, devinfo.serial.string);
+  zxlogf(INFO, "  firmware rev=%.*s", SATA_DEVINFO_FW_REV_LEN, devinfo.firmware_rev.string);
+  zxlogf(INFO, "  model id=%.*s", SATA_DEVINFO_MODEL_ID_LEN, devinfo.model_id.string);
 
   bool is_qemu = model_id_is_qemu(devinfo.model_id.string);
 
@@ -152,7 +152,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, Controller* controll
     zxlogf(INFO, " PIO");
   }
   dev->max_cmd = devinfo.queue_depth;
-  zxlogf(INFO, " %u commands\n", dev->max_cmd + 1);
+  zxlogf(INFO, " %u commands", dev->max_cmd + 1);
 
   uint32_t block_size = 512;  // default
   uint64_t block_count = 0;
@@ -168,9 +168,9 @@ static zx_status_t sata_device_identify(sata_device_t* dev, Controller* controll
       block_count = devinfo.lba_capacity;
       zxlogf(INFO, "  LBA");
     }
-    zxlogf(INFO, " %" PRIu64 " sectors,  sector size=%u\n", block_count, block_size);
+    zxlogf(INFO, " %" PRIu64 " sectors,  sector size=%u", block_count, block_size);
   } else {
-    zxlogf(INFO, "  CHS unsupported!\n");
+    zxlogf(INFO, "  CHS unsupported!");
   }
   dev->flags = flags;
 
@@ -243,10 +243,10 @@ static void sata_queue(void* ctx, block_op_t* bop, block_impl_queue_callback com
       txn->cmd = (BLOCK_OP(bop->command) == BLOCK_OP_READ) ? SATA_CMD_READ_DMA_EXT
                                                            : SATA_CMD_WRITE_DMA_EXT;
       txn->device = 0x40;
-      zxlogf(TRACE, "sata: queue op 0x%x txn %p\n", bop->command, txn);
+      zxlogf(TRACE, "sata: queue op 0x%x txn %p", bop->command, txn);
       break;
     case BLOCK_OP_FLUSH:
-      zxlogf(TRACE, "sata: queue FLUSH txn %p\n", txn);
+      zxlogf(TRACE, "sata: queue FLUSH txn %p", txn);
       break;
     default:
       block_complete(txn, ZX_ERR_NOT_SUPPORTED);
@@ -266,7 +266,7 @@ zx_status_t sata_bind(Controller* controller, zx_device_t* parent, uint32_t port
   fbl::AllocChecker ac;
   std::unique_ptr<sata_device_t> device(new (&ac) sata_device_t);
   if (!ac.check()) {
-    zxlogf(ERROR, "sata: out of memory\n");
+    zxlogf(ERROR, "sata: out of memory");
     return ZX_ERR_NO_MEMORY;
   }
   device->controller = controller;

@@ -46,14 +46,14 @@ void FtDevice::ParseReport(ft3x27_finger_t* rpt, uint8_t* buf) {
 int FtDevice::Thread() {
   zx_status_t status;
   zx::time timestamp;
-  zxlogf(INFO, "focaltouch: entering irq thread\n");
+  zxlogf(INFO, "focaltouch: entering irq thread");
   while (true) {
     status = irq_.wait(&timestamp);
     if (!running_.load()) {
       return ZX_OK;
     }
     if (status != ZX_OK) {
-      zxlogf(ERROR, "focaltouch: Interrupt error %d\n", status);
+      zxlogf(ERROR, "focaltouch: Interrupt error %d", status);
     }
     TRACE_DURATION("input", "FtDevice Read");
     uint8_t i2c_buf[kMaxPoints * kFingerRptSize + 1];
@@ -70,10 +70,10 @@ int FtDevice::Thread() {
                         timestamp.get());
       }
     } else {
-      zxlogf(ERROR, "focaltouch: i2c read error\n");
+      zxlogf(ERROR, "focaltouch: i2c read error");
     }
   }
-  zxlogf(INFO, "focaltouch: exiting\n");
+  zxlogf(INFO, "focaltouch: exiting");
 }
 
 zx_status_t FtDevice::Init() {
@@ -81,7 +81,7 @@ zx_status_t FtDevice::Init() {
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get composite protocol\n");
+    zxlogf(ERROR, "Could not get composite protocol");
     return status;
   }
 
@@ -89,27 +89,27 @@ zx_status_t FtDevice::Init() {
   size_t actual;
   composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
   if (actual != fbl::count_of(fragments)) {
-    zxlogf(ERROR, "could not get fragments\n");
+    zxlogf(ERROR, "could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: failed to acquire i2c\n");
+    zxlogf(ERROR, "focaltouch: failed to acquire i2c");
     return status;
   }
 
   status =
       device_get_protocol(fragments[FRAGMENT_INT_GPIO], ZX_PROTOCOL_GPIO, &gpios_[FT_INT_PIN]);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
+    zxlogf(ERROR, "focaltouch: failed to acquire gpio");
     return status;
   }
 
   status = device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO,
                                &gpios_[FT_RESET_PIN]);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
+    zxlogf(ERROR, "focaltouch: failed to acquire gpio");
     return status;
   }
 
@@ -125,7 +125,7 @@ zx_status_t FtDevice::Init() {
   status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &device_id, sizeof(device_id),
                                &actual);
   if (status != ZX_OK || sizeof(device_id) != actual) {
-    zxlogf(ERROR, "focaltouch: failed to read metadata\n");
+    zxlogf(ERROR, "focaltouch: failed to read metadata");
     return status == ZX_OK ? ZX_ERR_INTERNAL : status;
   }
 
@@ -136,7 +136,7 @@ zx_status_t FtDevice::Init() {
   } else if (device_id == FOCALTECH_DEVICE_FT5726) {
     descriptor_len_ = get_ft5726_report_desc(&descriptor_);
   } else {
-    zxlogf(ERROR, "focaltouch: unknown device ID %u\n", device_id);
+    zxlogf(ERROR, "focaltouch: unknown device ID %u", device_id);
     return ZX_ERR_INTERNAL;
   }
 
@@ -144,12 +144,12 @@ zx_status_t FtDevice::Init() {
 }
 
 zx_status_t FtDevice::Create(void* ctx, zx_device_t* device) {
-  zxlogf(INFO, "focaltouch: driver started...\n");
+  zxlogf(INFO, "focaltouch: driver started...");
 
   auto ft_dev = std::make_unique<FtDevice>(device);
   zx_status_t status = ft_dev->Init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: Driver bind failed %d\n", status);
+    zxlogf(ERROR, "focaltouch: Driver bind failed %d", status);
     return status;
   }
 
@@ -164,10 +164,10 @@ zx_status_t FtDevice::Create(void* ctx, zx_device_t* device) {
 
   status = ft_dev->DdkAdd("focaltouch HidDevice");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: Could not create hid device: %d\n", status);
+    zxlogf(ERROR, "focaltouch: Could not create hid device: %d", status);
     return status;
   } else {
-    zxlogf(INFO, "focaltouch: Added hid device\n");
+    zxlogf(INFO, "focaltouch: Added hid device");
   }
 
   cleanup.cancel();
@@ -248,11 +248,11 @@ void FtDevice::HidbusStop() {
 zx_status_t FtDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
   fbl::AutoLock lock(&client_lock_);
   if (client_.is_valid()) {
-    zxlogf(ERROR, "focaltouch: Already bound!\n");
+    zxlogf(ERROR, "focaltouch: Already bound!");
     return ZX_ERR_ALREADY_BOUND;
   } else {
     client_ = ddk::HidbusIfcProtocolClient(ifc);
-    zxlogf(INFO, "focaltouch: started\n");
+    zxlogf(INFO, "focaltouch: started");
   }
   return ZX_OK;
 }
@@ -273,7 +273,7 @@ zx_status_t FtDevice::Read(uint8_t addr, uint8_t* buf, size_t len) {
 
     zx_status_t status = i2c_write_read_sync(&i2c_, &addr, 1, buf, readlen);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to read i2c - %d\n", status);
+      zxlogf(ERROR, "Failed to read i2c - %d", status);
       return status;
     }
 

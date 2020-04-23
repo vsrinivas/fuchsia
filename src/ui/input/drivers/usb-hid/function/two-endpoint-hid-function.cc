@@ -196,17 +196,17 @@ zx_status_t FakeUsbHidFunction::Bind() {
 
   zx_status_t status = function_.AllocInterface(&descriptor_->interface.bInterfaceNumber);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_interface failed\n");
+    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_interface failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_IN, &descriptor_->interrupt_in.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint in failed\n");
+    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint in failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_OUT, &descriptor_->interrupt_out.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint out failed\n");
+    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint out failed");
     return status;
   }
 
@@ -259,7 +259,7 @@ void FakeUsbHidFunction::UsbEndpointOutCallback(usb_request_t* request) {
     report_.resize(request->response.actual);
     usb_request_copy_from(request, report_.data(), report_.size(), 0);
   } else {
-    zxlogf(ERROR, "request status: %d\n", request->response.status);
+    zxlogf(ERROR, "request status: %d", request->response.status);
     active_ = false;
   }
   data_out_req_complete_ = true;

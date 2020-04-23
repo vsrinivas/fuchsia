@@ -49,7 +49,7 @@ zx_status_t Instance::Bind() {
 zx_status_t Instance::FidlOpenPipe(zx_handle_t pipe_request_handle) {
   zx::channel pipe_request(pipe_request_handle);
   if (!pipe_request.is_valid()) {
-    zxlogf(ERROR, "%s: invalid channel\n", kTag);
+    zxlogf(ERROR, "%s: invalid channel", kTag);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -64,7 +64,7 @@ zx_status_t Instance::FidlOpenPipe(zx_handle_t pipe_request_handle) {
       ZX_DEBUG_ASSERT(pipes_.find(pipe_ptr) != pipes_.end());
 
       if (status != ZX_ERR_PEER_CLOSED) {
-        zxlogf(ERROR, "%s: pipe error: %d\n", kTag, status);
+        zxlogf(ERROR, "%s: pipe error: %d", kTag, status);
       }
       pipes_.erase(pipe_ptr);
     });

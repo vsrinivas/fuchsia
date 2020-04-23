@@ -24,7 +24,7 @@ class FakeMtkSpi : public MtkSpi {
     fbl::AllocChecker ac;
     auto device = fbl::make_unique_checked<FakeMtkSpi>(&ac, std::move(mmio));
     if (!ac.check()) {
-      zxlogf(ERROR, "%s: device object alloc failed\n", __func__);
+      zxlogf(ERROR, "%s: device object alloc failed", __func__);
       return nullptr;
     }
     EXPECT_OK(device->Init());
@@ -42,13 +42,13 @@ class MtkSpiTest : public zxtest::Test {
 
     regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "%s: regs_ alloc failed\n", __func__);
+      zxlogf(ERROR, "%s: regs_ alloc failed", __func__);
       return;
     }
     mock_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(&ac, regs_.get(),
                                                                        sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "%s: mock_mmio_ alloc failed\n", __func__);
+      zxlogf(ERROR, "%s: mock_mmio_ alloc failed", __func__);
       return;
     }
 

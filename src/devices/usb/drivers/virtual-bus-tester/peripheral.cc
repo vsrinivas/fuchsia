@@ -100,12 +100,12 @@ zx_status_t TestFunction::Bind() {
 
   zx_status_t status = function_.AllocInterface(&descriptor_.interface.bInterfaceNumber);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb_function_alloc_interface failed\n");
+    zxlogf(ERROR, "usb_function_alloc_interface failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "usb_function_alloc_ep failed");
     return status;
   }
 

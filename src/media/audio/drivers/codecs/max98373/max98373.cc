@@ -84,7 +84,7 @@ zx_status_t Max98373::HardwareReset() {
     zx_nanosleep(zx_deadline_after(ZX_MSEC(3)));
     return ZX_OK;
   }
-  zxlogf(ERROR, "%s Could not hardware reset the codec\n", __FILE__);
+  zxlogf(ERROR, "%s Could not hardware reset the codec", __FILE__);
   return ZX_ERR_INTERNAL;
 }
 
@@ -99,7 +99,7 @@ zx_status_t Max98373::SoftwareResetAndInitialize() {
   uint8_t buffer;
   status = ReadReg(kRegRevId, &buffer);
   if (status == ZX_OK && buffer != 0x43) {
-    zxlogf(ERROR, "%s Unexpected Rev Id 0x%02X\n", __FILE__, buffer);
+    zxlogf(ERROR, "%s Unexpected Rev Id 0x%02X", __FILE__, buffer);
     return ZX_ERR_INTERNAL;
   }
 
@@ -123,7 +123,7 @@ zx_status_t Max98373::SoftwareResetAndInitialize() {
   }
 
   initialized_ = true;
-  zxlogf(INFO, "audio: codec max98373 initialized\n");
+  zxlogf(INFO, "audio: codec max98373 initialized");
   return status;
 }
 
@@ -147,7 +147,7 @@ zx_status_t Max98373::Create(zx_device_t* parent) {
 
   auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Could not get composite protocol\n", __FILE__);
+    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -155,7 +155,7 @@ zx_status_t Max98373::Create(zx_device_t* parent) {
   size_t actual = 0;
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s Could not get fragments\n", __FILE__);
+    zxlogf(ERROR, "%s Could not get fragments", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -163,7 +163,7 @@ zx_status_t Max98373::Create(zx_device_t* parent) {
   auto dev = std::unique_ptr<Max98373>(
       new (&ac) Max98373(parent, fragments[FRAGMENT_I2C], fragments[FRAGMENT_RESET_GPIO]));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s Could not allocate memory\n", __FILE__);
+    zxlogf(ERROR, "%s Could not allocate memory", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -213,13 +213,13 @@ void Max98373::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_forma
 
   // Only allow 2 channels.
   if (format->number_of_channels != 2) {
-    zxlogf(ERROR, "%s DAI format number of channels not supported\n", __FILE__);
+    zxlogf(ERROR, "%s DAI format number of channels not supported", __FILE__);
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }
   if (format->channels_to_use_count != 2 || format->channels_to_use_list == nullptr ||
       format->channels_to_use_list[0] != 0 || format->channels_to_use_list[1] != 1) {
-    zxlogf(ERROR, "%s DAI format channels to use not supported\n", __FILE__);
+    zxlogf(ERROR, "%s DAI format channels to use not supported", __FILE__);
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }
@@ -227,7 +227,7 @@ void Max98373::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_forma
   // Only I2S.
   if (format->sample_format != SAMPLE_FORMAT_PCM_SIGNED ||
       format->justify_format != JUSTIFY_FORMAT_JUSTIFY_I2S) {
-    zxlogf(ERROR, "%s DAI format format not supported\n", __FILE__);
+    zxlogf(ERROR, "%s DAI format format not supported", __FILE__);
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }
@@ -240,7 +240,7 @@ void Max98373::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_forma
     }
   }
   if (i == kSupportedDaiFormats.frame_rates_count) {
-    zxlogf(ERROR, "%s DAI format rates not supported\n", __FILE__);
+    zxlogf(ERROR, "%s DAI format rates not supported", __FILE__);
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }

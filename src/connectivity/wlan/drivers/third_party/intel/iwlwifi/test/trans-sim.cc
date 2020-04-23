@@ -260,19 +260,19 @@ static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev,
 
   status = device_add(dev, &args, &iwl_trans->zxdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to create device: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "Failed to create device: %s", zx_status_get_string(status));
     goto free_iwl_trans;
   }
 
   status = iwl_drv_init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to init driver: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "Failed to init driver: %s", zx_status_get_string(status));
     goto remove_dev;
   }
 
   status = iwl_drv_start(iwl_trans);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to start driver: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "Failed to start driver: %s", zx_status_get_string(status));
     goto remove_dev;
   }
 
@@ -281,7 +281,7 @@ static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev,
   iwl_drv_add_to_mvm_opmode(iwl_trans->drv);
   status = iwl_mvm_init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to init MVM: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "Failed to init MVM: %s", zx_status_get_string(status));
     goto remove_dev;
   }
 

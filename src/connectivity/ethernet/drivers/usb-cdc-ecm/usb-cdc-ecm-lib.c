@@ -4,7 +4,7 @@ const char* module_name = "usb-cdc-ecm";
 
 static bool parse_cdc_header(usb_cs_header_interface_descriptor_t* header_desc) {
   // Check for supported CDC version
-  zxlogf(TRACE, "%s: device reports CDC version as 0x%x\n", module_name, header_desc->bcdCDC);
+  zxlogf(TRACE, "%s: device reports CDC version as 0x%x", module_name, header_desc->bcdCDC);
   return header_desc->bcdCDC >= CDC_SUPPORTED_VERSION;
 }
 
@@ -23,11 +23,11 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
       usb_get_descriptor(&ctx->usb, 0, USB_DT_STRING, desc->iMACAddress, str_desc_buf,
                          sizeof(str_desc_buf), ZX_TIME_INFINITE, &out_length);
   if (result < 0) {
-    zxlogf(ERROR, "%s: error reading MAC address\n", module_name);
+    zxlogf(ERROR, "%s: error reading MAC address", module_name);
     return false;
   }
   if (out_length != expected_str_size) {
-    zxlogf(ERROR, "%s: MAC address string incorrect length (saw %zd, expected %zd)\n", module_name,
+    zxlogf(ERROR, "%s: MAC address string incorrect length (saw %zd, expected %zd)", module_name,
            out_length, expected_str_size);
     return false;
   }
@@ -39,7 +39,7 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
   for (ndx = 0; ndx < ETH_MAC_SIZE * 4; ndx++) {
     if (ndx % 2 == 1) {
       if (str[ndx] != 0) {
-        zxlogf(ERROR, "%s: MAC address contains invalid characters\n", module_name);
+        zxlogf(ERROR, "%s: MAC address contains invalid characters", module_name);
         return false;
       }
       continue;
@@ -50,7 +50,7 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
     } else if (str[ndx] >= 'A' && str[ndx] <= 'F') {
       value = (str[ndx] - 'A') + 0xa;
     } else {
-      zxlogf(ERROR, "%s: MAC address contains invalid characters\n", module_name);
+      zxlogf(ERROR, "%s: MAC address contains invalid characters", module_name);
       return false;
     }
     if (ndx % 4 == 0) {
@@ -60,7 +60,7 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
     }
   }
 
-  zxlogf(ERROR, "%s: MAC address is %02X:%02X:%02X:%02X:%02X:%02X\n", module_name, ctx->mac_addr[0],
+  zxlogf(ERROR, "%s: MAC address is %02X:%02X:%02X:%02X:%02X:%02X", module_name, ctx->mac_addr[0],
          ctx->mac_addr[1], ctx->mac_addr[2], ctx->mac_addr[3], ctx->mac_addr[4], ctx->mac_addr[5]);
   return true;
 }
@@ -89,13 +89,13 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
       if (ifc_desc->bInterfaceClass == USB_CLASS_CDC) {
         if (ifc_desc->bNumEndpoints == 0) {
           if (*default_ifc) {
-            zxlogf(ERROR, "%s: multiple default interfaces found\n", module_name);
+            zxlogf(ERROR, "%s: multiple default interfaces found", module_name);
             goto fail;
           }
           *default_ifc = ifc_desc;
         } else if (ifc_desc->bNumEndpoints == 2) {
           if (*data_ifc) {
-            zxlogf(ERROR, "%s: multiple data interfaces found\n", module_name);
+            zxlogf(ERROR, "%s: multiple data interfaces found", module_name);
             goto fail;
           }
           *data_ifc = ifc_desc;
@@ -109,14 +109,14 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
       }
       if (cs_ifc_desc->bDescriptorSubType == USB_CDC_DST_HEADER) {
         if (cdc_header_desc != NULL) {
-          zxlogf(ERROR, "%s: multiple CDC headers\n", module_name);
+          zxlogf(ERROR, "%s: multiple CDC headers", module_name);
           goto fail;
         }
         cdc_header_desc =
             usb_desc_iter_get_structure(iter, sizeof(usb_cs_header_interface_descriptor_t));
       } else if (cs_ifc_desc->bDescriptorSubType == USB_CDC_DST_ETHERNET) {
         if (cdc_eth_desc != NULL) {
-          zxlogf(ERROR, "%s: multiple CDC ethernet descriptors\n", module_name);
+          zxlogf(ERROR, "%s: multiple CDC ethernet descriptors", module_name);
           goto fail;
         }
         cdc_eth_desc =
@@ -131,56 +131,56 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
       if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_IN &&
           usb_ep_type(endpoint_desc) == USB_ENDPOINT_INTERRUPT) {
         if (*int_ep != NULL) {
-          zxlogf(ERROR, "%s: multiple interrupt endpoint descriptors\n", module_name);
+          zxlogf(ERROR, "%s: multiple interrupt endpoint descriptors", module_name);
           goto fail;
         }
         *int_ep = endpoint_desc;
       } else if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_OUT &&
                  usb_ep_type(endpoint_desc) == USB_ENDPOINT_BULK) {
         if (*tx_ep != NULL) {
-          zxlogf(ERROR, "%s: multiple tx endpoint descriptors\n", module_name);
+          zxlogf(ERROR, "%s: multiple tx endpoint descriptors", module_name);
           goto fail;
         }
         *tx_ep = endpoint_desc;
       } else if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_IN &&
                  usb_ep_type(endpoint_desc) == USB_ENDPOINT_BULK) {
         if (*rx_ep != NULL) {
-          zxlogf(ERROR, "%s: multiple rx endpoint descriptors\n", module_name);
+          zxlogf(ERROR, "%s: multiple rx endpoint descriptors", module_name);
           goto fail;
         }
         *rx_ep = endpoint_desc;
       } else {
-        zxlogf(ERROR, "%s: unrecognized endpoint\n", module_name);
+        zxlogf(ERROR, "%s: unrecognized endpoint", module_name);
         goto fail;
       }
     }
     usb_desc_iter_advance(iter);
   }
   if (cdc_header_desc == NULL || cdc_eth_desc == NULL) {
-    zxlogf(ERROR, "%s: CDC %s descriptor(s) not found\n", module_name,
+    zxlogf(ERROR, "%s: CDC %s descriptor(s) not found", module_name,
            cdc_header_desc ? "ethernet" : cdc_eth_desc ? "header" : "ethernet and header");
     goto fail;
   }
   if (*int_ep == NULL || *tx_ep == NULL || *rx_ep == NULL) {
-    zxlogf(ERROR, "%s: missing one or more required endpoints\n", module_name);
+    zxlogf(ERROR, "%s: missing one or more required endpoints", module_name);
     goto fail;
   }
   if (*default_ifc == NULL) {
-    zxlogf(ERROR, "%s: unable to find CDC default interface\n", module_name);
+    zxlogf(ERROR, "%s: unable to find CDC default interface", module_name);
     goto fail;
   }
   if (*data_ifc == NULL) {
-    zxlogf(ERROR, "%s: unable to find CDC data interface\n", module_name);
+    zxlogf(ERROR, "%s: unable to find CDC data interface", module_name);
     goto fail;
   }
 
   // Parse the information in the CDC descriptors
   if (!parse_cdc_header(cdc_header_desc)) {
-    zxlogf(ERROR, "%s: unable to parse cdc header\n", module_name);
+    zxlogf(ERROR, "%s: unable to parse cdc header", module_name);
     goto fail;
   }
   if (!parse_cdc_ethernet_descriptor(ecm_ctx, cdc_eth_desc)) {
-    zxlogf(ERROR, "%s: unable to parse cdc ethernet descriptor\n", module_name);
+    zxlogf(ERROR, "%s: unable to parse cdc ethernet descriptor", module_name);
     goto fail;
   }
   result = ZX_OK;

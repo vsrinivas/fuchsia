@@ -57,11 +57,11 @@ zx_status_t TestPwmDevice::Create(zx_device_t* parent) {
   auto dev = std::make_unique<TestPwmDevice>(parent);
   zx_status_t status;
 
-  zxlogf(INFO, "TestPwmDevice::Create: %s \n", DRIVER_NAME);
+  zxlogf(INFO, "TestPwmDevice::Create: %s ", DRIVER_NAME);
 
   status = dev->DdkAdd("test-pwm");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
     return status;
   }
   // devmgr is now in charge of dev.

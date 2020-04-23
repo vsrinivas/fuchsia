@@ -109,7 +109,7 @@ zx_status_t BlockDevice::Init() {
   // Allocate the main vring.
   auto err = vring_.Init(0, ring_size);
   if (err < 0) {
-    zxlogf(ERROR, "failed to allocate vring\n");
+    zxlogf(ERROR, "failed to allocate vring");
     return err;
   }
 
@@ -119,7 +119,7 @@ zx_status_t BlockDevice::Init() {
   zx_status_t status =
       io_buffer_init(&blk_req_buf_, bti_.get(), size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "cannot alloc blk_req buffers %d\n", status);
+    zxlogf(ERROR, "cannot alloc blk_req buffers %d", status);
     return status;
   }
   auto cleanup = fbl::MakeAutoCall([this]() { io_buffer_release(&blk_req_buf_); });
@@ -151,7 +151,7 @@ zx_status_t BlockDevice::Init() {
   status = DdkAdd("virtio-block");
   device_ = zxdev();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to run DdkAdd\n");
+    zxlogf(ERROR, "failed to run DdkAdd");
     device_ = nullptr;
     return status;
   }

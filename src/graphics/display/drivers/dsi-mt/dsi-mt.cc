@@ -388,94 +388,94 @@ void DsiMt::DsiImplReset() {
 }
 
 void DsiMt::DsiImplPrintDsiRegisters() {
-  zxlogf(INFO, "Dumping DSI MT Registers:\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "DsiStartReg = 0x%x\n", DsiStartReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStaReg = 0x%x\n", DsiStaReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiIntEnReg = 0x%x\n", DsiIntEnReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiIntStaReg = 0x%x\n", DsiIntStaReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiComCtrlReg = 0x%x\n", DsiComCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiModeCtrlReg = 0x%x\n",
+  zxlogf(INFO, "Dumping DSI MT Registers:");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "DsiStartReg = 0x%x", DsiStartReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiStaReg = 0x%x", DsiStaReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiIntEnReg = 0x%x", DsiIntEnReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiIntStaReg = 0x%x", DsiIntStaReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiComCtrlReg = 0x%x", DsiComCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiModeCtrlReg = 0x%x",
          DsiModeCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiTxRxCtrlReg = 0x%x\n",
+  zxlogf(INFO, "DsiTxRxCtrlReg = 0x%x",
          DsiTxRxCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPsCtrlReg = 0x%x\n", DsiPsCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiVsaNlReg = 0x%x\n", DsiVsaNlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiVbpNlReg = 0x%x\n", DsiVbpNlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiVfpNlReg = 0x%x\n", DsiVfpNlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiVactNlReg = 0x%x\n", DsiVactNlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiHsaWcReg = 0x%x\n", DsiHsaWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiHbpWcReg = 0x%x\n", DsiHbpWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiHfpWcReg = 0x%x\n", DsiHfpWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiBllpWcReg = 0x%x\n", DsiBllpWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiCmdqSizeReg = 0x%x\n",
+  zxlogf(INFO, "DsiPsCtrlReg = 0x%x", DsiPsCtrlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiVsaNlReg = 0x%x", DsiVsaNlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiVbpNlReg = 0x%x", DsiVbpNlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiVfpNlReg = 0x%x", DsiVfpNlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiVactNlReg = 0x%x", DsiVactNlReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiHsaWcReg = 0x%x", DsiHsaWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiHbpWcReg = 0x%x", DsiHbpWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiHfpWcReg = 0x%x", DsiHfpWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiBllpWcReg = 0x%x", DsiBllpWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiCmdqSizeReg = 0x%x",
          DsiCmdqSizeReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiHstxCklWcReg = 0x%x\n",
+  zxlogf(INFO, "DsiHstxCklWcReg = 0x%x",
          DsiHstxCklWcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiRxData03Reg = 0x%x\n",
+  zxlogf(INFO, "DsiRxData03Reg = 0x%x",
          DsiRxData03Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiRxData47Reg = 0x%x\n",
+  zxlogf(INFO, "DsiRxData47Reg = 0x%x",
          DsiRxData47Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiRxData8bReg = 0x%x\n",
+  zxlogf(INFO, "DsiRxData8bReg = 0x%x",
          DsiRxData8bReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiRxDataCReg = 0x%x\n", DsiRxDataCReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiRackReg = 0x%x\n", DsiRackReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiTrigStaReg = 0x%x\n", DsiTrigStaReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiMemContReg = 0x%x\n", DsiMemContReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiFrmBcReg = 0x%x\n", DsiFrmBcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPhyLcpatReg = 0x%x\n",
+  zxlogf(INFO, "DsiRxDataCReg = 0x%x", DsiRxDataCReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiRackReg = 0x%x", DsiRackReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiTrigStaReg = 0x%x", DsiTrigStaReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiMemContReg = 0x%x", DsiMemContReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiFrmBcReg = 0x%x", DsiFrmBcReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiPhyLcpatReg = 0x%x",
          DsiPhyLcpatReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPhyLcconReg = 0x%x\n",
+  zxlogf(INFO, "DsiPhyLcconReg = 0x%x",
          DsiPhyLcconReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPhyLd0ConReg = 0x%x\n",
+  zxlogf(INFO, "DsiPhyLd0ConReg = 0x%x",
          DsiPhyLd0ConReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPhyTimeCon0Reg = 0x%x\n",
+  zxlogf(INFO, "DsiPhyTimeCon0Reg = 0x%x",
          DsiPhyTimeCon0Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPhyTimeCon1Reg = 0x%x\n",
+  zxlogf(INFO, "DsiPhyTimeCon1Reg = 0x%x",
          DsiPhyTimeCon1Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPhyTimeCon2Reg = 0x%x\n",
+  zxlogf(INFO, "DsiPhyTimeCon2Reg = 0x%x",
          DsiPhyTimeCon2Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPhyTimeCon3Reg = 0x%x\n",
+  zxlogf(INFO, "DsiPhyTimeCon3Reg = 0x%x",
          DsiPhyTimeCon3Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiPhyTimeCon4Reg = 0x%x\n",
+  zxlogf(INFO, "DsiPhyTimeCon4Reg = 0x%x",
          DsiPhyTimeCon4Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiVmCmdConReg = 0x%x\n",
+  zxlogf(INFO, "DsiVmCmdConReg = 0x%x",
          DsiVmCmdConReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiVmCmdData0Reg = 0x%x\n",
+  zxlogf(INFO, "DsiVmCmdData0Reg = 0x%x",
          DsiVmCmdData0Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiVmCmdData4Reg = 0x%x\n",
+  zxlogf(INFO, "DsiVmCmdData4Reg = 0x%x",
          DsiVmCmdData4Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiVmCmdData8Reg = 0x%x\n",
+  zxlogf(INFO, "DsiVmCmdData8Reg = 0x%x",
          DsiVmCmdData8Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiVmCmdDataCReg = 0x%x\n",
+  zxlogf(INFO, "DsiVmCmdDataCReg = 0x%x",
          DsiVmCmdDataCReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiCksmOutReg = 0x%x\n", DsiCksmOutReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStateDbg0Reg = 0x%x\n",
+  zxlogf(INFO, "DsiCksmOutReg = 0x%x", DsiCksmOutReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "DsiStateDbg0Reg = 0x%x",
          DsiStateDbg0Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStateDbg1Reg = 0x%x\n",
+  zxlogf(INFO, "DsiStateDbg1Reg = 0x%x",
          DsiStateDbg1Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStateDbg2Reg = 0x%x\n",
+  zxlogf(INFO, "DsiStateDbg2Reg = 0x%x",
          DsiStateDbg2Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStateDbg3Reg = 0x%x\n",
+  zxlogf(INFO, "DsiStateDbg3Reg = 0x%x",
          DsiStateDbg3Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStateDbg4Reg = 0x%x\n",
+  zxlogf(INFO, "DsiStateDbg4Reg = 0x%x",
          DsiStateDbg4Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStateDbg5Reg = 0x%x\n",
+  zxlogf(INFO, "DsiStateDbg5Reg = 0x%x",
          DsiStateDbg5Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStateDbg6Reg = 0x%x\n",
+  zxlogf(INFO, "DsiStateDbg6Reg = 0x%x",
          DsiStateDbg6Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStateDbg7Reg = 0x%x\n",
+  zxlogf(INFO, "DsiStateDbg7Reg = 0x%x",
          DsiStateDbg7Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStateDbg8Reg = 0x%x\n",
+  zxlogf(INFO, "DsiStateDbg8Reg = 0x%x",
          DsiStateDbg8Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiStateDbg9Reg = 0x%x\n",
+  zxlogf(INFO, "DsiStateDbg9Reg = 0x%x",
          DsiStateDbg9Reg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiDebugSelReg = 0x%x\n",
+  zxlogf(INFO, "DsiDebugSelReg = 0x%x",
          DsiDebugSelReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiBistPatternReg = 0x%x\n",
+  zxlogf(INFO, "DsiBistPatternReg = 0x%x",
          DsiBistPatternReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "DsiBistConReg = 0x%x\n", DsiBistConReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "DsiBistConReg = 0x%x", DsiBistConReg::Get().ReadFrom(&(*dsi_mmio_)).reg_value());
+  zxlogf(INFO, "######################\n");
 }
 
 void DsiMt::StartDsi() {

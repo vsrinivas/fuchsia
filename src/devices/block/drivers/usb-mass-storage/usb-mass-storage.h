@@ -41,7 +41,7 @@ class UmsBlockDevice;
 // struct representing a block device for a logical unit
 struct Transaction {
   void Complete(zx_status_t status) {
-    zxlogf(TRACE, "UMS DONE %d (%p)\n", status, &op);
+    zxlogf(TRACE, "UMS DONE %d (%p)", status, &op);
     completion_cb(cookie, status, &op);
   }
 

@@ -36,10 +36,10 @@ void UsbHidbus::UsbInterruptCallback(usb_request_t* req) {
   void* buffer;
   zx_status_t status = usb_request_mmap(req, &buffer);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb-hid: usb_request_mmap failed: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "usb-hid: usb_request_mmap failed: %s", zx_status_get_string(status));
     return;
   }
-  zxlogf(SPEW, "usb-hid: callback request status %d\n", req->response.status);
+  zxlogf(SPEW, "usb-hid: callback request status %d", req->response.status);
   if (driver_get_log_flags() & DDK_LOG_SPEW) {
     hexdump(buffer, req->response.actual);
   }
@@ -56,7 +56,7 @@ void UsbHidbus::UsbInterruptCallback(usb_request_t* req) {
       }
       break;
     default:
-      zxlogf(ERROR, "usb-hid: unknown interrupt status %d; not requeuing req\n",
+      zxlogf(ERROR, "usb-hid: unknown interrupt status %d; not requeuing req",
              req->response.status);
       requeue = false;
       break;
@@ -162,7 +162,7 @@ zx_status_t UsbHidbus::HidbusGetDescriptor(hid_description_type_t desc_type, voi
                       static_cast<uint16_t>(desc_type << 8), interface_, out_data_buffer, desc_len,
                       out_data_actual);
   if (status < 0) {
-    zxlogf(ERROR, "usb-hid: error reading report descriptor 0x%02x: %d\n", desc_type, status);
+    zxlogf(ERROR, "usb-hid: error reading report descriptor 0x%02x: %d", desc_type, status);
   }
   return status;
 }

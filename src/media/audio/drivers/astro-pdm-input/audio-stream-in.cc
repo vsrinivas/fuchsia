@@ -74,7 +74,7 @@ zx_status_t AstroAudioStreamIn::InitPDev() {
 
   status = pdev_->GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
+    zxlogf(ERROR, "%s could not obtain bti - %d", __func__, status);
     return status;
   }
   std::optional<ddk::MmioBuffer> mmio0, mmio1;
@@ -89,7 +89,7 @@ zx_status_t AstroAudioStreamIn::InitPDev() {
 
   pdm_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL, 15, 999, TODDR_B);
   if (pdm_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create pdm device\n", __func__);
+    zxlogf(ERROR, "%s failed to create pdm device", __func__);
     return ZX_ERR_NO_MEMORY;
   }
   // Initialize the ring buffer
@@ -183,7 +183,7 @@ zx_status_t AstroAudioStreamIn::AddFormats() {
   fbl::AllocChecker ac;
   supported_formats_.reserve(1, &ac);
   if (!ac.check()) {
-    zxlogf(ERROR, "Out of memory, can not create supported formats list\n");
+    zxlogf(ERROR, "Out of memory, can not create supported formats list");
     return ZX_ERR_NO_MEMORY;
   }
   // Astro only supports stereo, 16-bit, 48k audio in
@@ -205,13 +205,13 @@ zx_status_t AstroAudioStreamIn::InitBuffer(size_t size) {
   zx_status_t status;
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
     return status;
   }
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __func__, status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {

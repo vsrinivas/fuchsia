@@ -65,7 +65,7 @@ void VmoHelper<true>::printoffsetinvmo(uint32_t offset) {
   }
 
   // print the last frame of data:
-  zxlogf(DEBUG1, "offset is at: 0x%x\n", offset);
+  zxlogf(DEBUG1, "offset is at: 0x%x", offset);
 
   if (offset > 32) {
     uint8_t* frame_start =
@@ -75,7 +75,7 @@ void VmoHelper<true>::printoffsetinvmo(uint32_t offset) {
     }
   }
 
-  zxlogf(DEBUG1, "\n");
+  zxlogf(DEBUG1, "");
 }
 
 template <bool DEBUG>

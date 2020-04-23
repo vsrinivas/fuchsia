@@ -132,7 +132,7 @@ int UsbVirtualBus::DeviceThread() {
           void* device_buffer;
           auto status = device_req->Mmap(&device_buffer);
           if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: usb_request_mmap failed: %d\n", __func__, status);
+            zxlogf(ERROR, "%s: usb_request_mmap failed: %d", __func__, status);
             req->request()->response.status = status;
             req->request()->response.actual = 0;
             device_req->request()->response.status = status;
@@ -168,7 +168,7 @@ void UsbVirtualBus::HandleControl(Request request) {
   size_t length = le16toh(setup->wLength);
   size_t actual = 0;
 
-  zxlogf(TRACE, "%s type: 0x%02X req: %d value: %d index: %d length: %zu\n", __func__,
+  zxlogf(TRACE, "%s type: 0x%02X req: %d value: %d index: %d length: %zu", __func__,
          setup->bmRequestType, setup->bRequest, le16toh(setup->wValue), le16toh(setup->wIndex),
          length);
 
@@ -178,7 +178,7 @@ void UsbVirtualBus::HandleControl(Request request) {
     if (length > 0) {
       auto status = request.Mmap(&buffer);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: usb_request_mmap failed: %d\n", __func__, status);
+        zxlogf(ERROR, "%s: usb_request_mmap failed: %d", __func__, status);
         request.Complete(status, 0);
         return;
       }

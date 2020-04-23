@@ -137,7 +137,7 @@ zx_status_t PciModernBackend::Init() {
 
     st = ReadVirtioCap(&pci_, off, &cap);
     if (st != ZX_OK) {
-      zxlogf(ERROR, "Failed to read PCI capabilities\n");
+      zxlogf(ERROR, "Failed to read PCI capabilities");
       return st;
     }
     switch (cap.cfg_type) {
@@ -165,11 +165,11 @@ zx_status_t PciModernBackend::Init() {
 
   // Ensure we found needed capabilities during parsing
   if (common_cfg_ == nullptr || isr_status_ == nullptr || device_cfg_ == 0 || notify_base_ == 0) {
-    zxlogf(ERROR, "%s: failed to bind, missing capabilities\n", tag());
+    zxlogf(ERROR, "%s: failed to bind, missing capabilities", tag());
     return ZX_ERR_BAD_STATE;
   }
 
-  zxlogf(SPEW, "virtio: modern pci backend successfully initialized\n");
+  zxlogf(SPEW, "virtio: modern pci backend successfully initialized");
   return ZX_OK;
 }
 
@@ -229,17 +229,17 @@ zx_status_t PciModernBackend::MapBar(uint8_t bar) {
   mmio_buffer_t mmio;
   zx_status_t s = pci_map_bar_buffer(&pci_, bar, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (s != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to map bar %u: %d\n", tag(), bar, s);
+    zxlogf(ERROR, "%s: Failed to map bar %u: %d", tag(), bar, s);
     return s;
   }
 
   bar_[bar] = ddk::MmioBuffer(mmio);
-  zxlogf(TRACE, "%s: bar %u mapped to %p\n", tag(), bar, bar_[bar]->get());
+  zxlogf(TRACE, "%s: bar %u mapped to %p", tag(), bar, bar_[bar]->get());
   return ZX_OK;
 }
 
 void PciModernBackend::CommonCfgCallbackLocked(const virtio_pci_cap_t& cap) {
-  zxlogf(TRACE, "%s: common cfg found in bar %u offset %#x\n", tag(), cap.bar, cap.offset);
+  zxlogf(TRACE, "%s: common cfg found in bar %u offset %#x", tag(), cap.bar, cap.offset);
   if (MapBar(cap.bar) != ZX_OK) {
     return;
   }
@@ -253,7 +253,7 @@ void PciModernBackend::CommonCfgCallbackLocked(const virtio_pci_cap_t& cap) {
 }
 
 void PciModernBackend::NotifyCfgCallbackLocked(const virtio_pci_cap_t& cap) {
-  zxlogf(TRACE, "%s: notify cfg found in bar %u offset %#x\n", tag(), cap.bar, cap.offset);
+  zxlogf(TRACE, "%s: notify cfg found in bar %u offset %#x", tag(), cap.bar, cap.offset);
   if (MapBar(cap.bar) != ZX_OK) {
     return;
   }
@@ -262,7 +262,7 @@ void PciModernBackend::NotifyCfgCallbackLocked(const virtio_pci_cap_t& cap) {
 }
 
 void PciModernBackend::IsrCfgCallbackLocked(const virtio_pci_cap_t& cap) {
-  zxlogf(TRACE, "%s: isr cfg found in bar %u offset %#x\n", tag(), cap.bar, cap.offset);
+  zxlogf(TRACE, "%s: isr cfg found in bar %u offset %#x", tag(), cap.bar, cap.offset);
   if (MapBar(cap.bar) != ZX_OK) {
     return;
   }
@@ -273,7 +273,7 @@ void PciModernBackend::IsrCfgCallbackLocked(const virtio_pci_cap_t& cap) {
 }
 
 void PciModernBackend::DeviceCfgCallbackLocked(const virtio_pci_cap_t& cap) {
-  zxlogf(TRACE, "%s: device cfg found in bar %u offset %#x\n", tag(), cap.bar, cap.offset);
+  zxlogf(TRACE, "%s: device cfg found in bar %u offset %#x", tag(), cap.bar, cap.offset);
   if (MapBar(cap.bar) != ZX_OK) {
     return;
   }
@@ -327,7 +327,7 @@ void PciModernBackend::RingKick(uint16_t ring_index) {
   // equal to the ring index.
   auto addr = notify_base_ + ring_index * notify_off_mul_;
   auto ptr = reinterpret_cast<volatile uint16_t*>(addr);
-  zxlogf(SPEW, "%s: kick %u addr %p\n", tag(), ring_index, ptr);
+  zxlogf(SPEW, "%s: kick %u addr %p", tag(), ring_index, ptr);
   *ptr = ring_index;
 }
 
@@ -340,7 +340,7 @@ bool PciModernBackend::ReadFeature(uint32_t feature) {
   MmioWrite(&common_cfg_->device_feature_select, select);
   MmioRead(&common_cfg_->device_feature, &val);
   bool is_set = (val & (1u << bit)) != 0;
-  zxlogf(TRACE, "%s: read feature bit %u = %u\n", tag(), feature, is_set);
+  zxlogf(TRACE, "%s: read feature bit %u = %u", tag(), feature, is_set);
   return is_set;
 }
 
@@ -353,7 +353,7 @@ void PciModernBackend::SetFeature(uint32_t feature) {
   MmioWrite(&common_cfg_->driver_feature_select, select);
   MmioRead(&common_cfg_->driver_feature, &val);
   MmioWrite(&common_cfg_->driver_feature, val | (1u << bit));
-  zxlogf(TRACE, "%s: feature bit %u now set\n", tag(), feature);
+  zxlogf(TRACE, "%s: feature bit %u now set", tag(), feature);
 }
 
 zx_status_t PciModernBackend::ConfirmFeatures() {

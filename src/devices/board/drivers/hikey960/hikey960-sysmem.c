@@ -46,7 +46,7 @@ zx_status_t hikey960_sysmem_init(hikey960_t* hikey) {
   zx_status_t status;
 
   if ((status = pbus_protocol_device_add(&hikey->pbus, ZX_PROTOCOL_SYSMEM, &sysmem_dev)) != ZX_OK) {
-    zxlogf(ERROR, "hikey_sysmem_init: pbus_protocol_device_add() failed for sysmem: %d\n", status);
+    zxlogf(ERROR, "hikey_sysmem_init: pbus_protocol_device_add() failed for sysmem: %d", status);
     return status;
   }
 

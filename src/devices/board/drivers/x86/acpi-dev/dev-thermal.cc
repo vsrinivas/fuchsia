@@ -100,7 +100,7 @@ static zx_status_t fidl_GetTemperatureCelsius(void* ctx, fidl_txn_t* txn) {
 
   zx_status_t status = acpi_tmp_call(dev->acpi_handle, &v);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi-thermal: acpi error %d in _TMP\n", status);
+    zxlogf(ERROR, "acpi-thermal: acpi error %d in _TMP", status);
     return fuchsia_hardware_thermal_DeviceGetTemperatureCelsius_reply(txn, status, 0);
   }
 
@@ -141,7 +141,7 @@ static zx_status_t fidl_SetTripCelsius(void* ctx, uint32_t id, float temp, fidl_
   ACPI_STATUS acpi_status =
       acpi_evaluate_method_intarg(dev->acpi_handle, "PAT0", celsius_to_decikelvin(temp));
   if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi-thermal: acpi error %d in PAT0\n", acpi_status);
+    zxlogf(ERROR, "acpi-thermal: acpi error %d in PAT0", acpi_status);
     return fuchsia_hardware_thermal_DeviceSetTripCelsius_reply(txn, acpi_to_zx_status(acpi_status));
   }
   mtx_lock(&dev->lock);
@@ -192,7 +192,7 @@ static zx_status_t acpi_thermal_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* 
 
 static void acpi_thermal_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   acpi_thermal_device_t* dev = static_cast<acpi_thermal_device_t*>(ctx);
-  zxlogf(TRACE, "acpi-thermal: got event 0x%x\n", value);
+  zxlogf(TRACE, "acpi-thermal: got event 0x%x", value);
   switch (value) {
     case INT3403_THERMAL_EVENT:
       zx_object_signal(dev->event, 0, ZX_USER_SIGNAL_0);
@@ -222,7 +222,7 @@ zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDL
   uint64_t type = 0;
   ACPI_STATUS acpi_status = acpi_evaluate_integer(acpi_handle, "PTYP", &type);
   if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi-thermal: acpi error %d in PTYP\n", acpi_status);
+    zxlogf(ERROR, "acpi-thermal: acpi error %d in PTYP", acpi_status);
     return acpi_to_zx_status(acpi_status);
   }
   if (type != INT3403_TYPE_SENSOR) {
@@ -239,7 +239,7 @@ zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDL
 
   zx_status_t status = zx_event_create(0, &dev->event);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi-thermal: error %d in zx_event_create\n", status);
+    zxlogf(ERROR, "acpi-thermal: error %d in zx_event_create", status);
     acpi_thermal_release(dev);
     return status;
   }
@@ -248,7 +248,7 @@ zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDL
   acpi_status = AcpiInstallNotifyHandler(acpi_handle, ACPI_DEVICE_NOTIFY,
                                          acpi_thermal::acpi_thermal_notify, dev);
   if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi-thermal: could not install notify handler\n");
+    zxlogf(ERROR, "acpi-thermal: could not install notify handler");
     acpi_thermal_release(dev);
     return acpi_to_zx_status(acpi_status);
   }
@@ -256,7 +256,7 @@ zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDL
   uint64_t v;
   acpi_status = acpi_evaluate_integer(dev->acpi_handle, "PATC", &v);
   if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi-thermal: could not get auxiliary trip count\n");
+    zxlogf(ERROR, "acpi-thermal: could not get auxiliary trip count");
     return acpi_status;
   }
   dev->trip_point_count = (uint32_t)v;
@@ -275,12 +275,12 @@ zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDL
 
   status = device_add(parent, &args, &dev->zxdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi-thermal: could not add device! err=%d\n", status);
+    zxlogf(ERROR, "acpi-thermal: could not add device! err=%d", status);
     acpi_thermal_release(dev);
     return status;
   }
 
-  zxlogf(TRACE, "acpi-thermal: initialized '%s' %u trip points\n", name, dev->trip_point_count);
+  zxlogf(TRACE, "acpi-thermal: initialized '%s' %u trip points", name, dev->trip_point_count);
 
   return ZX_OK;
 }

@@ -44,26 +44,26 @@ NelsonAudioStreamOut::NelsonAudioStreamOut(zx_device_t* parent)
 zx_status_t NelsonAudioStreamOut::InitCodec() {
   auto status = codec_.GetInfo();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get codec info %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not get codec info %d", __FUNCTION__, status);
     return status;
   }
 
   // Reset and initialize codec after we have configured I2S.
   status = codec_.Reset();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not reset codec %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not reset codec %d", __FUNCTION__, status);
     return status;
   }
 
   status = codec_.SetNotBridged();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not set not bridged mode %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not set not bridged mode %d", __FUNCTION__, status);
     return status;
   }
 
   status = codec_.CheckExpectedDaiFormat();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get expected DAI format %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not get expected DAI format %d", __FUNCTION__, status);
     return status;
   }
 
@@ -80,7 +80,7 @@ zx_status_t NelsonAudioStreamOut::InitCodec() {
   };
   status = codec_.SetDaiFormat(format);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not set DAI format %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not set DAI format %d", __FUNCTION__, status);
     return status;
   }
 
@@ -103,21 +103,21 @@ zx_status_t NelsonAudioStreamOut::InitHW() {
   // Lane 0, unmask first 2 slots (0x00000003),
   auto status = lib_->ConfigTdmOutLane(0, 0x00000003);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure TDM out lane %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not configure TDM out lane %d", __FILE__, status);
     return status;
   }
 
   // Setup appropriate tdm clock signals. mclk = 1.536GHz/125 = 12.288MHz.
   status = lib_->SetMclkDiv(124);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure MCLK %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not configure MCLK %d", __FILE__, status);
     return status;
   }
 
   // sclk = 12.288MHz/4 = 3.072MHz, 32 every 64 sclks is frame sync (I2S).
   status = lib_->SetSclkDiv(3, 31, 63, true);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure SCLK %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
     return status;
   }
 
@@ -125,11 +125,11 @@ zx_status_t NelsonAudioStreamOut::InitHW() {
 
   status = InitCodec();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not initialize codec - %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not initialize codec - %d", __FILE__, status);
     return status;
   }
 
-  zxlogf(INFO, "audio: Nelson audio output initialized\n");
+  zxlogf(INFO, "audio: Nelson audio output initialized");
   return ZX_OK;
 }
 
@@ -138,7 +138,7 @@ zx_status_t NelsonAudioStreamOut::InitPdev() {
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Could not get composite protocol\n", __FILE__);
+    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
     return status;
   }
 
@@ -146,31 +146,31 @@ zx_status_t NelsonAudioStreamOut::InitPdev() {
   size_t actual;
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s could not get fragments\n", __FILE__);
+    zxlogf(ERROR, "%s could not get fragments", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   pdev_ = fragments[FRAGMENT_PDEV];
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "%s could not get pdev\n", __FILE__);
+    zxlogf(ERROR, "%s could not get pdev", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   codec_.proto_client_ = fragments[FRAGMENT_CODEC];
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "%s Could not get pdev\n", __FILE__);
+    zxlogf(ERROR, "%s Could not get pdev", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not obtain bti %d", __FUNCTION__, status);
     return status;
   }
 
   clks_[kHifiPllClk] = fragments[FRAGMENT_CLOCK];
   if (!clks_[kHifiPllClk].is_valid()) {
-    zxlogf(ERROR, "%s GetClk failed\n", __FILE__);
+    zxlogf(ERROR, "%s GetClk failed", __FILE__);
     return status;
   }
 
@@ -181,14 +181,14 @@ zx_status_t NelsonAudioStreamOut::InitPdev() {
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev_.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not map mmio %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not map mmio %d", __FUNCTION__, status);
     return status;
   }
 
   lib_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_B,
                               AmlVersion::kS905D3G);
   if (lib_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create audio device\n", __FILE__);
+    zxlogf(ERROR, "%s failed to create audio device", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -197,7 +197,7 @@ zx_status_t NelsonAudioStreamOut::InitPdev() {
       kWantedFrameRate * sizeof(uint16_t) * kNumberOfChannels, ZX_PAGE_SIZE);
   status = InitBuffer(kRingBufferSize);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to Init buffer %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s failed to Init buffer %d", __FILE__, status);
     return status;
   }
 
@@ -205,7 +205,7 @@ zx_status_t NelsonAudioStreamOut::InitPdev() {
 
   codec_.proto_client_ = fragments[FRAGMENT_CODEC];
   if (!codec_.proto_client_.is_valid()) {
-    zxlogf(ERROR, "%s Could not get codec\n", __FILE__);
+    zxlogf(ERROR, "%s Could not get codec", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -220,7 +220,7 @@ zx_status_t NelsonAudioStreamOut::Init() {
 
   status = AddFormats();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not add formats %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not add formats %d", __FILE__, status);
     return status;
   }
 
@@ -228,7 +228,7 @@ zx_status_t NelsonAudioStreamOut::Init() {
   gain_state_t state = {};
   status = codec_.GetGainState(&state);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get gain state %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not get gain state %d", __FILE__, status);
     return status;
   }
   cur_gain_state_.cur_gain = state.gain;
@@ -238,7 +238,7 @@ zx_status_t NelsonAudioStreamOut::Init() {
   gain_format_t format = {};
   status = codec_.GetGainFormat(&format);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get gain format %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not get gain format %d", __FILE__, status);
     return status;
   }
 
@@ -367,13 +367,13 @@ zx_status_t NelsonAudioStreamOut::AddFormats() {
 zx_status_t NelsonAudioStreamOut::InitBuffer(size_t size) {
   auto status = zx::vmo::create_contiguous(bti_, size, 0, &ring_buffer_vmo_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
     return status;
   }
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __func__, status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {

@@ -42,14 +42,14 @@ static zx_protocol_device_t i2c_test_device_protocol = {
 
 static void i2c_complete(void* cookie, zx_status_t status, const i2c_op_t* ops, size_t cnt) {
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hikey960-i2c-test i2c_complete error: %d\n", status);
+    zxlogf(ERROR, "hikey960-i2c-test i2c_complete error: %d", status);
   }
   ZX_ASSERT(cnt == 1);
   if (ops[0].data_size != 8) {
-    zxlogf(ERROR, "hikey960-i2c-test received %zd bytes instead of 8\n", ops[0].data_size);
+    zxlogf(ERROR, "hikey960-i2c-test received %zd bytes instead of 8", ops[0].data_size);
   }
   const uint8_t* data = ops[0].data_buffer;
-  zxlogf(INFO, "hikey-i2c-test: %02X %02X %02X %02X %02X %02X %02X %02X\n", data[0], data[1],
+  zxlogf(INFO, "hikey-i2c-test: %02X %02X %02X %02X %02X %02X %02X %02X", data[0], data[1],
          data[2], data[3], data[4], data[5], data[6], data[7]);
 }
 

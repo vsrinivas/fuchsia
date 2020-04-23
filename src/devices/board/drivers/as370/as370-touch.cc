@@ -85,7 +85,7 @@ zx_status_t As370::TouchInit() {
 
   zx_status_t status = DdkAddComposite("as370-touch", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s CompositeDeviceAdd failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FILE__, status);
     return status;
   }
 

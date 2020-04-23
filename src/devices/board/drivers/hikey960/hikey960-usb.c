@@ -195,7 +195,7 @@ zx_status_t hikey960_usb_init(hikey960_t* hikey) {
   status = pbus_composite_device_add(&hikey->pbus, &hikey_usb_dev, hikey_usb_fragments,
                                      countof(hikey_usb_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hikey960_add_devices could not add hikey_usb_dev: %d\n", status);
+    zxlogf(ERROR, "hikey960_add_devices could not add hikey_usb_dev: %d", status);
     return status;
   }
 
@@ -216,7 +216,7 @@ zx_status_t hikey960_usb_init(hikey960_t* hikey) {
   status = pbus_composite_device_add(&hikey->pbus, &dwc3_dev, dwc3_fragments,
                                      countof(dwc3_fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pbus_composite_device_add failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: pbus_composite_device_add failed: %d", __FUNCTION__, status);
     return status;
   }
 

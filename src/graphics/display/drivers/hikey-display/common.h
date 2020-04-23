@@ -12,7 +12,7 @@ namespace hi_display {
 // define for DW-DSI BIST and ADV7533-Bridge Test
 #define DW_DSI_TEST_ENABLE
 
-#define TRACE zxlogf(INFO, "%s %d\n", __FUNCTION__, __LINE__);
+#define TRACE zxlogf(INFO, "%s %d", __FUNCTION__, __LINE__);
 
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 

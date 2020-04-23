@@ -28,18 +28,18 @@ zx_status_t FtdiI2c::Enable() {
     return status;
   }
   if (!mpsse_.IsValid()) {
-    zxlogf(ERROR, "ftdi_i2c: mpsse is invalid!\n");
+    zxlogf(ERROR, "ftdi_i2c: mpsse is invalid!");
     return ZX_ERR_INTERNAL;
   }
 
   status = mpsse_.Sync();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ftdi_i2c: mpsse failed to sync %d\n", status);
+    zxlogf(ERROR, "ftdi_i2c: mpsse failed to sync %d", status);
     return status;
   }
   status = mpsse_.FlushGpio();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ftdi_i2c: mpsse failed flush GPIO\n");
+    zxlogf(ERROR, "ftdi_i2c: mpsse failed flush GPIO");
     return status;
   }
 
@@ -257,7 +257,7 @@ zx_status_t FtdiI2c::Transact(uint8_t bus_address, std::vector<uint8_t> write_da
   // Check each response byte to see if its an ACK (zero) or NACK (non-zero).
   for (size_t i = 0; i < response.size() - read_size; i++) {
     if ((response[i] & 0x1) != 0) {
-      zxlogf(INFO, "Ftdi-i2c: Recieved NACK on byte %ld (data=%d)\n", i, response[i]);
+      zxlogf(INFO, "Ftdi-i2c: Recieved NACK on byte %ld (data=%d)", i, response[i]);
       return ZX_ERR_INTERNAL;
     }
   }
@@ -346,7 +346,7 @@ zx_status_t FtdiI2c::I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_li
       read_data.resize(total_read_bytes);
       status = Transact(static_cast<uint8_t>(op_list[i].address), write_data, &read_data);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "I2c transact failed with %d\n", status);
+        zxlogf(ERROR, "I2c transact failed with %d", status);
         return status;
       }
 

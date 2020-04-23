@@ -294,8 +294,8 @@ zx_status_t Mt8167sGpu::PowerUp() {
     constexpr uint32_t kRgxCrCoreId = 0x18;
     constexpr uint32_t kRgxCrCoreRevision = 0x20;
 
-    zxlogf(INFO, "[mt8167s-gpu] GPU ID: %lx\n", ReadHW64(&real_gpu_buffer_.value(), kRgxCrCoreId));
-    zxlogf(INFO, "[mt8167s-gpu] GPU core revision: %lx\n",
+    zxlogf(INFO, "[mt8167s-gpu] GPU ID: %lx", ReadHW64(&real_gpu_buffer_.value(), kRgxCrCoreId));
+    zxlogf(INFO, "[mt8167s-gpu] GPU core revision: %lx",
            ReadHW64(&real_gpu_buffer_.value(), kRgxCrCoreRevision));
     logged_gpu_info_ = true;
   }
@@ -345,7 +345,7 @@ zx_status_t Mt8167sGpu::Bind() {
   for (unsigned i = 0; i < kClockCount; i++) {
     clks_[i] = fragments[i + 1];
     if (!clks_[i].is_valid()) {
-      zxlogf(ERROR, "%s could not get clock\n", __func__);
+      zxlogf(ERROR, "%s could not get clock", __func__);
       return ZX_ERR_INTERNAL;
     }
   }

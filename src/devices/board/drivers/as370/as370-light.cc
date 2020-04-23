@@ -18,7 +18,7 @@ zx_status_t As370::LightInit() {
   // setup LED/Touch reset pin
   auto status = gpio_impl_.SetAltFunction(4, 0);  // 0 - GPIO mode
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GPIO SetAltFunction failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: GPIO SetAltFunction failed: %d", __func__, status);
     return status;
   }
 
@@ -81,7 +81,7 @@ zx_status_t As370::LightInit() {
 
   status = pbus_.CompositeDeviceAdd(&light_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
 

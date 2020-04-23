@@ -211,7 +211,7 @@ zx_status_t FakeFtdiFunction::UsbFunctionInterfaceSetConfigured(void* ctx, bool 
 
     if ((status = func->function_.ConfigEp(&func->descriptor_.bulk_in, nullptr)) != ZX_OK ||
         (status = func->function_.ConfigEp(&func->descriptor_.bulk_out, nullptr)) != ZX_OK) {
-      zxlogf(ERROR, "ftdi-function: usb_function_config_ep failed\n");
+      zxlogf(ERROR, "ftdi-function: usb_function_config_ep failed");
     }
     // queue first read on OUT endpoint
     usb_request_complete_t complete = {
@@ -221,9 +221,9 @@ zx_status_t FakeFtdiFunction::UsbFunctionInterfaceSetConfigured(void* ctx, bool 
             },
         .ctx = ctx,
     };
-    zxlogf(ERROR, "ftdi-function: about to configure!\n");
+    zxlogf(ERROR, "ftdi-function: about to configure!");
     if (func->data_out_req_) {
-      zxlogf(ERROR, "We have data out!\n");
+      zxlogf(ERROR, "We have data out!");
     }
     func->RequestQueue(func->data_out_req_->request(), &complete);
   } else {
@@ -276,17 +276,17 @@ zx_status_t FakeFtdiFunction::Bind() {
 
   zx_status_t status = function_.AllocInterface(&descriptor_.interface.bInterfaceNumber);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeFtdiFunction: usb_function_alloc_interface failed\n");
+    zxlogf(ERROR, "FakeFtdiFunction: usb_function_alloc_interface failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_IN, &descriptor_.bulk_in.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeFtdiFunction: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeFtdiFunction: usb_function_alloc_ep failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeFtdiFunction: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeFtdiFunction: usb_function_alloc_ep failed");
     return status;
   }
 

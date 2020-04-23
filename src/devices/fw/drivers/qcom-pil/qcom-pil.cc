@@ -35,13 +35,13 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
   fbl::StringBuffer<metadata::kMaxNameLen + 4> metadata_file;
   metadata_file.Append(fw_[fw_n].name);
   metadata_file.Append(".mdt");
-  zxlogf(INFO, "%s loading %s\n", __func__, metadata_file.c_str());
+  zxlogf(INFO, "%s loading %s", __func__, metadata_file.c_str());
   size_t metadata_size = 0;
   zx::vmo metadata;
   auto status = load_firmware(parent(), metadata_file.c_str(), metadata.reset_and_get_address(),
                               &metadata_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s load FW metadata failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s load FW metadata failed %d", __func__, status);
     return status;
   }
 
@@ -49,7 +49,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
   Elf32_Ehdr ehdr;
   metadata.read(&ehdr, 0, sizeof(Elf32_Ehdr));
   if (memcmp(ehdr.e_ident, ELFMAG, SELFMAG)) {
-    zxlogf(ERROR, "%s not an ELF header\n", __func__);
+    zxlogf(ERROR, "%s not an ELF header", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
   fbl::Array<Elf32_Phdr> phdrs(new Elf32_Phdr[ehdr.e_phnum], ehdr.e_phnum);
@@ -58,7 +58,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
   // Copy metadata to the intended physical address.
   status = zx_vmo_read(metadata.get(), mmios_[fw_n]->get(), 0, ZX_ROUNDUP(metadata_size, PAGE_SIZE));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s VMO read failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s VMO read failed %d", __func__, status);
     return status;
   }
 
@@ -71,7 +71,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
                               fw_[fw_n].pa);  // kBufferReadWrite.
   status = qcom::SmcCall(smc_.get(), &params, &result);
   if (status != ZX_OK || result.arg0 != qcom::kSmcOk) {
-    zxlogf(ERROR, "%s metadata init failed %d/%d\n", __func__, status,
+    zxlogf(ERROR, "%s metadata init failed %d/%d", __func__, status,
            static_cast<int>(result.arg0));
     return status;
   }
@@ -86,7 +86,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
     }
     constexpr uint32_t kRelocatableBitOffset = 27;
     if (!(phdrs[i].p_flags & (1 << kRelocatableBitOffset))) {
-      zxlogf(ERROR, "%s FW segments to load must be relocatable\n", __func__);
+      zxlogf(ERROR, "%s FW segments to load must be relocatable", __func__);
       return ZX_ERR_INTERNAL;
     }
     if (phdrs[i].p_paddr < start) {
@@ -97,12 +97,12 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
     }
   }
   if (start == std::numeric_limits<uint32_t>::max() || end == 0) {
-    zxlogf(ERROR, "%s ELF headers could not find total size\n", __func__);
+    zxlogf(ERROR, "%s ELF headers could not find total size", __func__);
     return ZX_ERR_INTERNAL;
   }
   total_size = ZX_ROUNDUP(end - start, PAGE_SIZE);
   if (total_size > mmios_[fw_n]->get_size()) {
-    zxlogf(ERROR, "%s ELF headers total size (0x%lX) too big (>0x%lX)\n", __func__, total_size,
+    zxlogf(ERROR, "%s ELF headers total size (0x%lX) too big (>0x%lX)", __func__, total_size,
            mmios_[fw_n]->get_size());
     return ZX_ERR_INTERNAL;
   }
@@ -116,7 +116,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
       total_size);   // kValue.
   status = qcom::SmcCall(smc_.get(), &params, &result);
   if (status != ZX_OK || result.arg0 != qcom::kSmcOk) {
-    zxlogf(ERROR, "%s memory setup failed %d/%d\n", __func__, status,
+    zxlogf(ERROR, "%s memory setup failed %d/%d", __func__, status,
            static_cast<int>(result.arg0));
     return status;
   }
@@ -134,20 +134,20 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
     segment_name.Append(fw_[fw_n].name);
     segment_name.AppendPrintf(".b%02u", i);
 
-    zxlogf(INFO, "%s loading %s\n", __func__, segment_name.c_str());
+    zxlogf(INFO, "%s loading %s", __func__, segment_name.c_str());
     zx::vmo segment;
     size_t seg_size = 0;
     auto status =
         load_firmware(parent(), segment_name.c_str(), segment.reset_and_get_address(), &seg_size);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s load FW failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s load FW failed %d", __func__, status);
       return status;
     }
 
     status = segment.read(reinterpret_cast<void*>(v_addr + (phdrs[i].p_paddr - start)), 0,
                           ZX_ROUNDUP(seg_size, PAGE_SIZE));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s vmo read failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s vmo read failed %d", __func__, status);
       return status;
     }
   }
@@ -157,11 +157,11 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
       CreatePilSmcParams(PilCmd::AuthAndReset, CreateSmcArgs(1, SmcArgType::kValue), fw_[fw_n].id);
   status = qcom::SmcCall(smc_.get(), &params, &result);
   if (status != ZX_OK || result.arg0 != qcom::kSmcOk) {
-    zxlogf(ERROR, "%s authentication failed %d/%d\n", __func__, status,
+    zxlogf(ERROR, "%s authentication failed %d/%d", __func__, status,
            static_cast<int>(result.arg0));
     return status;
   }
-  zxlogf(INFO, "%s %s brought out of reset\n", __func__, fw_[fw_n].name);
+  zxlogf(INFO, "%s %s brought out of reset", __func__, fw_[fw_n].name);
   return ZX_OK;
 }
 
@@ -175,7 +175,7 @@ int PilDevice::PilThread() {
 zx_status_t PilDevice::Bind() {
   ddk::CompositeProtocolClient composite(parent());
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s could not get composite protocol\n", __func__);
+    zxlogf(ERROR, "%s could not get composite protocol", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -183,31 +183,31 @@ zx_status_t PilDevice::Bind() {
   size_t actual;
   composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
   if (actual != fbl::count_of(fragments)) {
-    zxlogf(ERROR, "%s could not get fragments\n", __func__);
+    zxlogf(ERROR, "%s could not get fragments", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   pdev_ = fragments[0];
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "%s could not get pdev protocol\n", __func__);
+    zxlogf(ERROR, "%s could not get pdev protocol", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   auto status = pdev_.GetSmc(0, &smc_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s GetSmc failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s GetSmc failed %d", __func__, status);
     return status;
   }
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s GetBti failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s GetBti failed %d", __func__, status);
     return status;
   }
 
   for (unsigned i = 0; i < kClockCount; i++) {
     clks_[i] = fragments[i + 1];
     if (!clks_[i].is_valid()) {
-      zxlogf(ERROR, "%s GetClk failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s GetClk failed %d", __func__, status);
       return status;
     }
   }
@@ -226,7 +226,7 @@ zx_status_t PilDevice::Bind() {
   status =
       device_get_metadata(parent_, DEVICE_METADATA_PRIVATE, fw_.data(), metadata_size, &actual);
   if (status != ZX_OK || metadata_size != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s device_get_metadata failed %d", __func__, status);
     return status;
   }
 
@@ -249,7 +249,7 @@ zx_status_t PilDevice::Bind() {
     zx_smc_result_t result = {};
     status = qcom::SmcCall(smc_.get(), &params, &result);
     if (status == ZX_OK && result.arg0 == kSmcOk && result.arg1 == 1) {
-      zxlogf(INFO, "%s pas_id %d supported\n", __func__, i);
+      zxlogf(INFO, "%s pas_id %d supported", __func__, i);
     }
   }
 #endif
@@ -266,7 +266,7 @@ zx_status_t PilDevice::Bind() {
 
   status = DdkAdd("qcom-pil");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s DdkAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s DdkAdd failed %d", __func__, status);
     ShutDown();
     return status;
   }
@@ -287,7 +287,7 @@ zx_status_t PilDevice::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   auto dev = fbl::make_unique_checked<PilDevice>(&ac, parent);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s PilDevice creation ZX_ERR_NO_MEMORY\n", __func__);
+    zxlogf(ERROR, "%s PilDevice creation ZX_ERR_NO_MEMORY", __func__);
     return ZX_ERR_NO_MEMORY;
   }
   auto status = dev->Bind();

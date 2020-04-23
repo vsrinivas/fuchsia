@@ -31,7 +31,7 @@ zx_status_t a113_clk_init(a113_clk_dev_t **device) {
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "a113_clk_init: mmio_buffer_init_physical failed %d\n", status);
+    zxlogf(ERROR, "a113_clk_init: mmio_buffer_init_physical failed %d", status);
     goto init_fail;
   }
   (*device)->regs_vaddr = (*device)->mmio.vaddr;
@@ -61,7 +61,7 @@ zx_status_t a113_clk_set_mpll2(a113_clk_dev_t *device, uint64_t rate, uint64_t *
 
   uint64_t sdm = DIV_ROUND_UP((A113_FIXED_PLL_RATE - n * rate) * SDM_FRACTIONALITY, rate);
   ZX_DEBUG_ASSERT(sdm < (1 << 14));
-  zxlogf(INFO, "%s sdm= %ld  n= %ld\n", __func__, sdm, n);
+  zxlogf(INFO, "%s sdm= %ld  n= %ld", __func__, sdm, n);
   a113_clk_update_reg(device, A113_HHI_MPLL_CNTL8, 0, 14, (uint32_t)sdm);
   a113_clk_update_reg(device, A113_HHI_MPLL_CNTL8, 16, 9, (uint32_t)n);
 

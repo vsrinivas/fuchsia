@@ -38,7 +38,7 @@ const size_t kPllMmio = 3;
 zx_status_t AmlPcieDevice::InitProtocols() {
   ddk::CompositeProtocolClient composite(parent_);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "ZX_PROTOCOL_COMPOSITE not available\n");
+    zxlogf(ERROR, "ZX_PROTOCOL_COMPOSITE not available");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -47,7 +47,7 @@ zx_status_t AmlPcieDevice::InitProtocols() {
   size_t actual;
   composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
   if (actual != fbl::count_of(fragments)) {
-    zxlogf(ERROR, "could not retrieve all our fragments\n");
+    zxlogf(ERROR, "could not retrieve all our fragments");
     return ZX_ERR_INTERNAL;
   }
 
@@ -72,7 +72,7 @@ zx_status_t AmlPcieDevice::InitProtocols() {
   for (unsigned i = 0; i < kClockCount; i++) {
     auto status = device_get_protocol(fragments[i + 2], ZX_PROTOCOL_CLOCK, &clks_[i]);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml_pcie: failed to get clk protocol\n");
+      zxlogf(ERROR, "aml_pcie: failed to get clk protocol");
       return status;
     }
   }
@@ -90,7 +90,7 @@ zx_status_t AmlPcieDevice::InitMmios() {
   mmio_buffer_t mmio;
   st = pdev_map_mmio_buffer(&pdev_, kElbMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to map dbi mmio, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to map dbi mmio, st = %d", st);
     return st;
   }
   dbi_ = ddk::MmioBuffer(mmio);
@@ -98,28 +98,28 @@ zx_status_t AmlPcieDevice::InitMmios() {
   std::optional<ddk::MmioPinnedBuffer> mmio_pinned;
   st = dbi_->Pin(pin_bti, &mmio_pinned);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to pin DBI, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to pin DBI, st = %d", st);
     return st;
   }
   dbi_pinned_ = *std::move(mmio_pinned);
 
   st = pdev_map_mmio_buffer(&pdev_, kCfgMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to map cfg mmio, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to map cfg mmio, st = %d", st);
     return st;
   }
   cfg_ = ddk::MmioBuffer(mmio);
 
   st = pdev_map_mmio_buffer(&pdev_, kRstMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to map rst mmio, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to map rst mmio, st = %d", st);
     return st;
   }
   rst_ = ddk::MmioBuffer(mmio);
 
   st = pdev_map_mmio_buffer(&pdev_, kPllMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to map pll mmio, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to map pll mmio, st = %d", st);
     return st;
   }
   pll_ = ddk::MmioBuffer(mmio);
@@ -134,20 +134,20 @@ zx_status_t AmlPcieDevice::InitMetadata() {
   st = device_get_metadata(parent_, IATU_CFG_APERTURE_METADATA, &atu_cfg_, sizeof(atu_cfg_),
                            &actual);
   if (st != ZX_OK || actual != sizeof(atu_cfg_)) {
-    zxlogf(ERROR, "aml_pcie: could not get cfg atu metadata\n");
+    zxlogf(ERROR, "aml_pcie: could not get cfg atu metadata");
     return st;
   }
 
   st = device_get_metadata(parent_, IATU_IO_APERTURE_METADATA, &atu_io_, sizeof(atu_io_), &actual);
   if (st != ZX_OK || actual != sizeof(atu_io_)) {
-    zxlogf(ERROR, "aml_pcie: could not get io atu metadata\n");
+    zxlogf(ERROR, "aml_pcie: could not get io atu metadata");
     return st;
   }
 
   st = device_get_metadata(parent_, IATU_MMIO_APERTURE_METADATA, &atu_mem_, sizeof(atu_mem_),
                            &actual);
   if (st != ZX_OK || actual != sizeof(atu_mem_)) {
-    zxlogf(ERROR, "aml_pcie: could not get mem atu metadata\n");
+    zxlogf(ERROR, "aml_pcie: could not get mem atu metadata");
     return st;
   }
 
@@ -211,13 +211,13 @@ zx_status_t AmlPcieDevice::Init() {
 
   st = clock_enable(&clks_[kClk81]);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to init root clock, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to init root clock, st = %d", st);
     return st;
   }
 
   st = clock_enable(&clks_[kClkPcieA]);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to init pciea clock, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to init pciea clock, st = %d", st);
     return st;
   }
 
@@ -225,7 +225,7 @@ zx_status_t AmlPcieDevice::Init() {
 
   st = clock_enable(&clks_[kClkPort]);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to init port clock, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to init port clock, st = %d", st);
     return st;
   }
 
@@ -236,7 +236,7 @@ zx_status_t AmlPcieDevice::Init() {
 
   st = pcie_->EstablishLink(&atu_cfg_, &atu_io_, &atu_mem_);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to establish link, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to establish link, st = %d", st);
     return st;
   }
 
@@ -244,7 +244,7 @@ zx_status_t AmlPcieDevice::Init() {
   st = zx_pci_add_subtract_io_range(get_root_resource(), false, atu_io_.cpu_addr, atu_io_.length,
                                     true);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to add pcie io range, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to add pcie io range, st = %d", st);
     return st;
   }
 
@@ -252,7 +252,7 @@ zx_status_t AmlPcieDevice::Init() {
   st = zx_pci_add_subtract_io_range(get_root_resource(), true, atu_mem_.cpu_addr, atu_mem_.length,
                                     true);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to add pcie mmio range, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to add pcie mmio range, st = %d", st);
     return st;
   }
 
@@ -261,7 +261,7 @@ zx_status_t AmlPcieDevice::Init() {
   const size_t arg_size = sizeof(*arg) + sizeof(arg->addr_windows[0]) * 2;
   arg = (zx_pci_init_arg_t*)calloc(1, arg_size);
   if (!arg) {
-    zxlogf(ERROR, "aml_pcie: failed to allocate pci init arg\n");
+    zxlogf(ERROR, "aml_pcie: failed to allocate pci init arg");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -291,7 +291,7 @@ zx_status_t AmlPcieDevice::Init() {
   // Please do not use get_root_resource() in new code. See ZX-1467.
   st = zx_pci_init(get_root_resource(), arg, arg_size);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to init pci bus driver, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to init pci bus driver, st = %d", st);
     return st;
   }
 
@@ -301,7 +301,7 @@ zx_status_t AmlPcieDevice::Init() {
   /* FIXME this needs to be rewritten to use composite devices
       st = pdev_device_add(&pdev_, 0, &pci_dev_args, &dev_);
       if (st != ZX_OK) {
-          zxlogf(ERROR, "aml_pcie: pdev_device_add failed, st = %d\n", st);
+          zxlogf(ERROR, "aml_pcie: pdev_device_add failed, st = %d", st);
           return st;
       }
   */
@@ -318,7 +318,7 @@ extern "C" zx_status_t aml_pcie_bind(void* ctx, zx_device_t* device) {
   pcie::aml::AmlPcieDevice* dev = new (&ac) pcie::aml::AmlPcieDevice(device);
 
   if (!ac.check()) {
-    zxlogf(ERROR, "aml_pcie: failed to allocate aml pcie device\n");
+    zxlogf(ERROR, "aml_pcie: failed to allocate aml pcie device");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -326,7 +326,7 @@ extern "C" zx_status_t aml_pcie_bind(void* ctx, zx_device_t* device) {
   // owns the memory.
   zx_status_t st = dev->Init();
   if (st != ZX_OK) {
-    zxlogf(ERROR, "aml_pcie: failed to start, st = %d\n", st);
+    zxlogf(ERROR, "aml_pcie: failed to start, st = %d", st);
     delete dev;
   }
 

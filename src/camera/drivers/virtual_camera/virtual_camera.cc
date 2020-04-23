@@ -17,7 +17,7 @@ static zx_status_t bind(void* /*ctx*/, zx_device_t* device) {
   auto dev = std::make_unique<VirtualCameraDevice>();
   zx_status_t status = dev->Bind(device);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "*** virtual_camera: could not add device '%s': %d\n", __func__, status);
+    zxlogf(ERROR, "*** virtual_camera: could not add device '%s': %d", __func__, status);
     return status;
   }
 

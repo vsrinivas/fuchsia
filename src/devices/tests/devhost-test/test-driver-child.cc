@@ -41,7 +41,7 @@ zx_status_t TestDevhostDriverChild::Bind() {
   auto status =
       DdkGetMetadata(DEVICE_METADATA_PRIVATE, &test_metadata_, sizeof(test_metadata_), &actual);
   if (status != ZX_OK || actual != sizeof(test_metadata_)) {
-    zxlogf(ERROR, "TestDevhostDriverChild::Bind: Unable to get metadata correctly\n");
+    zxlogf(ERROR, "TestDevhostDriverChild::Bind: Unable to get metadata correctly");
     return ZX_ERR_INTERNAL;
   }
   return DdkAdd("devhost-test-child");

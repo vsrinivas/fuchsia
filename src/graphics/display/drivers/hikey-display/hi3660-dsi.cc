@@ -14,7 +14,7 @@ namespace hi_display {
 
 zx_status_t HiDsi::GetDisplayResolution(uint32_t& width, uint32_t& height) {
   if (std_disp_timing_ == NULL) {
-    zxlogf(ERROR, "Display not ready \n");
+    zxlogf(ERROR, "Display not ready ");
     return ZX_ERR_NOT_SUPPORTED;
   }
   height = static_cast<uint32_t>(std_disp_timing_->HActive);
@@ -28,7 +28,7 @@ zx_status_t HiDsi::DsiGetDisplayTiming() {
   uint8_t num_dtd = 0;
 
   if (&edid_buf_[0] == 0) {
-    zxlogf(ERROR, "%s: No EDID available\n", __FUNCTION__);
+    zxlogf(ERROR, "%s: No EDID available", __FUNCTION__);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -41,16 +41,16 @@ zx_status_t HiDsi::DsiGetDisplayTiming() {
   edid_->EdidParseStdDisplayTiming(edid_buf_, std_raw_dtd_, std_disp_timing_);
 
   if ((status = edid_->EdidGetNumDtd(edid_buf_, &num_dtd)) != ZX_OK) {
-    zxlogf(ERROR, "Something went wrong with reading number of DTD\n");
+    zxlogf(ERROR, "Something went wrong with reading number of DTD");
     return status;
   }
 
   if (num_dtd == 0) {
-    zxlogf(ERROR, "No DTD Founds!!\n");
+    zxlogf(ERROR, "No DTD Founds!!");
     return ZX_ERR_INTERNAL;
   }
 
-  zxlogf(INFO, "Number of DTD found was %d\n", num_dtd);
+  zxlogf(INFO, "Number of DTD found was %d", num_dtd);
   raw_dtd_ = static_cast<DetailedTiming*>(calloc(num_dtd, sizeof(DetailedTiming)));
   disp_timing_ = static_cast<DisplayTiming*>(calloc(num_dtd, sizeof(DisplayTiming)));
   if (raw_dtd_ == 0 || disp_timing_ == 0) {
@@ -92,7 +92,7 @@ void HiDsi::DsiConfigureDphyPll() {
       DsiDphyWrite(0x34 + tmp, 0x1c);
     }
   } else {
-    zxlogf(INFO, "%d x %d resolution not supported\n", std_disp_timing_->HActive,
+    zxlogf(INFO, "%d x %d resolution not supported", std_disp_timing_->HActive,
            std_disp_timing_->VActive);
   }
 }
@@ -182,13 +182,13 @@ zx_status_t HiDsi::DsiInit(zx_device_t* parent) {
   pdev_protocol_t pdev;
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to obtain the display protocol\n");
+    zxlogf(ERROR, "Failed to obtain the display protocol");
     return ZX_ERR_NO_MEMORY;
   }
 
   dsiimpl_ = parent;
   if (!dsiimpl_.is_valid()) {
-    zxlogf(ERROR, "DSI Protocol Not implemented\n");
+    zxlogf(ERROR, "DSI Protocol Not implemented");
     return ZX_ERR_NO_RESOURCES;
   }
 

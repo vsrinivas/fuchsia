@@ -75,7 +75,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   // Fetch the NHLT resource
   ACPI_STATUS acpi_status = AcpiEvaluateObject(object, (char*)"_DSM", &params, &out);
   if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi: failed to fetch NHLT blob (acpi_status 0x%x)\n", acpi_status);
+    zxlogf(ERROR, "acpi: failed to fetch NHLT blob (acpi_status 0x%x)", acpi_status);
     return acpi_to_zx_status(acpi_status);
   }
 
@@ -83,7 +83,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
 
   ACPI_OBJECT* out_obj = static_cast<ACPI_OBJECT*>(out.Pointer);
   if (out_obj->Type != ACPI_TYPE_BUFFER) {
-    zxlogf(ERROR, "acpi: unexpected object type (%u) for NHLT blob\n", out_obj->Type);
+    zxlogf(ERROR, "acpi: unexpected object type (%u) for NHLT blob", out_obj->Type);
     return ZX_ERR_INTERNAL;
   }
 
@@ -91,12 +91,12 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   acpi_status = AcpiBufferToResource(out_obj->Buffer.Pointer,
                                      static_cast<uint16_t>(out_obj->Buffer.Length), &res);
   if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi: failed to parse NHLT resource (acpi_status 0x%x)\n", acpi_status);
+    zxlogf(ERROR, "acpi: failed to parse NHLT resource (acpi_status 0x%x)", acpi_status);
     return acpi_to_zx_status(acpi_status);
   }
 
   if (res->Type != ACPI_RESOURCE_TYPE_ADDRESS64) {
-    zxlogf(ERROR, "acpi: unexpected NHLT resource type (%u)\n", res->Type);
+    zxlogf(ERROR, "acpi: unexpected NHLT resource type (%u)", res->Type);
     return ZX_ERR_INTERNAL;
   }
 
@@ -111,7 +111,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   // Please do not use get_root_resource() in new code. See ZX-1467.
   status = zx_vmo_create_physical(get_root_resource(), page_start, page_size, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi: failed to create NHLT VMO (res %d)\n", status);
+    zxlogf(ERROR, "acpi: failed to create NHLT VMO (res %d)", status);
     return status;
   }
 
@@ -119,7 +119,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   zx_vaddr_t vaddr = 0;
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, page_size, &vaddr);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi: failed to map NHLT blob (res %d)\n", status);
+    zxlogf(ERROR, "acpi: failed to map NHLT blob (res %d)", status);
     return status;
   }
   void* nhlt = (void*)(vaddr + page_offset);
@@ -131,10 +131,10 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
            (unsigned)(adr & 0xFFFF));
   status = device_publish_metadata(dev, path, *(uint32_t*)"NHLT", nhlt, size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi: failed to publish NHLT metadata (res %d)\n", status);
+    zxlogf(ERROR, "acpi: failed to publish NHLT metadata (res %d)", status);
   }
 
-  zxlogf(TRACE, "acpi: published NHLT metadata for device at %s\n", path);
+  zxlogf(TRACE, "acpi: published NHLT metadata for device at %s", path);
 
   zx_vmar_unmap(zx_vmar_root_self(), vaddr, ZX_ROUNDUP(size, PAGE_SIZE));
 

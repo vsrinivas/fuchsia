@@ -63,7 +63,7 @@ class SimpleHid {
   void HidbusStop() {
     zx_port_packet_t packet = {kPacketKeyStop, ZX_PKT_TYPE_USER, ZX_OK, {}};
     if (port_.queue(&packet) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to queue packet\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to queue packet", __FILE__);
     }
 
     thrd_join(thread_, nullptr);
@@ -81,7 +81,7 @@ class SimpleHid {
     zx_port_packet packet = {kPacketKeyConfigure, ZX_PKT_TYPE_USER, ZX_OK, {}};
     zx_status_t status = port_.queue(&packet);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to queue packet\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to queue packet", __FILE__);
     }
 
     return status;

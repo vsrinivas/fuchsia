@@ -66,7 +66,7 @@ zx_status_t TestPowerDevice::Init() {
   pbus_protocol_t pbus;
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d", __func__, status);
     return status;
   }
   power_impl_protocol_t power_proto = {
@@ -75,7 +75,7 @@ zx_status_t TestPowerDevice::Init() {
   };
   status = pbus_register_protocol(&pbus, ZX_PROTOCOL_POWER_IMPL, &power_proto, sizeof(power_proto));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s pbus_register_protocol failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s pbus_register_protocol failed %d", __func__, status);
     return status;
   }
   return ZX_OK;
@@ -86,17 +86,17 @@ zx_status_t TestPowerDevice::Create(zx_device_t* parent) {
   pdev_protocol_t pdev;
   zx_status_t status;
 
-  zxlogf(INFO, "TestPowerDevice::Create: %s \n", DRIVER_NAME);
+  zxlogf(INFO, "TestPowerDevice::Create: %s ", DRIVER_NAME);
 
   status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV\n", __func__);
+    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV", __func__);
     return status;
   }
 
   status = dev->DdkAdd("test-power", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
     return status;
   }
   // devmgr is now in charge of dev.
@@ -114,7 +114,7 @@ zx_status_t TestPowerDevice::PowerImplEnablePowerDomain(uint32_t index) {
     return ZX_ERR_INVALID_ARGS;
   }
   enabled_[index] = true;
-  zxlogf(ERROR, "%s: Enabling power domain for index:%d\n", __func__, index);
+  zxlogf(ERROR, "%s: Enabling power domain for index:%d", __func__, index);
   return ZX_OK;
 }
 
@@ -123,7 +123,7 @@ zx_status_t TestPowerDevice::PowerImplDisablePowerDomain(uint32_t index) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (!enabled_[index]) {
-    zxlogf(ERROR, "%s: Power domain is not enabled: index:%d\n", __func__, index);
+    zxlogf(ERROR, "%s: Power domain is not enabled: index:%d", __func__, index);
     return ZX_ERR_UNAVAILABLE;
   }
   enabled_[index] = false;

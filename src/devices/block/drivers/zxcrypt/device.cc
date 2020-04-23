@@ -44,20 +44,20 @@ zx_status_t Device::Init(const DdkVolume& volume) {
 
   // Set up allocation bitmap
   if ((rc = map_.Reset(Volume::kBufferSize / info_.block_size)) != ZX_OK) {
-    zxlogf(ERROR, "bitmap allocation failed: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "bitmap allocation failed: %s", zx_status_get_string(rc));
     return rc;
   }
 
   // Start workers
   if ((rc = zx::port::create(0, &port_)) != ZX_OK) {
-    zxlogf(ERROR, "zx::port::create failed: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "zx::port::create failed: %s", zx_status_get_string(rc));
     return rc;
   }
   for (size_t i = 0; i < kNumWorkers; ++i) {
     zx::port port;
     port_.duplicate(ZX_RIGHT_SAME_RIGHTS, &port);
     if ((rc = workers_[i].Start(this, volume, std::move(port))) != ZX_OK) {
-      zxlogf(ERROR, "failed to start worker %zu: %s\n", i, zx_status_get_string(rc));
+      zxlogf(ERROR, "failed to start worker %zu: %s", i, zx_status_get_string(rc));
       return rc;
     }
   }
@@ -94,7 +94,7 @@ zx_off_t Device::DdkGetSize() {
   zx_off_t reserved, size;
   if (mul_overflow(info_.block_size, info_.reserved_blocks, &reserved) ||
       sub_overflow(device_get_size(info_.block_device), reserved, &size)) {
-    zxlogf(ERROR, "device_get_size returned less than what has been reserved\n");
+    zxlogf(ERROR, "device_get_size returned less than what has been reserved");
     return 0;
   }
 
@@ -117,7 +117,7 @@ void Device::DdkRelease() {
 
   // One way or another we need to release the memory
   auto cleanup = fbl::MakeAutoCall([this]() {
-    zxlogf(TRACE, "zxcrypt device %p released\n", this);
+    zxlogf(TRACE, "zxcrypt device %p released", this);
     delete this;
   });
 
@@ -147,7 +147,7 @@ void Device::BlockImplQueue(block_op_t* block, block_impl_queue_callback complet
 
   // Check if the device is active.
   if (!active_.load()) {
-    zxlogf(ERROR, "rejecting I/O request: device is not active\n");
+    zxlogf(ERROR, "rejecting I/O request: device is not active");
     completion_cb(cookie, ZX_ERR_BAD_STATE, block);
     return;
   }
@@ -157,7 +157,7 @@ void Device::BlockImplQueue(block_op_t* block, block_impl_queue_callback complet
   extra_op_t* extra = BlockToExtra(block, info_.op_size);
   zx_status_t rc = extra->Init(block, completion_cb, cookie, info_.reserved_blocks);
   if (rc != ZX_OK) {
-    zxlogf(ERROR, "failed to initialize extra info: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "failed to initialize extra info: %s", zx_status_get_string(rc));
     BlockComplete(block, rc);
     return;
   }
@@ -256,17 +256,17 @@ void Device::BlockForward(block_op_t* block, zx_status_t status) {
   LOG_ENTRY_ARGS("block=%p, status=%s", block, zx_status_get_string(status));
 
   if (!block) {
-    zxlogf(SPEW, "early return; no block provided\n");
+    zxlogf(SPEW, "early return; no block provided");
     return;
   }
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aborting request due to failure: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "aborting request due to failure: %s", zx_status_get_string(status));
     BlockComplete(block, status);
     return;
   }
   // Check if the device is active (i.e. |DdkUnbind| has not been called).
   if (!active_.load()) {
-    zxlogf(ERROR, "aborting request; device is not active\n");
+    zxlogf(ERROR, "aborting request; device is not active");
     BlockComplete(block, ZX_ERR_BAD_STATE);
     return;
   }
@@ -322,7 +322,7 @@ void Device::EnqueueWrite(block_op_t* block) {
     list_add_tail(&queue_, &extra->node);
   }
   if (stalled_.load()) {
-    zxlogf(SPEW, "early return; no requests completed since last stall\n");
+    zxlogf(SPEW, "early return; no requests completed since last stall");
     return;
   }
 
@@ -338,7 +338,7 @@ void Device::EnqueueWrite(block_op_t* block) {
     uint64_t len = block->rw.length;
     if ((rc = map_.Find(false, hint_, map_.size(), len, &off)) == ZX_ERR_NO_RESOURCES &&
         (rc = map_.Find(false, 0, map_.size(), len, &off)) == ZX_ERR_NO_RESOURCES) {
-      zxlogf(TRACE, "zxcrypt device %p stalled pending request completion\n", this);
+      zxlogf(TRACE, "zxcrypt device %p stalled pending request completion", this);
       stalled_.store(true);
       break;
     }
@@ -376,7 +376,7 @@ void Device::SendToWorker(block_op_t* block) {
   zx_port_packet_t packet;
   Worker::MakeRequest(&packet, Worker::kBlockRequest, block);
   if ((rc = port_.queue(&packet)) != ZX_OK) {
-    zxlogf(ERROR, "zx::port::queue failed: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "zx::port::queue failed: %s", zx_status_get_string(rc));
     BlockComplete(block, rc);
     return;
   }
@@ -394,7 +394,7 @@ void Device::BlockCallback(void* cookie, zx_status_t status, block_op_t* block) 
   block->rw.offset_vmo = extra->offset_vmo;
 
   if (status != ZX_OK) {
-    zxlogf(TRACE, "parent device returned %s\n", zx_status_get_string(status));
+    zxlogf(TRACE, "parent device returned %s", zx_status_get_string(status));
     device->BlockComplete(block, status);
     return;
   }

@@ -67,7 +67,7 @@ zx_status_t ParseImageHeader(const zx::vmo& fw_vmo, uint32_t* out_i2c_size) {
   ZX_DEBUG_ASSERT(idx < KNumEepromSizes);
   *out_i2c_size = kEepromSizeLUT[idx];
 
-  zxlogf(TRACE, "image header: ctl 0x%02x type 0x%02x i2c eeprom size %u\n", image_header.image_ctl,
+  zxlogf(TRACE, "image header: ctl 0x%02x type 0x%02x i2c eeprom size %u", image_header.image_ctl,
          image_header.image_type, *out_i2c_size);
   return ZX_OK;
 }
@@ -103,7 +103,7 @@ zx_status_t FlashProgrammer::DeviceWrite(uint8_t eeprom_slave_addr, uint16_t eep
                                        FLASH_PROGRAMMER_WRITE, eeprom_slave_addr, eeprom_byte_addr,
                                        ZX_SEC(kReqTimeoutSecs), buf, len_to_write);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb control returned err %d\n", status);
+    zxlogf(ERROR, "usb control returned err %d", status);
     return status;
   }
   return ZX_OK;
@@ -130,7 +130,7 @@ zx_status_t FlashProgrammer::EEPROMSlaveWrite(uint8_t eeprom_slave_addr, const z
     req_write_len = fbl::round_up(req_write_len, kVendorReqSizeAlignment);
     status = DeviceWrite(eeprom_slave_addr, eeprom_byte_addr, write_buf, req_write_len);
 
-    zxlogf(TRACE, "EEPROM [%u] write addr %u vmo offset %lu len to write %lu status %d\n",
+    zxlogf(TRACE, "EEPROM [%u] write addr %u vmo offset %lu len to write %lu status %d",
            eeprom_slave_addr, eeprom_byte_addr, vmo_offset, req_write_len, status);
 
     if (status != ZX_OK) {
@@ -150,7 +150,7 @@ zx_status_t FlashProgrammer::LoadPrebuiltFirmware(fuchsia_hardware_usb_fwloader_
       fw_path = kBootFirmwarePath;
       break;
     default:
-      zxlogf(ERROR, "unsupported firmware type: %u\n", type);
+      zxlogf(ERROR, "unsupported firmware type: %u", type);
       return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -172,17 +172,17 @@ zx_status_t FlashProgrammer::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
   size_t vmo_size;
   zx_status_t status = fw_vmo.get_size(&vmo_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to get firmware vmo size, err: %d\n", status);
+    zxlogf(ERROR, "failed to get firmware vmo size, err: %d", status);
     return ZX_ERR_INVALID_ARGS;
   }
   if (vmo_size < fw_size) {
-    zxlogf(ERROR, "invalid vmo, vmo size was %lu, fw size was %lu\n", vmo_size, fw_size);
+    zxlogf(ERROR, "invalid vmo, vmo size was %lu, fw size was %lu", vmo_size, fw_size);
     return ZX_ERR_INVALID_ARGS;
   }
   uint32_t eeprom_size;
   status = ParseImageHeader(fw_vmo, &eeprom_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "invalid firmware image header, err: %d\n", status);
+    zxlogf(ERROR, "invalid firmware image header, err: %d", status);
     return status;
   }
   if (eeprom_size == 0) {
@@ -240,7 +240,7 @@ zx_status_t FlashProgrammer::Create(zx_device_t* parent) {
 }
 
 extern "C" zx_status_t flash_programmer_bind(void* ctx, zx_device_t* parent) {
-  zxlogf(TRACE, "flash_programmer_bind\n");
+  zxlogf(TRACE, "flash_programmer_bind");
   return usb::FlashProgrammer::Create(parent);
 }
 

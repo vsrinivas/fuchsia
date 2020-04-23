@@ -62,7 +62,7 @@ static zx_status_t pl031_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc
 
   zx_status_t status = set_utc_offset(rtc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!\n");
+    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
   }
 
   return ZX_OK;
@@ -92,7 +92,7 @@ static zx_protocol_device_t pl031_rtc_device_proto = {.version = DEVICE_OPS_VERS
                                                       .message = pl031_rtc_message};
 
 static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
-  zxlogf(TRACE, "pl031_rtc: bind parent = %p\n", parent);
+  zxlogf(TRACE, "pl031_rtc: bind parent = %p", parent);
 
   pdev_protocol_t proto;
   zx_status_t st = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &proto);
@@ -103,14 +103,14 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
   // Allocate a new device object for the bus.
   pl031_t* pl031 = calloc(1, sizeof(*pl031));
   if (!pl031) {
-    zxlogf(ERROR, "pl031_rtc: bind failed to allocate pl031_t struct\n");
+    zxlogf(ERROR, "pl031_rtc: bind failed to allocate pl031_t struct");
     return ZX_ERR_NO_MEMORY;
   }
 
   // Carve out some address space for this device.
   st = pdev_map_mmio_buffer(&proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &pl031->mmio);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "pl031_rtc: bind failed to pdev_map_mmio.\n");
+    zxlogf(ERROR, "pl031_rtc: bind failed to pdev_map_mmio.");
     goto error_return;
   }
   pl031->regs = pl031->mmio.vaddr;
@@ -127,7 +127,7 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
   zx_device_t* dev;
   st = device_add(parent, &args, &dev);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "pl031_rtc: error adding device\n");
+    zxlogf(ERROR, "pl031_rtc: error adding device");
     goto error_return;
   }
 
@@ -136,7 +136,7 @@ static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
   sanitize_rtc(pl031, &rtc, pl031_rtc_get, pl031_rtc_set);
   st = set_utc_offset(&rtc);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "pl031_rtc: unable to set the UTC clock!\n");
+    zxlogf(ERROR, "pl031_rtc: unable to set the UTC clock!");
   }
 
   return ZX_OK;

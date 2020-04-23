@@ -18,7 +18,7 @@ namespace sdmmc {
 zx_status_t SdmmcRootDevice::Bind(void* ctx, zx_device_t* parent) {
   ddk::SdmmcProtocolClient host(parent);
   if (!host.is_valid()) {
-    zxlogf(ERROR, "sdmmc: failed to get sdmmc protocol\n");
+    zxlogf(ERROR, "sdmmc: failed to get sdmmc protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -26,7 +26,7 @@ zx_status_t SdmmcRootDevice::Bind(void* ctx, zx_device_t* parent) {
   std::unique_ptr<SdmmcRootDevice> dev(new (&ac) SdmmcRootDevice(parent, host));
 
   if (!ac.check()) {
-    zxlogf(ERROR, "SdmmcRootDevice:Bind: Failed to allocate device\n");
+    zxlogf(ERROR, "SdmmcRootDevice:Bind: Failed to allocate device");
     return ZX_ERR_NO_MEMORY;
   }
   zx_status_t st = dev->DdkAdd("sdmmc", DEVICE_ADD_NON_BINDABLE);
@@ -59,11 +59,11 @@ int SdmmcRootDevice::WorkerThread() {
   SdmmcDevice sdmmc(host_);
   zx_status_t st = sdmmc.Init();
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to get host info\n");
+    zxlogf(ERROR, "sdmmc: failed to get host info");
     return thrd_error;
   }
 
-  zxlogf(TRACE, "sdmmc: host caps dma %d 8-bit bus %d max_transfer_size %" PRIu64 "\n",
+  zxlogf(TRACE, "sdmmc: host caps dma %d 8-bit bus %d max_transfer_size %" PRIu64 "",
          sdmmc.UseDma() ? 1 : 0, (sdmmc.host_info().caps & SDMMC_HOST_CAP_BUS_WIDTH_8) ? 1 : 0,
          sdmmc.host_info().max_transfer_size);
 
@@ -72,20 +72,20 @@ int SdmmcRootDevice::WorkerThread() {
 
   std::unique_ptr<SdmmcBlockDevice> block_dev;
   if ((st = SdmmcBlockDevice::Create(zxdev(), sdmmc, &block_dev)) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: Failed to create block device, retcode = %d\n", st);
+    zxlogf(ERROR, "sdmmc: Failed to create block device, retcode = %d", st);
     return thrd_error;
   }
 
   std::unique_ptr<SdioControllerDevice> sdio_dev;
   if ((st = SdioControllerDevice::Create(zxdev(), sdmmc, &sdio_dev)) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: Failed to create block device, retcode = %d\n", st);
+    zxlogf(ERROR, "sdmmc: Failed to create block device, retcode = %d", st);
     return thrd_error;
   }
 
   // No matter what state the card is in, issuing the GO_IDLE_STATE command will
   // put the card into the idle state.
   if ((st = sdmmc.SdmmcGoIdle()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
+    zxlogf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d", st);
     return thrd_error;
   }
 
@@ -99,7 +99,7 @@ int SdmmcRootDevice::WorkerThread() {
 
     return thrd_error;
   } else if ((st = block_dev->ProbeSd()) != ZX_OK && (st = block_dev->ProbeMmc()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to probe\n");
+    zxlogf(ERROR, "sdmmc: failed to probe");
     return thrd_error;
   }
 

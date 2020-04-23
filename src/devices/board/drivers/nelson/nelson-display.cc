@@ -191,7 +191,7 @@ static const device_fragment_t fragments[] = {
 zx_status_t Nelson::DisplayInit() {
   zx_status_t status = pbus_.DeviceAdd(&dsi_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd dsi failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd dsi failed: %d", __func__, status);
     return status;
   }
 
@@ -215,7 +215,7 @@ zx_status_t Nelson::DisplayInit() {
 
   status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d", __func__, status);
     return status;
   }
 

@@ -64,14 +64,14 @@ zx_status_t BuildEventMap(const EventDetails* events, size_t count, const uint16
   // |EventDetails| is the id within the group. Each id must be in
   // the range [1,PERFMON_MAX_EVENT]. ID 0 is reserved.
   if (largest_event_id == 0 || largest_event_id > kMaxEvent) {
-    zxlogf(ERROR, "PMU: Corrupt event database\n");
+    zxlogf(ERROR, "PMU: Corrupt event database");
     return ZX_ERR_INTERNAL;
   }
 
   fbl::AllocChecker ac;
   size_t event_map_size = largest_event_id + 1;
-  zxlogf(TRACE, "PMU: %zu arch events\n", count);
-  zxlogf(TRACE, "PMU: arch event id range: 1-%zu\n", event_map_size);
+  zxlogf(TRACE, "PMU: %zu arch events", count);
+  zxlogf(TRACE, "PMU: arch event id range: 1-%zu", event_map_size);
   auto event_map = std::unique_ptr<uint16_t[]>(new (&ac) uint16_t[event_map_size]{});
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -90,17 +90,17 @@ zx_status_t BuildEventMap(const EventDetails* events, size_t count, const uint16
 }
 
 static void DumpHwProperties(const PmuHwProperties& props) {
-  zxlogf(INFO, "Performance Monitor Unit configuration for this chipset:\n");
-  zxlogf(INFO, "PMU: version %u\n", props.common.pm_version);
-  zxlogf(INFO, "PMU: %u fixed events, width %u\n", props.common.max_num_fixed_events,
+  zxlogf(INFO, "Performance Monitor Unit configuration for this chipset:");
+  zxlogf(INFO, "PMU: version %u", props.common.pm_version);
+  zxlogf(INFO, "PMU: %u fixed events, width %u", props.common.max_num_fixed_events,
          props.common.max_fixed_counter_width);
-  zxlogf(INFO, "PMU: %u programmable events, width %u\n", props.common.max_num_programmable_events,
+  zxlogf(INFO, "PMU: %u programmable events, width %u", props.common.max_num_programmable_events,
          props.common.max_programmable_counter_width);
-  zxlogf(INFO, "PMU: %u misc events, width %u\n", props.common.max_num_misc_events,
+  zxlogf(INFO, "PMU: %u misc events, width %u", props.common.max_num_misc_events,
          props.common.max_misc_counter_width);
 #ifdef __x86_64__
-  zxlogf(INFO, "PMU: perf_capabilities: 0x%lx\n", props.perf_capabilities);
-  zxlogf(INFO, "PMU: lbr_stack_size: %u\n", props.lbr_stack_size);
+  zxlogf(INFO, "PMU: perf_capabilities: 0x%lx", props.perf_capabilities);
+  zxlogf(INFO, "PMU: lbr_stack_size: %u", props.lbr_stack_size);
 #endif
 }
 
@@ -119,9 +119,9 @@ zx_status_t PerfmonDevice::GetHwProperties(mtrace_control_func_t* mtrace_control
                                       0, out_props, sizeof(*out_props));
   if (status != ZX_OK) {
     if (status == ZX_ERR_NOT_SUPPORTED) {
-      zxlogf(INFO, "%s: No PM support\n", __func__);
+      zxlogf(INFO, "%s: No PM support", __func__);
     } else {
-      zxlogf(INFO, "%s: Error %d fetching ipm properties\n", __func__, status);
+      zxlogf(INFO, "%s: Error %d fetching ipm properties", __func__, status);
     }
     return status;
   }
@@ -140,7 +140,7 @@ void PerfmonDevice::FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t nu
 }
 
 void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
-  zxlogf(TRACE, "%s called\n", __func__);
+  zxlogf(TRACE, "%s called", __func__);
 
   props->api_version = fidl_perfmon::API_VERSION;
   props->pm_version = pmu_hw_properties_.common.pm_version;
@@ -167,7 +167,7 @@ void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
 }
 
 zx_status_t PerfmonDevice::PmuInitialize(const FidlPerfmonAllocation* allocation) {
-  zxlogf(TRACE, "%s called\n", __func__);
+  zxlogf(TRACE, "%s called", __func__);
 
   if (per_trace_state_) {
     return ZX_ERR_BAD_STATE;
@@ -213,7 +213,7 @@ zx_status_t PerfmonDevice::PmuInitialize(const FidlPerfmonAllocation* allocation
 }
 
 void PerfmonDevice::PmuTerminate() {
-  zxlogf(TRACE, "%s called\n", __func__);
+  zxlogf(TRACE, "%s called", __func__);
 
   if (active_) {
     PmuStop();
@@ -227,7 +227,7 @@ void PerfmonDevice::PmuTerminate() {
 }
 
 zx_status_t PerfmonDevice::PmuGetAllocation(FidlPerfmonAllocation* allocation) {
-  zxlogf(TRACE, "%s called\n", __func__);
+  zxlogf(TRACE, "%s called", __func__);
 
   const PmuPerTraceState* per_trace = per_trace_state_.get();
   if (!per_trace) {
@@ -240,7 +240,7 @@ zx_status_t PerfmonDevice::PmuGetAllocation(FidlPerfmonAllocation* allocation) {
 }
 
 zx_status_t PerfmonDevice::PmuGetBufferHandle(uint32_t descriptor, zx_handle_t* out_handle) {
-  zxlogf(TRACE, "%s called\n", __func__);
+  zxlogf(TRACE, "%s called", __func__);
 
   const PmuPerTraceState* per_trace = per_trace_state_.get();
   if (!per_trace) {
@@ -256,7 +256,7 @@ zx_status_t PerfmonDevice::PmuGetBufferHandle(uint32_t descriptor, zx_handle_t* 
       zx_handle_duplicate(per_trace->buffers[descriptor].vmo_handle, ZX_RIGHT_SAME_RIGHTS, &h);
   if (status != ZX_OK) {
     // This failure could be hard to debug. Give the user some help.
-    zxlogf(ERROR, "%s: Failed to duplicate %u buffer handle: %d\n", __func__, descriptor, status);
+    zxlogf(ERROR, "%s: Failed to duplicate %u buffer handle: %d", __func__, descriptor, status);
     return status;
   }
 
@@ -278,7 +278,7 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
 
     if (flags & fidl_perfmon::EventConfigFlags::IS_TIMEBASE) {
       if (ocfg->timebase_event != kEventIdNone) {
-        zxlogf(ERROR, "%s: multiple timebases [%u]\n", __func__, ii);
+        zxlogf(ERROR, "%s: multiple timebases [%u]", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
       }
       ocfg->timebase_event = icfg->events[ii].event;
@@ -286,7 +286,7 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
 
     if (flags & fidl_perfmon::EventConfigFlags::COLLECT_PC) {
       if (rate == 0) {
-        zxlogf(ERROR, "%s: PC flag requires own timebase, event [%u]\n", __func__, ii);
+        zxlogf(ERROR, "%s: PC flag requires own timebase, event [%u]", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
       }
     }
@@ -294,29 +294,29 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
     if (flags & fidl_perfmon::EventConfigFlags::COLLECT_LAST_BRANCH) {
       // Further verification is architecture specific.
       if (icfg->events[ii].rate == 0) {
-        zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]\n", __func__, ii);
+        zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
       }
     }
   }
 
   if (ii == 0) {
-    zxlogf(ERROR, "%s: No events provided\n", __func__);
+    zxlogf(ERROR, "%s: No events provided", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Ensure there are no holes.
   for (; ii < countof(icfg->events); ++ii) {
     if (icfg->events[ii].event != kEventIdNone) {
-      zxlogf(ERROR, "%s: Hole at event [%u]\n", __func__, ii);
+      zxlogf(ERROR, "%s: Hole at event [%u]", __func__, ii);
       return ZX_ERR_INVALID_ARGS;
     }
     if (icfg->events[ii].rate != 0) {
-      zxlogf(ERROR, "%s: Hole at rate [%u]\n", __func__, ii);
+      zxlogf(ERROR, "%s: Hole at rate [%u]", __func__, ii);
       return ZX_ERR_INVALID_ARGS;
     }
     if (icfg->events[ii].flags != fidl_perfmon::EventConfigFlags()) {
-      zxlogf(ERROR, "%s: Hole at flags [%u]\n", __func__, ii);
+      zxlogf(ERROR, "%s: Hole at flags [%u]", __func__, ii);
       return ZX_ERR_INVALID_ARGS;
     }
   }
@@ -325,7 +325,7 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
 }
 
 zx_status_t PerfmonDevice::PmuStageConfig(const FidlPerfmonConfig* fidl_config) {
-  zxlogf(TRACE, "%s called\n", __func__);
+  zxlogf(TRACE, "%s called", __func__);
 
   if (active_) {
     return ZX_ERR_BAD_STATE;
@@ -359,7 +359,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const FidlPerfmonConfig* fidl_config) 
   unsigned ii;  // ii: input index
   for (ii = 0; ii < icfg->events.size(); ++ii) {
     EventId id = icfg->events[ii].event;
-    zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
+    zxlogf(TRACE, "%s: processing [%u] = %u", __func__, ii, id);
     if (id == kEventIdNone) {
       break;
     }
@@ -386,7 +386,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const FidlPerfmonConfig* fidl_config) 
         }
         break;
       default:
-        zxlogf(ERROR, "%s: Invalid event [%u] (bad group)\n", __func__, ii);
+        zxlogf(ERROR, "%s: Invalid event [%u] (bad group)", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
     }
   }
@@ -399,7 +399,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const FidlPerfmonConfig* fidl_config) 
 }
 
 zx_status_t PerfmonDevice::PmuGetConfig(FidlPerfmonConfig* config) {
-  zxlogf(TRACE, "%s called\n", __func__);
+  zxlogf(TRACE, "%s called", __func__);
 
   const PmuPerTraceState* per_trace = per_trace_state_.get();
   if (!per_trace) {
@@ -415,7 +415,7 @@ zx_status_t PerfmonDevice::PmuGetConfig(FidlPerfmonConfig* config) {
 }
 
 zx_status_t PerfmonDevice::PmuStart() {
-  zxlogf(TRACE, "%s called\n", __func__);
+  zxlogf(TRACE, "%s called", __func__);
 
   if (active_) {
     return ZX_ERR_BAD_STATE;
@@ -432,7 +432,7 @@ zx_status_t PerfmonDevice::PmuStart() {
   // Step 1: Get the configuration data into the kernel for use by START.
 
 #ifdef __x86_64__
-  zxlogf(TRACE, "%s: global ctrl 0x%lx, fixed ctrl 0x%lx\n", __func__,
+  zxlogf(TRACE, "%s: global ctrl 0x%lx, fixed ctrl 0x%lx", __func__,
          per_trace->config.global_ctrl, per_trace->config.fixed_ctrl);
 
   // Note: If only misc counters are enabled then |global_ctrl| will be zero.
@@ -484,7 +484,7 @@ fail : {
 }
 
 void PerfmonDevice::PmuStop() {
-  zxlogf(TRACE, "%s called\n", __func__);
+  zxlogf(TRACE, "%s called", __func__);
 
   PmuPerTraceState* per_trace = per_trace_state_.get();
   if (!per_trace) {
@@ -613,7 +613,7 @@ zx_status_t perfmon_bind(void* ctx, zx_device_t* parent) {
   DumpHwProperties(props);
 
   if (props.common.pm_version < perfmon::kMinPmVersion) {
-    zxlogf(INFO, "%s: PM version %u or above is required\n", __func__, perfmon::kMinPmVersion);
+    zxlogf(INFO, "%s: PM version %u or above is required", __func__, perfmon::kMinPmVersion);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -638,7 +638,7 @@ zx_status_t perfmon_bind(void* ctx, zx_device_t* parent) {
 
   status = dev->DdkAdd("perfmon");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: could not add device: %d", __func__, status);
   } else {
     // devmgr owns the memory now
     __UNUSED auto ptr = dev.release();

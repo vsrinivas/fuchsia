@@ -151,7 +151,7 @@ static zx_status_t test_i2c(i2c_protocol_t* i2c) {
   // i2c test driver returns 1024 for max transfer size
   zx_status_t status = i2c_get_max_transfer_size(i2c, &max_transfer);
   if (status != ZX_OK || max_transfer != 1024) {
-    zxlogf(ERROR, "%s: i2c_get_max_transfer_size failed\n", DRIVER_NAME);
+    zxlogf(ERROR, "%s: i2c_get_max_transfer_size failed", DRIVER_NAME);
     return ZX_ERR_INTERNAL;
   }
 
@@ -163,13 +163,13 @@ static zx_status_t test_i2c(i2c_protocol_t* i2c) {
   status = i2c_write_read_sync(i2c, write_digits, sizeof(write_digits), read_digits,
                                sizeof(read_digits));
   if (status != ZX_OK || max_transfer != 1024) {
-    zxlogf(ERROR, "%s: i2c_write_read_sync failed %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: i2c_write_read_sync failed %d", DRIVER_NAME, status);
     return status;
   }
 
   for (size_t i = 0; i < countof(read_digits); i++) {
     if (read_digits[i] != write_digits[countof(read_digits) - i - 1]) {
-      zxlogf(ERROR, "%s: read_digits does not match reverse of write digits\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: read_digits does not match reverse of write digits", DRIVER_NAME);
       return ZX_ERR_INTERNAL;
     }
   }
@@ -184,7 +184,7 @@ static zx_status_t test_spi(spi_protocol_t* spi) {
   // tx should just succeed
   zx_status_t status = spi_transmit(spi, txbuf, sizeof txbuf);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: spi_transmit failed %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: spi_transmit failed %d", DRIVER_NAME, status);
     return status;
   }
 
@@ -193,19 +193,19 @@ static zx_status_t test_spi(spi_protocol_t* spi) {
   memset(rxbuf, 0, sizeof rxbuf);
   status = spi_receive(spi, sizeof rxbuf, rxbuf, sizeof rxbuf, &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: spi_receive failed %d (\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: spi_receive failed %d (", DRIVER_NAME, status);
     return status;
   }
 
   if (actual != sizeof rxbuf) {
-    zxlogf(ERROR, "%s: spi_receive returned incomplete %zu/%zu (\n", DRIVER_NAME, actual,
+    zxlogf(ERROR, "%s: spi_receive returned incomplete %zu/%zu (", DRIVER_NAME, actual,
            sizeof rxbuf);
     return ZX_ERR_INTERNAL;
   }
 
   for (size_t i = 0; i < actual; i++) {
     if (rxbuf[i] != (i & 0xff)) {
-      zxlogf(ERROR, "%s: spi_receive returned bad pattern rxbuf[%zu] = 0x%02x, should be 0x%02x(\n",
+      zxlogf(ERROR, "%s: spi_receive returned bad pattern rxbuf[%zu] = 0x%02x, should be 0x%02x(",
              DRIVER_NAME, i, rxbuf[i], (uint8_t)(i & 0xff));
       return ZX_ERR_INTERNAL;
     }
@@ -215,19 +215,19 @@ static zx_status_t test_spi(spi_protocol_t* spi) {
   memset(rxbuf, 0, sizeof rxbuf);
   status = spi_exchange(spi, txbuf, sizeof txbuf, rxbuf, sizeof rxbuf, &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: spi_exchange failed %d (\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: spi_exchange failed %d (", DRIVER_NAME, status);
     return status;
   }
 
   if (actual != sizeof rxbuf) {
-    zxlogf(ERROR, "%s: spi_exchange returned incomplete %zu/%zu (\n", DRIVER_NAME, actual,
+    zxlogf(ERROR, "%s: spi_exchange returned incomplete %zu/%zu (", DRIVER_NAME, actual,
            sizeof rxbuf);
     return ZX_ERR_INTERNAL;
   }
 
   for (size_t i = 0; i < actual; i++) {
     if (rxbuf[i] != txbuf[i]) {
-      zxlogf(ERROR, "%s: spi_exchange returned bad result rxbuf[%zu] = 0x%02x, should be 0x%02x(\n",
+      zxlogf(ERROR, "%s: spi_exchange returned bad result rxbuf[%zu] = 0x%02x, should be 0x%02x(",
              DRIVER_NAME, i, rxbuf[i], txbuf[i]);
       return ZX_ERR_INTERNAL;
     }
@@ -243,42 +243,42 @@ static zx_status_t test_power(power_protocol_t* power) {
   uint32_t min_voltage = 0, max_voltage = 0;
   if ((status = power_get_supported_voltage_range(power, &min_voltage, &max_voltage)) != ZX_OK) {
     // Not a fixed power domain.
-    zxlogf(ERROR, "Unable to get supported voltage from power domain\n");
+    zxlogf(ERROR, "Unable to get supported voltage from power domain");
     return status;
   }
 
   // These are the limits in the test power-impl driver
   if (min_voltage != 10 && max_voltage != 1000) {
-    zxlogf(ERROR, "%s: Got wrong supported voltages\n", __func__);
+    zxlogf(ERROR, "%s: Got wrong supported voltages", __func__);
     return ZX_ERR_INTERNAL;
   }
 
   if ((status = power_register_power_domain(power, 50, 800)) != ZX_OK) {
-    zxlogf(ERROR, "Unable to register for power domain\n");
+    zxlogf(ERROR, "Unable to register for power domain");
     return status;
   }
 
   power_domain_status_t out_status;
   if ((status = power_get_power_domain_status(power, &out_status) != ZX_OK)) {
-    zxlogf(ERROR, "Unable to power domain status\n");
+    zxlogf(ERROR, "Unable to power domain status");
     return status;
   }
 
   if (out_status != POWER_DOMAIN_STATUS_ENABLED) {
-    zxlogf(ERROR, "power domain should have been enabled after registration\n");
+    zxlogf(ERROR, "power domain should have been enabled after registration");
     return ZX_ERR_INTERNAL;
   }
 
   uint32_t out_actual_voltage = 0;
   if ((status = power_request_voltage(power, 30, &out_actual_voltage)) != ZX_OK) {
-    zxlogf(ERROR, "Unable to request a particular voltage. Got out_voltage as %d\n",
+    zxlogf(ERROR, "Unable to request a particular voltage. Got out_voltage as %d",
            out_actual_voltage);
     return status;
   }
 
   // We registered to the domain with voltage range 50-800. 30 will be rounded to 50.
   if (out_actual_voltage != 50) {
-    zxlogf(ERROR, "Generic power driver failed to set correct voltage. Got out_voltage as %d\n",
+    zxlogf(ERROR, "Generic power driver failed to set correct voltage. Got out_voltage as %d",
            out_actual_voltage);
     return ZX_ERR_INTERNAL;
   }
@@ -292,7 +292,7 @@ static zx_status_t test_power(power_protocol_t* power) {
   }
 
   if ((status = power_unregister_power_domain(power) != ZX_OK)) {
-    zxlogf(ERROR, "Unable to unregister for power domain\n");
+    zxlogf(ERROR, "Unable to unregister for power domain");
     return status;
   }
 
@@ -479,11 +479,11 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   composite_protocol_t composite;
   zx_status_t status;
 
-  zxlogf(INFO, "test_bind: %s \n", DRIVER_NAME);
+  zxlogf(INFO, "test_bind: %s ", DRIVER_NAME);
 
   status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_COMPOSITE\n", DRIVER_NAME);
+    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_COMPOSITE", DRIVER_NAME);
     return status;
   }
 
@@ -492,7 +492,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   zx_device_t* fragments[count];
   composite_get_fragments(&composite, fragments, count, &actual);
   if (count != actual) {
-    zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %zu)\n", DRIVER_NAME, count, actual);
+    zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %zu)", DRIVER_NAME, count, actual);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -500,7 +500,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
   status = device_get_protocol(fragments[FRAGMENT_PDEV_1], ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PDEV\n", DRIVER_NAME);
+    zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PDEV", DRIVER_NAME);
     return status;
   }
 
@@ -508,18 +508,18 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   composite_test_metadata metadata;
   status = device_get_metadata_size(fragments[FRAGMENT_PDEV_1], DEVICE_METADATA_PRIVATE, &size);
   if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed: %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: device_get_metadata_size failed: %d", DRIVER_NAME, status);
     return ZX_ERR_INTERNAL;
   }
   status = device_get_metadata(fragments[FRAGMENT_PDEV_1], DEVICE_METADATA_PRIVATE, &metadata,
                                sizeof(metadata), &size);
   if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
-    zxlogf(ERROR, "%s: device_get_metadata failed: %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: device_get_metadata failed: %d", DRIVER_NAME, status);
     return ZX_ERR_INTERNAL;
   }
 
   if (metadata.metadata_value != 12345) {
-    zxlogf(ERROR, "%s: device_get_metadata failed: %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: device_get_metadata failed: %d", DRIVER_NAME, status);
     return ZX_ERR_INTERNAL;
   }
 
@@ -534,108 +534,108 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
     if (count != FRAGMENT_COUNT_1) {
-      zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %d)\n", DRIVER_NAME, count,
+      zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %d)", DRIVER_NAME, count,
              FRAGMENT_COUNT_1);
       return ZX_ERR_BAD_STATE;
     }
 
     status = device_get_protocol(fragments[FRAGMENT_CLOCK_1], ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK", DRIVER_NAME);
       return status;
     }
     status = device_get_protocol(fragments[FRAGMENT_POWER_1], ZX_PROTOCOL_POWER, &power);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER", DRIVER_NAME);
       return status;
     }
     status = device_get_protocol(fragments[FRAGMENT_CHILD4_1], ZX_PROTOCOL_CLOCK, &child4);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol from child4\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol from child4", DRIVER_NAME);
       return status;
     }
     status = device_get_protocol(fragments[FRAGMENT_GPIO_1], ZX_PROTOCOL_GPIO, &gpio);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO", DRIVER_NAME);
       return status;
     }
     status = device_get_protocol(fragments[FRAGMENT_I2C_1], ZX_PROTOCOL_I2C, &i2c);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C", DRIVER_NAME);
       return status;
     }
     status = device_get_protocol(fragments[FRAGMENT_CODEC_1], ZX_PROTOCOL_CODEC, &codec);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CODEC\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CODEC", DRIVER_NAME);
       return status;
     }
     if ((status = test_clock(&clock)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
+      zxlogf(ERROR, "%s: test_clock failed: %d", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_power(&power)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_power failed: %d\n", DRIVER_NAME, status);
+      zxlogf(ERROR, "%s: test_power failed: %d", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_gpio(&gpio)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_gpio failed: %d\n", DRIVER_NAME, status);
+      zxlogf(ERROR, "%s: test_gpio failed: %d", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_i2c(&i2c)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_i2c failed: %d\n", DRIVER_NAME, status);
+      zxlogf(ERROR, "%s: test_i2c failed: %d", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_codec(&codec)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_codec failed: %d\n", DRIVER_NAME, status);
+      zxlogf(ERROR, "%s: test_codec failed: %d", DRIVER_NAME, status);
       return status;
     }
   } else if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_2) {
     if (count != FRAGMENT_COUNT_2) {
-      zxlogf(ERROR, "%s: got the wrong number of components (%u, %d)\n", DRIVER_NAME, count,
+      zxlogf(ERROR, "%s: got the wrong number of components (%u, %d)", DRIVER_NAME, count,
              FRAGMENT_COUNT_2);
       return ZX_ERR_BAD_STATE;
     }
 
     status = device_get_protocol(fragments[FRAGMENT_CLOCK_2], ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK", DRIVER_NAME);
       return status;
     }
     status = device_get_protocol(fragments[FRAGMENT_POWER_2], ZX_PROTOCOL_POWER, &power);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER", DRIVER_NAME);
       return status;
     }
     status = device_get_protocol(fragments[FRAGMENT_CHILD4_2], ZX_PROTOCOL_CLOCK, &child4);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol from child4\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol from child4", DRIVER_NAME);
       return status;
     }
     status = device_get_protocol(fragments[FRAGMENT_SPI_2], ZX_PROTOCOL_SPI, &spi);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_SPI\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_SPI", DRIVER_NAME);
       return status;
     }
     status = device_get_protocol(fragments[FRAGMENT_PWM_2], ZX_PROTOCOL_PWM, &pwm);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PWM\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PWM", DRIVER_NAME);
       return status;
     }
 
     if ((status = test_clock(&clock)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
+      zxlogf(ERROR, "%s: test_clock failed: %d", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_power(&power)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_power failed: %d\n", DRIVER_NAME, status);
+      zxlogf(ERROR, "%s: test_power failed: %d", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_spi(&spi)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_spi failed: %d\n", DRIVER_NAME, status);
+      zxlogf(ERROR, "%s: test_spi failed: %d", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_pwm(&pwm)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_pwm failed: %d\n", DRIVER_NAME, status);
+      zxlogf(ERROR, "%s: test_pwm failed: %d", DRIVER_NAME, status);
       return status;
     }
   }
@@ -655,7 +655,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
   status = device_add(parent, &args, &test->zxdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_add failed: %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: device_add failed: %d", DRIVER_NAME, status);
     free(test);
     return status;
   }
@@ -663,20 +663,20 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   // Make sure we can read metadata added to a fragment.
   status = device_get_metadata_size(test->zxdev, DEVICE_METADATA_PRIVATE, &size);
   if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed: %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: device_get_metadata_size failed: %d", DRIVER_NAME, status);
     device_async_remove(test->zxdev);
     return ZX_ERR_INTERNAL;
   }
   status =
       device_get_metadata(test->zxdev, DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata), &size);
   if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
-    zxlogf(ERROR, "%s: device_get_metadata failed: %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: device_get_metadata failed: %d", DRIVER_NAME, status);
     device_async_remove(test->zxdev);
     return ZX_ERR_INTERNAL;
   }
 
   if (metadata.metadata_value != 12345) {
-    zxlogf(ERROR, "%s: device_get_metadata failed: %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: device_get_metadata failed: %d", DRIVER_NAME, status);
     device_async_remove(test->zxdev);
     return ZX_ERR_INTERNAL;
   }

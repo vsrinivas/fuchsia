@@ -164,7 +164,7 @@ zx_status_t Mt8167::Msdc2Init() {
   zx_status_t status = ddk::MmioBuffer::Create(kIocfgBaseAligned, kIocfgSizeAligned, *root_resource,
                                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &iocfg_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to set MSDC2 GPIOs: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Failed to set MSDC2 GPIOs: %d", __FUNCTION__, status);
     return status;
   }
 
@@ -214,7 +214,7 @@ zx_status_t Mt8167::Msdc2Init() {
   status = ddk::MmioBuffer::Create(kGpioBaseAligned, kGpioSizeAligned, *root_resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to set MSDC2 GPIOs: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Failed to set MSDC2 GPIOs: %d", __FUNCTION__, status);
     return status;
   }
 
@@ -271,7 +271,7 @@ zx_status_t Mt8167::Msdc2Init() {
   }
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC2 failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC2 failed: %d", __FUNCTION__, status);
   }
 
   return status;

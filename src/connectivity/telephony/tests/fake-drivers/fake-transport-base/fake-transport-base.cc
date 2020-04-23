@@ -87,19 +87,19 @@ zx_status_t Device::SetSnoopChannelToDevice(zx::channel channel) {
   } else {
     status = snoop_channel_port_.wait(zx::deadline_after(zx::sec(0)), &packet);
     if (status == ZX_ERR_TIMED_OUT) {
-      zxlogf(ERROR, "tel-fake-transport: timed out: %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "tel-fake-transport: timed out: %s", zx_status_get_string(status));
     } else if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
-      zxlogf(INFO, "tel-fake-transport: snoop channel peer closed\n");
+      zxlogf(INFO, "tel-fake-transport: snoop channel peer closed");
       // snoop_channel_.reset();
       (void)snoop_channel_.release();
     }
   }
 
   if (snoop_channel_.is_valid()) {
-    zxlogf(ERROR, "tel-fake-transport: snoop channel already connected\n");
+    zxlogf(ERROR, "tel-fake-transport: snoop channel already connected");
     result = ZX_ERR_ALREADY_BOUND;
   } else if (channel == ZX_HANDLE_INVALID) {
-    zxlogf(ERROR, "tel-fake-transport: get invalid snoop channel handle\n");
+    zxlogf(ERROR, "tel-fake-transport: get invalid snoop channel handle");
     result = ZX_ERR_BAD_HANDLE;
   } else {
     snoop_channel_.reset(channel.release());
@@ -129,13 +129,13 @@ void Device::Release() { delete this; }
 
 void Device::Unbind() {
   if (!fake_ctrl_thread_.joinable()) {
-    zxlogf(ERROR, "tel-fake-transport: unbind(): thrd unjoinable\n");
+    zxlogf(ERROR, "tel-fake-transport: unbind(): thrd unjoinable");
     return;
   }
   zx_port_packet_t packet = {};
   packet.key = kTerminateMsg;
   ctrl_channel_port_.queue(&packet);
-  zxlogf(INFO, "tel-fake-transport: unbind(): joining thread\n");
+  zxlogf(INFO, "tel-fake-transport: unbind(): joining thread");
   fake_ctrl_thread_.join();
 
   device_remove_deprecated(tel_dev_);
@@ -152,10 +152,10 @@ zx_status_t Device::GetProtocol(uint32_t proto_id, void* out_proto) {
 zx_status_t Device::SetChannelToDevice(zx::channel transport) {
   zx_status_t result = ZX_OK;
   if (ctrl_channel_.is_valid()) {
-    zxlogf(ERROR, "tel-fake-transport: already bound, failing\n");
+    zxlogf(ERROR, "tel-fake-transport: already bound, failing");
     result = ZX_ERR_ALREADY_BOUND;
   } else if (transport == ZX_HANDLE_INVALID) {
-    zxlogf(ERROR, "tel-fake-transport: invalid channel handle\n");
+    zxlogf(ERROR, "tel-fake-transport: invalid channel handle");
     result = ZX_ERR_BAD_HANDLE;
   } else {
     ctrl_channel_.reset(transport.release());

@@ -163,7 +163,7 @@ zx_status_t Vim::SdioInit() {
   status = pbus_.CompositeDeviceAdd(&aml_sd_emmc_dev, sdio_fragments, fbl::count_of(sdio_fragments),
                                     UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "SdioInit could not add aml_sd_emmc_dev: %d\n", status);
+    zxlogf(ERROR, "SdioInit could not add aml_sd_emmc_dev: %d", status);
     return status;
   }
 
@@ -186,7 +186,7 @@ zx_status_t Vim::SdioInit() {
 
   status = DdkAddComposite("wifi", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_add_composite failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_add_composite failed: %d", __func__, status);
     return status;
   }
 

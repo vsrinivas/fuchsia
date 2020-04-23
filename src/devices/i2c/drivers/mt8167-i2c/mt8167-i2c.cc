@@ -59,7 +59,7 @@ zx_status_t Mt8167I2c::I2cImplTransact(uint32_t id, const i2c_impl_op_t* ops, si
     // TODO(andresoportus): Add support for HW transaction (write followed by read).
     status = Transact(ops[i].is_read, id, addr, ops[i].data_buffer, ops[i].data_size, ops[i].stop);
     if (status != ZX_OK && bind_finished_) {
-      zxlogf(ERROR, "%s: error in bus id: %u  addr: 0x%X  size: %lu\n", __func__, id, addr,
+      zxlogf(ERROR, "%s: error in bus id: %u  addr: 0x%X  size: %lu", __func__, id, addr,
              ops[i].data_size);
       Reset(id);
       return status;
@@ -73,9 +73,9 @@ int Mt8167I2c::IrqThread() {
   zx_port_packet_t packet;
   while (1) {
     auto status = irq_port_.wait(zx::time::infinite(), &packet);
-    zxlogf(TRACE, "Port key %lu triggered\n", packet.key);
+    zxlogf(TRACE, "Port key %lu triggered", packet.key);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: irq_port_.wait failed %d \n", __func__, status);
+      zxlogf(ERROR, "%s: irq_port_.wait failed %d ", __func__, status);
       return status;
     }
     auto id = static_cast<uint32_t>(packet.key);
@@ -138,10 +138,10 @@ zx_status_t Mt8167I2c::Transact(bool is_read, uint32_t id, uint8_t addr, void* b
   auto st = IntrStatReg::Get().ReadFrom(&keys_[id].mmio);
   if (st.arb_lost() || st.hs_nacker() || st.ackerr()) {
     if (bind_finished_) {
-      zxlogf(ERROR, "%s: I2C error 0x%X\n", __func__,
+      zxlogf(ERROR, "%s: I2C error 0x%X", __func__,
              IntrStatReg::Get().ReadFrom(&keys_[id].mmio).reg_value());
       if (st.ackerr()) {
-        zxlogf(ERROR, "%s: No I2C ack reply from peripheral\n", __func__);
+        zxlogf(ERROR, "%s: No I2C ack reply from peripheral", __func__);
       }
     }
     return ZX_ERR_INTERNAL;
@@ -180,7 +180,7 @@ int Mt8167I2c::TestThread() {
     };
     auto status = I2cImplTransact(bus_id, ops, countof(ops));
     if (status == ZX_OK) {
-      zxlogf(INFO, "I2C Addr: 0x%02X Reg:0x%02X Value:0x%02X\n", addr, data_write, data_read);
+      zxlogf(INFO, "I2C Addr: 0x%02X Reg:0x%02X Value:0x%02X", addr, data_write, data_read);
     }
   }
 #endif
@@ -190,12 +190,12 @@ int Mt8167I2c::TestThread() {
 zx_status_t Mt8167I2c::GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* gpios) {
   ddk::CompositeProtocolClient composite(parent());
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Could not get composite protocol\n", __FILE__);
+    zxlogf(ERROR, "%s: Could not get composite protocol", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
   auto fragment_count = composite.GetFragmentCount();
   if (fragment_count != kMaxFragments) {
-    zxlogf(ERROR, "%s Wrong number of fragments %u\n", __func__, fragment_count);
+    zxlogf(ERROR, "%s Wrong number of fragments %u", __func__, fragment_count);
     return ZX_ERR_INTERNAL;
   }
   size_t actual = 0;
@@ -210,14 +210,14 @@ zx_status_t Mt8167I2c::GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* gpios) {
   fbl::AllocChecker ac;
   gpios->reset(new (&ac) ddk::GpioProtocolClient[gpio_count], gpio_count);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s ZX_ERR_NO_MEMORY\n", __FUNCTION__);
+    zxlogf(ERROR, "%s ZX_ERR_NO_MEMORY", __FUNCTION__);
     return ZX_ERR_NO_MEMORY;
   }
 
   for (uint32_t i = 0; i < gpio_count; i++) {
     auto status = device_get_protocol(fragments[i + 1], ZX_PROTOCOL_GPIO, &((*gpios)[i]));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s ZX_PROTOCOL_GPIO failed\n", __FUNCTION__);
+      zxlogf(ERROR, "%s ZX_PROTOCOL_GPIO failed", __FUNCTION__);
       return status;
     }
   }
@@ -268,12 +268,12 @@ zx_status_t Mt8167I2c::Bind() {
 
   ddk::CompositeProtocolClient composite(parent());
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Could not get composite protocol\n", __FILE__);
+    zxlogf(ERROR, "%s: Could not get composite protocol", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
   auto fragment_count = composite.GetFragmentCount();
   if (fragment_count != kMaxFragments) {
-    zxlogf(ERROR, "%s Wrong number of fragments %u\n", __func__, fragment_count);
+    zxlogf(ERROR, "%s Wrong number of fragments %u", __func__, fragment_count);
     return ZX_ERR_INTERNAL;
   }
   size_t actual = 0;
@@ -287,20 +287,20 @@ zx_status_t Mt8167I2c::Bind() {
   pdev_device_info_t info;
   status = pdev.GetDeviceInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s pdev_get_device_info failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s pdev_get_device_info failed %d", __FUNCTION__, status);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   bus_count_ = info.mmio_count - 1;  // Last MMIO is for XO clock.
   if (bus_count_ != MT8167_I2C_CNT) {
-    zxlogf(ERROR, "%s wrong I2C count %d\n", __FUNCTION__, bus_count_);
+    zxlogf(ERROR, "%s wrong I2C count %d", __FUNCTION__, bus_count_);
     return ZX_ERR_INTERNAL;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev.MapMmio(bus_count_, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s MapMmio %u failed %d\n", __FUNCTION__, bus_count_, status);
+    zxlogf(ERROR, "%s MapMmio %u failed %d", __FUNCTION__, bus_count_, status);
     return status;
   }
   xo_regs_ = XoRegs(std::move(*mmio));  // Last MMIO is for XO clock.
@@ -308,14 +308,14 @@ zx_status_t Mt8167I2c::Bind() {
   for (uint32_t id = 0; id < bus_count_; id++) {
     status = pdev.MapMmio(id, &mmio);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s MapMmio %d failed %d\n", __FUNCTION__, id, status);
+      zxlogf(ERROR, "%s MapMmio %d failed %d", __FUNCTION__, id, status);
       return status;
     }
 
     zx::event event;
     status = zx::event::create(0, &event);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s zx::event::create failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s zx::event::create failed %d", __FUNCTION__, status);
       return status;
     }
     keys_.push_back({std::move(*mmio), zx::interrupt(), std::move(event)});
@@ -350,7 +350,7 @@ zx_status_t Mt8167I2c::Bind() {
 
   status = DdkAdd("mt8167-i2c");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s DdkAdd failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s DdkAdd failed: %d", __FUNCTION__, status);
     ShutDown();
   }
   return status;
@@ -375,7 +375,7 @@ zx_status_t Mt8167I2c::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   auto dev = fbl::make_unique_checked<Mt8167I2c>(&ac, parent);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s ZX_ERR_NO_MEMORY\n", __FUNCTION__);
+    zxlogf(ERROR, "%s ZX_ERR_NO_MEMORY", __FUNCTION__);
     return ZX_ERR_NO_MEMORY;
   }
 

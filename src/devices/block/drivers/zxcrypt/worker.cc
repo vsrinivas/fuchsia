@@ -50,21 +50,21 @@ zx_status_t Worker::Start(Device* device, const DdkVolume& volume, zx::port&& po
   zx_status_t rc;
 
   if (!device) {
-    zxlogf(ERROR, "bad parameters: device=%p\n", device);
+    zxlogf(ERROR, "bad parameters: device=%p", device);
     return ZX_ERR_INVALID_ARGS;
   }
   device_ = device;
 
   if ((rc = volume.Bind(crypto::Cipher::kEncrypt, &encrypt_)) != ZX_OK ||
       (rc = volume.Bind(crypto::Cipher::kDecrypt, &decrypt_)) != ZX_OK) {
-    zxlogf(ERROR, "failed to bind ciphers: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "failed to bind ciphers: %s", zx_status_get_string(rc));
     return rc;
   }
 
   port_ = std::move(port);
 
   if (thrd_create_with_name(&thrd_, WorkerRun, this, "zxcrypt_worker") != thrd_success) {
-    zxlogf(ERROR, "failed to start thread\n");
+    zxlogf(ERROR, "failed to start thread");
     return ZX_ERR_INTERNAL;
   }
 
@@ -81,7 +81,7 @@ zx_status_t Worker::Run() {
   while (true) {
     // Read request
     if ((rc = port_.wait(zx::time::infinite(), &packet)) != ZX_OK) {
-      zxlogf(ERROR, "failed to read request: %s\n", zx_status_get_string(rc));
+      zxlogf(ERROR, "failed to read request: %s", zx_status_get_string(rc));
       return rc;
     }
     ZX_DEBUG_ASSERT(packet.key == 0);
@@ -93,10 +93,10 @@ zx_status_t Worker::Run() {
       case kBlockRequest:
         break;
       case kStopRequest:
-        zxlogf(TRACE, "worker %p stopping.\n", this);
+        zxlogf(TRACE, "worker %p stopping.", this);
         return ZX_OK;
       default:
-        zxlogf(ERROR, "unknown request: 0x%016" PRIx64 "\n", packet.user.u64[0]);
+        zxlogf(ERROR, "unknown request: 0x%016" PRIx64 "", packet.user.u64[0]);
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -128,18 +128,18 @@ zx_status_t Worker::EncryptWrite(block_op_t* block) {
   if (mul_overflow(block->rw.length, device_->block_size(), &length) ||
       mul_overflow(block->rw.offset_dev, device_->block_size(), &offset_dev) ||
       mul_overflow(extra->offset_vmo, device_->block_size(), &offset_vmo)) {
-    zxlogf(ERROR, "overflow; length=%" PRIu32 "; offset_dev=%" PRIu64 "; offset_vmo=%" PRIu64 "\n",
+    zxlogf(ERROR, "overflow; length=%" PRIu32 "; offset_dev=%" PRIu64 "; offset_vmo=%" PRIu64 "",
            block->rw.length, block->rw.offset_dev, extra->offset_vmo);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   // Copy and encrypt the plaintext
   if ((rc = zx_vmo_read(extra->vmo, extra->data, offset_vmo, length)) != ZX_OK) {
-    zxlogf(ERROR, "zx_vmo_read() failed: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "zx_vmo_read() failed: %s", zx_status_get_string(rc));
     return rc;
   }
   if ((rc = encrypt_.Encrypt(extra->data, offset_dev, length, extra->data) != ZX_OK)) {
-    zxlogf(ERROR, "failed to encrypt: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "failed to encrypt: %s", zx_status_get_string(rc));
     return rc;
   }
 
@@ -156,7 +156,7 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
   if (mul_overflow(block->rw.length, device_->block_size(), &length) ||
       mul_overflow(block->rw.offset_dev, device_->block_size(), &offset_dev) ||
       mul_overflow(block->rw.offset_vmo, device_->block_size(), &offset_vmo)) {
-    zxlogf(ERROR, "overflow; length=%" PRIu32 "; offset_dev=%" PRIu64 "; offset_vmo=%" PRIu64 "\n",
+    zxlogf(ERROR, "overflow; length=%" PRIu32 "; offset_dev=%" PRIu64 "; offset_vmo=%" PRIu64 "",
            block->rw.length, block->rw.offset_dev, block->rw.offset_vmo);
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -166,7 +166,7 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
   uintptr_t address;
   constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   if ((rc = zx_vmar_map(root, flags, 0, block->rw.vmo, offset_vmo, length, &address)) != ZX_OK) {
-    zxlogf(ERROR, "zx::vmar::root_self()->map() failed: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "zx::vmar::root_self()->map() failed: %s", zx_status_get_string(rc));
     return rc;
   }
   auto cleanup =
@@ -175,7 +175,7 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
   // Decrypt in place
   uint8_t* data = reinterpret_cast<uint8_t*>(address);
   if ((rc = decrypt_.Decrypt(data, offset_dev, length, data)) != ZX_OK) {
-    zxlogf(ERROR, "failed to decrypt: %s\n", zx_status_get_string(rc));
+    zxlogf(ERROR, "failed to decrypt: %s", zx_status_get_string(rc));
     return rc;
   }
 
@@ -193,7 +193,7 @@ zx_status_t Worker::Stop() {
   thrd_join(thrd_, &rc);
 
   if (rc != ZX_OK) {
-    zxlogf(WARN, "worker exited with error: %s\n", zx_status_get_string(rc));
+    zxlogf(WARN, "worker exited with error: %s", zx_status_get_string(rc));
     return rc;
   }
 

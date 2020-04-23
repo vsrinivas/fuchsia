@@ -18,7 +18,7 @@ zx_status_t Bus::Create(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
     return ZX_OK;
   }
 
-  zxlogf(ERROR, "rtl88xx: CreateUsbBus() returned %s\n", zx_status_get_string(usb_status));
+  zxlogf(ERROR, "rtl88xx: CreateUsbBus() returned %s", zx_status_get_string(usb_status));
   return ZX_ERR_NOT_SUPPORTED;
 }
 

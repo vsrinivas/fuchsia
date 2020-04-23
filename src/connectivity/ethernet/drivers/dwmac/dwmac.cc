@@ -52,7 +52,7 @@ static inline T* offset_ptr(U* ptr, size_t offset) {
 }
 
 int DWMacDevice::Thread() {
-  zxlogf(INFO, "dwmac: ethmac started\n");
+  zxlogf(INFO, "dwmac: ethmac started");
 
   zx_status_t status;
   while (true) {
@@ -62,7 +62,7 @@ int DWMacDevice::Thread() {
       break;
     }
     if (status != ZX_OK) {
-      zxlogf(ERROR, "dwmac: Interrupt error\n");
+      zxlogf(ERROR, "dwmac: Interrupt error");
       break;
     }
     uint32_t stat = mmio_->Read32(DW_MAC_DMA_STATUS);
@@ -77,7 +77,7 @@ int DWMacDevice::Thread() {
     }
     if (stat & DMA_STATUS_AIS) {
       bus_errors_++;
-      zxlogf(ERROR, "dwmac: abnormal interrupt. status = 0x%08x\n", stat);
+      zxlogf(ERROR, "dwmac: abnormal interrupt. status = 0x%08x", stat);
     }
   }
   return status;
@@ -103,10 +103,10 @@ int DWMacDevice::WorkerThread() {
 
   zx_status_t status = DdkAdd("Designware MAC");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwmac: Could not create eth device: %d\n", status);
+    zxlogf(ERROR, "dwmac: Could not create eth device: %d", status);
     return status;
   } else {
-    zxlogf(INFO, "dwmac: Added dwMac device\n");
+    zxlogf(INFO, "dwmac: Added dwMac device");
   }
   return status;
 }
@@ -119,7 +119,7 @@ void DWMacDevice::UpdateLinkStatus() {
     if (ethernet_client_.is_valid()) {
       ethernet_client_.Status(online_ ? ETHERNET_STATUS_ONLINE : 0u);
     } else {
-      zxlogf(ERROR, "dwmac: System not ready\n");
+      zxlogf(ERROR, "dwmac: System not ready");
     }
   }
   if (online_) {
@@ -127,34 +127,34 @@ void DWMacDevice::UpdateLinkStatus() {
   } else {
     mmio_->ClearBits32((GMAC_CONF_TE | GMAC_CONF_RE), DW_MAC_MAC_CONF);
   }
-  zxlogf(INFO, "dwmac: Link is now %s\n", online_ ? "up" : "down");
+  zxlogf(INFO, "dwmac: Link is now %s", online_ ? "up" : "down");
 }
 
 zx_status_t DWMacDevice::InitPdev() {
   // Map mac control registers and dma control registers.
   auto status = pdev_.MapMmio(kEthMacMmio, &mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwmac: could not map dwmac mmio: %d\n", status);
+    zxlogf(ERROR, "dwmac: could not map dwmac mmio: %d", status);
     return status;
   }
 
   // Map dma interrupt.
   status = pdev_.GetInterrupt(0, &dma_irq_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwmac: could not map dma interrupt\n");
+    zxlogf(ERROR, "dwmac: could not map dma interrupt");
     return status;
   }
 
   // Get our bti.
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwmac: could not obtain bti: %d\n", status);
+    zxlogf(ERROR, "dwmac: could not obtain bti: %d", status);
     return status;
   }
 
   // Get ETH_BOARD protocol.
   if (!eth_board_.is_valid()) {
-    zxlogf(ERROR, "dwmac: could not obtain ETH_BOARD protocol: %d\n", status);
+    zxlogf(ERROR, "dwmac: could not obtain ETH_BOARD protocol: %d", status);
     return status;
   }
 
@@ -168,7 +168,7 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
 
   auto status = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get ZX_PROTOCOL_COMPOSITE\n", __func__);
+    zxlogf(ERROR, "%s could not get ZX_PROTOCOL_COMPOSITE", __func__);
     return status;
   }
 
@@ -176,19 +176,19 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
   size_t actual;
   composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
   if (actual != 2) {
-    zxlogf(ERROR, "%s could not get fragments\n", __func__);
+    zxlogf(ERROR, "%s could not get fragments", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get ZX_PROTOCOL_PDEV\n", __func__);
+    zxlogf(ERROR, "%s could not get ZX_PROTOCOL_PDEV", __func__);
     return status;
   }
 
   status = device_get_protocol(fragments[FRAGMENT_ETH_BOARD], ZX_PROTOCOL_ETH_BOARD, &eth_board);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get ZX_PROTOCOL_ETH_BOARD\n", __func__);
+    zxlogf(ERROR, "%s could not get ZX_PROTOCOL_ETH_BOARD", __func__);
     return status;
   }
 
@@ -236,7 +236,7 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
   status = device_get_metadata(fragments[FRAGMENT_PDEV], DEVICE_METADATA_ETH_PHY_DEVICE, &phy_info,
                                sizeof(eth_dev_metadata_t), &actual);
   if (status != ZX_OK || actual != sizeof(eth_dev_metadata_t)) {
-    zxlogf(ERROR, "dwmac: Could not get PHY metadata %d\n", status);
+    zxlogf(ERROR, "dwmac: Could not get PHY metadata %d", status);
     return status;
   }
 
@@ -261,7 +261,7 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
   zx_device_t* dev;
   status = device_add(device, &phy_device_args, &dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwmac: Could not create phy device: %d\n", status);
+    zxlogf(ERROR, "dwmac: Could not create phy device: %d", status);
 
     return status;
   }
@@ -383,20 +383,20 @@ DWMacDevice::DWMacDevice(zx_device_t* device, pdev_protocol_t* pdev,
 void DWMacDevice::ReleaseBuffers() {
   // Unpin the memory used for the dma buffers
   if (txn_buffer_->UnPin() != ZX_OK) {
-    zxlogf(ERROR, "dwmac: Error unpinning transaction buffers\n");
+    zxlogf(ERROR, "dwmac: Error unpinning transaction buffers");
   }
   if (desc_buffer_->UnPin() != ZX_OK) {
-    zxlogf(ERROR, "dwmac: Error unpinning description buffers\n");
+    zxlogf(ERROR, "dwmac: Error unpinning description buffers");
   }
 }
 
 void DWMacDevice::DdkRelease() {
-  zxlogf(INFO, "Ethernet release...\n");
+  zxlogf(INFO, "Ethernet release...");
   delete this;
 }
 
 void DWMacDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
-  zxlogf(INFO, "Ethernet DdkUnbind\n");
+  zxlogf(INFO, "Ethernet DdkUnbind");
   ShutDown();
   txn.Reply();
 }
@@ -437,7 +437,7 @@ zx_status_t DWMacDevice::GetMAC(zx_device_t* dev) {
     buffer[5] = static_cast<uint8_t>((hi >> 8) & 0xff);
   }
 
-  zxlogf(INFO, "dwmac: MAC address %02x:%02x:%02x:%02x:%02x:%02x\n", buffer[0], buffer[1],
+  zxlogf(INFO, "dwmac: MAC address %02x:%02x:%02x:%02x:%02x:%02x", buffer[0], buffer[1],
          buffer[2], buffer[3], buffer[4], buffer[5]);
   memcpy(mac_, buffer, sizeof mac_);
   return ZX_OK;
@@ -453,7 +453,7 @@ zx_status_t DWMacDevice::EthernetImplQuery(uint32_t options, ethernet_info_t* in
 }
 
 void DWMacDevice::EthernetImplStop() {
-  zxlogf(INFO, "Stopping Ethermac\n");
+  zxlogf(INFO, "Stopping Ethermac");
   fbl::AutoLock lock(&lock_);
   ethernet_client_.clear();
 }
@@ -467,7 +467,7 @@ zx_status_t DWMacDevice::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
   } else {
     ethernet_client_ = ddk::EthernetIfcProtocolClient(ifc);
     UpdateLinkStatus();
-    zxlogf(INFO, "dwmac: Started\n");
+    zxlogf(INFO, "dwmac: Started");
   }
   return ZX_OK;
 }
@@ -499,8 +499,8 @@ zx_status_t DWMacDevice::InitDevice() {
   mmio_->Write32(~0, DW_MAC_MAC_HASHTABLELO);
 
   // TODO - configure filters
-  zxlogf(INFO, "macaddr0hi = %08x\n", mmio_->Read32(DW_MAC_MAC_MACADDR0HI));
-  zxlogf(INFO, "macaddr0lo = %08x\n", mmio_->Read32(DW_MAC_MAC_MACADDR0LO));
+  zxlogf(INFO, "macaddr0hi = %08x", mmio_->Read32(DW_MAC_MAC_MACADDR0HI));
+  zxlogf(INFO, "macaddr0lo = %08x", mmio_->Read32(DW_MAC_MAC_MACADDR0LO));
 
   mmio_->SetBits32((1 << 10) | (1 << 4) | (1 << 0), DW_MAC_MAC_FRAMEFILT);
 
@@ -539,7 +539,7 @@ void DWMacDevice::ProcRxBuffer(uint32_t int_status) {
     }
     size_t fr_len = (pkt_stat & DESC_RXSTS_FRMLENMSK) >> DESC_RXSTS_FRMLENSHFT;
     if (fr_len > kTxnBufSize) {
-      zxlogf(ERROR, "dwmac: unsupported packet size received\n");
+      zxlogf(ERROR, "dwmac: unsupported packet size received");
       return;
     }
 
@@ -553,7 +553,7 @@ void DWMacDevice::ProcRxBuffer(uint32_t int_status) {
         ethernet_client_.Recv(temptr, fr_len, 0);
 
       } else {
-        zxlogf(ERROR, "Dropping bad packet\n");
+        zxlogf(ERROR, "Dropping bad packet");
       }
     };
 
@@ -585,7 +585,7 @@ void DWMacDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbu
     return;
   }
   if (tx_descriptors_[curr_tx_buf_].txrx_status & DESC_TXSTS_OWNBYDMA) {
-    zxlogf(ERROR, "dwmac: TX buffer overrun@ %u\n", curr_tx_buf_);
+    zxlogf(ERROR, "dwmac: TX buffer overrun@ %u", curr_tx_buf_);
     op.Complete(ZX_ERR_UNAVAILABLE);
     return;
   }
@@ -613,7 +613,7 @@ void DWMacDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbu
 
 zx_status_t DWMacDevice::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
                                               size_t data_size) {
-  zxlogf(INFO, "dwmac: SetParam called  %x  %x\n", param, value);
+  zxlogf(INFO, "dwmac: SetParam called  %x  %x", param, value);
   return ZX_OK;
 }
 

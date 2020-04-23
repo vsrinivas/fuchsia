@@ -174,7 +174,7 @@ zx_status_t As370::AudioInit() {
   // DMA device.
   auto status = pbus_.DeviceAdd(&dhub);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s adding Dhub failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s adding Dhub failed %d", __FILE__, status);
     return status;
   }
 
@@ -194,7 +194,7 @@ zx_status_t As370::AudioInit() {
 
   status = DdkAddComposite("audio-max98373", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s DdkAddComposite failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
     return status;
   }
 
@@ -206,7 +206,7 @@ zx_status_t As370::AudioInit() {
       pbus_.CompositeDeviceAdd(&controller_out, controller_fragments, countof(controller_fragments),
                                controller_coresident_device_index);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s adding audio controller out device failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
     return status;
   }
 
@@ -218,7 +218,7 @@ zx_status_t As370::AudioInit() {
   status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments),
                                     in_coresident_device_index);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s adding audio input device failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
     return status;
   }
   return ZX_OK;

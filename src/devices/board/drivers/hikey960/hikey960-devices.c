@@ -247,37 +247,37 @@ zx_status_t hikey960_add_devices(hikey960_t* hikey) {
   zx_status_t status;
 
   if ((status = pbus_device_add(&hikey->pbus, &hikey960_clk_dev)) != ZX_OK) {
-    zxlogf(ERROR, "hikey960_add_devices could not add clk_dev: %d\n", status);
+    zxlogf(ERROR, "hikey960_add_devices could not add clk_dev: %d", status);
   }
   if ((status = hikey960_usb_init(hikey)) != ZX_OK) {
-    zxlogf(ERROR, "hikey960_usb_init failed: %d\n", status);
+    zxlogf(ERROR, "hikey960_usb_init failed: %d", status);
   }
 
   if ((status = pbus_device_add(&hikey->pbus, &ufs_dev)) != ZX_OK) {
-    zxlogf(ERROR, "hikey960_add_devices could not add ufs_dev: %d\n", status);
+    zxlogf(ERROR, "hikey960_add_devices could not add ufs_dev: %d", status);
     return status;
   }
 
   if ((status = pbus_device_add(&hikey->pbus, &mali_dev)) != ZX_OK) {
-    zxlogf(ERROR, "hikey960_add_devices could not add mali_dev: %d\n", status);
+    zxlogf(ERROR, "hikey960_add_devices could not add mali_dev: %d", status);
     return status;
   }
 
 #if GPIO_TEST
   if ((status = pbus_device_add(&hikey->pbus, &gpio_test_dev)) != ZX_OK) {
-    zxlogf(ERROR, "hikey960_add_devices could not add gpio_test_dev: %d\n", status);
+    zxlogf(ERROR, "hikey960_add_devices could not add gpio_test_dev: %d", status);
   }
 #endif
 
 #if I2C_TEST
   if ((status = pbus_device_add(&hikey->pbus, &i2c_test_dev)) != ZX_OK) {
-    zxlogf(ERROR, "hikey960_add_devices could not add i2c_test_dev: %d\n", status);
+    zxlogf(ERROR, "hikey960_add_devices could not add i2c_test_dev: %d", status);
   }
 #endif
 
 #if ENABLE_DISPLAY
   if ((status = pbus_device_add(&hikey->pbus, &dsi_dev)) != ZX_OK) {
-    zxlogf(ERROR, "hikey960_add_devices could not add hi_display_dev: %d\n", status);
+    zxlogf(ERROR, "hikey960_add_devices could not add hi_display_dev: %d", status);
   }
 #endif
 

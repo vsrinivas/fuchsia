@@ -91,7 +91,7 @@ int Vim::Thread() {
   // "vim2-machina" boards. The latter of which does not initialize devices.
   status = pbus_.GetBoardInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Thread: GetBoardInfo failed: %d\n", status);
+    zxlogf(ERROR, "Thread: GetBoardInfo failed: %d", status);
     return -1;
   }
 
@@ -102,84 +102,84 @@ int Vim::Thread() {
   // Start protocol drivers before adding platform devices.
   // Sysmem is started early so zx_vmo_create_contiguous() works.
   if ((status = SysmemInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: SysmemInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: SysmemInit failed: %d", status);
     return -1;
   }
 
   if ((status = GpioInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: GpioInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: GpioInit failed: %d", status);
     return -1;
   }
 
   if ((status = I2cInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: I2cInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: I2cInit failed: %d", status);
     return -1;
   }
 
   if ((status = ClkInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: ClkInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: ClkInit failed: %d", status);
     return -1;
   }
 
   if ((status = CanvasInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: CanvasInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: CanvasInit failed: %d", status);
     return -1;
   }
 
   // Start platform devices.
   if ((status = UartInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: UartInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: UartInit failed: %d", status);
     return -1;
   }
 
   if ((status = EmmcInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: EmmcInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: EmmcInit failed: %d", status);
     return -1;
   }
 
   if ((status = SdioInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: SdioInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: SdioInit failed: %d", status);
     return -1;
   }
 
   if ((status = EthInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: EthInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: EthInit failed: %d", status);
     return -1;
   }
 
   if ((status = UsbInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: UsbInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: UsbInit failed: %d", status);
     return -1;
   }
 
   if ((status = MaliInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: MaliInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: MaliInit failed: %d", status);
     return -1;
   }
 
   if ((status = ThermalInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: ThermalInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: ThermalInit failed: %d", status);
     return -1;
   }
 
   if ((status = DisplayInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: DisplayInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: DisplayInit failed: %d", status);
     return -1;
   }
 
   if ((status = VideoInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: VideoInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: VideoInit failed: %d", status);
     return -1;
   }
 
   // Remove this when not needed for testing any longer
   if ((status = pbus_.DeviceAdd(&tee_dev)) != ZX_OK) {
-    zxlogf(ERROR, "vim_start_thread, could not add tee_dev: %d\n", status);
+    zxlogf(ERROR, "vim_start_thread, could not add tee_dev: %d", status);
     return -1;
   }
 
   if ((status = SdInit()) != ZX_OK) {
-    zxlogf(ERROR, "Thread: SdInit failed: %d\n", status);
+    zxlogf(ERROR, "Thread: SdInit failed: %d", status);
     return -1;
   }
 

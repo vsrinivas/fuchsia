@@ -23,7 +23,7 @@ static void xdc_ring_doorbell(xdc_t* xdc, xdc_endpoint_t* ep) {
 static zx_status_t xdc_get_dequeue_ptr_locked(xdc_t* xdc, xdc_endpoint_t* ep, uint64_t* out_dequeue)
     __TA_REQUIRES(xdc->lock) {
   if (ep->state != XDC_EP_STATE_STOPPED) {
-    zxlogf(ERROR, "tried to read dequeue pointer of %s EP while not stopped, state is: %d\n",
+    zxlogf(ERROR, "tried to read dequeue pointer of %s EP while not stopped, state is: %d",
            ep->name, ep->state);
     return ZX_ERR_BAD_STATE;
   }
@@ -113,7 +113,7 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in, bool is_
   if (req->header.length > 0) {
     zx_status_t status = usb_request_physmap(req, xdc->bti_handle);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: usb_request_physmap failed: %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: usb_request_physmap failed: %d", __FUNCTION__, status);
       mtx_unlock(&xdc->lock);
       return status;
     }
@@ -164,7 +164,7 @@ zx_status_t xdc_restart_transfer_ring_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
   xhci_transfer_ring_t* ring = &ep->transfer_ring;
   xhci_trb_t* trb = xhci_transfer_ring_phys_to_trb(ring, dequeue_ptr);
   if (!trb) {
-    zxlogf(ERROR, "no valid TRB corresponding to dequeue_ptr: %lu\n", dequeue_ptr);
+    zxlogf(ERROR, "no valid TRB corresponding to dequeue_ptr: %lu", dequeue_ptr);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -222,11 +222,11 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     case TRB_CC_USB_TRANSACTION_ERROR:
     case TRB_CC_TRB_ERROR:
     case TRB_CC_STALL_ERROR:
-      zxlogf(ERROR, "xdc_handle_transfer_event: error condition code: %d\n", cc);
+      zxlogf(ERROR, "xdc_handle_transfer_event: error condition code: %d", cc);
       error = true;
       break;
     default:
-      zxlogf(ERROR, "xdc_handle_transfer_event: unexpected condition code %d\n", cc);
+      zxlogf(ERROR, "xdc_handle_transfer_event: unexpected condition code %d", cc);
       error = true;
       break;
   }
@@ -253,7 +253,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     if (trb_get_type(trb) == TRB_TRANSFER_NOOP) {
       // If it's the NO-OP TRB we queued when dealing with the halt condition,
       // there won't be a corresponding usb request.
-      zxlogf(TRACE, "xdc_handle_transfer_event: got a NO-OP TRB\n");
+      zxlogf(TRACE, "xdc_handle_transfer_event: got a NO-OP TRB");
       xhci_set_dequeue_ptr(ring, xhci_get_next_trb(ring, trb));
       xdc_process_transactions_locked(xdc, ep);
       return;
@@ -270,7 +270,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
   }
 
   if (!req) {
-    zxlogf(ERROR, "xdc_handle_transfer_event: unable to find request to complete\n");
+    zxlogf(ERROR, "xdc_handle_transfer_event: unable to find request to complete");
     return;
   }
 
@@ -286,7 +286,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     }
   }
   if (!found_req) {
-    zxlogf(ERROR, "xdc_handle_transfer_event: ignoring event for completed transfer\n");
+    zxlogf(ERROR, "xdc_handle_transfer_event: ignoring event for completed transfer");
     return;
   }
   // Remove request from pending_reqs.

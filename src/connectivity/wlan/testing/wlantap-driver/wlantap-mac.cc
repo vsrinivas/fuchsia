@@ -248,7 +248,7 @@ zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_device::MacRole
                             .proto_ops = &proto_ops};
   zx_status_t status = device_add(parent_phy, &args, &wlanmac->device_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: could not add device: %d", __func__, status);
     return status;
   }
   // Transfer ownership to devmgr

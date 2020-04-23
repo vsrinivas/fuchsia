@@ -33,7 +33,7 @@ void GpioTest::DdkRelease() {
 int GpioTest::OutputThread() {
   for (uint32_t i = 0; i < gpio_count_ - 1; i++) {
     if (gpios_[i].ConfigOut(0) != ZX_OK) {
-      zxlogf(ERROR, "gpio-test: ConfigOut failed for gpio %u\n", i);
+      zxlogf(ERROR, "gpio-test: ConfigOut failed for gpio %u", i);
       return -1;
     }
   }
@@ -55,23 +55,23 @@ int GpioTest::OutputThread() {
 // test thread that cycles runs tests for GPIO interrupts
 int GpioTest::InterruptThread() {
   if (gpios_[GPIO_BUTTON].ConfigIn(GPIO_PULL_DOWN) != ZX_OK) {
-    zxlogf(ERROR, "%s: gpio_config failed for gpio %u \n", __func__, GPIO_BUTTON);
+    zxlogf(ERROR, "%s: gpio_config failed for gpio %u ", __func__, GPIO_BUTTON);
     return -1;
   }
 
   if (gpios_[GPIO_BUTTON].GetInterrupt(ZX_INTERRUPT_MODE_EDGE_HIGH, &interrupt_) != ZX_OK) {
-    zxlogf(ERROR, "%s: gpio_get_interrupt failed for gpio %u\n", __func__, GPIO_BUTTON);
+    zxlogf(ERROR, "%s: gpio_get_interrupt failed for gpio %u", __func__, GPIO_BUTTON);
     return -1;
   }
 
   while (!done_) {
-    zxlogf(INFO, "Waiting for GPIO Test Input Interrupt\n");
+    zxlogf(INFO, "Waiting for GPIO Test Input Interrupt");
     auto status = interrupt_.wait(nullptr);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: interrupt wait failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s: interrupt wait failed %d", __func__, status);
       return -1;
     }
-    zxlogf(INFO, "Received GPIO Test Input Interrupt\n");
+    zxlogf(INFO, "Received GPIO Test Input Interrupt");
     uint8_t out;
     gpios_[GPIO_LED].Read(&out);
     gpios_[GPIO_LED].Write(!out);

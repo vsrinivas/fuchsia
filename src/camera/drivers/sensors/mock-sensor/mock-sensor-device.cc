@@ -14,10 +14,10 @@ zx_status_t MockSensorDevice::Create(void* ctx, zx_device_t* parent) {
 
   zx_status_t status = device->DdkAdd("mock-sensor");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "mock-sensor-device: Could not add mock-sensor: %d\n", status);
+    zxlogf(ERROR, "mock-sensor-device: Could not add mock-sensor: %d", status);
     return status;
   }
-  zxlogf(ERROR, "mock-sensor-device: Successfully added mock sensor: %d\n", status);
+  zxlogf(ERROR, "mock-sensor-device: Successfully added mock sensor: %d", status);
   // Device is held by DevMgr.
   __UNUSED auto* dev = device.release();
   return ZX_OK;

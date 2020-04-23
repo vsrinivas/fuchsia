@@ -96,7 +96,7 @@ zx_status_t publish_cpu_trace(zx_handle_t bti, zx_device_t* sys_root) {
   // add as a child of the sysroot
   zx_status_t status = device_add(sys_root, &args, &dev->zxdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "platform-bus: error %d in device_add(sys/cpu-trace)\n", status);
+    zxlogf(ERROR, "platform-bus: error %d in device_add(sys/cpu-trace)", status);
     cpu_trace_release(dev);
     return status;
   }

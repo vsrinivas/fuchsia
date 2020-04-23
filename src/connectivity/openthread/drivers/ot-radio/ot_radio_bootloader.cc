@@ -86,17 +86,17 @@ void OtRadioDeviceBootloader::PrintSpiCommand(int cmd, void *cmd_ptr, size_t cmd
   for (i = 0; i < cmd_size; i++) {
     zxlogf(TRACE, "0x%x ", cmd_buf[i]);
   }
-  zxlogf(TRACE, "\n");
+  zxlogf(TRACE, "");
 }
 
 OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, size_t cmd_size,
                                                                   size_t exp_resp_size) {
-  zxlogf(TRACE, "ot-radio: Sending command:\n");
+  zxlogf(TRACE, "ot-radio: Sending command:");
   PrintSpiCommand(reinterpret_cast<NlSpiBlBasicCmd *>(cmd)->cmd, cmd, cmd_size);
 
   zx_status_t status = dev_handle_->spi_.Transmit(cmd, cmd_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: spi transmit failed with status : %d for cmd : %d\n", status,
+    zxlogf(ERROR, "ot-radio: spi transmit failed with status : %d for cmd : %d", status,
            reinterpret_cast<NlSpiBlBasicCmd *>(cmd)->cmd);
     bl_zx_status = status;
     return BL_ERR_SPI_TRANSMIT_FAILED;
@@ -109,21 +109,21 @@ OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, 
     auto status = dev_handle_->port_.wait(zx::deadline_after(zx::sec(wait_time_sec)), &packet);
 
     if (status == ZX_ERR_TIMED_OUT) {
-      zxlogf(ERROR, "ot-radio: port wait timed out: %d\n", status);
+      zxlogf(ERROR, "ot-radio: port wait timed out: %d", status);
       bl_zx_status = ZX_ERR_TIMED_OUT;
       return BL_ERR_PORT_WAIT_TIMED_OUT;
     } else if (status != ZX_OK) {
-      zxlogf(ERROR, "ot-radio: port wait failed: %d\n", status);
+      zxlogf(ERROR, "ot-radio: port wait failed: %d", status);
       bl_zx_status = status;
       return BL_ERR_PORT_WAIT_FAILED;
     }
 
     if (packet.key == PORT_KEY_EXIT_THREAD) {
-      zxlogf(ERROR, "ot-radio: port key exit thread received\n");
+      zxlogf(ERROR, "ot-radio: port key exit thread received");
       return BL_ERR_PORT_KEY_EXIT_THREAD;
     } else if (packet.key == PORT_KEY_RADIO_IRQ) {
       dev_handle_->interrupt_.ack();
-      zxlogf(TRACE, "ot-radio: interrupt\n");
+      zxlogf(TRACE, "ot-radio: interrupt");
 
       // Read packet
       uint8_t i;
@@ -131,9 +131,9 @@ OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, 
       size_t read_length = exp_resp_size;
       dev_handle_->spi_.Receive(read_length, &dev_handle_->spi_rx_buffer_[0], read_length,
                                 &rx_actual);
-      zxlogf(TRACE, "ot-radio: rx_actual %lu expected : %lu\n", rx_actual, read_length);
+      zxlogf(TRACE, "ot-radio: rx_actual %lu expected : %lu", rx_actual, read_length);
       for (i = 0; i < read_length; i++) {
-        zxlogf(TRACE, "ot-radio: RX %2X %c\n", dev_handle_->spi_rx_buffer_[i],
+        zxlogf(TRACE, "ot-radio: RX %2X %c", dev_handle_->spi_rx_buffer_[i],
                isalnum(dev_handle_->spi_rx_buffer_[i]) ? dev_handle_->spi_rx_buffer_[i] : '#');
       }
 
@@ -149,19 +149,19 @@ OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, 
       // Special case to ignore -- in some cases it is found a spurious response
       // of all 0xff's is received. Ignore such responses for now
       if (response->cmd == 0xff) {
-        zxlogf(TRACE, "ot-radio: response received has cmd = 0xff, continuing\n");
+        zxlogf(TRACE, "ot-radio: response received has cmd = 0xff, continuing");
         continue;
       }
 
       cmd_sent = ~cmd_sent;
       if (response->cmd != cmd_sent) {
-        zxlogf(ERROR, "ot-radio: response received has cmd(%u) != cmd_sent(%u)\n", response->cmd,
+        zxlogf(ERROR, "ot-radio: response received has cmd(%u) != cmd_sent(%u)", response->cmd,
                cmd_sent);
         return BL_ERR_RESP_CMD_MISMATCH;
       }
 
       if (response->length != exp_resp_size) {
-        zxlogf(ERROR, "ot-radio: response received has length(%hu) != expected length(%zu)\n",
+        zxlogf(ERROR, "ot-radio: response received has length(%hu) != expected length(%zu)",
                response->length, exp_resp_size);
         return BL_ERR_RESP_LENGTH_MISMATCH;
       }
@@ -169,7 +169,7 @@ OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, 
       uint32_t expected_crc = BlModeCrc32(kSpiPacketCrc32InitValue, &response->length,
                                           exp_resp_size - sizeof(response->crc32));
       if (response->crc32 != expected_crc) {
-        zxlogf(ERROR, "ot-radio: response received has crc(%u) != expected crc(%u)\n",
+        zxlogf(ERROR, "ot-radio: response received has crc(%u) != expected crc(%u)",
                response->crc32, expected_crc);
         return BL_ERR_RESP_CRC_MISMATCH;
       }
@@ -191,25 +191,25 @@ bool OtRadioDeviceBootloader::FirmwareAlreadyUpToDateCRC(const std::vector<uint8
 zx_status_t OtRadioDeviceBootloader::PutRcpInBootloader() {
   zx_status_t status = ZX_OK;
 
-  zxlogf(TRACE, "ot-radio : putting rcp in bootloader\n");
+  zxlogf(TRACE, "ot-radio : putting rcp in bootloader");
 
   status = dev_handle_->gpio_[OT_RADIO_BOOTLOADER_PIN].Write(0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: gpio write failed\n");
+    zxlogf(ERROR, "ot-radio: gpio write failed");
     return status;
   }
   zx::nanosleep(zx::deadline_after(zx::msec(50)));
 
   status = dev_handle_->gpio_[OT_RADIO_RESET_PIN].Write(0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: gpio write failed\n");
+    zxlogf(ERROR, "ot-radio: gpio write failed");
     return status;
   }
   zx::nanosleep(zx::deadline_after(zx::msec(50)));
 
   status = dev_handle_->gpio_[OT_RADIO_RESET_PIN].Write(1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: gpio write failed\n");
+    zxlogf(ERROR, "ot-radio: gpio write failed");
     return status;
   }
 
@@ -223,11 +223,11 @@ zx_status_t OtRadioDeviceBootloader::PutRcpInBootloader() {
 
   status = dev_handle_->gpio_[OT_RADIO_BOOTLOADER_PIN].Write(1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: gpio write failed\n");
+    zxlogf(ERROR, "ot-radio: gpio write failed");
     return status;
   }
 
-  zxlogf(TRACE, "ot-radio : device has been put in bootloader mode\n");
+  zxlogf(TRACE, "ot-radio : device has been put in bootloader mode");
 
   return status;
 }
@@ -268,16 +268,16 @@ zx_status_t OtRadioDeviceBootloader::GetFirmwareBytes(std::vector<uint8_t> *fw_b
       load_firmware(dev_handle_->parent(), "ot-ncp-app-release.bin", &vmo, &size);
 
   if (load_fw_status == ZX_OK) {
-    zxlogf(TRACE, "ot-radio: load_firmware succeeded\n");
+    zxlogf(TRACE, "ot-radio: load_firmware succeeded");
     fw_bytes->resize(size);
     zx_status_t vmo_read_status = zx_vmo_read(vmo, &(fw_bytes->front()), 0, size);
 
     if (vmo_read_status != ZX_OK) {
-      zxlogf(ERROR, "ot-radio: failed to read vmo : %d\n", vmo_read_status);
+      zxlogf(ERROR, "ot-radio: failed to read vmo : %d", vmo_read_status);
       return vmo_read_status;
     }
   } else {
-    zxlogf(ERROR, "ot-radio: load_firmware failed with error : %d\n", load_fw_status);
+    zxlogf(ERROR, "ot-radio: load_firmware failed with error : %d", load_fw_status);
     return load_fw_status;
   }
 
@@ -294,7 +294,7 @@ OtRadioBlResult OtRadioDeviceBootloader::SendFlashEraseCmd(uint32_t address, uin
   result = SendSpiCmdAndGetResponse(reinterpret_cast<uint8_t *>(&erase_cmd), sizeof(erase_cmd),
                                     sizeof(NlSpiBlBasicResponse));
   if (result != BL_RET_SUCCESS) {
-    zxlogf(ERROR, "ot-radio: Error in sending flash-erase command and getting response\n");
+    zxlogf(ERROR, "ot-radio: Error in sending flash-erase command and getting response");
   }
 
   return result;
@@ -323,13 +323,13 @@ OtRadioBlResult OtRadioDeviceBootloader::UploadFirmware(const std::vector<uint8_
     // Now prepare the cmd since rest of the fields are updated. As crc can be
     // calculated now
     BlPrepareCmd(&write_cmd.cmd, spi_cmd_size, BL_SPI_CMD_FLASH_WRITE);
-    zxlogf(TRACE, "ot-radio: writing flash @ 0x%08x\n", address);
+    zxlogf(TRACE, "ot-radio: writing flash @ 0x%08x", address);
 
     OtRadioBlResult result;
     result = SendSpiCmdAndGetResponse(reinterpret_cast<uint8_t *>(&write_cmd), spi_cmd_size,
                                       sizeof(NlSpiBlBasicResponse));
     if (result != BL_RET_SUCCESS) {
-      zxlogf(ERROR, "ot-radio: Sending flash write command got invalid response\n");
+      zxlogf(ERROR, "ot-radio: Sending flash write command got invalid response");
       return result;
     }
 
@@ -338,13 +338,13 @@ OtRadioBlResult OtRadioDeviceBootloader::UploadFirmware(const std::vector<uint8_
         reinterpret_cast<NlSpiBlBasicResponse *>(&dev_handle_->spi_rx_buffer_[0]);
 
     if (basic_response->status != BL_ERROR_NONE) {
-      zxlogf(ERROR, "ot-radio: Flash write error @ 0x%x, status=%d\n", address,
+      zxlogf(ERROR, "ot-radio: Flash write error @ 0x%x, status=%d", address,
              basic_response->status);
       retry_count++;
       if (retry_count == max_retry_count) {
         return BL_ERR_WR_CMD_FAILED;
       } else {
-        zxlogf(ERROR, "ot-radio: will retry %d more times\n", max_retry_count - retry_count);
+        zxlogf(ERROR, "ot-radio: will retry %d more times", max_retry_count - retry_count);
         continue;
       }
     } else {
@@ -368,13 +368,13 @@ OtRadioBlResult OtRadioDeviceBootloader::VerifyUpload(const std::vector<uint8_t>
   verify_cmd.length = fw_bytes.size();
   verify_cmd.crc32_check = BlModeCrc32(kSpiPacketCrc32InitValue, &fw_bytes[0], fw_bytes.size());
   BlPrepareCmd(&verify_cmd.cmd, sizeof(verify_cmd), BL_SPI_CMD_FLASH_VERIFY);
-  zxlogf(TRACE, "ot-radio: Verifying crc32 of flashed image\n");
+  zxlogf(TRACE, "ot-radio: Verifying crc32 of flashed image");
 
   OtRadioBlResult result;
   result = SendSpiCmdAndGetResponse(reinterpret_cast<uint8_t *>(&verify_cmd), sizeof(verify_cmd),
                                     sizeof(NlSpiBlBasicResponse));
   if (result != BL_RET_SUCCESS) {
-    zxlogf(ERROR, "ot-radio: error in sending flash verify cmd and getting a response\n");
+    zxlogf(ERROR, "ot-radio: error in sending flash verify cmd and getting a response");
     return result;
   }
 
@@ -382,7 +382,7 @@ OtRadioBlResult OtRadioDeviceBootloader::VerifyUpload(const std::vector<uint8_t>
       reinterpret_cast<NlSpiBlBasicResponse *>(&dev_handle_->spi_rx_buffer_[0]);
 
   if (basic_response->status != BL_ERROR_NONE) {
-    zxlogf(ERROR, "ot-radio: Verification failed\n");
+    zxlogf(ERROR, "ot-radio: Verification failed");
     return BL_ERR_VERIFICATION_FAILED;
   }
 
@@ -395,19 +395,19 @@ OtRadioBlResult OtRadioDeviceBootloader::UploadAndCheckFirmware(
 
   status = SendFlashEraseCmd(kFwStartAddr, fw_bytes.size());
   if (status != BL_RET_SUCCESS) {
-    zxlogf(ERROR, "ot-radio: Flash Erase Command failed\n");
+    zxlogf(ERROR, "ot-radio: Flash Erase Command failed");
     return status;
   }
 
   status = UploadFirmware(fw_bytes);
   if (status != BL_RET_SUCCESS) {
-    zxlogf(ERROR, "ot-radio: Upload Firmware command failed\n");
+    zxlogf(ERROR, "ot-radio: Upload Firmware command failed");
     return status;
   }
 
   status = VerifyUpload(fw_bytes);
   if (status != BL_RET_SUCCESS) {
-    zxlogf(ERROR, "ot-radio: Verify Upload failed\n");
+    zxlogf(ERROR, "ot-radio: Verify Upload failed");
     return status;
   }
 
@@ -423,14 +423,14 @@ OtRadioBlResult OtRadioDeviceBootloader::UpdateRadioFirmware() {
 
   if (GetNewFirmwareVersion().size() == 0) {
     // Invalid version string indicates invalid firmware
-    zxlogf(ERROR, "ot-radio: The new firmware is invalid\n");
+    zxlogf(ERROR, "ot-radio: The new firmware is invalid");
     return BL_ERR_INVALID_FW_VERSION;
   }
 
   std::vector<uint8_t> fw_bytes;
   zx_status_t status;
   if ((status = GetFirmwareBytes(&fw_bytes)) != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: GetFirmwareBytes failed with status : %d\n", status);
+    zxlogf(ERROR, "ot-radio: GetFirmwareBytes failed with status : %d", status);
     bl_zx_status = status;
     return BL_ERR_GET_FW_BYTES_FAILED;
   }
@@ -440,7 +440,7 @@ OtRadioBlResult OtRadioDeviceBootloader::UpdateRadioFirmware() {
     bl_zx_status = status;
     // Attempt a Reset to try and clear up GPIO state:
     if ((status = dev_handle_->Reset()) != ZX_OK) {
-      zxlogf(ERROR, "ot-radio: subsequent Reset call also failed, status: %d\n", status);
+      zxlogf(ERROR, "ot-radio: subsequent Reset call also failed, status: %d", status);
     }
     return BL_ERR_PUT_RCP_BLMODE_FAIL;
   }

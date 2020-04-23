@@ -128,13 +128,13 @@ zx_status_t Asix88179Ethernet::ReadPhy(uint8_t register_address, uint16_t* data)
                                       AX88179_REQ_PHY, AX88179_PHY_ID, register_address,
                                       ZX_TIME_INFINITE, data, sizeof(*data), &out_length);
   if (out_length == sizeof(*data)) {
-    zxlogf(SPEW, "ax88179: read phy %#x: %#x\n", register_address, *data);
+    zxlogf(SPEW, "ax88179: read phy %#x: %#x", register_address, *data);
   }
   return status;
 }
 
 zx_status_t Asix88179Ethernet::WritePhy(uint8_t register_address, uint16_t data) {
-  zxlogf(SPEW, "ax88179: write phy %#x: %#x\n", register_address, data);
+  zxlogf(SPEW, "ax88179: write phy %#x: %#x", register_address, data);
   return usb_.ControlOut(USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_PHY,
                          AX88179_PHY_ID, register_address, ZX_TIME_INFINITE, &data, sizeof(data));
 }
@@ -142,19 +142,19 @@ zx_status_t Asix88179Ethernet::WritePhy(uint8_t register_address, uint16_t data)
 zx_status_t Asix88179Ethernet::ConfigureBulkIn(uint8_t plsr) {
   uint8_t usb_mode = plsr & AX88179_PLSR_USB_MASK;
   if (usb_mode & (usb_mode - 1)) {
-    zxlogf(ERROR, "ax88179: invalid usb mode: %#x\n", usb_mode);
+    zxlogf(ERROR, "ax88179: invalid usb mode: %#x", usb_mode);
     return ZX_ERR_INVALID_ARGS;
   }
 
   uint8_t speed = plsr & AX88179_PLSR_EPHY_MASK;
   if (speed & (speed - 1)) {
-    zxlogf(ERROR, "ax88179: invalid eth speed: %#x\n", speed);
+    zxlogf(ERROR, "ax88179: invalid eth speed: %#x", speed);
     return ZX_ERR_INVALID_ARGS;
   }
 
   zx_status_t status = WriteMac(AX88179_MAC_RQCR, kBulkInConfig[usb_mode][speed >> 4]);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_RQCR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_RQCR, status);
   }
   return status;
 }
@@ -163,26 +163,26 @@ zx_status_t Asix88179Ethernet::ConfigureMediumMode() {
   uint16_t data = 0;
   zx_status_t status = ReadPhy(AX88179_PHY_PHYSR, &data);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: ReadPhy to %#x failed: %d\n", AX88179_PHY_PHYSR, status);
+    zxlogf(ERROR, "ax88179: ReadPhy to %#x failed: %d", AX88179_PHY_PHYSR, status);
     return status;
   }
 
   unsigned int mode = (data & (AX88179_PHYSR_SPEED | AX88179_PHYSR_DUPLEX)) >> 13;
-  zxlogf(TRACE, "ax88179: medium mode: %#x\n", mode);
+  zxlogf(TRACE, "ax88179: medium mode: %#x", mode);
   if (mode == 4 || mode > 5) {
-    zxlogf(ERROR, "ax88179: mode invalid (mode=%u)\n", mode);
+    zxlogf(ERROR, "ax88179: mode invalid (mode=%u)", mode);
     return ZX_ERR_NOT_SUPPORTED;
   }
   status = WriteMac(AX88179_MAC_MSR, kMediaMode[mode]);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_MSR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_MSR, status);
     return status;
   }
 
   uint8_t PLSR_value = 0;
   status = ReadMac(AX88179_MAC_PLSR, &PLSR_value);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: ReadMac to %#x failed: %d\n", AX88179_MAC_PLSR, status);
+    zxlogf(ERROR, "ax88179: ReadMac to %#x failed: %d", AX88179_MAC_PLSR, status);
     return status;
   }
   status = ConfigureBulkIn(PLSR_value);
@@ -199,21 +199,21 @@ zx_status_t Asix88179Ethernet::Receive(usb::Request<>& request) {
   };
 
   if (response.actual < 4) {
-    zxlogf(ERROR, "ax88179: Receive short packet\n");
+    zxlogf(ERROR, "ax88179: Receive short packet");
     return ZX_ERR_INTERNAL;
   }
 
   uint8_t* read_data;
   zx_status_t status = request.Mmap(reinterpret_cast<void**>(&read_data));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: mmap failed: %d\n", status);
+    zxlogf(ERROR, "ax88179: mmap failed: %d", status);
     return status;
   }
 
   ptrdiff_t header_offset = response.actual - sizeof(ReceiveHeader);
   ReceiveHeader* header = reinterpret_cast<ReceiveHeader*>(read_data + header_offset);
   if (header->number_packets < 1 || header->packet_header_offset >= header_offset) {
-    zxlogf(ERROR, "ax88179: %s bad packet\n", __func__);
+    zxlogf(ERROR, "ax88179: %s bad packet", __func__);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -225,36 +225,36 @@ zx_status_t Asix88179Ethernet::Receive(usb::Request<>& request) {
     uint32_t* packet_header =
         reinterpret_cast<uint32_t*>(read_data + header->packet_header_offset + packet_index);
     if ((uintptr_t)packet_header >= (uintptr_t)header) {
-      zxlogf(ERROR, "ax88179: %s packet header out of bounds, packet header=%p rx header=%p\n",
+      zxlogf(ERROR, "ax88179: %s packet header out of bounds, packet header=%p rx header=%p",
              __func__, packet_header, header);
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
     uint16_t packet_length = le16toh((*packet_header & AX88179_RX_PKTLEN) >> 16);
     if (packet_length < 2) {
-      zxlogf(ERROR, "ax88179: %s short packet (len=%u)\n", __func__, packet_length);
+      zxlogf(ERROR, "ax88179: %s short packet (len=%u)", __func__, packet_length);
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
     if (offset + packet_length > header->packet_header_offset) {
-      zxlogf(ERROR, "ax88179: %s invalid packet length %u > %lu bytes remaining\n", __func__,
+      zxlogf(ERROR, "ax88179: %s invalid packet length %u > %lu bytes remaining", __func__,
              packet_length, header->packet_header_offset - offset);
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
     bool drop = false;
     if (*packet_header & AX88179_RX_DROPPKT) {
-      zxlogf(SPEW, "ax88179: %s DropPkt\n", __func__);
+      zxlogf(SPEW, "ax88179: %s DropPkt", __func__);
       drop = true;
     }
     if (*packet_header & AX88179_RX_MIIER) {
-      zxlogf(SPEW, "ax88179: %s MII-Er\n", __func__);
+      zxlogf(SPEW, "ax88179: %s MII-Er", __func__);
       drop = true;
     }
     if (*packet_header & AX88179_RX_CRCER) {
-      zxlogf(SPEW, "ax88179: %s CRC-Er\n", __func__);
+      zxlogf(SPEW, "ax88179: %s CRC-Er", __func__);
       drop = true;
     }
     if (!(*packet_header & AX88179_RX_OK)) {
-      zxlogf(SPEW, "ax88179: %s !GoodPkt\n", __func__);
+      zxlogf(SPEW, "ax88179: %s !GoodPkt", __func__);
       drop = true;
     }
     if (!drop) {
@@ -279,7 +279,7 @@ void Asix88179Ethernet::ReadComplete(usb_request_t* usb_request) {
   fbl::AutoLock lock(&lock_);
 
   if (usb_request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "ax88179: ReadComplete usb_reset_endpoint\n");
+    zxlogf(TRACE, "ax88179: ReadComplete usb_reset_endpoint");
     usb_.ResetEndpoint(bulk_in_address_);
   } else if (usb_request->response.status == ZX_ERR_IO_INVALID) {
     zxlogf(TRACE,
@@ -310,12 +310,12 @@ void Asix88179Ethernet::WriteComplete(usb_request_t* usb_request) {
 
   if (usb_request->response.status == ZX_ERR_IO_NOT_PRESENT) {
     free_write_pool_.Add(std::move(request));
-    zxlogf(INFO, "ax88179: remote closed\n");
+    zxlogf(INFO, "ax88179: remote closed");
     return;
   }
 
   if (usb_request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "ax88179: WriteComplete usb_reset_endpoint\n");
+    zxlogf(TRACE, "ax88179: WriteComplete usb_reset_endpoint");
     usb_.ResetEndpoint(bulk_out_address_);
   } else if (usb_request->response.status == ZX_ERR_IO_INVALID) {
     zxlogf(TRACE,
@@ -340,7 +340,7 @@ void Asix88179Ethernet::WriteComplete(usb_request_t* usb_request) {
       } else {
         size_t length = netbuf.operation()->data_size;
         // netbuf is too large for a request buffer.
-        zxlogf(ERROR, "ax88179: failed to append netbuf to empty request %zu\n", length);
+        zxlogf(ERROR, "ax88179: failed to append netbuf to empty request %zu", length);
         netbuf.Complete(ZX_ERR_INTERNAL);
         break;
       }
@@ -383,12 +383,12 @@ void Asix88179Ethernet::InterruptComplete(usb_request_t* usb_request) {
           usb_.RequestQueue(pending_request->take(), &read_request_complete_);
         }
 
-        zxlogf(TRACE, "ax88179: now online\n");
+        zxlogf(TRACE, "ax88179: now online");
         if (ifc_.is_valid()) {
           ifc_.Status(ETHERNET_STATUS_ONLINE);
         }
       } else if (!online && was_online) {
-        zxlogf(TRACE, "ax88179: now offline\n");
+        zxlogf(TRACE, "ax88179: now offline");
         if (ifc_.is_valid()) {
           ifc_.Status(0);
         }
@@ -430,7 +430,7 @@ void Asix88179Ethernet::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t*
 
   size_t length = op.operation()->data_size;
   if (length > (kMtu + kMaxEthernetHeaderSize)) {
-    zxlogf(ERROR, "ax88179: unsupported packet length %zu\n", length);
+    zxlogf(ERROR, "ax88179: unsupported packet length %zu", length);
     op.Complete(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -455,7 +455,7 @@ void Asix88179Ethernet::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t*
     }
     request->request()->header.length = 0;
     if (RequestAppend(*request, op) != ZX_OK) {
-      zxlogf(ERROR, "ax88179: append failed, length %zu\n", length);
+      zxlogf(ERROR, "ax88179: append failed, length %zu", length);
       op.Complete(ZX_ERR_INTERNAL);
       return;
     }
@@ -473,7 +473,7 @@ void Asix88179Ethernet::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t*
       }
       request->request()->header.length = 0;
       if (RequestAppend(*request, op) != ZX_OK) {
-        zxlogf(ERROR, "ax88179: append failed, length %zu\n", length);
+        zxlogf(ERROR, "ax88179: append failed, length %zu", length);
         op.Complete(ZX_ERR_INTERNAL);
         return;
       }
@@ -542,7 +542,7 @@ zx_status_t Asix88179Ethernet::EthernetImplStart(const ethernet_ifc_protocol_t* 
   }
 
   ifc_ = ddk::EthernetIfcProtocolClient(ifc);
-  zxlogf(INFO, "ax88179: Started\n");
+  zxlogf(INFO, "ax88179: Started");
 
   // Set status in case the link came up before start.
   ifc_.Status(online_ ? ETHERNET_STATUS_ONLINE : 0);
@@ -554,7 +554,7 @@ zx_status_t Asix88179Ethernet::TwiddleRcrBit(uint16_t bit, bool on) {
   uint16_t rcr_bits = 0;
   zx_status_t status = ReadMac(AX88179_MAC_RCR, &rcr_bits);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: ReadMac from %#x failed: %d\n", AX88179_MAC_RCR, status);
+    zxlogf(ERROR, "ax88179: ReadMac from %#x failed: %d", AX88179_MAC_RCR, status);
     return status;
   }
   if (on) {
@@ -564,7 +564,7 @@ zx_status_t Asix88179Ethernet::TwiddleRcrBit(uint16_t bit, bool on) {
   }
   status = WriteMac(AX88179_MAC_RCR, rcr_bits);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_RCR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_RCR, status);
   }
   return status;
 }
@@ -605,7 +605,7 @@ zx_status_t Asix88179Ethernet::SetMulticastFilter(int32_t n_addresses, const uin
   }
   status = WriteMac(AX88179_MAC_MFA, filter);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_MFA, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_MFA, status);
     return status;
   }
   return status;
@@ -646,9 +646,9 @@ void Asix88179Ethernet::DumpRegister(const char* name, uint8_t register_address)
 
   zx_status_t status = ReadMac(register_address, &(data.bytes));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: could not read reg %s : %d\n", name, status);
+    zxlogf(ERROR, "ax88179: could not read reg %s : %d", name, status);
   } else {
-    zxlogf(SPEW, "ax88179: reg %s = %" PRIx64 "\n", name, data.value);
+    zxlogf(SPEW, "ax88179: reg %s = %" PRIx64 "", name, data.value);
   }
 }
 
@@ -675,14 +675,14 @@ zx_status_t Asix88179Ethernet::InitializeRegisters() {
   // Enable embedded PHY
   zx_status_t status = WriteMac<uint16_t>(AX88179_MAC_EPPRCR, 0x0000);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_EPPRCR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_EPPRCR, status);
     return status;
   }
   zx::nanosleep(zx::deadline_after(zx::msec(1)));
 
   status = WriteMac<uint16_t>(AX88179_MAC_EPPRCR, 0x0020);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_EPPRCR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_EPPRCR, status);
     return status;
   }
   zx::nanosleep(zx::deadline_after(zx::msec(200)));
@@ -690,7 +690,7 @@ zx_status_t Asix88179Ethernet::InitializeRegisters() {
   // Switch clock to normal speed
   status = WriteMac<uint8_t>(AX88179_MAC_CLKSR, 0x03);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_CLKSR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_CLKSR, status);
     return status;
   }
   zx::nanosleep(zx::deadline_after(zx::msec(1)));
@@ -698,48 +698,48 @@ zx_status_t Asix88179Ethernet::InitializeRegisters() {
   // Read the MAC addr
   status = ReadMac(AX88179_MAC_NIDR, &mac_addr_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: ReadMac to %#x failed: %d\n", AX88179_MAC_NIDR, status);
+    zxlogf(ERROR, "ax88179: ReadMac to %#x failed: %d", AX88179_MAC_NIDR, status);
     return status;
   }
 
-  zxlogf(INFO, "ax88179: MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n", mac_addr_[0], mac_addr_[1],
+  zxlogf(INFO, "ax88179: MAC address: %02X:%02X:%02X:%02X:%02X:%02X", mac_addr_[0], mac_addr_[1],
          mac_addr_[2], mac_addr_[3], mac_addr_[4], mac_addr_[5]);
 
   // Ensure that the MAC RX is disabled
   status = WriteMac<uint16_t>(AX88179_MAC_RCR, 0x0000);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_RCR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_RCR, status);
     return status;
   }
 
   // Set RX Bulk-in sizes -- use USB 3.0/1000Mbps at this point
   status = ConfigureBulkIn(AX88179_PLSR_USB_SS | AX88179_PLSR_EPHY_1000);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_RQCR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_RQCR, status);
     return status;
   }
 
   // Configure flow control watermark
   status = WriteMac<uint8_t>(AX88179_MAC_PWLLR, 0x3c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_PWLLR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_PWLLR, status);
     return status;
   }
   status = WriteMac<uint8_t>(AX88179_MAC_PWLHR, 0x5c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_PWLHR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_PWLHR, status);
     return status;
   }
 
   // RX/TX checksum offload: ipv4, tcp, udp, tcpv6, udpv6
   status = WriteMac<uint8_t>(AX88179_MAC_CRCR, 0x67);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_CRCR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_CRCR, status);
     return status;
   }
   status = WriteMac<uint8_t>(AX88179_MAC_CTCR, 0x67);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_CTCR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_CTCR, status);
     return status;
   }
 
@@ -750,20 +750,20 @@ zx_status_t Asix88179Ethernet::InitializeRegisters() {
   // PHY auto-negotiation
   status = ReadPhy(AX88179_PHY_BMCR, &phy_data);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: ReadPhy to %#x failed: %d\n", AX88179_PHY_BMCR, status);
+    zxlogf(ERROR, "ax88179: ReadPhy to %#x failed: %d", AX88179_PHY_BMCR, status);
     return status;
   }
   phy_data |= 0x1200;
   status = WritePhy(AX88179_PHY_BMCR, phy_data);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WritePhy to %#x failed: %d\n", AX88179_PHY_BMCR, status);
+    zxlogf(ERROR, "ax88179: WritePhy to %#x failed: %d", AX88179_PHY_BMCR, status);
     return status;
   }
 
   // Default Ethernet medium mode
   status = WriteMac<uint16_t>(AX88179_MAC_MSR, 0x013b);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_MSR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_MSR, status);
     return status;
   }
 
@@ -773,14 +773,14 @@ zx_status_t Asix88179Ethernet::InitializeRegisters() {
                                                    AX88179_RCR_SO | AX88179_RCR_DROP_CRCE_N |
                                                    AX88179_RCR_IPE_N);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_RCR, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_RCR, status);
     return status;
   }
 
   uint8_t filter[kMulticastFilterNBytes] = {};
   status = WriteMac(AX88179_MAC_MFA, filter);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d\n", AX88179_MAC_MFA, status);
+    zxlogf(ERROR, "ax88179: WriteMac to %#x failed: %d", AX88179_MAC_MFA, status);
     return status;
   }
 
@@ -851,7 +851,7 @@ zx_status_t Asix88179Ethernet::Initialize() {
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (interface_descriptor->bNumEndpoints < 3) {
-    zxlogf(ERROR, "ax88179: Wrong number of endpoints: %d\n", interface_descriptor->bNumEndpoints);
+    zxlogf(ERROR, "ax88179: Wrong number of endpoints: %d", interface_descriptor->bNumEndpoints);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -878,7 +878,7 @@ zx_status_t Asix88179Ethernet::Initialize() {
   }
 
   if (!bulk_in_address || !bulk_out_address || !interrupt_address) {
-    zxlogf(ERROR, "ax88179: Bind could not find endpoints\n");
+    zxlogf(ERROR, "ax88179: Bind could not find endpoints");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -896,7 +896,7 @@ zx_status_t Asix88179Ethernet::Initialize() {
     std::optional<usb::Request<>> request;
     status = usb::Request<>::Alloc(&request, kUsbBufferSize, bulk_in_address, parent_req_size_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "ax88179: allocating reads failed %d\n", status);
+      zxlogf(ERROR, "ax88179: allocating reads failed %d", status);
       Shutdown();
       return status;
     }
@@ -907,7 +907,7 @@ zx_status_t Asix88179Ethernet::Initialize() {
     std::optional<usb::Request<>> request;
     status = usb::Request<>::Alloc(&request, kUsbBufferSize, bulk_out_address, parent_req_size_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "ax88179: allocating writes failed %d\n", status);
+      zxlogf(ERROR, "ax88179: allocating writes failed %d", status);
       Shutdown();
       return status;
     }
@@ -917,7 +917,7 @@ zx_status_t Asix88179Ethernet::Initialize() {
   status = usb::Request<>::Alloc(&interrupt_request_, kInterruptRequestSize, interrupt_address,
                                  parent_req_size_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: allocating interrupt failed %d\n", status);
+    zxlogf(ERROR, "ax88179: allocating interrupt failed %d", status);
     Shutdown();
     return status;
   }
@@ -925,14 +925,14 @@ zx_status_t Asix88179Ethernet::Initialize() {
   /* This is not needed, as long as the xhci stack does it for us.
   status = usb_set_configuration(device, 1);
   if (status < 0) {
-      zxlogf(ERROR, "aax88179_bind could not set configuration: %d\n", status);
+      zxlogf(ERROR, "aax88179_bind could not set configuration: %d", status);
       return ZX_ERR_NOT_SUPPORTED;
   }
   */
 
   status = DdkAdd("ax88179", DEVICE_ADD_INVISIBLE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: failed to create device: %d\n", status);
+    zxlogf(ERROR, "ax88179: failed to create device: %d", status);
     Shutdown();
     return status;
   }
@@ -943,7 +943,7 @@ zx_status_t Asix88179Ethernet::Initialize() {
       [](void* arg) -> int { return static_cast<Asix88179Ethernet*>(arg)->InterruptThread(); },
       this, "asix-88179-thread");
   if (ret != thrd_success) {
-    zxlogf(ERROR, "ax88179: failed to create interrupt thread: %d\n", ret);
+    zxlogf(ERROR, "ax88179: failed to create interrupt thread: %d", ret);
     Shutdown();
     return ZX_ERR_INTERNAL;
   }
@@ -961,10 +961,10 @@ zx_status_t Asix88179Ethernet::Bind(void* ctx, zx_device_t* dev) {
 
   zx_status_t status = eth_device->Initialize();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ax88179: ethernet driver failed to get added: %d\n", status);
+    zxlogf(ERROR, "ax88179: ethernet driver failed to get added: %d", status);
     return status;
   } else {
-    zxlogf(INFO, "ax88179: ethernet driver added\n");
+    zxlogf(INFO, "ax88179: ethernet driver added");
   }
 
   // On successful Add, Devmgr takes ownership (relinquished on DdkRelease),

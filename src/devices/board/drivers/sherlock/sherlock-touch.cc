@@ -80,7 +80,7 @@ static const composite_device_desc_t ft_comp_desc = {
 zx_status_t Sherlock::TouchInit() {
   zx_status_t status = DdkAddComposite("ft5726-touch", &ft_comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s(ft5726): DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s(ft5726): DeviceAdd failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

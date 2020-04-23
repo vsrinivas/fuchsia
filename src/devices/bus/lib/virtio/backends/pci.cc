@@ -27,13 +27,13 @@ zx_status_t PciBackend::Bind() {
 
   st = zx::port::create(/*options=*/ZX_PORT_BIND_TO_INTERRUPT, &wait_port_);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: cannot create wait port: %d\n", tag(), st);
+    zxlogf(ERROR, "%s: cannot create wait port: %d", tag(), st);
     return st;
   }
 
   // enable bus mastering
   if ((st = pci_enable_bus_master(&pci_, true)) != ZX_OK) {
-    zxlogf(ERROR, "%s: cannot enable bus master %d\n", tag(), st);
+    zxlogf(ERROR, "%s: cannot enable bus master %d", tag(), st);
     return st;
   }
 
@@ -43,29 +43,29 @@ zx_status_t PciBackend::Bind() {
   if ((st = pci_query_irq_mode(&pci_, mode, &avail_irqs)) != ZX_OK || avail_irqs == 0) {
     mode = ZX_PCIE_IRQ_MODE_LEGACY;
     if ((st = pci_query_irq_mode(&pci_, mode, &avail_irqs)) != ZX_OK || avail_irqs == 0) {
-      zxlogf(ERROR, "%s: no available IRQs found\n", tag());
+      zxlogf(ERROR, "%s: no available IRQs found", tag());
       return st;
     }
   }
 
   if ((st = pci_set_irq_mode(&pci_, mode, 1)) != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to set irq mode %u\n", tag(), mode);
+    zxlogf(ERROR, "%s: failed to set irq mode %u", tag(), mode);
     return st;
   }
 
   if ((st = pci_map_interrupt(&pci_, 0, &tmp_handle)) != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to map irq %d\n", tag(), st);
+    zxlogf(ERROR, "%s: failed to map irq %d", tag(), st);
     return st;
   }
 
   st = zx_interrupt_bind(tmp_handle, wait_port_.get(), /*key=*/0, /*options=*/0);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to bind interrupt %d\n", tag(), st);
+    zxlogf(ERROR, "%s: failed to bind interrupt %d", tag(), st);
     return st;
   }
 
   irq_handle_.reset(tmp_handle);
-  zxlogf(SPEW, "%s: irq handle %u\n", tag(), irq_handle_.get());
+  zxlogf(SPEW, "%s: irq handle %u", tag(), irq_handle_.get());
   return Init();
 }
 

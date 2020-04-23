@@ -228,7 +228,7 @@ static zx_status_t InsntraceInitOnce() {
 
   max_leaf = __get_cpuid_max(0, nullptr);
   if (max_leaf < 0x14) {
-    zxlogf(INFO, "IntelPT: No PT support\n");
+    zxlogf(INFO, "IntelPT: No PT support");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -243,7 +243,7 @@ static zx_status_t InsntraceInitOnce() {
 
   __cpuid_count(0x07, 0, a, b, c, d);
   if (!BIT(b, 25)) {
-    zxlogf(INFO, "IntelPT: No PT support\n");
+    zxlogf(INFO, "IntelPT: No PT support");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -281,12 +281,12 @@ static zx_status_t InsntraceInitOnce() {
   ipt_config_output_transport = !!BIT(c, 3);
   ipt_config_lip = !!BIT(c, 31);
 
-  zxlogf(INFO, "Intel Processor Trace configuration for this chipset:\n");
+  zxlogf(INFO, "Intel Processor Trace configuration for this chipset:");
   // No need to print everything, but these are useful.
-  zxlogf(INFO, "mtc_freq_mask:   0x%x\n", ipt_config_mtc_freq_mask);
-  zxlogf(INFO, "cyc_thresh_mask: 0x%x\n", ipt_config_cyc_thresh_mask);
-  zxlogf(INFO, "psb_freq_mask:   0x%x\n", ipt_config_psb_freq_mask);
-  zxlogf(INFO, "num addr ranges: %u\n", ipt_config_num_addr_ranges);
+  zxlogf(INFO, "mtc_freq_mask:   0x%x", ipt_config_mtc_freq_mask);
+  zxlogf(INFO, "cyc_thresh_mask: 0x%x", ipt_config_cyc_thresh_mask);
+  zxlogf(INFO, "psb_freq_mask:   0x%x", ipt_config_psb_freq_mask);
+  zxlogf(INFO, "num addr ranges: %u", ipt_config_num_addr_ranges);
 
   return ZX_OK;
 }
@@ -374,9 +374,9 @@ uint32_t InsntraceDevice::ComputeTopaEntryCount(ipt_per_trace_state_t* per_trace
       (num_entries + IPT_TOPA_MAX_TABLE_ENTRIES - 2) / (IPT_TOPA_MAX_TABLE_ENTRIES - 1);
   uint32_t result = num_entries + num_end_entries;
 
-  zxlogf(DEBUG1, "IPT: compute_topa_entry_count: num_entries: %u\n", num_entries);
-  zxlogf(DEBUG1, "IPT: compute_topa_entry_count: num_end_entries: %u\n", num_end_entries);
-  zxlogf(DEBUG1, "IPT: compute_topa_entry_count: total entries: %u\n", result);
+  zxlogf(DEBUG1, "IPT: compute_topa_entry_count: num_entries: %u", num_entries);
+  zxlogf(DEBUG1, "IPT: compute_topa_entry_count: num_end_entries: %u", num_end_entries);
+  zxlogf(DEBUG1, "IPT: compute_topa_entry_count: total entries: %u", result);
 
   return result;
 }
@@ -388,7 +388,7 @@ size_t InsntraceDevice::ComputeCaptureSize(const ipt_per_trace_state_t* per_trac
   uint32_t curr_table_entry_idx = (uint32_t)per_trace->output_mask_ptrs >> 7;
   uint32_t curr_entry_offset = (uint32_t)(per_trace->output_mask_ptrs >> 32);
 
-  zxlogf(DEBUG1, "IPT: compute_capture_size: trace %tu\n", per_trace - per_trace_state_.get());
+  zxlogf(DEBUG1, "IPT: compute_capture_size: trace %tu", per_trace - per_trace_state_.get());
   zxlogf(DEBUG1,
          "IPT: curr_table_paddr 0x%" PRIx64 ", curr_table_entry_idx %u, curr_entry_offset %u\n",
          curr_table_paddr, curr_table_entry_idx, curr_entry_offset);
@@ -412,7 +412,7 @@ size_t InsntraceDevice::ComputeCaptureSize(const ipt_per_trace_state_t* per_trac
 
   // Should be unreachable.
   // TODO(dje): Later flag state as broken.
-  zxlogf(ERROR, "IPT: unexpectedly exited capture loop\n");
+  zxlogf(ERROR, "IPT: unexpectedly exited capture loop");
   return 0;
 }
 
@@ -443,7 +443,7 @@ zx_status_t InsntraceDevice::X86PtAllocBuffer1(ipt_per_trace_state_t* per_trace,
     zx_paddr_t pa = io_buffer_phys(&per_trace->chunks[i]);
     zx_paddr_t align_mask = (1ull << alignment_log2) - 1;
     if (pa & align_mask) {
-      zxlogf(ERROR, "%s: WARNING: chunk has bad alignment: alignment %u, got 0x%" PRIx64 "\n",
+      zxlogf(ERROR, "%s: WARNING: chunk has bad alignment: alignment %u, got 0x%" PRIx64 "",
              __func__, alignment_log2, pa);
       return ZX_ERR_INTERNAL;
     }
@@ -459,7 +459,7 @@ zx_status_t InsntraceDevice::X86PtAllocBuffer1(ipt_per_trace_state_t* per_trace,
       (entry_count + IPT_TOPA_MAX_TABLE_ENTRIES - 1) / IPT_TOPA_MAX_TABLE_ENTRIES;
 
   if (entry_count < 2) {
-    zxlogf(INFO, "IPT: INVALID ENTRY COUNT: %u\n", entry_count);
+    zxlogf(INFO, "IPT: INVALID ENTRY COUNT: %u", entry_count);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -514,7 +514,7 @@ void InsntraceDevice::X86PtFreeBuffer1(ipt_per_trace_state_t* per_trace) {
 
 zx_status_t InsntraceDevice::X86PtAllocBuffer(const BufferConfig* config,
                                               BufferDescriptor* out_descriptor) {
-  zxlogf(DEBUG1, "%s: num_chunks %u, chunk_order %u\n", __func__, config->num_chunks,
+  zxlogf(DEBUG1, "%s: num_chunks %u, chunk_order %u", __func__, config->num_chunks,
          config->chunk_order);
 
   if (config->num_chunks == 0 || config->num_chunks > MAX_NUM_CHUNKS)
@@ -551,27 +551,27 @@ zx_status_t InsntraceDevice::X86PtAllocBuffer(const BufferConfig* config,
   if (ipt_config_psb)
     settable_ctl_mask |= (IPT_CTL_CYC_EN_MASK | IPT_CTL_PSB_FREQ_MASK | IPT_CTL_CYC_THRESH_MASK);
   if ((config->ctl & ~settable_ctl_mask) != 0) {
-    zxlogf(ERROR, "bad ctl, requested 0x%" PRIx64 ", valid 0x%" PRIx64 "\n", config->ctl,
+    zxlogf(ERROR, "bad ctl, requested 0x%" PRIx64 ", valid 0x%" PRIx64 "", config->ctl,
            settable_ctl_mask);
     return ZX_ERR_INVALID_ARGS;
   }
 
   uint32_t mtc_freq = (uint32_t)((config->ctl & IPT_CTL_MTC_FREQ_MASK) >> IPT_CTL_MTC_FREQ_SHIFT);
   if (mtc_freq != 0 && ((1 << mtc_freq) & ipt_config_mtc_freq_mask) == 0) {
-    zxlogf(ERROR, "bad mtc_freq value, requested 0x%x, valid mask 0x%x\n", mtc_freq,
+    zxlogf(ERROR, "bad mtc_freq value, requested 0x%x, valid mask 0x%x", mtc_freq,
            ipt_config_mtc_freq_mask);
     return ZX_ERR_INVALID_ARGS;
   }
   uint32_t cyc_thresh =
       (uint32_t)((config->ctl & IPT_CTL_CYC_THRESH_MASK) >> IPT_CTL_CYC_THRESH_SHIFT);
   if (cyc_thresh != 0 && ((1 << cyc_thresh) & ipt_config_cyc_thresh_mask) == 0) {
-    zxlogf(ERROR, "bad cyc_thresh value, requested 0x%x, valid mask 0x%x\n", cyc_thresh,
+    zxlogf(ERROR, "bad cyc_thresh value, requested 0x%x, valid mask 0x%x", cyc_thresh,
            ipt_config_cyc_thresh_mask);
     return ZX_ERR_INVALID_ARGS;
   }
   uint32_t psb_freq = (uint32_t)((config->ctl & IPT_CTL_PSB_FREQ_MASK) >> IPT_CTL_PSB_FREQ_SHIFT);
   if (psb_freq != 0 && ((1 << psb_freq) & ipt_config_psb_freq_mask) == 0) {
-    zxlogf(ERROR, "bad psb_freq value, requested 0x%x, valid mask 0x%x\n", psb_freq,
+    zxlogf(ERROR, "bad psb_freq value, requested 0x%x, valid mask 0x%x", psb_freq,
            ipt_config_psb_freq_mask);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -1150,7 +1150,7 @@ zx_status_t insntrace_bind(void* ctx, zx_device_t* parent) {
 
   status = dev->DdkAdd("insntrace");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: could not add device: %d", __func__, status);
   } else {
     // devmgr owns the memory now
     __UNUSED auto ptr = dev.release();

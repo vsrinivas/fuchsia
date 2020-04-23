@@ -73,13 +73,13 @@ zx_status_t Ltr578Als::GetInputReport(ltr_578als_input_rpt_t* report) {
     fbl::AutoLock lock(&i2c_lock_);
     status = i2c_.ReadSync(kAlsDataAddress, reinterpret_cast<uint8_t*>(&light_data), 3);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to read ambient light registers\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to read ambient light registers", __FILE__);
       return status;
     }
 
     status = i2c_.ReadSync(kPsDataAddress, reinterpret_cast<uint8_t*>(&proximity_data), 2);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to read proximity registers\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to read proximity registers", __FILE__);
       return status;
     }
   }
@@ -94,21 +94,21 @@ zx_status_t Ltr578Als::Create(void* ctx, zx_device_t* parent) {
   i2c_protocol_t i2c;
   auto status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_I2C\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_I2C", __FILE__);
     return status;
   }
 
   zx::port port;
   status = zx::port::create(0, &port);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to create port\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to create port", __FILE__);
     return status;
   }
 
   fbl::AllocChecker ac;
   std::unique_ptr<Ltr578Als> device(new (&ac) Ltr578Als(parent, &i2c, std::move(port)));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Ltr578Als alloc failed\n", __FILE__);
+    zxlogf(ERROR, "%s: Ltr578Als alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -117,7 +117,7 @@ zx_status_t Ltr578Als::Create(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = device->DdkAdd("ltr-578als")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    zxlogf(ERROR, "%s: DdkAdd failed", __FILE__);
     return status;
   }
 
@@ -132,7 +132,7 @@ zx_status_t Ltr578Als::Init() {
     for (size_t i = 0; i < countof(kDefaultRegValues); i++) {
       zx_status_t status = i2c_.WriteSync(kDefaultRegValues[i], sizeof(kDefaultRegValues[i]));
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to configure sensors\n", __FILE__);
+        zxlogf(ERROR, "%s: Failed to configure sensors", __FILE__);
         return status;
       }
     }

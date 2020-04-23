@@ -337,7 +337,7 @@ static void vim_apply_configuration(void* ctx, const display_config_t** display_
       zx_status_t status = get_vic(&display_configs[0]->mode, display->p);
       if (status != ZX_OK) {
         mtx_unlock(&display->display_lock);
-        zxlogf(ERROR, "Apply with bad mode\n");
+        zxlogf(ERROR, "Apply with bad mode");
         return;
       }
 

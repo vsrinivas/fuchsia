@@ -17,14 +17,14 @@ namespace board_luis {
 zx_status_t Luis::Create(void* ctx, zx_device_t* parent) {
   ddk::PBusProtocolClient pbus(parent);
   if (!pbus.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PBUS\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PBUS", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   pdev_board_info_t board_info;
   zx_status_t status = pbus.GetBoardInfo(&board_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get board info: %s\n", __func__, zx_status_get_string(status));
+    zxlogf(ERROR, "%s: Failed to get board info: %s", __func__, zx_status_get_string(status));
     return status;
   }
 
@@ -35,7 +35,7 @@ zx_status_t Luis::Create(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = board->DdkAdd("luis", DEVICE_ADD_NON_BINDABLE)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed %s\n", __func__, zx_status_get_string(status));
+    zxlogf(ERROR, "%s: DdkAdd failed %s", __func__, zx_status_get_string(status));
     return status;
   }
 
@@ -55,39 +55,39 @@ zx_status_t Luis::Start() {
 
 int Luis::Thread() {
   if (ClockInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: ClockInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: ClockInit() failed", __func__);
     return thrd_error;
   }
 
   if (GpioInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: GpioInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: GpioInit() failed", __func__);
     return thrd_error;
   }
 
   if (I2cInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: I2cInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: I2cInit() failed", __func__);
     return thrd_error;
   }
 
   if (PowerInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: PowerInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: PowerInit() failed", __func__);
     return thrd_error;
   }
 
   if (EmmcInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: EmmcInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: EmmcInit() failed", __func__);
   }
 
   if (ThermalInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: ThermalInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: ThermalInit() failed", __func__);
   }
 
   if (UsbInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: UsbInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: UsbInit() failed", __func__);
   }
 
   if (SdioInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: SdioInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: SdioInit() failed", __func__);
   }
 
   return 0;

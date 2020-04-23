@@ -44,7 +44,7 @@ constexpr pbus_dev_t canvas_dev = []() {
 zx_status_t Sherlock::CanvasInit() {
   zx_status_t status = pbus_.DeviceAdd(&canvas_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::CanvasInit: DeviceAdd failed: %d\n", status);
+    zxlogf(ERROR, "Sherlock::CanvasInit: DeviceAdd failed: %d", status);
     return status;
   }
   return status;

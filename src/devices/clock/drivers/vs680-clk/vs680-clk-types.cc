@@ -107,7 +107,7 @@ zx_status_t Vs680Pll::SetRate(uint64_t parent_rate_hz, uint64_t hz) const {
   }
 
   if (!status.lock()) {
-    zxlogf(TRACE, "%s: PLL did not lock in %u us\n", __FILE__, kPllLockTimeMicroseconds);
+    zxlogf(TRACE, "%s: PLL did not lock in %u us", __FILE__, kPllLockTimeMicroseconds);
   }
 
   PllCtrlA::Get().ReadFrom(&pll_mmio_).set_bypass(0).WriteTo(&pll_mmio_);

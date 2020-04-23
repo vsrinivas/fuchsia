@@ -191,14 +191,14 @@ zx_status_t Vim::EthInit() {
   auto status = pbus_.CompositeDeviceAdd(&eth_board_dev, eth_fragments,
                                          fbl::count_of(eth_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 
   // Add a composite device for dwmac driver in the ethernet board driver's devhost.
   status = pbus_.CompositeDeviceAdd(&dwmac_dev, dwmac_fragments, fbl::count_of(dwmac_fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 

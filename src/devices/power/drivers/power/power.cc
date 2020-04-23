@@ -106,7 +106,7 @@ zx_status_t PowerDevice::GetSuitableVoltageLocked(uint32_t voltage, uint32_t* su
     }
   }
   if (min_voltage_all_children > max_voltage_all_children) {
-    zxlogf(ERROR, "Supported voltage ranges of all the dependents do not intersect.\n");
+    zxlogf(ERROR, "Supported voltage ranges of all the dependents do not intersect.");
     return ZX_ERR_NOT_FOUND;
   }
   *suitable_voltage = voltage;
@@ -137,13 +137,13 @@ zx_status_t PowerDevice::RegisterPowerDomain(uint64_t component_device_id,
     if (parent_power_.is_valid()) {
       status = parent_power_.RegisterPowerDomain(min_voltage_uV_, max_voltage_uV_);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to register with parent power domain\n");
+        zxlogf(ERROR, "Failed to register with parent power domain");
         return status;
       }
     }
     status = power_impl_.EnablePowerDomain(index_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to enabled this power domain\n");
+      zxlogf(ERROR, "Failed to enabled this power domain");
       return status;
     }
   }
@@ -163,13 +163,13 @@ zx_status_t PowerDevice::UnregisterPowerDomain(uint64_t component_device_id) {
   if (GetDependentCountLocked() == 0) {
     status = power_impl_.DisablePowerDomain(index_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to disable power domain\n");
+      zxlogf(ERROR, "Failed to disable power domain");
       return status;
     }
     if (parent_power_.is_valid() && status == ZX_OK) {
       status = parent_power_.UnregisterPowerDomain();
       if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to unregister with parent power domain\n");
+        zxlogf(ERROR, "Failed to unregister with parent power domain");
         return status;
       }
     }
@@ -200,13 +200,13 @@ zx_status_t PowerDevice::RequestVoltage(uint64_t component_device_id, uint32_t v
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (voltage < min_voltage_uV_ || voltage > max_voltage_uV_) {
-    zxlogf(ERROR, "The voltage is not within supported voltage range of the power domain\n");
+    zxlogf(ERROR, "The voltage is not within supported voltage range of the power domain");
     return ZX_ERR_INVALID_ARGS;
   }
   PowerDeviceComponentChild* child = GetComponentChildLocked(component_device_id);
   ZX_DEBUG_ASSERT(child != nullptr);
   if (!child->registered()) {
-    zxlogf(ERROR, "The device is not registered for the power domain\n");
+    zxlogf(ERROR, "The device is not registered for the power domain");
     return ZX_ERR_UNAVAILABLE;
   }
 
@@ -275,7 +275,7 @@ zx_status_t PowerDevice::DdkCloseProtocolSessionMultibindable(void* child_ctx) {
   if (iter != children_.end()) {
     children_.erase(iter);
   } else {
-    zxlogf(ERROR, "%s: Unable to find the child with the given child_ctx\n", __FUNCTION__);
+    zxlogf(ERROR, "%s: Unable to find the child with the given child_ctx", __FUNCTION__);
     return ZX_ERR_NOT_FOUND;
   }
   return ZX_OK;
@@ -326,14 +326,14 @@ zx_status_t PowerDevice::Create(void* ctx, zx_device_t* parent) {
   zx_device_t* fragments[parent_count];
   composite.GetFragments(fragments, parent_count, &actual);
   if (actual != parent_count) {
-    zxlogf(ERROR, "%s could not get composite fragments\n", __func__);
+    zxlogf(ERROR, "%s could not get composite fragments", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // POWER_IMPL_PROTOCOL is always the first component
   ddk::PowerImplProtocolClient power_impl(fragments[0]);
   if (!power_impl.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_POWER_IMPL not available\n", __func__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_POWER_IMPL not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -341,7 +341,7 @@ zx_status_t PowerDevice::Create(void* ctx, zx_device_t* parent) {
   if (parent_count > 1) {
     parent_power = ddk::PowerProtocolClient(fragments[1]);
     if (!parent_power.is_valid()) {
-      zxlogf(ERROR, "%s: Parent power protocol not available\n", __func__);
+      zxlogf(ERROR, "%s: Parent power protocol not available", __func__);
       return ZX_ERR_INTERNAL;
     }
   }

@@ -66,7 +66,7 @@ static pbus_dev_t nna_dev = []() {
 zx_status_t Sherlock::NnaInit() {
   zx_status_t status = pbus_.DeviceAdd(&nna_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::NnaInit: pbus_device_add() failed for nna: %d\n", status);
+    zxlogf(ERROR, "Sherlock::NnaInit: pbus_device_add() failed for nna: %d", status);
     return status;
   }
   return ZX_OK;

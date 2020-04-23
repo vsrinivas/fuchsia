@@ -21,7 +21,7 @@ namespace ti {
 #define LOG_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define LOG_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define LOG_SPEW(fmt, ...) zxlogf(SPEW, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define LOG_TRACE zxlogf(INFO, "[%s %d]\n", __func__, __LINE__)
+#define LOG_TRACE zxlogf(INFO, "[%s %d]", __func__, __LINE__)
 
 constexpr uint8_t kBacklightBrightnessLsbReg = 0x10;
 constexpr uint8_t kBacklightBrightnessMsbReg = 0x11;

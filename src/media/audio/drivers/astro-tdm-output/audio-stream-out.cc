@@ -42,7 +42,7 @@ zx_status_t AstroAudioStreamOut::InitCodec() {
 
   auto status = codec_->Init(frames_per_second_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to initialize codec\n", __FILE__);
+    zxlogf(ERROR, "%s failed to initialize codec", __FILE__);
     audio_en_.Write(0);
     return status;
   }
@@ -55,7 +55,7 @@ zx_status_t AstroAudioStreamOut::InitHW() {
 
   auto status = InitCodec();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not initialize codec - %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not initialize codec - %d", __FILE__, status);
     return status;
   }
 
@@ -73,14 +73,14 @@ zx_status_t AstroAudioStreamOut::InitHW() {
   // Lane 0, unmask first 2 slots (0x00000003),
   status = aml_audio_->ConfigTdmOutLane(0, 0x00000003);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure TDM out lane %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not configure TDM out lane %d", __FILE__, status);
     return status;
   }
 
   // Setup appropriate tdm clock signals. mclk = 3.072GHz/125 = 24.576MHz.
   status = aml_audio_->SetMclkDiv(124);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure MCLK %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not configure MCLK %d", __FILE__, status);
     return status;
   }
 
@@ -90,7 +90,7 @@ zx_status_t AstroAudioStreamOut::InitHW() {
   // 96kHz: sclk=24.576MHz/2=12.288MHz, 12.288MHz/128=96k frame sync, sdiv=1, lrduty=0, lrdiv=127.
   status = aml_audio_->SetSclkDiv((192'000 / frames_per_second_ - 1), 0, 127, false);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not configure SCLK %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
     return status;
   }
 
@@ -105,7 +105,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get composite protocol\n");
+    zxlogf(ERROR, "Could not get composite protocol");
     return status;
   }
 
@@ -113,7 +113,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
   size_t actual;
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   if (actual < countof(fragments)) {
-    zxlogf(ERROR, "could not get fragments\n");
+    zxlogf(ERROR, "could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -126,25 +126,25 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
   audio_en_ = fragments[FRAGMENT_ENABLE_GPIO];
 
   if (!audio_fault_.is_valid() || !audio_en_.is_valid()) {
-    zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
+    zxlogf(ERROR, "%s failed to allocate gpio", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::I2cChannel i2c = fragments[FRAGMENT_I2C];
   if (!i2c.is_valid()) {
-    zxlogf(ERROR, "%s failed to allocate i2c\n", __func__);
+    zxlogf(ERROR, "%s failed to allocate i2c", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   codec_ = Tas27xx::Create(std::move(i2c));
   if (!codec_) {
-    zxlogf(ERROR, "%s could not get tas27xx\n", __func__);
+    zxlogf(ERROR, "%s could not get tas27xx", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
+    zxlogf(ERROR, "%s could not obtain bti - %d", __func__, status);
     return status;
   }
 
@@ -155,21 +155,21 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
   }
   aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_B);
   if (aml_audio_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create tdm device\n", __func__);
+    zxlogf(ERROR, "%s failed to create tdm device", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
   // Initialize the ring buffer
   status = InitBuffer(kRingBufferSize);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to init buffer %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s failed to init buffer %d", __FILE__, status);
     return status;
   }
 
   status = aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
                                  pinned_ring_buffer_.region(0).size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to set buffer %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s failed to set buffer %d", __FILE__, status);
     return status;
   }
 
@@ -335,7 +335,7 @@ zx_status_t AstroAudioStreamOut::AddFormats() {
   fbl::AllocChecker ac;
   supported_formats_.reserve(1, &ac);
   if (!ac.check()) {
-    zxlogf(ERROR, "Out of memory, can not create supported formats list\n");
+    zxlogf(ERROR, "Out of memory, can not create supported formats list");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -358,13 +358,13 @@ zx_status_t AstroAudioStreamOut::InitBuffer(size_t size) {
   zx_status_t status;
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
     return status;
   }
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __func__, status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {

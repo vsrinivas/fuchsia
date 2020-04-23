@@ -248,7 +248,7 @@ zx_device_t* fragments[FRAGMENT_COUNT];
 size_t actual;
 composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
 if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: could not get our fragments\n", __FILE__);
+    zxlogf(ERROR, "%s: could not get our fragments", __FILE__);
     return ZX_ERR_INTERNAL;
 }
 ```

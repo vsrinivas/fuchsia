@@ -56,13 +56,13 @@ namespace board_mt8167 {
 zx_status_t Mt8167::Vgp1Enable() {
   ddk::PowerImplProtocolClient power(parent());
   if (!power.is_valid()) {
-    zxlogf(ERROR, "Failed to get power impl protocol\n");
+    zxlogf(ERROR, "Failed to get power impl protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
   zx_status_t status = power.EnablePowerDomain(kVDLdoVGp1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to enable VGP1 regulator: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Failed to enable VGP1 regulator: %d", __FUNCTION__, status);
   }
 
   return status;
@@ -83,13 +83,13 @@ zx_status_t Mt8167::PowerInit() {
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_POWER_IMPL, &power_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Adding power-impl device failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Adding power-impl device failed %d", __FUNCTION__, status);
     return status;
   }
 
   status = DdkAddComposite("composite-pd-kVDLdoVGp2", &power_domain_kVDLdoVGp2_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddComposite for power domain kVDLdoVGp2 failed: %d\n", __FUNCTION__,
+    zxlogf(ERROR, "%s: DdkAddComposite for power domain kVDLdoVGp2 failed: %d", __FUNCTION__,
            status);
     return status;
   }

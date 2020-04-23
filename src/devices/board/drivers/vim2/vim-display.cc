@@ -124,7 +124,7 @@ zx_status_t Vim::DisplayInit() {
 
   if ((status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments),
                                          UINT32_MAX)) != ZX_OK) {
-    zxlogf(ERROR, "DisplayInit: pbus_device_add() failed for display: %d\n", status);
+    zxlogf(ERROR, "DisplayInit: pbus_device_add() failed for display: %d", status);
     return status;
   }
 

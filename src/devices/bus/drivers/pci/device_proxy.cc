@@ -14,7 +14,7 @@
 #define RPC_ENTRY pci_tracef("[%s] %s: entry\n", cfg_->addr(), __func__)
 
 #define DEVICE_PROXY_UNIMPLEMENTED                     \
-  zxlogf(INFO, "[DeviceProxy] called %s\n", __func__); \
+  zxlogf(INFO, "[DeviceProxy] called %s", __func__); \
   return ZX_ERR_NOT_SUPPORTED
 
 // This file contains the PciProtocol implementation that is proxied over
@@ -112,7 +112,7 @@ zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
       st = zx_ioports_request(handle, static_cast<uint16_t>(out_bar->addr),
                               static_cast<uint32_t>(out_bar->size));
       if (st != ZX_OK) {
-        zxlogf(ERROR, "Failed to map IO window for bar into process: %d\n", st);
+        zxlogf(ERROR, "Failed to map IO window for bar into process: %d", st);
         return st;
       }
     }

@@ -122,7 +122,7 @@ static zx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, port_status
     usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONFIG_ERROR, port,
                       ZX_TIME_INFINITE);
   }
-  zxlogf(TRACE, "\n");
+  zxlogf(TRACE, "");
 
   *out_status = status.wPortStatus;
   return ZX_OK;
@@ -160,7 +160,7 @@ static zx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, port_status_t
 }
 
 static void usb_hub_interrupt_complete(void* ctx, usb_request_t* req) {
-  zxlogf(TRACE, "usb_hub_interrupt_complete got %d %" PRIu64 "\n", req->response.status,
+  zxlogf(TRACE, "usb_hub_interrupt_complete got %d %" PRIu64 "", req->response.status,
          req->response.actual);
   usb_hub_t* hub = (usb_hub_t*)ctx;
   sync_completion_signal(&hub->completion);
@@ -174,13 +174,13 @@ static void usb_hub_power_on_port(usb_hub_t* hub, int port) {
 static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
   port_status_t status;
 
-  zxlogf(TRACE, "port %d usb_hub_port_enabled\n", port);
+  zxlogf(TRACE, "port %d usb_hub_port_enabled", port);
 
   // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
   // wait for USB_PORT_ENABLE == 1 and USB_PORT_RESET == 0
   if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_ENABLE, USB_PORT_ENABLE | USB_PORT_RESET,
                             ZX_MSEC(100)) != ZX_OK) {
-    zxlogf(ERROR, "usb_hub_wait_for_port USB_PORT_RESET failed for USB hub, port %d\n", port);
+    zxlogf(ERROR, "usb_hub_wait_for_port USB_PORT_RESET failed for USB hub, port %d", port);
     return;
   }
 
@@ -195,7 +195,7 @@ static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
     speed = USB_SPEED_FULL;
   }
 
-  zxlogf(TRACE, "call hub_device_added for port %d\n", port);
+  zxlogf(TRACE, "call hub_device_added for port %d", port);
   usb_bus_device_added(&hub->bus, hub->usb_device, port, speed);
   usb_hub_set_port_attached(hub, port, true);
 }
@@ -203,12 +203,12 @@ static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
 static void usb_hub_port_connected(usb_hub_t* hub, int port) {
   port_status_t status;
 
-  zxlogf(TRACE, "port %d usb_hub_port_connected\n", port);
+  zxlogf(TRACE, "port %d usb_hub_port_connected", port);
 
   // USB 2.0 spec section 7.1.7.3 recommends 100ms between connect and reset
   if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_CONNECTION, USB_PORT_CONNECTION,
                             ZX_MSEC(100)) != ZX_OK) {
-    zxlogf(ERROR, "usb_hub_wait_for_port USB_PORT_CONNECTION failed for USB hub, port %d\n", port);
+    zxlogf(ERROR, "usb_hub_wait_for_port USB_PORT_CONNECTION failed for USB hub, port %d", port);
     return;
   }
 
@@ -224,7 +224,7 @@ static zx_status_t usb_hub_port_reset(void* ctx, uint32_t port) {
   status = usb_hub_wait_for_port(hub, port, &status, USB_PORT_ENABLE,
                                  USB_PORT_ENABLE | USB_PORT_RESET, ZX_MSEC(100));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb_hub_wait_for_port USB_PORT_RESET failed for USB hub, port %d\n", port);
+    zxlogf(ERROR, "usb_hub_wait_for_port USB_PORT_RESET failed for USB hub, port %d", port);
   }
   return status;
 }
@@ -234,7 +234,7 @@ static usb_hub_interface_protocol_ops_t _hub_interface = {
 };
 
 static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
-  zxlogf(TRACE, "port %d usb_hub_port_disconnected\n", port);
+  zxlogf(TRACE, "port %d usb_hub_port_disconnected", port);
   usb_bus_device_removed(&hub->bus, hub->usb_device, port);
   usb_hub_set_port_attached(hub, port, false);
 }
@@ -242,7 +242,7 @@ static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
 static void usb_hub_handle_port_status(usb_hub_t* hub, int port, port_status_t status) {
   port_status_t old_status = hub->port_status[port];
 
-  zxlogf(TRACE, "usb_hub_handle_port_status port: %d status: %04X old_status: %04X\n", port, status,
+  zxlogf(TRACE, "usb_hub_handle_port_status port: %d status: %04X old_status: %04X", port, status,
          old_status);
 
   hub->port_status[port] = status;
@@ -316,7 +316,7 @@ static int usb_hub_thread(void* arg) {
       usb_get_descriptor(&hub->usb, USB_TYPE_CLASS | USB_RECIP_DEVICE, desc_type, 0, &hub_desc,
                          sizeof(hub_desc), ZX_TIME_INFINITE, &out_length);
   if (result < 0) {
-    zxlogf(ERROR, "get hub descriptor failed: %d\n", result);
+    zxlogf(ERROR, "get hub descriptor failed: %d", result);
     goto fail;
   }
   // The length of the descriptor varies depending on whether it is USB 2.0 or 3.0,
@@ -324,7 +324,7 @@ static int usb_hub_thread(void* arg) {
   size_t min_length = 7;
   size_t max_length = sizeof(hub_desc);
   if (out_length < min_length || out_length > max_length) {
-    zxlogf(ERROR, "get hub descriptor got length %lu, want length between %lu and %lu\n",
+    zxlogf(ERROR, "get hub descriptor got length %lu, want length between %lu and %lu",
            out_length, min_length, max_length);
     result = ZX_ERR_BAD_STATE;
     goto fail;
@@ -340,10 +340,10 @@ static int usb_hub_thread(void* arg) {
     result = usb_get_descriptor(&hub->usb, USB_TYPE_STANDARD, USB_DT_DEVICE_QUALIFIER, 0,
                                 &qual_desc, sizeof(qual_desc), ZX_TIME_INFINITE, &out_length);
     if (result < 0) {
-      zxlogf(ERROR, "get device_qualifier descriptor failed: %d\n", result);
+      zxlogf(ERROR, "get device_qualifier descriptor failed: %d", result);
       goto fail;
     } else if (out_length != sizeof(qual_desc)) {
-      zxlogf(ERROR, "get device_qualifier descriptor returned %ld bytes, want %ld\n", out_length,
+      zxlogf(ERROR, "get device_qualifier descriptor returned %ld bytes, want %ld", out_length,
              sizeof(qual_desc));
       result = ZX_ERR_BAD_STATE;
       goto fail;
@@ -354,10 +354,10 @@ static int usb_hub_thread(void* arg) {
     result = usb_get_descriptor(&hub->usb, USB_TYPE_STANDARD, USB_DT_DEVICE, 0, &dev_desc,
                                 sizeof(dev_desc), ZX_TIME_INFINITE, &out_length);
     if (result < 0) {
-      zxlogf(ERROR, "get device descriptor failed: %d\n", result);
+      zxlogf(ERROR, "get device descriptor failed: %d", result);
       goto fail;
     } else if (out_length != sizeof(dev_desc)) {
-      zxlogf(ERROR, "get device descriptor returned %ld bytes, want %ld\n", out_length,
+      zxlogf(ERROR, "get device descriptor returned %ld bytes, want %ld", out_length,
              sizeof(dev_desc));
       result = ZX_ERR_BAD_STATE;
       goto fail;
@@ -370,7 +370,7 @@ static int usb_hub_thread(void* arg) {
 
   result = usb_bus_configure_hub(&hub->bus, hub->usb_device, hub->hub_speed, &hub_desc, multi_tt);
   if (result < 0) {
-    zxlogf(ERROR, "configure_hub failed: %d\n", result);
+    zxlogf(ERROR, "configure_hub failed: %d", result);
     goto fail;
   }
 
@@ -420,7 +420,7 @@ static int usb_hub_thread(void* arg) {
     // bit zero is hub status
     if (bitmap[0] & 1) {
       // what to do here?
-      zxlogf(ERROR, "usb_hub_interrupt_complete hub status changed\n");
+      zxlogf(ERROR, "usb_hub_interrupt_complete hub status changed");
     }
 
     int port = 1;
@@ -458,7 +458,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
   usb_bus_protocol_t bus;
   status = device_get_protocol(device, ZX_PROTOCOL_USB_BUS, &bus);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb_hub_bind could not find bus device\n");
+    zxlogf(ERROR, "usb_hub_bind could not find bus device");
     return status;
   }
 
@@ -492,7 +492,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
 
   usb_hub_t* hub = calloc(1, sizeof(usb_hub_t));
   if (!hub) {
-    zxlogf(ERROR, "Not enough memory for usb_hub_t.\n");
+    zxlogf(ERROR, "Not enough memory for usb_hub_t.");
     usb_desc_iter_release(&iter);
     return ZX_ERR_NO_MEMORY;
   }
@@ -516,7 +516,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
 
   status = usb_enable_endpoint(&usb, endp, ss_comp_desc, true);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: usb_enable_endpoint failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: usb_enable_endpoint failed %d", __FUNCTION__, status);
     usb_desc_iter_release(&iter);
     usb_hub_free(hub);
     return status;

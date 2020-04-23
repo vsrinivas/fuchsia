@@ -85,7 +85,7 @@ zx_status_t UsbBus::Create(usb_protocol_t* usb_protocol,
     if (status != ZX_OK) {
         // usb_set_interface() fails on some Realtek chipsets, with no impact on subsequent
         // functionality.
-        zxlogf(TRACE, "rtl88xx: UsbBus::Create() failed to set interface %d alternate %d: %s\n",
+        zxlogf(TRACE, "rtl88xx: UsbBus::Create() failed to set interface %d alternate %d: %s",
                usb_iface_desc.bInterfaceNumber, usb_iface_desc.bAlternateSetting,
                zx_status_get_string(status));
     }
@@ -145,11 +145,11 @@ zx_status_t UsbBus::ReadRegister(uint16_t offset, uint8_t* value, const char* na
   const zx_status_t status =
       ControlReadRegister(offset, reinterpret_cast<char*>(value), sizeof(*value));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rtl88xx: UsbBus::ReadRegister(%s) returned %s\n", name,
+    zxlogf(ERROR, "rtl88xx: UsbBus::ReadRegister(%s) returned %s", name,
            zx_status_get_string(status));
   }
   if (kLogBusTransactions) {
-    zxlogf(INFO, "rtl88xx: UsbBus %-24s  > 0x%02x\n", name, *value);
+    zxlogf(INFO, "rtl88xx: UsbBus %-24s  > 0x%02x", name, *value);
   }
   return status;
 }
@@ -158,11 +158,11 @@ zx_status_t UsbBus::ReadRegister(uint16_t offset, uint16_t* value, const char* n
   const zx_status_t status =
       ControlReadRegister(offset, reinterpret_cast<char*>(value), sizeof(*value));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rtl88xx: UsbBus::ReadRegister(%s) returned %s\n", name,
+    zxlogf(ERROR, "rtl88xx: UsbBus::ReadRegister(%s) returned %s", name,
            zx_status_get_string(status));
   }
   if (kLogBusTransactions) {
-    zxlogf(INFO, "rtl88xx: UsbBus %-24s  > 0x%04x\n", name, *value);
+    zxlogf(INFO, "rtl88xx: UsbBus %-24s  > 0x%04x", name, *value);
   }
   return status;
 }
@@ -171,11 +171,11 @@ zx_status_t UsbBus::ReadRegister(uint16_t offset, uint32_t* value, const char* n
   const zx_status_t status =
       ControlReadRegister(offset, reinterpret_cast<char*>(value), sizeof(*value));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rtl88xx: UsbBus::ReadRegister(%s) returned %s\n", name,
+    zxlogf(ERROR, "rtl88xx: UsbBus::ReadRegister(%s) returned %s", name,
            zx_status_get_string(status));
   }
   if (kLogBusTransactions) {
-    zxlogf(INFO, "rtl88xx: UsbBus %-24s  > 0x%08x\n", name, *value);
+    zxlogf(INFO, "rtl88xx: UsbBus %-24s  > 0x%08x", name, *value);
   }
   return status;
 }
@@ -185,11 +185,11 @@ zx_status_t UsbBus::WriteRegister(uint16_t offset, uint8_t value, const char* na
   const zx_status_t status =
       ControlWriteRegister(offset, reinterpret_cast<char*>(&value), sizeof(value));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rtl88xx: UsbBus::WriteRegister(%s) returned %s\n", name,
+    zxlogf(ERROR, "rtl88xx: UsbBus::WriteRegister(%s) returned %s", name,
            zx_status_get_string(status));
   }
   if (kLogBusTransactions) {
-    zxlogf(INFO, "rtl88xx: UsbBus %-24s <  0x%02x\n", name, original_value);
+    zxlogf(INFO, "rtl88xx: UsbBus %-24s <  0x%02x", name, original_value);
   }
   return status;
 }
@@ -199,11 +199,11 @@ zx_status_t UsbBus::WriteRegister(uint16_t offset, uint16_t value, const char* n
   const zx_status_t status =
       ControlWriteRegister(offset, reinterpret_cast<char*>(&value), sizeof(value));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rtl88xx: UsbBus::WriteRegister(%s) returned %s\n", name,
+    zxlogf(ERROR, "rtl88xx: UsbBus::WriteRegister(%s) returned %s", name,
            zx_status_get_string(status));
   }
   if (kLogBusTransactions) {
-    zxlogf(INFO, "rtl88xx: UsbBus %-24s <  0x%04x\n", name, original_value);
+    zxlogf(INFO, "rtl88xx: UsbBus %-24s <  0x%04x", name, original_value);
   }
   return status;
 }
@@ -213,11 +213,11 @@ zx_status_t UsbBus::WriteRegister(uint16_t offset, uint32_t value, const char* n
   const zx_status_t status =
       ControlWriteRegister(offset, reinterpret_cast<char*>(&value), sizeof(value));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rtl88xx: UsbBus::WriteRegister(%s) returned %s\n", name,
+    zxlogf(ERROR, "rtl88xx: UsbBus::WriteRegister(%s) returned %s", name,
            zx_status_get_string(status));
   }
   if (kLogBusTransactions) {
-    zxlogf(INFO, "rtl88xx: UsbBus %-24s <  0x%08x\n", name, original_value);
+    zxlogf(INFO, "rtl88xx: UsbBus %-24s <  0x%08x", name, original_value);
   }
   return status;
 }
@@ -258,7 +258,7 @@ zx_status_t CreateUsbBus(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
   usb_desc_iter_t usb_iter;
   status = usb_desc_iter_init(&usb_protocol, &usb_iter);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rtl88xx: CreateUsbBus() failed to iterate descriptor: %s\n",
+    zxlogf(ERROR, "rtl88xx: CreateUsbBus() failed to iterate descriptor: %s",
            zx_status_get_string(status));
     return status;
   }
@@ -291,11 +291,11 @@ zx_status_t CreateUsbBus(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
 
     status = UsbBus::Create(&usb_protocol, *usb_iface_desc, bus);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "rtl88xx: UsbBus::Create() returned %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "rtl88xx: UsbBus::Create() returned %s", zx_status_get_string(status));
     }
   } else {
     status = ZX_ERR_NOT_SUPPORTED;
-    zxlogf(ERROR, "rtl88xx: UsbBus::Create() failed to find interface\n");
+    zxlogf(ERROR, "rtl88xx: UsbBus::Create() failed to find interface");
   }
   usb_desc_iter_release(&usb_iter);
 

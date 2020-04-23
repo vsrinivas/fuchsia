@@ -51,7 +51,7 @@ zx_status_t HidInstance::ReadReportFromFifo(uint8_t* buf, size_t buf_size, zx_ti
 
   size_t xfer = base_->GetReportSizeById(rpt_id, ReportType::INPUT);
   if (xfer == 0) {
-    zxlogf(ERROR, "error reading hid device: unknown report id (%u)!\n", rpt_id);
+    zxlogf(ERROR, "error reading hid device: unknown report id (%u)!", rpt_id);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -265,7 +265,7 @@ void HidInstance::WriteToFifo(const uint8_t* report, size_t report_len, zx_time_
   ssize_t wrote = zx_hid_fifo_write(&fifo_, report, report_len);
   if (wrote <= 0) {
     if (!(flags_ & kHidFlagsWriteFailed)) {
-      zxlogf(ERROR, "%s: could not write to hid fifo (ret=%zd)\n", base_->GetName(), wrote);
+      zxlogf(ERROR, "%s: could not write to hid fifo (ret=%zd)", base_->GetName(), wrote);
       flags_ |= kHidFlagsWriteFailed;
     }
     return;

@@ -71,7 +71,7 @@ zx_status_t Controller::HbaReset() {
   // reset should complete within 1 second
   zx_status_t status = bus_->WaitForClear(kHbaGlobalHostControl, AHCI_GHC_HR, zx::sec(1));
   if (status) {
-    zxlogf(ERROR, "ahci: hba reset timed out\n");
+    zxlogf(ERROR, "ahci: hba reset timed out");
   }
   return status;
 }
@@ -89,12 +89,12 @@ void Controller::Queue(uint32_t portnr, sata_txn_t* txn) {
   Port* port = &ports_[portnr];
   zx_status_t status = port->Queue(txn);
   if (status == ZX_OK) {
-    zxlogf(SPEW, "ahci.%u: queue txn %p offset_dev 0x%" PRIx64 " length 0x%x\n", port->num(), txn,
+    zxlogf(SPEW, "ahci.%u: queue txn %p offset_dev 0x%" PRIx64 " length 0x%x", port->num(), txn,
            txn->bop.rw.offset_dev, txn->bop.rw.length);
     // hit the worker thread
     sync_completion_signal(&worker_completion_);
   } else {
-    zxlogf(INFO, "ahci.%u: failed to queue txn %p: %d\n", port->num(), txn, status);
+    zxlogf(INFO, "ahci.%u: failed to queue txn %p: %d", port->num(), txn, status);
     // TODO: close transaction.
   }
 }
@@ -147,7 +147,7 @@ int Controller::IrqLoop() {
     zx_status_t status = bus_->InterruptWait();
     if (status != ZX_OK) {
       if (!ShouldExit()) {
-        zxlogf(ERROR, "ahci: error %d waiting for interrupt\n", status);
+        zxlogf(ERROR, "ahci: error %d waiting for interrupt", status);
       }
       return 0;
     }
@@ -246,7 +246,7 @@ zx_status_t Controller::Create(zx_device_t* parent, std::unique_ptr<Controller>*
   fbl::AllocChecker ac;
   std::unique_ptr<Bus> bus(new (&ac) PciBus());
   if (!ac.check()) {
-    zxlogf(ERROR, "ahci: out of memory\n");
+    zxlogf(ERROR, "ahci: out of memory");
     return ZX_ERR_NO_MEMORY;
   }
   return CreateWithBus(parent, std::move(bus), con_out);
@@ -257,12 +257,12 @@ zx_status_t Controller::CreateWithBus(zx_device_t* parent, std::unique_ptr<Bus> 
   fbl::AllocChecker ac;
   std::unique_ptr<Controller> controller(new (&ac) Controller());
   if (!ac.check()) {
-    zxlogf(ERROR, "ahci: out of memory\n");
+    zxlogf(ERROR, "ahci: out of memory");
     return ZX_ERR_NO_MEMORY;
   }
   zx_status_t status = bus->Configure(parent);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: failed to configure host bus\n");
+    zxlogf(ERROR, "ahci: failed to configure host bus");
     return status;
   }
   controller->bus_ = std::move(bus);
@@ -273,12 +273,12 @@ zx_status_t Controller::CreateWithBus(zx_device_t* parent, std::unique_ptr<Bus> 
 zx_status_t Controller::LaunchThreads() {
   zx_status_t status = irq_thread_.CreateWithName(IrqThread, this, "ahci-irq");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error %d creating irq thread\n", status);
+    zxlogf(ERROR, "ahci: error %d creating irq thread", status);
     return status;
   }
   status = worker_thread_.CreateWithName(WorkerThread, this, "ahci-worker");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error %d creating worker thread\n", status);
+    zxlogf(ERROR, "ahci: error %d creating worker thread", status);
     return status;
   }
   return ZX_OK;
@@ -305,12 +305,12 @@ zx_status_t ahci_bind(void* ctx, zx_device_t* parent) {
   std::unique_ptr<Controller> controller;
   zx_status_t status = Controller::Create(parent, &controller);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: failed to create ahci controller (%d)\n", status);
+    zxlogf(ERROR, "ahci: failed to create ahci controller (%d)", status);
     return status;
   }
 
   if ((status = controller->LaunchThreads()) != ZX_OK) {
-    zxlogf(ERROR, "ahci: failed to start controller threads (%d)\n", status);
+    zxlogf(ERROR, "ahci: failed to start controller threads (%d)", status);
     return status;
   }
 
@@ -324,7 +324,7 @@ zx_status_t ahci_bind(void* ctx, zx_device_t* parent) {
 
   status = device_add(parent, &args, controller->zxdev_ptr());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error %d in device_add\n", status);
+    zxlogf(ERROR, "ahci: error %d in device_add", status);
     controller->Shutdown();
     return status;
   }
@@ -333,7 +333,7 @@ zx_status_t ahci_bind(void* ctx, zx_device_t* parent) {
   thrd_t t;
   int ret = thrd_create_with_name(&t, Controller::InitThread, controller.get(), "ahci-init");
   if (ret != thrd_success) {
-    zxlogf(ERROR, "ahci: error %d in init thread create\n", status);
+    zxlogf(ERROR, "ahci: error %d in init thread create", status);
     // This is an error in that no devices will be found, but the AHCI controller is enabled.
     // Not returning an error, but the controller should be removed.
     // TODO: handle this better in upcoming init cleanup CL.

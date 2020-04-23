@@ -15,7 +15,7 @@
 // Using ## __VA_ARGS__ instead of __VA_OPT__(,) __VA_ARGS__ for now, since
 // __VA_OPT__ doesn't seem to be available yet.
 #define LOG(severity, fmt, ...)                                                                 \
-  zxlogf(severity, "[%s:%s:%d] " fmt "\n", amlogic_secure_mem::kDeviceName, __func__, __LINE__, \
+  zxlogf(severity, "[%s:%s:%d] " fmt "", amlogic_secure_mem::kDeviceName, __func__, __LINE__, \
          ##__VA_ARGS__)
 
 #endif  // SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_LOG_H_

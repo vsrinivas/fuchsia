@@ -123,7 +123,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         }
         if (intf->bInterfaceClass == USB_CLASS_VIDEO) {
           if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_CONTROL) {
-            zxlogf(TRACE, "interface USB_SUBCLASS_VIDEO_CONTROL\n");
+            zxlogf(TRACE, "interface USB_SUBCLASS_VIDEO_CONTROL");
             break;
           } else if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_STREAMING) {
             zxlogf(TRACE,
@@ -140,7 +140,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
                     std::move(formats), &streaming_settings, std::move(device_info),
                     parent_req_size);
                 if (status != ZX_OK) {
-                  zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
+                  zxlogf(ERROR, "UsbVideoStream::Create failed: %d", status);
                   goto error_return;
                 }
               }
@@ -157,7 +157,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
             break;
           }
         }
-        zxlogf(TRACE, "USB_DT_INTERFACE %d %d %d\n", intf->bInterfaceClass,
+        zxlogf(TRACE, "USB_DT_INTERFACE %d %d %d", intf->bInterfaceClass,
                intf->bInterfaceSubClass, intf->bInterfaceProtocol);
         break;
       }
@@ -175,7 +175,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               if (control_header == NULL) {
                 break;
               }
-              zxlogf(TRACE, "USB_VIDEO_VC_HEADER dwClockFrequency: %u\n",
+              zxlogf(TRACE, "USB_VIDEO_VC_HEADER dwClockFrequency: %u",
                      control_header->dwClockFrequency);
               break;
             }
@@ -186,7 +186,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               if (desc == NULL) {
                 break;
               }
-              zxlogf(TRACE, "USB_VIDEO_VC_INPUT_TERMINAL wTerminalType: %04X\n",
+              zxlogf(TRACE, "USB_VIDEO_VC_INPUT_TERMINAL wTerminalType: %04X",
                      le16toh(desc->wTerminalType));
               break;
             }
@@ -197,21 +197,21 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               if (desc == NULL) {
                 break;
               }
-              zxlogf(TRACE, "USB_VIDEO_VC_OUTPUT_TERMINAL wTerminalType: %04X\n",
+              zxlogf(TRACE, "USB_VIDEO_VC_OUTPUT_TERMINAL wTerminalType: %04X",
                      le16toh(desc->wTerminalType));
               break;
             }
             case USB_VIDEO_VC_SELECTOR_UNIT:
-              zxlogf(TRACE, "USB_VIDEO_VC_SELECTOR_UNIT\n");
+              zxlogf(TRACE, "USB_VIDEO_VC_SELECTOR_UNIT");
               break;
             case USB_VIDEO_VC_PROCESSING_UNIT:
-              zxlogf(TRACE, "USB_VIDEO_VC_PROCESSING_UNIT\n");
+              zxlogf(TRACE, "USB_VIDEO_VC_PROCESSING_UNIT");
               break;
             case USB_VIDEO_VC_EXTENSION_UNIT:
-              zxlogf(TRACE, "USB_VIDEO_VS_EXTENSION_TYPE\n");
+              zxlogf(TRACE, "USB_VIDEO_VS_EXTENSION_TYPE");
               break;
             case USB_VIDEO_VC_ENCODING_UNIT:
-              zxlogf(TRACE, "USB_VIDEO_VS_ENCODING_TYPE\n");
+              zxlogf(TRACE, "USB_VIDEO_VS_ENCODING_TYPE");
               break;
           }
         } else if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_STREAMING) {
@@ -229,7 +229,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               break;
             }
             case USB_VIDEO_VS_OUTPUT_HEADER:
-              zxlogf(TRACE, "USB_VIDEO_VS_OUTPUT_HEADER\n");
+              zxlogf(TRACE, "USB_VIDEO_VS_OUTPUT_HEADER");
               break;
             case USB_VIDEO_VS_FORMAT_UNCOMPRESSED:
             case USB_VIDEO_VS_FORMAT_MJPEG:
@@ -243,7 +243,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
             case USB_VIDEO_VS_FORMAT_VP8_SIMULCAST:
               if (input_header && formats.number_of_formats() >= input_header->bNumFormats) {
                 // More formats than expected, this should never happen.
-                zxlogf(ERROR, "skipping unexpected format %u, already have %d formats\n",
+                zxlogf(ERROR, "skipping unexpected format %u, already have %d formats",
                        vc_header->bDescriptorSubtype, input_header->bNumFormats);
                 break;
               }
@@ -257,7 +257,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               break;
           }
         } else if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION) {
-          zxlogf(TRACE, "USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION\n");
+          zxlogf(TRACE, "USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION");
         }
         break;
       }
@@ -296,7 +296,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         if (desc == NULL) {
           break;
         }
-        zxlogf(TRACE, "USB_VIDEO_CS_ENDPOINT wMaxTransferSize %u\n", desc->wMaxTransferSize);
+        zxlogf(TRACE, "USB_VIDEO_CS_ENDPOINT wMaxTransferSize %u", desc->wMaxTransferSize);
         break;
       }
       case USB_DT_SS_EP_COMPANION: {
@@ -341,7 +341,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         // fall through for unhandled superspeed bulk endpoint
       }
       default:
-        zxlogf(TRACE, "unknown DT %d\n", header->bDescriptorType);
+        zxlogf(TRACE, "unknown DT %d", header->bDescriptorType);
         break;
     }
     usb_desc_iter_advance(&iter);
@@ -351,7 +351,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         device, &usb, video_source_index++, intf, control_header, input_header, std::move(formats),
         &streaming_settings, std::move(device_info), parent_req_size);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
+      zxlogf(ERROR, "UsbVideoStream::Create failed: %d", status);
     }
   }
 error_return:

@@ -75,7 +75,7 @@ zx_status_t Sherlock::TeeInit() {
   zx_status_t status =
       pbus_.CompositeDeviceAdd(&tee_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

@@ -450,7 +450,7 @@ void Device::Dump() const {
       if (bar.is_64bit) {
         zxlogf(INFO, "%08x ", cfg_->Read(Config::kBar(bar.bar_id + 1)));
       }
-      zxlogf(INFO, "%08x ]\n", cfg_->Read(Config::kBar(bar.bar_id)));
+      zxlogf(INFO, "%08x ]", cfg_->Read(Config::kBar(bar.bar_id)));
     }
   }
   if (!caps_.list.is_empty()) {

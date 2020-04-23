@@ -334,7 +334,7 @@ zx_status_t ScsiDevice::WorkerThread() {
         } else {
           max_xfer_size_sectors = fbl::min(max_sectors, SCSI_MAX_XFER_SIZE);
         }
-        zxlogf(INFO, "Virtio SCSI %u:%u Max Xfer Size %ukb\n", target, lun,
+        zxlogf(INFO, "Virtio SCSI %u:%u Max Xfer Size %ukb", target, lun,
                max_xfer_size_sectors * 2);
         scsi::Disk::Create(this, device_, /*target=*/target, /*lun=*/lun, max_xfer_size_sectors);
         luns_found++;
@@ -380,27 +380,27 @@ zx_status_t ScsiDevice::Init() {
   {
     fbl::AutoLock lock(&lock_);
     if (config_.max_channel > 1) {
-      zxlogf(WARN, "config_.max_channel %d not expected.\n", config_.max_channel);
+      zxlogf(WARN, "config_.max_channel %d not expected.", config_.max_channel);
     }
   }
 
   virtio::Device::DriverStatusAck();
 
   if (!bti().is_valid()) {
-    zxlogf(ERROR, "invalid bti handle\n");
+    zxlogf(ERROR, "invalid bti handle");
     return ZX_ERR_BAD_HANDLE;
   }
   {
     fbl::AutoLock lock(&lock_);
     auto err = control_ring_.Init(/*index=*/Queue::CONTROL);
     if (err) {
-      zxlogf(ERROR, "failed to allocate control queue\n");
+      zxlogf(ERROR, "failed to allocate control queue");
       return err;
     }
 
     err = request_queue_.Init(/*index=*/Queue::REQUEST);
     if (err) {
-      zxlogf(ERROR, "failed to allocate request queue\n");
+      zxlogf(ERROR, "failed to allocate request queue");
       return err;
     }
     request_buffers_size_ =
@@ -410,7 +410,7 @@ zx_status_t ScsiDevice::Init() {
       auto status = io_buffer_init(&scsi_io_slot_table_[i].request_buffer, bti().get(),
                                    /*size=*/request_buffers_size_, IO_BUFFER_RW | IO_BUFFER_CONTIG);
       if (status) {
-        zxlogf(ERROR, "failed to allocate queue working memory\n");
+        zxlogf(ERROR, "failed to allocate queue working memory");
         return status;
       }
       scsi_io_slot_table_[i].avail = true;
@@ -426,7 +426,7 @@ zx_status_t ScsiDevice::Init() {
   auto status = DdkAdd("virtio-scsi");
   device_ = zxdev();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to run DdkAdd\n");
+    zxlogf(ERROR, "failed to run DdkAdd");
     device_ = nullptr;
     return status;
   }

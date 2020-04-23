@@ -51,7 +51,7 @@ static void sent_fake_qmi_msg(zx::channel& channel, uint8_t* resp, uint32_t resp
   zx_status_t status;
   status = channel.write(0, resp, resp_size, NULL, 0);
   if (status < 0) {
-    zxlogf(ERROR, "qmi-fake-transport: failed to write message to channel: %s\n",
+    zxlogf(ERROR, "qmi-fake-transport: failed to write message to channel: %s",
            zx_status_get_string(status));
   }
 }
@@ -68,7 +68,7 @@ void QmiDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
     qmi_msg.timestamp = zx_clock_get_monotonic();
     memcpy(qmi_msg.opaque_bytes.data_, snoop_data, current_length);
     snoop_msg.set_qmi_message(fidl::unowned_ptr(&qmi_msg));
-    zxlogf(INFO, "qmi-fake-transport: snoop msg %u %u %u %u sent\n", qmi_msg.opaque_bytes.data_[0],
+    zxlogf(INFO, "qmi-fake-transport: snoop msg %u %u %u %u sent", qmi_msg.opaque_bytes.data_[0],
            qmi_msg.opaque_bytes.data_[1], qmi_msg.opaque_bytes.data_[2],
            qmi_msg.opaque_bytes.data_[3]);
     fidl_tel_snoop::Publisher::Call::SendMessage(zx::unowned_channel(GetCtrlSnoopChannel().get()),
@@ -95,7 +95,7 @@ void QmiDevice::ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uin
     sent_fake_qmi_msg(GetCtrlChannel(), resp, resp_size);
     SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
   } else {
-    zxlogf(ERROR, "qmi-fake-driver: unexpected qmi msg received\n");
+    zxlogf(ERROR, "qmi-fake-driver: unexpected qmi msg received");
     memcpy(resp, kQmiNonsenseResp,
            std::min(sizeof(kQmiNonsenseResp), static_cast<std::size_t>(resp_size)));
     sent_fake_qmi_msg(GetCtrlChannel(), resp, resp_size);
@@ -111,23 +111,23 @@ static int qmi_fake_transport_thread(void* cookie) {
   uint8_t resp_buf[kTelCtrlPlanePktMax];
 
   zx_port_packet_t packet;
-  zxlogf(INFO, "qmi-fake-transport: event loop initialized\n");
+  zxlogf(INFO, "qmi-fake-transport: event loop initialized");
   while (true) {
     zx_status_t status = device_ptr->GetCtrlChannelPort().wait(zx::time::infinite(), &packet);
     if (status == ZX_ERR_TIMED_OUT) {
-      zxlogf(ERROR, "qmi-fake-transport: timed out: %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "qmi-fake-transport: timed out: %s", zx_status_get_string(status));
     } else if (status == ZX_OK) {
       switch (packet.key) {
         case tel_fake::kChannelMsg:
           if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
-            zxlogf(ERROR, "qmi-fake-transport: channel closed\n");
+            zxlogf(ERROR, "qmi-fake-transport: channel closed");
             status = device_ptr->CloseCtrlChannel();
             continue;
           }
           status = device_ptr->GetCtrlChannel().read(0, req_buf, NULL, kTelCtrlPlanePktMax, 0,
                                                      &req_len, NULL);
           if (status != ZX_OK) {
-            zxlogf(ERROR, "qmi-fake-transport: failed to read channel: %s\n",
+            zxlogf(ERROR, "qmi-fake-transport: failed to read channel: %s",
                    zx_status_get_string(status));
             return status;
           }
@@ -144,11 +144,11 @@ static int qmi_fake_transport_thread(void* cookie) {
           device_ptr->EventLoopCleanup();
           return 0;
         default:
-          zxlogf(ERROR, "qmi-fake-transport: qmi_port undefined key %lu\n", packet.key);
+          zxlogf(ERROR, "qmi-fake-transport: qmi_port undefined key %lu", packet.key);
           assert(0);
       }
     } else {
-      zxlogf(ERROR, "qmi-fake-transport: qmi_port err %d\n", status);
+      zxlogf(ERROR, "qmi-fake-transport: qmi_port err %d", status);
       assert(0);
     }
   }
@@ -159,7 +159,7 @@ zx_status_t QmiDevice::Bind() {
   // create a port to watch qmi messages
   zx_status_t status = zx::port::create(0, &GetCtrlChannelPort());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "qmi-fake-transport: failed to create a port: %s\n",
+    zxlogf(ERROR, "qmi-fake-transport: failed to create a port: %s",
            zx_status_get_string(status));
     return status;
   }
@@ -175,11 +175,11 @@ zx_status_t QmiDevice::Bind() {
   args.proto_id = ZX_PROTOCOL_QMI_TRANSPORT;
   status = device_add(GetParentDevice(), &args, &GetTelDevPtr());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "qmi-fake-transport: could not add device: %d\n", status);
+    zxlogf(ERROR, "qmi-fake-transport: could not add device: %d", status);
     zx_port_packet_t packet = {};
     packet.key = tel_fake::kTerminateMsg;
     GetCtrlChannelPort().queue(&packet);
-    zxlogf(INFO, "qmi-fake-transport: joining thread\n");
+    zxlogf(INFO, "qmi-fake-transport: joining thread");
     GetCtrlThrd().join();
     return status;
   }

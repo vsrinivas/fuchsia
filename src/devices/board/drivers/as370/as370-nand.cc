@@ -100,7 +100,7 @@ zx_status_t As370::NandInit() {
 
   zx_status_t status = pbus_.DeviceAdd(&nand_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
     return status;
   }
 

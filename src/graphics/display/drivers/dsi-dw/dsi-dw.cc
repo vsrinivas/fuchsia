@@ -503,17 +503,17 @@ zx_status_t DsiDw::WaitforCmdNotFull() { return WaitforFifo(kBitCmdFull, 0); }
 zx_status_t DsiDw::WaitforCmdEmpty() { return WaitforFifo(kBitCmdEmpty, 1); }
 
 void DsiDw::DumpCmd(const mipi_dsi_cmd_t& cmd) {
-  zxlogf(ERROR, "\n\t\t MIPI DSI Command:\n");
-  zxlogf(ERROR, "\t\t\t\t VIC = 0x%x (%d)\n", cmd.virt_chn_id, cmd.virt_chn_id);
-  zxlogf(ERROR, "\t\t\t\t Data Type = 0x%x (%d)\n", cmd.dsi_data_type, cmd.dsi_data_type);
-  zxlogf(ERROR, "\t\t\t\t ACK = 0x%x (%d)\n", cmd.flags, cmd.flags);
-  zxlogf(ERROR, "\t\t\t\t Payload size = 0x%lx (%ld)\n", cmd.pld_data_count, cmd.pld_data_count);
+  zxlogf(ERROR, "\n\t\t MIPI DSI Command:");
+  zxlogf(ERROR, "\t\t\t\t VIC = 0x%x (%d)", cmd.virt_chn_id, cmd.virt_chn_id);
+  zxlogf(ERROR, "\t\t\t\t Data Type = 0x%x (%d)", cmd.dsi_data_type, cmd.dsi_data_type);
+  zxlogf(ERROR, "\t\t\t\t ACK = 0x%x (%d)", cmd.flags, cmd.flags);
+  zxlogf(ERROR, "\t\t\t\t Payload size = 0x%lx (%ld)", cmd.pld_data_count, cmd.pld_data_count);
   zxlogf(ERROR, "\t\t\t\t Payload Data: [");
 
   for (size_t i = 0; i < cmd.pld_data_count; i++) {
     zxlogf(ERROR, "0x%x, ", cmd.pld_data_list[i]);
   }
-  zxlogf(ERROR, "]\n\n");
+  zxlogf(ERROR, "]\n");
 }
 
 zx_status_t DsiDw::GenericPayloadRead(uint32_t* data) {

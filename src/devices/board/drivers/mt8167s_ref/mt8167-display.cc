@@ -220,7 +220,7 @@ class WACS2_RDATA : public hwreg::RegisterBase<WACS2_RDATA, uint32_t> {
 
 zx_status_t Mt8167::DisplayInit() {
   if (board_info_.pid != PDEV_PID_CLEO && board_info_.pid != PDEV_PID_MEDIATEK_8167S_REF) {
-    zxlogf(ERROR, "Unsupported product\n");
+    zxlogf(ERROR, "Unsupported product");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -250,7 +250,7 @@ zx_status_t Mt8167::DisplayInit() {
       ddk::MmioBuffer::Create(MT8167_PMIC_WRAP_BASE, MT8167_PMIC_WRAP_SIZE, *root_resource,
                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &pmic_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: PMIC MmioBuffer::Create failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: PMIC MmioBuffer::Create failed %d", __FUNCTION__, status);
     return status;
   }
 
@@ -265,7 +265,7 @@ zx_status_t Mt8167::DisplayInit() {
 
   status = pbus_.DeviceAdd(&dsi_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
 
@@ -288,7 +288,7 @@ zx_status_t Mt8167::DisplayInit() {
   // Load display driver in same devhost as DSI driver.
   status = pbus_.CompositeDeviceAdd(&display_dev, fragments, fbl::count_of(fragments), 3);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;
   }
 

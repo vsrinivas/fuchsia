@@ -112,7 +112,7 @@ zx_status_t UsbPhy::Create(void* ctx, zx_device_t* parent) {
 
 zx_status_t UsbPhy::AddDwc2Device() {
   if (dwc2_device_) {
-    zxlogf(ERROR, "UsbPhy::AddDwc2Device: device already exists!\n");
+    zxlogf(ERROR, "UsbPhy::AddDwc2Device: device already exists!");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -133,7 +133,7 @@ zx_status_t UsbPhy::AddDwc2Device() {
 
 zx_status_t UsbPhy::RemoveDwc2Device() {
   if (dwc2_device_ == nullptr) {
-    zxlogf(ERROR, "UsbPhy::RemoveDwc2Device: device does not exist!\n");
+    zxlogf(ERROR, "UsbPhy::RemoveDwc2Device: device does not exist!");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -146,32 +146,32 @@ zx_status_t UsbPhy::RemoveDwc2Device() {
 
 zx_status_t UsbPhy::Init() {
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "UsbPhy::Init: could not get platform device protocol\n");
+    zxlogf(ERROR, "UsbPhy::Init: could not get platform device protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   auto status = pdev_.MapMmio(0, &usbphy_mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "UsbPhy::Init: MapMmio failed for usbphy_mmio_\n");
+    zxlogf(ERROR, "UsbPhy::Init: MapMmio failed for usbphy_mmio_");
     return status;
   }
   status = pdev_.MapMmio(1, &reset_mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "UsbPhy::Init: MapMmio failed for reset_mmio_\n");
+    zxlogf(ERROR, "UsbPhy::Init: MapMmio failed for reset_mmio_");
     return status;
   }
 
   pdev_device_info_t info;
   status = pdev_.GetDeviceInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "UsbPhy::Init: GetDeviceInfo failed\n");
+    zxlogf(ERROR, "UsbPhy::Init: GetDeviceInfo failed");
     return status;
   }
   did_ = info.did;
 
   status = InitPhy();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "UsbPhy::Init: InitPhy() failed\n");
+    zxlogf(ERROR, "UsbPhy::Init: InitPhy() failed");
     return status;
   }
 
@@ -181,7 +181,7 @@ zx_status_t UsbPhy::Init() {
   }
   status = DdkAdd(name, DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "UsbPhy::Init: DdkAdd() failed\n");
+    zxlogf(ERROR, "UsbPhy::Init: DdkAdd() failed");
     return status;
   }
 

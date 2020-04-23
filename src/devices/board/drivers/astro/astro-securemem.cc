@@ -58,7 +58,7 @@ zx_status_t Astro::SecureMemInit() {
   zx_status_t status =
       pbus_.CompositeDeviceAdd(&secure_mem_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

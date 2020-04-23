@@ -194,24 +194,24 @@ zx_status_t Display::Bind() {
   fbl::AutoLock lock(&lock_);
 
   if (!control_.is_valid()) {
-    zxlogf(ERROR, "%s: no control protocol\n", kTag);
+    zxlogf(ERROR, "%s: no control protocol", kTag);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (!pipe_.is_valid()) {
-    zxlogf(ERROR, "%s: no pipe protocol\n", kTag);
+    zxlogf(ERROR, "%s: no pipe protocol", kTag);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   zx_status_t status = pipe_.GetBti(&bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBti failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: GetBti failed: %d", kTag, status);
     return status;
   }
 
   status = io_buffer_.Init(bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: io_buffer_init failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: io_buffer_init failed: %d", kTag, status);
     return status;
   }
 
@@ -219,13 +219,13 @@ zx_status_t Display::Bind() {
   goldfish_pipe_signal_value_t signal_cb = {Display::OnSignal, this};
   status = pipe_.Create(&signal_cb, &id_, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Create failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: Create failed: %d", kTag, status);
     return status;
   }
 
   status = cmd_buffer_.InitVmo(bti_.get(), vmo.get(), 0, IO_BUFFER_RW);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: io_buffer_init_vmo failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: io_buffer_init_vmo failed: %d", kTag, status);
     return status;
   }
 
@@ -236,7 +236,7 @@ zx_status_t Display::Bind() {
 
   pipe_.Open(id_);
   if (buffer->status) {
-    zxlogf(ERROR, "%s: Open failed: %d\n", kTag, buffer->status);
+    zxlogf(ERROR, "%s: Open failed: %d", kTag, buffer->status);
     cmd_buffer_.release();
     return ZX_ERR_INTERNAL;
   }
@@ -245,14 +245,14 @@ zx_status_t Display::Bind() {
   memcpy(io_buffer_.virt(), kPipeName, length);
   status = WriteLocked(static_cast<uint32_t>(length));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Pipe name write failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: Pipe name write failed: %d", kTag, status);
     return status;
   }
 
   memcpy(io_buffer_.virt(), &kClientFlags, sizeof(kClientFlags));
   status = WriteLocked(sizeof(kClientFlags));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Client flags write failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: Client flags write failed: %d", kTag, status);
     return status;
   }
 
@@ -294,15 +294,15 @@ zx_status_t Display::Bind() {
       } while (device_stream >> delim);
 
       if (!device.width || !device.height) {
-        zxlogf(ERROR, "%s: skip device=%s, missing size\n", kTag, device_string.c_str());
+        zxlogf(ERROR, "%s: skip device=%s, missing size", kTag, device_string.c_str());
         continue;
       }
       if (!device.refresh_rate_hz) {
-        zxlogf(ERROR, "%s: skip device=%s, refresh rate is zero\n", kTag, device_string.c_str());
+        zxlogf(ERROR, "%s: skip device=%s, refresh rate is zero", kTag, device_string.c_str());
         continue;
       }
       if (device.scale < 0.1f || device.scale > 100.f) {
-        zxlogf(ERROR, "%s: skip device=%s, scale is not in range 0.1-100\n", kTag,
+        zxlogf(ERROR, "%s: skip device=%s, scale is not in range 0.1-100", kTag,
                device_string.c_str());
         continue;
       }
@@ -384,7 +384,7 @@ zx_status_t Display::ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset) 
   zx_status_t status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, offset,
                                 color_buffer->size, &color_buffer->paddr, 1, &color_buffer->pmt);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to pin VMO: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to pin VMO: %d", kTag, status);
     return status;
   }
 
@@ -396,7 +396,7 @@ zx_status_t Display::ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset) 
     fbl::AutoLock lock(&lock_);
     status = CreateColorBufferLocked(image->width, image->height, &color_buffer->id);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: failed to create color buffer\n", kTag);
+      zxlogf(ERROR, "%s: failed to create color buffer", kTag);
       return status;
     }
   }
@@ -428,7 +428,7 @@ zx_status_t Display::DisplayControllerImplImportImage(image_t* image, zx_unowned
   }
 
   if (!vmo.is_valid()) {
-    zxlogf(ERROR, "%s: invalid index\n", kTag);
+    zxlogf(ERROR, "%s: invalid index", kTag);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -440,7 +440,7 @@ zx_status_t Display::DisplayControllerImplImportImage(image_t* image, zx_unowned
   }
 
   if (!collection_info.settings.has_image_format_constraints || offset) {
-    zxlogf(ERROR, "%s: invalid image format or offset\n", kTag);
+    zxlogf(ERROR, "%s: invalid image format or offset", kTag);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -482,7 +482,7 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
         // TODO(36184): Returning error will cause blank screen if scenic requests
         // color correction. For now, lets pretend we support it, until a proper
         // fix is done (either from scenic or from core display)
-        zxlogf(WARN, "%s: Color Correction not support. No error reported\n", __func__);
+        zxlogf(WARN, "%s: Color Correction not support. No error reported", __func__);
       }
 
       if (display_configs[i]->layer_list[0]->type != LAYER_TYPE_PRIMARY) {
@@ -561,13 +561,13 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
 
       zx_status_t status = color_buffer->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: failed to duplicate vmo: %d\n", kTag, status);
+        zxlogf(ERROR, "%s: failed to duplicate vmo: %d", kTag, status);
       } else {
         fbl::AutoLock lock(&lock_);
 
         status = control_.GetColorBuffer(std::move(vmo), &color_buffer->id);
         if (status != ZX_OK) {
-          zxlogf(ERROR, "%s: failed to get color buffer: %d\n", kTag, status);
+          zxlogf(ERROR, "%s: failed to get color buffer: %d", kTag, status);
         }
 
         // Color buffers are in vulkan-only mode by default as that avoids
@@ -578,7 +578,7 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
           uint32_t result = 0;
           status = SetColorBufferVulkanModeLocked(color_buffer->id, 0, &result);
           if (status != ZX_OK || result) {
-            zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d\n", kTag, status, result);
+            zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d", kTag, status, result);
           }
         }
       }
@@ -596,7 +596,7 @@ zx_status_t Display::DisplayControllerImplGetSysmemConnection(zx::channel connec
 
   zx_status_t status = pipe_.ConnectSysmem(std::move(connection));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to connect to sysmem: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to connect to sysmem: %d", kTag, status);
     return status;
   }
   return ZX_OK;
@@ -643,7 +643,7 @@ zx_status_t Display::DisplayControllerImplSetBufferCollectionConstraints(const i
   zx_status_t status =
       fuchsia_sysmem_BufferCollectionSetConstraints(collection, true, &constraints);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to set constraints\n", kTag);
+    zxlogf(ERROR, "%s: failed to set constraints", kTag);
     return status;
   }
   return ZX_OK;
@@ -693,7 +693,7 @@ zx_status_t Display::WriteLocked(uint32_t cmd_size) {
 
     // Early out if error is not because of back-pressure.
     if (buffer->status != PIPE_ERROR_AGAIN) {
-      zxlogf(ERROR, "%s: write to pipe buffer failed: %d\n", kTag, buffer->status);
+      zxlogf(ERROR, "%s: write to pipe buffer failed: %d", kTag, buffer->status);
       return ZX_ERR_INTERNAL;
     }
 
@@ -736,7 +736,7 @@ zx_status_t Display::ReadResultLocked(uint32_t* result, uint32_t count) {
 
     // Early out if error is not because of back-pressure.
     if (buffer->status != PIPE_ERROR_AGAIN) {
-      zxlogf(ERROR, "%s: reading result failed: %d\n", kTag, buffer->status);
+      zxlogf(ERROR, "%s: reading result failed: %d", kTag, buffer->status);
       return ZX_ERR_INTERNAL;
     }
 
@@ -935,7 +935,7 @@ int Display::FlushHandler(uint64_t display_id) {
       uint32_t result[2] = {0, 1};
       zx_status_t status = CreateDisplayLocked(result);
       if (status != ZX_OK || result[1]) {
-        zxlogf(ERROR, "%s: failed to create display: %d %d\n", kTag, status, result[1]);
+        zxlogf(ERROR, "%s: failed to create display: %d %d", kTag, status, result[1]);
         return 1;
       }
       host_display_id = result[0];
@@ -946,7 +946,7 @@ int Display::FlushHandler(uint64_t display_id) {
     zx_status_t status =
         SetDisplayPoseLocked(host_display_id, device.x, device.y, width, height, &result);
     if (status != ZX_OK || result) {
-      zxlogf(ERROR, "%s: failed to set display pose: %d %d\n", kTag, status, result);
+      zxlogf(ERROR, "%s: failed to set display pose: %d %d", kTag, status, result);
       return 1;
     }
   }
@@ -976,7 +976,7 @@ int Display::FlushHandler(uint64_t display_id) {
             UpdateColorBufferLocked(displayed_cb->id, displayed_cb->paddr, displayed_cb->width,
                                     displayed_cb->height, displayed_cb->size, &result);
         if (status != ZX_OK || result) {
-          zxlogf(ERROR, "%s: color buffer update failed\n", kTag);
+          zxlogf(ERROR, "%s: color buffer update failed", kTag);
           continue;
         }
       }
@@ -987,7 +987,7 @@ int Display::FlushHandler(uint64_t display_id) {
         zx_status_t status =
             SetDisplayColorBufferLocked(host_display_id, displayed_cb->id, &result);
         if (status != ZX_OK || result) {
-          zxlogf(ERROR, "%s: failed to set display color buffer\n", kTag);
+          zxlogf(ERROR, "%s: failed to set display color buffer", kTag);
           continue;
         }
       } else {

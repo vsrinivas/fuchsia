@@ -59,7 +59,7 @@ void dwc3_print_status(dwc3_t* dwc) {
     zxlogf(TRACE, "DEVCTRLHLT ");
   if (dsts.RXFIFOEMPTY())
     zxlogf(TRACE, "RXFIFOEMPTY ");
-  zxlogf(TRACE, "\n");
+  zxlogf(TRACE, "");
 
   auto gsts = GSTS::Get().ReadFrom(mmio);
   zxlogf(TRACE, "GSTS: ");
@@ -81,7 +81,7 @@ void dwc3_print_status(dwc3_t* dwc) {
     zxlogf(TRACE, "CSR_TIMEOUT ");
   if (gsts.BUSERRADDRVLD())
     zxlogf(TRACE, "BUSERRADDRVLD ");
-  zxlogf(TRACE, "\n");
+  zxlogf(TRACE, "");
 }
 
 static void dwc3_stop(dwc3_t* dwc) {
@@ -199,12 +199,12 @@ static void dwc3_start_host_mode(dwc3_t* dwc) {
 
   zx_status_t status = device_add(dwc->parent, &args, &dwc->xhci_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_start_host_mode failed to add device for XHCI: %d\n", status);
+    zxlogf(ERROR, "dwc3_start_host_mode failed to add device for XHCI: %d", status);
   }
 }
 
 void dwc3_usb_reset(dwc3_t* dwc) {
-  zxlogf(INFO, "dwc3_usb_reset\n");
+  zxlogf(INFO, "dwc3_usb_reset");
 
   dwc3_ep0_reset(dwc);
 
@@ -219,7 +219,7 @@ void dwc3_usb_reset(dwc3_t* dwc) {
 }
 
 void dwc3_disconnected(dwc3_t* dwc) {
-  zxlogf(INFO, "dwc3_disconnected\n");
+  zxlogf(INFO, "dwc3_disconnected");
 
   dwc3_cmd_ep_end_transfer(dwc, EP0_OUT);
   dwc->ep0_state = EP0_STATE_NONE;
@@ -257,7 +257,7 @@ void dwc3_connection_done(dwc3_t* dwc) {
       ep0_max_packet = 512;
       break;
     default:
-      zxlogf(ERROR, "dwc3_connection_done: unsupported speed %u\n", speed);
+      zxlogf(ERROR, "dwc3_connection_done: unsupported speed %u", speed);
       dwc->speed = USB_SPEED_UNDEFINED;
       break;
   }
@@ -325,10 +325,10 @@ static void dwc3_request_queue(void* ctx, usb_request_t* req, const usb_request_
   auto* req_int = USB_REQ_TO_INTERNAL(req);
   req_int->complete_cb = *cb;
 
-  zxlogf(LTRACE, "dwc3_request_queue ep: %u\n", req->header.ep_address);
+  zxlogf(LTRACE, "dwc3_request_queue ep: %u", req->header.ep_address);
   unsigned ep_num = dwc3_ep_num(req->header.ep_address);
   if (ep_num < 2 || ep_num >= countof(dwc->eps)) {
-    zxlogf(ERROR, "dwc3_request_queue: bad ep address 0x%02X\n", req->header.ep_address);
+    zxlogf(ERROR, "dwc3_request_queue: bad ep address 0x%02X", req->header.ep_address);
     usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, cb);
     return;
   }
@@ -421,7 +421,7 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
   if (mode == USB_MODE_PERIPHERAL) {
     status = pdev_get_interrupt(&dwc->pdev, IRQ_USB3, 0, dwc->irq_handle.reset_and_get_address());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "dwc3_set_mode: pdev_get_interrupt failed\n");
+      zxlogf(ERROR, "dwc3_set_mode: pdev_get_interrupt failed");
       goto fail;
     }
 
@@ -492,7 +492,7 @@ static zx_protocol_device_t dwc3_device_ops = []() {
 }();
 
 zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "dwc3_bind\n");
+  zxlogf(INFO, "dwc3_bind");
 
   auto* dwc = new dwc3_t;
   if (!dwc) {
@@ -503,26 +503,26 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
   composite_protocol_t composite;
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_COMPOSITE\n", __func__);
+    zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_COMPOSITE", __func__);
     goto fail;
   }
   zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
   composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
   if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: Could not get fragments\n", __func__);
+    zxlogf(ERROR, "%s: Could not get fragments", __func__);
     goto fail;
   }
 
   status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &dwc->pdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_PDEV\n", __func__);
+    zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_PDEV", __func__);
     goto fail;
   }
 
   status = device_get_protocol(fragments[FRAGMENT_UMS], ZX_PROTOCOL_USB_MODE_SWITCH, &dwc->ums);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_USB_MODE_SWITCH\n", __func__);
+    zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_USB_MODE_SWITCH", __func__);
     goto fail;
   }
 
@@ -543,7 +543,7 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
   mmio_buffer_t mmio;
   status = pdev_map_mmio_buffer(&dwc->pdev, MMIO_USB3OTG, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_bind: pdev_map_mmio_buffer failed\n");
+    zxlogf(ERROR, "dwc3_bind: pdev_map_mmio_buffer failed");
     goto fail;
   }
   dwc->mmio = ddk::MmioBuffer(mmio);
@@ -551,7 +551,7 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
   status = io_buffer_init(&dwc->event_buffer, dwc->bti_handle.get(), EVENT_BUFFER_SIZE,
                           IO_BUFFER_RO | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_bind: io_buffer_init failed\n");
+    zxlogf(ERROR, "dwc3_bind: io_buffer_init failed");
     goto fail;
   }
   io_buffer_cache_flush(&dwc->event_buffer, 0, EVENT_BUFFER_SIZE);
@@ -559,13 +559,13 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
   status = io_buffer_init(&dwc->ep0_buffer, dwc->bti_handle.get(), UINT16_MAX,
                           IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_bind: io_buffer_init failed\n");
+    zxlogf(ERROR, "dwc3_bind: io_buffer_init failed");
     goto fail;
   }
 
   status = dwc3_ep0_init(dwc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_bind: dwc3_ep_init failed\n");
+    zxlogf(ERROR, "dwc3_bind: dwc3_ep_init failed");
     goto fail;
   }
 
@@ -587,7 +587,7 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 
 fail:
-  zxlogf(ERROR, "dwc3_bind failed %d\n", status);
+  zxlogf(ERROR, "dwc3_bind failed %d", status);
   dwc3_release(dwc);
   return status;
 }

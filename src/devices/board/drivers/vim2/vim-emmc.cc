@@ -115,7 +115,7 @@ zx_status_t Vim::EmmcInit() {
 
   status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d\n", status);
+    zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d", status);
     return status;
   }
 

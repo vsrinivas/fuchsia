@@ -15,14 +15,14 @@ zx_status_t PwmDevice::Create(void* ctx, zx_device_t* parent) {
   pwm_impl_protocol_t pwm_proto;
   auto status = device_get_protocol(parent, ZX_PROTOCOL_PWM_IMPL, &pwm_proto);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: device_get_protocol failed %d", __FILE__, status);
     return status;
   }
 
   size_t metadata_size;
   status = device_get_metadata_size(parent, DEVICE_METADATA_PWM_IDS, &metadata_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __FILE__, status);
     return status;
   }
   auto pwm_count = metadata_size / sizeof(pwm_id_t);
@@ -37,11 +37,11 @@ zx_status_t PwmDevice::Create(void* ctx, zx_device_t* parent) {
   status =
       device_get_metadata(parent, DEVICE_METADATA_PWM_IDS, pwm_ids.get(), metadata_size, &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: device_get_metadata failed %d", __FILE__, status);
     return status;
   }
   if (actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata size error %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: device_get_metadata size error %d", __FILE__, status);
     return ZX_ERR_INTERNAL;
   }
 

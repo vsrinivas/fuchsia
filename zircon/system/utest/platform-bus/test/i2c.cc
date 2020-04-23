@@ -43,17 +43,17 @@ zx_status_t TestI2cDevice::Create(zx_device_t* parent) {
   pdev_protocol_t pdev;
   zx_status_t status;
 
-  zxlogf(INFO, "TestI2cDevice::Create: %s \n", DRIVER_NAME);
+  zxlogf(INFO, "TestI2cDevice::Create: %s ", DRIVER_NAME);
 
   status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV\n", __func__);
+    zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV", __func__);
     return status;
   }
 
   status = dev->DdkAdd("test-i2c");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
     return status;
   }
   // devmgr is now in charge of dev.

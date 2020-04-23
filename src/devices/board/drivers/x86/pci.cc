@@ -127,7 +127,7 @@ static ACPI_STATUS report_current_resources_resource_cb_ex(ACPI_RESOURCE* res, v
   if (add_range && is_mmio && base < 1024 * 1024) {
     // The PC platform defines many legacy regions below 1MB that we do not
     // want PCIe to try to map onto.
-    zxlogf(INFO, "Skipping adding MMIO range, due to being below 1MB\n");
+    zxlogf(INFO, "Skipping adding MMIO range, due to being below 1MB");
     return AE_OK;
   }
 
@@ -144,7 +144,7 @@ static ACPI_STATUS report_current_resources_resource_cb_ex(ACPI_RESOURCE* res, v
     alloc = &kIoAlloc;
   }
 
-  zxlogf(TRACE, "ACPI range modification: %sing %s %016lx %016lx\n", add_range ? "add" : "subtract",
+  zxlogf(TRACE, "ACPI range modification: %sing %s %016lx %016lx", add_range ? "add" : "subtract",
          is_mmio ? "MMIO" : "PIO", base, len);
   if (add_range) {
     status = alloc->AddRegion({.base = base, .size = len}, true);
@@ -154,7 +154,7 @@ static ACPI_STATUS report_current_resources_resource_cb_ex(ACPI_RESOURCE* res, v
 
   if (status != ZX_OK) {
     if (add_range) {
-      zxlogf(INFO, "Failed to add range: %d\n", status);
+      zxlogf(INFO, "Failed to add range: %d", status);
     } else {
       // If we are subtracting a range and fail, abort.  This is bad.
       return AE_ERROR;
@@ -232,7 +232,7 @@ static zx_status_t pci_read_mcfg_table(void) {
   ACPI_TABLE_HEADER* raw_table = NULL;
   ACPI_STATUS status = AcpiGetTable(const_cast<char*>(ACPI_SIG_MCFG), 1, &raw_table);
   if (status != AE_OK) {
-    zxlogf(TRACE, "%s no MCFG table found.\n", kLogTag);
+    zxlogf(TRACE, "%s no MCFG table found.", kLogTag);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -246,7 +246,7 @@ static zx_status_t pci_read_mcfg_table(void) {
   uintptr_t table_end = reinterpret_cast<uintptr_t>(mcfg) + mcfg->Header.Length;
   size_t table_bytes = table_end - table_start;
   if (table_bytes % sizeof(pci_mcfg_allocation_t)) {
-    zxlogf(ERROR, "%s MCFG table has invalid size %zu\n", kLogTag, table_bytes);
+    zxlogf(ERROR, "%s MCFG table has invalid size %zu", kLogTag, table_bytes);
     return ZX_ERR_INTERNAL;
   }
 
@@ -256,7 +256,7 @@ static zx_status_t pci_read_mcfg_table(void) {
   for (unsigned i = 0; i < table_bytes / sizeof(pci_mcfg_allocation_t); i++) {
     auto entry = &(reinterpret_cast<pci_mcfg_allocation_t*>(table_start))[i];
     mcfg_allocations.push_back(entry);
-    zxlogf(TRACE, "%s MCFG allocation %u (Addr = %#lx, Segment = %u, Start = %u, End = %u)\n",
+    zxlogf(TRACE, "%s MCFG allocation %u (Addr = %#lx, Segment = %u, Start = %u, End = %u)",
            kLogTag, i, entry->base_address, entry->segment_group, entry->start_bus_num,
            entry->end_bus_num);
   }
@@ -304,14 +304,14 @@ zx_status_t pci_init_bookkeeping(void) {
   // MCFG table will only exist with PCIe so 'not found' is not a failure case.
   status = pci_read_mcfg_table();
   if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
-    zxlogf(ERROR, "%s error attempting to read mcfg table %d\n", kLogTag, status);
+    zxlogf(ERROR, "%s error attempting to read mcfg table %d", kLogTag, status);
     return status;
   }
 
   // Please do not use get_root_resource() in new code. See ZX-1467.
   status = pci_report_current_resources_ex(get_root_resource());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s error attempting to populate PCI allocators %d\n", kLogTag, status);
+    zxlogf(ERROR, "%s error attempting to populate PCI allocators %d", kLogTag, status);
     return status;
   }
 
@@ -339,7 +339,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   fbl::AllocChecker ac;
   auto dev_ctx = std::unique_ptr<pciroot_ctx_t>(new (&ac) pciroot_ctx_t());
   if (!ac.check()) {
-    zxlogf(ERROR, "failed to allocate pciroot ctx: %d!\n", status);
+    zxlogf(ERROR, "failed to allocate pciroot ctx: %d!", status);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -350,7 +350,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
 
   status = acpi_bbn_call(object, &dev_ctx->info.start_bus_num);
   if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
-    zxlogf(TRACE, "%s Unable to read _BBN for '%s' (%d), assuming base bus of 0\n", kLogTag,
+    zxlogf(TRACE, "%s Unable to read _BBN for '%s' (%d), assuming base bus of 0", kLogTag,
            dev_ctx->name, status);
 
     // Until we find an ecam we assume this potential legacy pci bus spans
@@ -362,7 +362,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   status = acpi_seg_call(object, &dev_ctx->info.segment_group);
   if (status != ZX_OK) {
     dev_ctx->info.segment_group = 0;
-    zxlogf(TRACE, "%s Unable to read _SEG for '%s' (%d), assuming segment group 0.\n", kLogTag,
+    zxlogf(TRACE, "%s Unable to read _SEG for '%s' (%d), assuming segment group 0.", kLogTag,
            dev_ctx->name, status);
   }
 
@@ -376,13 +376,13 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   if (status == ZX_OK) {
     // Do the bus values make sense?
     if (found_bbn && mcfg_alloc.start_bus_num != pinfo.start_bus_num) {
-      zxlogf(ERROR, "%s: conflicting base bus num for '%s', _BBN reports %u and MCFG reports %u\n",
+      zxlogf(ERROR, "%s: conflicting base bus num for '%s', _BBN reports %u and MCFG reports %u",
              kLogTag, dev_ctx->name, pinfo.start_bus_num, mcfg_alloc.start_bus_num);
     }
 
     // Do the segment values make sense?
     if (pinfo.segment_group != 0 && pinfo.segment_group != mcfg_alloc.segment_group) {
-      zxlogf(ERROR, "%s: conflicting segment group for '%s', _BBN reports %u and MCFG reports %u\n",
+      zxlogf(ERROR, "%s: conflicting segment group for '%s', _BBN reports %u and MCFG reports %u",
              kLogTag, dev_ctx->name, pinfo.segment_group, mcfg_alloc.segment_group);
     }
 
@@ -398,7 +398,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
     // Please do not use get_root_resource() in new code. See ZX-1467.
     status = zx_vmo_create_physical(get_root_resource(), vmo_base, ecam_size, &pinfo.ecam_vmo);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "couldn't create VMO for ecam, mmio cfg will not work: %d!\n", status);
+      zxlogf(ERROR, "couldn't create VMO for ecam, mmio cfg will not work: %d!", status);
       return status;
     }
   }
@@ -420,7 +420,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
 
   status = Pciroot::Create(std::move(dev_ctx), parent, ctx->platform_bus, name);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to add pciroot device for '%s': %d\n", kLogTag, dev_ctx->name, status);
+    zxlogf(ERROR, "%s failed to add pciroot device for '%s': %d", kLogTag, dev_ctx->name, status);
   } else {
     // devmgr owns the ctx pointer now so release it from the uptr
     __UNUSED auto p = dev_ctx.release();
@@ -429,7 +429,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
     // updated in the future.
     ctx->found_pci = true;
     ctx->last_pci = last_pci_bbn;
-    zxlogf(INFO, "%s published pciroot '%s'\n", kLogTag, name);
+    zxlogf(INFO, "%s published pciroot '%s'", kLogTag, name);
   }
 
   return status;

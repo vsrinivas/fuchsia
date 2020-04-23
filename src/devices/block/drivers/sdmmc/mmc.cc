@@ -34,15 +34,15 @@ constexpr uint32_t kSwitchStatusRetries = 3;
 namespace {
 
 zx_status_t DecodeCid(const uint8_t* raw_cid) {
-  zxlogf(INFO, "mmc: product name=%c%c%c%c%c%c\n", raw_cid[MMC_CID_PRODUCT_NAME_START],
+  zxlogf(INFO, "mmc: product name=%c%c%c%c%c%c", raw_cid[MMC_CID_PRODUCT_NAME_START],
          raw_cid[MMC_CID_PRODUCT_NAME_START + 1], raw_cid[MMC_CID_PRODUCT_NAME_START + 2],
          raw_cid[MMC_CID_PRODUCT_NAME_START + 3], raw_cid[MMC_CID_PRODUCT_NAME_START + 4],
          raw_cid[MMC_CID_PRODUCT_NAME_START + 5]);
-  zxlogf(INFO, "       revision=%u.%u\n", (raw_cid[MMC_CID_REVISION] >> 4) & 0xf,
+  zxlogf(INFO, "       revision=%u.%u", (raw_cid[MMC_CID_REVISION] >> 4) & 0xf,
          raw_cid[MMC_CID_REVISION] & 0xf);
   uint32_t serial;
   memcpy(&serial, reinterpret_cast<const uint32_t*>(&raw_cid[MMC_CID_SERIAL]), sizeof(uint32_t));
-  zxlogf(INFO, "       serial=%u\n", serial);
+  zxlogf(INFO, "       serial=%u", serial);
   return ZX_OK;
 }
 
@@ -53,10 +53,10 @@ zx_status_t DecodeCsd(const uint8_t* raw_csd) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zxlogf(SPEW, "mmc: CSD version %u spec version %u\n", (raw_csd[MMC_CSD_SPEC_VERSION] >> 6) & 0x3,
+  zxlogf(SPEW, "mmc: CSD version %u spec version %u", (raw_csd[MMC_CSD_SPEC_VERSION] >> 6) & 0x3,
          spec_vrsn);
   if (driver_get_log_flags() & DDK_LOG_SPEW) {
-    zxlogf(SPEW, "CSD:\n");
+    zxlogf(SPEW, "CSD:");
     hexdump8_ex(raw_csd, 16, 0);
   }
 
@@ -65,7 +65,7 @@ zx_status_t DecodeCsd(const uint8_t* raw_csd) {
                                           (raw_csd[MMC_CSD_SIZE_START + 1] << 2) |
                                           ((raw_csd[MMC_CSD_SIZE_START + 2] & 0x3) << 10));
   if (c_size != 0xfff) {
-    zxlogf(ERROR, "mmc: unsupported C_SIZE 0x%04x\n", c_size);
+    zxlogf(ERROR, "mmc: unsupported C_SIZE 0x%04x", c_size);
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
@@ -79,7 +79,7 @@ zx_status_t SdmmcBlockDevice::MmcDoSwitch(uint8_t index, uint8_t value) {
   // Send the MMC_SWITCH command
   zx_status_t st = sdmmc_.MmcSwitch(index, value);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "mmc: failed to MMC_SWITCH (0x%x=%d), retcode = %d\n", index, value, st);
+    zxlogf(ERROR, "mmc: failed to MMC_SWITCH (0x%x=%d), retcode = %d", index, value, st);
     return st;
   }
 
@@ -103,12 +103,12 @@ zx_status_t SdmmcBlockDevice::MmcDoSwitch(uint8_t index, uint8_t value) {
 
   if (st == ZX_OK) {
     if (resp & MMC_STATUS_SWITCH_ERR) {
-      zxlogf(ERROR, "mmc: mmc status error after MMC_SWITCH (0x%x=%d), status = 0x%08x\n", index,
+      zxlogf(ERROR, "mmc: mmc status error after MMC_SWITCH (0x%x=%d), status = 0x%08x", index,
              value, resp);
       st = ZX_ERR_INTERNAL;
     }
   } else {
-    zxlogf(ERROR, "mmc: failed to MMC_SEND_STATUS (%x=%d), retcode = %d\n", index, value, st);
+    zxlogf(ERROR, "mmc: failed to MMC_SEND_STATUS (%x=%d), retcode = %d", index, value, st);
   }
 
   return st;
@@ -119,7 +119,7 @@ zx_status_t SdmmcBlockDevice::MmcSetBusWidth(sdmmc_bus_width_t bus_width,
   // Switch the card to the new bus width
   zx_status_t st = MmcDoSwitch(MMC_EXT_CSD_BUS_WIDTH, mmc_ext_csd_bus_width);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "mmc: failed to switch bus width to EXT_CSD %d, retcode = %d\n",
+    zxlogf(ERROR, "mmc: failed to switch bus width to EXT_CSD %d, retcode = %d",
            mmc_ext_csd_bus_width, st);
     return ZX_ERR_INTERNAL;
   }
@@ -127,7 +127,7 @@ zx_status_t SdmmcBlockDevice::MmcSetBusWidth(sdmmc_bus_width_t bus_width,
   if (bus_width != bus_width_) {
     // Switch the host to the new bus width
     if ((st = sdmmc_.host().SetBusWidth(bus_width)) != ZX_OK) {
-      zxlogf(ERROR, "mmc: failed to switch the host bus width to %d, retcode = %d\n", bus_width,
+      zxlogf(ERROR, "mmc: failed to switch the host bus width to %d, retcode = %d", bus_width,
              st);
       return ZX_ERR_INTERNAL;
     }
@@ -175,13 +175,13 @@ zx_status_t SdmmcBlockDevice::MmcSwitchTiming(sdmmc_timing_t new_timing) {
 
   zx_status_t st = MmcDoSwitch(MMC_EXT_CSD_HS_TIMING, ext_csd_timing);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "mmc: failed to switch device timing to %d\n", new_timing);
+    zxlogf(ERROR, "mmc: failed to switch device timing to %d", new_timing);
     return st;
   }
 
   // Switch the host timing
   if ((st = sdmmc_.host().SetTiming(new_timing)) != ZX_OK) {
-    zxlogf(ERROR, "mmc: failed to switch host timing to %d\n", new_timing);
+    zxlogf(ERROR, "mmc: failed to switch host timing to %d", new_timing);
     return st;
   }
 
@@ -192,7 +192,7 @@ zx_status_t SdmmcBlockDevice::MmcSwitchTiming(sdmmc_timing_t new_timing) {
 zx_status_t SdmmcBlockDevice::MmcSwitchFreq(uint32_t new_freq) {
   zx_status_t st;
   if ((st = sdmmc_.host().SetBusFreq(new_freq)) != ZX_OK) {
-    zxlogf(ERROR, "mmc: failed to set host bus frequency, retcode = %d\n", st);
+    zxlogf(ERROR, "mmc: failed to set host bus frequency, retcode = %d", st);
     return st;
   }
   clock_rate_ = new_freq;
@@ -200,7 +200,7 @@ zx_status_t SdmmcBlockDevice::MmcSwitchFreq(uint32_t new_freq) {
 }
 
 zx_status_t SdmmcBlockDevice::MmcDecodeExtCsd(const uint8_t* raw_ext_csd) {
-  zxlogf(SPEW, "mmc: EXT_CSD version %u CSD version %u\n", raw_ext_csd[192], raw_ext_csd[194]);
+  zxlogf(SPEW, "mmc: EXT_CSD version %u CSD version %u", raw_ext_csd[192], raw_ext_csd[194]);
 
   // Get the capacity for the card
   uint32_t sectors = (raw_ext_csd[212] << 0) | (raw_ext_csd[213] << 8) | (raw_ext_csd[214] << 16) |
@@ -208,7 +208,7 @@ zx_status_t SdmmcBlockDevice::MmcDecodeExtCsd(const uint8_t* raw_ext_csd) {
   block_info_.block_count = sectors * kMmcSectorSize / kMmcBlockSize;
   block_info_.block_size = kMmcBlockSize;
 
-  zxlogf(TRACE, "mmc: found card with capacity = %" PRIu64 "B\n",
+  zxlogf(TRACE, "mmc: found card with capacity = %" PRIu64 "B",
          block_info_.block_count * block_info_.block_size);
 
   return ZX_OK;
@@ -243,36 +243,36 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
   // Query OCR
   uint32_t ocr = 0;
   if ((st = sdmmc_.MmcSendOpCond(ocr, &ocr)) != ZX_OK) {
-    zxlogf(ERROR, "mmc: MMC_SEND_OP_COND failed, retcode = %d\n", st);
+    zxlogf(ERROR, "mmc: MMC_SEND_OP_COND failed, retcode = %d", st);
     return st;
   }
 
   // Indicate sector mode
   if ((st = sdmmc_.MmcSendOpCond(ocr, &ocr)) != ZX_OK) {
-    zxlogf(ERROR, "mmc: MMC_SEND_OP_COND failed, retcode = %d\n", st);
+    zxlogf(ERROR, "mmc: MMC_SEND_OP_COND failed, retcode = %d", st);
     return st;
   }
 
   // Get CID from card
   // Only supports 1 card currently so no need to loop
   if ((st = sdmmc_.MmcAllSendCid(raw_cid_)) != ZX_OK) {
-    zxlogf(ERROR, "mmc: MMC_ALL_SEND_CID failed, retcode = %d\n", st);
+    zxlogf(ERROR, "mmc: MMC_ALL_SEND_CID failed, retcode = %d", st);
     return st;
   }
-  zxlogf(SPEW, "mmc: MMC_ALL_SEND_CID cid 0x%08x 0x%08x 0x%08x 0x%08x\n", raw_cid_[0], raw_cid_[1],
+  zxlogf(SPEW, "mmc: MMC_ALL_SEND_CID cid 0x%08x 0x%08x 0x%08x 0x%08x", raw_cid_[0], raw_cid_[1],
          raw_cid_[2], raw_cid_[3]);
 
   DecodeCid(reinterpret_cast<const uint8_t*>(raw_cid_));
 
   // Set relative card address
   if ((st = sdmmc_.MmcSetRelativeAddr(1)) != ZX_OK) {
-    zxlogf(ERROR, "mmc: MMC_SET_RELATIVE_ADDR failed, retcode = %d\n", st);
+    zxlogf(ERROR, "mmc: MMC_SET_RELATIVE_ADDR failed, retcode = %d", st);
     return st;
   }
 
   // Read CSD register
   if ((st = sdmmc_.MmcSendCsd(raw_csd_)) != ZX_OK) {
-    zxlogf(ERROR, "mmc: MMC_SEND_CSD failed, retcode = %d\n", st);
+    zxlogf(ERROR, "mmc: MMC_SEND_CSD failed, retcode = %d", st);
     return st;
   }
 
@@ -282,13 +282,13 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
 
   // Select the card
   if ((st = sdmmc_.MmcSelectCard()) != ZX_OK) {
-    zxlogf(ERROR, "mmc: MMC_SELECT_CARD failed, retcode = %d\n", st);
+    zxlogf(ERROR, "mmc: MMC_SELECT_CARD failed, retcode = %d", st);
     return st;
   }
 
   // Read extended CSD register
   if ((st = sdmmc_.MmcSendExtCsd(raw_ext_csd_)) != ZX_OK) {
-    zxlogf(ERROR, "mmc: MMC_SEND_EXT_CSD failed, retcode = %d\n", st);
+    zxlogf(ERROR, "mmc: MMC_SEND_EXT_CSD failed, retcode = %d", st);
     return st;
   }
 
@@ -302,7 +302,7 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
     // Switch to 1.8V signal voltage
     sdmmc_voltage_t new_voltage = SDMMC_VOLTAGE_V180;
     if ((st = sdmmc_.host().SetSignalVoltage(new_voltage)) != ZX_OK) {
-      zxlogf(ERROR, "mmc: failed to switch to 1.8V signalling, retcode = %d\n", st);
+      zxlogf(ERROR, "mmc: failed to switch to 1.8V signalling, retcode = %d", st);
       return st;
     }
 
@@ -320,7 +320,7 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
       }
 
       if ((st = sdmmc_.host().PerformTuning(MMC_SEND_TUNING_BLOCK)) != ZX_OK) {
-        zxlogf(ERROR, "mmc: tuning failed %d\n", st);
+        zxlogf(ERROR, "mmc: tuning failed %d", st);
         return st;
       }
 
@@ -376,7 +376,7 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
     timing_ = SDMMC_TIMING_LEGACY;
   }
 
-  zxlogf(INFO, "mmc: initialized mmc @ %u MHz, bus width %d, timing %d\n", clock_rate_ / 1000000,
+  zxlogf(INFO, "mmc: initialized mmc @ %u MHz, bus width %d, timing %d", clock_rate_ / 1000000,
          bus_width_, timing_);
 
   return ZX_OK;

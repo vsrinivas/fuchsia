@@ -38,7 +38,7 @@ zx_status_t Vim::CanvasInit() {
 
   zx_status_t status = pbus_.DeviceAdd(&canvas_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "CanvasInit: DeviceAdd Canvas failed: %d\n", status);
+    zxlogf(ERROR, "CanvasInit: DeviceAdd Canvas failed: %d", status);
     return status;
   }
   return ZX_OK;

@@ -174,7 +174,7 @@ zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
   zx_status_t status = WaitForInterruptImpl();
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::WaitForInterrupt: WaitForInterruptImpl got %d\n", status);
+    zxlogf(ERROR, "AmlSdEmmc::WaitForInterrupt: WaitForInterruptImpl got %d", status);
     return status;
   }
 
@@ -234,7 +234,7 @@ zx_status_t AmlSdEmmc::WaitForInterrupt(sdmmc_req_t* req) {
   }
 
   if (!(status_irq.end_of_chain())) {
-    zxlogf(ERROR, "AmlSdEmmc::WaitForInterrupt: END OF CHAIN bit is not set status:0x%x\n",
+    zxlogf(ERROR, "AmlSdEmmc::WaitForInterrupt: END OF CHAIN bit is not set status:0x%x",
            status_irq.reg_value());
     return ZX_ERR_IO_INVALID;
   }
@@ -441,7 +441,7 @@ zx_status_t AmlSdEmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sd_emmc_desc_t* c
   bool is_read = req->cmd_flags & SDMMC_CMD_READ;
   uint64_t pagecount = ((req->buf_offset & PAGE_MASK) + req_len + PAGE_MASK) / PAGE_SIZE;
   if (pagecount > SDMMC_PAGES_COUNT) {
-    zxlogf(ERROR, "AmlSdEmmc::SetupDataDescsDma: too many pages %lu vs %lu\n", pagecount,
+    zxlogf(ERROR, "AmlSdEmmc::SetupDataDescsDma: too many pages %lu vs %lu", pagecount,
            SDMMC_PAGES_COUNT);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -454,7 +454,7 @@ zx_status_t AmlSdEmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sd_emmc_desc_t* c
   zx_status_t st = zx_bti_pin(bti_.get(), options, req->dma_vmo, req->buf_offset & ~PAGE_MASK,
                               pagecount * PAGE_SIZE, phys, pagecount, &req->pmt);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::SetupDataDescsDma: bti-pin failed with error %d\n", st);
+    zxlogf(ERROR, "AmlSdEmmc::SetupDataDescsDma: bti-pin failed with error %d", st);
     return st;
   }
 
@@ -466,7 +466,7 @@ zx_status_t AmlSdEmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sd_emmc_desc_t* c
     st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN, req->buf_offset, req_len, NULL, 0);
   }
   if (st != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::SetupDataDescsDma: cache clean failed with error  %d\n", st);
+    zxlogf(ERROR, "AmlSdEmmc::SetupDataDescsDma: cache clean failed with error  %d", st);
     return st;
   }
 
@@ -492,11 +492,11 @@ zx_status_t AmlSdEmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sd_emmc_desc_t* c
         *last_desc = desc;
         break;
       } else {
-        zxlogf(TRACE, "AmlSdEmmc::SetupDataDescsDma: empty descriptor list!\n");
+        zxlogf(TRACE, "AmlSdEmmc::SetupDataDescsDma: empty descriptor list!");
         return ZX_ERR_NOT_SUPPORTED;
       }
     } else if (length > PAGE_SIZE) {
-      zxlogf(TRACE, "AmlSdEmmc::SetupDataDescsDma: chunk size > %zu is unsupported\n", length);
+      zxlogf(TRACE, "AmlSdEmmc::SetupDataDescsDma: chunk size > %zu is unsupported", length);
       return ZX_ERR_NOT_SUPPORTED;
     } else if ((++count) > AML_DMA_DESC_MAX_COUNT) {
       zxlogf(TRACE,
@@ -628,13 +628,13 @@ zx_status_t AmlSdEmmc::FinishReq(sdmmc_req_t* req) {
       st = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, req->buf_offset, req_len,
                            NULL, 0);
       if (st != ZX_OK) {
-        zxlogf(ERROR, "AmlSdEmmc::FinishReq: cache clean failed with error  %d\n", st);
+        zxlogf(ERROR, "AmlSdEmmc::FinishReq: cache clean failed with error  %d", st);
       }
     }
 
     st = zx_pmt_unpin(req->pmt);
     if (st != ZX_OK) {
-      zxlogf(ERROR, "AmlSdEmmc::FinishReq: error %d in pmt_unpin\n", st);
+      zxlogf(ERROR, "AmlSdEmmc::FinishReq: error %d in pmt_unpin", st);
     }
     req->pmt = ZX_HANDLE_INVALID;
   }
@@ -660,7 +660,7 @@ zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
   if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
     status = SetupDataDescs(req, desc, &last_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "AmlSdEmmc::SdmmcRequest: Failed to setup data descriptors\n");
+      zxlogf(ERROR, "AmlSdEmmc::SdmmcRequest: Failed to setup data descriptors");
       return status;
     }
   }
@@ -831,7 +831,7 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
     tuning_blk = fbl::Span<const uint8_t>(aml_sd_emmc_tuning_blk_pattern_8bit,
                                           sizeof(aml_sd_emmc_tuning_blk_pattern_8bit));
   } else {
-    zxlogf(ERROR, "AmlSdEmmc::SdmmcPerformTuning: Tuning at wrong buswidth: %d\n", bw);
+    zxlogf(ERROR, "AmlSdEmmc::SdmmcPerformTuning: Tuning at wrong buswidth: %d", bw);
     return ZX_ERR_INTERNAL;
   }
 
@@ -923,7 +923,7 @@ zx_status_t AmlSdEmmc::Init() {
         descs_buffer_.Init(bti_.get(), AML_DMA_DESC_MAX_COUNT * sizeof(aml_sd_emmc_desc_t),
                            IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "AmlSdEmmc::Init: Failed to allocate dma descriptors\n");
+      zxlogf(ERROR, "AmlSdEmmc::Init: Failed to allocate dma descriptors");
       return status;
     }
     dev_info_.max_transfer_size = AML_DMA_DESC_MAX_COUNT * PAGE_SIZE;
@@ -942,7 +942,7 @@ zx_status_t AmlSdEmmc::Bind() {
   zx_status_t status = DdkAdd("aml-sd-emmc");
   if (status != ZX_OK) {
     irq_.destroy();
-    zxlogf(ERROR, "AmlSdEmmc::Bind: DdkAdd failed\n");
+    zxlogf(ERROR, "AmlSdEmmc::Bind: DdkAdd failed");
   }
   return status;
 }
@@ -952,7 +952,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
 
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "AmlSdEmmc::Could not get composite protocol\n");
+    zxlogf(ERROR, "AmlSdEmmc::Could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -961,26 +961,26 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
   // Only pdev fragment is required.
   if (fragment_count < 1) {
-    zxlogf(ERROR, "AmlSdEmmc: Could not get fragments\n");
+    zxlogf(ERROR, "AmlSdEmmc: Could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Could not get pdev: %d\n", status);
+    zxlogf(ERROR, "AmlSdEmmc::Create: Could not get pdev: %d", status);
     return ZX_ERR_NO_RESOURCES;
   }
 
   zx::bti bti;
   if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get BTI: %d\n", status);
+    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get BTI: %d", status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get mmio: %d\n", status);
+    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get mmio: %d", status);
     return status;
   }
 
@@ -988,7 +988,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   std::optional<ddk::MmioPinnedBuffer> pinned_mmio;
   status = mmio->Pin(bti, &pinned_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to pin mmio: %d\n", status);
+    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to pin mmio: %d", status);
     return status;
   }
 
@@ -998,19 +998,19 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   status =
       device_get_metadata(parent, DEVICE_METADATA_EMMC_CONFIG, &config, sizeof(config), &actual);
   if (status != ZX_OK || actual != sizeof(config)) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get metadata: %d\n", status);
+    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get metadata: %d", status);
     return status;
   }
 
   zx::interrupt irq;
   if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get interrupt: %d\n", status);
+    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get interrupt: %d", status);
     return status;
   }
 
   pdev_device_info_t dev_info;
   if ((status = pdev.GetDeviceInfo(&dev_info)) != ZX_OK) {
-    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get device info: %d\n", status);
+    zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get device info: %d", status);
     return status;
   }
 
@@ -1018,7 +1018,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   if (fragment_count > FRAGMENT_GPIO_RESET) {
     reset_gpio = fragments[FRAGMENT_GPIO_RESET];
     if (!reset_gpio.is_valid()) {
-      zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get GPIO\n");
+      zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get GPIO");
       return ZX_ERR_NO_RESOURCES;
     }
   }

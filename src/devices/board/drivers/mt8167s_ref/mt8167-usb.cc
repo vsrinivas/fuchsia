@@ -159,63 +159,63 @@ zx_status_t Mt8167::UsbInit() {
   power_domain_status_t pwr_status;
   ddk::PowerImplProtocolClient power(parent());
   if (!power.is_valid()) {
-    zxlogf(ERROR, "%s: could not get power protocol\n", __func__);
+    zxlogf(ERROR, "%s: could not get power protocol", __func__);
     return ZX_ERR_INTERNAL;
   }
 
   status = power.GetPowerDomainStatus(kVDLdoVUsb33, &pwr_status);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not read usb power domain: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: could not read usb power domain: %d", __func__, status);
     return status;
   }
 
   if (pwr_status == POWER_DOMAIN_STATUS_DISABLED) {
-    zxlogf(INFO, "%s: enabling usb power domain...\n", __func__);
+    zxlogf(INFO, "%s: enabling usb power domain...", __func__);
     status = power.EnablePowerDomain(kVDLdoVUsb33);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not enable usb power domain: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: could not enable usb power domain: %d", __func__, status);
       return status;
     }
 
     status = power.GetPowerDomainStatus(kVDLdoVUsb33, &pwr_status);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not read usb power domain: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: could not read usb power domain: %d", __func__, status);
       return status;
     }
 
     if (pwr_status != POWER_DOMAIN_STATUS_ENABLED) {
-      zxlogf(ERROR, "%s: usb power domain could not be enabled\n", __func__);
+      zxlogf(ERROR, "%s: usb power domain could not be enabled", __func__);
       return ZX_ERR_INTERNAL;
     }
   }
 
   ddk::ClockImplProtocolClient clk(parent());
   if (!clk.is_valid()) {
-    zxlogf(ERROR, "%s: could not get clock protocol\n", __func__);
+    zxlogf(ERROR, "%s: could not get clock protocol", __func__);
     return ZX_ERR_INTERNAL;
   }
 
   status = clk.Enable(kClkUsb);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not enable USB-P0 clock: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: could not enable USB-P0 clock: %d", __func__, status);
     return status;
   }
 
   status = clk.Enable(kClkUsb1p);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not enable USB-P1 clock: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: could not enable USB-P1 clock: %d", __func__, status);
     return status;
   }
 
   status = pbus_.DeviceAdd(&usb_dci_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: (mt-usb-dci) DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: (mt-usb-dci) DeviceAdd failed %d", __func__, status);
     return status;
   }
 
   status = pbus_.DeviceAdd(&usb_hci_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: (mt-usb-hci) DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: (mt-usb-hci) DeviceAdd failed %d", __func__, status);
     return status;
   }
 

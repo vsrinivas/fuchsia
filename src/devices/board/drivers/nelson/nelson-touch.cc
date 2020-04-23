@@ -88,7 +88,7 @@ zx_status_t Nelson::TouchInit() {
         Logic 1 for Innolux/Goodix combination
   */
   gpio_impl_.Read(GPIO_PANEL_DETECT, &gpio_state);
-  zxlogf(INFO, "%s - Touch type: %s\n", __func__, (gpio_state ? "GTx8x" : "FT3x27"));
+  zxlogf(INFO, "%s - Touch type: %s", __func__, (gpio_state ? "GTx8x" : "FT3x27"));
   if (!gpio_state) {
     const zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
@@ -107,7 +107,7 @@ zx_status_t Nelson::TouchInit() {
     };
     zx_status_t status = DdkAddComposite("gtx8x-touch", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(INFO, "nelson_touch_init(gt92xx): composite_device_add failed: %d\n", status);
+      zxlogf(INFO, "nelson_touch_init(gt92xx): composite_device_add failed: %d", status);
       return status;
     }
   } else {
@@ -129,7 +129,7 @@ zx_status_t Nelson::TouchInit() {
 
     zx_status_t status = DdkAddComposite("ft3x27-touch", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s(ft3x27): CompositeDeviceAdd failed: %d\n", __func__, status);
+      zxlogf(ERROR, "%s(ft3x27): CompositeDeviceAdd failed: %d", __func__, status);
       return status;
     }
   }

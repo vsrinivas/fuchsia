@@ -117,20 +117,20 @@ void FakeI2c<AddressType, DataType>::I2cTransact(const i2c_op_t* op_list, size_t
   }
 
   // Can't handle this: log the transaction, and abort execution.
-  zxlogf(ERROR, "Unsupported I2C transation:\n");
+  zxlogf(ERROR, "Unsupported I2C transation:");
   for (size_t i = 0; i < op_count; i++) {
     if (op_list[i].is_read) {
-      zxlogf(ERROR, " * READ of %ld byte(s)\n", op_list[i].data_size);
+      zxlogf(ERROR, " * READ of %ld byte(s)", op_list[i].data_size);
     } else {
       fbl::StringBuffer<1024> buff;
       const auto* data = reinterpret_cast<const uint8_t*>(op_list[i].data_buffer);
       for (size_t j = 0; j < op_list[i].data_size; j++) {
         buff.Append(fbl::StringPrintf(" %02x", data[j]));
       }
-      zxlogf(ERROR, " * WRITE of %ld byte(s): %s\n", op_list[i].data_size, buff.c_str());
+      zxlogf(ERROR, " * WRITE of %ld byte(s): %s", op_list[i].data_size, buff.c_str());
     }
     if (op_list[i].stop) {
-      zxlogf(ERROR, " * STOP\n");
+      zxlogf(ERROR, " * STOP");
     }
   }
   ZX_PANIC("Unsupported I2C transaction.");

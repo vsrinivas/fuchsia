@@ -72,7 +72,7 @@ zx_status_t UsbBus::UsbBusInterfaceAddDevice(uint32_t device_id, uint32_t hub_id
 
 zx_status_t UsbBus::UsbBusInterfaceRemoveDevice(uint32_t device_id) {
   if (device_id >= devices_.size()) {
-    zxlogf(ERROR, "%s: device_id out of range\n", __func__);
+    zxlogf(ERROR, "%s: device_id out of range", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -88,12 +88,12 @@ zx_status_t UsbBus::UsbBusInterfaceRemoveDevice(uint32_t device_id) {
 
 zx_status_t UsbBus::UsbBusInterfaceResetPort(uint32_t hub_id, uint32_t port, bool enumerating) {
   if (hub_id >= devices_.size()) {
-    zxlogf(ERROR, "%s: hub_id out of range\n", __func__);
+    zxlogf(ERROR, "%s: hub_id out of range", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
   auto device = devices_[hub_id];
   if (device == nullptr) {
-    zxlogf(ERROR, "hub not found in %s\n", __func__);
+    zxlogf(ERROR, "hub not found in %s", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -109,13 +109,13 @@ zx_status_t UsbBus::UsbBusInterfaceResetPort(uint32_t hub_id, uint32_t port, boo
 
 zx_status_t UsbBus::UsbBusInterfaceReinitializeDevice(uint32_t device_id) {
   if (device_id >= devices_.size()) {
-    zxlogf(ERROR, "%s: device_id out of range\n", __func__);
+    zxlogf(ERROR, "%s: device_id out of range", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
   auto device = devices_[device_id];
   if (device == nullptr) {
-    zxlogf(ERROR, "could not find device %u\n", device_id);
+    zxlogf(ERROR, "could not find device %u", device_id);
     return ZX_ERR_INTERNAL;
   }
 
@@ -137,22 +137,22 @@ zx_status_t UsbBus::UsbBusInterfaceReinitializeDevice(uint32_t device_id) {
     bool descriptors_changed =
         memcmp(&old_desc, &updated_desc, sizeof(usb_device_descriptor_t)) != 0;
     if (descriptors_changed) {
-      zxlogf(INFO, "device updated from VID 0x%x PID 0x%x to VID 0x%x PID 0x%x\n",
+      zxlogf(INFO, "device updated from VID 0x%x PID 0x%x to VID 0x%x PID 0x%x",
              old_desc.idVendor, old_desc.idProduct, updated_desc.idVendor, updated_desc.idProduct);
 
       status = UsbBusInterfaceRemoveDevice(device_id);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "could not remove device %u, got err %d\n", device_id, status);
+        zxlogf(ERROR, "could not remove device %u, got err %d", device_id, status);
         return status;
       }
       status = UsbBusInterfaceAddDevice(device_id, device->GetHubId(), device->GetSpeed());
       if (status != ZX_OK) {
-        zxlogf(ERROR, "could not add device %u, got err %d\n", device_id, status);
+        zxlogf(ERROR, "could not add device %u, got err %d", device_id, status);
       }
       return status;
     }
   } else {
-    zxlogf(ERROR, "could not get updated descriptor: %d got len %lu\n", status, actual);
+    zxlogf(ERROR, "could not get updated descriptor: %d got len %lu", status, actual);
     // We should try reinitializing the device anyway.
   }
 
@@ -207,7 +207,7 @@ zx_status_t UsbBus::UsbBusSetHubInterface(zx_device_t* usb_device,
 
   auto usb_dev = devices_[usb_device_id];
   if (usb_dev == nullptr) {
-    zxlogf(ERROR, "%s: no device for usb_device_id %u\n", __func__, usb_device_id);
+    zxlogf(ERROR, "%s: no device for usb_device_id %u", __func__, usb_device_id);
     return ZX_ERR_INTERNAL;
   }
 

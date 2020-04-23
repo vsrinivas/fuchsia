@@ -40,7 +40,7 @@ zx_status_t LightDevice::SetSimpleValue(bool value) {
 
   zx_status_t status = ZX_OK;
   if ((status = gpio_.Write(value)) != ZX_OK) {
-    zxlogf(ERROR, "%s: GPIO write failed\n", __func__);
+    zxlogf(ERROR, "%s: GPIO write failed", __func__);
     return status;
   }
 
@@ -63,7 +63,7 @@ zx_status_t LightDevice::SetBrightnessValue(uint8_t value) {
       .mode_config_size = sizeof(regular),
   };
   if ((status = pwm_->SetConfig(&config)) != ZX_OK) {
-    zxlogf(ERROR, "%s: PWM set config failed\n", __func__);
+    zxlogf(ERROR, "%s: PWM set config failed", __func__);
     return status;
   }
 
@@ -171,7 +171,7 @@ zx_status_t AmlLight::Init() {
 
   ddk::CompositeProtocolClient composite(parent());
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Could not get composite protocol\n", __func__);
+    zxlogf(ERROR, "%s: Could not get composite protocol", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -184,7 +184,7 @@ zx_status_t AmlLight::Init() {
   size_t metadata_size, actual;
   if ((status = device_get_metadata_size(parent(), DEVICE_METADATA_NAME, &metadata_size)) !=
       ZX_OK) {
-    zxlogf(ERROR, "%s: couldn't get metadata size\n", __func__);
+    zxlogf(ERROR, "%s: couldn't get metadata size", __func__);
     return status;
   }
   auto names = fbl::Array<char>(new (&ac) char[metadata_size], metadata_size);
@@ -196,7 +196,7 @@ zx_status_t AmlLight::Init() {
     return status;
   }
   if ((actual != metadata_size) || (actual % kNameLength != 0)) {
-    zxlogf(ERROR, "%s: wrong metadata size\n", __func__);
+    zxlogf(ERROR, "%s: wrong metadata size", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
   uint32_t led_count = static_cast<uint32_t>(metadata_size / kNameLength);
@@ -204,7 +204,7 @@ zx_status_t AmlLight::Init() {
   if (((status = device_get_metadata_size(parent(), DEVICE_METADATA_LIGHTS, &metadata_size)) !=
        ZX_OK) ||
       (metadata_size != led_count * sizeof(lights_config_t))) {
-    zxlogf(ERROR, "%s: get metdata size failed\n", __func__);
+    zxlogf(ERROR, "%s: get metdata size failed", __func__);
     return status;
   }
   auto configs = fbl::Array<lights_config_t>(new (&ac) lights_config_t[led_count], led_count);
@@ -216,7 +216,7 @@ zx_status_t AmlLight::Init() {
     return status;
   }
   if ((actual != metadata_size) || (actual % sizeof(lights_config_t) != 0)) {
-    zxlogf(ERROR, "%s: wrong metadata size\n", __func__);
+    zxlogf(ERROR, "%s: wrong metadata size", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -232,7 +232,7 @@ zx_status_t AmlLight::Init() {
 
     ddk::GpioProtocolClient gpio(fragments[count]);
     if (!gpio.is_valid()) {
-      zxlogf(ERROR, "%s: could not get gpio protocol: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: could not get gpio protocol: %d", __func__, status);
       return status;
     }
     count++;
@@ -240,25 +240,25 @@ zx_status_t AmlLight::Init() {
     if (config->brightness) {
       ddk::PwmProtocolClient pwm(fragments[count]);
       if (!pwm.is_valid()) {
-        zxlogf(ERROR, "%s: could not get pwm protocol: %d\n", __func__, status);
+        zxlogf(ERROR, "%s: could not get pwm protocol: %d", __func__, status);
         return status;
       }
       count++;
       if (i * kNameLength >= names.size()) {
-        zxlogf(ERROR, "%s: name buffer overflow!\n", __func__);
+        zxlogf(ERROR, "%s: name buffer overflow!", __func__);
         return ZX_ERR_BUFFER_TOO_SMALL;
       }
       lights_.emplace_back(&names[i * kNameLength], gpio, pwm);
     } else {
       if (i * kNameLength >= names.size()) {
-        zxlogf(ERROR, "%s: name buffer overflow!\n", __func__);
+        zxlogf(ERROR, "%s: name buffer overflow!", __func__);
         return ZX_ERR_BUFFER_TOO_SMALL;
       }
       lights_.emplace_back(&names[i * kNameLength], gpio, std::nullopt);
     }
 
     if ((status = lights_.back().Init(config->init_on)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Could not initialize light\n", __func__);
+      zxlogf(ERROR, "%s: Could not initialize light", __func__);
       return status;
     }
 

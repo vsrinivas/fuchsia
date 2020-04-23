@@ -116,7 +116,7 @@ zx_status_t Astro::BluetoothInit() {
   status = pbus_.CompositeDeviceAdd(&bt_uart_dev, bt_uart_fragments, countof(bt_uart_fragments),
                                     UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;
   }
 

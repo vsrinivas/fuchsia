@@ -40,7 +40,7 @@ zx_status_t Msm8x53::GpioInit() {
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __func__, status);
     return status;
   }
 
@@ -65,7 +65,7 @@ zx_status_t Msm8x53::GpioInit() {
   gpio_test_dev.gpio_list = gpio_test_gpios;
   gpio_test_dev.gpio_count = countof(gpio_test_gpios);
   if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not add gpio_test_dev %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Could not add gpio_test_dev %d", __func__, status);
     return status;
   }
 #endif

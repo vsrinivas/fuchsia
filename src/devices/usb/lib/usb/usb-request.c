@@ -41,7 +41,7 @@ __EXPORT zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size, 
   if (data_size > 0) {
     status = zx_vmo_create(data_size, 0, &req->vmo_handle);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "usb_request_alloc: Failed to create vmo: %d\n", status);
+      zxlogf(ERROR, "usb_request_alloc: Failed to create vmo: %d", status);
       free(req);
       return status;
     }
@@ -51,7 +51,7 @@ __EXPORT zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size, 
                          req->vmo_handle, 0, data_size, &mapped_addr);
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "usb_request_alloc: Failed to map the vmo: %d\n", status);
+      zxlogf(ERROR, "usb_request_alloc: Failed to map the vmo: %d", status);
       free(req);
       return status;
     }
@@ -79,7 +79,7 @@ __EXPORT zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_
   zx_handle_t dup_handle;
   zx_status_t status = zx_handle_duplicate(vmo_handle, ZX_RIGHT_SAME_RIGHTS, &dup_handle);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb_request_alloc_vmo: Failed to duplicate handle: %d\n", status);
+    zxlogf(ERROR, "usb_request_alloc_vmo: Failed to duplicate handle: %d", status);
     free(req);
     return status;
   }
@@ -96,7 +96,7 @@ __EXPORT zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, dup_handle, 0,
                        size, &mapped_addr);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb_request_alloc_vmo: zx_vmar_map failed %d size: %zu\n", status, size);
+    zxlogf(ERROR, "usb_request_alloc_vmo: zx_vmar_map failed %d size: %zu", status, size);
     zx_handle_close(dup_handle);
     free(req);
     return status;
@@ -126,7 +126,7 @@ __EXPORT zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle
   zx_handle_t dup_handle;
   zx_status_t status = zx_handle_duplicate(vmo_handle, ZX_RIGHT_SAME_RIGHTS, &dup_handle);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb_request_init: Failed to duplicate handle: %d\n", status);
+    zxlogf(ERROR, "usb_request_init: Failed to duplicate handle: %d", status);
     return status;
   }
 
@@ -142,7 +142,7 @@ __EXPORT zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, dup_handle, 0,
                        size, &mapped_addr);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb_request_init: zx_vmar_map failed %d size: %zu\n", status, size);
+    zxlogf(ERROR, "usb_request_init: zx_vmar_map failed %d size: %zu", status, size);
     zx_handle_close(dup_handle);
     return status;
   }
@@ -179,7 +179,7 @@ __EXPORT zx_status_t usb_request_set_sg_list(usb_request_t* req,
   size_t num_bytes = sg_count * sizeof(phys_iter_sg_entry_t);
   req->sg_list = malloc(num_bytes);
   if (req->sg_list == NULL) {
-    zxlogf(ERROR, "usb_request_set_sg_list: out of memory\n");
+    zxlogf(ERROR, "usb_request_set_sg_list: out of memory");
     return ZX_ERR_NO_MEMORY;
   }
   memcpy(req->sg_list, sg_list, num_bytes);
@@ -246,7 +246,7 @@ zx_status_t usb_request_physmap(usb_request_t* req, zx_handle_t bti_handle) {
 
   zx_paddr_t* paddrs = malloc(pages * sizeof(zx_paddr_t));
   if (paddrs == NULL) {
-    zxlogf(ERROR, "usb_request_physmap: out of memory\n");
+    zxlogf(ERROR, "usb_request_physmap: out of memory");
     return ZX_ERR_NO_MEMORY;
   }
   const size_t sub_offset = page_offset & (PAGE_SIZE - 1);
@@ -261,7 +261,7 @@ zx_status_t usb_request_physmap(usb_request_t* req, zx_handle_t bti_handle) {
   zx_status_t status =
       zx_bti_pin(bti_handle, options, req->vmo_handle, pin_offset, pin_length, paddrs, pages, &pmt);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "usb_request_physmap: zx_bti_pin failed:%d\n", status);
+    zxlogf(ERROR, "usb_request_physmap: zx_bti_pin failed:%d", status);
     free(paddrs);
     return status;
   }

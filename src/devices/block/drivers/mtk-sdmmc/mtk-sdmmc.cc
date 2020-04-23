@@ -84,7 +84,7 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
 
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get composite protocol\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get composite protocol", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -92,26 +92,26 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   size_t fragment_count = 0;
   composite.GetFragments(fragments, FRAGMENT_COUNT, &fragment_count);
   if (fragment_count <= FRAGMENT_PDEV) {
-    zxlogf(ERROR, "%s: Failed to get fragments\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get fragments", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   zx::bti bti;
   if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_get_bti failed\n", __FILE__);
+    zxlogf(ERROR, "%s: pdev_get_bti failed", __FILE__);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev.MapMmio failed\n", __FILE__);
+    zxlogf(ERROR, "%s: pdev.MapMmio failed", __FILE__);
     return status;
   }
 
@@ -119,7 +119,7 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   size_t actual;
   status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &config, sizeof(config), &actual);
   if (status != ZX_OK || actual != sizeof(config)) {
-    zxlogf(ERROR, "%s: DdkGetMetadata failed\n", __FILE__);
+    zxlogf(ERROR, "%s: DdkGetMetadata failed", __FILE__);
     return status;
   }
 
@@ -137,13 +137,13 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
 
   zx::interrupt irq;
   if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to map interrupt\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to map interrupt", __FILE__);
     return status;
   }
 
   pdev_device_info_t dev_info;
   if ((status = pdev.GetDeviceInfo(&dev_info)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get device info\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get device info", __FILE__);
     return status;
   }
 
@@ -151,7 +151,7 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   if (fragment_count > FRAGMENT_RESET_GPIO) {
     reset_gpio = ddk::GpioProtocolClient(fragments[FRAGMENT_RESET_GPIO]);
     if (!reset_gpio.is_valid()) {
-      zxlogf(ERROR, "%s: Failed to get reset GPIO\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to get reset GPIO", __FILE__);
       return ZX_ERR_NO_RESOURCES;
     }
   }
@@ -160,7 +160,7 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   if (fragment_count > FRAGMENT_POWER_EN_GPIO) {
     power_en_gpio = ddk::GpioProtocolClient(fragments[FRAGMENT_POWER_EN_GPIO]);
     if (!power_en_gpio.is_valid()) {
-      zxlogf(ERROR, "%s: Failed to get power enable GPIO\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to get power enable GPIO", __FILE__);
       return ZX_ERR_NO_RESOURCES;
     }
   }
@@ -171,7 +171,7 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
                                                 std::move(irq), reset_gpio, power_en_gpio, config));
 
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: MtkSdmmc alloc failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MtkSdmmc alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -197,7 +197,7 @@ void MtkSdmmc::DdkRelease() {
 zx_status_t MtkSdmmc::Bind() {
   zx_status_t status = DdkAdd("mtk-sdmmc");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    zxlogf(ERROR, "%s: DdkAdd failed", __FILE__);
   }
 
   return status;
@@ -233,14 +233,14 @@ zx_status_t MtkSdmmc::Init() {
 
   auto cb = [](void* arg) -> int { return reinterpret_cast<MtkSdmmc*>(arg)->IrqThread(); };
   if (thrd_create_with_name(&irq_thread_, cb, this, "mt8167-emmc-thread") != thrd_success) {
-    zxlogf(ERROR, "%s: Failed to create IRQ thread\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to create IRQ thread", __FILE__);
     return ZX_ERR_INTERNAL;
   }
 
   if (power_en_gpio_.is_valid()) {
     zx_status_t status = power_en_gpio_.ConfigOut(1);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to set power enable GPIO\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to set power enable GPIO", __FILE__);
       return status;
     }
   }
@@ -405,7 +405,7 @@ RequestStatus MtkSdmmc::SendTuningBlock(uint32_t cmd_idx, zx_handle_t vmo) {
 
   uint8_t buf[sizeof(kTuningBlockPattern8Bit)];
   if ((status.data_status = zx_vmo_read(vmo, buf, 0, request.blocksize)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to read VMO\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to read VMO", __FILE__);
     return status;
   }
 
@@ -435,7 +435,7 @@ void MtkSdmmc::TestDelaySettings(DelayCallback&& set_delay, RequestCallback&& do
   }
 
   results[fbl::count_of(results) - 1] = '\0';
-  zxlogf(INFO, "%s: Tuning results: %s\n", __func__, results);
+  zxlogf(INFO, "%s: Tuning results: %s", __func__, results);
 }
 
 zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
@@ -455,7 +455,7 @@ zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
   zx_status_t status = vmo_mapper.CreateAndMap(sizeof(kTuningBlockPattern8Bit),
                                                ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to create and map VMO\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to create and map VMO", __FILE__);
     return status;
   }
 
@@ -511,7 +511,7 @@ zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
 
   msdc_iocon.set_data_sample(data_sample).WriteTo(&mmio_);
   pad_tune0.set_data_delay(data_delay).WriteTo(&mmio_);
-  zxlogf(INFO, "%s: cmd sample %u, cmd delay %u, data sample %u, data delay %u\n", __func__,
+  zxlogf(INFO, "%s: cmd sample %u, cmd delay %u, data sample %u, data delay %u", __func__,
          cmd_sample, cmd_delay, data_sample, data_delay);
 
   return ZX_OK;
@@ -522,7 +522,7 @@ zx_status_t MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
   zx_status_t status =
       io_buffer_init(&bdma_buf_, bti_.get(), bd_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to create BDMA buffer\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to create BDMA buffer", __FILE__);
     return status;
   }
 
@@ -535,7 +535,7 @@ zx_status_t MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
   uint64_t desc_count = 0;
   for (size_t buf_size = phys_iter_next(&phys_iter, &buf_addr); buf_size != 0; desc_count++) {
     if (desc_count >= phys_iter_buf->phys_count) {
-      zxlogf(ERROR, "%s: Page count mismatch\n", __FILE__);
+      zxlogf(ERROR, "%s: Page count mismatch", __FILE__);
       return ZX_ERR_INTERNAL;
     }
 
@@ -553,20 +553,20 @@ zx_status_t MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
 
     status = zx_vmo_write(bdma_buf_.vmo_handle, &desc, desc_count * sizeof(desc), sizeof(desc));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to write to BDMA buffer\n", __FILE__);
+      zxlogf(ERROR, "%s: Failed to write to BDMA buffer", __FILE__);
       return status;
     }
   }
 
   if (desc_count == 0) {
-    zxlogf(ERROR, "%s: No pages provided for DMA buffer\n", __FILE__);
+    zxlogf(ERROR, "%s: No pages provided for DMA buffer", __FILE__);
     return ZX_ERR_INTERNAL;
   }
 
   const uint64_t gp_size = 2 * sizeof(GpDmaDescriptor);
   status = io_buffer_init(&gpdma_buf_, bti_.get(), gp_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to create GPDMA buffer\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to create GPDMA buffer", __FILE__);
     return status;
   }
 
@@ -579,7 +579,7 @@ zx_status_t MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
   gp_desc.SetChecksum();
 
   if ((status = zx_vmo_write(gpdma_buf_.vmo_handle, &gp_desc, 0, sizeof(gp_desc))) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to write to GPDMA buffer\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to write to GPDMA buffer", __FILE__);
     return status;
   }
 
@@ -587,17 +587,17 @@ zx_status_t MtkSdmmc::SetupDmaDescriptors(phys_iter_buffer_t* phys_iter_buf) {
   status = zx_vmo_write(gpdma_buf_.vmo_handle, &gp_null_desc, sizeof(gp_null_desc),
                         sizeof(gp_null_desc));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to write to GPDMA buffer\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to write to GPDMA buffer", __FILE__);
     return status;
   }
 
   if ((status = io_buffer_cache_op(&bdma_buf_, ZX_VMO_OP_CACHE_CLEAN, 0, bd_size)) != ZX_OK) {
-    zxlogf(ERROR, "%s: BDMA descriptors cache clean failed\n", __FILE__);
+    zxlogf(ERROR, "%s: BDMA descriptors cache clean failed", __FILE__);
     return status;
   }
 
   if ((status = io_buffer_cache_op(&gpdma_buf_, ZX_VMO_OP_CACHE_CLEAN, 0, gp_size)) != ZX_OK) {
-    zxlogf(ERROR, "%s: GPDMA descriptors cache clean failed\n", __FILE__);
+    zxlogf(ERROR, "%s: GPDMA descriptors cache clean failed", __FILE__);
     return status;
   }
 
@@ -621,7 +621,7 @@ zx_status_t MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
   zx_status_t status = zx_bti_pin(bti_.get(), options, req->dma_vmo, req->buf_offset & ~kPageMask,
                                   PAGE_SIZE * pagecount, phys, pagecount, &req->pmt);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to pin DMA buffer\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to pin DMA buffer", __FILE__);
     return status;
   }
 
@@ -659,7 +659,7 @@ zx_status_t MtkSdmmc::RequestPrepareDma(sdmmc_req_t* req) {
   }
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DMA buffer cache clean failed\n", __FILE__);
+    zxlogf(ERROR, "%s: DMA buffer cache clean failed", __FILE__);
     return status;
   }
 
@@ -680,7 +680,7 @@ zx_status_t MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
     cache_status = zx_vmo_op_range(req->dma_vmo, ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, req->buf_offset,
                                    req_len, nullptr, 0);
     if (cache_status != ZX_OK) {
-      zxlogf(ERROR, "%s: DMA buffer cache invalidate failed\n", __FILE__);
+      zxlogf(ERROR, "%s: DMA buffer cache invalidate failed", __FILE__);
     }
   }
 
@@ -689,7 +689,7 @@ zx_status_t MtkSdmmc::RequestFinishDma(sdmmc_req_t* req) {
 
   zx_status_t unpin_status = zx_pmt_unpin(req->pmt);
   if (unpin_status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to unpin DMA buffer\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to unpin DMA buffer", __FILE__);
   }
 
   return cache_status != ZX_OK ? cache_status : unpin_status;
@@ -863,7 +863,7 @@ int MtkSdmmc::IrqThread() {
   while (1) {
     zx::time timestamp;
     if (WaitForInterrupt(&timestamp) != ZX_OK) {
-      zxlogf(ERROR, "%s: IRQ wait failed\n", __FILE__);
+      zxlogf(ERROR, "%s: IRQ wait failed", __FILE__);
       return thrd_error;
     }
 
@@ -890,7 +890,7 @@ int MtkSdmmc::IrqThread() {
     }
 
     if (req_ == nullptr) {
-      zxlogf(ERROR, "%s: Received interrupt with no request, MSDC_INT=%08x\n", __FILE__,
+      zxlogf(ERROR, "%s: Received interrupt with no request, MSDC_INT=%08x", __FILE__,
              msdc_int.reg_value());
 
       // TODO(bradenkell): Interrupts should only be enabled when req_ is valid. Figure out
@@ -916,7 +916,7 @@ int MtkSdmmc::IrqThread() {
     } else if (msdc_int.transfer_complete()) {
       req_->status = ZX_OK;
     } else {
-      zxlogf(WARN, "%s: Received unexpected interrupt, MSDC_INT=%08x\n", __FILE__,
+      zxlogf(WARN, "%s: Received unexpected interrupt, MSDC_INT=%08x", __FILE__,
              msdc_int.reg_value());
       continue;
     }

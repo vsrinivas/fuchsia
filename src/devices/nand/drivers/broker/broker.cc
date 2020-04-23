@@ -129,7 +129,7 @@ fuchsia_nand_Broker_ops_t fidl_ops = {
 
 zx_status_t Broker::Bind() {
   if (!nand_.is_valid()) {
-    zxlogf(ERROR, "nand-broker: device '%s' does not support nand protocol\n",
+    zxlogf(ERROR, "nand-broker: device '%s' does not support nand protocol",
            device_get_name(parent()));
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -137,10 +137,10 @@ zx_status_t Broker::Bind() {
   fuchsia_hardware_nand_Info info;
   Query(&info);
   if (!op_size_) {
-    zxlogf(ERROR, "nand-broker: unable to query the nand driver\n");
+    zxlogf(ERROR, "nand-broker: unable to query the nand driver");
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zxlogf(INFO, "nand-broker: %d blocks of %d pages each. Page size: %d\n", info.num_blocks,
+  zxlogf(INFO, "nand-broker: %d blocks of %d pages each. Page size: %d", info.num_blocks,
          info.pages_per_block, info.page_size);
 
   return DdkAdd("broker");
@@ -193,7 +193,7 @@ zx_status_t Broker::Queue(uint32_t command, const fuchsia_nand_BrokerRequest& re
 }
 
 zx_status_t NandBrokerBind(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "nand-broker: binding\n");
+  zxlogf(INFO, "nand-broker: binding");
   fbl::AllocChecker checker;
   std::unique_ptr<Broker> device(new (&checker) Broker(parent));
   if (!checker.check()) {

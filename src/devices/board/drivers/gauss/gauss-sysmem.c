@@ -44,7 +44,7 @@ zx_status_t gauss_sysmem_init(gauss_bus_t* bus) {
   zx_status_t status;
 
   if ((status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_SYSMEM, &sysmem_dev)) != ZX_OK) {
-    zxlogf(ERROR, "gauss_sysmem_init: pbus_protocol_device_add() failed for sysmem: %d\n", status);
+    zxlogf(ERROR, "gauss_sysmem_init: pbus_protocol_device_add() failed for sysmem: %d", status);
     return status;
   }
 

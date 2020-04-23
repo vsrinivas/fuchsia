@@ -131,7 +131,7 @@ zx_status_t GpioLight::Create(void* ctx, zx_device_t* parent) {
 zx_status_t GpioLight::Init() {
   ddk::CompositeProtocolClient composite(parent_);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "GpioLight: Could not get composite protocol\n");
+    zxlogf(ERROR, "GpioLight: Could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -147,7 +147,7 @@ zx_status_t GpioLight::Init() {
   auto status = device_get_metadata_size(parent(), DEVICE_METADATA_NAME, &metadata_size);
   if (status == ZX_OK) {
     if (expected != metadata_size) {
-      zxlogf(ERROR, "%s: expected metadata size %zu, got %zu\n", __func__, expected, metadata_size);
+      zxlogf(ERROR, "%s: expected metadata size %zu, got %zu", __func__, expected, metadata_size);
       status = ZX_ERR_INTERNAL;
     }
   }
@@ -187,7 +187,7 @@ zx_status_t GpioLight::Init() {
     }
     status = gpio->ConfigOut(0);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "gpio-light: ConfigOut failed for gpio %u\n", i);
+      zxlogf(ERROR, "gpio-light: ConfigOut failed for gpio %u", i);
       return status;
     }
   }

@@ -181,7 +181,7 @@ zx_status_t SimpleDisplay::Bind(const char* name, std::unique_ptr<SimpleDisplay>
   // when device goes out of scope.
   __UNUSED auto ptr = vbe_ptr->release();
 
-  zxlogf(INFO, "%s: initialized display, %u x %u (stride=%u format=%08x)\n", name, width_, height_,
+  zxlogf(INFO, "%s: initialized display, %u x %u (stride=%u format=%08x)", name, width_, height_,
          stride_, format_);
 
   return ZX_OK;

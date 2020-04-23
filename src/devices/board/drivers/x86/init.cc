@@ -97,7 +97,7 @@ ACPI_STATUS acpi_prw_walk(ACPI_HANDLE obj, UINT32 level, void* context, void** o
     goto bailout;
   }
   if (AcpiSetupGpeForWake(obj, gpe_block, gpe_bit) != AE_OK) {
-    zxlogf(INFO, "Acpi failed to setup wake GPE\n");
+    zxlogf(INFO, "Acpi failed to setup wake GPE");
   }
 
 bailout:
@@ -111,45 +111,45 @@ ACPI_STATUS acpi_sub_init(void) {
   // of the ACPICA developer's reference.
   ACPI_STATUS status = AcpiInitializeSubsystem();
   if (status != AE_OK) {
-    zxlogf(WARN, "Could not initialize ACPI\n");
+    zxlogf(WARN, "Could not initialize ACPI");
     return status;
   }
 
   status = AcpiInitializeTables(NULL, ACPI_MAX_INIT_TABLES, FALSE);
   if (status == AE_NOT_FOUND) {
-    zxlogf(WARN, "Could not find ACPI tables\n");
+    zxlogf(WARN, "Could not find ACPI tables");
     return status;
   } else if (status == AE_NO_MEMORY) {
-    zxlogf(WARN, "Could not initialize ACPI tables\n");
+    zxlogf(WARN, "Could not initialize ACPI tables");
     return status;
   } else if (status != AE_OK) {
-    zxlogf(WARN, "Could not initialize ACPI tables for unknown reason\n");
+    zxlogf(WARN, "Could not initialize ACPI tables for unknown reason");
     return status;
   }
 
   status = AcpiLoadTables();
   if (status != AE_OK) {
-    zxlogf(WARN, "Could not load ACPI tables: %d\n", status);
+    zxlogf(WARN, "Could not load ACPI tables: %d", status);
     return status;
   }
 
   status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
   if (status != AE_OK) {
-    zxlogf(WARN, "Could not enable ACPI\n");
+    zxlogf(WARN, "Could not enable ACPI");
     return status;
   }
 
   status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
   if (status != AE_OK) {
-    zxlogf(WARN, "Could not initialize ACPI objects\n");
+    zxlogf(WARN, "Could not initialize ACPI objects");
     return status;
   }
 
   status = set_apic_irq_mode();
   if (status == AE_NOT_FOUND) {
-    zxlogf(WARN, "Could not find ACPI IRQ mode switch\n");
+    zxlogf(WARN, "Could not find ACPI IRQ mode switch");
   } else if (status != AE_OK) {
-    zxlogf(WARN, "Failed to set APIC IRQ mode\n");
+    zxlogf(WARN, "Failed to set APIC IRQ mode");
     return status;
   }
 
@@ -157,7 +157,7 @@ ACPI_STATUS acpi_sub_init(void) {
 
   status = AcpiUpdateAllGpes();
   if (status != AE_OK) {
-    zxlogf(WARN, "Could not initialize ACPI GPEs\n");
+    zxlogf(WARN, "Could not initialize ACPI GPEs");
     return status;
   }
 
@@ -191,7 +191,7 @@ zx_status_t X86::EarlyInit() {
   // not propagate.
   status = iommu_manager_.Init();
   if (status != ZX_OK) {
-    zxlogf(INFO, "acpi: Failed to initialize IOMMU manager: %d\n", status);
+    zxlogf(INFO, "acpi: Failed to initialize IOMMU manager: %d", status);
   }
   return ZX_OK;
 }

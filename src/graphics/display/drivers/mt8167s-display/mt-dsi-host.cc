@@ -393,28 +393,28 @@ zx_status_t MtDsiHost::Config(const display_setting_t& disp_setting) {
 
 void MtDsiHost::PrintRegisters() {
   ZX_DEBUG_ASSERT(initialized_);
-  zxlogf(INFO, "Dumping DSI MIPI PHY Registers:\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "MIPI_TX_CON = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_CON));
-  zxlogf(INFO, "MIPI_TX_CLOCK_LANE = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_CLOCK_LANE));
-  zxlogf(INFO, "MIPI_TX_DATA_LANE0 = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_DATA_LANE0));
-  zxlogf(INFO, "MIPI_TX_DATA_LANE1 = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_DATA_LANE1));
-  zxlogf(INFO, "MIPI_TX_DATA_LANE2 = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_DATA_LANE2));
-  zxlogf(INFO, "MIPI_TX_DATA_LANE3 = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_DATA_LANE3));
-  zxlogf(INFO, "MIPI_TX_TOP_CON = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_TOP_CON));
-  zxlogf(INFO, "MIPI_TX_BG_CON = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_BG_CON));
-  zxlogf(INFO, "MIPI_TX_PLL_CON0 = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_PLL_CON0));
-  zxlogf(INFO, "MIPI_TX_PLL_CON1 = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_PLL_CON1));
-  zxlogf(INFO, "MIPI_TX_PLL_CON2 = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_PLL_CON2));
-  zxlogf(INFO, "MIPI_TX_PLL_CON3 = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_PLL_CON3));
-  zxlogf(INFO, "MIPI_TX_PLL_CHG = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_PLL_CHG));
-  zxlogf(INFO, "MIPI_TX_PLL_TOP = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_PLL_TOP));
-  zxlogf(INFO, "MIPI_TX_PLL_PWR = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_PLL_PWR));
-  zxlogf(INFO, "MIPI_TX_RGS = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_RGS));
-  zxlogf(INFO, "MIPI_TX_SW_CTRL = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_SW_CTRL));
-  zxlogf(INFO, "MIPI_TX_SW_CTRL_CON0 = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_SW_CTRL_CON0));
-  zxlogf(INFO, "MIPI_TX_SW_CTRL_CON1 = 0x%x\n", mipi_tx_mmio_->Read32(MIPI_TX_SW_CTRL_CON1));
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "Dumping DSI MIPI PHY Registers:");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "MIPI_TX_CON = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_CON));
+  zxlogf(INFO, "MIPI_TX_CLOCK_LANE = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_CLOCK_LANE));
+  zxlogf(INFO, "MIPI_TX_DATA_LANE0 = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_DATA_LANE0));
+  zxlogf(INFO, "MIPI_TX_DATA_LANE1 = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_DATA_LANE1));
+  zxlogf(INFO, "MIPI_TX_DATA_LANE2 = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_DATA_LANE2));
+  zxlogf(INFO, "MIPI_TX_DATA_LANE3 = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_DATA_LANE3));
+  zxlogf(INFO, "MIPI_TX_TOP_CON = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_TOP_CON));
+  zxlogf(INFO, "MIPI_TX_BG_CON = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_BG_CON));
+  zxlogf(INFO, "MIPI_TX_PLL_CON0 = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_PLL_CON0));
+  zxlogf(INFO, "MIPI_TX_PLL_CON1 = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_PLL_CON1));
+  zxlogf(INFO, "MIPI_TX_PLL_CON2 = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_PLL_CON2));
+  zxlogf(INFO, "MIPI_TX_PLL_CON3 = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_PLL_CON3));
+  zxlogf(INFO, "MIPI_TX_PLL_CHG = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_PLL_CHG));
+  zxlogf(INFO, "MIPI_TX_PLL_TOP = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_PLL_TOP));
+  zxlogf(INFO, "MIPI_TX_PLL_PWR = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_PLL_PWR));
+  zxlogf(INFO, "MIPI_TX_RGS = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_RGS));
+  zxlogf(INFO, "MIPI_TX_SW_CTRL = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_SW_CTRL));
+  zxlogf(INFO, "MIPI_TX_SW_CTRL_CON0 = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_SW_CTRL_CON0));
+  zxlogf(INFO, "MIPI_TX_SW_CTRL_CON1 = 0x%x", mipi_tx_mmio_->Read32(MIPI_TX_SW_CTRL_CON1));
+  zxlogf(INFO, "######################\n");
   dsiimpl_.PrintDsiRegisters();
 }
 

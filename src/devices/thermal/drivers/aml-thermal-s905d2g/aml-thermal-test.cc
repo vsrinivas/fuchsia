@@ -279,37 +279,37 @@ class AmlTSensorTest : public zxtest::Test {
 
     pll_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlTSensorTest::SetUp: pll_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlTSensorTest::SetUp: pll_regs_ alloc failed");
       return;
     }
     mock_pll_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
         &ac, pll_regs_.get(), sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlTSensorTest::SetUp: mock_pll_mmio_ alloc failed\n");
+      zxlogf(ERROR, "AmlTSensorTest::SetUp: mock_pll_mmio_ alloc failed");
       return;
     }
 
     ao_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlTSensorTest::SetUp: ao_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlTSensorTest::SetUp: ao_regs_ alloc failed");
       return;
     }
     mock_ao_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
         &ac, ao_regs_.get(), sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlTSensorTest::SetUp: mock_ao_mmio_ alloc failed\n");
+      zxlogf(ERROR, "AmlTSensorTest::SetUp: mock_ao_mmio_ alloc failed");
       return;
     }
 
     hiu_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlTSensorTest::SetUp: hiu_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlTSensorTest::SetUp: hiu_regs_ alloc failed");
       return;
     }
     mock_hiu_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
         &ac, hiu_regs_.get(), sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlTSensorTest::SetUp: mock_hiu_mmio_ alloc failed\n");
+      zxlogf(ERROR, "AmlTSensorTest::SetUp: mock_hiu_mmio_ alloc failed");
       return;
     }
 
@@ -492,7 +492,7 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
         break;
       }
       default:
-        zxlogf(ERROR, "AmlVoltageRegulatorTest::Create: unsupported SOC PID %u\n", pid);
+        zxlogf(ERROR, "AmlVoltageRegulatorTest::Create: unsupported SOC PID %u", pid);
         return;
     }
 
@@ -606,19 +606,19 @@ class AmlCpuFrequencyTest : public zxtest::Test {
 
     hiu_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlCpuFrequencyTest::SetUp: hiu_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlCpuFrequencyTest::SetUp: hiu_regs_ alloc failed");
       return;
     }
     mock_hiu_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
         &ac, hiu_regs_.get(), sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlCpuFrequencyTest::SetUp: mock_hiu_mmio_ alloc failed\n");
+      zxlogf(ERROR, "AmlCpuFrequencyTest::SetUp: mock_hiu_mmio_ alloc failed");
       return;
     }
 
     hiu_internal_mmio_ = fbl::Array(new (&ac) uint32_t[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlCpuFrequencyTest::SetUp: hiu_internal_mmio_ alloc failed\n");
+      zxlogf(ERROR, "AmlCpuFrequencyTest::SetUp: hiu_internal_mmio_ alloc failed");
       return;
     }
 
@@ -658,7 +658,7 @@ class AmlCpuFrequencyTest : public zxtest::Test {
         break;
       }
       default:
-        zxlogf(ERROR, "AmlCpuFrequencyTest::Create: unsupported SOC PID %u\n", pid);
+        zxlogf(ERROR, "AmlCpuFrequencyTest::Create: unsupported SOC PID %u", pid);
         return;
     }
 
@@ -870,35 +870,35 @@ class AmlThermalTest : public zxtest::Test {
     // Temperature Sensor
     tsensor_pll_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlThermalTest::SetUp: tsensor_pll_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlThermalTest::SetUp: tsensor_pll_regs_ alloc failed");
       return;
     }
     tsensor_mock_pll_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
         &ac, tsensor_pll_regs_.get(), sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlThermalTest::SetUp: mock_pll_mmio_ alloc failed\n");
+      zxlogf(ERROR, "AmlThermalTest::SetUp: mock_pll_mmio_ alloc failed");
       return;
     }
     tsensor_ao_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlThermalTest::SetUp: tsensor_ao_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlThermalTest::SetUp: tsensor_ao_regs_ alloc failed");
       return;
     }
     tsensor_mock_ao_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
         &ac, tsensor_ao_regs_.get(), sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlThermalTest::SetUp: mock_ao_mmio_ alloc failed\n");
+      zxlogf(ERROR, "AmlThermalTest::SetUp: mock_ao_mmio_ alloc failed");
       return;
     }
     tsensor_hiu_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlThermalTest::SetUp: tsensor_hiu_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlThermalTest::SetUp: tsensor_hiu_regs_ alloc failed");
       return;
     }
     tsensor_mock_hiu_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
         &ac, tsensor_hiu_regs_.get(), sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlThermalTest::SetUp: mock_hiu_mmio_ alloc failed\n");
+      zxlogf(ERROR, "AmlThermalTest::SetUp: mock_hiu_mmio_ alloc failed");
       return;
     }
     (*tsensor_mock_ao_mmio_)[0x268].ExpectRead(0x00000000);      // trim_info_
@@ -919,18 +919,18 @@ class AmlThermalTest : public zxtest::Test {
     // CPU Frequency and Scaling
     cpufreq_scaling_hiu_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlThermalTest::SetUp: cpufreq_scaling_hiu_regs_ alloc failed\n");
+      zxlogf(ERROR, "AmlThermalTest::SetUp: cpufreq_scaling_hiu_regs_ alloc failed");
       return;
     }
     cpufreq_scaling_mock_hiu_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
         &ac, cpufreq_scaling_hiu_regs_.get(), sizeof(uint32_t), kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlThermalTest::SetUp: cpufreq_scaling_mock_hiu_mmio_ alloc failed\n");
+      zxlogf(ERROR, "AmlThermalTest::SetUp: cpufreq_scaling_mock_hiu_mmio_ alloc failed");
       return;
     }
     cpufreq_scaling_hiu_internal_mmio_ = fbl::Array(new (&ac) uint32_t[kRegSize], kRegSize);
     if (!ac.check()) {
-      zxlogf(ERROR, "AmlThermalTest::SetUp: cpufreq_scaling_hiu_internal_mmio_ alloc failed\n");
+      zxlogf(ERROR, "AmlThermalTest::SetUp: cpufreq_scaling_hiu_internal_mmio_ alloc failed");
       return;
     }
 
@@ -1065,7 +1065,7 @@ class AmlThermalTest : public zxtest::Test {
         break;
       }
       default:
-        zxlogf(ERROR, "AmlThermalTest::Create: unsupported SOC PID %u\n", pid);
+        zxlogf(ERROR, "AmlThermalTest::Create: unsupported SOC PID %u", pid);
         return;
     }
 

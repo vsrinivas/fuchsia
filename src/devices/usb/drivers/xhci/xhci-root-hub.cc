@@ -267,7 +267,7 @@ static void print_portsc(int port, uint32_t portsc) {
     zxlogf(SPEW, " DR");
   if (portsc & PORTSC_WPR)
     zxlogf(SPEW, " WPR");
-  zxlogf(SPEW, "\n");
+  zxlogf(SPEW, "");
 }
 
 static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index) {
@@ -335,12 +335,12 @@ static zx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh
 }
 
 zx_status_t xhci_start_root_hubs(xhci_t* xhci) {
-  zxlogf(TRACE, "xhci_start_root_hubs\n");
+  zxlogf(TRACE, "xhci_start_root_hubs");
 
   for (int i = 0; i < XHCI_RH_COUNT; i++) {
     zx_status_t status = xhci_start_root_hub(xhci, &xhci->root_hubs[i], i);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "xhci_start_root_hub(%d) failed: %d\n", i, status);
+      zxlogf(ERROR, "xhci_start_root_hub(%d) failed: %d", i, status);
       return status;
     }
   }
@@ -349,7 +349,7 @@ zx_status_t xhci_start_root_hubs(xhci_t* xhci) {
 }
 
 void xhci_stop_root_hubs(xhci_t* xhci) {
-  zxlogf(TRACE, "xhci_stop_root_hubs\n");
+  zxlogf(TRACE, "xhci_stop_root_hubs");
 
   volatile xhci_port_regs_t* port_regs = xhci->op_regs->port_regs;
   for (uint8_t i = 0; i < xhci->rh_num_ports; i++) {
@@ -425,7 +425,7 @@ static zx_status_t xhci_rh_get_descriptor(xhci_t* xhci, uint8_t request_type, xh
     }
   }
 
-  zxlogf(ERROR, "xhci_rh_get_descriptor unsupported value: %d index: %d\n", value, index);
+  zxlogf(ERROR, "xhci_rh_get_descriptor unsupported value: %d index: %d", value, index);
   usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0, &req_int->complete_cb);
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -439,7 +439,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
   uint16_t index = le16toh(setup->wIndex);
   xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
 
-  zxlogf(SPEW, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
+  zxlogf(SPEW, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d",
          request_type, request, value, index, le16toh(setup->wLength));
 
   if ((request_type & USB_DIR_MASK) == USB_DIR_IN && request == USB_REQ_GET_DESCRIPTOR) {
@@ -504,7 +504,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
     return ZX_OK;
   }
 
-  zxlogf(ERROR, "unsupported root hub control request type: 0x%02X req: %d value: %d index: %d\n",
+  zxlogf(ERROR, "unsupported root hub control request type: 0x%02X req: %d value: %d index: %d",
          request_type, request, value, index);
 
   usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0, &req_int->complete_cb);
@@ -512,7 +512,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
 }
 
 static void xhci_rh_handle_intr_req(xhci_t* xhci, xhci_root_hub_t* rh, usb_request_t* req) {
-  zxlogf(SPEW, "xhci_rh_handle_intr_req\n");
+  zxlogf(SPEW, "xhci_rh_handle_intr_req");
   uint8_t status_bits[128 / 8];
   bool have_status = 0;
   uint8_t* ptr = status_bits;
@@ -546,7 +546,7 @@ static void xhci_rh_handle_intr_req(xhci_t* xhci, xhci_root_hub_t* rh, usb_reque
 }
 
 zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_index) {
-  zxlogf(SPEW, "xhci_rh_usb_request_queue rh_index: %d\n", rh_index);
+  zxlogf(SPEW, "xhci_rh_usb_request_queue rh_index: %d", rh_index);
 
   xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];
   xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
@@ -566,7 +566,7 @@ zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_i
 void xhci_handle_root_hub_change(xhci_t* xhci) {
   volatile xhci_port_regs_t* port_regs = xhci->op_regs->port_regs;
 
-  zxlogf(TRACE, "xhci_handle_root_hub_change\n");
+  zxlogf(TRACE, "xhci_handle_root_hub_change");
 
   for (uint8_t i = 0; i < xhci->rh_num_ports; i++) {
     uint32_t portsc = XHCI_READ32(&port_regs[i].portsc);
@@ -593,7 +593,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
 
       if (portsc & PORTSC_CSC) {
         // connect status change
-        zxlogf(TRACE, "port %d PORTSC_CSC connected: %d\n", i, connected);
+        zxlogf(TRACE, "port %d PORTSC_CSC connected: %d", i, connected);
         if (connected) {
           status->wPortStatus |= USB_PORT_CONNECTION;
         } else {
@@ -606,7 +606,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
       }
       if (portsc & PORTSC_PRC) {
         // port reset change
-        zxlogf(TRACE, "port %d PORTSC_PRC enabled: %d\n", i, enabled);
+        zxlogf(TRACE, "port %d PORTSC_PRC enabled: %d", i, enabled);
         if (enabled) {
           status->wPortStatus &= static_cast<uint16_t>(~USB_PORT_RESET);
           status->wPortChange |= USB_C_PORT_RESET;

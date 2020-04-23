@@ -49,7 +49,7 @@ zx_status_t s905d2_hiu_init(aml_hiu_dev_t* device) {
   status = mmio_buffer_init_physical(&device->mmio, S905D2_HIU_BASE, S905D2_HIU_LENGTH, resource,
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: mmio_buffer_init_physical failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: mmio_buffer_init_physical failed %d", __func__, status);
     return status;
   }
   device->regs_vaddr = device->mmio.vaddr;

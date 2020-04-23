@@ -47,7 +47,7 @@ void UsbHci::UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf)
   bus_ = ddk::UsbBusInterfaceProtocolClient(bus_intf);
   auto status = bus_.AddDevice(root_hub()->id(), 0, root_hub()->speed());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "adding device to bus error: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "adding device to bus error: %s", zx_status_get_string(status));
   }
 }
 
@@ -65,7 +65,7 @@ zx_status_t UsbHci::UsbHciEnableEndpoint(uint32_t device_id, const usb_endpoint_
 
 uint64_t UsbHci::UsbHciGetCurrentFrame() {
   // Pending ISOCHRONOUS support.
-  zxlogf(ERROR, "%s not currently supported\n", __func__);
+  zxlogf(ERROR, "%s not currently supported", __func__);
   return 0;
 }
 
@@ -87,7 +87,7 @@ zx_status_t UsbHci::UsbHciHubDeviceAdded(uint32_t hub_id, uint32_t port, usb_spe
 
   auto status = device->Enumerate();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "enumeration error: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "enumeration error: %s", zx_status_get_string(status));
     device_[id].reset();
     return status;
   }
@@ -95,7 +95,7 @@ zx_status_t UsbHci::UsbHciHubDeviceAdded(uint32_t hub_id, uint32_t port, usb_spe
   // The device survived enumeration and is ready to be managed by the USB stack.
   status = bus_.AddDevice(id, hub_id, speed);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "add device failed: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "add device failed: %s", zx_status_get_string(status));
     device_[id].reset();
     return status;
   }
@@ -116,7 +116,7 @@ zx_status_t UsbHci::UsbHciHubDeviceRemoved(uint32_t hub_id, uint32_t port) {
 
   auto status = bus_.RemoveDevice(kDeviceId);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "could not remove device: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "could not remove device: %s", zx_status_get_string(status));
     return status;
   }
   return ZX_OK;
@@ -153,28 +153,28 @@ zx_status_t UsbHci::Create(void* ctx, zx_device_t* parent) {
 
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "could not create PDev\n");
+    zxlogf(ERROR, "could not create PDev");
     return ZX_ERR_INTERNAL;
   }
 
   std::optional<ddk::MmioBuffer> usb_mmio;
   status = pdev.MapMmio(0, &usb_mmio);
   if (status != ZX_OK || !usb_mmio.has_value()) {
-    zxlogf(ERROR, "could not map usb_mmio: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "could not map usb_mmio: %s", zx_status_get_string(status));
     return status;
   }
 
   std::optional<ddk::MmioBuffer> phy_mmio;
   status = pdev.MapMmio(1, &phy_mmio);
   if (status != ZX_OK || !phy_mmio.has_value()) {
-    zxlogf(ERROR, "could not map phy_mmio: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "could not map phy_mmio: %s", zx_status_get_string(status));
     return status;
   }
 
   zx::interrupt irq;
   status = pdev.GetInterrupt(0, &irq);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "could not get interrupt: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "could not get interrupt: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -265,12 +265,12 @@ void UsbHci::HandleIrq() {
 }
 
 void UsbHci::HandleConnect() {
-  zxlogf(INFO, "mt-usb-host sees port connection.\n");
+  zxlogf(INFO, "mt-usb-host sees port connection.");
   root_hub()->PortConnect();
 }
 
 void UsbHci::HandleDisconnect() {
-  zxlogf(INFO, "mt-usb-host sees port disconnection.\n");
+  zxlogf(INFO, "mt-usb-host sees port disconnection.");
   root_hub()->PortDisconnect();
 }
 
@@ -304,10 +304,10 @@ int UsbHci::IrqThread() {
   for (;;) {
     status = irq_.wait(nullptr);
     if (status == ZX_ERR_CANCELED) {
-      zxlogf(TRACE, "irq thread break\n");
+      zxlogf(TRACE, "irq thread break");
       break;
     } else if (status != ZX_OK) {
-      zxlogf(ERROR, "irq wait error: %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "irq wait error: %s", zx_status_get_string(status));
       continue;
     }
     HandleIrq();

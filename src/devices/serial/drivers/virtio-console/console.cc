@@ -32,7 +32,7 @@ zx_status_t QueueTransfer(Ring* ring, uintptr_t phys, uint32_t len, bool write) 
   vring_desc* desc = ring->AllocDescChain(1, &index);
   if (!desc) {
     // This should not happen
-    zxlogf(ERROR, "Failed to find free descriptor for the virtio ring\n");
+    zxlogf(ERROR, "Failed to find free descriptor for the virtio ring");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -61,7 +61,7 @@ zx_status_t TransferBuffer::Init(const zx::bti& bti, size_t count, uint32_t chun
 
   TransferDescriptor* descriptor = new TransferDescriptor[count_];
   if (!descriptor) {
-    zxlogf(ERROR, "Failed to allocate transfer descriptors (%d)\n", ZX_ERR_NO_MEMORY);
+    zxlogf(ERROR, "Failed to allocate transfer descriptors (%d)", ZX_ERR_NO_MEMORY);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -69,7 +69,7 @@ zx_status_t TransferBuffer::Init(const zx::bti& bti, size_t count, uint32_t chun
 
   zx_status_t status = io_buffer_init(&buf_, bti.get(), size_, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to allocate transfer buffers (%d)\n", status);
+    zxlogf(ERROR, "Failed to allocate transfer buffers (%d)", status);
     return status;
   }
 
@@ -129,13 +129,13 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
 
   zx_status_t status = zx::eventpair::create(0, &event_, &event_remote_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to create event pair (%d)\n", tag(), status);
+    zxlogf(ERROR, "%s: Failed to create event pair (%d)", tag(), status);
     return status;
   }
 
   status = loop_.StartThread("virtio-console-connection");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to launch connection processing thread (%d)\n", tag(), status);
+    zxlogf(ERROR, "%s: Failed to launch connection processing thread (%d)", tag(), status);
     return status;
   }
 
@@ -147,26 +147,26 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   DeviceReset();
   DriverStatusAck();
   if (!DeviceFeatureSupported(VIRTIO_F_VERSION_1)) {
-    zxlogf(ERROR, "%s: Legacy virtio interface is not supported by this driver\n", tag());
+    zxlogf(ERROR, "%s: Legacy virtio interface is not supported by this driver", tag());
     return ZX_ERR_NOT_SUPPORTED;
   }
   DriverFeatureAck(VIRTIO_F_VERSION_1);
 
   status = DeviceStatusFeaturesOk();
   if (status) {
-    zxlogf(ERROR, "%s: Feature negotiation failed (%d)\n", tag(), status);
+    zxlogf(ERROR, "%s: Feature negotiation failed (%d)", tag(), status);
     return status;
   }
 
   status = port0_receive_queue_.Init(0, kDescriptors);
   if (status) {
-    zxlogf(ERROR, "%s: Failed to initialize receive queue (%d)\n", tag(), status);
+    zxlogf(ERROR, "%s: Failed to initialize receive queue (%d)", tag(), status);
     return status;
   }
 
   status = port0_receive_buffer_.Init(bti_, kDescriptors, kChunkSize);
   if (status) {
-    zxlogf(ERROR, "%s: Failed to allocate buffers for receive queue (%d)\n", tag(), status);
+    zxlogf(ERROR, "%s: Failed to allocate buffers for receive queue (%d)", tag(), status);
     return status;
   }
 
@@ -181,13 +181,13 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
 
   status = port0_transmit_queue_.Init(1, kDescriptors);
   if (status) {
-    zxlogf(ERROR, "%s: Failed to initialize transmit queue (%d)\n", tag(), status);
+    zxlogf(ERROR, "%s: Failed to initialize transmit queue (%d)", tag(), status);
     return status;
   }
 
   status = port0_transmit_buffer_.Init(bti_, kDescriptors, kChunkSize);
   if (status) {
-    zxlogf(ERROR, "%s: Failed to allocate buffers for transmit queue (%d)\n", tag(), status);
+    zxlogf(ERROR, "%s: Failed to allocate buffers for transmit queue (%d)", tag(), status);
     return status;
   }
 
@@ -201,7 +201,7 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   status = DdkAdd("virtio-console");
   device_ = zxdev();
   if (status) {
-    zxlogf(ERROR, "%s: Failed to register device (%d)\n", tag(), status);
+    zxlogf(ERROR, "%s: Failed to register device (%d)", tag(), status);
     device_ = nullptr;
     return status;
   }

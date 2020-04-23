@@ -52,13 +52,13 @@ std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data, uint32_t fra
         sub_frame_size = reinterpret_cast<const uint32_t*>(index_data)[i];
         break;
       default:
-        zxlogf(ERROR, "Unsupported bytes_per_framesize: %d\n", bytes_per_framesize);
+        zxlogf(ERROR, "Unsupported bytes_per_framesize: %d", bytes_per_framesize);
         frame_sizes.clear();
         return frame_sizes;
     }
     total_size += sub_frame_size;
     if (total_size > frame_size) {
-      zxlogf(ERROR, "Total superframe size too large: %u > %u\n", total_size, frame_size);
+      zxlogf(ERROR, "Total superframe size too large: %u > %u", total_size, frame_size);
       frame_sizes.clear();
       return frame_sizes;
     }

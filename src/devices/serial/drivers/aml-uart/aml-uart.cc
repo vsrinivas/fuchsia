@@ -37,7 +37,7 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
 
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "AmlUart::Could not get composite protocol\n");
+    zxlogf(ERROR, "AmlUart::Could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -46,13 +46,13 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
   composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
   // Only pdev fragment is required.
   if (fragment_count < 1) {
-    zxlogf(ERROR, "AmlUart: Could not get fragments\n");
+    zxlogf(ERROR, "AmlUart: Could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(fragments[0]);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "AmlUart::Create: Could not get pdev\n");
+    zxlogf(ERROR, "AmlUart::Create: Could not get pdev");
     return ZX_ERR_NO_RESOURCES;
   }
   pdev_protocol_t proto;
@@ -63,18 +63,18 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
   status =
       device_get_metadata(parent, DEVICE_METADATA_SERIAL_PORT_INFO, &info, sizeof(info), &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, status);
     return status;
   }
   if (actual < sizeof(info)) {
-    zxlogf(ERROR, "%s: serial_port_info_t metadata too small\n", __func__);
+    zxlogf(ERROR, "%s: serial_port_info_t metadata too small", __func__);
     return ZX_ERR_INTERNAL;
   }
 
   mmio_buffer_t mmio;
   status = pdev_map_mmio_buffer(&proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_map_&mmio__buffer failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: pdev_map_&mmio__buffer failed %d", __func__, status);
     return status;
   }
 
@@ -99,7 +99,7 @@ zx_status_t AmlUart::Init() {
   };
   auto status = DdkAdd("aml-uart", 0, props, fbl::count_of(props));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkDeviceAdd failed\n", __func__);
+    zxlogf(ERROR, "%s: DdkDeviceAdd failed", __func__);
     return status;
   }
 
@@ -137,13 +137,13 @@ uint32_t AmlUart::ReadStateAndNotify() {
 }
 
 int AmlUart::IrqThread() {
-  zxlogf(INFO, "%s start\n", __func__);
+  zxlogf(INFO, "%s start", __func__);
 
   while (1) {
     zx_status_t status;
     status = irq_.wait(nullptr);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: irq.wait() got %d\n", __func__, status);
+      zxlogf(ERROR, "%s: irq.wait() got %d", __func__, status);
       break;
     }
     // This will call the notify_cb if the serial state has changed.
@@ -225,7 +225,7 @@ zx_status_t AmlUart::SerialImplAsyncConfig(uint32_t baud_rate, uint32_t flags) {
   constexpr uint32_t kCrystalClockSpeed = 24000000;
   uint32_t baud_bits = (kCrystalClockSpeed / 3) / baud_rate - 1;
   if (baud_bits & (~AML_UART_REG5_NEW_BAUD_RATE_MASK)) {
-    zxlogf(ERROR, "%s: baud rate %u too large\n", __func__, baud_rate);
+    zxlogf(ERROR, "%s: baud rate %u too large", __func__, baud_rate);
     return ZX_ERR_OUT_OF_RANGE;
   }
   auto baud = Reg5::Get()
@@ -312,7 +312,7 @@ zx_status_t AmlUart::SerialImplAsyncEnable(bool enable) {
   if (enable && !enabled_) {
     zx_status_t status = pdev_get_interrupt(&pdev_, 0, 0, irq_.reset_and_get_address());
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: pdev_get_interrupt failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s: pdev_get_interrupt failed %d", __func__, status);
       return status;
     }
 

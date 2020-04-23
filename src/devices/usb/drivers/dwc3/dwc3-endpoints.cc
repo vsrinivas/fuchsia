@@ -71,7 +71,7 @@ void dwc3_ep_fifo_release(dwc3_t* dwc, unsigned ep_num) {
 
 void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_paddr_t buffer,
                             size_t length, bool send_zlp) {
-  zxlogf(LTRACE, "dwc3_ep_start_transfer ep %u type %u length %zu\n", ep_num, type, length);
+  zxlogf(LTRACE, "dwc3_ep_start_transfer ep %u type %u length %zu", ep_num, type, length);
 
   // special case: EP0_OUT and EP0_IN use the same fifo
   dwc3_endpoint_t* ep = (ep_num == EP0_IN ? &dwc->eps[EP0_OUT] : &dwc->eps[ep_num]);
@@ -148,7 +148,7 @@ zx_status_t dwc3_ep_config(dwc3_t* dwc, const usb_endpoint_descriptor_t* ep_desc
 
   uint8_t ep_type = usb_ep_type(ep_desc);
   if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
-    zxlogf(ERROR, "dwc3_ep_config: isochronous endpoints are not supported\n");
+    zxlogf(ERROR, "dwc3_ep_config: isochronous endpoints are not supported");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -158,7 +158,7 @@ zx_status_t dwc3_ep_config(dwc3_t* dwc, const usb_endpoint_descriptor_t* ep_desc
 
   zx_status_t status = dwc3_ep_fifo_init(dwc, ep_num);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_config_ep: dwc3_ep_fifo_init failed %d\n", status);
+    zxlogf(ERROR, "dwc3_config_ep: dwc3_ep_fifo_init failed %d", status);
     return status;
   }
   ep->max_packet_size = usb_ep_max_packet(ep_desc);
@@ -201,7 +201,7 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
   // OUT transactions must have length > 0 and multiple of max packet size
   if (EP_OUT(ep_num)) {
     if (req->header.length == 0 || req->header.length % ep->max_packet_size != 0) {
-      zxlogf(ERROR, "dwc3_ep_queue: OUT transfers must be multiple of max packet size\n");
+      zxlogf(ERROR, "dwc3_ep_queue: OUT transfers must be multiple of max packet size");
       usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, &req_int->complete_cb);
       return;
     }
@@ -222,7 +222,7 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
 }
 
 void dwc3_ep_set_config(dwc3_t* dwc, unsigned ep_num, bool enable) {
-  zxlogf(TRACE, "dwc3_ep_set_config %u\n", ep_num);
+  zxlogf(TRACE, "dwc3_ep_set_config %u", ep_num);
 
   dwc3_endpoint_t* ep = &dwc->eps[ep_num];
 
@@ -236,7 +236,7 @@ void dwc3_ep_set_config(dwc3_t* dwc, unsigned ep_num, bool enable) {
 }
 
 void dwc3_start_eps(dwc3_t* dwc) {
-  zxlogf(TRACE, "dwc3_start_eps\n");
+  zxlogf(TRACE, "dwc3_start_eps");
 
   dwc3_cmd_ep_set_config(dwc, EP0_IN, USB_ENDPOINT_CONTROL, dwc->eps[EP0_IN].max_packet_size, 0,
                          true);
@@ -259,7 +259,7 @@ void dwc_ep_read_trb(dwc3_endpoint_t* ep, dwc3_trb_t* trb, dwc3_trb_t* out_trb) 
                                      sizeof(*trb));
     memcpy((void*)out_trb, (void*)trb, sizeof(*trb));
   } else {
-    zxlogf(ERROR, "dwc_ep_read_trb: bad trb\n");
+    zxlogf(ERROR, "dwc_ep_read_trb: bad trb");
   }
 }
 
@@ -271,7 +271,7 @@ void dwc3_ep_xfer_started(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id) {
 }
 
 void dwc3_ep_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
-  zxlogf(LTRACE, "dwc3_ep_xfer_not_ready ep %u state %d\n", ep_num, dwc->ep0_state);
+  zxlogf(LTRACE, "dwc3_ep_xfer_not_ready ep %u state %d", ep_num, dwc->ep0_state);
 
   if (ep_num == EP0_OUT || ep_num == EP0_IN) {
     dwc3_ep0_xfer_not_ready(dwc, ep_num, stage);
@@ -285,10 +285,10 @@ void dwc3_ep_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
 }
 
 void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
-  zxlogf(LTRACE, "dwc3_ep_xfer_complete ep %u state %d\n", ep_num, dwc->ep0_state);
+  zxlogf(LTRACE, "dwc3_ep_xfer_complete ep %u state %d", ep_num, dwc->ep0_state);
 
   if (ep_num >= countof(dwc->eps)) {
-    zxlogf(ERROR, "dwc3_ep_xfer_complete: bad ep_num %u\n", ep_num);
+    zxlogf(ERROR, "dwc3_ep_xfer_complete: bad ep_num %u", ep_num);
     return;
   }
 
@@ -306,7 +306,7 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
       dwc_ep_read_trb(ep, ep->fifo.current, &trb);
       ep->fifo.current = nullptr;
       if (trb.control & TRB_HWO) {
-        zxlogf(ERROR, "TRB_HWO still set in dwc3_ep_xfer_complete\n");
+        zxlogf(ERROR, "TRB_HWO still set in dwc3_ep_xfer_complete");
       }
 
       zx_off_t actual = req->header.length - TRB_BUFSIZ(trb.status);
@@ -321,7 +321,7 @@ void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
       list_add_tail(&dwc->pending_completions, &req_int->pending_node);
     } else {
       ep->lock.Release();
-      zxlogf(ERROR, "dwc3_ep_xfer_complete: no usb request found to complete!\n");
+      zxlogf(ERROR, "dwc3_ep_xfer_complete: no usb request found to complete!");
     }
   }
 }

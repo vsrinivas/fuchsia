@@ -76,7 +76,7 @@ zx_status_t C18::SpiInit() {
         // Please do not use get_root_resource() in new code (ZX-1467).
         zx::resource(get_root_resource()), ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio2);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: MmioBuffer Create failed %d \n", __PRETTY_FUNCTION__, status);
+      zxlogf(ERROR, "%s: MmioBuffer Create failed %d ", __PRETTY_FUNCTION__, status);
       return status;
     }
 
@@ -88,7 +88,7 @@ zx_status_t C18::SpiInit() {
 
   zx_status_t status = pbus_.DeviceAdd(&spi_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
   }
 
   return status;

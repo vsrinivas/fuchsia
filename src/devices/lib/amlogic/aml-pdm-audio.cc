@@ -70,7 +70,7 @@ std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
       new (&ac) AmlPdmDevice(std::move(pdm_mmio), std::move(audio_mmio), pdm_clk_src, sysclk_div,
                              dclk_div, toddr_dev, fifo_depth, version));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Could not create AmlPdmDevice\n", __func__);
+    zxlogf(ERROR, "%s: Could not create AmlPdmDevice", __func__);
     return nullptr;
   }
 

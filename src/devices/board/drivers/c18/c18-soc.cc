@@ -60,7 +60,7 @@ zx_status_t C18::SocInit() {
                                      // Please do not use get_root_resource() in new code (ZX-1467).
                                      get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: mmio_buffer_init_physical failed %d \n", __PRETTY_FUNCTION__, status);
+    zxlogf(ERROR, "%s: mmio_buffer_init_physical failed %d ", __PRETTY_FUNCTION__, status);
     return status;
   }
   ddk::MmioBuffer mmio2(mmio);

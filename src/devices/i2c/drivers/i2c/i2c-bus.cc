@@ -44,7 +44,7 @@ int I2cBus::I2cThread() {
   fbl::Array<uint8_t> read_buffer(new (&ac) uint8_t[I2C_MAX_TOTAL_TRANSFER],
                                   I2C_MAX_TOTAL_TRANSFER);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s could not allocate read_buffer\n", __FUNCTION__);
+    zxlogf(ERROR, "%s could not allocate read_buffer", __FUNCTION__);
     return 0;
   }
 

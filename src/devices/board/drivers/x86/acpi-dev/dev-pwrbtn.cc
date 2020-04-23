@@ -100,7 +100,7 @@ AcpiPwrbtnDevice::~AcpiPwrbtnDevice() {
 }
 
 void AcpiPwrbtnDevice::HandlePress() {
-  zxlogf(TRACE, "acpi-pwrbtn: pressed\n");
+  zxlogf(TRACE, "acpi-pwrbtn: pressed");
 
   fbl::AutoLock guard(&lock_);
   pressed_ = true;
@@ -155,7 +155,7 @@ void AcpiPwrbtnDevice::QueueHidReportLocked() {
 }
 
 zx_status_t AcpiPwrbtnDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
-  zxlogf(TRACE, "acpi-pwrbtn: hid bus query\n");
+  zxlogf(TRACE, "acpi-pwrbtn: hid bus query");
 
   info->dev_num = 0;
   info->device_class = HID_DEVICE_CLASS_OTHER;
@@ -164,7 +164,7 @@ zx_status_t AcpiPwrbtnDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
 }
 
 zx_status_t AcpiPwrbtnDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
-  zxlogf(TRACE, "acpi-pwrbtn: hid bus start\n");
+  zxlogf(TRACE, "acpi-pwrbtn: hid bus start");
 
   fbl::AutoLock guard(&lock_);
   if (client_.is_valid()) {
@@ -175,7 +175,7 @@ zx_status_t AcpiPwrbtnDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
 }
 
 void AcpiPwrbtnDevice::HidbusStop() {
-  zxlogf(TRACE, "acpi-pwrbtn: hid bus stop\n");
+  zxlogf(TRACE, "acpi-pwrbtn: hid bus stop");
 
   fbl::AutoLock guard(&lock_);
   client_.clear();
@@ -184,7 +184,7 @@ void AcpiPwrbtnDevice::HidbusStop() {
 zx_status_t AcpiPwrbtnDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
                                                   void* out_data_buffer, size_t data_size,
                                                   size_t* out_data_actual) {
-  zxlogf(TRACE, "acpi-pwrbtn: hid bus get descriptor\n");
+  zxlogf(TRACE, "acpi-pwrbtn: hid bus get descriptor");
 
   if (out_data_buffer == nullptr || out_data_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -243,7 +243,7 @@ zx_status_t AcpiPwrbtnDevice::HidbusGetProtocol(uint8_t* protocol) { return ZX_E
 zx_status_t AcpiPwrbtnDevice::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
 void AcpiPwrbtnDevice::DdkRelease() {
-  zxlogf(INFO, "acpi-pwrbtn: DdkRelease\n");
+  zxlogf(INFO, "acpi-pwrbtn: DdkRelease");
   delete this;
 }
 
@@ -275,7 +275,7 @@ zx_status_t AcpiPwrbtnDevice::Create(zx_device_t* parent, std::unique_ptr<AcpiPw
 }
 
 zx_status_t pwrbtn_init(zx_device_t* parent) {
-  zxlogf(TRACE, "acpi-pwrbtn: init\n");
+  zxlogf(TRACE, "acpi-pwrbtn: init");
 
   std::unique_ptr<AcpiPwrbtnDevice> dev;
   zx_status_t status = AcpiPwrbtnDevice::Create(parent, &dev);
@@ -291,6 +291,6 @@ zx_status_t pwrbtn_init(zx_device_t* parent) {
   // devmgr is now in charge of the memory for dev
   __UNUSED auto ptr = dev.release();
 
-  zxlogf(INFO, "acpi-pwrbtn: initialized\n");
+  zxlogf(INFO, "acpi-pwrbtn: initialized");
   return ZX_OK;
 }

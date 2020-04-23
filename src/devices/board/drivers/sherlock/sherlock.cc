@@ -68,127 +68,127 @@ zx_status_t Sherlock::Create(void* ctx, zx_device_t* parent) {
 int Sherlock::Thread() {
   // Load protocol implementation drivers first.
   if (SysmemInit() != ZX_OK) {
-    zxlogf(ERROR, "SysmemInit() failed\n");
+    zxlogf(ERROR, "SysmemInit() failed");
     return -1;
   }
 
   if (GpioInit() != ZX_OK) {
-    zxlogf(ERROR, "GpioInit() failed\n");
+    zxlogf(ERROR, "GpioInit() failed");
     return -1;
   }
 
   if (BoardInit() != ZX_OK) {
-    zxlogf(ERROR, "BoardInit() failed\n");
+    zxlogf(ERROR, "BoardInit() failed");
     return -1;
   }
 
   if (ClkInit() != ZX_OK) {
-    zxlogf(ERROR, "ClkInit() failed\n");
+    zxlogf(ERROR, "ClkInit() failed");
     return -1;
   }
 
   if (I2cInit() != ZX_OK) {
-    zxlogf(ERROR, "I2cInit() failed\n");
+    zxlogf(ERROR, "I2cInit() failed");
   }
 
   if (SpiInit() != ZX_OK) {
-    zxlogf(ERROR, "SpiInit() failed\n");
+    zxlogf(ERROR, "SpiInit() failed");
   }
 
   if (CanvasInit() != ZX_OK) {
-    zxlogf(ERROR, "CanvasInit() failed\n");
+    zxlogf(ERROR, "CanvasInit() failed");
   }
 
   if (PwmInit() != ZX_OK) {
-    zxlogf(ERROR, "PwmInit() failed\n");
+    zxlogf(ERROR, "PwmInit() failed");
   }
 
   if (ThermalInit() != ZX_OK) {
-    zxlogf(ERROR, "ThermalInit() failed\n");
+    zxlogf(ERROR, "ThermalInit() failed");
   }
 
   if (DisplayInit() != ZX_OK) {
-    zxlogf(ERROR, "DisplayInit()failed\n");
+    zxlogf(ERROR, "DisplayInit()failed");
   }
 
   // Then the platform device drivers.
   if (UsbInit() != ZX_OK) {
-    zxlogf(ERROR, "UsbInit() failed\n");
+    zxlogf(ERROR, "UsbInit() failed");
   }
 
   if (EmmcInit() != ZX_OK) {
-    zxlogf(ERROR, "EmmcInit() failed\n");
+    zxlogf(ERROR, "EmmcInit() failed");
   }
 
   if (SdioInit() != ZX_OK) {
-    zxlogf(ERROR, "SdioInit() failed\n");
+    zxlogf(ERROR, "SdioInit() failed");
   }
 
   if (BluetoothInit() != ZX_OK) {
-    zxlogf(ERROR, "BluetoothInit() failed\n");
+    zxlogf(ERROR, "BluetoothInit() failed");
   }
 
   if (CameraInit() != ZX_OK) {
-    zxlogf(ERROR, "CameraInit() failed\n");
+    zxlogf(ERROR, "CameraInit() failed");
   }
 
   if (TeeInit() != ZX_OK) {
-    zxlogf(ERROR, "TeeInit() failed\n");
+    zxlogf(ERROR, "TeeInit() failed");
   }
 
   if (VideoInit() != ZX_OK) {
-    zxlogf(ERROR, "VideoInit() failed\n");
+    zxlogf(ERROR, "VideoInit() failed");
   }
 
   if (VideoEncInit() != ZX_OK) {
-    zxlogf(ERROR, "VideoEncInit() failed\n");
+    zxlogf(ERROR, "VideoEncInit() failed");
   }
 
   if (MaliInit() != ZX_OK) {
-    zxlogf(ERROR, "MaliInit() failed\n");
+    zxlogf(ERROR, "MaliInit() failed");
   }
 
   if (NnaInit() != ZX_OK) {
-    zxlogf(ERROR, "NnaInit() failed\n");
+    zxlogf(ERROR, "NnaInit() failed");
   }
 
   if (ButtonsInit() != ZX_OK) {
-    zxlogf(ERROR, "ButtonsInit() failed\n");
+    zxlogf(ERROR, "ButtonsInit() failed");
   }
 
   if (AudioInit() != ZX_OK) {
-    zxlogf(ERROR, "AudioInit() failed\n");
+    zxlogf(ERROR, "AudioInit() failed");
   }
 
   if (TouchInit() != ZX_OK) {
-    zxlogf(ERROR, "TouchInit() failed\n");
+    zxlogf(ERROR, "TouchInit() failed");
     return -1;
   }
 
   if (LightInit() != ZX_OK) {
-    zxlogf(ERROR, "LightInit() failed\n");
+    zxlogf(ERROR, "LightInit() failed");
     return -1;
   }
 
   if (OtRadioInit() != ZX_OK) {
-    zxlogf(ERROR, "OtRadioInit() failed\n");
+    zxlogf(ERROR, "OtRadioInit() failed");
   }
 
   if (SecureMemInit() != ZX_OK) {
-    zxlogf(ERROR, "SecureMemInit failed\n");
+    zxlogf(ERROR, "SecureMemInit failed");
   }
 
   if (BacklightInit() != ZX_OK) {
-    zxlogf(ERROR, "BacklightInit() failed\n");
+    zxlogf(ERROR, "BacklightInit() failed");
   }
 
   if (RamCtlInit() != ZX_OK) {
-    zxlogf(ERROR, "RamCtlInit failed\n");
+    zxlogf(ERROR, "RamCtlInit failed");
   }
 
   zx_status_t status = pbus_.DeviceAdd(&rtc_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d", __func__, status);
     return -1;
   }
 

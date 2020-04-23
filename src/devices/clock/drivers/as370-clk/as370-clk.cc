@@ -25,24 +25,24 @@ namespace clk {
 zx_status_t As370Clk::Create(void* ctx, zx_device_t* parent) {
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: failed to get pdev\n", __FILE__);
+    zxlogf(ERROR, "%s: failed to get pdev", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> global_mmio, avio_mmio, cpu_mmio;
   auto status = pdev.MapMmio(0, &global_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to map mmio index 0 %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: failed to map mmio index 0 %d", __FILE__, status);
     return status;
   }
   status = pdev.MapMmio(1, &avio_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to map mmio index 1 %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: failed to map mmio index 1 %d", __FILE__, status);
     return status;
   }
   status = pdev.MapMmio(2, &cpu_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to map mmio index 2 %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: failed to map mmio index 2 %d", __FILE__, status);
     return status;
   }
 
@@ -51,7 +51,7 @@ zx_status_t As370Clk::Create(void* ctx, zx_device_t* parent) {
 
   status = device->DdkAdd("synaptics-clk");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed %d", __FILE__, status);
     return status;
   }
 
@@ -113,7 +113,7 @@ zx_status_t As370Clk::CpuSetRate(uint64_t rate) {
         .set_PDDP(0)
         .set_SLOPE(0)
         .WriteTo(&cpu_mmio_);
-    zxlogf(TRACE, "%s %luHz dn %u  dm %u  dp %u\n", __FILE__, rate, dn, 1, 1);
+    zxlogf(TRACE, "%s %luHz dn %u  dm %u  dp %u", __FILE__, rate, dn, 1, 1);
   } else {
     auto dn = static_cast<uint32_t>(rate) / 1'000 * 48 / 400'000;
     CPU_WRP_PLL_REG_ctrl::Get()
@@ -133,7 +133,7 @@ zx_status_t As370Clk::CpuSetRate(uint64_t rate) {
         .set_PDDP(0)
         .set_SLOPE(0)
         .WriteTo(&cpu_mmio_);
-    zxlogf(TRACE, "%s %luHz dn %u  dm %u  dp %u\n", __FILE__, rate, dn, 1, 3);
+    zxlogf(TRACE, "%s %luHz dn %u  dm %u  dp %u", __FILE__, rate, dn, 1, 3);
   }
   return ZX_OK;
 }
@@ -175,8 +175,8 @@ zx_status_t As370Clk::AvpllSetRate(bool avpll0, uint64_t rate) {
     return ZX_ERR_INTERNAL;  // Should not happen.
   }
 
-  zxlogf(TRACE, "%s frac %u  dn %u  dm %u  dp %u\n", __FILE__, frac, dn, dm, dp);
-  zxlogf(TRACE, "%s requested: %fMHz  expected: %fMHz\n", __FILE__,
+  zxlogf(TRACE, "%s frac %u  dn %u  dm %u  dp %u", __FILE__, frac, dn, dm, dp);
+  zxlogf(TRACE, "%s requested: %fMHz  expected: %fMHz", __FILE__,
          static_cast<double>(rate) / 1'000'000.,
          ((static_cast<double>(frac) / (max_frac + 1)) + dn) * 25. / dp / dm);
 

@@ -66,7 +66,7 @@ zx_koid_t GetKoidForVmo(const zx::vmo& vmo) {
   zx_status_t status =
       zx_object_get_info(vmo.get(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: zx_object_get_info() failed - status: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: zx_object_get_info() failed - status: %d", kTag, status);
     return ZX_KOID_INVALID;
   }
   return info.koid;
@@ -88,9 +88,9 @@ void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* f
   va_end(args2);
 
   if (is_error) {
-    zxlogf(ERROR, "[%s %s] %s\n", prefix1, prefix2, buffer.get());
+    zxlogf(ERROR, "[%s %s] %s", prefix1, prefix2, buffer.get());
   } else {
-    zxlogf(TRACE, "[%s %s] %s\n", prefix1, prefix2, buffer.get());
+    zxlogf(TRACE, "[%s %s] %s", prefix1, prefix2, buffer.get());
   }
 }
 
@@ -115,7 +115,7 @@ class Heap : public FidlServer<
     zx::vmo vmo;
     zx_status_t status = zx::vmo::create(size, 0, &vmo);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: zx::vmo::create() failed - size: %lu status: %d\n", kTag, size, status);
+      zxlogf(ERROR, "%s: zx::vmo::create() failed - size: %lu status: %d", kTag, size, status);
       return fuchsia_sysmem_HeapAllocateVmo_reply(txn, status, ZX_HANDLE_INVALID);
     }
 
@@ -196,19 +196,19 @@ zx_status_t Control::Bind() {
   fbl::AutoLock lock(&lock_);
 
   if (!pipe_.is_valid()) {
-    zxlogf(ERROR, "%s: no pipe protocol\n", kTag);
+    zxlogf(ERROR, "%s: no pipe protocol", kTag);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   zx_status_t status = pipe_.GetBti(&bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBti failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: GetBti failed: %d", kTag, status);
     return status;
   }
 
   status = io_buffer_.Init(bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: io_buffer_init failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: io_buffer_init failed: %d", kTag, status);
     return status;
   }
 
@@ -216,13 +216,13 @@ zx_status_t Control::Bind() {
   goldfish_pipe_signal_value_t signal_cb = {Control::OnSignal, this};
   status = pipe_.Create(&signal_cb, &id_, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Create failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: Create failed: %d", kTag, status);
     return status;
   }
 
   status = cmd_buffer_.InitVmo(bti_.get(), vmo.get(), 0, IO_BUFFER_RW);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: io_buffer_init_vmo failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: io_buffer_init_vmo failed: %d", kTag, status);
     return status;
   }
 
@@ -236,7 +236,7 @@ zx_status_t Control::Bind() {
 
   pipe_.Open(id_);
   if (buffer->status) {
-    zxlogf(ERROR, "%s: Open failed: %d\n", kTag, buffer->status);
+    zxlogf(ERROR, "%s: Open failed: %d", kTag, buffer->status);
     return ZX_ERR_INTERNAL;
   }
 
@@ -249,7 +249,7 @@ zx_status_t Control::Bind() {
   int32_t consumed_size = 0;
   int32_t result = WriteLocked(static_cast<uint32_t>(length), &consumed_size);
   if (result < 0) {
-    zxlogf(ERROR, "%s: failed connecting to '%s' pipe: %d\n", kTag, kPipeName, result);
+    zxlogf(ERROR, "%s: failed connecting to '%s' pipe: %d", kTag, kPipeName, result);
     return ZX_ERR_INTERNAL;
   }
   ZX_DEBUG_ASSERT(consumed_size == static_cast<int32_t>(length));
@@ -262,13 +262,13 @@ zx_status_t Control::Bind() {
   zx::channel heap_request, heap_connection;
   status = zx::channel::create(0, &heap_request, &heap_connection);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: zx::channel:create() failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: zx::channel:create() failed: %d", kTag, status);
     return status;
   }
   status = pipe_.RegisterSysmemHeap(fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL,
                                     std::move(heap_connection));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to register heap: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to register heap: %d", kTag, status);
     return status;
   }
 
@@ -294,7 +294,7 @@ void Control::FreeColorBuffer(zx_koid_t koid) {
 
   auto it = color_buffers_.find(koid);
   if (it == color_buffers_.end()) {
-    zxlogf(ERROR, "%s: invalid key\n", kTag);
+    zxlogf(ERROR, "%s: invalid key", kTag);
     return;
   }
 
@@ -329,7 +329,7 @@ zx_status_t Control::FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t widt
   uint32_t id;
   zx_status_t status = CreateColorBufferLocked(width, height, format, &id);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to create color buffer: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to create color buffer: %d", kTag, status);
     return status;
   }
 
@@ -339,7 +339,7 @@ zx_status_t Control::FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t widt
   uint32_t result = 0;
   status = SetColorBufferVulkanModeLocked(id, VULKAN_ONLY, &result);
   if (status != ZX_OK || result) {
-    zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d\n", kTag, status, result);
+    zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d", kTag, status, result);
     return status;
   }
 
@@ -482,7 +482,7 @@ zx_status_t Control::ReadResultLocked(uint32_t* result) {
 
     // Early out if error is not because of back-pressure.
     if (buffer->status != PIPE_ERROR_AGAIN) {
-      zxlogf(ERROR, "%s: reading result failed: %d\n", kTag, buffer->status);
+      zxlogf(ERROR, "%s: reading result failed: %d", kTag, buffer->status);
       return ZX_ERR_INTERNAL;
     }
 

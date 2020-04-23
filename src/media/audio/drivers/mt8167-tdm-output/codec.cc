@@ -15,7 +15,7 @@ static bool IsFormatSupported(sample_format_t sample_format, justify_format_t ju
        ++i) {
   }
   if (i == formats->sample_formats_count) {
-    zxlogf(ERROR, "%s did not find wanted sample format\n", __FILE__);
+    zxlogf(ERROR, "%s did not find wanted sample format", __FILE__);
     return false;
   }
   for (i = 0;
@@ -23,13 +23,13 @@ static bool IsFormatSupported(sample_format_t sample_format, justify_format_t ju
        ++i) {
   }
   if (i == formats->justify_formats_count) {
-    zxlogf(ERROR, "%s did not find wanted justify format\n", __FILE__);
+    zxlogf(ERROR, "%s did not find wanted justify format", __FILE__);
     return false;
   }
   for (i = 0; i < formats->frame_rates_count && formats->frame_rates_list[i] != frame_rate; ++i) {
   }
   if (i == formats->frame_rates_count) {
-    zxlogf(ERROR, "%s did not find wanted sample rate\n", __FILE__);
+    zxlogf(ERROR, "%s did not find wanted sample rate", __FILE__);
     return false;
   }
   for (i = 0;
@@ -37,7 +37,7 @@ static bool IsFormatSupported(sample_format_t sample_format, justify_format_t ju
        ++i) {
   }
   if (i == formats->bits_per_sample_count) {
-    zxlogf(ERROR, "%s did not find wanted bits per sample\n", __FILE__);
+    zxlogf(ERROR, "%s did not find wanted bits per sample", __FILE__);
     return false;
   }
   for (i = 0;
@@ -45,7 +45,7 @@ static bool IsFormatSupported(sample_format_t sample_format, justify_format_t ju
        ++i) {
   }
   if (i == formats->bits_per_channel_count) {
-    zxlogf(ERROR, "%s did not find wanted bits per channel\n", __FILE__);
+    zxlogf(ERROR, "%s did not find wanted bits per channel", __FILE__);
     return false;
   }
   return true;
@@ -65,7 +65,7 @@ zx_status_t Codec::Reset() {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to reset %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s failed to reset %d", __FUNCTION__, status);
   }
   return status;
 }
@@ -84,7 +84,7 @@ zx_status_t Codec::SetNotBridged() {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed get bridging support %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s failed get bridging support %d", __FUNCTION__, status);
   }
   if (out.supports_bridged_mode) {
     proto_client_.SetBridgedMode(
@@ -117,11 +117,11 @@ zx_status_t Codec::CheckExpectedDaiFormat() {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to get DAI formats %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s failed to get DAI formats %d", __FUNCTION__, status);
     return status;
   }
   if (out.status != ZX_OK) {
-    zxlogf(ERROR, "%s did not find expected DAI formats %d\n", __FUNCTION__, out.status);
+    zxlogf(ERROR, "%s did not find expected DAI formats %d", __FUNCTION__, out.status);
   }
   return status;
 }
@@ -138,11 +138,11 @@ zx_status_t Codec::SetDaiFormat(dai_format_t format) {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to get DAI formats %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s failed to get DAI formats %d", __FUNCTION__, status);
     return status;
   }
   if (out.status != ZX_OK) {
-    zxlogf(ERROR, "%s did not find expected DAI formats %d\n", __FUNCTION__, out.status);
+    zxlogf(ERROR, "%s did not find expected DAI formats %d", __FUNCTION__, out.status);
   }
   return status;
 }
@@ -161,7 +161,7 @@ zx_status_t Codec::GetGainFormat(gain_format_t* format) {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to get gain format %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s failed to get gain format %d", __FUNCTION__, status);
   }
   *format = out.format;
   return status;
@@ -181,7 +181,7 @@ zx_status_t Codec::GetGainState(gain_state_t* state) {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to get gain state %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s failed to get gain state %d", __FUNCTION__, status);
   }
   *state = out.state;
   return status;

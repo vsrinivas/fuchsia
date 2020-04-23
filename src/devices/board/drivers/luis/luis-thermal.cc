@@ -70,7 +70,7 @@ zx_status_t Luis::ThermalInit() {
   zx_status_t status = pbus_.CompositeDeviceAdd(&thermal_dev, thermal_fragments,
                                                 fbl::count_of(thermal_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 

@@ -19,7 +19,7 @@ fbl::RefPtr<PinnedBuffer> PinnedBuffer::Create(size_t size, const zx::bti& bti,
   // create vmar large enough for rx,tx buffers, and rx,tx dma descriptors
   vmar_mgr = fzl::VmarManager::Create(size, nullptr);
   if (!vmar_mgr) {
-    zxlogf(ERROR, "pinned-buffer: Creation of vmar manager failed\n");
+    zxlogf(ERROR, "pinned-buffer: Creation of vmar manager failed");
     return nullptr;
   }
 
@@ -34,7 +34,7 @@ fbl::RefPtr<PinnedBuffer> PinnedBuffer::Create(size_t size, const zx::bti& bti,
       size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, std::move(vmar_mgr), &pbuf->vmo_,
       ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_WRITE, cache_policy);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "pinned-buffer: vmo creation failed %d\n", status);
+    zxlogf(ERROR, "pinned-buffer: vmo creation failed %d", status);
     return nullptr;
   }
 

@@ -180,7 +180,7 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
   size_t actual;
 
   if (device_get_protocol(parent, ZX_PROTOCOL_BLOCK, &bp) != ZX_OK) {
-    zxlogf(ERROR, "bootpart: block device '%s': does not support block protocol\n",
+    zxlogf(ERROR, "bootpart: block device '%s': does not support block protocol",
            device_get_name(parent));
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -193,7 +193,7 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
 
   zbi_partition_map_t* pmap = (zbi_partition_map_t*)buffer;
   if (pmap->partition_count == 0) {
-    zxlogf(ERROR, "bootpart: partition_count is zero\n");
+    zxlogf(ERROR, "bootpart: partition_count is zero");
     return ZX_ERR_INTERNAL;
   }
 

@@ -139,7 +139,7 @@ namespace board_mt8167 {
 zx_status_t Mt8167::ThermalInit() {
   auto status = pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd thermal failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: DeviceAdd thermal failed: %d", __FUNCTION__, status);
   }
 
   return status;

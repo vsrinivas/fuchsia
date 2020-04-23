@@ -116,7 +116,7 @@ void Controller::PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) {
         fbl::AllocChecker ac;
         info->edid_timings.push_back(*timing, &ac);
         if (!ac.check()) {
-          zxlogf(WARN, "Edid skip allocation failed\n");
+          zxlogf(WARN, "Edid skip allocation failed");
           break;
         }
       }
@@ -150,7 +150,7 @@ void Controller::PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info) {
 
   info->edid_audio_.push_back(range, &ac);
   if (!ac.check()) {
-    zxlogf(ERROR, "Out of memory attempting to construct supported format list.\n");
+    zxlogf(ERROR, "Out of memory attempting to construct supported format list.");
     return;
   }
 
@@ -215,7 +215,7 @@ void Controller::PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info) {
 
       info->edid_audio_.push_back(range, &ac);
       if (!ac.check()) {
-        zxlogf(ERROR, "Out of memory attempting to construct supported format list.\n");
+        zxlogf(ERROR, "Out of memory attempting to construct supported format list.");
         return;
       }
     }
@@ -239,21 +239,21 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
     added_success = std::unique_ptr<fbl::RefPtr<DisplayInfo>[]>(
         new (&ac) fbl::RefPtr<DisplayInfo>[added_count]);
     if (!ac.check()) {
-      zxlogf(ERROR, "No memory when processing hotplug\n");
+      zxlogf(ERROR, "No memory when processing hotplug");
       return;
     }
   }
   if (removed_count) {
     removed = std::unique_ptr<uint64_t[]>(new (&ac) uint64_t[removed_count]);
     if (!ac.check()) {
-      zxlogf(ERROR, "No memory when processing hotplug\n");
+      zxlogf(ERROR, "No memory when processing hotplug");
       return;
     }
     memcpy(removed.get(), displays_removed, removed_count * sizeof(uint64_t));
   }
   task = fbl::make_unique_checked<async::Task>(&ac);
   if (!ac.check()) {
-    zxlogf(ERROR, "No memory when processing hotplug\n");
+    zxlogf(ERROR, "No memory when processing hotplug");
     return;
   }
 
@@ -270,7 +270,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
         n->self.reset();
       }
     } else {
-      zxlogf(TRACE, "Unknown display %ld removed\n", displays_removed[i]);
+      zxlogf(TRACE, "Unknown display %ld removed", displays_removed[i]);
     }
   }
 
@@ -278,7 +278,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
     fbl::AllocChecker ac, ac2;
     fbl::RefPtr<DisplayInfo> info = fbl::AdoptRef(new (&ac) DisplayInfo);
     if (!ac.check()) {
-      zxlogf(INFO, "Out of memory when processing display hotplug\n");
+      zxlogf(INFO, "Out of memory when processing display hotplug");
       break;
     }
     info->pending_layer_change = false;
@@ -296,7 +296,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
         fbl::Array<cursor_info_t>(new (&ac2) cursor_info_t[display_params.cursor_info_count],
                                   display_params.cursor_info_count);
     if (!ac.check() || !ac2.check()) {
-      zxlogf(INFO, "Out of memory when processing display hotplug\n");
+      zxlogf(INFO, "Out of memory when processing display hotplug");
       break;
     }
     memcpy(info->pixel_formats_.data(), display_params.pixel_format_list,
@@ -307,7 +307,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
     info->has_edid = display_params.edid_present;
     if (info->has_edid) {
       if (!i2c_.is_valid()) {
-        zxlogf(ERROR, "Presented edid display with no i2c bus\n");
+        zxlogf(ERROR, "Presented edid display with no i2c bus");
         continue;
       }
 
@@ -318,7 +318,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       static constexpr uint32_t kEdidRetries = 3;
       do {
         if (edid_attempt != 0) {
-          zxlogf(TRACE, "Error %d/%d initializing edid: \"%s\"\n", edid_attempt, kEdidRetries,
+          zxlogf(TRACE, "Error %d/%d initializing edid: \"%s\"", edid_attempt, kEdidRetries,
                  edid_err);
           zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
         }
@@ -329,16 +329,16 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       } while (!success && edid_attempt < kEdidRetries);
 
       if (!success) {
-        zxlogf(INFO, "Failed to parse edid \"%s\"\n", edid_err);
+        zxlogf(INFO, "Failed to parse edid \"%s\"", edid_err);
         continue;
       }
 
       PopulateDisplayAudio(info);
       if (zxlog_level_enabled(TRACE) && info->edid_audio_.size()) {
-        zxlogf(TRACE, "Supported audio formats:\n");
+        zxlogf(TRACE, "Supported audio formats:");
         for (auto range : info->edid_audio_) {
           for (auto rate : audio::utils::FrameRateEnumerator(range)) {
-            zxlogf(TRACE, "  rate=%d, channels=[%d, %d], sample=%x\n", rate, range.min_channels,
+            zxlogf(TRACE, "  rate=%d, channels=[%d, %d], sample=%x", rate, range.min_channels,
                    range.max_channels, range.sample_formats);
           }
         }
@@ -366,7 +366,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
         const char* manufacturer = strlen(info->edid.manufacturer_name())
                                        ? info->edid.manufacturer_name()
                                        : info->edid.manufacturer_id();
-        zxlogf(TRACE, "Manufacturer \"%s\", product %d, name \"%s\", serial \"%s\"\n", manufacturer,
+        zxlogf(TRACE, "Manufacturer \"%s\", product %d, name \"%s\", serial \"%s\"", manufacturer,
                info->edid.product_code(), info->edid.monitor_name(), info->edid.monitor_serial());
         info->edid.Print([](const char* str) { zxlogf(TRACE, "%s", str); });
       }
@@ -377,7 +377,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
     if (displays_.insert_or_find(info)) {
       added_success[added_success_count++] = std::move(info);
     } else {
-      zxlogf(INFO, "Ignoring duplicate display\n");
+      zxlogf(INFO, "Ignoring duplicate display");
     }
   }
   if (display_info_actual)
@@ -403,7 +403,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
           added_ids[final_added_success_count++] = added_ptr[i]->id;
           added_ptr[i]->init_done = true;
         } else {
-          zxlogf(WARN, "Ignoring display with no compatible edid timings\n");
+          zxlogf(WARN, "Ignoring display with no compatible edid timings");
         }
       }
 
@@ -416,7 +416,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
                                            removed_count);
       }
     } else {
-      zxlogf(ERROR, "Failed to dispatch display change task %d\n", status);
+      zxlogf(ERROR, "Failed to dispatch display change task %d", status);
     }
 
     delete[] added_ptr;
@@ -439,7 +439,7 @@ void Controller::DisplayCaptureInterfaceOnCaptureComplete() {
         primary_client_->OnCaptureComplete();
       }
     } else {
-      zxlogf(ERROR, "Failed to dispatch capture complete task %d\n", status);
+      zxlogf(ERROR, "Failed to dispatch capture complete task %d", status);
     }
     delete task;
   });
@@ -464,7 +464,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   }
 
   if (!info) {
-    zxlogf(ERROR, "No such display %lu\n", display_id);
+    zxlogf(ERROR, "No such display %lu", display_id);
     return;
   }
 
@@ -739,7 +739,7 @@ void Controller::HandleClientOwnershipChanges() {
 }
 
 void Controller::OnClientDead(ClientProxy* client) {
-  zxlogf(TRACE, "Client %d dead\n", client->id());
+  zxlogf(TRACE, "Client %d dead", client->id());
   fbl::AutoLock lock(mtx());
   if (unbinding_) {
     return;
@@ -843,30 +843,30 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
   fbl::AllocChecker ac;
   std::unique_ptr<async::Task> task = fbl::make_unique_checked<async::Task>(&ac);
   if (!ac.check()) {
-    zxlogf(TRACE, "Failed to alloc client task\n");
+    zxlogf(TRACE, "Failed to alloc client task");
     return ZX_ERR_NO_MEMORY;
   }
 
   fbl::AutoLock lock(mtx());
   if (unbinding_) {
-    zxlogf(TRACE, "Client connected during unbind\n");
+    zxlogf(TRACE, "Client connected during unbind");
     return ZX_ERR_UNAVAILABLE;
   }
 
   if ((is_vc && vc_client_) || (!is_vc && primary_client_)) {
-    zxlogf(TRACE, "Already bound\n");
+    zxlogf(TRACE, "Already bound");
     return ZX_ERR_ALREADY_BOUND;
   }
 
   auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc, next_client_id_++);
   if (!ac.check()) {
-    zxlogf(TRACE, "Failed to alloc client\n");
+    zxlogf(TRACE, "Failed to alloc client");
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status = client->Init(std::move(client_channel));
   if (status != ZX_OK) {
-    zxlogf(TRACE, "Failed to init client %d\n", status);
+    zxlogf(TRACE, "Failed to init client %d", status);
     return status;
   }
 
@@ -874,13 +874,13 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
                           0 /* prop_count */, 0 /* proto_id */, nullptr /* proxy_args */,
                           device_channel.release());
   if (status != ZX_OK) {
-    zxlogf(TRACE, "Failed to add client %d\n", status);
+    zxlogf(TRACE, "Failed to add client %d", status);
     return status;
   }
 
   ClientProxy* client_ptr = client.release();
 
-  zxlogf(TRACE, "New %s client [%d] connected.\n", is_vc ? "dc-vc" : "dc", client_ptr->id());
+  zxlogf(TRACE, "New %s client [%d] connected.", is_vc ? "dc-vc" : "dc", client_ptr->id());
 
   if (is_vc) {
     vc_client_ = client_ptr;
@@ -950,19 +950,19 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
   // optional display controller capture protocol client
   dc_capture_ = ddk::DisplayCaptureImplProtocolClient(parent_);
   if (!dc_capture_.is_valid()) {
-    zxlogf(WARN, "Display Capture not supported by this platform\n");
+    zxlogf(WARN, "Display Capture not supported by this platform");
   }
 
   i2c_ = ddk::I2cImplProtocolClient(parent_);
 
   status = loop_.StartThread("display-client-loop", &loop_thread_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to start loop %d\n", status);
+    zxlogf(ERROR, "Failed to start loop %d", status);
     return status;
   }
 
   if ((status = DdkAdd("display-controller")) != ZX_OK) {
-    zxlogf(ERROR, "Failed to add display core device %d\n", status);
+    zxlogf(ERROR, "Failed to add display core device %d", status);
     return status;
   }
 
@@ -977,12 +977,12 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
     zx_handle_t profile = ZX_HANDLE_INVALID;
     if ((status = device_get_deadline_profile(this->zxdev(), capacity, deadline, period,
                                               "dev/display/controller", &profile)) != ZX_OK) {
-      zxlogf(ERROR, "Failed to get deadline profile %d\n", status);
+      zxlogf(ERROR, "Failed to get deadline profile %d", status);
     } else {
       zx_handle_t thread_handle = thrd_get_zx_handle(loop_thread_);
       status = zx_object_set_profile(thread_handle, profile, 0);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to set deadline profile %d\n", status);
+        zxlogf(ERROR, "Failed to set deadline profile %d", status);
       }
       zx_handle_close(profile);
     }
@@ -999,7 +999,7 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
 }
 
 void Controller::DdkUnbindNew(ddk::UnbindTxn txn) {
-  zxlogf(INFO, "Controller::DdkUnbind\n");
+  zxlogf(INFO, "Controller::DdkUnbind");
   fbl::AutoLock lock(mtx());
   unbinding_ = true;
   txn.Reply();

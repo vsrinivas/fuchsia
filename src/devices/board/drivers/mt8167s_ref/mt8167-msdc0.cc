@@ -124,7 +124,7 @@ zx_status_t Mt8167::Msdc0Init() {
   zx_status_t status = ddk::MmioBuffer::Create(kClkBaseAligned, kClkSizeAligned, *root_resource,
                                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &clk_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to set MSDC0 clock: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Failed to set MSDC0 clock: %d", __FUNCTION__, status);
     return status;
   }
 
@@ -132,7 +132,7 @@ zx_status_t Mt8167::Msdc0Init() {
   status = ddk::MmioBuffer::Create(kPllBaseAligned, kPllSizeAligned, *root_resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &pll_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to set MSDC0 clock: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Failed to set MSDC0 clock: %d", __FUNCTION__, status);
     return status;
   }
 
@@ -155,7 +155,7 @@ zx_status_t Mt8167::Msdc0Init() {
 
   status = pbus_.CompositeDeviceAdd(&msdc0_dev, fragments, fbl::count_of(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC0 failed: %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC0 failed: %d", __FUNCTION__, status);
   }
 
   return status;

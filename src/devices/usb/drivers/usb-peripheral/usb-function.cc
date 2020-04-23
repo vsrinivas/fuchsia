@@ -36,7 +36,7 @@ zx_status_t UsbFunction::UsbFunctionSetInterface(
   size_t actual;
   function_intf_.GetDescriptors(descriptors, length, &actual);
   if (actual != length) {
-    zxlogf(ERROR, "UsbFunctionInterfaceClient::GetDescriptors() failed\n");
+    zxlogf(ERROR, "UsbFunctionInterfaceClient::GetDescriptors() failed");
     delete[] descriptors;
     return ZX_ERR_INTERNAL;
   }

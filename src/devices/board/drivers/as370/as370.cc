@@ -17,14 +17,14 @@ namespace board_as370 {
 zx_status_t As370::Create(void* ctx, zx_device_t* parent) {
   ddk::PBusProtocolClient pbus(parent);
   if (!pbus.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PBUS\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PBUS", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   pdev_board_info_t board_info;
   zx_status_t status = pbus.GetBoardInfo(&board_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get board info: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to get board info: %d", __func__, status);
     return status;
   }
 
@@ -35,7 +35,7 @@ zx_status_t As370::Create(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = board->DdkAdd("as370", DEVICE_ADD_NON_BINDABLE)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed %s\n", __func__, zx_status_get_string(status));
+    zxlogf(ERROR, "%s: DdkAdd failed %s", __func__, zx_status_get_string(status));
     return status;
   }
 
@@ -56,56 +56,56 @@ zx_status_t As370::Start() {
 int As370::Thread() {
   auto status = GpioInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GpioInit() failed: %s\n", __func__, zx_status_get_string(status));
+    zxlogf(ERROR, "%s: GpioInit() failed: %s", __func__, zx_status_get_string(status));
     return thrd_error;
   }
 
   status = ClockInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ClkInit() failed: %s\n", __func__, zx_status_get_string(status));
+    zxlogf(ERROR, "%s: ClkInit() failed: %s", __func__, zx_status_get_string(status));
     return thrd_error;
   }
 
   status = I2cInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: I2cInit() failed: %s\n", __func__, zx_status_get_string(status));
+    zxlogf(ERROR, "%s: I2cInit() failed: %s", __func__, zx_status_get_string(status));
     return thrd_error;
   }
 
   if (UsbInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: UsbInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: UsbInit() failed", __func__);
   }
 
   if (AudioInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: AudioInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: AudioInit() failed", __func__);
     // In case of error report it and keep going.
   }
 
   if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_VISALIA) {
     if (LightInit() != ZX_OK) {
-      zxlogf(ERROR, "%s: LightInit() failed\n", __func__);
+      zxlogf(ERROR, "%s: LightInit() failed", __func__);
     }
 
     if (TouchInit() != ZX_OK) {
-      zxlogf(ERROR, "%s: TouchInit() failed\n", __func__);
+      zxlogf(ERROR, "%s: TouchInit() failed", __func__);
     }
   }
 
   if (NandInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: NandInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: NandInit() failed", __func__);
   }
 
   if (PowerInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: PowerInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: PowerInit() failed", __func__);
     // In case of error report it and keep going.
   }
 
   if (ThermalInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: ThermalInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: ThermalInit() failed", __func__);
   }
 
   if (SdioInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: SdioInit() failed\n", __func__);
+    zxlogf(ERROR, "%s: SdioInit() failed", __func__);
   }
 
   return 0;

@@ -148,7 +148,7 @@ void EthDev::RecvLocked(const void* data, size_t len, uint32_t extra) {
         }
       } else {
         // Fatal, should force teardown
-        zxlogf(ERROR, "eth [%s]: rx fifo read failed %d\n", name_, status);
+        zxlogf(ERROR, "eth [%s]: rx fifo read failed %d", name_, status);
       }
       return;
     }
@@ -173,12 +173,12 @@ void EthDev::RecvLocked(const void* data, size_t len, uint32_t extra) {
   if ((status = receive_fifo_.write(sizeof(*e), e, 1, nullptr)) < 0) {
     if (status == ZX_ERR_SHOULD_WAIT) {
       if ((fail_receive_write_++ % kFailureReportRate) == 0) {
-        zxlogf(ERROR, "eth [%s]: no rx_fifo space available (%u times)\n", name_,
+        zxlogf(ERROR, "eth [%s]: no rx_fifo space available (%u times)", name_,
                fail_receive_write_);
       }
     } else {
       // Fatal, should force teardown.
-      zxlogf(ERROR, "eth [%s]: rx_fifo write failed %d\n", name_, status);
+      zxlogf(ERROR, "eth [%s]: rx_fifo write failed %d", name_, status);
     }
     return;
   }
@@ -190,11 +190,11 @@ int EthDev::TransmitFifoWrite(eth_fifo_entry_t* entries, size_t count) {
   // Writing should never fail, or fail to write all entries.
   status = transmit_fifo_.write(sizeof(eth_fifo_entry_t), entries, count, &actual);
   if (status < 0) {
-    zxlogf(ERROR, "eth [%s]: tx_fifo write failed %d\n", name_, status);
+    zxlogf(ERROR, "eth [%s]: tx_fifo write failed %d", name_, status);
     return -1;
   }
   if (actual != count) {
-    zxlogf(ERROR, "eth [%s]: tx_fifo: only wrote %zu of %zu!\n", name_, actual, count);
+    zxlogf(ERROR, "eth [%s]: tx_fifo: only wrote %zu of %zu!", name_, actual, count);
     return -1;
   }
   return 0;
@@ -203,7 +203,7 @@ int EthDev::TransmitFifoWrite(eth_fifo_entry_t* entries, size_t count) {
 std::optional<TransmitBuffer> EthDev::GetTransmitBuffer() {
   auto tx_buffer = free_transmit_buffers_.pop();
   if (!tx_buffer) {
-    zxlogf(ERROR, "eth [%s]: transmit_buffer pool empty\n", name_);
+    zxlogf(ERROR, "eth [%s]: transmit_buffer pool empty", name_);
     return std::nullopt;
   }
   new (tx_buffer->private_storage()) TransmitInfo(fbl::RefPtr<EthDev>(this));
@@ -217,7 +217,7 @@ void EthDev::PutTransmitBuffer(TransmitBuffer tx_buffer) {
 }
 
 void EthDev0::SetStatus(uint32_t status) {
-  zxlogf(TRACE, "eth: status() %08x\n", status);
+  zxlogf(TRACE, "eth: status() %08x", status);
 
   fbl::AutoLock lock(&ethdev_lock_);
   static_assert(ETHERNET_STATUS_ONLINE == fuchsia_hardware_ethernet_DEVICE_STATUS_ONLINE, "");
@@ -333,7 +333,7 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
       }
       uint32_t opts = count > 1 ? ETHERNET_TX_OPT_MORE : 0u;
       if (opts) {
-        zxlogf(SPEW, "setting OPT_MORE (%lu packets to go)\n", count);
+        zxlogf(SPEW, "setting OPT_MORE (%lu packets to go)", count);
       }
       transmit_buffer->operation()->data_buffer =
           reinterpret_cast<char*>(io_buffer_.start()) + e->offset;
@@ -379,14 +379,14 @@ int EthDev::TransmitThread() {
         if ((status = transmit_fifo_.wait_one(
                  ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate,
                  zx::time::infinite(), &observed)) < 0) {
-          zxlogf(ERROR, "eth [%s]: tx_fifo: error waiting: %d\n", name_, status);
+          zxlogf(ERROR, "eth [%s]: tx_fifo: error waiting: %d", name_, status);
           break;
         }
         if (observed & kSignalFifoTerminate)
           break;
         continue;
       } else {
-        zxlogf(ERROR, "eth [%s]: tx_fifo: cannot read: %d\n", name_, status);
+        zxlogf(ERROR, "eth [%s]: tx_fifo: cannot read: %d", name_, status);
         break;
       }
     }
@@ -395,7 +395,7 @@ int EthDev::TransmitThread() {
     }
   }
 
-  zxlogf(INFO, "eth [%s]: tx_thread: exit: %d\n", name_, status);
+  zxlogf(INFO, "eth [%s]: tx_thread: exit: %d", name_, status);
   return 0;
 }
 
@@ -406,12 +406,12 @@ zx_status_t EthDev::GetFifosLocked(struct fuchsia_hardware_ethernet_Fifos* fifos
   zx::fifo receive_fifo;
   if ((status = zx_fifo_create(kFifoDepth, kFifoEntrySize, 0, &temp_fifo.tx,
                                transmit_fifo.reset_and_get_address())) < 0) {
-    zxlogf(ERROR, "eth_create  [%s]: failed to create tx fifo: %d\n", name_, status);
+    zxlogf(ERROR, "eth_create  [%s]: failed to create tx fifo: %d", name_, status);
     return status;
   }
   if ((status = zx_fifo_create(kFifoDepth, kFifoEntrySize, 0, &temp_fifo.rx,
                                receive_fifo.reset_and_get_address())) < 0) {
-    zxlogf(ERROR, "eth_create  [%s]: failed to create rx fifo: %d\n", name_, status);
+    zxlogf(ERROR, "eth_create  [%s]: failed to create rx fifo: %d", name_, status);
     zx_handle_close(temp_fifo.tx);
     return status;
   }
@@ -440,14 +440,14 @@ zx_status_t EthDev::SetIObufLocked(zx_handle_t vmo) {
   zx::pmt pmt;
 
   if ((status = io_vmo.get_size(&size)) < 0) {
-    zxlogf(ERROR, "eth [%s]: could not get io_buf size: %d\n", name_, status);
+    zxlogf(ERROR, "eth [%s]: could not get io_buf size: %d", name_, status);
     return status;
   }
 
   if ((status = io_buffer.Map(io_vmo, 0, size,
                               ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
                               NULL)) < 0) {
-    zxlogf(ERROR, "eth [%s]: could not map io_buf: %d\n", name_, status);
+    zxlogf(ERROR, "eth [%s]: could not map io_buf: %d", name_, status);
     return status;
   }
 
@@ -465,12 +465,12 @@ zx_status_t EthDev::SetIObufLocked(zx_handle_t vmo) {
     edev0_->mac_.GetBti(&bti);
     if (!bti.is_valid()) {
       status = ZX_ERR_INTERNAL;
-      zxlogf(ERROR, "eth [%s]: ethernet_impl_get_bti return invalid handle\n", name_);
+      zxlogf(ERROR, "eth [%s]: ethernet_impl_get_bti return invalid handle", name_);
       return status;
     }
     if ((status = bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, io_vmo, 0, size, paddr_map.get(),
                           pages, &pmt)) != ZX_OK) {
-      zxlogf(ERROR, "eth [%s]: bti_pin failed, can't pin vmo: %d\n", name_, status);
+      zxlogf(ERROR, "eth [%s]: bti_pin failed, can't pin vmo: %d", name_, status);
       return status;
     }
   }
@@ -501,7 +501,7 @@ zx_status_t EthDev::StartLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
         [](void* arg) -> int { return static_cast<EthDev*>(arg)->TransmitThread(); }, this,
         "eth-tx-thread");
     if (r != thrd_success) {
-      zxlogf(ERROR, "eth [%s]: failed to start tx thread: %d\n", name_, r);
+      zxlogf(ERROR, "eth [%s]: failed to start tx thread: %d", name_, r);
       return ZX_ERR_INTERNAL;
     }
     state_ |= kStateTransmitThreadCreated;
@@ -529,7 +529,7 @@ zx_status_t EthDev::StartLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
     // Trigger the status signal so the client will query the status at the start.
     receive_fifo_.signal_peer(0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
   } else {
-    zxlogf(ERROR, "eth [%s]: failed to start mac: %d\n", name_, status);
+    zxlogf(ERROR, "eth [%s]: failed to start mac: %d", name_, status);
   }
 
   return status;
@@ -666,7 +666,7 @@ zx_status_t EthDev::MsgConfigMulticastSetPromiscuousModeLocked(bool enabled, fid
 }
 
 zx_status_t EthDev::MsgConfigMulticastTestFilterLocked(fidl_txn_t* txn) {
-  zxlogf(INFO, "MULTICAST_TEST_FILTER invoked. Turning multicast-promisc off unconditionally.\n");
+  zxlogf(INFO, "MULTICAST_TEST_FILTER invoked. Turning multicast-promisc off unconditionally.");
   zx_status_t status = TestClearMulticastPromiscLocked();
   return REPLY(ConfigMulticastTestFilter)(txn, status);
 }
@@ -718,7 +718,7 @@ void EthDev::KillLocked() {
     return;
   }
 
-  zxlogf(TRACE, "eth [%s]: kill: tearing down%s\n", name_,
+  zxlogf(TRACE, "eth [%s]: kill: tearing down%s", name_,
          (state_ & kStateTransmitThreadCreated) ? " tx thread" : "");
   SetPromiscLocked(false);
 
@@ -738,7 +738,7 @@ void EthDev::KillLocked() {
     state_ &= (~kStateTransmitThreadCreated);
     int ret;
     thrd_join(transmit_thread_, &ret);
-    zxlogf(TRACE, "eth [%s]: kill: tx thread exited\n", name_);
+    zxlogf(TRACE, "eth [%s]: kill: tx thread exited", name_);
   }
 
   // Ensure that all requests to ethmac were completed.
@@ -756,12 +756,12 @@ void EthDev::KillLocked() {
 
   if (paddr_map_ != nullptr) {
     if (pmt_.unpin() != ZX_OK) {
-      zxlogf(ERROR, "eth [%s]: cannot unpin vmo?!\n", name_);
+      zxlogf(ERROR, "eth [%s]: cannot unpin vmo?!", name_);
     }
     paddr_map_ = nullptr;
     pmt_.reset();
   }
-  zxlogf(TRACE, "eth [%s]: all resources released\n", name_);
+  zxlogf(TRACE, "eth [%s]: all resources released", name_);
 }
 
 void EthDev::StopAndKill() {
@@ -776,7 +776,7 @@ void EthDev::StopAndKill() {
     state_ &= (~kStateTransmitThreadCreated);
     int ret;
     thrd_join(transmit_thread_, &ret);
-    zxlogf(TRACE, "eth [%s]: kill: tx thread exited\n", name_);
+    zxlogf(TRACE, "eth [%s]: kill: tx thread exited", name_);
   }
   // Check if it is part of the idle list and remove.
   // It will not be part of active list as StopLocked() would have moved it to Idle.
@@ -812,7 +812,7 @@ EthDev::~EthDev() {
     state_ &= (~kStateTransmitThreadCreated);
     int ret;
     thrd_join(transmit_thread_, &ret);
-    zxlogf(TRACE, "eth [%s]: kill: tx thread exited\n", name_);
+    zxlogf(TRACE, "eth [%s]: kill: tx thread exited", name_);
   }
   // sync_completion_signal(completion_);
 }
@@ -942,7 +942,7 @@ zx_status_t EthDev0::AddDevice() {
   ethernet_impl_protocol_t proto;
 
   if (!mac_.is_valid()) {
-    zxlogf(ERROR, "eth: bind: no ethermac protocol\n");
+    zxlogf(ERROR, "eth: bind: no ethermac protocol");
     return ZX_ERR_INTERNAL;
   }
 
@@ -950,24 +950,24 @@ zx_status_t EthDev0::AddDevice() {
   ops = proto.ops;
   if (ops->query == nullptr || ops->stop == nullptr || ops->start == nullptr ||
       ops->queue_tx == nullptr || ops->set_param == nullptr) {
-    zxlogf(ERROR, "eth: bind: device '%s': incomplete ethermac protocol\n",
+    zxlogf(ERROR, "eth: bind: device '%s': incomplete ethermac protocol",
            device_get_name(parent_));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if ((status = mac_.Query(0, &info_)) < 0) {
-    zxlogf(ERROR, "eth: bind: ethermac query failed: %d\n", status);
+    zxlogf(ERROR, "eth: bind: ethermac query failed: %d", status);
     return status;
   }
 
   if ((info_.features & ETHERNET_FEATURE_DMA) && (ops->get_bti == nullptr)) {
-    zxlogf(ERROR, "eth: bind: device '%s': does not implement ops->get_bti()\n",
+    zxlogf(ERROR, "eth: bind: device '%s': does not implement ops->get_bti()",
            device_get_name(parent_));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (info_.netbuf_size < sizeof(ethernet_netbuf_t)) {
-    zxlogf(ERROR, "eth: bind: device '%s': invalid buffer size %ld\n", device_get_name(parent_),
+    zxlogf(ERROR, "eth: bind: device '%s': invalid buffer size %ld", device_get_name(parent_),
            info_.netbuf_size);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -979,7 +979,7 @@ zx_status_t EthDev0::AddDevice() {
   // Make sure device starts with expected settings.
   if ((status = mac_.SetParam(ETHERNET_SETPARAM_PROMISC, 0, nullptr, 0)) != ZX_OK) {
     // Log the error, but continue, as this is not critical.
-    zxlogf(WARN, "eth: bind: device '%s': unable to disable promiscuous mode: %s\n",
+    zxlogf(WARN, "eth: bind: device '%s': unable to disable promiscuous mode: %s",
            device_get_name(parent_), zx_status_get_string(status));
   }
 

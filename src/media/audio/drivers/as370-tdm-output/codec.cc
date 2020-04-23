@@ -13,7 +13,7 @@ static bool IsFormatSupported(sample_format_t sample_format, justify_format_t ju
        ++i) {
   }
   if (i == formats->sample_formats_count) {
-    zxlogf(ERROR, "%s did not find wanted sample format\n", __FILE__);
+    zxlogf(ERROR, "%s did not find wanted sample format", __FILE__);
     return false;
   }
 
@@ -22,14 +22,14 @@ static bool IsFormatSupported(sample_format_t sample_format, justify_format_t ju
        ++i) {
   }
   if (i == formats->justify_formats_count) {
-    zxlogf(ERROR, "%s did not find wanted justify format\n", __FILE__);
+    zxlogf(ERROR, "%s did not find wanted justify format", __FILE__);
     return false;
   }
 
   for (i = 0; i < formats->frame_rates_count && formats->frame_rates_list[i] != frame_rate; ++i) {
   }
   if (i == formats->frame_rates_count) {
-    zxlogf(ERROR, "%s did not find wanted sample rate\n", __FILE__);
+    zxlogf(ERROR, "%s did not find wanted sample rate", __FILE__);
     return false;
   }
 
@@ -38,7 +38,7 @@ static bool IsFormatSupported(sample_format_t sample_format, justify_format_t ju
        ++i) {
   }
   if (i == formats->bits_per_sample_count) {
-    zxlogf(ERROR, "%s did not find wanted bits per sample\n", __FILE__);
+    zxlogf(ERROR, "%s did not find wanted bits per sample", __FILE__);
     return false;
   }
 
@@ -47,7 +47,7 @@ static bool IsFormatSupported(sample_format_t sample_format, justify_format_t ju
        ++i) {
   }
   if (i == formats->bits_per_channel_count) {
-    zxlogf(ERROR, "%s did not find wanted bits per channel\n", __FILE__);
+    zxlogf(ERROR, "%s did not find wanted bits per channel", __FILE__);
     return false;
   }
 
@@ -63,13 +63,13 @@ zx_status_t Codec::GetInfo() {
   proto_client_.GetInfo(
       [](void* ctx, const info_t* info) {
         auto* completion = reinterpret_cast<sync_completion_t*>(ctx);
-        zxlogf(INFO, "audio: Found codec %s by %s\n", info->product_name, info->manufacturer);
+        zxlogf(INFO, "audio: Found codec %s by %s", info->product_name, info->manufacturer);
         sync_completion_signal(completion);
       },
       &completion);
   auto status = sync_completion_wait(&completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s sync_completion_wait failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s sync_completion_wait failed %d", __FILE__, status);
   }
   return status;
 }
@@ -88,7 +88,7 @@ zx_status_t Codec::Reset() {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to reset %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s failed to reset %d", __FILE__, status);
   }
   return status;
 }
@@ -107,7 +107,7 @@ zx_status_t Codec::SetNotBridged() {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed get bridging support %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s failed get bridging support %d", __FILE__, status);
     return status;
   }
   if (out.supports_bridged_mode) {
@@ -140,11 +140,11 @@ zx_status_t Codec::CheckExpectedDaiFormat() {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to get DAI formats %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s failed to get DAI formats %d", __FILE__, status);
     return status;
   }
   if (out.status != ZX_OK) {
-    zxlogf(ERROR, "%s did not find expected DAI formats %d\n", __FILE__, out.status);
+    zxlogf(ERROR, "%s did not find expected DAI formats %d", __FILE__, out.status);
   }
   return status;
 }
@@ -161,11 +161,11 @@ zx_status_t Codec::SetDaiFormat(dai_format_t format) {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to get DAI formats %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s failed to get DAI formats %d", __FILE__, status);
     return status;
   }
   if (out.status != ZX_OK) {
-    zxlogf(ERROR, "%s did not find expected DAI formats %d\n", __FILE__, out.status);
+    zxlogf(ERROR, "%s did not find expected DAI formats %d", __FILE__, out.status);
   }
   return status;
 }
@@ -184,7 +184,7 @@ zx_status_t Codec::GetGainFormat(gain_format_t* format) {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to get gain format %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s failed to get gain format %d", __FILE__, status);
     return status;
   }
   *format = out.format;
@@ -205,7 +205,7 @@ zx_status_t Codec::GetGainState(gain_state_t* state) {
       &out);
   auto status = sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to get gain state %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s failed to get gain state %d", __FILE__, status);
     return status;
   }
   *state = out.state;

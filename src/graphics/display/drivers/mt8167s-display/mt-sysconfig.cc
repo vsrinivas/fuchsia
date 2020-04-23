@@ -214,52 +214,52 @@ zx_status_t MtSysConfig::MutexSetDefault() {
 
 void MtSysConfig::PrintRegisters() {
   ZX_DEBUG_ASSERT(initialized_);
-  zxlogf(INFO, "Dumping MtSysConfig Registers\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "SYSCONFIG_DISP_OVL0_MOUT_EN = 0x%x\n",
+  zxlogf(INFO, "Dumping MtSysConfig Registers");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "SYSCONFIG_DISP_OVL0_MOUT_EN = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_DISP_OVL0_MOUT_EN));
-  zxlogf(INFO, "SYSCONFIG_DISP_DITHER_MOUT_EN = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_DISP_DITHER_MOUT_EN = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_DISP_DITHER_MOUT_EN));
-  zxlogf(INFO, "SYSCONFIG_DISP_UFOE_MOUT_EN = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_DISP_UFOE_MOUT_EN = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_DISP_UFOE_MOUT_EN));
-  zxlogf(INFO, "SYSCONFIG_DISP_COLOR0_SEL_IN = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_DISP_COLOR0_SEL_IN = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_DISP_COLOR0_SEL_IN));
-  zxlogf(INFO, "SYSCONFIG_DISP_UFOE_SEL_IN = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_DISP_UFOE_SEL_IN = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_DISP_UFOE_SEL_IN));
-  zxlogf(INFO, "SYSCONFIG_DSI0_SEL_IN = 0x%x\n", syscfg_mmio_->Read32(SYSCONFIG_DSI0_SEL_IN));
-  zxlogf(INFO, "SYSCONFIG_DISP_RDMA0_SOUT_SEL_IN = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_DSI0_SEL_IN = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_DSI0_SEL_IN));
+  zxlogf(INFO, "SYSCONFIG_DISP_RDMA0_SOUT_SEL_IN = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_DISP_RDMA0_SOUT_SEL_IN));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_MISC = 0x%x\n", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_MISC));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_CON0 = 0x%x\n", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_CON0));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_SET0 = 0x%x\n", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_SET0));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_CLR0 = 0x%x\n", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_CLR0));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_CON1 = 0x%x\n", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_CON1));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_SET1 = 0x%x\n", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_SET1));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_CLR1 = 0x%x\n", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_CLR1));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_HW_DCM_DIS0 = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_MMSYS_MISC = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_MISC));
+  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_CON0 = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_CON0));
+  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_SET0 = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_SET0));
+  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_CLR0 = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_CLR0));
+  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_CON1 = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_CON1));
+  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_SET1 = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_SET1));
+  zxlogf(INFO, "SYSCONFIG_MMSYS_CG_CLR1 = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_CG_CLR1));
+  zxlogf(INFO, "SYSCONFIG_MMSYS_HW_DCM_DIS0 = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_MMSYS_HW_DCM_DIS0));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_HW_DCM_DIS_SET0 = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_MMSYS_HW_DCM_DIS_SET0 = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_MMSYS_HW_DCM_DIS_SET0));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_HW_DCM_DIS_CLR0 = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_MMSYS_HW_DCM_DIS_CLR0 = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_MMSYS_HW_DCM_DIS_CLR0));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_SW0_RST_B = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_MMSYS_SW0_RST_B = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_MMSYS_SW0_RST_B));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_SW1_RST_B = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_MMSYS_SW1_RST_B = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_MMSYS_SW1_RST_B));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_LCM_RST_B = 0x%x\n",
+  zxlogf(INFO, "SYSCONFIG_MMSYS_LCM_RST_B = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_MMSYS_LCM_RST_B));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_DUMMY = 0x%x\n", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_DUMMY));
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "SYSCONFIG_MMSYS_DUMMY = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_DUMMY));
+  zxlogf(INFO, "######################\n");
 
-  zxlogf(INFO, "Dumping Mutex Registers\n");
-  zxlogf(INFO, "######################\n\n");
-  zxlogf(INFO, "MUTEX_INTEN = 0x%x\n", mutex_mmio_->Read32(MUTEX_INTEN));
-  zxlogf(INFO, "MUTEX_INTSTA = 0x%x\n", mutex_mmio_->Read32(MUTEX_INTSTA));
-  zxlogf(INFO, "MUTEX0_EN = 0x%x\n", mutex_mmio_->Read32(MUTEX0_EN));
-  zxlogf(INFO, "MUTEX0_RST = 0x%x\n", mutex_mmio_->Read32(MUTEX0_RST));
-  zxlogf(INFO, "MUTEX0_MOD = 0x%x\n", mutex_mmio_->Read32(MUTEX0_MOD));
-  zxlogf(INFO, "MUTEX0_SOF = 0x%x\n", mutex_mmio_->Read32(MUTEX0_SOF));
-  zxlogf(INFO, "######################\n\n");
+  zxlogf(INFO, "Dumping Mutex Registers");
+  zxlogf(INFO, "######################\n");
+  zxlogf(INFO, "MUTEX_INTEN = 0x%x", mutex_mmio_->Read32(MUTEX_INTEN));
+  zxlogf(INFO, "MUTEX_INTSTA = 0x%x", mutex_mmio_->Read32(MUTEX_INTSTA));
+  zxlogf(INFO, "MUTEX0_EN = 0x%x", mutex_mmio_->Read32(MUTEX0_EN));
+  zxlogf(INFO, "MUTEX0_RST = 0x%x", mutex_mmio_->Read32(MUTEX0_RST));
+  zxlogf(INFO, "MUTEX0_MOD = 0x%x", mutex_mmio_->Read32(MUTEX0_MOD));
+  zxlogf(INFO, "MUTEX0_SOF = 0x%x", mutex_mmio_->Read32(MUTEX0_SOF));
+  zxlogf(INFO, "######################\n");
 }
 
 }  // namespace mt8167s_display

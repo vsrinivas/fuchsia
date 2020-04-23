@@ -43,7 +43,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
 
   // check that count is a power of 2
   if (!fbl::is_pow2(count)) {
-    zxlogf(ERROR, "ring count: %u is not a power of 2\n", count);
+    zxlogf(ERROR, "ring count: %u is not a power of 2", count);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -52,7 +52,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
   // make sure the count is available in this ring
   uint16_t max_ring_size = device_->GetRingSize(index);
   if (count > max_ring_size) {
-    zxlogf(ERROR, "ring init count too big for hardware %u > %u\n", count, max_ring_size);
+    zxlogf(ERROR, "ring init count too big for hardware %u > %u", count, max_ring_size);
     return ZX_ERR_OUT_OF_RANGE;
   }
 

@@ -95,7 +95,7 @@ zx_status_t PlatformDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
 
   zx_status_t status = zx::vmo::create_physical(*bus_->GetResource(), vmo_base, vmo_size, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: creating vmo failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: creating vmo failed %d", __FUNCTION__, status);
     return status;
   }
 
@@ -103,7 +103,7 @@ zx_status_t PlatformDevice::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
   snprintf(name, sizeof(name), "mmio %u", index);
   status = vmo.set_property(ZX_PROP_NAME, name, sizeof(name));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: setting vmo name failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: setting vmo name failed %d", __FUNCTION__, status);
     return status;
   }
 
@@ -128,7 +128,7 @@ zx_status_t PlatformDevice::PDevGetInterrupt(uint32_t index, uint32_t flags,
   }
   zx_status_t status = zx::interrupt::create(*bus_->GetResource(), irq.irq, flags, out_irq);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_create failed %d\n", status);
+    zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_create failed %d", status);
     return status;
   }
   return status;
@@ -214,7 +214,7 @@ zx_status_t PlatformDevice::RpcGetMmio(uint32_t index, zx_paddr_t* out_paddr, si
   zx_status_t status = zx::resource::create(*root_rsrc, ZX_RSRC_KIND_MMIO, mmio.base, mmio.length,
                                             rsrc_name, sizeof(rsrc_name), &resource);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_rpc_get_mmio: zx_resource_create failed: %d\n", name_, status);
+    zxlogf(ERROR, "%s: pdev_rpc_get_mmio: zx_resource_create failed: %d", name_, status);
     return status;
   }
 
@@ -296,7 +296,7 @@ zx_status_t PlatformDevice::RpcGetSmc(uint32_t index, zx_handle_t* out_handle,
   zx_status_t status = zx::resource::create(*root_rsrc, options, smc.service_call_num_base,
                                             smc.count, rsrc_name, sizeof(rsrc_name), &resource);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_rpc_get_smc: zx_resource_create failed: %d\n", name_, status);
+    zxlogf(ERROR, "%s: pdev_rpc_get_smc: zx_resource_create failed: %d", name_, status);
     return status;
   }
 
@@ -405,7 +405,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
   auto status = zx_channel_read(channel, 0, &req_buf, req_handles, sizeof(req_buf),
                                 fbl::count_of(req_handles), &actual, &req_handle_count);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d\n", status);
+    zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d", status);
     return status;
   }
 
@@ -414,7 +414,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
 
   auto req = reinterpret_cast<rpc_pdev_req_t*>(&req_buf);
   if (actual < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu (PDEV)\n", __func__, actual, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu (PDEV)", __func__, actual, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
   auto resp = reinterpret_cast<rpc_pdev_rsp_t*>(&resp_buf);
@@ -451,7 +451,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
       break;
     }
     default:
-      zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, req_header->op);
+      zxlogf(ERROR, "%s: unknown pdev op %u", __func__, req_header->op);
       return ZX_ERR_INTERNAL;
   }
 
@@ -460,7 +460,7 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
   status = zx_channel_write(channel, 0, resp_header, resp_len,
                             (resp_handle_count ? resp_handles : nullptr), resp_handle_count);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d\n", status);
+    zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d", status);
   }
   return status;
 }
@@ -524,7 +524,7 @@ zx_status_t PlatformDevice::Start() {
         status = DdkAddMetadata(metadata.zbi_type, data.data(), data.size());
       }
       if (status != ZX_OK) {
-        zxlogf(WARN, "%s failed to add metadata for new device\n", __func__);
+        zxlogf(WARN, "%s failed to add metadata for new device", __func__);
       }
     }
 

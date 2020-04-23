@@ -134,7 +134,7 @@ zx_status_t Vim::EnableWifi32K() {
   status = mmio_buffer_init_physical(&buffer, S912_PWM_BASE, 0x10000, get_root_resource(),
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical failed: %d\n", status);
+    zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical failed: %d", status);
     return status;
   }
   uint32_t* regs = (uint32_t*)buffer.vaddr;
@@ -189,7 +189,7 @@ zx_status_t Vim::UartInit() {
   status = pbus_.CompositeDeviceAdd(&bt_uart_dev, bt_uart_fragments, countof(bt_uart_fragments),
                                     UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "UartInit: pbus_device_add failed: %d\n", status);
+    zxlogf(ERROR, "UartInit: pbus_device_add failed: %d", status);
     return status;
   }
 
@@ -197,7 +197,7 @@ zx_status_t Vim::UartInit() {
   // Bind UART for 40-pin header
   status = pbus_.DeviceAdd(&header_uart_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "UartInit: pbus_device_add failed: %d\n", status);
+    zxlogf(ERROR, "UartInit: pbus_device_add failed: %d", status);
     return status;
   }
 #endif

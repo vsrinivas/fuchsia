@@ -30,14 +30,14 @@ zx_status_t As370::I2cInit() {
   ddk::GpioImplProtocolClient gpio(parent());
 
   if (!gpio.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to create GPIO protocol client\n", __func__);
+    zxlogf(ERROR, "%s: Failed to create GPIO protocol client", __func__);
     return ZX_ERR_INTERNAL;
   }
 
   for (uint32_t i = 0; i < countof(i2c_gpios); i++) {
     status = gpio.SetAltFunction(i2c_gpios[i], 1);  // 1 == SDA/SCL pinmux setting.
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: GPIO SetAltFunction failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: GPIO SetAltFunction failed %d", __FUNCTION__, status);
       return status;
     }
   }
@@ -158,7 +158,7 @@ zx_status_t As370::I2cInit() {
 
   status = pbus_.DeviceAdd(&i2c_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
 

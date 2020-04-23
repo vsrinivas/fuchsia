@@ -27,7 +27,7 @@ static zx_protocol_device_t test_device_protocol = {
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
-  zxlogf(INFO, "test_bind: %s \n", DRIVER_NAME);
+  zxlogf(INFO, "test_bind: %s ", DRIVER_NAME);
 
   test_t* child_2 = calloc(1, sizeof(test_t));
   if (!child_2) {
@@ -51,7 +51,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
   status = device_add(parent, &child_2_args, &child_2->zxdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_device_add failed: %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: pdev_device_add failed: %d", DRIVER_NAME, status);
     free(child_2);
     return status;
   }
@@ -78,7 +78,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
   status = device_add(parent, &child_3_args, &child_3->zxdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_device_add failed: %d\n", DRIVER_NAME, status);
+    zxlogf(ERROR, "%s: pdev_device_add failed: %d", DRIVER_NAME, status);
     free(child_3);
     return status;
   }

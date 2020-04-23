@@ -27,26 +27,26 @@ namespace sdhci {
 zx_status_t Msm8x53Sdhci::Create(void* ctx, zx_device_t* parent) {
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> core_mmio;
   zx_status_t status = pdev.MapMmio(0, &core_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MapMmio failed", __FILE__);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> hc_mmio;
   if ((status = pdev.MapMmio(1, &hc_mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MapMmio failed", __FILE__);
     return status;
   }
 
   zx::interrupt irq;
   if ((status = pdev.GetInterrupt(0, &irq)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to map interrupt\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to map interrupt", __FILE__);
     return status;
   }
 
@@ -54,7 +54,7 @@ zx_status_t Msm8x53Sdhci::Create(void* ctx, zx_device_t* parent) {
   std::unique_ptr<Msm8x53Sdhci> device(
       new (&ac) Msm8x53Sdhci(parent, *std::move(core_mmio), *std::move(hc_mmio), std::move(irq)));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Msm8x53Sdhci alloc failed\n", __FILE__);
+    zxlogf(ERROR, "%s: Msm8x53Sdhci alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -63,7 +63,7 @@ zx_status_t Msm8x53Sdhci::Create(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = device->DdkAdd("msm8x53-sdhci")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed\n", __FILE__);
+    zxlogf(ERROR, "%s: DdkAdd failed", __FILE__);
     return status;
   }
 

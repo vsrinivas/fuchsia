@@ -76,35 +76,35 @@ zx_status_t Imx227Device::InitPdev() {
 
   // I2c for communicating with the sensor.
   if (!i2c_.is_valid()) {
-    zxlogf(ERROR, "%s; I2C not available\n", __func__);
+    zxlogf(ERROR, "%s; I2C not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   // Clk for gating clocks for sensor.
   if (!clk24_.is_valid()) {
-    zxlogf(ERROR, "%s; clk24_ not available\n", __func__);
+    zxlogf(ERROR, "%s; clk24_ not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   // Mipi for init and de-init.
   if (!mipi_.is_valid()) {
-    zxlogf(ERROR, "%s; mipi_ not available\n", __func__);
+    zxlogf(ERROR, "%s; mipi_ not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   // GPIOs
   if (!gpio_vana_enable_.is_valid()) {
-    zxlogf(ERROR, "%s; gpio_vana_enable_ not available\n", __func__);
+    zxlogf(ERROR, "%s; gpio_vana_enable_ not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   if (!gpio_vdig_enable_.is_valid()) {
-    zxlogf(ERROR, "%s; gpio_vdig_enable_ not available\n", __func__);
+    zxlogf(ERROR, "%s; gpio_vdig_enable_ not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   if (!gpio_cam_rst_.is_valid()) {
-    zxlogf(ERROR, "%s; gpio_cam_rst_ not available\n", __func__);
+    zxlogf(ERROR, "%s; gpio_cam_rst_ not available", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -133,7 +133,7 @@ uint8_t Imx227Device::Read8(uint16_t addr) {
   zx_status_t status =
       i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(buf), &val, sizeof(val));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Imx227Device: could not read reg addr: 0x%08x  status: %d\n", addr, status);
+    zxlogf(ERROR, "Imx227Device: could not read reg addr: 0x%08x  status: %d", addr, status);
     return -1;
   }
   return val;
@@ -160,7 +160,7 @@ void Imx227Device::Write8(uint16_t addr, uint8_t val) {
 bool Imx227Device::ValidateSensorID() {
   uint16_t sensor_id = Read16(kSensorModelIdReg);
   if (sensor_id != kSensorId) {
-    zxlogf(ERROR, "Imx227Device: Invalid sensor ID\n");
+    zxlogf(ERROR, "Imx227Device: Invalid sensor ID");
     return false;
   }
   return true;
@@ -248,7 +248,7 @@ zx_status_t Imx227Device::CameraSensorInit() {
   ctx_.param.isp_exposure_channel_delay = 0;
 
   initialized_ = true;
-  zxlogf(TRACE, "%s IMX227 Camera Sensor Brought out of reset\n", __func__);
+  zxlogf(TRACE, "%s IMX227 Camera Sensor Brought out of reset", __func__);
   return ZX_OK;
 }
 
@@ -294,7 +294,7 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* ou
 //               initialized into the requested mode.
 zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
   std::lock_guard guard(lock_);
-  zxlogf(TRACE, "%s IMX227 Camera Sensor Mode Set request to %d\n", __func__, mode);
+  zxlogf(TRACE, "%s IMX227 Camera Sensor Mode Set request to %d", __func__, mode);
 
   HwInit();
 
@@ -384,7 +384,7 @@ zx_status_t Imx227Device::CameraSensorStartStreaming() {
   if (!IsSensorInitialized() || ctx_.streaming_flag) {
     return ZX_ERR_BAD_STATE;
   }
-  zxlogf(TRACE, "%s Camera Sensor Start Streaming\n", __func__);
+  zxlogf(TRACE, "%s Camera Sensor Start Streaming", __func__);
   ctx_.streaming_flag = 1;
   Write8(kModeSelectReg, 0x01);
   return ZX_OK;
@@ -434,7 +434,7 @@ zx_status_t Imx227Device::Create(zx_device_t* parent, std::unique_ptr<Imx227Devi
   size_t actual;
   composite.GetFragments(fragments.data(), FRAGMENT_COUNT, &actual);
   if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s Could not get fragments\n", __func__);
+    zxlogf(ERROR, "%s Could not get fragments", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -444,7 +444,7 @@ zx_status_t Imx227Device::Create(zx_device_t* parent, std::unique_ptr<Imx227Devi
 
   zx_status_t status = sensor_device->InitPdev();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s InitPdev failed\n", __func__);
+    zxlogf(ERROR, "%s InitPdev failed", __func__);
     return status;
   }
   *device_out = std::move(sensor_device);
@@ -464,7 +464,7 @@ zx_status_t Imx227Device::CreateAndBind(void* /*ctx*/, zx_device_t* parent) {
   std::unique_ptr<Imx227Device> device;
   zx_status_t status = Imx227Device::Create(parent, &device);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "imx227: Could not setup imx227 sensor device: %d\n", status);
+    zxlogf(ERROR, "imx227: Could not setup imx227 sensor device: %d", status);
     return status;
   }
   std::array<zx_device_prop_t, 1> props = {{
@@ -473,10 +473,10 @@ zx_status_t Imx227Device::CreateAndBind(void* /*ctx*/, zx_device_t* parent) {
 
   status = device->DdkAdd("imx227", DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props.data(), props.size());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "imx227: Could not add imx227 sensor device: %d\n", status);
+    zxlogf(ERROR, "imx227: Could not add imx227 sensor device: %d", status);
     return status;
   }
-  zxlogf(INFO, "imx227 driver added\n");
+  zxlogf(INFO, "imx227 driver added");
 
   // `device` intentionally leaked as it is now held by DevMgr.
   __UNUSED auto* dev = device.release();

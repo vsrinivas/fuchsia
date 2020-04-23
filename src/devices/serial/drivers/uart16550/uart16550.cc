@@ -183,7 +183,7 @@ zx_status_t Uart16550::Create(void* /*ctx*/, zx_device_t* parent) {
 
   auto status = dev->Init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Init failed\n", __func__);
+    zxlogf(ERROR, "%s: Init failed", __func__);
     return status;
   }
 
@@ -213,13 +213,13 @@ zx_status_t Uart16550::Init() {
   zx::resource io_port;
   auto status = acpi_.GetPio(kPioIndex, &io_port);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: acpi_.GetPio failed\n", __func__);
+    zxlogf(ERROR, "%s: acpi_.GetPio failed", __func__);
     return status;
   }
 
   status = acpi_.MapInterrupt(kIrqIndex, &interrupt_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: acpi_.MapInterrupt failed\n", __func__);
+    zxlogf(ERROR, "%s: acpi_.MapInterrupt failed", __func__);
     return status;
   }
 
@@ -227,7 +227,7 @@ zx_status_t Uart16550::Init() {
   status =
       io_port.get_info(ZX_INFO_RESOURCE, &resource_info, sizeof(resource_info), nullptr, nullptr);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: io_port.get_info failed\n", __func__);
+    zxlogf(ERROR, "%s: io_port.get_info failed", __func__);
     return status;
   }
 
@@ -235,23 +235,23 @@ zx_status_t Uart16550::Init() {
   const auto port_size = static_cast<uint32_t>(resource_info.size);
 
   if (port_base != resource_info.base) {
-    zxlogf(ERROR, "%s: overflowing UART port base\n", __func__);
+    zxlogf(ERROR, "%s: overflowing UART port base", __func__);
     return ZX_ERR_BAD_STATE;
   }
 
   if (port_size != resource_info.size) {
-    zxlogf(ERROR, "%s: overflowing UART port size\n", __func__);
+    zxlogf(ERROR, "%s: overflowing UART port size", __func__);
     return ZX_ERR_BAD_STATE;
   }
 
   if (port_size != kPortCount) {
-    zxlogf(ERROR, "%s: unsupported UART port count\n", __func__);
+    zxlogf(ERROR, "%s: unsupported UART port count", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   status = zx_ioports_request(io_port.get(), port_base, port_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: zx_ioports_request failed\n", __func__);
+    zxlogf(ERROR, "%s: zx_ioports_request failed", __func__);
     return status;
   }
 
@@ -267,7 +267,7 @@ zx_status_t Uart16550::Init() {
 
   status = SerialImplConfig(kMaxBaudRate, kDefaultConfig);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SerialImplConfig failed\n", __func__);
+    zxlogf(ERROR, "%s: SerialImplConfig failed", __func__);
     return status;
   }
 
@@ -286,7 +286,7 @@ zx_status_t Uart16550::Init(zx::interrupt interrupt, hwreg::Mock::RegisterIo por
 
   auto status = SerialImplConfig(kMaxBaudRate, kDefaultConfig);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SerialImplConfig failed\n", __func__);
+    zxlogf(ERROR, "%s: SerialImplConfig failed", __func__);
     return status;
   }
 
@@ -304,7 +304,7 @@ zx_status_t Uart16550::SerialImplGetInfo(serial_port_info_t* info) {
 
 zx_status_t Uart16550::SerialImplConfig(uint32_t baud_rate, uint32_t flags) {
   if (Enabled()) {
-    zxlogf(ERROR, "%s: attempted to configure when enabled\n", __func__);
+    zxlogf(ERROR, "%s: attempted to configure when enabled", __func__);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -439,7 +439,7 @@ zx_status_t Uart16550::SerialImplRead(void* buf, size_t size, size_t* actual) {
   *actual = 0;
 
   if (!enabled_) {
-    zxlogf(ERROR, "%s: attempted to read when disabled\n", __func__);
+    zxlogf(ERROR, "%s: attempted to read when disabled", __func__);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -482,7 +482,7 @@ zx_status_t Uart16550::SerialImplWrite(const void* buf, size_t size, size_t* act
   *actual = 0;
 
   if (!enabled_) {
-    zxlogf(ERROR, "%s: attempted to write when disabled\n", __func__);
+    zxlogf(ERROR, "%s: attempted to write when disabled", __func__);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -524,7 +524,7 @@ zx_status_t Uart16550::SerialImplWrite(const void* buf, size_t size, size_t* act
 zx_status_t Uart16550::SerialImplSetNotifyCallback(const serial_notify_t* cb) {
   std::lock_guard<std::mutex> lock(device_mutex_);
   if (enabled_) {
-    zxlogf(ERROR, "%s: attempted to set notify callback when enabled\n", __func__);
+    zxlogf(ERROR, "%s: attempted to set notify callback when enabled", __func__);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -608,19 +608,19 @@ void Uart16550::HandleInterrupts() {
         // Clear the interrupt.
         const auto lsr = LineStatusRegister::Get().ReadFrom(&port_io_);
         if (lsr.overrun_error()) {
-          zxlogf(ERROR, "%s: overrun error (OE) detected\n", __func__);
+          zxlogf(ERROR, "%s: overrun error (OE) detected", __func__);
         }
         if (lsr.parity_error()) {
-          zxlogf(ERROR, "%s: parity error (PE) detected\n", __func__);
+          zxlogf(ERROR, "%s: parity error (PE) detected", __func__);
         }
         if (lsr.framing_error()) {
-          zxlogf(ERROR, "%s: framing error (FE) detected\n", __func__);
+          zxlogf(ERROR, "%s: framing error (FE) detected", __func__);
         }
         if (lsr.break_interrupt()) {
-          zxlogf(ERROR, "%s: break interrupt (BI) detected\n", __func__);
+          zxlogf(ERROR, "%s: break interrupt (BI) detected", __func__);
         }
         if (lsr.error_in_rx_fifo()) {
-          zxlogf(ERROR, "%s: error in rx fifo detected\n", __func__);
+          zxlogf(ERROR, "%s: error in rx fifo detected", __func__);
         }
         break;
       }
@@ -648,16 +648,16 @@ void Uart16550::HandleInterrupts() {
         // Clear the interrupt.
         const auto msr = ModemStatusRegister::Get().ReadFrom(&port_io_);
         if (msr.clear_to_send()) {
-          zxlogf(INFO, "%s: clear to send (CTS) detected\n", __func__);
+          zxlogf(INFO, "%s: clear to send (CTS) detected", __func__);
         }
         if (msr.data_set_ready()) {
-          zxlogf(INFO, "%s: data set ready (DSR) detected\n", __func__);
+          zxlogf(INFO, "%s: data set ready (DSR) detected", __func__);
         }
         if (msr.ring_indicator()) {
-          zxlogf(INFO, "%s: ring indicator (RI) detected\n", __func__);
+          zxlogf(INFO, "%s: ring indicator (RI) detected", __func__);
         }
         if (msr.data_carrier_detect()) {
-          zxlogf(INFO, "%s: data carrier (DCD) detected\n", __func__);
+          zxlogf(INFO, "%s: data carrier (DCD) detected", __func__);
         }
         break;
       }

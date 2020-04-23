@@ -64,7 +64,7 @@ zx_status_t RealEmbeddedController::Create(fbl::RefPtr<EmbeddedController>* out)
   zx_status_t status =
       dev->EmbeddedController::IssueCommand(EC_CMD_GET_FEATURES, 0, &dev->features_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi-cros-ec-core: get features failed: %d\n", status);
+    zxlogf(ERROR, "acpi-cros-ec-core: get features failed: %d", status);
     return status;
   }
 
@@ -103,37 +103,37 @@ zx_status_t InitDevices(fbl::RefPtr<EmbeddedController> controller, zx_device_t*
   // Get EC version.
   ec_response_get_version version;
   if (zx_status_t status = GetECVersion(controller.get(), &version); status != ZX_OK) {
-    zxlogf(TRACE, "acpi-cros-ec-core: failed to get EC version details.\n");
+    zxlogf(TRACE, "acpi-cros-ec-core: failed to get EC version details.");
     return status;
   }
-  zxlogf(INFO, "acpi-cros-ec-core: Detected EC firmware version %s (RO), %s (RW).\n",
+  zxlogf(INFO, "acpi-cros-ec-core: Detected EC firmware version %s (RO), %s (RW).",
          version.version_string_ro, version.version_string_rw);
 
   // Initialize MotionSense driver.
   if (controller->SupportsFeature(EC_FEATURE_MOTION_SENSE)) {
-    zxlogf(TRACE, "acpi-cros-ec-motion: init\n");
+    zxlogf(TRACE, "acpi-cros-ec-motion: init");
     zx_status_t status =
         AcpiCrOsEcMotionDevice::Bind(parent, controller, CreateAcpiHandle(acpi_handle), nullptr);
     if (status != ZX_OK) {
-      zxlogf(INFO, "acpi-cros-ec-motion: failed to initialize: %s\n", zx_status_get_string(status));
+      zxlogf(INFO, "acpi-cros-ec-motion: failed to initialize: %s", zx_status_get_string(status));
     } else {
-      zxlogf(INFO, "acpi-cros-ec-motion: initialized.\n");
+      zxlogf(INFO, "acpi-cros-ec-motion: initialized.");
     }
   }
 
-  zxlogf(INFO, "acpi-cros-ec-core: initialized\n");
+  zxlogf(INFO, "acpi-cros-ec-core: initialized");
   return ZX_OK;
 }
 
 }  // namespace cros_ec
 
 zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
-  zxlogf(TRACE, "acpi-cros-ec-core: init\n");
+  zxlogf(TRACE, "acpi-cros-ec-core: init");
 
   fbl::RefPtr<cros_ec::EmbeddedController> ec;
   zx_status_t status = cros_ec::RealEmbeddedController::Create(&ec);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi-cros-ec-core: Failed to initialise EC: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "acpi-cros-ec-core: Failed to initialise EC: %s", zx_status_get_string(status));
     return status;
   }
 

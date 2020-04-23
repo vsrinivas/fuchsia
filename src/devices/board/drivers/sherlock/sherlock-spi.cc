@@ -120,7 +120,7 @@ zx_status_t Sherlock::SpiInit() {
     zx_status_t status = ddk::MmioBuffer::Create(T931_HIU_BASE, T931_HIU_LENGTH, *resource,
                                                  ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: MmioBuffer::Create failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s: MmioBuffer::Create failed %d", __func__, status);
       return status;
     }
 
@@ -132,7 +132,7 @@ zx_status_t Sherlock::SpiInit() {
   zx_status_t status =
       pbus_.CompositeDeviceAdd(&spi_dev, fragments, fbl::count_of(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
   }
 

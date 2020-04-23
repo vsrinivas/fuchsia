@@ -38,7 +38,7 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx,
   uint32_t new_voltage = thermal_config_.opps[power_domain].opp[opp_idx].volt_uv;
   uint32_t new_frequency = thermal_config_.opps[power_domain].opp[opp_idx].freq_hz;
 
-  zxlogf(INFO, "Scaling from %d MHz, %u mV, --> %d MHz, %u mV\n", old_frequency / 1000000,
+  zxlogf(INFO, "Scaling from %d MHz, %u mV, --> %d MHz, %u mV", old_frequency / 1000000,
          old_voltage / 1000, new_frequency / 1000000, new_voltage / 1000);
 
   // If new settings are same as old, don't do anything.
@@ -51,7 +51,7 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx,
   if (new_frequency > old_frequency) {
     status = voltage_regulator_->SetVoltage(power_domain, new_voltage);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-thermal: Could not change CPU voltage: %d\n", status);
+      zxlogf(ERROR, "aml-thermal: Could not change CPU voltage: %d", status);
       return status;
     }
   }
@@ -59,7 +59,7 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx,
   // Now let's change CPU frequency.
   status = cpufreq_scaling_->SetFrequency(power_domain, new_frequency);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-thermal: Could not change CPU frequency: %d\n", status);
+    zxlogf(ERROR, "aml-thermal: Could not change CPU frequency: %d", status);
     // Failed to change CPU frequency, change back to old
     // voltage before returning.
     status = voltage_regulator_->SetVoltage(power_domain, old_voltage);
@@ -73,7 +73,7 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx,
   if (new_frequency < old_frequency) {
     status = voltage_regulator_->SetVoltage(power_domain, new_voltage);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-thermal: Could not change CPU voltage: %d\n", status);
+      zxlogf(ERROR, "aml-thermal: Could not change CPU voltage: %d", status);
       return status;
     }
   }
@@ -84,7 +84,7 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx,
 zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   ddk::CompositeProtocolClient composite(device);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: failed to get composite protocol\n", __func__);
+    zxlogf(ERROR, "%s: failed to get composite protocol", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -93,20 +93,20 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   size_t actual;
   composite.GetFragments(&fragment, 1, &actual);
   if (actual != 1) {
-    zxlogf(ERROR, "%s: failed to get pdev fragment\n", __func__);
+    zxlogf(ERROR, "%s: failed to get pdev fragment", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(fragment);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "aml-thermal: failed to get pdev protocol\n");
+    zxlogf(ERROR, "aml-thermal: failed to get pdev protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   pdev_device_info_t device_info;
   zx_status_t status = pdev.GetDeviceInfo(&device_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-thermal: failed to get GetDeviceInfo \n");
+    zxlogf(ERROR, "aml-thermal: failed to get GetDeviceInfo ");
     return status;
   }
 
@@ -115,7 +115,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &thermal_info, sizeof(thermal_info),
                                &actual);
   if (status != ZX_OK || actual != sizeof(thermal_info)) {
-    zxlogf(ERROR, "aml-thermal: Could not get voltage-table metadata %d\n", status);
+    zxlogf(ERROR, "aml-thermal: Could not get voltage-table metadata %d", status);
     return status;
   }
 
@@ -124,7 +124,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   status = device_get_metadata(device, DEVICE_METADATA_THERMAL_CONFIG, &thermal_config,
                                sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo), &actual);
   if (status != ZX_OK || actual != sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo)) {
-    zxlogf(ERROR, "aml-thermal: Could not get thermal config metadata %d\n", status);
+    zxlogf(ERROR, "aml-thermal: Could not get thermal config metadata %d", status);
     return status;
   }
 
@@ -144,7 +144,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   // Initialize Temperature Sensor.
   status = tsensor->Create(fragment, thermal_config);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-thermal: Could not initialize Temperature Sensor: %d\n", status);
+    zxlogf(ERROR, "aml-thermal: Could not initialize Temperature Sensor: %d", status);
     return status;
   }
 
@@ -157,7 +157,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   // Initialize voltage regulator.
   status = voltage_regulator->Create(device, thermal_config, &thermal_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-thermal: Could not initialize Voltage Regulator: %d\n", status);
+    zxlogf(ERROR, "aml-thermal: Could not initialize Voltage Regulator: %d", status);
     return status;
   }
 
@@ -170,7 +170,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   // Initialize CPU frequency scaling.
   status = cpufreq_scaling->Create(device, thermal_config, thermal_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-thermal: Could not initialize CPU freq. scaling: %d\n", status);
+    zxlogf(ERROR, "aml-thermal: Could not initialize CPU freq. scaling: %d", status);
     return status;
   }
 
@@ -183,13 +183,13 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
   status = thermal_device->StartConnectDispatchThread();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-thermal: Could not start connect dispatcher thread, st = %d\n", status);
+    zxlogf(ERROR, "aml-thermal: Could not start connect dispatcher thread, st = %d", status);
     return status;
   }
 
   status = thermal_device->DdkAdd("thermal", 0, nullptr, 0, ZX_PROTOCOL_THERMAL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-thermal: Could not create thermal device: %d\n", status);
+    zxlogf(ERROR, "aml-thermal: Could not create thermal device: %d", status);
     return status;
   }
 
@@ -227,7 +227,7 @@ zx_status_t AmlThermal::ThermalConnect(zx::channel chan) {
                 &fidl_ops);
 
   if (st != ZX_OK) {
-    zxlogf(ERROR, "Failed to start FIDL dispatcher, st = %d\n", st);
+    zxlogf(ERROR, "Failed to start FIDL dispatcher, st = %d", st);
   }
 
   return st;
@@ -307,12 +307,12 @@ zx_status_t AmlThermal::PopulateClusterDvfsTable(
   zx_smc_result_t smc_result;
   zx_status_t status = zx_smc_call(smc_resource.get(), &smc_params, &smc_result);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-thermal: zx_smc_call failed: %d\n", status);
+    zxlogf(ERROR, "aml-thermal: zx_smc_call failed: %d", status);
     return status;
   }
 
   if (smc_result.arg0 >= fbl::count_of(aml_info.opps[0])) {
-    zxlogf(ERROR, "aml-thermal: DVFS table index out of range: %lu\n", smc_result.arg0);
+    zxlogf(ERROR, "aml-thermal: DVFS table index out of range: %lu", smc_result.arg0);
     return ZX_ERR_OUT_OF_RANGE;
   }
 

@@ -90,13 +90,13 @@ zx_status_t PhyDevice::Create(void* ctx, zx_device_t* device) {
 
   // Get ETH_MAC protocol.
   if (!phy_device->eth_mac_.is_valid()) {
-    zxlogf(ERROR, "aml-dwmac: could not obtain ETH_BOARD protocol\n");
+    zxlogf(ERROR, "aml-dwmac: could not obtain ETH_BOARD protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
   zx_status_t status = phy_device->DdkAdd("phy_null_device", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "dwmac: Could not create phy device: %d\n", status);
+    zxlogf(ERROR, "dwmac: Could not create phy device: %d", status);
     return status;
   }
 

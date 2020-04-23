@@ -94,7 +94,7 @@ zx_status_t Mt8167::GpuInit() {
 
   auto status = pbus_.CompositeDeviceAdd(&gpu_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
 

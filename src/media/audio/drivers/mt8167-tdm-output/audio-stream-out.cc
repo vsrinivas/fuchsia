@@ -45,7 +45,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get composite protocol\n");
+    zxlogf(ERROR, "Could not get composite protocol");
     return status;
   }
 
@@ -54,7 +54,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   // Only PDEV and I2C fragments are required.
   if (actual < 2) {
-    zxlogf(ERROR, "could not get fragments\n");
+    zxlogf(ERROR, "could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -67,7 +67,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
   status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codec, sizeof(metadata::Codec),
                                &actual);
   if (status != ZX_OK || sizeof(metadata::Codec) != actual) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
     return status;
   }
 
@@ -78,7 +78,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
 
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not obtain bti %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not obtain bti %d", __FUNCTION__, status);
     return status;
   }
 
@@ -99,7 +99,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
   // I2S2 corresponds to I2S_8CH.
   mt_audio_ = MtAudioOutDevice::Create(*std::move(mmio_audio), MtAudioOutDevice::I2S2);
   if (mt_audio_ == nullptr) {
-    zxlogf(ERROR, "%s failed to create device\n", __FUNCTION__);
+    zxlogf(ERROR, "%s failed to create device", __FUNCTION__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -282,7 +282,7 @@ zx_status_t Mt8167AudioStreamOut::AddFormats() {
   fbl::AllocChecker ac;
   supported_formats_.reserve(1, &ac);
   if (!ac.check()) {
-    zxlogf(ERROR, "Out of memory, can not create supported formats list\n");
+    zxlogf(ERROR, "Out of memory, can not create supported formats list");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -305,13 +305,13 @@ zx_status_t Mt8167AudioStreamOut::InitBuffer(size_t size) {
   zx_status_t status;
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __FUNCTION__, status);
     return status;
   }
 
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __FUNCTION__, status);
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {

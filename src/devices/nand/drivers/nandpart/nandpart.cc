@@ -60,11 +60,11 @@ void CompletionCallback(void* cookie, zx_status_t status, nand_operation_t* nand
 }  // namespace
 
 zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "NandPartDevice::Create: Starting...!\n");
+  zxlogf(INFO, "NandPartDevice::Create: Starting...!");
 
   nand_protocol_t nand_proto;
   if (device_get_protocol(parent, ZX_PROTOCOL_NAND, &nand_proto) != ZX_OK) {
-    zxlogf(ERROR, "nandpart: parent device '%s': does not support nand protocol\n",
+    zxlogf(ERROR, "nandpart: parent device '%s': does not support nand protocol",
            device_get_name(parent));
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -82,11 +82,11 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &nand_config,
                                            sizeof(nand_config), &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "nandpart: parent device '%s' has no device metadata\n", device_get_name(parent));
+    zxlogf(ERROR, "nandpart: parent device '%s' has no device metadata", device_get_name(parent));
     return status;
   }
   if (actual < sizeof(nand_config_t)) {
-    zxlogf(ERROR, "nandpart: Expected metadata is of size %zu, needs to at least be %zu\n", actual,
+    zxlogf(ERROR, "nandpart: Expected metadata is of size %zu, needs to at least be %zu", actual,
            sizeof(nand_config_t));
     return ZX_ERR_INTERNAL;
   }
@@ -98,7 +98,7 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
   fbl::RefPtr<BadBlock> bad_block;
   status = BadBlock::Create(config, &bad_block);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "nandpart: Failed to create BadBlock object\n");
+    zxlogf(ERROR, "nandpart: Failed to create BadBlock object");
     return status;
   }
 
@@ -107,11 +107,11 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
   status =
       device_get_metadata(parent, DEVICE_METADATA_PARTITION_MAP, buffer, sizeof(buffer), &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "nandpart: parent device '%s' has no partition map\n", device_get_name(parent));
+    zxlogf(ERROR, "nandpart: parent device '%s' has no partition map", device_get_name(parent));
     return status;
   }
   if (actual < sizeof(zbi_partition_map_t)) {
-    zxlogf(ERROR, "nandpart: Partition map is of size %zu, needs to at least be %zu\n", actual,
+    zxlogf(ERROR, "nandpart: Partition map is of size %zu, needs to at least be %zu", actual,
            sizeof(zbi_partition_t));
     return ZX_ERR_INTERNAL;
   }
@@ -121,7 +121,7 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
   const size_t minimum_size =
       sizeof(zbi_partition_map_t) + (sizeof(zbi_partition_t) * pmap->partition_count);
   if (actual < minimum_size) {
-    zxlogf(ERROR, "nandpart: Partition map is of size %zu, needs to at least be %zu\n", actual,
+    zxlogf(ERROR, "nandpart: Partition map is of size %zu, needs to at least be %zu", actual,
            minimum_size);
     return ZX_ERR_INTERNAL;
   }
@@ -166,7 +166,7 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
     }
     status = device->Bind(part->name, copy_count);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to bind %s with error %d\n", part->name, status);
+      zxlogf(ERROR, "Failed to bind %s with error %d", part->name, status);
 
       continue;
     }
@@ -178,7 +178,7 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t NandPartDevice::Bind(const char* name, uint32_t copy_count) {
-  zxlogf(INFO, "nandpart: Binding %s to %s\n", name, device_get_name(parent()));
+  zxlogf(INFO, "nandpart: Binding %s to %s", name, device_get_name(parent()));
 
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND},
@@ -260,7 +260,7 @@ zx_status_t NandPartDevice::BadBlockGetBadBlockList(uint32_t* bad_block_list,
   }
 
   *bad_block_count = bad_block_list_.size();
-  zxlogf(TRACE, "nandpart: %s: Bad block count: %zu\n", name(), *bad_block_count);
+  zxlogf(TRACE, "nandpart: %s: Bad block count: %zu", name(), *bad_block_count);
 
   if (bad_block_list_len == 0 || bad_block_list_.size() == 0) {
     return ZX_OK;

@@ -66,7 +66,7 @@ typedef struct ethernet_device {
 } ethernet_device_t;
 
 static void rtl8111_init_buffers(ethernet_device_t* edev) {
-  zxlogf(TRACE, "rtl8111: Initializing buffers\n");
+  zxlogf(TRACE, "rtl8111: Initializing buffers");
   edev->txd_ring = io_buffer_virt(&edev->buffer);
   edev->txd_phys_addr = io_buffer_phys(&edev->buffer);
   edev->txd_idx = 0;
@@ -95,7 +95,7 @@ static void rtl8111_init_buffers(ethernet_device_t* edev) {
 }
 
 static void rtl8111_init_regs(ethernet_device_t* edev) {
-  zxlogf(TRACE, "rtl8111: Initializing registers\n");
+  zxlogf(TRACE, "rtl8111: Initializing registers");
 
   // C+CR needs to be configured first - enable rx VLAN detagging and checksum offload
   WRITE16(RTL_CPLUSCR, READ16(RTL_CPLUSCR) | RTL_CPLUSCR_RXVLAN | RTL_CPLUSCR_RXCHKSUM);
@@ -145,7 +145,7 @@ static void rtl8111_init_regs(ethernet_device_t* edev) {
 
   edev->online = READ8(RTL_PHYSTATUS) & RTL_PHYSTATUS_LINKSTS;
 
-  zxlogf(INFO, "rtl111: mac address=%02x:%02x:%02x:%02x:%02x:%02x, link %s\n", edev->mac[0],
+  zxlogf(INFO, "rtl111: mac address=%02x:%02x:%02x:%02x:%02x:%02x, link %s", edev->mac[0],
          edev->mac[1], edev->mac[2], edev->mac[3], edev->mac[4], edev->mac[5],
          edev->online ? "online" : "offline");
 }
@@ -156,7 +156,7 @@ static int irq_thread(void* arg) {
     zx_status_t r;
     r = zx_interrupt_wait(edev->irqh, NULL);
     if (r != ZX_OK) {
-      zxlogf(TRACE, "rtl8111: irq wait failed: %d\n", r);
+      zxlogf(TRACE, "rtl8111: irq wait failed: %d", r);
       break;
     }
 
@@ -167,7 +167,7 @@ static int irq_thread(void* arg) {
       bool was_online = edev->online;
       bool online = READ8(RTL_PHYSTATUS) & RTL_PHYSTATUS_LINKSTS;
       if (online != was_online) {
-        zxlogf(INFO, "rtl8111: link %s\n", online ? "online" : "offline");
+        zxlogf(INFO, "rtl8111: link %s", online ? "online" : "offline");
         edev->online = online;
         if (edev->ifc.ops) {
           ethernet_ifc_status(&edev->ifc, online ? ETHERNET_STATUS_ONLINE : 0);
@@ -184,7 +184,7 @@ static int irq_thread(void* arg) {
           size_t len = rxd->status1 & RX_DESC_LEN_MASK;
           ethernet_ifc_recv(&edev->ifc, edev->rxb + (edev->rxd_idx * ETH_BUF_SIZE), len, 0);
         } else {
-          zxlogf(ERROR, "rtl8111: No ethmac callback, dropping packet\n");
+          zxlogf(ERROR, "rtl8111: No ethmac callback, dropping packet");
         }
 
         bool is_end = edev->rxd_idx == (ETH_BUF_COUNT - 1);
@@ -243,7 +243,7 @@ static void rtl8111_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* net
                              ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
   size_t length = netbuf->data_size;
   if (length > (size_t)ETH_BUF_SIZE) {
-    zxlogf(ERROR, "rtl8111: Unsupported packet length %zu\n", length);
+    zxlogf(ERROR, "rtl8111: Unsupported packet length %zu", length);
     completion_cb(cookie, ZX_ERR_INVALID_ARGS, netbuf);
     return;
   }
@@ -257,7 +257,7 @@ static void rtl8111_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* net
     WRITE16(RTL_ISR, RTL_INT_TOK);
 
     while (edev->txd_ring[edev->txd_idx].status1 & TX_DESC_OWN) {
-      zxlogf(TRACE, "rtl8111: Waiting for buffer\n");
+      zxlogf(TRACE, "rtl8111: Waiting for buffer");
       cnd_wait(&edev->tx_cond, &edev->lock);
     }
 
@@ -339,7 +339,7 @@ static zx_protocol_device_t device_ops = {
 };
 
 static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
-  zxlogf(TRACE, "rtl8111: binding device\n");
+  zxlogf(TRACE, "rtl8111: binding device");
 
   zx_status_t r;
   ethernet_device_t* edev;
@@ -351,53 +351,53 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
   cnd_init(&edev->tx_cond);
 
   if ((r = device_get_protocol(dev, ZX_PROTOCOL_PCI, &edev->pci)) != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: no pci protocol\n");
+    zxlogf(ERROR, "rtl8111: no pci protocol");
     goto fail;
   }
 
   uint32_t irq_cnt = 0;
   if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
       (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
-    zxlogf(TRACE, "rtl8111: using MSI mode\n");
+    zxlogf(TRACE, "rtl8111: using MSI mode");
   } else if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
              (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
-    zxlogf(TRACE, "rtl8111: using legacy irq mode\n");
+    zxlogf(TRACE, "rtl8111: using legacy irq mode");
   } else {
-    zxlogf(ERROR, "rtl8111: failed to configure irqs\n");
+    zxlogf(ERROR, "rtl8111: failed to configure irqs");
     r = ZX_ERR_INTERNAL;
     goto fail;
   }
 
   r = pci_map_interrupt(&edev->pci, 0, &edev->irqh);
   if (r != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: failed to map irq %d\n", r);
+    zxlogf(ERROR, "rtl8111: failed to map irq %d", r);
     goto fail;
   }
 
   r = pci_map_bar_buffer(&edev->pci, 2u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &edev->mmio);
   if (r != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: cannot map io %d\n", r);
+    zxlogf(ERROR, "rtl8111: cannot map io %d", r);
     goto fail;
   }
 
   if ((r = pci_enable_bus_master(&edev->pci, true)) != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: cannot enable bus master %d\n", r);
+    zxlogf(ERROR, "rtl8111: cannot enable bus master %d", r);
     goto fail;
   }
 
   if ((r = pci_get_bti(&edev->pci, 0, &edev->btih)) != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: could not get bti %d\n", r);
+    zxlogf(ERROR, "rtl8111: could not get bti %d", r);
     goto fail;
   }
 
   uint32_t mac_version = READ32(RTL_TCR) & 0x7cf00000;
-  zxlogf(TRACE, "rtl8111: version 0x%08x\n", mac_version);
+  zxlogf(TRACE, "rtl8111: version 0x%08x", mac_version);
 
   // TODO(stevensd): Don't require a contiguous buffer
   uint32_t alloc_size = ((ETH_BUF_SIZE + ETH_DESC_ELT_SIZE) * ETH_BUF_COUNT) * 2;
   r = io_buffer_init(&edev->buffer, edev->btih, alloc_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (r != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: cannot alloc io-buffer %d\n", r);
+    zxlogf(ERROR, "rtl8111: cannot alloc io-buffer %d", r);
     goto fail;
   }
 
@@ -414,18 +414,18 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
   };
 
   if ((r = device_add(dev, &args, &edev->zxdev)) != ZX_OK) {
-    zxlogf(ERROR, "rtl8111: failed to add device %d\n", r);
+    zxlogf(ERROR, "rtl8111: failed to add device %d", r);
     goto fail;
   }
 
   r = thrd_create_with_name(&edev->irq_thread, irq_thread, edev, "rtl-irq-thread");
   if (r < 0) {
-    zxlogf(ERROR, "rtl8111: failed to create irq thread %d\n", r);
+    zxlogf(ERROR, "rtl8111: failed to create irq thread %d", r);
     device_async_remove(edev->zxdev);
     return ZX_OK;  // The cleanup will be done in release
   }
 
-  zxlogf(TRACE, "rtl8111: bind successful\n");
+  zxlogf(TRACE, "rtl8111: bind successful");
 
   return ZX_OK;
 

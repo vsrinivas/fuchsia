@@ -62,7 +62,7 @@ zx_status_t Vim::UsbInit() {
   status = ddk::MmioBuffer::Create(S912_USB_PHY_BASE, S912_USB_PHY_LENGTH, *resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &usb_phy);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "UsbInit io_buffer_init_physical failed %d\n", status);
+    zxlogf(ERROR, "UsbInit io_buffer_init_physical failed %d", status);
     return status;
   }
 
@@ -100,7 +100,7 @@ zx_status_t Vim::UsbInit() {
   writel(temp, addr + USB_R5_OFFSET);
 
   if ((status = pbus_.DeviceAdd(&xhci_dev)) != ZX_OK) {
-    zxlogf(ERROR, "UsbInit could not add xhci_dev: %d\n", status);
+    zxlogf(ERROR, "UsbInit could not add xhci_dev: %d", status);
     return status;
   }
 

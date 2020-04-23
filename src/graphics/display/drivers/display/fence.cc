@@ -139,7 +139,7 @@ zx_status_t FenceCollection::ImportEvent(zx::event event, uint64_t id) {
     if (ac.check() && new_fence->CreateRef()) {
       fences_.insert_or_find(std::move(new_fence));
     } else {
-      zxlogf(ERROR, "Failed to allocate fence ref for event#%ld\n", id);
+      zxlogf(ERROR, "Failed to allocate fence ref for event#%ld", id);
       return ZX_ERR_NO_MEMORY;
     }
     return ZX_OK;
@@ -147,10 +147,10 @@ zx_status_t FenceCollection::ImportEvent(zx::event event, uint64_t id) {
 
   // Ref an existing fence
   if (fence->event() != event.get()) {
-    zxlogf(ERROR, "Cannot reuse event#%ld for zx::event %u\n", id, event.get());
+    zxlogf(ERROR, "Cannot reuse event#%ld for zx::event %u", id, event.get());
     return ZX_ERR_INVALID_ARGS;
   } else if (!fence->CreateRef()) {
-    zxlogf(ERROR, "Failed to allocate fence ref for event#%ld\n", id);
+    zxlogf(ERROR, "Failed to allocate fence ref for event#%ld", id);
     return ZX_ERR_NO_MEMORY;
   }
   return ZX_OK;

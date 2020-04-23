@@ -64,7 +64,7 @@ zx_status_t QemuArm64::PciInit() {
   // Please do not use get_root_resource() in new code. See ZX-1467.
   status = zx_pci_init(get_root_resource(), arg, static_cast<uint32_t>(arg_size));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: error %d in zx_pci_init\n", __func__, status);
+    zxlogf(ERROR, "%s: error %d in zx_pci_init", __func__, status);
     return status;
   }
 
@@ -89,7 +89,7 @@ zx_status_t QemuArm64::PciAdd() {
 
   auto status = pbus_.DeviceAdd(&pci_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
   }
 

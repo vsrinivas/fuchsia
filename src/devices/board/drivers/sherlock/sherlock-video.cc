@@ -133,7 +133,7 @@ zx_status_t Sherlock::VideoInit() {
   zx_status_t status =
       pbus_.CompositeDeviceAdd(&video_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::VideoInit: CompositeDeviceAdd() failed for video: %d\n", status);
+    zxlogf(ERROR, "Sherlock::VideoInit: CompositeDeviceAdd() failed for video: %d", status);
     return status;
   }
   return ZX_OK;

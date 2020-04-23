@@ -74,7 +74,7 @@
 #define DEBUGOUT1(...) DEBUGOUT(__VA_ARGS__)
 #define DEBUGOUT2(...) DEBUGOUT(__VA_ARGS__)
 #define DEBUGOUT3(...) DEBUGOUT(__VA_ARGS__)
-#define DEBUGFUNC(F) zxlogf(TRACE, F "\n")
+#define DEBUGFUNC(F) zxlogf(TRACE, F "")
 
 #define STATIC static
 #define FALSE 0

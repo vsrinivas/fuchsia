@@ -66,7 +66,7 @@ zx_status_t Vim::MaliInit() {
 
   zx_status_t status = pbus_.DeviceAdd(&mali_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "MaliInit: pbus_device_add failed: %d\n", status);
+    zxlogf(ERROR, "MaliInit: pbus_device_add failed: %d", status);
     return status;
   }
   return status;

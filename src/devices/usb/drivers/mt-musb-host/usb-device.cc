@@ -29,19 +29,19 @@ zx_status_t HardwareDevice::Enumerate() {
   usb_device_descriptor_t desc;
   auto status = ep0->GetDeviceDescriptor(&desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "GET_DESCRIPTOR (device) error: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "GET_DESCRIPTOR (device) error: %s", zx_status_get_string(status));
     return status;
   }
 
   // TODO(hansens) add support for multipoint devices (i.e. downstream hubs).
   if (desc.bDeviceClass == USB_CLASS_HUB) {
-    zxlogf(ERROR, "usb host does not currently support downstream hubs\n");
+    zxlogf(ERROR, "usb host does not currently support downstream hubs");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   status = ep0->SetAddress(static_cast<uint8_t>(id_));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "SET_ADDRESS error: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "SET_ADDRESS error: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -56,7 +56,7 @@ zx_status_t HardwareDevice::Enumerate() {
   // TODO(hansens) use the queue to enumerate the device instead of discrete endpoint routines.
   status = ep0->StartQueueThread();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "endpoint thread init error: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "endpoint thread init error: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -124,7 +124,7 @@ zx_status_t HardwareDevice::EnableEndpoint(const usb_endpoint_descriptor_t& desc
       ep_q_[ep] = std::make_unique<InterruptQueue>(usb_.View(0), id_, descriptor);
       break;
     default:
-      zxlogf(ERROR, "unsupported endpoint type: 0x%x\n", type);
+      zxlogf(ERROR, "unsupported endpoint type: 0x%x", type);
       break;
   }
 
@@ -173,7 +173,7 @@ zx_status_t HardwareDevice::DisableEndpoint(const usb_endpoint_descriptor_t& des
 
 size_t HardwareDevice::GetMaxTransferSize(uint8_t ep) {
   if (ep >= kMaxEndpointCount || !ep_q_[ep]) {
-    zxlogf(ERROR, "%s: unconfigured endpoint: %d\n", __func__, ep);
+    zxlogf(ERROR, "%s: unconfigured endpoint: %d", __func__, ep);
     return 0;
   }
   return ep_q_[ep]->GetMaxTransferSize();

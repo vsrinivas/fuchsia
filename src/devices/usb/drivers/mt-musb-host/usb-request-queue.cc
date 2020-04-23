@@ -71,10 +71,10 @@ zx_status_t TransactionQueue::Halt() {
     int rc;
     int status = thrd_join(pending_thread_, &rc);
     if (status != thrd_success) {
-      zxlogf(ERROR, "could not join pending_thread\n");
+      zxlogf(ERROR, "could not join pending_thread");
       return ZX_ERR_INTERNAL;
     } else if (rc != 0) {
-      zxlogf(ERROR, "pending_thread returned nonzero status: %d\n", rc);
+      zxlogf(ERROR, "pending_thread returned nonzero status: %d", rc);
       return ZX_ERR_INTERNAL;
     }
   }
@@ -112,7 +112,7 @@ int TransactionQueue::QueueThread() {
 
     status = DispatchRequest(std::move(req.value()));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "could not process usb request: %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "could not process usb request: %s", zx_status_get_string(status));
     }
   }
   return 0;
@@ -132,7 +132,7 @@ zx_status_t ControlQueue::GetDeviceDescriptor(usb_device_descriptor_t* out) {
   transaction_->Wait();
 
   if (!transaction_->Ok()) {
-    zxlogf(ERROR, "usb transaction did not complete successfully\n");
+    zxlogf(ERROR, "usb transaction did not complete successfully");
     return ZX_ERR_INTERNAL;
   }
 
@@ -152,7 +152,7 @@ zx_status_t ControlQueue::SetAddress(uint8_t addr) {
   transaction_->Wait();
 
   if (!transaction_->Ok()) {
-    zxlogf(ERROR, "usb transaction did not complete successfully\n");
+    zxlogf(ERROR, "usb transaction did not complete successfully");
     return ZX_ERR_INTERNAL;
   }
 
@@ -175,7 +175,7 @@ zx_status_t ControlQueue::DispatchRequest(usb::BorrowedRequest<> req) {
     void* vmo_addr;
     status = req.Mmap(&vmo_addr);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "could not map request vmo: %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "could not map request vmo: %s", zx_status_get_string(status));
       req.Complete(status, 0);
       return status;
     }
@@ -197,7 +197,7 @@ zx_status_t ControlQueue::DispatchRequest(usb::BorrowedRequest<> req) {
     req.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
     return ZX_OK;
   } else if (!transaction_->Ok()) {
-    zxlogf(ERROR, "usb control transfer did not complete successfully\n");
+    zxlogf(ERROR, "usb control transfer did not complete successfully");
     req.Complete(ZX_ERR_INTERNAL, 0);
     return ZX_ERR_INTERNAL;
   }
@@ -209,7 +209,7 @@ zx_status_t BulkQueue::DispatchRequest(usb::BorrowedRequest<> req) {
   void* vmo_addr;
   auto status = req.Mmap(&vmo_addr);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "could not map request vmo: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "could not map request vmo: %s", zx_status_get_string(status));
     req.Complete(status, 0);
     return status;
   }
@@ -223,7 +223,7 @@ zx_status_t BulkQueue::DispatchRequest(usb::BorrowedRequest<> req) {
     req.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
     return ZX_OK;
   } else if (!transaction_->Ok()) {
-    zxlogf(ERROR, "usb bulk transfer did not complete successfully\n");
+    zxlogf(ERROR, "usb bulk transfer did not complete successfully");
     req.Complete(ZX_ERR_INTERNAL, 0);
     return ZX_ERR_INTERNAL;
   }
@@ -235,7 +235,7 @@ zx_status_t InterruptQueue::DispatchRequest(usb::BorrowedRequest<> req) {
   void* vmo_addr;
   auto status = req.Mmap(&vmo_addr);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "could not map request vmo: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "could not map request vmo: %s", zx_status_get_string(status));
     req.Complete(status, 0);
     return status;
   }
@@ -249,7 +249,7 @@ zx_status_t InterruptQueue::DispatchRequest(usb::BorrowedRequest<> req) {
     req.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
     return ZX_OK;
   } else if (!transaction_->Ok()) {
-    zxlogf(ERROR, "usb interrupt transfer did not complete successfully\n");
+    zxlogf(ERROR, "usb interrupt transfer did not complete successfully");
     req.Complete(ZX_ERR_INTERNAL, 0);
     return ZX_ERR_INTERNAL;
   }

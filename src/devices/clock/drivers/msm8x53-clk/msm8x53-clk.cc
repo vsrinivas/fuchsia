@@ -37,14 +37,14 @@ zx_status_t Msm8x53Clk::Create(void* ctx, zx_device_t* parent) {
 
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "msm-clk: failed to get pdev protocol\n");
+    zxlogf(ERROR, "msm-clk: failed to get pdev protocol");
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "msm-clk: failed to map cc_base mmio, st = %d\n", status);
+    zxlogf(ERROR, "msm-clk: failed to map cc_base mmio, st = %d", status);
     return status;
   }
 
@@ -52,13 +52,13 @@ zx_status_t Msm8x53Clk::Create(void* ctx, zx_device_t* parent) {
 
   status = device->Init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "msm-clk: failed to initialize, st = %d\n", status);
+    zxlogf(ERROR, "msm-clk: failed to initialize, st = %d", status);
     return status;
   }
 
   status = device->DdkAdd(kMsmClkName);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "msm-clk: DdkAdd failed, st = %d\n", status);
+    zxlogf(ERROR, "msm-clk: DdkAdd failed, st = %d", status);
     return status;
   }
 
@@ -131,7 +131,7 @@ zx_status_t Msm8x53Clk::ClockImplSetRate(uint32_t id, uint64_t hz) {
       return RcgClockSetRate(index, hz);
     }
     default:
-      zxlogf(WARN, "msm_clk: unsupported clock type: %u\n", (uint16_t)clock_type);
+      zxlogf(WARN, "msm_clk: unsupported clock type: %u", (uint16_t)clock_type);
   }
 
   return ZX_ERR_NOT_SUPPORTED;
@@ -294,7 +294,7 @@ zx_status_t Msm8x53Clk::RcgClockEnable(uint32_t index) {
   // Check to see if frequency has been set.
   fbl::AutoLock lock(&rcg_rates_lock_);
   if (rcg_rates_[index] == kRcgRateUnset) {
-    zxlogf(ERROR, "Attempted to enable RCG %u before setting rate\n", index);
+    zxlogf(ERROR, "Attempted to enable RCG %u before setting rate", index);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -354,7 +354,7 @@ zx_status_t Msm8x53Clk::RcgClockSetRate(uint32_t index, uint64_t rate) {
 
   if (table == nullptr) {
     // This clock frequency is not supported.
-    zxlogf(WARN, "unsupported clock frequency, clk = %u, rate = %lu\n", index, rate);
+    zxlogf(WARN, "unsupported clock frequency, clk = %u, rate = %lu", index, rate);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -393,7 +393,7 @@ zx_status_t Msm8x53Clk::LatchRcgConfig(const MsmClkRcg& clk) {
     zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
   }
 
-  zxlogf(WARN, "Failed to latch RCG config\n");
+  zxlogf(WARN, "Failed to latch RCG config");
   return ZX_ERR_TIMED_OUT;
 }
 

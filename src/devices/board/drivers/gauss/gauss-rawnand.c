@@ -126,7 +126,7 @@ zx_status_t gauss_raw_nand_init(gauss_bus_t* bus) {
 
   status = pbus_device_add(&bus->pbus, &raw_nand_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "gauss_raw_nand_init: pbus_device_add raw_nand failed: %d\n", status);
+    zxlogf(ERROR, "gauss_raw_nand_init: pbus_device_add raw_nand failed: %d", status);
     return status;
   }
 

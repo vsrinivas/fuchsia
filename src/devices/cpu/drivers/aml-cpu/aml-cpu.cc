@@ -38,7 +38,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: failed to get composite protocol\n", __func__);
+    zxlogf(ERROR, "%s: failed to get composite protocol", __func__);
     return ZX_ERR_INTERNAL;
   }
 
@@ -46,7 +46,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   size_t actual;
   composite.GetFragments(devices, kFragmentCount, &actual);
   if (actual != kFragmentCount) {
-    zxlogf(ERROR, "%s: Expected to get %lu fragments, actually got %lu\n", __func__,
+    zxlogf(ERROR, "%s: Expected to get %lu fragments, actually got %lu", __func__,
            kFragmentCount, actual);
     return ZX_ERR_INTERNAL;
   }
@@ -66,7 +66,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   ddk::ThermalProtocolClient thermal_client;
   status = ddk::ThermalProtocolClient::CreateFromDevice(device, &thermal_client);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to get thermal protocol client, st = %d\n", status);
+    zxlogf(ERROR, "aml-cpu: Failed to get thermal protocol client, st = %d", status);
     return status;
   }
 
@@ -75,7 +75,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   zx::channel channel_local, channel_remote;
   status = zx::channel::create(0, &channel_local, &channel_remote);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to create channel pair, st = %d\n", status);
+    zxlogf(ERROR, "aml-cpu: Failed to create channel pair, st = %d", status);
     return status;
   }
 
@@ -83,7 +83,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   // serve its FIDL interface over this channel.
   status = thermal_client.Connect(std::move(channel_remote));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: failed to connect to thermal driver, st = %d\n", status);
+    zxlogf(ERROR, "aml-cpu: failed to connect to thermal driver, st = %d", status);
     return status;
   }
 
@@ -91,7 +91,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
   auto device_info = thermal_fidl_client.GetDeviceInfo();
   if (device_info.status() != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: failed to get device info, st = %d\n", device_info.status());
+    zxlogf(ERROR, "aml-cpu: failed to get device info, st = %d", device_info.status());
     return device_info.status();
   }
 
@@ -104,19 +104,19 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   static_assert(static_cast<size_t>(PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) ==
                 kLittleDomainIndex);
   if (info->opps[kLittleDomainIndex].count != 0) {
-    zxlogf(ERROR, "aml-cpu: this driver only supports one dvfs domain.\n");
+    zxlogf(ERROR, "aml-cpu: this driver only supports one dvfs domain.");
     return ZX_ERR_INTERNAL;
   }
 
   // Make sure we don't have more operating points than available performance states.
   const fuchsia_thermal::OperatingPoint& opps = info->opps[0];
   if (opps.count > MAX_DEVICE_PERFORMANCE_STATES) {
-    zxlogf(ERROR, "aml-cpu: cpu device has more operating points than we support\n");
+    zxlogf(ERROR, "aml-cpu: cpu device has more operating points than we support");
     return ZX_ERR_INTERNAL;
   }
 
   const uint8_t perf_state_count = static_cast<uint8_t>(opps.count);
-  zxlogf(INFO, "aml-cpu: Creating CPU Device with %u operating poitns\n", opps.count);
+  zxlogf(INFO, "aml-cpu: Creating CPU Device with %u operating poitns", opps.count);
 
   auto cpu_device = std::make_unique<AmlCpu>(device, std::move(thermal_fidl_client));
 
@@ -130,7 +130,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
                               perf_states, perf_state_count  // Perf states & count
   );
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to add cpu device, st = %d\n", status);
+    zxlogf(ERROR, "aml-cpu: Failed to add cpu device, st = %d", status);
     return status;
   }
 
@@ -154,12 +154,12 @@ zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* o
 
   status = GetThermalOperatingPoints(&opps);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get Thermal operating poitns, st = %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to get Thermal operating poitns, st = %d", __func__, status);
     return status;
   }
 
   if (requested_state >= opps.count) {
-    zxlogf(ERROR, "%s: Requested device performance state is out of bounds\n", __func__);
+    zxlogf(ERROR, "%s: Requested device performance state is out of bounds", __func__);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -169,7 +169,7 @@ zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* o
       thermal_client_.SetDvfsOperatingPoint(pstate, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
 
   if (!result.ok() || result->status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to set dvfs operating point.\n", __func__);
+    zxlogf(ERROR, "%s: failed to set dvfs operating point.", __func__);
     return ZX_ERR_INTERNAL;
   }
 
@@ -189,13 +189,13 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
 
   status = GetThermalOperatingPoints(&opps);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get Thermal operating poitns, st = %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to get Thermal operating poitns, st = %d", __func__, status);
     completer.ReplyError(status);
   }
 
   // Make sure that the state is in bounds?
   if (state >= opps.count) {
-    zxlogf(ERROR, "%s: requested pstate index out of bounds, requested = %u, count = %u\n",
+    zxlogf(ERROR, "%s: requested pstate index out of bounds, requested = %u, count = %u",
            __func__, state, opps.count);
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
@@ -212,7 +212,7 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
 zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* out) {
   auto result = thermal_client_.GetDeviceInfo();
   if (!result.ok() || result->status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get thermal device info\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get thermal device info", __func__);
     return ZX_ERR_INTERNAL;
   }
 
@@ -220,7 +220,7 @@ zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* o
 
   // We only support one DVFS cluster on Astro.
   if (info->opps[1].count != 0) {
-    zxlogf(ERROR, "%s: thermal driver reported more than one dvfs domain?\n", __func__);
+    zxlogf(ERROR, "%s: thermal driver reported more than one dvfs domain?", __func__);
     return ZX_ERR_INTERNAL;
   }
 

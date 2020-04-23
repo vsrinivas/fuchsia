@@ -17,7 +17,7 @@ namespace dwc2 {
 void Dwc2::HandleReset() {
   auto* mmio = get_mmio();
 
-  zxlogf(LTRACE, "\nRESET\n");
+  zxlogf(LTRACE, "\nRESET");
 
   ep0_state_ = Ep0State::DISCONNECTED;
   configured_ = false;
@@ -127,7 +127,7 @@ void Dwc2::HandleInEpInterrupt() {
         } else {
           HandleTransferComplete(ep_num);
           if (diepint.nak()) {
-            zxlogf(ERROR, "Unandled interrupt diepint.nak ep_num %u\n", ep_num);
+            zxlogf(ERROR, "Unandled interrupt diepint.nak ep_num %u", ep_num);
             DIEPINT::Get(ep_num).ReadFrom(mmio).set_nak(1).WriteTo(mmio);
           }
         }
@@ -135,23 +135,23 @@ void Dwc2::HandleInEpInterrupt() {
 
       // TODO(voydanoff) Implement error recovery for these interrupts
       if (diepint.epdisabled()) {
-        zxlogf(ERROR, "Unandled interrupt diepint.epdisabled for ep_num %u\n", ep_num);
+        zxlogf(ERROR, "Unandled interrupt diepint.epdisabled for ep_num %u", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_epdisabled(1).WriteTo(mmio);
       }
       if (diepint.ahberr()) {
-        zxlogf(ERROR, "Unandled interrupt diepint.ahberr for ep_num %u\n", ep_num);
+        zxlogf(ERROR, "Unandled interrupt diepint.ahberr for ep_num %u", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_ahberr(1).WriteTo(mmio);
       }
       if (diepint.timeout()) {
-        zxlogf(ERROR, "Unandled interrupt diepint.timeout for ep_num %u\n", ep_num);
+        zxlogf(ERROR, "Unandled interrupt diepint.timeout for ep_num %u", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_timeout(1).WriteTo(mmio);
       }
       if (diepint.intktxfemp()) {
-        zxlogf(ERROR, "Unandled interrupt diepint.intktxfemp for ep_num %u\n", ep_num);
+        zxlogf(ERROR, "Unandled interrupt diepint.intktxfemp for ep_num %u", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_intktxfemp(1).WriteTo(mmio);
       }
       if (diepint.intknepmis()) {
-        zxlogf(ERROR, "Unhandled interrupt diepint.intknepmis for ep_num %u\n", ep_num);
+        zxlogf(ERROR, "Unhandled interrupt diepint.intknepmis for ep_num %u", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_intknepmis(1).WriteTo(mmio);
       }
       if (diepint.inepnakeff()) {
@@ -222,11 +222,11 @@ void Dwc2::HandleOutEpInterrupt() {
       }
       // TODO(voydanoff) Implement error recovery for these interrupts
       if (doepint.epdisabled()) {
-        zxlogf(ERROR, "Unhandled interrupt doepint.epdisabled for ep_num %u\n", ep_num);
+        zxlogf(ERROR, "Unhandled interrupt doepint.epdisabled for ep_num %u", ep_num);
         DOEPINT::Get(ep_num).ReadFrom(mmio).set_epdisabled(1).WriteTo(mmio);
       }
       if (doepint.ahberr()) {
-        zxlogf(ERROR, "Unhandled interrupt doepint.ahberr for ep_num %u\n", ep_num);
+        zxlogf(ERROR, "Unhandled interrupt doepint.ahberr for ep_num %u", ep_num);
         DOEPINT::Get(ep_num).ReadFrom(mmio).set_ahberr(1).WriteTo(mmio);
       }
     }
@@ -246,12 +246,12 @@ zx_status_t Dwc2::HandleSetupRequest(size_t* out_actual) {
     // Handle some special setup requests in this driver
     switch (setup->bRequest) {
       case USB_REQ_SET_ADDRESS:
-        zxlogf(LTRACE, "SET_ADDRESS %d\n", setup->wValue);
+        zxlogf(LTRACE, "SET_ADDRESS %d", setup->wValue);
         SetAddress(static_cast<uint8_t>(setup->wValue));
         *out_actual = 0;
         return ZX_OK;
       case USB_REQ_SET_CONFIGURATION:
-        zxlogf(LTRACE, "SET_CONFIGURATION %d\n", setup->wValue);
+        zxlogf(LTRACE, "SET_CONFIGURATION %d", setup->wValue);
         configured_ = true;
         if (dci_intf_) {
           status = dci_intf_->Control(setup, nullptr, 0, nullptr, 0, out_actual);
@@ -595,7 +595,7 @@ void Dwc2::HandleEp0TransferComplete() {
       break;
     case Ep0State::STALL:
     default:
-      zxlogf(ERROR, "EP0 state is %d, should not get here\n", static_cast<int>(ep0_state_));
+      zxlogf(ERROR, "EP0 state is %d, should not get here", static_cast<int>(ep0_state_));
       break;
   }
 }
@@ -643,13 +643,13 @@ zx_status_t Dwc2::InitController() {
 
   auto ghwcfg2 = GHWCFG2::Get().ReadFrom(mmio);
   if (!ghwcfg2.dynamic_fifo()) {
-    zxlogf(ERROR, "DWC2 driver requires dynamic FIFO support\n");
+    zxlogf(ERROR, "DWC2 driver requires dynamic FIFO support");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   auto ghwcfg4 = GHWCFG4::Get().ReadFrom(mmio);
   if (!ghwcfg4.ded_fifo_en()) {
-    zxlogf(ERROR, "DWC2 driver requires dedicated FIFO support\n");
+    zxlogf(ERROR, "DWC2 driver requires dedicated FIFO support");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -815,7 +815,7 @@ zx_status_t Dwc2::Create(void* ctx, zx_device_t* parent) {
 zx_status_t Dwc2::Init() {
   ddk::CompositeProtocolClient composite(parent());
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "Dwc2::Create could not get composite protocol\n");
+    zxlogf(ERROR, "Dwc2::Create could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -830,7 +830,7 @@ zx_status_t Dwc2::Init() {
 
   pdev_ = fragments[0];
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "Dwc2::Create: could not get platform device protocol\n");
+    zxlogf(ERROR, "Dwc2::Create: could not get platform device protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -847,48 +847,48 @@ zx_status_t Dwc2::Init() {
 
   auto status = DdkGetMetadata(DEVICE_METADATA_PRIVATE, &metadata_, sizeof(metadata_), &actual);
   if (status != ZX_OK || actual != sizeof(metadata_)) {
-    zxlogf(ERROR, "Dwc2::Init can't get driver metadata\n");
+    zxlogf(ERROR, "Dwc2::Init can't get driver metadata");
     return ZX_ERR_INTERNAL;
   }
 
   status = pdev_.MapMmio(0, &mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Dwc2::Init MapMmio failed: %d\n", status);
+    zxlogf(ERROR, "Dwc2::Init MapMmio failed: %d", status);
     return status;
   }
 
   status = pdev_.GetInterrupt(0, &irq_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Dwc2::Init GetInterrupt failed: %d\n", status);
+    zxlogf(ERROR, "Dwc2::Init GetInterrupt failed: %d", status);
     return status;
   }
 
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Dwc2::Init GetBti failed: %d\n", status);
+    zxlogf(ERROR, "Dwc2::Init GetBti failed: %d", status);
     return status;
   }
 
   status = ep0_buffer_.Init(bti_.get(), UINT16_MAX, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Dwc2::Init ep0_buffer_.Init failed: %d\n", status);
+    zxlogf(ERROR, "Dwc2::Init ep0_buffer_.Init failed: %d", status);
     return status;
   }
 
   status = ep0_buffer_.PhysMap();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Dwc2::Init ep0_buffer_.PhysMap failed: %d\n", status);
+    zxlogf(ERROR, "Dwc2::Init ep0_buffer_.PhysMap failed: %d", status);
     return status;
   }
 
   if ((status = InitController()) != ZX_OK) {
-    zxlogf(ERROR, "Dwc2::Init InitController failed: %d\n", status);
+    zxlogf(ERROR, "Dwc2::Init InitController failed: %d", status);
     return status;
   }
 
   status = DdkAdd("dwc2");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Dwc2::Init DdkAdd failed: %d\n", status);
+    zxlogf(ERROR, "Dwc2::Init DdkAdd failed: %d", status);
     return status;
   }
 
@@ -910,7 +910,7 @@ int Dwc2::IrqThread() {
     if (wait_res == ZX_ERR_CANCELED) {
       break;
     } else if (wait_res != ZX_OK) {
-      zxlogf(ERROR, "dwc_usb: irq wait failed, retcode = %d\n", wait_res);
+      zxlogf(ERROR, "dwc_usb: irq wait failed, retcode = %d", wait_res);
     }
 
     // It doesn't seem that this inner loop should be necessary,
@@ -943,7 +943,7 @@ int Dwc2::IrqThread() {
     }
   }
 
-  zxlogf(INFO, "dwc_usb: irq thread finished\n");
+  zxlogf(INFO, "dwc_usb: irq thread finished");
   return 0;
 }
 
@@ -962,11 +962,11 @@ void Dwc2::DdkSuspendNew(ddk::SuspendTxn txn) {
 void Dwc2::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb) {
   uint8_t ep_num = DWC_ADDR_TO_INDEX(req->header.ep_address);
   if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= fbl::count_of(endpoints_)) {
-    zxlogf(ERROR, "Dwc2::UsbDciRequestQueue: bad ep address 0x%02X\n", req->header.ep_address);
+    zxlogf(ERROR, "Dwc2::UsbDciRequestQueue: bad ep address 0x%02X", req->header.ep_address);
     usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, cb);
     return;
   }
-  zxlogf(LTRACE, "UsbDciRequestQueue ep %u length %zu\n", ep_num, req->header.length);
+  zxlogf(LTRACE, "UsbDciRequestQueue ep %u length %zu", ep_num, req->header.length);
 
   auto* ep = &endpoints_[ep_num];
 
@@ -978,7 +978,7 @@ void Dwc2::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* 
   // OUT transactions must have length > 0 and multiple of max packet size
   if (DWC_EP_IS_OUT(ep_num)) {
     if (req->header.length == 0 || req->header.length % ep->max_packet_size != 0) {
-      zxlogf(ERROR, "dwc_ep_queue: OUT transfers must be multiple of max packet size\n");
+      zxlogf(ERROR, "dwc_ep_queue: OUT transfers must be multiple of max packet size");
       usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, cb);
       return;
     }
@@ -987,13 +987,13 @@ void Dwc2::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* 
   fbl::AutoLock lock(&ep->lock);
 
   if (!ep->enabled) {
-    zxlogf(ERROR, "dwc_ep_queue ep not enabled!\n");
+    zxlogf(ERROR, "dwc_ep_queue ep not enabled!");
     usb_request_complete(req, ZX_ERR_BAD_STATE, 0, cb);
     return;
   }
 
   if (!configured_) {
-    zxlogf(ERROR, "dwc_ep_queue not configured!\n");
+    zxlogf(ERROR, "dwc_ep_queue not configured!");
     usb_request_complete(req, ZX_ERR_BAD_STATE, 0, cb);
     return;
   }
@@ -1004,7 +1004,7 @@ void Dwc2::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* 
 
 zx_status_t Dwc2::UsbDciSetInterface(const usb_dci_interface_protocol_t* interface) {
   if (dci_intf_) {
-    zxlogf(ERROR, "%s: dci_intf_ already set\n", __func__);
+    zxlogf(ERROR, "%s: dci_intf_ already set", __func__);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -1019,7 +1019,7 @@ zx_status_t Dwc2::UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
 
   uint8_t ep_num = DWC_ADDR_TO_INDEX(ep_desc->bEndpointAddress);
   if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= fbl::count_of(endpoints_)) {
-    zxlogf(ERROR, "Dwc2::UsbDciConfigEp: bad ep address 0x%02X\n", ep_desc->bEndpointAddress);
+    zxlogf(ERROR, "Dwc2::UsbDciConfigEp: bad ep address 0x%02X", ep_desc->bEndpointAddress);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1028,7 +1028,7 @@ zx_status_t Dwc2::UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
   uint16_t max_packet_size = usb_ep_max_packet(ep_desc);
 
   if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
-    zxlogf(ERROR, "Dwc2::UsbDciConfigEp: isochronous endpoints are not supported\n");
+    zxlogf(ERROR, "Dwc2::UsbDciConfigEp: isochronous endpoints are not supported");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -1062,7 +1062,7 @@ zx_status_t Dwc2::UsbDciDisableEp(uint8_t ep_address) {
 
   unsigned ep_num = DWC_ADDR_TO_INDEX(ep_address);
   if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= fbl::count_of(endpoints_)) {
-    zxlogf(ERROR, "Dwc2::UsbDciConfigEp: bad ep address 0x%02X\n", ep_address);
+    zxlogf(ERROR, "Dwc2::UsbDciConfigEp: bad ep address 0x%02X", ep_address);
     return ZX_ERR_INVALID_ARGS;
   }
 

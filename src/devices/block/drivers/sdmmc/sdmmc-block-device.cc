@@ -27,7 +27,7 @@ inline void BlockComplete(sdmmc::BlockOperation& txn, zx_status_t status) {
   if (txn.node()->complete_cb()) {
     txn.Complete(status);
   } else {
-    zxlogf(TRACE, "sdmmc: block op %p completion_cb unset!\n", txn.operation());
+    zxlogf(TRACE, "sdmmc: block op %p completion_cb unset!", txn.operation());
   }
 }
 
@@ -122,7 +122,7 @@ zx_status_t SdmmcBlockDevice::Create(zx_device_t* parent, const SdmmcDevice& sdm
   fbl::AllocChecker ac;
   out_dev->reset(new (&ac) SdmmcBlockDevice(parent, sdmmc));
   if (!ac.check()) {
-    zxlogf(ERROR, "sdmmc: failed to allocate device memory\n");
+    zxlogf(ERROR, "sdmmc: failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -133,7 +133,7 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   // Device must be in TRAN state at this point
   zx_status_t st = WaitForTran();
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: waiting for TRAN state failed, retcode = %d\n", st);
+    zxlogf(ERROR, "sdmmc: waiting for TRAN state failed, retcode = %d", st);
     return ZX_ERR_TIMED_OUT;
   }
 
@@ -144,13 +144,13 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
       [](void* ctx) -> int { return reinterpret_cast<SdmmcBlockDevice*>(ctx)->WorkerThread(); },
       this, "sdmmc-block-worker");
   if (rc != thrd_success) {
-    zxlogf(ERROR, "sdmmc: Failed to start worker thread, retcode = %d\n", st);
+    zxlogf(ERROR, "sdmmc: Failed to start worker thread, retcode = %d", st);
     return thrd_status_to_zx_status(rc);
   }
 
   st = DdkAdd(is_sd_ ? "sdmmc-sd" : "sdmmc-mmc", DEVICE_ADD_NON_BINDABLE);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: Failed to add block device, retcode = %d\n", st);
+    zxlogf(ERROR, "sdmmc: Failed to add block device, retcode = %d", st);
     return st;
   }
 
@@ -160,12 +160,12 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   std::unique_ptr<PartitionDevice> user_partition(
       new (&ac) PartitionDevice(zxdev(), this, block_info_, USER_DATA_PARTITION));
   if (!ac.check()) {
-    zxlogf(ERROR, "sdmmc: failed to allocate device memory\n");
+    zxlogf(ERROR, "sdmmc: failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
   }
 
   if ((st = user_partition->AddDevice()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to add user partition device: %d\n", st);
+    zxlogf(ERROR, "sdmmc: failed to add user partition device: %d", st);
     return st;
   }
 
@@ -191,26 +191,26 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   std::unique_ptr<PartitionDevice> boot_partition_1(
       new (&ac) PartitionDevice(zxdev(), this, boot_info, BOOT_PARTITION_1));
   if (!ac.check()) {
-    zxlogf(ERROR, "sdmmc: failed to allocate device memory\n");
+    zxlogf(ERROR, "sdmmc: failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
   }
 
   std::unique_ptr<PartitionDevice> boot_partition_2(
       new (&ac) PartitionDevice(zxdev(), this, boot_info, BOOT_PARTITION_2));
   if (!ac.check()) {
-    zxlogf(ERROR, "sdmmc: failed to allocate device memory\n");
+    zxlogf(ERROR, "sdmmc: failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
   }
 
   if ((st = boot_partition_1->AddDevice()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d\n", st);
+    zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d", st);
     return st;
   }
 
   dummy = boot_partition_1.release();
 
   if ((st = boot_partition_2->AddDevice()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d\n", st);
+    zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d", st);
     return st;
   }
 
@@ -279,7 +279,7 @@ zx_status_t SdmmcBlockDevice::DoTxn(const BlockOperation& txn, const EmmcPartiti
       return ZX_OK;
     default:
       // should not get here
-      zxlogf(ERROR, "sdmmc: do_txn invalid block op %d\n", kBlockOp(txn.operation()->command));
+      zxlogf(ERROR, "sdmmc: do_txn invalid block op %d", kBlockOp(txn.operation()->command));
       ZX_DEBUG_ASSERT(false);
       return ZX_ERR_INVALID_ARGS;
   }
@@ -290,7 +290,7 @@ zx_status_t SdmmcBlockDevice::DoTxn(const BlockOperation& txn, const EmmcPartiti
         (raw_ext_csd_[MMC_EXT_CSD_PARTITION_CONFIG] & MMC_EXT_CSD_PARTITION_ACCESS_MASK) |
         partition;
     if ((st = MmcDoSwitch(MMC_EXT_CSD_PARTITION_CONFIG, partition_config_value)) != ZX_OK) {
-      zxlogf(ERROR, "sdmmc: failed to switch to partition %u\n", partition);
+      zxlogf(ERROR, "sdmmc: failed to switch to partition %u", partition);
       return st;
     }
   }
@@ -329,7 +329,7 @@ zx_status_t SdmmcBlockDevice::DoTxn(const BlockOperation& txn, const EmmcPartiti
     st = mapper.Map(*zx::unowned_vmo(txn.operation()->rw.vmo), offset_vmo, length,
                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (st != ZX_OK) {
-      zxlogf(TRACE, "sdmmc: do_txn vmo map error %d\n", st);
+      zxlogf(TRACE, "sdmmc: do_txn vmo map error %d", st);
       return st;
     }
     req->virt_buffer = mapper.start();
@@ -341,15 +341,15 @@ zx_status_t SdmmcBlockDevice::DoTxn(const BlockOperation& txn, const EmmcPartiti
   if (st != ZX_OK || ((req->blockcount > 1) && !(req->cmd_flags & SDMMC_CMD_AUTO12))) {
     zx_status_t stop_st = sdmmc_.SdmmcStopTransmission();
     if (stop_st != ZX_OK) {
-      zxlogf(TRACE, "sdmmc: do_txn stop transmission error %d\n", stop_st);
+      zxlogf(TRACE, "sdmmc: do_txn stop transmission error %d", stop_st);
     }
   }
 
   if (st != ZX_OK) {
-    zxlogf(TRACE, "sdmmc: do_txn error %d\n", st);
+    zxlogf(TRACE, "sdmmc: do_txn error %d", st);
   }
 
-  zxlogf(TRACE, "sdmmc: do_txn complete\n");
+  zxlogf(TRACE, "sdmmc: do_txn complete");
   return st;
 }
 
@@ -414,7 +414,7 @@ int SdmmcBlockDevice::WorkerThread() {
     worker_event_.Wait(&lock_);
   }
 
-  zxlogf(TRACE, "sdmmc: worker thread terminated successfully\n");
+  zxlogf(TRACE, "sdmmc: worker thread terminated successfully");
   return thrd_success;
 }
 
@@ -425,7 +425,7 @@ zx_status_t SdmmcBlockDevice::WaitForTran() {
     uint32_t response;
     zx_status_t st = sdmmc_.SdmmcSendStatus(&response);
     if (st != ZX_OK) {
-      zxlogf(ERROR, "sdmmc: SDMMC_SEND_STATUS error, retcode = %d\n", st);
+      zxlogf(ERROR, "sdmmc: SDMMC_SEND_STATUS error, retcode = %d", st);
       return st;
     }
 

@@ -82,9 +82,9 @@ zx_status_t Sherlock::OtRadioInit() {
   zx_status_t status =
       pbus_.CompositeDeviceAdd(&dev, ot_fragments, fbl::count_of(ot_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s(nrf52840): DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s(nrf52840): DeviceAdd failed: %d", __func__, status);
   } else {
-    zxlogf(INFO, "%s(nrf52840): DeviceAdded\n", __func__);
+    zxlogf(INFO, "%s(nrf52840): DeviceAdded", __func__);
   }
   return status;
 }

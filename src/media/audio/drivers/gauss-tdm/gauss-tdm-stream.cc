@@ -44,7 +44,7 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
   composite_protocol_t composite;
   zx_status_t res = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
   if (res != ZX_OK) {
-    zxlogf(ERROR, "Could not get composite protocol\n");
+    zxlogf(ERROR, "Could not get composite protocol");
     return res;
   }
 
@@ -52,7 +52,7 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
   size_t actual;
   composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
   if (actual != countof(fragments)) {
-    zxlogf(ERROR, "could not get fragments\n");
+    zxlogf(ERROR, "could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -70,7 +70,7 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
   res = pdev_map_mmio_buffer(&stream->pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
 
   if (res != ZX_OK) {
-    zxlogf(ERROR, "tdm-output-driver: failed to map mmio.\n");
+    zxlogf(ERROR, "tdm-output-driver: failed to map mmio.");
     return res;
   }
   stream->mmio_ = ddk::MmioBuffer(mmio);
@@ -82,7 +82,7 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
 
   res = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &stream->i2c_);
   if (res != ZX_OK) {
-    zxlogf(ERROR, "tdm-output-driver: failed to acquire i2c\n");
+    zxlogf(ERROR, "tdm-output-driver: failed to acquire i2c");
     return res;
   }
 
@@ -131,7 +131,7 @@ zx_status_t TdmOutputStream::Bind(const char* devname) {
 
   zx_status_t res = AddFormats(&supported_formats_);
   if (res != ZX_OK) {
-    zxlogf(ERROR, "Failed to add formats\n");
+    zxlogf(ERROR, "Failed to add formats");
     return res;
   }
 
@@ -250,12 +250,12 @@ void TdmOutputStream::GetChannel(GetChannelCompleter::Sync completer) {
 #define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                    \
   case _cmd:                                                                 \
     if (req_size != sizeof(req._payload)) {                                  \
-      zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)\n", req_size, \
+      zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)", req_size, \
              sizeof(req._payload));                                          \
       return ZX_ERR_INVALID_ARGS;                                            \
     }                                                                        \
     if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                \
-      zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "\n");              \
+      zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "");              \
       return ZX_ERR_INVALID_ARGS;                                            \
     }                                                                        \
     return _handler(channel, req._payload, ##__VA_ARGS__);
@@ -299,7 +299,7 @@ zx_status_t TdmOutputStream::ProcessStreamChannel(dispatcher::Channel* channel, 
     HREQ(AUDIO_STREAM_CMD_GET_STRING, get_string, OnGetStringLocked, false);
     HREQ(AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN, get_clock_domain, OnGetClockDomainLocked, false);
     default:
-      zxlogf(ERROR, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
+      zxlogf(ERROR, "Unrecognized stream command 0x%04x", req.hdr.cmd);
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -336,7 +336,7 @@ zx_status_t TdmOutputStream::ProcessRingBufferChannel(dispatcher::Channel* chann
     HREQ(AUDIO_RB_CMD_START, rb_start, OnStartLocked, false);
     HREQ(AUDIO_RB_CMD_STOP, rb_stop, OnStopLocked, false);
     default:
-      zxlogf(ERROR, "Unrecognized ring buffer command 0x%04x\n", req.hdr.cmd);
+      zxlogf(ERROR, "Unrecognized ring buffer command 0x%04x", req.hdr.cmd);
       return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -351,7 +351,7 @@ zx_status_t TdmOutputStream::OnGetStreamFormatsLocked(
   audio_proto::StreamGetFmtsResp resp = {};
 
   if (supported_formats_.size() > std::numeric_limits<uint16_t>::max()) {
-    zxlogf(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
+    zxlogf(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!",
            supported_formats_.size());
     return ZX_ERR_INTERNAL;
   }
@@ -372,7 +372,7 @@ zx_status_t TdmOutputStream::OnGetStreamFormatsLocked(
 
     res = channel->Write(&resp, sizeof(resp));
     if (res != ZX_OK) {
-      zxlogf(ERROR, "Failed to send get stream formats response (res %d)\n", res);
+      zxlogf(ERROR, "Failed to send get stream formats response (res %d)", res);
       return res;
     }
 
@@ -417,7 +417,7 @@ zx_status_t TdmOutputStream::OnSetStreamFormatLocked(dispatcher::Channel* channe
   // Determine the frame size.
   frame_size_ = audio::utils::ComputeFrameSize(req.channels, req.sample_format);
   if (!frame_size_) {
-    zxlogf(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)\n", req.channels,
+    zxlogf(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)", req.channels,
            req.sample_format);
     resp.result = ZX_ERR_INTERNAL;
     goto finished;
@@ -633,7 +633,7 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
   resp.result =
       io_buffer_init(&ring_buffer_, bti_.get(), ring_buffer_size_, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (resp.result != ZX_OK) {
-    zxlogf(ERROR, "Failed to create ring buffer (size %u, res %d)\n", ring_buffer_size_,
+    zxlogf(ERROR, "Failed to create ring buffer (size %u, res %d)", ring_buffer_size_,
            resp.result);
     goto finished;
   }
@@ -655,7 +655,7 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
   zx_handle_t vmo_copy;
   resp.result = zx_handle_duplicate(ring_buffer_.vmo_handle, client_rights, &vmo_copy);
   if (resp.result != ZX_OK) {
-    zxlogf(ERROR, "Failed to duplicate ring buffer handle (res %d)\n", resp.result);
+    zxlogf(ERROR, "Failed to duplicate ring buffer handle (res %d)", resp.result);
     goto finished;
   }
   client_rb_handle.reset(vmo_copy);
@@ -671,7 +671,7 @@ finished:
   }
 
   if (res != ZX_OK) {
-    zxlogf(ERROR, "Error in ring buffer creation\n");
+    zxlogf(ERROR, "Error in ring buffer creation");
     ReleaseRingBufferLocked();
   }
 
@@ -695,7 +695,7 @@ zx_status_t TdmOutputStream::ProcessRingNotification() {
   if (rb_channel_) {
     return rb_channel_->Write(&resp, sizeof(resp));
   } else {
-    zxlogf(ERROR, "RingBufferNotification Failed - rb channel closed\n");
+    zxlogf(ERROR, "RingBufferNotification Failed - rb channel closed");
     // return ok so the Timer can live on for later use.
     return ZX_OK;
   }

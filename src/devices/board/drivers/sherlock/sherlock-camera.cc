@@ -380,26 +380,26 @@ zx_status_t Sherlock::CameraInit() {
 
   zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Mipi_Device DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Mipi_Device DeviceAdd failed %d", __func__, status);
     return status;
   }
 
   status = pbus_.CompositeDeviceAdd(&sensor_dev, imx227_sensor_fragments,
                                     countof(imx227_sensor_fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: IMX227 DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: IMX227 DeviceAdd failed %d", __func__, status);
     return status;
   }
 
   status = pbus_.CompositeDeviceAdd(&gdc_dev, gdc_fragments, countof(gdc_fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GDC DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: GDC DeviceAdd failed %d", __func__, status);
     return status;
   }
 
   status = pbus_.CompositeDeviceAdd(&ge2d_dev, ge2d_fragments, countof(ge2d_fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GE2D DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: GE2D DeviceAdd failed %d", __func__, status);
     return status;
   }
 
@@ -407,7 +407,7 @@ zx_status_t Sherlock::CameraInit() {
   status = pbus_.CompositeDeviceAdd(&isp_dev, isp_fragments, countof(isp_fragments), 1);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ISP DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ISP DeviceAdd failed %d", __func__, status);
     return status;
   }
 
@@ -427,7 +427,7 @@ zx_status_t Sherlock::CameraInit() {
 
   status = DdkAddComposite("camera-controller", &camera_comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Camera Controller DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Camera Controller DeviceAdd failed %d", __func__, status);
     return status;
   }
 

@@ -77,20 +77,20 @@ zx_status_t AmlPwm::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
   mode_config tmp_cfg = {UNKNOWN, {}};
   pwm_config_t old_config = {false, 0, 0.0, &tmp_cfg, sizeof(mode_config)};
   if ((status = CopyConfig(&old_config, &configs_[idx])) != ZX_OK) {
-    zxlogf(ERROR, "%s: could not save old config %d\n", __func__, status);
+    zxlogf(ERROR, "%s: could not save old config %d", __func__, status);
     return status;
   }
   auto old_mode_cfg = static_cast<const mode_config*>(old_config.mode_config_buffer);
 
   // Update new
   if ((status = CopyConfig(&configs_[idx], config)) != ZX_OK) {
-    zxlogf(ERROR, "%s: could not save new config %d\n", __func__, status);
+    zxlogf(ERROR, "%s: could not save new config %d", __func__, status);
     return status;
   }
 
   bool mode_eq = (old_mode_cfg->mode == mode);
   if (!mode_eq && ((status = SetMode(idx, mode)) != ZX_OK)) {
-    zxlogf(ERROR, "%s: Set Mode failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Set Mode failed %d", __func__, status);
     PwmImplSetConfig(idx, &old_config);
     return status;
   }
@@ -106,7 +106,7 @@ zx_status_t AmlPwm::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
       val_eq = (old_mode_cfg->delta_sigma.delta == mode_cfg->delta_sigma.delta);
       if (!(mode_eq && val_eq) &&
           ((status = SetDSSetting(idx, mode_cfg->delta_sigma.delta)) != ZX_OK)) {
-        zxlogf(ERROR, "%s: Set Delta Sigma Setting failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: Set Delta Sigma Setting failed %d", __func__, status);
         PwmImplSetConfig(idx, &old_config);
         return status;
       }
@@ -120,7 +120,7 @@ zx_status_t AmlPwm::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
       if (!(mode_eq && val_eq) &&
           ((status = SetDutyCycle2(idx, mode_cfg->two_timer.period_ns2,
                                    mode_cfg->two_timer.duty_cycle2)) != ZX_OK)) {
-        zxlogf(ERROR, "%s: Set Duty Cycle 2 failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: Set Duty Cycle 2 failed %d", __func__, status);
         PwmImplSetConfig(idx, &old_config);
         return status;
       }
@@ -128,25 +128,25 @@ zx_status_t AmlPwm::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
                (old_mode_cfg->two_timer.timer2 == mode_cfg->two_timer.timer2);
       if (!(mode_eq && val_eq) && ((status = SetTimers(idx, mode_cfg->two_timer.timer1,
                                                        mode_cfg->two_timer.timer2)) != ZX_OK)) {
-        zxlogf(ERROR, "%s: Set Timers failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: Set Timers failed %d", __func__, status);
         PwmImplSetConfig(idx, &old_config);
         return status;
       }
       break;
     case UNKNOWN:
     default:
-      zxlogf(ERROR, "%s: Unsupported Mode %d\n", __func__, mode);
+      zxlogf(ERROR, "%s: Unsupported Mode %d", __func__, mode);
       return ZX_ERR_NOT_SUPPORTED;
   }
 
   val_eq = (old_config.polarity == config->polarity);
   if (!(mode_eq && val_eq) && ((status = Invert(idx, config->polarity)) != ZX_OK)) {
-    zxlogf(ERROR, "%s: Invert failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Invert failed %d", __func__, status);
     PwmImplSetConfig(idx, &old_config);
     return status;
   }
   if ((status = EnableConst(idx, en_const)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Enable Const failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Enable Const failed %d", __func__, status);
     PwmImplSetConfig(idx, &old_config);
     return status;
   }
@@ -154,7 +154,7 @@ zx_status_t AmlPwm::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
       (old_config.period_ns == config->period_ns) && (old_config.duty_cycle == config->duty_cycle);
   if (!(mode_eq && val_eq) &&
       ((status = SetDutyCycle(idx, config->period_ns, config->duty_cycle)) != ZX_OK)) {
-    zxlogf(ERROR, "%s: Set Duty Cycle failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Set Duty Cycle failed %d", __func__, status);
     PwmImplSetConfig(idx, &old_config);
     return status;
   }
@@ -377,19 +377,19 @@ zx_status_t AmlPwmDevice::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<AmlPwmDevice> device(new (&ac) AmlPwmDevice(parent));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: device object alloc failed\n", __func__);
+    zxlogf(ERROR, "%s: device object alloc failed", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status = ZX_OK;
   if ((status = device->Init(parent)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Init failed\n", __func__);
+    zxlogf(ERROR, "%s: Init failed", __func__);
     return status;
   }
 
   if ((status = device->DdkAdd("aml-pwm-device", 0, nullptr, 0, ZX_PROTOCOL_PWM_IMPL, nullptr,
                                ZX_HANDLE_INVALID, nullptr, 0)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed\n", __func__);
+    zxlogf(ERROR, "%s: DdkAdd failed", __func__);
     return status;
   }
 

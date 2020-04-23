@@ -52,7 +52,7 @@ zx_status_t Vim::ClkInit() {
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ClkInit: DeviceAdd failed, st = %d\n", status);
+    zxlogf(ERROR, "ClkInit: DeviceAdd failed, st = %d", status);
     return status;
   }
 

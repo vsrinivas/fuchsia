@@ -17,7 +17,7 @@
 #include "device.h"
 
 zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
-  zxlogf(TRACE, "%s\n", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   usb_protocol_t usb;
   zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
@@ -54,7 +54,7 @@ zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
   usb_desc_iter_release(&iter);
 
   if (!blkin_endpt || blkout_endpts.empty()) {
-    zxlogf(ERROR, "%s could not find endpoints\n", __func__);
+    zxlogf(ERROR, "%s could not find endpoints", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 

@@ -184,7 +184,7 @@ zx_status_t SerialDevice::Create(void* ctx, zx_device_t* dev) {
   }
 
   if ((status = sdev->Bind()) != ZX_OK) {
-    zxlogf(ERROR, "SerialDevice::Create: Bind failed\n");
+    zxlogf(ERROR, "SerialDevice::Create: Bind failed");
     sdev.release()->DdkRelease();
     return status;
   }
@@ -197,14 +197,14 @@ zx_status_t SerialDevice::Create(void* ctx, zx_device_t* dev) {
 
 zx_status_t SerialDevice::Init() {
   if (!serial_.is_valid()) {
-    zxlogf(ERROR, "SerialDevice::Init: ZX_PROTOCOL_SERIAL_IMPL_ASYNC not available\n");
+    zxlogf(ERROR, "SerialDevice::Init: ZX_PROTOCOL_SERIAL_IMPL_ASYNC not available");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   serial_port_info_t info;
   zx_status_t status = serial_.GetInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "SerialDevice::Init: SerialImpl::GetInfo failed %d\n", status);
+    zxlogf(ERROR, "SerialDevice::Init: SerialImpl::GetInfo failed %d", status);
     return status;
   }
   serial_class_ = info.serial_class;

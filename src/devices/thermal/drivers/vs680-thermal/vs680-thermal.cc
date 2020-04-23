@@ -49,7 +49,7 @@ namespace thermal {
 zx_status_t Vs680Thermal::Create(void* ctx, zx_device_t* parent) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get composite protocol\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get composite protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -57,38 +57,38 @@ zx_status_t Vs680Thermal::Create(void* ctx, zx_device_t* parent) {
   size_t fragment_count = 0;
   composite.GetFragments(fragments, FRAGMENT_COUNT, &fragment_count);
   if (fragment_count < FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: Failed to get fragments\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get fragments", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get platform device protocol\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get platform device protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> mmio;
   zx_status_t status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to map MMIO: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to map MMIO: %d", __func__, status);
     return status;
   }
 
   zx::interrupt interrupt;
   if ((status = pdev.GetInterrupt(0, &interrupt)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get interrupt: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to get interrupt: %d", __func__, status);
     return status;
   }
 
   ddk::ClockProtocolClient cpu_clock(fragments[FRAGMENT_CPU_CLOCK]);
   if (!cpu_clock.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get clock protocol\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get clock protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   ddk::PowerProtocolClient cpu_power(fragments[FRAGMENT_CPU_POWER]);
   if (!cpu_power.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get power protocol\n", __func__);
+    zxlogf(ERROR, "%s: Failed to get power protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -96,7 +96,7 @@ zx_status_t Vs680Thermal::Create(void* ctx, zx_device_t* parent) {
   auto device = fbl::make_unique_checked<Vs680Thermal>(&ac, parent, *std::move(mmio),
                                                        std::move(interrupt), cpu_clock, cpu_power);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Failed to allocate device memory\n", __func__);
+    zxlogf(ERROR, "%s: Failed to allocate device memory", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -105,7 +105,7 @@ zx_status_t Vs680Thermal::Create(void* ctx, zx_device_t* parent) {
   }
 
   if ((status = device->DdkAdd("vs680-thermal")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __func__, status);
     // Init() started the interrupt thread, call DdkRelease to stop it and destroy the device
     // object.
     device->DdkRelease();
@@ -139,7 +139,7 @@ zx_status_t Vs680Thermal::Init() {
 
   zx_status_t status = cpu_power_.RegisterPowerDomain(min_volt_uv, max_volt_uv);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to register VCPU power domain: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Failed to register VCPU power domain: %d", __func__, status);
     return status;
   }
 
@@ -149,7 +149,7 @@ zx_status_t Vs680Thermal::Init() {
 
   auto cb = [](void* arg) { return reinterpret_cast<Vs680Thermal*>(arg)->TemperatureThread(); };
   if (thrd_create_with_name(&thread_, cb, this, "vs680-thermal-thread") != thrd_success) {
-    zxlogf(ERROR, "%s: Failed to create IRQ thread\n", __func__);
+    zxlogf(ERROR, "%s: Failed to create IRQ thread", __func__);
     return ZX_ERR_INTERNAL;
   }
 
@@ -231,31 +231,31 @@ zx_status_t Vs680Thermal::SetOperatingPoint(uint16_t op_idx) {
   if (next.freq_hz > current.freq_hz) {
     uint32_t actual_voltage = 0;
     if ((status = cpu_power_.RequestVoltage(next.volt_uv, &actual_voltage))) {
-      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u: %d\n", __func__, next.volt_uv, status);
+      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u: %d", __func__, next.volt_uv, status);
       return status;
     }
     if (actual_voltage != next.volt_uv) {
-      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u\n", __func__, next.volt_uv);
+      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u", __func__, next.volt_uv);
       return ZX_ERR_INTERNAL;
     }
 
     if ((status = cpu_clock_.SetRate(next.freq_hz)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to set CPU clock rate to %u: %d\n", __func__, next.freq_hz, status);
+      zxlogf(ERROR, "%s: Failed to set CPU clock rate to %u: %d", __func__, next.freq_hz, status);
       return status;
     }
   } else {
     if ((status = cpu_clock_.SetRate(next.freq_hz)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to set CPU clock rate to %u: %d\n", __func__, next.freq_hz, status);
+      zxlogf(ERROR, "%s: Failed to set CPU clock rate to %u: %d", __func__, next.freq_hz, status);
       return status;
     }
 
     uint32_t actual_voltage = 0;
     if ((status = cpu_power_.RequestVoltage(next.volt_uv, &actual_voltage))) {
-      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u: %d\n", __func__, next.volt_uv, status);
+      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u: %d", __func__, next.volt_uv, status);
       return status;
     }
     if (actual_voltage != next.volt_uv) {
-      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u\n", __func__, next.volt_uv);
+      zxlogf(ERROR, "%s: Failed to set CPU voltage to %u", __func__, next.volt_uv);
       return ZX_ERR_INTERNAL;
     }
   }
@@ -275,7 +275,7 @@ int Vs680Thermal::TemperatureThread() {
     if (status == ZX_ERR_CANCELED) {
       break;
     } else if (status != ZX_OK) {
-      zxlogf(INFO, "%s: Interrupt wait returned %d\n", __func__, status);
+      zxlogf(INFO, "%s: Interrupt wait returned %d", __func__, status);
       break;
     }
 

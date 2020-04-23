@@ -68,7 +68,7 @@ bool Layer::ResolvePendingImage(FenceCollection* fences) {
     current_image_config_gen_ = pending_image_config_gen_;
 
     if (pending_image_ == nullptr) {
-      zxlogf(ERROR, "Tried to apply configuration with missing image\n");
+      zxlogf(ERROR, "Tried to apply configuration with missing image");
       return false;
     }
 
@@ -87,7 +87,7 @@ bool Layer::ResolvePendingImage(FenceCollection* fences) {
   if (pending_image_) {
     auto wait_fence = fences->GetFence(pending_wait_event_id_);
     if (wait_fence && wait_fence->InContainer()) {
-      zxlogf(ERROR, "Tried to wait with a busy event\n");
+      zxlogf(ERROR, "Tried to wait with a busy event");
       return false;
     }
     pending_image_->PrepareFences(std::move(wait_fence),

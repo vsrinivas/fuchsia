@@ -50,7 +50,7 @@ zx_status_t xhci_send_command(xhci_t* xhci, uint32_t cmd, uint64_t ptr, uint32_t
     if (cc == TRB_CC_SUCCESS) {
       return ZX_OK;
     }
-    zxlogf(ERROR, "xhci_send_command %u failed, cc: %d\n", cmd, cc);
+    zxlogf(ERROR, "xhci_send_command %u failed, cc: %d", cmd, cc);
     return ZX_ERR_INTERNAL;
   } else if (status == ZX_ERR_TIMED_OUT) {
     sync_completion_reset(&command.completion);

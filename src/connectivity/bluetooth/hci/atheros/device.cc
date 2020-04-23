@@ -91,7 +91,7 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
   usb_request_t* req;
   result = usb_request_alloc(&req, size, bulk_out_addr_, parent_req_size_);
   if (result != ZX_OK) {
-    zxlogf(ERROR, "LoadNVM: Failed to allocate usb request: %d\n", result);
+    zxlogf(ERROR, "LoadNVM: Failed to allocate usb request: %d", result);
     return result;
   }
 
@@ -147,7 +147,7 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
   usb_request_t* req;
   result = usb_request_alloc(&req, size, bulk_out_addr_, parent_req_size_);
   if (result != ZX_OK) {
-    zxlogf(ERROR, "LoadRAM: Failed to allocate usb request: %d\n", result);
+    zxlogf(ERROR, "LoadRAM: Failed to allocate usb request: %d", result);
     return result;
   }
 

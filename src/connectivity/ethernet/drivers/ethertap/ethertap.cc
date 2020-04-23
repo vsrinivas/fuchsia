@@ -63,7 +63,7 @@ zx_status_t TapCtl::Create(void* ctx, zx_device_t* parent) {
   auto dev = std::unique_ptr<TapCtl>(new TapCtl(parent));
   zx_status_t status = dev->DdkAdd("tapctl");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: could not add device: %d", __func__, status);
   } else {
     // devmgr owns the memory now
     __UNUSED auto* ptr = dev.release();
@@ -89,11 +89,11 @@ zx_status_t TapCtl::OpenDevice(const char* name, const fuchsia_hardware_ethertap
   auto status = tap->DdkAdd(name);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "tapctl: could not add tap device: %d\n", status);
+    zxlogf(ERROR, "tapctl: could not add tap device: %d", status);
   } else {
     // devmgr owns the memory until release is called
     __UNUSED auto ptr = tap.release();
-    zxlogf(INFO, "tapctl: created ethertap device '%s'\n", name);
+    zxlogf(INFO, "tapctl: created ethertap device '%s'", name);
   }
   return status;
 }
@@ -208,7 +208,7 @@ void TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
   fidl::Message msg(builder.Finalize(), fidl::HandlePart());
   auto status = msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnFrameEventTable, &err);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ethertap: EthernetImplQueueTx error encoding: %d %s\n", status, err);
+    zxlogf(ERROR, "ethertap: EthernetImplQueueTx error encoding: %d %s", status, err);
   } else {
     if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
       ethertap_trace("sending %zu bytes\n", length);
@@ -217,7 +217,7 @@ void TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
     status = msg.Write(channel_.get(), 0);
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "ethertap: EthernetImplQueueTx error writing: %d\n", status);
+      zxlogf(ERROR, "ethertap: EthernetImplQueueTx error writing: %d", status);
     }
   }
   // returning ZX_ERR_SHOULD_WAIT indicates that we will call complete_tx(), which we will not
@@ -278,12 +278,12 @@ zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const
   fidl::Message msg(builder.Finalize(), fidl::HandlePart());
   auto status = msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventTable, &err);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ethertap: EthernetImplSetParam error encoding: %d %s\n", status, err);
+    zxlogf(ERROR, "ethertap: EthernetImplSetParam error encoding: %d %s", status, err);
   } else {
     status = msg.Write(channel_.get(), 0);
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "ethertap: EthernetImplSetParam error writing: %d\n", status);
+      zxlogf(ERROR, "ethertap: EthernetImplSetParam error writing: %d", status);
     }
   }
 
@@ -407,7 +407,7 @@ int TapDevice::Thread() {
   {
     fbl::AutoLock lock(&lock_);
     dead_ = true;
-    zxlogf(INFO, "ethertap: device '%s' destroyed\n", name());
+    zxlogf(INFO, "ethertap: device '%s' destroyed", name());
     channel_.reset();
   }
   DdkRemoveDeprecated();

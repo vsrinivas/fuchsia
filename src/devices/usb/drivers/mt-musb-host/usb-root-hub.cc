@@ -117,7 +117,7 @@ zx_status_t UsbRootHub::HandleRequest(usb::BorrowedRequest<> req) {
   uint8_t ep_addr = static_cast<uint8_t>(req.request()->header.ep_address & 0xf);
 
   if (ep_addr > 1) {  // A USB hub only suports two endpoints: control and interrupt.
-    zxlogf(ERROR, "unsupported hub endpoint address: %d\n", ep_addr);
+    zxlogf(ERROR, "unsupported hub endpoint address: %d", ep_addr);
     req.Complete(ZX_ERR_INTERNAL, 0);
     return ZX_ERR_INTERNAL;
   }
@@ -135,7 +135,7 @@ zx_status_t UsbRootHub::HandleRequest(usb::BorrowedRequest<> req) {
       case USB_REQ_CLEAR_FEATURE:
         return ClearFeature(std::move(req));
       default:
-        zxlogf(ERROR, "unsupported device request: 0x%02x\n", req.request()->setup.bRequest);
+        zxlogf(ERROR, "unsupported device request: 0x%02x", req.request()->setup.bRequest);
         req.Complete(ZX_ERR_NOT_SUPPORTED, 0);
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -146,7 +146,7 @@ zx_status_t UsbRootHub::HandleRequest(usb::BorrowedRequest<> req) {
     auto t = [](void* arg) { return static_cast<UsbRootHub*>(arg)->EndpointHandlerThread(); };
     auto status = thrd_create_with_name(&endpoint_thread_, t, this, "hub_endpoint_thread");
     if (status != ZX_OK) {
-      zxlogf(ERROR, "root hub thread init error: %s\n", zx_status_get_string(status));
+      zxlogf(ERROR, "root hub thread init error: %s", zx_status_get_string(status));
       req.Complete(status, 0);
       return status;
     }
@@ -173,7 +173,7 @@ zx_status_t UsbRootHub::PortReset() {
 zx_status_t UsbRootHub::ClearFeature(usb::BorrowedRequest<> req) {
   uint16_t index = le16toh(req.request()->setup.wIndex);
   if (index != 1) {
-    zxlogf(ERROR, "unsupported ClearFeature() index: %d\n", index);
+    zxlogf(ERROR, "unsupported ClearFeature() index: %d", index);
     req.Complete(ZX_ERR_OUT_OF_RANGE, 0);
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -185,7 +185,7 @@ zx_status_t UsbRootHub::ClearFeature(usb::BorrowedRequest<> req) {
     case 0x23:  // See: 11.24.2 (USB 2.0 spec)
       return ClearPortFeature(std::move(req));
     default:
-      zxlogf(ERROR, "unsupported ClearFeature() request type: 0x%02x\n", bm_req_type);
+      zxlogf(ERROR, "unsupported ClearFeature() request type: 0x%02x", bm_req_type);
       req.Complete(ZX_ERR_NOT_SUPPORTED, 0);
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -228,7 +228,7 @@ zx_status_t UsbRootHub::ClearPortFeature(usb::BorrowedRequest<> req) {
       port_.ClearChangeBits(USB_C_PORT_OVER_CURRENT);
       break;
     default:
-      zxlogf(ERROR, "unsupported ClearFeature() selector: 0x%02x\n", feature);
+      zxlogf(ERROR, "unsupported ClearFeature() selector: 0x%02x", feature);
       req.Complete(ZX_ERR_INVALID_ARGS, 0);
       return ZX_ERR_INVALID_ARGS;
   }
@@ -250,7 +250,7 @@ zx_status_t UsbRootHub::GetDescriptor(usb::BorrowedRequest<> req) {
     case USB_HUB_DESC_TYPE:  // HUB-class descriptor.
       return GetHubDescriptor(std::move(req));
     default:
-      zxlogf(ERROR, "unsupported GetDescriptor() descriptor type: 0x%02x\n", type);
+      zxlogf(ERROR, "unsupported GetDescriptor() descriptor type: 0x%02x", type);
       req.Complete(ZX_ERR_NOT_SUPPORTED, 0);
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -317,7 +317,7 @@ zx_status_t UsbRootHub::GetStatus(usb::BorrowedRequest<> req) {
       return GetPortStatus(std::move(req));
       break;
     default:
-      zxlogf(ERROR, "unsupported GetStatus() request type: 0x%02x\n", bm_req_type);
+      zxlogf(ERROR, "unsupported GetStatus() request type: 0x%02x", bm_req_type);
       req.Complete(ZX_ERR_NOT_SUPPORTED, 0);
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -340,7 +340,7 @@ zx_status_t UsbRootHub::GetHubStatus(usb::BorrowedRequest<> req) {
 zx_status_t UsbRootHub::SetConfiguration(usb::BorrowedRequest<> req) {
   uint8_t index = static_cast<uint8_t>(req.request()->setup.wValue & 0xff);
   if (index != 1) {
-    zxlogf(ERROR, "unsupported SetConfiguration() index: %d\n", index);
+    zxlogf(ERROR, "unsupported SetConfiguration() index: %d", index);
     req.Complete(ZX_ERR_OUT_OF_RANGE, 0);
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -353,7 +353,7 @@ zx_status_t UsbRootHub::SetConfiguration(usb::BorrowedRequest<> req) {
 zx_status_t UsbRootHub::SetFeature(usb::BorrowedRequest<> req) {
   uint16_t index = le16toh(req.request()->setup.wIndex);
   if (index != 1) {
-    zxlogf(ERROR, "unsupported SetFeature() index: %d\n", index);
+    zxlogf(ERROR, "unsupported SetFeature() index: %d", index);
     req.Complete(ZX_ERR_OUT_OF_RANGE, 0);
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -365,7 +365,7 @@ zx_status_t UsbRootHub::SetFeature(usb::BorrowedRequest<> req) {
     case 0x23:  // See: 11.24.2 (USB 2.0 spec)
       return SetPortFeature(std::move(req));
     default:
-      zxlogf(ERROR, "unsupported SetFeature() request type: 0x%02x\n", bm_req_type);
+      zxlogf(ERROR, "unsupported SetFeature() request type: 0x%02x", bm_req_type);
       req.Complete(ZX_ERR_NOT_SUPPORTED, 0);
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -394,7 +394,7 @@ zx_status_t UsbRootHub::SetPortFeature(usb::BorrowedRequest<> req) {
       port_.PowerOn();
       break;
     default:
-      zxlogf(ERROR, "unsupported SetFeature() selector: 0x%02x\n", feature);
+      zxlogf(ERROR, "unsupported SetFeature() selector: 0x%02x", feature);
       req.Complete(ZX_ERR_INVALID_ARGS, 0);
       return ZX_ERR_INVALID_ARGS;
   }

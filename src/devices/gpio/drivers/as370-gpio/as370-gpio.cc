@@ -48,23 +48,23 @@ zx_status_t As370Gpio::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &pinmux_metadata,
                                            sizeof(pinmux_metadata), &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get metadata: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to get metadata: %d", __FILE__, status);
     return status;
   }
   if (actual != sizeof(pinmux_metadata)) {
-    zxlogf(ERROR, "%s: Unexpected metadata size\n", __FILE__);
+    zxlogf(ERROR, "%s: Unexpected metadata size", __FILE__);
     return ZX_ERR_INTERNAL;
   }
 
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PLATFORM_DEVICE\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PLATFORM_DEVICE", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   pdev_device_info_t device_info = {};
   if ((status = pdev.GetDeviceInfo(&device_info)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get device info: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Failed to get device info: %d", __FILE__, status);
     return status;
   }
 
@@ -72,11 +72,11 @@ zx_status_t As370Gpio::Create(void* ctx, zx_device_t* parent) {
   const uint32_t gpio_mmio_count = device_info.mmio_count - pinmux_mmio_count;
 
   if (gpio_mmio_count > synaptics::kMaxGpioPorts) {
-    zxlogf(ERROR, "%s: Too many GPIO MMIOs specified\n", __FILE__);
+    zxlogf(ERROR, "%s: Too many GPIO MMIOs specified", __FILE__);
     return ZX_ERR_INTERNAL;
   }
   if (gpio_mmio_count < device_info.irq_count) {
-    zxlogf(ERROR, "%s: Too many interrupts specified\n", __FILE__);
+    zxlogf(ERROR, "%s: Too many interrupts specified", __FILE__);
     return ZX_ERR_INTERNAL;
   }
 
@@ -85,14 +85,14 @@ zx_status_t As370Gpio::Create(void* ctx, zx_device_t* parent) {
   fbl::Vector<ddk::MmioBuffer> pinmux_mmios;
   pinmux_mmios.reserve(pinmux_mmio_count, &ac);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Allocation failed\n", __FILE__);
+    zxlogf(ERROR, "%s: Allocation failed", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   for (uint32_t i = 0; i < pinmux_mmio_count; i++) {
     std::optional<ddk::MmioBuffer> mmio;
     if ((status = pdev.MapMmio(i, &mmio)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to map pinmux MMIO: %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s: Failed to map pinmux MMIO: %d", __FILE__, status);
       return status;
     }
     pinmux_mmios.push_back(*std::move(mmio));
@@ -101,14 +101,14 @@ zx_status_t As370Gpio::Create(void* ctx, zx_device_t* parent) {
   fbl::Vector<ddk::MmioBuffer> gpio_mmios;
   gpio_mmios.reserve(gpio_mmio_count, &ac);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Allocation failed\n", __FILE__);
+    zxlogf(ERROR, "%s: Allocation failed", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   for (uint32_t i = pinmux_mmio_count; i < pinmux_mmio_count + gpio_mmio_count; i++) {
     std::optional<ddk::MmioBuffer> mmio;
     if ((status = pdev.MapMmio(i, &mmio)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to map GPIO MMIO: %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s: Failed to map GPIO MMIO: %d", __FILE__, status);
       return status;
     }
     gpio_mmios.push_back(*std::move(mmio));
@@ -117,14 +117,14 @@ zx_status_t As370Gpio::Create(void* ctx, zx_device_t* parent) {
   fbl::Array<zx::interrupt> port_interrupts(new (&ac) zx::interrupt[device_info.irq_count],
                                             device_info.irq_count);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Allocation failed\n", __FILE__);
+    zxlogf(ERROR, "%s: Allocation failed", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   for (uint32_t i = 0; i < port_interrupts.size(); i++) {
     zx::interrupt interrupt;
     if ((status = pdev.GetInterrupt(i, &interrupt)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to get interrupt: %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s: Failed to get interrupt: %d", __FILE__, status);
       return status;
     }
     port_interrupts[i] = std::move(interrupt);
@@ -134,17 +134,17 @@ zx_status_t As370Gpio::Create(void* ctx, zx_device_t* parent) {
                                                     std::move(gpio_mmios),
                                                     std::move(port_interrupts), pinmux_metadata);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: Failed to allocate device memory\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to allocate device memory", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
   if ((status = device->Init()) != ZX_OK) {
-    zxlogf(ERROR, "%s: Init failed: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Init failed: %d", __FILE__, status);
     return status;
   }
 
   if ((status = device->Bind()) != ZX_OK) {
-    zxlogf(ERROR, "%s: Bind failed: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: Bind failed: %d", __FILE__, status);
     device->Shutdown();
     return status;
   }
@@ -156,7 +156,7 @@ zx_status_t As370Gpio::Create(void* ctx, zx_device_t* parent) {
 zx_status_t As370Gpio::Init() {
   zx_status_t status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s zx_port_create failed %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s zx_port_create failed %d", __FUNCTION__, status);
     return status;
   }
 
@@ -169,7 +169,7 @@ zx_status_t As370Gpio::Init() {
   for (const zx::interrupt& port_interrupt : port_interrupts_) {
     status = port_interrupt.bind(port_, port_key++, 0 /*options*/);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s zx_interrupt_bind failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s zx_interrupt_bind failed %d", __FUNCTION__, status);
       return status;
     }
   }
@@ -194,20 +194,20 @@ zx_status_t As370Gpio::Init() {
 zx_status_t As370Gpio::Bind() {
   ddk::PBusProtocolClient pbus(parent());
   if (!pbus.is_valid()) {
-    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PLATFORM_BUS\n", __FILE__);
+    zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PLATFORM_BUS", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   zx_status_t status;
   if ((status = DdkAdd("as370-gpio")) != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: DdkAdd failed: %d", __FILE__, status);
     return status;
   }
 
   gpio_impl_protocol_t gpio_proto = {.ops = &gpio_impl_protocol_ops_, .ctx = this};
   status = pbus.RegisterProtocol(ddk_proto_id_, &gpio_proto, sizeof(gpio_proto));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to register ZX_PROTOCOL_GPIO_IMPL: %d\n", __FILE__, __LINE__);
+    zxlogf(ERROR, "%s: Failed to register ZX_PROTOCOL_GPIO_IMPL: %d", __FILE__, __LINE__);
     return status;
   }
 
@@ -219,16 +219,16 @@ int As370Gpio::Thread() {
     zx_port_packet_t packet;
     zx_status_t status = port_.wait(zx::time::infinite(), &packet);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s port wait failed: %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s port wait failed: %d", __FUNCTION__, status);
       return thrd_error;
     }
 
     if (packet.key == kPortKeyTerminate) {
-      zxlogf(INFO, "As370Gpio thread terminating\n");
+      zxlogf(INFO, "As370Gpio thread terminating");
       return thrd_success;
     }
     if (packet.key >= gpio_mmios_.size()) {
-      zxlogf(WARN, "%s received interrupt from invalid port\n", __FUNCTION__);
+      zxlogf(WARN, "%s received interrupt from invalid port", __FUNCTION__);
       continue;
     }
 
@@ -243,7 +243,7 @@ int As370Gpio::Thread() {
           status = gpio_interrupts_[interrupt_offset + index].trigger(
               0, zx::time(packet.interrupt.timestamp));
           if (status != ZX_OK) {
-            zxlogf(ERROR, "%s zx_interrupt_trigger failed %d\n", __func__, status);
+            zxlogf(ERROR, "%s zx_interrupt_trigger failed %d", __func__, status);
           }
         }
         // Clear the interrupt.
@@ -407,19 +407,19 @@ zx_status_t As370Gpio::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
   }
 
   if (IsInterruptEnabled(index)) {
-    zxlogf(ERROR, "%s interrupt %u already exists\n", __FUNCTION__, index);
+    zxlogf(ERROR, "%s interrupt %u already exists", __FUNCTION__, index);
     return ZX_ERR_ALREADY_EXISTS;
   }
 
   zx::interrupt irq;
   zx_status_t status = zx::interrupt::create(zx::resource(), index, ZX_INTERRUPT_VIRTUAL, &irq);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s zx::interrupt::create failed %d \n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s zx::interrupt::create failed %d ", __FUNCTION__, status);
     return status;
   }
   status = irq.duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s interrupt.duplicate failed %d \n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s interrupt.duplicate failed %d ", __FUNCTION__, status);
     return status;
   }
 
@@ -447,7 +447,7 @@ zx_status_t As370Gpio::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
   }
   gpio_interrupts_[interrupt_index] = std::move(irq);
   gpio_mmios_[port].ModifyBit<uint32_t>(true, bit, kGpioPortAIntrEn);
-  zxlogf(TRACE, "%s INT %u enabled\n", __FUNCTION__, index);
+  zxlogf(TRACE, "%s INT %u enabled", __FUNCTION__, index);
   return ZX_OK;
 }
 

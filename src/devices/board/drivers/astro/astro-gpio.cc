@@ -124,13 +124,13 @@ static pbus_dev_t gpio_dev = []() {
 zx_status_t Astro::GpioInit() {
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
     return status;
   }
 
   gpio_impl_ = ddk::GpioImplProtocolClient(parent());
   if (!gpio_impl_.is_valid()) {
-    zxlogf(ERROR, "%s: GpioImplProtocolClient failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: GpioImplProtocolClient failed %d", __func__, status);
     return ZX_ERR_INTERNAL;
   }
 
@@ -156,7 +156,7 @@ zx_status_t Astro::GpioInit() {
   }();
 
   if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd gpio_test failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd gpio_test failed: %d", __func__, status);
     return status;
   }
 #endif

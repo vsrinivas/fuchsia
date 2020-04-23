@@ -34,7 +34,7 @@ zx_status_t TestCompatibilityHookDriverChild::Bind() {
   auto status =
       DdkGetMetadata(DEVICE_METADATA_PRIVATE, &test_metadata_, sizeof(test_metadata_), &actual);
   if (status != ZX_OK || actual != sizeof(test_metadata_)) {
-    zxlogf(ERROR, "test_compat_hook_child_get_metadata not succesful\n");
+    zxlogf(ERROR, "test_compat_hook_child_get_metadata not succesful");
     return ZX_ERR_INTERNAL;
   }
   if (test_metadata_.add_in_bind) {

@@ -220,7 +220,7 @@ zx_status_t Nelson::SdEmmcConfigurePortB() {
   status = ddk::MmioBuffer::Create(kGpioBase, aligned_size, *resource,
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_base);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Create(gpio) error: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Create(gpio) error: %d", __func__, status);
   }
 
   PadDsReg2A::Get()
@@ -244,7 +244,7 @@ zx_status_t Nelson::SdioInit() {
   status =
       pbus_.CompositeDeviceAdd(&sd_emmc_dev, sdio_fragments, countof(sdio_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd sd_emmc failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd sd_emmc failed: %d", __func__, status);
     return status;
   }
 
@@ -267,7 +267,7 @@ zx_status_t Nelson::SdioInit() {
 
   status = DdkAddComposite("wifi", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddComposite failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAddComposite failed: %d", __func__, status);
     return status;
   }
 

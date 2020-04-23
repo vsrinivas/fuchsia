@@ -85,27 +85,27 @@ PipeDevice::~PipeDevice() {
 
 zx_status_t PipeDevice::Bind() {
   if (!acpi_.is_valid()) {
-    zxlogf(ERROR, "%s: no acpi protocol\n", kTag);
+    zxlogf(ERROR, "%s: no acpi protocol", kTag);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   zx_status_t status = acpi_.GetBti(GOLDFISH_BTI_ID, 0, &bti_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBti failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: GetBti failed: %d", kTag, status);
     return status;
   }
 
   acpi_mmio_t mmio;
   status = acpi_.GetMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetMmio failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: GetMmio failed: %d", kTag, status);
     return status;
   }
   fbl::AutoLock lock(&mmio_lock_);
   status = ddk::MmioBuffer::Create(mmio.offset, mmio.size, zx::vmo(mmio.vmo),
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: mmiobuffer create failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: mmiobuffer create failed: %d", kTag, status);
     return status;
   }
 
@@ -113,13 +113,13 @@ zx_status_t PipeDevice::Bind() {
   mmio_->Write32(PIPE_DRIVER_VERSION, PIPE_V2_REG_VERSION);
   uint32_t version = mmio_->Read32(PIPE_V2_REG_VERSION);
   if (version < PIPE_MIN_DEVICE_VERSION) {
-    zxlogf(ERROR, "%s: insufficient device version: %d\n", kTag, version);
+    zxlogf(ERROR, "%s: insufficient device version: %d", kTag, version);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   status = acpi_.MapInterrupt(0, &irq_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: map_interrupt failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: map_interrupt failed: %d", kTag, status);
     return status;
   }
 
@@ -134,7 +134,7 @@ zx_status_t PipeDevice::Bind() {
   static_assert(sizeof(CommandBuffers) <= PAGE_SIZE, "cmds size");
   status = io_buffer_.Init(bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: io_buffer_init failed: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: io_buffer_init failed: %d", kTag, status);
     return status;
   }
 
@@ -156,7 +156,7 @@ zx_status_t PipeDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
 
   zx_status_t status = instance->Bind();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to init instance: %d\n", kTag, status);
+    zxlogf(ERROR, "%s: failed to init instance: %d", kTag, status);
     return status;
   }
 
@@ -252,7 +252,7 @@ int PipeDevice::IrqHandler() {
   while (1) {
     zx_status_t status = irq_.wait(nullptr);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: irq.wait() got %d\n", kTag, status);
+      zxlogf(ERROR, "%s: irq.wait() got %d", kTag, status);
       break;
     }
 

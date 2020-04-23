@@ -164,7 +164,7 @@ zx_status_t SetUpDeviceClocks(Alc5663Client* client, uint32_t sample_rate,
   PllParameters pll_parameters;
   result = CalculatePllParams(bclk_frequency, 512 * sample_rate, &pll_parameters);
   if (result != ZX_OK) {
-    zxlogf(ERROR, "alc5663: Could not set up PLL to convert clock from %uHz to %uHz.\n",
+    zxlogf(ERROR, "alc5663: Could not set up PLL to convert clock from %uHz to %uHz.",
            bclk_frequency, 512 * sample_rate);
     return result;
   }
@@ -292,7 +292,7 @@ zx_status_t Alc5663Device::InitializeDevice() {
   // Reset the device.
   zx_status_t status = WriteRegister(&client_, ResetAndDeviceIdReg{});
   if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5663: Could not reset device.\n");
+    zxlogf(ERROR, "alc5663: Could not reset device.");
     return status;
   }
 
@@ -300,11 +300,11 @@ zx_status_t Alc5663Device::InitializeDevice() {
   VendorIdReg vendor{};
   status = ReadRegister(&client_, &vendor);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5663: Could not read device vendor ID.\n");
+    zxlogf(ERROR, "alc5663: Could not read device vendor ID.");
     return status;
   }
   if (vendor.vendor_id() != VendorIdReg::kVendorRealtek) {
-    zxlogf(ERROR, "alc5663: Unsupported device vendor ID: 0x%04x.\n", vendor.vendor_id());
+    zxlogf(ERROR, "alc5663: Unsupported device vendor ID: 0x%04x.", vendor.vendor_id());
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -312,12 +312,12 @@ zx_status_t Alc5663Device::InitializeDevice() {
   VersionIdReg version{};
   status = ReadRegister(&client_, &version);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5663: Could not read version information.\n");
+    zxlogf(ERROR, "alc5663: Could not read version information.");
     return status;
   }
 
   // Log vendor and version.
-  zxlogf(INFO, "Found ALC5663 codec, vendor 0x%04x, version 0x%04x.\n", vendor.vendor_id(),
+  zxlogf(INFO, "Found ALC5663 codec, vendor 0x%04x, version 0x%04x.", vendor.vendor_id(),
          version.version_id());
 
   // Power on everything.
@@ -380,7 +380,7 @@ void Alc5663Device::Shutdown() {
   // TODO(dgreenway): Power down the device.
   zx_status_t status = WriteRegister(&client_, ResetAndDeviceIdReg{});
   if (status != ZX_OK) {
-    zxlogf(WARN, "alc5663: Failed to reset the device during shutdown.\n");
+    zxlogf(WARN, "alc5663: Failed to reset the device during shutdown.");
   }
 }
 
@@ -392,7 +392,7 @@ zx_status_t Alc5663Device::AddChildToParent(std::unique_ptr<Alc5663Device> devic
   // Add the device.
   zx_status_t status = device->DdkAdd("alc5663");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5663: could not add device: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "alc5663: could not add device: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -405,7 +405,7 @@ zx_status_t Alc5663Device::Bind(zx_device_t* parent, Alc5663Device** created_dev
   ddk::I2cChannel channel;
   zx_status_t result = ddk::I2cChannel::CreateFromDevice(parent, &channel);
   if (result != ZX_OK) {
-    zxlogf(ERROR, "alc5663: could not get I2C protocol from parent device: %s\n",
+    zxlogf(ERROR, "alc5663: could not get I2C protocol from parent device: %s",
            zx_status_get_string(result));
     return result;
   }
@@ -414,14 +414,14 @@ zx_status_t Alc5663Device::Bind(zx_device_t* parent, Alc5663Device** created_dev
   fbl::AllocChecker ac;
   auto device = std::unique_ptr<Alc5663Device>(new (&ac) Alc5663Device(parent, channel));
   if (!ac.check()) {
-    zxlogf(ERROR, "alc5663: out of memory attempting to allocate device\n");
+    zxlogf(ERROR, "alc5663: out of memory attempting to allocate device");
     return ZX_ERR_NO_MEMORY;
   }
 
   // Initialise the hardware.
   zx_status_t status = device->InitializeDevice();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5663: failed to initialize hardware: %s\n", zx_status_get_string(status));
+    zxlogf(ERROR, "alc5663: failed to initialize hardware: %s", zx_status_get_string(status));
     return status;
   }
 

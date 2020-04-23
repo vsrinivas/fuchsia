@@ -60,27 +60,27 @@ int Vim3::Thread() {
   zx_status_t status;
 
   if ((status = SysmemInit()) != ZX_OK) {
-    zxlogf(ERROR, "SysmemInit() failed: %d\n", status);
+    zxlogf(ERROR, "SysmemInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
   if ((status = GpioInit()) != ZX_OK) {
-    zxlogf(ERROR, "GpioInit() failed: %d\n", status);
+    zxlogf(ERROR, "GpioInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
   if ((status = ClkInit()) != ZX_OK) {
-    zxlogf(ERROR, "ClkInit() failed: %d\n", status);
+    zxlogf(ERROR, "ClkInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
   if ((status = I2cInit()) != ZX_OK) {
-    zxlogf(ERROR, "I2cInit() failed: %d\n", status);
+    zxlogf(ERROR, "I2cInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
   if ((status = EthInit()) != ZX_OK) {
-    zxlogf(ERROR, "EthInit() failed: %d\n", status);
+    zxlogf(ERROR, "EthInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }

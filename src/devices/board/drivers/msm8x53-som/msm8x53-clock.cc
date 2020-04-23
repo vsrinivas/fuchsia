@@ -60,7 +60,7 @@ constexpr pbus_dev_t clock_dev = []() {
 zx_status_t Msm8x53::ClockInit() {
   zx_status_t status = pbus_.DeviceAdd(&clock_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
   }
 

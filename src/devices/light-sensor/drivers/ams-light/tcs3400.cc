@@ -75,13 +75,13 @@ zx_status_t Tcs3400Device::FillInputRpt() {
     // a lower byte read
     status = i2c_write_read_sync(&i2c_, &i.reg_l, 1, &buf_l, 1);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Tcs3400Device::FillInputRpt: i2c_write_read_sync failed: %d\n", status);
+      zxlogf(ERROR, "Tcs3400Device::FillInputRpt: i2c_write_read_sync failed: %d", status);
       input_rpt_.state = HID_USAGE_SENSOR_STATE_ERROR_VAL;
       return status;
     }
     status = i2c_write_read_sync(&i2c_, &i.reg_h, 1, &buf_h, 1);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Tcs3400Device::FillInputRpt: i2c_write_read_sync failed: %d\n", status);
+      zxlogf(ERROR, "Tcs3400Device::FillInputRpt: i2c_write_read_sync failed: %d", status);
       input_rpt_.state = HID_USAGE_SENSOR_STATE_ERROR_VAL;
       return status;
     }
@@ -94,7 +94,7 @@ zx_status_t Tcs3400Device::FillInputRpt() {
     // misaligned pointer is UB. This ends up getting lowered to a 16-bit store.
     memcpy(i.out, &out, sizeof(out));
 
-    zxlogf(TRACE, "Lux (a + b x raw): %u  raw: 0x%04X  a: %u  b: %f\n", out,
+    zxlogf(TRACE, "Lux (a + b x raw): %u  raw: 0x%04X  a: %u  b: %f", out,
            (((buf_h & 0xFF) << 8) | (buf_l & 0xFF)), lux_constant_coefficient_,
            lux_linear_coefficient_);
   }
@@ -111,7 +111,7 @@ int Tcs3400Device::Thread() {
     zx_time_t timeout = fbl::min(poll_timeout, irq_rearm_timeout);
     zx_status_t status = zx_port_wait(port_handle_, timeout, &packet);
     if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
-      zxlogf(ERROR, "Tcs3400Device::Thread: port wait failed: %d\n", status);
+      zxlogf(ERROR, "Tcs3400Device::Thread: port wait failed: %d", status);
       return thrd_error;
     }
 
@@ -128,7 +128,7 @@ int Tcs3400Device::Thread() {
 
     switch (packet.key) {
       case TCS_SHUTDOWN:
-        zxlogf(INFO, "Tcs3400Device::Thread: shutting down\n");
+        zxlogf(INFO, "Tcs3400Device::Thread: shutting down");
         return thrd_success;
       case TCS_CONFIGURE: {
         fbl::AutoLock lock(&feature_lock_);
@@ -157,7 +157,7 @@ int Tcs3400Device::Thread() {
             fbl::AutoLock lock(&i2c_lock_);
             status = i2c_write_sync(&i2c_, &i.cmd, sizeof(setup[0]));
             if (status != ZX_OK) {
-              zxlogf(ERROR, "Tcs3400Device::Thread: i2c_write_sync failed: %d\n", status);
+              zxlogf(ERROR, "Tcs3400Device::Thread: i2c_write_sync failed: %d", status);
               break;  // do not exit thread, future transactions may succeed
             }
           }
@@ -194,7 +194,7 @@ int Tcs3400Device::Thread() {
           uint8_t cmd[] = {TCS_I2C_AICLEAR, 0x00};
           status = i2c_write_sync(&i2c_, &cmd, sizeof(cmd));
           if (status != ZX_OK) {
-            zxlogf(ERROR, "Tcs3400Device::Thread: i2c_write_sync failed: %d\n", status);
+            zxlogf(ERROR, "Tcs3400Device::Thread: i2c_write_sync failed: %d", status);
             // Continue on error, future transactions may succeed
           }
           irq_rearm_timeout = ZX_TIME_INFINITE;
@@ -300,7 +300,7 @@ zx_status_t Tcs3400Device::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, con
   zx_port_packet packet = {TCS_CONFIGURE, ZX_PKT_TYPE_USER, ZX_OK, {}};
   zx_status_t status = zx_port_queue(port_handle_, &packet);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Tcs3400Device::HidbusSetReport: zx_port_queue failed: %d\n", status);
+    zxlogf(ERROR, "Tcs3400Device::HidbusSetReport: zx_port_queue failed: %d", status);
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;
@@ -323,7 +323,7 @@ zx_status_t Tcs3400Device::Bind() {
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get composite protocol\n");
+    zxlogf(ERROR, "Could not get composite protocol");
     return status;
   }
 
@@ -331,7 +331,7 @@ zx_status_t Tcs3400Device::Bind() {
   size_t actual;
   composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
   if (actual != fbl::count_of(fragments)) {
-    zxlogf(ERROR, "could not get fragments\n");
+    zxlogf(ERROR, "could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -352,14 +352,14 @@ zx_status_t Tcs3400Device::Bind() {
 
   status = zx_port_create(ZX_PORT_BIND_TO_INTERRUPT, &port_handle_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Tcs3400Device::Bind: port_create failed: %d\n", status);
+    zxlogf(ERROR, "Tcs3400Device::Bind: port_create failed: %d", status);
     return status;
   }
   metadata::LightSensorParams parameters;
   status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &parameters,
                                sizeof(metadata::LightSensorParams), &actual);
   if (status != ZX_OK || sizeof(metadata::LightSensorParams) != actual) {
-    zxlogf(ERROR, "%s Getting metadata failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s Getting metadata failed %d", __FILE__, status);
     return status;
   }
 
@@ -369,20 +369,20 @@ zx_status_t Tcs3400Device::Bind() {
   // ATIME = 256 - Integration Time / 2.4 ms.
   if (parameters.integration_time_ms <= 615) {
     const uint8_t atime = static_cast<uint8_t>(256 - (parameters.integration_time_ms * 10 / 24));
-    zxlogf(TRACE, "atime (%u)\n", atime);
+    zxlogf(TRACE, "atime (%u)", atime);
     const uint8_t command[2] = {TCS_I2C_ATIME, atime};
     status = i2c_write_sync(&i2c_, &command, countof(command));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s Setting integration time failed %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s Setting integration time failed %d", __FILE__, status);
       return status;
     }
   } else {
-    zxlogf(WARN, "%s Invalid integration time (%u)\n", __FILE__, parameters.integration_time_ms);
+    zxlogf(WARN, "%s Invalid integration time (%u)", __FILE__, parameters.integration_time_ms);
   }
 
   status = zx_interrupt_bind(irq_.get(), port_handle_, TCS_INTERRUPT, 0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Tcs3400Device::Bind: zx_interrupt_bind failed: %d\n", status);
+    zxlogf(ERROR, "Tcs3400Device::Bind: zx_interrupt_bind failed: %d", status);
     return status;
   }
 
@@ -408,14 +408,14 @@ zx_status_t Tcs3400Device::Bind() {
 
   status = DdkAdd("tcs-3400");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Tcs3400Device::Bind: DdkAdd failed: %d\n", status);
+    zxlogf(ERROR, "Tcs3400Device::Bind: DdkAdd failed: %d", status);
     return status;
   }
 
   zx_port_packet packet = {TCS_CONFIGURE, ZX_PKT_TYPE_USER, ZX_OK, {}};
   status = zx_port_queue(port_handle_, &packet);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Tcs3400Device::Bind: zx_port_queue failed: %d\n", status);
+    zxlogf(ERROR, "Tcs3400Device::Bind: zx_port_queue failed: %d", status);
   }
 
   cleanup.cancel();

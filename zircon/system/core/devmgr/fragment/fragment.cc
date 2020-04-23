@@ -67,7 +67,7 @@ zx_status_t Fragment::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8
   }
   auto* req = reinterpret_cast<const AmlogicCanvasProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
   auto* resp = reinterpret_cast<AmlogicCanvasProxyResponse*>(resp_buf);
@@ -76,19 +76,19 @@ zx_status_t Fragment::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8
   switch (req->op) {
     case AmlogicCanvasOp::CONFIG:
       if (req_handle_count != 1) {
-        zxlogf(ERROR, "%s received %u handles, expecting 1\n", __func__, req_handle_count);
+        zxlogf(ERROR, "%s received %u handles, expecting 1", __func__, req_handle_count);
         return ZX_ERR_INTERNAL;
       }
       return canvas_client_.proto_client().Config(zx::vmo(std::move(req_handles[0])), req->offset,
                                                   &req->info, &resp->canvas_idx);
     case AmlogicCanvasOp::FREE:
       if (req_handle_count != 0) {
-        zxlogf(ERROR, "%s received %u handles, expecting 0\n", __func__, req_handle_count);
+        zxlogf(ERROR, "%s received %u handles, expecting 0", __func__, req_handle_count);
         return ZX_ERR_INTERNAL;
       }
       return canvas_client_.proto_client().Free(req->canvas_idx);
     default:
-      zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown clk op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -102,7 +102,7 @@ zx_status_t Fragment::RpcButtons(const uint8_t* req_buf, uint32_t req_size, uint
   }
   auto* req = reinterpret_cast<const ButtonsProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
   auto* resp = reinterpret_cast<ButtonsProxyResponse*>(resp_buf);
@@ -111,12 +111,12 @@ zx_status_t Fragment::RpcButtons(const uint8_t* req_buf, uint32_t req_size, uint
   switch (req->op) {
     case ButtonsOp::GET_NOTIFY_CHANNEL:
       if (req_handle_count != 1) {
-        zxlogf(ERROR, "%s received %u handles, expecting 1\n", __func__, req_handle_count);
+        zxlogf(ERROR, "%s received %u handles, expecting 1", __func__, req_handle_count);
         return ZX_ERR_INTERNAL;
       }
       return buttons_client_.proto_client().GetChannel(zx::channel(std::move(req_handles[0])));
     default:
-      zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown clk op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -130,7 +130,7 @@ zx_status_t Fragment::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_
   }
   auto* req = reinterpret_cast<const ClockProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
   auto* resp = reinterpret_cast<ClockProxyResponse*>(resp_buf);
@@ -156,7 +156,7 @@ zx_status_t Fragment::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_
     case ClockOp::GET_INPUT:
       return clock_client_.proto_client().GetInput(&resp->current_input);
     default:
-      zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown clk op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -170,7 +170,7 @@ zx_status_t Fragment::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, uin
   }
   auto* req = reinterpret_cast<const EthBoardProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
   auto* resp = reinterpret_cast<ProxyResponse*>(resp_buf);
@@ -180,7 +180,7 @@ zx_status_t Fragment::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, uin
     case EthBoardOp::RESET_PHY:
       return eth_board_client_.proto_client().ResetPhy();
     default:
-      zxlogf(ERROR, "%s: unknown ETH_BOARD op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown ETH_BOARD op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -194,7 +194,7 @@ zx_status_t Fragment::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
   auto* req = reinterpret_cast<const GpioProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
   auto* resp = reinterpret_cast<GpioProxyResponse*>(resp_buf);
@@ -225,7 +225,7 @@ zx_status_t Fragment::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t
     case GpioOp::SET_POLARITY:
       return gpio_client_.proto_client().SetPolarity(req->polarity);
     default:
-      zxlogf(ERROR, "%s: unknown GPIO op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown GPIO op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -292,7 +292,7 @@ zx_status_t Fragment::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t*
   }
   auto* req = reinterpret_cast<const I2cProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
   auto* resp = reinterpret_cast<I2cProxyResponse*>(resp_buf);
@@ -348,7 +348,7 @@ zx_status_t Fragment::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t*
       return status;
     }
     default:
-      zxlogf(ERROR, "%s: unknown I2C op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown I2C op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -362,7 +362,7 @@ zx_status_t Fragment::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
   auto* req = reinterpret_cast<const PdevProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
   auto* resp = reinterpret_cast<PdevProxyResponse*>(resp_buf);
@@ -412,7 +412,7 @@ zx_status_t Fragment::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_t
     case PdevOp::GET_BOARD_INFO:
       return pdev_client_.proto_client().GetBoardInfo(&resp->board_info);
     default:
-      zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown pdev op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -426,7 +426,7 @@ zx_status_t Fragment::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_
   }
   auto* req = reinterpret_cast<const PowerProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __FUNCTION__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
 
@@ -449,7 +449,7 @@ zx_status_t Fragment::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_
     case PowerOp::READ_PMIC_CTRL_REG:
       return power_client_.proto_client().ReadPmicCtrlReg(req->reg_addr, &resp->reg_value);
     default:
-      zxlogf(ERROR, "%s: unknown Power op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown Power op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -463,7 +463,7 @@ zx_status_t Fragment::RpcPwm(const uint8_t* req_buf, uint32_t req_size, uint8_t*
   }
   auto* req = reinterpret_cast<const PwmProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __FUNCTION__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
 
@@ -493,7 +493,7 @@ zx_status_t Fragment::RpcPwm(const uint8_t* req_buf, uint32_t req_size, uint8_t*
     case PwmOp::DISABLE:
       return pwm_client_.proto_client().Disable();
     default:
-      zxlogf(ERROR, "%s: unknown Pwm op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown Pwm op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -507,7 +507,7 @@ zx_status_t Fragment::RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t*
   }
   auto req = reinterpret_cast<const SpiProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
 
@@ -533,7 +533,7 @@ zx_status_t Fragment::RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t*
       return spi_client_.proto_client().Exchange(txbuf, req->length, rxbuf, req->length, &actual);
     }
     default:
-      zxlogf(ERROR, "%s: unknown SPI op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown SPI op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -547,7 +547,7 @@ zx_status_t Fragment::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint8
   }
   auto* req = reinterpret_cast<const SysmemProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
   uint32_t expected_handle_count;
@@ -562,7 +562,7 @@ zx_status_t Fragment::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint8
       break;
   }
   if (req_handle_count != expected_handle_count) {
-    zxlogf(ERROR, "%s received %u handles, expecting %u op %u\n", __func__, req_handle_count,
+    zxlogf(ERROR, "%s received %u handles, expecting %u op %u", __func__, req_handle_count,
            expected_handle_count, static_cast<uint32_t>(req->op));
     return ZX_ERR_INTERNAL;
   }
@@ -580,7 +580,7 @@ zx_status_t Fragment::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint8
     case SysmemOp::UNREGISTER_SECURE_MEM:
       return sysmem_client_.proto_client().UnregisterSecureMem();
     default:
-      zxlogf(ERROR, "%s: unknown sysmem op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown sysmem op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -594,11 +594,11 @@ zx_status_t Fragment::RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t*
   }
   auto* req = reinterpret_cast<const TeeProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
   if (req_handle_count < 1 || req_handle_count > 2) {
-    zxlogf(ERROR, "%s received %u handles, expecting 1-2\n", __func__, req_handle_count);
+    zxlogf(ERROR, "%s received %u handles, expecting 1-2", __func__, req_handle_count);
     return ZX_ERR_INTERNAL;
   }
   *out_resp_size = sizeof(ProxyResponse);
@@ -614,7 +614,7 @@ zx_status_t Fragment::RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t*
                                                 std::move(service_provider));
     }
     default:
-      zxlogf(ERROR, "%s: unknown sysmem op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown sysmem op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -628,7 +628,7 @@ zx_status_t Fragment::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t*
   }
   auto* req = reinterpret_cast<const UsbModeSwitchProxyRequest*>(req_buf);
   if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, req_size, sizeof(*req));
+    zxlogf(ERROR, "%s received %u, expecting %zu", __FUNCTION__, req_size, sizeof(*req));
     return ZX_ERR_INTERNAL;
   }
 
@@ -638,7 +638,7 @@ zx_status_t Fragment::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t*
     case UsbModeSwitchOp::SET_MODE:
       return ums_client_.proto_client().SetMode(req->mode);
     default:
-      zxlogf(ERROR, "%s: unknown USB Mode Switch op %u\n", __func__,
+      zxlogf(ERROR, "%s: unknown USB Mode Switch op %u", __func__,
              static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
@@ -825,7 +825,7 @@ zx_status_t Fragment::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_
       return status;
     }
     default:
-      zxlogf(ERROR, "%s: unknown CODEC op %u\n", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown CODEC op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -851,7 +851,7 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
   auto status = zx_channel_read(raw_channel, 0, &req_buf, req_handles_raw, sizeof(req_buf),
                                 fbl::count_of(req_handles_raw), &actual, &req_handle_count);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d\n", status);
+    zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d", status);
     return status;
   }
 
@@ -928,7 +928,7 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
                         resp_handles, &resp_handle_count);
       break;
     default:
-      zxlogf(ERROR, "%s: unknown protocol %u\n", __func__, req_header->proto_id);
+      zxlogf(ERROR, "%s: unknown protocol %u", __func__, req_header->proto_id);
       return ZX_ERR_INTERNAL;
   }
 
@@ -945,7 +945,7 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
   status = zx_channel_write(raw_channel, 0, resp_header, resp_len,
                             (resp_handle_count ? resp_handles_raw : nullptr), resp_handle_count);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d\n", status);
+    zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d", status);
   }
   return status;
 }

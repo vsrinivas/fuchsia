@@ -89,7 +89,7 @@ void I2cDevice::AddChildren() {
   size_t metadata_size;
   auto status = device_get_metadata_size(zxdev(), DEVICE_METADATA_I2C_CHANNELS, &metadata_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __func__, status);
     return;
   }
   auto channel_count = metadata_size / sizeof(i2c_channel_t);
@@ -97,7 +97,7 @@ void I2cDevice::AddChildren() {
   fbl::AllocChecker ac;
   std::unique_ptr<i2c_channel_t[]> channels(new (&ac) i2c_channel_t[channel_count]);
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: out of memory\n", __func__);
+    zxlogf(ERROR, "%s: out of memory", __func__);
     return;
   }
 
@@ -105,7 +105,7 @@ void I2cDevice::AddChildren() {
   status = device_get_metadata(zxdev(), DEVICE_METADATA_I2C_CHANNELS, channels.get(), metadata_size,
                                &actual);
   if (status != ZX_OK || actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, status);
     return;
   }
 
@@ -118,14 +118,14 @@ void I2cDevice::AddChildren() {
     const auto did = channel.did;
 
     if (bus_id >= i2c_buses_.size()) {
-      zxlogf(ERROR, "%s: bus_id %u out of range\n", __func__, bus_id);
+      zxlogf(ERROR, "%s: bus_id %u out of range", __func__, bus_id);
       return;
     }
 
     fbl::AllocChecker ac;
     std::unique_ptr<I2cChild> dev(new (&ac) I2cChild(zxdev(), i2c_buses_[bus_id], channel.address));
     if (!ac.check()) {
-      zxlogf(ERROR, "%s: out of memory\n", __func__);
+      zxlogf(ERROR, "%s: out of memory", __func__);
       return;
     }
 
@@ -150,7 +150,7 @@ void I2cDevice::AddChildren() {
     }
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAdd failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s: DdkAdd failed %d", __func__, status);
       return;
     }
 

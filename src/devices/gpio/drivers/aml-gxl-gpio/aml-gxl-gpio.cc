@@ -51,20 +51,20 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
 
   pdev_protocol_t pdev;
   if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev)) != ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: ZX_PROTOCOL_PDEV not available\n");
+    zxlogf(ERROR, "AmlGxlGpio::Create: ZX_PROTOCOL_PDEV not available");
     return status;
   }
 
   pbus_protocol_t pbus;
   if ((status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus)) != ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: ZX_PROTOCOL_PBUS not available\n");
+    zxlogf(ERROR, "AmlGxlGpio::Create: ZX_PROTOCOL_PBUS not available");
     return status;
   }
 
   mmio_buffer_t mmio;
   status = pdev_map_mmio_buffer(&pdev, MMIO_GPIO, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: pdev_map_mmio_buffer failed\n");
+    zxlogf(ERROR, "AmlGxlGpio::Create: pdev_map_mmio_buffer failed");
     return status;
   }
 
@@ -72,7 +72,7 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
 
   status = pdev_map_mmio_buffer(&pdev, MMIO_GPIO_A0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: pdev_map_mmio_buffer failed\n");
+    zxlogf(ERROR, "AmlGxlGpio::Create: pdev_map_mmio_buffer failed");
     return status;
   }
 
@@ -81,7 +81,7 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
   status =
       pdev_map_mmio_buffer(&pdev, MMIO_GPIO_INTERRUPTS, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: pdev_map_mmio_buffer failed\n");
+    zxlogf(ERROR, "AmlGxlGpio::Create: pdev_map_mmio_buffer failed");
     return status;
   }
 
@@ -89,7 +89,7 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
 
   pdev_device_info_t info;
   if ((status = pdev_get_device_info(&pdev, &info)) != ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: pdev_get_device_info failed\n");
+    zxlogf(ERROR, "AmlGxlGpio::Create: pdev_get_device_info failed");
     return status;
   }
 
@@ -106,7 +106,7 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
       block_count = countof(s912_gpio_blocks);
       break;
     default:
-      zxlogf(ERROR, "AmlGxlGpio::Create: unsupported SOC PID %u\n", info.pid);
+      zxlogf(ERROR, "AmlGxlGpio::Create: unsupported SOC PID %u", info.pid);
       return ZX_ERR_INVALID_ARGS;
   }
 
@@ -114,13 +114,13 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
 
   fbl::Array<uint16_t> irq_info(new (&ac) uint16_t[info.irq_count], info.irq_count);
   if (!ac.check()) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: irq_info alloc failed\n");
+    zxlogf(ERROR, "AmlGxlGpio::Create: irq_info alloc failed");
     return ZX_ERR_NO_MEMORY;
   }
 
   fbl::Array<fbl::Mutex> block_locks(new (&ac) fbl::Mutex[block_count], block_count);
   if (!ac.check()) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: block locks alloc failed\n");
+    zxlogf(ERROR, "AmlGxlGpio::Create: block locks alloc failed");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -129,14 +129,14 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
                            std::move(mmio_interrupt), gpio_blocks, gpio_interrupt, pinmux_blocks,
                            block_count, std::move(block_locks), std::move(irq_info)));
   if (!ac.check()) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: device object alloc failed\n");
+    zxlogf(ERROR, "AmlGxlGpio::Create: device object alloc failed");
     return ZX_ERR_NO_MEMORY;
   }
 
   device->Bind(pbus);
 
   if ((status = device->DdkAdd("aml-gxl-gpio")) != ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: DdkAdd failed\n");
+    zxlogf(ERROR, "AmlGxlGpio::Create: DdkAdd failed");
     return status;
   }
 
@@ -181,7 +181,7 @@ zx_status_t AmlGxlGpio::GpioImplConfigIn(uint32_t index, uint32_t flags) {
   uint32_t pin_index;
   fbl::Mutex* block_lock;
   if ((status = AmlPinToBlock(index, &block, &pin_index, &block_lock)) != ZX_OK) {
-    zxlogf(ERROR, "AmGxlGpio::GpioImplConfigIn: pin not found %u\n", index);
+    zxlogf(ERROR, "AmGxlGpio::GpioImplConfigIn: pin not found %u", index);
     return status;
   }
 
@@ -222,7 +222,7 @@ zx_status_t AmlGxlGpio::GpioImplConfigOut(uint32_t index, uint8_t initial_value)
   uint32_t pin_index;
   fbl::Mutex* block_lock;
   if ((status = AmlPinToBlock(index, &block, &pin_index, &block_lock)) != ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::GpioImplConfigOut: pin not found %u\n", index);
+    zxlogf(ERROR, "AmlGxlGpio::GpioImplConfigOut: pin not found %u", index);
     return status;
   }
 
@@ -288,7 +288,7 @@ zx_status_t AmlGxlGpio::GpioImplRead(uint32_t pin, uint8_t* out_value) {
   uint32_t pin_index;
   fbl::Mutex* block_lock;
   if ((status = AmlPinToBlock(pin, &block, &pin_index, &block_lock)) != ZX_OK) {
-    zxlogf(ERROR, "AmGxlGpio::GpioImplRead: pin not found %u\n", pin);
+    zxlogf(ERROR, "AmGxlGpio::GpioImplRead: pin not found %u", pin);
     return status;
   }
 
@@ -315,7 +315,7 @@ zx_status_t AmlGxlGpio::GpioImplWrite(uint32_t pin, uint8_t value) {
   uint32_t pin_index;
   fbl::Mutex* block_lock;
   if ((status = AmlPinToBlock(pin, &block, &pin_index, &block_lock)) != ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::GpioImplWrite: pin not found %u\n", pin);
+    zxlogf(ERROR, "AmlGxlGpio::GpioImplWrite: pin not found %u", pin);
     return status;
   }
 
@@ -352,19 +352,19 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
 
   for (uint32_t i = 0; i < irq_info_.size(); i++) {
     if (irq_info_[i] == pin) {
-      zxlogf(ERROR, "GPIO Interrupt already configured for this pin %u\n", (int)index);
+      zxlogf(ERROR, "GPIO Interrupt already configured for this pin %u", (int)index);
       return ZX_ERR_ALREADY_EXISTS;
     }
   }
 
-  zxlogf(TRACE, "GPIO Interrupt index %d allocated\n", (int)index);
+  zxlogf(TRACE, "GPIO Interrupt index %d allocated", (int)index);
 
   zx_status_t status;
   const AmlGpioBlock* block;
   uint32_t pin_index;
   fbl::Mutex* block_lock;
   if ((status = AmlPinToBlock(pin, &block, &pin_index, &block_lock)) != ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::GpioImplGetInterrupt: pin not found %u\n", pin);
+    zxlogf(ERROR, "AmlGxlGpio::GpioImplGetInterrupt: pin not found %u", pin);
     return status;
   }
 
@@ -379,7 +379,7 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
   // Create Interrupt Object
   if ((status = pdev_get_interrupt(&pdev_, index, flags_, out_irq->reset_and_get_address())) !=
       ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::GpioImplGetInterrupt: pdev_get_interrupt failed %d\n", status);
+    zxlogf(ERROR, "AmlGxlGpio::GpioImplGetInterrupt: pdev_get_interrupt failed %d", status);
     return status;
   }
 

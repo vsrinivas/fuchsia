@@ -110,7 +110,7 @@ void UsbMassStorageDevice::RequestQueue(usb_request_t* request,
 // Performs the object initialization.
 zx_status_t UsbMassStorageDevice::Init() {
   dead_ = false;
-  zxlogf(INFO, "UMS: parent: '%s'\n", device_get_name(parent()));
+  zxlogf(INFO, "UMS: parent: '%s'", device_get_name(parent()));
   // Add root device, which will contain block devices for logical units
   zx_status_t status = DdkAdd("ums", DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INVISIBLE);
   if (status != ZX_OK) {
@@ -176,7 +176,7 @@ zx_status_t UsbMassStorageDevice::Init() {
     // See USB Mass Storage Class Spec. 3.2 Get Max LUN.
     // Clear the stall.
     usb.ResetEndpoint(0);
-    zxlogf(INFO, "Device does not support multiple LUNs\n");
+    zxlogf(INFO, "Device does not support multiple LUNs");
     max_lun = 0;
   } else if (status != ZX_OK) {
     return status;
@@ -583,7 +583,7 @@ zx_status_t UsbMassStorageDevice::Read(UmsBlockDevice* dev, Transaction* txn) {
     uint32_t residue;
     status = ReadCsw(&residue);
     if (status == ZX_OK && residue) {
-      zxlogf(ERROR, "unexpected residue in Read\n");
+      zxlogf(ERROR, "unexpected residue in Read");
       status = ZX_ERR_IO;
     }
   }
@@ -648,7 +648,7 @@ zx_status_t UsbMassStorageDevice::Write(UmsBlockDevice* dev, Transaction* txn) {
     uint32_t residue;
     status = ReadCsw(&residue);
     if (status == ZX_OK && residue) {
-      zxlogf(ERROR, "unexpected residue in Write\n");
+      zxlogf(ERROR, "unexpected residue in Write");
       status = ZX_ERR_IO;
     }
   }
@@ -663,7 +663,7 @@ zx_status_t UsbMassStorageDevice::AddBlockDevice(fbl::RefPtr<UmsBlockDevice> dev
   scsi_read_capacity_10_t data;
   zx_status_t status = ReadCapacity(lun, &data);
   if (status < 0) {
-    zxlogf(ERROR, "read_capacity10 failed: %d\n", status);
+    zxlogf(ERROR, "read_capacity10 failed: %d", status);
     return status;
   }
 
@@ -674,7 +674,7 @@ zx_status_t UsbMassStorageDevice::AddBlockDevice(fbl::RefPtr<UmsBlockDevice> dev
     scsi_read_capacity_16_t data;
     status = ReadCapacity(lun, &data);
     if (status < 0) {
-      zxlogf(ERROR, "read_capacity16 failed: %d\n", status);
+      zxlogf(ERROR, "read_capacity16 failed: %d", status);
       return status;
     }
 
@@ -682,7 +682,7 @@ zx_status_t UsbMassStorageDevice::AddBlockDevice(fbl::RefPtr<UmsBlockDevice> dev
     params.block_size = betoh32(data.block_length);
   }
   if (params.block_size == 0) {
-    zxlogf(ERROR, "UMS zero block size\n");
+    zxlogf(ERROR, "UMS zero block size");
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -694,14 +694,14 @@ zx_status_t UsbMassStorageDevice::AddBlockDevice(fbl::RefPtr<UmsBlockDevice> dev
   scsi_mode_sense_6_data_t ms_data;
   status = ModeSense(lun, &ms_data);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ModeSense failed: %d\n", status);
+    zxlogf(ERROR, "ModeSense failed: %d", status);
     return status;
   }
   unsigned char cache_sense[20];
   status = ModeSense(lun, 0x08, cache_sense, sizeof(cache_sense));
   params = dev->GetBlockDeviceParameters();
   if (status != ZX_OK) {
-    zxlogf(WARN, "CacheSense failed: %d\n", status);
+    zxlogf(WARN, "CacheSense failed: %d", status);
     params.cache_enabled = true;
   } else {
     params.cache_enabled = cache_sense[6] & (1 << 2);
@@ -749,7 +749,7 @@ zx_status_t UsbMassStorageDevice::CheckLunsReady() {
       if (status == ZX_OK) {
         params.device_added = true;
       } else {
-        zxlogf(ERROR, "UMS: device_add for block device failed %d\n", status);
+        zxlogf(ERROR, "UMS: device_add for block device failed %d", status);
       }
     } else if (!ready && params.device_added) {
       dev->DdkRemoveDeprecated();
@@ -768,7 +768,7 @@ int UsbMassStorageDevice::WorkerThread() {
     uint8_t inquiry_data[UMS_INQUIRY_TRANSFER_LENGTH];
     status = Inquiry(lun, inquiry_data);
     if (status < 0) {
-      zxlogf(ERROR, "Inquiry failed for lun %d status: %d\n", lun, status);
+      zxlogf(ERROR, "Inquiry failed for lun %d status: %d", lun, status);
       DdkRemoveDeprecated();
       return status;
     }
@@ -817,7 +817,7 @@ int UsbMassStorageDevice::WorkerThread() {
       }
       current_txn = txn;
     }
-    zxlogf(TRACE, "UMS PROCESS (%p)\n", &txn->op);
+    zxlogf(TRACE, "UMS PROCESS (%p)", &txn->op);
 
     UmsBlockDevice* dev = txn->dev;
     const auto& params = dev->GetBlockDeviceParameters();
@@ -825,13 +825,13 @@ int UsbMassStorageDevice::WorkerThread() {
     switch (txn->op.command & BLOCK_OP_MASK) {
       case BLOCK_OP_READ:
         if ((status = Read(dev, txn)) != ZX_OK) {
-          zxlogf(ERROR, "ums: read of %u @ %zu failed: %d\n", txn->op.rw.length,
+          zxlogf(ERROR, "ums: read of %u @ %zu failed: %d", txn->op.rw.length,
                  txn->op.rw.offset_dev, status);
         }
         break;
       case BLOCK_OP_WRITE:
         if ((status = Write(dev, txn)) != ZX_OK) {
-          zxlogf(ERROR, "ums: write of %u @ %zu failed: %d\n", txn->op.rw.length,
+          zxlogf(ERROR, "ums: write of %u @ %zu failed: %d", txn->op.rw.length,
                  txn->op.rw.offset_dev, status);
         }
         break;
@@ -846,7 +846,7 @@ int UsbMassStorageDevice::WorkerThread() {
           uint32_t residue;
           status = ReadCsw(&residue);
           if (status == ZX_OK && residue) {
-            zxlogf(ERROR, "unexpected residue in Write\n");
+            zxlogf(ERROR, "unexpected residue in Write");
             status = ZX_ERR_IO;
           }
         } else {
@@ -877,11 +877,11 @@ int UsbMassStorageDevice::WorkerThread() {
   while ((txn = list_remove_head_type(&queued_txns_, Transaction, node)) != NULL) {
     switch (txn->op.command & BLOCK_OP_MASK) {
       case BLOCK_OP_READ:
-        zxlogf(ERROR, "ums: read of %u @ %zu discarded during unbind\n", txn->op.rw.length,
+        zxlogf(ERROR, "ums: read of %u @ %zu discarded during unbind", txn->op.rw.length,
                txn->op.rw.offset_dev);
         break;
       case BLOCK_OP_WRITE:
-        zxlogf(ERROR, "ums: write of %u @ %zu discarded during unbind\n", txn->op.rw.length,
+        zxlogf(ERROR, "ums: write of %u @ %zu discarded during unbind", txn->op.rw.length,
                txn->op.rw.offset_dev);
         break;
     }

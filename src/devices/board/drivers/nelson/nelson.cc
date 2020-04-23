@@ -46,7 +46,7 @@ uint32_t Nelson::GetBoardRev() {
   if (board_rev >= MAX_SUPPORTED_REV) {
     // We have detected a new board rev. Print this warning just in case the
     // new board rev requires additional support that we were not aware of
-    zxlogf(INFO, "Unsupported board revision detected (%d)\n", board_rev);
+    zxlogf(INFO, "Unsupported board revision detected (%d)", board_rev);
   }
 
   return board_rev;
@@ -57,12 +57,12 @@ int Nelson::Thread() {
 
   // Sysmem is started early so zx_vmo_create_contiguous() works.
   if ((status = SysmemInit()) != ZX_OK) {
-    zxlogf(ERROR, "%s: SysmemInit() failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: SysmemInit() failed: %d", __func__, status);
     return status;
   }
 
   if ((status = GpioInit()) != ZX_OK) {
-    zxlogf(ERROR, "%s: GpioInit() failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: GpioInit() failed: %d", __func__, status);
     return status;
   }
 
@@ -71,105 +71,105 @@ int Nelson::Thread() {
   info.board_revision = GetBoardRev();
   status = pbus_.SetBoardInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: PBusSetBoardInfo failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: PBusSetBoardInfo failed: %d", __func__, status);
   }
-  zxlogf(INFO, "Detected board rev 0x%x\n", info.board_revision);
+  zxlogf(INFO, "Detected board rev 0x%x", info.board_revision);
 
   if ((info.board_revision != BOARD_REV_P1) && (info.board_revision != BOARD_REV_P2)) {
-    zxlogf(ERROR, "Unsupported board revision %u. Booting will not continue\n",
+    zxlogf(ERROR, "Unsupported board revision %u. Booting will not continue",
            info.board_revision);
     return -1;
   }
 
   if ((status = ClkInit()) != ZX_OK) {
-    zxlogf(ERROR, "ClkInit failed: %d\n", status);
+    zxlogf(ERROR, "ClkInit failed: %d", status);
   }
 
   if ((status = ButtonsInit()) != ZX_OK) {
-    zxlogf(ERROR, "ButtonsInit failed: %d\n", status);
+    zxlogf(ERROR, "ButtonsInit failed: %d", status);
   }
 
   if ((status = I2cInit()) != ZX_OK) {
-    zxlogf(ERROR, "I2cInit failed: %d\n", status);
+    zxlogf(ERROR, "I2cInit failed: %d", status);
   }
 
   if ((status = CpuInit()) != ZX_OK) {
-    zxlogf(ERROR, "CpuInit failed: %d\n", status);
+    zxlogf(ERROR, "CpuInit failed: %d", status);
   }
 
   if ((status = SpiInit()) != ZX_OK) {
-    zxlogf(ERROR, "SpiInit failed: %d\n", status);
+    zxlogf(ERROR, "SpiInit failed: %d", status);
   }
 
   if ((status = MaliInit()) != ZX_OK) {
-    zxlogf(ERROR, "MaliInit failed: %d\n", status);
+    zxlogf(ERROR, "MaliInit failed: %d", status);
   }
 
   if ((status = UsbInit()) != ZX_OK) {
-    zxlogf(ERROR, "UsbInit failed: %d\n", status);
+    zxlogf(ERROR, "UsbInit failed: %d", status);
   }
 
   // TODO(fxb/48099): Enable init once the touch driver has landed.
   // if ((status = TouchInit()) != ZX_OK) {
-  //   zxlogf(ERROR, "TouchInit failed: %d\n", status);
+  //   zxlogf(ERROR, "TouchInit failed: %d", status);
   // }
 
   if ((status = DisplayInit()) != ZX_OK) {
-    zxlogf(ERROR, "DisplayInit failed: %d\n", status);
+    zxlogf(ERROR, "DisplayInit failed: %d", status);
   }
 
   if ((status = CanvasInit()) != ZX_OK) {
-    zxlogf(ERROR, "CanvasInit failed: %d\n", status);
+    zxlogf(ERROR, "CanvasInit failed: %d", status);
   }
 
   if ((status = PwmInit()) != ZX_OK) {
-    zxlogf(ERROR, "PwmInit failed: %d\n", status);
+    zxlogf(ERROR, "PwmInit failed: %d", status);
   }
 
   if ((status = TeeInit()) != ZX_OK) {
-    zxlogf(ERROR, "TeeInit failed: %d\n", status);
+    zxlogf(ERROR, "TeeInit failed: %d", status);
   }
 
   if ((status = VideoInit()) != ZX_OK) {
-    zxlogf(ERROR, "VideoInit failed: %d\n", status);
+    zxlogf(ERROR, "VideoInit failed: %d", status);
   }
 
   if ((status = pbus_.DeviceAdd(&rtc_dev)) != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed - RTC: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed - RTC: %d", __func__, status);
   }
 
   if ((status = EmmcInit()) != ZX_OK) {
-    zxlogf(ERROR, "EmmcInit() failed: %d\n", status);
+    zxlogf(ERROR, "EmmcInit() failed: %d", status);
   }
 
   if ((status = SdioInit()) != ZX_OK) {
-    zxlogf(ERROR, "SdioInit failed: %d\n", status);
+    zxlogf(ERROR, "SdioInit failed: %d", status);
   }
 
   if ((status = LightInit()) != ZX_OK) {
-    zxlogf(ERROR, "LightInit failed: %d\n", status);
+    zxlogf(ERROR, "LightInit failed: %d", status);
   }
 
   if ((status = ThermalInit()) != ZX_OK) {
-    zxlogf(ERROR, "ThermalInit failed: %d\n", status);
+    zxlogf(ERROR, "ThermalInit failed: %d", status);
   }
 
   if ((status = AudioInit()) != ZX_OK) {
-    zxlogf(ERROR, "AudioInit failed: %d\n", status);
+    zxlogf(ERROR, "AudioInit failed: %d", status);
   }
 
   if ((status = SecureMemInit()) != ZX_OK) {
-    zxlogf(ERROR, "SecureMemInit failed: %d\n", status);
+    zxlogf(ERROR, "SecureMemInit failed: %d", status);
   }
 
   if ((status = BacklightInit()) != ZX_OK) {
-    zxlogf(ERROR, "BacklightInit failed: %d\n", status);
+    zxlogf(ERROR, "BacklightInit failed: %d", status);
   }
 
   // This function includes some non-trivial delays, so lets run this last
   // to avoid slowing down the rest of the boot.
   if ((status = BluetoothInit()) != ZX_OK) {
-    zxlogf(ERROR, "BluetoothInit failed: %d\n", status);
+    zxlogf(ERROR, "BluetoothInit failed: %d", status);
   }
 
   return ZX_OK;

@@ -137,7 +137,7 @@ zx_status_t Nelson::VideoInit() {
   zx_status_t status;
   if ((status = pbus_.CompositeDeviceAdd(&video_dev, fragments, countof(fragments), UINT32_MAX)) !=
       ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd() failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd() failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

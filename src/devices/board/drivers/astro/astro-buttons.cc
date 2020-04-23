@@ -105,7 +105,7 @@ zx_status_t Astro::ButtonsInit() {
 
   zx_status_t status = DdkAddComposite("astro-buttons", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 

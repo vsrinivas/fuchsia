@@ -52,7 +52,7 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
 IfaceDevice::IfaceDevice(zx_device_t* device, uint16_t role) : parent_(device), role_(role) {}
 
 zx_status_t IfaceDevice::Bind() {
-  zxlogf(INFO, "wlan::testing::IfaceDevice::Bind()\n");
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Bind()");
 
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
@@ -64,23 +64,23 @@ zx_status_t IfaceDevice::Bind() {
 
   zx_status_t status = device_add(parent_, &args, &zxdev_);
   if (status != ZX_OK) {
-    zxlogf(INFO, "wlan-test: could not add test device: %d\n", status);
+    zxlogf(INFO, "wlan-test: could not add test device: %d", status);
   }
   return status;
 }
 
 void IfaceDevice::Unbind() {
-  zxlogf(INFO, "wlan::testing::IfaceDevice::Unbind()\n");
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Unbind()");
   device_remove_deprecated(zxdev_);
 }
 
 void IfaceDevice::Release() {
-  zxlogf(INFO, "wlan::testing::IfaceDevice::Release()\n");
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Release()");
   delete this;
 }
 
 zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
-  zxlogf(INFO, "wlan::testing::IfaceDevice::Query()\n");
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Query()");
   memset(info, 0, sizeof(*info));
 
   wlan_info_t* ifc_info = &info->ifc_info;
@@ -128,14 +128,14 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
 }
 
 void IfaceDevice::Stop() {
-  zxlogf(INFO, "wlan::testing::IfaceDevice::Stop()\n");
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Stop()");
   std::lock_guard<std::mutex> lock(lock_);
   ifc_.ops = nullptr;
   ifc_.ctx = nullptr;
 }
 
 zx_status_t IfaceDevice::Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel) {
-  zxlogf(INFO, "wlan::testing::IfaceDevice::Start()\n");
+  zxlogf(INFO, "wlan::testing::IfaceDevice::Start()");
   std::lock_guard<std::mutex> lock(lock_);
   *out_sme_channel = ZX_HANDLE_INVALID;
   if (ifc_.ops != nullptr) {
@@ -147,7 +147,7 @@ zx_status_t IfaceDevice::Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* o
 }
 
 zx_status_t IfaceDevice::SetChannel(uint32_t options, const wlan_channel_t* chan) {
-  zxlogf(INFO, "wlan::testing::IfaceDevice::SetChannel()  chan=%u\n", chan->primary);
+  zxlogf(INFO, "wlan::testing::IfaceDevice::SetChannel()  chan=%u", chan->primary);
   return ZX_OK;
 }
 

@@ -93,7 +93,7 @@ zx_status_t Device::Bind() {
   }
 
   if (!bulk_out_addr) {
-    zxlogf(ERROR, "could not find bulk out endpoint\n");
+    zxlogf(ERROR, "could not find bulk out endpoint");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -101,7 +101,7 @@ zx_status_t Device::Bind() {
 
   status = DdkAdd("virtual-bus-test");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "device_add failed\n");
+    zxlogf(ERROR, "device_add failed");
     return status;
   }
 

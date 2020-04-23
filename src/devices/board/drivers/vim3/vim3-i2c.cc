@@ -108,7 +108,7 @@ zx_status_t Vim3::I2cInit() {
 
   zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "I2cInit: DeviceAdd failed: %d\n", status);
+    zxlogf(ERROR, "I2cInit: DeviceAdd failed: %d", status);
     return status;
   }
 

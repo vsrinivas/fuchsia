@@ -113,7 +113,7 @@ zx_status_t Astro::I2cInit() {
 
   zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;
   }
 

@@ -40,11 +40,11 @@ fit::result<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>, zx_status_t> G
   std::unique_ptr<virtio::Backend> backend = nullptr;
   uint8_t offset;
   if (pci_get_first_capability(&pci, PCI_CAP_ID_VENDOR, &offset) == ZX_OK) {
-    zxlogf(SPEW, "virtio %02x:%02x.%1x using modern PCI backend\n", info.bus_id, info.dev_id,
+    zxlogf(SPEW, "virtio %02x:%02x.%1x using modern PCI backend", info.bus_id, info.dev_id,
            info.func_id);
     backend.reset(new virtio::PciModernBackend(pci, info));
   } else {
-    zxlogf(SPEW, "virtio %02x:%02x.%1x using legacy PCI backend\n", info.bus_id, info.dev_id,
+    zxlogf(SPEW, "virtio %02x:%02x.%1x using legacy PCI backend", info.bus_id, info.dev_id,
            info.func_id);
     backend.reset(new virtio::PciLegacyBackend(pci, info));
   }

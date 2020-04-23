@@ -75,10 +75,10 @@ zx_status_t Dfu::Download(uint16_t block_num, uint8_t* buf, size_t len_to_write)
       ControlReq(USB_DIR_OUT, USB_DFU_DNLOAD, block_num, buf, len_to_write, &out_len);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "DNLOAD returned err %d\n", status);
+    zxlogf(ERROR, "DNLOAD returned err %d", status);
     return status;
   } else if (out_len != len_to_write) {
-    zxlogf(ERROR, "DNLOAD returned bad len, want: %lu, got: %lu\n", len_to_write, out_len);
+    zxlogf(ERROR, "DNLOAD returned bad len, want: %lu, got: %lu", len_to_write, out_len);
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -90,10 +90,10 @@ zx_status_t Dfu::GetStatus(usb_dfu_get_status_data_t* out_status) {
   zx_status_t status =
       ControlReq(USB_DIR_IN, USB_DFU_GET_STATUS, 0, out_status, want_len, &out_len);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "GET_STATUS returned err %d\n", status);
+    zxlogf(ERROR, "GET_STATUS returned err %d", status);
     return status;
   } else if (out_len != want_len) {
-    zxlogf(ERROR, "GET_STATUS returned bad len, want: %lu, got: %lu\n", want_len, out_len);
+    zxlogf(ERROR, "GET_STATUS returned bad len, want: %lu, got: %lu", want_len, out_len);
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -103,7 +103,7 @@ zx_status_t Dfu::ClearStatus() {
   size_t out_len;
   zx_status_t status = ControlReq(USB_DIR_OUT, USB_DFU_CLR_STATUS, 0, nullptr, 0, &out_len);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "CLR_STATUS returned err %d\n", status);
+    zxlogf(ERROR, "CLR_STATUS returned err %d", status);
     return status;
   }
   return ZX_OK;
@@ -114,10 +114,10 @@ zx_status_t Dfu::GetState(uint8_t* out_state) {
   size_t out_len;
   zx_status_t status = ControlReq(USB_DIR_IN, USB_DFU_GET_STATE, 0, out_state, want_len, &out_len);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "GET_STATE returned err %d\n", status);
+    zxlogf(ERROR, "GET_STATE returned err %d", status);
     return status;
   } else if (out_len != want_len) {
-    zxlogf(ERROR, "GET_STATE returned bad len, want: %lu, got: %lu\n", want_len, out_len);
+    zxlogf(ERROR, "GET_STATE returned bad len, want: %lu, got: %lu", want_len, out_len);
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -130,11 +130,11 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
   size_t vmo_size;
   zx_status_t status = fw_vmo.get_size(&vmo_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to get firmware vmo size, err: %d\n", status);
+    zxlogf(ERROR, "failed to get firmware vmo size, err: %d", status);
     return ZX_ERR_INVALID_ARGS;
   }
   if (vmo_size < fw_size) {
-    zxlogf(ERROR, "invalid vmo, vmo size was %lu, fw size was %lu\n", vmo_size, fw_size);
+    zxlogf(ERROR, "invalid vmo, vmo size was %lu, fw size was %lu", vmo_size, fw_size);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -150,16 +150,16 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
     case USB_DFU_STATE_DFU_ERROR:
       // We can get back to the DFU Idle state by clearing the error status.
       // USB DFU Spec Rev, 1.1, Table A.2.11.
-      zxlogf(ERROR, "device is in dfuERROR state, trying to clear error status...\n");
+      zxlogf(ERROR, "device is in dfuERROR state, trying to clear error status...");
       status = ClearStatus();
       if (status != ZX_OK) {
-        zxlogf(ERROR, "could not clear error status, got err: %d\n", status);
+        zxlogf(ERROR, "could not clear error status, got err: %d", status);
         return status;
       }
       break;
     default:
       // TODO(jocelyndang): handle more states.
-      zxlogf(ERROR, "device is in an unexpected state: %u\n", state);
+      zxlogf(ERROR, "device is in an unexpected state: %u", state);
       return ZX_ERR_BAD_STATE;
   }
 
@@ -173,7 +173,7 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
   size_t len_to_write;
   do {
     len_to_write = fbl::min(fw_size - vmo_offset, static_cast<size_t>(func_desc_.wTransferSize));
-    zxlogf(TRACE, "fetching block %u, offset %lu len %lu\n", block_num, vmo_offset, len_to_write);
+    zxlogf(TRACE, "fetching block %u, offset %lu len %lu", block_num, vmo_offset, len_to_write);
     zx_status_t status = fw_vmo.read(write_buf, vmo_offset, len_to_write);
     if (status != ZX_OK) {
       return status;
@@ -188,7 +188,7 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
       return status;
     }
     if (dfu_status.bStatus != USB_DFU_STATUS_OK) {
-      zxlogf(ERROR, "bad status %u\n", dfu_status.bStatus);
+      zxlogf(ERROR, "bad status %u", dfu_status.bStatus);
       return ZX_ERR_IO;
     }
     // The device expects the block number to wrap around to zero, so no need to bounds check.
@@ -204,7 +204,7 @@ zx_status_t Dfu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t Dfu::Bind() {
-  zxlogf(TRACE, "adding DFU, interface %x, v%x.%x\n", intf_num_, MSB(func_desc_.bcdDFUVersion),
+  zxlogf(TRACE, "adding DFU, interface %x, v%x.%x", intf_num_, MSB(func_desc_.bcdDFUVersion),
          LSB(func_desc_.bcdDFUVersion));
   zx_status_t status = DdkAdd("usb-dfu", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
@@ -238,7 +238,7 @@ zx_status_t Dfu::Create(zx_device_t* parent) {
   while ((header = usb_desc_iter_peek(&iter)) != nullptr) {
     if (header->bDescriptorType == USB_DFU_CS_FUNCTIONAL) {
       if (header->bLength < sizeof(func_desc)) {
-        zxlogf(ERROR, "DFU func desc should be at least %lu long, got %u\n", sizeof(func_desc),
+        zxlogf(ERROR, "DFU func desc should be at least %lu long, got %u", sizeof(func_desc),
                header->bLength);
       } else {
         usb_dfu_func_desc_t* desc =
@@ -247,7 +247,7 @@ zx_status_t Dfu::Create(zx_device_t* parent) {
           zxlogf(ERROR, "DFU func desc invalid");
         } else {
           func_desc = *desc;
-          zxlogf(TRACE, "DFU func desc bmAttributes %u wDetachTimeOut %u wTransferSize %u\n",
+          zxlogf(TRACE, "DFU func desc bmAttributes %u wDetachTimeOut %u wTransferSize %u",
                  func_desc.bmAttributes, func_desc.wDetachTimeOut, func_desc.wTransferSize);
           break;
         }
@@ -258,7 +258,7 @@ zx_status_t Dfu::Create(zx_device_t* parent) {
   usb_desc_iter_release(&iter);
 
   if (func_desc.bLength == 0) {
-    zxlogf(ERROR, "could not find any valid DFU functional descriptor\n");
+    zxlogf(ERROR, "could not find any valid DFU functional descriptor");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -277,7 +277,7 @@ zx_status_t Dfu::Create(zx_device_t* parent) {
 }
 
 zx_status_t dfu_bind(void* ctx, zx_device_t* parent) {
-  zxlogf(TRACE, "dfu_bind\n");
+  zxlogf(TRACE, "dfu_bind");
   return usb::Dfu::Create(parent);
 }
 

@@ -55,7 +55,7 @@ uint32_t AmlMipiDevice::AdapGetDepth(const mipi_adap_info_t* info) {
       depth = 14;
       break;
     default:
-      zxlogf(ERROR, "%s, unsupported data format.\n", __func__);
+      zxlogf(ERROR, "%s, unsupported data format.", __func__);
       break;
   }
   return depth;
@@ -66,13 +66,13 @@ zx_status_t AmlMipiDevice::InitBuffer(const mipi_adap_info_t* /*info*/, size_t s
   zx_status_t status =
       zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
     return status;
   }
   // Pin the ring buffer.
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __func__, status);
+    zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __func__, status);
     return status;
   }
   // Validate the pinned buffer.
@@ -109,7 +109,7 @@ zx_status_t AmlMipiDevice::AdapFrontendInit(const mipi_adap_info_t* info) {
       frontend_reg.Write32(0x001f0011, CSI2_GEN_CTRL0);
     }
   } else {
-    zxlogf(ERROR, "%s, unsupported mode.\n", __func__);
+    zxlogf(ERROR, "%s, unsupported mode.", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -127,7 +127,7 @@ zx_status_t AmlMipiDevice::AdapFrontendInit(const mipi_adap_info_t* info) {
 
   // set frame size
   if (info->mode == MIPI_MODES_DOL_MODE) {
-    zxlogf(ERROR, "%s, unsupported mode.\n", __func__);
+    zxlogf(ERROR, "%s, unsupported mode.", __func__);
   } else {
     frontend_reg.Write32(0x00000780, CSI2_DDR_STRIDE_PIX);
   }
@@ -142,7 +142,7 @@ void AmlMipiDevice::AdapFrontEndStart(const mipi_adap_info_t* info) {
   uint32_t depth, val;
   depth = AdapGetDepth(info);
   if (!depth) {
-    zxlogf(ERROR, "%s, unsupported format \n", __func__);
+    zxlogf(ERROR, "%s, unsupported format ", __func__);
   }
   auto frontend_reg = mipi_adap_mmio_->View(FRONTEND_BASE, kFrontEnd0Size);
 
@@ -175,7 +175,7 @@ zx_status_t AmlMipiDevice::AdapReaderInit(const mipi_adap_info_t* info) {
                             MIPI_ADAPT_DDR_RD0_CNTL2);
     reader_reg.Write32(0x70000001, MIPI_ADAPT_DDR_RD0_CNTL0);
   } else {
-    zxlogf(ERROR, "%s, unsupported mode.\n", __func__);
+    zxlogf(ERROR, "%s, unsupported mode.", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
@@ -187,7 +187,7 @@ void AmlMipiDevice::AdapReaderStart(const mipi_adap_info_t* info) {
   uint32_t val, depth;
   depth = AdapGetDepth(info);
   if (!depth) {
-    zxlogf(ERROR, "%s, unsupported format \n", __func__);
+    zxlogf(ERROR, "%s, unsupported format ", __func__);
   }
 
   val = static_cast<uint32_t>(ceil((width * depth) / (8 * 16)));
@@ -219,7 +219,7 @@ zx_status_t AmlMipiDevice::AdapPixelInit(const mipi_adap_info_t* info) {
     pixel_reg.Write32(0x0000a500, MIPI_ADAPT_PIXEL0_CNTL0);
     pixel_reg.Write32(0x80000008, MIPI_ADAPT_PIXEL0_CNTL1);
   } else {
-    zxlogf(ERROR, "%s, unsupported mode.\n", __func__);
+    zxlogf(ERROR, "%s, unsupported mode.", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
@@ -245,7 +245,7 @@ zx_status_t AmlMipiDevice::AdapAlignInit(const mipi_adap_info_t* info) {
   auto align_reg = mipi_adap_mmio_->View(ALIGN_BASE, kAlignSize);
 
   if (info->mode == MIPI_MODES_DOL_MODE) {
-    zxlogf(ERROR, "%s, unsupported mode.\n", __func__);
+    zxlogf(ERROR, "%s, unsupported mode.", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
   // default width 1280, height 720
@@ -263,7 +263,7 @@ zx_status_t AmlMipiDevice::AdapAlignInit(const mipi_adap_info_t* info) {
     align_reg.Write32(0x0, MIPI_ADAPT_ALIG_CNTL7);
     align_reg.Write32(0x80000020, MIPI_ADAPT_ALIG_CNTL8);
   } else {
-    zxlogf(ERROR, "%s, unsupported mode.\n", __func__);
+    zxlogf(ERROR, "%s, unsupported mode.", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -293,7 +293,7 @@ void AmlMipiDevice::AdapAlignStart(const mipi_adap_info_t* info) {
  */
 
 int AmlMipiDevice::AdapterIrqHandler() {
-  zxlogf(INFO, "%s start\n", __func__);
+  zxlogf(INFO, "%s start", __func__);
   zx_status_t status = ZX_OK;
 
   while (running_.load()) {

@@ -23,7 +23,7 @@ static const pbus_dev_t cpu_dev = []() {
 zx_status_t Nelson::CpuInit() {
   zx_status_t st = pbus_.DeviceAdd(&cpu_dev);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, st);
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, st);
     return st;
   }
 

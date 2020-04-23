@@ -75,7 +75,7 @@ static const pbus_dev_t gpio_dev = {
 zx_status_t gauss_gpio_init(gauss_bus_t* bus) {
   zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "gauss_gpio_init: pbus_protocol_device_add failed: %d\n", status);
+    zxlogf(ERROR, "gauss_gpio_init: pbus_protocol_device_add failed: %d", status);
     return status;
   }
 

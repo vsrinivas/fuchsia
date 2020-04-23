@@ -58,11 +58,11 @@ bool Lp50xxLight::BlinkTest() {
           rgb.green = static_cast<uint8_t>(green);
           status = SetRgbValue(led, rgb);
           if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: Failed to set color R:%d G:%d B:%d\n", __func__, red, green, blue);
+            zxlogf(ERROR, "%s: Failed to set color R:%d G:%d B:%d", __func__, red, green, blue);
           }
           status = GetRgbValue(led, &rgb);
           if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: Failed to get color R:%d G:%d B:%d\n", __func__, red, green, blue);
+            zxlogf(ERROR, "%s: Failed to get color R:%d G:%d B:%d", __func__, red, green, blue);
           }
         }
       }
@@ -75,11 +75,11 @@ bool Lp50xxLight::BlinkTest() {
     rgb.blue = 0;
     status = SetRgbValue(i, rgb);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to reset color\n", __PRETTY_FUNCTION__);
+      zxlogf(ERROR, "%s: Failed to reset color", __PRETTY_FUNCTION__);
     }
   }
 
-  zxlogf(INFO, "Lp50xxLight Blink test complete\n");
+  zxlogf(INFO, "Lp50xxLight Blink test complete");
   return ZX_OK;
 }
 
@@ -107,11 +107,11 @@ zx_status_t Lp50xxLight::Lp50xxRegConfig() {
       reset_addr_ = 0x38;
       break;
     default:
-      zxlogf(ERROR, "%s: unsupported PID %u\n", __func__, pid_);
+      zxlogf(ERROR, "%s: unsupported PID %u", __func__, pid_);
       return ZX_ERR_NOT_SUPPORTED;
   }
   if (led_count != led_count_) {
-    zxlogf(ERROR, "%s: incorrect number of LEDs %u != %u\n", __func__, led_count_, led_count);
+    zxlogf(ERROR, "%s: incorrect number of LEDs %u != %u", __func__, led_count_, led_count);
     return ZX_ERR_INTERNAL;
   }
 
@@ -143,7 +143,7 @@ zx_status_t Lp50xxLight::GetRgbValue(uint32_t index, llcpp::fuchsia::hardware::l
   auto blue = BlueColorReg::Get(led_color_addr_, index).FromValue(0);
 
   if (red.ReadFrom(i2c_) || green.ReadFrom(i2c_) || blue.ReadFrom(i2c_)) {
-    zxlogf(ERROR, "Failed to read I2C color registers\n");
+    zxlogf(ERROR, "Failed to read I2C color registers");
     return ZX_ERR_INTERNAL;
   }
 
@@ -344,7 +344,7 @@ zx_status_t Lp50xxLight::InitHelper() {
   composite_protocol_t composite;
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed\n", __func__);
+    zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed", __func__);
     return status;
   }
 
@@ -359,20 +359,20 @@ zx_status_t Lp50xxLight::InitHelper() {
   // status = device_get_protocol(fragments[kI2cFragment], ZX_PROTOCOL_I2C, &i2c_);
   ddk::I2cProtocolClient i2c(fragments[kI2cFragment]);
   if (!i2c.is_valid()) {
-    zxlogf(ERROR, "ZX_PROTOCOL_I2C not found, err=%d\n", status);
+    zxlogf(ERROR, "ZX_PROTOCOL_I2C not found, err=%d", status);
     return status;
   }
 
   ddk::PDevProtocolClient pdev(fragments[kPdevFragment]);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: Get PBusProtocolClient failed\n", __func__);
+    zxlogf(ERROR, "%s: Get PBusProtocolClient failed", __func__);
     return ZX_ERR_INTERNAL;
   }
 
   pdev_device_info info = {};
   status = pdev.GetDeviceInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetDeviceInfo failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: GetDeviceInfo failed: %d", __func__, status);
     return ZX_ERR_INTERNAL;
   }
   pid_ = info.pid;
@@ -382,7 +382,7 @@ zx_status_t Lp50xxLight::InitHelper() {
   size_t metadata_size;
   if ((status = device_get_metadata_size(parent(), DEVICE_METADATA_LIGHTS, &metadata_size)) !=
       ZX_OK) {
-    zxlogf(ERROR, "%s: couldn't get metadata size\n", __func__);
+    zxlogf(ERROR, "%s: couldn't get metadata size", __func__);
     return status;
   }
   auto configs =
@@ -395,7 +395,7 @@ zx_status_t Lp50xxLight::InitHelper() {
     return status;
   }
   if ((actual != metadata_size) || (actual % sizeof(lights_config_t) != 0)) {
-    zxlogf(ERROR, "%s: wrong metadata size\n", __func__);
+    zxlogf(ERROR, "%s: wrong metadata size", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
   led_count_ = static_cast<uint32_t>(metadata_size) / sizeof(lights_config_t);
@@ -406,7 +406,7 @@ zx_status_t Lp50xxLight::InitHelper() {
 
   if ((status = device_get_metadata_size(parent(), DEVICE_METADATA_LIGHTS_GROUP_NAME,
                                          &metadata_size)) != ZX_OK) {
-    zxlogf(ERROR, "%s: couldn't get metadata size\n", __func__);
+    zxlogf(ERROR, "%s: couldn't get metadata size", __func__);
     return status;
   }
   group_names_ = fbl::Array<char>(new (&ac) char[metadata_size], metadata_size);
@@ -419,7 +419,7 @@ zx_status_t Lp50xxLight::InitHelper() {
   }
   if ((actual != metadata_size) || (actual % kNameLength != 0) ||
       static_cast<uint32_t>(metadata_size / kNameLength) != group2led_.size()) {
-    zxlogf(ERROR, "%s: wrong metadata size\n", __func__);
+    zxlogf(ERROR, "%s: wrong metadata size", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -432,7 +432,7 @@ zx_status_t Lp50xxLight::Init() {
   // Set device specific register configuration
   zx_status_t status = Lp50xxRegConfig();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Device register configuration failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Device register configuration failed %d", __func__, status);
     return status;
   }
 
@@ -442,7 +442,7 @@ zx_status_t Lp50xxLight::Init() {
 
   status = dev_conf0.WriteTo(i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Device enable failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Device enable failed %d", __func__, status);
     return status;
   }
 
@@ -454,7 +454,7 @@ zx_status_t Lp50xxLight::Init() {
   dev_conf1.set_pwm_dithering_enable(1);
   status = dev_conf1.WriteTo(i2c_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Device conf1 failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: Device conf1 failed %d", __func__, status);
     return status;
   }
 

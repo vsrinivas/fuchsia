@@ -71,7 +71,7 @@ zx_status_t Luis::EmmcInit() {
 
   status = pbus_.DeviceAdd(&emmc_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd() error: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd() error: %d", __func__, status);
   }
 
   return status;

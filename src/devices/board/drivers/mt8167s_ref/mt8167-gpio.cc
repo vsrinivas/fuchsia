@@ -95,13 +95,13 @@ zx_status_t Mt8167::GpioInit() {
       (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO)) {
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __FUNCTION__, status);
       return status;
     }
 
     status = device_get_protocol(parent(), ZX_PROTOCOL_GPIO_IMPL, &gpio_impl_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __func__, status);
+      zxlogf(ERROR, "%s: device_get_protocol failed %d", __func__, status);
       return status;
     }
   } else {
@@ -127,7 +127,7 @@ zx_status_t Mt8167::GpioInit() {
   gpio_test_dev.gpio_list = gpio_test_gpios;
   gpio_test_dev.gpio_count = countof(gpio_test_gpios);
   if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not add gpio_test_dev %d\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: Could not add gpio_test_dev %d", __FUNCTION__, status);
     return status;
   }
 #endif

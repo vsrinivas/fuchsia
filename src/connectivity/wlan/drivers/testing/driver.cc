@@ -21,20 +21,20 @@
 static async::Loop* loop = nullptr;
 
 zx_status_t wlanphy_test_init(void** out_ctx) {
-  zxlogf(INFO, "%s\n", __func__);
+  zxlogf(INFO, "%s", __func__);
   loop = new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = loop->StartThread("wlan-test-loop");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "wlanphy_test: could not create event loop: %d\n", status);
+    zxlogf(ERROR, "wlanphy_test: could not create event loop: %d", status);
     delete loop;
     loop = nullptr;
   }
-  zxlogf(INFO, "wlanphy_test: event loop started\n");
+  zxlogf(INFO, "wlanphy_test: event loop started");
   return status;
 }
 
 zx_status_t wlanphy_test_bind(void* ctx, zx_device_t* device) {
-  zxlogf(INFO, "%s\n", __func__);
+  zxlogf(INFO, "%s", __func__);
 
   test_protocol_t proto;
   auto status = device_get_protocol(device, ZX_PROTOCOL_TEST, reinterpret_cast<void*>(&proto));
@@ -45,7 +45,7 @@ zx_status_t wlanphy_test_bind(void* ctx, zx_device_t* device) {
   auto dev = std::make_unique<wlan::testing::PhyDevice>(device);
   status = dev->Bind();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "wlanphy-test: could not bind: %d\n", status);
+    zxlogf(ERROR, "wlanphy-test: could not bind: %d", status);
   } else {
     // devhost is now responsible for the memory used by wlan-test. It will
     // be cleaned up in the Device::Release() method.

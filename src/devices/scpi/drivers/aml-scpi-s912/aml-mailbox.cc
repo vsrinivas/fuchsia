@@ -70,7 +70,7 @@ zx_status_t AmlMailbox::MailboxSendCommand(const mailbox_channel_t* channel,
 
   zx_status_t status = inth_[rx_mailbox_id].wait(nullptr);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-mailbox: zx_interrupt_wait failed: %d\n", status);
+    zxlogf(ERROR, "aml-mailbox: zx_interrupt_wait failed: %d", status);
     return status;
   }
 
@@ -107,20 +107,20 @@ zx_status_t AmlMailbox::InitPdev() {
   // Map MMIOs
   zx_status_t status = pdev_.MapMmio(MMIO_MAILBOX, &mailbox_mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-mailbox: could not map mailbox mmio: %d\n", status);
+    zxlogf(ERROR, "aml-mailbox: could not map mailbox mmio: %d", status);
     return status;
   }
 
   status = pdev_.MapMmio(MMIO_MAILBOX_PAYLOAD, &mailbox_payload_mmio_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-mailbox: could not map payload mmio: %d\n", status);
+    zxlogf(ERROR, "aml-mailbox: could not map payload mmio: %d", status);
     return status;
   }
 
   for (uint32_t i = 0; i < kNumMailboxes; i++) {
     status = pdev_.GetInterrupt(i, &inth_[i]);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-mailbox: could not map interrupt: %d\n", status);
+      zxlogf(ERROR, "aml-mailbox: could not map interrupt: %d", status);
       return status;
     }
 
@@ -144,10 +144,10 @@ zx_status_t AmlMailbox::Create(zx_device_t* parent) {
 
   status = mailbox_device->Bind();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-mailbox driver failed to get added: %d\n", status);
+    zxlogf(ERROR, "aml-mailbox driver failed to get added: %d", status);
     return status;
   } else {
-    zxlogf(INFO, "aml-mailbox driver added\n");
+    zxlogf(INFO, "aml-mailbox driver added");
   }
 
   // mailbox_device intentionally leaked as it is now held by DevMgr

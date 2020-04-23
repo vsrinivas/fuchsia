@@ -170,7 +170,7 @@ zx_status_t Nelson::AudioInit() {
   pdev_board_info_t board_info = {};
   auto status = pbus_.GetBoardInfo(&board_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBoardInfo failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: GetBoardInfo failed %d", __FILE__, status);
     return status;
   }
 
@@ -191,13 +191,13 @@ zx_status_t Nelson::AudioInit() {
     codec_desc.fragments_count = countof(ref_codec_fragments);
     status = DdkAddComposite("audio-max98373", &codec_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s DdkAddComposite failed %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
     }
     status = pbus_.CompositeDeviceAdd(&controller_out, ref_controller_fragments,
                                       countof(ref_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s adding audio controller out device failed %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
       return status;
     }
   } else {
@@ -237,13 +237,13 @@ zx_status_t Nelson::AudioInit() {
     codec_desc.fragments_count = countof(p2_codec_fragments);
     status = DdkAddComposite("audio-tas5805", &codec_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s DdkAddComposite failed %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
     }
     status = pbus_.CompositeDeviceAdd(&controller_out, p2_controller_fragments,
                                       countof(p2_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s adding audio controller out device failed %d\n", __FILE__, status);
+      zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
       return status;
     }
   }
@@ -251,7 +251,7 @@ zx_status_t Nelson::AudioInit() {
   // Input device.
   status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s adding audio input device failed %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
     return status;
   }
   return ZX_OK;

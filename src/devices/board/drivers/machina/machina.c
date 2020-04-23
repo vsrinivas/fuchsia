@@ -62,7 +62,7 @@ static zx_status_t machina_pci_init(void) {
   // Please do not use get_root_resource() in new code. See ZX-1467.
   status = zx_pci_init(get_root_resource(), arg, arg_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: error %d in zx_pci_init\n", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: error %d in zx_pci_init", __FUNCTION__, status);
     goto fail;
   }
 
@@ -103,7 +103,7 @@ static int machina_start_thread(void* arg) {
 
   status = machina_sysmem_init(bus);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "machina_board_bind machina_sysmem_init failed: %d\n", status);
+    zxlogf(ERROR, "machina_board_bind machina_sysmem_init failed: %d", status);
     goto fail;
   }
 
@@ -125,18 +125,18 @@ static int machina_start_thread(void* arg) {
 
   status = pbus_device_add(&bus->pbus, &pci_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "machina_board_bind could not add pci_dev: %d\n", status);
+    zxlogf(ERROR, "machina_board_bind could not add pci_dev: %d", status);
   }
 
   status = pbus_device_add(&bus->pbus, &pl031_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "machina_board_bind could not add pl031: %d\n", status);
+    zxlogf(ERROR, "machina_board_bind could not add pl031: %d", status);
   }
 
   return ZX_OK;
 
 fail:
-  zxlogf(ERROR, "machina_start_thread failed, not all devices have been initialized\n");
+  zxlogf(ERROR, "machina_start_thread failed, not all devices have been initialized");
   return status;
 }
 
@@ -153,7 +153,7 @@ static zx_status_t machina_board_bind(void* ctx, zx_device_t* parent) {
 
   zx_status_t status = machina_pci_init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "machina_pci_init failed: %d\n", status);
+    zxlogf(ERROR, "machina_pci_init failed: %d", status);
   }
 
   device_add_args_t args = {

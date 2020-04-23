@@ -80,7 +80,7 @@ zx_status_t WlanPhy::Create(zx_device_t* bus_device) {
   };
   status = device_add(bus_device, &args, &wlan_phy->zx_device_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "rtl88xx: WlanPhy failed to create zx_device_: %s\n",
+    zxlogf(ERROR, "rtl88xx: WlanPhy failed to create zx_device_: %s",
            zx_status_get_string(status));
     return status;
   }
@@ -144,7 +144,7 @@ zx_status_t WlanPhy::SetCountry(const wlanphy_country_t* country) {
   if (country == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  zxlogf(ERROR, "rtl88xx: SetCountry to [%s] not implemented\n",
+  zxlogf(ERROR, "rtl88xx: SetCountry to [%s] not implemented",
          wlan::common::Alpha2ToStr(country->alpha2).c_str());
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -153,7 +153,7 @@ zx_status_t WlanPhy::GetCountry(wlanphy_country_t* out_country) {
   if (out_country == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  zxlogf(ERROR, "rtl88xx: GetCountry not implemented\n");
+  zxlogf(ERROR, "rtl88xx: GetCountry not implemented");
   return ZX_ERR_NOT_SUPPORTED;
 }
 

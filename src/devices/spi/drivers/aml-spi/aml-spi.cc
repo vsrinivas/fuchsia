@@ -35,7 +35,7 @@ void AmlSpi::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlSpi::DdkRelease() { delete this; }
 
-#define dump_reg(reg) zxlogf(ERROR, "%-21s (+%02x): %08x\n", #reg, reg, mmio_.Read32(reg))
+#define dump_reg(reg) zxlogf(ERROR, "%-21s (+%02x): %08x", #reg, reg, mmio_.Read32(reg))
 
 void AmlSpi::DumpState() {
   // skip registers with side-effects
@@ -142,7 +142,7 @@ zx_status_t AmlSpi::GpioInit(amlspi_cs_map_t* map, zx_device_t** gpio_fragments,
     uint32_t index = map->cs[i];
     zx_status_t status = device_get_protocol(gpio_fragments[index], ZX_PROTOCOL_GPIO, &gpio);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: failed to acquire gpio for SS%d\n", __func__, i);
+      zxlogf(ERROR, "%s: failed to acquire gpio for SS%d", __func__, i);
       return status;
     }
 
@@ -158,7 +158,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
 
   auto status = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get composite protocol\n", __func__);
+    zxlogf(ERROR, "%s: could not get composite protocol", __func__);
     return status;
   }
 
@@ -168,26 +168,26 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   size_t actual;
   composite_get_fragments(&composite, fragments, fragment_count, &actual);
   if (actual != fragment_count) {
-    zxlogf(ERROR, "%s: could not get fragments\n", __func__);
+    zxlogf(ERROR, "%s: could not get fragments", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   pdev_protocol_t pdev;
   status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __func__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __func__);
     return status;
   }
 
   pdev_device_info_t info;
   status = pdev_get_device_info(&pdev, &info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_get_device_info failed\n", __func__);
+    zxlogf(ERROR, "%s: pdev_get_device_info failed", __func__);
     return status;
   }
 
   if (info.mmio_count != info.irq_count) {
-    zxlogf(ERROR, "%s: mmio_count %u does not match irq_count %u\n", __func__, info.mmio_count,
+    zxlogf(ERROR, "%s: mmio_count %u does not match irq_count %u", __func__, info.mmio_count,
            info.irq_count);
     status = ZX_ERR_INVALID_ARGS;
     return status;
@@ -197,7 +197,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   status = device_get_metadata(device, DEVICE_METADATA_AMLSPI_CS_MAPPING, gpio_map, sizeof gpio_map,
                                &actual);
   if ((status != ZX_OK) || (actual != sizeof gpio_map)) {
-    zxlogf(ERROR, "%s: failed to read GPIO/chip select map\n", __func__);
+    zxlogf(ERROR, "%s: failed to read GPIO/chip select map", __func__);
     return status;
   }
 
@@ -205,7 +205,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     mmio_buffer_t mmio;
     status = pdev_map_mmio_buffer(&pdev, i, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: pdev_map_&mmio__buffer #%d failed %d\n", __func__, i, status);
+      zxlogf(ERROR, "%s: pdev_map_&mmio__buffer #%d failed %d", __func__, i, status);
       return status;
     }
 
@@ -227,13 +227,13 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
 
     status = spi->DdkAdd(devname);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkDeviceAdd failed for %s\n", __func__, devname);
+      zxlogf(ERROR, "%s: DdkDeviceAdd failed for %s", __func__, devname);
       return status;
     }
 
     status = spi->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &i, sizeof i);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAddMetadata failed for %s\n", __func__, devname);
+      zxlogf(ERROR, "%s: DdkAddMetadata failed for %s", __func__, devname);
       return status;
     }
 

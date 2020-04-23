@@ -189,7 +189,7 @@ zx_status_t NelsonUsbPhy::InitPhy() {
     while (!u2p_r1.ReadFrom(&usbctrl_mmio).phy_rdy()) {
       // wait phy ready max 1ms, common is 100us
       if (count > 200) {
-        zxlogf(ERROR, "NelsonUsbPhy::InitPhy U2P_R1_PHY_RDY wait failed\n");
+        zxlogf(ERROR, "NelsonUsbPhy::InitPhy U2P_R1_PHY_RDY wait failed");
         break;
       }
       count++;
@@ -277,10 +277,10 @@ int NelsonUsbPhy::IrqThread() {
 
     // Read current host/device role.
     if (r5.iddig_curr() == 0) {
-      zxlogf(INFO, "Entering USB Host Mode\n");
+      zxlogf(INFO, "Entering USB Host Mode");
       SetMode(UsbMode::HOST);
     } else {
-      zxlogf(INFO, "Entering USB Peripheral Mode\n");
+      zxlogf(INFO, "Entering USB Peripheral Mode");
       SetMode(UsbMode::PERIPHERAL);
     }
 
@@ -289,7 +289,7 @@ int NelsonUsbPhy::IrqThread() {
     if (status == ZX_ERR_CANCELED) {
       return 0;
     } else if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: irq_.wait failed: %d\n", __func__, status);
+      zxlogf(ERROR, "%s: irq_.wait failed: %d", __func__, status);
       return -1;
     }
     lock_.Acquire();
@@ -388,14 +388,14 @@ void NelsonUsbPhy::RemoveDwc2Device(bool wait) {
 
 zx_status_t NelsonUsbPhy::Init() {
   if (!pdev_.is_valid()) {
-    zxlogf(ERROR, "NelsonUsbPhy::Init: could not get platform device protocol\n");
+    zxlogf(ERROR, "NelsonUsbPhy::Init: could not get platform device protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
   size_t actual;
   auto status =
       DdkGetMetadata(DEVICE_METADATA_PRIVATE, pll_settings_, sizeof(pll_settings_), &actual);
   if (status != ZX_OK || actual != sizeof(pll_settings_)) {
-    zxlogf(ERROR, "NelsonUsbPhy::Init could not get metadata for PLL settings\n");
+    zxlogf(ERROR, "NelsonUsbPhy::Init could not get metadata for PLL settings");
     return ZX_ERR_INTERNAL;
   }
 

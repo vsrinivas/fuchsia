@@ -528,7 +528,7 @@ static void e1000_identify_hardware(struct adapter* adapter) {
   zx_pcie_device_info_t pci_info;
   zx_status_t status = pci_get_device_info(pci, &pci_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "pci_get_device_info failure\n");
+    zxlogf(ERROR, "pci_get_device_info failure");
     return;
   }
 
@@ -540,7 +540,7 @@ static void e1000_identify_hardware(struct adapter* adapter) {
 
   /* Do Shared Code Init and Setup */
   if (e1000_set_mac_type(&adapter->hw)) {
-    zxlogf(ERROR, "e1000_set_mac_type init failure\n");
+    zxlogf(ERROR, "e1000_set_mac_type init failure");
     return;
   }
 }
@@ -551,7 +551,7 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
   zx_status_t status =
       pci_map_bar_buffer(pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &adapter->bar0_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "pci_map_bar cannot map io %d\n", status);
+    zxlogf(ERROR, "pci_map_bar cannot map io %d", status);
     return status;
   }
 
@@ -577,14 +577,14 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
         rid += 4;
     }
     if (rid >= PCI_CONFIG_CARDBUS_CIS_PTR) {
-      zxlogf(ERROR, "Unable to locate IO BAR\n");
+      zxlogf(ERROR, "Unable to locate IO BAR");
       return ZX_ERR_IO_NOT_PRESENT;
     }
 
     zx_pci_bar_t bar;
     status = pci_get_bar(pci, iorid, &bar);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Unable to allocate bus resource: ioport (%d)\n", status);
+      zxlogf(ERROR, "Unable to allocate bus resource: ioport (%d)", status);
     }
 
     adapter->osdep.iobase = bar.addr;
@@ -923,7 +923,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
 
   zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_PCI, &adapter->osdep.pci);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "no pci protocol (%d)\n", status);
+    zxlogf(ERROR, "no pci protocol (%d)", status);
     goto fail;
   }
 
@@ -931,7 +931,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
 
   status = pci_enable_bus_master(pci, true);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "cannot enable bus master %d\n", status);
+    zxlogf(ERROR, "cannot enable bus master %d", status);
     goto fail;
   }
 
@@ -949,20 +949,20 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
              (pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
     DEBUGOUT("using legacy irq mode\n");
   } else {
-    zxlogf(ERROR, "failed to configure irqs\n");
+    zxlogf(ERROR, "failed to configure irqs");
     goto fail;
   }
 
   status = pci_map_interrupt(pci, 0, &adapter->irqh);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to map irq\n");
+    zxlogf(ERROR, "failed to map irq");
     goto fail;
   }
 
   e1000_identify_hardware(adapter);
   status = e1000_allocate_pci_resources(adapter);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Allocation of PCI resources failed (%d)\n", status);
+    zxlogf(ERROR, "Allocation of PCI resources failed (%d)", status);
     goto fail;
   }
 
@@ -988,7 +988,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
     status = pci_map_bar_buffer(pci, EM_BAR_TYPE_FLASH / 4, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                 &adapter->flash_mmio);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Mapping of Flash failed\n");
+      zxlogf(ERROR, "Mapping of Flash failed");
       goto fail;
     }
     /* This is used in the shared code */
@@ -1007,7 +1007,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
 
   s32 err = e1000_setup_init_funcs(hw, TRUE);
   if (err) {
-    zxlogf(ERROR, "Setup of Shared code failed, error %d\n", err);
+    zxlogf(ERROR, "Setup of Shared code failed, error %d", err);
     goto fail;
   }
 
@@ -1052,14 +1052,14 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
     ** if it fails a second time its a real issue.
     */
     if (e1000_validate_nvm_checksum(hw) < 0) {
-      zxlogf(ERROR, "The EEPROM Checksum Is Not Valid\n");
+      zxlogf(ERROR, "The EEPROM Checksum Is Not Valid");
       goto fail;
     }
   }
 
   /* Copy the permanent MAC address out of the EEPROM */
   if (e1000_read_mac_addr(hw) < 0) {
-    zxlogf(ERROR, "EEPROM read error while reading MAC address\n");
+    zxlogf(ERROR, "EEPROM read error while reading MAC address");
     goto fail;
   }
 
@@ -1072,7 +1072,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
   status =
       io_buffer_init(&adapter->buffer, adapter->btih, ETH_ALLOC, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status < 0) {
-    zxlogf(ERROR, "cannot alloc io-buffer %d\n", status);
+    zxlogf(ERROR, "cannot alloc io-buffer %d", status);
     goto fail;
   }
 
@@ -1125,7 +1125,7 @@ fail:
   mmio_buffer_release(&adapter->bar0_mmio);
   mmio_buffer_release(&adapter->flash_mmio);
   free(adapter);
-  zxlogf(ERROR, "%s: %d FAIL\n", __FUNCTION__, __LINE__);
+  zxlogf(ERROR, "%s: %d FAIL", __FUNCTION__, __LINE__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 

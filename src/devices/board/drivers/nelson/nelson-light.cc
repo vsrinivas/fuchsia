@@ -78,7 +78,7 @@ zx_status_t Nelson::LightInit() {
 
   zx_status_t status = DdkAddComposite("tcs3400-light", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s(tcs-3400): DdkAddComposite failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s(tcs-3400): DdkAddComposite failed: %d", __func__, status);
     return status;
   }
 

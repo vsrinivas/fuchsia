@@ -42,7 +42,7 @@ zx_status_t Mt8167::Create(zx_device_t* parent) {
   pdev_board_info_t board_info;
   status = pbus_get_board_info(&pbus, &board_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBoardInfo failed\n", __FILE__);
+    zxlogf(ERROR, "%s: GetBoardInfo failed", __FILE__);
     return status;
   }
 
@@ -68,68 +68,68 @@ zx_status_t Mt8167::Create(zx_device_t* parent) {
 
 int Mt8167::Thread() {
   if (SocInit() != ZX_OK) {
-    zxlogf(ERROR, "SocInit() failed\n");
+    zxlogf(ERROR, "SocInit() failed");
     return -1;
   }
   // Load protocol implementation drivers first.
   if (SysmemInit() != ZX_OK) {
-    zxlogf(ERROR, "SysmemInit() failed\n");
+    zxlogf(ERROR, "SysmemInit() failed");
     return -1;
   }
   if (PowerInit() != ZX_OK) {
-    zxlogf(ERROR, "PowerInit() failed\n");
+    zxlogf(ERROR, "PowerInit() failed");
     return -1;
   }
   if (ClkInit() != ZX_OK) {
-    zxlogf(ERROR, "ClkInit() failed\n");
+    zxlogf(ERROR, "ClkInit() failed");
     return -1;
   }
   if (GpioInit() != ZX_OK) {
-    zxlogf(ERROR, "GpioInit() failed\n");
+    zxlogf(ERROR, "GpioInit() failed");
     return -1;
   }
   if (I2cInit() != ZX_OK) {
-    zxlogf(ERROR, "I2cInit() failed\n");
+    zxlogf(ERROR, "I2cInit() failed");
     return -1;
   }
   // Then the platform device drivers.
 
   // eMMC
   if (Msdc0Init() != ZX_OK) {
-    zxlogf(ERROR, "Msdc0Init() failed\n");
+    zxlogf(ERROR, "Msdc0Init() failed");
   }
   // SDIO
   if (Msdc2Init() != ZX_OK) {
-    zxlogf(ERROR, "Msdc2Init() failed\n");
+    zxlogf(ERROR, "Msdc2Init() failed");
   }
   if (DisplayInit() != ZX_OK) {
-    zxlogf(ERROR, "DisplayInit() failed\n");
+    zxlogf(ERROR, "DisplayInit() failed");
   }
   if (ButtonsInit() != ZX_OK) {
-    zxlogf(ERROR, "ButtonsInit() failed\n");
+    zxlogf(ERROR, "ButtonsInit() failed");
   }
   if (GpuInit() != ZX_OK) {
-    zxlogf(ERROR, "GpuInit() failed\n");
+    zxlogf(ERROR, "GpuInit() failed");
   }
   if (UsbInit() != ZX_OK) {
-    zxlogf(ERROR, "UsbInit() failed\n");
+    zxlogf(ERROR, "UsbInit() failed");
   }
   if (TouchInit() != ZX_OK) {
-    zxlogf(ERROR, "TouchInit() failed\n");
+    zxlogf(ERROR, "TouchInit() failed");
   }
   if (ThermalInit() != ZX_OK) {
-    zxlogf(ERROR, "ThermalInit() failed\n");
+    zxlogf(ERROR, "ThermalInit() failed");
   }
   if (BacklightInit() != ZX_OK) {
-    zxlogf(ERROR, "BacklightInit() failed\n");
+    zxlogf(ERROR, "BacklightInit() failed");
   }
   if (AudioInit() != ZX_OK) {
-    zxlogf(ERROR, "AudioInit() failed\n");
+    zxlogf(ERROR, "AudioInit() failed");
   }
 
   zx_status_t status = pbus_.DeviceAdd(&rtc_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d", __func__, status);
     return -1;
   }
 

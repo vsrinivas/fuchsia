@@ -201,7 +201,7 @@ zx_status_t FakeUsbCdcAcmFunction::UsbFunctionInterfaceSetConfigured(bool config
 
     if ((status = function_.ConfigEp(&descriptor_.bulk_in, nullptr)) != ZX_OK ||
         (status = function_.ConfigEp(&descriptor_.bulk_out, nullptr)) != ZX_OK) {
-      zxlogf(ERROR, "usb-cdc-acm-function: usb_function_config_ep failed\n");
+      zxlogf(ERROR, "usb-cdc-acm-function: usb_function_config_ep failed");
     }
     // queue first read on OUT endpoint
     usb_request_complete_t complete = {
@@ -211,9 +211,9 @@ zx_status_t FakeUsbCdcAcmFunction::UsbFunctionInterfaceSetConfigured(bool config
             },
         .ctx = this,
     };
-    zxlogf(ERROR, "usb-cdc-acm-function: about to configure!\n");
+    zxlogf(ERROR, "usb-cdc-acm-function: about to configure!");
     if (data_out_req_) {
-      zxlogf(ERROR, "We have data out!\n");
+      zxlogf(ERROR, "We have data out!");
     }
     RequestQueue(data_out_req_->request(), &complete);
   } else {
@@ -266,17 +266,17 @@ zx_status_t FakeUsbCdcAcmFunction::Bind() {
 
   zx_status_t status = function_.AllocInterface(&descriptor_.interface.bInterfaceNumber);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbCdcAcmFunction: usb_function_alloc_interface failed\n");
+    zxlogf(ERROR, "FakeUsbCdcAcmFunction: usb_function_alloc_interface failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_IN, &descriptor_.bulk_in.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbCdcAcmFunction: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeUsbCdcAcmFunction: usb_function_alloc_ep failed");
     return status;
   }
   status = function_.AllocEp(USB_DIR_OUT, &descriptor_.bulk_out.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbCdcAcmFunction: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeUsbCdcAcmFunction: usb_function_alloc_ep failed");
     return status;
   }
 
@@ -319,7 +319,7 @@ void FakeUsbCdcAcmFunction::DdkUnbindNew(ddk::UnbindTxn txn) {
 void FakeUsbCdcAcmFunction::DdkRelease() { delete this; }
 
 zx_status_t bind(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "FakeUsbCdcAcmFunction: binding driver\n");
+  zxlogf(INFO, "FakeUsbCdcAcmFunction: binding driver");
   auto dev = std::make_unique<FakeUsbCdcAcmFunction>(parent);
   zx_status_t status = dev->Bind();
   if (status == ZX_OK) {

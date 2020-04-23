@@ -72,7 +72,7 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
       proto->ops = &usb_mode_switch_protocol_ops_;
       return ZX_OK;
     default:
-      zxlogf(ERROR, "%s unsupported protocol \'%u\'\n", __func__, proto_id);
+      zxlogf(ERROR, "%s unsupported protocol \'%u\'", __func__, proto_id);
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -105,11 +105,11 @@ zx_status_t FragmentProxy::Rpc(const ProxyRequest* req, size_t req_length, Proxy
   status = resp->status;
 
   if (status == ZX_OK && resp_size < sizeof(*resp)) {
-    zxlogf(ERROR, "PlatformProxy::Rpc resp_size too short: %u\n", resp_size);
+    zxlogf(ERROR, "PlatformProxy::Rpc resp_size too short: %u", resp_size);
     status = ZX_ERR_INTERNAL;
     goto fail;
   } else if (status == ZX_OK && handle_count != out_handle_count) {
-    zxlogf(ERROR, "PlatformProxy::Rpc handle count %u expected %zu\n", handle_count,
+    zxlogf(ERROR, "PlatformProxy::Rpc handle count %u expected %zu", handle_count,
            out_handle_count);
     status = ZX_ERR_INTERNAL;
     goto fail;

@@ -212,7 +212,7 @@ zx_status_t MtkClk::Bind() {
   pbus_protocol_t pbus;
   status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "MtkClk: failed to get ZX_PROTOCOL_PBUS, st = %d\n", status);
+    zxlogf(ERROR, "MtkClk: failed to get ZX_PROTOCOL_PBUS, st = %d", status);
     return status;
   }
 
@@ -223,7 +223,7 @@ zx_status_t MtkClk::Bind() {
 
   status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "MtkClk::Create: pbus_register_protocol failed, st = %d\n", status);
+    zxlogf(ERROR, "MtkClk::Create: pbus_register_protocol failed, st = %d", status);
     return status;
   }
 
@@ -235,26 +235,26 @@ zx_status_t MtkClk::Create(zx_device_t* parent) {
 
   pdev_protocol_t pdev_proto;
   if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_proto)) != ZX_OK) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __FILE__);
     return status;
   }
 
   ddk::PDev pdev(&pdev_proto);
   std::optional<ddk::MmioBuffer> mmio;
   if ((status = pdev.MapMmio(0, &mmio)) != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed\n", __FILE__);
+    zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed", __FILE__);
     return status;
   }
 
   fbl::AllocChecker ac;
   std::unique_ptr<MtkClk> device(new (&ac) MtkClk(parent, *std::move(mmio)));
   if (!ac.check()) {
-    zxlogf(ERROR, "%s: MtkClk alloc failed\n", __FILE__);
+    zxlogf(ERROR, "%s: MtkClk alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
   if ((status = device->Bind()) != ZX_OK) {
-    zxlogf(ERROR, "%s: MtkClk bind failed: %d\n", __FILE__, status);
+    zxlogf(ERROR, "%s: MtkClk bind failed: %d", __FILE__, status);
     return status;
   }
 

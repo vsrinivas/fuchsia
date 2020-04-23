@@ -181,8 +181,8 @@ class MmioBuffer {
   void reset() { memset(&mmio_, 0, sizeof(mmio_)); }
 
   void Info() const {
-    zxlogf(INFO, "vaddr = %p\n", mmio_.vaddr);
-    zxlogf(INFO, "size = %lu\n", mmio_.size);
+    zxlogf(INFO, "vaddr = %p", mmio_.vaddr);
+    zxlogf(INFO, "size = %lu", mmio_.size);
   }
 
   void* get() const { return mmio_.vaddr; }

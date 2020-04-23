@@ -45,7 +45,7 @@ class VirtualAudioBus {
     // Add the virtual_audio device node, under parent /dev/test.
     zx_status_t status = device_add(parent_test_bus, &args, &control->dev_node_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "*** %s: could not add device '%s': %d\n", __func__, args.name, status);
+      zxlogf(ERROR, "*** %s: could not add device '%s': %d", __func__, args.name, status);
       return status;
     }
 

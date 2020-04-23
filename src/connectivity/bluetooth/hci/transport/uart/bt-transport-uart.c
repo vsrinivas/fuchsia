@@ -116,7 +116,7 @@ static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes
   zx_status_t status = zx_channel_write(hci->snoop_channel.h, 0, snoop_buffer, length + 1, NULL, 0);
   if (status != ZX_OK) {
     if (status != ZX_ERR_PEER_CLOSED) {
-      zxlogf(ERROR, "bt-transport-uart: failed to write to snoop channel: %s\n",
+      zxlogf(ERROR, "bt-transport-uart: failed to write to snoop channel: %s",
              zx_status_get_string(status));
     }
 
@@ -197,7 +197,7 @@ static void hci_handle_client_channel(hci_t* hci, client_channel_t* chan, zx_sig
       status = zx_channel_read(chan->h, 0, buf + 1, NULL, length, 0, &length, NULL);
 
       if (status != ZX_OK) {
-        zxlogf(ERROR, "hci_read_thread: failed to read from %s channel %s\n",
+        zxlogf(ERROR, "hci_read_thread: failed to read from %s channel %s",
                (packet_type == HCI_COMMAND) ? "CMD" : "ACL", zx_status_get_string(status));
         free(buf);
         chan->err = status;
@@ -234,7 +234,7 @@ static void hci_handle_uart_read_events(hci_t* hci, const uint8_t* buf, size_t l
       // start of new packet. read packet type
       packet_type = *src++;
       if (packet_type != HCI_EVENT && packet_type != HCI_ACL_DATA) {
-        zxlogf(INFO, "unsupported HCI packet type %u. We may be out of sync\n", packet_type);
+        zxlogf(INFO, "unsupported HCI packet type %u. We may be out of sync", packet_type);
         return;
       }
     }
@@ -273,7 +273,7 @@ static void hci_handle_uart_read_events(hci_t* hci, const uint8_t* buf, size_t l
             zx_status_t status = zx_channel_write(hci->cmd_channel.h, 0, &hci->event_buffer[1],
                                                   packet_length - 1, NULL, 0);
             if (status != ZX_OK) {
-              zxlogf(ERROR, "bt-transport-uart: failed to write CMD packet: %s\n",
+              zxlogf(ERROR, "bt-transport-uart: failed to write CMD packet: %s",
                      zx_status_get_string(status));
               hci->cmd_channel.err = status;
               zx_object_signal(hci->wakeup_event, 0, ZX_EVENT_SIGNALED);
@@ -320,7 +320,7 @@ static void hci_handle_uart_read_events(hci_t* hci, const uint8_t* buf, size_t l
                                                   packet_length - 1, NULL, 0);
 
             if (status != ZX_OK) {
-              zxlogf(ERROR, "bt-transport-uart: failed to write ACL packet: %s\n",
+              zxlogf(ERROR, "bt-transport-uart: failed to write ACL packet: %s",
                      zx_status_get_string(status));
               hci->acl_channel.err = status;
               zx_object_signal(hci->wakeup_event, 0, ZX_EVENT_SIGNALED);
@@ -359,7 +359,7 @@ static void hci_read_complete(void* context, zx_status_t status, const void* buf
   } else {
     // There is not much we can do in the event of a UART read error.  Do not
     // queue a read job and start the process of shutting down.
-    zxlogf(ERROR, "Fatal UART read error (%s), shutting down\n", zx_status_get_string(status));
+    zxlogf(ERROR, "Fatal UART read error (%s), shutting down", zx_status_get_string(status));
     hci_begin_shutdown(hci);
   }
 }
@@ -442,7 +442,7 @@ static int hci_thread(void* arg) {
     // Did we fail to wait?  This should never happen.  If it does, begin the
     // process of shutdown.
     if (status != ZX_OK) {
-      zxlogf(ERROR, "bt-transport-uart: zx_object_wait_many failed (%s) - exiting\n",
+      zxlogf(ERROR, "bt-transport-uart: zx_object_wait_many failed (%s) - exiting",
              zx_status_get_string(status));
       hci_begin_shutdown(hci);
       break;
@@ -479,7 +479,7 @@ static int hci_thread(void* arg) {
     }
   }
 
-  zxlogf(INFO, "bt-transport-uart: thread exiting\n");
+  zxlogf(INFO, "bt-transport-uart: thread exiting");
   hci->thread_running = false;
   return status;
 }
@@ -489,7 +489,7 @@ static zx_status_t hci_open_channel(hci_t* hci, client_channel_t* in_channel, zx
   mtx_lock(&hci->mutex);
 
   if (in_channel->h != ZX_HANDLE_INVALID) {
-    zxlogf(ERROR, "bt-transport-uart: already bound, failing\n");
+    zxlogf(ERROR, "bt-transport-uart: already bound, failing");
     result = ZX_ERR_ALREADY_BOUND;
     goto done;
   }
@@ -597,13 +597,13 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
 
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_SERIAL_IMPL_ASYNC, &serial);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "bt-transport-uart: get protocol ZX_PROTOCOL_SERIAL failed\n");
+    zxlogf(ERROR, "bt-transport-uart: get protocol ZX_PROTOCOL_SERIAL failed");
     return status;
   }
 
   hci_t* hci = calloc(1, sizeof(hci_t));
   if (!hci) {
-    zxlogf(ERROR, "bt-transport-uart: Not enough memory for hci_t\n");
+    zxlogf(ERROR, "bt-transport-uart: Not enough memory for hci_t");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -613,14 +613,14 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
 
   hci->serial = serial;
   if (status != ZX_OK) {
-    zxlogf(ERROR, "bt-transport-uart: serial_open_socket failed: %s\n",
+    zxlogf(ERROR, "bt-transport-uart: serial_open_socket failed: %s",
            zx_status_get_string(status));
     goto fail;
   }
 
   status = zx_event_create(0, &hci->wakeup_event);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hci_bind: zx_event_create failed\n");
+    zxlogf(ERROR, "hci_bind: zx_event_create failed");
     goto fail;
   }
 
@@ -637,7 +637,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
   serial_port_info_t info;
   status = serial_impl_async_get_info(&serial, &info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hci_bind: serial_get_info failed\n");
+    zxlogf(ERROR, "hci_bind: serial_get_info failed");
     goto fail;
   }
 
@@ -645,7 +645,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
   hci->can_write = true;
 
   if (info.serial_class != fuchsia_hardware_serial_Class_BLUETOOTH_HCI) {
-    zxlogf(ERROR, "hci_bind: info.device_class != BLUETOOTH_HCI\n");
+    zxlogf(ERROR, "hci_bind: info.device_class != BLUETOOTH_HCI");
     status = ZX_ERR_INTERNAL;
     goto fail;
   }
@@ -675,7 +675,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
   }
 
 fail:
-  zxlogf(ERROR, "hci_bind: bind failed: %s\n", zx_status_get_string(status));
+  zxlogf(ERROR, "hci_bind: bind failed: %s", zx_status_get_string(status));
   hci_release(hci);
   return status;
 }
