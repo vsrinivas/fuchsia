@@ -12,12 +12,22 @@ group("tests") {
 }
 
 test_package("weavestack_unittests") {
-  deps = [ ":unittests" ]
+  deps = [
+    ":config",
+    ":unittests",
+  ]
 
   tests = [
     {
       name = "weavestack_unittests"
       environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("../data/default_environment_schema.json")
+      dest = "default_environment_schema.json"
     },
   ]
 }
@@ -38,4 +48,9 @@ executable("unittests") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
   ]
+}
+
+config_data("config") {
+  for_pkg = "weavestack_unittests"
+  sources = [ "testdata/default_environment.json" ]
 }

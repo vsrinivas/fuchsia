@@ -14,13 +14,13 @@
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.ipp>
 // clang-format on
 
-#include <fuchsia/factory/cpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/logger.h>
 #include <net/ethernet.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fsl/vmo/file.h>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 
 namespace nl {
@@ -48,23 +48,21 @@ constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
 constexpr char kDeviceInfoConfigKey_VendorId[] = "vendor-id";
 // Maximum number of chars in hex for a uint64_t
-constexpr int kWeaveDeviceIdMaxLength = 16+1;
+constexpr int kWeaveDeviceIdMaxLength = 16 + 1;
 }  // unnamed namespace
 
 /* Singleton instance of the ConfigurationManager implementation object for the Fuchsia. */
 ConfigurationManagerImpl ConfigurationManagerImpl::sInstance;
 
-ConfigurationManagerImpl::ConfigurationManagerImpl()
-    : device_info_(WeaveConfigManager::CreateReadOnlyInstance(kDeviceInfoStorePath)) {}
+ConfigurationManagerImpl::ConfigurationManagerImpl() : ConfigurationManagerImpl(nullptr) {}
 
 ConfigurationManagerImpl::ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)),
-      device_info_(WeaveConfigManager::CreateReadOnlyInstance(kDeviceInfoStorePath)) {
-  FXL_CHECK(_Init() == WEAVE_NO_ERROR) << "Failed to init configuration manager.";
-}
+      device_info_(WeaveConfigManager::CreateReadOnlyInstance(kDeviceInfoStorePath)) {}
 
 WEAVE_ERROR ConfigurationManagerImpl::_Init() {
-  WEAVE_ERROR err;
+  WEAVE_ERROR err = WEAVE_NO_ERROR;
+
   if (!context_) {
     context_ = sys::ComponentContext::Create();
   }
@@ -88,7 +86,7 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
     return err;
   }
 
-  err = ConfigurationManagerImpl::GetAndStorePairingCode();
+  err = GetAndStorePairingCode();
   if (err != WEAVE_NO_ERROR && err != WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     return err;
   }
@@ -158,8 +156,7 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetFirmwareRevision(char* buf, size_t buf
                                           &out_len);
 }
 
-zx_status_t ConfigurationManagerImpl::ReadFactoryFile(const char* filename,
-                                                      char* output) {
+zx_status_t ConfigurationManagerImpl::ReadFactoryFile(const char* filename, char* output) {
   zx_status_t status;
   int weave_dir_fd;
   status = fdio_fd_create(factory_directory_.Unbind().TakeChannel().release(), &weave_dir_fd);
@@ -194,22 +191,24 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetDeviceId(uint64_t& device_id) {
   }
 
   err = device_info_->ReadConfigValue(kDeviceInfoConfigKey_DeviceId, &device_id);
-
-  if (err == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
-    // config data not found, lets check for a file path.
-    char path[PATH_MAX] = {'\0'};
-    size_t out_size;
-    err = device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_DeviceIdPath, path, sizeof(path),
-                                                  &out_size);
-    if (err == WEAVE_NO_ERROR) {
-      err = GetDeviceIdFromFactory(path, &device_id);
-      FXL_CHECK(err == WEAVE_NO_ERROR) << "Failed getting device id from factory at path: "<< path;
-      StoreManufacturerDeviceId(device_id);
-      return err;
-    }
+  if (err != WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
+    return err;
   }
 
-  return WEAVE_NO_ERROR;
+  char path[PATH_MAX] = {'\0'};
+  size_t out_size;
+  err = device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_DeviceIdPath, path, sizeof(path),
+                                         &out_size);
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  err = GetDeviceIdFromFactory(path, &device_id);
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  return StoreManufacturerDeviceId(device_id);
 }
 
 zx_status_t ConfigurationManagerImpl::GetDeviceIdFromFactory(const char* path,

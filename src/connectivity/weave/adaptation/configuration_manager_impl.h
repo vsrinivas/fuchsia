@@ -21,10 +21,12 @@
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
-
 namespace Internal {
 class NetworkProvisioningServerImpl;
 class WeaveConfigReader;
+namespace testing {
+class ConfigurationManagerTest;
+}  // namespace testing
 }  // namespace Internal
 
 /**
@@ -66,6 +68,7 @@ class ConfigurationManagerImpl final
   // ===== Members for internal use by the following friends.
 
   friend class Internal::NetworkProvisioningServerImpl;
+  friend class Internal::testing::ConfigurationManagerTest;
   friend ConfigurationManager& ConfigurationMgr(void);
   friend ConfigurationManagerImpl& ConfigurationMgrImpl(void);
 

@@ -13,40 +13,28 @@
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.ipp>
 // clang-format on
 
-#include <fuchsia/hwinfo/cpp/fidl.h>
-#include <fuchsia/hwinfo/cpp/fidl_test_base.h>
-#include <fuchsia/weave/cpp/fidl.h>
-#include <fuchsia/weave/cpp/fidl_test_base.h>
-#include <fuchsia/wlan/device/service/cpp/fidl.h>
-#include <fuchsia/wlan/device/service/cpp/fidl_test_base.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/gtest/real_loop_fixture.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
-#include <net/ethernet.h>
-#include <thread>
-#include <fuchsia/factory/cpp/fidl.h>
 #include <fuchsia/factory/cpp/fidl_test_base.h>
-#include <fuchsia/io/cpp/fidl.h>
+#include <fuchsia/hwinfo/cpp/fidl_test_base.h>
 #include <fuchsia/io/cpp/fidl_test_base.h>
+#include <fuchsia/weave/cpp/fidl_test_base.h>
+#include <fuchsia/wlan/device/service/cpp/fidl_test_base.h>
+
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/syslog/cpp/logger.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/vmo_file.h>
+#include <net/ethernet.h>
 
-#include "configuration_manager_impl.h"
-#include "gtest/gtest.h"
-#include <memory>
 #include "src/lib/fsl/vmo/strings.h"
+#include "weave_test_fixture.h"
 
-namespace adaptation {
+namespace nl::Weave::DeviceLayer::Internal {
 namespace testing {
 namespace {
 
 using nl::Weave::DeviceLayer::ConfigurationManager;
-using nl::Weave::DeviceLayer::ConfigurationMgr;
-using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
+using nl::Weave::DeviceLayer::ConfigurationManagerImpl;
 using nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor;
 
 constexpr uint8_t kExpectedMac[] = {124, 46, 119, 21, 27, 102};
@@ -161,11 +149,11 @@ class FakeDirectory {
   zx_status_t AddResource(std::string filename, const std::string& data) {
     return root_->AddEntry(filename, CreateVmoFile(data));
   }
-  void Serve(fidl::InterfaceRequest<fuchsia::io::Directory> channel, async_dispatcher_t* dispatcher) {
-    root_->Serve(
-        fuchsia::io::OPEN_FLAG_DIRECTORY | fuchsia::io::OPEN_RIGHT_READABLE |
-        fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-        channel.TakeChannel(), dispatcher);
+  void Serve(fidl::InterfaceRequest<fuchsia::io::Directory> channel,
+             async_dispatcher_t* dispatcher) {
+    root_->Serve(fuchsia::io::OPEN_FLAG_DIRECTORY | fuchsia::io::OPEN_RIGHT_READABLE |
+                     fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                 channel.TakeChannel(), dispatcher);
   }
 
  private:
@@ -175,9 +163,10 @@ class FakeDirectory {
       return nullptr;
     }
     return std::make_unique<vfs::VmoFile>(zx::unowned_vmo(test_vmo.vmo()), 0, data.size(),
-                            vfs::VmoFile::WriteOption::WRITABLE,
-                            vfs::VmoFile::Sharing::CLONE_COW);
+                                          vfs::VmoFile::WriteOption::WRITABLE,
+                                          vfs::VmoFile::Sharing::CLONE_COW);
   }
+
  protected:
   std::unique_ptr<vfs::PseudoDir> root_;
 };
@@ -186,21 +175,21 @@ class FakeWeaveFactoryStoreProvider
     : public fuchsia::factory::testing::WeaveFactoryStoreProvider_TestBase {
  public:
   FakeWeaveFactoryStoreProvider() = default;
+
   fidl::InterfaceRequestHandler<fuchsia::factory::WeaveFactoryStoreProvider> GetHandler(
       async_dispatcher_t* dispatcher = nullptr) {
     dispatcher_ = dispatcher;
-    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::factory::WeaveFactoryStoreProvider> request) {
+    return [this, dispatcher](
+               fidl::InterfaceRequest<fuchsia::factory::WeaveFactoryStoreProvider> request) {
       binding_.Bind(std::move(request), dispatcher);
     };
   }
+
   ~FakeWeaveFactoryStoreProvider() override = default;
   FakeWeaveFactoryStoreProvider(const FakeWeaveFactoryStoreProvider&) = delete;
-  FakeWeaveFactoryStoreProvider& operator=(
-      const FakeWeaveFactoryStoreProvider&) = delete;
+  FakeWeaveFactoryStoreProvider& operator=(const FakeWeaveFactoryStoreProvider&) = delete;
 
-  void AttachDir(std::unique_ptr<FakeDirectory> fake_dir) {
-    fake_dir_ = std::move(fake_dir);
-  }
+  void AttachDir(std::unique_ptr<FakeDirectory> fake_dir) { fake_dir_ = std::move(fake_dir); }
 
   void GetFactoryStore(::fidl::InterfaceRequest<::fuchsia::io::Directory> dir) override {
     if (!fake_dir_) {
@@ -211,13 +200,14 @@ class FakeWeaveFactoryStoreProvider
   }
 
   void NotImplemented_(const std::string& name) final { ADD_FAILURE(); };
+
  private:
   fidl::Binding<fuchsia::factory::WeaveFactoryStoreProvider> binding_{this};
   std::unique_ptr<FakeDirectory> fake_dir_;
   async_dispatcher_t* dispatcher_;
 };
 
-class ConfigurationManagerTest : public ::gtest::RealLoopFixture {
+class ConfigurationManagerTest : public WeaveTestFixture {
  public:
   ConfigurationManagerTest() {
     context_provider_.service_directory_provider()->AddService(
@@ -229,45 +219,23 @@ class ConfigurationManagerTest : public ::gtest::RealLoopFixture {
     context_provider_.service_directory_provider()->AddService(
         fake_weave_factory_store_provider_.GetHandler(dispatcher()));
   }
-  ~ConfigurationManagerTest() { QuitLoop(); }
 
   void SetUp() {
-    RealLoopFixture::SetUp();
-    RunLoopAsync();
-    cfg_mgr_ = std::make_unique<nl::Weave::DeviceLayer::ConfigurationManagerImpl>(
-        context_provider_.TakeContext());
-    WaitOnLoop(true);
+    WeaveTestFixture::SetUp();
+    WeaveTestFixture::RunFixtureLoop();
+    cfg_mgr_ = std::make_unique<ConfigurationManagerImpl>(context_provider_.TakeContext());
+    EXPECT_EQ(cfg_mgr_->_Init(), WEAVE_NO_ERROR);
   }
 
-  void RunLoopAsync() {
-    if (test_loop_bg_thread_) {
-      FAIL() << "Already running the background thread.";
-    }
-    test_loop_bg_trigger_.store(false);
-    test_loop_bg_thread_ = std::make_unique<std::thread>(
-        [this] { RunLoopUntil([this] { return test_loop_bg_trigger_.load(); }); });
+  void TearDown() {
+    WeaveTestFixture::StopFixtureLoop();
+    WeaveTestFixture::TearDown();
   }
-
-  void WaitOnLoop(bool trigger = false) {
-    if (!test_loop_bg_thread_) {
-      FAIL() << "Background thread was not started, nothing to wait on.";
-    }
-    if (trigger) {
-      TriggerCondition();
-    }
-    test_loop_bg_thread_->join();
-    test_loop_bg_thread_.reset();
-  }
-
-  void TriggerCondition() { test_loop_bg_trigger_.store(true); }
 
  protected:
-  std::unique_ptr<nl::Weave::DeviceLayer::ConfigurationManagerImpl> cfg_mgr_;
+  std::unique_ptr<ConfigurationManagerImpl> cfg_mgr_;
 
  private:
-  std::unique_ptr<std::thread> test_loop_bg_thread_;
-  std::atomic_bool test_loop_bg_trigger_;
-
   sys::testing::ComponentContextProvider context_provider_;
 
   FakeHwinfo fake_hwinfo_;
@@ -297,9 +265,7 @@ TEST_F(ConfigurationManagerTest, GetDeviceId) {
 
 TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
   uint8_t mac[ETH_ALEN];
-  RunLoopAsync();
   EXPECT_EQ(cfg_mgr_->GetPrimaryWiFiMACAddress(mac), WEAVE_NO_ERROR);
-  WaitOnLoop(true);
   EXPECT_TRUE(std::equal(std::begin(kExpectedMac), std::end(kExpectedMac), std::begin(mac)));
 }
 
@@ -333,9 +299,7 @@ TEST_F(ConfigurationManagerTest, GetSerialNumber) {
 
 TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
   ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor device_desc;
-  RunLoopAsync();
   EXPECT_EQ(cfg_mgr_->GetDeviceDescriptor(device_desc), WEAVE_NO_ERROR);
-  WaitOnLoop(true);
 
   EXPECT_STREQ(device_desc.SerialNumber, kExpectedSerialNumber);
   EXPECT_EQ(device_desc.ProductId, kExpectedProductId);
@@ -357,13 +321,13 @@ TEST_F(ConfigurationManagerTest, SetAndGetDeviceId) {
   const std::string test_device_id_data("1234ABCD");
   uint64_t stored_weave_device_id = 0;
 
-  EXPECT_EQ(nl::Weave::DeviceLayer::Internal::EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+  EXPECT_EQ(nl::Weave::DeviceLayer::Internal::EnvironmentConfig::FactoryResetConfig(),
+            WEAVE_NO_ERROR);
+
   auto fake_dir = std::make_unique<FakeDirectory>();
   EXPECT_EQ(ZX_OK, fake_dir->AddResource(test_device_id_file, test_device_id_data));
   GetFactoryProvider()->AttachDir(std::move(fake_dir));
-  RunLoopAsync();
   EXPECT_EQ(cfg_mgr_->GetDeviceId(stored_weave_device_id), WEAVE_NO_ERROR);
-  WaitOnLoop(true);
   EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), NULL, 16));
 
   // Show that even if the file is modified, it doesn't affect us as we read from
@@ -371,11 +335,9 @@ TEST_F(ConfigurationManagerTest, SetAndGetDeviceId) {
   stored_weave_device_id = 0;
   auto fake_dir2 = std::make_unique<FakeDirectory>();
   GetFactoryProvider()->AttachDir(std::move(fake_dir2));
-  RunLoopAsync();
   EXPECT_EQ(cfg_mgr_->GetDeviceId(stored_weave_device_id), WEAVE_NO_ERROR);
-  WaitOnLoop(true);
   EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), NULL, 16));
 }
 
 }  // namespace testing
-}  // namespace adaptation
+}  // namespace nl::Weave::DeviceLayer::Internal

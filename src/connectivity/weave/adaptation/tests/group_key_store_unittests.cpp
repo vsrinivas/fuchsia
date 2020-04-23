@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 #include "environment_config.h"
 
-namespace adaptation {
+namespace nl::Weave::DeviceLayer::Internal {
 namespace testing {
 namespace {
 using nl::Weave::WeaveKeyId;
@@ -260,4 +260,4 @@ TEST_F(GroupKeyStoreTest, StoreLastUsedEpochKeyId) {
 }
 
 }  // namespace testing
-}  // namespace adaptation
+}  // namespace nl::Weave::DeviceLayer::Internal
