@@ -24,7 +24,7 @@ group("tests") {
     "go",
     "go/src:logs_integration_go_tests",
     "rust",
-    "rust:bin_test",
+    "rust:bin",
     "rust/puppet:bin",
   ]
 }

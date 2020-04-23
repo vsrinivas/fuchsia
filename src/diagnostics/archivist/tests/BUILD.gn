@@ -89,7 +89,7 @@ test_package("archivist_integration_tests") {
       disabled = true
     },
     {
-      name = "logs_integration_bin_test"
+      name = "logs_integration_rust_tests"
       environments = basic_envs
     },
     {
