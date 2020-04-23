@@ -64,7 +64,7 @@ config("ledger_config") {
 
 package("ledger_tests") {
   testonly = true
-  rootjob_svc = "//build"
+  rootjob_svc = true
 
   deps = [
     "//src/ledger/bin:ledger_unittests",

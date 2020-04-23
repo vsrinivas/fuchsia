@@ -138,7 +138,7 @@ test("driver_manager_test") {
 }
 
 test_package("driver_manager_tests") {
-  deprecated_shell = "//build"
+  deprecated_shell = true
 
   deps = [ ":driver_manager_test" ]
 

@@ -14,7 +14,7 @@ group("shell") {
 }
 
 sandbox_test_package("has_deprecated_shell") {
-  deprecated_shell = "//build"
+  deprecated_shell = true
 
   sources = [ "has_shell.cc" ]
 

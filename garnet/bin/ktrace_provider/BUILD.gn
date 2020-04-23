@@ -57,7 +57,7 @@ executable("bin") {
 }
 
 package("ktrace_provider") {
-  rootjob_svc = "//build"
+  rootjob_svc = true
 
   deps = [ ":bin" ]
 

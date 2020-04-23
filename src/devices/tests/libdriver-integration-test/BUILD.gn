@@ -49,7 +49,7 @@ devmgr_manifest("devmgr-manifest") {
 }
 
 test_package("libdriver-integration-test") {
-  deprecated_shell = "//build"
+  deprecated_shell = true
 
   deps = [
     ":devmgr-manifest",

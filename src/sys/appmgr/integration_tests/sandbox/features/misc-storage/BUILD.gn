@@ -15,7 +15,7 @@ group("misc-storage") {
 }
 
 sandbox_test_package("has-misc-storage") {
-  deprecated_misc_storage = "//build"
+  deprecated_misc_storage = true
   sources = [ "has_misc_storage.cc" ]
 
   deps = [
@@ -37,7 +37,7 @@ sandbox_test_package("no-misc-storage") {
 
 sandbox_test_package("restricted-misc-storage") {
   # Has deprecated-misc-storage feature, but not in //src/security/policy allowlist.
-  deprecated_misc_storage = "//build"
+  deprecated_misc_storage = true
   sources = [ "no_misc_storage.cc" ]
 
   deps = [

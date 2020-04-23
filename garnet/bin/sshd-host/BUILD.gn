@@ -34,7 +34,7 @@ executable("bin") {
 }
 
 package("sshd-host") {
-  deprecated_shell = "//build"
+  deprecated_shell = true
 
   deps = [
     ":bin",

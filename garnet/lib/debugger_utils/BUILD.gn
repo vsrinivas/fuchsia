@@ -119,7 +119,7 @@ executable("debugger_utils_test_helper") {
 }
 
 test_package("debugger_utils_tests") {
-  rootjob_svc = "//build"
+  rootjob_svc = true
 
   deps = [
     ":debugger_utils_test_helper",

@@ -15,16 +15,23 @@ import("//src/sys/cmc/build/cmc.gni")
 #
 #   data (required)
 #     [file] The path to the cmx file that is to be validated
-#   extra_schemas (optional)
-#     [list of scopes] Paths to extra json schemas to validate the cmx file against.
-#     A custom error message can also be provided, to be displayed if the schema fails
-#     to validate.
+#
+#   block_deprecated_misc_storage (optional)
+#     Rejects a deprecated cmx feature. Defaults to true.
+#
+#   block_deprecated_shell (optional)
+#     Rejects a deprecated cmx feature. Defaults to true.
+#
+#   block_rootjob_svc (optional)
+#     Rejects a deprecated cmx feature. Defaults to true.
+#
+#   block_rootresource_svc (optional)
+#     Rejects a deprecated cmx feature. Defaults to true.
 #
 #   deps (optional)
 #   public_deps (optional)
 #   testonly (optional)
 #   visibility (optional)
-#     Standard GN meaning.
 #
 # Example of usage:
 #
@@ -35,6 +42,10 @@ template("cmx_validate") {
   cmc(target_name) {
     forward_variables_from(invoker,
                            [
+                             "block_deprecated_misc_storage",
+                             "block_deprecated_shell",
+                             "block_rootjob_svc",
+                             "block_rootresource_svc",
                              "deps",
                              "sources",
                              "public_deps",
@@ -54,19 +65,56 @@ template("cmx_validate") {
       "validate",
       rebase_path(invoker.data, root_build_dir),
     ]
-    if (defined(invoker.extra_schemas)) {
-      foreach(extra_schema, invoker.extra_schemas) {
-        inputs += [ extra_schema.schema ]
-        schema_path = rebase_path(extra_schema.schema, root_build_dir)
-        args += [ "--extra_schema" ]
-        if (defined(extra_schema.error_msg)) {
-          args += [ "${schema_path}:${extra_schema.error_msg}" ]
-        } else {
-          args += [ "${schema_path}" ]
-        }
+
+    extra_schemas = []
+    if (!defined(block_deprecated_misc_storage) ||
+        block_deprecated_misc_storage) {
+      extra_schemas += [
+        {
+          schema = "//src/sys/cmc/build/block_deprecated_misc_storage.json"
+          error_msg = "The 'deprecated-misc-storage' feature is deprecated and guarded by an allowlist."
+        },
+      ]
+    }
+    if (!defined(block_deprecated_shell) || block_deprecated_shell) {
+      extra_schemas += [
+        {
+          schema = "//src/sys/cmc/build/block_deprecated_shell.json"
+          error_msg = "The 'deprecated-shell' feature is deprecated and guarded by an allowlist."
+        },
+      ]
+    }
+
+    if (!defined(block_rootjob_svc) || block_rootjob_svc) {
+      extra_schemas += [
+        {
+          schema = "//src/sys/cmc/build/block_rootjob_svc.json"
+          error_msg =
+              "The 'fuchsia.boot.RootJob' service is guarded by an allowlist."
+        },
+      ]
+    }
+    if (!defined(block_rootresource_svc) || block_rootresource_svc) {
+      extra_schemas += [
+        {
+          schema = "//src/sys/cmc/build/block_rootresource_svc.json"
+          error_msg = "The 'fuchsia.boot.RootResource' service is guarded by an allowlist."
+        },
+      ]
+    }
+
+    foreach(extra_schema, extra_schemas) {
+      inputs += [ extra_schema.schema ]
+      schema_path = rebase_path(extra_schema.schema, root_build_dir)
+      args += [ "--extra_schema" ]
+      if (defined(extra_schema.error_msg)) {
+        args += [ "${schema_path}:${extra_schema.error_msg}" ]
+      } else {
+        args += [ "${schema_path}" ]
       }
     }
   }
+
   validate_module_cmx_facet("module_" + target_name) {
     forward_variables_from(invoker,
                            [

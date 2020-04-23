@@ -54,7 +54,7 @@ executable("coverage_component") {
 }
 
 test_package("run_test_component_test") {
-  deprecated_shell = "//build"
+  deprecated_shell = true
 
   deps = [
     ":bin",

@@ -135,7 +135,7 @@ rustc_binary("bin") {
 }
 
 package("sl4f") {
-  deprecated_shell = "//build"
+  deprecated_shell = true
 
   meta = [
     {
