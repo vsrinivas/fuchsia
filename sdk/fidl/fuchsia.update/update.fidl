@@ -8,7 +8,7 @@ library fuchsia.update;
 /// update, or follow the status of ongoing updates.
 ///
 /// The Manager provides a mechanism for checking for updates via the
-/// [fuchisa.update2/Manager.CheckNow] message.
+/// [fuchsia.update2/Manager.CheckNow] message.
 [Discoverable]
 protocol Manager {
     /// Immediately check for an update, and optionally track the state and

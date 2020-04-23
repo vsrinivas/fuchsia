@@ -91,7 +91,7 @@ Modular [config](config.md) for your product:
   agent_service_index = [
     {
       "service_name": "Simple",
-      "agent_url": "fuchisa-pkg://url/to/your/agent"
+      "agent_url": "fuchsia-pkg://url/to/your/agent"
     }
   ]
 ```

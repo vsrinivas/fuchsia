@@ -441,7 +441,7 @@ provides to Fuchsia developers. Among other things, the Fuchsia SDK contains a
 definition of the [Fuchsia System Interface](#fuchsia-system-interface) as well
 as a number of client libraries.
 
-### **Fuchsia System Interface** {#fuchisa-system-interface}
+### **Fuchsia System Interface** {#fuchsia-system-interface}
 
 The [Fuchsia System Interface](/docs/concepts/system/abi/system.md) is the binary
 interface that the Fuchsia operating system presents to software it runs. For

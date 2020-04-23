@@ -44,7 +44,7 @@ zx::resource AttemptToGetVmexResource() {
   }
   status = fdio_service_connect("/svc_blobfs/fuchsia.security.resource.Vmex", remote.release());
   if (status != ZX_OK) {
-    FS_TRACE_WARN("blobfs: Failed to connect to fucshia.security.resource.Vmex: %d\n", status);
+    FS_TRACE_WARN("blobfs: Failed to connect to fuchsia.security.resource.Vmex: %d\n", status);
     return zx::resource();
   }
 
