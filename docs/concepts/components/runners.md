@@ -149,7 +149,7 @@ declare a runner capability in its component manifest, as follows:
         "from": "self",
 
         // Path to the protocol in our outgoing directory.
-        "path": "/svc/fuchsia.sys2.ComponentRunner",
+        "path": "/svc/fuchsia.component.runner.ComponentRunner",
     }],
 }
 ```
