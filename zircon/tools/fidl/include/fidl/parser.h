@@ -27,7 +27,7 @@ class Parser {
 
   std::unique_ptr<raw::File> Parse() { return ParseFile(); }
 
-  bool Ok() const { return error_reporter_->errors().size() == 0; }
+  bool Success() const { return error_reporter_->errors().size() == 0; }
 
  private:
   // currently the only usecase for this enum is to identify the case where the parser
@@ -279,6 +279,38 @@ class Parser {
       std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness);
 
   std::unique_ptr<raw::File> ParseFile();
+
+  enum class RecoverResult {
+    Failure,
+    Continue,
+    EndOfScope,
+  };
+
+  // Called when an error is encountered in parsing. Attempts to get the parser
+  // back to a valid state, where parsing can continue. Possible results:
+  //  * Failure: recovery failed. we are still in an invalid state and cannot
+  //    continue.
+  //    A signal to `return` a failure from the current parsing function.
+  //  * Continue: recovery succeeded. we are in a valid state to continue, at
+  //    the same parsing scope as when this was called (e.g. if we just parsed a
+  //    decl with an error, we can now parse another decl. If we just parsed a
+  //    member of a decl with an error, we can now parse another member.
+  //    A signal to `continue` in the current parsing loop.
+  //  * EndOfScope: recovery succeeded, but we are now outside the current
+  //    parsing scope. For example, we just parsed a decl with an error, and
+  //    recovered, but are now at the end of the file.
+  //    A signal to `break` out of the current parsing loop.
+  RecoverResult Recover();
+
+  // Indicates whether we are currently able to continue parsing.
+  // Typically when the parser reports an error, it then attempts to recover
+  // (get back into a valid state). If this is successful, it updates
+  // recovered_errors_ to reflect how many errors are considered "recovered
+  // from".
+  // Not to be confused with Parser::Success, which is called after parsing to
+  // check if any errors were reported during parsing, regardless of recovery.
+  bool Ok() const { return error_reporter_->errors().size() == recovered_errors_; }
+  size_t recovered_errors_ = 0;
 
   std::map<std::string_view, types::HandleSubtype> handle_subtype_table_;
 

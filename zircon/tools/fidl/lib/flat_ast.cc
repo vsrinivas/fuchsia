@@ -1298,7 +1298,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   const Name& name = decl_ptr->name;
   auto iter = declarations_.emplace(name, decl_ptr);
   if (!iter.second) {
-    return Fail(ErrNameCollision, name);
+    return Fail(ErrNameCollision, name.span(), name);
   }
   if (name.span()) {
     if (dependencies_.Contains(name.span()->source_file().filename(), {name.span()->data()})) {

@@ -19,6 +19,8 @@ constexpr ErrorDef<std::string_view> ErrInvalidCharacter(
 // ---------------------------------------------------------------------------
 // Parser
 // ---------------------------------------------------------------------------
+constexpr ErrorDef ErrExpectedDeclaration(
+    "expected start of declaration");
 constexpr ErrorDef ErrUnbalancedParseTree(
     "Internal compiler error: unbalanced parse tree");
 constexpr ErrorDef ErrUnexpectedToken(

@@ -242,7 +242,7 @@ bool Parse(const fidl::SourceFile& source_file, fidl::ErrorReporter* error_repor
   fidl::Lexer lexer(source_file, error_reporter);
   fidl::Parser parser(&lexer, error_reporter, experimental_flags);
   auto ast = parser.Parse();
-  if (!parser.Ok()) {
+  if (!parser.Success()) {
     return false;
   }
   if (!library->ConsumeFile(std::move(ast))) {

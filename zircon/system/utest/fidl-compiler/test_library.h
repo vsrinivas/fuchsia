@@ -81,7 +81,7 @@ class TestLibrary final {
     fidl::Lexer lexer(*source_file, error_reporter_);
     fidl::Parser parser(&lexer, error_reporter_, experimental_flags_);
     out_ast_ptr->reset(parser.Parse().release());
-    return parser.Ok();
+    return parser.Success();
   }
 
   bool Compile() {
@@ -89,7 +89,7 @@ class TestLibrary final {
       fidl::Lexer lexer(*source_file, error_reporter_);
       fidl::Parser parser(&lexer, error_reporter_, experimental_flags_);
       auto ast = parser.Parse();
-      if (!parser.Ok())
+      if (!parser.Success())
         return false;
       if (!library_->ConsumeFile(std::move(ast)))
         return false;
@@ -106,7 +106,7 @@ class TestLibrary final {
     fidl::Lexer lexer(*source_file, error_reporter_);
     fidl::Parser parser(&lexer, error_reporter_, experimental_flags_);
     auto ast = parser.Parse();
-    if (!parser.Ok()) {
+    if (!parser.Success()) {
       std::string_view beginning(source_file->data().data(), 0);
       fidl::SourceSpan span(beginning, *source_file);
       const auto& error = error_reporter_->errors().at(0);

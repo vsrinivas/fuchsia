@@ -56,7 +56,7 @@ bool Format(const fidl::SourceFile& source_file, fidl::ErrorReporter* error_repo
   fidl::ExperimentalFlags experimental_flags;
   fidl::Parser parser(&lexer, error_reporter, experimental_flags);
   std::unique_ptr<fidl::raw::File> ast = parser.Parse();
-  if (!parser.Ok()) {
+  if (!parser.Success()) {
     return false;
   }
   fidl::raw::FormattingTreeVisitor visitor;

@@ -1250,47 +1250,70 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
     switch (Peek().combined()) {
       default:
+        Fail(ErrExpectedDeclaration);
+        return More;
+
+      case CASE_TOKEN(Token::Kind::kEndOfFile):
         return Done;
 
-      case CASE_IDENTIFIER(Token::Subkind::kBits):
+      case CASE_IDENTIFIER(Token::Subkind::kBits): {
         done_with_library_imports = true;
-        bits_declaration_list.emplace_back(ParseBitsDeclaration(
-            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kStrict)));
+        auto bits_decl = ParseBitsDeclaration(
+            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kStrict));
+        if (bits_decl)
+          bits_declaration_list.emplace_back(std::move(bits_decl));
         return More;
+      }
 
-      case CASE_IDENTIFIER(Token::Subkind::kConst):
+      case CASE_IDENTIFIER(Token::Subkind::kConst): {
         done_with_library_imports = true;
-        const_declaration_list.emplace_back(ParseConstDeclaration(std::move(attributes), scope));
+        auto const_decl = ParseConstDeclaration(std::move(attributes), scope);
+        if (const_decl)
+          const_declaration_list.emplace_back(std::move(const_decl));
         return More;
+      }
 
-      case CASE_IDENTIFIER(Token::Subkind::kEnum):
+      case CASE_IDENTIFIER(Token::Subkind::kEnum): {
         done_with_library_imports = true;
-        enum_declaration_list.emplace_back(ParseEnumDeclaration(
-            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kStrict)));
+        auto enum_decl = ParseEnumDeclaration(
+            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kStrict));
+        if (enum_decl)
+          enum_declaration_list.emplace_back(std::move(enum_decl));
         return More;
+      }
 
-      case CASE_IDENTIFIER(Token::Subkind::kProtocol):
+      case CASE_IDENTIFIER(Token::Subkind::kProtocol): {
         done_with_library_imports = true;
-        protocol_declaration_list.emplace_back(
-            ParseProtocolDeclaration(std::move(attributes), scope));
+        auto protocol_decl = ParseProtocolDeclaration(std::move(attributes), scope);
+        if (protocol_decl)
+          protocol_declaration_list.emplace_back(std::move(protocol_decl));
         return More;
+      }
 
-      case CASE_IDENTIFIER(Token::Subkind::kService):
+      case CASE_IDENTIFIER(Token::Subkind::kService): {
         done_with_library_imports = true;
-        service_declaration_list.emplace_back(
-            ParseServiceDeclaration(std::move(attributes), scope));
+        auto service_decl = ParseServiceDeclaration(std::move(attributes), scope);
+        if (service_decl)
+          service_declaration_list.emplace_back(std::move(service_decl));
         return More;
+      }
 
-      case CASE_IDENTIFIER(Token::Subkind::kStruct):
+      case CASE_IDENTIFIER(Token::Subkind::kStruct): {
         done_with_library_imports = true;
-        struct_declaration_list.emplace_back(ParseStructDeclaration(std::move(attributes), scope));
+        auto struct_decl = ParseStructDeclaration(std::move(attributes), scope);
+        if (struct_decl)
+          struct_declaration_list.emplace_back(std::move(struct_decl));
         return More;
+      }
 
-      case CASE_IDENTIFIER(Token::Subkind::kTable):
+      case CASE_IDENTIFIER(Token::Subkind::kTable): {
         done_with_library_imports = true;
-        table_declaration_list.emplace_back(
-            ParseTableDeclaration(std::move(attributes), scope, types::Strictness::kFlexible));
+        auto table_decl = ParseTableDeclaration(
+            std::move(attributes), scope, types::Strictness::kFlexible);
+        if (table_decl)
+          table_declaration_list.emplace_back(std::move(table_decl));
         return More;
+      }
 
       case CASE_IDENTIFIER(Token::Subkind::kUsing): {
         auto using_decl = ParseUsing(std::move(attributes), scope);
@@ -1310,12 +1333,15 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         return More;
       }
 
-      case CASE_IDENTIFIER(Token::Subkind::kUnion):
+      case CASE_IDENTIFIER(Token::Subkind::kUnion): {
         done_with_library_imports = true;
         ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUnion));
-        union_declaration_list.emplace_back(ParseUnionDeclaration(
-            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kStrict)));
+        auto union_decl = ParseUnionDeclaration(
+            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kStrict));
+        if (union_decl)
+          union_declaration_list.emplace_back(std::move(union_decl));
         return More;
+      }
 
       case CASE_IDENTIFIER(Token::Subkind::kXUnion):
         auto strictness = maybe_strictness.value_or(types::Strictness::kFlexible);
@@ -1331,8 +1357,16 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   };
 
   while (parse_declaration() == More) {
-    if (!Ok())
-      return Fail();
+    if (!Ok()) {
+      // If this returns RecoverResult::Continue, we have consumed up to a '}'
+      // and expect a ';' to follow.
+      auto result = Recover();
+      if (result == RecoverResult::Failure) {
+        return Fail();
+      } else if (result == RecoverResult::EndOfScope) {
+        break;
+      }
+    }
     ConsumeToken(OfKind(Token::Kind::kSemicolon));
     if (!Ok())
       return Fail();
@@ -1348,6 +1382,40 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       std::move(enum_declaration_list), std::move(protocol_declaration_list),
       std::move(service_declaration_list), std::move(struct_declaration_list),
       std::move(table_declaration_list), std::move(union_declaration_list));
+}
+
+Parser::RecoverResult Parser::Recover() {
+  recovered_errors_ = error_reporter_->errors().size();
+
+  auto matches = [](Token::KindAndSubkind kind) {
+    return kind.combined() == CASE_TOKEN(Token::Kind::kRightCurly) ||
+           kind.combined() == CASE_TOKEN(Token::Kind::kEndOfFile);
+  };
+
+  // Consume tokens until we find a synchronization point
+  // Where this is depends on the RecoverPoint passed in
+  // For EndOfDecl, this is a '}' or EOF
+  while (!matches(Peek())) {
+    auto token = last_token_;
+    last_token_ = Lex();
+    UpdateMarks(token);
+    if (!Ok())
+      return RecoverResult::Failure;
+  }
+
+  switch (Peek().combined()) {
+    case CASE_TOKEN(Token::Kind::kRightCurly):
+      ConsumeToken(OfKind(Token::Kind::kRightCurly));
+      if (!Ok())
+        return RecoverResult::Failure;
+      return RecoverResult::Continue;
+
+    case CASE_TOKEN(Token::Kind::kEndOfFile):
+      return RecoverResult::EndOfScope;
+
+    default:
+      return RecoverResult::Failure;
+  }
 }
 
 }  // namespace fidl
