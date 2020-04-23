@@ -114,6 +114,21 @@ TEST_F(LoggingSocketTest, VLog) {
   CheckSocketEmpty();
 }
 
+TEST_F(LoggingSocketTest, VLogWithTag) {
+  const char* kMsg1 = "test message";
+  const char* kMsg2 = "another message";
+  const char* kTag1 = "TAG";
+  const char* kTag2 = "TAAAG";
+
+  FXL_VLOGT(1, kTag1) << kMsg1;
+  CheckSocketEmpty();
+
+  fxl::SetLogSettings({.min_log_level = -1}, {});
+  FXL_VLOGT(1, kTag2) << kMsg2;
+  ReadPacketAndCompare(-1, kMsg2, {kTag2});
+  CheckSocketEmpty();
+}
+
 TEST_F(LoggingSocketTest, PLog) {
   FXL_PLOG(ERROR, ZX_OK) << "should be ok";
   ReadPacketAndCompare(FX_LOG_ERROR, "should be ok: 0 (ZX_OK)");

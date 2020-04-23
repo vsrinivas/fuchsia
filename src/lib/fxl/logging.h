@@ -122,11 +122,14 @@ FXL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
 #define FXL_VLOG_IS_ON(verbose_level) ((verbose_level) <= ::fxl::GetVlogVerbosity())
 
 // The VLOG macros log with negative verbosities.
-#define FXL_VLOG_STREAM(verbose_level) \
-  ::fxl::LogMessage(-verbose_level, __FILE__, __LINE__, nullptr, nullptr).stream()
+#define FXL_VLOG_STREAM(verbose_level, tag) \
+  ::fxl::LogMessage(-verbose_level, __FILE__, __LINE__, nullptr, tag).stream()
 
 #define FXL_VLOG(verbose_level) \
-  FXL_LAZY_STREAM(FXL_VLOG_STREAM(verbose_level), FXL_VLOG_IS_ON(verbose_level))
+  FXL_LAZY_STREAM(FXL_VLOG_STREAM(verbose_level, nullptr), FXL_VLOG_IS_ON(verbose_level))
+
+#define FXL_VLOGT(verbose_level, tag) \
+  FXL_LAZY_STREAM(FXL_VLOG_STREAM(verbose_level, tag), FXL_VLOG_IS_ON(verbose_level))
 
 #ifndef NDEBUG
 #define FXL_DLOG(severity) FXL_LOG(severity)

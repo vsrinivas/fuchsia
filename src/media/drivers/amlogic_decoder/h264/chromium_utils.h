@@ -31,8 +31,8 @@
 #define DLOG FXL_DLOG
 #endif
 #define DVLOG FXL_DVLOG
-#define DVLOG_IF(verbose_level, condition)        \
-  FXL_LAZY_STREAM(FXL_VLOG_STREAM(verbose_level), \
+#define DVLOG_IF(verbose_level, condition)                 \
+  FXL_LAZY_STREAM(FXL_VLOG_STREAM(verbose_level, nullptr), \
                   FXL_VLOG_IS_ON(verbose_level) && (condition))
 #define NOTREACHED FXL_NOTREACHED
 

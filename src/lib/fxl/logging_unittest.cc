@@ -137,6 +137,32 @@ TEST_F(LoggingFixture, LogT) {
 #endif
 }
 
+TEST_F(LoggingFixture, VLogT) {
+  LogSettings new_settings;
+  new_settings.min_log_level = -1;
+  files::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
+  SetLogSettings(new_settings, {});
+
+  int line = __LINE__ + 1;
+  FXL_VLOGT(1, "first") << "First message";
+  FXL_VLOGT(2, "second") << "ABCD";
+
+  std::string log;
+  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
+
+#ifdef __Fuchsia__
+  EXPECT_THAT(log, testing::HasSubstr("[first] VLOG(1): [logging_unittest.cc(" +
+                                      std::to_string(line) + ")] First message"));
+#else
+  EXPECT_THAT(log, testing::HasSubstr("[first] [VERBOSE1:logging_unittest.cc(" +
+                                      std::to_string(line) + ")] First message"));
+#endif
+
+  EXPECT_THAT(log, testing::Not(testing::HasSubstr("second")));
+  EXPECT_THAT(log, testing::Not(testing::HasSubstr("ABCD")));
+}
+
 TEST_F(LoggingFixture, DVLogNoMinLevel) {
   LogSettings new_settings;
   EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
