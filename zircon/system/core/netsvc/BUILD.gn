@@ -160,7 +160,6 @@ test("netsvc-test") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/devmgr-integration-test",
-    "//zircon/public/lib/driver-integration-test",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fs",
@@ -168,6 +167,7 @@ test("netsvc-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
+    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/ramdevice-client",
   ]
   data_deps = [ ":netsvc" ]
@@ -196,7 +196,6 @@ test("netsvc-stress-test") {
     ":netsvc_common",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/devmgr-integration-test",
-    "//zircon/public/lib/driver-integration-test",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fs",
@@ -204,6 +203,7 @@ test("netsvc-stress-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
+    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/ramdevice-client",
   ]
   data_deps = [ ":netsvc" ]

@@ -92,9 +92,9 @@ test("driver_host_test") {
     ":common",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
     "//zircon/public/lib/devmgr-integration-test",
-    "//zircon/public/lib/driver-integration-test",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/driver-integration-test",
   ]
 
   # TODO(46713): Fix the leaks and remove this.

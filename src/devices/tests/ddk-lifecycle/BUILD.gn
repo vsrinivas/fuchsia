@@ -46,7 +46,6 @@ test("ddk-lifecycle") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
-    "//zircon/public/lib/driver-integration-test",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
@@ -54,6 +53,7 @@ test("ddk-lifecycle") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/ulib/driver-integration-test",
   ]
 }
 
