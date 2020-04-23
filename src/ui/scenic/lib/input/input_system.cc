@@ -11,6 +11,7 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
@@ -22,30 +23,17 @@ namespace input {
 
 using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
 using FocusChangeStatus = scenic_impl::gfx::ViewTree::FocusChangeStatus;
-using InputCommand = fuchsia::ui::input::Command;
 using Phase = fuchsia::ui::input::PointerEventPhase;
-using ScenicCommand = fuchsia::ui::scenic::Command;
 using fuchsia::ui::input::InputEvent;
 using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventType;
-using fuchsia::ui::input::SendPointerInputCmd;
 
 namespace {
-
-gfx::LayerStackPtr GetLayerStack(const gfx::SceneGraph& scene_graph, GlobalId compositor_id) {
-  gfx::CompositorWeakPtr compositor = scene_graph.GetCompositor(compositor_id);
-  FXL_DCHECK(compositor) << "No compositor, violated invariant.";
-
-  gfx::LayerStackPtr layer_stack = compositor->layer_stack();
-  FXL_DCHECK(layer_stack) << "No layer stack, violated invariant.";
-
-  return layer_stack;
-}
 
 // The x and y values are in layer (screen) coordinates.
 // NOTE: The accumulated hit structs contain resources that callers should let go of as soon as
 // possible.
-void PerformGlobalHitTest(const gfx::LayerStackPtr& layer_stack, const escher::vec2& pointer,
+void PerformGlobalHitTest(const gfx::LayerStackPtr& layer_stack, const glm::vec2& pointer,
                           gfx::HitAccumulator<gfx::ViewHit>* accumulator) {
   escher::ray4 ray = CreateScreenPerpendicularRay(pointer.x, pointer.y);
   FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
@@ -55,16 +43,16 @@ void PerformGlobalHitTest(const gfx::LayerStackPtr& layer_stack, const escher::v
 
 // Helper function to build an AccessibilityPointerEvent when there is a
 // registered accessibility listener.
-AccessibilityPointerEvent BuildAccessibilityPointerEvent(const PointerEvent& original,
-                                                         const escher::vec2& ndc_point,
-                                                         const escher::vec2& local_point,
+AccessibilityPointerEvent BuildAccessibilityPointerEvent(const PointerEvent& world_space_event,
+                                                         const glm::vec2& ndc_point,
+                                                         const glm::vec2& local_point,
                                                          uint64_t viewref_koid) {
   AccessibilityPointerEvent event;
-  event.set_event_time(original.event_time);
-  event.set_device_id(original.device_id);
-  event.set_pointer_id(original.pointer_id);
-  event.set_type(original.type);
-  event.set_phase(original.phase);
+  event.set_event_time(world_space_event.event_time);
+  event.set_device_id(world_space_event.device_id);
+  event.set_pointer_id(world_space_event.pointer_id);
+  event.set_type(world_space_event.type);
+  event.set_phase(world_space_event.phase);
   event.set_ndc_point({ndc_point.x, ndc_point.y});
   event.set_viewref_koid(viewref_koid);
   if (viewref_koid != ZX_KOID_INVALID) {
@@ -90,7 +78,47 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
     : System(std::move(context)), scene_graph_(scene_graph) {
   FXL_CHECK(scene_graph);
 
-  pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(this->context());
+  pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(
+      this->context(),
+      /*on_register=*/
+      [this] {
+        FXL_CHECK(!pointer_event_buffer_)
+            << "on_disconnect must be called before registering a new listener";
+        // In case a11y is turned on mid execution make sure to send active pointer event streams to
+        // their final location and do not send them to the a11y listener.
+        pointer_event_buffer_ = std::make_unique<PointerEventBuffer>(
+            /* DispatchEventFunction */
+            [this](PointerEventBuffer::DeferredPointerEvent views_and_event) {
+              DispatchDeferredPointerEvent(std::move(views_and_event));
+            },
+            /* ReportAccessibilityEventFunction */
+            [this](fuchsia::ui::input::accessibility::PointerEvent pointer) {
+              accessibility_pointer_event_listener()->OnEvent(std::move(pointer));
+            });
+
+        for (const auto& kv : touch_targets_) {
+          // Force a reject in all active pointer IDs. When a new stream arrives,
+          // they will automatically be sent for the a11y listener decide
+          // what to do with them as the status will change to WAITING_RESPONSE.
+          pointer_event_buffer_->SetActiveStreamInfo(
+              /*pointer_id=*/kv.first, PointerEventBuffer::PointerIdStreamStatus::REJECTED);
+        }
+        // Registers an event handler for this listener. This callback captures a pointer to the
+        // event buffer that we own, so we need to clear it before we destroy it (see below).
+        accessibility_pointer_event_listener().events().OnStreamHandled =
+            [buffer = pointer_event_buffer_.get()](
+                uint32_t device_id, uint32_t pointer_id,
+                fuchsia::ui::input::accessibility::EventHandling handled) {
+              buffer->UpdateStream(pointer_id, handled);
+            };
+      },
+      /*on_disconnect=*/
+      [this] {
+        FXL_CHECK(pointer_event_buffer_) << "can not disconnect before registering";
+        // The listener disconnected. Release held events, delete the buffer.
+        accessibility_pointer_event_listener().events().OnStreamHandled = nullptr;
+        pointer_event_buffer_.reset();
+      });
 
   ime_service_ = this->context()->app_context()->svc()->Connect<fuchsia::ui::input::ImeService>();
   ime_service_.set_error_handler(
@@ -113,7 +141,12 @@ CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
       [](CommandDispatcher* cd) { delete cd; });
 }
 
-A11yPointerEventRegistry::A11yPointerEventRegistry(SystemContext* context) {
+A11yPointerEventRegistry::A11yPointerEventRegistry(SystemContext* context,
+                                                   fit::function<void()> on_register,
+                                                   fit::function<void()> on_disconnect)
+    : on_register_(std::move(on_register)), on_disconnect_(std::move(on_disconnect)) {
+  FXL_DCHECK(on_register_);
+  FXL_DCHECK(on_disconnect_);
   context->app_context()->outgoing()->AddPublicService(
       accessibility_pointer_event_registry_.GetHandler(this));
 }
@@ -124,6 +157,9 @@ void A11yPointerEventRegistry::Register(
     RegisterCallback callback) {
   if (!accessibility_pointer_event_listener()) {
     accessibility_pointer_event_listener().Bind(std::move(pointer_event_listener));
+    accessibility_pointer_event_listener_.set_error_handler(
+        [this](zx_status_t) { on_disconnect_(); });
+    on_register_();
     callback(/*success=*/true);
   } else {
     // An accessibility listener is already registered.
@@ -164,8 +200,8 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
   const zx_koid_t context_koid = utils::ExtractKoid(config.context().view());
   const zx_koid_t target_koid = utils::ExtractKoid(config.target().view());
   if (context_koid == ZX_KOID_INVALID || target_koid == ZX_KOID_INVALID) {
-    FXL_LOG(ERROR)
-        << "InjectorRegistry::Register : Argument |config.context| or |config.target| was invalid.";
+    FXL_LOG(ERROR) << "InjectorRegistry::Register : Argument |config.context| or |config.target| "
+                      "was invalid.";
     return;
   }
   if (!IsDescendantAndConnected(scene_graph_->view_tree(), target_koid, context_koid)) {
@@ -196,15 +232,6 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
   callback();
 }
 
-std::optional<glm::mat4> InputSystem::GetGlobalTransformByViewRef(
-    const fuchsia::ui::views::ViewRef& view_ref) const {
-  if (!scene_graph_) {
-    return std::nullopt;
-  }
-  zx_koid_t view_ref_koid = fsl::GetKoid(view_ref.reference.get());
-  return scene_graph_->view_tree().GlobalTransformOf(view_ref_koid);
-}
-
 void InputSystem::RegisterListener(
     fidl::InterfaceHandle<fuchsia::ui::input::PointerCaptureListener> listener_handle,
     fuchsia::ui::views::ViewRef view_ref, RegisterListenerCallback success_callback) {
@@ -230,14 +257,14 @@ void InputSystem::RegisterListener(
   success_callback(true);
 }
 
-void InputSystem::DispatchPointerCommand(const SendPointerInputCmd& command,
+void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
                                          scheduling::SessionId session_id, bool parallel_dispatch) {
   TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
   if (!scene_graph_)
     return;
 
   // Compositor and layer stack required for dispatch.
-  GlobalId compositor_id(session_id, command.compositor_id);
+  const GlobalId compositor_id(session_id, command.compositor_id);
   gfx::CompositorWeakPtr compositor = scene_graph_->GetCompositor(compositor_id);
   if (!compositor)
     return;  // It's legal to race against GFX's compositor setup.
@@ -246,14 +273,47 @@ void InputSystem::DispatchPointerCommand(const SendPointerInputCmd& command,
   if (!layer_stack)
     return;  // It's legal to race against GFX's layer stack setup.
 
+  const auto layers = layer_stack->layers();
+  if (layers.empty())
+    return;
+
+  // Assume we only have one layer.
+  const glm::vec2 screen_space_coords = PointerCoords(command.pointer_event);
+  const glm::mat4 screen_space_to_world_space_transform =
+      (*layers.begin())->GetScreenToWorldSpaceTransform();
+  const glm::vec2 world_space_coords =
+      TransformPointerCoords(screen_space_coords, screen_space_to_world_space_transform);
+  const fuchsia::ui::input::PointerEvent world_space_pointer_event =
+      ClonePointerWithCoords(command.pointer_event, world_space_coords);
+
   switch (command.pointer_event.type) {
-    case PointerEventType::TOUCH:
-      DispatchTouchCommand(command, layer_stack, session_id, parallel_dispatch,
-                           /*a11y_enabled=*/ShouldForwardAccessibilityPointerEvents());
+    case PointerEventType::TOUCH: {
+      TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
+      trace_flow_id_t trace_id = PointerTraceHACK(world_space_pointer_event.radius_major,
+                                                  world_space_pointer_event.radius_minor);
+      TRACE_FLOW_END("input", "dispatch_event_to_scenic", trace_id);
+
+      FXL_DCHECK(world_space_pointer_event.type == PointerEventType::TOUCH);
+      if (world_space_pointer_event.phase == Phase::HOVER) {
+        FXL_LOG(WARNING) << "Oops, touch device had unexpected HOVER event.";
+        return;
+      }
+      InjectTouchEvent(world_space_pointer_event, screen_space_coords, layer_stack,
+                       parallel_dispatch, IsA11yListenerEnabled());
       break;
-    case PointerEventType::MOUSE:
-      DispatchMouseCommand(command, layer_stack);
+    }
+    case PointerEventType::MOUSE: {
+      TRACE_DURATION("input", "dispatch_command", "command", "MouseCmd");
+      if (command.pointer_event.phase == Phase::ADD ||
+          command.pointer_event.phase == Phase::REMOVE ||
+          command.pointer_event.phase == Phase::HOVER) {
+        FXL_LOG(WARNING) << "Oops, mouse device (id=" << command.pointer_event.device_id
+                         << ") had an unexpected event: " << command.pointer_event.phase;
+        return;
+      }
+      InjectMouseEvent(world_space_pointer_event, screen_space_coords, layer_stack);
       break;
+    }
     default:
       // TODO(SCN-940), TODO(SCN-164): Stylus support needs to account for HOVER
       // events, which need to trigger an additional hit test on the DOWN event
@@ -270,43 +330,34 @@ void InputSystem::DispatchPointerCommand(const SendPointerInputCmd& command,
 //    disambiguation, we perform parallel dispatch to all clients.
 //  - Touch DOWN triggers a focus change, honoring the "may receive focus" property.
 //  - Touch REMOVE drops the association between event stream and client.
-void InputSystem::DispatchTouchCommand(const SendPointerInputCmd& command,
-                                       const gfx::LayerStackPtr& layer_stack,
-                                       scheduling::SessionId session_id, bool parallel_dispatch,
-                                       bool a11y_enabled) {
-  TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
-  trace_flow_id_t trace_id =
-      PointerTraceHACK(command.pointer_event.radius_major, command.pointer_event.radius_minor);
-  TRACE_FLOW_END("input", "dispatch_event_to_scenic", trace_id);
-
-  const uint32_t pointer_id = command.pointer_event.pointer_id;
-  const Phase pointer_phase = command.pointer_event.phase;
-  const escher::vec2 pointer = PointerCoords(command.pointer_event);
-
-  FXL_DCHECK(command.pointer_event.type == PointerEventType::TOUCH);
-  FXL_DCHECK(pointer_phase != Phase::HOVER) << "Oops, touch device had unexpected HOVER event.";
+void InputSystem::InjectTouchEvent(
+    const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
+    const glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack,
+    bool parallel_dispatch, bool a11y_enabled) {
+  FXL_DCHECK(world_space_pointer_event.type == PointerEventType::TOUCH);
+  const uint32_t pointer_id = world_space_pointer_event.pointer_id;
+  const Phase pointer_phase = world_space_pointer_event.phase;
 
   if (pointer_phase == Phase::ADD) {
     gfx::SessionHitAccumulator accumulator;
-    PerformGlobalHitTest(layer_stack, pointer, &accumulator);
+    PerformGlobalHitTest(layer_stack, screen_space_coords, &accumulator);
     const auto& hits = accumulator.hits();
 
     // Find input targets.  Honor the "input masking" view property.
-    ViewStack hit_views;
+    std::vector<zx_koid_t> hit_views;
     {
-      // Find the transform (input -> view coordinates) for each hit and fill out hit_views.
       for (const gfx::ViewHit& hit : hits) {
-        hit_views.stack.push_back({
-            hit.view->view_ref_koid(),
-            hit.view->event_reporter()->GetWeakPtr(),
-            hit.screen_to_view_transform,
-        });
+        hit_views.push_back(hit.view->view_ref_koid());
         if (/*TODO(SCN-919): view_id may mask input */ false) {
           break;
         }
       }
     }
-    FXL_VLOG(1) << "View stack of hits: " << hit_views;
+
+    FXL_VLOG(1) << "View hits: ";
+    for (auto view_ref_koid : hit_views) {
+      FXL_VLOG(1) << "[ViewRefKoid=" << view_ref_koid << "]";
+    }
 
     // Save targets for consistent delivery of touch events.
     touch_targets_[pointer_id] = hit_views;
@@ -320,9 +371,9 @@ void InputSystem::DispatchTouchCommand(const SendPointerInputCmd& command,
     // If accessibility listener is on, focus change events must be sent only if
     // the stream is rejected. This way, this operation is deferred.
     if (!a11y_enabled) {
-      if (!touch_targets_[pointer_id].stack.empty()) {
+      if (!touch_targets_[pointer_id].empty()) {
         // Request that focus be transferred to the top view.
-        RequestFocusChange(touch_targets_[pointer_id].stack[0].view_ref_koid);
+        RequestFocusChange(touch_targets_[pointer_id].front());
       } else if (focus_chain_root() != ZX_KOID_INVALID) {
         // The touch event stream has no designated receiver.
         // Request that focus be transferred to the root view, so that (1) the currently focused
@@ -333,12 +384,12 @@ void InputSystem::DispatchTouchCommand(const SendPointerInputCmd& command,
   }
 
   // Input delivery must be parallel; needed for gesture disambiguation.
-  std::vector<ViewStack::Entry> deferred_event_receivers;
-  for (const auto& entry : touch_targets_[pointer_id].stack) {
+  std::vector<zx_koid_t> deferred_event_receivers;
+  for (zx_koid_t view_ref_koid : touch_targets_[pointer_id]) {
     if (a11y_enabled) {
-      deferred_event_receivers.emplace_back(entry);
+      deferred_event_receivers.emplace_back(view_ref_koid);
     } else {
-      ReportPointerEvent(entry, command.pointer_event);
+      ReportPointerEventToView(world_space_pointer_event, view_ref_koid);
     }
     if (!parallel_dispatch) {
       break;  // TODO(SCN-1047): Remove when gesture disambiguation is ready.
@@ -350,13 +401,15 @@ void InputSystem::DispatchTouchCommand(const SendPointerInputCmd& command,
 
   if (a11y_enabled) {
     // We handle both latched (!deferred_event_receivers.empty()) and unlatched
-    // (deferred_event_receivers.empty()) touch events, for two reasons. (1) We must notify
-    // accessibility about events regardless of latch, so that it has full
-    //     information about a gesture stream. E.g., the gesture could start traversal in empty
-    //     space before MOVE-ing onto a rect; accessibility needs both the gesture and the rect.
+    // (deferred_event_receivers.empty()) touch events, for two reasons.
+    //
+    // (1) We must notify accessibility about events regardless of latch, so that it has full
+    // information about a gesture stream. E.g., the gesture could start traversal in empty space
+    // before MOVE-ing onto a rect; accessibility needs both the gesture and the rect.
+    //
     // (2) We must trigger a potential focus change request, even if no view receives the triggering
-    //     DOWN event, so that (a) the focused view receives an unfocus event, and (b) the focus
-    //     chain gets updated and dispatched accordingly.
+    // DOWN event, so that (a) the focused view receives an unfocus event, and (b) the focus chain
+    // gets updated and dispatched accordingly.
     //
     // NOTE: Do not rely on the latched view stack for "top hit" information; elevation can change
     // dynamically (it's only guaranteed correct for DOWN). Instead, perform an independent query
@@ -368,31 +421,32 @@ void InputSystem::DispatchTouchCommand(const SendPointerInputCmd& command,
       // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
       // will keep going until we find a hit with a valid owning View.
       gfx::TopHitAccumulator top_hit;
-      PerformGlobalHitTest(layer_stack, pointer, &top_hit);
+      PerformGlobalHitTest(layer_stack, screen_space_coords, &top_hit);
 
       if (top_hit.hit()) {
         const gfx::ViewHit& hit = *top_hit.hit();
-
-        view_transform = hit.screen_to_view_transform;
         view_ref_koid = hit.view->view_ref_koid();
       }
     }
 
-    const auto ndc = NormalizePointerCoords(pointer, layer_stack);
-    const auto top_hit_view_local = TransformPointerCoords(pointer, view_transform);
+    glm::vec2 top_hit_view_local;
+    if (view_ref_koid != ZX_KOID_INVALID) {
+      top_hit_view_local = TransformPointerCoords(PointerCoords(world_space_pointer_event),
+                                                  GetWorldToViewTransform(view_ref_koid).value());
+    }
+    // TODO(50549): Still screen space dependent. Fix when a11y has its own view.
+    const auto ndc = NormalizePointerCoords(screen_space_coords, layer_stack);
 
     AccessibilityPointerEvent packet = BuildAccessibilityPointerEvent(
-        command.pointer_event, ndc, top_hit_view_local, view_ref_koid);
+        world_space_pointer_event, ndc, top_hit_view_local, view_ref_koid);
     pointer_event_buffer_->AddEvent(
         pointer_id,
-        {.event = std::move(command.pointer_event),
-         .parallel_event_receivers = std::move(deferred_event_receivers),
-         .compositor_id = GlobalId{session_id, command.compositor_id}},
+        {.event = std::move(world_space_pointer_event),
+         .parallel_event_receivers = std::move(deferred_event_receivers)},
         std::move(packet));
   } else {
     // TODO(48150): Delete when we delete the PointerCapture functionality.
-    ReportPointerEventToPointerCaptureListener(command.pointer_event,
-                                               GlobalId{session_id, command.compositor_id});
+    ReportPointerEventToPointerCaptureListener(world_space_pointer_event);
   }
 
   if (pointer_phase == Phase::REMOVE || pointer_phase == Phase::CANCEL) {
@@ -416,59 +470,49 @@ void InputSystem::DispatchTouchCommand(const SendPointerInputCmd& command,
 //    cursors(!) do not roll up to any View (as expected), but may appear in the
 //    hit test; our dispatch needs to account for such behavior.
 // TODO(SCN-1078): Enhance trackpad support.
-void InputSystem::DispatchMouseCommand(const SendPointerInputCmd& command,
-                                       const gfx::LayerStackPtr& layer_stack) {
-  TRACE_DURATION("input", "dispatch_command", "command", "MouseCmd");
-
-  const uint32_t device_id = command.pointer_event.device_id;
-  const Phase pointer_phase = command.pointer_event.phase;
-  const escher::vec2 pointer = PointerCoords(command.pointer_event);
-
-  FXL_DCHECK(command.pointer_event.type == PointerEventType::MOUSE);
-  FXL_DCHECK(pointer_phase != Phase::ADD && pointer_phase != Phase::REMOVE &&
-             pointer_phase != Phase::HOVER)
-      << "Oops, mouse device (id=" << device_id << ") had an unexpected event: " << pointer_phase;
+void InputSystem::InjectMouseEvent(
+    const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
+    glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack) {
+  FXL_DCHECK(world_space_pointer_event.type == PointerEventType::MOUSE);
+  const uint32_t device_id = world_space_pointer_event.device_id;
+  const Phase pointer_phase = world_space_pointer_event.phase;
+  const glm::vec2 pointer = PointerCoords(world_space_pointer_event);
 
   if (pointer_phase == Phase::DOWN) {
     // Find top-hit target and associated properties.
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    PerformGlobalHitTest(layer_stack, pointer, &top_hit);
+    PerformGlobalHitTest(layer_stack, screen_space_coords, &top_hit);
 
-    ViewStack hit_view;
-
+    std::vector</*view_ref_koids*/ zx_koid_t> hit_views;
     if (top_hit.hit()) {
-      const gfx::ViewHit& hit = *top_hit.hit();
-
-      hit_view.stack.push_back({
-          hit.view->view_ref_koid(),
-          hit.view->event_reporter()->GetWeakPtr(),
-          hit.screen_to_view_transform,
-      });
+      hit_views.push_back(top_hit.hit()->view->view_ref_koid());
     }
-    FXL_VLOG(1) << "View hit: " << hit_view;
 
-    if (!hit_view.stack.empty()) {
+    FXL_VLOG(1) << "View hits: ";
+    for (auto view_ref_koid : hit_views) {
+      FXL_VLOG(1) << "[ViewRefKoid=" << view_ref_koid << "]";
+    }
+
+    if (!hit_views.empty()) {
       // Request that focus be transferred to the top view.
-      RequestFocusChange(hit_view.stack[0].view_ref_koid);
+      RequestFocusChange(hit_views.front());
     } else if (focus_chain_root() != ZX_KOID_INVALID) {
       // The mouse event stream has no designated receiver.
-      // Request that focus be transferred to the root view, so that (1) the currently focused view
-      // becomes unfocused, and (2) the focus chain remains under control of the root view.
+      // Request that focus be transferred to the root view, so that (1) the currently focused
+      // view becomes unfocused, and (2) the focus chain remains under control of the root view.
       RequestFocusChange(focus_chain_root());
     }
 
     // Save target for consistent delivery of mouse events.
-    mouse_targets_[device_id] = hit_view;
+    mouse_targets_[device_id] = hit_views;
   }
 
-  if (mouse_targets_.count(device_id) > 0 &&         // Tracking this device, and
-      mouse_targets_[device_id].stack.size() > 0) {  // target view exists.
-    const auto& entry = mouse_targets_[device_id].stack[0];
-    PointerEvent clone;
-    fidl::Clone(command.pointer_event, &clone);
-    ReportPointerEvent(entry, std::move(clone));
+  if (mouse_targets_.count(device_id) > 0 &&   // Tracking this device, and
+      mouse_targets_[device_id].size() > 0) {  // target view exists.
+    const zx_koid_t top_view_koid = mouse_targets_[device_id].front();
+    ReportPointerEventToView(world_space_pointer_event, top_view_koid);
   }
 
   if (pointer_phase == Phase::UP || pointer_phase == Phase::CANCEL) {
@@ -481,17 +525,11 @@ void InputSystem::DispatchMouseCommand(const SendPointerInputCmd& command,
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    PerformGlobalHitTest(layer_stack, pointer, &top_hit);
+    PerformGlobalHitTest(layer_stack, screen_space_coords, &top_hit);
 
     if (top_hit.hit()) {
-      const gfx::ViewHit& hit = *top_hit.hit();
-
-      ViewStack::Entry view_info;
-      view_info.reporter = hit.view->event_reporter()->GetWeakPtr();
-      view_info.transform = hit.screen_to_view_transform;
-      PointerEvent clone;
-      fidl::Clone(command.pointer_event, &clone);
-      ReportPointerEvent(view_info, std::move(clone));
+      const zx_koid_t top_view_koid = top_hit.hit()->view->view_ref_koid();
+      ReportPointerEventToView(world_space_pointer_event, top_view_koid);
     }
   }
 }
@@ -503,7 +541,7 @@ void InputSystem::DispatchDeferredPointerEvent(
   if (views_and_event.event.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
     if (!views_and_event.parallel_event_receivers.empty()) {
       // Request that focus be transferred to the top view.
-      const zx_koid_t view_koid = views_and_event.parallel_event_receivers[0].view_ref_koid;
+      const zx_koid_t view_koid = views_and_event.parallel_event_receivers.front();
       FXL_DCHECK(view_koid != ZX_KOID_INVALID) << "invariant";
       RequestFocusChange(view_koid);
     } else if (focus_chain_root() != ZX_KOID_INVALID) {
@@ -514,31 +552,13 @@ void InputSystem::DispatchDeferredPointerEvent(
     }
   }
 
-  for (auto& view : views_and_event.parallel_event_receivers) {
-    ReportPointerEvent(view, views_and_event.event);
+  for (zx_koid_t view_ref_koid : views_and_event.parallel_event_receivers) {
+    ReportPointerEventToView(views_and_event.event, view_ref_koid);
   }
 
   {  // TODO(48150): Delete when we delete the PointerCapture functionality.
-    ReportPointerEventToPointerCaptureListener(views_and_event.event,
-                                               views_and_event.compositor_id);
+    ReportPointerEventToPointerCaptureListener(views_and_event.event);
   }
-}
-
-void InputSystem::ReportPointerEvent(const ViewStack::Entry& view_info,
-                                     const PointerEvent& pointer) {
-  if (!view_info.reporter)
-    return;  // Session's event reporter no longer available. Bail quietly.
-
-  TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
-  trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
-  TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
-
-  InputEvent event;
-  const auto transformed_coords =
-      TransformPointerCoords(PointerCoords(pointer), view_info.transform);
-  event.set_pointer(ClonePointerWithCoords(pointer, transformed_coords));
-
-  view_info.reporter->EnqueueEvent(std::move(event));
 }
 
 zx_koid_t InputSystem::focus() const {
@@ -577,7 +597,7 @@ void InputSystem::RequestFocusChange(zx_koid_t view) {
     return;  // Scene not present, or scene not connected to compositor.
 
   // Input system acts on authority of top-most view.
-  const zx_koid_t requestor = scene_graph_->view_tree().focus_chain()[0];
+  const zx_koid_t requestor = scene_graph_->view_tree().focus_chain().front();
 
   auto status = scene_graph_->RequestFocusChange(requestor, view);
   FXL_VLOG(1) << "Scenic RequestFocusChange. Authority: " << requestor << ", request: " << view
@@ -590,74 +610,56 @@ void InputSystem::RequestFocusChange(zx_koid_t view) {
       << static_cast<int>(status);
 }
 
-bool InputSystem::ShouldForwardAccessibilityPointerEvents() {
-  if (IsAccessibilityPointerEventForwardingEnabled()) {
-    // If the buffer was not initialized yet, perform the following sanity
-    // check: make sure to send active pointer event streams to their final
-    // location and do not send them to the a11y listener.
-    if (!pointer_event_buffer_) {
-      pointer_event_buffer_ = std::make_unique<PointerEventBuffer>(
-          /* DispatchEventFunction */
-          [this](PointerEventBuffer::DeferredPointerEvent views_and_event) {
-            DispatchDeferredPointerEvent(std::move(views_and_event));
-          },
-          /* ReportAccessibilityEventFunction */
-          [this](fuchsia::ui::input::accessibility::PointerEvent pointer) {
-            accessibility_pointer_event_listener()->OnEvent(std::move(pointer));
-          });
-
-      for (const auto& kv : touch_targets_) {
-        // Force a reject in all active pointer IDs. When a new stream arrives,
-        // they will automatically be sent for the a11y listener decide
-        // what to do with them as the status will change to WAITING_RESPONSE.
-        pointer_event_buffer_->SetActiveStreamInfo(
-            /*pointer_id=*/kv.first, PointerEventBuffer::PointerIdStreamStatus::REJECTED);
-      }
-      // Registers an event handler for this listener. This callback captures a pointer to the event
-      // buffer that we own, so we need to clear it before we destroy it (see below).
-      accessibility_pointer_event_listener().events().OnStreamHandled =
-          [buffer = pointer_event_buffer_.get()](
-              uint32_t device_id, uint32_t pointer_id,
-              fuchsia::ui::input::accessibility::EventHandling handled) {
-            buffer->UpdateStream(pointer_id, handled);
-          };
-    }
-    return true;
-  } else if (pointer_event_buffer_) {
-    // The listener disconnected. Release held events, delete the buffer.
-    accessibility_pointer_event_listener().events().OnStreamHandled = nullptr;
-    pointer_event_buffer_.reset();
-  }
-  return false;
-}
-
 // TODO(48150): Delete when we delete the PointerCapture functionality.
 void InputSystem::ReportPointerEventToPointerCaptureListener(
-    const fuchsia::ui::input::PointerEvent& pointer, GlobalId compositor_id) const {
-  if (!pointer_capture_listener_ || !scene_graph_)
+    const fuchsia::ui::input::PointerEvent& world_space_pointer) const {
+  if (!pointer_capture_listener_)
     return;
-
-  const auto layers = GetLayerStack(*scene_graph_.get(), compositor_id)->layers();
-  if (layers.empty())
-    return;
-
-  // Assume we only have one layer.
-  const glm::mat4 screen_to_world_transform = (*layers.begin())->GetScreenToWorldSpaceTransform();
 
   const PointerCaptureListener& listener = pointer_capture_listener_.value();
-
-  std::optional<glm::mat4> view_to_world_transform = GetGlobalTransformByViewRef(listener.view_ref);
-  if (!view_to_world_transform)
+  const zx_koid_t view_ref_koid = utils::ExtractKoid(listener.view_ref);
+  std::optional<glm::mat4> world_to_view_transform = GetWorldToViewTransform(view_ref_koid);
+  if (!world_to_view_transform)
     return;
 
-  const auto world_to_view_transform = glm::inverse(view_to_world_transform.value());
-  const auto screen_to_view_transform = world_to_view_transform * screen_to_world_transform;
-  const auto local_coords =
-      TransformPointerCoords(PointerCoords(pointer), screen_to_view_transform);
-  const auto local_pointer = ClonePointerWithCoords(pointer, local_coords);
+  const glm::vec2 local_coords =
+      TransformPointerCoords(PointerCoords(world_space_pointer), world_to_view_transform.value());
 
   // TODO(42145): Implement flow control.
-  listener.listener_ptr->OnPointerEvent(std::move(local_pointer), [] {});
+  listener.listener_ptr->OnPointerEvent(ClonePointerWithCoords(world_space_pointer, local_coords),
+                                        [] {});
+}
+
+void InputSystem::ReportPointerEventToView(
+    const fuchsia::ui::input::PointerEvent& world_space_pointer, zx_koid_t view_ref_koid) const {
+  TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
+  EventReporterWeakPtr event_reporter = scene_graph_->view_tree().EventReporterOf(view_ref_koid);
+  if (!event_reporter)
+    return;
+
+  std::optional<glm::mat4> world_to_view_transform = GetWorldToViewTransform(view_ref_koid);
+  if (!world_to_view_transform)
+    return;
+
+  trace_flow_id_t trace_id =
+      PointerTraceHACK(world_space_pointer.radius_major, world_space_pointer.radius_minor);
+  TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
+
+  const glm::vec2 local_coords =
+      TransformPointerCoords(PointerCoords(world_space_pointer), world_to_view_transform.value());
+
+  InputEvent event;
+  event.set_pointer(ClonePointerWithCoords(world_space_pointer, local_coords));
+  event_reporter->EnqueueEvent(std::move(event));
+}
+
+std::optional<glm::mat4> InputSystem::GetWorldToViewTransform(zx_koid_t view_ref_koid) const {
+  const auto view_to_world_transform = scene_graph_->view_tree().GlobalTransformOf(view_ref_koid);
+  if (!view_to_world_transform)
+    return std::nullopt;
+
+  const glm::mat4 world_to_view_transform = glm::inverse(view_to_world_transform.value());
+  return world_to_view_transform;
 }
 
 }  // namespace input

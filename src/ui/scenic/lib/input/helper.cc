@@ -73,11 +73,6 @@ escher::vec2 NormalizePointerCoords(const escher::vec2& pointer,
   };
 }
 
-PointerEvent BuildLocalPointerEvent(const PointerEvent& pointer_event, const glm::mat4& transform) {
-  return ClonePointerWithCoords(pointer_event,
-                                TransformPointerCoords(PointerCoords(pointer_event), transform));
-}
-
 trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   uint32_t ia, ib;
   memcpy(&ia, &fa, sizeof(uint32_t));

@@ -25,7 +25,8 @@ namespace input {
 // Implementation of PointerEventRegistry API.
 class A11yPointerEventRegistry : public fuchsia::ui::policy::accessibility::PointerEventRegistry {
  public:
-  A11yPointerEventRegistry(SystemContext* context);
+  A11yPointerEventRegistry(SystemContext* context, fit::function<void()> on_register,
+                           fit::function<void()> on_disconnect);
 
   // |fuchsia.ui.policy.accessibility.PointerEventRegistry|
   void Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
@@ -43,6 +44,12 @@ class A11yPointerEventRegistry : public fuchsia::ui::policy::accessibility::Poin
   // We honor the first accessibility listener to register. A call to Register()
   // above will fail if there is already a registered listener.
   fuchsia::ui::input::accessibility::PointerEventListenerPtr accessibility_pointer_event_listener_;
+
+  // Function called when a new listener successfully registers.
+  fit::function<void()> on_register_;
+
+  // Function called when an active listener disconnects.
+  fit::function<void()> on_disconnect_;
 };
 
 // Tracks input APIs.
@@ -77,7 +84,8 @@ class InputSystem : public System,
     return pointer_event_registry_->accessibility_pointer_event_listener();
   }
 
-  bool IsAccessibilityPointerEventForwardingEnabled() const {
+  // Checks if an accessibility listener is intercepting pointer events.
+  bool IsA11yListenerEnabled() const {
     return accessibility_pointer_event_listener() &&
            accessibility_pointer_event_listener().is_bound();
   }
@@ -106,25 +114,16 @@ class InputSystem : public System,
   }
 
  private:
-  // Gets the global transform of the view corresponding to |view_ref| from the scene graph's view
-  // tree. Return std::nullopt for exceptional cases (e.g., invalid or unknown view ref).
-  std::optional<glm::mat4> GetGlobalTransformByViewRef(
-      const fuchsia::ui::views::ViewRef& view_ref) const;
-
-  void DispatchTouchCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
-                            const gfx::LayerStackPtr& layer_stack, scheduling::SessionId session_id,
-                            bool parellel_dispatch, bool a11y_enabled);
-  void DispatchMouseCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
-                            const gfx::LayerStackPtr& layer_stack);
-
   // Dispatches an event to a parallel set of views; set may be empty.
   // Conditionally trigger focus change request, based on |views_and_event.event.phase|.
   // Called by PointerEventBuffer.
   void DispatchDeferredPointerEvent(PointerEventBuffer::DeferredPointerEvent views_and_event);
 
-  // Enqueue the pointer event into the entry in a ViewStack.
-  static void ReportPointerEvent(const ViewStack::Entry& view_info,
-                                 const fuchsia::ui::input::PointerEvent& pointer);
+  void InjectTouchEvent(const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
+                        const glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack,
+                        bool parallel_dispatch, bool a11y_enabled);
+  void InjectMouseEvent(const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
+                        const glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack);
 
   // Retrieve KOID of focus chain's root view.
   // Return ZX_KOID_INVALID if scene does not exist, or if the focus chain is empty.
@@ -137,23 +136,19 @@ class InputSystem : public System,
   // property set by the view holder).
   void RequestFocusChange(zx_koid_t view_ref_koid);
 
-  // Checks if an accessibility listener is intercepting pointer events. If the
-  // listener is on, initializes the buffer if it hasn't been created.
-  // Important:
-  // When the buffer is initialized, it can be the case that there are active
-  // pointer event streams that haven't finished yet. They are sent to clients,
-  // and *not* to the a11y listener. When the stream is done and a new stream
-  // arrives, these will be sent to the a11y listener who will just continue its
-  // normal flow. In a disconnection, if there are active pointer event streams,
-  // its assume that the listener rejected them so they are sent to clients.
-  bool ShouldForwardAccessibilityPointerEvents();
-
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
   // TODO(48150): Delete when we delete the PointerCapture functionality.
-  void ReportPointerEventToPointerCaptureListener(const fuchsia::ui::input::PointerEvent& pointer,
-                                                  GlobalId compositor_id) const;
+  void ReportPointerEventToPointerCaptureListener(
+      const fuchsia::ui::input::PointerEvent& world_space_pointer) const;
 
- private:
+  // Enqueue the pointer event into the EventReporter of a View.
+  void ReportPointerEventToView(const fuchsia::ui::input::PointerEvent& world_space_pointer,
+                                zx_koid_t view_ref_koid) const;
+
+  // Gets the transform matrix from World Space to the Local Space of the |view_ref|'s View.
+  // Return std::nullopt for exceptional cases (e.g., invalid or unknown view ref).
+  std::optional<glm::mat4> GetWorldToViewTransform(zx_koid_t view_ref_koid) const;
+
   InjectorId last_injector_id_ = 0;
 
   std::map<InjectorId, Injector> injectors_;
@@ -188,19 +183,15 @@ class InputSystem : public System,
 
   // Tracks the set of Views each touch event is delivered to; basically, a map from pointer ID to a
   // stack of ViewRef KOIDs. This is used to ensure consistent delivery of pointer events for a
-  // given finger to its original destination targets on their respective DOWN event.  In
+  // given finger to its original destination targets on their respective DOWN event. In
   // particular, a focus change triggered by a new finger should *not* affect delivery of events to
   // existing fingers.
-  //
-  // NOTE: We assume there is one touch screen, and hence unique pointer IDs.
-  std::unordered_map<uint32_t, ViewStack> touch_targets_;
+  std::unordered_map<uint32_t, std::vector</*view_ref_koids*/ zx_koid_t>> touch_targets_;
 
   // Tracks the View each mouse pointer is delivered to; a map from device ID to a ViewRef KOID.
-  // This is used to ensure consistent delivery of mouse events for a given device.  A focus change
+  // This is used to ensure consistent delivery of mouse events for a given device. A focus change
   // triggered by other pointer events should *not* affect delivery of events to existing mice.
-  //
-  // NOTE: We reuse the ViewStack here just for convenience.
-  std::unordered_map<uint32_t, ViewStack> mouse_targets_;
+  std::unordered_map<uint32_t, std::vector</*view_ref_koids*/ zx_koid_t>> mouse_targets_;
 };
 
 }  // namespace input
