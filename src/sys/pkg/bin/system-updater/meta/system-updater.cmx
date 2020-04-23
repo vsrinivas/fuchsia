@@ -1,20 +1,5 @@
 {
     "program": {
         "binary": "bin/system-updater"
-    },
-    "sandbox": {
-        "features": [
-            "build-info",
-            "deprecated-misc-storage",
-            "isolated-persistent-storage"
-        ],
-        "services": [
-            "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.device.manager.Administrator",
-            "fuchsia.logger.LogSink",
-            "fuchsia.paver.Paver",
-            "fuchsia.pkg.PackageResolver",
-            "fuchsia.space.Manager"
-        ]
     }
 }
