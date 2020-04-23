@@ -122,22 +122,9 @@ class AccessibilityPointerEventsTest : public InputSystemTest {
 
     return {
         std::move(root_session),
-        CreateClient(std::move(view_token)),
+        CreateClient("a11y-single-view", std::move(view_token)),
         root_resources.compositor.id(),
     };
-  }
-
-  // Sets up a client and captures its view ref KOID. For the most part, one client is created per
-  // test.
-  SessionWrapper CreateClient(ViewToken view_token) {
-    auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-    zx_koid_t koid = utils::ExtractKoid(view_ref);
-    SessionWrapper session_wrapper(scenic());
-    session_wrapper.SetViewKoid(koid);
-    scenic::View view(session_wrapper.session(), std::move(view_token), std::move(control_ref),
-                      std::move(view_ref), "View");
-    SetUpTestView(&view);
-    return session_wrapper;
   }
 };
 
@@ -926,7 +913,8 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
 
   RequestToPresent(session);
 
-  SessionWrapper view_a = CreateClient(std::move(v_a)), view_b = CreateClient(std::move(v_b));
+  SessionWrapper view_a = CreateClient("a11y-view-a", std::move(v_a)),
+                 view_b = CreateClient("a11y-view-b", std::move(v_b));
 
   const uint32_t compositor_id = root_resources.compositor.id();
 
@@ -1055,7 +1043,7 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yRejects) {
     RequestToPresent(session);
   }
 
-  SessionWrapper view = CreateClient(std::move(vt));
+  SessionWrapper view = CreateClient("a11y-single-view", std::move(vt));
 
   // Transfer focus to view.
   {
@@ -1136,7 +1124,7 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
     RequestToPresent(session);
   }
 
-  SessionWrapper view = CreateClient(std::move(vt));
+  SessionWrapper view = CreateClient("a11y-single-view", std::move(vt));
 
   // Transfer focus to view.
   {

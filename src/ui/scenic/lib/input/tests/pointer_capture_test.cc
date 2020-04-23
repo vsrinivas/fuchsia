@@ -82,13 +82,14 @@ class PointerCaptureTest : public InputSystemTest {
       const std::string& name, fuchsia::ui::views::ViewToken view_token) {
     auto listener_wrapper = std::make_unique<ListenerSessionWrapper>(scenic());
     auto pair = scenic::ViewRefPair::New();
-    ViewRef view_ref_clone;
-    pair.view_ref.Clone(&view_ref_clone);
-    listener_wrapper->SetViewKoid(utils::ExtractKoid(pair.view_ref));
+    ViewRef view_ref_clone1, view_ref_clone2;
+    pair.view_ref.Clone(&view_ref_clone1);
+    pair.view_ref.Clone(&view_ref_clone2);
+    listener_wrapper->SetViewRef(std::move(view_ref_clone1));
     scenic::View view(listener_wrapper->session(), std::move(view_token),
                       std::move(pair.control_ref), std::move(pair.view_ref), name);
     SetUpTestView(&view);
-    listener_wrapper->Register(input_system(), std::move(view_ref_clone),
+    listener_wrapper->Register(input_system(), std::move(view_ref_clone2),
                                [this] { RunLoopUntilIdle(); });
     return listener_wrapper;
   }

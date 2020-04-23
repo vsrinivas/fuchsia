@@ -73,6 +73,15 @@ AccessibilityPointerEvent BuildAccessibilityPointerEvent(const PointerEvent& ori
   return event;
 }
 
+bool IsDescendantAndConnected(const gfx::ViewTree& view_tree, zx_koid_t descendant_koid,
+                              zx_koid_t ancestor_koid) {
+  if (!view_tree.IsTracked(descendant_koid) || !view_tree.IsTracked(ancestor_koid))
+    return false;
+
+  return view_tree.IsDescendant(descendant_koid, ancestor_koid) &&
+         view_tree.IsConnectedToScene(ancestor_koid);
+}
+
 }  // namespace
 
 const char* InputSystem::kName = "InputSystem";
@@ -159,11 +168,13 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
         << "InjectorRegistry::Register : Argument |config.context| or |config.target| was invalid.";
     return;
   }
-  if (context_koid == target_koid) {
-    FXL_LOG(ERROR) << "InjectorRegistry::Register : Arguments |config.context| and |config.target| "
-                      "must not be equal.";
+  if (!IsDescendantAndConnected(scene_graph_->view_tree(), target_koid, context_koid)) {
+    FXL_LOG(ERROR) << "InjectorRegistry::Register : Argument |config.context| must be connected to "
+                      "the Scene, and |config.target| must be a descendant of |config.context|";
     return;
   }
+
+  // TODO(50348): Add a callback to kill the channel immediately if connectivity breaks.
 
   const InjectorId id = ++last_injector_id_;
   InjectorSettings settings{.dispatch_policy = config.dispatch_policy(),
@@ -171,8 +182,12 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
                             .device_type = config.device_config().device_type(),
                             .context_koid = context_koid,
                             .target_koid = target_koid};
-  const auto [it, success] =
-      injectors_.try_emplace(id, id, std::move(settings), std::move(injector));
+  const auto [it, success] = injectors_.try_emplace(
+      id, id, std::move(settings), std::move(injector),
+      /*is_descendant_and_connected*/
+      [this](zx_koid_t descendant, zx_koid_t ancestor) {
+        return IsDescendantAndConnected(scene_graph_->view_tree(), descendant, ancestor);
+      });
   FXL_CHECK(success) << "Injector already exists.";
 
   // Remove the injector if the channel has an error.

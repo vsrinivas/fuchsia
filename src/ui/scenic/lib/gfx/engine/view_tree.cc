@@ -81,7 +81,7 @@ std::optional<zx_koid_t> ViewTree::ConnectedViewRefKoidOf(SessionId session_id) 
   const auto range = ref_node_koids_.equal_range(session_id);
   for (auto it = range.first; it != range.second; ++it) {
     const zx_koid_t koid = it->second;
-    if (IsConnected(koid)) {
+    if (IsConnectedToScene(koid)) {
       return std::optional<zx_koid_t>(koid);
     }
   }
@@ -113,7 +113,7 @@ bool ViewTree::IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) 
   return IsDescendant(parent_koid, ancestor_koid);  // Recursive.
 }
 
-bool ViewTree::IsConnected(zx_koid_t koid) const {
+bool ViewTree::IsConnectedToScene(zx_koid_t koid) const {
   FXL_DCHECK(IsTracked(koid)) << "precondition";
 
   if (!IsValid(root_))
@@ -237,7 +237,7 @@ bool ViewTree::IsStateValid() const {
     int connected_koid = 0;
     const auto range = ref_node_koids_.equal_range(session_id);
     for (auto it = range.first; it != range.second; ++it) {
-      if (IsConnected(it->second)) {
+      if (IsConnectedToScene(it->second)) {
         ++connected_koid;
       }
     }
@@ -326,11 +326,11 @@ bool ViewTree::IsStateValid() const {
 ViewTree::FocusChangeStatus ViewTree::RequestFocusChange(const zx_koid_t requestor,
                                                          const zx_koid_t request) {
   // Invalid requestor.
-  if (!IsTracked(requestor) || !IsRefNode(requestor) || !IsConnected(requestor))
+  if (!IsTracked(requestor) || !IsRefNode(requestor) || !IsConnectedToScene(requestor))
     return ViewTree::FocusChangeStatus::kErrorRequestorInvalid;
 
   // Invalid request.
-  if (!IsTracked(request) || !IsRefNode(request) || !IsConnected(request))
+  if (!IsTracked(request) || !IsRefNode(request) || !IsConnectedToScene(request))
     return ViewTree::FocusChangeStatus::kErrorRequestInvalid;
 
   // Transfer policy: requestor must be authorized.

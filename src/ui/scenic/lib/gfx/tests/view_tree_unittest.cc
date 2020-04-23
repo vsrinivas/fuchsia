@@ -541,7 +541,7 @@ TEST(ViewTreePrimitive, IsConnected) {
                   DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
-  EXPECT_TRUE(tree.IsConnected(scene_koid));
+  EXPECT_TRUE(tree.IsConnectedToScene(scene_koid));
 
   // Replacement scene considered connected, old scene disconnected.
   scenic::ViewRefPair pair_2 = scenic::ViewRefPair::New();
@@ -550,24 +550,24 @@ TEST(ViewTreePrimitive, IsConnected) {
                   DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid_2);
 
-  EXPECT_FALSE(tree.IsConnected(scene_koid));
-  EXPECT_TRUE(tree.IsConnected(scene_koid_2));
+  EXPECT_FALSE(tree.IsConnectedToScene(scene_koid));
+  EXPECT_TRUE(tree.IsConnectedToScene(scene_koid_2));
 
   // New nodes not automatically connected.
   zx_koid_t attach = 1111u;
   tree.NewAttachNode(attach);
 
-  EXPECT_FALSE(tree.IsConnected(attach));
+  EXPECT_FALSE(tree.IsConnectedToScene(attach));
 
   // Connect operation properly connects to scene.
   tree.ConnectToParent(attach, scene_koid_2);
 
-  EXPECT_TRUE(tree.IsConnected(attach));
+  EXPECT_TRUE(tree.IsConnectedToScene(attach));
 
   // Disconnect operation really does disconnect.
   tree.DisconnectFromParent(attach);
 
-  EXPECT_FALSE(tree.IsConnected(attach));
+  EXPECT_FALSE(tree.IsConnectedToScene(attach));
 }
 
 TEST(ViewTreePrimitive, IsRefNode) {

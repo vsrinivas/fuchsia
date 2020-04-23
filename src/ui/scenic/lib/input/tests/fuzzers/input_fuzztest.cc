@@ -77,14 +77,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
   input_system_test.RequestToPresent(session);
 
   // Create initial view.
-  SessionWrapper client1(input_system_test.scenic());
-  auto pair = scenic::ViewRefPair::New();
-  client1.SetViewKoid(utils::ExtractKoid(pair.view_ref));
-  scenic::View view(client1.session(), std::move(view_token1), std::move(pair.control_ref),
-                    std::move(pair.view_ref), "client1");
+  SessionWrapper client1 = input_system_test.CreateClient("client1", std::move(view_token1));
   scenic::ViewHolder view_holder2(client1.session(), std::move(view_holder_token2), "view_holder2");
   view_holder2.SetViewProperties(InputSystemTest::k5x5x1);
-  view.AddChild(view_holder2);
+  client1.view()->AddChild(view_holder2);
   input_system_test.RequestToPresent(client1.session());
 
   // Create child view.

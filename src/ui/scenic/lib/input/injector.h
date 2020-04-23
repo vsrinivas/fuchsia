@@ -27,7 +27,9 @@ struct InjectorSettings {
 class Injector : public fuchsia::ui::pointerflow::Injector {
  public:
   Injector(InjectorId id, InjectorSettings settings,
-           fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector);
+           fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector,
+           fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
+               is_descendant_and_connected);
 
   // |fuchsia::ui::pointerflow::Injector|
   void Inject(std::vector<fuchsia::ui::pointerflow::Event> events,
@@ -45,6 +47,9 @@ class Injector : public fuchsia::ui::pointerflow::Injector {
 
   // Client defined data.
   const InjectorSettings settings_;
+
+  fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
+      is_descendant_and_connected_;
 };
 
 }  // namespace input

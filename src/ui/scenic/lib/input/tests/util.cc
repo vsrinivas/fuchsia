@@ -17,7 +17,6 @@
 #include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
-#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace lib_ui_input_tests {
 
@@ -61,7 +60,8 @@ SessionWrapper::SessionWrapper(Scenic* scenic) {
 SessionWrapper::SessionWrapper(SessionWrapper&& original) {
   session_ = std::move(original.session_);
   session_->set_event_handler(fit::bind_member(this, &SessionWrapper::OnEvent));
-  view_koid_ = original.view_koid_;
+  view_ref_ = std::move(original.view_ref_);
+  view_ = std::move(original.view_);
   events_ = std::move(original.events_);
 }
 
@@ -125,10 +125,13 @@ SessionWrapper InputSystemTest::CreateClient(const std::string& name,
                                              fuchsia::ui::views::ViewToken view_token) {
   SessionWrapper session_wrapper(scenic());
   auto pair = scenic::ViewRefPair::New();
-  session_wrapper.SetViewKoid(utils::ExtractKoid(pair.view_ref));
-  scenic::View view(session_wrapper.session(), std::move(view_token), std::move(pair.control_ref),
-                    std::move(pair.view_ref), name);
-  SetUpTestView(&view);
+  fuchsia::ui::views::ViewRef clone;
+  pair.view_ref.Clone(&clone);
+  session_wrapper.SetViewRef(std::move(clone));
+  session_wrapper.SetView(
+      std::make_unique<scenic::View>(session_wrapper.session(), std::move(view_token),
+                                     std::move(pair.control_ref), std::move(pair.view_ref), name));
+  SetUpTestView(session_wrapper.view());
 
   return session_wrapper;
 }

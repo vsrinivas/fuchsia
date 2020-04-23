@@ -21,6 +21,7 @@
 #include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace lib_ui_input_tests {
 
@@ -35,8 +36,20 @@ class SessionWrapper {
   std::vector<fuchsia::ui::input::InputEvent>& events() { return events_; }
   const std::vector<fuchsia::ui::input::InputEvent>& events() const { return events_; }
 
+  void SetView(std::unique_ptr<scenic::View> view) { view_ = std::move(view); }
+  void SetViewRef(fuchsia::ui::views::ViewRef view_ref) {
+    view_ref_ = std::move(view_ref);
+    SetViewKoid(utils::ExtractKoid(view_ref_.value()));
+  }
   void SetViewKoid(zx_koid_t koid) { view_koid_ = koid; }
-  zx_koid_t ViewKoid() const { return view_koid_; }
+  zx_koid_t ViewKoid() const {
+    FXL_CHECK(view_koid_) << "No view koid set.";
+    return view_koid_;
+  }
+
+  const fuchsia::ui::views::ViewRef& view_ref() { return view_ref_.value(); }
+
+  scenic::View* view() { return view_.get(); }
 
  private:
   // Callback to capture returned events.
@@ -46,6 +59,10 @@ class SessionWrapper {
   std::unique_ptr<scenic::Session> session_;
   // View koid, if any.
   zx_koid_t view_koid_ = ZX_KOID_INVALID;
+  // View, if any.
+  std::unique_ptr<scenic::View> view_;
+  // ViewRef, if any.
+  std::optional<fuchsia::ui::views::ViewRef> view_ref_;
   // Collects input events conveyed to this session.
   std::vector<fuchsia::ui::input::InputEvent> events_;
 };

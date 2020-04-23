@@ -149,7 +149,7 @@ class ViewTree {
   // Pre: koid exists in nodes_ map
   // Invariant: each valid parent reference exists in nodes_ map
   // - This operation is O(N) in the depth of the view tree.
-  bool IsConnected(zx_koid_t koid) const;
+  bool IsConnectedToScene(zx_koid_t koid) const;
 
   // "RTTI" for type validity.
   bool IsRefNode(zx_koid_t koid) const;
