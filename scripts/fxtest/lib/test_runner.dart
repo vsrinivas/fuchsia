@@ -68,7 +68,7 @@ class TestRunner {
     return ProcessResult(
       process.pid,
       _exitCode,
-      realtimeOutputSink == null ? _stdOut.toString() : '',
+      _stdOut.toString(),
       _stdErr.toString(),
     );
   }
