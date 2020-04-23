@@ -42,5 +42,7 @@ WavWriter class to record a waveform audio file.
     --duration[=<SECS>]    Specify a fixed duration rather than waiting for keystroke
                            (min 0.0, max 86400.0, default 2.0)
 
+    --ultrasound           Capture from an ultrasound capturer
+
     --v                    Display per-packet information
     --help, --?            Show this message

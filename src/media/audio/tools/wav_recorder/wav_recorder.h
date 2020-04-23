@@ -5,6 +5,7 @@
 #define SRC_MEDIA_AUDIO_TOOLS_WAV_RECORDER_WAV_RECORDER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/ultrasound/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -45,8 +46,10 @@ class WavRecorder {
 
   void SetupPayloadBuffer();
   void EstablishReferenceClock();
-  void ReceiveClockAndContinue(zx::clock received_clock);
-  void OnDefaultFormatFetched(fuchsia::media::StreamType type);
+  void ReceiveClockAndContinue(
+      zx::clock received_clock,
+      std::optional<fuchsia::media::AudioStreamType> stream_type = std::nullopt);
+  void OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& fmt);
 
   void SendCaptureJob();
   void OnPacketProduced(fuchsia::media::StreamPacket pkt);
@@ -96,6 +99,9 @@ class WavRecorder {
   uint32_t payload_buf_frame_offset_ = 0;
   bool clean_shutdown_ = false;
   uint32_t outstanding_capture_jobs_ = 0;
+
+  bool ultrasound_ = false;
+  fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
 };
 
 }  // namespace media::tools

@@ -31,9 +31,16 @@ constexpr char kClockRateAdjustOption[] = "rate-adjust";
 constexpr char kClockRateAdjustDefault[] = "-75";
 constexpr char kPacketDurationOption[] = "packet-ms";
 constexpr char kFileDurationOption[] = "duration";
+constexpr char kUltrasoundOption[] = "ultrasound";
 constexpr char kVerboseOption[] = "v";
 constexpr char kShowUsageOption1[] = "help";
 constexpr char kShowUsageOption2[] = "?";
+
+constexpr std::array<const char*, 12> kUltrasoundInvalidOptions = {
+    kLoopbackOption,       kChannelsOption,       kFrameRateOption,   k24In32FormatOption,
+    kPacked24FormatOption, kInt16FormatOption,    kGainOption,        kMuteOption,
+    kOptimalClockOption,   kMonotonicClockOption, kCustomClockOption, kClockRateAdjustOption,
+};
 
 constexpr uint32_t kPayloadBufferId = 0;
 
@@ -55,6 +62,28 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
 
   verbose_ = cmd_line_.HasOption(kVerboseOption);
   loopback_ = cmd_line_.HasOption(kLoopbackOption);
+  ultrasound_ = cmd_line_.HasOption(kUltrasoundOption);
+  if (ultrasound_) {
+    for (auto& invalid_option : kUltrasoundInvalidOptions) {
+      if (cmd_line_.HasOption(std::string(invalid_option))) {
+        fprintf(stderr, "--ultrasound cannot be used with --%s\n", invalid_option);
+        Usage();
+        exit(1);
+      }
+    }
+  } else {
+    // If user erroneously specifies float AND 24-in-32, prefer float.
+    if (cmd_line_.HasOption(kPacked24FormatOption)) {
+      pack_24bit_samples_ = true;
+      sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
+    } else if (cmd_line_.HasOption(k24In32FormatOption)) {
+      sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
+    } else if (cmd_line_.HasOption(kInt16FormatOption)) {
+      sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_16;
+    } else {
+      sample_format_ = fuchsia::media::AudioSampleFormat::FLOAT;
+    }
+  }
 
   std::string opt;
   if (cmd_line_.GetOptionValue(kFileDurationOption, &opt)) {
@@ -102,19 +131,33 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
   CLI_CHECK(pos_args.size() >= 1, "No filename specified");
   filename_ = pos_args[0].c_str();
 
-  // Connect to the audio service and obtain AudioCapturer and Gain interfaces.
-  fuchsia::media::AudioPtr audio = app_context->svc()->Connect<fuchsia::media::Audio>();
+  if (ultrasound_) {
+    ultrasound_factory_ = app_context->svc()->Connect<fuchsia::ultrasound::Factory>();
+    ultrasound_factory_->CreateCapturer(
+        audio_capturer_.NewRequest(), [this](auto reference_clock, auto stream_type) {
+          sample_format_ = stream_type.sample_format;
+          channel_count_ = stream_type.channels;
+          frames_per_second_ = stream_type.frames_per_second;
 
-  audio->CreateAudioCapturer(audio_capturer_.NewRequest(), loopback_);
-  audio_capturer_->BindGainControl(gain_control_.NewRequest());
+          ReceiveClockAndContinue(std::move(reference_clock), {stream_type});
+          ultrasound_factory_.Unbind();
+        });
+  } else {
+    // Connect to the audio service and obtain AudioCapturer and Gain interfaces.
+    fuchsia::media::AudioPtr audio = app_context->svc()->Connect<fuchsia::media::Audio>();
+
+    audio->CreateAudioCapturer(audio_capturer_.NewRequest(), loopback_);
+    audio_capturer_->BindGainControl(gain_control_.NewRequest());
+    gain_control_.set_error_handler([this](zx_status_t status) {
+      CLI_CHECK(Shutdown(), "Client connection to fuchsia.media.GainControl failed");
+    });
+
+    EstablishReferenceClock();
+  }
+
   audio_capturer_.set_error_handler([this](zx_status_t status) {
     CLI_CHECK(Shutdown(), "Client connection to fuchsia.media.AudioCapturer failed");
   });
-  gain_control_.set_error_handler([this](zx_status_t status) {
-    CLI_CHECK(Shutdown(), "Client connection to fuchsia.media.GainControl failed");
-  });
-
-  EstablishReferenceClock();
 
   // Quit if someone hits a key.
   keystroke_waiter_.Wait([this](zx_status_t, uint32_t) { OnQuit(); }, STDIN_FILENO, POLLIN);
@@ -175,6 +218,8 @@ void WavRecorder::Usage() {
          kFileDurationOption);
   printf("\t\t\t(min 0.0, max %.1f, default %.1f)\n", kMaxFileDurationSecs,
          kDefaultFileDurationSecs);
+
+  printf("\n  --%s\t\tCapture from an ultrasound capturer\n", kUltrasoundOption);
 
   printf("\n  --%s\t\t\tDisplay per-packet information\n", kVerboseOption);
   printf("  --%s, --%s\t\tShow this message\n", kShowUsageOption1, kShowUsageOption2);
@@ -285,39 +330,30 @@ void WavRecorder::EstablishReferenceClock() {
 }
 
 // Once we've received the reference clock, request the default format and continue
-void WavRecorder::ReceiveClockAndContinue(zx::clock received_clock) {
+void WavRecorder::ReceiveClockAndContinue(
+    zx::clock received_clock, std::optional<fuchsia::media::AudioStreamType> stream_type) {
   reference_clock_ = std::move(received_clock);
 
   if (verbose_) {
     audio::clock::GetAndDisplayClockDetails(reference_clock_);
   }
 
-  // Fetch the initial media type and figure out what we need to do from there.
-  audio_capturer_->GetStreamType(
-      [this](fuchsia::media::StreamType type) { OnDefaultFormatFetched(std::move(type)); });
+  if (stream_type) {
+    OnDefaultFormatFetched(*stream_type);
+  } else {
+    // Fetch the initial media type and figure out what we need to do from there.
+    audio_capturer_->GetStreamType([this](fuchsia::media::StreamType type) {
+      CLI_CHECK(type.medium_specific.is_audio(), "Default format is not audio!");
+      OnDefaultFormatFetched(type.medium_specific.audio());
+    });
+  }
 }
 
 // Once we receive the default format, we don't need to wait for anything else.
 // We open our .wav file for recording, set our capture format, set input gain,
 // setup our VMO and add it as a payload buffer, send a series of empty packets
-void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
+void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& fmt) {
   auto cleanup = fit::defer([this]() { Shutdown(); });
-
-  CLI_CHECK(type.medium_specific.is_audio(), "Default format is not audio!");
-
-  const auto& fmt = type.medium_specific.audio();
-
-  // If user erroneously specifies float AND 24-in-32, prefer float.
-  if (cmd_line_.HasOption(kPacked24FormatOption)) {
-    pack_24bit_samples_ = true;
-    sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
-  } else if (cmd_line_.HasOption(k24In32FormatOption)) {
-    sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
-  } else if (cmd_line_.HasOption(kInt16FormatOption)) {
-    sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_16;
-  } else {
-    sample_format_ = fuchsia::media::AudioSampleFormat::FLOAT;
-  }
 
   channel_count_ = fmt.channels;
   frames_per_second_ = fmt.frames_per_second;

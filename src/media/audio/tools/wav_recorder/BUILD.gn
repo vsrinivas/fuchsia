@@ -25,6 +25,7 @@ executable("wav_rec_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
