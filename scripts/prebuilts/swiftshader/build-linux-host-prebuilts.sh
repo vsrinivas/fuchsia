@@ -649,6 +649,7 @@ clone_and_build "${VULKAN_VALIDATION_LAYERS}" "${VULKAN_VALIDATION_LAYERS_GIT_UR
 FILES=(
   lib/libvk_swiftshader.so
   lib/vk_swiftshader_icd.json
+  lib/libvulkan.so.1
   lib/libvulkan.so
   lib/libVkLayer_khronos_validation.so
   share/vulkan/explicit_layer.d/VkLayer_khronos_validation.json
