@@ -24,6 +24,7 @@ import("//build/images/vbmeta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package_metadata.gni")
+import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
 # update_manifest is for the "update.manifest" target below.
@@ -1753,7 +1754,7 @@ generate_package_metadata("all_package_manifests.list") {
 
 # The component index is the index of components in all universe packages.
 component_index_metadata = "$target_out_dir/component_index_metadata"
-component_index_metadata_list("component_index_metadata") {
+generate_component_index("component_index_metadata") {
   visibility = [
     "//build/images:*",
     "//src/sys/component_index:*",

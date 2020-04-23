@@ -1,0 +1,50 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generates a list of fuchsia-pkg URLs for component from all packages in the
+# transitive closure of declared dependencies.
+#
+# Parameters
+#
+#   data_deps (optional)
+#   deps (optional)
+#   outputs (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Same as for any GN `generated_file()` target.
+template("generate_component_index") {
+  generated_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "outputs",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    data_keys = [ "component_index" ]
+    walk_keys = [ "component_index_barrier" ]
+  }
+}
+
+# Adds a component URL to the component index.
+#
+# The caller should add a dep on the given target name for the metadata to take effect.
+#
+# Parameters
+#
+#   package_name (required)
+#   manifest_path (required)
+template("add_to_component_index") {
+  assert(defined(invoker.package_name), "Missing package_name")
+  assert(defined(invoker.manifest_path), "Missing manifest path")
+
+  group(target_name) {
+    metadata = {
+      component_index = [ "fuchsia-pkg://fuchsia.com/${invoker.package_name}#${invoker.manifest_path}" ]
+    }
+  }
+}

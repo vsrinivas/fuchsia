@@ -7,41 +7,8 @@ import("//build/images/manifest.gni")
 import("//build/testing/test_spec.gni")
 import("//src/sys/cmc/build/cml.gni")
 import("//src/sys/cmc/build/cmx.gni")
+import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
-
-# Generate a list of fuchsia-pkg URLs for component from all packages in the
-# transitive closure of declared dependencies, with an implied barrier at each
-# package (dependency chains cease processing at package targets).
-#
-# Parameters
-#
-#   data_deps (optional)
-#   deps (optional)
-#   outputs (optional)
-#   public_deps (optional)
-#   testonly (optional)
-#   visibility (optional)
-#     Same as for any GN `generated_file()` target.
-template("component_index_metadata_list") {
-  generated_file(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "data_deps",
-                             "deps",
-                             "outputs",
-                             "public_deps",
-                             "testonly",
-                             "visibility",
-                           ])
-
-    if (!defined(outputs)) {
-      outputs = [ target_gen_dir + "/" + target_name ]
-    }
-
-    data_keys = [ "component_index" ]
-    walk_keys = [ "component_index_barrier" ]
-  }
-}
 
 # Defines a package
 #
@@ -401,16 +368,16 @@ template("package") {
     # cmx_format will minify cmx files in non-debug builds, and pretty-print cmx
     # files in debug builds
     formatted_manifest = []
-    component_indices = []
     foreach(meta, pkg.meta) {
+      target_suffix = pkg_target_name + "_" + get_path_info(meta.dest, "file")
+
       if (get_path_info(meta.dest, "extension") == "cmx") {
         manifest_deps = []
         manifest_deps = pkg.deps
         manifest_path = meta.path
 
         if (needs_debugdata) {
-          merge_target = "debugdata_" + pkg_target_name + "_" +
-                         get_path_info(meta.dest, "file")
+          merge_target = "debugdata_$target_suffix"
           cmx_merge(merge_target) {
             sources = [
               rebase_path(meta.path),
@@ -418,17 +385,16 @@ template("package") {
             ]
             deps = pkg.deps
           }
-          manifest_deps += [ ":${merge_target}" ]
+          manifest_deps += [ ":$merge_target" ]
           merged_outputs = []
-          merged_outputs = get_target_outputs(":${merge_target}")
+          merged_outputs = get_target_outputs(":$merge_target")
           manifest_path = merged_outputs[0]
         }
 
         # This is where we add sys.process.Launcher to test packages which
         # need it (see above).
         if (pkg.tests != []) {
-          merge_target = "process_launcher_" + pkg_target_name + "_" +
-                         get_path_info(meta.dest, "file")
+          merge_target = "process_launcer_$target_suffix"
           cmx_merge(merge_target) {
             #conditional_file = metadata_manifest_patches
             sources = [
@@ -437,38 +403,38 @@ template("package") {
             ]
             deps = manifest_deps + [ ":$metadata_manifest_target_name" ]
           }
-          manifest_deps += [ ":${merge_target}" ]
+          manifest_deps += [ ":$merge_target" ]
           merged_outputs = []
-          merged_outputs = get_target_outputs(":${merge_target}")
+          merged_outputs = get_target_outputs(":$merge_target")
           manifest_path = merged_outputs[0]
         }
 
-        component_indices += [ "fuchsia-pkg://fuchsia.com/" + pkg.package_name +
-                               "#meta/" + meta.dest ]
-        format =
-            "format_" + pkg_target_name + "_" + get_path_info(meta.dest, "file")
-        cmx_format(format) {
+        format_target = "format_$target_suffix"
+        cmx_format(format_target) {
           data = rebase_path(manifest_path)
           deps = manifest_deps
         }
         formatted_outputs = []
-        formatted_outputs = get_target_outputs(":$format")
+        formatted_outputs = get_target_outputs(":$format_target")
         meta.path = formatted_outputs[0]
-        pkg.deps += [ ":$format" ]
-      } else if (get_path_info(meta.path, "extension") == "cml") {
-        component_indices += [ "fuchsia-pkg://fuchsia.com/" + pkg.package_name +
-                               "#meta/" + meta.dest ]
-        compiled = "compiled_" + pkg_target_name + "_" +
-                   get_path_info(meta.dest, "file")
+        pkg.deps += [ ":$format_target" ]
 
-        cm(compiled) {
+        component_index_target = "index_$target_suffix"
+        add_to_component_index(component_index_target) {
+          package_name = pkg.package_name
+          manifest_path = "meta/${meta.dest}"
+        }
+        pkg.deps += [ ":$component_index_target" ]
+      } else if (get_path_info(meta.path, "extension") == "cml") {
+        compiled_target = "compiled_$target_suffix"
+        cm(compiled_target) {
           data = rebase_path(meta.path)
           deps = pkg.deps
           public_deps = pkg.public_deps
         }
-        pkg.deps += [ ":$compiled" ]
+        pkg.deps += [ ":$compiled_target" ]
         compiled_outputs = []
-        compiled_outputs = get_target_outputs(":$compiled")
+        compiled_outputs = get_target_outputs(":$compiled_target")
         meta.path = compiled_outputs[0]
       }
       formatted_manifest += [ meta ]
@@ -767,14 +733,6 @@ template("package") {
       manifest = ":$manifest"
       metadata = {
         forward_variables_from(pkg.metadata, "*")
-
-        component_index = component_indices
-
-        # We only ever want to collect the following component indices from
-        # packages, not from dependencies of packages, so the barrier prevents
-        # us from walking any further in the dependency chain. See `gn help
-        # walk_keys` for more information on the mechanic.
-        component_index_barrier = []
       }
 
       deps = pkg.deps
