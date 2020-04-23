@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/isolated-ota-tests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}

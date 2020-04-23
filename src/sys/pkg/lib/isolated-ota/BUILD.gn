@@ -1,0 +1,36 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("isolated-ota") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:thiserror",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+test_package("isolated-ota-tests") {
+  deps = [ ":isolated-ota_test" ]
+
+  tests = [
+    {
+      name = "isolated_ota_lib_test"
+      dest = "isolated-ota-tests"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":isolated-ota-tests" ]
+}
