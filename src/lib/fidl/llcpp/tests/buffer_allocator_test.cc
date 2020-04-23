@@ -66,6 +66,41 @@ TEST(BufferAllocator, SingleItemDestructor) {
   EXPECT_EQ(destructCountC, 1);
 }
 
+TEST(BufferAllocator, ResetDestructor) {
+  int destructCountA = 0;
+  int destructCountB = 0;
+  int destructCountC = 0;
+
+  {
+    fidl::BufferAllocator<2048> allocator;
+
+    allocator.make<DestructCounter>(&destructCountA);
+    allocator.make<DestructCounter>(&destructCountB);
+    allocator.make<DestructCounter>(&destructCountC);
+
+    EXPECT_EQ(destructCountA, 0);
+    EXPECT_EQ(destructCountB, 0);
+    EXPECT_EQ(destructCountC, 0);
+
+    allocator.reset();
+
+    EXPECT_EQ(destructCountA, 1);
+    EXPECT_EQ(destructCountB, 1);
+    EXPECT_EQ(destructCountC, 1);
+
+    allocator.make<DestructCounter>(&destructCountA);
+    allocator.make<DestructCounter>(&destructCountB);
+    allocator.make<DestructCounter>(&destructCountC);
+
+    EXPECT_EQ(destructCountA, 1);
+    EXPECT_EQ(destructCountB, 1);
+    EXPECT_EQ(destructCountC, 1);
+  }
+  EXPECT_EQ(destructCountA, 2);
+  EXPECT_EQ(destructCountB, 2);
+  EXPECT_EQ(destructCountC, 2);
+}
+
 TEST(BufferAllocator, ArrayDestructor) {
   constexpr int n = 3;
   int destructCounts[n] = {};

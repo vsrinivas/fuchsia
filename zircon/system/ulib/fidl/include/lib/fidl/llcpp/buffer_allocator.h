@@ -29,6 +29,7 @@ class BufferAllocator final : public Allocator {
         // Point last_destructor_metadata_ so the first metadata is past the end of the
         // buffer -- this is intentional. The metadata pointer will decrease from there.
         last_destructor_metadata_(reinterpret_cast<DestructorMetadata*>(buf_ + NBytes)) {}
+  ~BufferAllocator() { cleanup_destructor_metadata(); }
 
   // Remove copy and move constructors becuase the allocator is inherently meant
   // to create pointers to objects inside of it and moving/copying allocators
@@ -38,14 +39,15 @@ class BufferAllocator final : public Allocator {
   BufferAllocator& operator=(const BufferAllocator&) = delete;
   BufferAllocator& operator=(BufferAllocator&&) = delete;
 
-  ~BufferAllocator() {
-    DestructorMetadata* end_destructor_metadata =
-        reinterpret_cast<DestructorMetadata*>(buf_ + NBytes);
-    for (; last_destructor_metadata_ < end_destructor_metadata; last_destructor_metadata_++) {
-      assert(last_destructor_metadata_->dtor && "dtor should be set in allocate()");
-      last_destructor_metadata_->dtor(buf_ + last_destructor_metadata_->offset,
-                                      last_destructor_metadata_->count);
-    }
+  // Reset the object so it can make allocations again. Only use this if you
+  // are sure that any previous allocations are no longer living, otherwise
+  // there will be use-after-free problems.
+  // This does not zero the memory to avoid the performance cost.
+  void reset() {
+    cleanup_destructor_metadata();
+
+    next_object_ = buf_;
+    last_destructor_metadata_ = reinterpret_cast<DestructorMetadata*>(buf_ + NBytes);
   }
 
  private:
@@ -66,6 +68,16 @@ class BufferAllocator final : public Allocator {
     uint32_t count;
     destructor dtor;
   };
+
+  void cleanup_destructor_metadata() {
+    DestructorMetadata* end_destructor_metadata =
+        reinterpret_cast<DestructorMetadata*>(buf_ + NBytes);
+    for (; last_destructor_metadata_ < end_destructor_metadata; last_destructor_metadata_++) {
+      assert(last_destructor_metadata_->dtor && "dtor should be set in allocate()");
+      last_destructor_metadata_->dtor(buf_ + last_destructor_metadata_->offset,
+                                      last_destructor_metadata_->count);
+    }
+  }
 
   allocation_result allocate(size_t obj_size, size_t count, destructor dtor) override {
     assert(count <= static_cast<size_t>(std::numeric_limits<uint32_t>::max()) &&
