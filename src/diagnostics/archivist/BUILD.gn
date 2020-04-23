@@ -90,8 +90,6 @@ rustc_binary("bin") {
 }
 
 package("archivist") {
-  global_data = "//build"
-
   deps = [ ":bin" ]
 
   binaries = [
