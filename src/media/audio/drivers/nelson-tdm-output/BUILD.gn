@@ -23,6 +23,7 @@ driver_module("nelson-tdm-output") {
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
+    "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -32,7 +33,6 @@ driver_module("nelson-tdm-output") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/audio/lib/simple-audio-stream",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
   ]

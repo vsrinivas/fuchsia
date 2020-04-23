@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE
 
-#pragma once
+#ifndef SRC_DEVICES_PCI_LIB_DESIGNWARE_DW_PCIE_HW_H_
+#define SRC_DEVICES_PCI_LIB_DESIGNWARE_DW_PCIE_HW_H_
 
+#include <hw/reg.h>
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
-#include <hw/reg.h>
 
 namespace pcie {
 namespace designware {
@@ -84,3 +85,5 @@ typedef struct atu_ctrl_regs {
 }  // namespace designware
 
 }  // namespace pcie
+
+#endif  // SRC_DEVICES_PCI_LIB_DESIGNWARE_DW_PCIE_HW_H_

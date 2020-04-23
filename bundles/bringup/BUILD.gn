@@ -27,7 +27,7 @@ group("tests") {
     "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",
     "//src/media/audio/drivers/sherlock-tdm-output/test:sherlock-audio-out-test-package",
-    "//zircon/system/dev/audio/lib/simple-audio-stream/tests:sa-unittest-package",
+    "//src/media/audio/lib/simple-audio-stream/tests:sa-unittest-package",
     "//zircon/system/ulib/abs_clock/test:abs-clock-test-package",
     "//zircon/system/ulib/affine/test:affine-package",
     "//zircon/system/ulib/async-loop/test:async-loop-package",

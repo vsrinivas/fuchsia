@@ -1,10 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_DEVICES_CLOCK_LIB_HISI_INCLUDE_DEV_CLK_HISI_LIB_HISI_GATE_H_
+#define SRC_DEVICES_CLOCK_LIB_HISI_INCLUDE_DEV_CLK_HISI_LIB_HISI_GATE_H_
+
+#include <zircon/types.h>
 
 #include <ddk/device.h>
-#include <zircon/types.h>
 
 namespace hisi_clock {
 
@@ -30,3 +32,5 @@ class Gate {
 };
 
 }  // namespace hisi_clock
+
+#endif  // SRC_DEVICES_CLOCK_LIB_HISI_INCLUDE_DEV_CLK_HISI_LIB_HISI_GATE_H_

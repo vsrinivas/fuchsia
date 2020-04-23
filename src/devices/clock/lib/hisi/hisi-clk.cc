@@ -1,18 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <dev/clk/hisi-lib/hisi-clk.h>
-
-#include <hw/reg.h>
+#include <lib/device-protocol/pdev.h>
+#include <lib/device-protocol/platform-device.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <threads.h>
-
 #include <zircon/assert.h>
 #include <zircon/threads.h>
-
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -20,13 +15,13 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/clockimpl.h>
-#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
-#include <lib/device-protocol/pdev.h>
-
 #include <ddktl/protocol/platform/bus.h>
-
+#include <dev/clk/hisi-lib/hisi-clk.h>
 #include <dev/clk/hisi-lib/hisi-gate.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <hw/reg.h>
 
 // HiSilicon has two different types of clock gates:
 //
@@ -138,9 +133,7 @@ zx_status_t HisiClock::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate)
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t HisiClock::ClockImplSetInput(uint32_t id, uint32_t idx) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+zx_status_t HisiClock::ClockImplSetInput(uint32_t id, uint32_t idx) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t HisiClock::ClockImplGetNumInputs(uint32_t id, uint32_t* out) {
   return ZX_ERR_NOT_SUPPORTED;

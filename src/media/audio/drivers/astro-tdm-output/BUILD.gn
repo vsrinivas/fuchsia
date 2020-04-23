@@ -24,6 +24,7 @@ driver_module("astro-tdm-output") {
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
+    "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -32,7 +33,6 @@ driver_module("astro-tdm-output") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/dev/audio/lib/simple-audio-stream",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
   ]

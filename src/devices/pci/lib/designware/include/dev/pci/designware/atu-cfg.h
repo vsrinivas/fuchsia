@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_PCI_LIB_DESIGNWARE_INCLUDE_DEV_PCI_DESIGNWARE_ATU_CFG_H_
+#define SRC_DEVICES_PCI_LIB_DESIGNWARE_INCLUDE_DEV_PCI_DESIGNWARE_ATU_CFG_H_
 
 #include <ddk/metadata.h>
 
@@ -25,3 +26,5 @@ typedef struct iatu_translation_entry {
   // Size of the translation aperture.
   size_t length;
 } iatu_translation_entry_t;
+
+#endif  // SRC_DEVICES_PCI_LIB_DESIGNWARE_INCLUDE_DEV_PCI_DESIGNWARE_ATU_CFG_H_

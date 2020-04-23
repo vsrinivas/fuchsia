@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE
 
-#include <dev/pci/designware/dw-pcie.h>
-
 #include <zircon/syscalls.h>
+
+#include <dev/pci/designware/dw-pcie.h>
 
 #include "dw-pcie-hw.h"
 

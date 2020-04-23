@@ -149,7 +149,7 @@ of channels have messages (either expected responses or asynchronous
 notifications) to be read.
 There are bindings for different languages to facilitate sending and receiving
 FIDL messages, and in particular for C++ drivers there is also a library
-[SimpleAudioStream](/zircon/system/dev/audio/lib/simple-audio-stream) that facilitates the creation
+[SimpleAudioStream](/src/media/audio/lib/simple-audio-stream) that facilitates the creation
 of drivers in C++, this library uses the
 [LLCPP](/docs/development/languages/fidl/tutorials/tutorial-llcpp.md) bindings to send and receive
 FIDL messages.

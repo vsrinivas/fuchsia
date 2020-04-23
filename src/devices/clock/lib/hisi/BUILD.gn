@@ -14,7 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/zx_library.gni")
 
-zx_library("hisi-lib") {
+zx_library("hisi") {
   sdk = "source"
   sdk_headers = [
     "dev/clk/hisi-lib/hisi-gate.h",
