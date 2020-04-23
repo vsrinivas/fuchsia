@@ -254,6 +254,7 @@ TEST(HidButtonsTest, DirectButtonPush) {
 
   EXPECT_OK(device.BindTest());
   device.FakeInterrupt();
+  device.DebounceWait();
   device.ShutDownTest();
   ASSERT_NO_FATAL_FAILURES(mock_gpios[0].VerifyAndClear());
 }
@@ -285,6 +286,7 @@ TEST(HidButtonsTest, DirectButtonUnpushedReport) {
   protocol.ops = &ops;
   device.HidbusStart(&protocol);
   device.FakeInterrupt();
+  device.DebounceWait();
   device.ShutDownTest();
   ASSERT_NO_FATAL_FAILURES(mock_gpios[0].VerifyAndClear());
 }
@@ -316,6 +318,7 @@ TEST(HidButtonsTest, DirectButtonPushedReport) {
   protocol.ops = &ops;
   device.HidbusStart(&protocol);
   device.FakeInterrupt();
+  device.DebounceWait();
   device.ShutDownTest();
   ASSERT_NO_FATAL_FAILURES(mock_gpios[0].VerifyAndClear());
 }
@@ -350,8 +353,11 @@ TEST(HidButtonsTest, DirectButtonPushUnpushPush) {
 
   EXPECT_OK(device.BindTest());
   device.FakeInterrupt();
+  device.DebounceWait();
   device.FakeInterrupt();
+  device.DebounceWait();
   device.FakeInterrupt();
+  device.DebounceWait();
   device.ShutDownTest();
   ASSERT_NO_FATAL_FAILURES(mock_gpios[0].VerifyAndClear());
 }
@@ -381,6 +387,7 @@ TEST(HidButtonsTest, DirectButtonFlaky) {
 
   EXPECT_OK(device.BindTest());
   device.FakeInterrupt();
+  device.DebounceWait();
   device.ShutDownTest();
   ASSERT_NO_FATAL_FAILURES(mock_gpios[0].VerifyAndClear());
 }
@@ -450,6 +457,7 @@ TEST(HidButtonsTest, MatrixButtonPush) {
   protocol.ops = &ops;
   device.HidbusStart(&protocol);
   device.FakeInterrupt();
+  device.DebounceWait();
   device.ShutDownTest();
   for (size_t i = 0; i < countof(gpios_matrix); ++i) {
     ASSERT_NO_FATAL_FAILURES(mock_gpios[i].VerifyAndClear());
@@ -781,84 +789,4 @@ TEST(HidButtonsTest, Notify2) {
   }
 }
 
-TEST(HidButtonsTest, DebounceTest) {
-  // Hid Buttons Device
-  ddk::MockGpio mock_gpios[countof(gpios_multiple)];
-  HidButtonsDeviceTest device(mock_gpios, countof(mock_gpios), TestType::kTestNotify);
-  zx::interrupt irqs[countof(gpios_multiple)];
-  for (size_t i = 0; i < countof(gpios_multiple); ++i) {
-    zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irqs[i]);
-    device.SetupGpio(std::move(irqs[i]), i);
-  }
-
-  EXPECT_OK(device.BindTest());
-
-  // Reconfigure Polarity due to interrupt.
-  mock_gpios[1]
-      .ExpectRead(ZX_OK, 1)                         // Pushed.
-      .ExpectSetPolarity(ZX_OK, GPIO_POLARITY_LOW)  // Turn the polarity.
-      .ExpectRead(ZX_OK, 1);                        // Still pushed, ok to continue.
-  mock_gpios[0].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
-  mock_gpios[1].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
-
-  // Reconfigure Polarity due to interrupt.
-  mock_gpios[1]
-      .ExpectRead(ZX_OK, 0)                          // Not pushed.
-      .ExpectSetPolarity(ZX_OK, GPIO_POLARITY_HIGH)  // Turn the polarity.
-      .ExpectRead(ZX_OK, 0);                         // Still not pushed, ok to continue.
-  mock_gpios[0].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
-  mock_gpios[1].ExpectRead(ZX_OK, 0);                // Read value to prepare report.
-
-  // Reconfigure Polarity due to interrupt.
-  mock_gpios[0]
-      .ExpectRead(ZX_OK, 1)                         // Pushed.
-      .ExpectSetPolarity(ZX_OK, GPIO_POLARITY_LOW)  // Turn the polarity.
-      .ExpectRead(ZX_OK, 1);                        // Still pushed, ok to continue.
-  mock_gpios[0].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
-  mock_gpios[1].ExpectRead(ZX_OK, 1);               // Read value to prepare report.
-
-  {  // Scoping for Client
-    zx::channel client_end, server_end;
-    EXPECT_OK(zx::channel::create(0, &client_end, &server_end));
-    device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end));
-    Buttons::SyncClient client(std::move(client_end));
-    auto result1 = client.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::MUTE));
-    EXPECT_OK(result1.status());
-
-    // Interrupts
-    device.FakeInterrupt(ButtonType::MUTE);
-    device.FakeInterrupt(ButtonType::MUTE);  // Bounce (within debounce threshold).
-    device.DebounceWait();
-    EXPECT_OK(client.HandleEvents(Buttons::EventHandlers{
-        .on_notify =
-            [](ButtonType type, bool pressed) {
-              if (type == ButtonType::MUTE && pressed == false) {
-                return ZX_OK;
-              }
-              return ZX_ERR_INTERNAL;
-            },
-        .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-    }));
-    auto result2 = client.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::VOLUME_UP));
-    EXPECT_OK(result2.status());
-    device.FakeInterrupt(ButtonType::VOLUME_UP);
-    device.DebounceWait();
-    EXPECT_OK(client.HandleEvents(Buttons::EventHandlers{
-        .on_notify =
-            [](ButtonType type, bool pressed) {
-              if (type == ButtonType::VOLUME_UP && pressed == true) {
-                return ZX_OK;
-              }
-              return ZX_ERR_INTERNAL;
-            },
-        .unknown = [] { return ZX_ERR_INVALID_ARGS; },
-    }));
-  }  // Close Client
-
-  device.Wait();
-  device.ShutDownTest();
-  for (size_t i = 0; i < countof(gpios_multiple); ++i) {
-    ASSERT_NO_FATAL_FAILURES(mock_gpios[i].VerifyAndClear());
-  }
-}
 }  // namespace buttons

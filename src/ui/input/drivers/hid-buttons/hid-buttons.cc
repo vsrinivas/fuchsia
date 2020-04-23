@@ -31,12 +31,32 @@
 namespace buttons {
 
 void HidButtonsDevice::Notify(uint32_t type) {
+  // HID Report
+  buttons_input_rpt_t input_rpt;
+  size_t out_len;
+  zx_status_t status =
+      HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, &input_rpt, sizeof(input_rpt), &out_len);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s HidbusGetReport failed %d\n", __FUNCTION__, status);
+  } else {
+    fbl::AutoLock lock(&client_lock_);
+    if (client_.is_valid()) {
+      client_.IoQueue(&input_rpt, sizeof(buttons_input_rpt_t), zx_clock_get_monotonic());
+      // If report could not be filled, we do not ioqueue.
+    }
+  }
+  if (fdr_gpio_.has_value() && fdr_gpio_.value() == type) {
+    zxlogf(INFO, "FDR (up and down buttons) pressed\n");
+  }
+
+  // Notify
   fbl::AutoLock lock(&channels_lock_);
   for (auto const& interface : button2channels_[type]) {
     Buttons::SendOnNotifyEvent(zx::unowned_channel(interface->chan()),
                                static_cast<ButtonType>(buttons_[type].id),
                                debounce_states_[type].value);
   }
+
   debounce_states_[type].enqueued = false;
 }
 
@@ -70,22 +90,6 @@ int HidButtonsDevice::Thread() {
                                                   ZX_TIMER_SIGNALED, 0);
         }
         debounce_states_[type].enqueued = true;
-      }
-
-      buttons_input_rpt_t input_rpt;
-      size_t out_len;
-      status = HidbusGetReport(0, BUTTONS_RPT_ID_INPUT, &input_rpt, sizeof(input_rpt), &out_len);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "%s HidbusGetReport failed %d\n", __FUNCTION__, status);
-      } else {
-        fbl::AutoLock lock(&client_lock_);
-        if (client_.is_valid()) {
-          client_.IoQueue(&input_rpt, sizeof(buttons_input_rpt_t), zx_clock_get_monotonic());
-          // If report could not be filled, we do not ioqueue.
-        }
-      }
-      if (fdr_gpio_.has_value() && fdr_gpio_.value() == type) {
-        zxlogf(INFO, "FDR (up and down buttons) pressed\n");
       }
 
       gpios_[type].irq.ack();
