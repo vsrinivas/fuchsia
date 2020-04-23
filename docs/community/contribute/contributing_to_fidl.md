@@ -32,7 +32,6 @@ C++        | [//tools/fidl/fidlgen_hlcpp/][be-hlcpp]                | [//zircon/
 Go         | [//tools/fidl/fidlgen_go/][be-go]                      | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
 Rust       | [//tools/fidl/fidlgen_rust/][be-rust]                  | [//src/lib/fidl/rust/fidl/][rtl-rust]
 Dart       | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]<br>[//topaz/bin/fidl_bindings_test/][bindings_test-dart]
-JavaScript | [chromium:build/fuchsia/fidlgen_fs][be-js]             | [chromium:build/fuchsia/fidlgen_js/runtime][rtl-js]
 
 ### Other FIDL Tools
 
@@ -130,7 +129,7 @@ fx set core.x64 --with //bundles:tests --with //topaz/packages/tests:all --with 
 or, to ensure there's no breakage with lots of bindings etc.:
 
 ```sh
-fx set terminal.x64 --with //bundles:kitchen_sink --with //vendor/google/bundles:buildbot
+fx set terminal.x64 --with //bundles:kitchen_sink
 ```
 
 ### symbolizer
@@ -710,7 +709,6 @@ fidl fmt --library my_library.fidl -i
 [be-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidlgen_dart/
 [be-go]: /tools/fidl/fidlgen_go/
 [be-rust]: /tools/fidl/fidlgen_rust/
-[be-js]: https://chromium.googlesource.com/chromium/src/+/master/build/fuchsia/fidlgen_js/
 [bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_bindings_test
 [compatibility_test]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_compatibility_test
 [fidlc-source]: /zircon/tools/fidl/
