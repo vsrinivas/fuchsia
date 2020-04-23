@@ -81,9 +81,9 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
       // Fetch camera configurations
       device_->GetConfigurations(
           [this](std::vector<fuchsia::camera3::Configuration> configurations) {
-            // Assuming there is at least one configuration with one stream.
-            ZX_ASSERT(!configurations.empty());
-            ZX_ASSERT(!configurations[kConfigId].streams.empty());
+            // Assuming the configuration needed is actually there.
+            ZX_ASSERT(configurations.size() > kConfigId);
+            ZX_ASSERT(configurations[kConfigId].streams.size() > kStreamId);
             auto image_format = configurations[kConfigId].streams[kStreamId].image_format;
 
             // Connect to specific stream
