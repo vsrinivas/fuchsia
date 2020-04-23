@@ -1,0 +1,19 @@
+{{>copyright comment="//"}}
+
+#include "{{PROJECT_PATH}}/{{snake_case PROJECT_NAME}}.h"
+
+#include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+
+// |gtest::RealLoopFixture| creates an async loop and provides us with some utilities such as
+// RunLoopUntil().
+class {{pascal_case PROJECT_NAME}}Test : public gtest::RealLoopFixture {
+ public:
+  // Set up for each TEST_F() here:
+  {{pascal_case PROJECT_NAME}}Test() {}
+  // Clean up for each TEST_F() here:
+  ~{{pascal_case PROJECT_NAME}}Test() {}
+};
+
+TEST_F({{pascal_case PROJECT_NAME}}Test, SmokeTest) { {{snake_case PROJECT_NAME}}::App app(dispatcher()); }
