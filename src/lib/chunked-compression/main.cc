@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +24,7 @@
 #include <src/lib/chunked-compression/chunked-compressor.h>
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <src/lib/chunked-compression/status.h>
-#include <src/lib/chunked-compression/stream-chunked-compressor.h>
+#include <src/lib/chunked-compression/streaming-chunked-compressor.h>
 
 namespace {
 
