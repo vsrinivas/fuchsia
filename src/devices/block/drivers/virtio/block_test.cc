@@ -39,7 +39,7 @@ class FakeBackendForBlock : public virtio::FakeBackend {
   }
 };
 
-TEST(BlockTest, DISABLED_InitSuccess) {
+TEST(BlockTest, InitSuccess) {
   std::unique_ptr<virtio::Backend> backend = std::make_unique<FakeBackendForBlock>();
   zx::bti bti(ZX_HANDLE_INVALID);
   fake_bti_create(bti.reset_and_get_address());
@@ -99,7 +99,7 @@ class BlockDeviceTest : public zxtest::Test {
 };
 
 // Tests trivial attempts to queue one operation.
-TEST_F(BlockDeviceTest, DISABLED_QueueOne) {
+TEST_F(BlockDeviceTest, QueueOne) {
   InitDevice();
 
   virtio::block_txn_t txn;
@@ -121,7 +121,7 @@ TEST_F(BlockDeviceTest, DISABLED_QueueOne) {
   RemoveDevice();
 }
 
-TEST_F(BlockDeviceTest, DISABLED_CheckQuery) {
+TEST_F(BlockDeviceTest, CheckQuery) {
   InitDevice();
   ASSERT_EQ(info_.block_size, kBlkSize);
   ASSERT_EQ(info_.block_count, kCapacity);
