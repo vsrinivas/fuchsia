@@ -12,7 +12,7 @@ group("feedback") {
     ":tests",
     "boot_log_checker",
     "bugreport",
-    "crashpad_agent",
+    "crash_reports:crash-reports",
     "feedback_data:feedback_agent",
   ]
 }
@@ -23,16 +23,16 @@ group("tests") {
   public_deps = [
     "boot_log_checker/tests",
     "bugreport/tests",
-    "crashpad_agent/tests",
+    "crash_reports/tests",
     "feedback_data/tests",
     "utils/tests",
   ]
 }
 
 group("infra_configs") {
-  deps = [ "crashpad_agent:upload_to_prod_server_config" ]
+  deps = [ "crash_reports:upload_to_prod_server_config" ]
 }
 
 group("production_configs") {
-  deps = [ "crashpad_agent:production_config" ]
+  deps = [ "crash_reports:production_config" ]
 }

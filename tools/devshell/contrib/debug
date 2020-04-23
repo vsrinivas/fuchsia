@@ -123,14 +123,14 @@ if [[ -z "${port}" ]]; then
 fi
 
 if [[ -n "${target_core}" ]]; then
-  crashpad_agent_dir=`fx-command-run shell ls /tmp/r/sys | grep crashpad_agent`
-  if [[ -z "${crashpad_agent_dir}" ]]; then
-    fx-error "Could not find crashpad agent directory"
+  crash_reports_dir=`fx-command-run shell ls /tmp/r/sys | grep crash_reports`
+  if [[ -z "${crash_reports_dir}" ]]; then
+    fx-error "Could not find crash reports directory on target"
     exit 1
   fi
 
   core_name=`fx-command-run shell \
-    ls "/tmp/r/sys/${crashpad_agent_dir}/crashes/completed" | grep -v meta`
+    ls "/tmp/r/sys/${crash_reports_dir}/crashes/completed" | grep -v meta`
 
   if [[ -z "${core_name}" ]]; then
     fx-error "No cores available on device"
@@ -147,7 +147,7 @@ if [[ -n "${target_core}" ]]; then
 
   core="/tmp/zxdb_fetched_core.dmp"
   fx-command-run "cp" "--to-host" \
-    "/tmp/r/sys/${crashpad_agent_dir}/crashes/completed/${core_name}" \
+    "/tmp/r/sys/${crash_reports_dir}/crashes/completed/${core_name}" \
     "${core}"
 fi
 

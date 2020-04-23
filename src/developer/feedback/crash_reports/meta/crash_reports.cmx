@@ -1,0 +1,25 @@
+{
+    "program": {
+        "binary": "bin/crash_reports"
+    },
+    "sandbox": {
+        "features": [
+            "build-info",
+            "config-data",
+            "isolated-temp",
+            "root-ssl-certificates"
+        ],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.feedback.DataProvider",
+            "fuchsia.feedback.DeviceIdProvider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.Connectivity",
+            "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.settings.Privacy",
+            "fuchsia.time.Utc",
+            "fuchsia.update.channel.Provider"
+        ]
+    }
+}
