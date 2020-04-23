@@ -9,7 +9,7 @@ import("//build/testing/environments.gni")
 
 group("{{PROJECT_NAME}}") {
   testonly = true
-  public_deps = [
+  deps = [
     ":pkg",
     ":tests",
   ]
@@ -17,7 +17,7 @@ group("{{PROJECT_NAME}}") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":{{PROJECT_NAME}}-tests" ]
+  deps = [ ":{{PROJECT_NAME}}-tests" ]
 }
 
 rustc_binary("bin") {
