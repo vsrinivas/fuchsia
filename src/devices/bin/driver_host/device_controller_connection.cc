@@ -122,7 +122,7 @@ void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
 void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view, zx::vmo driver,
                                             BindDriverCompleter::Sync completer) {
   const auto& dev = this->dev();
-  fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
+  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
 
   // TODO: api lock integration
   LOGD(INFO, dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),

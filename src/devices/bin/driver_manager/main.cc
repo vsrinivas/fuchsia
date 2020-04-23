@@ -257,6 +257,7 @@ int main(int argc, char** argv) {
   config.require_system = driver_manager_params.require_system;
   config.asan_drivers = driver_manager_params.driver_host_asan;
   config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;
+  config.log_to_debuglog = driver_manager_params.log_to_debuglog || devmgr_args.log_to_debuglog;
   config.verbose = driver_manager_params.verbose;
   config.disable_netsvc = devmgr_args.disable_netsvc;
   config.fs_provider = &system_instance;

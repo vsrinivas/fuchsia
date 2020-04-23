@@ -12,6 +12,8 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 
+typedef struct fx_logger fx_logger_t;
+
 namespace internal {
 
 struct BindContext {
@@ -33,7 +35,9 @@ void set_creation_context(internal::CreationContext* ctx);
 
 // Note that this must be a struct to match the public opaque declaration.
 struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCounted<zx_driver> {
-  static zx_status_t Create(fbl::RefPtr<zx_driver>* out_driver);
+  static zx_status_t Create(std::string_view libname, fbl::RefPtr<zx_driver>* out_driver);
+
+  ~zx_driver();
 
   const char* name() const { return name_; }
 
@@ -51,7 +55,7 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
   void set_status(zx_status_t status) { status_ = status; }
 
-  void set_libname(fbl::StringPiece libname) { libname_ = libname; }
+  fx_logger_t* logger() const { return logger_; }
 
   // Interface to |ops|. These names contain Op in order to not
   // collide with e.g. RefPtr names.
@@ -98,12 +102,14 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
  private:
   friend std::unique_ptr<zx_driver> std::make_unique<zx_driver>();
-  zx_driver() = default;
+  explicit zx_driver(std::string_view libname);
 
   const char* name_ = nullptr;
   zx_driver_rec_t* driver_rec_ = nullptr;
   const zx_driver_ops_t* ops_ = nullptr;
   void* ctx_ = nullptr;
+  fx_logger_t* logger_ = nullptr;
+
   fbl::String libname_;
   zx_status_t status_ = ZX_OK;
 };

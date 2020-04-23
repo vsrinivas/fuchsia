@@ -9,12 +9,13 @@ bootfs_only = true
 on_second_thought_keep_on_astro = true
 
 kernel_cmdline_args = [
+  "console.shell=true",
+  "devmgr.log-to-debuglog=true",
   "kernel.enable-debugging-syscalls=true",
   "kernel.enable-serial-syscalls=true",
   "kernel.oom.behavior=jobkill",
   "netsvc.all-features=true",
   "netsvc.disable=false",
-  "console.shell=true",
 ]
 
 meta_package_labels = []

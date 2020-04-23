@@ -65,12 +65,11 @@ fbl::RefPtr<zx_driver> GetCompositeDriver() {
 
   fbl::AutoLock guard(&lock);
   if (composite == nullptr) {
-    zx_status_t status = zx_driver::Create(&composite);
+    zx_status_t status = zx_driver::Create("<internal:composite>", &composite);
     if (status != ZX_OK) {
       return nullptr;
     }
     composite->set_name("internal:composite");
-    composite->set_libname("<internal:composite>");
   }
   return composite;
 }

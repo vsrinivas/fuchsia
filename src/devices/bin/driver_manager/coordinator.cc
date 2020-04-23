@@ -407,6 +407,9 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
     env.push_back(entry.data());
   }
 
+  if (config_.log_to_debuglog) {
+    env.push_back("devmgr.log-to-debuglog=true");
+  }
   if (config_.verbose) {
     env.push_back("devmgr.verbose=true");
   }

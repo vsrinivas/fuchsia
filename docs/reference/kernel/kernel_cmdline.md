@@ -85,9 +85,14 @@ If this option is set, devmgr will only allow `libasync-default.so`,
 prevents drivers from dynamically linking with libraries that they should not.
 All other libraries should be statically linked into a driver.
 
+## devmgr\.log-to-debuglog
+
+If this option is set, devmgr and all drivers will output logs to debuglog, as
+opposed to syslog.
+
 ## devmgr\.verbose
 
-Turn on verbose logging.
+If this option is set, devmgr will enable verbose logging.
 
 ## driver.\<name>.compatibility-tests-enable
 
@@ -112,17 +117,11 @@ Example: `driver.usb_audio.disable`
 
 ## driver.\<name>.log=\<flags>
 
-Set the log flags for a driver.  Flags are one or more comma-separated
-values which must be preceded by a "+" (in which case that flag is enabled)
-or a "-" (in which case that flag is disabled).  The textual constants
-"error", "warn", "info", "trace", "spew", "debug1", "debug2", "debug3", and "debug4"
-may be used, and they map to the corresponding bits in DDK_LOG_... in `ddk/debug.h`
-The default log flags for a driver is "error", "warn", and "info".
-
-Individual drivers may define their own log flags beyond the eight mentioned
-above.
-
-Example: `driver.usb_audio.log=-error,+info,+0x1000`
+Set the minumum log severity for a driver.  The textual constants
+"error", "warn", "info", "trace", "spew", may be used, and they map to the
+corresponding bits in DDK_LOG_... in `ddk/debug.h`. If an unknown value is
+passed, the minimum log severity will be set to "spew". The default minimum log
+severity for a driver is "info".
 
 Note again that the name of the driver is the "Driver" argument to the
 ZIRCON\_DRIVER\_BEGIN macro. It is not, for example, the name of the device,

@@ -16,6 +16,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/debuglog.h>
+#include <lib/zx/process.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <lib/zxio/inception.h>
@@ -44,6 +45,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
+#include <fbl/string_printf.h>
 
 #include "async_loop_owned_rpc_handler.h"
 #include "composite_device.h"
@@ -67,43 +69,20 @@ llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(const zx_dev
   };
 }
 
-static uint32_t logflagval(char* flag) {
+static fx_log_severity_t log_min_severity(const char* flag) {
   if (!strcmp(flag, "error")) {
-    return DDK_LOG_ERROR;
+    return FX_LOG_ERROR;
   }
   if (!strcmp(flag, "warn")) {
-    return DDK_LOG_WARN;
+    return FX_LOG_WARNING;
   }
   if (!strcmp(flag, "info")) {
-    return DDK_LOG_INFO;
+    return FX_LOG_ERROR;
   }
   if (!strcmp(flag, "trace")) {
-    return DDK_LOG_TRACE;
+    return -1;
   }
-  if (!strcmp(flag, "spew")) {
-    return DDK_LOG_SPEW;
-  }
-  if (!strcmp(flag, "debug1")) {
-    return DDK_LOG_DEBUG1;
-  }
-  if (!strcmp(flag, "debug2")) {
-    return DDK_LOG_DEBUG2;
-  }
-  if (!strcmp(flag, "debug3")) {
-    return DDK_LOG_DEBUG3;
-  }
-  if (!strcmp(flag, "debug4")) {
-    return DDK_LOG_DEBUG4;
-  }
-  return static_cast<uint32_t>(strtoul(flag, nullptr, 0));
-}
-
-static void logflag(char* flag, uint32_t* flags) {
-  if (*flag == '+') {
-    *flags |= logflagval(flag + 1);
-  } else if (*flag == '-') {
-    *flags &= ~logflagval(flag + 1);
-  }
+  return -2;
 }
 
 zx_status_t log_rpc_result(const fbl::RefPtr<zx_device_t>& dev, const char* opname,
@@ -156,10 +135,31 @@ const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* const path, siz
   return end;
 }
 
-zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
-  *out_driver = fbl::AdoptRef(new zx_driver());
+zx_status_t zx_driver::Create(std::string_view libname, fbl::RefPtr<zx_driver>* out_driver) {
+  auto driver = fbl::AdoptRef(new zx_driver(libname));
+
+  char process_name[ZX_MAX_NAME_LEN] = {};
+  zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
+  const char* tags[] = {process_name, "driver"};
+  fx_logger_config_t config{
+      .min_severity = FX_LOG_INFO,
+      .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
+      .log_service_channel = ZX_HANDLE_INVALID,
+      .tags = tags,
+      .num_tags = std::size(tags),
+  };
+  zx_status_t status = fx_logger_create(&config, &driver->logger_);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *out_driver = std::move(driver);
   return ZX_OK;
 }
+
+zx_driver::zx_driver(std::string_view libname) : libname_(libname) {}
+
+zx_driver::~zx_driver() { fx_logger_destroy(logger_); }
 
 zx_status_t DriverHostContext::SetupRootDevcoordinatorConnection(zx::channel ch) {
   auto conn = std::make_unique<internal::DevhostControllerConnection>(this);
@@ -319,7 +319,7 @@ void DriverHostContext::ProxyIosDestroy(const fbl::RefPtr<zx_device_t>& dev) {
   }
 }
 
-zx_status_t DriverHostContext::FindDriver(fbl::StringPiece libname, zx::vmo vmo,
+zx_status_t DriverHostContext::FindDriver(std::string_view libname, zx::vmo vmo,
                                           fbl::RefPtr<zx_driver_t>* out) {
   // check for already-loaded driver first
   for (auto& drv : drivers_) {
@@ -330,11 +330,10 @@ zx_status_t DriverHostContext::FindDriver(fbl::StringPiece libname, zx::vmo vmo,
   }
 
   fbl::RefPtr<zx_driver> new_driver;
-  zx_status_t status = zx_driver::Create(&new_driver);
+  zx_status_t status = zx_driver::Create(libname, &new_driver);
   if (status != ZX_OK) {
     return status;
   }
-  new_driver->set_libname(libname);
 
   // Let the |drivers_| list and our out parameter each have a refcount.
   drivers_.push_back(new_driver);
@@ -384,24 +383,18 @@ zx_status_t DriverHostContext::FindDriver(fbl::StringPiece libname, zx::vmo vmo,
   new_driver->set_ops(*ops);
   dr->driver = new_driver.get();
 
-  // check for dprintf log level flags
-  char tmp[128];
-  snprintf(tmp, sizeof(tmp), "driver.%s.log", new_driver->name());
-  char* log = getenv(tmp);
-  if (log) {
-    while (log) {
-      char* sep = strchr(log, ',');
-      if (sep) {
-        *sep = 0;
-        logflag(log, &dr->log_flags);
-        *sep = ',';
-        log = sep + 1;
-      } else {
-        logflag(log, &dr->log_flags);
-        break;
-      }
+  // Check for minimum log severity of driver.
+  const auto flag_name = fbl::StringPrintf("driver.%s.log", new_driver->name());
+  const char* flag_value = getenv(flag_name.data());
+  if (flag_value != nullptr) {
+    fx_log_severity_t min_severity = log_min_severity(flag_value);
+    status = fx_logger_set_min_severity(new_driver->logger(), min_severity);
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to set minimum log severity for driver '%s': %s", new_driver->name(),
+           zx_status_get_string(status));
+    } else {
+      LOGF(INFO, "Driver '%s' set minimum log severity to %d", new_driver->name(), min_severity);
     }
-    LOGF(INFO, "Driver '%s' set log flags to %#x", new_driver->name(), dr->log_flags);
   }
 
   if (new_driver->has_init_op()) {
@@ -441,7 +434,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
                                                ::fidl::StringView proxy_args,
                                                uint64_t local_device_id,
                                                CreateDeviceCompleter::Sync completer) {
-  fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
+  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
   // This does not operate under the driver_host api lock,
   // since the newly created device is not visible to
   // any API surface until a driver is bound to it.
@@ -663,8 +656,19 @@ void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerCon
 }
 
 int main(int argc, char** argv) {
-  if (getenv_bool("devmgr.verbose", false)) {
-    FX_LOG_SET_VERBOSITY(1);
+  char process_name[ZX_MAX_NAME_LEN] = {};
+  zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
+  const char* tags[] = {process_name, "device"};
+  fx_logger_config_t config{
+      .min_severity = getenv_bool("devmgr.verbose", false) ? -1 /* verbosity=1 */ : FX_LOG_INFO,
+      .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
+      .log_service_channel = ZX_HANDLE_INVALID,
+      .tags = tags,
+      .num_tags = std::size(tags),
+  };
+  zx_status_t status = fx_log_reconfigure(&config);
+  if (status != ZX_OK) {
+    return status;
   }
 
   zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
@@ -681,7 +685,7 @@ int main(int argc, char** argv) {
   DriverHostContext ctx(&kAsyncLoopConfigAttachToCurrentThread, std::move(root_resource));
   RegisterContextForApi(&ctx);
 
-  zx_status_t status = connect_scheduler_profile_provider();
+  status = connect_scheduler_profile_provider();
   if (status != ZX_OK) {
     LOGF(INFO, "Failed to connect to profile provider: %s", zx_status_get_string(status));
     return status;

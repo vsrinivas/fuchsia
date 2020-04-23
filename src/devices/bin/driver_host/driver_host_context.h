@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_HOST_DEVHOST_CONTEXT_H_
-#define SRC_DEVICES_BIN_DRIVER_HOST_DEVHOST_CONTEXT_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_CONTEXT_H_
+#define SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_CONTEXT_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
@@ -127,7 +127,7 @@ class DriverHostContext {
   // queue.
   void RunWorkItems(size_t how_many_to_run);
 
-  zx_status_t FindDriver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out);
+  zx_status_t FindDriver(std::string_view libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out);
 
   // Called when a zx_device_t has run out of references and needs its destruction finalized.
   void QueueDeviceForFinalization(zx_device_t* device) TA_REQ(api_lock_);
@@ -218,4 +218,4 @@ class DriverHostContext {
   zx::resource root_resource_;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_HOST_DEVHOST_CONTEXT_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_CONTEXT_H_

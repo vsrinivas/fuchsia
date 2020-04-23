@@ -7,10 +7,10 @@
 
 #include <stdint.h>
 #include <stdio.h>
-
-#include <ddk/driver.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/log.h>
+
+#include <ddk/driver.h>
 
 __BEGIN_CDECLS
 
@@ -69,13 +69,14 @@ __BEGIN_CDECLS
 #define DDK_LOG_LDEBUG3 (ZX_LOG_DEBUG3 | ZX_LOG_LOCAL)
 #define DDK_LOG_LDEBUG4 (ZX_LOG_DEBUG4 | ZX_LOG_LOCAL)
 
-// zxlog_level_enabled_etc(...) is an internal macro which tests to see if a
-// given log level is currently enabled.  Users should not use this macro, they
-// should use zxlog_level_enabled(...) instead.
-#define zxlog_level_enabled_etc(flag) \
-  (((flag & ZX_LOG_LEVEL_MASK) & __zircon_driver_rec__.log_flags) != 0)
+// Do not use this function directly, use zxlog_level_enabled() instead.
+bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint32_t flag);
 
-// zxlog_level_enabled(...) provides a way for a driver to test to see if a
+// Do not use this macro directly, use zxlog_level_enabled() instead.
+#define zxlog_level_enabled_etc(flag) \
+  driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)
+
+// zxlog_level_enabled() provides a way for a driver to test to see if a
 // particular log level is currently enabled.  This allows for patterns where a
 // driver might want to log something at trace or spew level, but the something
 // that they want to log might involve a computation or for loop which cannot be
@@ -83,15 +84,28 @@ __BEGIN_CDECLS
 //
 // Example:
 // if (zxlog_level_enabled(TRACE)) {
-//     zxlogf(TRACE, "Scatter gather table has %u entries\n", sg_table.count);
+//     zxlogf(TRACE, "Scatter gather table has %u entries", sg_table.count);
 //     for (uint32_t i = 0; i < sg_table.count; ++i) {
-//         zxlogf(TRACE, "[%u] : 0x%08x, %u\n",
+//         zxlogf(TRACE, "[%u] : 0x%08x, %u",
 //                i, sg_table.entry[i].base, sg_table.entry[i].base);
 //     }
 // }
 #define zxlog_level_enabled(flag) zxlog_level_enabled_etc(DDK_LOG_##flag)
 
+// Do not use this function directly, use zxlogf() instead.
 void driver_printf(uint32_t flags, const char* fmt, ...) __PRINTFLIKE(2, 3);
+
+// Do not use this function directly, use zxlogf() instead.
+void driver_logf_internal(const zx_driver_t* drv, uint32_t flag, const char* msg, ...)
+    __PRINTFLIKE(3, 4);
+
+// Do not use this macro directly, use zxlogf() instead.
+#define zxlogf_etc(flag, msg...)                                                    \
+  do {                                                                              \
+    if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) { \
+      driver_logf_internal(__zircon_driver_rec__.driver, flag, msg);                \
+    }                                                                               \
+  } while (0)
 
 // zxlogf() provides a path to the kernel debuglog gated by log level flags
 //
@@ -108,12 +122,7 @@ void driver_printf(uint32_t flags, const char* fmt, ...) __PRINTFLIKE(2, 3);
 //
 // Example driver.floppydisk.log=-info,+trace,+0x10
 //
-#define zxlogf(flag, fmt...)                       \
-  do {                                             \
-    if (zxlog_level_enabled_etc(DDK_LOG_##flag)) { \
-      driver_printf(DDK_LOG_##flag, fmt);          \
-    }                                              \
-  } while (0)
+#define zxlogf(flag, msg...) zxlogf_etc(DDK_LOG_##flag, msg)
 
 static inline void driver_set_log_flags(uint32_t flags) { __zircon_driver_rec__.log_flags = flags; }
 

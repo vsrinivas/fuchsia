@@ -175,6 +175,8 @@ struct CoordinatorConfig {
   bool asan_drivers;
   // Whether to reboot the device when suspend does not finish on time.
   bool suspend_fallback;
+  // Whether to output logs to debuglog.
+  bool log_to_debuglog;
   // Whether to enable verbose logging.
   bool verbose;
   // Timeout for system wide suspend
