@@ -118,12 +118,17 @@ template("triage_config_test") {
     deps = [ ":$test_spec_target" ]
   }
 
-  copy(target_name) {
+  copy("${target_name}_copy_test_spec") {
     testonly = true
 
     sources = [ "${target_out_dir}/${test_spec_file}" ]
     outputs = [ test_path ]
 
     deps = [ ":${test_spec_file}" ]
+  }
+
+  group(target_name) {
+    testonly = true
+    deps = [ ":${target_name}_copy_test_spec($host_toolchain)" ]
   }
 }

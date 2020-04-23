@@ -11,7 +11,7 @@ group("test_data") {
 
 group("tests") {
   testonly = true
-  deps = [ ":triage_sample_config_test($host_toolchain)" ]
+  deps = [ ":triage_sample_config_test" ]
 }
 
 triage_config_test("triage_sample_config_test") {
