@@ -198,15 +198,16 @@ impl LastResultsNode {
 mod tests {
     use super::*;
     use crate::configuration::get_config;
+    use fuchsia_async as fasync;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use omaha_client::{common::UserCounting, protocol::Cohort, state_machine};
     use std::time::Duration;
 
-    #[test]
-    fn test_configuration_node() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_configuration_node() {
         let inspector = Inspector::new();
         let node = ConfigurationNode::new(inspector.root().create_child("configuration"));
-        node.set(&get_config("0.1.2"));
+        node.set(&get_config("0.1.2").await);
 
         assert_inspect_tree!(
             inspector,

@@ -95,10 +95,13 @@ pub async fn get_app_set(
     )
 }
 
-pub fn get_config(version: &str) -> Config {
+pub async fn get_config(version: &str) -> Config {
     // This file does not exist in production, it is only used in integration/e2e testing.
-    let service_url = fs::read_to_string("/config/data/omaha_url")
-        .unwrap_or("https://clients2.google.com/service/update2/fuchsia/json".to_string());
+    let service_url = match get_service_url_from_vbmeta().await {
+        Ok(Some(url)) => url,
+        _ => fs::read_to_string("/config/data/omaha_url")
+            .unwrap_or("https://clients2.google.com/service/update2/fuchsia/json".to_string()),
+    };
     Config {
         updater: Updater { name: "Fuchsia".to_string(), version: Version::from([0, 0, 1, 0]) },
 
@@ -134,6 +137,15 @@ async fn get_appid_and_channel_from_vbmeta_impl(
     }
 }
 
+async fn get_service_url_from_vbmeta() -> Result<Option<String>, Error> {
+    let proxy = fuchsia_component::client::connect_to_service::<ArgumentsMarker>()?;
+    get_service_url_from_vbmeta_impl(proxy).await
+}
+
+async fn get_service_url_from_vbmeta_impl(proxy: ArgumentsProxy) -> Result<Option<String>, Error> {
+    Ok(proxy.get_string("omaha_url").await?)
+}
+
 #[cfg(test)]
 mod sysconfig_mock {
     use std::cell::RefCell;
@@ -165,9 +177,9 @@ mod tests {
     use futures::prelude::*;
     use sysconfig_client::channel::OtaUpdateChannelConfig;
 
-    #[test]
-    fn test_get_config() {
-        let config = get_config("1.2.3.4");
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_config() {
+        let config = get_config("1.2.3.4").await;
         assert_eq!(config.updater.name, "Fuchsia");
         let os = config.os;
         assert_eq!(os.platform, "Fuchsia");
@@ -317,6 +329,61 @@ mod tests {
         let stream_fut = async move {
             match stream.next().await.unwrap() {
                 Ok(ArgumentsRequest::GetStrings { .. }) => {
+                    // Don't respond.
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            }
+        };
+        future::join(fut, stream_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_service_url_from_vbmeta() {
+        let (proxy, mut stream) = create_proxy_and_stream::<ArgumentsMarker>().unwrap();
+        let fut = async move {
+            let url = get_service_url_from_vbmeta_impl(proxy).await.unwrap();
+            assert_eq!(url, Some("test-url".to_string()));
+        };
+        let stream_fut = async move {
+            match stream.next().await.unwrap() {
+                Ok(ArgumentsRequest::GetString { key, responder }) => {
+                    assert_eq!(key, "omaha_url");
+                    responder.send(Some("test-url")).expect("send failed");
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            }
+        };
+        future::join(fut, stream_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_service_url_from_vbmeta_missing() {
+        let (proxy, mut stream) = create_proxy_and_stream::<ArgumentsMarker>().unwrap();
+        let fut = async move {
+            let url = get_service_url_from_vbmeta_impl(proxy).await.unwrap();
+            assert_eq!(url, None);
+        };
+        let stream_fut = async move {
+            match stream.next().await.unwrap() {
+                Ok(ArgumentsRequest::GetString { key, responder }) => {
+                    assert_eq!(key, "omaha_url");
+                    responder.send(None).expect("send failed");
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            }
+        };
+        future::join(fut, stream_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_service_url_from_vbmeta_error() {
+        let (proxy, mut stream) = create_proxy_and_stream::<ArgumentsMarker>().unwrap();
+        let fut = async move {
+            assert!(get_service_url_from_vbmeta_impl(proxy).await.is_err());
+        };
+        let stream_fut = async move {
+            match stream.next().await.unwrap() {
+                Ok(ArgumentsRequest::GetString { .. }) => {
                     // Don't respond.
                 }
                 request => panic!("Unexpected request: {:?}", request),

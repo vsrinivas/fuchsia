@@ -38,10 +38,11 @@ fn main() -> Result<(), Error> {
         let version = configuration::get_version().context("Failed to get version")?;
         let channel_configs = channel::get_configs().ok();
         info!("Omaha channel config: {:?}", channel_configs);
-        let (app_set, channel_source) =
-            configuration::get_app_set(&version, &channel_configs).await;
+        let ((app_set, channel_source), config) = futures::join!(
+            configuration::get_app_set(&version, &channel_configs),
+            configuration::get_config(&version),
+        );
         info!("Omaha app set: {:?}", app_set.to_vec().await);
-        let config = configuration::get_config(&version);
         info!("Update config: {:?}", config);
 
         let futures = FuturesUnordered::new();

@@ -581,7 +581,7 @@ mod stub {
         }
 
         pub async fn build(self) -> Rc<RefCell<StubFidlServer>> {
-            let config = configuration::get_config("0.1.2");
+            let config = configuration::get_config("0.1.2").await;
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
             let app_set = if self.apps.is_empty() {
                 AppSet::new(vec![App::new("id", [1, 0], Cohort::default())])
