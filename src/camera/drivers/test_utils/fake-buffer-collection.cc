@@ -4,6 +4,7 @@
 
 #include "fake-buffer-collection.h"
 
+#include <fbl/algorithm.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/image-format/image_format.h>
 #include <lib/syslog/global.h>
@@ -13,10 +14,6 @@
 #include <zircon/device/sysmem.h>
 #include <zircon/errors.h>
 #include <zircon/pixelformat.h>
-
-#include <src/camera/drivers/isp/modules/dma-format.h>
-
-#include "fbl/algorithm.h"
 
 namespace camera {
 
