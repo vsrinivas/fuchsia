@@ -22,6 +22,7 @@ var benchmarksTmpl = template.Must(template.New("tmpl").Parse(`
 #include "src/tests/benchmarks/fidl/llcpp/builder_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/decode_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/encode_benchmark_util.h"
+#include "src/tests/benchmarks/fidl/llcpp/memcpy_benchmark_util.h"
 
 constexpr size_t allocator_buf_size = 65536;
 
@@ -65,6 +66,11 @@ bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
 	fidl::aligned<{{ .Type }}> obj = Build{{ .Name }}Heap(nullptr);
 	return llcpp_benchmarks::EncodeBenchmark(state, &obj);
 }
+
+bool BenchmarkMemcpy{{ .Name }}(perftest::RepeatState* state) {
+	fidl::aligned<{{ .Type }}> obj = Build{{ .Name }}Heap(nullptr);
+	return llcpp_benchmarks::MemcpyBenchmark(state, &obj);
+}
 {{ end }}
 
 {{ range .DecodeBenchmarks }}
@@ -86,6 +92,7 @@ void RegisterTests() {
 
 	{{ range .EncodeBenchmarks }}
 	perftest::RegisterTest("LLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
+	perftest::RegisterTest("Memcpy/{{ .Path }}", BenchmarkMemcpy{{ .Name }});
 	{{ end }}
 
 	{{ range .DecodeBenchmarks }}
