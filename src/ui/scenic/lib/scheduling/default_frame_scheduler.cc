@@ -238,15 +238,6 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
                 target_presentation_time.get(), "frame_number", frame_number);
   const zx::time frame_render_start_time = zx::time(async_now(dispatcher_));
 
-  // Ratchet the Present callbacks to signal that all outstanding Present() calls until this point
-  // are applied to the next Scenic frame.
-  std::for_each(session_updaters_.begin(), session_updaters_.end(),
-                [frame_number](fxl::WeakPtr<SessionUpdater> updater) {
-                  if (updater) {
-                    updater->PrepareFrame(frame_number);
-                  }
-                });
-
   // Create a FrameTimings instance for this frame to track the render and presentation times.
   auto timings_rendered_callback = [weak =
                                         weak_factory_.GetWeakPtr()](const FrameTimings& timings) {

@@ -88,8 +88,7 @@ SessionContext VkSessionTest::CreateSessionContext() {
 }
 
 CommandContext VkSessionTest::CreateCommandContext() {
-  return CommandContext(escher::BatchGpuUploader::New(escher()->GetWeakPtr(), /* trace_id = */ 0),
-                        sysmem_.get(), display_manager_.get(), fxl::WeakPtr<SceneGraph>(/*empty*/));
+  return {.sysmem = sysmem_.get(), .display_manager = display_manager_.get()};
 }
 
 }  // namespace test

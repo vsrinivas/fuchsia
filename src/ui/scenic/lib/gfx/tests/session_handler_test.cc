@@ -80,8 +80,7 @@ scheduling::SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t trace_id) {
   UpdateResults update_results;
-  CommandContext command_context(/*uploader*/ nullptr, /*sysmem*/ nullptr,
-                                 /*display_manager*/ nullptr, engine_->scene_graph()->GetWeakPtr());
+  CommandContext command_context = {.scene_graph = engine_->scene_graph()->GetWeakPtr()};
 
   for (auto [session_id, present_id] : sessions_to_update) {
     auto session = session_manager_->FindSession(session_id);
@@ -90,13 +89,8 @@ scheduling::SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
     }
   }
 
-  // Flush work to the GPU.
-  command_context.Flush();
-
   return update_results;
 }
-
-void SessionHandlerTest::PrepareFrame(uint64_t trace_id) {}
 
 }  // namespace test
 }  // namespace gfx

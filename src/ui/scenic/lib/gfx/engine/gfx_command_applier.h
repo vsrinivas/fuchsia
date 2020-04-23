@@ -41,28 +41,10 @@ class Sysmem;
 // Graphical context for a set of session updates.
 // The CommandContext is only valid during a single processing batch, and should
 // not be accessed/stored outside of that.
-class CommandContext {
- public:
-  // Creates an empty command context.
-  CommandContext() = default;
-
-  CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader, Sysmem* sysmem,
-                 display::DisplayManager* display_manager, fxl::WeakPtr<SceneGraph> scene_graph);
-
-  escher::BatchGpuUploader* batch_gpu_uploader() const { return batch_gpu_uploader_.get(); }
-
-  Sysmem* sysmem() const { return sysmem_; };
-  display::DisplayManager* display_manager() const { return display_manager_; };
-  SceneGraph* scene_graph() const { return scene_graph_.get(); }
-
-  // Flush any work accumulated during command processing.
-  void Flush();
-
- private:
-  std::unique_ptr<escher::BatchGpuUploader> batch_gpu_uploader_;
-  Sysmem* sysmem_ = nullptr;
-  display::DisplayManager* display_manager_ = nullptr;
-  fxl::WeakPtr<SceneGraph> scene_graph_;
+struct CommandContext {
+  Sysmem* sysmem = nullptr;
+  display::DisplayManager* display_manager = nullptr;
+  fxl::WeakPtr<SceneGraph> scene_graph;
 };
 
 // Responsible for applying gfx commands to sessions.

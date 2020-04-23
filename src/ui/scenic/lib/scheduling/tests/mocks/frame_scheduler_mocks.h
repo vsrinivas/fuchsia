@@ -115,9 +115,6 @@ class MockSessionUpdater : public SessionUpdater {
     return update_sessions_return_value_;
   }
 
-  // |SessionUpdater|
-  void PrepareFrame(uint64_t frame_number) override { ++prepare_frame_call_count_; }
-
   void SetUpdateSessionsReturnValue(SessionUpdater::UpdateResults new_value) {
     update_sessions_return_value_ = new_value;
   }
@@ -125,7 +122,6 @@ class MockSessionUpdater : public SessionUpdater {
   fxl::WeakPtr<MockSessionUpdater> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   uint64_t update_sessions_call_count() { return update_sessions_call_count_; }
-  uint64_t prepare_frame_call_count() { return prepare_frame_call_count_; }
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> last_sessions_to_update() {
     return last_sessions_to_update_;
   };
@@ -133,7 +129,6 @@ class MockSessionUpdater : public SessionUpdater {
  private:
   SessionUpdater::UpdateResults update_sessions_return_value_;
 
-  uint64_t prepare_frame_call_count_ = 0;
   uint64_t update_sessions_call_count_ = 0;
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> last_sessions_to_update_;
 

@@ -58,7 +58,6 @@ std::unique_ptr<Session> SessionTest::CreateSession() {
 bool SessionTest::Apply(::fuchsia::ui::gfx::Command command) {
   auto command_context = CreateCommandContext();
   auto retval = session_->ApplyCommand(&command_context, std::move(command));
-  command_context.Flush();
   return retval;
 }
 

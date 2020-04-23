@@ -27,12 +27,11 @@ namespace gfx {
 static const uint32_t kDumpScenesBufferCapacity = 1024 * 64;
 const char* GfxSystem::kName = "GfxSystem";
 
-GfxSystem::GfxSystem(SystemContext context, Engine* engine, escher::EscherWeakPtr escher,
-                     Sysmem* sysmem, display::DisplayManager* display_manager)
+GfxSystem::GfxSystem(SystemContext context, Engine* engine, Sysmem* sysmem,
+                     display::DisplayManager* display_manager)
     : System(std::move(context)),
       display_manager_(display_manager),
       sysmem_(sysmem),
-      escher_(std::move(escher)),
       engine_(engine),
       session_manager_(this->context()->inspect_node()->CreateChild("SessionManager")),
       weak_factory_(this) {
@@ -225,17 +224,16 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t frame_trace_id) {
   scheduling::SessionUpdater::UpdateResults update_results;
-  if (!command_context_) {
-    command_context_ = std::make_optional<CommandContext>(
-        escher_ ? escher::BatchGpuUploader::New(escher_->GetWeakPtr(), frame_trace_id) : nullptr,
-        sysmem_, display_manager_, engine_->scene_graph());
-  }
+  CommandContext command_context{.sysmem = sysmem_,
+                                 .display_manager = display_manager_,
+                                 .scene_graph = engine_->scene_graph()};
+
   // Apply scheduled updates to each session, and process the changes to the local session scene
   // graph.
   for (auto& [session_id, present_id] : sessions_to_update) {
     TRACE_DURATION("gfx", "GfxSystem::UpdateSessions", "session_id", session_id);
     if (auto session = session_manager_.FindSession(session_id)) {
-      bool success = session->ApplyScheduledUpdates(&(command_context_.value()), present_id);
+      bool success = session->ApplyScheduledUpdates(&command_context, present_id);
       if (!success) {
         update_results.sessions_with_failed_updates.insert(session_id);
       }
@@ -275,13 +273,6 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
   engine_->scene_graph()->ProcessViewTreeUpdates();
 
   return update_results;
-}
-
-void GfxSystem::PrepareFrame(uint64_t trace_id) {
-  if (command_context_) {
-    command_context_->Flush();
-    command_context_.reset();
-  }
 }
 
 VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,

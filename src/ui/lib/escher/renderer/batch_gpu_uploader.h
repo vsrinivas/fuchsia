@@ -169,6 +169,9 @@ class BatchGpuUploader {
 
   // Submits all pending work to the given CommandBuffer.
   // Callback function will be called after all work is done.
+  //
+  // Note that Submit must be called on all BatchGpuUploaders, even if no work was scheduled.
+  // TODO(7206): Remove this restriction.
   void Submit(fit::function<void()> callback = nullptr);
 
   // Submit() and GenerateCommands() will wait on all semaphores added by

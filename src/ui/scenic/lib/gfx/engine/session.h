@@ -31,7 +31,7 @@
 namespace scenic_impl {
 namespace gfx {
 
-class CommandContext;
+struct CommandContext;
 class Resource;
 
 // gfx::Session is the internal endpoint of the scenic::Session channel.

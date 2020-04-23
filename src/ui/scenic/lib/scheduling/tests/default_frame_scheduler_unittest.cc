@@ -207,7 +207,6 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
   SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   ScheduleUpdateAndCallback(scheduler, kSessionId, Now());
@@ -220,7 +219,6 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   // End the pending frame.
@@ -249,7 +247,6 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCall) {
       });
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   SchedulePresent2Update(scheduler, kSessionId,
@@ -264,7 +261,6 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCall) {
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
   EXPECT_EQ(present_count, 0u);
 
@@ -302,7 +298,6 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
 
   // Start the test.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   ScheduleUpdateAndCallback(scheduler, kSessionId,
@@ -316,7 +311,6 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   // End the pending frame.
@@ -356,7 +350,6 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCallExactlyOnTime
 
   // Start the test.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
   EXPECT_EQ(present_count, 0u);
 
@@ -371,7 +364,6 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCallExactlyOnTime
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
   EXPECT_EQ(present_count, 0u);
 
@@ -416,7 +408,6 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetPresentCallbackWhenNoContentT
 
   // Start the test.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
   EXPECT_EQ(present_count, 0u);
 
@@ -431,7 +422,6 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetPresentCallbackWhenNoContentT
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
 
@@ -609,7 +599,6 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
   SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Schedule an update for now.
@@ -620,7 +609,6 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
@@ -631,7 +619,6 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
 
   // Updates should be applied, but not rendered.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   // End previous frame.
@@ -640,7 +627,6 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Second render should have occurred.
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 2u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 2u);
   mock_renderer_->EndFrame(/* frame number */ 1, Now());
 }
@@ -657,7 +643,6 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
       });
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
   EXPECT_EQ(present_count, 0u);
 
@@ -669,7 +654,6 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
@@ -681,7 +665,6 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
 
   // Updates should be applied, but not rendered.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
   EXPECT_EQ(present_count, 0u);
 
@@ -692,7 +675,6 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Second render should have occurred.
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 2u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 2u);
   mock_renderer_->EndFrame(/* frame number */ 1, Now());
   EXPECT_EQ(present_count, 2u);
@@ -975,7 +957,6 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   EXPECT_EQ(0, Now().get());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Schedule a frame where the GPU render work finished before the CPU work.
@@ -994,7 +975,6 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
@@ -1049,7 +1029,6 @@ TEST_F(FrameSchedulerTest, LowPresent2GpuRenderTime_ShouldNotMatter) {
   EXPECT_EQ(0, Now().get());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
   EXPECT_EQ(present_count, 0u);
 
@@ -1069,7 +1048,6 @@ TEST_F(FrameSchedulerTest, LowPresent2GpuRenderTime_ShouldNotMatter) {
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
   EXPECT_EQ(present_count, 0u);
 
@@ -1535,9 +1513,8 @@ TEST_F(FrameSchedulerTest, KillingFollowingSessionUpdaterInPreviousSessionUpdate
   constexpr SessionId kSession1 = 1;
   SetSessionUpdateFailedNotExpected(scheduler.get(), kSession1);
 
-  auto updater1 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>([]() {
-    EXPECT_FALSE(true) << "Should never be called.";
-  });
+  auto updater1 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>(
+      []() { EXPECT_FALSE(true) << "Should never be called."; });
   auto updater2 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>([&updater1]() {
     // No call should have been made to UpdateSessions of |updater1|. If this ever fails then the
     // SessionUpdaters are probably out of expected order in the frame scheduler and the test needs

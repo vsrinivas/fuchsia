@@ -54,9 +54,6 @@
 
 #include <glm/ext.hpp>
 
-namespace scenic_impl {
-namespace gfx {
-
 namespace {
 
 // Makes it convenient to check that a value is constant and of a specific type,
@@ -68,22 +65,8 @@ constexpr std::array<fuchsia::ui::gfx::Value::Tag, 2> kFloatValueTypes{
 
 }  // anonymous namespace
 
-CommandContext::CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader, Sysmem* sysmem,
-                               display::DisplayManager* display_manager,
-                               fxl::WeakPtr<SceneGraph> scene_graph)
-    : batch_gpu_uploader_(std::move(uploader)),
-      sysmem_(sysmem),
-      display_manager_(display_manager),
-      scene_graph_(std::move(scene_graph)) {}
-
-void CommandContext::Flush() {
-  if (batch_gpu_uploader_) {
-    // Submit regardless of whether or not there are updates to release the
-    // underlying CommandBuffer so the pool and sequencer don't stall out.
-    // TODO(ES-115) to remove this restriction.
-    batch_gpu_uploader_->Submit();
-  }
-}
+namespace scenic_impl {
+namespace gfx {
 
 bool GfxCommandApplier::AssertValueIsOfType(const fuchsia::ui::gfx::Value& value,
                                             const fuchsia::ui::gfx::Value::Tag* tags,
@@ -1475,8 +1458,8 @@ ResourcePtr GfxCommandApplier::CreateCompositor(Session* session, ResourceId id,
 ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
     Session* session, CommandContext* command_context, ResourceId id,
     fuchsia::ui::gfx::DisplayCompositorArgs args) {
-  FXL_DCHECK(command_context->display_manager());
-  display::Display* display = command_context->display_manager()->default_display();
+  FXL_DCHECK(command_context->display_manager);
+  display::Display* display = command_context->display_manager->default_display();
   if (!display) {
     session->error_reporter()->ERROR() << "There is no default display available.";
     return nullptr;
@@ -1490,8 +1473,8 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
 
   return fxl::AdoptRef(new DisplayCompositor(
       session, session->id(), id, session->session_context().scene_graph, display,
-      SwapchainFactory::CreateDisplaySwapchain(display, command_context->sysmem(),
-                                               command_context->display_manager(),
+      SwapchainFactory::CreateDisplaySwapchain(display, command_context->sysmem,
+                                               command_context->display_manager,
                                                session->session_context().escher)));
 }
 

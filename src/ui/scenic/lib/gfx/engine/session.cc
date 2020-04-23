@@ -84,7 +84,7 @@ bool Session::ApplyScheduledUpdates(CommandContext* command_context,
   // RAII object to ensure UpdateViewHolderConnections and StageViewTreeUpdates, on all exit paths.
   fbl::AutoCall cleanup([this, command_context] {
     view_tree_updater_.UpdateViewHolderConnections();
-    view_tree_updater_.StageViewTreeUpdates(command_context->scene_graph());
+    view_tree_updater_.StageViewTreeUpdates(command_context->scene_graph.get());
   });
 
   // Batch all updates up to |present_id|.

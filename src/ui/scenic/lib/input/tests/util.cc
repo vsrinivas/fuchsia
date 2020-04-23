@@ -144,7 +144,7 @@ void InputSystemTest::InitializeScenic(Scenic* scenic) {
   engine_ = std::make_unique<Engine>(context_provider_.context(), frame_scheduler,
                                      std::move(signaller), escher::EscherWeakPtr());
   frame_scheduler->SetFrameRenderer(engine_->GetWeakPtr());
-  auto gfx = scenic->RegisterSystem<GfxSystem>(engine_.get(), escher::EscherWeakPtr(),
+  auto gfx = scenic->RegisterSystem<GfxSystem>(engine_.get(),
                                                /* sysmem */ nullptr,
                                                /* display_manager */ nullptr);
   frame_scheduler->AddSessionUpdater(gfx->GetWeakPtr());

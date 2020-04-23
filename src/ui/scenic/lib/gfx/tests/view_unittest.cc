@@ -731,7 +731,6 @@ TEST_F(ViewTest, AnnotationViewReceivesViewPropertiesChangedEvent) {
   session_annotation->ApplyCommand(
       &cmd_ctx,
       scenic::NewCreateViewCmd(annotation_view_id, std::move(annotation_view_token), "Annotation"));
-  cmd_ctx.Flush();
   auto annotation_view =
       session_annotation->resources()->FindResource<View>(annotation_view_id)->GetWeakPtr();
 
@@ -795,7 +794,6 @@ TEST_F(ViewTest, AnnotationViewReceivesViewAttachedToSceneEvent) {
   session_annotation->ApplyCommand(
       &cmd_ctx,
       scenic::NewCreateViewCmd(annotation_view_id, std::move(annotation_view_token), "Annotation"));
-  cmd_ctx.Flush();
   auto annotation_view =
       session_annotation->resources()->FindResource<View>(annotation_view_id)->GetWeakPtr();
 
@@ -846,7 +844,6 @@ TEST_F(ViewTest, AnnotationViewReceivesViewDetachedFromSceneEvent) {
   session_annotation->ApplyCommand(
       &cmd_ctx,
       scenic::NewCreateViewCmd(annotation_view_id, std::move(annotation_view_token), "Annotation"));
-  cmd_ctx.Flush();
   auto annotation_view =
       session_annotation->resources()->FindResource<View>(annotation_view_id)->GetWeakPtr();
 

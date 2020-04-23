@@ -44,10 +44,6 @@ class SessionUpdater {
   // preconditions have been met (for example, all acquire fences have been signaled).
   virtual UpdateResults UpdateSessions(
       const std::unordered_map<SessionId, PresentId>& sessions_to_update, uint64_t trace_id) = 0;
-
-  // Notify updater that no more sessions will be updated before rendering the next frame; now is
-  // the time to do any necessary work before the frame is rendered.
-  virtual void PrepareFrame(uint64_t trace_id) = 0;
 };
 
 // Result of a call to FrameRenderer::RenderFrame(). See below.

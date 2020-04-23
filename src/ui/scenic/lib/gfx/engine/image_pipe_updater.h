@@ -52,9 +52,6 @@ class ImagePipeUpdater : public scheduling::SessionUpdater {
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
       uint64_t trace_id) override;
 
-  // |scheduling::SessionUpdater|
-  void PrepareFrame(uint64_t trace_id) override{};
-
   // For tests.
   scheduling::SessionId GetSchedulingId() { return scheduling_id_; }
 

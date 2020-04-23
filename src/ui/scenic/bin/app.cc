@@ -226,8 +226,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(&engine_.value(), escher_->GetWeakPtr(),
-                                                    &sysmem_, &display_manager_);
+  auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(&engine_.value(), &sysmem_, &display_manager_);
   FXL_DCHECK(gfx);
 
   frame_scheduler_->AddSessionUpdater(gfx->GetWeakPtr());

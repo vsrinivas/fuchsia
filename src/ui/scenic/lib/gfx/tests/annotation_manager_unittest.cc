@@ -76,10 +76,7 @@ class AnnotationManagerTest : public ViewTreeSessionTest {
     return session_context;
   }
 
-  CommandContext CreateCommandContext() {
-    return CommandContext(/*uploader=*/nullptr, /*sysmem=*/nullptr,
-                          /*display_manager=*/nullptr, scene_graph_->GetWeakPtr());
-  }
+  CommandContext CreateCommandContext() { return {.scene_graph = scene_graph_->GetWeakPtr()}; }
 
   SceneGraph* scene_graph() const { return scene_graph_.get(); }
   AnnotationManager* annotation_manager() const { return annotation_manager_.get(); }
@@ -149,7 +146,6 @@ TEST_F(AnnotationManagerTest, SuccessfulLookup) {
   session_view2->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kView2Id, std::move(view2_token), std::move(view2_ctrl_ref),
                                       std::move(view2_ref_for_creation), "view 2"));
-  cmds.Flush();
 
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token), "holder 1"));
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder2Id, std::move(view_holder2_token), "holder 2"));
@@ -227,7 +223,6 @@ TEST_F(AnnotationManagerTest, InvalidAndNonExistentViewRef) {
                               scenic::NewCreateViewCmd(kView1Id, std::move(view1_token), "view 1"));
   session_view2->ApplyCommand(&cmds,
                               scenic::NewCreateViewCmd(kView2Id, std::move(view2_token), "view 2"));
-  cmds.Flush();
 
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token), "holder 1"));
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder2Id, std::move(view_holder2_token), "holder 2"));
@@ -332,7 +327,6 @@ TEST_F(AnnotationManagerTest, LinkerTest_AnnotationViewCreatedFirst) {
   session_view1->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kView1Id, std::move(view1_token), std::move(view1_ctrl_ref),
                                       std::move(view1_ref_for_creation), "view 1"));
-  cmds.Flush();
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token), "holder 1"));
   Apply(scenic::NewAddChildCmd(kEntityNodeId, kViewHolder1Id));
 
@@ -347,7 +341,6 @@ TEST_F(AnnotationManagerTest, LinkerTest_AnnotationViewCreatedFirst) {
   session_annotation->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kAnnotationViewId, std::move(annotation_view_token),
                                       "annotation view"));
-  cmds.Flush();
 
   // Lookup Annotation View in the ResourceMap to verify that it is created
   // successfully.
@@ -420,7 +413,6 @@ TEST_F(AnnotationManagerTest, LinkerTest_AnnotationViewHolderCreatedFirst) {
   session_view1->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kView1Id, std::move(view1_token), std::move(view1_ctrl_ref),
                                       std::move(view1_ref_for_creation), "view 1"));
-  cmds.Flush();
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token), "holder 1"));
   Apply(scenic::NewAddChildCmd(kEntityNodeId, kViewHolder1Id));
 
@@ -442,7 +434,6 @@ TEST_F(AnnotationManagerTest, LinkerTest_AnnotationViewHolderCreatedFirst) {
   session_annotation->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kAnnotationViewId, std::move(annotation_view_token),
                                       "annotation view"));
-  cmds.Flush();
 
   // Lookup Annotation View in the ResourceMap to verify that it is created
   // successfully.
@@ -501,7 +492,6 @@ TEST_F(AnnotationManagerTest, RemoveAnnotationView) {
   session_view1->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kView1Id, std::move(view1_token), std::move(view1_ctrl_ref),
                                       std::move(view1_ref_for_creation), "view 1"));
-  cmds.Flush();
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token), "holder 1"));
   Apply(scenic::NewAddChildCmd(kEntityNodeId, kViewHolder1Id));
 
@@ -523,7 +513,6 @@ TEST_F(AnnotationManagerTest, RemoveAnnotationView) {
   session_annotation->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kAnnotationViewId, std::move(annotation_view_token),
                                       "annotation view"));
-  cmds.Flush();
 
   // Lookup Annotation View in the ResourceMap to verify that it is created
   // successfully.
@@ -538,7 +527,6 @@ TEST_F(AnnotationManagerTest, RemoveAnnotationView) {
 
   // Destroy Annotation View.
   session_annotation->ApplyCommand(&cmds, scenic::NewReleaseResourceCmd(kAnnotationViewId));
-  cmds.Flush();
   EXPECT_FALSE(annotation_view_weak_ptr);
   EXPECT_FALSE(annotation_view_holder_weak_ptr);
   EXPECT_EQ(view1_ptr->annotation_view_holders().size(), 0U);
@@ -583,7 +571,6 @@ TEST_F(AnnotationManagerTest, RemoveClientView) {
   session_view1->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kView1Id, std::move(view1_token), std::move(view1_ctrl_ref),
                                       std::move(view1_ref_for_creation), "view 1"));
-  cmds.Flush();
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token), "holder 1"));
   Apply(scenic::NewAddChildCmd(kEntityNodeId, kViewHolder1Id));
 
@@ -606,7 +593,6 @@ TEST_F(AnnotationManagerTest, RemoveClientView) {
   session_annotation->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kAnnotationViewId, std::move(annotation_view_token),
                                       "annotation view"));
-  cmds.Flush();
 
   // Lookup Annotation View in the ResourceMap to verify that it is created
   // successfully.
@@ -622,7 +608,6 @@ TEST_F(AnnotationManagerTest, RemoveClientView) {
   // Destroy Client View.
   ClearEvents();
   session_view1->ApplyCommand(&cmds, scenic::NewReleaseResourceCmd(kView1Id));
-  cmds.Flush();
   EXPECT_FALSE(view1_weak_ptr);
   EXPECT_FALSE(annotation_view_holder_weak_ptr);
   EXPECT_TRUE(annotation_view_weak_ptr);
@@ -677,7 +662,6 @@ TEST_F(AnnotationManagerTest, RemoveClientViewHolder) {
   session_view1->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kView1Id, std::move(view1_token), std::move(view1_ctrl_ref),
                                       std::move(view1_ref_for_creation), "view 111"));
-  cmds.Flush();
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token),
                                        "holder "
                                        "111"));
@@ -702,7 +686,6 @@ TEST_F(AnnotationManagerTest, RemoveClientViewHolder) {
   session_annotation->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kAnnotationViewId, std::move(annotation_view_token),
                                       "annotation view 111"));
-  cmds.Flush();
   StageAndUpdateViewTree(scene_graph());
 
   // Lookup Annotation View in the ResourceMap to verify that it is created
@@ -782,7 +765,6 @@ TEST_F(AnnotationManagerTest, ViewPropertiesPropagation) {
   session_view1->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kView1Id, std::move(view1_token), std::move(view1_ctrl_ref),
                                       std::move(view1_ref_for_creation), "view 1"));
-  cmds.Flush();
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token), "holder 1"));
   Apply(scenic::NewAddChildCmd(kEntityNodeId, kViewHolder1Id));
 
@@ -817,7 +799,6 @@ TEST_F(AnnotationManagerTest, ViewPropertiesPropagation) {
   session_annotation->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kAnnotationViewId, std::move(annotation_view_token),
                                       "annotation view"));
-  cmds.Flush();
 
   // Verify that Annotation ViewHolder is created correctly.
   EXPECT_EQ(view1_ptr->annotation_view_holders().size(), 1U);
@@ -918,7 +899,6 @@ TEST_F(AnnotationManagerTest, GlobalTransformPropagation) {
   session_view1->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kView1Id, std::move(view1_token), std::move(view1_ctrl_ref),
                                       std::move(view1_ref_for_creation), "view 1"));
-  cmds.Flush();
   Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token), "holder 1"));
   Apply(scenic::NewAddChildCmd(kEntityNodeId, kViewHolder1Id));
 
@@ -948,7 +928,6 @@ TEST_F(AnnotationManagerTest, GlobalTransformPropagation) {
   session_annotation->ApplyCommand(
       &cmds, scenic::NewCreateViewCmd(kAnnotationViewId, std::move(annotation_view_token),
                                       "annotation view"));
-  cmds.Flush();
 
   // Verify that Annotation ViewHolder is created correctly.
   EXPECT_EQ(view1_ptr->annotation_view_holders().size(), 1U);

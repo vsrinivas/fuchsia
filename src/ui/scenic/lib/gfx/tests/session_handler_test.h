@@ -55,8 +55,6 @@ class SessionHandlerTest : public ErrorReportingTest, public scheduling::Session
   UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
       uint64_t trace_id) override;
-  // |scheduling::SessionUpdater|
-  void PrepareFrame(uint64_t trace_id) override;
 
   sys::testing::ComponentContextProvider app_context_;
   std::unique_ptr<Scenic> scenic_;

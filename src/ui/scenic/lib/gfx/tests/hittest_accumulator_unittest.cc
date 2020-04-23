@@ -79,7 +79,6 @@ class SessionHitAccumulatorTest : public SessionTest {
     CommandContext command_context;
     session->ApplyCommand(&command_context,
                           scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-    command_context.Flush();
     return session->resources()->FindResource<View>(view_id);
   }
 

@@ -70,8 +70,9 @@ class CompositorTest : public SessionTest {
   }
 
   CommandContext CreateCommandContext() {
-    return CommandContext(/*batch_gpu_uploader=*/nullptr, /*sysmem=*/sysmem_.get(),
-                          display_manager_.get(), scene_graph_->GetWeakPtr());
+    return {.sysmem = sysmem_.get(),
+            .display_manager = display_manager_.get(),
+            .scene_graph = scene_graph_->GetWeakPtr()};
   }
 
   display::DisplayManager* display_manager() const { return display_manager_.get(); }

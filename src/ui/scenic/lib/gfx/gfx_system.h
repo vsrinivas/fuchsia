@@ -28,7 +28,7 @@ class GfxSystem : public System,
   static constexpr TypeId kTypeId = kGfx;
   static const char* kName;
 
-  GfxSystem(SystemContext context, Engine* engine, escher::EscherWeakPtr escher, Sysmem* sysmem,
+  GfxSystem(SystemContext context, Engine* engine, Sysmem* sysmem,
             display::DisplayManager* display_manager);
 
   GfxSystemWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -46,9 +46,6 @@ class GfxSystem : public System,
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
       uint64_t trace_id) override;
 
-  // |scheduling::SessionUpdater|
-  virtual void PrepareFrame(uint64_t trace_id) override;
-
   // For tests.
   SessionManager* session_manager() { return &session_manager_; }
 
@@ -64,14 +61,9 @@ class GfxSystem : public System,
                                std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources);
 
   display::DisplayManager* const display_manager_;
-
   Sysmem* const sysmem_;
-  escher::EscherWeakPtr escher_;
-
   Engine* const engine_;
   SessionManager session_manager_;
-
-  std::optional<CommandContext> command_context_;
 
   fxl::WeakPtrFactory<GfxSystem> weak_factory_;  // must be last
 };
