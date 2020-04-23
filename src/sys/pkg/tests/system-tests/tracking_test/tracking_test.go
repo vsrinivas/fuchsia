@@ -19,7 +19,6 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/util"
 	"fuchsia.googlesource.com/system_tests/check"
 	"fuchsia.googlesource.com/system_tests/pave"
-	"golang.org/x/crypto/ssh"
 )
 
 var c *config
@@ -261,57 +260,26 @@ func otaToPackage(
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
 
-	server, err := device.ServePackageRepository(ctx, repo, "tracking_test", true)
-	if err != nil {
-		return fmt.Errorf("error setting up server: %s", err)
-	}
-	defer server.Shutdown(ctx)
-
-	// In order to manually trigger the system updater, we need the `run`
-	// package. Since builds can be configured to not automatically install
-	// packages, we need to explicitly resolve it.
-	cmd := []string{"pkgctl", "resolve", "fuchsia-pkg://fuchsia.com/run/0"}
-	if err := device.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		return fmt.Errorf("error resolving the run package: %v", err)
+	if err := device.DownloadOTA(ctx, repo, updatePackageUrl); err != nil {
+		return fmt.Errorf("failed to download OTA: %s", err)
 	}
 
-	ch := make(chan struct{})
-	device.RegisterDisconnectListener(ch)
-
-	log.Printf("starting system OTA")
-
-	cmd = []string{
-		"run",
-		"\"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\"",
-		"--update",
-		updatePackageUrl,
-		"&&",
-		"sleep",
-		"60",
-	}
-	if err := device.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		if _, ok := err.(*ssh.ExitMissingError); !ok {
-			return fmt.Errorf("failed to run system_updater.cmx: %s", err)
-		}
-	}
-
-	// Wait until we get a signal that we have disconnected
-	select {
-	case <-ch:
-	case <-ctx.Done():
-		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
-	}
-
-	if err = device.Reconnect(ctx); err != nil {
-		return fmt.Errorf("device failed to connect: %s", err)
-	}
-
-	log.Printf("OTA complete, validating device")
-	// FIXME: See comment in device.TriggerSystemOTA()
+	// Disconnect from sl4f since the OTA should reboot the device.
 	if *rpcClient != nil {
 		(*rpcClient).Close()
 		*rpcClient = nil
 	}
+
+	log.Printf("Rebooting device")
+	startTime := time.Now()
+
+	if err = device.Reboot(ctx); err != nil {
+		return fmt.Errorf("device failed to reboot after OTA applied: %s", err)
+	}
+
+	log.Printf("Reboot complete in %s", time.Now().Sub(startTime))
+	log.Printf("Validating device")
+
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {
 		return fmt.Errorf("unable to connect to sl4f after OTA: %s", err)

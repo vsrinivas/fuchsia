@@ -78,7 +78,6 @@ func newServer(ctx context.Context, dir string, localHostname string, repoName s
 		case <-ctx.Done():
 			server.Shutdown(ctx)
 		}
-
 	}()
 
 	return &Server{
