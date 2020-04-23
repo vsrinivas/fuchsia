@@ -93,11 +93,11 @@ int main(int argc, char** argv) {
 ### Set settings
 
 ```C++
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/log_settings.h"
 
 int main(int argc, char** argv) {
-     syslog::LogSettings settings = {.fd = -1, .severity = FX_LOG_ERROR};
-     syslog::SetSettings(settings, {"tag1", "tag2"});
+     fxl::LogSettings settings = {.min_log_level = fxl::LOG_ERROR};
+     fxl::SetLogSettings(settings, {"tag1", "tag2"});
 }
 ```
 

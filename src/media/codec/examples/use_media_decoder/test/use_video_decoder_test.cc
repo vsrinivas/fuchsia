@@ -17,7 +17,6 @@
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
-#include <lib/syslog/logger.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -52,11 +51,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   }
   test_params->Validate();
 
-  syslog::LogSettings settings = {.fd = STDERR_FILENO, .severity = FX_LOG_INFO};
-  zx_status_t status = syslog::SetSettings(settings, {"use_video_decoder_test"});
-  ZX_ASSERT(status == ZX_OK);
-  fx_logger_t* logger = fx_log_get_logger();
-  ZX_ASSERT(logger);
+  syslog::SetTags({"use_video_decoder_test"});
 
   async::Loop fidl_loop(&kAsyncLoopConfigAttachToCurrentThread);
   thrd_t fidl_thread;

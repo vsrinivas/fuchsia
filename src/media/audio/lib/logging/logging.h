@@ -9,6 +9,7 @@
 
 #include <iomanip>
 
+#include "src/lib/fxl/log_settings.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 #define AUD_LOG(level)                                                                          \
@@ -37,8 +38,8 @@ class Logging {
 
   static void Init(const fx_log_severity_t log_level,
                    const std::initializer_list<std::string>& tags) {
-    syslog::LogSettings settings = {.severity = log_level, .fd = -1};
-    syslog::SetSettings(settings, tags);
+    fxl::LogSettings settings = {.min_log_level = log_level};
+    fxl::SetLogSettings(settings, tags);
   }
 };
 

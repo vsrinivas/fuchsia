@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/fxl/log_settings.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -121,8 +122,8 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
       FX_LOG_ERROR,    // 2
   };
 
-  syslog::LogSettings settings = {severities_in_use[0], -1};  // min_severity, fallback fd
-  ASSERT_EQ(syslog::SetSettings(settings, {tag}), ZX_OK);
+  fxl::LogSettings settings = {.min_log_level = severities_in_use[0]};
+  fxl::SetLogSettings(settings, {tag});
 
   for (auto severity : severities_in_use) {
     FX_LOGS_WITH_SEVERITY(severity) << message;
