@@ -23,7 +23,11 @@ namespace media::audio::test {
 
 class HermeticAudioEnvironment {
  public:
-  HermeticAudioEnvironment(const char* audio_core_config_data_path = nullptr);
+  struct Options {
+    const char* audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio_core";
+    const char* audio_core_config_data_path = nullptr;
+  };
+  HermeticAudioEnvironment(Options options);
   ~HermeticAudioEnvironment();
 
   void Start(async::Loop* loop);
@@ -43,14 +47,14 @@ class HermeticAudioEnvironment {
   }
 
  private:
+  const Options options_;
+
   // We use a mutex/condition variable allow the |hermetic_environment_| to be started on a
   // secondary thread. The majority of the functionality in |EnclosingEnvirionment| is just thin
   // wrappers around different FIDL calls so we don't guard all interaction with
   // |hermetic_environment_| with the mutex.
   std::condition_variable cv_;
   std::mutex mutex_;
-
-  const char* audio_core_config_data_path_;
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> hermetic_environment_;
   std::thread env_thread_;

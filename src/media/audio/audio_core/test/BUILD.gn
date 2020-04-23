@@ -9,6 +9,7 @@ group("test") {
     "device:audio_device_tests",
     "fidl:audio_fidl_tests",
     "hardware:audio_core_hardware_tests",
+    "pipeline:audio-core-for-pipeline-tests",
     "pipeline:audio_pipeline_tests",
     "service:audio_device_service_tests",
     "//src/media/audio/virtual_audio_service",

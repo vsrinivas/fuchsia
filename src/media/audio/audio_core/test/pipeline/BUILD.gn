@@ -3,10 +3,39 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
+import("//src/media/audio/audio_core_package.gni")
 import("//src/media/audio/hardware.gni")
 
+loadable_module("inversion_filter") {
+  sources = [ "inversion_filter.cc" ]
+
+  deps = [
+    "//sdk/lib/media/audio/effects",
+    "//src/lib/syslog/cpp",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
+audio_core_package("audio-core-for-pipeline-tests") {
+  effects = {
+    target = "//src/media/audio/audio_core/test/pipeline:inversion_filter"
+    name = "inversion_filter.so"
+  }
+}
+
 test_package("audio_pipeline_tests") {
-  deps = [ ":audio_pipeline_tests_bin" ]
+  deps = [
+    ":audio-core-for-pipeline-tests",
+    ":audio_pipeline_tests_bin",
+  ]
+
+  resources = [
+    {
+      path = "audio_core_config_with_inversion_filter.json"
+      dest = "audio_core_config_with_inversion_filter/audio_core_config.json"
+    },
+  ]
 
   tests = [
     {
@@ -27,7 +56,8 @@ executable("audio_pipeline_tests_bin") {
 
   sources = [
     "audio_pipeline_test.cc",
-    "audio_pipeline_test.h",
+    "hermetic_audio_pipeline_test.cc",
+    "hermetic_audio_pipeline_test.h",
   ]
 
   deps = [

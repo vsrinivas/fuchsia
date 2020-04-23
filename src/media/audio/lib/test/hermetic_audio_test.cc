@@ -4,20 +4,19 @@
 
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
+#include "src/media/audio/lib/test/hermetic_audio_environment.h"
+
 namespace media::audio::test {
 
 std::unique_ptr<HermeticAudioEnvironment> HermeticAudioTest::environment_;
 
-void HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioTest::Options options) {
-  const char* config_data_path = options.audio_core_config_data_path;
-  HermeticAudioTest::environment_ = std::make_unique<HermeticAudioEnvironment>(config_data_path);
+void HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options options) {
+  HermeticAudioTest::environment_ = std::make_unique<HermeticAudioEnvironment>(options);
   ASSERT_TRUE(HermeticAudioTest::environment_) << "Failed to create hermetic environment";
 }
 
 void HermeticAudioTest::SetUpTestSuite() {
-  HermeticAudioTest::SetUpTestSuiteWithOptions(Options{
-      .audio_core_config_data_path = nullptr,
-  });
+  HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options());
 }
 
 void HermeticAudioTest::TearDownTestSuite() { HermeticAudioTest::environment_ = nullptr; }
