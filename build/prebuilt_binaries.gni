@@ -33,6 +33,8 @@ template("prebuilt_binaries") {
     depfile = "$target_gen_dir/$target_name.d"
 
     args = [
+      "-build-dir",
+      rebase_path(root_build_dir),
       "-build-id-dir",
       rebase_path(invoker.build_id_dir),
       "-cpu",

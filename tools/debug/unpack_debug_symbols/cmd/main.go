@@ -30,6 +30,7 @@ import (
 
 var (
 	debugArchive   string
+	buildDir       string
 	buildIDDir     string
 	outputManifest string
 	cpu            string
@@ -47,6 +48,7 @@ func init() {
 	level = logger.WarningLevel
 
 	flag.StringVar(&debugArchive, "debug-archive", "", "path to archive of debug binaries")
+	flag.StringVar(&buildDir, "build-dir", "", "path to the build directory")
 	flag.StringVar(&buildIDDir, "build-id-dir", "", "path to .build-id directory to add debug binaries to")
 	flag.StringVar(&outputManifest, "output-manifest", "", "path to output a json manifest of debug binaries to")
 	flag.StringVar(&cpu, "cpu", "", "the architecture of the binaries in the archive")
@@ -270,11 +272,21 @@ func unpack(ctx context.Context, br *runner.BatchRunner) ([]binaryRef, error) {
 func writeManifest(bfrs []binaryRef) error {
 	out := []binary{}
 	for _, bfr := range bfrs {
+		// Even though these files live outside of the build directory,
+		// relativize them as is conventional for build API metadata.
+		relDebug, err := filepath.Rel(buildDir, bfr.ref.Filepath)
+		if err != nil {
+			return err
+		}
+		relBreakpad, err := filepath.Rel(buildDir, bfr.breakpad)
+		if err != nil {
+			return err
+		}
 		out = append(out, binary{
 			CPU:      cpu,
-			Debug:    bfr.ref.Filepath,
+			Debug:    relDebug,
 			BuildID:  bfr.ref.BuildID,
-			Breakpad: bfr.breakpad,
+			Breakpad: relBreakpad,
 			OS:       osName,
 		})
 	}
@@ -297,6 +309,9 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = logger.WithLogger(ctx, log)
+	if buildDir == "" {
+		log.Fatalf("-build-dir is required.")
+	}
 	if buildIDDir == "" {
 		log.Fatalf("-build-id-dir is required.")
 	}
