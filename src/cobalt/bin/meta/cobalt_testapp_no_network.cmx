@@ -2,7 +2,6 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx",
                 "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/cobalt_fake_timekeeper#meta/cobalt_fake_timekeeper.cmx"
             }
         }
@@ -15,7 +14,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher"
         ]
