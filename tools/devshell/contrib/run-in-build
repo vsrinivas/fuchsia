@@ -1,0 +1,18 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### Run a command in the build directory
+
+## usage: fx run-in-build COMMAND...
+##
+## This simply executes the command line with the build directory as the
+## current working directory.  It's most useful when combined with `fx multi`.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+
+fx-config-read
+cd "$FUCHSIA_BUILD_DIR"
+"$@"
