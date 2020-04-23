@@ -45,14 +45,11 @@ zx_library("minfs") {
     "fsck.cc",
     "metrics.cc",
     "minfs.cc",
-    "resizeable_array_buffer.cc",
     "transaction_limits.cc",
     "vnode.cc",
     "writeback.cc",
   ]
-  if (is_fuchsia) {
-    sources += [ "resizeable_vmo_buffer.cc" ]
-  } else {
+  if (!is_fuchsia) {
     sources += [
       "allocator/allocator_host.cc",
       "allocator/inode_manager_host.cc",

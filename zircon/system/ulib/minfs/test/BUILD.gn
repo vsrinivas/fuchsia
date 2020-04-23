@@ -54,12 +54,9 @@ test("minfs-unit") {
     "unit/mkfs_test.cc",
     "unit/mount_test.cc",
     "unit/parser_test.cc",
-    "unit/resizeable_array_buffer_test.cc",
-    "unit/resizeable_vmo_buffer_test.cc",
     "unit/superblock_test.cc",
     "unit/transaction_test.cc",
     "unit/truncate_test.cc",
-    "unit/vnode_buffer_test.cc",
     "unit/vnode_test.cc",
   ]
   deps = [
@@ -202,15 +199,11 @@ test("minfs-host") {
       configs -= fdio_config
     }
   }
-  sources = [
-    "host/bcache_test.cc",
-    "host/vnode_buffer_test.cc",
-  ]
+  sources = [ "host/bcache_test.cc" ]
   deps = [
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/minfs",
   ]
-  include_dirs = [ "$zx/system/ulib/minfs" ]
 }
 
 migrated_manifest("minfs-unit-manifest") {
