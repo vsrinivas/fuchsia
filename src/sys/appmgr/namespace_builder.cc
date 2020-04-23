@@ -29,6 +29,7 @@ constexpr char kDeprecatedDataName[] = "deprecated-data";
 constexpr char kBlockedDataName[] = "data";
 
 constexpr char kBuildInfoAllowList[] = "allowlist/build_info.txt";
+constexpr char kMiscStorageAllowList[] = "allowlist/deprecated_misc_storage.txt";
 constexpr char kGlobalDataAllowList[] = "allowlist/global_data.txt";
 
 NamespaceBuilder::~NamespaceBuilder() = default;
@@ -124,19 +125,6 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
     PushDirectoryFromPathAs(isolated_data_path_factory(), "/data");
   }
 
-  if (sandbox.HasFeature("deprecated-misc-storage")) {
-    const std::string dataDir = "/data/misc";
-    if (files::CreateDirectory(dataDir)) {
-      PushDirectoryFromPathAs(dataDir, "/misc");
-    } else {
-      FXL_LOG(ERROR) << "Failed to create deprecated-misc-storage directory";
-    }
-  }
-
-  if (sandbox.HasFeature("isolated-cache-storage")) {
-    PushDirectoryFromPathAs(isolated_cache_path_factory(), "/cache");
-  }
-
   for (const auto& feature : sandbox.features()) {
     if (feature == "root-ssl-certificates") {
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
@@ -163,11 +151,13 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       PushDirectoryFromPath("/dev/class/gpu");
       PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/data/vulkan-icd/icd.d",
                               "/config/vulkan/icd.d");
+    } else if (feature == "isolated-cache-storage") {
+      PushDirectoryFromPathAs(isolated_cache_path_factory(), "/cache");
     } else if (feature == "isolated-temp") {
       PushDirectoryFromPathAs(isolated_temp_path_factory(), "/tmp");
     } else if (feature == "hub") {
       AddHub(hub_directory_factory);
-    // Begin allowlisted namespace features
+      // Begin allowlisted namespace features
     } else if (feature == "build-info") {
       // fxb/50308
       AllowList build_info_allowlist(appmgr_config_dir_, kBuildInfoAllowList);
@@ -183,13 +173,29 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       if (pkg_url.Parse(ns_id) && global_data_allowlist.IsAllowed(pkg_url)) {
         PushDirectoryFromPathAsWithPermissions("/data", "/global_data",
                                                fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_POSIX |
-                                                   fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_ADMIN);
+                                                   fio::OPEN_RIGHT_READABLE |
+                                                   fio::OPEN_RIGHT_ADMIN);
         PushDirectoryFromPathAsWithPermissions("/tmp", "/global_tmp",
                                                fio::OPEN_FLAG_DIRECTORY | fio::OPEN_FLAG_POSIX |
-                                                   fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_ADMIN);
+                                                   fio::OPEN_RIGHT_READABLE |
+                                                   fio::OPEN_RIGHT_ADMIN);
       } else {
         FXL_LOG(WARNING) << "Component " << ns_id
                          << " is not allowed to use global-data. Blocked by allowlist.";
+      }
+    } else if (feature == "deprecated-misc-storage") {
+      AllowList misc_storage_allowlist(appmgr_config_dir_, kMiscStorageAllowList);
+      FuchsiaPkgUrl pkg_url;
+      if (pkg_url.Parse(ns_id) && misc_storage_allowlist.IsAllowed(pkg_url)) {
+        const std::string data_dir = "/data/misc";
+        if (files::CreateDirectory(data_dir)) {
+          PushDirectoryFromPathAs(data_dir, "/misc");
+        } else {
+          FXL_LOG(ERROR) << "Failed to create deprecated-misc-storage directory";
+        }
+      } else {
+        FXL_LOG(ERROR) << "Component " << ns_id
+                       << " is not allowed to use deprecated-misc-storage. Blocked by allowlist.";
       }
     }
   }

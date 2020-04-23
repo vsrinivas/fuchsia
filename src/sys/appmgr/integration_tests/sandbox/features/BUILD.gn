@@ -10,6 +10,7 @@ group("features") {
     "global-data",
     "hub",
     "isolated-temp",
+    "misc-storage",
     "shell",
     "shell-commands",
     "storage",

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/has-misc-storage"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-misc-storage"
+        ]
+    }
+}

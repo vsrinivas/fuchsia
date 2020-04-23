@@ -1,21 +1,22 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/testing/environments.gni")
 import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
-group("global-data") {
+group("misc-storage") {
   testonly = true
   deps = [
-    ":has_global_data",
-    ":no_global_data",
-    ":restricted_global_data",
+    ":has-misc-storage",
+    ":no-misc-storage",
+    ":restricted-misc-storage",
   ]
 }
 
-sandbox_test_package("has_global_data") {
-  sources = [ "has_global_data.cc" ]
+sandbox_test_package("has-misc-storage") {
+  deprecated_misc_storage = "//build"
+  sources = [ "has_misc_storage.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -24,8 +25,8 @@ sandbox_test_package("has_global_data") {
   environments = basic_envs
 }
 
-sandbox_test_package("no_global_data") {
-  sources = [ "no_global_data.cc" ]
+sandbox_test_package("no-misc-storage") {
+  sources = [ "no_misc_storage.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -34,9 +35,10 @@ sandbox_test_package("no_global_data") {
   environments = basic_envs
 }
 
-sandbox_test_package("restricted_global_data") {
-  # Has global-data feature, but not in //src/security/policy allowlist.
-  sources = [ "no_global_data.cc" ]
+sandbox_test_package("restricted-misc-storage") {
+  # Has deprecated-misc-storage feature, but not in //src/security/policy allowlist.
+  deprecated_misc_storage = "//build"
+  sources = [ "no_misc_storage.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
