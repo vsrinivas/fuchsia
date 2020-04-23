@@ -1,0 +1,107 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generate a list of package metadata exported from all packages in the
+# transitive closure of declared dependencies.
+#
+# Parameters
+#
+#   data_keys (required)
+#     [list of strings] A list of package target metadata keys to collect into a
+#     list. See gn help for data_keys for more information.
+#
+#     Well known package metadata:
+#
+#       package_names
+#
+#       snapshot_entries
+#         The snapshot entries are consumed for the production of the snapshots
+#         that feed into `fx delta` for version to version OTA size computations.
+#
+#       blob_manifests
+#         The blob manifests are aggregated by the image build process to produce
+#         manifests to publish to repositories and to produce manifests to write
+#         into blobfs images.
+#
+#       meta_far_merkle_index_entries
+#         The metafar merkle index entries are aggregated in image builds to
+#         produce package server indices for base serving.
+#
+#       package_output_manifests
+#         The path of each output manifest for each package.
+#
+#       package_barrier
+#         Metadata barrier.
+#
+#   data_deps (optional)
+#   data_keys (optional)
+#   deps (optional)
+#   output_conversion (optional)
+#   outputs (optional)
+#   public_deps (optional)
+#   rebase (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Same as for any GN `generated_file()` target.
+template("generate_package_metadata") {
+  generated_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "data_keys",
+                             "deps",
+                             "output_conversion",
+                             "outputs",
+                             "public_deps",
+                             "rebase",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    if (!defined(outputs)) {
+      outputs = [ target_gen_dir + "/" + target_name ]
+    }
+
+    walk_keys = [ "package_barrier" ]
+  }
+}
+
+# Defines package metadata.
+#
+# This metadata is collected by `generate_package_metadata`.
+# The caller should add a dep on the given target name for the metadata to take effect.
+#
+# Parameters (see `generate_package_metadata` for full definitions)
+#
+#   package_name (required)
+#   snapshot_entry (required)
+#   blob_manifest (required)
+#   meta_far_merkle_index_entry (required)
+#   package_output_manifest (required)
+#   testonly (optional)
+#   visibility (optional)
+template("define_package_metadata") {
+  assert(defined(invoker.package_name), "Missing package_name")
+  assert(defined(invoker.snapshot_entry), "Missing snapshot_entry")
+  assert(defined(invoker.blob_manifest), "Missing blob_manifest")
+  assert(defined(invoker.meta_far_merkle_index_entry),
+         "Missing meta_far_merkle_index_entry")
+  assert(defined(invoker.package_output_manifest),
+         "Missing package_output_manifest")
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    metadata = {
+      package_names = [ invoker.package_name ]
+      snapshot_entries = [ invoker.snapshot_entry ]
+      blob_manifests = [ rebase_path(invoker.blob_manifest, root_build_dir) ]
+      meta_far_merkle_index_entries = [ invoker.meta_far_merkle_index_entry ]
+      package_output_manifests = [ invoker.package_output_manifest ]
+    }
+  }
+}

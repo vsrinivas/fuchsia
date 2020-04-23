@@ -9,72 +9,6 @@ import("//src/sys/cmc/build/cml.gni")
 import("//src/sys/cmc/build/cmx.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
-# Generate a list of package metadata exported from all packages in the
-# transitive closure of declared dependencies, with an implied barrier at each
-# package (dependency chains cease processing at package targets).
-#
-# Parameters
-#
-#   data_keys (required)
-#     [list of strings] A list of package target metadata keys to collect into a
-#     list. See gn help for data_keys for more information.
-#
-#     Well known package metadata:
-#
-#       snapshot_entries
-#         The snapshot entries are consumed for the production of the snapshots
-#         that feed into `fx delta` for version to version OTA size computations.
-#
-#       blob_manifests
-#         The blob manifests are aggregated by the image build process to produce
-#         manifests to publish to repositories and to produce manifests to write
-#         into blobfs images.
-#
-#       meta_far_merkle_index_entries
-#         The metafar merkle index entries are aggregated in image builds to
-#         produce package server indices for base serving.
-#
-#       package_output_manifests
-#         The path of each output manifest for each package.
-#
-#       package_barrier
-#         [list of labels] This is passed to walk_keys and can be used as a barrier to
-#         control dependency propgatation below a package target.
-#
-#   data_deps (optional)
-#   deps (optional)
-#   metadata (optional)
-#   output_conversion (optional)
-#   outputs (optional)
-#   public_deps (optional)
-#   rebase (optional)
-#   testonly (optional)
-#   visibility (optional)
-#     Same as for any GN `generated_file()` target.
-template("package_metadata_list") {
-  generated_file(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "data_deps",
-                             "data_keys",
-                             "deps",
-                             "metadata",
-                             "output_conversion",
-                             "outputs",
-                             "public_deps",
-                             "rebase",
-                             "testonly",
-                             "visibility",
-                           ])
-
-    if (!defined(outputs)) {
-      outputs = [ target_gen_dir + "/" + target_name ]
-    }
-
-    walk_keys = [ "package_barrier" ]
-  }
-}
-
 # Generate a list of fuchsia-pkg URLs for component from all packages in the
 # transitive closure of declared dependencies, with an implied barrier at each
 # package (dependency chains cease processing at package targets).
@@ -744,14 +678,6 @@ template("package") {
         forward_variables_from(invoker.metadata, "*")
       }
       shell_binary_entries = shell_binaries
-
-      # Subtle: we only want dependency on the package target to consume
-      # package metadata propagation for the package we're building, never
-      # for transitive package dependencies of this package. In the fuchsia
-      # package case, we want to therefore only include our local package
-      # build target. For the system image package case, we don't want to
-      # include anything.
-      package_barrier = []
     }
 
     if (defined(pkg.visibility)) {

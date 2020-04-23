@@ -1,6 +1,8 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+import("//build/package_metadata.gni")
 import("//build/prebuilt_binaries.gni")
 
 declare_args() {
@@ -37,16 +39,14 @@ template("prebuilt_package") {
   if (defined(invoker.package_name)) {
     pkg_name = invoker.package_name
   }
+  pkg_version = 0
   manifest_target_name = target_name + ".manifest"
 
   meta_dir = target_out_dir + "/" + pkg_name + ".meta"
   blobs_json = "$meta_dir/blobs.json"
   package_manifest_json = "$meta_dir/package_manifest.json"
-
-  pkg = {
-    package_name = pkg_name
-    package_version = 0
-  }
+  blobs_manifest = "$meta_dir/blobs.manifest"
+  blobs_json_path = rebase_path(blobs_json, root_build_dir)
 
   unpack_action_name = target_name + ".debug-archive"
 
@@ -78,6 +78,17 @@ template("prebuilt_package") {
     }
   }
 
+  metadata_target_name = "${target_name}_metadata"
+  define_package_metadata(metadata_target_name) {
+    package_name = pkg_name
+    snapshot_entry = "$pkg_name/$pkg_version=$blobs_json_path"
+    blob_manifest = blobs_manifest
+    meta_far_merkle_index_entry =
+        "$pkg_name/$pkg_version=" +
+        rebase_path("$meta_dir/meta.far.merkle", root_build_dir)
+    package_output_manifest = package_manifest_json
+  }
+
   action(target_name) {
     forward_variables_from(invoker,
                            [
@@ -95,7 +106,6 @@ template("prebuilt_package") {
 
     system_rsp = "$target_out_dir/$pkg_name.system.rsp"
     meta_merkle = "$meta_dir/meta.far.merkle"
-    blobs_manifest = "$meta_dir/blobs.manifest"
 
     args = [
       "--pm-tool",
@@ -119,37 +129,12 @@ template("prebuilt_package") {
     ]
 
     deps = [
+      ":$metadata_target_name",
       ":$unpack_action_name($default_toolchain)",
       "//src/sys/pkg/bin/pm:pm_bin($host_toolchain)",
     ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
-    }
-
-    blobs_json_path = rebase_path(blobs_json, root_build_dir)
-
-    # Package metadata must be kept in sync with pm.gni.
-    # The template package_metadata_list documents the fields required to be
-    # implemented.
-    metadata = {
-      # We only ever want to collect the following package manifests from
-      # packages, not from dependencies of packages, so the barrier prevents us
-      # from walking any further in the dependency chain. See `gn help
-      # walk_keys` for more information on the mechanic.
-      package_barrier = []
-
-      package_names = [ pkg_name ]
-
-      snapshot_entries =
-          [ "${pkg.package_name}/${pkg.package_version}=$blobs_json_path" ]
-
-      blob_manifests = [ rebase_path(blobs_manifest, root_build_dir) ]
-
-      meta_far_merkle_index_entries =
-          [ "${pkg.package_name}/${pkg.package_version}=" +
-            rebase_path("$meta_dir/meta.far.merkle", root_build_dir) ]
-
-      package_output_manifests = [ package_manifest_json ]
     }
   }
 

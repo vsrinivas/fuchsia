@@ -23,7 +23,7 @@ import("//build/images/ta.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
-import("//build/package.gni")
+import("//build/package_metadata.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
 # update_manifest is for the "update.manifest" target below.
@@ -79,7 +79,7 @@ group("packages") {
 }
 
 template("package_list") {
-  generated_file(target_name) {
+  generate_package_metadata(target_name) {
     testonly = true
     forward_variables_from(invoker,
                            [
@@ -89,7 +89,6 @@ template("package_list") {
                            ])
 
     data_keys = [ "package_names" ]
-    walk_keys = [ "package_barrier" ]
     outputs = [ "$root_out_dir/$target_name" ]
   }
 }
@@ -143,7 +142,7 @@ shell_commands("shell-commands") {
 
 monolith_meta_far_merkle_index =
     "$target_out_dir/monolith_meta_far_merkle_index"
-package_metadata_list("monolith_meta_far_merkle_index") {
+generate_package_metadata("monolith_meta_far_merkle_index") {
   testonly = true
   outputs = [ monolith_meta_far_merkle_index ]
   data_keys = [ "meta_far_merkle_index_entries" ]
@@ -177,7 +176,7 @@ action("pkgsvr_index") {
 
 preinstall_meta_far_merkle_index =
     "$target_out_dir/preinstall_meta_far_merkle_index"
-package_metadata_list("preinstall_meta_far_merkle_index") {
+generate_package_metadata("preinstall_meta_far_merkle_index") {
   testonly = true
   outputs = [ preinstall_meta_far_merkle_index ]
   data_keys = [ "meta_far_merkle_index_entries" ]
@@ -1461,7 +1460,7 @@ group("archives") {
 # additionally includes the system_image package.
 
 update_meta_far_merkle_index = "$target_out_dir/update_meta_far_merkle_index"
-package_metadata_list("update_meta_far_merkle_index") {
+generate_package_metadata("update_meta_far_merkle_index") {
   testonly = true
   outputs = [ update_meta_far_merkle_index ]
   data_keys = [ "meta_far_merkle_index_entries" ]
@@ -1572,7 +1571,7 @@ pm_build("update.meta") {
 
 update_prime_meta_far_merkle_index =
     "$target_out_dir/update_prime_meta_far_merkle_index"
-package_metadata_list("update_prime_meta_far_merkle_index") {
+generate_package_metadata("update_prime_meta_far_merkle_index") {
   testonly = true
   outputs = [ update_prime_meta_far_merkle_index ]
   data_keys = [ "meta_far_merkle_index_entries" ]
@@ -1737,7 +1736,7 @@ action("update.sources.manifest") {
 # publish -lp`, a tool for publishing a set of packages from a build produced
 # list of package manifests.
 all_package_manifests_list = root_build_dir + "/all_package_manifests.list"
-package_metadata_list("all_package_manifests.list") {
+generate_package_metadata("all_package_manifests.list") {
   testonly = true
   outputs = [ all_package_manifests_list ]
   data_keys = [ "package_output_manifests" ]
@@ -1805,7 +1804,7 @@ tagged_snapshot_manifests = [
 all_snapshot_entries = []
 foreach(manifest, tagged_snapshot_manifests) {
   untagged_entries = "${manifest.tag}.snapshot_entries.untagged"
-  package_metadata_list(untagged_entries) {
+  generate_package_metadata(untagged_entries) {
     testonly = true
     outputs = [ target_gen_dir + "/" + target_name ]
     deps = manifest.deps

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/package_metadata.gni")
 
 amber_repository_dir = "$root_out_dir/amber-files"
 
@@ -55,6 +56,33 @@ template("_pm") {
 #   visibility (optional)
 #     Same as for any GN `action()` target.
 template("pm_build") {
+  forward_variables_from(invoker,
+                         [
+                           "package_name",
+                           "package_variant",
+                         ])
+  assert(defined(package_name), "A package name is required")
+  assert(package_name != "", "A package name is required")
+
+  if (!defined(package_variant)) {
+    package_variant = "0"
+  }
+
+  pkg_out_dir = "$target_out_dir/$target_name"
+  pkg_output_manifest = "$pkg_out_dir/package_manifest.json"
+
+  metadata_target_name = "${target_name}_metadata"
+  define_package_metadata(metadata_target_name) {
+    package_name = package_name
+    snapshot_entry = "$package_name/$package_variant=" +
+                     rebase_path("$pkg_out_dir/blobs.json", root_build_dir)
+    blob_manifest = "$pkg_out_dir/blobs.manifest"
+    meta_far_merkle_index_entry =
+        "$package_name/$package_variant=" +
+        rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir)
+    package_output_manifest = pkg_output_manifest
+  }
+
   _pm(target_name) {
     forward_variables_from(invoker,
                            [
@@ -63,41 +91,24 @@ template("pm_build") {
                              "public_deps",
                              "testonly",
                              "visibility",
-                             "package_name",
-                             "package_variant",
                            ])
     if (!defined(deps)) {
       deps = []
     }
     pkg_manifest_outputs = get_target_outputs(invoker.manifest)
     pkg_manifest_file = pkg_manifest_outputs[0]
-    pkg_out_dir = "$target_out_dir/$target_name"
-
-    if (!defined(package_variant)) {
-      package_variant = "0"
-    }
-
-    assert(defined(package_name), "A package name is required")
-    assert(package_name != "", "A package name is required")
-
     deps += [ invoker.manifest ]
-
-    if (string_replace(package_name, "_", "-") != package_name) {
-      # TODO(22679): packages ending up in this allowlist should be updated to
-      # use hyphens in their names. New entries should not be added to the
-      # allowlist or excluded by logic here.
-      deps += [ "//build:deprecated_package_underscore" ]
-    }
-
-    # if (string_replace(package_name, "_", "-") != package_name) {
-    #   print(get_label_info(":" + target_name, "label_no_toolchain"))
-    # }
-
     inputs = [ pkg_manifest_file ]
-
     depfile = "$pkg_out_dir/meta.far.d"
 
-    pkg_output_manifest = "$pkg_out_dir/package_manifest.json"
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+      package_barrier = [ ":$metadata_target_name" ]
+    }
+    deps += [ ":$metadata_target_name" ]
+
     outputs = [
       # produced by seal, must be listed first because of depfile rules.
       "$pkg_out_dir/meta.far",
@@ -118,33 +129,6 @@ template("pm_build") {
       pkg_output_manifest,
     ]
 
-    blobs_json_path = rebase_path("${pkg_out_dir}/blobs.json", root_build_dir)
-
-    metadata = {
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*")
-      }
-
-      # We only ever want to collect the following package manifests from
-      # packages, not from dependencies of packages, so the barrier prevents us
-      # from walking any further in the dependency chain. See `gn help
-      # walk_keys` for more information on the mechanic.
-      package_barrier = []
-
-      package_names = [ package_name ]
-
-      snapshot_entries = [ "$package_name/$package_variant=$blobs_json_path" ]
-
-      blob_manifests =
-          [ rebase_path("$pkg_out_dir/blobs.manifest", root_build_dir) ]
-
-      meta_far_merkle_index_entries =
-          [ "$package_name/$package_variant=" +
-            rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir) ]
-
-      package_output_manifests = [ pkg_output_manifest ]
-    }
-
     args = [
       "-o",
       rebase_path(pkg_out_dir, root_build_dir),
@@ -161,6 +145,13 @@ template("pm_build") {
       "-blobsfile",
       "-blobs-manifest",
     ]
+
+    if (string_replace(package_name, "_", "-") != package_name) {
+      # TODO(22679): packages ending up in this allowlist should be updated to
+      # use hyphens in their names. New entries should not be added to the
+      # allowlist or excluded by logic here.
+      deps += [ "//build:deprecated_package_underscore" ]
+    }
   }
 }
 

@@ -14,6 +14,7 @@ import("//build/images/shell_commands.gni")
 import("//build/images/ta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
+import("//build/package_metadata.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Assembles a Fuchsia system.
@@ -112,7 +113,7 @@ template("assemble_system") {
   }
 
   meta_far_merkle_index = "$target_out_dir/${image_name}_meta_far_merkle_index"
-  package_metadata_list("${image_name}_meta_far_merkle_index") {
+  generate_package_metadata("${image_name}_meta_far_merkle_index") {
     testonly = true
     visibility = [ ":*" ]
     outputs = [ meta_far_merkle_index ]
