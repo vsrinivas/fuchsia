@@ -27,37 +27,40 @@
 
 // Some convenience macros for error and debug printing.
 #define BRCMF_ERR(fmt, ...) \
-  ::wlan::brcmfmac::Debug::Print(DDK_LOG_ERROR, __func__, fmt, ##__VA_ARGS__)
+  ::wlan::brcmfmac::Debug::Print(DDK_LOG_ERROR, "brcmfmac (%s): " fmt, __func__, ##__VA_ARGS__)
 
 #define BRCMF_WARN(fmt, ...) \
-  ::wlan::brcmfmac::Debug::Print(DDK_LOG_WARN, __func__, fmt, ##__VA_ARGS__)
+  ::wlan::brcmfmac::Debug::Print(DDK_LOG_WARN, "brcmfmac (%s): " fmt, __func__, ##__VA_ARGS__)
 
 #define BRCMF_INFO(fmt, ...) \
-  ::wlan::brcmfmac::Debug::Print(DDK_LOG_INFO, __func__, fmt, ##__VA_ARGS__)
+  ::wlan::brcmfmac::Debug::Print(DDK_LOG_INFO, "brcmfmac (%s): " fmt, __func__, ##__VA_ARGS__)
 
-#define BRCMF_DBG(filter, fmt, ...)                                               \
-  do {                                                                            \
-    if (BRCMF_IS_ON(filter)) {                                                    \
-      ::wlan::brcmfmac::Debug::Print(DDK_LOG_WARN, __func__, fmt, ##__VA_ARGS__); \
-    }                                                                             \
+#define BRCMF_DBG(filter, fmt, ...)                                                 \
+  do {                                                                              \
+    if (BRCMF_IS_ON(filter)) {                                                      \
+      ::wlan::brcmfmac::Debug::Print(DDK_LOG_WARN, "brcmfmac (%s): " fmt, __func__, \
+                                     ##__VA_ARGS__);                                \
+    }                                                                               \
   } while (0)
 
 constexpr size_t kMaxHexDumpBytes = 4096;  // point at which output will be truncated
-#define BRCMF_DBG_HEX_DUMP(condition, data, length, fmt, ...)                     \
-  do {                                                                            \
-    if (condition) {                                                              \
-      ::wlan::brcmfmac::Debug::Print(DDK_LOG_INFO, __func__, fmt, ##__VA_ARGS__); \
-      ::wlan::brcmfmac::Debug::PrintHexDump(DDK_LOG_INFO, data, length);          \
-    }                                                                             \
+#define BRCMF_DBG_HEX_DUMP(condition, data, length, fmt, ...)                       \
+  do {                                                                              \
+    if (condition) {                                                                \
+      ::wlan::brcmfmac::Debug::Print(DDK_LOG_INFO, "brcmfmac (%s): " fmt, __func__, \
+                                     ##__VA_ARGS__);                                \
+      ::wlan::brcmfmac::Debug::PrintHexDump(DDK_LOG_INFO, data, length);            \
+    }                                                                               \
   } while (0)
 
 constexpr size_t kMaxStringDumpBytes = 256;  // point at which output will be truncated
-#define BRCMF_DBG_STRING_DUMP(condition, data, length, fmt, ...)                  \
-  do {                                                                            \
-    if (condition) {                                                              \
-      ::wlan::brcmfmac::Debug::Print(DDK_LOG_INFO, __func__, fmt, ##__VA_ARGS__); \
-      ::wlan::brcmfmac::Debug::PrintStringDump(DDK_LOG_INFO, data, length);       \
-    }                                                                             \
+#define BRCMF_DBG_STRING_DUMP(condition, data, length, fmt, ...)                    \
+  do {                                                                              \
+    if (condition) {                                                                \
+      ::wlan::brcmfmac::Debug::Print(DDK_LOG_INFO, "brcmfmac (%s): " fmt, __func__, \
+                                     ##__VA_ARGS__);                                \
+      ::wlan::brcmfmac::Debug::PrintStringDump(DDK_LOG_INFO, data, length);         \
+    }                                                                               \
   } while (0)
 
 #define BRCMF_IS_ON(filter) \
@@ -116,19 +119,7 @@ class Debug {
   // Print to the debugging output.
   template <typename... Args>
   static void Print(uint32_t flag, const char* func_name, const char* format, Args&&... args) {
-    if (zxlog_level_enabled_etc(flag)) {
-      constexpr char kPrefix[] = "brcmfmac (%s): ";
-      constexpr size_t kPrefixLength = 15;
-      static_assert(kPrefix[kPrefixLength] == '\0');
-      char new_format[256];
-
-      const size_t format_length =
-          std::min(sizeof(new_format) - kPrefixLength - 1, std::strlen(format));
-      std::memcpy(new_format, kPrefix, kPrefixLength);
-      std::memcpy(new_format + kPrefixLength, format, format_length);
-      new_format[kPrefixLength + format_length] = '\0';
-      driver_printf(flag, new_format, func_name, std::forward<Args>(args)...);
-    }
+    zxlogf_etc(flag, format, func_name, std::forward<Args>(args)...);
   }
 
   // Print a hexdump to the debugging output.

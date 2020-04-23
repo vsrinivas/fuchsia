@@ -99,8 +99,6 @@ TEST(TestCase, TestNoSignalOnPsrStateUnchanged) {
 // required stubs for faking ddk
 zx_driver_rec_t __zircon_driver_rec__ = {};
 
-void driver_printf(uint32_t flags, const char* fmt, ...) {}
-
 bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint32_t flag) { return false; }
 
 void driver_logf_internal(const zx_driver_t* drv, uint32_t flag, const char* msg, ...) {}

@@ -334,7 +334,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       }
 
       PopulateDisplayAudio(info);
-      if (zxlog_level_enabled_etc(DDK_LOG_TRACE) && info->edid_audio_.size()) {
+      if (zxlog_level_enabled(TRACE) && info->edid_audio_.size()) {
         zxlogf(TRACE, "Supported audio formats:\n");
         for (auto range : info->edid_audio_) {
           for (auto rate : audio::utils::FrameRateEnumerator(range)) {
@@ -362,7 +362,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
         display_info->horizontal_size_mm = info->edid.horizontal_size_mm();
         display_info->vertical_size_mm = info->edid.vertical_size_mm();
       }
-      if (zxlog_level_enabled_etc(DDK_LOG_TRACE)) {
+      if (zxlog_level_enabled(TRACE)) {
         const char* manufacturer = strlen(info->edid.manufacturer_name())
                                        ? info->edid.manufacturer_name()
                                        : info->edid.manufacturer_id();

@@ -376,13 +376,6 @@ __EXPORT zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(voi
   return internal::ContextForApi()->ScheduleWork(dev_ref, callback, cookie);
 }
 
-__EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  va_end(ap);
-}
-
 static fx_log_severity_t flag_to_severity(uint32_t flag) {
   switch (flag) {
     case DDK_LOG_INFO:

@@ -8,8 +8,6 @@
 #include <fuchsia/hardware/rtc/c/fidl.h>
 #include <zircon/compiler.h>
 
-#include <ddk/device.h>
-
 __BEGIN_CDECLS
 
 // Parse the `clock.backstop` argument, if supplied, and return the value. On

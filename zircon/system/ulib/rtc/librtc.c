@@ -5,10 +5,8 @@
 #include "include/librtc.h"
 
 #include <inttypes.h>
+#include <stdio.h>
 #include <stdlib.h>
-
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 
 enum months {
   JANUARY = 1,  // 31 days
@@ -187,21 +185,20 @@ void sanitize_rtc(void* ctx, fuchsia_hardware_rtc_Time* rtc,
   };
   zx_status_t result = rtc_get(ctx, rtc);
   if (result != ZX_OK) {
-    driver_printf(DDK_LOG_ERROR, "sanitize_rtc: could not get RTC value (%d)", result);
+    fprintf(stderr, "sanitize_rtc: could not get RTC value (%d)\n", result);
     return;
   };
   uint64_t backstop = rtc_backstop_seconds();
   if (rtc_is_invalid(rtc) || rtc->year < default_year || seconds_since_epoch(rtc) < backstop) {
     if (backstop > 0) {
-      driver_printf(DDK_LOG_INFO, "sanitize_rtc: clock set to clock.backstop=%ld\n", backstop);
+      fprintf(stderr, "sanitize_rtc: clock set to clock.backstop=%ld\n", backstop);
       seconds_to_rtc(backstop, &backstop_rtc);
     } else {
-      driver_printf(DDK_LOG_ERROR,
-                    "sanitize_rtc: clock set to constant default, set clock.backstop.\n");
+      fprintf(stderr, "sanitize_rtc: clock set to constant default, set clock.backstop\n");
     }
     result = rtc_set(ctx, &backstop_rtc);
     if (result != ZX_OK) {
-      driver_printf(DDK_LOG_ERROR, "sanitize_rtc: could not set RTC value (%d)", result);
+      fprintf(stderr, "sanitize_rtc: could not set RTC value (%d)\n", result);
       return;
     }
     *rtc = backstop_rtc;

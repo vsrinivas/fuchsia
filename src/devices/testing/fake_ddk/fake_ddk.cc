@@ -401,13 +401,6 @@ zx_status_t device_rebind(zx_device_t* device) {
 __EXPORT
 zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }
 
-extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  vprintf(fmt, args);
-  va_end(args);
-}
-
 extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint32_t flag) {
   return true;
 }
@@ -415,7 +408,7 @@ extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uin
 extern "C" void driver_logf_internal(const zx_driver_t* drv, uint32_t flag, const char* msg, ...) {
   va_list args;
   va_start(args, msg);
-  vprintf(msg, args);
+  vfprintf(stderr, msg, args);
   va_end(args);
 }
 
