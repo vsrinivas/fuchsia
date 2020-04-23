@@ -117,8 +117,8 @@ TEST_femu_osx_fail_tuntap() {
   set_up_stat
   set_up_cipd
 
-  if [[ -c /dev/tap0 ]]; then
-    # Run command, which should work because the tun/tap driver is installed
+  if [[ -c /dev/tap0 && -w /dev/tap0 ]]; then
+    # Run command, which should work because the tun/tap driver is installed and writable by the user
     BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
       -N
 
@@ -136,7 +136,11 @@ TEST_femu_osx_fail_tuntap() {
       -N \
       > femu_error_output.txt 2>&1
 
-    BT_EXPECT_FILE_CONTAINS_SUBSTRING femu_error_output.txt "To use emu with networking on macOS, install the tun/tap driver"
+    if [[ ! -c /dev/tap0 ]]; then
+      BT_EXPECT_FILE_CONTAINS_SUBSTRING femu_error_output.txt "To use emu with networking on macOS, install the tun/tap driver"
+    else
+      BT_EXPECT_FILE_CONTAINS_SUBSTRING femu_error_output.txt "For networking /dev/tap0 must be owned by ${USER}. Please run:"
+    fi
   fi
 }
 

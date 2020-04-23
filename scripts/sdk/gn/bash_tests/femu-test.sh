@@ -79,7 +79,7 @@ INPUT
   # OSX may not have the tun/tap driver installed, and you cannot bypass the
   # network checks, so need to work around this for the test. Linux does not
   # need a fake network because we use a fake ip command.
-  if is-mac && [[ ! -c /dev/tap0 ]]; then
+  if is-mac && [[ ! -c /dev/tap0 || ! -w /dev/tap0 ]]; then
     NETWORK_ARGS=( -N -I fakenetwork )
   else
     NETWORK_ARGS=( -N )
@@ -119,7 +119,7 @@ INPUT
   # We test the generated mac address since other scripts hard code this to SSH into the device.
   gn-test-check-mock-partial -fuchsia
   if is-mac; then
-    if [[ -c /dev/tap0 ]]; then
+    if [[ -c /dev/tap0 && -w /dev/tap0 ]]; then
       gn-test-check-mock-partial -netdev type=tap,ifname=tap0,id=net0,script="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/lib/emu-ifup-macos.sh"
       gn-test-check-mock-partial -device e1000,netdev=net0,mac=52:54:00:4d:27:96
     else
