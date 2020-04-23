@@ -1,0 +1,54 @@
+{
+    select: {
+        health: "INSPECT:timezone.cmx:root/fuchsia.inspect.Health:status",
+    },
+    eval: {
+        not_healthy: "health != 'OK'",
+    },
+    act: {
+        no_timezone: {
+            trigger: "not_healthy",
+            print: "Device does not have a set timezone",
+        },
+    },
+    test: {
+        is_healthy: {
+            yes: [],
+            no: [
+                "no_timezone",
+            ],
+            inspect: [
+                {
+                    path: "timezone.cmx",
+                    contents: {
+                        root: {
+                            "fuchsia.inspect.Health": {
+                                start_timestamp_nanos: 17453421103,
+                                status: "OK",
+                            },
+                        },
+                    },
+                },
+            ],
+        },
+        is_not_healthy: {
+            yes: [
+                "no_timezone",
+            ],
+            no: [],
+            inspect: [
+                {
+                    path: "timezone.cmx",
+                    contents: {
+                        root: {
+                            "fuchsia.inspect.Health": {
+                                start_timestamp_nanos: 17453421103,
+                                status: "UNHEALTHY",
+                            },
+                        },
+                    },
+                },
+            ],
+        },
+    },
+}
