@@ -423,7 +423,7 @@ use std::mem;
 use std::ops::{Bound, Range, RangeBounds};
 
 use never::Never;
-use zerocopy::{ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
+use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 /// A buffer that may be fragmented in multiple parts which are discontiguous in
 /// memory.
@@ -1496,6 +1496,40 @@ pub trait BufferViewMut<B: ByteSliceMut>: BufferView<B> + AsMut<[u8]> {
         // new_unaligned_zeroed only returns None if there aren't enough bytes
         Some(LayoutVerified::new_unaligned_zeroed(bytes).unwrap())
     }
+
+    /// Writes an object to the front of the buffer's body, consuming the bytes.
+    ///
+    /// `write_obj_front` consumes `size_of_val(obj)` bytes from the front of
+    /// the buffer's body, and overwrites them with `obj`. After a successful
+    /// call to `write_obj_front(obj)`, the prefix is `size_of_val(obj)` bytes
+    /// longer and the body is `size_of_val(obj)` bytes shorter. If the body is
+    /// not at least `size_of_val(obj)` bytes in length, `write_obj_front`
+    /// returns `None`.
+    fn write_obj_front<T>(&mut self, obj: &T) -> Option<()>
+    where
+        T: ?Sized + AsBytes,
+    {
+        let mut bytes = self.take_front(mem::size_of_val(obj))?;
+        bytes.copy_from_slice(obj.as_bytes());
+        Some(())
+    }
+
+    /// Writes an object to the back of the buffer's body, consuming the bytes.
+    ///
+    /// `write_obj_back` consumes `size_of_val(obj)` bytes from the back of
+    /// the buffer's body, and overwrites them with `obj`. After a successful
+    /// call to `write_obj_back(obj)`, the suffix is `size_of_val(obj)` bytes
+    /// longer and the body is `size_of_val(obj)` bytes shorter. If the body is
+    /// not at least `size_of_val(obj)` bytes in length, `write_obj_back`
+    /// returns `None`.
+    fn write_obj_back<T>(&mut self, obj: &T) -> Option<()>
+    where
+        T: ?Sized + AsBytes,
+    {
+        let mut bytes = self.take_back(mem::size_of_val(obj))?;
+        bytes.copy_from_slice(obj.as_bytes());
+        Some(())
+    }
 }
 
 // NOTE on undo_parse algorithm: It's important that ParseMetadata only describe
@@ -2110,13 +2144,16 @@ mod tests {
         assert_eq!(&view.as_mut()[3..5], &[7, 8][..]);
         assert_eq!(view.peek_obj_back::<[u8; 2]>().unwrap(), &[7, 8]);
         assert_eq!(view.take_obj_back_zero::<[u8; 2]>().unwrap().as_ref(), &[0, 0][..]);
-        assert_eq!(view.len(), 3);
-        assert!(view.take_front_zero(5).is_none());
-        assert_eq!(view.len(), 3);
-        assert!(view.take_back_zero(5).is_none());
-        assert_eq!(view.len(), 3);
-        assert_eq!(view.as_mut(), &[4, 5, 6][..]);
-        assert_eq!(view.into_rest_zero().as_ref(), &[0, 0, 0][..]);
+        assert_eq!(view.write_obj_front(&[0u8]), Some(()));
+        assert_eq!(view.as_mut(), &[5, 6][..]);
+        assert_eq!(view.write_obj_back(&[0u8]), Some(()));
+        assert_eq!(view.as_mut(), &[5][..]);
+        assert!(view.take_front_zero(2).is_none());
+        assert_eq!(view.len(), 1);
+        assert!(view.take_back_zero(2).is_none());
+        assert_eq!(view.len(), 1);
+        assert_eq!(view.as_mut(), &[5][..]);
+        assert_eq!(view.into_rest_zero().as_ref(), &[0][..]);
     }
 
     // Post-verification to test a BufferView implementation. Call after
@@ -2132,10 +2169,10 @@ mod tests {
     // Post-verification to test a BufferViewMut implementation. Call after
     // test_buffer_view_mut.
     fn test_buffer_view_mut_post<B: Buffer>(buffer: &B, preserves_cap: bool) {
-        assert_eq!(buffer.as_ref(), &[0, 0, 0][..]);
+        assert_eq!(buffer.as_ref(), &[0][..]);
         if preserves_cap {
-            assert_eq!(buffer.prefix_len(), 4);
-            assert_eq!(buffer.suffix_len(), 3);
+            assert_eq!(buffer.prefix_len(), 5);
+            assert_eq!(buffer.suffix_len(), 4);
         }
     }
 
