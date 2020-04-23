@@ -12,7 +12,8 @@
 
 namespace media::audio::test {
 
-class AudioDeviceServiceTest : public HermeticAudioTest {
+class AudioDeviceServiceTest : public HermeticAudioTest,
+                               public ::testing::WithParamInterface<uint8_t> {
  protected:
   void SetUp() override;
   void TearDown() override;

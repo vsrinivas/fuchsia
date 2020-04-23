@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
@@ -20,7 +21,8 @@ class FakeAudioDevice : public AudioDevice {
  public:
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix)
-      : AudioDevice(type, threading_model, registry, link_matrix) {}
+      : AudioDevice(type, threading_model, registry, link_matrix,
+                    std::make_unique<AudioDriver>(this)) {}
 
   // Needed because AudioDevice is an abstract class
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {}

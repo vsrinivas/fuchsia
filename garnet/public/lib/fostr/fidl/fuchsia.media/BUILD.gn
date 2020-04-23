@@ -8,6 +8,7 @@ fostr_fidl("fuchsia.media") {
   fidl_target = "//sdk/fidl/fuchsia.media"
 
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.hardware.audio",
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//garnet/public/lib/fostr/fidl/fuchsia.media.audio",
     "//garnet/public/lib/fostr/fidl/fuchsia.sysmem",

@@ -94,7 +94,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
 
  protected:
   AudioDevice(Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
-              LinkMatrix* link_matrix);
+              LinkMatrix* link_matrix, std::unique_ptr<AudioDriver> driver);
 
   //////////////////////////////////////////////////////////////////////////////
   //

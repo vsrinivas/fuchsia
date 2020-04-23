@@ -46,10 +46,23 @@ std::shared_ptr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
                                         link_matrix);
 }
 
+std::shared_ptr<AudioOutput> DriverOutput::Create(
+    fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> channel,
+    ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix) {
+  return std::make_shared<DriverOutput>(threading_model, registry, std::move(channel), link_matrix);
+}
+
 DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                            zx::channel initial_stream_channel, LinkMatrix* link_matrix)
     : AudioOutput(threading_model, registry, link_matrix),
       initial_stream_channel_(std::move(initial_stream_channel)) {}
+
+// TODO(andresoportus) Add suport for non-legacy here.
+DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
+                           fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> channel,
+                           LinkMatrix* link_matrix)
+    : AudioOutput(threading_model, registry, link_matrix),
+      initial_stream_channel_(channel.TakeChannel()) {}
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
@@ -351,7 +364,7 @@ void DriverOutput::OnDriverInfoFetched() {
   zx::duration min_rb_duration =
       kDefaultHighWaterNsec + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
 
-  res = SelectBestFormat(driver()->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
+  res = driver()->SelectBestFormat(&pref_fps, &pref_chan, &pref_fmt);
 
   if (res != ZX_OK) {
     FX_LOGS(ERROR) << "Output: cannot match a driver format to this request: " << pref_fps

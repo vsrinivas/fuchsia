@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_AUDIO_DEVICE_H_
 
 #include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
@@ -16,7 +17,8 @@ class FakeAudioDevice : public AudioDevice {
  public:
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix)
-      : AudioDevice(type, threading_model, registry, link_matrix) {}
+      : AudioDevice(type, threading_model, registry, link_matrix,
+                    std::make_unique<AudioDriver>(this)) {}
 
   bool driver_info_fetched() { return driver_info_fetched_; }
   bool driver_config_complete() { return driver_config_complete_; }

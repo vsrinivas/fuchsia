@@ -53,12 +53,13 @@ fit::result<audio_stream_unique_id_t> AudioDevice::UniqueIdFromString(const std:
 }
 
 AudioDevice::AudioDevice(AudioObject::Type type, ThreadingModel* threading_model,
-                         DeviceRegistry* registry, LinkMatrix* link_matrix)
+                         DeviceRegistry* registry, LinkMatrix* link_matrix,
+                         std::unique_ptr<AudioDriver> driver)
     : AudioObject(type),
       device_registry_(*registry),
       threading_model_(*threading_model),
       mix_domain_(threading_model->AcquireMixDomain()),
-      driver_(new AudioDriver(this)),
+      driver_(std::move(driver)),
       link_matrix_(*link_matrix) {
   FX_DCHECK(registry);
   FX_DCHECK((type == Type::Input) || (type == Type::Output));

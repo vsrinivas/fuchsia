@@ -35,7 +35,19 @@ void AudioDeviceServiceTest::SetUp() {
     devices_.push_back(std::move(info));
   };
 
-  audio_device_enumerator_->AddDeviceByChannel(std::move(remote_channel), "test device", false);
+  uint8_t version = GetParam();
+  switch (version) {
+    case 1:
+      audio_device_enumerator_->AddDeviceByChannel(std::move(remote_channel), "test device", false);
+      break;
+    case 2: {
+      fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config = {};
+      stream_config.set_channel(std::move(remote_channel));
+      audio_device_enumerator_->AddDeviceByChannel2("test device", false, std::move(stream_config));
+    } break;
+    default:
+      FAIL();
+  }
 }
 
 void AudioDeviceServiceTest::TearDown() {
@@ -55,7 +67,7 @@ void AudioDeviceServiceTest::TearDown() {
 }
 
 // Test that |AddDeviceByChannel| results in an |OnDeviceAdded| event.
-TEST_F(AudioDeviceServiceTest, AddDevice) {
+TEST_P(AudioDeviceServiceTest, AddDevice) {
   // Expect that the added device is enumerated via the device enumerator.
   RunLoopUntil([this]() { return !devices().empty(); });
 
@@ -69,7 +81,7 @@ TEST_F(AudioDeviceServiceTest, AddDevice) {
 }
 
 // Test that the info in |GetDevices| matches the info in the |OnDeviceAdded| event.
-TEST_F(AudioDeviceServiceTest, GetDevices) {
+TEST_P(AudioDeviceServiceTest, GetDevices) {
   RunLoopUntil([this]() { return !devices().empty(); });
 
   std::optional<std::vector<fuchsia::media::AudioDeviceInfo>> devices;
@@ -87,5 +99,8 @@ TEST_F(AudioDeviceServiceTest, GetDevices) {
 
   set_device_token(device.token_id);
 }
+
+INSTANTIATE_TEST_SUITE_P(AudioDeviceServiceTestInstance, AudioDeviceServiceTest,
+                         ::testing::Values(1, 2));  // Version of AddDeviceByChannel.
 
 }  // namespace media::audio::test

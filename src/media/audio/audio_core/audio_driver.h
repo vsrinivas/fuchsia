@@ -113,6 +113,8 @@ class AudioDriver {
   zx_status_t SetPlugDetectEnabled(bool enabled);
   zx_status_t SendSetGain(const AudioDeviceSettings::GainState& gain_state,
                           audio_set_gain_flags_t set_flags);
+  zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
+                               fuchsia::media::AudioSampleFormat* sample_format_inout);
 
  private:
   friend class AudioDevice;

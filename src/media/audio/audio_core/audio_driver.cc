@@ -1125,6 +1125,13 @@ zx_status_t AudioDriver::SendSetGain(const AudioDeviceSettings::GainState& gain_
   return stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
 }
 
+zx_status_t AudioDriver::SelectBestFormat(uint32_t* frames_per_second_inout,
+                                          uint32_t* channels_inout,
+                                          fuchsia::media::AudioSampleFormat* sample_format_inout) {
+  return media::audio::SelectBestFormat(format_ranges(), frames_per_second_inout, channels_inout,
+                                        sample_format_inout);
+}
+
 void AudioDriver::StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                          zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {

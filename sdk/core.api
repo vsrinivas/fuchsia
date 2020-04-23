@@ -37,6 +37,7 @@ sdk://fidl/fuchsia.diagnostics
 sdk://fidl/fuchsia.factory
 sdk://fidl/fuchsia.feedback
 sdk://fidl/fuchsia.fonts
+sdk://fidl/fuchsia.hardware.audio
 sdk://fidl/fuchsia.hardware.ethernet
 sdk://fidl/fuchsia.hardware.goldfish
 sdk://fidl/fuchsia.hardware.light

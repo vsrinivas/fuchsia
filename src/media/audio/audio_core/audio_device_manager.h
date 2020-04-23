@@ -79,6 +79,9 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) final;
   void AddDeviceByChannel(::zx::channel device_channel, std::string device_name,
                           bool is_input) final;
+  void AddDeviceByChannel2(
+      std::string device_name, bool is_input,
+      fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> channel) final;
 
  private:
   // Find the most-recently plugged device (per type: input or output) excluding throttle_output. If

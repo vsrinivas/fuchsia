@@ -341,4 +341,29 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
   AddDevice(std::move(new_device));
 }
 
+void AudioDeviceManager::AddDeviceByChannel2(
+    std::string device_name, bool is_input,
+    fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config) {
+  TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel2");
+  AUD_VLOG(TRACE) << " adding2 " << (is_input ? "input" : "output") << " '" << device_name << "'";
+
+  // Hand the stream off to the proper type of class to manage.
+  std::shared_ptr<AudioDevice> new_device;
+  if (is_input) {
+    new_device =
+        AudioInput::Create(std::move(stream_config), &threading_model(), this, &link_matrix_);
+  } else {
+    new_device =
+        DriverOutput::Create(std::move(stream_config), &threading_model(), this, &link_matrix_);
+  }
+
+  if (new_device == nullptr) {
+    FX_LOGS(ERROR) << "Failed to instantiate audio " << (is_input ? "input" : "output") << " for '"
+                   << device_name << "'";
+  }
+
+  REPORT(AddingDevice(device_name, *new_device));
+  AddDevice(std::move(new_device));
+}
+
 }  // namespace media::audio
