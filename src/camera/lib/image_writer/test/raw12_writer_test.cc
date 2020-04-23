@@ -9,8 +9,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/camera/drivers/isp/modules/dma-format.h"
-
 namespace camera {
 namespace {
 
@@ -59,7 +57,7 @@ void ReadTestImage(std::vector<uint8_t>* buf, uint32_t width, uint32_t height) {
   status = image_writer->Write(&vmo, kRedPixel, kMaxVal, kMaxVal);
   ASSERT_EQ(status, ZX_OK);
 
-  status = vmo.read(&buf->front(), 0, image_writer->VmoSize());
+  status = vmo.read(&buf->front(), 0, image_writer->vmo_size());
   ASSERT_EQ(status, ZX_OK);
 }
 

@@ -7,8 +7,6 @@
 
 #include <lib/fzl/vmo-pool.h>
 
-#include "src/camera/drivers/isp/modules/dma-format.h"
-
 namespace camera {
 
 inline constexpr uint16_t kHighByteMask = 0xFF0;
@@ -16,12 +14,11 @@ inline constexpr uint16_t kLowHalfByteMask = 0x00F;
 inline constexpr uint8_t kDoubleByteShift = 16;
 inline constexpr uint8_t kByteShift = 8;
 inline constexpr uint8_t kHalfByteShift = 4;
-inline constexpr auto kPixelTypeRaw12 = DmaFormat::RAW12;
 
 class ImageWriter {
  public:
-  ImageWriter(DmaFormat dma_format, size_t vmo_size)
-      : dma_format_(dma_format), vmo_size_(vmo_size) {}
+  ImageWriter(uint32_t width, uint32_t height, size_t vmo_size)
+      : width_(width), height_(height), vmo_size_(vmo_size) {}
   virtual ~ImageWriter() = default;
 
   // Virtual method to be implemented by derived classes specific to each supported image format.
@@ -38,11 +35,12 @@ class ImageWriter {
   virtual zx_status_t Write(zx::vmo* vmo, uint16_t r, uint16_t g, uint16_t b) = 0;
 
   // Getter methods
-  DmaFormat DmaFormat() const { return dma_format_; }
-  size_t VmoSize() const { return vmo_size_; }
+  uint32_t width() const { return width_; }
+  uint32_t height() const { return height_; }
+  size_t vmo_size() const { return vmo_size_; }
 
  private:
-  const class DmaFormat dma_format_;
+  const uint32_t width_, height_;
   const size_t vmo_size_;
 };
 

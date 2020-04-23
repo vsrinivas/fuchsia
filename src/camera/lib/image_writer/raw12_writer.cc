@@ -34,15 +34,12 @@ std::unique_ptr<Raw12Writer> Raw12Writer::Create(uint32_t width, uint32_t height
   // TODO(nzo): consider if there's a case where odd width/height would be necessary.
   FX_CHECK(width > 0 && height > 0) << "Invalid dimensions passed in.";
 
-  // TODO(nzo): is there a way to incorporate the height from DmaFormat instead of using a manual
-  //            calculation?
-  const auto kDmaFormat = camera::DmaFormat(width, height, kPixelTypeRaw12, false);
   const size_t kSize = width * height * kBytesPerDoublePixel;
-  return std::make_unique<Raw12Writer>(kDmaFormat, kSize);
+  return std::make_unique<Raw12Writer>(width, height, kSize);
 }
 
 zx_status_t Raw12Writer::Write(zx::vmo* vmo, uint16_t r, uint16_t g, uint16_t b) {
-  zx_status_t status = zx::vmo::create(VmoSize(), 0, vmo);
+  zx_status_t status = zx::vmo::create(vmo_size(), 0, vmo);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create VMO.";
     return status;
@@ -50,19 +47,19 @@ zx_status_t Raw12Writer::Write(zx::vmo* vmo, uint16_t r, uint16_t g, uint16_t b)
 
   std::array<uint8_t, kBytesPerDoublePixel> double_pixel_val;
 
-  auto buf = std::vector<uint8_t>(VmoSize(), 0);
+  auto buf = std::vector<uint8_t>(vmo_size(), 0);
 
   // Value for colors on the first column/row will be zero, increase by constant factor up to
   // maximum value for every column/row after that.
-  const float_t kGreenStepFactor = (DmaFormat().height() == 1) ? 0 : b / (DmaFormat().height() - 1);
-  const float_t kBlueStepFactor = (DmaFormat().width() == 1) ? 0 : g / (DmaFormat().width() - 1);
+  const float_t kGreenStepFactor = (height() == 1) ? 0 : b / (height() - 1);
+  const float_t kBlueStepFactor = (width() == 1) ? 0 : g / (width() - 1);
   uint16_t green_pixel = 0;
   uint16_t blue_pixel = 0;
 
   uint32_t row_num = 0;
 
-  for (uint32_t i = 0; i < VmoSize(); i += kBytesPerDoublePixel) {
-    if ((i != 0) && (i % (DmaFormat().width() * kBytesPerDoublePixel) == 0)) {
+  for (uint32_t i = 0; i < vmo_size(); i += kBytesPerDoublePixel) {
+    if ((i != 0) && (i % (width() * kBytesPerDoublePixel) == 0)) {
       row_num++;
       green_pixel += kGreenStepFactor;
       blue_pixel = 0;

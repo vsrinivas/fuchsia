@@ -35,11 +35,12 @@ class Raw12Writer : public ImageWriter {
  public:
   // Constructor.
   // Args:
-  //  |dma_format| A format object consisting of width, height, pixel format, and other paramaters.
+  //  |width| The width of the image to be written.
+  //  |height| The height of the image to be written.
   //  |vmo_size| Number of bytes comprising the intended images to be written (width * height * # of
   //             bytes per pixel).
-  explicit Raw12Writer(class DmaFormat dma_format, size_t vmo_size)
-      : ImageWriter(dma_format, vmo_size) {}
+  explicit Raw12Writer(uint32_t width, uint32_t height, size_t vmo_size)
+      : ImageWriter(width, height, vmo_size) {}
 
   // Factory method that outputs a Raw12Writer with all its params set for the format.
   // Args:
