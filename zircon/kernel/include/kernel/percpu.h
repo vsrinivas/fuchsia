@@ -7,6 +7,7 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_PERCPU_H_
 
 #include <lib/lazy_init/lazy_init.h>
+#include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
@@ -38,10 +39,6 @@ struct percpu {
 
   // deadline of this cpu's platform timer or ZX_TIME_INFINITE if not set
   zx_time_t next_timer_deadline;
-
-  // per cpu run queue and bitmap to indicate which queues are non empty
-  struct list_node run_queue[NUM_PRIORITIES];
-  uint32_t run_queue_bitmap;
 
   Scheduler scheduler;
 
@@ -140,9 +137,6 @@ struct percpu {
   // Temporary translation table with one entry for use in early boot.
   static percpu* boot_index_[1];
 } __CPU_ALIGN;
-
-// make sure the bitmap is large enough to cover our number of priorities
-static_assert(NUM_PRIORITIES <= sizeof(((percpu*)0)->run_queue_bitmap) * CHAR_BIT, "");
 
 // TODO(edcoyne): rename this to c++, or wait for travis's work to integrate
 // into arch percpus.

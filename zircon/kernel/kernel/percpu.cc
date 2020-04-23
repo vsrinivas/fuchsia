@@ -25,9 +25,6 @@ size_t percpu::processor_count_{1};
 
 percpu::percpu(cpu_num_t cpu_num) {
   list_initialize(&timer_queue);
-  for (unsigned int i = 0; i < NUM_PRIORITIES; i++) {
-    list_initialize(&run_queue[i]);
-  }
 
   preempt_timer_deadline = ZX_TIME_INFINITE;
   next_timer_deadline = ZX_TIME_INFINITE;
