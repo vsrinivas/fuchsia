@@ -12,6 +12,7 @@ use {
             hooks::HooksRegistration,
             model::{ComponentManagerConfig, Model, ModelParams},
             moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
+            realm::BindReason,
             resolver::ResolverRegistry,
             runner::Runner,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
@@ -348,7 +349,10 @@ impl RoutingTest {
         name: &'a str,
     ) {
         let realm = self.model.look_up_realm(&moniker).await.expect("failed to look up realm");
-        self.model.bind(&realm.abs_moniker).await.expect("bind instance failed");
+        self.model
+            .bind(&realm.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("bind instance failed");
         let partial_moniker = PartialMoniker::new(name.to_string(), Some(collection.to_string()));
         let nf =
             realm.remove_dynamic_child(&partial_moniker).await.expect("failed to remove child");
@@ -602,11 +606,24 @@ impl RoutingTest {
         out_dir
     }
 
-    /// Atempt to bind the instance associated with the given moniker.
+    /// Attempt to bind the instance associated with the given moniker with the
+    /// default reason of BindReason::Eager.
     ///
     /// On success, returns the short name of the component.
     pub async fn bind_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, anyhow::Error> {
-        self.model.bind(moniker).await?;
+        self.bind_instance_with_reason(moniker, BindReason::Eager).await
+    }
+
+    /// Attempt to bind the instance associated with the given moniker with a
+    /// provided reason.
+    ///
+    /// On success, returns the short name of the component.
+    async fn bind_instance_with_reason(
+        &self,
+        moniker: &AbsoluteMoniker,
+        reason: BindReason,
+    ) -> Result<String, anyhow::Error> {
+        self.model.bind(moniker, &reason).await?;
         Ok(match moniker.path().last() {
             Some(part) => part.name().to_string(),
             None => self.root_component_name.to_string(),
@@ -624,7 +641,7 @@ impl RoutingTest {
         let realm = self.model.look_up_realm(component).await.expect("lookup root realm failed");
         let mut server_end = server_end.into_channel();
         self.model
-            .bind(&realm.abs_moniker)
+            .bind(&realm.abs_moniker, &BindReason::Eager)
             .await
             .expect("failed to bind to realm")
             .open_outgoing(
@@ -702,7 +719,7 @@ pub mod capability_util {
         expected_res: ExpectedResult,
     ) {
         let realm = model.look_up_realm(&moniker).await.expect("failed to look up realm");
-        let meta_dir_res = realm.resolve_meta_dir().await;
+        let meta_dir_res = realm.resolve_meta_dir(&BindReason::Eager).await;
         match expected_res {
             ExpectedResult::Ok => {
                 let meta_dir = meta_dir_res.expect("failed to resolve meta dir");
@@ -1083,7 +1100,7 @@ pub mod capability_util {
             .look_up_realm(abs_moniker)
             .await
             .expect(&format!("realm not found {}", abs_moniker));
-        model.bind(abs_moniker).await.expect("failed to bind instance");
+        model.bind(abs_moniker, &BindReason::Eager).await.expect("failed to bind instance");
         let execution = realm.lock_execution().await;
         let runtime = execution.runtime.as_ref().expect("not resolved");
         let flags = OPEN_RIGHT_READABLE;

@@ -9,7 +9,7 @@ use {
         hooks::{Event, EventError, EventPayload, EventType, RuntimeInfo},
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
-        realm::{ExecutionState, Realm, Runtime, WeakRealm},
+        realm::{BindReason, ExecutionState, Realm, Runtime, WeakRealm},
         runner::Runner,
     },
     cm_rust::data,
@@ -24,7 +24,10 @@ use {
     vfs::execution_scope::ExecutionScope,
 };
 
-pub(super) async fn do_start(realm: &Arc<Realm>) -> Result<(), ModelError> {
+pub(super) async fn do_start(
+    realm: &Arc<Realm>,
+    bind_reason: &BindReason,
+) -> Result<(), ModelError> {
     // Pre-flight check: if the component is already started, return now. Note that `bind_at` also
     // performs this check before scheduling the action; here, we do it again while the action is
     // registered so we avoid the risk of invoking the BeforeStart hook twice.
@@ -80,6 +83,7 @@ pub(super) async fn do_start(realm: &Arc<Realm>) -> Result<(), ModelError> {
                     component_url: realm.component_url.clone(),
                     runtime: RuntimeInfo::from_runtime(&start_context.pending_runtime),
                     component_decl: start_context.component_decl.clone(),
+                    bind_reason: bind_reason.clone(),
                 }),
                 start_context.pending_runtime.timestamp,
             );

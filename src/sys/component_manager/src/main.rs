@@ -15,6 +15,7 @@ use {
             binding::Binder,
             model::{ComponentManagerConfig, Model},
             moniker::AbsoluteMoniker,
+            realm::BindReason,
         },
         startup,
     },
@@ -108,7 +109,7 @@ async fn run_root(args: startup::Arguments) -> Result<(Arc<Model>, BuiltinEnviro
 
     let root_moniker = AbsoluteMoniker::root();
     model
-        .bind(&root_moniker)
+        .bind(&root_moniker, &BindReason::Root)
         .await
         .map_err(|e| Error::from(e))
         .context(format!("failed to bind to root component {}", args.root_component_url))?;

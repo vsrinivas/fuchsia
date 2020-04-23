@@ -114,6 +114,7 @@ mod tests {
             binding::Binder,
             error::ModelError,
             model::{Model, ModelParams},
+            realm::BindReason,
             testing::{
                 mocks::MockResolver,
                 test_helpers::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
@@ -187,7 +188,7 @@ mod tests {
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: registry,
         }));
-        let realm = model.bind(&vec!["a:0", "b:0"].into()).await?;
+        let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
         Ok(())
     }
@@ -226,7 +227,7 @@ mod tests {
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: registry,
         }));
-        let realm = model.bind(&vec!["a:0", "b:0"].into()).await?;
+        let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
         Ok(())
     }
@@ -271,7 +272,7 @@ mod tests {
             root_resolver_registry: registry,
         }));
         assert_matches!(
-            model.bind(&vec!["a:0", "b:0"].into()).await,
+            model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await,
             Err(ModelError::ResolverError { .. })
         );
         Ok(())

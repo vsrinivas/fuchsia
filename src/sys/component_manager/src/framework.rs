@@ -11,7 +11,7 @@ use {
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::{ComponentManagerConfig, Model},
             moniker::{AbsoluteMoniker, PartialMoniker},
-            realm::Realm,
+            realm::{BindReason, Realm},
         },
     },
     anyhow::Error,
@@ -174,7 +174,7 @@ impl RealmCapabilityHost {
         let mut exposed_dir = exposed_dir.into_channel();
         if let Some(child_realm) = child_realm {
             child_realm
-                .bind()
+                .bind(&BindReason::BindChild { parent: realm.abs_moniker.clone() })
                 .await
                 .map_err(|e| match e {
                     ModelError::ResolverError { err } => {
@@ -342,6 +342,7 @@ mod tests {
                 events::{event::SyncMode, source::EventSource, stream::EventStream},
                 model::ModelParams,
                 moniker::AbsoluteMoniker,
+                realm::BindReason,
                 resolver::ResolverRegistry,
                 testing::{mocks::*, out_dir::OutDir, test_helpers, test_helpers::*, test_hook::*},
             },
@@ -430,7 +431,10 @@ mod tests {
             model.root_realm.hooks.install(hooks).await;
 
             // Look up and bind to realm.
-            let realm = model.bind(&realm_moniker).await.expect("failed to bind to realm");
+            let realm = model
+                .bind(&realm_moniker, &BindReason::Eager)
+                .await
+                .expect("failed to bind to realm");
 
             // Host framework service.
             let (realm_proxy, stream) =

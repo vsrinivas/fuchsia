@@ -8,7 +8,7 @@ use {
         error::ModelError,
         model::Model,
         moniker::AbsoluteMoniker,
-        realm::Realm,
+        realm::{BindReason, Realm},
     },
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys,
@@ -21,8 +21,11 @@ use {
 /// functionality.
 #[async_trait]
 pub trait Binder: Send + Sync {
-    async fn bind<'a>(&'a self, abs_moniker: &'a AbsoluteMoniker)
-        -> Result<Arc<Realm>, ModelError>;
+    async fn bind<'a>(
+        &'a self,
+        abs_moniker: &'a AbsoluteMoniker,
+        reason: &'a BindReason,
+    ) -> Result<Arc<Realm>, ModelError>;
 }
 
 #[async_trait]
@@ -37,8 +40,9 @@ impl Binder for Arc<Model> {
     async fn bind<'a>(
         &'a self,
         abs_moniker: &'a AbsoluteMoniker,
+        reason: &'a BindReason,
     ) -> Result<Arc<Realm>, ModelError> {
-        bind_at_moniker(self, abs_moniker).await
+        bind_at_moniker(self, abs_moniker, reason).await
     }
 }
 
@@ -47,9 +51,10 @@ impl Binder for Weak<Model> {
     async fn bind<'a>(
         &'a self,
         abs_moniker: &'a AbsoluteMoniker,
+        reason: &'a BindReason,
     ) -> Result<Arc<Realm>, ModelError> {
         if let Some(model) = self.upgrade() {
-            model.bind(abs_moniker).await
+            model.bind(abs_moniker, reason).await
         } else {
             Err(ModelError::ModelNotAvailable)
         }
@@ -61,21 +66,22 @@ impl Binder for Weak<Model> {
 pub async fn bind_at_moniker<'a>(
     model: &'a Arc<Model>,
     abs_moniker: &'a AbsoluteMoniker,
+    reason: &BindReason,
 ) -> Result<Arc<Realm>, ModelError> {
     let mut cur_moniker = AbsoluteMoniker::root();
     let mut realm = model.root_realm.clone();
-    bind_at(realm.clone()).await?;
+    bind_at(realm.clone(), reason).await?;
     for m in abs_moniker.path().iter() {
         cur_moniker = cur_moniker.child(m.clone());
         realm = model.look_up_realm(&cur_moniker).await?;
-        bind_at(realm.clone()).await?;
+        bind_at(realm.clone(), reason).await?;
     }
     Ok(realm)
 }
 
 /// Binds to the component instance in the given realm, starting it if it's not already
 /// running.
-pub async fn bind_at(realm: Arc<Realm>) -> Result<(), ModelError> {
+pub async fn bind_at(realm: Arc<Realm>, reason: &BindReason) -> Result<(), ModelError> {
     // Skip starting a component instance that was already started.
     // Eager binding can cause `bind_at` to be re-entrant. It's important to bail out here so
     // we don't end up in an infinite loop of binding to the same eager child.
@@ -85,7 +91,7 @@ pub async fn bind_at(realm: Arc<Realm>) -> Result<(), ModelError> {
             return res;
         }
     }
-    ActionSet::register(realm.clone(), Action::Start).await.await?;
+    ActionSet::register(realm.clone(), Action::Start(reason.clone())).await.await?;
 
     let eager_children: Vec<_> = {
         let mut state = realm.lock_state().await;
@@ -113,7 +119,7 @@ fn bind_eager_children_recursive<'a>(
     let f = async move {
         let futures: Vec<_> = instances_to_bind
             .iter()
-            .map(|realm| async move { bind_at(realm.clone()).await })
+            .map(|realm| async move { bind_at(realm.clone(), &BindReason::Eager).await })
             .collect();
         join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
         Ok(())
@@ -130,7 +136,7 @@ mod tests {
             model::{
                 actions::{Action, ActionSet},
                 events::event::SyncMode,
-                hooks::{EventType, HooksRegistration},
+                hooks::{EventPayload, EventType, HooksRegistration},
                 model::{ComponentManagerConfig, ModelParams},
                 moniker::PartialMoniker,
                 resolver::ResolverRegistry,
@@ -144,6 +150,7 @@ mod tests {
         },
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::prelude::*,
+        matches::assert_matches,
         std::{collections::HashSet, convert::TryFrom},
     };
 
@@ -189,7 +196,7 @@ mod tests {
         mock_resolver.add_component("root", component_decl_with_test_runner());
         let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
         let m: AbsoluteMoniker = AbsoluteMoniker::root();
-        let res = model.bind(&m).await;
+        let res = model.bind(&m, &BindReason::Root).await;
         assert!(res.is_ok());
         let actual_urls = mock_runner.urls_run();
         let expected_urls = vec!["test:///root_resolved".to_string()];
@@ -205,7 +212,7 @@ mod tests {
         mock_resolver.add_component("root", component_decl_with_test_runner());
         let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
         let m: AbsoluteMoniker = vec!["no-such-instance:0"].into();
-        let res = model.bind(&m).await;
+        let res = model.bind(&m, &BindReason::Root).await;
         let expected_res: Result<Arc<Realm>, ModelError> =
             Err(ModelError::instance_not_found(vec!["no-such-instance:0"].into()));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
@@ -247,7 +254,7 @@ mod tests {
         let model_copy = model.clone();
         let (f, bind_handle) = async move {
             let m: AbsoluteMoniker = vec!["system:0"].into();
-            model_copy.bind(&m).await.expect("failed to bind 1");
+            model_copy.bind(&m, &BindReason::Root).await.expect("failed to bind 1");
         }
         .remote_handle();
         fasync::spawn(f);
@@ -255,6 +262,11 @@ mod tests {
         event.resume();
         let event =
             event_stream.wait_until(EventType::Started, vec!["system:0"].into()).await.unwrap();
+        // Verify that the correct BindReason propagates to the event.
+        assert_matches!(
+            event.event.result,
+            Ok(EventPayload::Started { bind_reason: BindReason::Root, .. })
+        );
         {
             let expected_urls: Vec<String> = vec!["test:///root_resolved".to_string()];
             assert_eq!(mock_runner.urls_run(), expected_urls);
@@ -264,7 +276,7 @@ mod tests {
         // action. Allow the original bind to proceed, then check the result of both bindings.
         let m: AbsoluteMoniker = vec!["system:0"].into();
         let realm = model.look_up_realm(&m).await.expect("failed realm lookup");
-        let nf = ActionSet::register(realm, Action::Start).await;
+        let nf = ActionSet::register(realm, Action::Start(BindReason::Eager)).await;
         event.resume();
         bind_handle.await;
         nf.await.expect("failed to bind 2");
@@ -296,7 +308,7 @@ mod tests {
             new_model_with(mock_resolver, mock_runner.clone(), hook.hooks()).await;
         // bind to system
         let m: AbsoluteMoniker = vec!["system:0"].into();
-        assert!(model.bind(&m).await.is_ok());
+        assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         let expected_urls =
             vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
         assert_eq!(mock_runner.urls_run(), expected_urls);
@@ -315,7 +327,7 @@ mod tests {
         assert!(echo_realm.lock_state().await.is_none());
         // bind to echo
         let m: AbsoluteMoniker = vec!["echo:0"].into();
-        assert!(model.bind(&m).await.is_ok());
+        assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         let expected_urls = vec![
             "test:///root_resolved".to_string(),
             "test:///system_resolved".to_string(),
@@ -359,7 +371,7 @@ mod tests {
 
         // Bind to logger (before ever binding to system). Ancestors are bound first.
         let m: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
-        assert!(model.bind(&m).await.is_ok());
+        assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         let expected_urls = vec![
             "test:///root_resolved".to_string(),
             "test:///system_resolved".to_string(),
@@ -369,7 +381,7 @@ mod tests {
 
         // Bind to netstack.
         let m: AbsoluteMoniker = vec!["system:0", "netstack:0"].into();
-        assert!(model.bind(&m).await.is_ok());
+        assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         let expected_urls = vec![
             "test:///root_resolved".to_string(),
             "test:///system_resolved".to_string(),
@@ -380,7 +392,7 @@ mod tests {
 
         // finally, bind to system. Was already bound, so no new results.
         let m: AbsoluteMoniker = vec!["system:0"].into();
-        assert!(model.bind(&m).await.is_ok());
+        assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         let expected_urls = vec![
             "test:///root_resolved".to_string(),
             "test:///system_resolved".to_string(),
@@ -408,14 +420,14 @@ mod tests {
         let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
         // bind to system
         let m: AbsoluteMoniker = vec!["system:0"].into();
-        assert!(model.bind(&m).await.is_ok());
+        assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         let expected_urls =
             vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
         assert_eq!(mock_runner.urls_run(), expected_urls);
 
         // can't bind to logger: it does not exist
         let m: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
-        let res = model.bind(&m).await;
+        let res = model.bind(&m, &BindReason::Root).await;
         let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(m));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_urls = mock_runner.urls_run();
@@ -477,7 +489,7 @@ mod tests {
         // Bind to the top component, and check that it and the eager components were started.
         {
             let m = AbsoluteMoniker::new(vec!["a:0".into()]);
-            let res = model.bind(&m).await;
+            let res = model.bind(&m, &BindReason::Root).await;
             assert!(res.is_ok());
             let actual_urls = mock_runner.urls_run();
             // Execution order of `b` and `c` is non-deterministic.
@@ -556,7 +568,7 @@ mod tests {
         {
             let (f, bind_handle) = async move {
                 let m = AbsoluteMoniker::new(vec!["a:0".into()]);
-                model.bind(&m).await
+                model.bind(&m, &BindReason::Root).await
             }
             .remote_handle();
             fasync::spawn(f);
@@ -601,7 +613,7 @@ mod tests {
         // Bind to the parent component. The child should be started. However, the parent component
         // is non-executable so it is not run.
         let m: AbsoluteMoniker = vec!["a:0"].into();
-        assert!(model.bind(&m).await.is_ok());
+        assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         let actual_urls = mock_runner.urls_run();
         let expected_urls =
             vec!["test:///root_resolved".to_string(), "test:///b_resolved".to_string()];

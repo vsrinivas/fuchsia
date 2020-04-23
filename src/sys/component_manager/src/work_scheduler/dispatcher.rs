@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        model::{binding::Binder, error::ModelError, moniker::AbsoluteMoniker},
+        model::{binding::Binder, error::ModelError, moniker::AbsoluteMoniker, realm::BindReason},
         work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_PATH},
     },
     fidl_fuchsia_component as fcomponent,
@@ -98,7 +98,7 @@ async fn dispatch(
     let (client_end, mut server_end) = zx::Channel::create().map_err(|err| Error::Internal(err))?;
 
     binder
-        .bind(&target_moniker)
+        .bind(&target_moniker, &BindReason::Scheduled)
         .await
         .map_err(|err| Error::Model(err))?
         .open_outgoing(

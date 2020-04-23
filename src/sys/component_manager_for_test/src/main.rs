@@ -9,7 +9,7 @@ use {
         elf_runner::{ElfRunner, ProcessLauncherConnector},
         model::{
             binding::Binder, model::ComponentManagerConfig, moniker::AbsoluteMoniker,
-            testing::test_helpers,
+            realm::BindReason, testing::test_helpers,
         },
         startup,
     },
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Error> {
     let hub_proxy = builtin_environment.bind_service_fs_for_hub().await?;
 
     let root_moniker = AbsoluteMoniker::root();
-    match model.bind(&root_moniker).await {
+    match model.bind(&root_moniker, &BindReason::Root).await {
         Ok(_) => {
             // TODO: Exit the component manager when the root component's binding is lost
             // (when it terminates).

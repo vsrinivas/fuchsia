@@ -162,6 +162,8 @@ mod tests {
         super::*,
         crate::model::{
             binding::Binder,
+            moniker::AbsoluteMoniker,
+            realm::BindReason,
             testing::test_helpers::{
                 component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder, ComponentInfo,
                 TEST_RUNNER_NAME,
@@ -212,7 +214,10 @@ mod tests {
         let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
         let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
         let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::BindChild { parent: AbsoluteMoniker::root() })
+            .await
+            .expect("could not bind to a");
 
         // Wire up connections to SystemController
         let sys_controller = Box::new(SystemControllerCapabilityProvider::new(test.model.clone()));

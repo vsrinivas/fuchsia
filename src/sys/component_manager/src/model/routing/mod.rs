@@ -18,7 +18,7 @@ use {
             moniker::{
                 AbsoluteMoniker, ChildMoniker, ExtendedMoniker, PartialMoniker, RelativeMoniker,
             },
-            realm::{Realm, WeakRealm},
+            realm::{BindReason, Realm, WeakRealm},
             rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
             storage,
             walk_state::WalkState,
@@ -88,8 +88,16 @@ pub(super) async fn route_use_capability<'a>(
             .await
         }
         UseDecl::Storage(storage_decl) => {
-            route_and_open_storage_capability(storage_decl, open_mode, target_realm, server_chan)
-                .await
+            // TODO(fxb/50716): This BindReason is wrong. We need to refactor the Storage
+            // capability to plumb through the correct BindReason.
+            route_and_open_storage_capability(
+                storage_decl,
+                open_mode,
+                target_realm,
+                server_chan,
+                &BindReason::Eager,
+            )
+            .await
         }
         UseDecl::Event(_) => {
             // Events are logged separately through route_use_event_capability.
@@ -135,6 +143,7 @@ pub(super) async fn route_expose_capability<'a>(
 /// This provider will bind to the source moniker's realm and then open the service
 /// from the realm's outgoing directory.
 struct DefaultComponentCapabilityProvider {
+    target_realm: WeakRealm,
     source_realm: WeakRealm,
     path: CapabilityPath,
 }
@@ -150,7 +159,14 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
     ) -> Result<(), ModelError> {
         // Start the source component, if necessary
         let path = self.path.to_path_buf().attach(relative_path);
-        let source_realm = self.source_realm.upgrade()?.bind().await?;
+        let source_realm = self
+            .source_realm
+            .upgrade()?
+            .bind(&BindReason::AccessCapability {
+                target: ExtendedMoniker::ComponentInstance(self.target_realm.moniker.clone()),
+                path: self.path.clone(),
+            })
+            .await?;
         source_realm.open_outgoing(flags, open_mode, path, server_end).await?;
         Ok(())
     }
@@ -158,7 +174,10 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
 
 /// This method gets an optional default capability provider based on the
 /// capability source.
-fn get_default_provider(source: &CapabilitySource) -> Option<Box<dyn CapabilityProvider>> {
+fn get_default_provider(
+    target_realm: WeakRealm,
+    source: &CapabilitySource,
+) -> Option<Box<dyn CapabilityProvider>> {
     match source {
         CapabilitySource::Framework { .. } => {
             // There is no default provider for a Framework capability
@@ -168,6 +187,7 @@ fn get_default_provider(source: &CapabilitySource) -> Option<Box<dyn CapabilityP
             // Route normally for a component capability with a source path
             if let Some(path) = capability.source_path() {
                 Some(Box::new(DefaultComponentCapabilityProvider {
+                    target_realm,
                     source_realm: realm.clone(),
                     path: path.clone(),
                 }))
@@ -187,7 +207,8 @@ pub async fn open_capability_at_source(
     target_realm: &Arc<Realm>,
     server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
-    let capability_provider = Arc::new(Mutex::new(get_default_provider(&source)));
+    let capability_provider =
+        Arc::new(Mutex::new(get_default_provider(target_realm.as_weak(), &source)));
     let event = Event::new(
         target_realm.abs_moniker.clone(),
         Ok(EventPayload::CapabilityRouted {
@@ -253,6 +274,7 @@ pub async fn route_and_open_storage_capability<'a>(
     open_mode: u32,
     target_realm: &'a Arc<Realm>,
     server_chan: &mut zx::Channel,
+    bind_reason: &BindReason,
 ) -> Result<(), ModelError> {
     // TODO: Actually use `CapabilityState` to apply rights.
     let (dir_source_realm, dir_source_path, relative_moniker, _) =
@@ -263,6 +285,7 @@ pub async fn route_and_open_storage_capability<'a>(
         use_decl.type_(),
         &relative_moniker,
         open_mode,
+        bind_reason,
     )
     .await
     .map_err(|e| ModelError::from(e))?;
@@ -327,9 +350,8 @@ async fn route_storage_capability<'a>(
 
     let (storage_decl, source_realm) = match source {
         Some(CapabilitySource::Component {
-            capability:
-                ComponentCapability::Storage(decl),
-            realm
+            capability: ComponentCapability::Storage(decl),
+            realm,
         }) => (decl, realm.upgrade()?),
         _ => {
             unreachable!("Storage capability must come from a storage declaration.");

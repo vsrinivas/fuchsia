@@ -5,6 +5,7 @@
 use {
     crate::model::{
         model::Model,
+        realm::BindReason,
         resolver::{Resolver, ResolverError, ResolverFut},
         routing,
     },
@@ -64,7 +65,7 @@ impl FuchsiaPkgResolver {
         let (pkgfs_proxy, pkgfs_server) = create_proxy::<DirectoryMarker>()?;
         let mut pkgfs_server = pkgfs_server.into_channel();
         realm
-            .bind()
+            .bind(&BindReason::BasePkgResolver)
             .await
             .map_err(|e| format_err!("failed to bind to pkgfs provider: {}", e))?
             .open_outgoing(

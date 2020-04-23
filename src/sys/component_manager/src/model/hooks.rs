@@ -5,7 +5,11 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
-        model::{error::ModelError, moniker::AbsoluteMoniker, realm::Runtime},
+        model::{
+            error::ModelError,
+            moniker::AbsoluteMoniker,
+            realm::{BindReason, Runtime},
+        },
     },
     anyhow::format_err,
     async_trait::async_trait,
@@ -214,6 +218,7 @@ pub enum EventPayload {
         component_url: String,
         runtime: RuntimeInfo,
         component_decl: ComponentDecl,
+        bind_reason: BindReason,
     },
     Stopped,
     Running,

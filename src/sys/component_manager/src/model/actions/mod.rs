@@ -59,7 +59,7 @@ use {
         error::ModelError,
         hooks::{Event, EventPayload},
         moniker::ChildMoniker,
-        realm::Realm,
+        realm::{BindReason, Realm},
     },
     fuchsia_async as fasync,
     futures::{
@@ -69,14 +69,15 @@ use {
         task::{Poll, Waker},
     },
     std::collections::HashMap,
+    std::hash::{Hash, Hasher},
     std::sync::Arc,
 };
 
 /// A action on a realm that must eventually be fulfilled.
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, Clone)]
 pub enum Action {
     /// This single component instance should be started.
-    Start,
+    Start(BindReason),
     /// This realm's component instances should be shut down (stopped and never started again).
     Shutdown,
     /// The given child of this realm should be marked deleting.
@@ -85,6 +86,42 @@ pub enum Action {
     DeleteChild(ChildMoniker),
     /// This realm and all its component instance should be destroyed.
     Destroy,
+}
+
+/// Two Actions remain equivalent even if their BindReasons differ. The first
+/// BindReason is the reason for starting this component. Subsequent BindReasons
+/// are ignored.
+impl PartialEq for Action {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Action::Start(_), Action::Start(_)) => true,
+            (Action::Shutdown, Action::Shutdown) => true,
+            (Action::MarkDeleting(l), Action::MarkDeleting(r)) => l == r,
+            (Action::DeleteChild(l), Action::DeleteChild(r)) => l == r,
+            (Action::Destroy, Action::Destroy) => true,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Action {}
+
+impl Hash for Action {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Action::Start(_) => state.write_u8(0),
+            Action::Shutdown => state.write_u8(1),
+            Action::MarkDeleting(child_moniker) => {
+                state.write_u8(2);
+                child_moniker.hash(state);
+            }
+            Action::DeleteChild(child_moniker) => {
+                state.write_u8(3);
+                child_moniker.hash(state);
+            }
+            Action::Destroy => state.write_u8(4),
+        }
+    }
 }
 
 struct ActionStatus {
@@ -198,7 +235,7 @@ impl Action {
         let action = self.clone();
         fasync::spawn(async move {
             let res = match &action {
-                Action::Start => start::do_start(&realm).await,
+                Action::Start(bind_reason) => start::do_start(&realm, bind_reason).await,
                 Action::MarkDeleting(moniker) => {
                     do_mark_deleting(realm.clone(), moniker.clone()).await
                 }
@@ -293,6 +330,7 @@ pub mod tests {
             binding::Binder,
             hooks::{EventType, Hook, HooksRegistration},
             moniker::{AbsoluteMoniker, PartialMoniker},
+            realm::BindReason,
             testing::{
                 test_helpers::{
                     component_decl_with_test_runner, execution_is_shut_down, has_child,
@@ -424,7 +462,7 @@ pub mod tests {
         // Bind to the component, causing it to start. This should cause the realm to have an
         // `Execution`.
         let realm = test.look_up(vec!["a:0"].into()).await;
-        test.model.bind(&realm.abs_moniker).await.expect("could not bind to a");
+        test.model.bind(&realm.abs_moniker, &BindReason::Eager).await.expect("could not bind to a");
         assert!(is_executing(&realm).await);
         let a_info = ComponentInfo::new(realm.clone()).await;
 
@@ -435,7 +473,7 @@ pub mod tests {
 
         // Trying to bind to the component should fail because it's shut down.
         test.model
-            .bind(&a_info.realm.abs_moniker)
+            .bind(&a_info.realm.abs_moniker, &BindReason::Eager)
             .await
             .expect_err("successfully bound to a after shutdown");
 
@@ -478,10 +516,22 @@ pub mod tests {
         let realm_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
         let realm_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
         let realm_c = test.look_up(vec!["container:0", "c:0"].into()).await;
-        test.model.bind(&realm_container.abs_moniker).await.expect("could not bind to container");
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to coll:a");
-        test.model.bind(&realm_b.abs_moniker).await.expect("could not bind to coll:b");
-        test.model.bind(&realm_c.abs_moniker).await.expect("could not bind to coll:b");
+        test.model
+            .bind(&realm_container.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to container");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to coll:a");
+        test.model
+            .bind(&realm_b.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to coll:b");
+        test.model
+            .bind(&realm_c.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to coll:b");
         assert!(is_executing(&realm_container).await);
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
@@ -615,7 +665,10 @@ pub mod tests {
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
 
         // Register shutdown action on "a", and wait for it.
@@ -687,7 +740,10 @@ pub mod tests {
         let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_c).await);
@@ -824,7 +880,10 @@ pub mod tests {
         let realm_e = test.look_up(vec!["a:0", "b:0", "e:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_c).await);
@@ -1006,7 +1065,10 @@ pub mod tests {
         let realm_f = test.look_up(moniker_f.clone()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_c).await);
@@ -1222,7 +1284,10 @@ pub mod tests {
         let realm_f = test.look_up(moniker_f.clone()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_c).await);
@@ -1367,7 +1432,10 @@ pub mod tests {
         let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
 
         let realm_a_info = ComponentInfo::new(realm_a).await;
         let realm_b_info = ComponentInfo::new(realm_b).await;
@@ -1445,9 +1513,18 @@ pub mod tests {
         let realm_b2 = test.look_up(vec!["a:0", "b:0", "b:0"].into()).await;
 
         // Bind to second `b`.
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to b2");
-        test.model.bind(&realm_b.abs_moniker).await.expect("could not bind to b2");
-        test.model.bind(&realm_b2.abs_moniker).await.expect("could not bind to b2");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to b2");
+        test.model
+            .bind(&realm_b.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to b2");
+        test.model
+            .bind(&realm_b2.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to b2");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_b2).await);
@@ -1567,7 +1644,10 @@ pub mod tests {
         let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_c).await);
@@ -1767,7 +1847,10 @@ pub mod tests {
         // `Execution`.
         let realm_root = test.look_up(vec![].into()).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
 
         // Register delete child action, and wait for it. Component should be destroyed.
@@ -1793,7 +1876,7 @@ pub mod tests {
 
         // Trying to bind to the component should fail because it's shut down.
         test.model
-            .bind(&realm_a.abs_moniker)
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
             .await
             .expect_err("successfully bound to a after shutdown");
 
@@ -1836,9 +1919,18 @@ pub mod tests {
         let realm_container = test.look_up(vec!["container:0"].into()).await;
         let realm_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
         let realm_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
-        test.model.bind(&realm_container.abs_moniker).await.expect("could not bind to container");
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to coll:a");
-        test.model.bind(&realm_b.abs_moniker).await.expect("could not bind to coll:b");
+        test.model
+            .bind(&realm_container.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to container");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to coll:a");
+        test.model
+            .bind(&realm_b.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to coll:b");
         assert!(is_executing(&realm_container).await);
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
@@ -1940,7 +2032,10 @@ pub mod tests {
         let test = ActionsTest::new("root", components, None).await;
         let realm_root = test.look_up(vec![].into()).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
         // Get realm_b without resolving it.
         let realm_b = {
@@ -2025,8 +2120,14 @@ pub mod tests {
         let realm_x = test.look_up(vec!["x:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
-        test.model.bind(&realm_x.abs_moniker).await.expect("could not bind to x");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+        test.model
+            .bind(&realm_x.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to x");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_c).await);
@@ -2143,9 +2244,18 @@ pub mod tests {
         let realm_b2 = test.look_up(vec!["a:0", "b:0", "b:0"].into()).await;
 
         // Bind to second `b`.
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to b2");
-        test.model.bind(&realm_b.abs_moniker).await.expect("could not bind to b2");
-        test.model.bind(&realm_b2.abs_moniker).await.expect("could not bind to b2");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to b2");
+        test.model
+            .bind(&realm_b.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to b2");
+        test.model
+            .bind(&realm_b2.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to b2");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_b2).await);
@@ -2278,7 +2388,10 @@ pub mod tests {
         let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
-        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        test.model
+            .bind(&realm_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_c).await);

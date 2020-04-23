@@ -12,7 +12,7 @@ use {
             error::ModelError,
             exposed_dir::ExposedDir,
             hooks::{Event, EventError, EventPayload, EventType, Hooks},
-            moniker::{AbsoluteMoniker, ChildMoniker, InstanceId, PartialMoniker},
+            moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, InstanceId, PartialMoniker},
             namespace::IncomingNamespace,
             resolver::Resolver,
             routing::{self, RoutingError},
@@ -20,7 +20,7 @@ use {
         },
     },
     clonable_error::ClonableError,
-    cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
+    cm_rust::{self, CapabilityPath, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
@@ -44,6 +44,49 @@ use {
     vfs::path::Path,
 };
 
+/// Describes the reason a realm is being requested to start.
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub enum BindReason {
+    /// Indicates that the target is starting the component because it wishes to access
+    /// the capability at path.
+    AccessCapability { target: ExtendedMoniker, path: CapabilityPath },
+    /// Indicates that the component is starting becasue the framework wishes to use
+    /// /pkgfs.
+    BasePkgResolver,
+    /// Indicates that the component is starting because a call to bind_child was made.
+    BindChild { parent: AbsoluteMoniker },
+    /// Indicates that the component was marked as eagerly starting by the parent.
+    // TODO(fxb/50714): Include the parent BindReason.
+    // parent: ExtendedMoniker,
+    // parent_bind_reason: Option<Arc<BindReason>>
+    Eager,
+    /// Indicates that this component is starting because it is the root component.
+    Root,
+    /// Indicates that this component is starting because it was scheduled by WorkScheduler.
+    Scheduled,
+    /// This is an unsupported BindReason. If you are seeing this then this is a bug.
+    Unsupported,
+}
+
+impl ToString for BindReason {
+    fn to_string(&self) -> String {
+        match self {
+            BindReason::AccessCapability { target, path } => {
+                format!("'{}' requested access to '{}'", target, path)
+            }
+            BindReason::BasePkgResolver => {
+                "the base package resolver attempted to open /pkgfs".to_string()
+            }
+            BindReason::BindChild { parent } => {
+                format!("its parent '{}' requested to bind to it", parent)
+            }
+            BindReason::Eager => "it's eager".to_string(),
+            BindReason::Root => "it's the root".to_string(),
+            BindReason::Scheduled => "it was scheduled to run".to_string(),
+            BindReason::Unsupported => "this is a bug".to_string(),
+        }
+    }
+}
 /// A returned type corresponding to a resolved component manifest.
 pub struct Component {
     /// The URL of the resolved component.
@@ -263,6 +306,7 @@ impl Realm {
     /// Ok(None) will be returned.
     pub async fn resolve_meta_dir(
         self: &Arc<Self>,
+        bind_reason: &BindReason,
     ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
         {
             // If our meta directory has already been resolved, just return the answer.
@@ -288,6 +332,7 @@ impl Realm {
             fio::MODE_TYPE_DIRECTORY,
             self,
             &mut server_chan,
+            bind_reason,
         )
         .await?;
         let meta_dir = Arc::new(DirectoryProxy::from_channel(
@@ -578,7 +623,7 @@ impl Realm {
 
     /// Binds to the component instance in this realm, starting it if it's not already running.
     /// Binds to the parent realm's component instance if it is not already bound.
-    pub async fn bind(self: &Arc<Self>) -> Result<Arc<Self>, ModelError> {
+    pub async fn bind(self: &Arc<Self>, reason: &BindReason) -> Result<Arc<Self>, ModelError> {
         // Push all Realms on the way to the root onto a stack.
         let mut realms = Vec::new();
         let mut current = Arc::clone(self);
@@ -590,7 +635,7 @@ impl Realm {
 
         // Now bind to each realm starting at the root (last element).
         for realm in realms.into_iter().rev() {
-            binding::bind_at(realm).await?;
+            binding::bind_at(realm, reason).await?;
         }
         Ok(Arc::clone(self))
     }
@@ -1488,7 +1533,8 @@ pub mod tests {
             )],
         )
         .await;
-        let realm = test.model.bind(&vec![].into()).await.expect("failed to bind");
+        let realm =
+            test.model.bind(&vec![].into(), &BindReason::Root).await.expect("failed to bind");
         let (node_proxy, server_end) =
             fidl::endpoints::create_proxy::<fio::NodeMarker>().expect("failed to create endpoints");
         let mut server_end = server_end.into_channel();
@@ -1538,7 +1584,8 @@ pub mod tests {
             .expect("subscribe to event stream");
         event_source.start_component_tree().await;
 
-        let _realm = test.model.bind(&vec![].into()).await.expect("failed to bind");
+        let _realm =
+            test.model.bind(&vec![].into(), &BindReason::Root).await.expect("failed to bind");
         let event =
             event_stream.wait_until(EventType::CapabilityReady, vec![].into()).await.unwrap().event;
 
@@ -1573,9 +1620,10 @@ pub mod tests {
         event_source.start_component_tree().await;
 
         let model = test.model.clone();
-        let (f, bind_handle) =
-            async move { model.bind(&vec![].into()).await.expect("failed to bind") }
-                .remote_handle();
+        let (f, bind_handle) = async move {
+            model.bind(&vec![].into(), &BindReason::Root).await.expect("failed to bind")
+        }
+        .remote_handle();
         fasync::spawn(f);
         let discovered_timestamp =
             wait_until_event_get_timestamp(&mut event_stream, EventType::Discovered).await;

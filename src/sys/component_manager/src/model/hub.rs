@@ -595,7 +595,7 @@ impl Hook for Hub {
             Ok(EventPayload::MarkedForDestruction) => {
                 self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
-            Ok(EventPayload::Started { component_url, runtime, component_decl }) => {
+            Ok(EventPayload::Started { component_url, runtime, component_decl, .. }) => {
                 self.on_started_async(
                     &event.target_moniker,
                     component_url.clone(),
@@ -622,6 +622,7 @@ mod tests {
             model::{
                 binding::Binder,
                 model::{ComponentManagerConfig, Model, ModelParams},
+                realm::BindReason,
                 resolver::ResolverRegistry,
                 rights,
                 testing::mocks,
@@ -751,7 +752,7 @@ mod tests {
         model.root_realm.hooks.install(additional_hooks).await;
 
         let root_moniker = AbsoluteMoniker::root();
-        let res = model.bind(&root_moniker).await;
+        let res = model.bind(&root_moniker, &BindReason::Root).await;
         assert!(res.is_ok());
 
         (model, builtin_environment, hub_proxy)

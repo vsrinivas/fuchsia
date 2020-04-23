@@ -18,8 +18,8 @@ use {
         framework::RealmCapabilityHost,
         model::{
             binding::Binder,
-            capability_routed_logger::CapabilityRoutedLogger,
             error::ModelError,
+            event_logger::EventLogger,
             events::{event::SyncMode, source_factory::EventSourceFactory},
             hub::Hub,
             model::{ComponentManagerConfig, Model},
@@ -67,7 +67,7 @@ pub struct BuiltinEnvironment {
     pub event_source_factory: Arc<EventSourceFactory>,
     pub stop_notifier: Arc<RootRealmStopNotifier>,
     pub capability_ready_notifier: Arc<CapabilityReadyNotifier>,
-    pub capability_routed_logger: Option<Arc<CapabilityRoutedLogger>>,
+    pub event_logger: Option<Arc<EventLogger>>,
     is_debug: bool,
 }
 
@@ -185,10 +185,10 @@ impl BuiltinEnvironment {
             Arc::new(CapabilityReadyNotifier::new(Arc::downgrade(model)));
         model.root_realm.hooks.install(capability_ready_notifier.hooks()).await;
 
-        let capability_routed_logger = if args.debug {
-            let capability_routed_logger = Arc::new(CapabilityRoutedLogger::new());
-            model.root_realm.hooks.install(capability_routed_logger.hooks()).await;
-            Some(capability_routed_logger)
+        let event_logger = if args.debug {
+            let event_logger = Arc::new(EventLogger::new());
+            model.root_realm.hooks.install(event_logger.hooks()).await;
+            Some(event_logger)
         } else {
             None
         };
@@ -211,7 +211,7 @@ impl BuiltinEnvironment {
             event_source_factory,
             stop_notifier,
             capability_ready_notifier,
-            capability_routed_logger,
+            event_logger,
             is_debug: args.debug,
         })
     }

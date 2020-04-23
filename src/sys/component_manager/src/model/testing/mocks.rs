@@ -8,7 +8,7 @@ use {
         environment::Environment,
         error::ModelError,
         moniker::AbsoluteMoniker,
-        realm::{Realm, WeakRealm},
+        realm::{BindReason, Realm, WeakRealm},
         resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
         runner::{Runner, RunnerError},
     },
@@ -344,6 +344,7 @@ impl Binder for FakeBinder {
     async fn bind<'a>(
         &'a self,
         _abs_moniker: &'a AbsoluteMoniker,
+        _reason: &'a BindReason,
     ) -> Result<Arc<Realm>, ModelError> {
         let resolver = ResolverRegistry::new();
         let root_component_url = "test:///root".to_string();

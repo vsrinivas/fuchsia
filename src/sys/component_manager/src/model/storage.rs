@@ -8,7 +8,7 @@ use {
         model::{
             error::ModelError,
             moniker::{AbsoluteMoniker, RelativeMoniker},
-            realm::Realm,
+            realm::{BindReason, Realm},
         },
     },
     anyhow::Error,
@@ -99,6 +99,7 @@ pub async fn open_isolated_storage(
     storage_type: fsys::StorageType,
     relative_moniker: &RelativeMoniker,
     open_mode: u32,
+    bind_reason: &BindReason,
 ) -> Result<DirectoryProxy, ModelError> {
     const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
     let (dir_proxy, local_server_end) =
@@ -106,7 +107,7 @@ pub async fn open_isolated_storage(
     let mut local_server_end = local_server_end.into_channel();
     if let Some(dir_source_realm) = dir_source_realm.as_ref() {
         dir_source_realm
-            .bind()
+            .bind(bind_reason)
             .await?
             .open_outgoing(FLAGS, open_mode, dir_source_path.to_path_buf(), &mut local_server_end)
             .await?;
@@ -149,8 +150,10 @@ pub async fn delete_isolated_storage(
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
     let mut local_server_end = local_server_end.into_channel();
     if let Some(dir_source_realm) = dir_source_realm.as_ref() {
+        // TODO(fxb/50716): This BindReason is wrong. We need to refactor the Storage
+        // capability to plumb through the correct BindReason.
         dir_source_realm
-            .bind()
+            .bind(&BindReason::Unsupported)
             .await?
             .open_outgoing(
                 FLAGS,
@@ -261,6 +264,7 @@ mod tests {
     use super::*;
     use {
         crate::model::{
+            realm::BindReason,
             routing::RoutingError,
             testing::routing_test_helpers::{RoutingTest, RoutingTestBuilder},
             testing::test_helpers::{
@@ -315,6 +319,7 @@ mod tests {
             fsys::StorageType::Data,
             &relative_moniker,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            &BindReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -329,6 +334,7 @@ mod tests {
             fsys::StorageType::Data,
             &relative_moniker,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            &BindReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -343,6 +349,7 @@ mod tests {
             fsys::StorageType::Data,
             &relative_moniker,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            &BindReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -357,6 +364,7 @@ mod tests {
             fsys::StorageType::Cache,
             &relative_moniker,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            &BindReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -384,6 +392,7 @@ mod tests {
             fsys::StorageType::Data,
             &relative_moniker,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            &BindReason::Eager,
         )
         .await
         .expect_err("open isolated storage not meant to succeed");
@@ -441,6 +450,7 @@ mod tests {
                 storage_type,
                 &child_moniker,
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                &BindReason::Eager,
             )
             .await
             .expect("failed to open isolated storage");
@@ -456,6 +466,7 @@ mod tests {
             fsys::StorageType::Data,
             &parent_moniker,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            &BindReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
@@ -475,6 +486,7 @@ mod tests {
             fsys::StorageType::Data,
             &parent_moniker,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            &BindReason::Eager,
         )
         .await
         .expect("failed to open isolated storage");
