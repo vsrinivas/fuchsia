@@ -24,12 +24,12 @@ namespace media::audio {
 class OutputPipeline : public Stream {
  public:
   // Creates an |OutputPipeline| based on the specification in |config|. The pipeline will
-  // ultimately produce output frames via |LockBuffer| in the |output_format| requested.
+  // ultimately produce output frames via |ReadLock| in the |output_format| requested.
   //
   // |max_block_size_frames| is the largest contiguous region that may be returned from
-  // |LockBuffer|. If a caller requests a frame region of more that |max_block_size_frames|, then
+  // |ReadLock|. If a caller requests a frame region of more that |max_block_size_frames|, then
   // the pipeline will truncate this to only |max_block_size_frames| and the caller will have to
-  // call |LockBuffer| again to mix the subsequent frames.
+  // call |ReadLock| again to mix the subsequent frames.
   //
   // |ref_clock_to_fractional_frame| is a timeline function that will compute the output frame
   // number (in fixed point format with 13 bits of fractional precision) based on a reference
@@ -59,16 +59,16 @@ class OutputPipeline : public Stream {
   void SetEffectConfig(const std::string& instance_name, const std::string& config);
 
   // |media::audio::Stream|
-  std::optional<Stream::Buffer> LockBuffer(zx::time ref_time, int64_t frame,
-                                           uint32_t frame_count) override {
-    TRACE_DURATION("audio", "OutputPipeline::LockBuffer");
+  std::optional<Stream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+                                         uint32_t frame_count) override {
+    TRACE_DURATION("audio", "OutputPipeline::ReadLock");
     FX_DCHECK(stream_);
-    return stream_->LockBuffer(ref_time, frame, frame_count);
+    return stream_->ReadLock(ref_time, frame, frame_count);
   }
-  void UnlockBuffer(bool release_buffer) override {
-    TRACE_DURATION("audio", "OutputPipeline::UnlockBuffer");
+  void ReadUnlock(bool release_buffer) override {
+    TRACE_DURATION("audio", "OutputPipeline::ReadUnlock");
     FX_DCHECK(stream_);
-    stream_->UnlockBuffer(release_buffer);
+    stream_->ReadUnlock(release_buffer);
   }
   void Trim(zx::time trim) override {
     TRACE_DURATION("audio", "OutputPipeline::Trim");

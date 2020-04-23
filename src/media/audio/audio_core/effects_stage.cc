@@ -92,9 +92,9 @@ EffectsStage::EffectsStage(std::shared_ptr<Stream> source,
   SetMinLeadTime(zx::duration(0));
 }
 
-std::optional<Stream::Buffer> EffectsStage::LockBuffer(zx::time ref_time, int64_t frame,
-                                                       uint32_t frame_count) {
-  TRACE_DURATION("audio", "EffectsStage::LockBuffer", "frame", frame, "length", frame_count);
+std::optional<Stream::Buffer> EffectsStage::ReadLock(zx::time ref_time, int64_t frame,
+                                                     uint32_t frame_count) {
+  TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", frame, "length", frame_count);
   // If we have a partially consumed block, return that here.
   if (current_block_ && frame >= current_block_->start() && frame < current_block_->end()) {
     return current_block_;
@@ -110,7 +110,7 @@ std::optional<Stream::Buffer> EffectsStage::LockBuffer(zx::time ref_time, int64_
     aligned_frame_count = std::min<uint32_t>(aligned_frame_count, max_batch_size);
   }
 
-  current_block_ = source_->LockBuffer(ref_time, aligned_first_frame, aligned_frame_count);
+  current_block_ = source_->ReadLock(ref_time, aligned_first_frame, aligned_frame_count);
   if (current_block_) {
     FX_DCHECK(current_block_->start().Floor() == aligned_first_frame);
     FX_DCHECK(current_block_->length().Floor() == aligned_frame_count);
@@ -121,7 +121,7 @@ std::optional<Stream::Buffer> EffectsStage::LockBuffer(zx::time ref_time, int64_
   return current_block_;
 }
 
-Stream::TimelineFunctionSnapshot EffectsStage::ReferenceClockToFractionalFrames() const {
+BaseStream::TimelineFunctionSnapshot EffectsStage::ReferenceClockToFractionalFrames() const {
   auto snapshot = source_->ReferenceClockToFractionalFrames();
 
   // Update our timeline function to include the latency introduced by these effects.

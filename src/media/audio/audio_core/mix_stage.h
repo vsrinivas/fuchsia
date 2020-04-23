@@ -20,7 +20,6 @@ namespace media::audio {
 
 class MixStage : public Stream {
  public:
-  MixStage(std::shared_ptr<Stream> output_stream);
   MixStage(const Format& output_format, uint32_t block_size,
            TimelineFunction reference_clock_to_fractional_frame);
   MixStage(const Format& output_format, uint32_t block_size,
@@ -32,9 +31,9 @@ class MixStage : public Stream {
   };
 
   // |media::audio::Stream|
-  std::optional<Stream::Buffer> LockBuffer(zx::time ref_time, int64_t frame,
-                                           uint32_t frame_count) override;
-  void UnlockBuffer(bool release_buffer) override;
+  std::optional<Stream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+                                         uint32_t frame_count) override;
+  void ReadUnlock(bool release_buffer) override;
   void Trim(zx::time ref_time) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
   void SetMinLeadTime(zx::duration min_lead_time) override;
@@ -44,6 +43,7 @@ class MixStage : public Stream {
   void RemoveInput(const Stream& stream);
 
  private:
+  MixStage(std::shared_ptr<WritableStream> output_stream);
   void SetupMixBuffer(uint32_t max_mix_frames);
 
   struct MixJob {
@@ -69,7 +69,6 @@ class MixStage : public Stream {
 
   void SetupMix(Mixer* mixer);
   bool ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& buffer);
-
   void MixStream(Stream* stream, Mixer* mixer, zx::time ref_time);
 
   struct StreamHolder {
@@ -80,7 +79,7 @@ class MixStage : public Stream {
   std::mutex stream_lock_;
   std::vector<StreamHolder> streams_ FXL_GUARDED_BY(stream_lock_);
 
-  std::shared_ptr<Stream> output_stream_;
+  std::shared_ptr<WritableStream> output_stream_;
 
   // State used by the mix task.
   MixJob cur_mix_job_;

@@ -203,8 +203,13 @@ class AudioDriver {
   // 3) Expose protected accessors in AudioDevice which demand that we execute in the mix domain.
   //
   // This should be a strong enough guarantee to warrant disabling the thread safety analysis here.
-  const std::shared_ptr<RingBuffer>& ring_buffer() const FXL_NO_THREAD_SAFETY_ANALYSIS {
-    return ring_buffer_;
+  const std::shared_ptr<ReadableRingBuffer>& readable_ring_buffer() const
+      FXL_NO_THREAD_SAFETY_ANALYSIS {
+    return readable_ring_buffer_;
+  };
+  const std::shared_ptr<WritableRingBuffer>& writable_ring_buffer() const
+      FXL_NO_THREAD_SAFETY_ANALYSIS {
+    return writable_ring_buffer_;
   };
 
   void StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
@@ -256,7 +261,8 @@ class AudioDriver {
   // Ring buffer state. Details are lock-protected and changes tracked with generation counter,
   // allowing AudioCapturer clients to snapshot ring-buffer state during mix/resample operations.
   mutable std::mutex ring_buffer_state_lock_;
-  std::shared_ptr<RingBuffer> ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
+  std::shared_ptr<ReadableRingBuffer> readable_ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
+  std::shared_ptr<WritableRingBuffer> writable_ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
 
   // The timeline function which maps from either the capture time (Input) or
   // presentation time (Output) at the speaker/microphone on the audio device's

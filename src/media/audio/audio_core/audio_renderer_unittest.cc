@@ -139,14 +139,14 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
     ASSERT_TRUE(stream);
 
     {  // Expect a buffer.
-      auto buffer = stream->LockBuffer(zx::time(0), 0, 0);
+      auto buffer = stream->ReadLock(zx::time(0), 0, 0);
       ASSERT_TRUE(buffer);
       EXPECT_FALSE(buffer->is_continuous());
       EXPECT_NE(nullptr, buffer->payload());
-      stream->UnlockBuffer(true);
+      stream->ReadUnlock(true);
     }
     {  // No more buffers.
-      auto buffer = stream->LockBuffer(zx::time(0), 0, 0);
+      auto buffer = stream->ReadLock(zx::time(0), 0, 0);
       ASSERT_FALSE(buffer);
     }
   }

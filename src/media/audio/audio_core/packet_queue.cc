@@ -91,9 +91,9 @@ void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   }
 }
 
-std::optional<Stream::Buffer> PacketQueue::LockBuffer(zx::time now, int64_t frame,
-                                                      uint32_t frame_count) {
-  TRACE_DURATION("audio", "PacketQueue::LockBuffer");
+std::optional<Stream::Buffer> PacketQueue::ReadLock(zx::time now, int64_t frame,
+                                                    uint32_t frame_count) {
+  TRACE_DURATION("audio", "PacketQueue::ReadLock");
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
   FX_DCHECK(!processing_in_progress_);
@@ -109,8 +109,8 @@ std::optional<Stream::Buffer> PacketQueue::LockBuffer(zx::time now, int64_t fram
   }
 }
 
-void PacketQueue::UnlockBuffer(bool release_buffer) {
-  TRACE_DURATION("audio", "PacketQueue::UnlockBuffer");
+void PacketQueue::ReadUnlock(bool release_buffer) {
+  TRACE_DURATION("audio", "PacketQueue::ReadUnlock");
   {
     std::lock_guard<std::mutex> locker(pending_mutex_);
     FX_DCHECK(processing_in_progress_);
@@ -163,7 +163,7 @@ void PacketQueue::Trim(zx::time ref_time) {
   }
 }
 
-Stream::TimelineFunctionSnapshot PacketQueue::ReferenceClockToFractionalFrames() const {
+BaseStream::TimelineFunctionSnapshot PacketQueue::ReferenceClockToFractionalFrames() const {
   if (!timeline_function_) {
     return {
         .timeline_function = TimelineFunction(),

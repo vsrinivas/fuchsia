@@ -27,9 +27,9 @@ class EffectsStage : public Stream {
   void SetEffectConfig(const std::string& instance_name, const std::string& config);
 
   // |media::audio::Stream|
-  std::optional<Stream::Buffer> LockBuffer(zx::time ref_time, int64_t frame,
-                                           uint32_t frame_count) override;
-  void UnlockBuffer(bool release_buffer) override { source_->UnlockBuffer(release_buffer); }
+  std::optional<Stream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+                                         uint32_t frame_count) override;
+  void ReadUnlock(bool release_buffer) override { source_->ReadUnlock(release_buffer); }
   void Trim(zx::time trim_threshold) override { source_->Trim(trim_threshold); }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
   void SetMinLeadTime(zx::duration lead_time) override;

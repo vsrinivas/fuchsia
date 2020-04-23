@@ -19,7 +19,7 @@ static const Format kFormat =
 
 class IntermediateBufferTest : public ::testing::Test {};
 
-TEST_F(IntermediateBufferTest, LockBuffer) {
+TEST_F(IntermediateBufferTest, WriteLock) {
   auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
       TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
   auto intermediate_buffer = std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms);
@@ -29,7 +29,7 @@ TEST_F(IntermediateBufferTest, LockBuffer) {
   ASSERT_EQ(intermediate_buffer->frame_count(), 256u);
 
   {
-    auto stream_buffer = intermediate_buffer->LockBuffer(zx::time(0), 0, 256);
+    auto stream_buffer = intermediate_buffer->WriteLock(zx::time(0), 0, 256);
     ASSERT_TRUE(stream_buffer);
     ASSERT_EQ(intermediate_buffer->buffer(), stream_buffer->payload());
     ASSERT_EQ(FractionalFrames<int64_t>(0), stream_buffer->start());
@@ -37,7 +37,7 @@ TEST_F(IntermediateBufferTest, LockBuffer) {
   }
 
   {
-    auto stream_buffer = intermediate_buffer->LockBuffer(zx::time(0), 3, 256);
+    auto stream_buffer = intermediate_buffer->WriteLock(zx::time(0), 3, 256);
     ASSERT_TRUE(stream_buffer);
     ASSERT_EQ(intermediate_buffer->buffer(), stream_buffer->payload());
     ASSERT_EQ(FractionalFrames<int64_t>(3), stream_buffer->start());
@@ -53,7 +53,7 @@ TEST_F(IntermediateBufferTest, ClampLengthToBufferSize) {
 
   // Request 1024 frames, but since the buffer is only 256 frames the returned buffer should be
   // truncated to 256 frames.
-  auto stream_buffer = intermediate_buffer->LockBuffer(zx::time(0), 0, 1024);
+  auto stream_buffer = intermediate_buffer->WriteLock(zx::time(0), 0, 1024);
   ASSERT_TRUE(stream_buffer);
   ASSERT_EQ(intermediate_buffer->buffer(), stream_buffer->payload());
   ASSERT_EQ(FractionalFrames<int64_t>(0), stream_buffer->start());

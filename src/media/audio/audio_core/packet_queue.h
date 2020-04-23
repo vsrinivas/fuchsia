@@ -41,9 +41,9 @@ class PacketQueue : public Stream {
   }
 
   // |media::audio::Stream|
-  std::optional<Stream::Buffer> LockBuffer(zx::time now, int64_t frame,
-                                           uint32_t frame_count) override;
-  void UnlockBuffer(bool release_buffer) override;
+  std::optional<Stream::Buffer> ReadLock(zx::time now, int64_t frame,
+                                         uint32_t frame_count) override;
+  void ReadUnlock(bool release_buffer) override;
   void Trim(zx::time ref_time) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
   void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,

@@ -26,7 +26,8 @@
 namespace media::audio {
 
 class AudioDriver;
-class RingBuffer;
+class ReadableRingBuffer;
+class WritableRingBuffer;
 
 class AudioDevice : public AudioObject, public std::enable_shared_from_this<AudioDevice> {
  public:
@@ -194,7 +195,9 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   bool UpdatePlugState(bool plugged, zx::time plug_time);
 
   // AudioDriver accessors.
-  const std::shared_ptr<RingBuffer>& driver_ring_buffer() const
+  const std::shared_ptr<ReadableRingBuffer>& driver_readable_ring_buffer() const
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  const std::shared_ptr<WritableRingBuffer>& driver_writable_ring_buffer() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // Accessors for some of the useful timeline functions computed by the driver

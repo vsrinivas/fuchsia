@@ -97,8 +97,8 @@ std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
   if (spec.loopback) {
     FX_DCHECK(!loopback_) << "Only a single loopback point is allowed.";
     const uint32_t ring_size = output_format.frames_per_second();
-    auto endpoints =
-        RingBuffer::AllocateSoftwareBuffer(output_format, ref_clock_to_fractional_frame, ring_size);
+    auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
+        output_format, ref_clock_to_fractional_frame, ring_size);
     loopback_ = std::move(endpoints.reader);
     root = std::make_shared<TapStage>(std::move(root), std::move(endpoints.writer));
   }

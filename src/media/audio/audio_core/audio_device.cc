@@ -248,8 +248,12 @@ bool AudioDevice::UpdatePlugState(bool plugged, zx::time plug_time) {
   return false;
 }
 
-const std::shared_ptr<RingBuffer>& AudioDevice::driver_ring_buffer() const {
-  return driver_->ring_buffer();
+const std::shared_ptr<ReadableRingBuffer>& AudioDevice::driver_readable_ring_buffer() const {
+  return driver_->readable_ring_buffer();
+};
+
+const std::shared_ptr<WritableRingBuffer>& AudioDevice::driver_writable_ring_buffer() const {
+  return driver_->writable_ring_buffer();
 };
 
 const TimelineFunction& AudioDevice::driver_ptscts_ref_clock_to_fractional_frames() const {

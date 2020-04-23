@@ -48,8 +48,8 @@ class TapStageTest : public testing::ThreadingModelFixture {
 
     auto tap_timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(
         TimelineFunction(FractionalFrames<int64_t>(tap_frame_offset_).raw_value(), 0, rate));
-    auto endpoints = RingBuffer::AllocateSoftwareBuffer(kDefaultFormat, tap_timeline_function,
-                                                        kRingBufferFrameCount);
+    auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(kDefaultFormat, tap_timeline_function,
+                                                            kRingBufferFrameCount);
     ring_buffer_ = std::move(endpoints.reader);
 
     ASSERT_TRUE(ring_buffer_);
@@ -70,7 +70,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
   TapStage& tap() { return *tap_; }
   PacketQueue& packet_queue() { return *packet_queue_; }
   testing::PacketFactory& packet_factory() { return packet_factory_; }
-  RingBuffer& ring_buffer() { return *ring_buffer_; }
+  ReadableRingBuffer& ring_buffer() { return *ring_buffer_; }
 
   // Assert that |stream| contains a buffer that is exactly |frame_count| frames starting at |frame|
   // with data that matches only |expected_sample| (that is all the samples in the buffer match
@@ -78,19 +78,19 @@ class TapStageTest : public testing::ThreadingModelFixture {
   template <size_t frame_count>
   void CheckStream(Stream* stream, zx::duration epoch_delta, int64_t frame, float expected_sample,
                    bool release = true) {
-    auto buffer = stream->LockBuffer(zx::time(0) + epoch_delta, frame, frame_count);
+    auto buffer = stream->ReadLock(zx::time(0) + epoch_delta, frame, frame_count);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), FractionalFrames<int64_t>(frame));
     EXPECT_EQ(buffer->length(), FractionalFrames<uint32_t>(frame_count));
     auto& arr = as_array<float, frame_count>(buffer->payload());
     EXPECT_THAT(arr, Each(FloatEq(expected_sample)));
-    stream->UnlockBuffer(release);
+    stream->ReadUnlock(release);
   }
 
   uint32_t tap_frame_offset_;
   testing::PacketFactory packet_factory_{dispatcher(), kDefaultFormat, 4 * PAGE_SIZE};
   std::shared_ptr<PacketQueue> packet_queue_;
-  std::shared_ptr<RingBuffer> ring_buffer_;
+  std::shared_ptr<ReadableRingBuffer> ring_buffer_;
   std::shared_ptr<TapStage> tap_;
 };
 
@@ -103,14 +103,14 @@ TEST_F(TapStageTest, CopySinglePacket) {
   CheckStream<frame_count>(&ring_buffer(), zx::msec(10), 0, 1.0, true);
 }
 
-// Test that LockBuffer returns a buffer correctly sized for whatever buffer was returned by
-// the source streams |LockBuffer|.
+// Test that ReadLock returns a buffer correctly sized for whatever buffer was returned by
+// the source streams |ReadLock|.
 TEST_F(TapStageTest, TruncateToInputBuffer) {
   packet_queue().PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
 
   constexpr uint32_t frame_count = kDefaultPacketFrames;
   {  // Read from the tap, expect to get the same bytes from the packet.
-    auto buffer = tap().LockBuffer(zx::time(0), 0, frame_count * 2);
+    auto buffer = tap().ReadLock(zx::time(0), 0, frame_count * 2);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), FractionalFrames<int64_t>(0));
     EXPECT_EQ(buffer->length(), FractionalFrames<uint32_t>(frame_count));
@@ -152,8 +152,8 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
   // The ring buffer needs to be read in 2 portions, since this packet will wrap around the end of
   // the ring.
   //
-  // The ring buffer should return the first 64 frames for the first LockBuffer (the only
-  // remaining space before the buffer wraps around). A subsequent LockBuffer should return the
+  // The ring buffer should return the first 64 frames for the first ReadLock (the only
+  // remaining space before the buffer wraps around). A subsequent ReadLock should return the
   // reminaing frames.
   constexpr uint32_t expected_frames_region_1 = kRingBufferFrameCount - (2 * kDefaultPacketFrames);
   constexpr uint32_t expected_frames_region_2 = kDefaultPacketFrames - expected_frames_region_1;
@@ -161,7 +161,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
     uint32_t requested_frames = kDefaultPacketFrames;
     constexpr uint32_t expected_frames = expected_frames_region_1;
     int64_t frame = 2 * kDefaultPacketFrames;
-    auto buffer = ring_buffer().LockBuffer(zx::time(0) + zx::msec(30), frame, requested_frames);
+    auto buffer = ring_buffer().ReadLock(zx::time(0) + zx::msec(30), frame, requested_frames);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), FractionalFrames<int64_t>(frame));
     EXPECT_EQ(buffer->length(), FractionalFrames<uint32_t>(expected_frames));
@@ -173,7 +173,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
     constexpr uint32_t requested_frames = kDefaultPacketFrames;
     constexpr uint32_t expected_frames = expected_frames_region_2;
     int64_t frame = kRingBufferFrameCount;
-    auto buffer = ring_buffer().LockBuffer(zx::time(0) + zx::msec(30), frame, requested_frames);
+    auto buffer = ring_buffer().ReadLock(zx::time(0) + zx::msec(30), frame, requested_frames);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), FractionalFrames<int64_t>(frame));
     EXPECT_EQ(buffer->length(), FractionalFrames<uint32_t>(expected_frames));

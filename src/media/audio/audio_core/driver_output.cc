@@ -133,10 +133,10 @@ std::optional<MixStage::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
     output_muted = cur_gain_state.muted;
   }
 
-  FX_DCHECK(driver_ring_buffer() != nullptr);
+  FX_DCHECK(driver_writable_ring_buffer() != nullptr);
   const auto& ref_clock_to_safe_wr_frame = driver_safe_read_or_write_ref_clock_to_frames();
   const auto& output_frames_per_reference_tick = ref_clock_to_safe_wr_frame.rate();
-  const auto& rb = *driver_ring_buffer();
+  const auto& rb = *driver_writable_ring_buffer();
   uint32_t fifo_frames = driver()->fifo_depth_frames();
 
   // output_frames_consumed is the number of frames that the audio output
@@ -249,7 +249,7 @@ void DriverOutput::WriteToRing(
     const MixStage::FrameSpan& span,
     fit::function<void(uint64_t offset, uint32_t length, void* dest_buf)> writer) {
   TRACE_DURATION("audio", "DriverOutput::FinishMixJob");
-  const auto& rb = driver_ring_buffer();
+  const auto& rb = driver_writable_ring_buffer();
   FX_DCHECK(rb != nullptr);
 
   size_t frames_left = span.length;
@@ -261,7 +261,7 @@ void DriverOutput::WriteToRing(
     if (to_send > contig_space) {
       to_send = contig_space;
     }
-    void* dest_buf = rb->virt() + (rb->frame_size() * wr_ptr);
+    void* dest_buf = rb->virt() + (rb->format().bytes_per_frame() * wr_ptr);
 
     writer(offset, to_send, dest_buf);
 
@@ -444,8 +444,8 @@ void DriverOutput::OnDriverConfigComplete() {
                  kDefaultHighWaterNsec);
 
   // Fill our brand new ring buffer with silence
-  FX_CHECK(driver_ring_buffer() != nullptr);
-  const auto& rb = *driver_ring_buffer();
+  FX_CHECK(driver_writable_ring_buffer() != nullptr);
+  const auto& rb = *driver_writable_ring_buffer();
   FX_DCHECK(output_producer_ != nullptr);
   FX_DCHECK(rb.virt() != nullptr);
   output_producer_->FillWithSilence(rb.virt(), rb.frames());
@@ -486,7 +486,7 @@ void DriverOutput::OnDriverStartComplete() {
   auto format = driver()->GetFormat();
   FX_CHECK(format);
   FX_DCHECK(pipeline_config_);
-  SetupMixTask(*pipeline_config_, format->channels(), driver_ring_buffer()->frames(),
+  SetupMixTask(*pipeline_config_, format->channels(), driver_writable_ring_buffer()->frames(),
                driver_ptscts_ref_clock_to_fractional_frames());
 
   // Compute low_water_frames_.  low_water_frames_ is minimum the number of

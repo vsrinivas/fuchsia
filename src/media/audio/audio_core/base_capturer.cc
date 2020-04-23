@@ -655,7 +655,7 @@ zx_status_t BaseCapturer::Process() {
     }
 
     // Mix the requested number of frames from sources to intermediate buffer, then into output.
-    auto buf = mix_stage_->LockBuffer(now, frame_count_, mix_frames);
+    auto buf = mix_stage_->ReadLock(now, frame_count_, mix_frames);
     FXB_48598_DCHECK(buf);
     FXB_48598_DCHECK(buf->start().Floor() == frame_count_);
     FXB_48598_DCHECK(buf->length().Floor() == mix_frames);

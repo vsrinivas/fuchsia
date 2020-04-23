@@ -10,15 +10,15 @@
 
 namespace media::audio {
 
-TapStage::TapStage(std::shared_ptr<Stream> source, std::shared_ptr<Stream> tap)
+TapStage::TapStage(std::shared_ptr<Stream> source, std::shared_ptr<WritableStream> tap)
     : Stream(source->format()), source_(std::move(source)), tap_(std::move(tap)) {
   FX_DCHECK(source_->format() == tap_->format());
 }
 
-std::optional<Stream::Buffer> TapStage::LockBuffer(zx::time ref_time, int64_t frame,
-                                                   uint32_t frame_count) {
-  TRACE_DURATION("audio", "TapStage::LockBuffer", "frame", frame, "length", frame_count);
-  auto input_buffer = source_->LockBuffer(ref_time, frame, frame_count);
+std::optional<Stream::Buffer> TapStage::ReadLock(zx::time ref_time, int64_t frame,
+                                                 uint32_t frame_count) {
+  TRACE_DURATION("audio", "TapStage::ReadLock", "frame", frame, "length", frame_count);
+  auto input_buffer = source_->ReadLock(ref_time, frame, frame_count);
   if (!input_buffer) {
     return std::nullopt;
   }
@@ -30,7 +30,7 @@ std::optional<Stream::Buffer> TapStage::LockBuffer(zx::time ref_time, int64_t fr
   uint32_t output_frames_outstanding = input_buffer->length().Floor();
 
   while (output_frames_outstanding > 0) {
-    auto output_buffer = tap_->LockBuffer(ref_time, output_buffer_frame, output_frames_outstanding);
+    auto output_buffer = tap_->WriteLock(ref_time, output_buffer_frame, output_frames_outstanding);
     if (!output_buffer) {
       break;
     }

@@ -47,7 +47,7 @@ MixStage::MixStage(const Format& output_format, uint32_t block_size,
     : MixStage(std::make_shared<IntermediateBuffer>(output_format, block_size,
                                                     reference_clock_to_fractional_frame)) {}
 
-MixStage::MixStage(std::shared_ptr<Stream> output_stream)
+MixStage::MixStage(std::shared_ptr<WritableStream> output_stream)
     : Stream(output_stream->format()), output_stream_(std::move(output_stream)) {}
 
 std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<Stream> stream,
@@ -79,12 +79,12 @@ void MixStage::RemoveInput(const Stream& stream) {
   streams_.erase(it);
 }
 
-std::optional<Stream::Buffer> MixStage::LockBuffer(zx::time now, int64_t frame,
-                                                   uint32_t frame_count) {
-  TRACE_DURATION("audio", "MixStage::LockBuffer", "frame", frame, "length", frame_count);
+std::optional<Stream::Buffer> MixStage::ReadLock(zx::time now, int64_t frame,
+                                                 uint32_t frame_count) {
+  TRACE_DURATION("audio", "MixStage::ReadLock", "frame", frame, "length", frame_count);
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
-  auto output_buffer = output_stream_->LockBuffer(now, frame, frame_count);
+  auto output_buffer = output_stream_->WriteLock(now, frame, frame_count);
   if (!output_buffer) {
     return std::nullopt;
   }
@@ -104,11 +104,10 @@ std::optional<Stream::Buffer> MixStage::LockBuffer(zx::time now, int64_t frame,
   ForEachSource(TaskType::Mix, now);
   return {Stream::Buffer(output_buffer->start(), output_buffer->length(), cur_mix_job_.buf, true)};
 }
-void MixStage::UnlockBuffer(bool release_buffer) {
-  TRACE_DURATION("audio", "MixStage::UnlockBuffer");
-}
 
-Stream::TimelineFunctionSnapshot MixStage::ReferenceClockToFractionalFrames() const {
+void MixStage::ReadUnlock(bool release_buffer) { TRACE_DURATION("audio", "MixStage::ReadUnlock"); }
+
+BaseStream::TimelineFunctionSnapshot MixStage::ReferenceClockToFractionalFrames() const {
   TRACE_DURATION("audio", "MixStage::ReferenceClockToFractionalFrames");
   return output_stream_->ReferenceClockToFractionalFrames();
 }
@@ -194,8 +193,8 @@ void MixStage::MixStream(Stream* stream, Mixer* mixer, zx::time ref_time) {
         mixer->pos_filter_width();
 
     // Try to grab the packet queue's front.
-    stream_buffer = stream->LockBuffer(ref_time, frac_source_for_first_mix_job_frame.Floor(),
-                                       source_frames.Ceiling());
+    stream_buffer = stream->ReadLock(ref_time, frac_source_for_first_mix_job_frame.Floor(),
+                                     source_frames.Ceiling());
 
     // If the queue is empty, then we are done.
     if (!stream_buffer) {
@@ -222,11 +221,11 @@ void MixStage::MixStream(Stream* stream, Mixer* mixer, zx::time ref_time) {
       break;
     }
     // We did consume this entire source packet, and we should keep mixing.
-    stream->UnlockBuffer(release_buffer);
+    stream->ReadUnlock(release_buffer);
   }
 
   // Unlock queue (completing packet if needed) and proceed to the next source.
-  stream->UnlockBuffer(release_buffer);
+  stream->ReadUnlock(release_buffer);
 
   // Note: there is no point in doing this for Trim tasks, but it doesn't hurt anything, and it's
   // easier than adding another function to ForEachSource to run after each renderer is processed,

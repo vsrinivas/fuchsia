@@ -16,8 +16,6 @@
 
 namespace media::audio {
 
-class RingBuffer;
-
 class Packet;
 
 class AudioOutput : public AudioDevice {

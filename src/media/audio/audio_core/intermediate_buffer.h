@@ -14,7 +14,9 @@
 
 namespace media::audio {
 
-class IntermediateBuffer : public Stream {
+// A buffer for writing temporary audio data. Each WriteLock() locks the start of the buffer,
+// given by buffer().
+class IntermediateBuffer : public WritableStream {
  public:
   IntermediateBuffer(const Format& output_format, uint32_t size_in_frames,
                      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames);
@@ -22,10 +24,9 @@ class IntermediateBuffer : public Stream {
   void* buffer() const { return vmo_.start(); }
   size_t frame_count() const { return frame_count_; }
 
-  // |media::audio::Stream|
-  std::optional<Buffer> LockBuffer(zx::time ref_time, int64_t frame, uint32_t frame_count) override;
-  void UnlockBuffer(bool release_buffer) override {}
-  void Trim(zx::time trim) override {}
+  // |media::audio::WritableStream|
+  std::optional<Buffer> WriteLock(zx::time ref_time, int64_t frame, uint32_t frame_count) override;
+  void WriteUnlock() override {}
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
 
  private:

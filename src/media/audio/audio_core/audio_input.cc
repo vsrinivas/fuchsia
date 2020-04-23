@@ -61,7 +61,7 @@ zx_status_t AudioInput::Init() {
 
 fit::result<std::shared_ptr<Stream>, zx_status_t> AudioInput::InitializeDestLink(
     const AudioObject& dest) {
-  return fit::ok(driver()->ring_buffer());
+  return fit::ok(driver()->readable_ring_buffer());
 }
 
 void AudioInput::OnWakeup() {

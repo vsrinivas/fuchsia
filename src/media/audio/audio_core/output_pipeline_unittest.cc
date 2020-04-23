@@ -203,7 +203,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
   // and one on the linearize stage). Therefore we expect all samples to be 2.0.
-  auto buf = pipeline->LockBuffer(zx::time(0), 0, 48);
+  auto buf = pipeline->ReadLock(zx::time(0), 0, 48);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), 0u);
   ASSERT_EQ(buf->length().Floor(), 48u);
@@ -215,8 +215,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   auto loopback_frame =
       FractionalFrames<int64_t>::FromRaw(transform.timeline_function.Apply((zx::time(0)).get()))
           .Floor();
-  auto loopback_buf =
-      pipeline->loopback()->LockBuffer(zx::time(0) + zx::msec(1), loopback_frame, 48);
+  auto loopback_buf = pipeline->loopback()->ReadLock(zx::time(0) + zx::msec(1), loopback_frame, 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), 0u);
   ASSERT_EQ(loopback_buf->length().Floor(), 48u);
@@ -273,7 +272,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
   // and one on the linearize stage). Therefore we expect all samples to be 2.0.
-  auto buf = pipeline->LockBuffer(zx::time(0), 0, 96);
+  auto buf = pipeline->ReadLock(zx::time(0), 0, 96);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), 0u);
   ASSERT_EQ(buf->length().Floor(), 96u);
@@ -285,8 +284,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   auto loopback_frame =
       FractionalFrames<int64_t>::FromRaw(transform.timeline_function.Apply((zx::time(0)).get()))
           .Floor();
-  auto loopback_buf =
-      pipeline->loopback()->LockBuffer(zx::time(0) + zx::msec(1), loopback_frame, 48);
+  auto loopback_buf = pipeline->loopback()->ReadLock(zx::time(0) + zx::msec(1), loopback_frame, 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), 0u);
   ASSERT_EQ(loopback_buf->length().Floor(), 48u);
@@ -337,7 +335,7 @@ TEST_F(OutputPipelineTest, SetEffectConfig) {
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a single effect that sets all samples to the size of the new config).
-  auto buf = pipeline->LockBuffer(zx::time(0) + zx::msec(1), 0, 48);
+  auto buf = pipeline->ReadLock(zx::time(0) + zx::msec(1), 0, 48);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), 0u);
   ASSERT_EQ(buf->length().Floor(), 48u);
@@ -475,7 +473,7 @@ TEST_F(OutputPipelineTest, DifferentMixRates) {
   }
 
   {
-    auto buf = pipeline->LockBuffer(zx::time(0), 0, 240);
+    auto buf = pipeline->ReadLock(zx::time(0), 0, 240);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);
@@ -487,7 +485,7 @@ TEST_F(OutputPipelineTest, DifferentMixRates) {
   }
 
   {
-    auto buf = pipeline->LockBuffer(zx::time(0) + zx::msec(10), 240, 240);
+    auto buf = pipeline->ReadLock(zx::time(0) + zx::msec(10), 240, 240);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);

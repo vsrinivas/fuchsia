@@ -68,7 +68,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
 
   // Read from the effects stage. Since our effect adds 1.0 to each sample, and we populated the
   // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
-  auto buf = effects_stage->LockBuffer(zx::time(0) + zx::msec(10), 0, 480);
+  auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
   ASSERT_TRUE(buf);
   ASSERT_EQ(0u, buf->start().Floor());
   ASSERT_EQ(480u, buf->length().Floor());
@@ -100,28 +100,28 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
 
   {
     // Ask for 1 frame; expect to get a full block.
-    auto buffer = effects_stage->LockBuffer(zx::time(0), 0, 1);
+    auto buffer = effects_stage->ReadLock(zx::time(0), 0, 1);
     EXPECT_EQ(buffer->start().Floor(), 0u);
     EXPECT_EQ(buffer->length().Floor(), kBlockSize);
   }
 
   {
     // Ask for subsequent frames; expect the same block still.
-    auto buffer = effects_stage->LockBuffer(zx::time(0), kBlockSize / 2, kBlockSize / 2);
+    auto buffer = effects_stage->ReadLock(zx::time(0), kBlockSize / 2, kBlockSize / 2);
     EXPECT_EQ(buffer->start().Floor(), 0u);
     EXPECT_EQ(buffer->length().Floor(), kBlockSize);
   }
 
   {
     // Ask for the second block
-    auto buffer = effects_stage->LockBuffer(zx::time(0), kBlockSize, kBlockSize);
+    auto buffer = effects_stage->ReadLock(zx::time(0), kBlockSize, kBlockSize);
     EXPECT_EQ(buffer->start().Floor(), kBlockSize);
     EXPECT_EQ(buffer->length().Floor(), kBlockSize);
   }
 
   {
     // Check for a frame to verify we handle frame numbers > UINT32_MAX.
-    auto buffer = effects_stage->LockBuffer(zx::time(0), 0x100000000, 1);
+    auto buffer = effects_stage->ReadLock(zx::time(0), 0x100000000, 1);
     EXPECT_EQ(buffer->start().Floor(), 0x100000000);
     EXPECT_EQ(buffer->length().Floor(), kBlockSize);
   }
@@ -149,7 +149,7 @@ TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
   {
-    auto buffer = effects_stage->LockBuffer(zx::time(0), 0, 512);
+    auto buffer = effects_stage->ReadLock(zx::time(0), 0, 512);
     EXPECT_EQ(buffer->start().Floor(), 0u);
     // Length is 2 full blocks since 3 blocks would be > 300 frames.
     EXPECT_EQ(buffer->length().Floor(), 256u);
@@ -268,7 +268,7 @@ TEST_F(EffectsStageTest, SetEffectConfig) {
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
 
   // Read from the effects stage. Our effect sets each sample to the size of the config.
-  auto buf = effects_stage->LockBuffer(zx::time(0) + zx::msec(10), 0, 480);
+  auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
   ASSERT_TRUE(buf);
   ASSERT_EQ(0u, buf->start().Floor());
   ASSERT_EQ(480u, buf->length().Floor());

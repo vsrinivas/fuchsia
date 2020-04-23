@@ -48,10 +48,10 @@ void AudioOutput::Process() {
 
     auto mix_frames = StartMixJob(now);
     if (mix_frames) {
-      auto buf = pipeline_->LockBuffer(now, mix_frames->start, mix_frames->length);
+      auto buf = pipeline_->ReadLock(now, mix_frames->start, mix_frames->length);
       FX_CHECK(buf);
       FinishMixJob(*mix_frames, reinterpret_cast<float*>(buf->payload()));
-      pipeline_->UnlockBuffer(true);
+      pipeline_->ReadUnlock(true);
     } else {
       pipeline_->Trim(now);
     }

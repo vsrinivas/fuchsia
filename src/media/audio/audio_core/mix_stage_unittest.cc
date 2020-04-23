@@ -130,7 +130,7 @@ TEST_F(MixStageTest, MixUniformFormats) {
   {  // Mix frames 0-2ms. Expect the first 1ms to be 0.8 samples and the second ms to be 0.9
      // samples.
     auto buf =
-        mix_stage_->LockBuffer(time_until(zx::msec(2)), output_frame_start, output_frame_count);
+        mix_stage_->ReadLock(time_until(zx::msec(2)), output_frame_start, output_frame_count);
     // 1ms @ 48000hz == 48 frames. 2ms == 96 (frames).
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->length().Floor(), 96u);
@@ -139,14 +139,14 @@ TEST_F(MixStageTest, MixUniformFormats) {
     EXPECT_THAT(arr1, Each(FloatEq(0.8f)));
     auto& arr2 = as_array<float, 96>(buf->payload(), 96);
     EXPECT_THAT(arr2, Each(FloatEq(0.9f)));
-    mix_stage_->UnlockBuffer(true);
+    mix_stage_->ReadUnlock(true);
   }
 
   output_frame_start += output_frame_count;
   {  // Mix frames 2-4ms. Expect the first 1ms to be 0.9 samples and the second ms to be 0.8
      // samples.
     auto buf =
-        mix_stage_->LockBuffer(time_until(zx::msec(4)), output_frame_start, output_frame_count);
+        mix_stage_->ReadLock(time_until(zx::msec(4)), output_frame_start, output_frame_count);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->length().Floor(), 96u);
 
@@ -154,14 +154,14 @@ TEST_F(MixStageTest, MixUniformFormats) {
     EXPECT_THAT(arr1, Each(FloatEq(0.9f)));
     auto& arr2 = as_array<float, 96>(buf->payload(), 96);
     EXPECT_THAT(arr2, Each(FloatEq(0.8f)));
-    mix_stage_->UnlockBuffer(true);
+    mix_stage_->ReadUnlock(true);
   }
 
   output_frame_start += output_frame_count;
   {  // Mix frames 4-6ms. Expect the first 1ms to be 0.8 samples and the second ms to be 0.6
      // samples.
     auto buf =
-        mix_stage_->LockBuffer(time_until(zx::msec(6)), output_frame_start, output_frame_count);
+        mix_stage_->ReadLock(time_until(zx::msec(6)), output_frame_start, output_frame_count);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->length().Floor(), 96u);
 
@@ -169,7 +169,7 @@ TEST_F(MixStageTest, MixUniformFormats) {
     EXPECT_THAT(arr1, Each(FloatEq(0.8f)));
     auto& arr2 = as_array<float, 96>(buf->payload(), 96);
     EXPECT_THAT(arr2, Each(FloatEq(0.6f)));
-    mix_stage_->UnlockBuffer(true);
+    mix_stage_->ReadUnlock(true);
   }
 }
 
@@ -179,7 +179,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
 
   // We explictly request a SincSampler here to get a non-trivial filter width.
   auto ring_buffer_endpoints =
-      RingBuffer::AllocateSoftwareBuffer(kDefaultFormat, timeline_function_, kRingSizeFrames);
+      BaseRingBuffer::AllocateSoftwareBuffer(kDefaultFormat, timeline_function_, kRingSizeFrames);
   mix_stage_->AddInput(ring_buffer_endpoints.reader, Mixer::Resampler::WindowedSinc);
 
   // Fill up the ring buffer with some non-empty samples so that we can observe these values in
@@ -196,22 +196,22 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   // above.
   constexpr uint32_t kRequestedFrames = kRingSizeFrames / 2;
   {
-    auto buf = mix_stage_->LockBuffer(time_until(zx::msec(1)), 0, kRequestedFrames);
+    auto buf = mix_stage_->ReadLock(time_until(zx::msec(1)), 0, kRequestedFrames);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), 0u);
     ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
-    mix_stage_->UnlockBuffer(true);
+    mix_stage_->ReadUnlock(true);
 
     auto& arr = as_array<float, kRequestedFrames>(buf->payload(), 0);
     EXPECT_THAT(arr, Each(FloatEq(kRingBufferSampleValue1)));
   }
 
   {
-    auto buf = mix_stage_->LockBuffer(time_until(zx::msec(2)), kRequestedFrames, kRequestedFrames);
+    auto buf = mix_stage_->ReadLock(time_until(zx::msec(2)), kRequestedFrames, kRequestedFrames);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), kRequestedFrames);
     ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
-    mix_stage_->UnlockBuffer(true);
+    mix_stage_->ReadUnlock(true);
 
     auto& arr = as_array<float, 2 * kRequestedFrames>(buf->payload(), 0);
     EXPECT_THAT(arr, Each(FloatEq(kRingBufferSampleValue2)));

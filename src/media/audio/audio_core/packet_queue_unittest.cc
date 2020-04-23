@@ -122,7 +122,7 @@ TEST_F(PacketQueueTest, LockUnlockBuffer) {
   // Now pop off the packets in FIFO order.
   //
   // Packet #0:
-  auto buffer = packet_queue->LockBuffer(Now(), 0, 0);
+  auto buffer = packet_queue->ReadLock(Now(), 0, 0);
   ASSERT_TRUE(buffer);
   ASSERT_FALSE(buffer->is_continuous());
   ASSERT_EQ(0, buffer->start());
@@ -132,13 +132,13 @@ TEST_F(PacketQueueTest, LockUnlockBuffer) {
   ASSERT_FALSE(packet_queue->empty());
   ASSERT_EQ(0u, released_packet_count());
   packet0 = nullptr;
-  packet_queue->UnlockBuffer(true);
+  packet_queue->ReadUnlock(true);
   RunLoopUntilIdle();
   ASSERT_FALSE(packet_queue->empty());
   ASSERT_EQ(1u, released_packet_count());
 
   // Packet #1
-  buffer = packet_queue->LockBuffer(Now(), 0, 0);
+  buffer = packet_queue->ReadLock(Now(), 0, 0);
   ASSERT_TRUE(buffer);
   ASSERT_TRUE(buffer->is_continuous());
   ASSERT_EQ(20, buffer->start());
@@ -146,13 +146,13 @@ TEST_F(PacketQueueTest, LockUnlockBuffer) {
   ASSERT_EQ(40, buffer->end());
   ASSERT_EQ(packet1->payload(), buffer->payload());
   packet1 = nullptr;
-  packet_queue->UnlockBuffer(true);
+  packet_queue->ReadUnlock(true);
   RunLoopUntilIdle();
   ASSERT_FALSE(packet_queue->empty());
   ASSERT_EQ(2u, released_packet_count());
 
   // ...and #2
-  buffer = packet_queue->LockBuffer(Now(), 0, 0);
+  buffer = packet_queue->ReadLock(Now(), 0, 0);
   ASSERT_TRUE(buffer);
   ASSERT_TRUE(buffer->is_continuous());
   ASSERT_EQ(40, buffer->start());
@@ -160,7 +160,7 @@ TEST_F(PacketQueueTest, LockUnlockBuffer) {
   ASSERT_EQ(60, buffer->end());
   ASSERT_EQ(packet2->payload(), buffer->payload());
   packet2 = nullptr;
-  packet_queue->UnlockBuffer(true);
+  packet_queue->ReadUnlock(true);
   RunLoopUntilIdle();
   ASSERT_TRUE(packet_queue->empty());
   ASSERT_EQ(3u, released_packet_count());
