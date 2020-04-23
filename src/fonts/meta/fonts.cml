@@ -23,5 +23,11 @@
             ],
             from: "self",
         },
+        {
+            directory: "/diagnostics",
+            from: "self",
+            to: "framework",
+            rights: [ "connect" ],
+        },
     ],
 }
