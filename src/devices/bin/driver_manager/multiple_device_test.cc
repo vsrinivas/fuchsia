@@ -8,8 +8,8 @@
 
 #include <string>
 
+#include "component_lifecycle.h"
 #include "src/devices/lib/log/log.h"
-
 TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
@@ -469,4 +469,44 @@ TEST_F(MultipleDeviceTestCase, ResumeTimeout) {
   // Wait for the event that the callback sets, otherwise the test will quit.
   resume_received_event.wait_one(ZX_USER_SIGNAL_0, zx::time(ZX_TIME_INFINITE), nullptr);
   ASSERT_TRUE(resume_callback_executed);
+}
+
+// Test devices are suspended when component lifecycle stop event is received.
+TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
+  ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
+  set_coordinator_loop_thread_running(true);
+
+  async::Loop devhost_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  ASSERT_OK(devhost_loop.StartThread("DevHostLoop"));
+
+  async::Wait suspend_task_pbus(
+      platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+        CheckSuspendReceivedAndReply(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC,
+                                     ZX_OK);
+      });
+  ASSERT_OK(suspend_task_pbus.Begin(devhost_loop.dispatcher()));
+
+  async::Wait suspend_task_sys(
+      sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+        CheckSuspendReceivedAndReply(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC,
+                                     ZX_OK);
+      });
+  ASSERT_OK(suspend_task_sys.Begin(devhost_loop.dispatcher()));
+
+  zx::channel component_lifecycle_client, component_lifecycle_server;
+  ASSERT_OK(zx::channel::create(0, &component_lifecycle_client, &component_lifecycle_server));
+  ASSERT_OK(devmgr::ComponentLifecycleServer::Create(
+      coordinator_loop()->dispatcher(), coordinator(), std::move(component_lifecycle_server)));
+  llcpp::fuchsia::process::lifecycle::Lifecycle::SyncClient client(
+      std::move(component_lifecycle_client));
+  auto result = client.Stop();
+  ASSERT_OK(result.status());
+  // the lifecycle channel should be closed now
+  zx_signals_t pending;
+  EXPECT_OK(client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &pending));
+  EXPECT_TRUE(pending & ZX_CHANNEL_PEER_CLOSED);
+  ASSERT_FALSE(suspend_task_pbus.is_pending());
+  ASSERT_FALSE(suspend_task_sys.is_pending());
 }

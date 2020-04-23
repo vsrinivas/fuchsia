@@ -1275,7 +1275,8 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
       },
       config_.suspend_timeout);
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create suspend timeout watchdog");
+    LOGF(ERROR, "Failed to create timeout watchdog for suspend: %s\n",
+         zx_status_get_string(status));
   }
 
   auto completion = [this, callback_info = std::move(callback_info)](zx_status_t status) {

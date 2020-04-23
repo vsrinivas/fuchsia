@@ -70,6 +70,9 @@ class IsolatedDevmgr {
   // FD to the root of devmgr's devfs
   fbl::unique_fd devfs_root_;
 
+  // Channel for component lifecycle events
+  zx::channel component_lifecycle_client_;
+
   // Opaque state associated with the async_loop_
   std::unique_ptr<SvcLoopState> svc_loop_state_;
 };

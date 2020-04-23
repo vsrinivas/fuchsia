@@ -20,6 +20,8 @@ source_set("lib") {
   sources = [
     "binding.cc",
     "binding_internal.h",
+    "component_lifecycle.cc",
+    "component_lifecycle.h",
     "composite_device.cc",
     "coordinator.cc",
     "coordinator.h",
@@ -55,6 +57,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_c",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
     "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/devices/lib/log",

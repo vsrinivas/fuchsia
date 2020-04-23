@@ -39,6 +39,7 @@
 #include <fs/vfs.h>
 #include <fs/vmo_file.h>
 
+#include "component_lifecycle.h"
 #include "coordinator.h"
 #include "devfs.h"
 #include "driver_host_loader_service.h"
@@ -328,6 +329,19 @@ int main(int argc, char** argv) {
   zx::channel devfs_client(zx_take_startup_handle(DEVMGR_LAUNCHER_DEVFS_ROOT_HND));
   if (devfs_client.is_valid()) {
     fdio_service_clone_to(devfs_root_borrow()->get(), devfs_client.release());
+  }
+
+  // Check if whatever launched devmgr gave a channel for component lifecycle events
+  zx::channel component_lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
+  ZX_ASSERT(component_lifecycle_request.is_valid());
+  if (component_lifecycle_request.is_valid()) {
+    status = devmgr::ComponentLifecycleServer::Create(loop.dispatcher(), &coordinator,
+                                                      std::move(component_lifecycle_request));
+    if (status != ZX_OK) {
+      LOGF(ERROR, "driver_manager: Cannot create componentlifecycleserver: %s\n",
+           zx_status_get_string(status));
+      return status;
+    }
   }
 
   status = system_instance.CreateSvcJob(root_job);

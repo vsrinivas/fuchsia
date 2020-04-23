@@ -103,8 +103,8 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
 
 __EXPORT
 zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoing_server,
-                   zx::job* devmgr_job, zx::channel* devfs_root,
-                   zx::channel* outgoing_services_root) {
+                   zx::channel component_lifecycle_server, zx::job* devmgr_job,
+                   zx::channel* devfs_root, zx::channel* outgoing_services_root) {
   // Create containing job (and copies for devcoordinator and fshost)
   zx::job job, devmgr_job_copy, fshost_job_copy;
   zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
@@ -182,6 +182,10 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
       .h = {.id = DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND,
             .handle = outgoing_services_server.release()},
+  });
+  actions.push_back(fdio_spawn_action_t{
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_LIFECYCLE, .handle = component_lifecycle_server.release()},
   });
 
   for (auto& ns : args.flat_namespace) {

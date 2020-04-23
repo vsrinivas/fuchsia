@@ -255,14 +255,18 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
   }
 
   GetBootItemFunction get_boot_item = std::move(args.get_boot_item);
-
+  zx::channel component_lifecycle_client, component_lifecycle_server;
+  status = zx::channel::create(0, &component_lifecycle_client, &component_lifecycle_server);
+  if (status != ZX_OK) {
+    return status;
+  }
   IsolatedDevmgr devmgr;
   zx::channel devfs;
   zx::channel outgoing_svc_root;
   std::map<std::string, std::string> boot_args = std::move(args.boot_args);
-  status = devmgr_launcher::Launch(std::move(args), std::move(svc_client),
-                                   std::move(fshost_outgoing_server), &devmgr.job_, &devfs,
-                                   &outgoing_svc_root);
+  status = devmgr_launcher::Launch(
+      std::move(args), std::move(svc_client), std::move(fshost_outgoing_server),
+      std::move(component_lifecycle_server), &devmgr.job_, &devfs, &outgoing_svc_root);
   if (status != ZX_OK) {
     return status;
   }
@@ -279,7 +283,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
     return status;
   }
   devmgr.devfs_root_.reset(fd);
-
+  devmgr.component_lifecycle_client_.reset(component_lifecycle_client.release());
   devmgr.svc_root_dir_.reset(outgoing_svc_root.release());
   *out = std::move(devmgr);
   return ZX_OK;

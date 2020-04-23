@@ -41,6 +41,7 @@
 #include "vmo_writer.h"
 
 using llcpp::fuchsia::device::manager::SystemPowerState;
+namespace power_fidl = llcpp::fuchsia::hardware::power;
 
 class DriverHostLoaderService;
 class FsProvider;
@@ -183,7 +184,11 @@ struct CoordinatorConfig {
   zx::duration suspend_timeout = kDefaultSuspendTimeout;
   // Timeout for system wide resume
   zx::duration resume_timeout = kDefaultResumeTimeout;
-  // Something to clone a handle from the environment to pass to a DriverHost.
+  // System will be transitioned to this system power state during
+  // component shutdown.
+  power_fidl::statecontrol::SystemPowerState shutdown_system_state =
+      power_fidl::statecontrol::SystemPowerState::REBOOT;
+  // Something to clone a handle from the environment to pass to a Devhost.
   FsProvider* fs_provider;
 };
 
@@ -195,7 +200,7 @@ struct SuspendCallbackInfo : public fbl::RefCounted<SuspendCallbackInfo> {
   SuspendCallback callback;
 };
 
-class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface,
+class Coordinator : public power_fidl::statecontrol::Admin::Interface,
                     public llcpp::fuchsia::device::manager::BindDebugger::Interface {
  public:
   Coordinator(const Coordinator&) = delete;
@@ -291,6 +296,9 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   bool disable_netsvc() const { return config_.disable_netsvc; }
   bool require_system() const { return config_.require_system; }
   bool suspend_fallback() const { return config_.suspend_fallback; }
+  power_fidl::statecontrol::SystemPowerState shutdown_system_state() const {
+    return config_.shutdown_system_state;
+  }
 
   void set_running(bool running) { running_ = running; }
   bool system_available() const { return system_available_; }
@@ -337,6 +345,11 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
+  // Power state control interface
+  void Suspend(
+      power_fidl::statecontrol::SystemPowerState state,
+      power_fidl::statecontrol::Admin::Interface::SuspendCompleter::Sync completer) override;
+  uint32_t GetSuspendFlagsFromSystemPowerState(power_fidl::statecontrol::SystemPowerState state);
 
   // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
   void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
@@ -381,12 +394,6 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   InspectManager inspect_manager_;
 
-  // Power state control interface
-  void Suspend(
-      llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState state,
-      llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface::SuspendCompleter::Sync
-          completer) override;
-
   // Bind debugger interface
   void GetBindProgram(::fidl::StringView driver_path,
                       GetBindProgramCompleter::Sync completer) override;
@@ -410,8 +417,6 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   void BuildSuspendList();
   void Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback);
-  uint32_t GetSuspendFlagsFromSystemPowerState(
-      llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState state);
 
   std::unique_ptr<Driver> ValidateDriver(std::unique_ptr<Driver> drv);
 
