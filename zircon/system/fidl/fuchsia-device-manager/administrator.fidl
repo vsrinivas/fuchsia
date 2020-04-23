@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// This API is deprecated. Use https://cs.corp.google.com/fuchsia/fuchsia-mirror/sdk/fidl/fuchsia.hardware.power.statecontrol/admin.fidl
+// instead.Bug:fxb/42257
 library fuchsia.device.manager;
 
 using zx;
