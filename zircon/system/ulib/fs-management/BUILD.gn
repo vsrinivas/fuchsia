@@ -2,51 +2,82 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("fs-management") {
-  sdk = "shared"
-  sdk_headers = [
-    "fs-management/admin.h",
-    "fs-management/format.h",
-    "fs-management/fvm.h",
-    "fs-management/launch.h",
-    "fs-management/mount.h",
-  ]
-  shared = true
-  sources = [
-    "admin.cc",
-    "fsck.cc",
-    "fvm.cc",
-    "launch.cc",
-    "mkfs.cc",
-    "mount.cc",
-  ]
-  public_deps = [ "$zx/system/fidl/fuchsia-hardware-block-volume:c.headers" ]
-  deps = [
-    "$zx/system/fidl/fuchsia-boot:llcpp",
-    "$zx/system/fidl/fuchsia-fshost:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-hardware-block:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/digest",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fvm",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/gpt",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/boringssl",
-  ]
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
 
-  # TODO(36548): restore data_deps after migration to the GN build.
-  data_deps = [
-    # uapp/blobfs
-    #"uapp/minfs",
-    #"$zx/third_party/uapp/fsck-msdosfs",
-    #"$zx/third_party/uapp/mkfs-msdosfs",
-  ]
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
+if (is_fuchsia) {
+  zx_library("fs-management") {
+    sdk = "shared"
+    sdk_headers = [
+      "fs-management/admin.h",
+      "fs-management/format.h",
+      "fs-management/fvm.h",
+      "fs-management/launch.h",
+      "fs-management/mount.h",
+    ]
+    shared = true
+    sources = [
+      "admin.cc",
+      "fsck.cc",
+      "fvm.cc",
+      "launch.cc",
+      "mkfs.cc",
+      "mount.cc",
+    ]
+    public_deps = [ "//zircon/system/fidl/fuchsia-hardware-block-volume:c" ]
+    deps = [
+      "//third_party/boringssl",
+      "//zircon/public/lib/digest",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fdio-caller",
+      "//zircon/public/lib/fs",
+      "//zircon/public/lib/fvm",
+      "//zircon/public/lib/fzl",
+      "//zircon/public/lib/gpt",
+      "//zircon/public/lib/pretty",
+      "//zircon/public/lib/zx",
+      "//zircon/system/fidl/fuchsia-boot:llcpp",
+      "//zircon/system/fidl/fuchsia-fshost:llcpp",
+      "//zircon/system/fidl/fuchsia-hardware-block:c",
+      "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
+      "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
+      "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
+      "//zircon/system/fidl/fuchsia-io:llcpp",
+    ]
+    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
+    configs += [ "//build/config:Wno-unused-function" ]
+
+    data_deps = [
+      "//zircon/system/uapp/blobfs",
+      "//zircon/system/uapp/minfs",
+      "//zircon/third_party/uapp/fsck-msdosfs",
+      "//zircon/third_party/uapp/mkfs-msdosfs",
+    ]
+  }
+} else {
+  config("headers_config") {
+    include_dirs = [ "include" ]
+  }
+
+  source_set("fs-management") {
+    public = [
+      "include/fs-management/admin.h",
+      "include/fs-management/format.h",
+      "include/fs-management/fvm.h",
+      "include/fs-management/launch.h",
+      "include/fs-management/mount.h",
+    ]
+
+    public_configs = [ ":headers_config" ]
+  }
 }

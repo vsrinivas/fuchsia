@@ -121,7 +121,6 @@ aggregate_manifest("legacy-aux") {
     "fdio",
 #------------------
 #------------------
-    "fs-management",
 #------------------
 #------------------
     "inspector",

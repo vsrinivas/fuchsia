@@ -39,7 +39,7 @@ zx_library("fvm-host") {
   public_deps = [
     # <fvm/format.h> has #include <fs-management/mount.h> though that
     # library is not really meant for host code.
-    "//zircon/public/lib/fs-management",
+    "//zircon/system/ulib/fs-management",
 
     # <fvm-host/format.h> has #include <blobfs/format.h>.
     "//zircon/system/ulib/blobfs",

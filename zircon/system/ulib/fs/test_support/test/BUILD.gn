@@ -43,8 +43,8 @@ test("fs_test_support") {
   ]
   deps = [
     "//zircon/public/lib/devmgr-integration-test",
-    "//zircon/public/lib/fs-management",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/ramdevice-client",
   ]

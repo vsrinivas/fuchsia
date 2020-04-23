@@ -5,6 +5,11 @@
     "sdk": false
   },
   {
+    "label": "//zircon/system/ulib/fs-management:fs-management",
+    "name": "fs-management",
+    "sdk": false
+  },
+  {
     "label": "//src/devices/pci/lib/pci:pci",
     "name": "pci",
     "sdk": false
