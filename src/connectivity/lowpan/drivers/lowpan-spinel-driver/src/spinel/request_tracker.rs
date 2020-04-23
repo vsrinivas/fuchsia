@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO: Remove this once the code that uses this is merged in.
-#![allow(dead_code)]
-
 use super::{Canceled, ResponseHandler};
 use core::fmt::Debug;
 use lowpan_driver_common::AsyncCondition;

@@ -11,6 +11,15 @@ pub use request_tracker::*;
 pub mod response_handler;
 pub use response_handler::*;
 
+pub mod frame_handler;
+pub use frame_handler::*;
+
+pub mod request_desc;
+pub use request_desc::*;
+
+pub mod commands;
+pub use commands::*;
+
 pub mod enums;
 pub use enums::*;
 
