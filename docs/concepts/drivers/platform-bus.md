@@ -3,7 +3,7 @@
 ## Introduction
 
 The term **platform bus** refers to a specific Zircon driver with source code located at
-[//fuchsia/src/devices/bus/drivers/platform/](../../../src/devices/bus/drivers/platform/)).
+[//fuchsia/src/devices/bus/drivers/platform/](/src/devices/bus/drivers/platform/)).
 However this term also refers to the framework that manages the lower level drivers in Zircon.
 In this document, **platform bus driver** refers to a specific driver and **platform bus**
 refers to the general framework.
@@ -48,7 +48,7 @@ The platform bus driver is started automatically by the devmgr at boot.
 Since the platform bus driver is a generic driver that contains no information about the
 platform it is running on, it first loads the board driver, which handles platform specific logic.
 To determine which board driver to load, platform bus driver reads the `ZBI_TYPE_PLATFORM_ID`
-record from the [ZBI data](../../../zircon/system/public/zircon/boot/image.h) passed from the
+record from the [ZBI data](/zircon/system/public/zircon/boot/image.h) passed from the
 bootloader. It then adds a device with protocol `ZX_PROTOCOL_PBUS` with the
 `BIND_PLATFORM_DEV_VID` and `BIND_PLATFORM_DEV_PID` binding variables set to the vid and did
 from the platform data record. The correct board driver will bind to this device and continue
@@ -90,7 +90,7 @@ are responsible for proxying the PDEV and I2C protocols to the audio driver.
 
 ## Platform Device Protocol
 
-The [platform device protocol](../../..//sdk/banjo/ddk.protocol.platform.device/platform-device.banjo)
+The [platform device protocol](/sdk/banjo/ddk.protocol.platform.device/platform-device.banjo)
 (`ZX_PROTOCOL_PDEV`) is the main protocol provided by the platform bus to
 platform device drivers. This protocol provides access to resources like MMIO ranges, interrupts,
 BTIs, and SMC ranges to the platform device driver. Rather than requesting MMIOs and interrupts by
@@ -108,7 +108,7 @@ different.
 
 ## Platform Bus Protocol
 
-The [platform bus protocol](../../..//sdk/banjo/ddk.protocol.platform.bus/platform-bus.banjo)
+The [platform bus protocol](/sdk/banjo/ddk.protocol.platform.bus/platform-bus.banjo)
 (`ZX_PROTOCOL_PBUS`) is used by board drivers and protocol implementation drivers
 to communicate with the platform bus driver. It is only available to drivers running in the
 platform bus's devhost (in particular, it is not accessible to platform device drivers).
