@@ -82,6 +82,7 @@ impl AccessPoint {
                     }
                     Err(e) => error!("encountered and error while serving provider requests: {}", e)
                 },
+                complete => break,
             }
         }
     }
