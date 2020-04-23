@@ -1,0 +1,80 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("sherlock") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "sherlock-audio.cc",
+    "sherlock-backlight.cc",
+    "sherlock-bluetooth.cc",
+    "sherlock-board.cc",
+    "sherlock-buttons.cc",
+    "sherlock-camera.cc",
+    "sherlock-canvas.cc",
+    "sherlock-clk.cc",
+    "sherlock-display.cc",
+    "sherlock-emmc.cc",
+    "sherlock-gpio.cc",
+    "sherlock-i2c.cc",
+    "sherlock-light.cc",
+    "sherlock-mali.cc",
+    "sherlock-nna.cc",
+    "sherlock-ot-radio.cc",
+    "sherlock-pwm.cc",
+    "sherlock-ram.cc",
+    "sherlock-sdio.cc",
+    "sherlock-securemem.cc",
+    "sherlock-spi.cc",
+    "sherlock-sysmem.cc",
+    "sherlock-tee.cc",
+    "sherlock-thermal.cc",
+    "sherlock-touch.cc",
+    "sherlock-usb.cc",
+    "sherlock-video-enc.cc",
+    "sherlock-video.cc",
+    "sherlock.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.clockimpl",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.iommu",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.scpi",
+    "//sdk/banjo/ddk.protocol.sdmmc",
+    "//sdk/banjo/ddk.protocol.serial",
+    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/connectivity/openthread/lib/ot-radio",
+    "//src/devices/lib/amlogic",
+    "//src/devices/lib/broadcom",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/focaltech",
+    "//src/devices/usb/lib/usb",
+    "//src/graphics/display/lib/device-protocol-display",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
+  ]
+}
+
+migrated_manifest("sherlock-manifest") {
+  deps = [ ":sherlock" ]
+}

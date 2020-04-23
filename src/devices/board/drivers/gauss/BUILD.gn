@@ -1,0 +1,69 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("gauss") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "gauss-audio.c",
+    "gauss-clk.c",
+    "gauss-gpio.c",
+    "gauss-i2c.c",
+    "gauss-pcie.cc",
+    "gauss-rawnand.c",
+    "gauss-sysmem.c",
+    "gauss-usb.c",
+    "gauss.c",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.iommu",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/lib/amlogic",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/device-protocol-i2c",
+    "//zircon/public/lib/sync",
+    "//zircon/system/dev/pci/designware",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
+  ]
+  data_deps = [ ":gauss-i2c-test" ]
+}
+
+driver_module("gauss-i2c-test") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [ "gauss-i2c-test.c" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/device-protocol-i2c",
+    "//zircon/public/lib/sync",
+    "//zircon/system/banjo/ddk.protocol.i2c",
+  ]
+}
+
+migrated_manifest("gauss-manifest") {
+  deps = [ ":gauss" ]
+}
+
+migrated_manifest("gauss-i2c-test-manifest") {
+  deps = [ ":gauss-i2c-test" ]
+}

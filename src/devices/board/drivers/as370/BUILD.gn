@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("as370") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "as370-audio.cc",
+    "as370-clock.cc",
+    "as370-gpio.cc",
+    "as370-i2c.cc",
+    "as370-light.cc",
+    "as370-nand.cc",
+    "as370-power.cc",
+    "as370-sdio.cc",
+    "as370-thermal.cc",
+    "as370-touch.cc",
+    "as370-usb.cc",
+    "as370.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.shareddma",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
+    "//src/devices/lib/as370",
+    "//src/devices/lib/driver",
+    "//src/devices/usb/lib/usb",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+  ]
+
+  # TODO(47406): restore some form of data dependency on as370 and visalia
+  # boot shims.
+}
+
+migrated_manifest("as370-manifest") {
+  deps = [ ":as370" ]
+}

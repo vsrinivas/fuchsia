@@ -1,0 +1,409 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+assert(current_cpu == "x64")
+
+declare_args() {
+  # Setting this config to true only makes sense if the zircon enable_user_pci config is also true.
+  # We define a separate config here for the moment due to not quite unified builds and the
+  # difficulty of sharing configs between builds.
+  platform_enable_user_pci = false
+}
+
+group("x86") {
+  deps = [ ":platform-bus-x86" ]
+}
+
+config("config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [ "include" ]
+
+  if (platform_enable_user_pci) {
+    defines = [ "ENABLE_USER_PCI" ]
+  }
+
+  cflags = [ "-Wno-null-pointer-arithmetic" ]
+  cflags_c = [ "-fno-strict-aliasing" ]
+}
+
+source_set("smbios") {
+  visibility = [ ":*" ]
+
+  sources = [ "smbios.cc" ]
+
+  configs += [ ":config" ]
+
+  deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/smbios",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("iommu") {
+  visibility = [ ":*" ]
+
+  sources = [ "iommu.cc" ]
+
+  configs += [ ":config" ]
+
+  deps = [
+    "//third_party/acpica",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+driver_module("platform-bus-x86") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "acpi-dev/dev-battery.cc",
+    "acpi-dev/dev-cros-ec/acpi.cc",
+    "acpi-dev/dev-cros-ec/dev.cc",
+    "acpi-dev/dev-cros-ec/motion.cc",
+    "acpi-dev/dev-ec.cc",
+    "acpi-dev/dev-lid.cc",
+    "acpi-dev/dev-lid.h",
+    "acpi-dev/dev-pwrbtn.cc",
+    "acpi-dev/dev-pwrsrc.cc",
+    "acpi-dev/dev-tbmc.cc",
+    "acpi-dev/dev-thermal.cc",
+    "acpi-nswalk.cc",
+    "debug.cc",
+    "init.cc",
+    "iommu-driver-tests.cc",
+    "methods.cc",
+    "nhlt.cc",
+    "pciroot.cc",
+    "power.cc",
+    "resources.cc",
+    "sysmem.cc",
+    "util.cc",
+    "x86-driver-tests.cc",
+    "x86.cc",
+    "x86.h",
+  ]
+
+  # Userspace PCI feature flag.  The scaffolding for the userspace pci bus
+  # driver is in pci.cpp.  If not enabled then the kernel pci bus driver
+  # initialization code in ACPI (kpci.cc) will be built instead.
+  if (platform_enable_user_pci) {
+    sources += [ "pci.cc" ]
+  } else {
+    sources += [ "kpci.cc" ]
+  }
+  configs += [ ":config" ]
+  deps = [
+    ":iommu",
+    ":smbios",
+    "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/ddk.protocol.pciroot",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.scpi",
+    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/lib/driver",
+    "//src/devices/pci/lib/pci",
+    "//third_party/acpica",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/lazy_init",
+    "//zircon/public/lib/region-alloc",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-sysinfo:c",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
+    "//zircon/system/ulib/driver-unit-test",
+    "//zircon/system/ulib/hid",
+    "//zircon/third_party/ulib/chromiumos-platform-ec",
+  ]
+  public_configs = [ "$zx_build/public/gn/config:default_warnings" ]
+}
+
+test("x86-battery-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "x86-battery-test"
+  test_group = "ddk"
+  sources = [
+    "acpi-dev/dev-battery-test.cc",
+    "acpi-dev/dev-battery.cc",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/ddk.protocol.pciroot",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.scpi",
+    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/lib/driver",
+    "//src/devices/pci/lib/pci",
+    "//third_party/acpica",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/region-alloc",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hid",
+    "//zircon/third_party/ulib/chromiumos-platform-ec",
+  ]
+}
+
+test("x86-lid-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "x86-lid-test"
+  test_group = "ddk"
+  sources = [
+    "acpi-dev/dev-lid-test.cc",
+    "acpi-dev/dev-lid.cc",
+    "acpi-dev/dev-lid.h",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/ddk.protocol.hidbus",
+    "//src/devices/testing/fake_ddk",
+    "//src/ui/input/testing/mock-hidbus-ifc",
+    "//third_party/acpica",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hid",
+  ]
+}
+
+test("x86-pwrsrc-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "x86-pwrsrc-test"
+  test_group = "ddk"
+  sources = [
+    "acpi-dev/dev-pwrsrc-test.cc",
+    "acpi-dev/dev-pwrsrc.cc",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.scpi",
+    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
+    "//third_party/acpica",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hid",
+  ]
+}
+
+test("x86-board-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  test_group = "ddk"
+  sources = [
+    "iommu-test.cc",
+    "smbios-test.cc",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    ":iommu",
+    ":smbios",
+    "//src/devices/testing/fake_ddk",
+    "//third_party/acpica",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+test("x86-thermal-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "x86-thermal-test"
+  test_group = "ddk"
+  sources = [
+    "acpi-dev/dev-thermal-test.cc",
+    "acpi-dev/dev-thermal.cc",
+    "acpi-dev/dev-thermal.h",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/testing/fake_ddk",
+    "//third_party/acpica",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+test("x86-cros-ec-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "x86-cros-ec-test"
+  test_group = "ddk"
+  sources = [
+    "acpi-dev/dev-cros-ec/acpi.cc",
+    "acpi-dev/dev-cros-ec/acpi.h",
+    "acpi-dev/dev-cros-ec/dev.cc",
+    "acpi-dev/dev-cros-ec/dev.h",
+    "acpi-dev/dev-cros-ec/motion-test.cc",
+    "acpi-dev/dev-cros-ec/motion.cc",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/banjo/ddk.protocol.hidbus",
+    "//src/devices/testing/fake_ddk",
+    "//src/ui/input/testing/mock-hidbus-ifc",
+    "//third_party/acpica",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/hid-parser",
+    "//zircon/third_party/ulib/chromiumos-platform-ec",
+  ]
+}
+
+migrated_manifest("platform-bus-x86-manifest") {
+  deps = [ ":platform-bus-x86" ]
+}
+
+migrated_manifest("x86-battery-test-manifest") {
+  deps = [ ":x86-battery-test" ]
+}
+
+migrated_manifest("x86-lid-test-manifest") {
+  deps = [ ":x86-lid-test" ]
+}
+
+migrated_manifest("x86-pwrsrc-test-manifest") {
+  deps = [ ":x86-pwrsrc-test" ]
+}
+
+migrated_manifest("x86-board-test-manifest") {
+  deps = [ ":x86-board-test" ]
+}
+
+migrated_manifest("x86-thermal-test-manifest") {
+  deps = [ ":x86-thermal-test" ]
+}
+
+migrated_manifest("x86-cros-ec-test-manifest") {
+  deps = [ ":x86-cros-ec-test" ]
+}

@@ -1,0 +1,74 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("astro") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "astro-audio.cc",
+    "astro-backlight.cc",
+    "astro-bluetooth.cc",
+    "astro-buttons.cc",
+    "astro-canvas.cc",
+    "astro-clk.cc",
+    "astro-cpu.cc",
+    "astro-display.cc",
+    "astro-gpio.cc",
+    "astro-i2c.cc",
+    "astro-light.cc",
+    "astro-mali.cc",
+    "astro-pwm.cc",
+    "astro-ram.cc",
+    "astro-rawnand.cc",
+    "astro-sdio.cc",
+    "astro-securemem.cc",
+    "astro-sysmem.cc",
+    "astro-tee.cc",
+    "astro-thermal.cc",
+    "astro-touch.cc",
+    "astro-usb.cc",
+    "astro-video.cc",
+    "astro.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.clockimpl",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.iommu",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.scpi",
+    "//sdk/banjo/ddk.protocol.serial",
+    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_c",
+    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/lib/amlogic",
+    "//src/devices/lib/broadcom",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/focaltech",
+    "//src/devices/usb/lib/usb",
+    "//src/graphics/display/lib/device-protocol-display",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
+  ]
+}
+
+migrated_manifest("astro-manifest") {
+  deps = [ ":astro" ]
+}

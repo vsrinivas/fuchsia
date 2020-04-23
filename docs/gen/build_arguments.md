@@ -2777,5 +2777,5 @@ difficulty of sharing configs between builds.
 
 **Current value (from the default):** `false`
 
-From //zircon/system/dev/board/x86/BUILD.gn:25
+From //src/devices/board/drivers/x86/BUILD.gn:25
 

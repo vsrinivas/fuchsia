@@ -1,0 +1,129 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("mt8167s_ref") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "mt8167-audio.cc",
+    "mt8167-backlight.cc",
+    "mt8167-buttons.cc",
+    "mt8167-clk.cc",
+    "mt8167-display.cc",
+    "mt8167-gpio.cc",
+    "mt8167-gpu.cc",
+    "mt8167-i2c.cc",
+    "mt8167-msdc0.cc",
+    "mt8167-msdc2.cc",
+    "mt8167-power.cc",
+    "mt8167-soc.cc",
+    "mt8167-sysmem.cc",
+    "mt8167-thermal.cc",
+    "mt8167-touch.cc",
+    "mt8167-usb.cc",
+    "mt8167.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.clockimpl",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.powerimpl",
+    "//sdk/banjo/ddk.protocol.scpi",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/focaltech",
+    "//src/devices/lib/mt8167",
+    "//src/graphics/display/lib/device-protocol-display",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
+  ]
+
+  # TODO(47406): restore some form of data dependency on cleo and mt8167s_ref
+  # boot shims.
+}
+
+test("mt8167s_ref-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "mt8167s_ref-test"
+  sources = [
+    "mt8167-audio.cc",
+    "mt8167-backlight.cc",
+    "mt8167-buttons.cc",
+    "mt8167-clk.cc",
+    "mt8167-display.cc",
+    "mt8167-gpio.cc",
+    "mt8167-gpu.cc",
+    "mt8167-i2c.cc",
+    "mt8167-msdc0.cc",
+    "mt8167-msdc2.cc",
+    "mt8167-power.cc",
+    "mt8167-soc.cc",
+    "mt8167-sysmem.cc",
+    "mt8167-test.cc",
+    "mt8167-thermal.cc",
+    "mt8167-touch.cc",
+    "mt8167-usb.cc",
+    "mt8167.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.clockimpl",
+    "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.powerimpl",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/focaltech",
+    "//src/devices/lib/mt8167",
+    "//src/graphics/display/lib/device-protocol-display",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
+  ]
+}
+
+migrated_manifest("mt8167s_ref-manifest") {
+  deps = [ ":mt8167s_ref" ]
+}
+
+migrated_manifest("mt8167s_ref-test-manifest") {
+  deps = [ ":mt8167s_ref-test" ]
+}

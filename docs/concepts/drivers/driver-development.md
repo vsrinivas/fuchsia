@@ -341,7 +341,7 @@ instead. For example, the virtual console is implemented by the
 Privileged operations such as `zx_vmo_create_contiguous()` and
 [zx_interrupt_create](/docs/reference/syscalls/interrupt_create.md) require a root resource
 handle. This handle is not available to drivers other than the system driver
-([ACPI](/zircon/system/dev/board/x86) on x86 systems and
+([ACPI](/src/devices/board/drivers/x86) on x86 systems and
 [platform](/src/devices/bus/drivers/platform) on ARM systems). A device should
 request its parent to perform such operations for it. Contact the author
 of the parent driver if its protocol does not address this use case.

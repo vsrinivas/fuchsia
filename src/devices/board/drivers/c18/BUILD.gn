@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("c18") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "c18-gpio.cc",
+    "c18-msdc0.cc",
+    "c18-soc.cc",
+    "c18-spi.cc",
+    "c18.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.gpioimpl",
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mt8167",
+    "//src/devices/lib/mt8183",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zx",
+  ]
+
+  # TODO(47406): restore some form of data dependency on c18
+  # boot shim.
+}
+
+migrated_manifest("c18-manifest") {
+  deps = [ ":c18" ]
+}

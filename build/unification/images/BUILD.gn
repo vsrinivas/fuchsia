@@ -408,8 +408,8 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/core/pwrbtn-monitor:pwrbtn-monitor-manifest",
     "//zircon/system/core/svchost:svchost-manifest",
     "//zircon/system/core/sysinfo:sysinfo-manifest",
-    "//zircon/system/dev/board/integration-test:integration-test-manifest",
-    "//zircon/system/dev/board/machina:machina-manifest",
+    "//src/devices/board/drivers/integration-test:integration-test-manifest",
+    "//src/devices/board/drivers/machina:machina-manifest",
     "//zircon/system/uapp/audio:bin-manifest",
     "//zircon/system/uapp/blobfs:blobfs-manifest",
     "//zircon/system/uapp/crasher:crasher-manifest",
@@ -460,7 +460,7 @@ aggregate_manifest("migrated-image") {
   ]
 
   if (target_cpu == "arm64") {
-    deps += [ "//zircon/system/dev/board/astro:astro-manifest" ]
+    deps += [ "//src/devices/board/drivers/astro:astro-manifest" ]
   } else if (target_cpu == "x64") {
     deps += [
       "//src/connectivity/ethernet/drivers/intel-ethernet:intel-ethernet-manifest",
@@ -471,7 +471,7 @@ aggregate_manifest("migrated-image") {
       "//src/devices/serial/drivers/uart16550:uart16550-manifest",
       "//src/graphics/display/drivers/intel-i915:intel-i915-manifest",
       "//src/ui/input/drivers/pc-ps2:pc-ps2-manifest",
-      "//zircon/system/dev/board/x86:platform-bus-x86-manifest",
+      "//src/devices/board/drivers/x86:platform-bus-x86-manifest",
       "//zircon/system/uapp/acpidump:acpidump-manifest",
     ]
   }
@@ -551,7 +551,7 @@ aggregate_manifest("migrated-image") {
       "//src/ui/input/drivers/virtio:virtio_input-manifest",
       "//src/ui/light/drivers/gpio-light:gpio-light-manifest",
       "//src/ui/light/drivers/lp50xx-light:lp50xx-light-manifest",
-      "//zircon/system/dev/board/qemu-arm64:qemu-arm64-manifest",
+      "//src/devices/board/drivers/qemu-arm64:qemu-arm64-manifest",
       "//zircon/system/uapp/audio:test-manifest",
       "//zircon/system/ulib/ddktl/test:ddktl-test-manifest",
       "//zircon/system/utest/platform-bus:test-audio-codec-manifest",
@@ -572,21 +572,21 @@ aggregate_manifest("migrated-image") {
 
     if (target_cpu == "arm64") {
       deps += [
-        "//zircon/system/dev/board/as370:as370-manifest",
-        "//zircon/system/dev/board/c18:c18-manifest",
-        "//zircon/system/dev/board/gauss:gauss-i2c-test-manifest",
-        "//zircon/system/dev/board/gauss:gauss-manifest",
-        "//zircon/system/dev/board/hikey960:hi3660-i2c-test-manifest",
-        "//zircon/system/dev/board/hikey960:hikey960-manifest",
-        "//zircon/system/dev/board/luis:luis-manifest",
-        "//zircon/system/dev/board/msm8998:msm8998-manifest",
-        "//zircon/system/dev/board/msm8x53-som:msm8x53-som-manifest",
-        "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-manifest",
-        "//zircon/system/dev/board/nelson:nelson-manifest",
-        "//zircon/system/dev/board/qemu-arm64:qemu-arm64-manifest",
-        "//zircon/system/dev/board/sherlock:sherlock-manifest",
-        "//zircon/system/dev/board/vim2:vim2-manifest",
-        "//zircon/system/dev/board/vim3:vim3-manifest",
+        "//src/devices/board/drivers/as370:as370-manifest",
+        "//src/devices/board/drivers/c18:c18-manifest",
+        "//src/devices/board/drivers/gauss:gauss-i2c-test-manifest",
+        "//src/devices/board/drivers/gauss:gauss-manifest",
+        "//src/devices/board/drivers/hikey960:hi3660-i2c-test-manifest",
+        "//src/devices/board/drivers/hikey960:hikey960-manifest",
+        "//src/devices/board/drivers/luis:luis-manifest",
+        "//src/devices/board/drivers/msm8998:msm8998-manifest",
+        "//src/devices/board/drivers/msm8x53-som:msm8x53-som-manifest",
+        "//src/devices/board/drivers/mt8167s_ref:mt8167s_ref-manifest",
+        "//src/devices/board/drivers/nelson:nelson-manifest",
+        "//src/devices/board/drivers/qemu-arm64:qemu-arm64-manifest",
+        "//src/devices/board/drivers/sherlock:sherlock-manifest",
+        "//src/devices/board/drivers/vim2:vim2-manifest",
+        "//src/devices/board/drivers/vim3:vim3-manifest",
       ]
     }
   }
@@ -772,7 +772,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/usb/drivers/mt-musb-host:mt-hci-test-manifest",
     "//src/devices/usb/drivers/mt-musb-host:mt-hci-transaction-test-manifest",
     "//src/devices/lib/mt8167/test:mt8167-audio-lib-test-manifest",
-    "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-test-manifest",
+    "//src/devices/board/drivers/mt8167s_ref:mt8167s_ref-test-manifest",
     "//zircon/system/core/netsvc:netsvc-stress-test-manifest",
     "//zircon/system/core/netsvc:netsvc-test-manifest",
 #------------------
@@ -848,12 +848,12 @@ aggregate_manifest("migrated-aux") {
     deps += []
   } else if (target_cpu == "x64") {
     deps += [
-      "//zircon/system/dev/board/x86:x86-battery-test-manifest",
-      "//zircon/system/dev/board/x86:x86-board-test-manifest",
-      "//zircon/system/dev/board/x86:x86-cros-ec-test-manifest",
-      "//zircon/system/dev/board/x86:x86-lid-test-manifest",
-      "//zircon/system/dev/board/x86:x86-pwrsrc-test-manifest",
-      "//zircon/system/dev/board/x86:x86-thermal-test-manifest",
+      "//src/devices/board/drivers/x86:x86-battery-test-manifest",
+      "//src/devices/board/drivers/x86:x86-board-test-manifest",
+      "//src/devices/board/drivers/x86:x86-cros-ec-test-manifest",
+      "//src/devices/board/drivers/x86:x86-lid-test-manifest",
+      "//src/devices/board/drivers/x86:x86-pwrsrc-test-manifest",
+      "//src/devices/board/drivers/x86:x86-thermal-test-manifest",
       "//zircon/system/utest/x86-board:x86-board-manifest",
       "//zircon/system/utest/x86-umip:x86-umip-manifest",
     ]
@@ -1030,7 +1030,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/usb/drivers/mt-musb-host:mt-hci-test-manifest",
     "//src/devices/usb/drivers/mt-musb-host:mt-hci-transaction-test-manifest",
     "//src/devices/lib/mt8167/test:mt8167-audio-lib-test-manifest",
-    "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-test-manifest",
+    "//src/devices/board/drivers/mt8167s_ref:mt8167s_ref-test-manifest",
     "//zircon/system/core/netsvc:netsvc-stress-test-manifest",
     "//zircon/system/core/netsvc:netsvc-test-manifest",
 #------------------
@@ -1102,12 +1102,12 @@ aggregate_manifest("migrated-tests") {
     deps += []
   } else if (target_cpu == "x64") {
     deps += [
-      "//zircon/system/dev/board/x86:x86-battery-test-manifest",
-      "//zircon/system/dev/board/x86:x86-board-test-manifest",
-      "//zircon/system/dev/board/x86:x86-cros-ec-test-manifest",
-      "//zircon/system/dev/board/x86:x86-lid-test-manifest",
-      "//zircon/system/dev/board/x86:x86-pwrsrc-test-manifest",
-      "//zircon/system/dev/board/x86:x86-thermal-test-manifest",
+      "//src/devices/board/drivers/x86:x86-battery-test-manifest",
+      "//src/devices/board/drivers/x86:x86-board-test-manifest",
+      "//src/devices/board/drivers/x86:x86-cros-ec-test-manifest",
+      "//src/devices/board/drivers/x86:x86-lid-test-manifest",
+      "//src/devices/board/drivers/x86:x86-pwrsrc-test-manifest",
+      "//src/devices/board/drivers/x86:x86-thermal-test-manifest",
       "//zircon/system/utest/x86-board:x86-board-manifest",
       "//zircon/system/utest/x86-umip:x86-umip-manifest",
       "//zircon/system/uapp/acpidump:acpidump-test-manifest",
