@@ -7,7 +7,7 @@
         },
         {
             name: "driver",
-            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/test_driver.cm",
+            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/driver.cm",
         },
     ],
     offer: [
@@ -20,8 +20,18 @@
             ],
         },
         {
+            runner: "rust_test_runner",
+            from: "realm",
+            to: [ "#driver" ],
+        },
+        {
             protocol: "/svc/fuchsia.diagnostics.ArchiveAccessor",
             from: "#archivist",
+            to: [ "#driver" ],
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
             to: [ "#driver" ],
         },
         {
@@ -44,15 +54,7 @@
             from: "realm",
             as: "/config/data",
             to: [ "#archivist" ],
-            subdir: "fonts",
-        },
-        {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-            ],
-            from: "realm",
-            to: [ "#driver" ],
+            subdir: "archivist",
         },
     ],
     expose: [

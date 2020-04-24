@@ -1,8 +1,6 @@
 {
     program: {
-        // Use the rust test adapter because we don't have the ability to use a runner yet.
-        binary: "bin/rust_test_adapter",
-        args: [ "/pkg/test/archivist_integration_tests" ],
+        binary: "test/archivist_integration_tests",
     },
     collections: [
         {
@@ -11,19 +9,16 @@
         },
     ],
     use: [
-        { runner: "elf" },
-        {
-            protocol: "/svc/fuchsia.sys2.Realm",
-            from: "framework",
-        },
+        { runner: "rust_test_runner" },
         {
             protocol: [
                 "/svc/fuchsia.diagnostics.ArchiveAccessor",
-
-                // These "use" statements are needed for the RustTestAdapter trampoline
                 "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
             ],
+        },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
         },
     ],
     offer: [

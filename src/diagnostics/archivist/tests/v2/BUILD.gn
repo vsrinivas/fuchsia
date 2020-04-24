@@ -35,7 +35,6 @@ test_package("archivist-integration-tests-v2") {
     ":integration_tests_bin",
     ":stub_inspect_component",
     "//src/diagnostics/archivist:bin",
-    "//src/sys/test_adapters/rust:bin",
   ]
 
   binaries = [
@@ -45,10 +44,6 @@ test_package("archivist-integration-tests-v2") {
     {
       name = "stub_inspect_component"
     },
-    {
-      # TODO: Remove once tests can use a test runner
-      name = "rust_test_adapter"
-    },
   ]
 
   meta = [
@@ -57,12 +52,12 @@ test_package("archivist-integration-tests-v2") {
       dest = "archivist.cm"
     },
     {
-      path = rebase_path("meta/integration_tests_driver.cml")
-      dest = "test_driver.cm"
-    },
-    {
       path = rebase_path("meta/stub_inspect_component.cml")
       dest = "stub_inspect_component.cm"
+    },
+    {
+      path = rebase_path("meta/driver.cml")
+      dest = "driver.cm"
     },
   ]
 
