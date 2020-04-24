@@ -1,12 +1,12 @@
-# Fuchsia Archive Format
+# Fuchsia archive format (FAR)
 
 ## Overview
 
-The Fuchsia Archive format is a format for storing a directory tree in a
-file. Like a `.tar` or `.zip` file, a Fuchsia Archive file stores a mapping
+The Fuchsia archive format is a format for storing a directory tree in a
+file. Like a `.tar` or `.zip` file, a Fuchsia archive file stores a mapping
 from path names to file contents.
 
-Fuchsia Archive files are sometimes referred to as FARs or FAR archives,
+Fuchsia archive files are sometimes referred to as FARs or FAR archives,
 and are given the filename extension `.far`.
 
 ## Format

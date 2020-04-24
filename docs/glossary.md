@@ -378,7 +378,7 @@ qualities suitable for user interfaces.
 The Fuchsia Archive Format is a container for files to be used by Zircon and
 Fuchsia.
 
--   [FAR Spec](/docs/concepts/packages/archive_format.md)
+-   [FAR Spec](/docs/concepts/source_code/archive_format.md)
 
 ### **FBL** {#fbl}
 
