@@ -4,98 +4,90 @@
 
 // Forward declarations for old <-> V1 mappings
 
-extern const fidl_type_t test_name_ParentGetChildRequestTable;
-extern const fidl_type_t test_name_ParentGetChildResponseTable;
-extern const fidl_type_t test_name_ParentGetChildRequestRequestTable;
-extern const fidl_type_t test_name_ParentGetChildRequestResponseTable;
-extern const fidl_type_t test_name_ParentTakeChildRequestTable;
-extern const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
-extern const fidl_type_t v1_test_name_ParentGetChildRequestTable;
-extern const fidl_type_t v1_test_name_ParentGetChildResponseTable;
-extern const fidl_type_t v1_test_name_ParentGetChildRequestRequestTable;
-extern const fidl_type_t v1_test_name_ParentGetChildRequestResponseTable;
-extern const fidl_type_t v1_test_name_ParentTakeChildRequestTable;
-extern const fidl_type_t v1_test_name_ParentTakeChildRequestRequestTable;
+static const fidl_type_t Vector5nonnullable27String4294967295nonnullableTable;
+static const fidl_type_t Vector5nonnullable6uint32Table;
+static const fidl_type_t Vector4294967295nonnullable27String4294967295nonnullableTable;
+static const fidl_type_t Vector9nonnullable27String4294967295nonnullableTable;
+static const fidl_type_t Vector5nonnullable28someotherlibrary_ReferenceMeTable;
+extern const fidl_type_t example_ExampleOfUseOfAliasesTable;
+static const fidl_type_t v1_Vector5nonnullable30v1_String4294967295nonnullableTable;
+static const fidl_type_t v1_Vector5nonnullable6uint32Table;
+static const fidl_type_t v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable;
+static const fidl_type_t v1_Vector9nonnullable30v1_String4294967295nonnullableTable;
+static const fidl_type_t v1_Vector5nonnullable31v1_someotherlibrary_ReferenceMeTable;
+extern const fidl_type_t v1_example_ExampleOfUseOfAliasesTable;
 
 // Coding tables for old wire format.
 
+extern const fidl_type_t someotherlibrary_ReferenceMeTable;
+extern const fidl_type_t example_ExampleOfUseOfAliasesTable;
 
 
-extern const fidl_type_t test_name_ParentGetChildRequestTable;
-static const struct FidlStructField Fields31test_name_ParentGetChildRequest[] = {};
-const fidl_type_t test_name_ParentGetChildRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields31test_name_ParentGetChildRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequest", .alt_type=&v1_test_name_ParentGetChildRequestTable}}};
+static const fidl_type_t String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
 
-static const fidl_type_t Protocol15test_name_ChildnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+static const fidl_type_t Vector5nonnullable27String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&String4294967295nonnullableTable, .max_count=5u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .alt_type=&v1_Vector5nonnullable30v1_String4294967295nonnullableTable}}};
 
-extern const fidl_type_t test_name_ParentGetChildResponseTable;
-static const struct FidlStructField Fields32test_name_ParentGetChildResponse[] = {
-    /*FidlStructField*/{.type=&Protocol15test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
+static const fidl_type_t Vector5nonnullable6uint32Table = {.type_tag=kFidlTypeVector, {.coded_vector={.element=NULL, .max_count=5u, .element_size=4u, .nullable=kFidlNullability_Nonnullable, .alt_type=&v1_Vector5nonnullable6uint32Table}}};
+
+static const fidl_type_t Vector4294967295nonnullable27String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&String4294967295nonnullableTable, .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .alt_type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable}}};
+
+static const fidl_type_t Vector9nonnullable27String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&String4294967295nonnullableTable, .max_count=9u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .alt_type=&v1_Vector9nonnullable30v1_String4294967295nonnullableTable}}};
+
+static const fidl_type_t Vector5nonnullable28someotherlibrary_ReferenceMeTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&someotherlibrary_ReferenceMeTable, .max_count=5u, .element_size=1u, .nullable=kFidlNullability_Nonnullable, .alt_type=&v1_Vector5nonnullable31v1_someotherlibrary_ReferenceMeTable}}};
+
+static const fidl_type_t HandlehandlenonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+
+static const fidl_type_t HandlehandlenullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable}}};
+
+
+static const struct FidlStructField Fields29example_ExampleOfUseOfAliases[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
+    /*FidlStructField*/{.type=&Vector5nonnullable27String4294967295nonnullableTable, .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=&Vector5nonnullable6uint32Table, .offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=&Vector4294967295nonnullable27String4294967295nonnullableTable, .offset=40u, .padding=0u},
+    /*FidlStructField*/{.type=&Vector9nonnullable27String4294967295nonnullableTable, .offset=56u, .padding=0u},
+    /*FidlStructField*/{.type=&Vector5nonnullable27String4294967295nonnullableTable, .offset=72u, .padding=0u},
+    /*FidlStructField*/{.type=&Vector5nonnullable28someotherlibrary_ReferenceMeTable, .offset=88u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=104u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=108u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlehandlenullableTable, .offset=112u, .padding=4u}
 };
-const fidl_type_t test_name_ParentGetChildResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32test_name_ParentGetChildResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildResponse", .alt_type=&v1_test_name_ParentGetChildResponseTable}}};
-
-extern const fidl_type_t test_name_ParentGetChildRequestRequestTable;
-static const struct FidlStructField Fields38test_name_ParentGetChildRequestRequest[] = {};
-const fidl_type_t test_name_ParentGetChildRequestRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields38test_name_ParentGetChildRequestRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequestRequest", .alt_type=&v1_test_name_ParentGetChildRequestRequestTable}}};
-
-static const fidl_type_t Request15test_name_ChildnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
-
-extern const fidl_type_t test_name_ParentGetChildRequestResponseTable;
-static const struct FidlStructField Fields39test_name_ParentGetChildRequestResponse[] = {
-    /*FidlStructField*/{.type=&Request15test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
-};
-const fidl_type_t test_name_ParentGetChildRequestResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39test_name_ParentGetChildRequestResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequestResponse", .alt_type=&v1_test_name_ParentGetChildRequestResponseTable}}};
-
-extern const fidl_type_t test_name_ParentTakeChildRequestTable;
-static const struct FidlStructField Fields32test_name_ParentTakeChildRequest[] = {
-    /*FidlStructField*/{.type=&Protocol15test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
-};
-const fidl_type_t test_name_ParentTakeChildRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32test_name_ParentTakeChildRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentTakeChildRequest", .alt_type=&v1_test_name_ParentTakeChildRequestTable}}};
-
-extern const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
-static const struct FidlStructField Fields39test_name_ParentTakeChildRequestRequest[] = {
-    /*FidlStructField*/{.type=&Request15test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
-};
-const fidl_type_t test_name_ParentTakeChildRequestRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39test_name_ParentTakeChildRequestRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentTakeChildRequestRequest", .alt_type=&v1_test_name_ParentTakeChildRequestRequestTable}}};
-
+const fidl_type_t example_ExampleOfUseOfAliasesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields29example_ExampleOfUseOfAliases, .field_count=10u, .size=120u, .max_out_of_line=4294967295u, .contains_union=false, .name="example/ExampleOfUseOfAliases", .alt_type=&v1_example_ExampleOfUseOfAliasesTable}}};
 
 // Coding tables for v1 wire format.
 
+extern const fidl_type_t v1_someotherlibrary_ReferenceMeTable;
+extern const fidl_type_t v1_example_ExampleOfUseOfAliasesTable;
 
 
-extern const fidl_type_t v1_test_name_ParentGetChildRequestTable;
-static const struct FidlStructField Fields34v1_test_name_ParentGetChildRequest[] = {};
-const fidl_type_t v1_test_name_ParentGetChildRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields34v1_test_name_ParentGetChildRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequest", .alt_type=&test_name_ParentGetChildRequestTable}}};
+static const fidl_type_t v1_String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
 
-static const fidl_type_t v1_Protocol18v1_test_name_ChildnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+static const fidl_type_t v1_Vector5nonnullable30v1_String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&v1_String4294967295nonnullableTable, .max_count=5u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .alt_type=&Vector5nonnullable27String4294967295nonnullableTable}}};
 
-extern const fidl_type_t v1_test_name_ParentGetChildResponseTable;
-static const struct FidlStructField Fields35v1_test_name_ParentGetChildResponse[] = {
-    /*FidlStructField*/{.type=&v1_Protocol18v1_test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
+static const fidl_type_t v1_Vector5nonnullable6uint32Table = {.type_tag=kFidlTypeVector, {.coded_vector={.element=NULL, .max_count=5u, .element_size=4u, .nullable=kFidlNullability_Nonnullable, .alt_type=&Vector5nonnullable6uint32Table}}};
+
+static const fidl_type_t v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&v1_String4294967295nonnullableTable, .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .alt_type=&Vector4294967295nonnullable27String4294967295nonnullableTable}}};
+
+static const fidl_type_t v1_Vector9nonnullable30v1_String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&v1_String4294967295nonnullableTable, .max_count=9u, .element_size=16u, .nullable=kFidlNullability_Nonnullable, .alt_type=&Vector9nonnullable27String4294967295nonnullableTable}}};
+
+static const fidl_type_t v1_Vector5nonnullable31v1_someotherlibrary_ReferenceMeTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&v1_someotherlibrary_ReferenceMeTable, .max_count=5u, .element_size=1u, .nullable=kFidlNullability_Nonnullable, .alt_type=&Vector5nonnullable28someotherlibrary_ReferenceMeTable}}};
+
+static const fidl_type_t v1_HandlehandlenonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+
+static const fidl_type_t v1_HandlehandlenullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable}}};
+
+
+static const struct FidlStructField Fields32v1_example_ExampleOfUseOfAliases[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
+    /*FidlStructField*/{.type=&v1_Vector5nonnullable30v1_String4294967295nonnullableTable, .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_Vector5nonnullable6uint32Table, .offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, .offset=40u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_Vector9nonnullable30v1_String4294967295nonnullableTable, .offset=56u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_Vector5nonnullable30v1_String4294967295nonnullableTable, .offset=72u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_Vector5nonnullable31v1_someotherlibrary_ReferenceMeTable, .offset=88u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlehandlenonnullableTable, .offset=104u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlehandlenonnullableTable, .offset=108u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlehandlenullableTable, .offset=112u, .padding=4u}
 };
-const fidl_type_t v1_test_name_ParentGetChildResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35v1_test_name_ParentGetChildResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildResponse", .alt_type=&test_name_ParentGetChildResponseTable}}};
-
-extern const fidl_type_t v1_test_name_ParentGetChildRequestRequestTable;
-static const struct FidlStructField Fields41v1_test_name_ParentGetChildRequestRequest[] = {};
-const fidl_type_t v1_test_name_ParentGetChildRequestRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields41v1_test_name_ParentGetChildRequestRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequestRequest", .alt_type=&test_name_ParentGetChildRequestRequestTable}}};
-
-static const fidl_type_t v1_Request18v1_test_name_ChildnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
-
-extern const fidl_type_t v1_test_name_ParentGetChildRequestResponseTable;
-static const struct FidlStructField Fields42v1_test_name_ParentGetChildRequestResponse[] = {
-    /*FidlStructField*/{.type=&v1_Request18v1_test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
-};
-const fidl_type_t v1_test_name_ParentGetChildRequestResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields42v1_test_name_ParentGetChildRequestResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequestResponse", .alt_type=&test_name_ParentGetChildRequestResponseTable}}};
-
-extern const fidl_type_t v1_test_name_ParentTakeChildRequestTable;
-static const struct FidlStructField Fields35v1_test_name_ParentTakeChildRequest[] = {
-    /*FidlStructField*/{.type=&v1_Protocol18v1_test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
-};
-const fidl_type_t v1_test_name_ParentTakeChildRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35v1_test_name_ParentTakeChildRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentTakeChildRequest", .alt_type=&test_name_ParentTakeChildRequestTable}}};
-
-extern const fidl_type_t v1_test_name_ParentTakeChildRequestRequestTable;
-static const struct FidlStructField Fields42v1_test_name_ParentTakeChildRequestRequest[] = {
-    /*FidlStructField*/{.type=&v1_Request18v1_test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
-};
-const fidl_type_t v1_test_name_ParentTakeChildRequestRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields42v1_test_name_ParentTakeChildRequestRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentTakeChildRequestRequest", .alt_type=&test_name_ParentTakeChildRequestRequestTable}}};
-
+const fidl_type_t v1_example_ExampleOfUseOfAliasesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32v1_example_ExampleOfUseOfAliases, .field_count=10u, .size=120u, .max_out_of_line=4294967295u, .contains_union=false, .name="example/ExampleOfUseOfAliases", .alt_type=&example_ExampleOfUseOfAliasesTable}}};
 
