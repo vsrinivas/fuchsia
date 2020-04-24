@@ -1,0 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.product.deprecatedconfiguration;
+
+using fuchsia.net;
+
+// NOTE: This FIDL protocol is deprecated.  Please do not add new uses that depend on it.
+/// Allows for the configuration of WLAN devices to support legacy applications.
+[Discoverable]
+protocol DeprecatedConfigurator {
+    /// Suggests a MAC address for [`fuchsia.wlan.policy/AccessPointProvider`] to use when creating
+    /// new access point interfaces.
+    SetPreferredAccessPointMacAddress(fuchsia.net.MacAddress mac);
+};
