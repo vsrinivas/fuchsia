@@ -66,6 +66,12 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 
 		// We upload all debug binaries to a flat namespace.
 		debugSrc := filepath.Join(mods.BuildDir(), bin.Debug)
+		debugBuilt, err := osmisc.FileExists(debugSrc)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to determine if debug binary %q was built: %v", bin.Label, err)
+		} else if !debugBuilt {
+			return nil, nil, fmt.Errorf("something's wrong: we have a build ID for %q but no associated debug binary", bin.Label)
+		}
 		uploads = append(uploads, Upload{
 			Source:      debugSrc,
 			Destination: fmt.Sprintf("%s/%s.debug", namespace, id),
@@ -73,9 +79,25 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 			Compress:    true,
 		})
 
-		// Ditto for breakpad symbols, if present.
-		breakpadSrc := filepath.Join(mods.BuildDir(), bin.Breakpad)
-		if bin.Breakpad != "" {
+		// If we configured the build to output breakpad symbols, then
+		// assert that the associated breakpad file here was present, as the
+		// associated debug binary is.
+		if breakpadEmitted {
+			if bin.Breakpad == "" {
+				if bin.OS == "fuchsia" {
+					return nil, nil, fmt.Errorf("breakpad file for %q was not present in metadata", bin.Label)
+				}
+				// We're lenient on non-fuchsia binaries not having breakpad
+				// files as we can't generate them for all hosts and languages.
+				continue
+			}
+			breakpadSrc := filepath.Join(mods.BuildDir(), bin.Breakpad)
+			breakpadBuilt, err := osmisc.FileExists(breakpadSrc)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to determine if breakpad file for %q was built: %v", bin.Label, err)
+			} else if !breakpadBuilt {
+				return nil, nil, fmt.Errorf("breakpad file for %q was not built", bin.Label)
+			}
 			uploads = append(uploads, Upload{
 				Source:      breakpadSrc,
 				Destination: fmt.Sprintf("%s/%s.sym", namespace, id),
@@ -84,30 +106,10 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 			})
 		}
 
+		// At this point, fuchsiaBuildIDs should reflect all binaries built
+		// and *all* of their associated breakpad files if emitted in the build.
 		if bin.OS == "fuchsia" {
 			fuchsiaBuildIDs = append(fuchsiaBuildIDs, id)
-			// If we configured the build to output breakpad symbols, then
-			// assert that they are present for every fuchsia binary that is
-			// also present.
-			//
-			// There is generic already logic in cmd/up.go for checking whether
-			// a file exists, so we leave the filtering to that.
-			if breakpadEmitted {
-				if bin.Breakpad == "" {
-					return nil, nil, fmt.Errorf("breakpad symbol must be present for %s", bin.Label)
-				}
-				debugBuilt, err := osmisc.FileExists(debugSrc)
-				if err != nil {
-					return nil, nil, fmt.Errorf("failed to determine if debug binary %q was built: %v", bin.Label, err)
-				}
-				breakpadBuilt, err := osmisc.FileExists(breakpadSrc)
-				if err != nil {
-					return nil, nil, fmt.Errorf("failed to determine if breakpad file for %q was built: %v", bin.Label, err)
-				}
-				if debugBuilt && !breakpadBuilt {
-					fmt.Printf("breakpad file for the following binary was not built:\n %#v\n", bin)
-				}
-			}
 		}
 	}
 	return uploads, fuchsiaBuildIDs, nil

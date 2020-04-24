@@ -47,33 +47,37 @@ func (m mockBinModules) PrebuiltBinaries() []build.PrebuiltBinaries {
 }
 
 func TestDebugBinaryUploads(t *testing.T) {
-	buildDir, err := ioutil.TempDir("", "")
+	checkout, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatalf("failed to create a temporary directory: %v", err)
 	}
-	defer os.RemoveAll(buildDir)
-	println(buildDir)
+	defer os.RemoveAll(checkout)
+	buildDir, err := ioutil.TempDir(checkout, "out")
+	if err != nil {
+		t.Fatalf("failed to create a 'build directory'")
+	}
 
-	prebuiltBinManifest, err := binaryManifest(buildDir, []build.Binary{
+	pbins := []build.Binary{
 		{
-			Debug:    filepath.Join(".build-id", "pr", "ebuiltA.debug"),
-			Breakpad: filepath.Join("gen", "prebuiltA.sym"),
+			Debug:    filepath.Join("..", ".build-id", "pr", "ebuiltA.debug"),
+			Breakpad: filepath.Join("..", ".build-id", "pr", "ebuiltA.sym"),
 			OS:       "fuchsia",
 			Label:    "//prebuilt",
 		},
 		{
-			Debug:    filepath.Join(".build-id", "pr", "ebuiltA.debug"),
-			Breakpad: filepath.Join("gen", "prebuiltA.sym"),
+			Debug:    filepath.Join("..", ".build-id", "pr", "ebuiltA.debug"),
+			Breakpad: filepath.Join("..", ".build-id", "pr", "ebuiltA.sym"),
 			OS:       "fuchsia",
 			Label:    "//prebuilt",
 		},
 		{
-			Debug:    filepath.Join(".build-id", "pr", "ebuiltB.debug"),
-			Breakpad: filepath.Join("host", "gen", "prebuiltB.sym"),
+			Debug:    filepath.Join("..", ".build-id", "pr", "ebuiltB.debug"),
+			Breakpad: filepath.Join("..", ".build-id", "pr", "ebuiltB.sym"),
 			OS:       "linux",
 			Label:    "//prebuilt",
 		},
-	})
+	}
+	prebuiltBinManifest, err := binaryManifest(buildDir, pbins)
 	if err != nil {
 		t.Fatalf("failed to create binary manifest: %v", err)
 	}
@@ -113,6 +117,18 @@ func TestDebugBinaryUploads(t *testing.T) {
 		},
 	}
 
+	// The logic under test deals in file existence.
+	for _, bin := range pbins {
+		touch(t, filepath.Join(buildDir, bin.Debug))
+		touch(t, filepath.Join(buildDir, bin.Breakpad))
+	}
+	for _, bin := range m.bins {
+		touch(t, filepath.Join(buildDir, bin.Debug))
+		if bin.Breakpad != "" {
+			touch(t, filepath.Join(buildDir, bin.Breakpad))
+		}
+	}
+
 	expectedUploads := []Upload{
 		{
 			Source:      filepath.Join(buildDir, ".build-id", "fi", "rst.debug"),
@@ -145,25 +161,25 @@ func TestDebugBinaryUploads(t *testing.T) {
 			Deduplicate: true,
 		},
 		{
-			Source:      filepath.Join(buildDir, ".build-id", "pr", "ebuiltA.debug"),
+			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltA.debug"),
 			Destination: "NAMESPACE/prebuiltA.debug",
 			Compress:    true,
 			Deduplicate: true,
 		},
 		{
-			Source:      filepath.Join(buildDir, "gen", "prebuiltA.sym"),
+			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltA.sym"),
 			Destination: "NAMESPACE/prebuiltA.sym",
 			Compress:    true,
 			Deduplicate: true,
 		},
 		{
-			Source:      filepath.Join(buildDir, ".build-id", "pr", "ebuiltB.debug"),
+			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltB.debug"),
 			Destination: "NAMESPACE/prebuiltB.debug",
 			Compress:    true,
 			Deduplicate: true,
 		},
 		{
-			Source:      filepath.Join(buildDir, "host", "gen", "prebuiltB.sym"),
+			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltB.sym"),
 			Destination: "NAMESPACE/prebuiltB.sym",
 			Compress:    true,
 			Deduplicate: true,
@@ -181,6 +197,22 @@ func TestDebugBinaryUploads(t *testing.T) {
 	if !reflect.DeepEqual(actualIDs, expectedIDs) {
 		t.Fatalf("unexpected build IDs:\nexpected:\n%#v\nactual:\n%#v\n", expectedIDs, actualIDs)
 	}
+}
+
+func touch(t *testing.T, file string) {
+	t.Helper()
+	file, err := filepath.Abs(file)
+	if err != nil {
+		t.Fatalf("failed to absolutize: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(file), os.ModePerm); err != nil {
+		t.Fatalf("failed to create parent directories for %s: %v", file, err)
+	}
+	f, err := os.Create(file)
+	if err != nil {
+		t.Fatalf("failed to create %s: %v", file, err)
+	}
+	f.Close()
 }
 
 func binaryManifest(buildDir string, bins []build.Binary) (string, error) {
