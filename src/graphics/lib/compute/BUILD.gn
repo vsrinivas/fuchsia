@@ -12,10 +12,8 @@ group("compute") {
     "common",
     "common/vk",
     "hotsort",
-    "mold",
     "mold-next",
     "spinel",
-    "spinel-mold",
     "spinel-rs",
     "spinel-rs-sys",
     "spinel/platforms/vk",
@@ -48,10 +46,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":graphics-compute-unittests",
-    "mold:mold-tests",
     "mold-next:mold-next-tests",
-    "spinel-mold:spinel-mold-static-tests",
-    "spinel-mold:spinel-mold-tests",
     "spinel-rs:spinel-rs-tests",
     "spinel-rs-sys:spinel-rs-sys-tests",
     "surpass:surpass-tests",
@@ -75,7 +70,6 @@ group("tests") {
 group("all_tests") {
   testonly = true
   public_deps = [
-    ":graphics-compute-mold-c-unittests",
     ":graphics-compute-vk-unittests",
     ":tests",
     "examples",
@@ -112,10 +106,4 @@ graphics_compute_unittests_package("graphics-compute-vk-unittests") {
     "tests/common/spinel_vk:unittests",
   ]
   needs_vulkan = true
-}
-
-# A target used to group all graphics compute unit-tests that depend on
-# spinel-mold instead of Spinel and have no Vulkan dependencies.
-graphics_compute_unittests_package("graphics-compute-mold-c-unittests") {
-  deps = [ "spinel-mold:mold_c_unittests" ]
 }

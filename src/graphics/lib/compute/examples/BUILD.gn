@@ -48,29 +48,12 @@ source_set("common_spinel") {
 }
 
 #
-# Common sources files for demos that use Mold.
-#
-source_set("common_mold") {
-  sources = [
-    "common/demo_app_mold.cc",
-    "common/demo_app_mold.h",
-  ]
-  deps = [ "${graphics_compute_dir}/tests/common/spinel:spinel_utils" ]
-  public_deps = [
-    ":common",
-    "${graphics_compute_dir}/spinel-mold:spinel-mold-c",
-    "${graphics_compute_dir}/tests:common",
-    "${graphics_compute_dir}/tests:common_vk",
-  ]
-}
-
-#
-# A template used to define a set of demo programs that use Spinel or Mold
+# A template used to define a set of demo programs that use Spinel
 # as backends for the Spinel API.
 #
 # Accepts all variables from graphics_compute_executable() plus:
 #
-#  spinel_backend: A required string that must be either "spinel" or "mold"
+#  spinel_backend: A required string that must be "spinel"
 #
 template("graphics_compute_spinel_demo_executable") {
   assert(defined(invoker.spinel_backend), "spinel_backend must be defined!")
@@ -92,12 +75,6 @@ template("graphics_compute_spinel_demo_executable") {
         ":common",
         ":common_spinel",
       ]
-    } else if (invoker.spinel_backend == "mold") {
-      deps += [
-        ":common",
-        ":common_mold",
-      ]
-      defines += [ "USE_MOLD=1" ]
     } else {
       assert(false, "Invalid spinel_backend value: ${invoker.spinel_backend}")
     }
@@ -116,16 +93,9 @@ template("graphics_compute_spinel_demo") {
     forward_variables_from(invoker, "*", [ "target_name" ])
     spinel_backend = "spinel"
   }
-  graphics_compute_spinel_demo_executable("mold-${target_name}") {
-    forward_variables_from(invoker, "*", [ "target_name" ])
-    spinel_backend = "mold"
-  }
 
   group(target_name) {
-    deps = [
-      ":mold-${target_name}",
-      ":spinel-${target_name}",
-    ]
+    deps = [ ":spinel-${target_name}" ]
   }
 }
 

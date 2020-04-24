@@ -18,7 +18,6 @@ rustc_library("input") {
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
-    "//src/graphics/lib/compute/mold",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
