@@ -122,14 +122,18 @@ Read the [Fuchsia Getting Started][getting_started] guide first.
 
 ### fx set
 
+If you are working on the FIDL toolchain, use:
+
 ```sh
-fx set core.x64 --with //bundles:tests --with //topaz/packages/tests:all --with //sdk:modular_testing
+fx set core.x64 --with //bundles/fidl:tests
 ```
 
-or, to ensure there's no breakage with lots of bindings etc.:
+If you are working on an LSC:
 
 ```sh
-fx set terminal.x64 --with //bundles:kitchen_sink
+fx set terminal.x64 --with //bundles:kitchen_sink \
+                    --with //topaz/packages/tests:all \
+                    --with //sdk:modular_testing
 ```
 
 ### symbolizer

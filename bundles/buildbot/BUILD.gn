@@ -19,6 +19,7 @@ group("core") {
   testonly = true
   public_deps = [
     "//bundles:tools",
+    "//bundles/fidl:tests",
     "//examples",
     "//examples:tests",
     "//garnet",
