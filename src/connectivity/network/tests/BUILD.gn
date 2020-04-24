@@ -25,6 +25,7 @@ rustc_test("netstack_fidl_integration_test") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/fidl_fuchsia_net_ext",
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",

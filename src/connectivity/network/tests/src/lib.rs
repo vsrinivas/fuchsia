@@ -4,223 +4,17 @@
 
 #![cfg(test)]
 
-use anyhow::Context as _;
-use std::convert::TryInto;
+mod environments;
 
+use environments::*;
+
+use anyhow::Context as _;
+
+use fidl_fuchsia_net_ext::ip_addr;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
 use futures::stream::{self, StreamExt, TryStreamExt};
 
-const SECURE_STASH_URL: &str = "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx";
-
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
-
-// TODO(gongt) Use an attribute macro to reduce the boilerplate of running the
-// same test for both N2 and N3.
-/// Abstraction for a Fuchsia component which offers network stack services.
-trait Netstack {
-    const URL: &'static str;
-}
-
-/// Uninstantiable type that represents Netstack2's implementation of a
-/// network stack.
-enum Netstack2 {}
-
-impl Netstack for Netstack2 {
-    const URL: &'static str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx";
-}
-
-/// Uninstantiable type that represents Netstack3's implementation of a
-/// network stack.
-enum Netstack3 {}
-
-impl Netstack for Netstack3 {
-    const URL: &'static str = fuchsia_component::fuchsia_single_component_package_url!("netstack3");
-}
-
-/// Helper struct providing [`fidl_fuchsia_netemul_network::DeviceConnection`]
-/// with utility functions.
-struct DeviceConnection(fidl_fuchsia_netemul_network::DeviceConnection);
-
-impl DeviceConnection {
-    /// Creates a `DeviceConnection` from `endpoint`.
-    async fn new(endpoint: &fidl_fuchsia_netemul_network::EndpointProxy) -> anyhow::Result<Self> {
-        Ok(DeviceConnection(endpoint.get_device().await?))
-    }
-
-    /// Unwraps this `DeviceConnection` into an Ethernet
-    /// [`fidl::endpoints::ClientEnd`] if it is an Ethernet connection.
-    ///
-    /// # Panics
-    ///
-    /// Panics if this `DeviceConnection` is not
-    /// [`fidl_fuchsia_netemul_network::DeviceConnection::Ethernet`].
-    fn expect_ethernet<T: std::fmt::Display>(
-        self,
-        msg: T,
-    ) -> fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker> {
-        let Self(device) = self;
-        match device {
-            fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(eth) => eth,
-            fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
-                panic!("DeviceConnection was NetworkDevice ({:?}) {}", netdevice, msg)
-            }
-        }
-    }
-
-    /// Adds this `DeviceConnection` to `stack`.
-    async fn add_to_stack(
-        self,
-        name: &str,
-        stack: &fidl_fuchsia_net_stack::StackProxy,
-    ) -> anyhow::Result<u64> {
-        let Self(device) = self;
-        match device {
-            fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(eth) => exec_fidl!(
-                stack.add_ethernet_interface(name, eth),
-                "failed to add ethernet interface"
-            ),
-            fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
-                todo!("(48907) Support NetworkDevice version of integration tests. Got unexpected NetworkDevice {:?}", netdevice)
-            }
-        }
-    }
-}
-
-fn connect_to_service<S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService>(
-    managed_environment: &fidl_fuchsia_netemul_environment::ManagedEnvironmentProxy,
-) -> std::result::Result<S::Proxy, anyhow::Error> {
-    let (proxy, server) = fuchsia_zircon::Channel::create()?;
-    let () = managed_environment.connect_to_service(S::SERVICE_NAME, server)?;
-    let proxy = fuchsia_async::Channel::from_channel(proxy)?;
-    Ok(<S::Proxy as fidl::endpoints::Proxy>::from_channel(proxy))
-}
-
-fn get_network_context(
-    sandbox: &fidl_fuchsia_netemul_sandbox::SandboxProxy,
-) -> std::result::Result<fidl_fuchsia_netemul_network::NetworkContextProxy, anyhow::Error> {
-    let (client, server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_netemul_network::NetworkContextMarker>()
-            .context("failed to create network context proxy")?;
-    let () = sandbox.get_network_context(server).context("failed to get network context")?;
-    Ok(client)
-}
-
-fn get_endpoint_manager(
-    network_context: &fidl_fuchsia_netemul_network::NetworkContextProxy,
-) -> std::result::Result<fidl_fuchsia_netemul_network::EndpointManagerProxy, anyhow::Error> {
-    let (client, server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_netemul_network::EndpointManagerMarker>()
-            .context("failed to create endpoint manager proxy")?;
-    let () =
-        network_context.get_endpoint_manager(server).context("failed to get endpoint manager")?;
-    Ok(client)
-}
-
-async fn create_endpoint(
-    name: &str,
-    endpoint_manager: &fidl_fuchsia_netemul_network::EndpointManagerProxy,
-) -> std::result::Result<fidl_fuchsia_netemul_network::EndpointProxy, anyhow::Error> {
-    let (status, endpoint) = endpoint_manager
-        .create_endpoint(
-            name,
-            &mut fidl_fuchsia_netemul_network::EndpointConfig {
-                mtu: 1500,
-                mac: None,
-                backing: fidl_fuchsia_netemul_network::EndpointBacking::Ethertap,
-            },
-        )
-        .await
-        .context("failed to create endpoint")?;
-    let () = fuchsia_zircon::Status::ok(status).context("failed to create endpoint")?;
-    let endpoint = endpoint
-        .ok_or(anyhow::format_err!("failed to create endpoint"))?
-        .into_proxy()
-        .context("failed to get endpoint proxy")?;
-    Ok(endpoint)
-}
-
-fn create_netstack_environment<N: Netstack>(
-    sandbox: &fidl_fuchsia_netemul_sandbox::SandboxProxy,
-    name: String,
-) -> std::result::Result<fidl_fuchsia_netemul_environment::ManagedEnvironmentProxy, anyhow::Error> {
-    let (client, server) = fidl::endpoints::create_proxy::<
-        fidl_fuchsia_netemul_environment::ManagedEnvironmentMarker,
-    >()
-    .context("failed to create managed environment proxy")?;
-    let () = sandbox
-        .create_environment(
-            server,
-            fidl_fuchsia_netemul_environment::EnvironmentOptions {
-                name: Some(name),
-                services: Some([
-                    <fidl_fuchsia_net_stack::StackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                    <fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                    <fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                ]
-                    // TODO(tamird): use into_iter after
-                    // https://github.com/rust-lang/rust/issues/25725.
-                    .iter()
-                    .map(std::ops::Deref::deref)
-                    .map(str::to_string)
-                    .map(|name| fidl_fuchsia_netemul_environment::LaunchService {
-                        name,
-                        url: N::URL.to_string(),
-                        arguments: None,
-                    })
-                    .chain(
-                        Some(
-                            fidl_fuchsia_netemul_environment::LaunchService {
-                                name: <fidl_fuchsia_stash::StoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME.to_string(),
-                                url: fuchsia_component::fuchsia_single_component_package_url!("stash").to_string(),
-                                arguments: None,
-                            }
-                    ))
-                    .chain(
-                        Some(
-                            fidl_fuchsia_netemul_environment::LaunchService {
-                                name: <fidl_fuchsia_cobalt::LoggerFactoryMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME.to_string(),
-                                url: fuchsia_component::fuchsia_single_component_package_url!("mock_cobalt").to_string(),
-                                arguments: None,
-                            }
-                    ))
-                    .collect()),
-                devices: None,
-                inherit_parent_launch_services: None,
-                logger_options: Some(fidl_fuchsia_netemul_environment::LoggerOptions {
-                    enabled: Some(true),
-                    klogs_enabled: None,
-                    filter_options: None,
-                    syslog_output: Some(true),
-                }),
-            },
-        )
-        .context("failed to create environment")?;
-    Ok(client)
-}
-
-async fn with_netstack_and_device<F, T, N, S>(name: &'static str, async_fn: T) -> Result
-where
-    F: futures::Future<Output = Result>,
-    T: FnOnce(S::Proxy, DeviceConnection) -> F,
-    N: Netstack,
-    S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
-{
-    let sandbox = fuchsia_component::client::connect_to_service::<
-        fidl_fuchsia_netemul_sandbox::SandboxMarker,
-    >()
-    .context("failed to connect to sandbox")?;
-    let network_context = get_network_context(&sandbox).context("failed to get network context")?;
-    let endpoint_manager =
-        get_endpoint_manager(&network_context).context("failed to get endpoint manager")?;
-    let endpoint =
-        create_endpoint(name, &endpoint_manager).await.context("failed to create endpoint")?;
-    let device = DeviceConnection::new(&endpoint).await.context("failed to get ethernet device")?;
-    let managed_environment = create_netstack_environment::<N>(&sandbox, name.to_string())
-        .context("failed to create netstack environment")?;
-    let netstack_proxy =
-        connect_to_service::<S>(&managed_environment).context("failed to connect to netstack")?;
-    async_fn(netstack_proxy, device).await
-}
 
 /// Launches a new netstack with the endpoint and returns the IPv6 addresses
 /// initially assigned to it.
@@ -231,39 +25,18 @@ where
 /// the launched netstack will still be terminated, but no guarantees are made
 /// about when that will happen.
 async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
-    endpoint: &fidl_fuchsia_netemul_network::EndpointProxy,
+    endpoint: &TestEndpoint<'_>,
     launcher: &fidl_fuchsia_sys::LauncherProxy,
     name: String,
 ) -> Result<Vec<fidl_fuchsia_net::Subnet>> {
-    let device =
-        DeviceConnection::new(endpoint).await.context("failed to get device connection")?;
     // Launch the netstack service.
-    let (dir, dir_server) = fuchsia_zircon::Channel::create()?;
-    let (component_controller, component_controller_server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_sys::ComponentControllerMarker>()
-            .context("failed to create launcher proxy")?;
-    let () = launcher.create_component(
-        &mut fidl_fuchsia_sys::LaunchInfo {
-            url: N::URL.to_string(),
-            arguments: None,
-            out: None,
-            err: None,
-            directory_request: Some(dir_server),
-            flat_namespace: None,
-            additional_services: None,
-        },
-        Some(component_controller_server),
-    )?;
 
-    // Connect to the netstack service.
-    let (netstack, server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_netstack::NetstackMarker>()
-            .context("failed to create netstack proxy")?;
-    let () = fdio::service_connect_at(
-        &dir,
-        <fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-        server.into_channel(),
-    ).context("failed to connect to netstack")?;
+    let mut app = fuchsia_component::client::AppBuilder::new(N::VERSION.get_url())
+        .spawn(launcher)
+        .context("failed to spawn netstack")?;
+    let netstack = app
+        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .context("failed to connect to netstack service")?;
 
     // Add the device and get its interface state from netstack.
     // TODO(48907) Support Network Device. This helper fn should use stack.fidl
@@ -277,7 +50,10 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
                 metric: 0,
                 ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
             },
-            device.expect_ethernet("add_ethernet_device requires an Ethernet endpoint"),
+            endpoint
+                .get_ethernet()
+                .await
+                .context("add_ethernet_device requires an Ethernet endpoint")?,
         )
         .await
         .context("failed to add ethernet device")?;
@@ -294,14 +70,8 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
     // Note, simply dropping `component_controller` would also kill the netstack
     // but we explicitly kill it and wait for the terminated event before
     // proceeding.
-    let () = component_controller.kill()?;
-    let mut event_stream = component_controller.take_event_stream();
-    while let Some(event) = event_stream.next().await {
-        match event? {
-            fidl_fuchsia_sys::ComponentControllerEvent::OnTerminated { .. } => break,
-            fidl_fuchsia_sys::ComponentControllerEvent::OnDirectoryReady {} => {}
-        }
-    }
+    let () = app.kill().context("failed to kill app")?;
+    let _exit_status = app.wait().await.context("failed to observe netstack termination")?;
 
     Ok(interface.ipv6addrs)
 }
@@ -311,27 +81,25 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn set_interface_status_unknown_interface() -> Result {
     let name = "set_interface_status";
-    with_netstack_and_device::<_, _, Netstack2, fidl_fuchsia_netstack::NetstackMarker>(
-        name,
-        |netstack, _device| async move {
-            let interfaces = netstack.get_interfaces2().await.context("failed to call get_interfaces2")?;
-            let next_id = 1 + interfaces
-                .iter()
-                .map(|interface| interface.id)
-                .max()
-                .ok_or(anyhow::format_err!("failed to find any network interfaces (at least localhost should be present)"))?;
+    let sandbox = TestSandbox::new()?;
+    let (_env, netstack) =
+        sandbox.new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker>(name)?;
 
-            let () = netstack
-                .set_interface_status(next_id, false).context("failed to call set_interface_status")?;
-            let _interfaces = netstack
-                .get_interfaces2()
-                .await
-                .context("failed to invoke netstack method after calling set_interface_status with an invalid argument")?;
+    let interfaces = netstack.get_interfaces2().await.context("failed to call get_interfaces2")?;
+    let next_id =
+        1 + interfaces.iter().map(|interface| interface.id).max().ok_or(anyhow::format_err!(
+            "failed to find any network interfaces (at least localhost should be present)"
+        ))?;
 
-            Ok(())
-        },
-    )
-    .await
+    let () = netstack
+        .set_interface_status(next_id, false)
+        .context("failed to call set_interface_status")?;
+    let _interfaces = netstack
+        .get_interfaces2()
+        .await
+        .context("failed to invoke netstack method after calling set_interface_status with an invalid argument")?;
+
+    Ok(())
 }
 
 /// Test that across netstack runs, a device will initially be assigned the same
@@ -339,52 +107,12 @@ async fn set_interface_status_unknown_interface() -> Result {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn consistent_initial_ipv6_addrs() -> Result {
     let name = "consistent_initial_ipv6_addrs";
-
-    // Create the environment the netstacks will be created in.
-    let sandbox = fuchsia_component::client::connect_to_service::<
-        fidl_fuchsia_netemul_sandbox::SandboxMarker,
-    >()
-    .context("failed to connect to sandbox")?;
-    let network_context = get_network_context(&sandbox).context("failed to get network context")?;
-    let endpoint_manager =
-        get_endpoint_manager(&network_context).context("failed to get endpoint manager")?;
-    let endpoint =
-        create_endpoint(name, &endpoint_manager).await.context("failed to create endpoint")?;
-    let (env, server) = fidl::endpoints::create_proxy::<
-        fidl_fuchsia_netemul_environment::ManagedEnvironmentMarker,
-    >()
-    .context("failed to create managed environment proxy")?;
-    let () = sandbox
-        .create_environment(
-            server,
-            fidl_fuchsia_netemul_environment::EnvironmentOptions {
-                name: Some(name.to_string()),
-                // We need the fuchsia.stash.SecureStore becuase that is where
-                // Netstack2 stores its secret key for opaque IID generation.
-                //
-                // Without this service, we may not get consistent IPv6
-                // addresses across netstack runs.
-                services: Some(vec![
-                            fidl_fuchsia_netemul_environment::LaunchService {
-                                name: <fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME.to_string(),
-                                url: SECURE_STASH_URL.to_string(),
-                                arguments: None,
-                            },
-                ]),
-                devices: None,
-                inherit_parent_launch_services: None,
-                logger_options: Some(fidl_fuchsia_netemul_environment::LoggerOptions {
-                    enabled: Some(true),
-                    klogs_enabled: None,
-                    filter_options: None,
-                    syslog_output: Some(true),
-                }),
-            },
-        )
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let env = sandbox
+        .create_environment(name, &[KnownServices::SecureStash])
         .context("failed to create environment")?;
-    let (launcher, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_sys::LauncherMarker>()
-        .context("failed to create launcher proxy")?;
-    let () = env.get_launcher(server)?;
+    let launcher = env.get_launcher().context("failed to get launcher")?;
+    let endpoint = sandbox.create_endpoint(name).await.context("failed to create endpoint")?;
 
     // Make sure netstack uses the same addresses across runs for a device.
     let first_run_addrs = run_netstack_and_get_ipv6_addrs_for_endpoint::<Netstack2>(
@@ -406,11 +134,15 @@ async fn consistent_initial_ipv6_addrs() -> Result {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn inspect_objects() -> Result {
-    let launcher = fuchsia_component::client::launcher().context("failed to create launcher")?;
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let env = sandbox
+        .create_empty_environment("inspect_objects")
+        .context("failed to create environment")?;
+    let launcher = env.get_launcher().context("failed to create launcher")?;
 
     let netstack = fuchsia_component::client::launch(
         &launcher,
-        <Netstack2 as Netstack>::URL.to_string(),
+        <Netstack2 as Netstack>::VERSION.get_url().to_string(),
         None,
     )
     .context("failed to start netstack")?;
@@ -439,68 +171,59 @@ async fn inspect_objects() -> Result {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn add_ethernet_device() -> Result {
     let name = "add_ethernet_device";
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let (_env, netstack, device) = sandbox
+        .new_netstack_and_device::<Netstack2, fidl_fuchsia_netstack::NetstackMarker>(name)
+        .await?;
 
-    with_netstack_and_device::<_, _, Netstack2, fidl_fuchsia_netstack::NetstackMarker>(
-        name,
-        |netstack, device| async move {
-            let id = netstack
-                .add_ethernet_device(
-                    name,
-                    &mut fidl_fuchsia_netstack::InterfaceConfig {
-                        name: name.to_string(),
-                        filepath: "/fake/filepath/for_test".to_string(),
-                        metric: 0,
-                        ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
-                    },
-                    // We're testing add_ethernet_device (netstack.fidl), which
-                    // does not have a network device entry point.
-                    device.expect_ethernet("add_ethernet_device requires an Ethernet endpoint"),
-                )
+    let id = netstack
+        .add_ethernet_device(
+            name,
+            &mut fidl_fuchsia_netstack::InterfaceConfig {
+                name: name.to_string(),
+                filepath: "/fake/filepath/for_test".to_string(),
+                metric: 0,
+                ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
+            },
+            // We're testing add_ethernet_device (netstack.fidl), which
+            // does not have a network device entry point.
+            device
+                .get_ethernet()
                 .await
-                .context("failed to add ethernet device")?;
-            let interface = netstack
-                .get_interfaces2()
-                .await
-                .context("failed to get interfaces")?
-                .into_iter()
-                .find(|interface| interface.id == id)
-                .ok_or(anyhow::format_err!("failed to find added ethernet device"))?;
-            assert_eq!(
-                interface.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
-                0
-            );
-            assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
-            Ok::<(), anyhow::Error>(())
-        },
-    )
-    .await
+                .context("add_ethernet_device requires an Ethernet endpoint")?,
+        )
+        .await
+        .context("failed to add ethernet device")?;
+    let interface = netstack
+        .get_interfaces2()
+        .await
+        .context("failed to get interfaces")?
+        .into_iter()
+        .find(|interface| interface.id == id)
+        .ok_or(anyhow::format_err!("failed to find added ethernet device"))?;
+    assert_eq!(interface.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK, 0);
+    assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
+    Ok::<(), anyhow::Error>(())
 }
 
 async fn add_ethernet_interface<N: Netstack>(name: &'static str) -> Result {
-    with_netstack_and_device::<_, _, N, fidl_fuchsia_net_stack::StackMarker>(
-        name,
-        |stack, device| async move {
-            let id = device.add_to_stack(name, &stack).await?;
-            let interface = stack
-                .list_interfaces()
-                .await
-                .context("failed to list interfaces")?
-                .into_iter()
-                .find(|interface| interface.id == id)
-                .ok_or(anyhow::format_err!("failed to find added ethernet interface"))?;
-            assert_eq!(
-                interface.properties.features
-                    & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
-                0
-            );
-            assert_eq!(
-                interface.properties.physical_status,
-                fidl_fuchsia_net_stack::PhysicalStatus::Down
-            );
-            Ok(())
-        },
-    )
-    .await
+    let sandbox = TestSandbox::new()?;
+    let (_env, stack, device) =
+        sandbox.new_netstack_and_device::<N, fidl_fuchsia_net_stack::StackMarker>(name).await?;
+    let id = device.add_to_stack(&stack).await?;
+    let interface = stack
+        .list_interfaces()
+        .await
+        .context("failed to list interfaces")?
+        .into_iter()
+        .find(|interface| interface.id == id)
+        .ok_or(anyhow::format_err!("failed to find added ethernet interface"))?;
+    assert_eq!(
+        interface.properties.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
+        0
+    );
+    assert_eq!(interface.properties.physical_status, fidl_fuchsia_net_stack::PhysicalStatus::Down);
+    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -517,14 +240,10 @@ async fn add_ethernet_interface_n3() -> Result {
 async fn add_del_interface_address() -> Result {
     let name = "add_del_interface_address";
 
-    let sandbox = fuchsia_component::client::connect_to_service::<
-        fidl_fuchsia_netemul_sandbox::SandboxMarker,
-    >()
-    .context("failed to connect to sandbox")?;
-    let managed_environment = create_netstack_environment::<Netstack2>(&sandbox, name.to_string())
-        .context("failed to create netstack environment")?;
-    let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
-        .context("failed to connect to netstack")?;
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let (_env, stack) = sandbox
+        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(name)
+        .context("failed to create environment")?;
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let loopback = interfaces
@@ -535,9 +254,7 @@ async fn add_del_interface_address() -> Result {
         })
         .ok_or(anyhow::format_err!("failed to find loopback"))?;
     let mut interface_address = fidl_fuchsia_net_stack::InterfaceAddress {
-        ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-            addr: [1, 1, 1, 1],
-        }),
+        ip_address: ip_addr![1, 1, 1, 1],
         prefix_len: 32,
     };
     let res = stack
@@ -577,23 +294,18 @@ async fn add_del_interface_address() -> Result {
 async fn add_remove_interface_address_errors() -> Result {
     let name = "add_remove_interface_address_errors";
 
-    let sandbox = fuchsia_component::client::connect_to_service::<
-        fidl_fuchsia_netemul_sandbox::SandboxMarker,
-    >()
-    .context("failed to connect to sandbox")?;
-    let managed_environment = create_netstack_environment::<Netstack2>(&sandbox, name.to_string())
-        .context("failed to create netstack environment")?;
-    let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
-        .context("failed to connect to stack")?;
-    let netstack =
-        connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>(&managed_environment)
-            .context("failed to connect to netstack")?;
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let (env, stack) = sandbox
+        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(name)
+        .context("failed to create environment")?;
+    let netstack = env
+        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .context("failed to connect to netstack")?;
+
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
     let mut interface_address = fidl_fuchsia_net_stack::InterfaceAddress {
-        ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-            addr: [0, 0, 0, 0],
-        }),
+        ip_address: ip_addr![0, 0, 0, 0],
         prefix_len: 0,
     };
 
@@ -623,7 +335,6 @@ async fn add_remove_interface_address_errors() -> Result {
     );
 
     // Don't crash on invalid prefix length.
-
     interface_address.prefix_len = 43;
     let error = stack
         .add_interface_address(max_id, &mut interface_address)
@@ -652,14 +363,11 @@ async fn add_remove_interface_address_errors() -> Result {
 }
 
 async fn get_interface_info_not_found<N: Netstack>(name: &'static str) -> Result {
-    let sandbox = fuchsia_component::client::connect_to_service::<
-        fidl_fuchsia_netemul_sandbox::SandboxMarker,
-    >()
-    .context("failed to connect to sandbox")?;
-    let managed_environment = create_netstack_environment::<N>(&sandbox, name.to_string())
-        .context("failed to create netstack environment")?;
-    let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
-        .context("failed to connect to netstack")?;
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let (_env, stack) = sandbox
+        .new_netstack::<N, fidl_fuchsia_net_stack::StackMarker>(name)
+        .context("failed to create environment")?;
+
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
     let res =
@@ -682,14 +390,11 @@ async fn get_interface_info_not_found_n3() -> Result {
 async fn disable_interface_loopback() -> Result {
     let name = "disable_interface_loopback";
 
-    let sandbox = fuchsia_component::client::connect_to_service::<
-        fidl_fuchsia_netemul_sandbox::SandboxMarker,
-    >()
-    .context("failed to connect to sandbox")?;
-    let managed_environment = create_netstack_environment::<Netstack2>(&sandbox, name.to_string())
-        .context("failed to create netstack environment")?;
-    let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
-        .context("failed to connect to netstack")?;
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let (_env, stack) = sandbox
+        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(name)
+        .context("failed to create environment")?;
+
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let localhost = interfaces
         .iter()
@@ -750,9 +455,7 @@ async fn acquire_dhcp() -> Result {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
                     static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                        ip_address: fidl_fuchsia_net::IpAddress::Ipv4(
-                            fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 1] },
-                        ),
+                        ip_address: ip_addr![192, 168, 0, 1],
                         prefix_len: 24,
                     }),
                     want_addr: None,
@@ -761,14 +464,7 @@ async fn acquire_dhcp() -> Result {
                     name: "client-ep",
                     env: DhcpTestEnv::Client,
                     static_addr: None,
-                    want_addr: Some((
-                        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                            addr: [192, 168, 0, 2],
-                        }),
-                        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                            addr: [255, 255, 255, 128], // Subnet is configured in JSON.
-                        }),
-                    )),
+                    want_addr: Some((ip_addr![192, 168, 0, 2], ip_addr![255, 255, 255, 128])),
                 },
             ],
         }],
@@ -788,9 +484,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device() -> Result {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
                     static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                        ip_address: fidl_fuchsia_net::IpAddress::Ipv4(
-                            fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 1] },
-                        ),
+                        ip_address: ip_addr![192, 168, 0, 1],
                         prefix_len: 24,
                     }),
                     want_addr: None,
@@ -799,14 +493,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device() -> Result {
                     name: "client-ep",
                     env: DhcpTestEnv::Client,
                     static_addr: None,
-                    want_addr: Some((
-                        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                            addr: [192, 168, 0, 2],
-                        }),
-                        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                            addr: [255, 255, 255, 128],
-                        }),
-                    )),
+                    want_addr: Some((ip_addr![192, 168, 0, 2], ip_addr![255, 255, 255, 128])),
                 },
             ],
         }],
@@ -827,9 +514,7 @@ async fn acquire_dhcp_with_multiple_network() -> Result {
                         name: "server-ep1",
                         env: DhcpTestEnv::Server,
                         static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                            ip_address: fidl_fuchsia_net::IpAddress::Ipv4(
-                                fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 1] },
-                            ),
+                            ip_address: ip_addr![192, 168, 0, 1],
                             prefix_len: 24,
                         }),
                         want_addr: None,
@@ -838,14 +523,7 @@ async fn acquire_dhcp_with_multiple_network() -> Result {
                         name: "client-ep1",
                         env: DhcpTestEnv::Client,
                         static_addr: None,
-                        want_addr: Some((
-                            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                                addr: [192, 168, 0, 2],
-                            }),
-                            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                                addr: [255, 255, 255, 128],
-                            }),
-                        )),
+                        want_addr: Some((ip_addr![192, 168, 0, 2], ip_addr![255, 255, 255, 128])),
                     },
                 ],
             },
@@ -856,9 +534,7 @@ async fn acquire_dhcp_with_multiple_network() -> Result {
                         name: "server-ep2",
                         env: DhcpTestEnv::Server,
                         static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                            ip_address: fidl_fuchsia_net::IpAddress::Ipv4(
-                                fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 1, 1] },
-                            ),
+                            ip_address: ip_addr![192, 168, 1, 1],
                             prefix_len: 24,
                         }),
                         want_addr: None,
@@ -867,14 +543,7 @@ async fn acquire_dhcp_with_multiple_network() -> Result {
                         name: "client-ep2",
                         env: DhcpTestEnv::Client,
                         static_addr: None,
-                        want_addr: Some((
-                            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                                addr: [192, 168, 1, 2],
-                            }),
-                            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                                addr: [255, 255, 255, 0],
-                            }),
-                        )),
+                        want_addr: Some((ip_addr![192, 168, 1, 2], ip_addr![255, 255, 255, 0])),
                     },
                 ],
             },
@@ -902,102 +571,53 @@ async fn test_dhcp(
     network_configs: &mut [DhcpTestNetwork<'_>],
     dhcpd_config_paths: &[&str],
 ) -> Result {
-    let sandbox = fuchsia_component::client::connect_to_service::<
-        fidl_fuchsia_netemul_sandbox::SandboxMarker,
-    >()
-    .context("failed to connect to sandbox")?;
-    let network_context = get_network_context(&sandbox).context("failed to get network context")?;
-    let network_manager = &{
-        let (client, server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_netemul_network::NetworkManagerMarker>()
-                .context("failed to create network manager proxy")?;
-        let () =
-            network_context.get_network_manager(server).context("failed to get network manager")?;
-        client
-    };
-    let endpoint_manager =
-        &get_endpoint_manager(&network_context).context("failed to get endpoint manager")?;
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
 
-    let server_environment =
-        &create_netstack_environment::<Netstack2>(&sandbox, format!("{}_server", name))
-            .context("failed to create server environment")?;
-    let server_stack =
-        &connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(server_environment)
-            .context("failed to connect to server stack")?;
+    let server_environment = sandbox
+        .create_netstack_environment::<Netstack2, _>(format!("{}_server", name))
+        .context("failed to create server environment")?;
+    let server_env_ref = &server_environment;
 
-    let client_environment =
-        &create_netstack_environment::<Netstack2>(&sandbox, format!("{}_client", name))
-            .context("failed to create client environment")?;
-    let client_stack =
-        &connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(client_environment)
-            .context("failed to connect to client stack")?;
+    let client_environment = sandbox
+        .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
+        .context("failed to create client environment")?;
+    let client_env_ref = &client_environment;
+
+    let sandbox_ref = &sandbox;
 
     let networks = stream::iter(network_configs)
         .then(|DhcpTestNetwork { name, eps }| async move {
-            let (status, network) = network_manager
-                .create_network(
-                    name,
-                    fidl_fuchsia_netemul_network::NetworkConfig {
-                        latency: None,
-                        packet_loss: None,
-                        reorder: None,
-                    },
-                )
-                .await
-                .context("failed to create network")?;
-            let network = network
-                .ok_or(anyhow::format_err!("failed to create network"))?
-                .into_proxy()
-                .context("failed to get network proxy")?;
-            let () = fuchsia_zircon::Status::ok(status).context("failed to create network")?;
-
+            let network =
+                sandbox_ref.create_network(*name).await.context("failed to create network")?;
             // `network` is returned at the end of the scope so it is not
             // dropped.
             let network_ref = &network;
             let eps = stream::iter(eps.into_iter())
                 .then(|DhcpTestEndpoint { name, env, static_addr, want_addr }| async move {
-                    let endpoint = create_endpoint(name, endpoint_manager)
+                    let test_environment = match env {
+                        DhcpTestEnv::Client => client_env_ref,
+                        DhcpTestEnv::Server => server_env_ref,
+                    };
+
+                    let config = match static_addr {
+                        Some(addr) => {
+                            // NOTE: InterfaceAddress does not currently
+                            // implement Clone, it probably will at some point
+                            // as FIDL bindings evolve.
+                            InterfaceConfig::StaticIp(fidl_fuchsia_net_stack::InterfaceAddress {
+                                ip_address: addr.ip_address,
+                                prefix_len: addr.prefix_len,
+                            })
+                        }
+                        None => InterfaceConfig::None,
+                    };
+
+                    let interface = test_environment
+                        .join_network(network_ref, *name, config)
                         .await
                         .context("failed to create endpoint")?;
-                    let () = endpoint
-                        .set_link_up(true)
-                        .await
-                        .context("failed to start server endpoint")?;
-                    let device = DeviceConnection::new(&endpoint)
-                        .await
-                        .context("failed to get server device connection")?;
-                    let stack = match env {
-                        DhcpTestEnv::Client => client_stack,
-                        DhcpTestEnv::Server => server_stack,
-                    };
-                    let id = device
-                        .add_to_stack(name, stack)
-                        .await
-                        .context("failed to add server device")?;
 
-                    match static_addr {
-                        Some(addr) => {
-                            let () = exec_fidl!(
-                                stack.add_interface_address(id, addr),
-                                "failed to add interface address"
-                            )?;
-                        }
-                        None => (),
-                    }
-
-                    let () = exec_fidl!(
-                        stack.enable_interface(id),
-                        "failed to enable server interface"
-                    )?;
-
-                    let status = network_ref
-                        .attach_endpoint(name)
-                        .await
-                        .context("failed to attach server endpoint")?;
-                    let () = fuchsia_zircon::Status::ok(status)
-                        .context("failed to attach server endpoint")?;
-
-                    Result::Ok((id, env, want_addr, endpoint))
+                    Result::Ok((env, test_environment, want_addr, interface))
                 })
                 .try_collect::<Vec<_>>()
                 .await?;
@@ -1007,34 +627,25 @@ async fn test_dhcp(
         .try_collect::<Vec<_>>()
         .await?;
 
-    let launcher = {
-        let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_sys::LauncherMarker>()
-            .context("failed to create launcher proxy")?;
-        let () = server_environment.get_launcher(server).context("failed to get launcher")?;
-        client
-    };
+    let launcher = server_environment.get_launcher().context("failed to create launcher")?;
     let _dhcpds = dhcpd_config_paths
         .into_iter()
         .map(|config_path| {
             fuchsia_component::client::launch(
                 &launcher,
-                fuchsia_component::fuchsia_single_component_package_url!("dhcpd-testing")
-                    .to_string(),
+                KnownServices::DhcpServer.get_url().to_string(),
                 Some(vec![String::from("--config"), config_path.to_string()]),
             )
             .context("failed to start dhcpd")
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let client_netstack =
-        &connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>(&client_environment)
-            .context("failed to connect to client netstack")?;
     let () = stream::iter(
         // Iterate over references to prevent filter from dropping endpoints.
         networks
             .iter()
             .flat_map(|(_, eps)| eps)
-            .filter(|(_, env, _, _)| match env {
+            .filter(|(env, _, _, _)| match env {
                 // We only care about whether client endpoints can acquire
                 // addresses through DHCP client or not.
                 DhcpTestEnv::Client => true,
@@ -1042,32 +653,21 @@ async fn test_dhcp(
             })
             .map(Result::Ok),
     )
-    .try_for_each(|(id, _, addr, _)| async move {
+    .try_for_each(|(_, _, addr, interface)| async move {
         let (want_addr, want_netmask) =
             addr.ok_or(anyhow::format_err!("expected address must be set for client endpoints"))?;
 
-        let (dhcp_client, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()
-                .context("failed to create endpoints for fuchsia.net.dhcp.Client")?;
+        interface.start_dhcp().await.context("Failed to start DHCP")?;
 
-        let () = client_netstack
-            .get_dhcp_client((*id).try_into().expect("should fit"), server_end)
-            .await
-            .context("failed to call client_netstack.get_dhcp_client")?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .context("failed to get dhcp client")?;
-        let () = dhcp_client
-            .start()
-            .await
-            .context("failed to call dhcp_client.start")?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .context("failed to start dhcp client")?;
+        let client_netstack = client_env_ref
+            .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+            .context("failed to connect to client netstack")?;
 
         let mut address_change_stream = futures::TryStreamExt::try_filter_map(
             client_netstack.take_event_stream(),
             |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
                 futures::future::ok(
-                    interfaces.into_iter().find(|interface| interface.id as u64 == *id).and_then(
+                    interfaces.into_iter().find(|i| i.id as u64 == interface.id()).and_then(
                         |fidl_fuchsia_netstack::NetInterface { addr, netmask, .. }| {
                             let ipaddr = addr;
                             match ipaddr {

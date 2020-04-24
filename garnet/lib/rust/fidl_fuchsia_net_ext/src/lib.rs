@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod macros;
+
 use anyhow;
 use fidl_fuchsia_net as fidl;
+pub use macros::*;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct IpAddress(pub std::net::IpAddr);
