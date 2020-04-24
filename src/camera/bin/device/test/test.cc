@@ -87,9 +87,12 @@ class DeviceTest : public gtest::RealLoopFixture {
   // Synchronizes messages to a stream. This method returns when an error occurs or all messages
   // sent to |stream| have been received by the server.
   void Sync(fuchsia::camera3::StreamPtr& stream) {
-    stream->SetResolution({.width = 0, .height = 0});
+    fuchsia::camera3::StreamPtr stream2;
+    SetFailOnError(stream2, "Rebound Stream for DeviceTest::Sync");
+    stream->Rebind(stream2.NewRequest());
     bool resolution_returned = false;
-    stream->WatchResolution([&](fuchsia::math::Size resolution) { resolution_returned = true; });
+    stream2->SetResolution({.width = 0, .height = 0});
+    stream2->WatchResolution([&](fuchsia::math::Size resolution) { resolution_returned = true; });
     RunLoopUntilFailureOr(resolution_returned);
   }
 
@@ -495,6 +498,68 @@ TEST_F(DeviceTest, Rebind) {
   SetFailOnError(stream2, "Stream");
   stream->Rebind(stream2.NewRequest());
   Sync(stream2);
+}
+
+TEST_F(DeviceTest, OrphanStream) {
+  // Connect to the device.
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  Sync(device);
+
+  // Connect to the stream.
+  fuchsia::camera3::StreamPtr stream;
+  SetFailOnError(stream, "Stream");
+  device->ConnectToStream(0, stream.NewRequest());
+  Sync(stream);
+
+  // Disconnect from the device.
+  device = nullptr;
+
+  // Connect to the device as a new client. There is no way for a client to know when an existing
+  // exclusive client disconnects, so it must retry periodically.
+  fuchsia::camera3::DevicePtr device2;
+  bool device_acquired = false;
+  while (!device_acquired) {
+    bool error_received = false;
+    device2.set_error_handler([&](zx_status_t status) {
+      EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
+      error_received = true;
+    });
+    device_->GetHandler()(device2.NewRequest());
+    device2->GetIdentifier([&](fidl::StringPtr identifier) { device_acquired = true; });
+    while (!HasFailure() && !device_acquired && !error_received) {
+      RunLoopUntilIdle();
+    }
+    if (!device_acquired) {
+      // Brief timeout to reduce logspam.
+      zx::nanosleep(zx::deadline_after(zx::msec(100)));
+    }
+  }
+  SetFailOnError(device2, "Device2");
+
+  // Make sure the stream is still active.
+  Sync(stream);
+
+  // Attempting to connect to the stream should fail because it's still active via the first client.
+  fuchsia::camera3::StreamPtr stream2;
+  bool error_received = false;
+  stream2.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
+    error_received = true;
+  });
+  device2->ConnectToStream(0, stream2.NewRequest());
+  RunLoopUntilFailureOr(error_received);
+
+  // Setting the configuration should disconnect the orphaned stream and allow the new client to
+  // connect.
+  SetFailOnError(stream, "Stream2");
+  error_received = false;
+  stream.set_error_handler([&](zx_status_t status) { error_received = true; });
+  device2->SetCurrentConfiguration(0);
+  device2->ConnectToStream(0, stream2.NewRequest());
+  Sync(stream2);
+  RunLoopUntilFailureOr(error_received);
 }
 
 }  // namespace camera
