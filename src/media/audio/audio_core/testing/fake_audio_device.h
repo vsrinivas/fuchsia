@@ -71,7 +71,7 @@ class FakeAudioOutput : public FakeAudioDevice {
       : FakeAudioDevice(Type::Output, threading_model, registry, link_matrix) {}
 
   fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, std::shared_ptr<Stream> stream) override {
+      const AudioObject& source, std::shared_ptr<ReadableStream> stream) override {
     stream->SetMinLeadTime(min_lead_time_);
     return fit::ok(mixer_);
   }

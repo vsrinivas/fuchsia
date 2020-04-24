@@ -41,7 +41,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
 
   // |media::audio::AudioObject|
   std::optional<Format> format() const override { return format_; }
-  fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
+  fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
   std::optional<StreamUsage> usage() const override {

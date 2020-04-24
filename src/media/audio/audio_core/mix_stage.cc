@@ -48,9 +48,9 @@ MixStage::MixStage(const Format& output_format, uint32_t block_size,
                                                     reference_clock_to_fractional_frame)) {}
 
 MixStage::MixStage(std::shared_ptr<WritableStream> output_stream)
-    : Stream(output_stream->format()), output_stream_(std::move(output_stream)) {}
+    : ReadableStream(output_stream->format()), output_stream_(std::move(output_stream)) {}
 
-std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<Stream> stream,
+std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream,
                                           Mixer::Resampler resampler_hint) {
   TRACE_DURATION("audio", "MixStage::AddInput");
   FX_CHECK(stream);
@@ -69,7 +69,7 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<Stream> stream,
   return mixer;
 }
 
-void MixStage::RemoveInput(const Stream& stream) {
+void MixStage::RemoveInput(const ReadableStream& stream) {
   TRACE_DURATION("audio", "MixStage::RemoveInput");
   std::lock_guard<std::mutex> lock(stream_lock_);
   auto it = std::find_if(streams_.begin(), streams_.end(), [stream = &stream](const auto& holder) {
@@ -79,8 +79,8 @@ void MixStage::RemoveInput(const Stream& stream) {
   streams_.erase(it);
 }
 
-std::optional<Stream::Buffer> MixStage::ReadLock(zx::time now, int64_t frame,
-                                                 uint32_t frame_count) {
+std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time now, int64_t frame,
+                                                         uint32_t frame_count) {
   TRACE_DURATION("audio", "MixStage::ReadLock", "frame", frame, "length", frame_count);
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
@@ -102,7 +102,8 @@ std::optional<Stream::Buffer> MixStage::ReadLock(zx::time now, int64_t frame,
   size_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
   ForEachSource(TaskType::Mix, now);
-  return {Stream::Buffer(output_buffer->start(), output_buffer->length(), cur_mix_job_.buf, true)};
+  return {ReadableStream::Buffer(output_buffer->start(), output_buffer->length(), cur_mix_job_.buf,
+                                 true)};
 }
 
 void MixStage::ReadUnlock(bool release_buffer) { TRACE_DURATION("audio", "MixStage::ReadUnlock"); }
@@ -114,7 +115,7 @@ BaseStream::TimelineFunctionSnapshot MixStage::ReferenceClockToFractionalFrames(
 
 void MixStage::SetMinLeadTime(zx::duration min_lead_time) {
   TRACE_DURATION("audio", "MixStage::SetMinLeadTime");
-  Stream::SetMinLeadTime(min_lead_time);
+  ReadableStream::SetMinLeadTime(min_lead_time);
 
   // Propogate our lead time to our inputs.
   std::lock_guard<std::mutex> lock(stream_lock_);
@@ -135,7 +136,7 @@ void MixStage::Trim(zx::time time) {
 void MixStage::ForEachSource(TaskType task_type, zx::time ref_time) {
   TRACE_DURATION("audio", "MixStage::ForEachSource");
 
-  std::vector<std::pair<std::shared_ptr<Stream>, std::shared_ptr<Mixer>>> streams;
+  std::vector<std::pair<std::shared_ptr<ReadableStream>, std::shared_ptr<Mixer>>> streams;
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     for (const auto& holder : streams_) {
@@ -155,7 +156,7 @@ void MixStage::ForEachSource(TaskType task_type, zx::time ref_time) {
   }
 }
 
-void MixStage::MixStream(Stream* stream, Mixer* mixer, zx::time ref_time) {
+void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time ref_time) {
   TRACE_DURATION("audio", "MixStage::MixStream");
   // Ensure the mapping from source-frame to local-time is up-to-date.
   UpdateSourceTrans(*stream, &mixer->bookkeeping());
@@ -168,7 +169,7 @@ void MixStage::MixStream(Stream* stream, Mixer* mixer, zx::time ref_time) {
   }
 
   bool release_buffer;
-  std::optional<Stream::Buffer> stream_buffer;
+  std::optional<ReadableStream::Buffer> stream_buffer;
   while (true) {
     release_buffer = false;
 
@@ -242,7 +243,8 @@ void MixStage::SetupMix(Mixer* mixer) {
   cur_mix_job_.frames_produced = 0;
 }
 
-bool MixStage::ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& source_buffer) {
+bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
+                          const ReadableStream::Buffer& source_buffer) {
   TRACE_DURATION("audio", "MixStage::ProcessMix");
   // Bookkeeping should contain: the rechannel matrix (eventually).
 
@@ -437,7 +439,7 @@ bool MixStage::ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& so
   return consumed_source;
 }
 
-void MixStage::UpdateSourceTrans(const Stream& stream, Mixer::Bookkeeping* bk) {
+void MixStage::UpdateSourceTrans(const ReadableStream& stream, Mixer::Bookkeeping* bk) {
   TRACE_DURATION("audio", "MixStage::UpdateSourceTrans");
 
   auto snapshot = stream.ReferenceClockToFractionalFrames();

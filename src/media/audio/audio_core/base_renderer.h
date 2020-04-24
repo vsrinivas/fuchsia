@@ -65,7 +65,7 @@ class BaseRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
 
   // |media::audio::AudioObject|
   void OnLinkAdded() override;
-  fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
+  fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
 

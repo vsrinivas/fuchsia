@@ -68,7 +68,7 @@ void BaseRenderer::Shutdown() {
   payload_buffers_.clear();
 }
 
-fit::result<std::shared_ptr<Stream>, zx_status_t> BaseRenderer::InitializeDestLink(
+fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::InitializeDestLink(
     const AudioObject& dest) {
   TRACE_DURATION("audio", "BaseRenderer::InitializeDestLink");
   auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_);

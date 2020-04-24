@@ -19,8 +19,9 @@ struct BufferTraits {
 
 template <>
 struct BufferTraits<ReadableRingBuffer> {
-  static std::optional<Stream::Buffer> MakeBuffer(int64_t start, uint32_t length, void* payload) {
-    return {Stream::Buffer(start, length, payload, true)};
+  static std::optional<ReadableStream::Buffer> MakeBuffer(int64_t start, uint32_t length,
+                                                          void* payload) {
+    return {ReadableStream::Buffer(start, length, payload, true)};
   }
 };
 
@@ -154,7 +155,7 @@ ReadableRingBuffer::ReadableRingBuffer(
     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
     fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count, uint32_t offset_frames,
     bool is_hardware_buffer)
-    : Stream(format),
+    : ReadableStream(format),
       BaseRingBuffer(format, reference_clock_to_fractional_frames, vmo_mapper, frame_count,
                      offset_frames, is_hardware_buffer) {}
 
@@ -224,8 +225,8 @@ std::shared_ptr<WritableRingBuffer> BaseRingBuffer::CreateWritableHardwareBuffer
       offset_frames, true);
 }
 
-std::optional<Stream::Buffer> ReadableRingBuffer::ReadLock(zx::time now, int64_t frame,
-                                                           uint32_t frame_count) {
+std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLock(zx::time now, int64_t frame,
+                                                                   uint32_t frame_count) {
   return LockBuffer<ReadableRingBuffer>(this, now, frame, frame_count, true, is_hardware_buffer_);
 }
 

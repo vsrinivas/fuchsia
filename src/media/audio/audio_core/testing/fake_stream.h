@@ -10,7 +10,7 @@
 
 namespace media::audio::testing {
 
-class FakeStream : public Stream {
+class FakeStream : public ReadableStream {
  public:
   FakeStream(const Format& format, size_t max_buffer_size = PAGE_SIZE);
 
@@ -18,7 +18,7 @@ class FakeStream : public Stream {
     return timeline_function_;
   }
 
-  // |media::audio::Stream|
+  // |media::audio::ReadableStream|
   std::optional<Buffer> ReadLock(zx::time now, int64_t frame, uint32_t frame_count);
   void ReadUnlock(bool release_buffer) {}
   void Trim(zx::time trim_threshold) {}

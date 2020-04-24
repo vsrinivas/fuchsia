@@ -54,7 +54,7 @@ std::pair<int64_t, uint32_t> AlignBufferRequest(int64_t frame, uint32_t length,
 
 // static
 std::shared_ptr<EffectsStage> EffectsStage::Create(
-    const std::vector<PipelineConfig::Effect>& effects, std::shared_ptr<Stream> source) {
+    const std::vector<PipelineConfig::Effect>& effects, std::shared_ptr<ReadableStream> source) {
   TRACE_DURATION("audio", "EffectsStage::Create");
   if (source->format().sample_format() != fuchsia::media::AudioSampleFormat::FLOAT) {
     FX_LOGS(ERROR) << "EffectsStage can only be added to streams with FLOAT samples";
@@ -82,9 +82,9 @@ std::shared_ptr<EffectsStage> EffectsStage::Create(
   return std::make_shared<EffectsStage>(std::move(source), std::move(processor));
 }
 
-EffectsStage::EffectsStage(std::shared_ptr<Stream> source,
+EffectsStage::EffectsStage(std::shared_ptr<ReadableStream> source,
                            std::unique_ptr<EffectsProcessor> effects_processor)
-    : Stream(source->format()),
+    : ReadableStream(source->format()),
       source_(std::move(source)),
       effects_processor_(std::move(effects_processor)) {
   // Initialize our lead time. Setting 0 here will resolve our lead time to effect delay in our
@@ -92,8 +92,8 @@ EffectsStage::EffectsStage(std::shared_ptr<Stream> source,
   SetMinLeadTime(zx::duration(0));
 }
 
-std::optional<Stream::Buffer> EffectsStage::ReadLock(zx::time ref_time, int64_t frame,
-                                                     uint32_t frame_count) {
+std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time ref_time, int64_t frame,
+                                                             uint32_t frame_count) {
   TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", frame, "length", frame_count);
   // If we have a partially consumed block, return that here.
   if (current_block_ && frame >= current_block_->start() && frame < current_block_->end()) {
@@ -144,7 +144,7 @@ void EffectsStage::SetMinLeadTime(zx::duration external_lead_time) {
   zx::duration total_lead_time = external_lead_time + intrinsic_lead_time;
 
   // Apply the total lead time to us and propagate that value to our source.
-  Stream::SetMinLeadTime(total_lead_time);
+  ReadableStream::SetMinLeadTime(total_lead_time);
   source_->SetMinLeadTime(total_lead_time);
 }
 

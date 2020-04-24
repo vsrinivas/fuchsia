@@ -76,7 +76,7 @@ class BaseRingBuffer {
   const bool is_hardware_buffer_;
 };
 
-class ReadableRingBuffer : public Stream, public BaseRingBuffer {
+class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
  public:
   // This constructor is public so it's accessible by make_shared, but it should never
   // be called directly. Use static methods in BaseRingBuffer.
@@ -85,9 +85,9 @@ class ReadableRingBuffer : public Stream, public BaseRingBuffer {
                      fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
                      uint32_t offset_frames, bool is_hardware_buffer);
 
-  // |media::audio::Stream|
-  std::optional<Stream::Buffer> ReadLock(zx::time now, int64_t frame,
-                                         uint32_t frame_count) override;
+  // |media::audio::ReadableStream|
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time now, int64_t frame,
+                                                 uint32_t frame_count) override;
   void ReadUnlock(bool release_buffer) override {}
   void Trim(zx::time trim_threshold) override {}
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;

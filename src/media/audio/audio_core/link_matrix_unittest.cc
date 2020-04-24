@@ -24,18 +24,19 @@ class MockObject : public AudioObject {
   explicit MockObject(AudioObject::Type object_type) : AudioObject(object_type) {}
 
   fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, std::shared_ptr<Stream> stream) override {
+      const AudioObject& source, std::shared_ptr<ReadableStream> stream) override {
     source_ = &source;
     stream_ = stream;
     return fit::ok(mixer_);
   }
-  fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
+  fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override {
     dest_ = &dest;
     return fit::ok(stream_);
   }
 
-  void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) override {
+  void CleanupSourceLink(const AudioObject& source,
+                         std::shared_ptr<ReadableStream> stream) override {
     cleaned_source_stream_ = stream;
     cleaned_source_link_ = &source;
   }
@@ -44,7 +45,7 @@ class MockObject : public AudioObject {
 
   void OnLinkAdded() override { on_link_added_called_ = true; }
 
-  std::shared_ptr<Stream> cleaned_source_stream() const { return cleaned_source_stream_; }
+  std::shared_ptr<ReadableStream> cleaned_source_stream() const { return cleaned_source_stream_; }
 
   const AudioObject* cleaned_source_link() const { return cleaned_source_link_; }
 
@@ -52,25 +53,25 @@ class MockObject : public AudioObject {
 
   bool on_link_added_called() const { return on_link_added_called_; }
 
-  void set_stream(std::shared_ptr<Stream> stream) { stream_ = stream; }
+  void set_stream(std::shared_ptr<ReadableStream> stream) { stream_ = stream; }
 
   void set_mixer(std::shared_ptr<Mixer> mixer) { mixer_ = std::move(mixer); }
 
   const AudioObject* source() const { return source_; }
 
-  std::shared_ptr<Stream> stream() const { return stream_; }
+  std::shared_ptr<ReadableStream> stream() const { return stream_; }
 
   const AudioObject* dest() const { return dest_; }
 
  private:
   const AudioObject* source_ = nullptr;
-  std::shared_ptr<Stream> stream_;
+  std::shared_ptr<ReadableStream> stream_;
   const AudioObject* dest_ = nullptr;
   std::shared_ptr<Mixer> mixer_;
 
   bool on_link_added_called_ = false;
 
-  std::shared_ptr<Stream> cleaned_source_stream_;
+  std::shared_ptr<ReadableStream> cleaned_source_stream_;
   const AudioObject* cleaned_source_link_ = nullptr;
   const AudioObject* cleaned_dest_link_ = nullptr;
 };

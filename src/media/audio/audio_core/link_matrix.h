@@ -24,7 +24,7 @@ class LinkMatrix {
   struct LinkHandle {
     std::shared_ptr<AudioObject> object;
     std::shared_ptr<const LoudnessTransform> loudness_transform;
-    std::shared_ptr<Stream> stream;
+    std::shared_ptr<ReadableStream> stream;
     std::shared_ptr<Mixer> mixer;
   };
 
@@ -53,7 +53,7 @@ class LinkMatrix {
 
     Link(std::shared_ptr<AudioObject> _object,
          std::shared_ptr<const LoudnessTransform> _loudness_transform,
-         std::shared_ptr<Stream> _stream, std::shared_ptr<Mixer> _mixer)
+         std::shared_ptr<ReadableStream> _stream, std::shared_ptr<Mixer> _mixer)
         : key(_object.get()),
           object(std::move(_object)),
           loudness_transform(std::move(_loudness_transform)),
@@ -65,7 +65,7 @@ class LinkMatrix {
     const AudioObject* key;
     std::weak_ptr<AudioObject> object;
     std::shared_ptr<const LoudnessTransform> loudness_transform;
-    std::shared_ptr<Stream> stream;
+    std::shared_ptr<ReadableStream> stream;
     std::shared_ptr<Mixer> mixer;
   };
 

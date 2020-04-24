@@ -21,7 +21,7 @@
 
 namespace media::audio {
 
-class OutputPipeline : public Stream {
+class OutputPipeline : public ReadableStream {
  public:
   // Creates an |OutputPipeline| based on the specification in |config|. The pipeline will
   // ultimately produce output frames via |ReadLock| in the |output_format| requested.
@@ -41,26 +41,26 @@ class OutputPipeline : public Stream {
                  TimelineFunction reference_clock_to_fractional_frame,
                  Mixer::Resampler sampler = Mixer::Resampler::Default);
 
-  // Returns the loopback |Stream| for this pipeline.
-  std::shared_ptr<Stream> loopback() const { return loopback_; }
+  // Returns the loopback |ReadableStream| for this pipeline.
+  std::shared_ptr<ReadableStream> loopback() const { return loopback_; }
 
   // Adds |stream| as an input to be mixed. The given |usage| will indicate where in the pipeline
   // this stream will be routed (based on the |PipelineConfig| this pipeline was created with).
-  std::shared_ptr<Mixer> AddInput(std::shared_ptr<Stream> stream, const StreamUsage& usage,
+  std::shared_ptr<Mixer> AddInput(std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
                                   Mixer::Resampler sampler_hint = Mixer::Resampler::Default);
 
   // Removes |stream| from the pipeline.
   //
   // It is an error to call |RemoveInput| without exactly one preceeding call to |AddInput| with the
   // same |stream|.
-  void RemoveInput(const Stream& stream);
+  void RemoveInput(const ReadableStream& stream);
 
   // Sets the configuration of all effects with the given instance name.
   void SetEffectConfig(const std::string& instance_name, const std::string& config);
 
-  // |media::audio::Stream|
-  std::optional<Stream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
-                                         uint32_t frame_count) override {
+  // |media::audio::ReadableStream|
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+                                                 uint32_t frame_count) override {
     TRACE_DURATION("audio", "OutputPipeline::ReadLock");
     FX_DCHECK(stream_);
     return stream_->ReadLock(ref_time, frame, frame_count);
@@ -81,12 +81,12 @@ class OutputPipeline : public Stream {
     return stream_->ReferenceClockToFractionalFrames();
   }
   void SetMinLeadTime(zx::duration min_lead_time) override {
-    Stream::SetMinLeadTime(min_lead_time);
+    ReadableStream::SetMinLeadTime(min_lead_time);
     stream_->SetMinLeadTime(min_lead_time);
   }
 
  private:
-  std::shared_ptr<Stream> CreateMixStage(
+  std::shared_ptr<ReadableStream> CreateMixStage(
       const PipelineConfig::MixGroup& spec, uint32_t channels, uint32_t block_size,
       fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, uint32_t* usage_mask,
       Mixer::Resampler sampler);
@@ -94,13 +94,13 @@ class OutputPipeline : public Stream {
 
   std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<StreamUsage>>> mix_stages_;
   std::vector<std::shared_ptr<EffectsStage>> effects_stages_;
-  std::vector<std::pair<std::shared_ptr<Stream>, StreamUsage>> streams_;
+  std::vector<std::pair<std::shared_ptr<ReadableStream>, StreamUsage>> streams_;
 
   // This is the root of the mix graph. The other mix stages must be reachable from this node
   // to actually get mixed.
-  std::shared_ptr<Stream> stream_;
+  std::shared_ptr<ReadableStream> stream_;
 
-  std::shared_ptr<Stream> loopback_;
+  std::shared_ptr<ReadableStream> loopback_;
 };
 
 }  // namespace media::audio

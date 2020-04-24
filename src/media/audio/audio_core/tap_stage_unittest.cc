@@ -76,8 +76,8 @@ class TapStageTest : public testing::ThreadingModelFixture {
   // with data that matches only |expected_sample| (that is all the samples in the buffer match
   // |expected_sample|).
   template <size_t frame_count>
-  void CheckStream(Stream* stream, zx::duration epoch_delta, int64_t frame, float expected_sample,
-                   bool release = true) {
+  void CheckStream(ReadableStream* stream, zx::duration epoch_delta, int64_t frame,
+                   float expected_sample, bool release = true) {
     auto buffer = stream->ReadLock(zx::time(0) + epoch_delta, frame, frame_count);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), FractionalFrames<int64_t>(frame));

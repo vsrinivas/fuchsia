@@ -44,10 +44,10 @@ class BaseStream {
 };
 
 // A read-only stream of audio data.
-class Stream : public BaseStream {
+class ReadableStream : public BaseStream {
  public:
-  Stream(Format format) : BaseStream(format) {}
-  virtual ~Stream() = default;
+  ReadableStream(Format format) : BaseStream(format) {}
+  virtual ~ReadableStream() = default;
 
   class Buffer {
    public:
@@ -68,9 +68,9 @@ class Stream : public BaseStream {
     //
     // Buffers may become discontinuous if, for example, and AudioRenderer is flushed and new
     // packets are provided; these new packets will not be assumed to be continuous with the
-    // preceeding ones. Each |Stream| implementation is reponsible for reporting any discontinuity
-    // so that stream processors (ex: the mixer) may clear any intermediate state based on the
-    // continuity of the stream.
+    // preceeding ones. Each |ReadableStream| implementation is reponsible for reporting any
+    // discontinuity so that stream processors (ex: the mixer) may clear any intermediate state
+    // based on the continuity of the stream.
     bool is_continuous() const { return is_continuous_; }
 
    private:

@@ -40,9 +40,9 @@ class AudioOutput : public AudioDevice {
   // if we're initializing a dest link, then we're being connected as a loopback so we should return
   // our loopback stream.
   fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, std::shared_ptr<Stream> stream) final;
-  void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) final;
-  fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
+      const AudioObject& source, std::shared_ptr<ReadableStream> stream) final;
+  void CleanupSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) final;
+  fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
 
   void SetNextSchedTime(zx::time next_sched_time) {

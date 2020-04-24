@@ -11,16 +11,16 @@
 
 namespace media::audio {
 
-// A |TapStage| reads stream buffers from an input |Stream| and copies them to a secondary
+// A |TapStage| reads stream buffers from an input |ReadableStream| and copies them to a secondary
 // |WritableStream|.
-class TapStage : public Stream {
+class TapStage : public ReadableStream {
  public:
   // Creates a |TapStage| that returns buffers from |input| while copying their contents into |tap|.
-  TapStage(std::shared_ptr<Stream> input, std::shared_ptr<WritableStream> tap);
+  TapStage(std::shared_ptr<ReadableStream> input, std::shared_ptr<WritableStream> tap);
 
-  // |media::audio::Stream|
-  std::optional<Stream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
-                                         uint32_t frame_count) override;
+  // |media::audio::ReadableStream|
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+                                                 uint32_t frame_count) override;
   void ReadUnlock(bool release_buffer) override { source_->ReadUnlock(release_buffer); }
   void Trim(zx::time trim) override { source_->Trim(trim); }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
@@ -31,7 +31,7 @@ class TapStage : public Stream {
  private:
   const TimelineFunction& SourceFracFrameToTapFrame();
 
-  std::shared_ptr<Stream> source_;
+  std::shared_ptr<ReadableStream> source_;
   std::shared_ptr<WritableStream> tap_;
 
   // Track the mapping of source frames to tap frames.

@@ -10,13 +10,13 @@
 
 namespace media::audio {
 
-TapStage::TapStage(std::shared_ptr<Stream> source, std::shared_ptr<WritableStream> tap)
-    : Stream(source->format()), source_(std::move(source)), tap_(std::move(tap)) {
+TapStage::TapStage(std::shared_ptr<ReadableStream> source, std::shared_ptr<WritableStream> tap)
+    : ReadableStream(source->format()), source_(std::move(source)), tap_(std::move(tap)) {
   FX_DCHECK(source_->format() == tap_->format());
 }
 
-std::optional<Stream::Buffer> TapStage::ReadLock(zx::time ref_time, int64_t frame,
-                                                 uint32_t frame_count) {
+std::optional<ReadableStream::Buffer> TapStage::ReadLock(zx::time ref_time, int64_t frame,
+                                                         uint32_t frame_count) {
   TRACE_DURATION("audio", "TapStage::ReadLock", "frame", frame, "length", frame_count);
   auto input_buffer = source_->ReadLock(ref_time, frame, frame_count);
   if (!input_buffer) {
@@ -48,7 +48,7 @@ std::optional<Stream::Buffer> TapStage::ReadLock(zx::time ref_time, int64_t fram
 }
 
 void TapStage::SetMinLeadTime(zx::duration min_lead_time) {
-  Stream::SetMinLeadTime(min_lead_time);
+  ReadableStream::SetMinLeadTime(min_lead_time);
   source_->SetMinLeadTime(min_lead_time);
 }
 

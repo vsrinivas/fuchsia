@@ -14,21 +14,22 @@
 namespace media::audio {
 
 // An |EffectsStage| is a stream adapter that produces frames by reading them from a source
-// |Stream|, and then running a set of audio 'effects' on those frames.
-class EffectsStage : public Stream {
+// |ReadableStream|, and then running a set of audio 'effects' on those frames.
+class EffectsStage : public ReadableStream {
  public:
   static std::shared_ptr<EffectsStage> Create(const std::vector<PipelineConfig::Effect>& effects,
-                                              std::shared_ptr<Stream> source);
+                                              std::shared_ptr<ReadableStream> source);
 
-  EffectsStage(std::shared_ptr<Stream> source, std::unique_ptr<EffectsProcessor> effects_processor);
+  EffectsStage(std::shared_ptr<ReadableStream> source,
+               std::unique_ptr<EffectsProcessor> effects_processor);
 
   uint32_t block_size() const { return effects_processor_->block_size(); }
 
   void SetEffectConfig(const std::string& instance_name, const std::string& config);
 
-  // |media::audio::Stream|
-  std::optional<Stream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
-                                         uint32_t frame_count) override;
+  // |media::audio::ReadableStream|
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+                                                 uint32_t frame_count) override;
   void ReadUnlock(bool release_buffer) override { source_->ReadUnlock(release_buffer); }
   void Trim(zx::time trim_threshold) override { source_->Trim(trim_threshold); }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
@@ -46,9 +47,9 @@ class EffectsStage : public Stream {
  private:
   zx::duration ComputeIntrinsicMinLeadTime() const;
 
-  std::shared_ptr<Stream> source_;
+  std::shared_ptr<ReadableStream> source_;
   std::unique_ptr<EffectsProcessor> effects_processor_;
-  std::optional<Stream::Buffer> current_block_;
+  std::optional<ReadableStream::Buffer> current_block_;
 };
 
 }  // namespace media::audio

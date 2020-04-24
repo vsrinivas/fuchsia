@@ -36,7 +36,7 @@ OutputPipeline::OutputPipeline(const PipelineConfig& config, uint32_t channels,
                                uint32_t max_block_size_frames,
                                TimelineFunction ref_clock_to_fractional_frame,
                                Mixer::Resampler sampler)
-    : Stream(FormatForMixGroup(config.root(), channels)) {
+    : ReadableStream(FormatForMixGroup(config.root(), channels)) {
   uint32_t usage_mask = 0;
   stream_ =
       CreateMixStage(config.root(), channels, max_block_size_frames,
@@ -44,7 +44,7 @@ OutputPipeline::OutputPipeline(const PipelineConfig& config, uint32_t channels,
                      &usage_mask, sampler);
 }
 
-std::shared_ptr<Mixer> OutputPipeline::AddInput(std::shared_ptr<Stream> stream,
+std::shared_ptr<Mixer> OutputPipeline::AddInput(std::shared_ptr<ReadableStream> stream,
                                                 const StreamUsage& usage,
                                                 Mixer::Resampler sampler_hint) {
   TRACE_DURATION("audio", "OutputPipeline::AddInput", "stream", stream.get());
@@ -52,7 +52,7 @@ std::shared_ptr<Mixer> OutputPipeline::AddInput(std::shared_ptr<Stream> stream,
   return LookupStageForUsage(usage).AddInput(std::move(stream), sampler_hint);
 }
 
-void OutputPipeline::RemoveInput(const Stream& stream) {
+void OutputPipeline::RemoveInput(const ReadableStream& stream) {
   TRACE_DURATION("audio", "OutputPipeline::RemoveInput", "stream", &stream);
   auto it = std::find_if(streams_.begin(), streams_.end(),
                          [&stream](auto& pair) { return pair.first.get() == &stream; });
@@ -67,7 +67,7 @@ void OutputPipeline::SetEffectConfig(const std::string& instance_name, const std
   }
 }
 
-std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
+std::shared_ptr<ReadableStream> OutputPipeline::CreateMixStage(
     const PipelineConfig::MixGroup& spec, uint32_t channels, uint32_t max_block_size_frames,
     fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, uint32_t* usage_mask,
     Mixer::Resampler sampler) {
@@ -82,7 +82,7 @@ std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
   }
 
   // If we have effects, we should add that stage in now.
-  std::shared_ptr<Stream> root = stage;
+  std::shared_ptr<ReadableStream> root = stage;
   if (!spec.effects.empty()) {
     auto effects_stage = EffectsStage::Create(spec.effects, root);
     FX_DCHECK(effects_stage);

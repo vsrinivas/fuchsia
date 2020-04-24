@@ -123,8 +123,9 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
 
   // |media::audio::AudioObject|
   fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, std::shared_ptr<Stream> stream) override;
-  void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) override;
+      const AudioObject& source, std::shared_ptr<ReadableStream> stream) override;
+  void CleanupSourceLink(const AudioObject& source,
+                         std::shared_ptr<ReadableStream> stream) override;
   void OnLinkAdded() override;
 
  protected:

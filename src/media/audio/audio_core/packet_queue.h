@@ -21,7 +21,7 @@
 
 namespace media::audio {
 
-class PacketQueue : public Stream {
+class PacketQueue : public ReadableStream {
  public:
   explicit PacketQueue(Format format);
   PacketQueue(Format format,
@@ -40,9 +40,9 @@ class PacketQueue : public Stream {
     underflow_reporter_ = std::move(underflow_reporter);
   }
 
-  // |media::audio::Stream|
-  std::optional<Stream::Buffer> ReadLock(zx::time now, int64_t frame,
-                                         uint32_t frame_count) override;
+  // |media::audio::ReadableStream|
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time now, int64_t frame,
+                                                 uint32_t frame_count) override;
   void ReadUnlock(bool release_buffer) override;
   void Trim(zx::time ref_time) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;

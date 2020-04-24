@@ -149,7 +149,7 @@ void BaseCapturer::OnStateChanged(State old_state, State new_state) {
 }
 
 fit::result<std::shared_ptr<Mixer>, zx_status_t> BaseCapturer::InitializeSourceLink(
-    const AudioObject& source, std::shared_ptr<Stream> stream) {
+    const AudioObject& source, std::shared_ptr<ReadableStream> stream) {
   TRACE_DURATION("audio", "BaseCapturer::InitializeSourceLink");
 
   switch (state_.load()) {
@@ -171,7 +171,8 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> BaseCapturer::InitializeSourceL
   }
 }
 
-void BaseCapturer::CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) {
+void BaseCapturer::CleanupSourceLink(const AudioObject& source,
+                                     std::shared_ptr<ReadableStream> stream) {
   mix_stage_->RemoveInput(*stream);
 }
 

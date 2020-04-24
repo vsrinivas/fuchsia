@@ -36,7 +36,7 @@ static constexpr uint16_t kUnderflowErrorInterval = 100;
 PacketQueue::PacketQueue(Format format) : PacketQueue(format, nullptr) {}
 
 PacketQueue::PacketQueue(Format format, fbl::RefPtr<VersionedTimelineFunction> timeline_function)
-    : Stream(std::move(format)), timeline_function_(std::move(timeline_function)) {}
+    : ReadableStream(std::move(format)), timeline_function_(std::move(timeline_function)) {}
 
 PacketQueue::~PacketQueue() {
   pending_flush_packet_queue_.clear();
@@ -91,8 +91,8 @@ void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   }
 }
 
-std::optional<Stream::Buffer> PacketQueue::ReadLock(zx::time now, int64_t frame,
-                                                    uint32_t frame_count) {
+std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(zx::time now, int64_t frame,
+                                                            uint32_t frame_count) {
   TRACE_DURATION("audio", "PacketQueue::ReadLock");
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
@@ -103,7 +103,8 @@ std::optional<Stream::Buffer> PacketQueue::ReadLock(zx::time now, int64_t frame,
     auto packet = pending_packet_queue_.front();
     bool is_continuous = !flushed_;
     flushed_ = false;
-    return {Stream::Buffer(packet->start(), packet->length(), packet->payload(), is_continuous)};
+    return {ReadableStream::Buffer(packet->start(), packet->length(), packet->payload(),
+                                   is_continuous)};
   } else {
     return std::nullopt;
   }

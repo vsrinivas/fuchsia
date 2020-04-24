@@ -59,7 +59,7 @@ zx_status_t AudioInput::Init() {
   return res;
 }
 
-fit::result<std::shared_ptr<Stream>, zx_status_t> AudioInput::InitializeDestLink(
+fit::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioInput::InitializeDestLink(
     const AudioObject& dest) {
   return fit::ok(driver()->readable_ring_buffer());
 }
