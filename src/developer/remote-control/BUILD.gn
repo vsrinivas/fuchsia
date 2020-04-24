@@ -94,14 +94,7 @@ test_package("remote-control-lib-tests") {
 
   binaries = [
     {
-      # TODO: Remove once tests can use a test runner
-      name = "rust_test_adapter"
-    },
-    {
       name = "mock_sys_launcher"
-    },
-    {
-      name = "remote_control_lib_test"
     },
   ]
 

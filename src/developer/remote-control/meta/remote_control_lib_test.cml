@@ -13,18 +13,10 @@
         {
             runner: "elf",
             from: "realm",
-            to: [
-                "#sys-launcher",
-                "#test-driver",
-            ],
+            to: [ "#sys-launcher" ],
         },
         {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-
-                // This is required for the rust test adapter.
-                "/svc/fuchsia.process.Launcher",
-            ],
+            runner: "rust_test_runner",
             from: "realm",
             to: [ "#test-driver" ],
         },
