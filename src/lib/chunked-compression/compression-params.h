@@ -41,7 +41,6 @@ struct CompressionParams {
   // Estimates a good chunk size for the given input size.
   static size_t ChunkSizeForInputSize(size_t len);
   static size_t MinChunkSize();
-  static size_t MaxChunkSize();
 };
 
 }  // namespace chunked_compression

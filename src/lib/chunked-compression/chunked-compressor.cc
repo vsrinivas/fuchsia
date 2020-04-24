@@ -19,8 +19,7 @@ ChunkedCompressor::ChunkedCompressor(CompressionParams params) : inner_(params) 
 ChunkedCompressor::~ChunkedCompressor() {}
 
 Status ChunkedCompressor::CompressBytes(const void* input, size_t input_len,
-                                        fbl::Array<uint8_t>* output,
-                                        size_t* bytes_written_out) {
+                                        fbl::Array<uint8_t>* output, size_t* bytes_written_out) {
   CompressionParams params;
   ChunkedCompressor compressor(params);
   size_t output_len = params.ComputeOutputSizeLimit(input_len);

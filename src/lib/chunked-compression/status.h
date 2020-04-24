@@ -6,7 +6,6 @@
 #define SRC_LIB_CHUNKED_COMPRESSION_STATUS_H_
 
 #include <stdint.h>
-
 #include <zircon/types.h>
 
 namespace chunked_compression {

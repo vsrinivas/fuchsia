@@ -68,6 +68,7 @@ test("chunked-compression-unittests") {
   sources = [
     "chunked-compressor-test.cc",
     "chunked-decompressor-test.cc",
+    "compression-params-test.cc",
     "header-reader-test.cc",
     "header-writer-test.cc",
     "seek-table-test.cc",
