@@ -4,27 +4,18 @@
 
 use crate::agent::base::{Agent, Invocation, Lifespan};
 use crate::agent::bluetooth_earcons_handler::watch_bluetooth_connections;
-use crate::agent::volume_change_earcons_handler::VolumeChangeEarconsHandler;
+use crate::agent::volume_change_earcons_handler::{listen_to_audio_events, VolumeChangeEarconsHandler, watch_background_usage};
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{ListenSession, SettingType, SwitchboardClient, SwitchboardError};
+use crate::switchboard::base::ListenSession;
 
 use anyhow::{Context, Error};
-use fidl::endpoints::create_request_stream;
-use fidl_fuchsia_media::{
-    AudioRenderUsage,
-    Usage::RenderUsage,
-    UsageReporterMarker,
-    UsageState::{Ducked, Muted},
-    UsageWatcherRequest::OnStateChanged,
-};
 use fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy};
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
-use futures::StreamExt;
 use std::collections::HashSet;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::AtomicBool,
     Arc,
 };
 
@@ -50,7 +41,7 @@ pub struct CommonEarconsParams {
 /// It must be saved until the lifetime of the callbacks from the listen call are complete.
 pub struct SwitchboardListenSessionHolder {
     /// The listen session that is handed back from the listen call on the Switchboard.
-    listen_session: Option<Box<dyn ListenSession + Send + Sync + 'static>>,
+    pub listen_session: Option<Box<dyn ListenSession + Send + Sync + 'static>>,
 }
 
 /// Only used to tell if the listen session was inadvertently dropped. If it was dropped, the listen
@@ -142,77 +133,6 @@ impl Agent for EarconsAgent {
             return Ok(false);
         }
     }
-}
-
-// Listen to all the events on the switchboard that come through on the Audio setting
-// type. Make corresponding requests on the corresponding handlers to get the necessary state.
-async fn listen_to_audio_events(
-    client: SwitchboardClient,
-    volume_change_handler: VolumeChangeEarconsHandler,
-    common_earcons_params: CommonEarconsParams,
-) {
-    let common_earcons_params_clone = common_earcons_params.clone();
-    let listen_result = client
-        .clone()
-        .listen(
-            SettingType::Audio,
-            Arc::new(move |setting| {
-                volume_change_handler.get_volume_info(client.clone(), setting);
-            }),
-        )
-        .await;
-    assert!(listen_result.is_ok());
-
-    // Store the listen session so it doesn't get dropped and cancel the connection.
-    if let Ok(session) = listen_result {
-        let mut listen_session_holder_lock =
-            common_earcons_params_clone.listen_session_holder.lock().await;
-        listen_session_holder_lock.listen_session = Some(session);
-    }
-}
-
-/// Determine when the background usage is being played on.
-///
-/// We should not play earcons over a higher priority stream. In order to figure out whether there
-/// is a more high-priority stream playing, we watch the BACKGROUND audio usage. If it is muted or
-/// ducked, we should not play the earcons.
-// TODO (fxb/44381): Remove this when it is no longer necessary to check the background usage.
-async fn watch_background_usage(
-    service_context_handle: &ServiceContextHandle,
-    priority_stream_playing: Arc<AtomicBool>,
-) -> Result<(), Error> {
-    let usage_reporter_proxy =
-        service_context_handle.lock().await.connect::<UsageReporterMarker>().await?;
-
-    // Create channel for usage reporter watch results.
-    let (watcher_client, mut watcher_requests) = create_request_stream()?;
-
-    // Watch for changes in usage.
-    usage_reporter_proxy.watch(&mut RenderUsage(AudioRenderUsage::Background), watcher_client)?;
-
-    // Handle changes in the usage, update state.
-    while let Some(event) = watcher_requests.next().await {
-        match event {
-            Ok(OnStateChanged { usage: _usage, state, responder }) => {
-                responder.send()?;
-                priority_stream_playing.store(
-                    match state {
-                        Muted(_) | Ducked(_) => true,
-                        _ => false,
-                    },
-                    Ordering::SeqCst,
-                );
-            }
-            Err(_) => {
-                return Err(Error::new(SwitchboardError::ExternalFailure {
-                    setting_type: SettingType::Audio,
-                    dependency: "UsageReporterProxy".to_string(),
-                    request: "watch".to_string(),
-                }));
-            }
-        }
-    }
-    Ok(())
 }
 
 /// Establish a connection to the sound player and return the proxy representing the service.

@@ -6,16 +6,29 @@ use crate::agent::earcons_agent::{connect_to_sound_player, CommonEarconsParams};
 use crate::agent::earcons_sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
 use crate::agent::earcons_utils::play_sound;
 use crate::input::monitor_media_buttons;
+use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
-    AudioStreamType, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
+    AudioStreamType, SettingRequest, SettingResponse, SettingType, SwitchboardClient, SwitchboardError,
 };
 
+use anyhow::Error;
+use fidl::endpoints::create_request_stream;
+use fidl_fuchsia_media::{
+    AudioRenderUsage,
+    Usage::RenderUsage,
+    UsageReporterMarker,
+    UsageState::{Ducked, Muted},
+    UsageWatcherRequest::OnStateChanged,
+};
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::lock::Mutex;
 use futures::StreamExt;
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
 /// The VolumeChangeEarconsHandler takes care of the earcons functionality on volume change.
 #[derive(Debug, Clone)]
@@ -85,7 +98,7 @@ impl VolumeChangeEarconsHandler {
 /// Send a request to the switchboard to get the audio info for the volume change.
 ///
 /// Intended to be sent after getting a response from the listen command on the switchboard.
-pub fn get_volume_info(
+fn get_volume_info(
     switchboard_client: SwitchboardClient,
     setting_type: SettingType,
     last_media_user_volume: Arc<Mutex<Option<f32>>>,
@@ -118,6 +131,77 @@ pub fn get_volume_info(
             }
         }
     });
+}
+
+/// Listen to all the events on the switchboard that come through on the Audio setting
+/// type, and make corresponding requests on the corresponding handlers to get the necessary state.
+pub async fn listen_to_audio_events(
+    client: SwitchboardClient,
+    volume_change_handler: VolumeChangeEarconsHandler,
+    common_earcons_params: CommonEarconsParams,
+) {
+    let common_earcons_params_clone = common_earcons_params.clone();
+    let listen_result = client
+        .clone()
+        .listen(
+            SettingType::Audio,
+            Arc::new(move |setting| {
+                volume_change_handler.get_volume_info(client.clone(), setting);
+            }),
+        )
+        .await;
+    assert!(listen_result.is_ok());
+
+    // Store the listen session so it doesn't get dropped and cancel the connection.
+    if let Ok(session) = listen_result {
+        let mut listen_session_holder_lock =
+            common_earcons_params_clone.listen_session_holder.lock().await;
+        listen_session_holder_lock.listen_session = Some(session);
+    }
+}
+
+/// Determine when the background usage is being played on.
+///
+/// We should not play earcons over a higher priority stream. In order to figure out whether there
+/// is a more high-priority stream playing, we watch the BACKGROUND audio usage. If it is muted or
+/// ducked, we should not play the earcons.
+// TODO (fxb/44381): Remove this when it is no longer necessary to check the background usage.
+pub async fn watch_background_usage(
+    service_context_handle: &ServiceContextHandle,
+    priority_stream_playing: Arc<AtomicBool>,
+) -> Result<(), Error> {
+    let usage_reporter_proxy =
+        service_context_handle.lock().await.connect::<UsageReporterMarker>().await?;
+
+    // Create channel for usage reporter watch results.
+    let (watcher_client, mut watcher_requests) = create_request_stream()?;
+
+    // Watch for changes in usage.
+    usage_reporter_proxy.watch(&mut RenderUsage(AudioRenderUsage::Background), watcher_client)?;
+
+    // Handle changes in the usage, update state.
+    while let Some(event) = watcher_requests.next().await {
+        match event {
+            Ok(OnStateChanged { usage: _usage, state, responder }) => {
+                responder.send()?;
+                priority_stream_playing.store(
+                    match state {
+                        Muted(_) | Ducked(_) => true,
+                        _ => false,
+                    },
+                    Ordering::SeqCst,
+                );
+            }
+            Err(_) => {
+                return Err(Error::new(SwitchboardError::ExternalFailure {
+                    setting_type: SettingType::Audio,
+                    dependency: "UsageReporterProxy".to_string(),
+                    request: "watch".to_string(),
+                }));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Handle the volume state acquired from the switchboard, and determine whether
