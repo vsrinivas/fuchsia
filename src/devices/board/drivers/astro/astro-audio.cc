@@ -116,7 +116,7 @@ zx_status_t Astro::AudioInit() {
     return status;
   }
 
-  status = clk_impl_.SetRate(g12a_clk::CLK_HIFI_PLL, 3072000000);
+  status = clk_impl_.SetRate(g12a_clk::CLK_HIFI_PLL, 768000000);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d", __func__, status);
     return status;

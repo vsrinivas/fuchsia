@@ -37,35 +37,21 @@ AstroAudioStreamOut::AstroAudioStreamOut(zx_device_t* parent) : SimpleAudioStrea
   frames_per_second_ = kMinSampleRate;
 }
 
-zx_status_t AstroAudioStreamOut::InitCodec() {
-  audio_en_.Write(1);  // Enable codec by setting SOC_AUDIO_EN.
-
-  auto status = codec_->Init(frames_per_second_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to initialize codec", __FILE__);
-    audio_en_.Write(0);
-    return status;
-  }
-
-  return ZX_OK;
-}
-
 zx_status_t AstroAudioStreamOut::InitHW() {
-  aml_audio_->Shutdown();
+  zx_status_t status;
 
-  auto status = InitCodec();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not initialize codec - %d", __FILE__, status);
-    return status;
-  }
+  // Shut down the SoC audio peripherals (tdm/dma)
+  aml_audio_->Shutdown();
 
   auto on_error = fbl::MakeAutoCall([this]() { aml_audio_->Shutdown(); });
 
   aml_audio_->Initialize();
   // Setup TDM.
 
-  // 3 bitoffset, 4 slots, 32 bits/slot, 16 bits/sample, no mixing.
-  aml_audio_->ConfigTdmOutSlot(3, 3, 31, 15, 0);
+  // 3 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample, Mix L+R for lane0.
+  // Note: 3 bit offest places msb of sample one sclk period after edge of fsync
+  // to provide i2s framing
+  aml_audio_->ConfigTdmOutSlot(3, 1, 31, 15, 1);
 
   // Lane0 right channel.
   aml_audio_->ConfigTdmOutSwaps(0x00000010);
@@ -77,8 +63,13 @@ zx_status_t AstroAudioStreamOut::InitHW() {
     return status;
   }
 
-  // Setup appropriate tdm clock signals. mclk = 3.072GHz/125 = 24.576MHz.
-  status = aml_audio_->SetMclkDiv(124);
+  // PLL sourcing audio clock tree should be running at 768MHz
+  // Note: Audio clock tree input should always be < 1GHz
+  // mclk rate for 96kHz = 768MHz/5 = 153.6MHz
+  // mclk rate for 48kHz = 768MHz/10 = 76.8MHz
+  // Note: absmax mclk frequency is 500MHz per AmLogic
+  uint32_t mdiv = (frames_per_second_ == 96000) ? 5 : 10;
+  status = aml_audio_->SetMclkDiv(mdiv - 1);  // register val is div - 1;
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure MCLK %d", __FILE__, status);
     return status;
@@ -86,17 +77,25 @@ zx_status_t AstroAudioStreamOut::InitHW() {
 
   // No need to set mclk pad via SetMClkPad (TAS2770 features "MCLK Free Operation").
 
-  // 48kHz: sclk=24.576MHz/4= 6.144MHz, 6.144MHz/128=48k frame sync, sdiv=3, lrduty=0, lrdiv=127.
-  // 96kHz: sclk=24.576MHz/2=12.288MHz, 12.288MHz/128=96k frame sync, sdiv=1, lrduty=0, lrdiv=127.
-  status = aml_audio_->SetSclkDiv((192'000 / frames_per_second_ - 1), 0, 127, false);
+  // 48kHz: sclk=76.8MHz/25 = 3.072MHz, 3.072MHz/64=48kkHz
+  // 96kHz: sclk=153.6MHz/25 = 6.144MHz, 6.144MHz/64=96kHz
+  // lrduty = 32 sclk cycles (write 31) for i2s
+  // invert sclk = true = sclk is rising edge in middle of bit for i2s
+  status = aml_audio_->SetSclkDiv(24, 31, 63, true);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
     return status;
   }
 
+  // Allow clock divider changes to stabilize
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+
   aml_audio_->Sync();
 
   on_error.cancel();
+  // At this point the SoC audio peripherals are ready to start, but no
+  //  clocks are active.  The codec is also in software shutdown and will
+  //  need to be started after the audio clocks are activated.
   return ZX_OK;
 }
 
@@ -122,11 +121,11 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  audio_fault_ = fragments[FRAGMENT_FAULT_GPIO];
-  audio_en_ = fragments[FRAGMENT_ENABLE_GPIO];
+  ddk::GpioProtocolClient audio_fault = fragments[FRAGMENT_FAULT_GPIO];
+  ddk::GpioProtocolClient audio_en = fragments[FRAGMENT_ENABLE_GPIO];
 
-  if (!audio_fault_.is_valid() || !audio_en_.is_valid()) {
-    zxlogf(ERROR, "%s failed to allocate gpio", __func__);
+  if (!audio_fault.is_valid() || !audio_en.is_valid()) {
+    zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -136,7 +135,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  codec_ = Tas27xx::Create(std::move(i2c));
+  codec_ = Tas27xx::Create(std::move(i2c), std::move(audio_en), std::move(audio_fault), true, true);
   if (!codec_) {
     zxlogf(ERROR, "%s could not get tas27xx", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -173,7 +172,19 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return status;
   }
 
-  return InitHW();
+  status = InitHW();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to init tdm hardware %d\n", __FILE__, status);
+    return status;
+  }
+
+  status = codec_->Init(frames_per_second_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not initialize tas27xx - %d\n", __func__, status);
+    return status;
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t AstroAudioStreamOut::Init() {
@@ -190,7 +201,13 @@ zx_status_t AstroAudioStreamOut::Init() {
   }
 
   // Set our gain capabilities.
-  cur_gain_state_.cur_gain = codec_->GetGain();
+  float gain;
+  status = codec_->GetGain(&gain);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  cur_gain_state_.cur_gain = gain;
   cur_gain_state_.cur_mute = false;
   cur_gain_state_.cur_agc = false;
 
@@ -254,27 +271,33 @@ zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq
   }
 
   if (req.frames_per_second != frames_per_second_) {
-    auto last_rate = frames_per_second_;
+    // Put codec in safe state for rate change
+    zx_status_t status = codec_->SoftwareShutdown();
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    uint32_t last_rate = frames_per_second_;
     frames_per_second_ = req.frames_per_second;
-    auto status = InitHW();
+    status = InitHW();
     if (status != ZX_OK) {
       frames_per_second_ = last_rate;
       return status;
     }
+    // Note: autorate is enabled in the coded, so changine codec rate
+    // is not required.
 
-    // Set gain after the codec is reinitialized.
-    status = codec_->SetGain(cur_gain_state_.cur_gain);
-    if (status != ZX_OK) {
-      return status;
-    }
+    // Restart codec
+    return codec_->Start();
   }
 
   return ZX_OK;
 }
 
 void AstroAudioStreamOut::ShutdownHook() {
+  // safe the codec so it won't throw clock errors when tdm bus shuts down
+  codec_->HardwareShutdown();
   aml_audio_->Shutdown();
-  audio_en_.Write(0);
 }
 
 zx_status_t AstroAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
@@ -282,8 +305,13 @@ zx_status_t AstroAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
   if (status != ZX_OK) {
     return status;
   }
-  cur_gain_state_.cur_gain = codec_->GetGain();
-  return ZX_OK;
+  float gain;
+  status = codec_->GetGain(&gain);
+  if (status == ZX_OK) {
+    cur_gain_state_.cur_gain = gain;
+  }
+
+  return status;
 }
 
 zx_status_t AstroAudioStreamOut::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
@@ -319,12 +347,11 @@ zx_status_t AstroAudioStreamOut::Start(uint64_t* out_start_time) {
   } else {
     us_per_notification_ = 0;
   }
-  codec_->Mute(false);
   return ZX_OK;
 }
 
 zx_status_t AstroAudioStreamOut::Stop() {
-  codec_->Mute(true);
+  codec_->Standby();
   notify_timer_.Cancel();
   us_per_notification_ = 0;
   aml_audio_->Stop();

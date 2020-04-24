@@ -46,7 +46,6 @@ class AstroAudioStreamOut : public SimpleAudioStream {
   zx_status_t InitCodec();  // protected for unit test.
 
   std::unique_ptr<Tas27xx> codec_;           // protected for unit test.
-  ddk::GpioProtocolClient audio_en_;         // protected for unit test.
   std::unique_ptr<AmlTdmDevice> aml_audio_;  // protected for unit test.
 
  private:
@@ -70,8 +69,6 @@ class AstroAudioStreamOut : public SimpleAudioStream {
 
   zx::vmo ring_buffer_vmo_;
   fzl::PinnedVmo pinned_ring_buffer_;
-
-  ddk::GpioProtocolClient audio_fault_;
 
   zx::bti bti_;
 };
