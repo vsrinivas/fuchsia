@@ -64,20 +64,11 @@ void StreamImpl::Shutdown(zx_status_t status) {
 }
 
 void StreamImpl::Stop() {
-  if (!started_) {
-    Shutdown(ZX_ERR_BAD_STATE);
-    return;
-  }
-
   output_node_.OnStopStreaming();
   started_ = false;
 }
 
 void StreamImpl::Start() {
-  if (started_) {
-    Shutdown(ZX_ERR_BAD_STATE);
-    return;
-  }
   output_node_.OnStartStreaming();
   started_ = true;
 }

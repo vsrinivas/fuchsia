@@ -28,7 +28,6 @@ class IspStreamProtocol {
   output_stream_protocol_t* protocol() { return &protocol_; }
 
   void Start() {
-    ZX_ASSERT(started_ == false);
     ZX_ASSERT(ZX_OK == protocol_.ops->start(protocol_.ctx));
     started_ = true;
   }

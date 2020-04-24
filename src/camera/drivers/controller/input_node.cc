@@ -104,10 +104,8 @@ void InputNode::OnReleaseFrame(uint32_t buffer_index) {
 }
 
 void InputNode::OnStartStreaming() {
-  if (!enabled_) {
-    enabled_ = true;
-    isp_stream_protocol_->Start();
-  }
+  enabled_ = true;
+  isp_stream_protocol_->Start();
 }
 
 void InputNode::OnStopStreaming() {
