@@ -63,9 +63,7 @@ template("wasm_bindings") {
     tool = "//src/diagnostics/wasm/bindgen:bin"
     tool_output_name = "fx_wasm_bindgen"
 
-    output_dir = rebase_path("$dep_out_dir/$target_name")
-
-    #sources = [ invoker.data ]
+    output_dir = "$target_out_dir/$target_name"
 
     args = [
       file_name,
