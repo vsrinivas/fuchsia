@@ -9,23 +9,22 @@ use {
         color::Color,
         drawing::{FontFace, GlyphMap, Text},
         geometry::Corners,
+        input::{self},
         make_app_assistant,
         render::*,
         AnimationMode, App, AppAssistant, Point, RenderOptions, Size, ViewAssistant,
         ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     euclid::default::{Point2D, Rect, Size2D, Vector2D},
-    fidl_fuchsia_input_report as hid_input_report, fuchsia_async as fasync,
     fuchsia_trace::{self, counter, duration},
     fuchsia_trace_provider,
     fuchsia_zircon::{self as zx, AsHandleRef, ClockId, Event, Signals, Time},
-    futures::channel::mpsc::UnboundedReceiver,
     lazy_static::lazy_static,
     lipsum::{lipsum_title, lipsum_words},
     rand::{thread_rng, Rng},
     std::{
         collections::{BTreeMap, VecDeque},
-        f32, fs,
+        f32,
     },
 };
 
@@ -862,66 +861,6 @@ impl Contents {
     }
 }
 
-// TODO: Remove touch device and use handle_pointer_event
-struct TouchDevice {
-    x_range: hid_input_report::Range,
-    y_range: hid_input_report::Range,
-    receiver: UnboundedReceiver<hid_input_report::InputReport>,
-}
-
-impl TouchDevice {
-    fn create() -> Result<TouchDevice, Error> {
-        let input_devices_directory = "/dev/class/input-report";
-        let path = std::path::Path::new(input_devices_directory);
-        let entries = fs::read_dir(path)?;
-        for entry in entries {
-            let entry = entry?;
-            let (client, server) = zx::Channel::create()?;
-            fdio::service_connect(entry.path().to_str().expect("bad path"), server)?;
-            let mut device = hid_input_report::InputDeviceSynchronousProxy::new(client);
-
-            let descriptor = device.get_descriptor(Time::INFINITE)?;
-            match descriptor.touch {
-                None => continue,
-                Some(touch) => {
-                    println!("touch device: {0}", entry.path().to_str().unwrap());
-                    let input_descriptor = &touch.input.unwrap();
-                    let contact_descriptor = &input_descriptor.contacts.as_ref().unwrap()[0];
-                    let x_range = contact_descriptor.position_x.as_ref().unwrap().range;
-                    let y_range = contact_descriptor.position_y.as_ref().unwrap().range;
-                    let (sender, receiver) =
-                        futures::channel::mpsc::unbounded::<hid_input_report::InputReport>();
-
-                    // TODO: move direct input processing into carnelian.
-                    fasync::spawn_local(async move {
-                        if let Ok((_, event)) = device.get_reports_event(Time::INFINITE) {
-                            while let Ok(_) =
-                                fasync::OnSignals::new(&event, zx::Signals::USER_0).await
-                            {
-                                if let Ok(reports) = device.get_reports(Time::INFINITE) {
-                                    for report in reports {
-                                        let event_time =
-                                            report.event_time.expect("missing timestamp");
-                                        duration!("input", "on_report", "event_time" => event_time);
-                                        sender.unbounded_send(report).expect("unbounded_send");
-                                    }
-                                }
-                            }
-                        }
-                    });
-
-                    return Ok(TouchDevice { x_range, y_range, receiver });
-                }
-            }
-        }
-        Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no touch device found").into())
-    }
-
-    fn get_report(&mut self) -> Option<hid_input_report::InputReport> {
-        self.receiver.try_next().unwrap_or(None)
-    }
-}
-
 struct FlingCurve {
     curve_duration: f32,
     start_timestamp: Time,
@@ -1017,7 +956,7 @@ struct InfiniteScroll {
     scene: Scene,
     contents: BTreeMap<u64, Contents>,
     last_presentation_time: Time,
-    touch_device: Option<TouchDevice>,
+    pending_pointer_events: VecDeque<input::Event>,
     touch_points: Vec<Point>,
     touch_time: Time,
     previous_touch_points: Vec<Point>,
@@ -1039,7 +978,6 @@ impl InfiniteScroll {
         text_disabled: bool,
     ) -> Self {
         let scene = Scene::new(scale, exposure, max_columns, text_disabled);
-        let touch_device = TouchDevice::create().ok();
         let fake_scroll_start =
             Time::from_nanos(Time::get(ClockId::Monotonic).into_nanos().saturating_add(
                 zx::Duration::from_seconds(FAKE_SCROLL_DELAY_SECONDS).into_nanos(),
@@ -1051,7 +989,7 @@ impl InfiniteScroll {
             scene,
             contents: BTreeMap::new(),
             last_presentation_time: Time::get(ClockId::Monotonic),
-            touch_device,
+            pending_pointer_events: VecDeque::new(),
             touch_points: Vec::new(),
             touch_time: Time::from_nanos(0),
             previous_touch_points: Vec::new(),
@@ -1079,46 +1017,46 @@ impl InfiniteScroll {
         // Scroll distance is set by input processing code below.
         let mut scroll_distance = None;
 
-        // Process touch device input.
+        // Process touch events.
         //
         // Smooth motion is achieved by using a fixed offset from the
         // presentation time and approximating the touch location at
         // the exact sampling time.
-        if let Some(device) = self.touch_device.as_mut() {
-            // Determine sample time by removing sampling offset from presentation time.
-            let sample_time = presentation_time - self.touch_sampling_offset;
+        //
+        // Determine sample time by removing sampling offset from
+        // presentation time.
+        let sample_time = presentation_time - self.touch_sampling_offset;
 
-            fn average(points: &Vec<Point>) -> Vector2D<f32> {
-                points.iter().fold(Vector2D::zero(), |sum, x| sum + x.to_vector())
-                    / points.len() as f32
-            }
+        fn average(points: &Vec<Point>) -> Vector2D<f32> {
+            points.iter().fold(Vector2D::zero(), |sum, x| sum + x.to_vector()) / points.len() as f32
+        }
 
-            // Read new reports until we have one report past the sample time.
-            while self.touch_time <= sample_time {
-                match device.get_report() {
-                    Some(report) => {
-                        let touch = report.touch.as_ref();
-                        let contacts = touch.unwrap().contacts.as_ref().unwrap();
-
+        // Process events until we have one event past the sample time.
+        while self.touch_time <= sample_time {
+            match self.pending_pointer_events.pop_front() {
+                Some(event) => {
+                    if let input::EventType::Touch(touch_event) = event.event_type {
                         // Save previous touch state.
                         self.previous_touch_time = self.touch_time;
                         self.previous_touch_points.clear();
                         self.previous_touch_points.extend(self.touch_points.drain(..));
                         // Update touch points and origin. Origin is the average of
                         // all touch points.
-                        for contact in contacts.iter() {
-                            let point = Point::new(
-                                size.width * contact.position_x.unwrap() as f32
-                                    / device.x_range.max as f32,
-                                size.height * contact.position_y.unwrap() as f32
-                                    / device.y_range.max as f32,
-                            );
-                            self.touch_points.push(point);
+                        for contact in touch_event.contacts.iter() {
+                            match contact.phase {
+                                input::touch::Phase::Down(point, _) => {
+                                    self.touch_points.push(point.to_f32())
+                                }
+                                input::touch::Phase::Moved(point, _) => {
+                                    self.touch_points.push(point.to_f32())
+                                }
+                                _ => {}
+                            }
                         }
                         counter!("input", "touch_y", 0, "y" => (average(&self.touch_points)).y.round() as u32);
 
                         // Update touch time.
-                        self.touch_time = Time::from_nanos(report.event_time.unwrap());
+                        self.touch_time = Time::from_nanos(event.event_time as i64);
 
                         // Ignore previous touch points and set scroll origin if number of
                         // touch points changed.
@@ -1127,42 +1065,42 @@ impl InfiniteScroll {
                             self.previous_touch_points.clear();
                         }
                     }
-                    // Stop when no more reports are available.
-                    _ => break,
                 }
+                // Stop when no more events are available.
+                _ => break,
+            }
+        }
+
+        if !self.touch_points.is_empty() && !self.previous_touch_points.is_empty() {
+            let origin = average(&self.touch_points);
+            // Approximate origin at the sample time by assuming a linear
+            // change to touch location over the sampling interval.
+            if self.touch_time > sample_time && self.touch_time > self.previous_touch_time {
+                let interval = (self.touch_time - self.previous_touch_time).into_nanos() as f32;
+                let scalar =
+                    (sample_time - self.previous_touch_time).into_nanos() as f32 / interval;
+                let previous_origin = average(&self.previous_touch_points);
+                let estimated_origin = previous_origin + (origin - previous_origin) * scalar;
+                scroll_distance = Some(-(estimated_origin.y - self.scroll_origin.y));
+            } else {
+                let touch_latency = presentation_time - self.touch_time;
+                // Print a warning if touch sampling offset is too low for
+                // accurate touch point sampling.
+                if touch_latency > self.touch_sampling_offset {
+                    println!(
+                        "warning: high touch latency {:?} ms",
+                        touch_latency.into_nanos() as f32 / 1e+6
+                    );
+                }
+                scroll_distance = Some(-(origin.y - self.scroll_origin.y));
             }
 
-            if !self.touch_points.is_empty() && !self.previous_touch_points.is_empty() {
-                let origin = average(&self.touch_points);
-                // Approximate origin at the sample time by assuming a linear
-                // change to touch location over the sampling interval.
-                if self.touch_time > sample_time && self.touch_time > self.previous_touch_time {
-                    let interval = (self.touch_time - self.previous_touch_time).into_nanos() as f32;
-                    let scalar =
-                        (sample_time - self.previous_touch_time).into_nanos() as f32 / interval;
-                    let previous_origin = average(&self.previous_touch_points);
-                    let estimated_origin = previous_origin + (origin - previous_origin) * scalar;
-                    scroll_distance = Some(-(estimated_origin.y - self.scroll_origin.y));
-                } else {
-                    let touch_latency = presentation_time - self.touch_time;
-                    // Print a warning if touch sampling offset is too low for
-                    // accurate touch point sampling.
-                    if touch_latency > self.touch_sampling_offset {
-                        println!(
-                            "warning: high touch latency {:?} ms",
-                            touch_latency.into_nanos() as f32 / 1e+6
-                        );
-                    }
-                    scroll_distance = Some(-(origin.y - self.scroll_origin.y));
-                }
-
-                // Delay the start of fake scrolling.
-                self.fake_scroll_start =
-                    Time::from_nanos(presentation_time.into_nanos().saturating_add(
-                        zx::Duration::from_seconds(FAKE_SCROLL_DELAY_SECONDS).into_nanos(),
-                    ));
-                self.fake_scroll_velocity = None;
-            }
+            // Delay the start of fake scrolling.
+            self.fake_scroll_start =
+                Time::from_nanos(presentation_time.into_nanos().saturating_add(
+                    zx::Duration::from_seconds(FAKE_SCROLL_DELAY_SECONDS).into_nanos(),
+                ));
+            self.fake_scroll_velocity = None;
         }
 
         const SECONDS_PER_NANOSECOND: f32 = 1e-9;
@@ -1236,6 +1174,10 @@ impl InfiniteScroll {
 
         Ok(())
     }
+
+    fn handle_pointer_event(&mut self, event: &input::Event) {
+        self.pending_pointer_events.push_back(event.clone());
+    }
 }
 
 struct InfiniteScrollViewAssistant {
@@ -1282,6 +1224,18 @@ impl ViewAssistant for InfiniteScrollViewAssistant {
 
     fn initial_animation_mode(&mut self) -> AnimationMode {
         return AnimationMode::EveryFrame;
+    }
+
+    fn handle_pointer_event(
+        &mut self,
+        _context: &mut ViewAssistantContext<'_>,
+        event: &input::Event,
+        _pointer_event: &input::pointer::Event,
+    ) -> Result<(), Error> {
+        if let Some(infinite_scroll) = self.infinite_scroll.as_mut() {
+            infinite_scroll.handle_pointer_event(event);
+        }
+        Ok(())
     }
 }
 

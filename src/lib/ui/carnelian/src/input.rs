@@ -94,14 +94,14 @@ impl Modifiers {
 pub mod mouse {
     use super::*;
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone)]
     pub enum Phase {
         Down(Button),
         Up(Button),
         Moved,
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone)]
     pub struct Event {
         pub buttons: ButtonSet,
         pub phase: Phase,
@@ -130,7 +130,7 @@ mod mouse_tests {
 pub mod keyboard {
     use super::*;
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Clone, Debug, PartialEq)]
     pub enum Phase {
         Pressed,
         Released,
@@ -138,7 +138,7 @@ pub mod keyboard {
         Repeat,
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone)]
     pub struct Event {
         pub phase: Phase,
         pub code_point: Option<u32>,
@@ -188,7 +188,7 @@ pub mod touch {
         pub phase: Phase,
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone)]
     pub struct Event {
         pub contacts: Vec<Contact>,
         pub buttons: ButtonSet,
@@ -210,7 +210,7 @@ mod touch_tests {
 pub mod pointer {
     use super::*;
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone)]
     pub enum Phase {
         Down(IntPoint),
         Moved(IntPoint),
@@ -225,7 +225,7 @@ pub mod pointer {
         Contact(touch::ContactId),
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone)]
     pub struct Event {
         pub phase: Phase,
         pub pointer_id: PointerId,
@@ -319,14 +319,14 @@ mod device_id_tests {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum EventType {
     Mouse(mouse::Event),
     Keyboard(keyboard::Event),
     Touch(touch::Event),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Event {
     pub event_time: u64,
     pub device_id: DeviceId,
