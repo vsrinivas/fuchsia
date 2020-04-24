@@ -50,35 +50,74 @@ func TestParsePackagesLineFormatted(t *testing.T) {
 }
 
 func TestParsePackagesJson(t *testing.T) {
-	expectedPkgs := [2]string{
-		"fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
-		"fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789",
-	}
-
-	pFile := newByteReadCloser([]byte(`
+	for _, tc := range []struct {
+		name      string
+		version   string
+		wantError bool
+	}{
 		{
-			"version": 1,
-			"content": [
-				"fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
-				"fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789"
-				]
-		}
-	`))
+			name:      "version string success",
+			version:   "\"1\"",
+			wantError: false,
+		},
+		{
+			name:      "version int success",
+			version:   "1",
+			wantError: false,
+		},
+		{
+			name:      "version string unsupported fail",
+			version:   "\"2\"",
+			wantError: true,
+		},
+		{
+			name:      "version int unsupported fail",
+			version:   "2",
+			wantError: true,
+		},
+		{
+			name:      "version is bananas fail",
+			version:   "bananas",
+			wantError: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			expectedPkgs := make([]string, 0)
+			if !tc.wantError {
+				expectedPkgs = append(
+					expectedPkgs,
+					"fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
+					"fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789",
+				)
+			}
 
-	pkgs, err := ParsePackagesJson(pFile)
-	if err != nil {
-		t.Fatalf("Error processing packages: %s", err)
+			pFile := newByteReadCloser([]byte(fmt.Sprintf(`
+				{
+					"version": %s,
+					"content": [
+						"fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
+						"fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789"
+						]
+				}
+			`, tc.version)))
+
+			pkgs, err := ParsePackagesJson(pFile)
+			if (err == nil) == tc.wantError {
+				t.Fatalf("ParsePackagesJson() got error [%v], want error? %t", err, tc.wantError)
+			}
+
+			if len(expectedPkgs) != len(pkgs) {
+				t.Errorf("Length of parsed packages != expected")
+			}
+
+			for i, pkgURI := range pkgs {
+				if expectedPkgs[i] != pkgURI {
+					t.Errorf("Expected URI does not match, expected %q, found %q", expectedPkgs[i], pkgURI)
+				}
+			}
+		})
 	}
 
-	if len(expectedPkgs) != len(pkgs) {
-		t.Errorf("Length of parsed packages != expected")
-	}
-
-	for i, pkgURI := range pkgs {
-		if expectedPkgs[i] != pkgURI {
-			t.Errorf("Expected URI does not match, expected %q, found %q", expectedPkgs[i], pkgURI)
-		}
-	}
 }
 
 // Verifies that ParseImages() using the given image file and update package

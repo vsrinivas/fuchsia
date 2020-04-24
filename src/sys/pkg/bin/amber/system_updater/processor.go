@@ -104,13 +104,6 @@ func CacheUpdatePackage(updateURL string, resolver *pkg.PackageResolverWithCtxIn
 	return pkg, nil
 }
 
-// Packages deserializes the packages.json file in the system update package
-type Packages struct {
-	Version int `json:"version"`
-	// A list of fully qualified URIs
-	URIs []string `json:"content"`
-}
-
 // An image name and type string.
 type Image struct {
 	// The base name of the image.
@@ -180,12 +173,32 @@ func ParseRequirements(updatePkg *UpdatePackage) ([]string, []Image, error) {
 	return pkgs, imgs, nil
 }
 
+// Packages deserializes the packages.json file in the system update package.
+// NOTE: Fields must be exported for json decoding.
+type packages struct {
+	Version intOrStr `json:"version"`
+	// A list of fully qualified URIs.
+	URIs []string `json:"content"`
+}
+
+type intOrStr int
+
+// Enables us to support version as either a string or int.
+func (i *intOrStr) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err == nil {
+		b = []byte(s)
+	}
+
+	return json.Unmarshal(b, (*int)(i))
+}
+
 func ParsePackagesJson(pkgSrc io.ReadCloser) ([]string, error) {
 	bytes, err := ioutil.ReadAll(pkgSrc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read packages.json with error: %v", err)
 	}
-	var packages Packages
+	var packages packages
 	if err := json.Unmarshal(bytes, &packages); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal packages.json: %v", err)
 	}

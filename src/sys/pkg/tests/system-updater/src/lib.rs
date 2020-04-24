@@ -870,6 +870,7 @@ async fn test_packages_json_takes_precedence() {
         .add_file(
             "packages.json",
             &json!({
+              // TODO: Change to "1" once we remove support for versions as ints.
               "version": 1,
               "content": [
                 "fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
@@ -907,6 +908,7 @@ async fn test_metrics_report_untrusted_tuf_repo() {
         .add_file(
             "packages.json",
             &json!({
+              // TODO: Change to "1" once we remove support for versions as ints.
               "version": 1,
               "content": [
                 "fuchsia-pkg://non-existent-repo.com/amber/0?hash=abcdef",
