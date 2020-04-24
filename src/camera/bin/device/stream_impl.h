@@ -133,6 +133,7 @@ class StreamImpl {
   bool frame_sink_warning_sent_ = false;
   std::queue<fuchsia::camera3::FrameInfo> frames_;
   std::map<uint32_t, std::unique_ptr<async::Wait>> frame_waiters_;
+  fuchsia::math::Size current_resolution_;
   friend class Client;
 };
 

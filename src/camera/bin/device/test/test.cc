@@ -91,7 +91,6 @@ class DeviceTest : public gtest::RealLoopFixture {
     SetFailOnError(stream2, "Rebound Stream for DeviceTest::Sync");
     stream->Rebind(stream2.NewRequest());
     bool resolution_returned = false;
-    stream2->SetResolution({.width = 0, .height = 0});
     stream2->WatchResolution([&](fuchsia::math::Size resolution) { resolution_returned = true; });
     RunLoopUntilFailureOr(resolution_returned);
   }
@@ -413,12 +412,20 @@ TEST_F(DeviceTest, SetResolution) {
   fuchsia::camera3::StreamPtr stream;
   device->ConnectToStream(0, stream.NewRequest());
   SetFailOnError(stream, "Stream");
+  constexpr fuchsia::math::Size kExpectedDefaultSize{.width = 1920, .height = 1080};
   constexpr fuchsia::math::Size kRequestedSize{.width = 1025, .height = 32};
   constexpr fuchsia::math::Size kExpectedSize{.width = 1280, .height = 720};
   constexpr fuchsia::math::Size kRequestedSize2{.width = 1, .height = 1};
   constexpr fuchsia::math::Size kExpectedSize2{.width = 1024, .height = 576};
-  stream->SetResolution(kRequestedSize);
   bool callback_received = false;
+  stream->WatchResolution([&](fuchsia::math::Size coded_size) {
+    EXPECT_GE(coded_size.width, kExpectedDefaultSize.width);
+    EXPECT_GE(coded_size.height, kExpectedDefaultSize.height);
+    callback_received = true;
+  });
+  RunLoopUntilFailureOr(callback_received);
+  stream->SetResolution(kRequestedSize);
+  callback_received = false;
   stream->WatchResolution([&](fuchsia::math::Size coded_size) {
     EXPECT_GE(coded_size.width, kExpectedSize.width);
     EXPECT_GE(coded_size.height, kExpectedSize.height);

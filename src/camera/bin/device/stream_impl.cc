@@ -17,6 +17,13 @@
 #include "src/camera/bin/device/util.h"
 #include "src/lib/syslog/cpp/logger.h"
 
+static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) {
+  ZX_DEBUG_ASSERT(format.coded_width < std::numeric_limits<int32_t>::max());
+  ZX_DEBUG_ASSERT(format.coded_height < std::numeric_limits<int32_t>::max());
+  return {.width = static_cast<int32_t>(format.coded_width),
+          .height = static_cast<int32_t>(format.coded_height)};
+}
+
 StreamImpl::StreamImpl(const fuchsia::camera3::StreamProperties& properties,
                        const fuchsia::camera2::hal::StreamConfig& legacy_config,
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
@@ -28,8 +35,8 @@ StreamImpl::StreamImpl(const fuchsia::camera3::StreamProperties& properties,
       on_no_clients_(std::move(on_no_clients)) {
   legacy_stream_.set_error_handler(fit::bind_member(this, &StreamImpl::OnLegacyStreamDisconnected));
   legacy_stream_.events().OnFrameAvailable = fit::bind_member(this, &StreamImpl::OnFrameAvailable);
-  auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
-  clients_.emplace(client_id_next_++, std::move(client));
+  current_resolution_ = ConvertToSize(properties.image_format);
+  OnNewRequest(std::move(request));
   ZX_ASSERT(loop_.StartThread("Camera Stream Thread") == ZX_OK);
 }
 
@@ -43,6 +50,7 @@ void StreamImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Stream> r
   zx_status_t status =
       async::PostTask(loop_.dispatcher(), [this, request = std::move(request)]() mutable {
         auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
+        client->PostReceiveResolution(current_resolution_);
         clients_.emplace(client_id_next_++, std::move(client));
       });
   ZX_ASSERT(status == ZX_OK);
@@ -174,13 +182,6 @@ void StreamImpl::SendFrames() {
   }
 }
 
-static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) {
-  ZX_DEBUG_ASSERT(format.coded_width < std::numeric_limits<int32_t>::max());
-  ZX_DEBUG_ASSERT(format.coded_height < std::numeric_limits<int32_t>::max());
-  return {.width = static_cast<int32_t>(format.coded_width),
-          .height = static_cast<int32_t>(format.coded_height)};
-}
-
 void StreamImpl::PostSetResolution(uint32_t id, fuchsia::math::Size coded_size) {
   zx_status_t status = async::PostTask(loop_.dispatcher(), [this, id, coded_size] {
     auto it = clients_.find(id);
@@ -229,6 +230,7 @@ void StreamImpl::PostSetResolution(uint32_t id, fuchsia::math::Size coded_size) 
         }
       });
     }
+    current_resolution_ = best_size;
 
     // Inform clients of the resolution change.
     for (auto& [id, client] : clients_) {
