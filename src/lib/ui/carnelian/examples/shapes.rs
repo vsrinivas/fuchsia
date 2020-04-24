@@ -31,9 +31,6 @@ fn make_bounds(context: &ViewAssistantContext<'_>) -> Rect {
 #[derive(Clone, Debug, FromArgs)]
 #[argh(name = "shapes")]
 struct Args {
-    /// use partial updates
-    #[argh(switch, short = 'p')]
-    partial_updates: bool,
     /// use spinel
     #[argh(switch, short = 's')]
     use_spinel: bool,
@@ -180,7 +177,6 @@ fn raster_for_polygon(
 }
 
 struct ShapeDropViewAssistant {
-    partial_updates: bool,
     renderings: BTreeMap<u64, Rendering>,
     touch_handlers: BTreeMap<input::pointer::PointerId, TouchHandler>,
     animators: Vec<ShapeAnimator>,
@@ -191,11 +187,9 @@ struct ShapeDropViewAssistant {
 
 impl ShapeDropViewAssistant {
     fn new() -> Result<ShapeDropViewAssistant, Error> {
-        let args: Args = argh::from_env();
         let background_color = Color::from_hash_code("#2F4F4F")?;
         let composition = Composition::new(background_color);
         Ok(ShapeDropViewAssistant {
-            partial_updates: args.partial_updates,
             renderings: BTreeMap::new(),
             composition,
             background_color,
@@ -269,8 +263,6 @@ impl ViewAssistant for ShapeDropViewAssistant {
     ) -> Result<(), Error> {
         duration!("gfx", "ShapeDropViewAssistant::render");
 
-        const ERASE_COLOR: Color = Color { r: 0xff, g: 0, b: 0, a: 0xff };
-
         let background_color = self.background_color;
 
         self.setup_shapes(render_context);
@@ -287,7 +279,7 @@ impl ViewAssistant for ShapeDropViewAssistant {
 
         let rendering = self.renderings.entry(image_id).or_insert_with(|| Rendering::new());
 
-        let pre_clear = if !self.partial_updates || context.size != rendering.size {
+        let pre_clear = if context.size != rendering.size {
             rendering.size = context.size;
             rendering.previous_shapes.clear();
             Some(PreClear { color: background_color })
@@ -306,7 +298,7 @@ impl ViewAssistant for ShapeDropViewAssistant {
                 raster: translated_raster,
                 style: Style {
                     fill_rule: FillRule::WholeTile,
-                    fill: Fill::Solid(ERASE_COLOR),
+                    fill: Fill::Solid(background_color),
                     blend_mode: BlendMode::Over,
                 },
             }
