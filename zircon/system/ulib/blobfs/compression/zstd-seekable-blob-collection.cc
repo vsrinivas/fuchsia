@@ -48,7 +48,7 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
     return status;
   }
 
-  FS_TRACE_ERROR("\n\nCompressed space buffer %lu - %lu\n\n", reinterpret_cast<uint64_t>(cbc->mapped_vmo_.start()), reinterpret_cast<uint64_t>(cbc->mapped_vmo_.start()) + kCompressedTransferBufferBytes);
+  FS_TRACE_ERROR("\n\nCompressed space buffer is %lx, %lx\n\n", reinterpret_cast<uint64_t>(cbc->mapped_vmo_.start()), reinterpret_cast<uint64_t>(cbc->mapped_vmo_.start()) + kCompressedTransferBufferBytes);
 
   // Attach shared transfer buffer to block device.
   status = cbc->vmoid_.AttachVmo(cbc->transfer_vmo_);

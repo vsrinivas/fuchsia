@@ -903,12 +903,7 @@ zx_status_t Blobfs::PopulateCompressedTransferVmo(uint64_t offset, uint64_t leng
     return status;
   }
 
-  if (mapping.start() == nullptr) {
-    FS_TRACE_ERROR("\n\nUncompressed space buffer is null!\n\n");
-  } else {
-    FS_TRACE_ERROR("\n\nUncompressed space buffer is %lu\n\n", reinterpret_cast<uint64_t>(mapping.start()));
-  }
-  FS_TRACE_ERROR("\n\nUncompressed space buffer %lu - %lu", reinterpret_cast<uint64_t>(mapping.start()), reinterpret_cast<uint64_t>(mapping.start()) + length);
+  FS_TRACE_ERROR("\n\nUncompressed space buffer is %lx, %lx", reinterpret_cast<uint64_t>(mapping.start()), reinterpret_cast<uint64_t>(mapping.start()) + length);
 
   status = compressed_blobs_for_paging_->Read(
       info->identifier, static_cast<uint8_t*>(mapping.start()), offset, length);
