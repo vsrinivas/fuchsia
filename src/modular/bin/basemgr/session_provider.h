@@ -53,8 +53,7 @@ class SessionProvider {
   // Starts a new sessionmgr process if there isn't one already. Returns false
   // if there is an existing sessionmgr process, and does not start a new
   // session. Returns true if a new session was started successfully.
-  bool StartSession(fuchsia::ui::views::ViewToken view_token,
-                    fuchsia::modular::auth::AccountPtr account);
+  bool StartSession(fuchsia::ui::views::ViewToken view_token, bool is_ephemeral_account);
 
   // Asynchronously tears down the sessionmgr process. |callback| is invoked
   // once teardown is complete or has timed out.

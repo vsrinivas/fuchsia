@@ -107,9 +107,9 @@ void BasemgrImpl::StartBaseShell() {
   base_shell_app_->services().ConnectToService(base_shell_view_provider.NewRequest());
   base_shell_view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
-  presentation_container_ = std::make_unique<PresentationContainer>(
-      presenter_.get(), std::move(view_holder_token),
-      /* shell_config= */ GetActiveSessionShellConfig());
+  presentation_container_ =
+      std::make_unique<PresentationContainer>(presenter_.get(), std::move(view_holder_token),
+                                              /* shell_config= */ GetActiveSessionShellConfig());
 
   // TODO(alexmin): Remove BaseShellParams.
   fuchsia::modular::BaseShellParams params;
@@ -257,7 +257,8 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account) {
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto did_start_session =
-      session_provider_->StartSession(std::move(view_token), std::move(account));
+      session_provider_->StartSession(std::move(view_token),
+                                      /* is_ephemeral_account */ account == nullptr);
   if (!did_start_session) {
     FX_LOGS(WARNING) << "Session was already started and the logged in user "
                         "could not join the session.";
@@ -273,9 +274,9 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account) {
   }
 
   // Ownership of the Presenter should be moved to the session shell.
-  presentation_container_ = std::make_unique<PresentationContainer>(
-      presenter_.get(), std::move(view_holder_token),
-      /* shell_config= */ GetActiveSessionShellConfig());
+  presentation_container_ =
+      std::make_unique<PresentationContainer>(presenter_.get(), std::move(view_holder_token),
+                                              /* shell_config= */ GetActiveSessionShellConfig());
 }
 
 void BasemgrImpl::SelectNextSessionShell(SelectNextSessionShellCallback callback) {

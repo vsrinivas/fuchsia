@@ -32,13 +32,18 @@ constexpr char kSessionDirectoryLocation[] = "/data/modular";
 // plan to support more than a single session per user.
 constexpr char kSessionDirectoryPrefix[] = "USER_";
 
+// A fixed session ID that is used for new persistent sessions. This is possible
+// as basemanager never creates more than a single persistent session (or user)
+// per device.
+constexpr char kStandardSessionId[] = "0";
+
 // Returns a fully qualified session directory path for |session_id|.
 std::string GetSessionDirectory(const std::string& session_id) {
   return std::string(kSessionDirectoryLocation) + "/" + kSessionDirectoryPrefix + session_id;
 }
 
-// Returns the fully qualified paths of all existing session directories.
-std::vector<std::string> GetExistingSessionDirectories() {
+// Returns the session IDs encoded in all existing session directories.
+std::vector<std::string> GetExistingSessionIds() {
   std::vector<std::string> dirs;
   if (!files::ReadDirContents(kSessionDirectoryLocation, &dirs)) {
     FX_LOGS(WARNING) << "Could not open session directory location.";
@@ -47,17 +52,61 @@ std::vector<std::string> GetExistingSessionDirectories() {
   std::vector<std::string> output;
   for (const auto& dir : dirs) {
     if (strncmp(dir.c_str(), kSessionDirectoryPrefix, strlen(kSessionDirectoryPrefix)) == 0) {
-      FX_LOGS(INFO) << "Found session directory: " << dir;
-      output.push_back(std::string(kSessionDirectoryLocation) + "/" + dir);
+      auto session_id = dir.substr(strlen(kSessionDirectoryPrefix));
+      FX_LOGS(INFO) << "Found existing directory for session " << session_id;
+      output.push_back(session_id);
     }
   }
   return output;
 }
 
+// Returns an appropriate ID for the session, using the following logic and
+// reporting the selected case to cobalt:
+// * Ephemeral sessions receive a random ID
+// * Persistent sessions receive an ID extracted from the first session
+//   directory on disk if possible, and a fixed ID if not.
+std::string GetSessionId(bool is_ephemeral_account) {
+  if (is_ephemeral_account) {
+    FX_LOGS(INFO) << "Creating session using random ephemeral account.";
+    ReportEvent(ModularLifetimeEventsMetricDimensionEventType::CreateSessionNewEphemeralAccount);
+    uint32_t random_number = 0;
+    zx_cprng_draw(&random_number, sizeof random_number);
+    return std::to_string(random_number);
+  }
+
+  // TODO(50300): Once a sufficiently small number of devices are using legacy
+  // non-zero session IDs, remove support for sniffing an existing directory and
+  // just always use zero.
+  auto existing_sessions = GetExistingSessionIds();
+  if (existing_sessions.empty()) {
+    FX_LOGS(INFO) << "Creating session using new persistent account.";
+    ReportEvent(ModularLifetimeEventsMetricDimensionEventType::CreateSessionNewPersistentAccount);
+    return kStandardSessionId;
+  }
+
+  if (existing_sessions.size() == 1) {
+    if (existing_sessions[0] == std::string(kStandardSessionId)) {
+      FX_LOGS(INFO) << "Creating session using existing account with fixed ID.";
+      ReportEvent(ModularLifetimeEventsMetricDimensionEventType::CreateSessionExistingFixedAccount);
+    } else {
+      FX_LOGS(INFO) << "Creating session using existing account with legacy non-fixed ID.";
+      ReportEvent(
+          ModularLifetimeEventsMetricDimensionEventType::CreateSessionExistingPersistentAccount);
+    }
+    return existing_sessions[0];
+  }
+
+  FX_LOGS(WARNING) << "Creating session by picking the first of " << existing_sessions.size()
+                   << " existing directories.";
+  ReportEvent(
+      ModularLifetimeEventsMetricDimensionEventType::CreateSessionUnverifiablePersistentAccount);
+  return existing_sessions[0];
+}
+
 }  // namespace
 
 SessionContextImpl::SessionContextImpl(
-    fuchsia::sys::Launcher* const launcher, std::string session_id, bool is_ephemeral_account,
+    fuchsia::sys::Launcher* const launcher, bool is_ephemeral_account,
     fuchsia::modular::AppConfig sessionmgr_config, fuchsia::modular::AppConfig session_shell_config,
     fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
     fuchsia::ui::views::ViewToken view_token, fuchsia::sys::ServiceListPtr additional_services,
@@ -70,34 +119,9 @@ SessionContextImpl::SessionContextImpl(
   FX_CHECK(get_presentation_);
   FX_CHECK(on_session_shutdown_);
 
-  // 0. Generate the path to map '/data' for the sessionmgr we are starting.
+  // 0. Generate the path to map '/data' for the sessionmgr we are starting
+  std::string session_id = GetSessionId(is_ephemeral_account);
   auto data_origin = GetSessionDirectory(session_id);
-
-  // TODO(45946): We currently verify the existing session directories reflect
-  // the session we are being asked to create. Once we have gained confidence in
-  // the validity of existing directories, remove session_id as an input to the
-  // constructor and derive session ID from the existing directories (or set a
-  // random session ID in the case of a new epheremal account or a fixed
-  // session ID in the case of a new persistent account).
-  if (is_ephemeral_account) {
-    FX_LOGS(INFO) << "Creating session using ephemeral account.";
-    ReportEvent(ModularLifetimeEventsMetricDimensionEventType::CreateSessionNewEphemeralAccount);
-  } else {
-    auto existing_sessions = GetExistingSessionDirectories();
-    if (existing_sessions.empty()) {
-      FX_LOGS(INFO) << "Creating session using new persistent account.";
-      ReportEvent(ModularLifetimeEventsMetricDimensionEventType::CreateSessionNewPersistentAccount);
-    } else if (existing_sessions.size() == 1 && existing_sessions[0] == data_origin) {
-      FX_LOGS(INFO) << "Creating session using existing persistent account.";
-      ReportEvent(
-          ModularLifetimeEventsMetricDimensionEventType::CreateSessionExistingPersistentAccount);
-    } else {
-      FX_LOGS(WARNING) << "Creating session " << session_id << " that cannot be verified against "
-                       << existing_sessions.size() << " directories.";
-      ReportEvent(ModularLifetimeEventsMetricDimensionEventType::
-                      CreateSessionUnverifiablePersistentAccount);
-    }
-  }
 
   // 1. Create a PseudoDir containing startup.config. This directory will be
   // injected into sessionmgr's namespace and sessionmgr will read its

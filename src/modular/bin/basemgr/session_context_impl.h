@@ -46,16 +46,11 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   using GetPresentationCallback =
       fit::function<void(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)>;
 
-  // |session_id| is the device-local unique identifier for this session. Caller
-  // must ensure its uniqueness. sessionmgr creates an Environment namespace
-  // with the given |session_id|, and this will crash if it tries to create an
-  // environment with a pre-existing name.
-  //
   // |additional_services| are services that will be installed into the
   // Sessionmgr's namespace, including an implementation of
   // `fuchsia.intl.PropertyProvider`.
-  SessionContextImpl(fuchsia::sys::Launcher* const launcher, std::string session_id,
-                     bool is_ephemeral_account, fuchsia::modular::AppConfig sessionmgr_config,
+  SessionContextImpl(fuchsia::sys::Launcher* const launcher, bool is_ephemeral_account,
+                     fuchsia::modular::AppConfig sessionmgr_config,
                      fuchsia::modular::AppConfig session_shell_config,
                      fuchsia::modular::AppConfig story_shell_config,
                      bool use_session_shell_for_story_shell_factory,

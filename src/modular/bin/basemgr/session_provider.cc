@@ -52,24 +52,11 @@ SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launche
 }
 
 bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token,
-                                   fuchsia::modular::auth::AccountPtr account) {
+                                   bool is_ephemeral_account) {
   if (session_context_) {
     FX_LOGS(WARNING) << "StartSession() called when session context already "
                         "exists. Try calling SessionProvider::Teardown()";
     return false;
-  }
-
-  // TODO(MF-280): Currently, session_id maps to account ID. We should generate
-  // unique session ID's and store the mapping of session ID to session.
-  std::string session_id;
-  if (!account) {
-    // Guest user. Generate a random number to be used in this case.
-    uint32_t random_number = 0;
-    zx_cprng_draw(&random_number, sizeof random_number);
-    session_id = std::to_string(random_number);
-  } else {
-    // Non-guest user.
-    session_id = std::string(account->id);
   }
 
   // Set up a service directory for serving `fuchsia.intl.PropertyProvider` to
@@ -100,10 +87,9 @@ bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token,
 
   // Session context initializes and holds the sessionmgr process.
   session_context_ = std::make_unique<SessionContextImpl>(
-      launcher_, session_id, /* is_ephemeral_account */ account == nullptr,
-      CloneStruct(sessionmgr_), CloneStruct(session_shell_), CloneStruct(story_shell_),
-      use_session_shell_for_story_shell_factory_, std::move(view_token), std::move(services),
-      std::move(client),
+      launcher_, is_ephemeral_account, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
+      CloneStruct(story_shell_), use_session_shell_for_story_shell_factory_, std::move(view_token),
+      std::move(services), std::move(client),
       /* get_presentation= */
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));

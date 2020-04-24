@@ -18,9 +18,6 @@ namespace {
 using ::sys::testing::FakeLauncher;
 using SessionContextImplTest = gtest::TestLoopFixture;
 
-// Unique identifier for a test session.
-constexpr char kSessionId[] = "session_id";
-
 TEST_F(SessionContextImplTest, StartSessionmgr) {
   FakeLauncher launcher;
   std::string url = "test_url_string";
@@ -36,7 +33,7 @@ TEST_F(SessionContextImplTest, StartSessionmgr) {
       });
 
   modular::SessionContextImpl impl(
-      &launcher, kSessionId, false /* ephemeral_account */,
+      &launcher, false /* ephemeral_account */,
       modular::CloneStruct(app_config) /* sessionmgr_config */,
       modular::CloneStruct(app_config) /* session_shell_config */,
       modular::CloneStruct(app_config) /* story_shell_config */,
@@ -63,7 +60,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   bool done_callback_called = false;
   modular::SessionContextImpl impl(
-      &launcher, kSessionId,
+      &launcher,
       /* ephemeral_account */ false,
       /* sessionmgr_config= */ modular::CloneStruct(app_config),
       /* session_shell_config= */ modular::CloneStruct(app_config),
