@@ -18,7 +18,7 @@ class FakeAudioDevice : public AudioDevice {
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix)
       : AudioDevice(type, threading_model, registry, link_matrix,
-                    std::make_unique<AudioDriver>(this)) {}
+                    std::make_unique<AudioDriverV1>(this)) {}
 
   bool driver_info_fetched() { return driver_info_fetched_; }
   bool driver_config_complete() { return driver_config_complete_; }

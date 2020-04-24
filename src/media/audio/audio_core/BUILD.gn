@@ -70,8 +70,9 @@ source_set("audio_core_lib") {
     "audio_device_manager.h",
     "audio_device_settings.cc",
     "audio_device_settings.h",
-    "audio_driver.cc",
     "audio_driver.h",
+    "audio_driver_v1.cc",
+    "audio_driver_v2.cc",
     "audio_input.cc",
     "audio_input.h",
     "audio_object.h",
@@ -165,6 +166,7 @@ source_set("audio_core_lib") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.thermal",
     "//sdk/fidl/fuchsia.ultrasound",
@@ -180,7 +182,6 @@ source_set("audio_core_lib") {
   deps = [
     ":json_schema_headers",
     ":media_metrics_registry",
-    "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/media/cpp:no_converters",

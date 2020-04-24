@@ -19,14 +19,12 @@ executable("audio_device_service_tests_bin") {
   testonly = true
   output_name = "audio_device_service_tests"
 
-  sources = [
-    "audio_device_service_test.cc",
-    "audio_device_service_test.h",
-  ]
+  sources = [ "audio_device_service_test.cc" ]
 
   deps = [
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//src/lib/fxl/test:gtest_main",

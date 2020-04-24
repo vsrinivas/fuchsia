@@ -93,7 +93,7 @@ TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
   auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
                                   &context().link_matrix());
   auto fake_driver =
-      testing::FakeAudioDriver(std::move(c1), threading_model().FidlDomain().dispatcher());
+      testing::FakeAudioDriverV1(std::move(c1), threading_model().FidlDomain().dispatcher());
 
   auto vmo = fake_driver.CreateRingBuffer(PAGE_SIZE);
 
@@ -111,6 +111,41 @@ TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
       .max_channels = 100,
       .flags = 0,
   }});
+  context().route_graph().AddDevice(input.get());
+  RunLoopUntilIdle();
+
+  fidl_capturer_->AddPayloadBuffer(0, std::move(duplicate));
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 1u);
+}
+
+TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffersDriverV2) {
+  EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 0u);
+
+  zx::vmo duplicate;
+  ASSERT_EQ(
+      vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ | ZX_RIGHT_MAP, &duplicate),
+      ZX_OK);
+
+  zx::channel c1, c2;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
+  fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config = {};
+  stream_config.set_channel(zx::channel());
+  auto input = AudioInput::Create(std::move(stream_config), &threading_model(),
+                                  &context().device_manager(), &context().link_matrix());
+  auto fake_driver =
+      testing::FakeAudioDriverV2(std::move(c1), threading_model().FidlDomain().dispatcher());
+
+  auto vmo = fake_driver.CreateRingBuffer(PAGE_SIZE);
+
+  input->driver()->Init(std::move(c2));
+  fake_driver.Start();
+  input->driver()->GetDriverInfo();
+  RunLoopUntilIdle();
+
+  input->driver()->Start();
+
   context().route_graph().AddDevice(input.get());
   RunLoopUntilIdle();
 

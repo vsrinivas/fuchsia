@@ -7,6 +7,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
+#include <cstdlib>
+
 #include <audio-proto-utils/format-utils.h>
 #include <trace/event.h>
 
@@ -15,6 +17,207 @@
 #include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio {
+
+bool IsSampleFormatInSupported(
+    fuchsia::hardware::audio::SampleFormat sample_format, uint8_t bytes_per_sample,
+    uint8_t valid_bits_per_sample,
+    const fuchsia::hardware::audio::PcmSupportedFormats& supported_formats) {
+  auto& sf = supported_formats.sample_formats;
+  if (std::find(sf.begin(), sf.end(), sample_format) == sf.end()) {
+    return false;
+  }
+  auto& bps = supported_formats.bytes_per_sample;
+  if (std::find(bps.begin(), bps.end(), bytes_per_sample) == bps.end()) {
+    return false;
+  }
+  auto& vbps = supported_formats.valid_bits_per_sample;
+  if (std::find(vbps.begin(), vbps.end(), valid_bits_per_sample) == vbps.end()) {
+    return false;
+  }
+  return true;
+}
+
+bool IsNumberOfChannelsInSupported(uint32_t number_of_channels,
+                                   const fuchsia::hardware::audio::PcmSupportedFormats& format) {
+  for (auto channels : format.number_of_channels) {
+    if (channels == number_of_channels) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IsRateInSupported(uint32_t frame_rate,
+                       const fuchsia::hardware::audio::PcmSupportedFormats& format) {
+  for (auto rate : format.frame_rates) {
+    if (rate == frame_rate) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IsFormatInSupported(
+    const fuchsia::media::AudioStreamType& stream_type,
+    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& supported_formats) {
+  driver_utils::DriverSampleFormat driver_format = {};
+  if (!AudioSampleFormatToDriverSampleFormat(stream_type.sample_format, &driver_format)) {
+    return false;
+  }
+
+  // Is there a match for any given suppored format where we find sample format, number of channels
+  // and rate.
+  for (const auto& format : supported_formats) {
+    if (IsSampleFormatInSupported(driver_format.sample_format, driver_format.bytes_per_sample,
+                                  driver_format.valid_bits_per_sample, format) &&
+        IsNumberOfChannelsInSupported(stream_type.channels, format) &&
+        IsRateInSupported(stream_type.frames_per_second, format)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& fmts,
+                             uint32_t* frames_per_second_inout, uint32_t* channels_inout,
+                             fuchsia::media::AudioSampleFormat* sample_format_inout) {
+  TRACE_DURATION("audio", "SelectBestFormat");
+  if ((frames_per_second_inout == nullptr) || (channels_inout == nullptr) ||
+      (sample_format_inout == nullptr)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  uint32_t pref_frame_rate = *frames_per_second_inout;
+  uint32_t pref_channels = *channels_inout;
+
+  driver_utils::DriverSampleFormat pref_sample_format = {};
+  // Only valid pref_sample_formats are: unsigned-8, signed-16, signed-24in32 or float-32.
+  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(*sample_format_inout,
+                                                           &pref_sample_format)) {
+    FX_LOGS(ERROR) << "Failed to convert FIDL sample format ("
+                   << static_cast<uint32_t>(*sample_format_inout) << ") to driver sample format.";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint32_t best_frame_rate = 0;
+  uint32_t best_channels = 0;
+  driver_utils::DriverSampleFormat best_sample_format = {};
+  uint32_t best_score = 0;
+  uint32_t best_frame_rate_delta = std::numeric_limits<uint32_t>::max();
+
+  for (const auto& format : fmts) {
+    // Start by scoring our sample format. Right now, the audio core supports 8-bit unsigned, 16-bit
+    // signed, 24-bit-in-32 signed and 32-bit float. If this sample format range does not support
+    // any of these, just skip it for now. Otherwise, 5 points if you match the requested format, 4
+    // for signed-24, 3 for signed-16, 2 for float-32, or 1 for unsigned-8.
+    driver_utils::DriverSampleFormat this_sample_format;
+    int sample_format_score = 0;
+
+    // Check for direct match.
+    if (IsSampleFormatInSupported(pref_sample_format.sample_format,
+                                  pref_sample_format.bytes_per_sample,
+                                  pref_sample_format.valid_bits_per_sample, format)) {
+      this_sample_format = pref_sample_format;
+      sample_format_score = 5;
+    } else if (IsSampleFormatInSupported(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED, 4, 24,
+                                         format)) {
+      this_sample_format = {fuchsia::hardware::audio::SampleFormat::PCM_SIGNED, 4, 24};
+      sample_format_score = 4;
+    } else if (IsSampleFormatInSupported(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED, 2, 16,
+                                         format)) {
+      this_sample_format = {fuchsia::hardware::audio::SampleFormat::PCM_SIGNED, 2, 16};
+      sample_format_score = 3;
+    } else if (IsSampleFormatInSupported(fuchsia::hardware::audio::SampleFormat::PCM_FLOAT, 4, 32,
+                                         format)) {
+      this_sample_format = {fuchsia::hardware::audio::SampleFormat::PCM_FLOAT, 4, 32};
+      sample_format_score = 2;
+    } else if (IsSampleFormatInSupported(fuchsia::hardware::audio::SampleFormat::PCM_UNSIGNED, 1, 8,
+                                         format)) {
+      this_sample_format = {fuchsia::hardware::audio::SampleFormat::PCM_UNSIGNED, 1, 8};
+      sample_format_score = 1;
+    }
+
+    // Next consider the supported channel counts. 3 points for matching the requested channel
+    // count. Otherwise, default to stereo (if supported) and score 2 points. Failing that, just
+    // pick the top end of the supported channel range and score 1 point.
+    uint32_t this_channels = 0;
+    int channel_count_score = 0;
+
+    if (IsNumberOfChannelsInSupported(pref_channels, format)) {
+      this_channels = pref_channels;
+      channel_count_score = 3;
+    } else if (IsNumberOfChannelsInSupported(2, format)) {
+      this_channels = 2;
+      channel_count_score = 2;
+    } else {
+      this_channels =
+          *std::max_element(format.number_of_channels.begin(), format.number_of_channels.end());
+      channel_count_score = 1;
+    }
+
+    // Next score based on supported frame rates. Score 3 points for a match, 2 points if we have to
+    // scale up to the nearest supported rate, or 1 point if we have to scale down.
+    //
+    uint32_t this_frame_rate = 0;
+    uint32_t frame_rate_delta = std::numeric_limits<uint32_t>::max();
+    int frame_rate_score = 0;
+
+    if (IsRateInSupported(pref_frame_rate, format)) {
+      this_frame_rate = pref_frame_rate;
+      channel_count_score = 3;
+      frame_rate_delta = 0;
+    } else {
+      uint32_t delta = std::numeric_limits<uint32_t>::max();
+      for (auto& i : format.frame_rates) {
+        if (std::abs((long)i - (long)pref_frame_rate) < delta) {
+          delta = std::abs((long)i - (long)pref_frame_rate);
+          this_frame_rate = i;
+        }
+      }
+      if (pref_frame_rate < this_frame_rate) {
+        frame_rate_delta = this_frame_rate - pref_frame_rate;
+        channel_count_score = 2;
+      } else {
+        frame_rate_delta = pref_frame_rate - this_frame_rate;
+        channel_count_score = 1;
+      }
+    }
+
+    // OK, we have computed the best option supported by this frame rate range. Weight the score,
+    // and it if it better then any of our previous best score, replace our previous best with this.
+    uint32_t score;
+    score = (sample_format_score * 100)   // format is the most important.
+            + (channel_count_score * 10)  // channel count comes second.
+            + frame_rate_score;           // frame rate is the least important.
+
+    FX_DCHECK(score > 0);
+
+    // If this score is better than the current best score, or this score ties the current best
+    // score but the frame rate distance is less, then this is the new best format.
+    if ((score > best_score) ||
+        ((score == best_score) && (frame_rate_delta < best_frame_rate_delta))) {
+      best_frame_rate = this_frame_rate;
+      best_frame_rate_delta = frame_rate_delta;
+      best_channels = this_channels;
+      best_sample_format = this_sample_format;
+      best_score = score;
+    }
+  }
+
+  // If our score is still zero, then there must have be absolutely no supported formats in the set
+  // provided by the driver.
+  if (!best_score) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  __UNUSED bool convert_res =
+      driver_utils::DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
+  FX_DCHECK(convert_res);
+
+  *channels_inout = best_channels;
+  *frames_per_second_inout = best_frame_rate;
+
+  return ZX_OK;
+}
 
 zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmts,
                              uint32_t* frames_per_second_inout, uint32_t* channels_inout,

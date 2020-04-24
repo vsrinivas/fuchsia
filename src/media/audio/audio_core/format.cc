@@ -36,18 +36,26 @@ fit::result<Format> Format::Create(fuchsia::media::AudioStreamType stream_type) 
   auto frame_to_media_ratio = TimelineRate(FractionalFrames<int32_t>(1).raw_value(), 1);
 
   uint32_t bytes_per_frame = 0;
+  uint32_t valid_bits_per_channel = 0;
   switch (stream_type.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       bytes_per_frame = 1;
+      valid_bits_per_channel = 8;
       break;
 
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
       bytes_per_frame = 2;
+      valid_bits_per_channel = 16;
       break;
 
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+      bytes_per_frame = 4;
+      valid_bits_per_channel = 24;
+      break;
+
     case fuchsia::media::AudioSampleFormat::FLOAT:
       bytes_per_frame = 4;
+      valid_bits_per_channel = 32;
       break;
 
     default:
@@ -57,15 +65,18 @@ fit::result<Format> Format::Create(fuchsia::media::AudioStreamType stream_type) 
 
   bytes_per_frame *= stream_type.channels;
 
-  return fit::ok(Format(stream_type, frames_per_ns, frame_to_media_ratio, bytes_per_frame));
+  return fit::ok(Format(stream_type, frames_per_ns, frame_to_media_ratio, bytes_per_frame,
+                        valid_bits_per_channel));
 }
 
 Format::Format(fuchsia::media::AudioStreamType stream_type, TimelineRate frames_per_ns,
-               TimelineRate frame_to_media_ratio, uint32_t bytes_per_frame)
+               TimelineRate frame_to_media_ratio, uint32_t bytes_per_frame,
+               uint32_t valid_bits_per_channel)
     : stream_type_(stream_type),
       frames_per_ns_(frames_per_ns),
       frame_to_media_ratio_(frame_to_media_ratio),
-      bytes_per_frame_(bytes_per_frame) {}
+      bytes_per_frame_(bytes_per_frame),
+      valid_bits_per_channel_(valid_bits_per_channel) {}
 
 bool Format::operator==(const Format& other) const {
   // All the other class members are derived from our stream_type, so we don't need to include them

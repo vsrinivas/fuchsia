@@ -1,8 +1,5 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
-
-#include "src/media/audio/audio_core/audio_driver.h"
-
 #include <lib/async/cpp/time.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/zx/clock.h>
@@ -15,6 +12,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <trace/event.h>
 
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/driver_utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -41,17 +39,17 @@ void LogMissedCommandDeadline(zx::duration delay) {
 
 }  // namespace
 
-AudioDriver::AudioDriver(AudioDevice* owner) : AudioDriver(owner, LogMissedCommandDeadline) {}
+AudioDriverV1::AudioDriverV1(AudioDevice* owner) : AudioDriverV1(owner, LogMissedCommandDeadline) {}
 
-AudioDriver::AudioDriver(AudioDevice* owner, DriverTimeoutHandler timeout_handler)
+AudioDriverV1::AudioDriverV1(AudioDevice* owner, DriverTimeoutHandler timeout_handler)
     : owner_(owner),
       timeout_handler_(std::move(timeout_handler)),
       ref_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()) {
   FX_DCHECK(owner_ != nullptr);
 }
 
-zx_status_t AudioDriver::Init(zx::channel stream_channel) {
-  TRACE_DURATION("audio", "AudioDriver::Init");
+zx_status_t AudioDriverV1::Init(zx::channel stream_channel) {
+  TRACE_DURATION("audio", "AudioDriverV1::Init");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
   FX_DCHECK(state_ == State::Uninitialized);
@@ -76,7 +74,7 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   });
   res = stream_channel_wait_.Begin(owner_->mix_domain().dispatcher());
   if (res != ZX_OK) {
-    FX_PLOGS(ERROR, res) << "Failed to wait on stream channel for AudioDriver";
+    FX_PLOGS(ERROR, res) << "Failed to wait on stream channel for AudioDriverV1";
     return res;
   }
   stream_channel_ = std::move(stream_channel);
@@ -95,8 +93,8 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   return ZX_OK;
 }
 
-void AudioDriver::Cleanup() {
-  TRACE_DURATION("audio", "AudioDriver::Cleanup");
+void AudioDriverV1::Cleanup() {
+  TRACE_DURATION("audio", "AudioDriverV1::Cleanup");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
   std::shared_ptr<ReadableRingBuffer> readable_ring_buffer;
@@ -116,14 +114,14 @@ void AudioDriver::Cleanup() {
   cmd_timeout_.Cancel();
 }
 
-std::optional<Format> AudioDriver::GetFormat() const {
-  TRACE_DURATION("audio", "AudioDriver::GetFormat");
+std::optional<Format> AudioDriverV1::GetFormat() const {
+  TRACE_DURATION("audio", "AudioDriverV1::GetFormat");
   std::lock_guard<std::mutex> lock(configured_format_lock_);
   return configured_format_;
 }
 
-zx_status_t AudioDriver::GetDriverInfo() {
-  TRACE_DURATION("audio", "AudioDriver::GetDriverInfo");
+zx_status_t AudioDriverV1::GetDriverInfo() {
+  TRACE_DURATION("audio", "AudioDriverV1::GetDriverInfo");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
@@ -228,8 +226,8 @@ zx_status_t AudioDriver::GetDriverInfo() {
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_buffer_duration) {
-  TRACE_DURATION("audio", "AudioDriver::Configure");
+zx_status_t AudioDriverV1::Configure(const Format& format, zx::duration min_ring_buffer_duration) {
+  TRACE_DURATION("audio", "AudioDriverV1::Configure");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
@@ -308,8 +306,8 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::Start() {
-  TRACE_DURATION("audio", "AudioDriver::Start");
+zx_status_t AudioDriverV1::Start() {
+  TRACE_DURATION("audio", "AudioDriverV1::Start");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
@@ -342,8 +340,8 @@ zx_status_t AudioDriver::Start() {
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::Stop() {
-  TRACE_DURATION("audio", "AudioDriver::Stop");
+zx_status_t AudioDriverV1::Stop() {
+  TRACE_DURATION("audio", "AudioDriverV1::Stop");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
@@ -382,8 +380,8 @@ zx_status_t AudioDriver::Stop() {
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::SetPlugDetectEnabled(bool enabled) {
-  TRACE_DURATION("audio", "AudioDriver::SetPlugDetectEnabled");
+zx_status_t AudioDriverV1::SetPlugDetectEnabled(bool enabled) {
+  TRACE_DURATION("audio", "AudioDriverV1::SetPlugDetectEnabled");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
@@ -415,9 +413,9 @@ zx_status_t AudioDriver::SetPlugDetectEnabled(bool enabled) {
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::ReadMessage(const zx::channel& channel, void* buf, uint32_t buf_size,
-                                     uint32_t* bytes_read_out, zx::handle* handle_out) {
-  TRACE_DURATION("audio", "AudioDriver::ReadMessage");
+zx_status_t AudioDriverV1::ReadMessage(const zx::channel& channel, void* buf, uint32_t buf_size,
+                                       uint32_t* bytes_read_out, zx::handle* handle_out) {
+  TRACE_DURATION("audio", "AudioDriverV1::ReadMessage");
   FX_DCHECK(buf != nullptr);
   FX_DCHECK(bytes_read_out != nullptr);
   FX_DCHECK(handle_out != nullptr);
@@ -467,8 +465,8 @@ zx_status_t AudioDriver::ReadMessage(const zx::channel& channel, void* buf, uint
     }                                                                                          \
   } while (0)
 
-zx_status_t AudioDriver::ProcessStreamChannelMessage() {
-  TRACE_DURATION("audio", "AudioDriver::ProcessStreamChannelMessage");
+zx_status_t AudioDriverV1::ProcessStreamChannelMessage() {
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessStreamChannelMessage");
   zx_status_t res;
   zx::handle rxed_handle;
   uint32_t bytes_read;
@@ -562,8 +560,8 @@ zx_status_t AudioDriver::ProcessStreamChannelMessage() {
   return res;
 }
 
-zx_status_t AudioDriver::ProcessRingBufferChannelMessage() {
-  TRACE_DURATION("audio", "AudioDriver::ProcessRingBufferChannelMessage");
+zx_status_t AudioDriverV1::ProcessRingBufferChannelMessage() {
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessRingBufferChannelMessage");
   zx_status_t res;
   zx::handle rxed_handle;
   uint32_t bytes_read;
@@ -621,8 +619,8 @@ zx_status_t AudioDriver::ProcessRingBufferChannelMessage() {
 }
 #undef CHECK_RESP
 
-zx_status_t AudioDriver::ProcessGetStringResponse(audio_stream_cmd_get_string_resp_t& resp) {
-  TRACE_DURATION("audio", "AudioDriver::ProcessGetStringResponse");
+zx_status_t AudioDriverV1::ProcessGetStringResponse(audio_stream_cmd_get_string_resp_t& resp) {
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessGetStringResponse");
   std::string* tgt_string;
   uint32_t info_bit;
 
@@ -667,8 +665,8 @@ zx_status_t AudioDriver::ProcessGetStringResponse(audio_stream_cmd_get_string_re
   return OnDriverInfoFetched(info_bit);
 }
 
-zx_status_t AudioDriver::ProcessGetGainResponse(audio_stream_cmd_get_gain_resp_t& resp) {
-  TRACE_DURATION("audio", "AudioDriver::ProcessGetGainResponse");
+zx_status_t AudioDriverV1::ProcessGetGainResponse(audio_stream_cmd_get_gain_resp_t& resp) {
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessGetGainResponse");
   hw_gain_state_.cur_mute = resp.cur_mute;
   hw_gain_state_.cur_agc = resp.cur_agc;
   hw_gain_state_.cur_gain = resp.cur_gain;
@@ -681,9 +679,9 @@ zx_status_t AudioDriver::ProcessGetGainResponse(audio_stream_cmd_get_gain_resp_t
   return OnDriverInfoFetched(kDriverInfoHasGainState);
 }
 
-zx_status_t AudioDriver::ProcessGetFormatsResponse(
+zx_status_t AudioDriverV1::ProcessGetFormatsResponse(
     const audio_stream_cmd_get_formats_resp_t& resp) {
-  TRACE_DURATION("audio", "AudioDriver::ProcessGetFormatsResponse");
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessGetFormatsResponse");
   if (!fetching_driver_info()) {
     FX_LOGS(ERROR) << "Received unsolicited get formats response.";
     return ZX_ERR_BAD_STATE;
@@ -726,9 +724,9 @@ zx_status_t AudioDriver::ProcessGetFormatsResponse(
   return OnDriverInfoFetched(kDriverInfoHasFormats);
 }
 
-zx_status_t AudioDriver::ProcessSetFormatResponse(const audio_stream_cmd_set_format_resp_t& resp,
-                                                  zx::channel rb_channel) {
-  TRACE_DURATION("audio", "AudioDriver::ProcessSetFormatResponse");
+zx_status_t AudioDriverV1::ProcessSetFormatResponse(const audio_stream_cmd_set_format_resp_t& resp,
+                                                    zx::channel rb_channel) {
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessSetFormatResponse");
   if (state_ != State::Configuring_SettingFormat) {
     FX_LOGS(ERROR) << "Received unexpected set format response while in state "
                    << static_cast<uint32_t>(state_);
@@ -761,7 +759,7 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(const audio_stream_cmd_set_for
   });
   zx_status_t res = ring_buffer_channel_wait_.Begin(owner_->mix_domain().dispatcher());
   if (res != ZX_OK) {
-    FX_PLOGS(ERROR, res) << "Failed to wait on ring buffer channel for AudioDriver";
+    FX_PLOGS(ERROR, res) << "Failed to wait on ring buffer channel for AudioDriverV1";
     return res;
   }
   ring_buffer_channel_ = std::move(rb_channel);
@@ -787,9 +785,9 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(const audio_stream_cmd_set_for
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::ProcessGetClockDomainResponse(
+zx_status_t AudioDriverV1::ProcessGetClockDomainResponse(
     audio_stream_cmd_get_clock_domain_resp_t& resp) {
-  TRACE_DURATION("audio", "AudioDriver::ProcessGetClockDomainResponse");
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessGetClockDomainResponse");
   clock_domain_ = resp.clock_domain;
 
   AUD_VLOG(TRACE) << "Received clock domain " << clock_domain_;
@@ -797,9 +795,9 @@ zx_status_t AudioDriver::ProcessGetClockDomainResponse(
   return OnDriverInfoFetched(kDriverInfoHasClockDomain);
 }
 
-zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
+zx_status_t AudioDriverV1::ProcessGetFifoDepthResponse(
     const audio_rb_cmd_get_fifo_depth_resp_t& resp) {
-  TRACE_DURATION("audio", "AudioDriver::ProcessGetFifoDepthResponse");
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessGetFifoDepthResponse");
   if (state_ != State::Configuring_GettingFifoDepth) {
     FX_LOGS(ERROR) << "Received unexpected fifo depth response while in state "
                    << static_cast<uint32_t>(state_);
@@ -868,9 +866,9 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_resp_t& resp,
-                                                  zx::vmo rb_vmo) {
-  TRACE_DURATION("audio", "AudioDriver::ProcessGetBufferResponse");
+zx_status_t AudioDriverV1::ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_resp_t& resp,
+                                                    zx::vmo rb_vmo) {
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessGetBufferResponse");
   if (state_ != State::Configuring_GettingRingBuffer) {
     FX_LOGS(ERROR) << "Received unexpected get buffer response while in state "
                    << static_cast<uint32_t>(state_);
@@ -911,7 +909,7 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::ProcessStartResponse(const audio_rb_cmd_start_resp_t& resp) {
+zx_status_t AudioDriverV1::ProcessStartResponse(const audio_rb_cmd_start_resp_t& resp) {
   if (state_ != State::Starting) {
     FX_LOGS(ERROR) << "Received unexpected start response while in state "
                    << static_cast<uint32_t>(state_);
@@ -977,8 +975,8 @@ zx_status_t AudioDriver::ProcessStartResponse(const audio_rb_cmd_start_resp_t& r
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::ProcessStopResponse(const audio_rb_cmd_stop_resp_t& resp) {
-  TRACE_DURATION("audio", "AudioDriver::ProcessStopResponse");
+zx_status_t AudioDriverV1::ProcessStopResponse(const audio_rb_cmd_stop_resp_t& resp) {
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessStopResponse");
   if (state_ != State::Stopping) {
     FX_LOGS(ERROR) << "Received unexpected stop response while in state "
                    << static_cast<uint32_t>(state_);
@@ -1001,8 +999,8 @@ zx_status_t AudioDriver::ProcessStopResponse(const audio_rb_cmd_stop_resp_t& res
 // Currently we ignore driver-reported position, using the system-internal clock instead. This is
 // benign and can be safely ignored. However, we did not request it, so this may indicate some other
 // problem in the driver state machine. Issue a (debug-only) warning, eat the msg, and continue.
-zx_status_t AudioDriver::ProcessPositionNotify(const audio_rb_position_notify_t& notify) {
-  TRACE_DURATION("audio", "AudioDriver::ProcessPositionNotify");
+zx_status_t AudioDriverV1::ProcessPositionNotify(const audio_rb_position_notify_t& notify) {
+  TRACE_DURATION("audio", "AudioDriverV1::ProcessPositionNotify");
   if constexpr (kLogPositionNotifications) {
     if ((kPositionNotificationInfoInterval > 0) &&
         (position_notification_count_ % kPositionNotificationInfoInterval == 0)) {
@@ -1033,8 +1031,8 @@ zx_status_t AudioDriver::ProcessPositionNotify(const audio_rb_position_notify_t&
   return ZX_OK;
 }
 
-void AudioDriver::ShutdownSelf(const char* reason, zx_status_t status) {
-  TRACE_DURATION("audio", "AudioDriver::ShutdownSelf");
+void AudioDriverV1::ShutdownSelf(const char* reason, zx_status_t status) {
+  TRACE_DURATION("audio", "AudioDriverV1::ShutdownSelf");
   if (state_ == State::Shutdown) {
     return;
   }
@@ -1049,8 +1047,8 @@ void AudioDriver::ShutdownSelf(const char* reason, zx_status_t status) {
   state_ = State::Shutdown;
 }
 
-void AudioDriver::SetupCommandTimeout() {
-  TRACE_DURATION("audio", "AudioDriver::SetupCommandTimeout");
+void AudioDriverV1::SetupCommandTimeout() {
+  TRACE_DURATION("audio", "AudioDriverV1::SetupCommandTimeout");
 
   // If we have received a late response, report it now.
   if (driver_last_timeout_ != zx::time::infinite()) {
@@ -1075,8 +1073,8 @@ void AudioDriver::SetupCommandTimeout() {
   }
 }
 
-void AudioDriver::ReportPlugStateChange(bool plugged, zx::time plug_time) {
-  TRACE_DURATION("audio", "AudioDriver::ReportPlugStateChange");
+void AudioDriverV1::ReportPlugStateChange(bool plugged, zx::time plug_time) {
+  TRACE_DURATION("audio", "AudioDriverV1::ReportPlugStateChange");
   {
     std::lock_guard<std::mutex> lock(plugged_lock_);
     plugged_ = plugged;
@@ -1088,8 +1086,8 @@ void AudioDriver::ReportPlugStateChange(bool plugged, zx::time plug_time) {
   }
 }
 
-zx_status_t AudioDriver::OnDriverInfoFetched(uint32_t info) {
-  TRACE_DURATION("audio", "AudioDriver::OnDriverInfoFetched");
+zx_status_t AudioDriverV1::OnDriverInfoFetched(uint32_t info) {
+  TRACE_DURATION("audio", "AudioDriverV1::OnDriverInfoFetched");
   // We should never fetch the same info twice.
   if (fetched_driver_info_ & info) {
     ShutdownSelf("Duplicate driver info fetch\n", ZX_ERR_BAD_STATE);
@@ -1113,9 +1111,9 @@ zx_status_t AudioDriver::OnDriverInfoFetched(uint32_t info) {
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::SendSetGain(const AudioDeviceSettings::GainState& gain_state,
-                                     audio_set_gain_flags_t set_flags) {
-  TRACE_DURATION("audio", "AudioDriver::SendSetGain");
+zx_status_t AudioDriverV1::SetGain(const AudioDeviceSettings::GainState& gain_state,
+                                   audio_set_gain_flags_t set_flags) {
+  TRACE_DURATION("audio", "AudioDriverV1::SetGain");
   audio_stream_cmd_set_gain_req_t req;
   req.hdr.cmd = static_cast<audio_cmd_t>(AUDIO_STREAM_CMD_SET_GAIN | AUDIO_FLAG_NO_ACK);
   req.hdr.transaction_id = TXID;
@@ -1131,15 +1129,15 @@ zx_status_t AudioDriver::SendSetGain(const AudioDeviceSettings::GainState& gain_
   return stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
 }
 
-zx_status_t AudioDriver::SelectBestFormat(uint32_t* frames_per_second_inout,
-                                          uint32_t* channels_inout,
-                                          fuchsia::media::AudioSampleFormat* sample_format_inout) {
-  return media::audio::SelectBestFormat(format_ranges(), frames_per_second_inout, channels_inout,
+zx_status_t AudioDriverV1::SelectBestFormat(
+    uint32_t* frames_per_second_inout, uint32_t* channels_inout,
+    fuchsia::media::AudioSampleFormat* sample_format_inout) {
+  return media::audio::SelectBestFormat(format_ranges_, frames_per_second_inout, channels_inout,
                                         sample_format_inout);
 }
 
-void AudioDriver::StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                         zx_status_t status, const zx_packet_signal_t* signal) {
+void AudioDriverV1::StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                           zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Async wait failed";
     ShutdownSelf("Failed to wait on stream channel");
@@ -1163,8 +1161,9 @@ void AudioDriver::StreamChannelSignalled(async_dispatcher_t* dispatcher, async::
   }
 }
 
-void AudioDriver::RingBufferChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                             zx_status_t status, const zx_packet_signal_t* signal) {
+void AudioDriverV1::RingBufferChannelSignalled(async_dispatcher_t* dispatcher,
+                                               async::WaitBase* wait, zx_status_t status,
+                                               const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Async wait failed";
     ShutdownSelf("Failed to wait on ring buffer channel");
@@ -1188,7 +1187,7 @@ void AudioDriver::RingBufferChannelSignalled(async_dispatcher_t* dispatcher, asy
   }
 }
 
-void AudioDriver::DriverCommandTimedOut() {
+void AudioDriverV1::DriverCommandTimedOut() {
   FX_LOGS(WARNING) << "Unexpected driver timeout";
   driver_last_timeout_ = async::Now(owner_->mix_domain().dispatcher());
 }

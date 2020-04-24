@@ -103,7 +103,7 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
 
   struct FakeOutputAndDriver {
     std::shared_ptr<FakeAudioOutput> output;
-    std::unique_ptr<testing::FakeAudioDriver> fake_driver;
+    std::unique_ptr<testing::FakeAudioDriverV1> fake_driver;
   };
 
   FakeOutputAndDriver OutputWithDeviceId(const audio_stream_unique_id_t& device_id) {
@@ -111,7 +111,7 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
                                           &context().link_matrix());
     zx::channel c1, c2;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));
-    auto fake_driver = std::make_unique<testing::FakeAudioDriver>(
+    auto fake_driver = std::make_unique<testing::FakeAudioDriverV1>(
         std::move(c1), threading_model().FidlDomain().dispatcher());
     fake_driver->set_stream_unique_id(device_id);
     ZX_ASSERT(ZX_OK == output->driver()->Init(std::move(c2)));

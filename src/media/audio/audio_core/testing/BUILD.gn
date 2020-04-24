@@ -7,8 +7,9 @@ source_set("testing") {
 
   sources = [
     "fake_audio_device.h",
-    "fake_audio_driver.cc",
     "fake_audio_driver.h",
+    "fake_audio_driver_v1.cc",
+    "fake_audio_driver_v2.cc",
     "fake_audio_renderer.cc",
     "fake_audio_renderer.h",
     "fake_plug_detector.h",
@@ -25,6 +26,7 @@ source_set("testing") {
   public_deps = [ "//zircon/public/lib/fzl" ]
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.hardware.audio",
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/test:message_transceiver",

@@ -31,6 +31,8 @@ class AudioOutput : public AudioDevice {
   friend class AudioOutputTest;
 
   AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix);
+  AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
+              std::unique_ptr<AudioDriver>);
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 

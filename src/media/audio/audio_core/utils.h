@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_UTILS_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_UTILS_H_
 
+#include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -55,13 +56,22 @@ class AtomicGenerationId {
   std::atomic<uint32_t> id_;
 };
 
-// Given a preferred format and a list of driver supported format ranges, select
+// Given a preferred format and a list of driver supported formats, select
 // the "best" form and update the in/out parameters, then return ZX_OK.  If no
 // formats exist, or all format ranges get completely rejected, return an error
 // and leave the in/out params as they were.
+zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& fmts,
+                             uint32_t* frames_per_second_inout, uint32_t* channels_inout,
+                             fuchsia::media::AudioSampleFormat* sample_format_inout);
 zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmts,
                              uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                              fuchsia::media::AudioSampleFormat* sample_format_inout);
+
+// Given a format and a list of driver supported formats, if the format is found in
+// the driver supported list then return true, otherwise return false.
+bool IsFormatInSupported(
+    const fuchsia::media::AudioStreamType& stream_type,
+    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& supported_formats);
 
 // A simple extension to the libfzl VmoMapper which mixes in ref counting state
 // to allow for shared VmoMapper semantics.

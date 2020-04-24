@@ -20,6 +20,7 @@
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
@@ -27,9 +28,20 @@ namespace {
 static const struct {
   const char* path;
   bool is_input;
+  media::audio::AudioDriverVersion version;
 } AUDIO_DEVNODES[] = {
-    {.path = "/dev/class/audio-output", .is_input = false},
-    {.path = "/dev/class/audio-input", .is_input = true},
+    {.path = "/dev/class/audio-output",
+     .is_input = false,
+     .version = media::audio::AudioDriverVersion::V1},
+    {.path = "/dev/class/audio-input",
+     .is_input = true,
+     .version = media::audio::AudioDriverVersion::V1},
+    {.path = "/dev/class/audio-output-2",
+     .is_input = false,
+     .version = media::audio::AudioDriverVersion::V2},
+    {.path = "/dev/class/audio-input-2",
+     .is_input = true,
+     .version = media::audio::AudioDriverVersion::V2},
 };
 
 class PlugDetectorImpl : public PlugDetector {
@@ -50,18 +62,17 @@ class PlugDetectorImpl : public PlugDetector {
     // Create our watchers.
     for (const auto& devnode : AUDIO_DEVNODES) {
       auto watcher = fsl::DeviceWatcher::Create(
-          devnode.path,
-          [this, is_input = devnode.is_input](int dir_fd, const std::string& filename) {
-            AddAudioDevice(dir_fd, filename, is_input);
+          devnode.path, [this, is_input = devnode.is_input, version = devnode.version](
+                            int dir_fd, const std::string& filename) {
+            AddAudioDevice(dir_fd, filename, is_input, version);
           });
 
-      if (watcher == nullptr) {
-        FX_LOGS(ERROR) << "PlugDetectorImpl failed to create DeviceWatcher for \"" << devnode.path
-                       << "\".";
-        return ZX_ERR_NO_MEMORY;
+      if (watcher != nullptr) {
+        watchers_.emplace_back(std::move(watcher));
+      } else {
+        AUD_VLOG(TRACE) << "PlugDetectorImpl failed to create DeviceWatcher for \"" << devnode.path
+                        << "\".";
       }
-
-      watchers_.emplace_back(std::move(watcher));
     }
 
     error_cleanup.cancel();
@@ -76,7 +87,8 @@ class PlugDetectorImpl : public PlugDetector {
   }
 
  private:
-  void AddAudioDevice(int dir_fd, const std::string& name, bool is_input) {
+  void AddAudioDevice(int dir_fd, const std::string& name, bool is_input,
+                      AudioDriverVersion version) {
     TRACE_DURATION("audio", "PlugDetectorImpl::AddAudioDevice");
     if (!observer_) {
       return;
@@ -113,10 +125,11 @@ class PlugDetectorImpl : public PlugDetector {
       REPORT(FailedToObtainStreamChannel(name, is_input, res));
       FX_PLOGS(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output");
     });
-    device->GetChannel([d = std::move(device), this, is_input, name](
-                           ::fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> intf) {
-      observer_(intf.TakeChannel(), name, is_input);
-    });
+    device->GetChannel(
+        [d = std::move(device), this, is_input, version,
+         name](::fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config) {
+          observer_(stream_config.TakeChannel(), name, is_input, version);
+        });
   }
   Observer observer_;
   std::vector<std::unique_ptr<fsl::DeviceWatcher>> watchers_;

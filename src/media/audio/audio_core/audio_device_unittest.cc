@@ -22,7 +22,7 @@ class FakeAudioDevice : public AudioDevice {
   FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix)
       : AudioDevice(type, threading_model, registry, link_matrix,
-                    std::make_unique<AudioDriver>(this)) {}
+                    std::make_unique<AudioDriverV1>(this)) {}
 
   // Needed because AudioDevice is an abstract class
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {}

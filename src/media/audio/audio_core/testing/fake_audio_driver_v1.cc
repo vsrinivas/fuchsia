@@ -2,43 +2,42 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/testing/fake_audio_driver.h"
-
 #include <audio-proto-utils/format-utils.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 
 namespace media::audio::testing {
 
-FakeAudioDriver::FakeAudioDriver(zx::channel channel, async_dispatcher_t* dispatcher)
+FakeAudioDriverV1::FakeAudioDriverV1(zx::channel channel, async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher),
       stream_transceiver_(dispatcher),
       ring_buffer_transceiver_(dispatcher) {
   zx_status_t status = stream_transceiver_.Init(
-      std::move(channel), fit::bind_member(this, &FakeAudioDriver::OnInboundStreamMessage),
-      fit::bind_member(this, &FakeAudioDriver::OnInboundStreamError));
+      std::move(channel), fit::bind_member(this, &FakeAudioDriverV1::OnInboundStreamMessage),
+      fit::bind_member(this, &FakeAudioDriverV1::OnInboundStreamError));
   FX_CHECK(status == ZX_OK);
   // Initially leave the driver 'stopped' so that it won't reply to any messages until |Start| is
   // called.
   stream_transceiver_.StopProcessing();
 }
 
-void FakeAudioDriver::Start() {
+void FakeAudioDriverV1::Start() {
   stream_transceiver_.ResumeProcessing();
   if (ring_buffer_transceiver_.channel()) {
     ring_buffer_transceiver_.ResumeProcessing();
   }
 }
 
-void FakeAudioDriver::Stop() {
+void FakeAudioDriverV1::Stop() {
   stream_transceiver_.StopProcessing();
   if (ring_buffer_transceiver_.channel()) {
     ring_buffer_transceiver_.StopProcessing();
   }
 }
 
-fzl::VmoMapper FakeAudioDriver::CreateRingBuffer(size_t size) {
+fzl::VmoMapper FakeAudioDriverV1::CreateRingBuffer(size_t size) {
   FX_CHECK(!ring_buffer_) << "Calling CreateRingBuffer multiple times is not supported";
 
   ring_buffer_size_ = size;
@@ -48,9 +47,9 @@ fzl::VmoMapper FakeAudioDriver::CreateRingBuffer(size_t size) {
   return mapper;
 }
 
-void FakeAudioDriver::OnInboundStreamError(zx_status_t status) {}
+void FakeAudioDriverV1::OnInboundStreamError(zx_status_t status) {}
 
-void FakeAudioDriver::OnInboundStreamMessage(test::MessageTransceiver::Message message) {
+void FakeAudioDriverV1::OnInboundStreamMessage(test::MessageTransceiver::Message message) {
   auto& header = message.BytesAs<audio_cmd_hdr_t>();
   switch (header.cmd) {
     case AUDIO_STREAM_CMD_GET_FORMATS:
@@ -80,7 +79,7 @@ void FakeAudioDriver::OnInboundStreamMessage(test::MessageTransceiver::Message m
   }
 }
 
-void FakeAudioDriver::HandleCommandGetUniqueId(
+void FakeAudioDriverV1::HandleCommandGetUniqueId(
     const audio_stream_cmd_get_unique_id_req_t& request) {
   test::MessageTransceiver::Message response_message;
   auto& response = response_message.ResizeBytesAs<audio_stream_cmd_get_unique_id_resp>();
@@ -91,7 +90,7 @@ void FakeAudioDriver::HandleCommandGetUniqueId(
   EXPECT_EQ(ZX_OK, status);
 }
 
-void FakeAudioDriver::HandleCommandGetString(const audio_stream_cmd_get_string_req_t& request) {
+void FakeAudioDriverV1::HandleCommandGetString(const audio_stream_cmd_get_string_req_t& request) {
   std::string_view response_string;
 
   switch (request.id) {
@@ -119,7 +118,7 @@ void FakeAudioDriver::HandleCommandGetString(const audio_stream_cmd_get_string_r
   EXPECT_EQ(ZX_OK, status);
 }
 
-void FakeAudioDriver::HandleCommandGetGain(const audio_stream_cmd_get_gain_req_t& request) {
+void FakeAudioDriverV1::HandleCommandGetGain(const audio_stream_cmd_get_gain_req_t& request) {
   test::MessageTransceiver::Message response_message;
   auto& response = response_message.ResizeBytesAs<audio_stream_cmd_get_gain_resp_t>();
   response.hdr.transaction_id = request.hdr.transaction_id;
@@ -136,7 +135,7 @@ void FakeAudioDriver::HandleCommandGetGain(const audio_stream_cmd_get_gain_req_t
   EXPECT_EQ(ZX_OK, status);
 }
 
-void FakeAudioDriver::HandleCommandGetFormats(const audio_stream_cmd_get_formats_req_t& request) {
+void FakeAudioDriverV1::HandleCommandGetFormats(const audio_stream_cmd_get_formats_req_t& request) {
   // Multiple reponses isn't implemented yet.
   FX_CHECK(formats_.size() <= AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
 
@@ -154,7 +153,7 @@ void FakeAudioDriver::HandleCommandGetFormats(const audio_stream_cmd_get_formats
   EXPECT_EQ(ZX_OK, status);
 }
 
-void FakeAudioDriver::HandleCommandSetFormat(const audio_stream_cmd_set_format_req_t& request) {
+void FakeAudioDriverV1::HandleCommandSetFormat(const audio_stream_cmd_set_format_req_t& request) {
   test::MessageTransceiver::Message response_message;
   auto& response = response_message.ResizeBytesAs<audio_stream_cmd_set_format_resp_t>();
   response.hdr.transaction_id = request.hdr.transaction_id;
@@ -170,8 +169,8 @@ void FakeAudioDriver::HandleCommandSetFormat(const audio_stream_cmd_set_format_r
 
   status = ring_buffer_transceiver_.Init(
       std::move(local_channel),
-      fit::bind_member(this, &FakeAudioDriver::OnInboundRingBufferMessage),
-      fit::bind_member(this, &FakeAudioDriver::OnInboundRingBufferError));
+      fit::bind_member(this, &FakeAudioDriverV1::OnInboundRingBufferMessage),
+      fit::bind_member(this, &FakeAudioDriverV1::OnInboundRingBufferError));
   EXPECT_EQ(ZX_OK, status);
 
   response_message.handles_.clear();
@@ -187,7 +186,7 @@ void FakeAudioDriver::HandleCommandSetFormat(const audio_stream_cmd_set_format_r
   };
 }
 
-void FakeAudioDriver::HandleCommandPlugDetect(const audio_stream_cmd_plug_detect_req_t& request) {
+void FakeAudioDriverV1::HandleCommandPlugDetect(const audio_stream_cmd_plug_detect_req_t& request) {
   test::MessageTransceiver::Message response_message;
   auto& response = response_message.ResizeBytesAs<audio_stream_cmd_plug_detect_resp_t>();
   response.hdr.transaction_id = request.hdr.transaction_id;
@@ -202,7 +201,7 @@ void FakeAudioDriver::HandleCommandPlugDetect(const audio_stream_cmd_plug_detect
   EXPECT_EQ(ZX_OK, status);
 }
 
-void FakeAudioDriver::HandleCommandGetClockDomain(
+void FakeAudioDriverV1::HandleCommandGetClockDomain(
     const audio_stream_cmd_get_clock_domain_req_t& request) {
   test::MessageTransceiver::Message response_message;
   auto& response = response_message.ResizeBytesAs<audio_stream_cmd_get_clock_domain_resp_t>();
@@ -215,7 +214,7 @@ void FakeAudioDriver::HandleCommandGetClockDomain(
   EXPECT_EQ(ZX_OK, status);
 }
 
-void FakeAudioDriver::OnInboundRingBufferMessage(test::MessageTransceiver::Message message) {
+void FakeAudioDriverV1::OnInboundRingBufferMessage(test::MessageTransceiver::Message message) {
   auto& header = message.BytesAs<audio_cmd_hdr_t>();
   switch (header.cmd) {
     case AUDIO_RB_CMD_GET_FIFO_DEPTH:
@@ -236,9 +235,9 @@ void FakeAudioDriver::OnInboundRingBufferMessage(test::MessageTransceiver::Messa
   }
 }
 
-void FakeAudioDriver::OnInboundRingBufferError(zx_status_t status) {}
+void FakeAudioDriverV1::OnInboundRingBufferError(zx_status_t status) {}
 
-void FakeAudioDriver::HandleCommandGetFifoDepth(audio_rb_cmd_get_fifo_depth_req_t& request) {
+void FakeAudioDriverV1::HandleCommandGetFifoDepth(audio_rb_cmd_get_fifo_depth_req_t& request) {
   test::MessageTransceiver::Message response_message;
   auto& response = response_message.ResizeBytesAs<audio_rb_cmd_get_fifo_depth_resp_t>();
   response.hdr.transaction_id = request.hdr.transaction_id;
@@ -250,7 +249,7 @@ void FakeAudioDriver::HandleCommandGetFifoDepth(audio_rb_cmd_get_fifo_depth_req_
   EXPECT_EQ(ZX_OK, status);
 }
 
-void FakeAudioDriver::HandleCommandGetBuffer(audio_rb_cmd_get_buffer_req_t& request) {
+void FakeAudioDriverV1::HandleCommandGetBuffer(audio_rb_cmd_get_buffer_req_t& request) {
   test::MessageTransceiver::Message response_message;
   auto& response = response_message.ResizeBytesAs<audio_rb_cmd_get_buffer_resp_t>();
   response.hdr.transaction_id = request.hdr.transaction_id;
@@ -283,7 +282,7 @@ void FakeAudioDriver::HandleCommandGetBuffer(audio_rb_cmd_get_buffer_req_t& requ
   EXPECT_EQ(ZX_OK, status);
 }
 
-void FakeAudioDriver::HandleCommandStart(audio_rb_cmd_start_req_t& request) {
+void FakeAudioDriverV1::HandleCommandStart(audio_rb_cmd_start_req_t& request) {
   test::MessageTransceiver::Message response_message;
   auto& response = response_message.ResizeBytesAs<audio_rb_cmd_start_resp_t>();
   response.hdr.transaction_id = request.hdr.transaction_id;
@@ -299,7 +298,7 @@ void FakeAudioDriver::HandleCommandStart(audio_rb_cmd_start_req_t& request) {
   EXPECT_EQ(ZX_OK, status);
 }
 
-void FakeAudioDriver::HandleCommandStop(audio_rb_cmd_stop_req_t& request) {
+void FakeAudioDriverV1::HandleCommandStop(audio_rb_cmd_stop_req_t& request) {
   test::MessageTransceiver::Message response_message;
   auto& response = response_message.ResizeBytesAs<audio_rb_cmd_stop_resp_t>();
   response.hdr.transaction_id = request.hdr.transaction_id;

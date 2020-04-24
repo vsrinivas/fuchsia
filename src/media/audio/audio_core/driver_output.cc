@@ -13,6 +13,7 @@
 
 #include <trace/event.h>
 
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
@@ -54,14 +55,13 @@ std::shared_ptr<AudioOutput> DriverOutput::Create(
 
 DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                            zx::channel initial_stream_channel, LinkMatrix* link_matrix)
-    : AudioOutput(threading_model, registry, link_matrix),
+    : AudioOutput(threading_model, registry, link_matrix, std::make_unique<AudioDriverV1>(this)),
       initial_stream_channel_(std::move(initial_stream_channel)) {}
 
-// TODO(andresoportus) Add suport for non-legacy here.
 DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                            fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> channel,
                            LinkMatrix* link_matrix)
-    : AudioOutput(threading_model, registry, link_matrix),
+    : AudioOutput(threading_model, registry, link_matrix, std::make_unique<AudioDriverV2>(this)),
       initial_stream_channel_(channel.TakeChannel()) {}
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }

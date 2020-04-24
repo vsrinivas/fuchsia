@@ -15,7 +15,7 @@ class FakePlugDetector : public PlugDetector {
 
   void SimulatePlugEvent(zx::channel channel, std::string name, bool input) {
     if (observer_) {
-      observer_(std::move(channel), std::move(name), input);
+      observer_(std::move(channel), std::move(name), input, AudioDriverVersion::V1);
     } else {
       pending_devices_.push_back({std::move(channel), std::move(name), input});
     }
@@ -26,7 +26,7 @@ class FakePlugDetector : public PlugDetector {
     observer_ = std::move(o);
     std::vector<Device>::iterator it;
     while ((it = pending_devices_.begin()) != pending_devices_.end()) {
-      observer_(std::move(it->channel), std::move(it->name), it->input);
+      observer_(std::move(it->channel), std::move(it->name), it->input, AudioDriverVersion::V1);
       pending_devices_.erase(it);
     }
     return ZX_OK;

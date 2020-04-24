@@ -5,7 +5,9 @@
     "sandbox": {
         "dev": [
             "class/audio-input",
-            "class/audio-output"
+            "class/audio-input-2",
+            "class/audio-output",
+            "class/audio-output-2"
         ],
         "features": [
             "config-data",

@@ -39,9 +39,9 @@ class FakeAudioDevice : public fuchsia::hardware::audio::Device {
  private:
   void GetChannel(GetChannelCallback callback) override {
     FX_CHECK(client_);
-    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> intf = {};
-    intf.set_channel(std::move(client_));
-    callback(std::move(intf));
+    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
+    stream_config.set_channel(std::move(client_));
+    callback(std::move(stream_config));
   }
 
   zx::channel client_, server_;
@@ -56,8 +56,8 @@ class DeviceTracker {
     bool is_input;
   };
 
-  fit::function<void(zx::channel, std::string, bool)> GetHandler() {
-    return [this](auto channel, auto name, auto is_input) {
+  fit::function<void(zx::channel, std::string, bool, AudioDriverVersion)> GetHandler() {
+    return [this](auto channel, auto name, auto is_input, auto version) {
       devices_.emplace_back(DeviceConnection{std::move(channel), std::move(name), is_input});
     };
   }
@@ -70,23 +70,28 @@ class DeviceTracker {
   std::vector<DeviceConnection> devices_;
 };
 
-class PlugDetectorTest : public gtest::RealLoopFixture {
+class PlugDetectorTest : public gtest::RealLoopFixture,
+                         public ::testing::WithParamInterface<const char*> {
  protected:
   void SetUp() override {
     vfs_loop_.StartThread("vfs-loop");
     ASSERT_EQ(fdio_ns_get_installed(&ns_), ZX_OK);
     zx::channel c1, c2;
 
-    // Serve up the emulated audio-input directory
+    // Serve up the emulated audio-input[-2] directory
     ASSERT_EQ(zx::channel::create(0, &c1, &c2), ZX_OK);
     ASSERT_EQ(vfs_.Serve(input_dir_, std::move(c1), fs::VnodeConnectionOptions::ReadOnly()), ZX_OK);
-    ASSERT_EQ(fdio_ns_bind(ns_, "/dev/class/audio-input", c2.release()), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind(ns_, (std::string("/dev/class/audio-input") + GetParam()).c_str(),
+                           c2.release()),
+              ZX_OK);
 
-    // Serve up the emulated audio-output directory
+    // Serve up the emulated audio-output[-2] directory
     ASSERT_EQ(zx::channel::create(0, &c1, &c2), ZX_OK);
     ASSERT_EQ(vfs_.Serve(output_dir_, std::move(c1), fs::VnodeConnectionOptions::ReadOnly()),
               ZX_OK);
-    ASSERT_EQ(fdio_ns_bind(ns_, "/dev/class/audio-output", c2.release()), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind(ns_, (std::string("/dev/class/audio-output") + GetParam()).c_str(),
+                           c2.release()),
+              ZX_OK);
   }
   void TearDown() override {
     ASSERT_TRUE(input_dir_->IsEmpty());
@@ -94,8 +99,10 @@ class PlugDetectorTest : public gtest::RealLoopFixture {
     vfs_loop_.Shutdown();
     vfs_loop_.JoinThreads();
     ASSERT_NE(ns_, nullptr);
-    ASSERT_EQ(fdio_ns_unbind(ns_, "/dev/class/audio-input"), ZX_OK);
-    ASSERT_EQ(fdio_ns_unbind(ns_, "/dev/class/audio-output"), ZX_OK);
+    ASSERT_EQ(fdio_ns_unbind(ns_, (std::string("/dev/class/audio-input") + GetParam()).c_str()),
+              ZX_OK);
+    ASSERT_EQ(fdio_ns_unbind(ns_, (std::string("/dev/class/audio-output") + GetParam()).c_str()),
+              ZX_OK);
   }
 
   // Holds a reference to a pseudo dir entry that removes the entry when this object goes out of
@@ -110,8 +117,8 @@ class PlugDetectorTest : public gtest::RealLoopFixture {
     }
   };
 
-  // Adds a |FakeAudioDevice| to the emulated 'audio-input' directory that has been installed in
-  // the local namespace at /dev/class/audio-input.
+  // Adds a |FakeAudioDevice| to the emulated 'audio-input[-2]' directory that has been installed in
+  // the local namespace at /dev/class/audio-input[-2].
   ScopedDirent AddInputDevice(FakeAudioDevice* device) {
     auto name = std::to_string(next_input_device_number_++);
     FX_CHECK(ZX_OK == input_dir_->AddEntry(name, device->AsService()));
@@ -146,7 +153,7 @@ class PlugDetectorTest : public gtest::RealLoopFixture {
   fbl::RefPtr<fs::PseudoDir> output_dir_{fbl::MakeRefCounted<fs::PseudoDir>()};
 };
 
-TEST_F(PlugDetectorTest, DetectExistingDevices) {
+TEST_P(PlugDetectorTest, DetectExistingDevices) {
   // Add some devices that will exist before the plug detector starts.
   FakeAudioDevice input0, input1;
   auto d1 = AddInputDevice(&input0);
@@ -173,7 +180,7 @@ TEST_F(PlugDetectorTest, DetectExistingDevices) {
   plug_detector->Stop();
 }
 
-TEST_F(PlugDetectorTest, DetectHotplugDevices) {
+TEST_P(PlugDetectorTest, DetectHotplugDevices) {
   DeviceTracker tracker;
   auto plug_detector = PlugDetector::Create();
   ASSERT_EQ(ZX_OK, plug_detector->Start(tracker.GetHandler()));
@@ -191,6 +198,9 @@ TEST_F(PlugDetectorTest, DetectHotplugDevices) {
 
   plug_detector->Stop();
 }
+
+// This allows us to pick /dev/class/audio-input and /dev/class/audio-input-2 (similar for output).
+INSTANTIATE_TEST_SUITE_P(PlugDetectorTestInstance, PlugDetectorTest, ::testing::Values("", "-2"));
 
 }  // namespace
 }  // namespace media::audio

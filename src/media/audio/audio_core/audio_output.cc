@@ -20,10 +20,18 @@ namespace media::audio {
 
 static constexpr zx::duration kMaxTrimPeriod = zx::msec(10);
 
+// TODO(49345): We should not need driver to be set for all Audio Devices.
 AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                          LinkMatrix* link_matrix)
     : AudioDevice(Type::Output, threading_model, registry, link_matrix,
-                  std::make_unique<AudioDriver>(this)) {
+                  std::make_unique<AudioDriverV1>(this)) {
+  next_sched_time_ = async::Now(mix_domain().dispatcher());
+  next_sched_time_known_ = true;
+}
+
+AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
+                         LinkMatrix* link_matrix, std::unique_ptr<AudioDriver> driver)
+    : AudioDevice(Type::Output, threading_model, registry, link_matrix, std::move(driver)) {
   next_sched_time_ = async::Now(mix_domain().dispatcher());
   next_sched_time_known_ = true;
 }
