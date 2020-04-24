@@ -11,16 +11,46 @@ protocol Factory {
     /// Creates a new `fuchsia.media.AudioCapturer` that is capable of capturing audio in
     /// the ultrasonic frequency range.
     ///
+    /// The capturer will be suitible for capturing audio at ultrasound frequencies. The
+    /// channelization and sample rate of the capturer will be fixed to whatever the underlying
+    /// device is configured for. The `fuchsia.media.AudioSampleFormat` will be `FLOAT`.
+    ///
     /// See `fuchsia.media.AudioCore` for more information on the operation of a
-    /// `fuchsia.media.AudioCapturer`.
+    /// `fuchsia.media.AudioCapturer`, with the following differences:
+    ///
+    /// - `SetUsage` is disallowed. Ultrasound capturers do not have an associated
+    /// `fuchsia.media.AudioCaptureUsage`.
+    ///
+    /// - `BindGainControl` is disallowed. Ultrasound capturers will always have unity gain.
+    ///
+    /// - `SetPcmStreamType` is disallowed. The stream type of an ultrasound capturer is not
+    /// configurable, but instead returned from `CreateCapturer`.
+    ///
+    /// - `SetReferenceClock` is disallowed. The reference clock of an ultrasound capturer is not
+    /// configurable, but instead returned from `CreateCapturer`.
     CreateCapturer(request<fuchsia.media.AudioCapturer> request)
         -> (handle<clock> reference_clock, fuchsia.media.AudioStreamType stream_type);
 
     /// Creates a new `fuchsia.media.AudioRenderer` that is capable of producing audio in
     /// the ultrasonic frequency range.
     ///
+    /// The renderer will be suitible for producing audio at ultrasound frequencies. The
+    /// channelization and sample rate of the renderer will be fixed to whatever the underlying
+    /// device is configured for. The `fuchsia.media.AudioSampleFormat` will be `FLOAT`.
+    ///
     /// See `fuchsia.media.AudioCore` for more information on the operation of a
-    /// `fuchsia.media.AudioRenderer`.
+    /// `fuchsia.media.AudioRenderer`, with the following differences:
+    ///
+    /// - `SetUsage` is disallowed. Ultrasound renderers do not have an associated
+    /// `fuchsia.media.AudioRenderUsage`.
+    ///
+    /// - `BindGainControl` is disallowed. Ultrasound renderers will always have unity gain.
+    ///
+    /// - `SetPcmStreamType` is disallowed. The stream type of an ultrasound renderer is not
+    /// configurable, but instead returned from `CreateRenderer`.
+    ///
+    /// - `SetReferenceClock` is disallowed. The reference clock of an ultrasound renderer is not
+    /// configurable, but instead returned from `CreateRenderer`.
     CreateRenderer(request<fuchsia.media.AudioRenderer> renderer)
         -> (handle<clock> reference_clock, fuchsia.media.AudioStreamType stream_type);
 };
