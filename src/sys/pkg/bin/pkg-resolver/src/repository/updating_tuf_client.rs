@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{clock, inspect_util},
+    crate::{clock, inspect_util, metrics_util::tuf_error_as_update_tuf_client_event_code},
+    cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::MirrorConfig,
     fuchsia_async as fasync,
+    fuchsia_cobalt::CobaltSender,
     fuchsia_hyper::HyperConnector,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_contrib::inspectable::InspectableDebugString,
@@ -46,6 +48,8 @@ where
     auto_client_aborter: Option<AbortHandleOnDrop>,
 
     inspect: UpdatingTufClientInspectState,
+
+    cobalt_sender: CobaltSender,
 }
 
 struct AbortHandleOnDrop {
@@ -122,6 +126,7 @@ where
         >,
         config: &MirrorConfig,
         node: inspect::Node,
+        cobalt_sender: CobaltSender,
     ) -> Arc<AsyncMutex<Self>> {
         let (auto_client_aborter, auto_client_node_and_registration) = if config.subscribe() {
             let (aborter, registration) = AbortHandle::new_pair();
@@ -131,6 +136,7 @@ where
             (None, None)
         };
         let root_version = client.root_version();
+
         let ret = Arc::new(AsyncMutex::new(Self {
             client,
             last_update_successfully_checked_time: InspectableDebugString::new(
@@ -155,6 +161,7 @@ where
                 targets_version: node.create_int("targets_version", -1),
                 _node: node,
             },
+            cobalt_sender,
         }));
 
         if let Some((node, registration)) = auto_client_node_and_registration {
@@ -244,6 +251,17 @@ where
         } else {
             self.inspect.update_check_failure_count.increment();
         }
+
+        self.cobalt_sender.log_event_count(
+            metrics::UPDATE_TUF_CLIENT_METRIC_ID,
+            match &res {
+                Ok(_) => metrics::UpdateTufClientMetricDimensionResult::Success,
+                Err(e) => tuf_error_as_update_tuf_client_event_code(&e),
+            },
+            0,
+            1,
+        );
+
         res
     }
 }

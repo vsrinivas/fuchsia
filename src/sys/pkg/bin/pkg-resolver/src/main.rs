@@ -25,6 +25,7 @@ mod config;
 mod experiment;
 mod font_package_manager;
 mod inspect_util;
+mod metrics_util;
 mod ota_channel;
 mod queue;
 mod repository;

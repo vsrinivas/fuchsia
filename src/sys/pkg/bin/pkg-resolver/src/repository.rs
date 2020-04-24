@@ -6,7 +6,10 @@
 #![allow(deprecated)]
 
 use {
-    crate::{cache::MerkleForError, clock, inspect_util},
+    crate::{
+        cache::MerkleForError, clock, inspect_util,
+        metrics_util::tuf_error_as_create_tuf_client_event_code,
+    },
     anyhow::format_err,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig, RepositoryKey},
@@ -131,7 +134,7 @@ impl Repository {
                 .map_err(|e| {
                     cobalt_sender.log_event_count(
                         metrics::CREATE_TUF_CLIENT_METRIC_ID,
-                        tuf_error_as_event_code(&e),
+                        tuf_error_as_create_tuf_client_event_code(&e),
                         0,
                         1,
                     );
@@ -139,6 +142,7 @@ impl Repository {
                 })?,
                 mirror_config,
                 node.create_child("updating_tuf_client"),
+                cobalt_sender.clone(),
             );
         cobalt_sender.log_event_count(
             metrics::CREATE_TUF_CLIENT_METRIC_ID,
@@ -207,41 +211,6 @@ impl Repository {
         self.inspect.merkles_successfully_resolved_count.increment();
 
         Ok(custom)
-    }
-}
-
-// Using a free fn instead of impl From<> because both types are from other crates.
-fn tuf_error_as_event_code(e: &TufError) -> metrics::CreateTufClientMetricDimensionResult {
-    match e {
-        TufError::BadSignature => metrics::CreateTufClientMetricDimensionResult::BadSignature,
-        TufError::Encoding(_) => metrics::CreateTufClientMetricDimensionResult::Encoding,
-        TufError::ExpiredMetadata(_) => {
-            metrics::CreateTufClientMetricDimensionResult::ExpiredMetadata
-        }
-        TufError::IllegalArgument(_) => {
-            metrics::CreateTufClientMetricDimensionResult::IllegalArgument
-        }
-        TufError::MissingMetadata(_) => {
-            metrics::CreateTufClientMetricDimensionResult::MissingMetadata
-        }
-        TufError::NoSupportedHashAlgorithm => {
-            metrics::CreateTufClientMetricDimensionResult::NoSupportedHashAlgorithm
-        }
-        TufError::NotFound => metrics::CreateTufClientMetricDimensionResult::NotFound,
-        TufError::Opaque(_) => metrics::CreateTufClientMetricDimensionResult::Opaque,
-        TufError::Programming(_) => metrics::CreateTufClientMetricDimensionResult::Programming,
-        TufError::TargetUnavailable => {
-            metrics::CreateTufClientMetricDimensionResult::TargetUnavailable
-        }
-        TufError::UnkonwnHashAlgorithm(_) => {
-            metrics::CreateTufClientMetricDimensionResult::UnknownHashAlgorithm
-        }
-        TufError::UnknownKeyType(_) => {
-            metrics::CreateTufClientMetricDimensionResult::UnknownKeyType
-        }
-        TufError::VerificationFailure(_) => {
-            metrics::CreateTufClientMetricDimensionResult::VerificationFailure
-        }
     }
 }
 

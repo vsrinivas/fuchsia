@@ -418,6 +418,18 @@ async fn create_tuf_client_error() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn update_tuf_client_success() {
+    verify_resolve_emits_cobalt_events_with_metric_id(
+        PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
+        Option::<handler::StaticResponseCode>::None,
+        Ok(()),
+        metrics::UPDATE_TUF_CLIENT_METRIC_ID,
+        vec![metrics::UpdateTufClientMetricDimensionResult::Success],
+    )
+    .await;
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn font_resolver_is_font_package_check_not_font() {
     let env = TestEnvBuilder::new().build();
     let repo =
