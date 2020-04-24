@@ -113,9 +113,6 @@ test("fs") {
     "//zircon/system/ulib/minfs",
     "//zircon/system/ulib/ramdevice-client",
   ]
-
-  # TODO(46860): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("fs-manifest") {
