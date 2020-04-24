@@ -56,7 +56,7 @@ is in your code, then the tracing macros don't generate any code:
 
   ```c
   #define NTRACE  // disable tracing
-  #include <trace/event.h>
+  #include <lib/trace/event.h>
   ```
 
 Make sure that you define the `NTRACE` macro before the `#include`statement.

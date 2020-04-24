@@ -31,7 +31,7 @@ For example:
   ```cpp
   #include <lib/async-loop/cpp/loop.h>
   #include <lib/async-loop/default.h>
-  #include <trace-provider/provider.h>
+  #include <lib/trace-provider/provider.h>
   // further includes
 
   int main(int argc, const char** argv) {
@@ -53,7 +53,7 @@ For example:
   ```c
   #include <lib/async-loop/cpp/loop.h>
   #include <lib/async-loop/default.h>
-  #include <trace-provider/provider.h>
+  #include <lib/trace-provider/provider.h>
 
   int main(int argc, char** argv) {
     zx_status_t status;
