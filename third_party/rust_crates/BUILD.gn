@@ -209,6 +209,10 @@ group("json5") {
   deps = [ ":json5-v0_2_4" ]
 }
 
+group("json5format") {
+  deps = [ ":json5format-v0_1_0" ]
+}
+
 group("lazy_static") {
   deps = [ ":lazy_static-v1_4_0" ]
 }
@@ -3578,6 +3582,33 @@ rust_library("json5-v0_2_4") {
     "--edition=2018",
     "-Cmetadata=1d3fde29e2961c21",
     "-Cextra-filename=1d3fde29e2961c21",
+  ]
+}
+
+rust_library("json5format-v0_1_0") {
+  crate_name = "json5format"
+  crate_root = "//third_party/rust_crates/vendor/json5format/src/lib.rs"
+  output_name = "json5format-21dd6d6a386d6e53"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":anyhow-v1_0_25" ]
+  deps += [ ":lazy_static-v1_4_0" ]
+  deps += [ ":maplit-v1_0_1" ]
+  deps += [ ":proptest-v0_9_3" ]
+  deps += [ ":regex-v1_3_5" ]
+  deps += [ ":structopt-v0_2_14" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=21dd6d6a386d6e53",
+    "-Cextra-filename=21dd6d6a386d6e53",
   ]
 }
 
