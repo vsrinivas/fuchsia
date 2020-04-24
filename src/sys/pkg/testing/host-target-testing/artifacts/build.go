@@ -22,7 +22,7 @@ type Build interface {
 	GetPackageRepository(ctx context.Context) (*packages.Repository, error)
 
 	// GetPaver downloads and returns a paver for the build.
-	GetPaver(ctx context.Context) (*paver.Paver, error)
+	GetPaver(ctx context.Context) (paver.Paver, error)
 }
 
 type ArchiveBuild struct {
@@ -88,7 +88,7 @@ func (b *ArchiveBuild) GetBuildArchive(ctx context.Context) (string, error) {
 }
 
 // GetPaver downloads and returns a paver for the build.
-func (b *ArchiveBuild) GetPaver(ctx context.Context) (*paver.Paver, error) {
+func (b *ArchiveBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 	buildArchiveDir, err := b.GetBuildArchive(ctx)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (b *ArchiveBuild) GetPaver(ctx context.Context) (*paver.Paver, error) {
 	paveScript := filepath.Join(buildArchiveDir, "pave.sh")
 	paveZedbootScript := filepath.Join(buildArchiveDir, "pave-zedboot.sh")
 
-	return paver.NewPaver(paveZedbootScript, paveScript, b.sshPublicKey), nil
+	return paver.NewBuildPaver(paveZedbootScript, paveScript, b.sshPublicKey), nil
 }
 
 func (b *ArchiveBuild) Pave(ctx context.Context, deviceName string) error {
@@ -130,8 +130,8 @@ func (b *FuchsiaDirBuild) GetPackageRepository(ctx context.Context) (*packages.R
 	return packages.NewRepository(filepath.Join(b.dir, "amber-files"))
 }
 
-func (b *FuchsiaDirBuild) GetPaver(ctx context.Context) (*paver.Paver, error) {
-	return paver.NewPaver(
+func (b *FuchsiaDirBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
+	return paver.NewBuildPaver(
 		filepath.Join(b.dir, "pave-zedboot.sh"),
 		filepath.Join(b.dir, "pave.sh"),
 		b.sshPublicKey,

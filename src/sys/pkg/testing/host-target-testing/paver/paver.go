@@ -14,22 +14,26 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type Paver struct {
+type BuildPaver struct {
 	paveZedbootScript string
 	paveScript        string
 	publicKey         ssh.PublicKey
 }
 
+type Paver interface {
+	Pave(ctx context.Context, deviceName string) error
+}
+
 // NewPaver constructs a new paver, where script is the script to the "pave.sh"
 // script, and `publicKey` is the public key baked into the device as an
 // authorized key.
-func NewPaver(paveZedbootScript, paveScript string, publicKey ssh.PublicKey) *Paver {
-	return &Paver{paveZedbootScript: paveZedbootScript, paveScript: paveScript, publicKey: publicKey}
+func NewBuildPaver(paveZedbootScript, paveScript string, publicKey ssh.PublicKey) *BuildPaver {
+	return &BuildPaver{paveZedbootScript: paveZedbootScript, paveScript: paveScript, publicKey: publicKey}
 }
 
 // Pave runs a paver service for one pave. If `deviceName` is not empty, the
 // pave will only be applied to the specified device.
-func (p *Paver) Pave(ctx context.Context, deviceName string) error {
+func (p *BuildPaver) Pave(ctx context.Context, deviceName string) error {
 	// Write out the public key's authorized keys.
 	authorizedKeys, err := ioutil.TempFile("", "")
 	if err != nil {
@@ -54,7 +58,7 @@ func (p *Paver) Pave(ctx context.Context, deviceName string) error {
 	return p.runPave(ctx, deviceName, p.paveScript, "--fail-fast-if-version-mismatch", "--authorized-keys", authorizedKeys.Name())
 }
 
-func (p *Paver) runPave(ctx context.Context, deviceName string, script string, args ...string) error {
+func (p *BuildPaver) runPave(ctx context.Context, deviceName string, script string, args ...string) error {
 	log.Printf("paving device %q with %s", deviceName, script)
 	path, err := exec.LookPath(script)
 	if err != nil {
