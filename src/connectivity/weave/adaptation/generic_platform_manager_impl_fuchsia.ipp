@@ -111,6 +111,18 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
+    err = ServiceProvisioningSvr().Init();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "ServiceProvisioningSvr init failed: " << ErrorStr(err);
+      return err;
+    }
+
+    err = EchoSvr().Init();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "EchoSvr init failed: " << ErrorStr(err);
+      return err;
+    }
+
     return WEAVE_NO_ERROR;
 }
 
@@ -161,6 +173,8 @@ nl::Inet::InetLayer& GenericPlatformManagerImpl_Fuchsia<ImplClass>::GetInetLayer
 template<class ImplClass>
 void GenericPlatformManagerImpl_Fuchsia<ImplClass>::_ShutdownWeaveStack(void)
 {
+  EchoSvr().Shutdown();
+  ServiceProvisioningSvr().Shutdown();
   FabricProvisioningSvr().Shutdown();
   DeviceControlSvr().Shutdown();
   DeviceDescriptionSvr().Shutdown();
