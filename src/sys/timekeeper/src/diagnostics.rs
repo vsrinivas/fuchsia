@@ -16,6 +16,10 @@ fn monotonic_time() -> i64 {
     zx::Time::get(zx::ClockId::Monotonic).into_nanos()
 }
 
+fn utc_time() -> i64 {
+    zx::Time::get(zx::ClockId::UTC).into_nanos()
+}
+
 pub fn init() {
     fuchsia_syslog::init().context("initializing logging").unwrap();
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
@@ -24,6 +28,7 @@ pub fn init() {
         async move {
             let inspector = Inspector::new();
             inspector.root().record_int("system_uptime_monotonic_nanos", monotonic_time());
+            inspector.root().record_int("utc_nanos", utc_time());
             Ok(inspector)
         }
         .boxed()

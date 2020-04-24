@@ -287,6 +287,7 @@ mod tests {
             start_time_monotonic_nanos: AnyProperty,
             current: contains {
                 system_uptime_monotonic_nanos: AnyProperty,
+                utc_nanos: AnyProperty,
             }
         });
         Ok(())
