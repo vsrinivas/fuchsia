@@ -52,8 +52,6 @@ test_package("camera_tests") {
     "//src/camera/drivers/controller/test",
     "//src/camera/drivers/hw_accel/gdc/test",
     "//src/camera/drivers/hw_accel/ge2d/test",
-    "//src/camera/drivers/sensors/mock-sensor:mock-sensor-device-test",
-    "//src/camera/drivers/sensors/mock-sensor:mock-sensor-integration-test",
     "//src/camera/drivers/test_utils/test:button_checker_test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
     "//src/camera/drivers/virtual_camera/test",
@@ -100,17 +98,6 @@ test_package("camera_tests") {
     {
       name = "test_utils_test"
       manifest = "drivers/test_utils/test/meta/test_utils_test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "mock-sensor-device-test"
-      manifest = "drivers/sensors/mock-sensor/meta/mock-sensor-device-test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "mock-sensor-integration-test"
-      manifest =
-          "drivers/sensors/mock-sensor/meta/mock-sensor-integration-test.cmx"
       environments = basic_envs
     },
     {
