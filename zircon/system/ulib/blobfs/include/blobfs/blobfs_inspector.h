@@ -127,7 +127,7 @@ class BlobfsInspector {
   std::unique_ptr<fs::TransactionHandler> handler_;
   std::unique_ptr<disk_inspector::BufferFactory> buffer_factory_;
   disk_inspector::Loader loader_;
-  Superblock superblock_;
+  Superblock superblock_ = {};
   // Scratch buffer initialized to be a single block in the Create method.
   // Functions that use this buffer should try to treat it as an initialized
   // buffer only valid for the duration of the function without any presaved

@@ -24,8 +24,9 @@ namespace blobfs {
 // than extent-order.
 class BlockIterator {
  public:
-  BlockIterator(std::unique_ptr<ExtentIterator> iterator);
-  DISALLOW_COPY_ASSIGN_AND_MOVE(BlockIterator);
+  explicit BlockIterator(std::unique_ptr<ExtentIterator> iterator);
+  BlockIterator(const BlockIterator&) = delete;
+  BlockIterator& operator=(const BlockIterator&) = delete;
 
   // Returns true if there are no more blocks to be consumed.
   bool Done() const;

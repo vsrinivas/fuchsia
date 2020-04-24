@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <algorithm>
@@ -28,6 +29,7 @@
 // clang-format off
 
 namespace blobfs {
+
 constexpr uint64_t kBlobfsMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
 constexpr uint32_t kBlobfsVersion = 0x00000008;
@@ -80,18 +82,20 @@ inline size_t WriteBufferSize() {
 // - block 0 is always allocated
 // - inode 0 is never used, should be marked allocated but ignored
 
-struct Superblock {
+struct __PACKED Superblock {
     uint64_t magic0;
     uint64_t magic1;
     uint32_t version;
     uint32_t flags;
     uint32_t block_size;          // 8K typical.
+    uint32_t reserved1;           // Unused, reserved (for padding).
     uint64_t data_block_count;    // Number of data blocks in this area.
     uint64_t journal_block_count; // Number of journal blocks in this area.
     uint64_t inode_count;         // Number of blobs in this area.
     uint64_t alloc_block_count;   // Total number of allocated blocks.
     uint64_t alloc_inode_count;   // Total number of allocated blobs and container nodes.
     uint64_t blob_header_next;    // Block containing next blobfs, or zero if this is the last one.
+
     // The following fields are only valid with (flags & kBlobFlagFVM):
     uint64_t slice_size;          // Underlying slice size.
     uint64_t vslice_count;        // Number of underlying slices.
@@ -190,8 +194,8 @@ constexpr uint64_t kBlockCountMask = kBlockCountMax << kBlockOffsetBits;
 
 class Extent {
 public:
-    Extent() : data_(0) {}
-    Extent(BlockOffsetType start, BlockCountType length) : data_(0) {
+    Extent() = default;
+    Extent(BlockOffsetType start, BlockCountType length) {
         SetStart(start);
         SetLength(length);
     }
@@ -218,7 +222,7 @@ public:
     }
 
 private:
-    uint64_t data_;
+    uint64_t data_ = 0;
 };
 
 static_assert(sizeof(Extent) == sizeof(uint64_t), "Extent class should only contain data");
@@ -258,7 +262,7 @@ constexpr uint32_t kInlineMaxExtents = 1;
 // The number of extents within an extent container node.
 constexpr uint32_t kContainerMaxExtents = 6;
 
-struct NodePrelude {
+struct __PACKED NodePrelude {
     uint16_t flags;
     uint16_t version;
     // The next node containing this blob's extents.
@@ -280,7 +284,7 @@ struct NodePrelude {
 
 struct ExtentContainer;
 
-struct Inode {
+struct __PACKED alignas(8) Inode {
     NodePrelude header;
     uint8_t  merkle_root_hash[digest::kSha256Length];
     uint64_t blob_size;
@@ -299,7 +303,7 @@ struct Inode {
     bool IsCompressed() const { return header.flags & kBlobFlagMaskAnyCompression; }
 };
 
-struct ExtentContainer {
+struct __PACKED alignas(8) ExtentContainer {
     NodePrelude header;
     // The map index of the previous node.
     uint32_t previous_node;

@@ -17,7 +17,7 @@ namespace blobfs {
 
 class BlobfsChecker {
  public:
-  BlobfsChecker(std::unique_ptr<Blobfs> blobfs);
+  explicit BlobfsChecker(std::unique_ptr<Blobfs> blobfs);
 
   // Initialize validates the underlying FVM partition and optionally replays the journal.
   zx_status_t Initialize(bool apply_journal);

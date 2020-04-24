@@ -17,7 +17,7 @@ BlobVerifier::BlobVerifier(BlobfsMetrics* metrics) : metrics_(metrics) {}
 zx_status_t BlobVerifier::Create(digest::Digest digest, BlobfsMetrics* metrics, const void* merkle,
                                  size_t merkle_size, size_t data_size,
                                  std::unique_ptr<BlobVerifier>* out) {
-  auto verifier = std::make_unique<BlobVerifier>(metrics);
+  std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(metrics));
   verifier->digest_ = std::move(digest);
   zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);
   if (status != ZX_OK) {
@@ -42,7 +42,7 @@ zx_status_t BlobVerifier::Create(digest::Digest digest, BlobfsMetrics* metrics, 
 
 zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest, BlobfsMetrics* metrics,
                                             size_t data_size, std::unique_ptr<BlobVerifier>* out) {
-  auto verifier = std::make_unique<BlobVerifier>(metrics);
+  std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(metrics));
   verifier->digest_ = std::move(digest);
   zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);
   if (status != ZX_OK) {

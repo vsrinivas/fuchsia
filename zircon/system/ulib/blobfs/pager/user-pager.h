@@ -23,12 +23,12 @@ namespace blobfs {
 struct UserPagerInfo {
   // Unique identifier used by UserPager to identify the data source on the underlying block
   // device.
-  uint32_t identifier;
+  uint32_t identifier = 0;
   // Block offset (in bytes) the data starts at. Used to inform the UserPager of the offset it
   // should start issuing reads from.
-  uint64_t data_start_bytes;
+  uint64_t data_start_bytes = 0;
   // Total length of the data. The |verifier| must be set up to verify this length.
-  uint64_t data_length_bytes;
+  uint64_t data_length_bytes = 0;
   // Used to verify the pages as they are read in.
   // TODO(44742): Make BlobVerifier movable, unwrap from unique_ptr.
   std::unique_ptr<BlobVerifier> verifier;

@@ -14,10 +14,7 @@
 namespace blobfs {
 
 AllocatedExtentIterator::AllocatedExtentIterator(NodeFinder* finder, uint32_t node_index)
-    : finder_(finder),
-      inode_(finder_->GetNode(node_index)),
-      node_index_(node_index),
-      extent_node_(nullptr) {}
+    : finder_(finder), inode_(finder_->GetNode(node_index)), node_index_(node_index) {}
 
 bool AllocatedExtentIterator::Done() const { return extent_index_ == inode_->extent_count; }
 

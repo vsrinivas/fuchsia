@@ -21,7 +21,7 @@ class Runner;
 
 class QueryService final : public llcpp::fuchsia::fs::Query::Interface, public fs::Service {
  public:
-  explicit QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runner* runner);
+  QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runner* runner);
 
   void GetInfo(llcpp::fuchsia::fs::FilesystemInfoQuery query,
                GetInfoCompleter::Sync completer) final;

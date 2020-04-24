@@ -177,8 +177,8 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
   inode->extent_count = 1;
 
   if (json_recorder) {
-    json_recorder->Append(info.path.c_str(), info.digest.ToString().c_str(),
-                          info.length, kBlobfsBlockSize * inode->block_count);
+    json_recorder->Append(info.path.c_str(), info.digest.ToString().c_str(), info.length,
+                          kBlobfsBlockSize * inode->block_count);
   }
 
   if ((status = bs->WriteData(inode, info.merkle.data(), data)) != ZX_OK) {
@@ -496,7 +496,7 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 
 Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
                const fbl::Array<size_t>& extent_lengths)
-    : blockfd_(std::move(fd)), dirty_(false), offset_(offset) {
+    : blockfd_(std::move(fd)), offset_(offset) {
   ZX_ASSERT(extent_lengths.size() == kExtentCount);
   memcpy(&info_block_, info_block.block, kBlobfsBlockSize);
   cache_.bno = 0;

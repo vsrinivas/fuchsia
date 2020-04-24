@@ -40,8 +40,8 @@
 
 #include "allocator/extent-reserver.h"
 #include "allocator/node-reserver.h"
-#include "blob.h"
 #include "blob-loader.h"
+#include "blob.h"
 #include "blobfs-checker.h"
 #include "compression/algorithm.h"
 #include "compression/compressor.h"
@@ -678,13 +678,12 @@ void Blobfs::Sync(SyncCallback cb) {
 Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                const Superblock* info, Writability writable,
                CompressionAlgorithm write_compression_algorithm, zx::resource vmex_resource)
-    : dispatcher_(dispatcher),
+    : info_(*info),
+      dispatcher_(dispatcher),
       block_device_(std::move(device)),
       writability_(writable),
       write_compression_algorithm_(write_compression_algorithm),
-      vmex_resource_(std::move(vmex_resource)) {
-  memcpy(&info_, info, sizeof(Superblock));
-}
+      vmex_resource_(std::move(vmex_resource)) {}
 
 std::unique_ptr<BlockDevice> Blobfs::Reset() {
   if (!block_device_) {

@@ -189,7 +189,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   RawBitmap block_map_{};
 
   fbl::unique_fd blockfd_;
-  bool dirty_;
+  bool dirty_ = false;
   off_t offset_;
 
   size_t block_map_start_block_;

@@ -19,8 +19,7 @@ namespace {
 // from memory when references are closed.
 class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
  public:
-  explicit TestNode(const Digest& digest, BlobCache* cache)
-      : CacheNode(digest), cache_(cache), should_cache_(true), using_memory_(false) {}
+  explicit TestNode(const Digest& digest, BlobCache* cache) : CacheNode(digest), cache_(cache) {}
 
   void fbl_recycle() final { CacheNode::fbl_recycle(); }
 
@@ -46,8 +45,8 @@ class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
 
  private:
   BlobCache* cache_;
-  bool should_cache_;
-  bool using_memory_;
+  bool should_cache_ = true;
+  bool using_memory_ = false;
 };
 
 Digest GenerateDigest(size_t seed) {

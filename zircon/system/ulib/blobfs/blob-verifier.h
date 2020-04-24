@@ -19,15 +19,11 @@ namespace blobfs {
 // BlobVerifier verifies the contents of a blob against a merkle tree.
 class BlobVerifier {
  public:
-  // Public only to enable std::make_unique<>. Use |Create| or |CreateWithoutTree|.
-  // TODO(45457): Hide when MerkleTreeVerifier is movable.
-  explicit BlobVerifier(BlobfsMetrics* metrics);
-
-  // TODO(44742): Make this type movable. (Requires ulib/digest to be move friendly)
-  DISALLOW_COPY_ASSIGN_AND_MOVE(BlobVerifier);
-
   // Creates an instance of BlobVerifier for blobs named |digest|, using the provided merkle
   // tree which is at most |merkle_size| bytes.
+  //
+  // The passed-in BlobfsMetrics will be updated when this class runs. The pointer must outlive this
+  // class.
   //
   // Returns an error if the merkle tree's root does not match |digest|, or if the required tree
   // size for |data_size| bytes is bigger than |merkle_size|.
@@ -37,6 +33,9 @@ class BlobVerifier {
 
   // Creates an instance of BlobVerifier for blobs named |digest|, which are small enough to not
   // have a stored merkle tree (i.e. MerkleTreeBytes(data_size) == 0).
+  //
+  // The passed-in BlobfsMetrics will be updated when this class runs. The pointer must outlive this
+  // class.
   static zx_status_t CreateWithoutTree(digest::Digest digest, BlobfsMetrics* metrics,
                                        size_t data_size, std::unique_ptr<BlobVerifier>* out);
 
@@ -60,6 +59,13 @@ class BlobVerifier {
   size_t GetTreeLength() const { return tree_verifier_.GetTreeLength(); }
 
  private:
+  // Use |Create| or |CreateWithoutTree| to construct.
+  explicit BlobVerifier(BlobfsMetrics* metrics);
+
+  // TODO(44742): Make this type movable (requires digest::* member classes to be move-friendly).
+  BlobVerifier(const BlobVerifier&) = delete;
+  BlobVerifier& operator=(const BlobVerifier&) = delete;
+
   digest::Digest digest_;
   digest::MerkleTreeVerifier tree_verifier_;
   BlobfsMetrics* metrics_;
