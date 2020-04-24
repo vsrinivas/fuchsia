@@ -22,7 +22,9 @@ class MetricsSpec {
   // Additional metric-specific arguments.
   Map<String, dynamic> extraArgs = {};
 
-  MetricsSpec({@required this.name, this.extraArgs});
+  MetricsSpec({@required this.name, Map<String, dynamic> extraArgs}) {
+    this.extraArgs = extraArgs ?? {};
+  }
 }
 
 /// A collection of [MetricSpec]s.

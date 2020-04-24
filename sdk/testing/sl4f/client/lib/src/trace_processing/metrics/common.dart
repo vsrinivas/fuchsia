@@ -133,8 +133,8 @@ double computeVariance<T extends num>(Iterable<T> values) {
 double computeStandardDeviation<T extends num>(Iterable<T> values) =>
     sqrt(computeVariance(values));
 
-/// Compute the [percentile]th percentile (https://en.wikipedia.org/wiki/Percentile)
-/// of [values].
+/// Compute the linear interpolated [percentile]th percentile
+///  (https://en.wikipedia.org/wiki/Percentile) of [values].
 double computePercentile<T extends num>(Iterable<T> values, int percentile) {
   if (values.isEmpty) {
     throw ArgumentError(
