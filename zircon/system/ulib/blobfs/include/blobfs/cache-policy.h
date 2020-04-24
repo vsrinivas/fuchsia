@@ -7,14 +7,13 @@
 
 namespace blobfs {
 
-// CachePolicy describes the techniques used to cache blobs in memory, avoiding
-// re-reading and re-verifying them from disk.
+// CachePolicy describes the techniques used to cache blobs in memory, avoiding re-reading and
+// re-verifying them from disk.
 enum class CachePolicy {
   // When all strong references to a node are closed, |ActivateLowMemory()| is invoked.
   //
-  // This option avoids using memory for any longer than it needs to, but
-  // may result in higher performance penalties for blobs that are frequently
-  // opened and closed.
+  // This option avoids using memory for any longer than it needs to, but may result in higher
+  // performance penalties for blobs that are frequently opened and closed.
   EvictImmediately,
 
   // The node is never evicted from memory, unless it has been fully deleted and there are no

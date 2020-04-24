@@ -5,22 +5,22 @@
 // This file contains functions that are shared between host
 // and target implementations of Blobfs.
 
-#pragma once
-
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
-#include <fbl/algorithm.h>
-#include <fbl/macros.h>
-#include <fbl/string_buffer.h>
-#include <fs/transaction/transaction_handler.h>
-#include <zircon/types.h>
+#ifndef BLOBFS_COMMON_H_
+#define BLOBFS_COMMON_H_
 
 #include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 #include <blobfs/format.h>
+#include <fbl/algorithm.h>
+#include <fbl/macros.h>
+#include <fbl/string_buffer.h>
+#include <fs/transaction/transaction_handler.h>
 
 namespace blobfs {
 
@@ -73,3 +73,5 @@ void FormatBlobCompressedVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_N
 void FormatBlobMerkleVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 
 }  // namespace blobfs
+
+#endif  // BLOBFS_COMMON_H_
