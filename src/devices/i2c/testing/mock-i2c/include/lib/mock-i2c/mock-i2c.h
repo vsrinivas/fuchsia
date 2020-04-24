@@ -35,30 +35,30 @@ class MockI2c : ddk::I2cProtocol<MockI2c> {
   const i2c_protocol_t* GetProto() { return &proto_; }
 
   // Checks that the next operation is a read and returns the contents of buf.
-  MockI2c& ExpectRead(fbl::Vector<uint8_t> buf) {
-    I2cExpectation exp{std::move(buf), true, false};
+  MockI2c& ExpectRead(fbl::Vector<uint8_t> buf, zx_status_t status = ZX_OK) {
+    I2cExpectation exp{std::move(buf), true, false, status};
     expectations_.push_back(std::move(exp));
     return *this;
   }
 
   // Checks that the next operation is a read followed by a stop and returns the contents of buf.
-  MockI2c& ExpectReadStop(fbl::Vector<uint8_t> buf) {
-    I2cExpectation exp{std::move(buf), true, true};
+  MockI2c& ExpectReadStop(fbl::Vector<uint8_t> buf, zx_status_t status = ZX_OK) {
+    I2cExpectation exp{std::move(buf), true, true, status};
     expectations_.push_back(std::move(exp));
     return *this;
   }
 
   // Checks that the next operation is a write and that the data matches the contents of buf.
-  MockI2c& ExpectWrite(fbl::Vector<uint8_t> buf) {
-    I2cExpectation exp{std::move(buf), false, false};
+  MockI2c& ExpectWrite(fbl::Vector<uint8_t> buf, zx_status_t status = ZX_OK) {
+    I2cExpectation exp{std::move(buf), false, false, status};
     expectations_.push_back(std::move(exp));
     return *this;
   }
 
   // Checks that the next operation is a write followed by a stop and that the data matches the
   // contents of buf.
-  MockI2c& ExpectWriteStop(fbl::Vector<uint8_t> buf) {
-    I2cExpectation exp{std::move(buf), false, true};
+  MockI2c& ExpectWriteStop(fbl::Vector<uint8_t> buf, zx_status_t status = ZX_OK) {
+    I2cExpectation exp{std::move(buf), false, true, status};
     expectations_.push_back(std::move(exp));
     return *this;
   }
@@ -73,11 +73,12 @@ class MockI2c : ddk::I2cProtocol<MockI2c> {
   void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
                    void* cookie) {
     fbl::Vector<i2c_op_t> read_ops;
+    zx_status_t status;
     for (size_t i = 0; i < op_count; i++) {
-      CheckI2cOp(op_list[i], &read_ops);
+      CheckI2cOp(op_list[i], &read_ops, &status);
     }
 
-    callback(cookie, ZX_OK, read_ops.data(), read_ops.size());
+    callback(cookie, status, read_ops.data(), read_ops.size());
   }
 
   zx_status_t I2cGetMaxTransferSize(size_t* out_size) { return ZX_ERR_NOT_SUPPORTED; }
@@ -91,9 +92,10 @@ class MockI2c : ddk::I2cProtocol<MockI2c> {
     fbl::Vector<uint8_t> data;
     bool is_read;
     bool stop;
+    zx_status_t status;
   };
 
-  void CheckI2cOp(const i2c_op_t& op, fbl::Vector<i2c_op_t>* read_ops) {
+  void CheckI2cOp(const i2c_op_t& op, fbl::Vector<i2c_op_t>* read_ops, zx_status_t *status) {
     ASSERT_FALSE(expectations_.is_empty(), "No more transactions are expected");
     ASSERT_LT(expectations_index_, expectations_.size(), "No more transactions are expected");
 
@@ -111,6 +113,7 @@ class MockI2c : ddk::I2cProtocol<MockI2c> {
       EXPECT_EQ(0, memcmp(exp.data.data(), op.data_buffer, exp.data.size()),
                 "Transaction data mismatch");
     }
+    *status = exp.status;
   }
 
   const i2c_protocol_t proto_;
