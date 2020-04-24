@@ -197,6 +197,8 @@ zx_status_t ZSTDSeekableBlob::Create(
     return status;
   }
 
+  FS_TRACE_ERROR("\n\nRead blob header: archive_size=%lu\n\n", blob->header_.archive_size);
+
   *out = std::move(blob);
   return ZX_OK;
 }

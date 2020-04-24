@@ -888,6 +888,8 @@ zx_status_t Blobfs::PopulateCompressedTransferVmo(uint64_t offset, uint64_t leng
   ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 ||
                   offset + length == info->data_length_bytes);
 
+  FS_TRACE_ERROR("\n\nPopulating compressed transfer vmo offset=%lu, length=%lu, data_length_bytes=%lu\n\n", offset, length, info->data_length_bytes);
+
   fzl::VmoMapper mapping;
   // We need to unmap the transfer VMO before its pages can be transferred to the destination VMO,
   // via |zx_pager_supply_pages|.
