@@ -101,6 +101,7 @@ test("blobfs-unit") {
     "unit/node-populator-test.cc",
     "unit/node-reserver-test.cc",
     "unit/parser_test.cc",
+    "unit/seekable-compressor-test.cc",
     "unit/utils.cc",
     "unit/vector-extent-iterator-test.cc",
     "unit/zstd-compressed-block-collection-test.cc",

@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <optional>
 
 #include <stddef.h>
 
@@ -16,6 +17,15 @@
 #include "algorithm.h"
 
 namespace blobfs {
+
+// CompressionMapping describes the mapping between a range of bytes in a compressed file and the
+// range they decompress to.
+struct CompressionMapping {
+  size_t compressed_offset;
+  size_t compressed_length;
+  size_t decompressed_offset;
+  size_t decompressed_length;
+};
 
 // A `SeekableDecompressor` is used to decompress parts of blobs transparently. See `Compressor`
 // documentation for properties of `Compressor`/`SeekableDecompressor` pair implementations.
@@ -34,6 +44,15 @@ class SeekableDecompressor {
   virtual zx_status_t DecompressRange(void* uncompressed_buf, size_t* uncompressed_size,
                                       const void* compressed_buf, size_t max_compressed_size,
                                       size_t offset) = 0;
+
+  // Looks up |offset| in the decompressed space, and returns a mapping which describes the range of
+  // bytes to decompress which will contain the target offset.
+  //
+  // The concrete implementation is free to return an arbitrarily large range of bytes, but
+  // |offset| will always be contained in the mapping.
+  //
+  // Returns std::nullopt if the offset is out of bounds.
+  virtual std::optional<CompressionMapping> MappingForDecompressedAddress(size_t offset) = 0;
 };
 
 }  // namespace blobfs

@@ -263,6 +263,8 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index,
     algorithm = CompressionAlgorithm::ZSTD;
   } else if (inode.header.flags & kBlobFlagZSTDSeekableCompressed) {
     algorithm = CompressionAlgorithm::ZSTD_SEEKABLE;
+  } else if (inode.header.flags & kBlobFlagChunkCompressed) {
+    algorithm = CompressionAlgorithm::CHUNKED;
   } else {
     FS_TRACE_ERROR("Blob has no known compression format\n");
     return ZX_ERR_NOT_SUPPORTED;

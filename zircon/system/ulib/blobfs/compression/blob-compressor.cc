@@ -4,6 +4,7 @@
 
 #include "blob-compressor.h"
 
+#include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -13,6 +14,7 @@
 #include <fbl/macros.h>
 #include <fs/trace.h>
 
+#include "chunked.h"
 #include "lz4.h"
 #include "zstd-plain.h"
 #include "zstd-seekable.h"
@@ -69,6 +71,29 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionAlgorithm algori
       }
       auto result = BlobCompressor(std::move(compressor), std::move(compressed_blob));
       return std::make_optional(std::move(result));
+    }
+    case CompressionAlgorithm::CHUNKED: {
+      std::unique_ptr<ChunkedCompressor> compressor;
+      size_t max;
+      zx_status_t status = ChunkedCompressor::Create(blob_size, &max, &compressor);
+      if (status != ZX_OK) {
+        FS_TRACE_ERROR("[blobfs] Failed to create compressor: %s\n", zx_status_get_string(status));
+        return std::nullopt;
+      }
+      fzl::OwnedVmoMapper compressed_blob;
+      status = compressed_blob.CreateAndMap(max, "chunk-compressed-blob");
+      if (status != ZX_OK) {
+        FS_TRACE_ERROR("[blobfs] Failed to create mapping for compressed data: %s\n",
+                       zx_status_get_string(status));
+        return std::nullopt;
+      }
+      status = compressor->SetOutput(compressed_blob.start(), compressed_blob.size());
+      if (status != ZX_OK) {
+        FS_TRACE_ERROR("[blobfs] Failed to initialize compressor: %s\n",
+                       zx_status_get_string(status));
+        return std::nullopt;
+      }
+      return BlobCompressor(std::move(compressor), std::move(compressed_blob));
     }
     default:
       return std::nullopt;

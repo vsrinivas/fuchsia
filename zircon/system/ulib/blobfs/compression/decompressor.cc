@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "chunked.h"
 #include "lz4.h"
 #include "zstd-plain.h"
 #include "zstd-seekable.h"
@@ -25,6 +26,9 @@ zx_status_t Decompressor::Create(CompressionAlgorithm algorithm,
       break;
     case CompressionAlgorithm::ZSTD_SEEKABLE:
       *out = std::make_unique<ZSTDSeekableDecompressor>();
+      break;
+    case CompressionAlgorithm::CHUNKED:
+      *out = std::make_unique<ChunkedDecompressor>();
       break;
     default:
       return ZX_ERR_NOT_SUPPORTED;

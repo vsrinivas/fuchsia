@@ -5,9 +5,11 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_SEEKABLE_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_SEEKABLE_H_
 
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <memory>
+#include <optional>
 
 #include <blobfs/format.h>
 #include <zstd/zstd.h>
@@ -87,6 +89,11 @@ class ZSTDSeekableDecompressor : public Decompressor, public SeekableDecompresso
   zx_status_t DecompressRange(void* uncompressed_buf, size_t* uncompressed_size,
                               const void* compressed_buf, size_t max_compressed_size,
                               size_t offset) final;
+  std::optional<CompressionMapping> MappingForDecompressedAddress(size_t offset) final {
+    // TODO(markdittmer): Implement.
+    ZX_ASSERT(false);
+    return std::nullopt;
+  }
 
   // Reads up to `kZSTDSeekableHeaderSize` bytes from the beginning of `buf` into `header`.
   // @param buf Pointer to buffer that is to contain <header><zstd seekable archive>.

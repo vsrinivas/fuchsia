@@ -245,9 +245,13 @@ constexpr uint16_t kBlobFlagZSTDCompressed = 1 << 3;
 // Identifies that the on-disk storage of the blob is ZSTD-seekable compressed.
 constexpr uint16_t kBlobFlagZSTDSeekableCompressed = 1 << 4;
 
+// Identifies that the on-disk storage of the blob is chunk-compression compressed.
+constexpr uint16_t kBlobFlagChunkCompressed = 1 << 5;
+
 // Bitmask of all compression flags.
 constexpr uint16_t kBlobFlagMaskAnyCompression =
-    (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed | kBlobFlagZSTDSeekableCompressed);
+    (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed | kBlobFlagZSTDSeekableCompressed |
+     kBlobFlagChunkCompressed);
 
 // The number of extents within a normal inode.
 constexpr uint32_t kInlineMaxExtents = 1;

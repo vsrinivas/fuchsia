@@ -11,6 +11,19 @@
 
 namespace blobfs {
 
+CompressionAlgorithm AlgorithmForInode(const Inode& inode) {
+  if (inode.header.flags & kBlobFlagLZ4Compressed) {
+    return CompressionAlgorithm::LZ4;
+  } else if (inode.header.flags & kBlobFlagZSTDCompressed) {
+    return CompressionAlgorithm::ZSTD;
+  } else if (inode.header.flags & kBlobFlagZSTDSeekableCompressed) {
+    return CompressionAlgorithm::ZSTD_SEEKABLE;
+  } else if (inode.header.flags & kBlobFlagChunkCompressed) {
+    return CompressionAlgorithm::CHUNKED;
+  }
+  return CompressionAlgorithm::UNCOMPRESSED;
+}
+
 uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm) {
   switch (algorithm) {
     case CompressionAlgorithm::LZ4:
@@ -19,6 +32,8 @@ uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm) {
       return kBlobFlagZSTDCompressed;
     case CompressionAlgorithm::ZSTD_SEEKABLE:
       return kBlobFlagZSTDSeekableCompressed;
+    case CompressionAlgorithm::CHUNKED:
+      return kBlobFlagChunkCompressed;
     default:
       ZX_ASSERT(false);
       return kBlobFlagZSTDCompressed;

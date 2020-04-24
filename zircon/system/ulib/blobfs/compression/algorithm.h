@@ -7,14 +7,21 @@
 
 #include <stdint.h>
 
+#include <blobfs/format.h>
+
 namespace blobfs {
 
 // Unique identifiers for each |Compressor|/|Decompressor| strategy.
 enum class CompressionAlgorithm {
+  UNCOMPRESSED = 0,
   LZ4,
   ZSTD,
   ZSTD_SEEKABLE,
+  CHUNKED,
 };
+
+// Returns the compression algorithm used in |inode|.
+CompressionAlgorithm AlgorithmForInode(const Inode& inode);
 
 // Return an Inode header flagset with the flags associated with |algorithm|
 // set, and all other flags are unset.

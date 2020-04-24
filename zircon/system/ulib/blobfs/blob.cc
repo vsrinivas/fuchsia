@@ -273,7 +273,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
 
     // Ensure all non-allocation flags are propagated to the inode.
     const uint16_t non_allocation_flags =
-        kBlobFlagZSTDCompressed | kBlobFlagLZ4Compressed | kBlobFlagZSTDSeekableCompressed;
+        kBlobFlagMaskAnyCompression;
     mapped_inode->header.flags |= (inode_.header.flags & non_allocation_flags);
   } else {
     // Special case: Empty node.

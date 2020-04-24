@@ -24,6 +24,7 @@ source_set("private_headers") {
     "allocator/extent-reserver.h",
     "allocator/node-reserver.h",
     "compression/algorithm.h",
+    "compression/chunked.h",
     "compression/compressor.h",
     "compression/decompressor.h",
     "compression/lz4.h",
@@ -74,6 +75,7 @@ zx_library("blobfs") {
     "blobfs-checker.cc",
     "common.cc",
     "compression/algorithm.cc",
+    "compression/chunked.cc",
     "compression/decompressor.cc",
     "compression/lz4.cc",
     "compression/zstd-plain.cc",
@@ -101,6 +103,7 @@ zx_library("blobfs") {
   ]
   deps = [
     ":private_headers",
+    "//src/lib/chunked-compression",
     "//third_party/boringssl",
     "//third_party/zstd",
     "//third_party/zstd:zstdseek",

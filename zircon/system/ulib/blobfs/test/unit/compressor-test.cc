@@ -201,6 +201,39 @@ TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible4) {
                             1 << 10);
 }
 
+TEST(CompressorTests, CompressDecompressChunkRandom1) {
+  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 0, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressChunkRandom2) {
+  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 1, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressChunkRandom3) {
+  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 10, 1 << 5);
+}
+
+TEST(CompressorTests, CompressDecompressChunkRandom4) {
+  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 15, 1 << 10);
+}
+
+TEST(CompressorTests, CompressDecompressChunkCompressible1) {
+  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 0, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressChunkCompressible2) {
+  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 1, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressChunkCompressible3) {
+  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 10, 1 << 5);
+}
+
+TEST(CompressorTests, CompressDecompressChunkCompressible4) {
+  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 15,
+                            1 << 10);
+}
+
 void RunUpdateNoDataTest(CompressionAlgorithm algorithm) {
   const size_t input_size = 1024;
   auto compressor = BlobCompressor::Create(algorithm, input_size);

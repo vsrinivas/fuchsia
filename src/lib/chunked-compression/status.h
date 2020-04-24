@@ -7,11 +7,7 @@
 
 #include <stdint.h>
 
-#ifdef __Fuchsia__
-
 #include <zircon/types.h>
-
-#endif
 
 namespace chunked_compression {
 
@@ -46,11 +42,7 @@ constexpr Status kStatusErrBadState = -20;
 // Example: CRC or Parity error.
 constexpr Status kStatusErrIoDataIntegrity = -42;
 
-#ifdef __Fuchsia__
-
 constexpr zx_status_t ToZxStatus(Status status) { return static_cast<zx_status_t>(status); }
-
-#endif
 
 }  // namespace chunked_compression
 
