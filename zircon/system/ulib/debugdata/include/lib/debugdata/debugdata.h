@@ -8,22 +8,19 @@
 #include <fbl/vector.h>
 #include <fuchsia/debugdata/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/zircon-internal/fnv1hash.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
+
 #include <stdint.h>
 
 #include <mutex>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace debugdata {
-
-struct DataSinkDump {
-  std::string sink_name;
-  zx::vmo file_data;
-};
 
 class DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
  public:
@@ -33,10 +30,10 @@ class DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
   void Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync completer) override;
   void LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync completer) override;
 
-  std::vector<DataSinkDump>& GetData() { return data_; }
+  const auto& data() const { return data_; }
 
  private:
-  std::vector<DataSinkDump> data_;
+  std::unordered_map<std::string, std::vector<zx::vmo>> data_ __TA_GUARDED(lock_);
   std::mutex lock_;
   fbl::unique_fd root_dir_fd_;
 };

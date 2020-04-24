@@ -54,14 +54,15 @@ TEST(DebugDataTest, PublishData) {
   ASSERT_OK(loop.RunUntilIdle());
   loop.Shutdown();
 
-  const auto& data = svc.GetData();
+  const auto& data = svc.data();
   ASSERT_EQ(data.size(), 1);
 
-  const auto& dump = data[0];
-  ASSERT_STR_EQ(dump.sink_name.c_str(), kTestSink);
+  ASSERT_NE(data.find(kTestSink), data.end());
+  const auto& dump = data.at(kTestSink);
+  ASSERT_EQ(dump.size(), 1);
 
   uint8_t content[sizeof(kTestData)];
-  ASSERT_OK(dump.file_data.read(content, 0, sizeof(content)));
+  ASSERT_OK(dump[0].read(content, 0, sizeof(content)));
   ASSERT_EQ(memcmp(content, kTestData, sizeof(kTestData)), 0);
 }
 

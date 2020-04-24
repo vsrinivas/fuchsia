@@ -214,10 +214,10 @@ bool RunProfileMergeData() {
   ASSERT_EQ(0, MkDirAll(output_dir));
 
   // Run the test for the first time.
-  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, verbosity,
-                       &num_failed, &results));
+  EXPECT_TRUE(RunTests({test_name, test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name,
+                       verbosity, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
-  EXPECT_EQ(1, results.size());
+  EXPECT_EQ(2, results.size());
   EXPECT_LE(1, results[0]->data_sinks.size());
   EXPECT_TRUE(results[0]->data_sinks.find("llvm-profile") != results[0]->data_sinks.end());
   EXPECT_EQ(1, results[0]->data_sinks["llvm-profile"].size());
@@ -226,7 +226,7 @@ bool RunProfileMergeData() {
   EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, verbosity,
                        &num_failed, &results));
   EXPECT_EQ(0, num_failed);
-  EXPECT_EQ(2, results.size());
+  EXPECT_EQ(3, results.size());
   EXPECT_LE(1, results[1]->data_sinks.size());
   EXPECT_TRUE(results[1]->data_sinks.find("llvm-profile") != results[1]->data_sinks.end());
   EXPECT_EQ(1, results[1]->data_sinks["llvm-profile"].size());

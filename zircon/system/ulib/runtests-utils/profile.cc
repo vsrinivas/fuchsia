@@ -32,7 +32,7 @@ struct __llvm_profile_header {
 
 }  // namespace
 
-bool ProfilesCompatible(const uint8_t* src, uint8_t* dst, size_t size) {
+bool ProfilesCompatible(const uint8_t* dst, const uint8_t* src, size_t size) {
   const __llvm_profile_header* src_header = reinterpret_cast<const __llvm_profile_header*>(src);
   const __llvm_profile_header* dst_header = reinterpret_cast<const __llvm_profile_header*>(dst);
 
@@ -46,7 +46,7 @@ bool ProfilesCompatible(const uint8_t* src, uint8_t* dst, size_t size) {
       reinterpret_cast<const __llvm_profile_data*>(src + sizeof(*src_header));
   const __llvm_profile_data* src_data_end = src_data_start + src_header->DataSize;
   const __llvm_profile_data* dst_data_start =
-      reinterpret_cast<__llvm_profile_data*>(dst + sizeof(*dst_header));
+      reinterpret_cast<const __llvm_profile_data*>(dst + sizeof(*dst_header));
   const __llvm_profile_data* dst_data_end = dst_data_start + dst_header->DataSize;
 
   for (const __llvm_profile_data *src_data = src_data_start, *dst_data = dst_data_start;
@@ -59,7 +59,7 @@ bool ProfilesCompatible(const uint8_t* src, uint8_t* dst, size_t size) {
   return true;
 }
 
-uint8_t* MergeProfiles(const uint8_t* src, uint8_t* dst, size_t size) {
+uint8_t* MergeProfiles(uint8_t* dst, const uint8_t* src, size_t size) {
   const __llvm_profile_header* src_header = reinterpret_cast<const __llvm_profile_header*>(src);
   const __llvm_profile_data* src_data_start =
       reinterpret_cast<const __llvm_profile_data*>(src + sizeof(*src_header));

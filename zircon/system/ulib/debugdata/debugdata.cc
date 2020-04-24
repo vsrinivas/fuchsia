@@ -26,9 +26,9 @@ namespace debugdata {
 DebugData::DebugData(fbl::unique_fd root_dir_fd) : root_dir_fd_(std::move(root_dir_fd)) {}
 
 void DebugData::Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync) {
-  std::unique_lock lock(lock_);
+  std::lock_guard<std::mutex> lock(lock_);
   std::string name(data_sink.data(), data_sink.size());
-  data_.push_back({std::move(name), std::move(vmo)});
+  data_[name].push_back(std::move(vmo));
 }
 
 void DebugData::LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync completer) {
