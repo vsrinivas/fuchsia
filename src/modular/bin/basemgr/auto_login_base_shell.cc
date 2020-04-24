@@ -78,17 +78,13 @@ class AutoLoginBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseSh
                      " unimplemented.";
   }
 
-  void Login(const std::string& account_id) {
-    fuchsia::modular::UserLoginParams2 params;
-    params.account_id = account_id;
-    user_provider_->Login2(std::move(params));
-  }
+  void Login(bool is_ephemeral_account) { user_provider_->Login3(is_ephemeral_account); }
 
   void Connect() {
     if (user_provider_ && view_token_.value) {
       if (!settings_.persist_user) {
         // Login as an ephemeral guest user.
-        Login("");
+        Login(/* is_ephemeral_account */ true);
         return;
       }
 

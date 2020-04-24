@@ -68,25 +68,22 @@ void SessionUserProviderImpl::AddUser(fuchsia::modular::auth::IdentityProvider i
 }
 
 void SessionUserProviderImpl::Login(fuchsia::modular::UserLoginParams params) {
-  Login2(fuchsia::modular::UserLoginParams2{
-      .account_id = std::move(params.account_id),
-  });
+  bool is_ephemeral_account = params.account_id.value_or("") == "";
+  Login3(is_ephemeral_account);
 }
 
 void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) {
-  bool login_as_guest = params.account_id.value_or("") == "";
-  if (login_as_guest) {
-    FX_LOGS(INFO) << "fuchsia::modular::UserProvider::Login() Login as guest";
-    on_login_(/* account= */ nullptr);
+  bool is_ephemeral_account = params.account_id.value_or("") == "";
+  Login3(is_ephemeral_account);
+}
+
+void SessionUserProviderImpl::Login3(bool is_ephemeral_account) {
+  if (is_ephemeral_account) {
+    FX_LOGS(INFO) << "fuchsia::modular::UserProvider::Login() Login as ephemeral";
   } else {
-    FX_LOGS(INFO) << "fuchsia::modular::UserProvider::Login() Login as "
-                     "authenticated user";
-
-    auto account_deprecated = fuchsia::modular::auth::Account::New();
-    account_deprecated->id = params.account_id->c_str();
-
-    on_login_(std::move(account_deprecated));
+    FX_LOGS(INFO) << "fuchsia::modular::UserProvider::Login() Login as persistant";
   }
+  on_login_(is_ephemeral_account);
 }
 
 void SessionUserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
@@ -133,13 +130,10 @@ void SessionUserProviderImpl::OnInitialize(
 void SessionUserProviderImpl::OnAccountAdded(
     fuchsia::identity::account::InitialAccountState account_state,
     OnAccountAddedCallback callback) {
-  // TODO(MF-311): Get rid of this once clients of UserProvider interface start
-  // using AccountManager.
-  fuchsia::modular::UserLoginParams params;
-  params.account_id = std::to_string(account_state.account_id);
-  // Base shell may also call Login with the newly added account, but the Login
-  // flow should be resilient to multiple invocations.
-  Login(std::move(params));
+  // Base shell may also call Login after adding the account, but the Login
+  // flow should be resilient to multiple invocations. We assume only persistent
+  // accounts are added through the AccountManager.
+  Login3(/* is_ephemeral_account */ false);
   callback();
 }
 

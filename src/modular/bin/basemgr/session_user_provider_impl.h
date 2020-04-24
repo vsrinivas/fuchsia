@@ -31,7 +31,7 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   using OnInitializeCallback = fit::function<void()>;
 
   // Called after SessionUserProviderImpl successfully logs in a user.
-  using OnLoginCallback = fit::function<void(fuchsia::modular::auth::AccountPtr account)>;
+  using OnLoginCallback = fit::function<void(bool is_ephemeral_account)>;
 
   // |account_manager| Used to register SessionUserProviderImpl as an
   // |AccountListener| to receive updates on newly added/removed accounts. Must
@@ -52,14 +52,17 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   void Connect(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request);
 
   // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
-  void Login(fuchsia::modular::UserLoginParams params) override;
-
-  // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
-  void Login2(fuchsia::modular::UserLoginParams2 params) override;
+  void Login3(bool is_ephemeral_account) override;
 
   void RemoveAllUsers(fit::function<void()> callback);
 
  private:
+  // |fuchsia::modular::UserProvider|.
+  void Login(fuchsia::modular::UserLoginParams params) override;
+
+  // |fuchsia::modular::UserProvider|.
+  void Login2(fuchsia::modular::UserLoginParams2 params) override;
+
   // |fuchsia::modular::UserProvider|
   void AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
                AddUserCallback callback) override;

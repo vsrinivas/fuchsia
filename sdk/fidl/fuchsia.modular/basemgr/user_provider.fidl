@@ -11,40 +11,37 @@ using fuchsia.modular.auth;
 /// `Basemgr`, and act on the provided information (including extending the
 /// user database).
 protocol UserProvider {
-    /// Adds information of a user that can be used to authenticate her/him to this
-    /// device. Once successfully added, the user can login to the same device via
-    /// Login().
-    ///
-    /// `identity_provider` is the identity provider to use for identification.
-    ///
-    /// `device_name` is what the user wants to name the device. If null or empty
-    /// the device's current hostname will be used.
-    ///
-    /// `account` is NULL if there was an error during identification and
-    /// `error_code` is set.
+    /// DEPRECATED: This method is not supported. Calling it will always return
+    /// an error.
+    [Transitional]
     AddUser(fuchsia.modular.auth.IdentityProvider identity_provider)
         -> (fuchsia.modular.auth.Account? account, string? error_code);
 
-    /// Removes information of a user from the local user database.
-    ///
-    /// `account_id` is received from either AddUser() or PreviousUsers().
+    /// DEPRECATED: This method is not supported. Calling it will have no effect.
+    [Transitional]
     RemoveUser(string account_id) -> (string? error_code);
 
-    /// Uses the credentials provided in AddUser() to start a user session. This
-    /// would mean syncing with the user's ledger instance and displaying a user
-    /// shell with all of the user's stories.
-    // TODO(alhaad): In the future, we want to protect Login() with a password,
-    // Android lock pattern, etc.
+    /// DEPRECATED: For transitional purposes only.
+    [Transitional]
     Login(UserLoginParams user_login_params);
+
     /// DEPRECATED: For transitional purposes only.
     [Transitional]
     Login2(UserLoginParams2 user_login_params);
 
-    /// List of all users who have authenticated to this device in the past.
+    /// Starts a new user session, either using a random ephemeral account or
+    /// the only persistent account on the current device, creating this
+    /// persistent account if necessary.
+    [Transitional]
+    Login3(bool is_ephemeral_account);
+
+    /// DEPRECATED: This method is not supported. If called it will always
+    /// return an empty vector.
+    [Transitional]
     PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
 };
 
-/// Used to specify arguments to log into a user session.
+/// DEPRECATED, for backwards compatibility only
 struct UserLoginParams {
     /// `account_id` is received from either AddUser() or PreviousUsers(). It
     /// can be NULL which means logging-in using incognito mode.

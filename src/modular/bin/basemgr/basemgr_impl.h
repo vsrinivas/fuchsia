@@ -107,9 +107,8 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   void ShowSetupOrLogin();
 
-  // Invoked when a user has been logged in. Starts a new session for the given
-  // |account|.
-  void OnLogin(fuchsia::modular::auth::AccountPtr account);
+  // Invoked when a user has been logged in. Starts a new session.
+  void OnLogin(bool is_ephemeral_account);
 
   // Returns the session shell config of the active session shell, or returns
   // the a default config if there is no active one.

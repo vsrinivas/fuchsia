@@ -208,7 +208,7 @@ void BasemgrImpl::InitializeUserProvider() {
       /* on_initialize= */
       [this] { ShowSetupOrLogin(); },
       /* on_login= */
-      [this](fuchsia::modular::auth::AccountPtr account) { OnLogin(std::move(account)); });
+      [this](bool is_ephemeral_account) { OnLogin(is_ephemeral_account); });
 }
 
 void BasemgrImpl::GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) {
@@ -250,15 +250,14 @@ void BasemgrImpl::GetAuthenticationUIContext(
   base_shell_->GetAuthenticationUIContext(std::move(request));
 }
 
-void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account) {
+void BasemgrImpl::OnLogin(bool is_ephemeral_account) {
   if (state_ == State::SHUTTING_DOWN) {
     return;
   }
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto did_start_session =
-      session_provider_->StartSession(std::move(view_token),
-                                      /* is_ephemeral_account */ account == nullptr);
+      session_provider_->StartSession(std::move(view_token), is_ephemeral_account);
   if (!did_start_session) {
     FX_LOGS(WARNING) << "Session was already started and the logged in user "
                         "could not join the session.";
@@ -342,9 +341,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
       if (account_ids.empty()) {
         StartBaseShell();
       } else {
-        fuchsia::modular::UserLoginParams2 params;
-        params.account_id = std::to_string(account_ids.at(0));
-        session_user_provider_impl_->Login2(std::move(params));
+        session_user_provider_impl_->Login3(/* is_ephemeral_account */ false);
       }
     });
   };
@@ -384,8 +381,7 @@ void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
 }
 
 void BasemgrImpl::LoginAsGuest() {
-  fuchsia::modular::UserLoginParams2 params;
-  session_user_provider_impl_->Login2(std::move(params));
+  session_user_provider_impl_->Login3(/* is_ephemeral_account */ true);
 }
 
 void BasemgrImpl::LogoutUsers(fit::function<void()> callback) {

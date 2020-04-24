@@ -59,6 +59,7 @@ class TestBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> 
   void GetAuthenticationUIContext(
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> /*request*/) override {
     FX_LOGS(INFO) << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
+
                      " unimplemented.";
   }
 
@@ -68,9 +69,7 @@ class TestBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> 
       return;
     }
 
-    fuchsia::modular::UserLoginParams2 params;
-    params.account_id = "";  // incognito mode
-    user_provider_->Login2(std::move(params));
+    user_provider_->Login3(/* is_ephemeral_account */ true);
   }
 
   fuchsia::ui::views::ViewToken view_token_;
