@@ -1,25 +1,37 @@
-# `web_runner_tests`
+## `web_runner_tests`
 
-Contains integration tests to ensure that the Chromium version rolled into
-[`//topaz/tools/cipd.ensure`](../../tools/cipd.ensure) is compatible with
-Fuchsia. To run these tests, use:
+Contains integration tests to ensure that Chromium is compatible with Fuchsia.
 
-```
-fx set core.<board> --with //topaz/bundles:buildbot
-fx full-build
-fx reboot -r
-fx run-tests web_runner_tests
+## Build the test
+
+```shell
+$ fx set <product>.<arch> --with //src/chromium/web_runner_tests:tests
+$ fx build
 ```
 
-To run individual test suites, you can use:
+## Run the test
 
-```
-fx run-tests web_runner_tests -t web_runner_integration_tests
-fx run-tests web_runner_tests -t web_runner_pixel_tests
+Remember to kill a running Scenic before starting the test. In particular, the pixel tests must be
+run on a product without a graphical interface, such as `core`.
+(If the zircon console is running, you don't need to do this.)
+
+```shell
+$ fx shell killall scenic.cmx
 ```
 
-In particular the pixel tests must be run a product without a graphical base
-shell, such as `core`.
+To run all the tests, use this fx invocation:
+
+```shell
+$ fx test web_runner_tests
+```
+
+To run individual test suites, use these fx invocations:
+
+```shell
+fx test web_runner_tests -t -- --gtest_filter="WebRunnerIntegrationTest.*"
+fx test web_runner_tests -t -- --gtest_filter="WebRunnerPixelTest.*"
+fx test web_runner_tests -t -- --gtest_filter="WebPixelTest.*"
+```
 
 For more information about the individual tests, see their respective file
 comments.
