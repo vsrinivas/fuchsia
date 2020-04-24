@@ -6,12 +6,17 @@ The present tool verifies JSON files against schemas defined with
 ## Usage
 
 ```
-json_validator <path to schema> <path to file to verify> [path to stamp file]
+json_validator [--allow_comments] <path to schema> <path to file to verify> [path to stamp file]
 ```
 
 The third argument represents the path to a stamp file which gets updated when
 the tool runs successfully. This argument is mostly designed for integration
 with GN actions.
+
+The `--allow_comments` flags enables parsing non-standard JSON files that
+contain C-style comments (`/* block */` and `// inline`). The comments are
+ignored. This only applies to the file being verified -- the schema file may not
+contain comments even if this option is enabled.
 
 ## Schema references
 

@@ -1,0 +1,6 @@
+// This is an inline comment.
+{
+  /* This is
+     a block comment */
+  "message": "Validating this file with the schema test_schema.json and --allow_comments flag should succeed."
+}

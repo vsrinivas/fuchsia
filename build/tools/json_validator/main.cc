@@ -9,13 +9,29 @@
 #include <regex>
 #include <string>
 
-#include "rapidjson/document.h"
-#include "rapidjson/schema.h"
-#include "rapidjson/stringbuffer.h"
+#include <rapidjson/document.h>
+#include <rapidjson/schema.h>
+#include <rapidjson/stringbuffer.h>
+#include <src/lib/fxl/command_line.h>
 
 using namespace rapidjson;
 
+static constexpr char kArgAllowComments[] = "allow_comments";
+
+static constexpr char kUsage[] = R"(
+Usage: %s [--allow_comments] <schema> <file> [stamp]
+
+Arguments:
+  --allow_comments: Parses and ignores /* */ and // comments in the input file.
+    This does not apply to the schema file.
+)";
+
 // Reads the content of a file into a JSON document.
+//
+// The template parameter |parse_flags| is passed to the RapidJSON Parse method and controls
+// the JSON parsing behavior. This can be used to enable parsing non-standard JSON syntax,
+// like comments.
+template <unsigned parse_flags = kParseDefaultFlags>
 bool ReadDocument(std::string file, Document* document) {
   std::ifstream file_stream(file);
   if (!file_stream.is_open()) {
@@ -23,9 +39,9 @@ bool ReadDocument(std::string file, Document* document) {
     return false;
   }
   std::string content((std::istreambuf_iterator<char>(file_stream)),
-                       std::istreambuf_iterator<char>());
+                      std::istreambuf_iterator<char>());
   file_stream.close();
-  if (document->Parse(content).HasParseError()) {
+  if (document->Parse<parse_flags>(content).HasParseError()) {
     fprintf(stderr, "Error: unable to parse JSON in file %s.\n", file.c_str());
     return false;
   }
@@ -35,15 +51,12 @@ bool ReadDocument(std::string file, Document* document) {
 // A schema provider that can find schemas specified as URIs/paths relative to
 // the main schema.
 class LocalSchemaProvider : public IRemoteSchemaDocumentProvider {
-
  public:
-  explicit LocalSchemaProvider(const std::string directory) :
-    directory_(directory),
-    has_errors_(false) {}
+  explicit LocalSchemaProvider(const std::string directory)
+      : directory_(directory), has_errors_(false) {}
   ~LocalSchemaProvider() override {}
 
-  const SchemaDocument* GetRemoteDocument(
-      const char* uri, SizeType length) override {
+  const SchemaDocument* GetRemoteDocument(const char* uri, SizeType length) override {
     std::string input(uri, length);
     std::smatch matches;
     std::regex pattern("^(file:)?([^/#:]+)$");
@@ -69,9 +82,7 @@ class LocalSchemaProvider : public IRemoteSchemaDocumentProvider {
 
   // Returns true if some schemas could not be resolved.
   // By default, missing schemas are just ignored.
-  bool HasErrors() {
-    return has_errors_;
-  }
+  bool HasErrors() { return has_errors_; }
 
  private:
   // Map of resolved documents.
@@ -92,35 +103,41 @@ std::string BaseDir(const std::string file) {
 }
 
 int main(int argc, const char** argv) {
-  if (argc < 3 || argc > 4) {
-    printf("Usage: %s <schema> <file> [stamp]\n", argv[0]);
+  const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  const auto& positional_args = command_line.positional_args();
+
+  if (positional_args.size() < 2 || positional_args.size() > 3) {
+    printf(kUsage, argv[0]);
     return 1;
   }
-  const std::string schema_path = argv[1];
-  const std::string file_path = argv[2];
+
+  const std::string schema_path = positional_args[0];
+  const std::string file_path = positional_args[1];
+  const bool allow_comments = command_line.HasOption(kArgAllowComments);
 
   Document schema_document;
   if (!ReadDocument(schema_path, &schema_document)) {
     return 1;
   }
+
   Document file_document;
-  if (!ReadDocument(file_path, &file_document)) {
+  bool file_read_ok = allow_comments ? ReadDocument<kParseCommentsFlag>(file_path, &file_document)
+                                     : ReadDocument(file_path, &file_document);
+  if (!file_read_ok) {
     return 1;
   }
 
   std::string schema_base = BaseDir(schema_path);
   LocalSchemaProvider provider(schema_base);
-  SchemaDocument schema(schema_document, nullptr /* uri */, 0 /* uriLength */,
-                        &provider);
+  SchemaDocument schema(schema_document, nullptr /* uri */, 0 /* uriLength */, &provider);
   SchemaValidator validator(schema);
   if (!file_document.Accept(validator)) {
-    fprintf(stderr, "Error: the file %s is invalid according to schema %s.\n",
-            file_path.c_str(), schema_path.c_str());
+    fprintf(stderr, "Error: the file %s is invalid according to schema %s.\n", file_path.c_str(),
+            schema_path.c_str());
     StringBuffer buffer;
     validator.GetInvalidSchemaPointer().StringifyUriFragment(buffer);
     fprintf(stderr, " - location in schema     %s\n", buffer.GetString());
-    fprintf(stderr, " - affected keyword       %s\n",
-            validator.GetInvalidSchemaKeyword());
+    fprintf(stderr, " - affected keyword       %s\n", validator.GetInvalidSchemaKeyword());
     buffer.Clear();
     validator.GetInvalidDocumentPointer().StringifyUriFragment(buffer);
     fprintf(stderr, " - document reference     %s\n", buffer.GetString());
@@ -130,9 +147,9 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  if (argc == 4) {
+  if (positional_args.size() == 3) {
     // Write the stamp file if one was given.
-    std::string stamp_path = argv[3];
+    std::string stamp_path = positional_args[2];
     std::ofstream stamp(stamp_path);
     stamp.close();
   }

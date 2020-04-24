@@ -19,6 +19,10 @@ import("//build/compiled_action.gni")
 #     Additional schema files used by the original schema file must be listed
 #     here for validation to be re-run when they change.
 #
+#   allow_comments (optional; default is false)
+#     [bool] If true, the |data| file may contain C-style comments
+#     (`/* block */` and `// inline`) that will be ignored.
+#
 #   deps (optional)
 #   public_deps (optional)
 #   testonly (optional)
@@ -32,6 +36,10 @@ import("//build/compiled_action.gni")
 #     schema = "my_schema.json"
 #   }
 template("validate_json") {
+  assert(defined(invoker.data), "data is required")
+  assert(defined(invoker.schema), "schema is required")
+  allow_comments = defined(invoker.allow_comments) && invoker.allow_comments
+
   compiled_action(target_name) {
     forward_variables_from(invoker,
                            [
@@ -51,11 +59,15 @@ template("validate_json") {
       invoker.schema,
     ]
 
-    outputs = [
-      stamp_file,
-    ]
+    outputs = [ stamp_file ]
 
-    args = [
+    args = []
+
+    if (allow_comments) {
+      args += [ "--allow_comments" ]
+    }
+
+    args += [
       rebase_path(invoker.schema),
       rebase_path(invoker.data),
       rebase_path(stamp_file),

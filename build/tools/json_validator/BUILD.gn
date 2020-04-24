@@ -7,7 +7,10 @@ import("//build/host.gni")
 executable("json_validator") {
   sources = [ "main.cc" ]
 
-  deps = [ "//third_party/rapidjson" ]
+  deps = [
+    "//src/lib/fxl",
+    "//third_party/rapidjson",
+  ]
 }
 
 install_host_tools("install") {

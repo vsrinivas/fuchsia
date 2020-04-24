@@ -6,7 +6,10 @@
 group("tests") {
   testonly = true
 
-  deps = [ "sdk:tests" ]
+  deps = [
+    "sdk:tests",
+    "tools:tests",
+  ]
 }
 
 group("deprecated_bare_tests_allowlist") {
