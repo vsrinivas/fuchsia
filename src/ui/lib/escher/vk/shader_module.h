@@ -5,11 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_VK_SHADER_MODULE_H_
 #define SRC_UI_LIB_ESCHER_VK_SHADER_MODULE_H_
 
+#include <vulkan/vulkan.hpp>
+
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/third_party/granite/vk/shader_module_resource_layout.h"
 #include "src/ui/lib/escher/vk/shader_stage.h"
-
-#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -25,8 +25,8 @@ class ShaderModuleListener {
 
 // Base class that knows hows to wrap SPIR-V code into a vk::ShaderModule and
 // notify listeners so that e.g. vk::Pipelines can be invalidated/regenerated.
-// Subclasses should call UpdateSpirvAndNotifyListeners() whenever the input
-// SPIR-V code changes.
+// Subclasses should call RecreateModuleFromSpirvAndNotifyListeners() whenever
+// the input SPIR-V code changes.
 //
 // The primary design goal is to decouple use of binary SPIR-V code (i.e. to
 // build vk::Pipelines), from how the SPIR-V code is produced.  For example,
@@ -40,21 +40,15 @@ class ShaderModule : public fxl::RefCountedThreadSafe<ShaderModule> {
   // Return the shader stage that this module should be used for.
   ShaderStage shader_stage() const { return stage_; }
 
-  // Return true if a valid SPIRV code is available, and false otherwise.
-  bool is_valid() const { return is_valid_; }
+  // Return true if a valid vk::ShaderModule is available, and false otherwise.
+  bool is_valid() const { return module_; }
 
-  // Create the most up-to-date vk::ShaderModule.
-  // Clients must ensure that the module is_valid() before calling, and
-  // they must destroy the handle manually using |DestroyVkHandle()| once
-  // they have created the pipeline and before they destory the Vulkan device.
-  //
-  // TODO(crbug.com/swiftshader/148): We should move back to shared
-  // vk::ShaderModule once the bug on SwiftShader ICD is resolved.
-  vk::ShaderModule CreateVkHandle() const;
-
-  // Destroy the |vk_shader_module| argument created by the |CreateVkHandle()|
-  // function above.
-  void DestroyVkHandle(vk::ShaderModule vk_shader_module) const;
+  // Return the most up-to-date vk::ShaderModule. Clients must ensure that the
+  // module is_valid() before calling.
+  const vk::ShaderModule& vk() const {
+    FXL_DCHECK(is_valid());
+    return module_;
+  }
 
   // Add a listener. If is_valid(), then listener->OnShaderModuleUpdated() will
   // be called immediately.
@@ -73,15 +67,12 @@ class ShaderModule : public fxl::RefCountedThreadSafe<ShaderModule> {
 
  protected:
   // Subclasses should call this when new SPIR-V is available.
-  void UpdateSpirvAndNotifyListeners(std::vector<uint32_t> spirv);
+  void RecreateModuleFromSpirvAndNotifyListeners(std::vector<uint32_t> spirv);
 
  private:
   vk::Device device_;
   ShaderStage stage_;
-
-  bool is_valid_ = false;
-  std::vector<uint32_t> spirv_;
-
+  vk::ShaderModule module_;
   std::vector<ShaderModuleListener*> listeners_;
   impl::ShaderModuleResourceLayout layout_;
 };

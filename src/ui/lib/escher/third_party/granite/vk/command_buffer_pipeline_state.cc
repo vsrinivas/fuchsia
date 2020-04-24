@@ -309,9 +309,7 @@ void CommandBufferPipelineState::InitPipelineRasterizationStateCreateInfo(
 }
 
 vk::GraphicsPipelineCreateInfo* CommandBufferPipelineState::InitGraphicsPipelineCreateInfo(
-    BlockAllocator* allocator,
-    std::vector<std::pair<ShaderModulePtr, vk::ShaderModule>>* shader_modules,
-    const PipelineLayout* pipeline_layout, ShaderProgram* program) {
+    BlockAllocator* allocator, const PipelineLayout* pipeline_layout, ShaderProgram* program) {
   TRACE_DURATION("gfx", "escher::CommandBuffer::BuildGraphicsPipeline");
 
   auto& pipeline_layout_spec = pipeline_layout->spec();
@@ -403,14 +401,12 @@ vk::GraphicsPipelineCreateInfo* CommandBufferPipelineState::InitGraphicsPipeline
   vk::PipelineShaderStageCreateInfo* shader_stages =
       allocator->AllocateInitialized<vk::PipelineShaderStageCreateInfo>(EnumCount<ShaderStage>());
   unsigned num_stages = 0;
-
   for (size_t i = 0; i < EnumCount<ShaderStage>(); ++i) {
     auto& module = program->GetModuleForStage(static_cast<ShaderStage>(i));
     if (module) {
-      shader_modules->push_back({module, module->CreateVkHandle()});
       auto& s = shader_stages[num_stages++];
       s = vk::PipelineShaderStageCreateInfo();
-      s.module = shader_modules->back().second;
+      s.module = module->vk();
       s.pName = "main";
       s.stage = ShaderStageToFlags(module->shader_stage());
     }
@@ -440,23 +436,10 @@ vk::Pipeline CommandBufferPipelineState::BuildGraphicsPipeline(
     const PipelineLayout* pipeline_layout, ShaderProgram* program, bool log_pipeline_creation) {
   BlockAllocator allocator(1024);
 
-  // Stores pointers to |ShaderModule| of each shader stage, and all the
-  // temporarily created vk::ShaderModule handles which will be destroyed
-  // after the pipeline is created.
-  std::vector<std::pair<ShaderModulePtr, vk::ShaderModule>> shader_modules;
-
   vk::GraphicsPipelineCreateInfo* pipeline_create_info =
-      InitGraphicsPipelineCreateInfo(&allocator, &shader_modules, pipeline_layout, program);
+      InitGraphicsPipelineCreateInfo(&allocator, pipeline_layout, program);
 
-  vk::Pipeline pipeline =
-      pipeline_builder_->BuildGraphicsPipeline(*pipeline_create_info, log_pipeline_creation);
-
-  // Cleanup temporary |shader_modules|.
-  for (const auto& module_pair : shader_modules) {
-    module_pair.first->DestroyVkHandle(module_pair.second);
-  }
-
-  return pipeline;
+  return pipeline_builder_->BuildGraphicsPipeline(*pipeline_create_info, log_pipeline_creation);
 }
 
 // Building a compute pipeline is much simpler than building a graphics one. All you need
@@ -468,12 +451,9 @@ vk::Pipeline CommandBufferPipelineState::BuildComputePipeline(const PipelineLayo
   auto& module = program->GetModuleForStage(ShaderStage::kCompute);
   FXL_DCHECK(module && module->is_valid());
 
-  // Stores the temporary vk::ShaderModule handle.
-  vk::ShaderModule vk_shader_module = module->CreateVkHandle();
-
   vk::PipelineShaderStageCreateInfo shader_stage_info;
   shader_stage_info.stage = vk::ShaderStageFlagBits::eCompute;
-  shader_stage_info.module = vk_shader_module;
+  shader_stage_info.module = module->vk();
   shader_stage_info.pName = "main";
 
   vk::ComputePipelineCreateInfo pipeline_info;
@@ -481,13 +461,7 @@ vk::Pipeline CommandBufferPipelineState::BuildComputePipeline(const PipelineLayo
   pipeline_info.layout = pipeline_layout->vk();
 
   FXL_DCHECK(pipeline_builder_);
-  vk::Pipeline pipeline =
-      pipeline_builder_->BuildComputePipeline(pipeline_info, log_pipeline_creation);
-
-  // Cleanup temporary |vk_shader_module|.
-  module->DestroyVkHandle(vk_shader_module);
-
-  return pipeline;
+  return pipeline_builder_->BuildComputePipeline(pipeline_info, log_pipeline_creation);
 }
 
 void CommandBufferPipelineState::SetVertexAttributes(uint32_t binding, uint32_t attrib,

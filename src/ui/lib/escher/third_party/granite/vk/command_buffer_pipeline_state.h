@@ -33,7 +33,6 @@
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/util/enum_cast.h"
 #include "src/ui/lib/escher/util/hash.h"
-#include "src/ui/lib/escher/vk/shader_module.h"
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
 
 #include <vulkan/vulkan.hpp>
@@ -69,10 +68,9 @@ class CommandBufferPipelineState {
 
   // Helper function used by |BuildGraphicsPipeline()|, and by tests.  Uses |allocator| to allocate
   // a new vk::GraphicsPipelineCreateInfo, as well as other Vulkan structs pointed by it.
-  vk::GraphicsPipelineCreateInfo* InitGraphicsPipelineCreateInfo(
-      BlockAllocator* allocator,
-      std::vector<std::pair<ShaderModulePtr, vk::ShaderModule>>* shader_modules,
-      const PipelineLayout* layout, ShaderProgram* program);
+  vk::GraphicsPipelineCreateInfo* InitGraphicsPipelineCreateInfo(BlockAllocator* allocator,
+                                                                 const PipelineLayout* layout,
+                                                                 ShaderProgram* program);
 
   struct StaticState;
   StaticState* static_state() { return &static_state_; }
