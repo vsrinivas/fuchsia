@@ -27,6 +27,7 @@
 #include <fbl/auto_call.h>
 #include <zxtest/base/test.h>
 #include <zxtest/zxtest.h>
+#include <stdlib.h>
 
 #include "allocator/allocator.h"
 #include "blob.h"
@@ -58,6 +59,7 @@ void CanaryBlobSrcFunction(char* data, size_t length) {
 
 class ZSTDSeekableBlobTest : public zxtest::Test {
  public:
+
   void SetUp() {
     MountOptions options;
     options.write_compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE;

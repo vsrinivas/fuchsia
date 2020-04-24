@@ -13,6 +13,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/pager.h>
+#include <blobfs/compression-algorithm.h>
+
+#include <optional>
 
 #include "../blob-verifier.h"
 
@@ -32,6 +35,7 @@ struct UserPagerInfo {
   // Used to verify the pages as they are read in.
   // TODO(44742): Make BlobVerifier movable, unwrap from unique_ptr.
   std::unique_ptr<BlobVerifier> verifier;
+  std::optional<CompressionAlgorithm> compression_algorithm;
 };
 
 // The size of a transfer buffer for reading from storage.
@@ -72,6 +76,12 @@ class UserPager {
   // Protected for unit test access.
   zx::pager pager_;
 
+  // Scratch buffer for pager transfers.
+  // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
+  // calling |zx_pager_supply_pages|. Map this only when an explicit address is required, e.g. for
+  // verification, and unmap it immediately after.
+  zx::vmo transfer_buffer_;
+
  private:
   struct ReadRange {
     uint64_t offset;
@@ -110,11 +120,19 @@ class UserPager {
   virtual zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
                                         const zx::vmo& transfer_vmo, UserPagerInfo* info) = 0;
 
-  // Scratch buffer for pager transfers.
-  // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
-  // calling |zx_pager_supply_pages|. Map this only when an explicit address is required, e.g. for
-  // verification, and unmap it immediately after.
-  zx::vmo transfer_buffer_;
+  // Aligns the requested read range to include the minimum number of complete data blocks, which
+  // are the smallest unit of data that can be verified via the merkle tree. The range needs to be
+  // determined before calling the user pager to populate the pages, as absent pages will cause page
+  // faults during verification on the userpager thread, causing it to block against itself
+  // indefinitely.
+  //
+  // Example:
+  //
+  //                  |...input_range...|
+  // |..data_block..|..data_block..|..data_block..|
+  //                |........output_range.........|
+  virtual zx_status_t AlignForVerification(uint64_t* offset, uint64_t* length,
+                                           UserPagerInfo* info) = 0;
 
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);

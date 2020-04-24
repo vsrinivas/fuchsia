@@ -255,6 +255,15 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     return status;
   }
 
+  if (options->pager) {
+    status = ZSTDSeekableBlobCollection::Create(fs.get(), fs.get(), fs.get(), fs->allocator_.get(),
+                                                &fs->compressed_blobs_for_paging_);
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Could not initialize compressed blob collection for paging");
+      return status;
+    }
+  }
+
   if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize, "blobfs-superblock")) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create info vmo: %d\n", status);
     return status;
@@ -805,6 +814,15 @@ zx_status_t Blobfs::AttachTransferVmo(const zx::vmo& transfer_vmo) {
 }
 
 zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) {
+  if (info->compression_algorithm == CompressionAlgorithm::UNCOMPRESSED) {
+    return PopulateUncompressedTransferVmo(offset, length, info);
+  } else {
+    return PopulateCompressedTransferVmo(offset, length, info);
+  }
+}
+
+zx_status_t Blobfs::PopulateUncompressedTransferVmo(uint64_t offset, uint64_t length,
+                                                    UserPagerInfo* info) {
   fs::Ticker ticker(metrics_.Collecting());
   fs::ReadTxn txn(this);
   BlockIterator block_iter = BlockIteratorByNodeIndex(info->identifier);
@@ -842,6 +860,41 @@ zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPa
     return status;
   }
   metrics_.UpdateMerkleDiskRead(block_count * kBlobfsBlockSize, ticker.End());
+  return ZX_OK;
+}
+
+zx_status_t Blobfs::PopulateCompressedTransferVmo(uint64_t offset, uint64_t length,
+                                                  UserPagerInfo* info) {
+  // TODO: Provide |metrics_| access to ZSTD Seekable objects to |UpdateMerkeDiskRead())| with
+  // with appropriate values.
+
+  // Only supported paged compression format is ZSTD Seekable.
+  ZX_DEBUG_ASSERT(info && *info->compression_algorithm == CompressionAlgorithm::ZSTD_SEEKABLE);
+
+  // Assume |AlignForVerification| already called on |offset| and |length|.
+  ZX_DEBUG_ASSERT(offset % kBlobfsBlockSize == 0);
+  ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 || offset + length == info->data_length_bytes);
+
+  fzl::VmoMapper mapping;
+  // We need to unmap the transfer VMO before its pages can be transferred to the destination VMO,
+  // via |zx_pager_supply_pages|.
+  auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
+
+  // Map the transfer VMO in order to pass it to |ZSTDSeekableBlobCollection::Read|.
+  zx_status_t status = mapping.Map(transfer_buffer_, 0, length, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to map transfer buffer: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  status = compressed_blobs_for_paging_->Read(
+      info->identifier, static_cast<uint8_t*>(mapping.start()), offset, length);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to read from ZSTD Seekable archive to service page fault: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+
   return ZX_OK;
 }
 

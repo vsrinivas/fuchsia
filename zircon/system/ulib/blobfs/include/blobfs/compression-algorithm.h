@@ -29,6 +29,8 @@ CompressionAlgorithm AlgorithmForInode(const Inode& inode);
 // set, and all other flags are unset.
 uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm);
 
+CompressionAlgorithm AlgorithmFromInodeHeaderFlags(uint16_t flags);
+
 }  // namespace blobfs
 
 #endif  // BLOBFS_COMPRESSION_ALGORITHM_H_

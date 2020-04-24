@@ -52,6 +52,8 @@ class ZSTDSeekableBlobCollection {
                             fs::LegacyTransactionHandler* txn_handler, NodeFinder* node_finder,
                             std::unique_ptr<ZSTDSeekableBlobCollection>* out);
 
+  ~ZSTDSeekableBlobCollection();
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(ZSTDSeekableBlobCollection);
 
   // Load exactly |num_bytes| bytes starting at _uncompressed_ file contents byte offset

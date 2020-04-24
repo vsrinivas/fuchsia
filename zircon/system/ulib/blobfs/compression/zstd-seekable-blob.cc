@@ -5,6 +5,7 @@
 #include "zstd-seekable-blob.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sync/completion.h>
 #include <stdint.h>
 #include <string.h>
 #include <zircon/compiler.h>
@@ -20,6 +21,7 @@
 #include <fs/trace.h>
 #include <zstd/zstd_seekable.h>
 
+#include "zstd-seekable-blob-collection.h"
 #include "zstd-seekable.h"
 
 namespace blobfs {
@@ -125,7 +127,7 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
     static_assert(sizeof(const void*) == sizeof(uint64_t));
     uint64_t start_ptr;
     uint64_t end_ptr;
-    if (add_overflow(reinterpret_cast<uint64_t>(file->blob->decompressed_data_start()), start,
+    if (add_overflow(reinterpret_cast<uint64_t>(file->blob->compressed_data_start()), start,
                      &start_ptr) ||
         add_overflow(start_ptr, num_bytes, &end_ptr)) {
       FS_TRACE_ERROR("[blobfs][zstd-seekable] VMO offset overflow: offset=%u length=%zu\n", start,
@@ -133,7 +135,7 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
       file->status = ZX_ERR_OUT_OF_RANGE;
       return -1;
     }
-    memcpy(buf, file->blob->decompressed_data_start() + start, num_bytes);
+    memcpy(buf, file->blob->compressed_data_start() + start, num_bytes);
   }
 
   // Advance byte offset in file.

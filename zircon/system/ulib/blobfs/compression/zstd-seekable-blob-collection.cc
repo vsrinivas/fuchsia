@@ -40,7 +40,6 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
   }
 
   // Map shared transfer buffer.
-  fzl::VmoMapper mapper;
   status = cbc->mapped_vmo_.Map(cbc->transfer_vmo_, 0, kCompressedTransferBufferBytes,
                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
@@ -60,6 +59,8 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
   *out = std::move(cbc);
   return ZX_OK;
 }
+
+ZSTDSeekableBlobCollection::~ZSTDSeekableBlobCollection() { mapped_vmo_.Unmap(); }
 
 ZSTDSeekableBlobCollection::ZSTDSeekableBlobCollection(storage::VmoidRegistry* vmoid_registry,
                                                        SpaceManager* space_manager,

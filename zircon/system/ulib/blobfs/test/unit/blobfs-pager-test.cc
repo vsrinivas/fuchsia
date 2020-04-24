@@ -18,6 +18,7 @@
 #include <digest/merkle-tree.h>
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
+#include <blobfs/compression-algorithm.h>
 
 #include "blob-verifier.h"
 #include "pager/page-watcher.h"
@@ -52,6 +53,7 @@ class MockBlob {
     pager_info.verifier = std::move(verifier);
     pager_info.identifier = identifier_;
     pager_info.data_length_bytes = kBlobSize;
+    pager_info.compression_algorithm = CompressionAlgorithm::UNCOMPRESSED;
 
     page_watcher_ = std::make_unique<PageWatcher>(pager, std::move(pager_info));
 
