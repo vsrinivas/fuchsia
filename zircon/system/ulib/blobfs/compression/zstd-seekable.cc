@@ -198,9 +198,6 @@ zx_status_t ZSTDSeekableDecompressor::ReadHeader(const void* buf, size_t buf_siz
   const uint64_t* size_header = static_cast<const uint64_t*>(buf);
   const uint64_t archive_size = size_header[0];
   header->archive_size = archive_size;
-  if (buf_size < archive_size + kZSTDSeekableHeaderSize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
 
   return ZX_OK;
 }
