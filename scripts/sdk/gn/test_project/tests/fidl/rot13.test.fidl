@@ -1,0 +1,18 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.examples.rot13;
+
+/// Example service that performs rot13 encryption.
+[Discoverable]
+protocol Rot13 {
+    /// Applies rot13 encryption to the given string
+    /// Args:
+    ///   value - the string to encrypt.
+    /// Returns:
+    ///   response - is the encrypted string.
+    Encrypt(string:128? value) -> (string:128? response);
+
+    /// Calculates the unsigned 32 bit checksum of the string.
+    Checksum(string:128? value) -> (uint32 response);
+};

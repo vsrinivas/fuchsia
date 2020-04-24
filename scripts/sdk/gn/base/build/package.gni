@@ -15,6 +15,10 @@ import("pm_tool.gni")
 #   excluded_files
 #     Optional: List of files to exclude from the package.
 #
+#   fidl_ref_out_dir:
+#     Optional: directory for writing out $package_name_all_fidl_refs.txt
+#       that contains the paths to the internal representation (IR) of every
+#       FIDL interface referenced in the package. Defaults to $root_build_dir/fidl_refs.
 #   deps
 #     Required: List of fuchsia_component() targets that this
 #              package contains.
@@ -30,6 +34,11 @@ template("fuchsia_package") {
   } else {
     excluded_files = invoker.excluded_files
   }
+  if (!defined(invoker.fidl_ref_out_dir)) {
+    fidl_ref_out_dir = "$root_build_dir/fidl_refs"
+  } else {
+    fidl_ref_out_dir = invoker.fidl_ref_out_dir
+  }
 
   _depfile = "${target_gen_dir}/${target_name}_stamp.d"
 
@@ -43,6 +52,7 @@ template("fuchsia_package") {
   _archive_manifest = "$_pkg_out_dir/${package_name}.archive_manifest"
   _build_ids_file = "$_pkg_out_dir/ids.txt"
   _package_file = "$_pkg_out_dir/package"
+  _fidl_json_refs_file = "${fidl_ref_out_dir}/${package_name}_all_fidl_refs.txt"
 
   _packaged_components_metadata =
       "${target_gen_dir}/${package_name}_packaged_components_metadata.json"
@@ -63,6 +73,18 @@ template("fuchsia_package") {
     data_keys = [ "contents" ]
     output_conversion = "json"
     deps = _package_deps
+  }
+
+  #
+  # A generated file that lists all of the .fidl.json files
+  # used in this package. This is useful for tools that need
+  # to decode fidl.
+  generated_file("${package_name}_all_fidl_refs") {
+    testonly = true
+    deps = _package_deps
+
+    outputs = [ _fidl_json_refs_file ]
+    data_keys = [ "fidl_json" ]
   }
 
   action(_manifest_target) {

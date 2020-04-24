@@ -1,0 +1,3 @@
+#!/bin/bash
+
+{test_script} {refs_dir} {package_name}

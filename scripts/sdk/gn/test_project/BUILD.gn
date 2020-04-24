@@ -12,13 +12,17 @@ fuchsia_sdk_test_targets("all_sdk") {
 group("default") {
   deps = [
     ":all_sdk",
+    "tests/fidl:static_fidl_test_package",
     "tests/package",
   ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "tests/package:tests" ]
+  deps = [
+    "tests/fidl:tests",
+    "tests/package:tests",
+  ]
 }
 
 # A generated file that lists all of the test files.

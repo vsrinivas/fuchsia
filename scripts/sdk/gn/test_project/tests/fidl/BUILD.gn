@@ -1,0 +1,58 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/shellscript_test.gni")
+import("//third_party/fuchsia-sdk/build/component.gni")
+import("//third_party/fuchsia-sdk/build/fidl_library.gni")
+import("//third_party/fuchsia-sdk/build/package.gni")
+
+fidl_library("fuchsia.examples.rot13") {
+  sources = [ "rot13.test.fidl" ]
+}
+
+executable("hello_fidl") {
+  deps = [ ":fuchsia.examples.rot13" ]
+  sources = [ "//tests/package/hello.cc" ]
+}
+
+fuchsia_component("test_fidl_cmx") {
+  manifest = "//tests/package/meta/test_component.cmx"
+  data_deps = [ ":hello_fidl" ]
+}
+
+fuchsia_package("static_fidl_test_package") {
+  deps = [ ":test_fidl_cmx" ]
+}
+
+# Copy test script to the output dir. This script is used
+# validate the fidl reference file is written out.
+copy("fidl_test_script") {
+  sources = [ "//tests/fidl/fidl_ref_test.sh" ]
+  outputs = [ "${target_gen_dir}/{{source_file_part}}" ]
+}
+
+# Static far analysis test.
+shellscript_test("fidl_ref_test") {
+  script_template_file = "run_fidl_ref_test_template.txt"
+  template_keys = [
+    "test_script",
+    "refs_dir",
+    "package_name",
+  ]
+  template_data = {
+    refs_dir = rebase_path("${root_build_dir}/fidl_refs")
+    test_script = rebase_path("${target_gen_dir}/fidl_ref_test.sh")
+    package_name = "static_fidl_test_package"
+  }
+  data_deps = [
+    ":fidl_test_script",
+    ":static_fidl_test_package",
+    "//third_party/fuchsia-sdk/build:fuchsia_sdk_all_fidl_refs",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fidl_ref_test" ]
+}

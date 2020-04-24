@@ -92,7 +92,7 @@ template("clang_toolchain") {
     if (defined(invoker.cxx)) {
       cxx = invoker.cxx
     } else {
-      cxx = "${prefix}/clang"
+      cxx = "${prefix}/clang++"
     }
 
     if (defined(invoker.ld)) {
