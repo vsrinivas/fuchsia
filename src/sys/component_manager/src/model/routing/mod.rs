@@ -471,9 +471,6 @@ impl WalkPosition {
 /// Holds state related to a capability when walking the tree
 #[derive(Debug, Clone)]
 enum CapabilityState {
-    // TODO: `dead_code` is required to compile, even though this variants is constructed by
-    // `new`. Compiler bug?
-    #[allow(dead_code)]
     Directory {
         /// Holds the state of the rights. This is used to enforce directory rights.
         rights_state: WalkState<Rights>,
@@ -496,7 +493,7 @@ impl CapabilityState {
             }))
             | ComponentCapability::Offer(OfferDecl::Directory(OfferDirectoryDecl {
                 subdir, ..
-            })) => Self::Directory {
+            })) => CapabilityState::Directory {
                 rights_state: WalkState::new(),
                 subdir: subdir.as_ref().map_or(PathBuf::new(), |s| PathBuf::from(s)),
             },
@@ -508,12 +505,15 @@ impl CapabilityState {
             }
             ComponentCapability::UsedExpose(ExposeDecl::Directory(ExposeDirectoryDecl {
                 ..
-            })) => Self::Directory { rights_state: WalkState::new(), subdir: PathBuf::new() },
-            ComponentCapability::Storage(_) => Self::Directory {
+            })) => CapabilityState::Directory {
+                rights_state: WalkState::new(),
+                subdir: PathBuf::new(),
+            },
+            ComponentCapability::Storage(_) => CapabilityState::Directory {
                 rights_state: WalkState::at(Rights::from(*READ_RIGHTS | *WRITE_RIGHTS)),
                 subdir: PathBuf::new(),
             },
-            _ => Self::Other,
+            _ => CapabilityState::Other,
         }
     }
 
