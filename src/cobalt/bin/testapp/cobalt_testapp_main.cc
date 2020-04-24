@@ -57,9 +57,9 @@ int main(int argc, const char** argv) {
   cobalt::testapp::CobaltTestApp app(use_network, test_for_prober);
 
   if (!app.RunTests()) {
-    FX_LOGS(ERROR) << "FAIL";
+    FX_LOGS(ERROR) << "The Cobalt testapp exited with status: FAIL";
     return 1;
   }
-  FX_LOGS(INFO) << "PASS";
+  FX_LOGS(INFO) << "The Cobalt testapp exited with status: PASS";
   return 0;
 }

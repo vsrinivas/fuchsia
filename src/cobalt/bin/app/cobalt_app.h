@@ -94,7 +94,8 @@ class CobaltApp {
 
   static CobaltConfig CreateCobaltConfig(
       async_dispatcher_t* dispatcher, const std::string& global_metrics_registry_path,
-      const FuchsiaConfigurationData& configuration_data, FuchsiaSystemClockInterface* system_clock,
+      const FuchsiaConfigurationData& configuration_data,
+      FuchsiaSystemClockInterface* validated_clock,
       utils::FuchsiaHTTPClient::LoaderFactory http_loader_factory,
       std::chrono::seconds target_interval, std::chrono::seconds min_interval,
       std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
@@ -103,7 +104,7 @@ class CobaltApp {
 
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
             std::unique_ptr<CobaltServiceInterface> cobalt_service,
-            std::unique_ptr<FuchsiaSystemClockInterface> system_clock,
+            std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
             bool start_event_aggregator_worker, bool watch_for_user_consent);
 
   static encoder::ClientSecret getClientSecret();
@@ -112,7 +113,7 @@ class CobaltApp {
 
   std::unique_ptr<CobaltServiceInterface> cobalt_service_;
 
-  std::unique_ptr<FuchsiaSystemClockInterface> system_clock_;
+  std::unique_ptr<FuchsiaSystemClockInterface> validated_clock_;
 
   TimerManager timer_manager_;
 

@@ -120,10 +120,10 @@ CobaltApp CobaltApp::CreateCobaltApp(
 
   sys::ComponentContext* context_ptr = context.get();
 
-  auto system_clock = std::make_unique<FuchsiaSystemClock>(context_ptr->svc());
+  auto validated_clock = std::make_unique<FuchsiaSystemClock>(context_ptr->svc());
 
   auto cobalt_service = std::make_unique<CobaltService>(CreateCobaltConfig(
-      dispatcher, kMetricsRegistryPath, configuration_data, system_clock.get(),
+      dispatcher, kMetricsRegistryPath, configuration_data, validated_clock.get(),
       [context_ptr]() {
         fuchsia::net::http::LoaderSyncPtr loader_sync;
         context_ptr->svc()->Connect(loader_sync.NewRequest());
@@ -136,30 +136,29 @@ CobaltApp CobaltApp::CreateCobaltApp(
   cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());
 
   return CobaltApp(std::move(context), dispatcher, std::move(cobalt_service),
-                   std::move(system_clock), start_event_aggregator_worker,
+                   std::move(validated_clock), start_event_aggregator_worker,
                    configuration_data.GetWatchForUserConsent());
 }
 
 CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
                      std::unique_ptr<CobaltServiceInterface> cobalt_service,
-                     std::unique_ptr<FuchsiaSystemClockInterface> system_clock,
+                     std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
                      bool start_event_aggregator_worker, bool watch_for_user_consent)
     : context_(std::move(context)),
       cobalt_service_(std::move(cobalt_service)),
-      system_clock_(std::move(system_clock)),
+      validated_clock_(std::move(validated_clock)),
       timer_manager_(dispatcher) {
   auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   FX_LOGS(INFO) << "Waiting for the system clock to become accurate at: "
                 << std::put_time(std::localtime(&current_time), "%F %T %z");
-  system_clock_->AwaitExternalSource([this, start_event_aggregator_worker]() {
+  validated_clock_->AwaitExternalSource([this, start_event_aggregator_worker]() {
     auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     FX_LOGS(INFO) << "The system clock has become accurate, now at: "
                   << std::put_time(std::localtime(&current_time), "%F %T %z");
 
-    auto system_clock = std::make_unique<util::SystemClock>();
-
     // Now that the clock is accurate, notify CobaltService.
-    cobalt_service_->SystemClockIsAccurate(std::move(system_clock), start_event_aggregator_worker);
+    cobalt_service_->SystemClockIsAccurate(std::make_unique<util::SystemClock>(),
+                                           start_event_aggregator_worker);
   });
 
   // Create LoggerFactory protocol implementation and start serving it.
