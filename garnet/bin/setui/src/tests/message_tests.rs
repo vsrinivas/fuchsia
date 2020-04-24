@@ -355,3 +355,33 @@ async fn verify_messenger_behavior(messenger_type: MessengerType<TestAddress>) {
     // Verify Messenger received message.
     verify_payload(ORIGINAL, &mut test_receptor, None).await;
 }
+
+/// Ensures unbound messengers operate properly
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_unbound_messenger() {
+    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+
+    let (unbound_messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+
+    let (unbound_messenger_2, mut unbound_receptor_2) =
+        messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let signature_2 = unbound_messenger_2.get_signature();
+
+    let mut reply_receptor =
+        unbound_messenger_1.message(ORIGINAL, Audience::Messenger(signature_2)).send();
+
+    // Verify target messenger received message and send response.
+    verify_payload(
+        ORIGINAL,
+        &mut unbound_receptor_2,
+        Some(Box::new(move |client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                client.reply(REPLY).send().ack();
+                ()
+            })
+        })),
+    )
+    .await;
+
+    verify_payload(REPLY, &mut reply_receptor, None).await;
+}

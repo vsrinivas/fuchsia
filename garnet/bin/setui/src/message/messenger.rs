@@ -6,7 +6,7 @@ use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{
     ActionSender, Address, Audience, CreateMessengerResult, Fingerprint, Message, MessageAction,
     MessageError, MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType,
-    Payload,
+    Payload, Signature,
 };
 use crate::message::beacon::Beacon;
 use crate::message::message_builder::MessageBuilder;
@@ -53,6 +53,10 @@ impl<P: Payload + 'static, A: Address + 'static> MessengerClient<P, A> {
     pub fn message(&self, payload: P, audience: Audience<A>) -> MessageBuilder<P, A> {
         MessageBuilder::new(payload, MessageType::Origin(audience), self.messenger.clone())
     }
+
+    pub fn get_signature(&self) -> Signature<A> {
+        self.messenger.get_signature()
+    }
 }
 
 /// Messengers provide clients the ability to send messages to other registered
@@ -94,5 +98,9 @@ impl<P: Payload + 'static, A: Address + 'static> Messenger<P, A> {
     /// deferred actions as well (sending, replying).
     pub(super) fn transmit(&self, action: MessageAction<P, A>, beacon: Option<Beacon<P, A>>) {
         self.action_tx.unbounded_send((self.fingerprint.clone(), action, beacon)).ok();
+    }
+
+    pub(super) fn get_signature(&self) -> Signature<A> {
+        self.fingerprint.signature.clone()
     }
 }
