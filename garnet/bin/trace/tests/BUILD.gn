@@ -201,6 +201,7 @@ executable("basic_integration_test_app") {
   sources = [
     "basic_integration_tests.cc",
     "basic_integration_tests.h",
+    "fill_buffer_and_alert_integration_test.cc",
     "fill_buffer_integration_test.cc",
     "integration_test_main.cc",
     "simple_integration_test.cc",
@@ -541,6 +542,10 @@ test_package("trace_tests") {
     {
       path = rebase_path("circular.tspec")
       dest = "circular.tspec"
+    },
+    {
+      path = rebase_path("circular_trigger.tspec")
+      dest = "circular_trigger.tspec"
     },
     {
       path = rebase_path("streaming.tspec")

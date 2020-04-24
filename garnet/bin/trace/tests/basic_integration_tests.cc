@@ -11,6 +11,7 @@ namespace test {
 
 const IntegrationTest* kIntegrationTests[] = {
     &kFillBufferIntegrationTest,
+    &kFillBufferAndAlertIntegrationTest,
     &kSimpleIntegrationTest,
 };
 

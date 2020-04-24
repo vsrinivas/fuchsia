@@ -62,6 +62,13 @@ void TraceManager::OnEmptyControllerSet() {
       });
     }
   }
+
+  while (!watch_alert_callbacks_.empty()) {
+    watch_alert_callbacks_.pop();
+  }
+  while (!alerts_.empty()) {
+    alerts_.pop();
+  }
 }
 
 // fidl

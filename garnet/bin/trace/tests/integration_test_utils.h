@@ -7,13 +7,12 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/zx/time.h>
 #include <stddef.h>
 
 #include <memory>
 #include <string>
-
-#include <trace-provider/provider.h>
 
 #include "garnet/bin/trace/spec.h"
 

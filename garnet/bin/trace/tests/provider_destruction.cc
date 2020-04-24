@@ -7,22 +7,21 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/trace-provider/provider.h>
 
 #include <memory>
-
-#include <trace-provider/provider.h>
 
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 
-const char kProviderName[] = "provider-destruction";
+const char kProviderDestructionProviderName[] = "provider-destruction";
 
 static bool WriteEvents(async::Loop& loop) {
   std::unique_ptr<trace::TraceProvider> provider;
   bool already_started;
-  if (!tracing::test::CreateProviderSynchronously(loop, kProviderName, &provider,
+  if (!tracing::test::CreateProviderSynchronously(loop, kProviderDestructionProviderName, &provider,
                                                   &already_started)) {
     return false;
   }
@@ -35,7 +34,8 @@ static bool WriteEvents(async::Loop& loop) {
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     async::Loop wait_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     if (!tracing::test::WaitForTracingToStart(wait_loop, tracing::test::kStartTimeout)) {
-      FXL_LOG(ERROR) << "Provider " << kProviderName << " failed waiting for tracing to start";
+      FXL_LOG(ERROR) << "Provider " << kProviderDestructionProviderName
+                     << " failed waiting for tracing to start";
       return false;
     }
   }

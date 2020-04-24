@@ -36,6 +36,8 @@ TEST(Oneshot, FillBuffer) { RunAndVerify("data/oneshot.tspec"); }
 
 TEST(Circular, FillBuffer) { RunAndVerify("data/circular.tspec"); }
 
+TEST(CircularWithTrigger, FillBufferAndAlert) { RunAndVerify("data/circular_trigger.tspec"); }
+
 TEST(Streaming, FillBuffer) { RunAndVerify("data/streaming.tspec"); }
 
 TEST(NestedTestEnvironment, Test) {

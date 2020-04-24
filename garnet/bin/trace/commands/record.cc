@@ -50,6 +50,7 @@ const char kProviderBufferSize[] = "provider-buffer-size";
 const char kBufferingMode[] = "buffering-mode";
 const char kBenchmarkResultsFile[] = "benchmark-results-file";
 const char kTestSuite[] = "test-suite";
+const char kTrigger[] = "trigger";
 
 zx_status_t Spawn(const std::vector<std::string>& args, zx::process* subprocess) {
   FXL_DCHECK(args.size() > 0);
@@ -88,7 +89,7 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
                                                          kEnvironmentName, kReturnChildResult,
                                                          kBufferSize,      kProviderBufferSize,
                                                          kBufferingMode,   kBenchmarkResultsFile,
-                                                         kTestSuite};
+                                                         kTestSuite,       kTrigger};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -150,6 +151,8 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
       measurements = *spec.measurements;
     if (spec.test_suite_name)
       test_suite = *spec.test_suite_name;
+    if (spec.trigger_specs)
+      trigger_specs = std::move(*spec.trigger_specs);
   }
 
   // --categories=<cat1>,<cat2>,...
@@ -279,6 +282,15 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
     CheckCommandLineOverride("test-suite-name", spec.test_suite_name);
   }
 
+  // --trigger=<alert>:<action>
+  if (command_line.HasOption(kTrigger)) {
+    std::vector<fxl::StringView> args = command_line.GetOptionValues(kTrigger);
+    if (!ParseTriggers(args, &trigger_specs)) {
+      return false;
+    }
+    CheckCommandLineOverride("trigger", spec.trigger_specs);
+  }
+
   // <command> <args...>
   const auto& positional_args = command_line.positional_args();
   if (!positional_args.empty()) {
@@ -337,6 +349,12 @@ Command::Info RecordCommand::Describe() {
         "This is used by the Catapult dashboard. This argument is required if "
         "the results are uploaded to the Catapult dashboard (using "
         "bin/catapult_converter)"},
+       {"trigger=<alert>:<action>",
+        "Specifies an action to take when an alert with "
+        "the specified name is received. Multiple alert/action rules may be "
+        "specified using multiple --trigger arguments. The only action currently "
+        "supported is 'stop'. This action causes the session to be stopped and "
+        "results to be captured"},
        {"[command args]",
         "Run program after starting trace. The program is terminated when "
         "tracing ends unless --detach is specified"}}};
@@ -420,7 +438,7 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
       std::move(trace_config), options_.binary, std::move(bytes_consumer),
       std::move(record_consumer), std::move(error_handler),
       [this] { DoneTrace(); },  // TODO(37435): For now preserve existing behaviour.
-      [this] { DoneTrace(); });
+      [this] { DoneTrace(); }, fit::bind_member(this, &RecordCommand::OnAlert));
 
   tracer_->Start([this](controller::Controller_StartTracing_Result result) {
     if (result.is_err()) {
@@ -674,6 +692,20 @@ void RecordCommand::KillSpawnedApp() {
   wait_spawned_app_.set_object(ZX_HANDLE_INVALID);
 }
 
+void RecordCommand::OnAlert(std::string alert_name) {
+  auto iter = options_.trigger_specs.find(alert_name);
+  if (iter == options_.trigger_specs.end()) {
+    // No action specified for alert. This is expected.
+    return;
+  }
+
+  switch (iter->second) {
+    case Action::kStop:
+      TerminateTrace(EXIT_SUCCESS);
+      break;
+  }
+}
+
 void RecordCommand::StartTimer() {
   async::PostDelayedTask(
       dispatcher_,
@@ -682,8 +714,8 @@ void RecordCommand::StartTimer() {
           weak->TerminateTrace(EXIT_SUCCESS);
       },
       options_.duration);
-  out() << "Starting trace; will stop in " << options_.duration.to_nsecs() / 1000000000.0  << " seconds..."
-        << std::endl;
+  out() << "Starting trace; will stop in " << options_.duration.to_nsecs() / 1000000000.0
+        << " seconds..." << std::endl;
 }
 
 }  // namespace tracing

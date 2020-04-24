@@ -105,6 +105,24 @@ const char kRootSchema[] = R"({
     },
     "test_suite_name": {
       "type": "string"
+    },
+    "triggers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "alert": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 14
+          },
+          "action": {
+            "type": "string",
+            "enum": ["stop"]
+          },
+          "required": ["type", "action"]
+        }
+      }
     }
   }
 })";
@@ -129,6 +147,8 @@ const char kTestSuiteNameKey[] = "test_suite_name";
 const char kMeasureDurationType[] = "duration";
 const char kMeasureArgumentValueType[] = "argument_value";
 const char kMeasureTimeBetweenType[] = "time_between";
+const char kTriggersKey[] = "triggers";
+const char kAlertKey[] = "alert";
 
 // Schema for "duration" measurements.
 const char kDurationSchema[] = R"({
@@ -346,12 +366,18 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   }
 
   if (document.HasMember(kDurationKey)) {
-    result.duration = std::make_unique<zx::duration>(
-        zx::sec(document[kDurationKey].GetUint()));
+    result.duration = std::make_unique<zx::duration>(zx::sec(document[kDurationKey].GetUint()));
   }
 
   if (document.HasMember(kTestSuiteNameKey)) {
     result.test_suite_name = std::make_unique<std::string>(document[kTestSuiteNameKey].GetString());
+  }
+
+  if (document.HasMember(kTriggersKey)) {
+    result.trigger_specs = std::make_unique<std::unordered_map<std::string, Action>>();
+    for (const auto& trigger_object : document[kTriggersKey].GetArray()) {
+      result.trigger_specs->emplace(trigger_object[kAlertKey].GetString(), Action::kStop);
+    }
   }
 
   if (!document.HasMember(kMeasurementsKey)) {

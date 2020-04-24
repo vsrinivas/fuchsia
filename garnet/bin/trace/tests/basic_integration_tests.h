@@ -11,6 +11,7 @@ namespace tracing {
 namespace test {
 
 extern const IntegrationTest kFillBufferIntegrationTest;
+extern const IntegrationTest kFillBufferAndAlertIntegrationTest;
 extern const IntegrationTest kSimpleIntegrationTest;
 
 }  // namespace test

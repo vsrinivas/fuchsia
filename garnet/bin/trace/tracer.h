@@ -38,6 +38,9 @@ class Tracer {
   // This is not a |fit::callback| as async::PostTask takes a |fit::closure|.
   using DoneCallback = fit::closure;
 
+  // This is called when an alert is received.
+  using AlertCallback = fit::function<void(std::string)>;
+
   explicit Tracer(controller::Controller* controller);
   ~Tracer();
 
@@ -47,7 +50,8 @@ class Tracer {
   // TODO(PT-113): Remove |binary,record_consumer,error_handler|
   void Initialize(controller::TraceConfig config, bool binary, BytesConsumer bytes_consumer,
                   RecordConsumer record_consumer, ErrorHandler error_handler,
-                  FailCallback fail_callback, DoneCallback done_callback);
+                  FailCallback fail_callback, DoneCallback done_callback,
+                  AlertCallback alert_callback);
 
   // Start tracing.
   // Tracing must not already be started.
@@ -73,6 +77,8 @@ class Tracer {
   void Fail();
   void Done();
 
+  void BeginWatchAlert();
+
   controller::Controller* const controller_;
 
   State state_ = State::kReady;
@@ -80,6 +86,7 @@ class Tracer {
   StartCallback start_callback_;
   FailCallback fail_callback_;
   DoneCallback done_callback_;
+  AlertCallback alert_callback_;
 
   zx::socket socket_;
   async_dispatcher_t* dispatcher_;

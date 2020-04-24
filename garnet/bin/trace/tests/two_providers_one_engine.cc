@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
@@ -17,8 +18,6 @@
 #include <zircon/status.h>
 
 #include <memory>
-
-#include <trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"

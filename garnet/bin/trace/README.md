@@ -39,6 +39,11 @@ trace [options] command [command-specific options]
         output stream is not supported, if both --output-file=tcp:... and
         --compress are provided, --compress is ignored.
     --spec-file=[none]: Tracing specification file
+    --trigger=<alert>:<action>: Specifies an action to take when an alert with
+        the specified name is received. Multiple alert/action rules may be
+        specified using multiple --trigger arguments. The only action currently
+        supported is "stop". This action causes the session to be stopped and
+        results to be captured.
 ```
 
 Options provided on the command line override options found in the

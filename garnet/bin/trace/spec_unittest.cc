@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/trace/spec.h"
+
 #include <gtest/gtest.h>
 
-#include "garnet/bin/trace/spec.h"
 #include "garnet/lib/measure/results.h"
 
 namespace tracing {
@@ -126,6 +127,7 @@ TEST(Spec, DecodeEmpty) {
   EXPECT_FALSE(result.duration);
   EXPECT_FALSE(result.measurements);
   EXPECT_FALSE(result.test_suite_name);
+  EXPECT_FALSE(result.trigger_specs);
 }
 
 TEST(Spec, DecodeTestName) {
@@ -422,6 +424,50 @@ TEST(Spec, OutputNameOverride) {
   auto results = tracing::measure::ComputeResults(measurements, ticks, 1000.0);
   EXPECT_EQ(results.size(), 1u);
   EXPECT_EQ(results[0].label, "my_test_name");
+}
+
+TEST(Spec, DecodeOneTrigger) {
+  std::string json = R"({"triggers": [
+    {
+      "alert": "alert_name_0",
+      "action": "stop"
+    }
+  ]})";
+
+  Spec result;
+  ASSERT_TRUE(DecodeSpec(json, &result));
+  EXPECT_TRUE(!!result.trigger_specs);
+  EXPECT_EQ(1u, result.trigger_specs->size());
+  EXPECT_EQ(Action::kStop, (*result.trigger_specs)["alert_name_0"]);
+}
+
+TEST(Spec, DecodeTwoTriggers) {
+  std::string json = R"({"triggers": [
+    {
+      "alert": "alert_name_0",
+      "action": "stop"
+    },
+    {
+      "alert": "alert_name_1",
+      "action": "stop"
+    }
+  ]})";
+
+  Spec result;
+  ASSERT_TRUE(DecodeSpec(json, &result));
+  EXPECT_TRUE(!!result.trigger_specs);
+  EXPECT_EQ(2u, result.trigger_specs->size());
+  EXPECT_EQ(Action::kStop, (*result.trigger_specs)["alert_name_0"]);
+  EXPECT_EQ(Action::kStop, (*result.trigger_specs)["alert_name_1"]);
+}
+
+TEST(Spec, DecodeZeroTriggers) {
+  std::string json = R"({"triggers": []})";
+
+  Spec result;
+  ASSERT_TRUE(DecodeSpec(json, &result));
+  EXPECT_TRUE(!!result.trigger_specs);
+  EXPECT_EQ(0u, result.trigger_specs->size());
 }
 
 }  // namespace

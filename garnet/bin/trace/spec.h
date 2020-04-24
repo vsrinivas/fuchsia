@@ -5,11 +5,11 @@
 #ifndef GARNET_BIN_TRACE_SPEC_H_
 #define GARNET_BIN_TRACE_SPEC_H_
 
+#include <lib/zx/time.h>
+
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <lib/zx/time.h>
 
 #include "garnet/lib/measure/argument_value.h"
 #include "garnet/lib/measure/duration.h"
@@ -39,6 +39,11 @@ enum class BufferingMode {
 struct BufferingModeSpec {
   const char* name;
   BufferingMode mode;
+};
+
+enum class Action {
+  // Stop the session and write results.
+  kStop,
 };
 
 // Tracing specification.
@@ -81,6 +86,9 @@ struct Spec {
 
   // Test suite name to be used for dashboard upload.
   std::unique_ptr<std::string> test_suite_name;
+
+  // Triggers.
+  std::unique_ptr<std::unordered_map<std::string, Action>> trigger_specs;
 };
 
 const BufferingModeSpec* LookupBufferingMode(const std::string& name);

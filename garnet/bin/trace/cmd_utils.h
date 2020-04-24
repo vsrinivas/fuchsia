@@ -26,12 +26,19 @@ constexpr controller::BufferingMode kDefaultBufferingMode = controller::Bufferin
 constexpr char kDefaultOutputFileName[] = "/tmp/trace.json";
 constexpr char kDefaultBinaryOutputFileName[] = "/tmp/trace.fxt";
 
+constexpr char kActionStop[] = "stop";
+
 bool ParseBufferingMode(const std::string& value, BufferingMode* out_mode);
 
 bool ParseBufferSize(const std::string& value, uint32_t* out_buffer_size);
 
 bool ParseProviderBufferSize(const std::vector<fxl::StringView>& values,
                              std::vector<ProviderSpec>* out_specs);
+
+bool ParseTriggers(const std::vector<fxl::StringView>& values,
+                   std::unordered_map<std::string, Action>* out_specs);
+
+bool ParseAction(fxl::StringView value, Action* out_action);
 
 controller::BufferingMode TranslateBufferingMode(BufferingMode mode);
 

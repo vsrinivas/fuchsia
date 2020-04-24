@@ -52,6 +52,7 @@ class RecordCommand : public CommandWithController {
     std::string benchmark_results_file;
     std::string test_suite;
     measure::Measurements measurements;
+    std::unordered_map<std::string, Action> trigger_specs;
   };
 
   static Info Describe();
@@ -71,6 +72,7 @@ class RecordCommand : public CommandWithController {
   void OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
   void KillSpawnedApp();
+  void OnAlert(std::string alert_name);
 
   async_dispatcher_t* dispatcher_;
   fuchsia::sys::ComponentControllerPtr component_controller_;

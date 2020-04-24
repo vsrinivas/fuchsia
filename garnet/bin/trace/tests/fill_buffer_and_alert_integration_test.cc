@@ -1,12 +1,15 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/task.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
 #include <memory>
+
+#include <trace/event.h>
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
 #include "src/lib/fxl/logging.h"
@@ -14,9 +17,9 @@
 namespace tracing {
 namespace test {
 
-const char kFillBufferProviderName[] = "fill-buffer";
+const char kFillBufferAndAlerProviderName[] = "fill-buffer-and-alert";
 
-static bool RunFillBufferTest(const tracing::Spec& spec) {
+static bool RunFillBufferAndAlertTest(const tracing::Spec& spec) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   // If we're streaming then we need intermediate buffer saving to be acted on while we're
   // writing the buffer. So run the provider loop in the background.
@@ -24,7 +27,8 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
 
   std::unique_ptr<trace::TraceProvider> provider;
   bool already_started;
-  if (!CreateProviderSynchronously(loop, kFillBufferProviderName, &provider, &already_started)) {
+  if (!CreateProviderSynchronously(loop, kFillBufferAndAlerProviderName, &provider,
+                                   &already_started)) {
     return false;
   }
 
@@ -36,17 +40,28 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     async::Loop wait_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     if (!WaitForTracingToStart(wait_loop, kStartTimeout)) {
-      FXL_LOG(ERROR) << "Provider " << kFillBufferProviderName
+      FXL_LOG(ERROR) << "Provider " << kFillBufferAndAlerProviderName
                      << " failed waiting for tracing to start";
       return false;
     }
   }
+
+  // Send an alert that should be ignored and wait a second. If the alert isn't ignored properly,
+  // the session will stop early and fail, because the buffer wasn't filled in time.
+  TRACE_ALERT("trace:test", "ignore");
+  loop.Run(zx::deadline_after(zx::sec(1)));
 
   // Generate at least 4MB of test records.
   // This stress tests streaming mode buffer saving (with buffer size of 1MB).
   constexpr size_t kMinNumBuffersFilled = 4;
 
   FillBuffer(kMinNumBuffersFilled, *spec.buffer_size_in_mb);
+
+  // Send an alert.
+  TRACE_ALERT("trace:test", "alert");
+
+  // Wait for an hour. The provider will be shut down by the trace manager within a few seconds.
+  loop.Run(zx::deadline_after(zx::hour(1)));
 
   loop.Quit();
   loop.JoinThreads();
@@ -57,7 +72,8 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
   return true;
 }
 
-static bool VerifyFillBufferTest(const tracing::Spec& spec, const std::string& test_output_file) {
+static bool VerifyFillBufferAndAlertTest(const tracing::Spec& spec,
+                                         const std::string& test_output_file) {
   const tracing::BufferingModeSpec* mode_spec = tracing::LookupBufferingMode(*spec.buffering_mode);
   if (mode_spec == nullptr) {
     FXL_LOG(ERROR) << "Bad buffering mode: " << *spec.buffering_mode;
@@ -66,10 +82,10 @@ static bool VerifyFillBufferTest(const tracing::Spec& spec, const std::string& t
   return VerifyFullBuffer(test_output_file, mode_spec->mode, *spec.buffer_size_in_mb);
 }
 
-const IntegrationTest kFillBufferIntegrationTest = {
-    kFillBufferProviderName,
-    &RunFillBufferTest,
-    &VerifyFillBufferTest,
+const IntegrationTest kFillBufferAndAlertIntegrationTest = {
+    kFillBufferAndAlerProviderName,
+    &RunFillBufferAndAlertTest,
+    &VerifyFillBufferAndAlertTest,
 };
 
 }  // namespace test

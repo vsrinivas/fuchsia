@@ -69,6 +69,42 @@ bool ParseProviderBufferSize(const std::vector<fxl::StringView>& values,
   return true;
 }
 
+bool ParseTriggers(const std::vector<fxl::StringView>& values,
+                   std::unordered_map<std::string, Action>* out_specs) {
+  FXL_DCHECK(out_specs);
+
+  for (const auto& value : values) {
+    size_t colon = value.rfind(':');
+    if (colon == value.npos || colon < 1 || colon > value.size() - 2) {
+      FXL_LOG(ERROR) << "Syntax error in trigger specification: "
+                     << "should be alert-name:action, got " << value;
+      return false;
+    }
+    std::string name = value.substr(0, colon).ToString();
+    if (out_specs->find(name) != out_specs->end()) {
+      FXL_LOG(ERROR) << "Multiple trigger options for alert: " << name;
+      return false;
+    }
+    Action action;
+    if (!ParseAction(value.substr(colon + 1), &action)) {
+      FXL_LOG(ERROR) << "Unrecognized action: " << value.substr(colon + 1);
+      return false;
+    }
+    out_specs->emplace(name, action);
+  }
+  return true;
+}
+
+bool ParseAction(fxl::StringView value, Action* out_action) {
+  FXL_DCHECK(out_action);
+
+  if (value == kActionStop) {
+    *out_action = Action::kStop;
+    return true;
+  }
+  return false;
+}
+
 controller::BufferingMode TranslateBufferingMode(BufferingMode mode) {
   switch (mode) {
     case BufferingMode::kOneshot:

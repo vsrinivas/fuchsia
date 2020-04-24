@@ -28,7 +28,8 @@ Tracer::~Tracer() { CloseSocket(); }
 
 void Tracer::Initialize(controller::TraceConfig config, bool binary, BytesConsumer bytes_consumer,
                         RecordConsumer record_consumer, ErrorHandler error_handler,
-                        FailCallback fail_callback, DoneCallback done_callback) {
+                        FailCallback fail_callback, DoneCallback done_callback,
+                        AlertCallback alert_callback) {
   FXL_DCHECK(state_ == State::kReady);
 
   zx::socket outgoing_socket;
@@ -40,6 +41,7 @@ void Tracer::Initialize(controller::TraceConfig config, bool binary, BytesConsum
   }
 
   controller_->InitializeTracing(std::move(config), std::move(outgoing_socket));
+  BeginWatchAlert();
 
   binary_ = binary;
   bytes_consumer_ = std::move(bytes_consumer);
@@ -47,6 +49,7 @@ void Tracer::Initialize(controller::TraceConfig config, bool binary, BytesConsum
 
   fail_callback_ = std::move(fail_callback);
   done_callback_ = std::move(done_callback);
+  alert_callback_ = std::move(alert_callback);
 
   dispatcher_ = async_get_default_dispatcher();
   wait_.set_object(socket_.get());
@@ -181,6 +184,13 @@ void Tracer::Done() {
   if (done_callback_) {
     async::PostTask(async_get_default_dispatcher(), std::move(done_callback_));
   }
+}
+
+void Tracer::BeginWatchAlert() {
+  controller_->WatchAlert([this](std::string alert_name) {
+    alert_callback_(std::move(alert_name));
+    BeginWatchAlert();
+  });
 }
 
 }  // namespace tracing
