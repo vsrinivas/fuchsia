@@ -4,7 +4,9 @@
 
 use crate::agent::base::{Agent, Invocation, Lifespan};
 use crate::agent::bluetooth_earcons_handler::watch_bluetooth_connections;
-use crate::agent::volume_change_earcons_handler::{listen_to_audio_events, VolumeChangeEarconsHandler, watch_background_usage};
+use crate::agent::volume_change_earcons_handler::{
+    listen_to_audio_events, watch_background_usage, VolumeChangeEarconsHandler,
+};
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::ListenSession;
 
@@ -14,10 +16,7 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use std::collections::HashSet;
-use std::sync::{
-    atomic::AtomicBool,
-    Arc,
-};
+use std::sync::{atomic::AtomicBool, Arc};
 
 /// The Earcons Agent is responsible for watching updates to relevant sources that need to play
 /// sounds.

@@ -8,7 +8,8 @@ use crate::agent::earcons_utils::play_sound;
 use crate::input::monitor_media_buttons;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
-    AudioStreamType, SettingRequest, SettingResponse, SettingType, SwitchboardClient, SwitchboardError,
+    AudioStreamType, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
+    SwitchboardError,
 };
 
 use anyhow::Error;
@@ -26,8 +27,8 @@ use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::sync::{
-    Arc,
     atomic::{AtomicBool, Ordering},
+    Arc,
 };
 
 /// The VolumeChangeEarconsHandler takes care of the earcons functionality on volume change.

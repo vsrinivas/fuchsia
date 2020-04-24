@@ -154,6 +154,7 @@ impl VolumeController {
 
         self.update_volume_stream(&volume).await;
         self.changed_streams = Some(volume);
+        self.client.notify().await;
 
         Ok(None)
     }
