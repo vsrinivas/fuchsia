@@ -14,7 +14,7 @@ use std::io;
 ///
 /// [`io::Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
 /// [`FmtSubscriber`]: ../struct.Subscriber.html
-/// [`Event`]: https://docs.rs/tracing-core/0.1.6/tracing_core/event/struct.Event.html
+/// [`Event`]: https://docs.rs/tracing-core/0.1.5/tracing_core/event/struct.Event.html
 /// [`io::stdout`]: https://doc.rust-lang.org/std/io/fn.stdout.html
 /// [`io::stderr`]: https://doc.rust-lang.org/std/io/fn.stderr.html
 pub trait MakeWriter {
@@ -55,6 +55,7 @@ where
 #[cfg(test)]
 mod test {
     use super::MakeWriter;
+    use crate::fmt::format::Format;
     use crate::fmt::test::{MockMakeWriter, MockWriter};
     use crate::fmt::Subscriber;
     use lazy_static::lazy_static;
@@ -69,17 +70,18 @@ mod test {
         let subscriber = {
             #[cfg(feature = "ansi")]
             {
+                let f = Format::default().without_time().with_ansi(false);
                 Subscriber::builder()
+                    .event_format(f)
                     .with_writer(make_writer)
-                    .without_time()
-                    .with_ansi(false)
                     .finish()
             }
             #[cfg(not(feature = "ansi"))]
             {
+                let f = Format::default().without_time();
                 Subscriber::builder()
+                    .event_format(f)
                     .with_writer(make_writer)
-                    .without_time()
                     .finish()
             }
         };

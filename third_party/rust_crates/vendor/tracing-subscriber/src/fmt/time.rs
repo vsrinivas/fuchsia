@@ -30,6 +30,39 @@ pub trait FormatTime {
     fn format_time(&self, w: &mut dyn fmt::Write) -> fmt::Result;
 }
 
+/// Returns a new `SystemTime` timestamp provider.
+///
+/// This can then be configured further to determine how timestamps should be
+/// configured.
+///
+/// This is equivalent to calling
+/// ```rust
+/// # fn timer() -> tracing_subscriber::fmt::time::SystemTime {
+/// tracing_subscriber::fmt::time::SystemTime::default()
+/// # }
+/// ```
+pub fn time() -> SystemTime {
+    SystemTime::default()
+}
+
+/// Returns a new `Uptime` timestamp provider.
+///
+/// With this timer, timestamps will be formatted with the amount of time
+/// elapsed since the timestamp provider was constructed.
+///
+/// This can then be configured further to determine how timestamps should be
+/// configured.
+///
+/// This is equivalent to calling
+/// ```rust
+/// # fn timer() -> tracing_subscriber::fmt::time::Uptime {
+/// tracing_subscriber::fmt::time::Uptime::default()
+/// # }
+/// ```
+pub fn uptime() -> Uptime {
+    Uptime::default()
+}
+
 impl<'a, F> FormatTime for &'a F
 where
     F: FormatTime,
@@ -83,20 +116,21 @@ impl From<Instant> for Uptime {
 #[cfg(feature = "chrono")]
 impl FormatTime for SystemTime {
     fn format_time(&self, w: &mut dyn fmt::Write) -> fmt::Result {
-        write!(w, "{} ", chrono::Local::now().format("%b %d %H:%M:%S%.3f"))
+        write!(w, "{}", chrono::Local::now().format("%b %d %H:%M:%S%.3f"))
     }
 }
+
 #[cfg(not(feature = "chrono"))]
 impl FormatTime for SystemTime {
     fn format_time(&self, w: &mut fmt::Write) -> fmt::Result {
-        write!(w, "{:?} ", std::time::SystemTime::now())
+        write!(w, "{:?}", std::time::SystemTime::now())
     }
 }
 
 impl FormatTime for Uptime {
     fn format_time(&self, w: &mut dyn fmt::Write) -> fmt::Result {
         let e = self.epoch.elapsed();
-        write!(w, "{:4}.{:09}s ", e.as_secs(), e.subsec_nanos())
+        write!(w, "{:4}.{:09}s", e.as_secs(), e.subsec_nanos())
     }
 }
 
@@ -119,12 +153,14 @@ impl Default for ChronoFmtType {
 
 /// Retrieve and print the current UTC time.
 #[cfg(feature = "chrono")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct ChronoUtc {
     format: ChronoFmtType,
 }
 
 #[cfg(feature = "chrono")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
 impl ChronoUtc {
     /// Format the time using the [`RFC 3339`] format
     /// (a subset of [`ISO 8601`]).
@@ -151,24 +187,27 @@ impl ChronoUtc {
 }
 
 #[cfg(feature = "chrono")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
 impl FormatTime for ChronoUtc {
     fn format_time(&self, w: &mut dyn fmt::Write) -> fmt::Result {
         let time = chrono::Utc::now();
         match self.format {
-            ChronoFmtType::Rfc3339 => write!(w, "{} ", time.to_rfc3339()),
-            ChronoFmtType::Custom(ref format_str) => write!(w, "{} ", time.format(format_str)),
+            ChronoFmtType::Rfc3339 => write!(w, "{}", time.to_rfc3339()),
+            ChronoFmtType::Custom(ref format_str) => write!(w, "{}", time.format(format_str)),
         }
     }
 }
 
 /// Retrieve and print the current local time.
 #[cfg(feature = "chrono")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct ChronoLocal {
     format: ChronoFmtType,
 }
 
 #[cfg(feature = "chrono")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
 impl ChronoLocal {
     /// Format the time using the [`RFC 3339`] format
     /// (a subset of [`ISO 8601`]).
@@ -195,6 +234,7 @@ impl ChronoLocal {
 }
 
 #[cfg(feature = "chrono")]
+#[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
 impl FormatTime for ChronoLocal {
     fn format_time(&self, w: &mut dyn fmt::Write) -> fmt::Result {
         let time = chrono::Local::now();
@@ -218,8 +258,8 @@ where
         write!(writer, "{}", style.suffix())?;
     } else {
         timer.format_time(writer)?;
-        write!(writer, " ")?;
     }
+    writer.write_char(' ')?;
     Ok(())
 }
 

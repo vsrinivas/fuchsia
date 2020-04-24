@@ -2,14 +2,7 @@ use super::super::level::{self, LevelFilter};
 use super::{field, FieldMap, FilterVec};
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::{
-    cmp::Ordering,
-    collections::btree_set::{self, BTreeSet},
-    error::Error,
-    fmt,
-    iter::FromIterator,
-    str::FromStr,
-};
+use std::{cmp::Ordering, error::Error, fmt, iter::FromIterator, str::FromStr};
 use tracing_core::{span, Metadata};
 
 /// A single filtering directive.
@@ -45,8 +38,8 @@ pub(crate) type Statics = DirectiveSet<StaticDirective>;
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct DirectiveSet<T> {
-    directives: BTreeSet<T>,
-    max_level: LevelFilter,
+    directives: Vec<T>,
+    pub(crate) max_level: LevelFilter,
 }
 
 pub(crate) type CallsiteMatcher = MatchSet<field::CallsiteMatch>;
@@ -134,7 +127,7 @@ impl Directive {
         directives: impl IntoIterator<Item = Directive>,
     ) -> (Dynamics, Statics) {
         // TODO(eliza): this could be made more efficient...
-        let (dyns, stats): (BTreeSet<Directive>, BTreeSet<Directive>) =
+        let (dyns, stats): (Vec<Directive>, Vec<Directive>) =
             directives.into_iter().partition(Directive::is_dynamic);
         let statics = stats
             .into_iter()
@@ -391,7 +384,7 @@ impl<T> DirectiveSet<T> {
         self.directives.is_empty()
     }
 
-    pub(crate) fn iter<'a>(&'a self) -> btree_set::Iter<'a, T> {
+    pub(crate) fn iter(&self) -> std::slice::Iter<'_, T> {
         self.directives.iter()
     }
 }
@@ -399,7 +392,7 @@ impl<T> DirectiveSet<T> {
 impl<T: Ord> Default for DirectiveSet<T> {
     fn default() -> Self {
         Self {
-            directives: BTreeSet::new(),
+            directives: Vec::new(),
             max_level: LevelFilter::OFF,
         }
     }
@@ -416,11 +409,20 @@ impl<T: Match + Ord> DirectiveSet<T> {
     }
 
     pub(crate) fn add(&mut self, directive: T) {
+        // does this directive enable a more verbose level than the current
+        // max? if so, update the max level.
         let level = directive.level();
-        if level > &self.max_level {
+        if *level > self.max_level {
             self.max_level = level.clone();
         }
-        let _ = self.directives.replace(directive);
+        // insert the directive into the vec of directives, ordered by
+        // specificity (length of target + number of field filters). this
+        // ensures that, when finding a directive to match a span or event, we
+        // search the directive set in most specific first order.
+        match self.directives.binary_search(&directive) {
+            Ok(i) => self.directives[i] = directive,
+            Err(i) => self.directives.insert(i, directive),
+        }
     }
 }
 
@@ -434,14 +436,9 @@ impl<T: Match + Ord> FromIterator<T> for DirectiveSet<T> {
 
 impl<T: Match + Ord> Extend<T> for DirectiveSet<T> {
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
-        let max_level = &mut self.max_level;
-        let ds = iter.into_iter().inspect(|d| {
-            let level = d.level();
-            if level > &*max_level {
-                *max_level = level.clone();
-            }
-        });
-        self.directives.extend(ds);
+        for directive in iter.into_iter() {
+            self.add(directive);
+        }
     }
 }
 
@@ -457,7 +454,7 @@ impl Dynamics {
                     return Some(f);
                 }
                 match base_level {
-                    Some(ref b) if &d.level > b => base_level = Some(d.level.clone()),
+                    Some(ref b) if d.level > *b => base_level = Some(d.level.clone()),
                     None => base_level = Some(d.level.clone()),
                     _ => {}
                 }
@@ -486,7 +483,10 @@ impl Dynamics {
 impl Statics {
     pub(crate) fn enabled(&self, meta: &Metadata<'_>) -> bool {
         let level = meta.level();
-        self.directives_for(meta).any(|d| d.level >= *level)
+        match self.directives_for(meta).next() {
+            Some(d) => d.level >= *level,
+            None => false,
+        }
     }
 }
 
@@ -556,7 +556,7 @@ impl Match for StaticDirective {
         if meta.is_event() && !self.field_names.is_empty() {
             let fields = meta.fields();
             for name in &self.field_names {
-                if !fields.field(name).is_some() {
+                if fields.field(name).is_none() {
                     return false;
                 }
             }

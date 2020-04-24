@@ -20,12 +20,13 @@
 //!
 //! - `env-filter`: Enables the [`EnvFilter`] type, which implements filtering
 //!   similar to the [`env_logger` crate]. Enabled by default.
-//! - `filter`: Alias for `env-filter`. This feature flag was renamed in version
-//!   0.1.2, and will be removed in version 0.2.
 //! - `fmt`: Enables the [`fmt`] module, which provides a subscriber
 //!   implementation for printing formatted representations of trace events.
 //!   Enabled by default.
-//! - `ansi`: Enables `fmt` support for ANSI terminal colors. Enabled by default.
+//! - `ansi`: Enables `fmt` support for ANSI terminal colors. Enabled by
+//!   default.
+//! - `registry`: enables the experimental [`registry`] module.
+//! - `json`: Enables `fmt` support for JSON output. In JSON output, the ANSI feature does nothing.
 //!
 //! ### Optional Dependencies
 //!
@@ -47,7 +48,9 @@
 //! [`chrono`]: https://crates.io/crates/chrono
 //! [`env_logger` crate]: https://crates.io/crates/env_logger
 //! [`parking_lot`]: https://crates.io/crates/parking_lot
-#![doc(html_root_url = "https://docs.rs/tracing-subscriber/0.1.6")]
+//! [`registry`]: registry/index.html
+#![doc(html_root_url = "https://docs.rs/tracing-subscriber/0.2.4")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(
     missing_debug_implementations,
     missing_docs,
@@ -57,15 +60,12 @@
     const_err,
     dead_code,
     improper_ctypes,
-    legacy_directory_ownership,
     non_shorthand_field_patterns,
     no_mangle_generic_items,
     overflowing_literals,
     path_statements,
     patterns_in_fns_without_body,
-    plugin_as_library,
     private_in_public,
-    safe_extern_statics,
     unconditional_recursion,
     unused,
     unused_allocation,
@@ -81,31 +81,53 @@ macro_rules! try_lock {
         try_lock!($lock, else return)
     };
     ($lock:expr, else $els:expr) => {
-        match $lock {
-            Ok(l) => l,
-            Err(_) if std::thread::panicking() => $els,
-            Err(_) => panic!("lock poisoned"),
+        if let Ok(l) = $lock {
+            l
+        } else if std::thread::panicking() {
+            $els
+        } else {
+            panic!("lock poisoned")
         }
     };
 }
 
+pub mod field;
 pub mod filter;
 #[cfg(feature = "fmt")]
+#[cfg_attr(docsrs, doc(cfg(feature = "fmt")))]
 pub mod fmt;
 pub mod layer;
 pub mod prelude;
+pub mod registry;
 pub mod reload;
 pub(crate) mod sync;
 pub(crate) mod thread;
+pub mod util;
 
 #[cfg(feature = "env-filter")]
-#[allow(deprecated)]
-pub use filter::{EnvFilter, Filter};
+#[cfg_attr(docsrs, doc(cfg(feature = "env-filter")))]
+pub use filter::EnvFilter;
 
 pub use layer::Layer;
 
+#[cfg(feature = "registry")]
+#[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+pub use registry::Registry;
+
+///
+#[cfg(feature = "registry")]
+#[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+pub fn registry() -> Registry {
+    Registry::default()
+}
+
 #[cfg(feature = "fmt")]
+#[cfg_attr(docsrs, doc(cfg(feature = "fmt")))]
 pub use fmt::Subscriber as FmtSubscriber;
+
+#[cfg(feature = "fmt")]
+#[cfg_attr(docsrs, doc(cfg(feature = "fmt")))]
+pub use fmt::fmt;
 
 use std::default::Default;
 /// Tracks the currently executing span on a per-thread basis.
@@ -122,8 +144,11 @@ impl CurrentSpan {
         }
     }
 
-    /// Returns the [`Id`](::Id) of the span in which the current thread is
+    /// Returns the [`Id`] of the span in which the current thread is
     /// executing, or `None` if it is not inside of a span.
+    ///
+    ///
+    /// [`Id`]: https://docs.rs/tracing/latest/tracing/span/struct.Id.html
     pub fn id(&self) -> Option<Id> {
         self.current.with(|current| current.last().cloned())?
     }

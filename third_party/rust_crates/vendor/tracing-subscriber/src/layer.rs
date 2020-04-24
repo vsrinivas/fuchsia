@@ -6,6 +6,8 @@ use tracing_core::{
     Event,
 };
 
+#[cfg(feature = "registry")]
+use crate::registry::{self, LookupSpan, Registry, SpanRef};
 use std::{any::TypeId, marker::PhantomData};
 
 /// A composable handler for `tracing` events.
@@ -28,6 +30,131 @@ use std::{any::TypeId, marker::PhantomData};
 /// span IDs. The `Layer` trait represents this composable subset of the
 /// [`Subscriber`] behavior; it can _observe_ events and spans, but does not
 /// assign IDs.
+///
+/// ## Composing Layers
+///
+/// Since a `Layer` does not implement a complete strategy for collecting
+/// traces, it must be composed with a `Subscriber` in order to be used. The
+/// `Layer` trait is generic over a type parameter (called `S` in the trait
+/// definition), representing the types of `Subscriber` they can be composed
+/// with. Thus, a `Layer` may be implemented that will only compose with a
+/// particular `Subscriber` implementation, or additional trait bounds may be
+/// added to constrain what types implementing `Subscriber` a `Layer` can wrap.
+///
+/// `Layer`s may be added to a `Subscriber` by using the [`SubscriberExt::with`]
+/// method, which is provided by `tracing-subscriber`'s [prelude]. This method
+/// returns a [`Layered`] struct that implements `Subscriber` by composing the
+/// `Layer` with the `Subscriber`.
+///
+/// For example:
+/// ```rust
+/// use tracing_subscriber::Layer;
+/// use tracing_subscriber::prelude::*;
+/// use tracing::Subscriber;
+///
+/// pub struct MyLayer {
+///     // ...
+/// }
+///
+/// impl<S: Subscriber> Layer<S> for MyLayer {
+///     // ...
+/// }
+///
+/// pub struct MySubscriber {
+///     // ...
+/// }
+///
+/// # use tracing_core::{span::{Id, Attributes, Record}, Metadata, Event};
+/// impl Subscriber for MySubscriber {
+///     // ...
+/// #   fn new_span(&self, _: &Attributes) -> Id { Id::from_u64(1) }
+/// #   fn record(&self, _: &Id, _: &Record) {}
+/// #   fn event(&self, _: &Event) {}
+/// #   fn record_follows_from(&self, _: &Id, _: &Id) {}
+/// #   fn enabled(&self, _: &Metadata) -> bool { false }
+/// #   fn enter(&self, _: &Id) {}
+/// #   fn exit(&self, _: &Id) {}
+/// }
+/// # impl MyLayer {
+/// # fn new() -> Self { Self {} }
+/// # }
+/// # impl MySubscriber {
+/// # fn new() -> Self { Self { }}
+/// # }
+///
+/// let subscriber = MySubscriber::new()
+///     .with(MyLayer::new());
+///
+/// tracing::subscriber::set_global_default(subscriber);
+/// ```
+///
+/// Multiple `Layer`s may be composed in the same manner:
+/// ```rust
+/// # use tracing_subscriber::Layer;
+/// # use tracing_subscriber::prelude::*;
+/// # use tracing::Subscriber;
+/// pub struct MyOtherLayer {
+///     // ...
+/// }
+///
+/// impl<S: Subscriber> Layer<S> for MyOtherLayer {
+///     // ...
+/// }
+///
+/// pub struct MyThirdLayer {
+///     // ...
+/// }
+///
+/// impl<S: Subscriber> Layer<S> for MyThirdLayer {
+///     // ...
+/// }
+/// # pub struct MyLayer {}
+/// # impl<S: Subscriber> Layer<S> for MyLayer {}
+/// # pub struct MySubscriber { }
+/// # use tracing_core::{span::{Id, Attributes, Record}, Metadata, Event};
+/// # impl Subscriber for MySubscriber {
+/// #   fn new_span(&self, _: &Attributes) -> Id { Id::from_u64(1) }
+/// #   fn record(&self, _: &Id, _: &Record) {}
+/// #   fn event(&self, _: &Event) {}
+/// #   fn record_follows_from(&self, _: &Id, _: &Id) {}
+/// #   fn enabled(&self, _: &Metadata) -> bool { false }
+/// #   fn enter(&self, _: &Id) {}
+/// #   fn exit(&self, _: &Id) {}
+/// }
+/// # impl MyLayer {
+/// # fn new() -> Self { Self {} }
+/// # }
+/// # impl MyOtherLayer {
+/// # fn new() -> Self { Self {} }
+/// # }
+/// # impl MyThirdLayer {
+/// # fn new() -> Self { Self {} }
+/// # }
+/// # impl MySubscriber {
+/// # fn new() -> Self { Self { }}
+/// # }
+///
+/// let subscriber = MySubscriber::new()
+///     .with(MyLayer::new())
+///     .with(MyOtherLayer::new())
+///     .with(MyThirdLayer::new());
+///
+/// tracing::subscriber::set_global_default(subscriber);
+/// ```
+///
+/// The [`Layer::with_subscriber` method][with-sub] constructs the `Layered`
+/// type from a `Layer` and `Subscriber`, and is called by
+/// [`SubscriberExt::with`]. In general, it is more idiomatic to use
+/// `SubscriberExt::with`, and treat `Layer::with_subscriber` as an
+/// implementation detail, as `with_subscriber` calls must be nested, leading to
+/// less clear code for the reader. However, `Layer`s which wish to perform
+/// additional behavior when composed with a subscriber may provide their own
+/// implementations of `SubscriberExt::with`.
+///
+/// [`SubscriberExt::with`]: trait.SubscriberExt.html#method.with
+/// [`Layered`]: struct.Layered.html
+/// [prelude]: ../prelude/index.html
+/// [with-sub]: #method.with_subscriber
 ///
 /// ## Recording Traces
 ///
@@ -142,7 +269,7 @@ where
     /// [`Interest`]: https://docs.rs/tracing-core/latest/tracing_core/struct.Interest.html
     /// [`Context`]: ../struct.Context.html
     /// [`Subscriber::enabled`]: https://docs.rs/tracing-core/latest/tracing_core/trait.Subscriber.html#method.enabled
-    /// [`Layer::register_callsite`]: #method.reegister_callsite
+    /// [`Layer::register_callsite`]: #method.register_callsite
     /// [`on_event`]: #method.on_event
     /// [`on_enter`]: #method.on_enter
     /// [`on_exit`]: #method.on_exit
@@ -198,7 +325,6 @@ where
     /// ```rust
     /// # use tracing_subscriber::layer::Layer;
     /// # use tracing_core::Subscriber;
-    /// # fn main() {
     /// pub struct FooLayer {
     ///     // ...
     /// }
@@ -241,7 +367,6 @@ where
     /// let subscriber = FooLayer::new()
     ///     .and_then(BarLayer::new())
     ///     .with_subscriber(MySubscriber::new());
-    /// # }
     /// ```
     ///
     /// Multiple layers may be composed in this manner:
@@ -249,7 +374,6 @@ where
     /// ```rust
     /// # use tracing_subscriber::layer::Layer;
     /// # use tracing_core::Subscriber;
-    /// # fn main() {
     /// # pub struct FooLayer {}
     /// # pub struct BarLayer {}
     /// # pub struct MySubscriber {}
@@ -287,7 +411,6 @@ where
     ///     .and_then(BarLayer::new())
     ///     .and_then(BazLayer::new())
     ///     .with_subscriber(MySubscriber::new());
-    /// # }
     /// ```
     fn and_then<L>(self, layer: L) -> Layered<L, Self, S>
     where
@@ -311,7 +434,6 @@ where
     /// ```rust
     /// # use tracing_subscriber::layer::Layer;
     /// # use tracing_core::Subscriber;
-    /// # fn main() {
     /// pub struct FooLayer {
     ///     // ...
     /// }
@@ -342,7 +464,6 @@ where
     /// # }
     /// let subscriber = FooLayer::new()
     ///     .with_subscriber(MySubscriber::new());
-    /// # }
     ///```
     ///
     /// [`Subscriber`]: https://docs.rs/tracing-core/latest/tracing_core/trait.Subscriber.html
@@ -360,7 +481,7 @@ where
     #[doc(hidden)]
     unsafe fn downcast_raw(&self, id: TypeId) -> Option<*const ()> {
         if id == TypeId::of::<Self>() {
-            Some(&self as *const _ as *const ())
+            Some(self as *const _ as *const ())
         } else {
             None
         }
@@ -375,18 +496,14 @@ pub trait SubscriberExt: Subscriber + crate::sealed::Sealed {
         L: Layer<Self>,
         Self: Sized,
     {
-        Layered {
-            layer,
-            inner: self,
-            _s: PhantomData,
-        }
+        layer.with_subscriber(self)
     }
 }
 
 /// Represents information about the current context provided to [`Layer`]s by the
 /// wrapped [`Subscriber`].
 ///
-/// [`Layer`]: ../struct.Layer.html
+/// [`Layer`]: ../layer/trait.Layer.html
 /// [`Subscriber`]: https://docs.rs/tracing-core/latest/tracing_core/trait.Subscriber.html
 #[derive(Debug)]
 pub struct Context<'a, S> {
@@ -396,7 +513,7 @@ pub struct Context<'a, S> {
 /// A [`Subscriber`] composed of a `Subscriber` wrapped by one or more
 /// [`Layer`]s.
 ///
-/// [`Layer`]: ../struct.Layer.html
+/// [`Layer`]: ../layer/trait.Layer.html
 /// [`Subscriber`]: https://docs.rs/tracing-core/latest/tracing_core/trait.Subscriber.html
 #[derive(Clone, Debug)]
 pub struct Layered<L, I, S = I> {
@@ -406,10 +523,24 @@ pub struct Layered<L, I, S = I> {
 }
 
 /// A layer that does nothing.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Identity {
     _p: (),
 }
+
+/// An iterator over the [stored data] for all the spans in the
+/// current context, starting  the root of the trace tree and ending with
+/// the current span.
+///
+/// This is returned by [`Context::scope`].
+///
+/// [stored data]: ../registry/struct.SpanRef.html
+/// [`Context::scope`]: struct.Context.html#method.scope
+#[cfg(feature = "registry")]
+#[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+pub struct Scope<'a, L: LookupSpan<'a>>(
+    Option<std::iter::Chain<registry::FromRoot<'a, L>, std::iter::Once<SpanRef<'a, L>>>>,
+);
 
 // === impl Layered ===
 
@@ -492,9 +623,23 @@ where
     }
 
     fn try_close(&self, id: span::Id) -> bool {
-        let id2 = id.clone();
-        if self.inner.try_close(id) {
-            self.layer.on_close(id2, self.ctx());
+        #[cfg(feature = "registry")]
+        let subscriber = &self.inner as &dyn Subscriber;
+        #[cfg(feature = "registry")]
+        let mut guard = subscriber
+            .downcast_ref::<Registry>()
+            .map(|registry| registry.start_close(id.clone()));
+        if self.inner.try_close(id.clone()) {
+            // If we have a registry's close guard, indicate that the span is
+            // closing.
+            #[cfg(feature = "registry")]
+            {
+                if let Some(g) = guard.as_mut() {
+                    g.is_closing()
+                };
+            }
+
+            self.layer.on_close(id, self.ctx());
             true
         } else {
             false
@@ -508,6 +653,9 @@ where
 
     #[doc(hidden)]
     unsafe fn downcast_raw(&self, id: TypeId) -> Option<*const ()> {
+        if id == TypeId::of::<Self>() {
+            return Some(self as *const _ as *const ());
+        }
         self.layer
             .downcast_raw(id)
             .or_else(|| self.inner.downcast_raw(id))
@@ -599,9 +747,25 @@ where
 
     #[doc(hidden)]
     unsafe fn downcast_raw(&self, id: TypeId) -> Option<*const ()> {
+        if id == TypeId::of::<Self>() {
+            return Some(self as *const _ as *const ());
+        }
         self.layer
             .downcast_raw(id)
             .or_else(|| self.inner.downcast_raw(id))
+    }
+}
+
+#[cfg(feature = "registry")]
+#[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+impl<'a, L, S> LookupSpan<'a> for Layered<L, S>
+where
+    S: Subscriber + LookupSpan<'a>,
+{
+    type Data = S::Data;
+
+    fn span_data(&'a self, id: &span::Id) -> Option<Self::Data> {
+        self.inner.span_data(id)
     }
 }
 
@@ -678,6 +842,140 @@ impl<'a, S: Subscriber> Context<'a, S> {
             subscriber.event(event);
         }
     }
+
+    /// Returns metadata for the span with the given `id`, if it exists.
+    ///
+    /// If this returns `None`, then no span exists for that ID (either it has
+    /// closed or the ID is invalid).
+    ///
+    /// **Note**: This requires the wrapped subscriber to implement the
+    /// [`LookupSpan`] trait. `Layer` implementations that wish to use this
+    /// function can bound their `Subscriber` type parameter with
+    /// ```rust,ignore
+    /// where S: Subscriber + for<'a> LookupSpan<'a>,
+    /// ```
+    /// or similar.
+    ///
+    /// [`LookupSpan`]: ../registry/trait.LookupSpan.html
+    #[inline]
+    #[cfg(feature = "registry")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+    pub fn metadata(&self, id: &span::Id) -> Option<&'static Metadata<'static>>
+    where
+        S: for<'lookup> LookupSpan<'lookup>,
+    {
+        let span = self.subscriber.as_ref()?.span(id)?;
+        Some(span.metadata())
+    }
+
+    /// Returns [stored data] for the span with the given `id`, if it exists.
+    ///
+    /// If this returns `None`, then no span exists for that ID (either it has
+    /// closed or the ID is invalid).
+    ///
+    /// **Note**: This requires the wrapped subscriber to implement the
+    /// [`LookupSpan`] trait. `Layer` implementations that wish to use this
+    /// function can bound their `Subscriber` type parameter with
+    /// ```rust,ignore
+    /// where S: Subscriber + for<'span> LookupSpan<'span>,
+    /// ```
+    /// or similar.
+    ///
+    /// [stored data]: ../registry/struct.SpanRef.html
+    /// [`LookupSpan`]: ../registry/trait.LookupSpan.html
+    #[inline]
+    #[cfg(feature = "registry")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+    pub fn span(&self, id: &span::Id) -> Option<registry::SpanRef<'_, S>>
+    where
+        S: for<'lookup> LookupSpan<'lookup>,
+    {
+        self.subscriber.as_ref()?.span(id)
+    }
+
+    /// Returns `true` if an active span exists for the given `Id`.
+    ///
+    /// **Note**: This requires the wrapped subscriber to implement the
+    /// [`LookupSpan`] trait. `Layer` implementations that wish to use this
+    /// function can bound their `Subscriber` type parameter with
+    /// ```rust,ignore
+    /// where S: Subscriber + for<'a> LookupSpan<'a>,
+    /// ```
+    /// or similar.
+    ///
+    /// [`LookupSpan`]: ../registry/trait.LookupSpan.html
+    #[inline]
+    #[cfg(feature = "registry")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+    pub fn exists(&self, id: &span::Id) -> bool
+    where
+        S: for<'lookup> LookupSpan<'lookup>,
+    {
+        self.subscriber.as_ref().and_then(|s| s.span(id)).is_some()
+    }
+
+    /// Returns [stored data] for the span that the wrapped subscriber considers
+    /// to be the current.
+    ///
+    /// If this returns `None`, then we are not currently within a span.
+    ///
+    /// **Note**: This requires the wrapped subscriber to implement the
+    /// [`LookupSpan`] trait. `Layer` implementations that wish to use this
+    /// function can bound their `Subscriber` type parameter with
+    /// ```rust,ignore
+    /// where S: Subscriber + for<'span> LookupSpan<'span>,
+    /// ```
+    /// or similar.
+    ///
+    /// [stored data]: ../registry/struct.SpanRef.html
+    /// [`LookupSpan`]: ../registry/trait.LookupSpan.html
+    #[inline]
+    #[cfg(feature = "registry")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+    pub fn lookup_current(&self) -> Option<registry::SpanRef<'_, S>>
+    where
+        S: for<'lookup> LookupSpan<'lookup>,
+    {
+        let subscriber = self.subscriber.as_ref()?;
+        let current = subscriber.current_span();
+        let id = current.id()?;
+        let span = subscriber.span(&id);
+        debug_assert!(
+            span.is_some(),
+            "the subscriber should have data for the current span ({:?})!",
+            id,
+        );
+        span
+    }
+
+    /// Returns an iterator over the [stored data] for all the spans in the
+    /// current context, starting  the root of the trace tree and ending with
+    /// the current span.
+    ///
+    /// If this iterator is empty, then there are no spans in the current context
+    ///
+    /// **Note**: This requires the wrapped subscriber to implement the
+    /// [`LookupSpan`] trait. `Layer` implementations that wish to use this
+    /// function can bound their `Subscriber` type parameter with
+    /// ```rust,ignore
+    /// where S: Subscriber + for<'span> LookupSpan<'span>,
+    /// ```
+    /// or similar.
+    ///
+    /// [stored data]: ../registry/struct.SpanRef.html
+    /// [`LookupSpan`]: ../registry/trait.LookupSpan.html
+    #[cfg(feature = "registry")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+    pub fn scope(&self) -> Scope<'_, S>
+    where
+        S: for<'lookup> registry::LookupSpan<'lookup>,
+    {
+        let scope = self.lookup_current().map(|span| {
+            let parents = span.from_root();
+            parents.chain(std::iter::once(span))
+        });
+        Scope(scope)
+    }
 }
 
 impl<'a, S> Context<'a, S> {
@@ -706,6 +1004,27 @@ impl Identity {
     /// Returns a new `Identity` layer.
     pub fn new() -> Self {
         Self { _p: () }
+    }
+}
+
+// === impl Scope ===
+
+#[cfg(feature = "registry")]
+#[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+impl<'a, L: LookupSpan<'a>> Iterator for Scope<'a, L> {
+    type Item = SpanRef<'a, L>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.as_mut()?.next()
+    }
+}
+
+#[cfg(feature = "registry")]
+#[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
+impl<'a, L: LookupSpan<'a>> std::fmt::Debug for Scope<'a, L> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.pad("Scope { .. }")
     }
 }
 
@@ -738,8 +1057,42 @@ pub(crate) mod tests {
     struct NopLayer;
     impl<S: Subscriber> Layer<S> for NopLayer {}
 
+    #[allow(dead_code)]
     struct NopLayer2;
     impl<S: Subscriber> Layer<S> for NopLayer2 {}
+
+    /// A layer that holds a string.
+    ///
+    /// Used to test that pointers returned by downcasting are actually valid.
+    struct StringLayer(String);
+    impl<S: Subscriber> Layer<S> for StringLayer {}
+    struct StringLayer2(String);
+    impl<S: Subscriber> Layer<S> for StringLayer2 {}
+
+    struct StringLayer3(String);
+    impl<S: Subscriber> Layer<S> for StringLayer3 {}
+
+    pub(crate) struct StringSubscriber(String);
+
+    impl Subscriber for StringSubscriber {
+        fn register_callsite(&self, _: &'static Metadata<'static>) -> Interest {
+            Interest::never()
+        }
+
+        fn enabled(&self, _: &Metadata<'_>) -> bool {
+            false
+        }
+
+        fn new_span(&self, _: &span::Attributes<'_>) -> span::Id {
+            span::Id::from_u64(1)
+        }
+
+        fn record(&self, _: &span::Id, _: &span::Record<'_>) {}
+        fn record_follows_from(&self, _: &span::Id, _: &span::Id) {}
+        fn event(&self, _: &Event<'_>) {}
+        fn enter(&self, _: &span::Id) {}
+        fn exit(&self, _: &span::Id) {}
+    }
 
     fn assert_subscriber(_s: impl Subscriber) {}
 
@@ -769,17 +1122,23 @@ pub(crate) mod tests {
         let s = NopLayer
             .and_then(NopLayer)
             .and_then(NopLayer)
-            .with_subscriber(NopSubscriber);
-        assert!(Subscriber::downcast_ref::<NopSubscriber>(&s).is_some());
+            .with_subscriber(StringSubscriber("subscriber".into()));
+        let subscriber =
+            Subscriber::downcast_ref::<StringSubscriber>(&s).expect("subscriber should downcast");
+        assert_eq!(&subscriber.0, "subscriber");
     }
 
     #[test]
     fn downcasts_to_layer() {
-        let s = NopLayer
-            .and_then(NopLayer)
-            .and_then(NopLayer2)
+        let s = StringLayer("layer_1".into())
+            .and_then(StringLayer2("layer_2".into()))
+            .and_then(StringLayer3("layer_3".into()))
             .with_subscriber(NopSubscriber);
-        assert!(Subscriber::downcast_ref::<NopLayer>(&s).is_some());
-        assert!(Subscriber::downcast_ref::<NopLayer2>(&s).is_some());
+        let layer = Subscriber::downcast_ref::<StringLayer>(&s).expect("layer 1 should downcast");
+        assert_eq!(&layer.0, "layer_1");
+        let layer = Subscriber::downcast_ref::<StringLayer2>(&s).expect("layer 2 should downcast");
+        assert_eq!(&layer.0, "layer_2");
+        let layer = Subscriber::downcast_ref::<StringLayer3>(&s).expect("layer 13 should downcast");
+        assert_eq!(&layer.0, "layer_3");
     }
 }

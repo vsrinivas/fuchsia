@@ -7,7 +7,7 @@
 //! This can be used in cases where a subset of `Subscriber` functionality
 //! should be dynamically reconfigured, such as when filtering directives may
 //! change at runtime. Note that this layer introduces a (relatively small)
-//! amount of overhead, and should thus obly be used as needed.
+//! amount of overhead, and should thus only be used as needed.
 //!
 //! [`Layer` type]: struct.Layer.html
 //! [`Layer` trait]: ../layer/trait.Layer.html
@@ -228,71 +228,12 @@ impl Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        error::Error::description(self).fmt(f)
-    }
-}
-
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match self.kind {
+        let msg = match self.kind {
             ErrorKind::SubscriberGone => "subscriber no longer exists",
             ErrorKind::Poisoned => "lock poisoned",
-        }
+        };
+        f.pad(msg)
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::prelude::*;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-
-    #[test]
-    fn reload_handle() {
-        static FILTER1_CALLS: AtomicUsize = AtomicUsize::new(0);
-        static FILTER2_CALLS: AtomicUsize = AtomicUsize::new(0);
-
-        enum EnvFilter {
-            One,
-            Two,
-        }
-        impl<S: Subscriber> crate::Layer<S> for EnvFilter {
-            fn register_callsite(&self, _: &Metadata<'_>) -> Interest {
-                Interest::sometimes()
-            }
-
-            fn enabled(&self, _: &Metadata<'_>, _: layer::Context<'_, S>) -> bool {
-                match self {
-                    EnvFilter::One => FILTER1_CALLS.fetch_add(1, Ordering::Relaxed),
-                    EnvFilter::Two => FILTER2_CALLS.fetch_add(1, Ordering::Relaxed),
-                };
-                true
-            }
-        }
-        fn event() {
-            tracing::trace!("my event");
-        }
-
-        let (layer, handle) = Layer::new(EnvFilter::One);
-
-        let subscriber =
-            tracing_core::dispatcher::Dispatch::new(crate::layer::tests::NopSubscriber.with(layer));
-
-        tracing_core::dispatcher::with_default(&subscriber, || {
-            assert_eq!(FILTER1_CALLS.load(Ordering::Relaxed), 0);
-            assert_eq!(FILTER2_CALLS.load(Ordering::Relaxed), 0);
-
-            event();
-
-            assert_eq!(FILTER1_CALLS.load(Ordering::Relaxed), 1);
-            assert_eq!(FILTER2_CALLS.load(Ordering::Relaxed), 0);
-
-            handle.reload(EnvFilter::Two).expect("should reload");
-
-            event();
-
-            assert_eq!(FILTER1_CALLS.load(Ordering::Relaxed), 1);
-            assert_eq!(FILTER2_CALLS.load(Ordering::Relaxed), 1);
-        })
-    }
-}
+impl error::Error for Error {}

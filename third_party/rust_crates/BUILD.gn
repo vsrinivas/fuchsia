@@ -607,7 +607,7 @@ group("tracing-futures") {
 }
 
 group("tracing-subscriber") {
-  deps = [ ":tracing-subscriber-v0_1_6" ]
+  deps = [ ":tracing-subscriber-v0_2_5" ]
 }
 
 if (is_fuchsia) {
@@ -7234,6 +7234,28 @@ rust_library("sha1-v0_6_0") {
   ]
 }
 
+rust_library("sharded-slab-v0_0_9") {
+  crate_name = "sharded_slab"
+  crate_root = "//third_party/rust_crates/vendor/sharded-slab/src/lib.rs"
+  output_name = "sharded_slab-a5fb9ebc6e519d9e"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":lazy_static-v1_4_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=a5fb9ebc6e519d9e",
+    "-Cextra-filename=a5fb9ebc6e519d9e",
+  ]
+}
+
 rust_library("signal-hook-v0_1_13") {
   crate_name = "signal_hook"
   crate_root = "//third_party/rust_crates/vendor/signal-hook/src/lib.rs"
@@ -8675,10 +8697,10 @@ rust_library("tracing-log-v0_1_1") {
   ]
 }
 
-rust_library("tracing-subscriber-v0_1_6") {
+rust_library("tracing-subscriber-v0_2_5") {
   crate_name = "tracing_subscriber"
   crate_root = "//third_party/rust_crates/vendor/tracing-subscriber/src/lib.rs"
-  output_name = "tracing_subscriber-9746fd971464c6e2"
+  output_name = "tracing_subscriber-bc593657f911aa68"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -8686,6 +8708,7 @@ rust_library("tracing-subscriber-v0_1_6") {
 
   deps = []
   deps += [ ":chrono-v0_4_6" ]
+  deps += [ ":sharded-slab-v0_0_9" ]
   deps += [ ":tracing-core-v0_1_7" ]
   deps += [ ":tracing-log-v0_1_1" ]
 
@@ -8694,9 +8717,11 @@ rust_library("tracing-subscriber-v0_1_6") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=9746fd971464c6e2",
-    "-Cextra-filename=9746fd971464c6e2",
+    "-Cmetadata=bc593657f911aa68",
+    "-Cextra-filename=bc593657f911aa68",
     "--cfg=feature=\"chrono\"",
+    "--cfg=feature=\"registry\"",
+    "--cfg=feature=\"sharded-slab\"",
     "--cfg=feature=\"tracing-log\"",
   ]
 }

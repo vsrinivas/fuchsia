@@ -113,9 +113,9 @@ unic-char-range = "0.9"
 unic-ucd-block = "0.9"
 
 [dependencies.tracing-subscriber]
-version = "0.1.6"
+version = "0.2.5"
 default-features = false
-features = ["chrono", "tracing-log"]
+features = ["chrono", "registry", "tracing-log"]
 
 # Target-side only dependencies
 [target.'cfg(target_os = "fuchsia")'.dependencies]
