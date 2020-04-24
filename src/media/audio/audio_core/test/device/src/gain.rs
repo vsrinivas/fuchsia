@@ -53,21 +53,18 @@ async fn on_device_gain_changed_ignores_invalid_tokens_in_sets() -> Result<()> {
 #[test]
 async fn set_input_device_gain() -> Result<()> {
     with_connected_device(|assets: DeviceTestAssets<InputProxy>| async move {
+        let mut gain_change_events =
+            assets.enumerator.take_event_stream().try_filter_map(move |e| {
+                future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_gain_changed(e)))
+            });
         assets.enumerator.set_device_gain(
             assets.token,
             &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
             SET_AUDIO_GAIN_FLAG_GAIN_VALID | SET_AUDIO_GAIN_FLAG_MUTE_VALID,
         )?;
 
-        let (changed_token, gain_info) = assets
-            .enumerator
-            .take_event_stream()
-            .try_filter_map(move |e| {
-                future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_gain_changed(e)))
-            })
-            .try_next()
-            .await?
-            .expect("Waiting for a gain info event");
+        let (changed_token, gain_info) =
+            gain_change_events.try_next().await?.expect("Waiting for a gain info event");
 
         assert_eq!(changed_token, assets.token);
         assert_eq!(gain_info.flags, 0);
@@ -82,21 +79,18 @@ async fn set_input_device_gain() -> Result<()> {
 #[test]
 async fn set_output_device_gain() -> Result<()> {
     with_connected_device(|assets: DeviceTestAssets<OutputProxy>| async move {
+        let mut gain_change_events =
+            assets.enumerator.take_event_stream().try_filter_map(move |e| {
+                future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_gain_changed(e)))
+            });
         assets.enumerator.set_device_gain(
             assets.token,
             &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
             SET_AUDIO_GAIN_FLAG_GAIN_VALID | SET_AUDIO_GAIN_FLAG_MUTE_VALID,
         )?;
 
-        let (changed_token, gain_info) = assets
-            .enumerator
-            .take_event_stream()
-            .try_filter_map(move |e| {
-                future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_gain_changed(e)))
-            })
-            .try_next()
-            .await?
-            .expect("Waiting for a gain info event");
+        let (changed_token, gain_info) =
+            gain_change_events.try_next().await?.expect("Waiting for a gain info event");
 
         assert_eq!(changed_token, assets.token);
         assert_eq!(gain_info.flags, 0);
