@@ -228,8 +228,12 @@ zx_status_t ZSTDSeekableBlob::Read(uint8_t* buf, uint64_t data_byte_offset, uint
     return ZX_ERR_INTERNAL;
   }
 
+  FS_TRACE_ERROR("\n\nServicing ZSTDSeekableBlob::Read(%lx, %lu, %lu)\n\n", reinterpret_cast<uint64_t>(buf), data_byte_offset, num_bytes);
+
   size_t decompressed = 0;
   do {
+    FS_TRACE_ERROR("\n\nInvoking ZSTD_seekable_decompress(d_stream, %lx, %lu, %lu)\n\n", reinterpret_cast<uint64_t>(buf), num_bytes, data_byte_offset + decompressed);
+
     zstd_return =
         ZSTD_seekable_decompress(d_stream, buf, num_bytes, data_byte_offset + decompressed);
     if (ZSTD_isError(zstd_return)) {

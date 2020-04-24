@@ -897,13 +897,14 @@ zx_status_t Blobfs::PopulateCompressedTransferVmo(uint64_t offset, uint64_t leng
   });
 
   // Map the transfer VMO in order to pass it to |ZSTDSeekableBlobCollection::Read|.
-  zx_status_t status = mapping.Map(transfer_buffer_, 0, length, ZX_VM_PERM_READ);
+  zx_status_t status = mapping.Map(transfer_buffer_, 0, length, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to map transfer buffer: %s\n", zx_status_get_string(status));
     return status;
   }
 
   FS_TRACE_ERROR("\n\nUncompressed space buffer is %lx, %lx", reinterpret_cast<uint64_t>(mapping.start()), reinterpret_cast<uint64_t>(mapping.start()) + length);
+  FS_TRACE_ERROR("\n\nUncompressed space buffer first byte contains %x\n\n", *static_cast<uint8_t*>(mapping.start()));
 
   status = compressed_blobs_for_paging_->Read(
       info->identifier, static_cast<uint8_t*>(mapping.start()), offset, length);
