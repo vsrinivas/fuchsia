@@ -19,6 +19,9 @@ use {
     },
 };
 
+/// The capacity for bounded channels used by this implementation.
+pub static CHANNEL_CAPACITY: usize = 1024;
+
 /// A realm path is a vector of realm names.
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct RealmPath(pub Vec<String>);
@@ -175,9 +178,6 @@ pub struct ComponentEventData {
     /// Extra data about this event (to be stored in extra files in the archive).
     pub component_data_map: Option<HashMap<String, InspectData>>,
 }
-
-/// The capacity for bounded channels used by this implementation.
-pub static CHANNEL_CAPACITY: usize = 1024;
 
 pub type ComponentEventChannel = mpsc::Sender<ComponentEvent>;
 

@@ -10,6 +10,7 @@ use {
     anyhow::{Context, Error},
     archivist_lib::{archivist, configs, diagnostics, logs},
     argh::FromArgs,
+    fidl_fuchsia_sys2::EventSourceMarker,
     fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
@@ -50,8 +51,11 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new()?;
 
-    let event_provider = connect_to_service::<ComponentEventProviderMarker>()
-        .context("failed to connect to entity resolver")?;
+    let legacy_event_provider = connect_to_service::<ComponentEventProviderMarker>()
+        .context("failed to connect to event provider")?;
+    let event_source =
+        connect_to_service::<EventSourceMarker>().context("failed to connect to event source")?;
+
     diagnostics::init();
 
     let archivist_configuration: configs::Config = match configs::parse_config(&opt.config_path) {
@@ -62,7 +66,10 @@ fn main() -> Result<(), Error> {
     let num_threads = archivist_configuration.num_threads;
 
     let mut archivist = archivist::Archivist::new(archivist_configuration)?;
-    archivist.install_logger_services().set_event_provider(event_provider);
+    archivist
+        .install_logger_services()
+        .set_legacy_event_provider(legacy_event_provider)
+        .set_event_source(event_source);
     archivist.log_manager().spawn_internal_sink(log_server, log_name)?;
 
     if !opt.disable_log_connector {

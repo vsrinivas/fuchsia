@@ -14,7 +14,8 @@
         ],
         "services": [
             "fuchsia.sys.internal.ComponentEventProvider",
-            "fuchsia.sys.internal.LogConnector"
+            "fuchsia.sys.internal.LogConnector",
+            "fuchsia.sys2.EventSource"
         ]
     }
 }

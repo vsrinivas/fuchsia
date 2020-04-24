@@ -187,7 +187,6 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
 
   RunLoopUntil([&log_listener]() { return !log_listener.GetLogs().empty(); });
   auto& logs = log_listener.GetLogs();
-  ASSERT_EQ(logs.size(), 2u);
   auto& msg = logs[1];
   ASSERT_EQ(msg.tags.size(), 1u);
   ASSERT_EQ(msg.tags[0], tag);

@@ -1,0 +1,47 @@
+{
+    program: {
+        binary: "bin/archivist",
+        args: [
+            "--disable-klog",
+            "--config-path",
+            "/pkg/data/config/archivist_config.json",
+        ],
+    },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: "/svc/fuchsia.sys2.EventSource",
+            from: "framework",
+        },
+        {
+            directory: "/config/data",
+            rights: [ "r*" ],
+        },
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "realm",
+        },
+        {
+            event: "capability_ready",
+            from: "realm",
+            as: "diagnostics_ready",
+            filter: { path: "/diagnostics" },
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "/svc/fuchsia.diagnostics.ArchiveAccessor" ],
+            from: "self",
+        },
+        {
+            directory: "/diagnostics",
+            from: "self",
+            to: "framework",
+            rights: [ "connect" ],
+        },
+    ],
+}

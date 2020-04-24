@@ -6,6 +6,7 @@ use {
     crate::{archive, archive_accessor, configs, data_stats, diagnostics, events, inspect, logs},
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
+    fidl_fuchsia_sys2::EventSourceProxy,
     fidl_fuchsia_sys_internal::{ComponentEventProviderProxy, LogConnectorProxy, SourceIdentity},
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
@@ -68,8 +69,11 @@ pub struct Archivist {
     /// Stream which will recieve all the futures to process LogSink connections.
     log_sinks: Option<mpsc::UnboundedReceiver<FutureObj<'static, ()>>>,
 
-    /// Provider to optionally collect component events.
-    provider: Option<ComponentEventProviderProxy>,
+    /// Provider to collect component events from v1.
+    legacy_event_provider: Option<ComponentEventProviderProxy>,
+
+    /// Provider to collect component events from v2.
+    event_source: Option<EventSourceProxy>,
 
     /// Recieve stop signal to kill this archivist.
     stop_recv: Option<mpsc::Receiver<()>>,
@@ -77,12 +81,17 @@ pub struct Archivist {
 
 impl Archivist {
     async fn collect_component_events(
-        provider: ComponentEventProviderProxy,
+        legacy_provider: Option<ComponentEventProviderProxy>,
+        event_source: Option<EventSourceProxy>,
         state: archive::ArchivistState,
         pipeline_exists: bool,
     ) -> Result<(), Error> {
-        let events_result =
-            events::legacy::listen(provider, diagnostics::root().create_child("event_stats")).await;
+        let events_result = events::listen(
+            legacy_provider,
+            event_source,
+            diagnostics::root().create_child("event_stats"),
+        )
+        .await;
 
         let events = match events_result {
             Ok(events) => {
@@ -143,16 +152,26 @@ impl Archivist {
         return self;
     }
 
+    pub fn set_event_source(&mut self, source: EventSourceProxy) -> &mut Self {
+        assert!(self.event_source.is_none(), "set_event_source called twice.");
+        self.event_source = Some(source);
+        self
+    }
+
     // Sets event provider which is used to collect component events, Panics if called twice.
-    pub fn set_event_provider(&mut self, provider: ComponentEventProviderProxy) -> &mut Self {
-        assert!(self.provider.is_none(), "set_event_provider called twice.");
-        self.provider = Some(provider);
+    pub fn set_legacy_event_provider(
+        &mut self,
+        provider: ComponentEventProviderProxy,
+    ) -> &mut Self {
+        assert!(self.legacy_event_provider.is_none(), "set_legacy_event_provider called twice.");
+        self.legacy_event_provider = Some(provider);
         return self;
     }
 
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
-    /// Call `install_logger_services` and `set_event_provider` for further setup.
+    /// Call `install_logger_services`, `set_event_source` and `set_legacy_event_provider` for
+    /// further setup.
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
         let log_manager = logs::LogManager::new(diagnostics::root().create_child("log_stats"));
 
@@ -216,7 +235,8 @@ impl Archivist {
             _pipeline_nodes: vec![pipelines_node, feedback_pipeline, legacy_pipeline],
             _pipeline_configs: vec![feedback_config, legacy_config],
             log_manager,
-            provider: None,
+            legacy_event_provider: None,
+            event_source: None,
             stop_recv: None,
         })
     }
@@ -235,13 +255,14 @@ impl Archivist {
         // Start servcing all outgoing services.
         let run_outgoing = self.fs.collect::<()>().map(Ok);
         // collect events.
-        let run_event_collection = match self.provider {
-            Some(provider) => Either::Left(Self::collect_component_events(
+        let run_event_collection = match (self.legacy_event_provider, self.event_source) {
+            (None, None) => Either::Right(future::ok(())),
+            (provider, source) => Either::Left(Self::collect_component_events(
                 provider,
+                source,
                 self.state,
                 self.pipeline_exists,
             )),
-            None => Either::Right(future::ok(())),
         };
         // Process messages from log sink.
         let all_msg = async move {

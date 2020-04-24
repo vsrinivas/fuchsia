@@ -1,0 +1,17 @@
+{
+    program: {
+        binary: "bin/stub_inspect_component",
+    },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
+    ],
+    expose: [
+        {
+            directory: "/diagnostics",
+            from: "self",
+            to: "framework",
+            rights: [ "connect" ],
+        },
+    ],
+}

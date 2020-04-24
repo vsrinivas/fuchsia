@@ -1,0 +1,47 @@
+{
+    program: {
+        // Use the rust test adapter because we don't have the ability to use a runner yet.
+        binary: "bin/rust_test_adapter",
+        args: [ "/pkg/test/archivist_integration_tests" ],
+    },
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.diagnostics.ArchiveAccessor",
+
+                // These "use" statements are needed for the RustTestAdapter trampoline
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+            ],
+        },
+    ],
+    offer: [
+        {
+            runner: "elf",
+            from: "realm",
+            to: [ "#coll" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            from: "realm",
+            to: [ "#coll" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

@@ -1,0 +1,82 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("stub_inspect_component") {
+  name = "stub_inspect_component"
+  edition = "2018"
+  source_root = "components/stub_inspect_component.rs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_test("integration_tests_bin") {
+  name = "archivist_integration_tests"
+  edition = "2018"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+  ]
+}
+
+test_package("archivist-integration-tests-v2") {
+  deps = [
+    ":integration_tests_bin",
+    ":stub_inspect_component",
+    "//src/diagnostics/archivist:bin",
+    "//src/sys/test_adapters/rust:bin",
+  ]
+
+  binaries = [
+    {
+      name = "archivist"
+    },
+    {
+      name = "stub_inspect_component"
+    },
+    {
+      # TODO: Remove once tests can use a test runner
+      name = "rust_test_adapter"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/archivist_for_integration.cml")
+      dest = "archivist.cm"
+    },
+    {
+      path = rebase_path("meta/integration_tests_driver.cml")
+      dest = "test_driver.cm"
+    },
+    {
+      path = rebase_path("meta/stub_inspect_component.cml")
+      dest = "stub_inspect_component.cm"
+    },
+  ]
+
+  v2_tests = [
+    {
+      name = "archivist_integration_tests"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("configs/archivist_config.json")
+      dest = "config/archivist_config.json"
+    },
+  ]
+}

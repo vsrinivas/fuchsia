@@ -13,23 +13,23 @@ use {
     fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
-    futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
+    futures::{channel::mpsc, SinkExt, TryStreamExt},
     log::error,
     std::convert::TryInto,
 };
 
 /// Subscribe to component lifecycle events.
 /// |node| is the node where stats about events seen will be recorded.
-pub async fn listen(
+pub fn listen(
     provider: ComponentEventProviderProxy,
+    sender: mpsc::Sender<ComponentEvent>,
     node: inspect::Node,
-) -> Result<ComponentEventStream, Error> {
+) -> Result<(), Error> {
     let (events_client_end, listener_request_stream) =
         fidl::endpoints::create_request_stream::<ComponentEventListenerMarker>()?;
     provider.set_listener(events_client_end)?;
-    let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
     EventListenerServer::new(sender, node).spawn(listener_request_stream);
-    Ok(receiver.boxed())
+    Ok(())
 }
 
 struct EventListenerServer {
@@ -158,7 +158,7 @@ mod tests {
         },
         fuchsia_async as fasync,
         fuchsia_inspect::assert_inspect_tree,
-        futures::{channel::oneshot, TryStreamExt},
+        futures::{channel::oneshot, StreamExt, TryStreamExt},
     };
 
     #[derive(Clone)]
@@ -196,9 +196,10 @@ mod tests {
     async fn component_event_stream() {
         let (provider_proxy, listener_receiver) = spawn_fake_component_event_provider();
         let inspector = inspect::Inspector::new();
-        let mut event_stream = listen(provider_proxy, inspector.root().create_child("events"))
-            .await
+        let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
+        listen(provider_proxy, sender, inspector.root().create_child("events"))
             .expect("failed to listen");
+        let mut event_stream = receiver.boxed();
         let listener = listener_receiver
             .await
             .expect("failed to receive listener")

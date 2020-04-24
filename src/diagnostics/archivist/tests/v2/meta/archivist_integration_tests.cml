@@ -1,0 +1,64 @@
+{
+    children: [
+        {
+            name: "archivist",
+            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist.cm",
+            startup: "eager",
+        },
+        {
+            name: "driver",
+            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/test_driver.cm",
+        },
+    ],
+    offer: [
+        {
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#archivist",
+                "#driver",
+            ],
+        },
+        {
+            protocol: "/svc/fuchsia.diagnostics.ArchiveAccessor",
+            from: "#archivist",
+            to: [ "#driver" ],
+        },
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+            to: [ "#archivist" ],
+        },
+        {
+            event: "capability_ready",
+            from: "framework",
+            to: [ "#archivist" ],
+            filter: { path: "/diagnostics" },
+        },
+        {
+            directory: "/config/data",
+            from: "realm",
+            as: "/config/data",
+            to: [ "#archivist" ],
+            subdir: "fonts",
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+            ],
+            from: "realm",
+            to: [ "#driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "#driver",
+        },
+    ],
+}

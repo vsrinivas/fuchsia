@@ -73,6 +73,7 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/diagnostics/lib/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
