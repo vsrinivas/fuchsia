@@ -3,8 +3,10 @@
 # found in the LICENSE file.
 
 group("intl") {
+  testonly = true
   public_deps = [
     "intl_property_provider_impl",
+    "lookup",
     "unicode_utils",
   ]
 }
@@ -13,6 +15,7 @@ group("tests") {
   testonly = true
   public_deps = [
     "intl_property_provider_impl:tests",
+    "lookup:tests",
     "unicode_utils:tests",
   ]
 }

@@ -1,0 +1,40 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_staticlib.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("rust") {
+  testonly = true
+  public_deps = [
+    ":lib",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":intl-lookup-rust-tests" ]
+}
+
+rustc_staticlib("lib") {
+  with_unit_tests = true
+  name = "intl_lookup"
+  edition = "2018"
+  public = [ "lookup.h" ]
+  deps = [ "//third_party/rust_crates:libc" ]
+  non_rust_deps = [ "//zircon/public/lib/zx" ]
+}
+
+test_package("intl-lookup-rust-tests") {
+  deps = [ ":lib_test" ]
+
+  tests = [
+    {
+      name = "intl_lookup_staticlib_test"
+      dest = "intl_lookup_rust_tests"
+    },
+  ]
+}
