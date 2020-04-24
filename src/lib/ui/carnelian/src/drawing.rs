@@ -296,8 +296,6 @@ impl Text {
             ascent += size;
         }
 
-        bounding_box.size.height = size;
-
         Self { raster: raster_union.expect("raster_union"), bounding_box }
     }
 }
@@ -357,7 +355,7 @@ mod tests {
         );
 
         let expected_origin = Point::new(0.0, 3.4487228);
-        let expected_size = Vector2D::new(100.486115, 20.0);
+        let expected_size = Vector2D::new(100.486115, 14.787117);
         assert!(
             text.bounding_box.origin.approx_eq(&expected_origin),
             "Expected bounding box origin to be close to {} but found {}",

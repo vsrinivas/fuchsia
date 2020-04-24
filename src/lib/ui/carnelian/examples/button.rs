@@ -131,7 +131,7 @@ impl Button {
 
         // calculate button size based on label's text size
         // plus padding.
-        let button_size = label.bounding_box.size;
+        let button_size = Size::new(label.bounding_box.size.width, font_size as f32);
         let button_w = button_size.width + 2.0 * padding;
         let button_h = button_size.height + 2.0 * padding;
 
@@ -144,8 +144,7 @@ impl Button {
 
         let center = self.bounds.center();
 
-        let label_offet =
-            (center - (label.bounding_box.size / 2.0).to_vector()).to_vector().to_i32();
+        let label_offet = (center - (button_size / 2.0).to_vector()).to_vector().to_i32();
 
         let raster = raster_for_rectangle(&self.bounds, render_context);
         let button_layer = Layer {
