@@ -22,7 +22,7 @@ class ScreenshotTaker {
  public:
   explicit ScreenshotTaker(async::Loop* loop) : loop_(loop) {
     // Connect to the Scenic service.
-    auto context = sys::ComponentContext::Create();
+    auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     scenic_ = context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Scenic service.";

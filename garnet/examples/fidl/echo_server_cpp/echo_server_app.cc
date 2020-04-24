@@ -17,7 +17,8 @@ void EchoServer::EchoString(fidl::StringPtr value, EchoStringCallback callback) 
   callback(std::move(value));
 }
 
-EchoServerApp::EchoServerApp(bool quiet) : EchoServerApp(sys::ComponentContext::Create(), quiet) {}
+EchoServerApp::EchoServerApp(bool quiet)
+    : EchoServerApp(sys::ComponentContext::CreateAndServeOutgoingDirectory(), quiet) {}
 
 EchoServerApp::EchoServerApp(std::unique_ptr<sys::ComponentContext> context, bool quiet)
     : service_(new EchoServer(quiet)), context_(std::move(context)) {

@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
   // ComponentContext.
   // [START async_executor]
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   // [END async_executor]
 
   // CODELAB: Initialize Inspect here.

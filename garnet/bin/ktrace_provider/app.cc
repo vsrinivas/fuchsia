@@ -95,7 +95,7 @@ void RequestKtraceStart(const zx::channel& channel, uint32_t group_mask) {
 }  // namespace
 
 App::App(const fxl::CommandLine& command_line)
-    : component_context_(sys::ComponentContext::Create()) {
+    : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
   trace_observer_.Start(async_get_default_dispatcher(), [this] { UpdateState(); });
 }
 

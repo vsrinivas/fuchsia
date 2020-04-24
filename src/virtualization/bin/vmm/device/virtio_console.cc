@@ -161,7 +161,8 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   VirtioConsoleImpl virtio_console(context.get());
   return loop.Run();

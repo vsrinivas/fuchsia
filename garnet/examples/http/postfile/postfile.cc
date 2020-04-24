@@ -71,7 +71,8 @@ class ResponsePrinter {
 
 class PostFileApp {
  public:
-  PostFileApp(async::Loop* loop) : loop_(loop), context_(sys::ComponentContext::Create()) {
+  PostFileApp(async::Loop* loop)
+      : loop_(loop), context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
     http_service_ = context_->svc()->Connect<http::HttpService>();
   }
 

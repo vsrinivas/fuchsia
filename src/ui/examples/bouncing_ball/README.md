@@ -32,7 +32,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   std::unique_ptr<sys::ComponentContext> component_context =
-      sys::ComponentContext::Create();
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Add our ViewProvider service to the outgoing services.
   component_context->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
@@ -87,7 +87,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   std::unique_ptr<sys::ComponentContext> component_context =
-      sys::ComponentContext::Create();
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // ** NEW CODE **: Instantiate our ViewProvider service.
   ViewProviderService view_provider(component_context.get());

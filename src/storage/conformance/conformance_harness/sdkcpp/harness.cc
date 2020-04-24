@@ -57,7 +57,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   syslog::SetTags({"io_conformance_harness_sdkcpp"});
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   sys::ServiceHandler handler;
   fuchsia::io::test::Harness::Handler harness(&handler);
 

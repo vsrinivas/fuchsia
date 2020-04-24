@@ -28,7 +28,7 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params, fit::closure quit_call
   FXL_DCHECK(params.is_valid());
   FXL_DCHECK(quit_callback_);
 
-  auto startup_context = sys::ComponentContext::Create();
+  auto startup_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   player_ = startup_context->svc()->Connect<fuchsia::media::playback::Player>();
   player_.events().OnStatusChanged = [this](fuchsia::media::playback::PlayerStatus status) {

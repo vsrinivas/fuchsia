@@ -42,7 +42,7 @@ template <typename Impl, typename... Args>
 void ComponentMain(Args... args) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   modular::AppDriver<Impl> driver(context->outgoing(),
                                   std::make_unique<Impl>(context.get(), std::move(args)...),
                                   [&loop] { loop.Quit(); });

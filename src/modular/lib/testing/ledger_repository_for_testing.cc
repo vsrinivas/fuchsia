@@ -17,7 +17,8 @@
 namespace modular_testing {
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting()
-    : component_context_(sys::ComponentContext::Create()), weak_ptr_factory_(this) {
+    : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
+      weak_ptr_factory_(this) {
   fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = modular::kLedgerAppUrl;
 

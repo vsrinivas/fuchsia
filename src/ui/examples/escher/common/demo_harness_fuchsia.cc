@@ -92,7 +92,7 @@ DemoHarnessFuchsia::DemoHarnessFuchsia(async::Loop* loop, WindowParams window_pa
     : DemoHarness(window_params),
       owned_loop_(loop ? nullptr : new async::Loop(&kAsyncLoopConfigAttachToCurrentThread)),
       loop_(loop ? loop : owned_loop_.get()),
-      component_context_(sys::ComponentContext::Create()),
+      component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       input_reader_(this) {
   // Provide a PseudoDir where the demo can register debugging services.
   auto debug_dir = std::make_shared<vfs::PseudoDir>();

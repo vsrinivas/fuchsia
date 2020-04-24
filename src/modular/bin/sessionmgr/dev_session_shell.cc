@@ -52,7 +52,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
     component_context->outgoing()->AddPublicService(session_shell_bindings_.GetHandler(this));
 
-    component_context_ = sys::ComponentContext::Create();
+    component_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   }
 
   ~DevSessionShellApp() override = default;
@@ -177,7 +177,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   modular::AppDriver<DevSessionShellApp> driver(
       context->outgoing(), std::make_unique<DevSessionShellApp>(context.get(), std::move(settings)),
       [&loop] { loop.Quit(); });

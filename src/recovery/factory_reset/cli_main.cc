@@ -11,7 +11,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fuchsia::recovery::FactoryResetSyncPtr fdr;
   context->svc()->Connect(fdr.NewRequest());
   zx_status_t status, call_status;

@@ -188,7 +188,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   media::tools::MediaApp media_app(
       [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });

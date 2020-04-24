@@ -23,7 +23,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   network::tun::TunCtl ctl(loop.dispatcher());
-  auto ctx = sys::ComponentContext::Create();
+  auto ctx = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   ctx->outgoing()->AddPublicService(ctl.GetHandler());
   loop.Run();
   return 0;

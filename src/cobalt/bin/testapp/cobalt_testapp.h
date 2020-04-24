@@ -31,7 +31,7 @@ constexpr size_t kEventAggregatorBackfillDays = 2;
 class CobaltTestApp {
  public:
   CobaltTestApp(bool use_network, bool test_for_prober)
-      : context_(sys::ComponentContext::Create()),
+      : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         logger_(use_network, &cobalt_controller_),
         test_for_prober_(test_for_prober) {
     clock_.reset(new util::SystemClock);

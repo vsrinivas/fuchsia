@@ -19,7 +19,7 @@
 // to the sysmem driver.
 TEST(SysmemConnectorTest, Connect) {
   async::Loop main_loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   std::mutex is_sync_complete_lock;
   bool is_sync_complete = false;

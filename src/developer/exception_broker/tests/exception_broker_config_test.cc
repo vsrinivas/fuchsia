@@ -23,7 +23,7 @@ constexpr char kTestConfigFile[] = "/pkg/data/enable_jitd_on_startup.json";
 
 TEST(ExceptionBrokerConfig, NonExistanceShouldNotActivate) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   sys::testing::ServiceDirectoryProvider services;
 
@@ -35,7 +35,7 @@ TEST(ExceptionBrokerConfig, NonExistanceShouldNotActivate) {
 
 TEST(ExceptionBrokerConfig, ExistanceShouldActivate) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   sys::testing::ServiceDirectoryProvider services;
 
@@ -54,7 +54,7 @@ constexpr char kFilterConfigFile[] = "/pkg/data/filter_jitd_config.json";
 
 TEST(ExceptionBrokerConfig, FilterArray) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   sys::testing::ServiceDirectoryProvider services;
 

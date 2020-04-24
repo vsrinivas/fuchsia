@@ -33,7 +33,7 @@ constexpr bool kAutoUpdatePackages = false;
 }  // namespace
 
 App::App(Config config, async::Loop* loop)
-    : component_context_(sys::ComponentContext::Create()),
+    : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       auto_updates_enabled_(kAutoUpdatePackages) {
   FXL_DCHECK(component_context_);
 

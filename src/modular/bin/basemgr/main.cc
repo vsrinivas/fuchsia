@@ -197,7 +197,8 @@ int main(int argc, const char** argv) {
   }
 
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<sys::ComponentContext> component_context(sys::ComponentContext::Create());
+  std::unique_ptr<sys::ComponentContext> component_context(
+      sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
   fuchsia::setui::SetUiServicePtr setui;
   std::unique_ptr<modular::BasemgrImpl> basemgr_impl;

@@ -24,7 +24,8 @@ llcpp::fuchsia::shell::ExecuteResult InterpreterTestContext::GetResult() const {
 }
 
 InterpreterTest::InterpreterTest()
-    : loop_(&kAsyncLoopConfigAttachToCurrentThread), context_(sys::ComponentContext::Create()) {
+    : loop_(&kAsyncLoopConfigAttachToCurrentThread),
+      context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
   ::fidl::InterfaceHandle<fuchsia::io::Directory> directory;
 
   fuchsia::sys::LaunchInfo launch_info;

@@ -58,7 +58,8 @@ class MWGetApp {
  public:
   static constexpr int MAX_LOADERS = 100;
 
-  MWGetApp(async::Loop* loop) : context_(sys::ComponentContext::Create()), loop_(loop) {
+  MWGetApp(async::Loop* loop)
+      : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()), loop_(loop) {
     http_service_ = context_->svc()->Connect<http::HttpService>();
     FXL_DCHECK(loop);
     FXL_DCHECK(http_service_);

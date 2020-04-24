@@ -41,8 +41,9 @@ void test_factory() {
   // thread's default async_t, and we don't want to be accidentally doing
   // FIDL requests from the main thread, so we use
   // kAsyncLoopConfigNoAttachToCurrentThread above.
-  PostSerial(fidl_loop.dispatcher(),
-             [&component_context] { component_context = sys::ComponentContext::Create(); });
+  PostSerial(fidl_loop.dispatcher(), [&component_context] {
+    component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  });
 
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   codec_factory.set_error_handler([](zx_status_t error) {

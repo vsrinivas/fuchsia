@@ -16,7 +16,7 @@ ViewProviderComponent::ViewProviderComponent(ViewFactory factory, async::Loop* l
                                              sys::ComponentContext* component_context)
     : component_context_(component_context
                              ? std::unique_ptr<sys::ComponentContext>(component_context)
-                             : sys::ComponentContext::Create()),
+                             : sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       scenic_(component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>()),
       service_(component_context_.get(), scenic_.get(), factory.share()) {
   // Register the |View| service.

@@ -91,7 +91,7 @@ class ColorTransformManagerTest : public gtest::TestLoopFixture {
   void SetUp() override {
     TestLoopFixture::SetUp();
 
-    startup_context_ = sys::ComponentContext::Create();
+    startup_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     color_transform_manager_ =
         std::make_unique<a11y::ColorTransformManager>(startup_context_.get());
 

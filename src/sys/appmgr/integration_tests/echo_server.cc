@@ -12,7 +12,7 @@
 /// publish out dir for this component.
 int main() {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   EchoImpl echo;
   context->outgoing()->AddPublicService(echo.GetHandler(loop.dispatcher()));
   loop.Run();

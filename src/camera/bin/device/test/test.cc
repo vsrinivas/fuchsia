@@ -33,7 +33,7 @@ static void nop_stream_requested(
 
 class DeviceTest : public gtest::RealLoopFixture {
  protected:
-  DeviceTest() : context_(sys::ComponentContext::Create()) {}
+  DeviceTest() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
   void SetUp() override {
     context_->svc()->Connect(allocator_.NewRequest());

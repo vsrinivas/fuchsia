@@ -174,7 +174,7 @@ int main(int argc, const char** argv) {
     }
   }
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto service =
       std::make_unique<vfs::Service>([&devmgr](zx::channel chan, async_dispatcher_t* dispatcher) {
         devmgr->Connect(std::move(chan));

@@ -21,7 +21,8 @@ namespace {
 class App {
  public:
   explicit App(async_dispatcher_t* dispatcher)
-      : dispatcher_(dispatcher), component_context_(sys::ComponentContext::Create()) {
+      : dispatcher_(dispatcher),
+        component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
     LEDGER_DCHECK(component_context_);
   }
   App(const App&) = delete;

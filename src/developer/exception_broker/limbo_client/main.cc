@@ -41,7 +41,7 @@ int main(int argc, const char* argv[]) {
   // Create the client.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto& services = context->svc();
 
   LimboClient client(services);

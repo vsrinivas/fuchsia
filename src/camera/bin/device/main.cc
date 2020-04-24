@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
   syslog::SetTags({"camera", "camera_device"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Verify arguments.
   if (argc != 2 || argv[1][0] == '\0') {

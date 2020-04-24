@@ -92,7 +92,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   App app(context.get(), view_factory_it->second);
   fidl::BindingSet<fuchsia::ui::views::View> view_bindings_;
   context->outgoing()->AddPublicService(view_bindings_.GetHandler(&app));

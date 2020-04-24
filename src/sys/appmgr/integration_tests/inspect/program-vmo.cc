@@ -47,7 +47,7 @@ class Table {
 
 int main() {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
 
   Table t1(inspector->root().CreateChild("t1"));

@@ -17,7 +17,8 @@ using intl::IntlPropertyProviderImpl;
 int main() {
   syslog::SetTags({"intl_services"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   FX_LOGS(INFO) << "Started.";
 

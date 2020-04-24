@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
   syslog::SetTags({"camera-gym"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Connect to required services for the collage.
   fuchsia::sysmem::AllocatorHandle allocator;

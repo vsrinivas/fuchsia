@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/ui/activity/cpp/fidl.h>
 #include <fuchsia/ui/activity/control/cpp/fidl.h>
+#include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -210,7 +210,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async_set_default_dispatcher(loop.dispatcher());
-  std::unique_ptr<sys::ComponentContext> startup_context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> startup_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   activity_ctl::ActivityCtl ctl{std::move(startup_context), loop.dispatcher(),
                                 [&loop]() { loop.Quit(); }};

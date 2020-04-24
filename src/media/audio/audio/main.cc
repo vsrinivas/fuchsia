@@ -17,7 +17,7 @@ int main(int argc, const char** argv) {
 
   // ComponentContext is safe to initialize early as we publish all implemented interfaces before we
   // run the event loop.
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   auto closer = [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); };
   media::audio::AudioCoreClient audio_core(component_context.get(), closer);

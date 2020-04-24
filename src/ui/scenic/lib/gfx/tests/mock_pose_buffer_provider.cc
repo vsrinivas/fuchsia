@@ -10,7 +10,8 @@
 
 namespace mock_pose_buffer_provider {
 
-MockPoseBufferProviderApp::MockPoseBufferProviderApp() : context_(sys::ComponentContext::Create()) {
+MockPoseBufferProviderApp::MockPoseBufferProviderApp()
+    : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 

@@ -77,7 +77,7 @@ int main(int argc, const char** argv) {
   auto time_zone = ParseOrGetDefaultTimeZone(time_zone_id);
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  intl_wisdom::IntlWisdomClient client(sys::ComponentContext::Create());
+  intl_wisdom::IntlWisdomClient client(sys::ComponentContext::CreateAndServeOutgoingDirectory());
   client.Start(server_url);
   client.SendRequest(timestamp, *time_zone, [&loop](fidl::StringPtr response) {
     printf("Response:\n%s\n", response->data());

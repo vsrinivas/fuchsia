@@ -296,7 +296,8 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // The virtio-block device is single-threaded.
   VirtioBlockImpl virtio_block(context.get());

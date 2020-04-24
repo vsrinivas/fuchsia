@@ -45,7 +45,7 @@ int main(int argc, const char** argv) {
     FXL_LOG(ERROR) << "The --input_path= flag is DEPRECATED. Flag will be removed.";
   }
 
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto scenic = component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
 
   // Create tiles with a token for its root view.

@@ -15,7 +15,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   a11y::ViewManager view_manager(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                                  std::make_unique<a11y::ViewWrapperFactory>(),
                                  context->outgoing()->debug_dir());

@@ -20,7 +20,7 @@ void InitComponentContext() {
   // |Create()| needs a loop, it uses the default dispatcher.
   {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-    g_context = sys::ComponentContext::Create();
+    g_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     FXL_CHECK(g_context);
   }
 }

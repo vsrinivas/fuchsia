@@ -10,7 +10,8 @@
 namespace cloud_provider {
 
 ValidationTest::ValidationTest()
-    : component_context_(sys::ComponentContext::Create()), random_(test_loop().initial_state()) {}
+    : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
+      random_(test_loop().initial_state()) {}
 
 ValidationTest::~ValidationTest() = default;
 

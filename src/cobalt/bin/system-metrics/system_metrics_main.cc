@@ -24,7 +24,7 @@ int main(int argc, const char** argv) {
   fxl::SetLogSettingsFromCommandLine(command_line, {"cobalt", "system_metrics"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Create the SystemMetricsDaemon and start it.
   SystemMetricsDaemon daemon(loop.dispatcher(), context.get());

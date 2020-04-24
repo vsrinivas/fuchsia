@@ -18,7 +18,8 @@
 namespace guest_runner {
 
 RunnerImpl::RunnerImpl()
-    : context_(sys::ComponentContext::Create()), vfs_(async_get_default_dispatcher()) {
+    : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
+      vfs_(async_get_default_dispatcher()) {
   context_->svc()->Connect(launcher_.NewRequest());
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }

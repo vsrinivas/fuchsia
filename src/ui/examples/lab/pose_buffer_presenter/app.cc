@@ -67,7 +67,8 @@ static const uint32_t kIndexBufferData[] = {
 };
 }  // namespace
 
-App::App(async::Loop* loop) : component_context_(sys::ComponentContext::Create()), loop_(loop) {
+App::App(async::Loop* loop)
+    : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()), loop_(loop) {
   // Connect to the Scenic service.
   scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {

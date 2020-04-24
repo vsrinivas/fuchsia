@@ -33,7 +33,7 @@
 //
 // async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 // std::unique_ptr<sys::ComponentContext> context(
-//     sys::ComponentContext::Create());
+//     sys::ComponentContext::CreateAndServeOutgoingDirectory());
 // SystemMetricsDaemon daemon(loop.dispatcher(), context.get());
 // daemon.StartLogging();
 // loop.Run();

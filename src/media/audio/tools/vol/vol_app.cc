@@ -83,7 +83,7 @@ class EscapeDecoder {
 class VolApp {
  public:
   VolApp(int argc, const char** argv, fit::closure quit_callback)
-      : component_context_(sys::ComponentContext::Create()),
+      : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         quit_callback_(std::move(quit_callback)) {
     FX_DCHECK(quit_callback_);
 

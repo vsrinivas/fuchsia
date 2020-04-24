@@ -32,8 +32,9 @@ int main(int argc, char** argv) {
   bool immediate = command_line.HasOption("immediate");
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  network_time_service::TimeServiceImpl svc(sys::ComponentContext::Create(), config_path.c_str(),
-                                            rtc_path.c_str());
+  network_time_service::TimeServiceImpl svc(
+      sys::ComponentContext::CreateAndServeOutgoingDirectory(), config_path.c_str(),
+      rtc_path.c_str());
   if (immediate) {
     svc.Update(3, fuchsia::deprecatedtimezone::TimeService::UpdateCallback([&loop](bool success) {
                  FX_LOGS(INFO) << "time sync result was " << success;

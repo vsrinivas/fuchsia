@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
   // Standard component setup, create an event loop and obtain the
   // ComponentContext.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Create an inspector for this component.
   sys::ComponentInspector inspector(context.get());

@@ -25,7 +25,7 @@ void ScenicGfxTest::InitializeScenic(Scenic* scenic) {
       std::make_unique<scheduling::ConstantFramePredictor>(zx::msec(5)),
       scenic_->inspect_node()->CreateChild("FrameScheduler"));
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   engine_ = std::make_unique<gfx::Engine>(context.get(), frame_scheduler_, std::move(signaller),
                                           escher::EscherWeakPtr());
   auto system = scenic->RegisterSystem<gfx::GfxSystem>(engine_.get(),

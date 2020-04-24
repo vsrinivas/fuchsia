@@ -51,7 +51,8 @@ int main(int argc, const char** argv) {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
     trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-    std::unique_ptr<sys::ComponentContext> app_context(sys::ComponentContext::Create());
+    std::unique_ptr<sys::ComponentContext> app_context(
+        sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
     shadertoy::App app(&loop, app_context.get(), escher.GetWeakPtr());
     loop.Run();

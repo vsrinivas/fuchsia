@@ -51,7 +51,8 @@ bool GetBufferSizeInPages(uint32_t size_in_mb, uint32_t* out_num_pages) {
 
 }  // namespace
 
-App::App(const fxl::CommandLine& command_line) : startup_context_(sys::ComponentContext::Create()) {
+App::App(const fxl::CommandLine& command_line)
+    : startup_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
   if (command_line.HasOption("help")) {
     PrintHelp();
     exit(EXIT_SUCCESS);

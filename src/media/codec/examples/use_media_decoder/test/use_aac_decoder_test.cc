@@ -57,7 +57,7 @@ constexpr char kGoldenSha256_arm64[SHA256_DIGEST_LENGTH * 2 + 1] =
 TEST(DecoderTest, AacDecoder) {
   async::Loop main_loop(&kAsyncLoopConfigAttachToCurrentThread);
   main_loop.StartThread("main_loop");
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   component_context->svc()->Connect(codec_factory.NewRequest(main_loop.dispatcher()));
 

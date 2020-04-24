@@ -40,7 +40,7 @@ class InputInjectTest : public sys::testing::TestWithEnvironment {
 };
 
 void InputInjectTest::SetUp() {
-  auto ctx = sys::ComponentContext::Create();
+  auto ctx = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fidl::InterfacePtr<fuchsia::sys::Launcher> launcher;
   ctx->svc()->Connect(launcher.NewRequest());
 

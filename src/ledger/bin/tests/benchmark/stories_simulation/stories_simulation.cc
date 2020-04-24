@@ -433,7 +433,7 @@ int Main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   ssize_t story_count = absl::GetFlag(FLAGS_story_count);
   ssize_t active_story_count = absl::GetFlag(FLAGS_active_story_count);

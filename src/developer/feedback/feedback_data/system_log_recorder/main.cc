@@ -32,7 +32,7 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   SystemLogRecorder recorder(write_loop.dispatcher(), context->svc(),
                              SystemLogRecorder::WriteParameters{

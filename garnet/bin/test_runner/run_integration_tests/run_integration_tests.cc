@@ -101,7 +101,8 @@ int RunIntegrationTestsMain(int argc, char** argv) {
 
   TestRunnerConfig config(test_file);
 
-  std::shared_ptr<sys::ComponentContext> app_context = sys::ComponentContext::Create();
+  std::shared_ptr<sys::ComponentContext> app_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   std::vector<std::string> test_names = settings.positional_args();
   if (test_names.empty()) {

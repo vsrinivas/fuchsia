@@ -10,7 +10,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  tts::TtsServiceImpl impl(sys::ComponentContext::Create());
+  tts::TtsServiceImpl impl(sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
   if (impl.Init() != ZX_OK)
     return -1;

@@ -72,7 +72,7 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
     // This fixture constructor may run multiple times, but we want the context
     // to be set up just once per process.
     if (g_context == nullptr) {
-      g_context = sys::ComponentContext::Create().release();
+      g_context = sys::ComponentContext::CreateAndServeOutgoingDirectory().release();
     }
   }
 

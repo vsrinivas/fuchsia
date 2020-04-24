@@ -32,7 +32,7 @@ namespace modular {
 //
 // int main(int argc, const char** argv) {
 //   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-//   auto context = sys::ComponentContext::Create();
+//   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 //
 //   MyAgentServiceImpl my_service;
 //   fidl::BindingSet<MyAgentService> my_service_bindings;

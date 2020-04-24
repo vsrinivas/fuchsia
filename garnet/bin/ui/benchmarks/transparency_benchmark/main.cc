@@ -487,7 +487,8 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> component_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   ViewProviderService view_provider(component_context.get());
 

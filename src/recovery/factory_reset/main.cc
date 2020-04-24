@@ -18,7 +18,8 @@ int main(int argc, const char** argv) {
   fbl::unique_fd dev_fd;
   dev_fd.reset(open("/dev", O_RDONLY | O_DIRECTORY));
 
-  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   auto admin = context->svc()->Connect<fuchsia::device::manager::Administrator>();
   factory_reset::FactoryReset factory_reset(std::move(dev_fd), std::move(admin));

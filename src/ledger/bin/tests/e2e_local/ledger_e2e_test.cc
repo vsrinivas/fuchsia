@@ -83,7 +83,8 @@ std::vector<uint8_t> TestArray() {
 
 class LedgerEndToEndTest : public ledger::RealLoopFixture {
  public:
-  LedgerEndToEndTest() : component_context_(sys::ComponentContext::Create()) {
+  LedgerEndToEndTest()
+      : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
     component_context()->svc()->Connect(launcher_.NewRequest());
   }
   ~LedgerEndToEndTest() override = default;

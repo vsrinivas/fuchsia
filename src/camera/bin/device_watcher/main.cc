@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
   syslog::SetTags({"camera", "camera_device_watcher"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   fuchsia::sys::LauncherHandle launcher;
   zx_status_t status = context->svc()->Connect(launcher.NewRequest());

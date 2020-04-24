@@ -48,7 +48,7 @@ class IsolatedStorageTestUtil : public test::appmgr::integration::DataFileReader
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   IsolatedStorageTestUtil server(context->outgoing());
   loop.Run();
   return 0;

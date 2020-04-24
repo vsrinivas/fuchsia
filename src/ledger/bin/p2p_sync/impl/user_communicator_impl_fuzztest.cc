@@ -56,7 +56,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
 
   async::TestLoop loop(data_provider.ConsumeIntegral<uint32_t>());
   auto io_loop = loop.StartNewLoop();
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   ledger::Environment environment(
       ledger::EnvironmentBuilder()
           .SetDisableStatistics(true)

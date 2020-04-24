@@ -333,7 +333,7 @@ int Main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   ssize_t entry_count = absl::GetFlag(FLAGS_entry_count);
   ssize_t transaction_size = absl::GetFlag(FLAGS_transaction_size);

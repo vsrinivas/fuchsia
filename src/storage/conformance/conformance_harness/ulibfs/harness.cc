@@ -167,7 +167,7 @@ int main(int argc, const char** argv) {
   bindings.AddBinding(&harness, connection.NewRequest());
 
   // Sends a connection of `Io1TestHarness` protocol to the test through a HarnessReceiver.
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fuchsia::io::test::Io1HarnessReceiverPtr receiver =
       context->svc()->Connect<fuchsia::io::test::Io1HarnessReceiver>();
   receiver->SendIo1Harness(connection.Unbind());

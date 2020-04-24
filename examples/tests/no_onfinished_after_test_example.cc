@@ -15,7 +15,7 @@ int main(int /*unused*/, const char** /*unused*/) {
       {.name = "Example.Test3", .status = fuchsia::test::Status::PASSED}};
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   example::Options options;
   options.dont_send_on_finish_event = true;

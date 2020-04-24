@@ -20,7 +20,7 @@ namespace direct_input_child {
 const uint32_t kNoFinger = std::numeric_limits<uint32_t>::max();  // Sentinel.
 
 App::App(async::Loop* loop)
-    : component_context_(sys::ComponentContext::Create()),
+    : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       message_loop_(loop),
       focused_(false),
       view_provider_binding_(this) {

@@ -37,8 +37,8 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
   auto provider = std::make_unique<ControllerStreamProvider>();
 
   // Connect to sysmem.
-  zx_status_t status =
-      sys::ComponentContext::Create()->svc()->Connect(provider->allocator_.NewRequest());
+  zx_status_t status = sys::ComponentContext::CreateAndServeOutgoingDirectory()->svc()->Connect(
+      provider->allocator_.NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to connect to sysmem allocator service";
     return nullptr;

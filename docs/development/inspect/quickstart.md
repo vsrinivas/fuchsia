@@ -33,7 +33,7 @@ See below for the quick start guide in your language of choice.
 
   ```cpp
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   // ...
   loop.Run();
   ```
@@ -52,7 +52,7 @@ See below for the quick start guide in your language of choice.
 
   ```cpp
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto inspector =
         std::make_unique<sys::ComponentInspector>(component_context.get());
   inspect::Node& root_node = inspector->root();

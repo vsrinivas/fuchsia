@@ -21,7 +21,7 @@ namespace cobalt::testapp {
 class FakeTimekeeper : public ::fuchsia::time::testing::Utc_TestBase {
  public:
   FakeTimekeeper() {
-    context_ = sys::ComponentContext::Create();
+    context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   }
 

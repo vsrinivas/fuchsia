@@ -53,7 +53,7 @@ fuchsia::ui::gfx::ShadowTechnique GetShadowTechniqueFromCommandLine(
 }
 
 App::App(async::Loop* loop, const fxl::CommandLine& command_line)
-    : component_context_(sys::ComponentContext::Create()),
+    : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       loop_(loop),
       shadow_technique_(GetShadowTechniqueFromCommandLine(command_line)) {
   scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();

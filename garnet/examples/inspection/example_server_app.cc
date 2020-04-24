@@ -15,7 +15,8 @@ constexpr uint64_t kRequestHistogramFloor = 1;
 constexpr uint64_t kRequestHistogramInitialStep = 1;
 constexpr uint64_t kRequestHistogramStepMultiplier = 2;
 
-ExampleServerApp::ExampleServerApp() : ExampleServerApp(sys::ComponentContext::Create()) {}
+ExampleServerApp::ExampleServerApp()
+    : ExampleServerApp(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
 ExampleServerApp::ExampleServerApp(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {

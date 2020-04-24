@@ -18,7 +18,7 @@ int main(int argc, const char** argv) {
   syslog::SetTags({"feedback"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspect::Node& root_node = inspector->root();

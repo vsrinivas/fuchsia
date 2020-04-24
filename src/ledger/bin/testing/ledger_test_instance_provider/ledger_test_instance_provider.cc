@@ -28,7 +28,8 @@ constexpr absl::string_view kLedgerName = "test ledger instance";
 // Exposes a public service that serves an in-memory Ledger.
 int main(int argc, char const *argv[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  std::unique_ptr<sys::ComponentContext> context(sys::ComponentContext::Create());
+  std::unique_ptr<sys::ComponentContext> context(
+      sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
   // Get a repository factory.
   fidl::InterfaceHandle<fuchsia::io::Directory> child_directory;

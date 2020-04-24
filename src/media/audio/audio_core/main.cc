@@ -36,7 +36,7 @@ static int StartAudioCore() {
   FX_LOGS(INFO) << "AudioCore starting up";
 
   // Initialize our telemetry reporter (which optimizes to nothing if ENABLE_REPORTER is set to 0).
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   REPORT(Init(component_context.get()));
 
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);

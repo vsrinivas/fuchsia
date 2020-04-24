@@ -31,7 +31,7 @@ int main() {
   syslog::SetTags({"exception-broker"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   auto broker = fuchsia::exception::ExceptionBroker::Create(loop.dispatcher(), context->svc());
   if (!broker)

@@ -87,7 +87,7 @@ void Input(std::vector<const char*> args) {
 
 SemanticsIntegrationTest::SemanticsIntegrationTest(const std::string& environment_label)
     : environment_label_(environment_label),
-      component_context_(sys::ComponentContext::Create()),
+      component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                     std::make_unique<a11y::ViewWrapperFactory>(),
                     component_context_->outgoing()->debug_dir()),

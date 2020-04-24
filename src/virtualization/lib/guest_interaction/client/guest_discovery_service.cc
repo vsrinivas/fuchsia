@@ -22,7 +22,8 @@ static bool find_guest_ids(const std::string& realm_name, const std::string& gue
 }
 
 GuestDiscoveryServiceImpl::GuestDiscoveryServiceImpl()
-    : context_(sys::ComponentContext::Create()), executor_(async_get_default_dispatcher()) {
+    : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
+      executor_(async_get_default_dispatcher()) {
   context_->svc()->Connect(manager_.NewRequest());
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }

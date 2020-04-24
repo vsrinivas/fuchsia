@@ -13,7 +13,7 @@
 
 class VirtualCameraTest : public gtest::RealLoopFixture {
  public:
-  VirtualCameraTest() { context_ = sys::ComponentContext::Create(); }
+  VirtualCameraTest() { context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory(); }
 
  protected:
   virtual void SetUp() override {

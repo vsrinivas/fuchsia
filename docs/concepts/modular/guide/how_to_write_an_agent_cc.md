@@ -26,7 +26,7 @@ class.
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   modular::Agent agent(context->outgoing(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
@@ -99,7 +99,7 @@ Modular [config](config.md) for your product:
 Then, in the component's implementation (i.e., `main.cc`):
 
 ```c++
-auto sys_component_context = sys::ComponentContext::Create();
+auto sys_component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 SimplePtr simple = sys_component_context->svc()->Connect<Simple>();
 ```
 

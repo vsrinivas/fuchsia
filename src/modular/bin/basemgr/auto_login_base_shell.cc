@@ -131,7 +131,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   modular::AppDriver<modular::AutoLoginBaseShellApp> driver(
       context->outgoing(),
       std::make_unique<modular::AutoLoginBaseShellApp>(context.get(), settings),

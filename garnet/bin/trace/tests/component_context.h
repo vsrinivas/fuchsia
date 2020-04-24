@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_TRACE_TESTS_COMPONENT_CONTEXT_H_
 #define GARNET_BIN_TRACE_TESTS_COMPONENT_CONTEXT_H_
 
-#include <memory>
-
 #include <lib/sys/cpp/component_context.h>
+
+#include <memory>
 
 namespace tracing {
 namespace test {
@@ -17,7 +17,8 @@ void InitComponentContext();
 
 // Call this to get the component context pointer.
 // N.B. Use of this value requires the presence of the default async-loop dispatcher.
-// This constraint is imposed on us by the use of |sys::ComponentContext::Create()|.
+// This constraint is imposed on us by the use of
+// |sys::ComponentContext::CreateAndServeOutgoingDirectory()|.
 sys::ComponentContext* GetComponentContext();
 
 }  // namespace test

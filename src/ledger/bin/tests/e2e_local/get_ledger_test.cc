@@ -23,7 +23,7 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
   std::unique_ptr<ScopedTmpLocation> tmp_location =
       platform->file_system()->CreateScopedTmpLocation();
 
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fuchsia::sys::ComponentControllerPtr controller;
 
   LedgerPtr ledger;
@@ -49,7 +49,7 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   std::unique_ptr<ScopedTmpLocation> tmp_location =
       platform->file_system()->CreateScopedTmpLocation();
 
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fuchsia::sys::ComponentControllerPtr controller;
 
   LedgerPtr ledger;

@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 #include "app.h"
-#include "beacons.h"
-
-#include <time.h>
-#include <iostream>
-
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 
 #include <fuchsia/bluetooth/control/cpp/fidl.h>
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <time.h>
+
+#include <iostream>
+
+#include "beacons.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
@@ -22,7 +22,7 @@ namespace bt_beacon_reader {
 
 App::App(async::Loop* loop, bool just_tilts)
     : loop_(loop),
-      context_(sys::ComponentContext::Create()),
+      context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       central_delegate_(this),
       just_tilts_(just_tilts) {
   FXL_DCHECK(context_);

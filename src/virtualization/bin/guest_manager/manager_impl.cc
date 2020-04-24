@@ -8,7 +8,7 @@
 
 static uint32_t g_next_env_id = 0;
 
-ManagerImpl::ManagerImpl() : context_(sys::ComponentContext::Create()) {
+ManagerImpl::ManagerImpl() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 

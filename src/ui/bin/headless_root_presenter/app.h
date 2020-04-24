@@ -31,7 +31,8 @@ class App : public fuchsia::ui::policy::DeviceListenerRegistry,
             public ui_input::InputDeviceImpl::Listener {
  public:
   App(const fxl::CommandLine& command_line, async::Loop* loop,
-      std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create());
+      std::unique_ptr<sys::ComponentContext> component_context =
+          sys::ComponentContext::CreateAndServeOutgoingDirectory());
   ~App() = default;
 
   // |InputDeviceImpl::Listener|

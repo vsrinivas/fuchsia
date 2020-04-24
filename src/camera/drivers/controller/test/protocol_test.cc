@@ -40,7 +40,7 @@ constexpr auto kNumBuffers = 5;
 
 class ControllerProtocolTest : public gtest::TestLoopFixture {
  public:
-  ControllerProtocolTest() : context_(sys::ComponentContext::Create()) {}
+  ControllerProtocolTest() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
   void SetUp() override {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator1_.NewRequest()));

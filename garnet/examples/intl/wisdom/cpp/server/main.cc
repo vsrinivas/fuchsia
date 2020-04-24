@@ -8,7 +8,8 @@
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  intl_wisdom::IntlWisdomServerImpl server(sys::ComponentContext::Create());
+  intl_wisdom::IntlWisdomServerImpl server(
+      sys::ComponentContext::CreateAndServeOutgoingDirectory());
   loop.Run();
   return 0;
 }

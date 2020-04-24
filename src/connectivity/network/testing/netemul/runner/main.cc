@@ -71,7 +71,7 @@ int main(int argc, const char** argv) {
     return 1;
   } else {
     SandboxService service(loop.dispatcher());
-    auto context = sys::ComponentContext::Create();
+    auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     context->outgoing()->AddPublicService(service.GetHandler());
     loop.Run();
   }

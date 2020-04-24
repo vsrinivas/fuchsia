@@ -51,7 +51,7 @@ namespace modular {
 //
 // int main(int argc, const char** argv) {
 //   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-//   auto context = sys::ComponentContext::Create();
+//   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 //   modular::AppDriver<HelloWorldApp> driver(
 //       context->outgoing(),
 //       std::make_unique<HelloWorldApp>(context.get()),

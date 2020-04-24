@@ -23,7 +23,7 @@ class TestStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Sto
  public:
   TestStoryShellApp(sys::ComponentContext* const component_context)
       : SingleServiceApp(component_context) {
-    component_context_ = sys::ComponentContext::Create();
+    component_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   }
 
   ~TestStoryShellApp() override = default;
@@ -134,7 +134,7 @@ int main(int /*argc*/, const char** /*argv*/) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   modular::AppDriver<TestStoryShellApp> driver(context->outgoing(),
                                                std::make_unique<TestStoryShellApp>(context.get()),
                                                [&loop] { loop.Quit(); });

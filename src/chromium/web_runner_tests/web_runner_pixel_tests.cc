@@ -88,7 +88,7 @@ void Input(std::vector<const char*> args) {
 // screenshot utilities.
 class PixelTest : public gtest::RealLoopFixture {
  protected:
-  PixelTest() : context_(sys::ComponentContext::Create()) {
+  PixelTest() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
     scenic_ = context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);

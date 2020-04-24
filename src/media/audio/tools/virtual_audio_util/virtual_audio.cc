@@ -409,7 +409,7 @@ void VirtualAudioUtil::ParseAndExecute(fxl::CommandLine* cmdline) {
   }
 
   // Looks like we will interact with the service; get ready to connect to it.
-  component_context_ = sys::ComponentContext::Create();
+  component_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   for (auto option : cmdline->options()) {
     bool success = false;

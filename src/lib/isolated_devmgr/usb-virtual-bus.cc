@@ -29,7 +29,7 @@ namespace usb_virtual_bus {
 
 USBVirtualBusBase::USBVirtualBusBase(std::string pkg_url, std::string svc_name) {
   // create a IsolatedDevmgr through test component
-  auto ctx = sys::ComponentContext::Create();
+  auto ctx = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fidl::InterfacePtr<fuchsia::sys::Launcher> launcher;
   ctx->svc()->Connect(launcher.NewRequest());
 

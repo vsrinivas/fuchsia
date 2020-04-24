@@ -12,7 +12,7 @@ namespace linux_runner {
 
 static constexpr off_t kStatefulImageSize = 4000ul * 1024 * 1024;
 
-LinuxRunner::LinuxRunner() : context_(sys::ComponentContext::Create()) {
+LinuxRunner::LinuxRunner() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 

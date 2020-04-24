@@ -17,7 +17,7 @@ namespace mock_clock = fuchsia::testing;
 class FakeClockTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    auto ctx = sys::ComponentContext::Create();
+    auto ctx = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     ctx->svc()->Connect(mock_clock.NewRequest());
     // always pause mock clock before test starts
     ASSERT_OK(mock_clock->Pause());

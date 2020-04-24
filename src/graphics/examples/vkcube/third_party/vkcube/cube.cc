@@ -431,11 +431,11 @@ static void demo_draw_build_cmd(struct demo* demo, VkCommandBuffer cmd_buf) {
   };
   const VkClearValue clear_values[2] = {
 #if USE_SRGB
-      [0] = {.color.float32 = {0.033f, 0.033f, 0.033f, 1.0f}},
+    [0] = {.color.float32 = {0.033f, 0.033f, 0.033f, 1.0f}},
 #else
-      [0] = {.color.float32 = {0.2f, 0.2f, 0.2f, 1.0f}},
+    [0] = {.color.float32 = {0.2f, 0.2f, 0.2f, 1.0f}},
 #endif
-      [1] = {.depthStencil = {1.0f, 0}},
+    [1] = {.depthStencil = {1.0f, 0}},
   };
   const VkRenderPassBeginInfo rp_begin = {
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -2967,7 +2967,7 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
 
   demo->fuchsia_state->t0 = std::chrono::high_resolution_clock::now();
 
-  demo->fuchsia_state->context = sys::ComponentContext::Create();
+  demo->fuchsia_state->context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   ImagePipeViewProviderService::CreateViewCallback create_view_callback =
       [demo](fuchsia::ui::views::ViewToken view_token) {

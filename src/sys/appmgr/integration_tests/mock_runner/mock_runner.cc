@@ -88,7 +88,7 @@ void FakeSubComponent::GetProgramMetadata(FakeSubComponent::GetProgramMetadataCa
 
 MockRunner::MockRunner()
     : loop_(&kAsyncLoopConfigAttachToCurrentThread),
-      context_(sys::ComponentContext::Create()),
+      context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       mock_binding_(this),
       component_id_counter_(0) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));

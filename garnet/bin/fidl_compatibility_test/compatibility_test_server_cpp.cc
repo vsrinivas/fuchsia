@@ -25,7 +25,7 @@ namespace compatibility {
 class EchoServerApp : public Echo {
  public:
   explicit EchoServerApp(async::Loop* loop)
-      : loop_(loop), context_(sys::ComponentContext::Create()) {
+      : loop_(loop), context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
     context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   }
 

@@ -188,7 +188,8 @@ int main(int argc, const char** argv) {
   };
 
   // Launch a basemgr instance with the custom namespace we created above.
-  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());

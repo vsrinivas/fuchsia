@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   echo::testing::FakeEcho echo;
   echo.SetAnswer(argv[1]);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   context->outgoing()->AddPublicService(echo.GetHandler());
   loop.Run();
   return 0;

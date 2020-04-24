@@ -23,7 +23,8 @@ constexpr absl::string_view kCloudProviderUrl =
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> component_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fuchsia::sys::LauncherPtr component_launcher;
   component_context->svc()->Connect(component_launcher.NewRequest());
   cloud_provider::ValidationTestsLauncher launcher(

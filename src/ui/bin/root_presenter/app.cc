@@ -24,7 +24,7 @@
 namespace root_presenter {
 
 App::App(const fxl::CommandLine& command_line, async::Loop* loop)
-    : component_context_(sys::ComponentContext::Create()),
+    : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       input_reader_(this),
       fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_.get())),
       activity_notifier_(loop->dispatcher(), ActivityNotifierImpl::kDefaultInterval,

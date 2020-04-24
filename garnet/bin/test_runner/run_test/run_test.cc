@@ -34,7 +34,8 @@ class QuitObserver : public test_runner::TestRunObserver {
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  std::shared_ptr<sys::ComponentContext> app_context = sys::ComponentContext::Create();
+  std::shared_ptr<sys::ComponentContext> app_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   fxl::CommandLine settings = fxl::CommandLineFromArgcArgv(argc, argv);
   std::vector<std::string> args = settings.positional_args();

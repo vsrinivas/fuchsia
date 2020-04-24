@@ -13,7 +13,7 @@
 
 class DeviceWatcherTest : public gtest::TestLoopFixture {
  protected:
-  DeviceWatcherTest() : context_(sys::ComponentContext::Create()) {}
+  DeviceWatcherTest() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
   virtual void SetUp() override {
     ASSERT_EQ(context_->svc()->Connect(watcher_.NewRequest()), ZX_OK);
     watcher_.set_error_handler([](zx_status_t status) {

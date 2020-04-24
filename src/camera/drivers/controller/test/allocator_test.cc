@@ -26,7 +26,8 @@ namespace camera {
 
 class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
  public:
-  ControllerMemoryAllocatorTest() : context_(sys::ComponentContext::Create()) {}
+  ControllerMemoryAllocatorTest()
+      : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
   void SetUp() override {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator_.NewRequest()));

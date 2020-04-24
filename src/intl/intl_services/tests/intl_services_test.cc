@@ -25,7 +25,7 @@ class IntlServicesTest : public sys::testing::TestWithEnvironment {
  public:
   IntlServicesTest()
       : deadline_(zx::clock::get_monotonic() + zx::sec(kTimeoutSec)),
-        ctx_(sys::ComponentContext::Create()),
+        ctx_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         settings_intl_(ctx_->svc()->Connect<fuchsia::settings::Intl>()),
         intl_property_provider_(ctx_->svc()->Connect<fuchsia::intl::PropertyProvider>()),
         settings_intl_status_(ZX_OK),

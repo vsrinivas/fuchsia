@@ -58,7 +58,7 @@ int main(int argc, const char** argv) {
                       "will probably want to kill it before invoking this tool.";
 
   present_view::ViewInfo view_info = ParseCommandLine(command_line);
-  present_view::PresentView present_view(sys::ComponentContext::Create());
+  present_view::PresentView present_view(sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
   int retval = 0;
   bool present_success =

@@ -15,7 +15,7 @@ int main(int argc, const char** argv) {
   syslog::SetTags({"a11y_tts_log_engine"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   a11y::LogEngine app(std::move(context));
   loop.Run();
   return 0;

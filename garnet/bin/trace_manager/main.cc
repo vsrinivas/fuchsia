@@ -36,7 +36,8 @@ int main(int argc, char** argv) {
   FXL_LOG(INFO) << "Trace Manager starting with config: " << config_file;
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  tracing::TraceManagerApp trace_manager_app{sys::ComponentContext::Create(), std::move(config)};
+  tracing::TraceManagerApp trace_manager_app{
+      sys::ComponentContext::CreateAndServeOutgoingDirectory(), std::move(config)};
   loop.Run();
   return EXIT_SUCCESS;
 }

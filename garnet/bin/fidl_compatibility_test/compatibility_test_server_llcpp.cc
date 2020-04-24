@@ -29,7 +29,7 @@ namespace compatibility {
 class EchoClientApp {
  public:
   EchoClientApp(::fidl::StringView&& server_url)
-      : context_(sys::ComponentContext::Create()),
+      : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         client_(Echo::SyncClient(ConnectTo(std::move(server_url)))) {}
 
   // Half the methods are testing the managed flavor; the other half are testing caller-allocate.
@@ -347,7 +347,7 @@ int main(int argc, const char** argv) {
   // The FIDL support lib requires async_get_default_dispatcher() to return
   // non-null.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   std::vector<std::unique_ptr<llcpp::fidl::test::compatibility::EchoConnection>> connections;
 
   context->outgoing()->AddPublicService(

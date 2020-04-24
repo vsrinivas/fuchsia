@@ -22,7 +22,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), monitor::Monitor::kTraceName);
-  std::unique_ptr<sys::ComponentContext> startup_context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> startup_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Lower the priority.
   fuchsia::scheduler::ProfileProviderSyncPtr profile_provider;

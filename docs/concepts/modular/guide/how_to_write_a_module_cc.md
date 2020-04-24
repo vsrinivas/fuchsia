@@ -61,7 +61,7 @@ to a service provided by an Agent.
 ```c++
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   modular::ModuleDriver<simple::SimpleModule> driver(context.get(),
                                                      [&loop] { loop.Quit(); });
   loop.Run();

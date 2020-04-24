@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto app_context = sys::ComponentContext::Create();
+  auto app_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto test_runner = app_context->svc()->Connect<TestRunner>();
   Reporter reporter(&loop, name, test_runner.get());
 

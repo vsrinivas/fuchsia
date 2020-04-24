@@ -22,7 +22,7 @@ class EchoImpl : public fidl::examples::echo::Echo {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   sys::ServiceHandler handler;
   fuchsia::examples::MyService::Handler my_service(&handler);
 

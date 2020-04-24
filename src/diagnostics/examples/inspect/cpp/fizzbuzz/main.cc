@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   FX_LOGS(INFO) << "Starting up...";
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   sys::ComponentInspector inspector(context.get());
 
   FizzBuzz fizzbuzz(inspector.root().CreateChild("fizzbuzz_service"));

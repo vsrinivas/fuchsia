@@ -64,7 +64,7 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
   WEAVE_ERROR err = WEAVE_NO_ERROR;
 
   if (!context_) {
-    context_ = sys::ComponentContext::Create();
+    context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   }
 
   FXL_CHECK(context_->svc()->Connect(wlan_device_service_.NewRequest()) == ZX_OK)

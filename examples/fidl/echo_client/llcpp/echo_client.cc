@@ -70,7 +70,7 @@ zx_status_t llcpp_example(zx::unowned_channel svc) {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Start the echo service.
   //

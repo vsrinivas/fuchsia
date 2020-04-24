@@ -16,7 +16,8 @@
 static constexpr netemul::EthernetConfig eth_config = {.nbufs = 256, .buff_size = 2048};
 
 NetstackIntermediary::NetstackIntermediary(NetworkMap mac_network_mapping)
-    : NetstackIntermediary(std::move(mac_network_mapping), sys::ComponentContext::Create()) {}
+    : NetstackIntermediary(std::move(mac_network_mapping),
+                           sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
 NetstackIntermediary::NetstackIntermediary(NetworkMap mac_network_mapping,
                                            std::unique_ptr<sys::ComponentContext> context)

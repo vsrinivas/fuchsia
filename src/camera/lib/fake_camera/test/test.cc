@@ -14,7 +14,7 @@ constexpr auto kCameraIdentifier = "FakeCameraTest";
 
 class FakeCameraTest : public gtest::RealLoopFixture {
  public:
-  FakeCameraTest() { context_ = sys::ComponentContext::Create(); }
+  FakeCameraTest() { context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory(); }
 
  protected:
   virtual void SetUp() override {

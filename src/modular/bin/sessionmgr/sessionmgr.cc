@@ -37,7 +37,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto inspector = std::make_unique<sys::ComponentInspector>(component_context.get());
   inspect::Node& inspect_root = inspector->root();
 

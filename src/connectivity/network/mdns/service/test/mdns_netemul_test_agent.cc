@@ -335,7 +335,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> component_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   int result = 0;
 

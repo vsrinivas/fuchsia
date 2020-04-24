@@ -12,7 +12,7 @@ int main(int /*unused*/, const char** /*unused*/) {
   std::vector<example::TestInput> inputs;
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   example::TestSuite suite(&loop, std::move(inputs));
   context->outgoing()->AddPublicService(suite.GetHandler());

@@ -72,7 +72,8 @@ class ResponsePrinter {
 
 class WGetApp {
  public:
-  WGetApp(async::Loop* loop) : loop_(loop), context_(sys::ComponentContext::Create()) {
+  WGetApp(async::Loop* loop)
+      : loop_(loop), context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
     http_service_ = context_->svc()->Connect<http::HttpService>();
     FXL_DCHECK(http_service_);
   }

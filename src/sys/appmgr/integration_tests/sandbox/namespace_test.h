@@ -19,7 +19,7 @@
 
 class NamespaceTest : public sys::testing::TestWithEnvironment {
  protected:
-  NamespaceTest() : component_context_(sys::ComponentContext::Create()) {}
+  NamespaceTest() : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
   // Connects to a service provided by the environment.
   template <typename Interface>

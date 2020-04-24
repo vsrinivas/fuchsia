@@ -56,7 +56,8 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   async::Loop fidl_loop(&kAsyncLoopConfigAttachToCurrentThread);
   thrd_t fidl_thread;
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("FIDL_thread", &fidl_thread));
-  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> component_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   printf("Decoding test file %s\n", input_file_path.c_str());
 

@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("fidl_thread", &fidl_thread));
   async_dispatcher_t* fidl_dispatcher = fidl_loop.dispatcher();
 
-  // The moment we sys::ComponentContext::Create() + let the
+  // The moment we sys::ComponentContext::CreateAndServeOutgoingDirectory() + let the
   // fidl_thread retrieve anything from its port, we potentially are letting a
   // request for fuchsia::ui::views::View fail, since it'll fail to find the
   // View service in outgoing_services(), since we haven't yet added View to
@@ -78,8 +78,9 @@ int main(int argc, char* argv[]) {
   std::vector<fit::closure> to_run_on_fidl_thread;
 
   std::unique_ptr<sys::ComponentContext> component_context;
-  to_run_on_fidl_thread.emplace_back(
-      [&component_context] { component_context = sys::ComponentContext::Create(); });
+  to_run_on_fidl_thread.emplace_back([&component_context] {
+    component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  });
 
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   fuchsia::sysmem::AllocatorPtr sysmem;

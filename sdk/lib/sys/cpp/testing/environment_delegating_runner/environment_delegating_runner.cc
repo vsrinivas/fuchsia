@@ -10,7 +10,7 @@
 
 int main() {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto startup_ctx = sys::ComponentContext::Create();
+  auto startup_ctx = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto env_runner = startup_ctx->svc()->Connect<fuchsia::sys::Runner>();
   env_runner.set_error_handler([](zx_status_t) {
     // This program dies here to prevent proxying any further calls from our

@@ -33,7 +33,7 @@ class TestSessionShellApp : public modular::ViewApp,
     story_provider_->GetStories2(story_provider_watcher_.NewBinding(),
                                  [](std::vector<fuchsia::modular::StoryInfo2>) {});
 
-    component_context_ = sys::ComponentContext::Create();
+    component_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   }
 
   virtual ~TestSessionShellApp() override = default;
@@ -101,7 +101,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   modular::AppDriver<TestSessionShellApp> driver(
       context->outgoing(), std::make_unique<TestSessionShellApp>(context.get()),
       [&loop] { loop.Quit(); });

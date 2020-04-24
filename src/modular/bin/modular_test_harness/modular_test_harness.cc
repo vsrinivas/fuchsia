@@ -18,7 +18,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto env = context->svc()->Connect<fuchsia::sys::Environment>();
 
   modular_testing::TestHarnessImpl test_harness_impl(env, [&loop] { loop.Quit(); });

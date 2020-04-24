@@ -53,7 +53,7 @@ class App : public ledger_internal::LedgerController {
         loop_(&kAsyncLoopConfigAttachToCurrentThread),
         io_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         trace_provider_(loop_.dispatcher()),
-        component_context_(sys::ComponentContext::Create()),
+        component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         factory_bindings_(loop_.dispatcher()) {
     LEDGER_DCHECK(component_context_);
   }

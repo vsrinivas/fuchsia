@@ -44,7 +44,7 @@ void CodecFactoryApp::PublishService() {
   // We _rely_ on the driver to either fail the channel or send OnCodecList().
   ZX_DEBUG_ASSERT(existing_devices_discovered_);
 
-  startup_context_ = sys::ComponentContext::Create();
+  startup_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   startup_context_->outgoing()->AddPublicService<fuchsia::mediacodec::CodecFactory>(
       [this](fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
         // The CodecFactoryImpl is self-owned and will self-delete when the

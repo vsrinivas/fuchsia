@@ -19,7 +19,8 @@ int main(void) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async_set_default_dispatcher(loop.dispatcher());
 
-  std::unique_ptr<sys::ComponentContext> startup_context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> startup_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   auto driver = std::make_unique<activity::StateMachineDriver>(loop.dispatcher());
   activity::ActivityApp app(std::move(driver), loop.dispatcher());

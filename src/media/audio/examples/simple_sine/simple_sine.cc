@@ -166,7 +166,7 @@ int main(int argc, const char** argv) {
   syslog::SetTags({"simple_sine"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto startup_context = sys::ComponentContext::Create();
+  auto startup_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   examples::MediaApp media_app(
       [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });

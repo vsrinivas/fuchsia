@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
   syslog::SetTags({"feedback"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   const timekeeper::SystemClock clock;
 

@@ -26,10 +26,9 @@ class TtsClient {
   fuchsia::tts::TtsServicePtr tts_service_;
 };
 
-TtsClient::TtsClient(fit::closure quit_callback)
-    : quit_callback_(std::move(quit_callback)) {
+TtsClient::TtsClient(fit::closure quit_callback) : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
-  auto app_ctx = sys::ComponentContext::Create();
+  auto app_ctx = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   tts_service_ = app_ctx->svc()->Connect<fuchsia::tts::TtsService>();
   tts_service_.set_error_handler([this](zx_status_t status) {
     printf("Connection error when trying to talk to the TtsService\n");
@@ -38,8 +37,7 @@ TtsClient::TtsClient(fit::closure quit_callback)
 }
 
 void TtsClient::Say(std::string words) {
-  tts_service_->Say(std::move(words), 0,
-                    [this](uint64_t token) { quit_callback_(); });
+  tts_service_->Say(std::move(words), 0, [this](uint64_t token) { quit_callback_(); });
 }
 
 }  // namespace
@@ -52,9 +50,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  TtsClient client([&loop]() {
-    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
-  });
+  TtsClient client([&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
 
   std::string words(argv[1]);
   for (int i = 2; i < argc; ++i) {

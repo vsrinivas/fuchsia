@@ -88,7 +88,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  auto environment_services = sys::ComponentContext::Create()->svc();
+  auto environment_services = sys::ComponentContext::CreateAndServeOutgoingDirectory()->svc();
 
   // Make fidl.examples.echo.Echo from our own environment available in appmgr's
   // root realm.

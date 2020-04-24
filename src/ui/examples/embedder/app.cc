@@ -36,7 +36,9 @@ namespace embedder {
 static fuchsia::sys::ComponentControllerPtr s_subview_controller;
 
 App::App(async::Loop* loop, AppType type)
-    : component_context_(sys::ComponentContext::Create()), loop_(loop), type_(type) {
+    : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
+      loop_(loop),
+      type_(type) {
   // Connect the ExampleViewProviderService.
   if (type_ == AppType::CONTAINER) {
     // Launch the subview app.  Clone our stdout and stderr file descriptors

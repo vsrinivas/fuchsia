@@ -26,7 +26,7 @@ class CodecRunnerApp {
  public:
   CodecRunnerApp()
       : loop_(&kAsyncLoopConfigAttachToCurrentThread),
-        component_context_(sys::ComponentContext::Create()),
+        component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
   void Run() {

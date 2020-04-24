@@ -174,7 +174,7 @@ std::string CollectProfilerLog() {
       loop_.Quit();
     });
 
-    auto component_context = sys::ComponentContext::Create();
+    auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     log_listener->ConnectToLogger(component_context.get(), GetCurrentProcessKoid());
 
     // Trigger mmap log

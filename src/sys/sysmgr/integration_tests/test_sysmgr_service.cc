@@ -18,7 +18,7 @@ namespace {
 
 class Service : public ::test::sysmgr::Interface {
  public:
-  Service() : context_(sys::ComponentContext::Create()) {
+  Service() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
     context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   }
 

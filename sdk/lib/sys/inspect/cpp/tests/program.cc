@@ -10,7 +10,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
 
   inspector->root().CreateInt("val1", 1, inspector->inspector());

@@ -29,7 +29,7 @@ class DevStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Stor
       : SingleServiceApp(component_context),
         component_context_(component_context
                                ? std::unique_ptr<sys::ComponentContext>(component_context)
-                               : sys::ComponentContext::Create()) {}
+                               : sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
   ~DevStoryShellApp() override = default;
 
  private:
@@ -139,7 +139,7 @@ int main(int /*argc*/, const char** /*argv*/) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   modular::AppDriver<DevStoryShellApp> driver(context->outgoing(),
                                               std::make_unique<DevStoryShellApp>(context.get()),
                                               [&loop] { loop.Quit(); });

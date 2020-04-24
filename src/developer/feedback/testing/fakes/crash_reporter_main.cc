@@ -17,7 +17,7 @@ int main(int argc, const char** argv) {
   FX_LOGS(INFO) << "Starting FakeCrashReporter";
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   feedback::fakes::CrashReporter crash_reporter;
 

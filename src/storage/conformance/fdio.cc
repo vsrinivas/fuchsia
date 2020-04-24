@@ -26,8 +26,7 @@
 #include "gtest/gtest.h"
 
 fidl::InterfaceHandle<fuchsia::io::Directory> StartTestHarness(
-    sys::ComponentContext* context,
-    std::string harness_name,
+    sys::ComponentContext* context, std::string harness_name,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   fidl::InterfaceHandle<fuchsia::io::Directory> svc;
   fuchsia::sys::LaunchInfo info{
@@ -70,9 +69,7 @@ class FdioTest : public testing::Test {
     EXPECT_EQ(ZX_OK, fdio_ns_bind(ns_, kTestPath, client_end_.release()));
   }
 
-  ~FdioTest() override {
-    EXPECT_EQ(ZX_OK, fdio_ns_unbind(ns_, kTestPath));
-  }
+  ~FdioTest() override { EXPECT_EQ(ZX_OK, fdio_ns_unbind(ns_, kTestPath)); }
 
   static void FillBuffer(std::vector<char>* buf) {
     buf->resize(kTestVmoSize);
@@ -162,17 +159,17 @@ TEST_F(FdioTest, GetAttrVmoFile) {
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   FdioTest::component_context = context.get();
 
   testing::InitGoogleTest(&argc, argv);
 
   int exit_code = 0;
   for (const auto& harness_name : {
-    "io_conformance_harness_sdkcpp",
-    "io_conformance_harness_ulibfs",
-    "io_conformance_harness_rust_pseudo_fs_mt",
-  }) {
+           "io_conformance_harness_sdkcpp",
+           "io_conformance_harness_ulibfs",
+           "io_conformance_harness_rust_pseudo_fs_mt",
+       }) {
     FdioTest::harness_name = harness_name;
     std::cout << "----" << std::endl;
     std::cout << "---- Selecting testing harness: " << harness_name << std::endl;

@@ -83,7 +83,8 @@ int main(int argc, char* argv[]) {
   async::Loop fidl_loop(&kAsyncLoopConfigAttachToCurrentThread);
   thrd_t fidl_thread;
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("FIDL_thread", &fidl_thread));
-  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> component_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   std::unique_ptr<InStream> raw_stream;
   if (is_url) {

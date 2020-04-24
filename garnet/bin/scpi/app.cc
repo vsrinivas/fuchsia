@@ -4,8 +4,6 @@
 
 #include "garnet/bin/scpi/app.h"
 
-#include <ddk/protocol/scpi.h>
-#include <fbl/unique_fd.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -16,11 +14,14 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/object.h>
 
+#include <ddk/protocol/scpi.h>
+#include <fbl/unique_fd.h>
+
 namespace scpi {
 
 static const char kThermalDir[] = "/dev/class/thermal";
 
-App::App() : App(sys::ComponentContext::Create()) {}
+App::App() : App(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
 App::App(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(context)) {}
 

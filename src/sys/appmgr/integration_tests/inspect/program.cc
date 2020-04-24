@@ -54,7 +54,7 @@ class Table : public component::ExposedObject {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   Table t1("t1"), t2("t2");
   auto root_object = component::ObjectDir::Make("root");

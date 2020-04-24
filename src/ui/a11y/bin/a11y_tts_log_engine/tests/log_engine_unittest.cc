@@ -26,7 +26,7 @@ namespace {
 class LogEngineTest : public gtest::TestLoopFixture {
  protected:
   void SetUp() override {
-    startup_context_ = sys::ComponentContext::Create();
+    startup_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     tts_manager_ = std::make_unique<TtsManager>(startup_context_.get());
     fx_log_reset_global_for_testing();
     ASSERT_EQ(ZX_OK, InitLogger());

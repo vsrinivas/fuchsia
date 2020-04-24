@@ -8,7 +8,8 @@
 
 namespace echo {
 
-EchoClientApp::EchoClientApp() : context_(sys::ComponentContext::Create()) {}
+EchoClientApp::EchoClientApp()
+    : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
 void EchoClientApp::Start(std::string server_url) {
   fidl::InterfaceHandle<fuchsia::io::Directory> directory;

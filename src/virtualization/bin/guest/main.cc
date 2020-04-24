@@ -155,7 +155,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
 int main(int argc, const char** argv) {
   fit::closure func;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // This program might be called via an alias representing the vsh subcommand, e.g.
   // `guest vsh 0 3` vs `vsh 0 3`

@@ -15,7 +15,7 @@
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   fuchsia::kernel::CounterSyncPtr kcounter;
   ZX_ASSERT(context->svc()->Connect<fuchsia::kernel::Counter>(kcounter.NewRequest()) == ZX_OK);

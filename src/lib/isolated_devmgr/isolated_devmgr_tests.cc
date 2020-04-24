@@ -154,7 +154,7 @@ TEST_F(DevmgrTest, ExceptionCallback) {
 }
 
 TEST_F(DevmgrTest, ExposedThroughComponent) {
-  auto ctx = sys::ComponentContext::Create();
+  auto ctx = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fidl::InterfacePtr<fuchsia::sys::Launcher> launcher;
   ctx->svc()->Connect(launcher.NewRequest());
 
@@ -180,7 +180,7 @@ TEST_F(DevmgrTest, ExposedThroughComponent) {
 }
 
 TEST_F(DevmgrTest, ExposeDriverFromComponentNamespace) {
-  auto ctx = sys::ComponentContext::Create();
+  auto ctx = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   fidl::InterfacePtr<fuchsia::sys::Launcher> launcher;
   ctx->svc()->Connect(launcher.NewRequest());
 

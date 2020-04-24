@@ -83,7 +83,7 @@ std::ostream &operator<<(std::ostream &os, const Value &v) {
 class SnapshotTaker {
  public:
   explicit SnapshotTaker(async::Loop *loop)
-      : loop_(loop), context_(sys::ComponentContext::Create()) {
+      : loop_(loop), context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
     // Connect to the Scenic service.
     scenic_ = context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([this](zx_status_t status) {

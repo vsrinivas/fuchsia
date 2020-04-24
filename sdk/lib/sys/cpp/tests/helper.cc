@@ -60,7 +60,7 @@ int main(int argc, const char** argv) {
     std::cout << kUsage;
     return 0;
   }
-  auto startup = sys::ComponentContext::Create();
+  auto startup = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   std::unique_ptr<EchoServer> echo_server;
 
   if (cmdline.HasOption(kCmdCout)) {

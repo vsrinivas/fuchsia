@@ -26,7 +26,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<sys::ComponentContext> app_context(sys::ComponentContext::Create());
+  std::unique_ptr<sys::ComponentContext> app_context(
+      sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
   // Set up an inspect::Node to inject into the App.
   sys::ComponentInspector inspector(app_context.get());

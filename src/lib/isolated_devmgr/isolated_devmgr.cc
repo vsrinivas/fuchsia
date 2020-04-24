@@ -7,9 +7,9 @@
 #include <fcntl.h>
 #include <fuchsia/exception/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
@@ -46,7 +46,7 @@ void IsolatedDevmgr::HandleException() {
 
   // send exceptions to the ambient fuchsia.exception.Handler
   fuchsia::exception::HandlerSyncPtr handler;
-  sys::ComponentContext::Create()->svc()->Connect(handler.NewRequest());
+  sys::ComponentContext::CreateAndServeOutgoingDirectory()->svc()->Connect(handler.NewRequest());
   fuchsia::exception::ExceptionInfo einfo;
   einfo.process_koid = info.pid;
   einfo.thread_koid = info.tid;
@@ -75,7 +75,7 @@ const zbi_platform_id_t kPlatformId = []() {
   return plat_id;
 }();
 
-#define BOARD_REVISION_TEST      42
+#define BOARD_REVISION_TEST 42
 
 const zbi_board_info_t kBoardInfo = []() {
   zbi_board_info_t board_info = {};

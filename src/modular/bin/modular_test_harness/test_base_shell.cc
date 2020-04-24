@@ -86,7 +86,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   modular::AppDriver<modular::TestBaseShellApp> driver(
       context->outgoing(), std::make_unique<modular::TestBaseShellApp>(context.get()),

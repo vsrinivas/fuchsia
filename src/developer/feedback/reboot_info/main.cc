@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   const char reboot_log[] = "/boot/log/last-panic.txt";
   auto promise = feedback::HandleRebootLog(reboot_log, loop.dispatcher(), context->svc())

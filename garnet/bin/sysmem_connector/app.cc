@@ -6,7 +6,7 @@
 
 const char* kSysmemClassPath = "/dev/class/sysmem";
 
-App::App() : component_context_(sys::ComponentContext::Create()) {
+App::App() : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
   zx_status_t status = sysmem_connector_init(kSysmemClassPath, &sysmem_connector_);
   if (status != ZX_OK) {
     printf(

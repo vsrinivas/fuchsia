@@ -26,7 +26,8 @@
 namespace sched {
 
 zx_status_t CreateProfile(uint32_t priority, const std::string& name, zx::profile* profile) {
-  std::unique_ptr<sys::ComponentContext> startup_context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> startup_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
   if (startup_context == nullptr) {
     return ZX_ERR_UNAVAILABLE;
   }

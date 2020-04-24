@@ -31,7 +31,7 @@ int main(int argc, const char** argv) {
 
   // loop is needed by StartupContext.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  examples::MediaApp media_app(sys::ComponentContext::Create());
+  examples::MediaApp media_app(sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
   if (command_line.HasOption("v") || command_line.HasOption("verbose")) {
     media_app.set_verbose(true);

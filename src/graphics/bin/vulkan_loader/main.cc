@@ -60,7 +60,7 @@ int main(int argc, const char* const* argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   fxl::SetLogSettingsFromCommandLine(fxl::CommandLineFromArgcArgv(argc, argv));
 
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   LoaderImpl loader_impl;
   loader_impl.Add(context->outgoing());

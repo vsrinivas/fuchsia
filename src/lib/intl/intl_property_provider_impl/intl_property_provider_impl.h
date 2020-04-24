@@ -26,7 +26,7 @@ namespace intl {
 //
 // ```
 // async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-// auto context = sys::ComponentContext::Create();
+// auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 // // Connects to required backend services through context->svc().
 // auto intl = IntlPropertyProviderImpl::Create(context->svc());
 // // Starts serving `fuchsia.intl.PropertyProvider`.

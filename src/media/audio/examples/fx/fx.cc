@@ -722,7 +722,8 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<sys::ComponentContext> startup_context = sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> startup_context =
+      sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   fuchsia::media::AudioPtr audio = startup_context->svc()->Connect<fuchsia::media::Audio>();
 

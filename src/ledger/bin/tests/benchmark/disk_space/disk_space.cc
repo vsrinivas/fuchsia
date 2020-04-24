@@ -196,7 +196,7 @@ int Main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   ssize_t page_count = absl::GetFlag(FLAGS_page_count);
   ssize_t unique_key_count = absl::GetFlag(FLAGS_unique_key_count);

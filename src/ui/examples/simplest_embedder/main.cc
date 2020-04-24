@@ -51,7 +51,7 @@ int main(int argc, const char** argv) {
 
     // Create a startup context for ourselves and use it to connect to
     // environment services.
-    auto component_context = sys::ComponentContext::Create();
+    auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     fuchsia::ui::scenic::ScenicPtr scenic =
         component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic.set_error_handler([&loop](zx_status_t status) {
@@ -100,7 +100,7 @@ int main(int argc, const char** argv) {
 
     // Create a startup context for ourselves and use it to connect to
     // environment services.
-    auto component_context = sys::ComponentContext::Create();
+    auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     fuchsia::ui::scenic::ScenicPtr scenic =
         component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic.set_error_handler([&loop](zx_status_t status) {

@@ -283,7 +283,7 @@ int main(int argc, const char** argv) {
   // Standard component setup, create an event loop and obtain the
   // |StartupContext|.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::Create();
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Create a root object and bind it to out/
   auto root_object_dir = component::ObjectDir::Make("root");
