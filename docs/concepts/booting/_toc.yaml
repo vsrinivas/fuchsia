@@ -4,6 +4,8 @@
 toc:
 - title: "Bootsvc"
   path: /docs/concepts/booting/bootsvc.md
+- title: "Everything between power on and your component"
+  path: /docs/concepts/booting/everything_between_power_on_and_your_component.md
 - title: "Process creation"
   path: /docs/concepts/booting/process_creation.md
 - title: "Program loading"
