@@ -5,23 +5,36 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_
 #define SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_
 
+#include <fuchsia/hardware/gpio/llcpp/fidl.h>
+#include <lib/zircon-internal/thread_annotations.h>
+
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/gpioimpl.h>
+#include <fbl/mutex.h>
 
 namespace gpio {
 
 class GpioDevice;
-using GpioDeviceType = ddk::Device<GpioDevice, ddk::UnbindableNew>;
+using GpioDeviceType = ddk::Device<GpioDevice, ddk::UnbindableNew, ddk::Messageable>;
+using ::llcpp::fuchsia::hardware::gpio::Gpio;
 
-class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, ddk::base_protocol> {
+class GpioDevice : public GpioDeviceType,
+                   public Gpio::Interface,
+                   public ddk::GpioProtocol<GpioDevice, ddk::base_protocol> {
  public:
   GpioDevice(zx_device_t* parent, gpio_impl_protocol_t* gpio, uint32_t pin)
       : GpioDeviceType(parent), gpio_(gpio), pin_(pin) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    DdkTransaction transaction(txn);
+    Gpio::Dispatch(this, msg, &transaction);
+    return transaction.Status();
+  }
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
@@ -34,9 +47,45 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
   zx_status_t GpioReleaseInterrupt();
   zx_status_t GpioSetPolarity(gpio_polarity_t polarity);
 
+  // FIDL
+  void ConfigIn(uint32_t flags, ConfigInCompleter::Sync completer) {
+    zx_status_t status = GpioConfigIn(flags);
+    if (status == ZX_OK) {
+      completer.ReplySuccess();
+    } else {
+      completer.ReplyError(status);
+    }
+  }
+  void ConfigOut(uint8_t initial_value, ConfigOutCompleter::Sync completer) {
+    zx_status_t status = GpioConfigOut(initial_value);
+    if (status == ZX_OK) {
+      completer.ReplySuccess();
+    } else {
+      completer.ReplyError(status);
+    }
+  }
+  void Read(ReadCompleter::Sync completer) {
+    uint8_t value = 0;
+    zx_status_t status = GpioRead(&value);
+    if (status == ZX_OK) {
+      completer.ReplySuccess(value);
+    } else {
+      completer.ReplyError(status);
+    }
+  }
+  void Write(uint8_t value, WriteCompleter::Sync completer) {
+    zx_status_t status = GpioWrite(value);
+    if (status == ZX_OK) {
+      completer.ReplySuccess();
+    } else {
+      completer.ReplyError(status);
+    }
+  }
+
  private:
-  const ddk::GpioImplProtocolClient gpio_;
+  const ddk::GpioImplProtocolClient gpio_ TA_GUARDED(lock_);
   const uint32_t pin_;
+  fbl::Mutex lock_;
 };
 
 }  // namespace gpio

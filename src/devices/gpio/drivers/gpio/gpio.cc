@@ -15,30 +15,47 @@
 #include <ddk/metadata/gpio.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 
 namespace gpio {
 
-zx_status_t GpioDevice::GpioConfigIn(uint32_t flags) { return gpio_.ConfigIn(pin_, flags); }
+zx_status_t GpioDevice::GpioConfigIn(uint32_t flags) {
+  fbl::AutoLock lock(&lock_);
+  return gpio_.ConfigIn(pin_, flags);
+}
 
 zx_status_t GpioDevice::GpioConfigOut(uint8_t initial_value) {
+  fbl::AutoLock lock(&lock_);
   return gpio_.ConfigOut(pin_, initial_value);
 }
 
 zx_status_t GpioDevice::GpioSetAltFunction(uint64_t function) {
+  fbl::AutoLock lock(&lock_);
   return gpio_.SetAltFunction(pin_, function);
 }
 
-zx_status_t GpioDevice::GpioRead(uint8_t* out_value) { return gpio_.Read(pin_, out_value); }
+zx_status_t GpioDevice::GpioRead(uint8_t* out_value) {
+  fbl::AutoLock lock(&lock_);
+  return gpio_.Read(pin_, out_value);
+}
 
-zx_status_t GpioDevice::GpioWrite(uint8_t value) { return gpio_.Write(pin_, value); }
+zx_status_t GpioDevice::GpioWrite(uint8_t value) {
+  fbl::AutoLock lock(&lock_);
+  return gpio_.Write(pin_, value);
+}
 
 zx_status_t GpioDevice::GpioGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
+  fbl::AutoLock lock(&lock_);
   return gpio_.GetInterrupt(pin_, flags, out_irq);
 }
 
-zx_status_t GpioDevice::GpioReleaseInterrupt() { return gpio_.ReleaseInterrupt(pin_); }
+zx_status_t GpioDevice::GpioReleaseInterrupt() {
+  fbl::AutoLock lock(&lock_);
+  return gpio_.ReleaseInterrupt(pin_);
+}
 
 zx_status_t GpioDevice::GpioSetPolarity(gpio_polarity_t polarity) {
+  fbl::AutoLock lock(&lock_);
   return gpio_.SetPolarity(pin_, polarity);
 }
 

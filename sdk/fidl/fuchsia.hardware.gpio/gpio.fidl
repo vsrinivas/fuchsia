@@ -1,0 +1,21 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.gpio;
+
+using zx;
+
+protocol Gpio {
+    /// Configures a GPIO for input.
+    ConfigIn(uint32 flags) -> () error zx.status;
+
+    /// Configures a GPIO for output.
+    ConfigOut(uint8 initial_value) -> () error zx.status;
+
+    /// Reads the current value of a GPIO (0 or 1).
+    Read() -> (uint8 value) error zx.status;
+
+    /// Sets the current value of the GPIO (any non-zero value maps to 1).
+    Write(uint8 value) -> () error zx.status;
+};

@@ -2,13 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
-  testonly = true
+import("//build/fidl/fidl.gni")
 
-  deps = [
-    "as370-gpio:tests",
-    "gpio:tests",
-    "mt-8167:tests",
-    "qcom-gpio:tests",
-  ]
+fidl("fuchsia.hardware.gpio") {
+  sources = [ "gpio.fidl" ]
 }
