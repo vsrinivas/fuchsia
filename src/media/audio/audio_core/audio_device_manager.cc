@@ -134,7 +134,9 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
     client->events().OnDeviceAdded(info);
   }
 
-  OnPlugStateChanged(device, device->plugged(), device->plug_time());
+  if (device->plugged()) {
+    AddDeviceToRouteGraph(device, device->plug_time());
+  }
 }
 
 void AudioDeviceManager::RemoveDevice(const std::shared_ptr<AudioDevice>& device) {
@@ -168,10 +170,16 @@ void AudioDeviceManager::OnPlugStateChanged(const std::shared_ptr<AudioDevice>& 
     return;
   }
 
+  // If the device is not yet activated, we should not be changing routes.
+  bool activated = devices_.find(device->token()) != devices_.end();
+  if (!activated) {
+    return;
+  }
+
   if (plugged) {
-    OnDevicePlugged(device, plug_time);
+    AddDeviceToRouteGraph(device, plug_time);
   } else {
-    OnDeviceUnplugged(device, plug_time);
+    RemoveDeviceFromRouteGraph(device, plug_time);
   }
 }
 
@@ -269,9 +277,9 @@ std::shared_ptr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Ty
   return best;
 }
 
-void AudioDeviceManager::OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& device,
-                                           zx::time plug_time) {
-  TRACE_DURATION("audio", "AudioDeviceManager::OnDeviceUnplugged");
+void AudioDeviceManager::RemoveDeviceFromRouteGraph(const std::shared_ptr<AudioDevice>& device,
+                                                    zx::time plug_time) {
+  TRACE_DURATION("audio", "AudioDeviceManager::RemoveDeviceFromRouteGraph");
   FX_DCHECK(device);
 
   device->UpdatePlugState(/*plugged=*/false, plug_time);
@@ -280,9 +288,9 @@ void AudioDeviceManager::OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& d
   UpdateDefaultDevice(device->is_input());
 }
 
-void AudioDeviceManager::OnDevicePlugged(const std::shared_ptr<AudioDevice>& device,
-                                         zx::time plug_time) {
-  TRACE_DURATION("audio", "AudioDeviceManager::OnDevicePlugged");
+void AudioDeviceManager::AddDeviceToRouteGraph(const std::shared_ptr<AudioDevice>& device,
+                                               zx::time plug_time) {
+  TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceToRouteGraph");
   FX_DCHECK(device);
 
   device->UpdatePlugState(/*plugged=*/true, plug_time);

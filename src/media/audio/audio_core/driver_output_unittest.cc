@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/driver_output.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <zircon/status.h>
 
 #include <fbl/ref_ptr.h>
 #include <fbl/span.h>
@@ -29,6 +30,12 @@ constexpr size_t kRingBufferSizeBytes = 8 * PAGE_SIZE;
 constexpr zx::duration kExpectedMixInterval =
     DriverOutput::kDefaultHighWaterNsec - DriverOutput::kDefaultLowWaterNsec;
 
+const fuchsia::media::AudioStreamType kDefaultStreamType{
+    .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+    .channels = 2,
+    .frames_per_second = 48000,
+};
+
 class DriverOutputTest : public testing::ThreadingModelFixture {
  protected:
   void SetUp() override {
@@ -39,7 +46,6 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     driver_ = std::make_unique<testing::FakeAudioDriverV1>(
         std::move(c1), threading_model().FidlDomain().dispatcher());
     ASSERT_NE(driver_, nullptr);
-    driver_->Start();
 
     output_ = DriverOutput::Create(std::move(c2), &threading_model(), &context().device_manager(),
                                    &context().link_matrix());
@@ -89,6 +95,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
 
 // Simple sanity test that the DriverOutput properly initializes the driver.
 TEST_F(DriverOutputTest, DriverOutputStartsDriver) {
+  driver_->Start();
   // Fill the ring buffer with some bytes so we can detect if we've written to the buffer.
   auto rb_bytes = RingBuffer<uint8_t>();
   memset(rb_bytes.data(), 0xff, rb_bytes.size());
@@ -126,7 +133,88 @@ TEST_F(DriverOutputTest, DriverOutputStartsDriver) {
   RunLoopUntilIdle();
 }
 
+// Test fix for fxb/47251
+TEST_F(DriverOutputTest, HandlePlugDetectBeforeStartResponse) {
+  // Fill the ring buffer with some bytes so we can detect if we've written to the buffer.
+  auto rb_bytes = RingBuffer<uint8_t>();
+  memset(rb_bytes.data(), 0xff, rb_bytes.size());
+
+  // Setup our driver to advertise support for only 16-bit/2-channel/48khz audio.
+  constexpr uint8_t kSupportedChannels = 2;
+  constexpr uint32_t kSupportedSampleRate = 48000;
+  constexpr audio_sample_format_t kSupportedSampleFormat = AUDIO_SAMPLE_FORMAT_16BIT;
+  ConfigureDriverForSampleFormat(kSupportedChannels, kSupportedSampleRate, kSupportedSampleFormat,
+                                 ASF_RANGE_FLAG_FPS_48000_FAMILY);
+  driver_->set_plugged(true);
+  driver_->set_hardwired(false);
+
+  // Startup the DriverOutput. We expect it's completed some basic initialization of the driver.
+  context().device_manager().AddDevice(output_);
+  RunLoopUntilIdle();
+
+  // We want to step through some driver commands to that we can send the plug detect message before
+  // the ring buffer is started.
+  while (true) {
+    auto result = driver_->Step();
+    RunLoopUntilIdle();
+    if (!result.is_ok()) {
+      ASSERT_EQ(result.error(), ZX_ERR_SHOULD_WAIT)
+          << "Command filed " << zx_status_get_string(result.error());
+      break;
+    }
+  }
+
+  // |AUDIO_RB_CMD_GET_BUFFER| comes right before |START|, so we'll stop processing those messages
+  // then.
+  while (true) {
+    auto result = driver_->StepRingBuffer();
+    ASSERT_TRUE(result.is_ok()) << "Command failed " << zx_status_get_string(result.error());
+    RunLoopUntilIdle();
+    if (result.value() == AUDIO_RB_CMD_GET_BUFFER) {
+      break;
+    }
+  }
+
+  // Now process the main channel again. This will process any plug detect messages.
+  while (true) {
+    auto result = driver_->Step();
+    RunLoopUntilIdle();
+    if (!result.is_ok()) {
+      ASSERT_EQ(result.error(), ZX_ERR_SHOULD_WAIT)
+          << "Command filed " << zx_status_get_string(result.error());
+      break;
+    }
+  }
+
+  // Now add a renderer. We expect it to not yet be linked because the ring buffer hasn't completed
+  // the |AUDIO_RB_CMD_START| message yet.
+  auto renderer = std::make_unique<testing::FakeAudioRenderer>(
+      dispatcher(), std::make_optional<Format>(Format::Create(kDefaultStreamType).take_value()),
+      fuchsia::media::AudioRenderUsage::MEDIA, &context().link_matrix());
+  auto renderer_raw = renderer.get();
+  context().route_graph().AddRenderer(std::move(renderer));
+  context().route_graph().SetRendererRoutingProfile(
+      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
+  RunLoopUntilIdle();
+
+  // Since the output is not started, we should not have linked the renderer yet.
+  ASSERT_FALSE(context().link_matrix().AreLinked(*renderer_raw, *output_));
+
+  // Now finish starting the ring buffer and confirm the link has been made to our renderer.
+  auto result = driver_->StepRingBuffer();
+  RunLoopUntilIdle();
+  ASSERT_TRUE(result.is_ok());
+  ASSERT_EQ(result.value(), AUDIO_RB_CMD_START);
+  result = driver_->StepRingBuffer();
+  ASSERT_FALSE(result.is_ok());
+  ASSERT_TRUE(context().link_matrix().AreLinked(*renderer_raw, *output_));
+
+  threading_model().FidlDomain().ScheduleTask(output_->Shutdown());
+  RunLoopUntilIdle();
+}
+
 TEST_F(DriverOutputTest, RendererOutput) {
+  driver_->Start();
   // Setup our driver to advertise support for a single format.
   constexpr uint8_t kSupportedChannels = 2;
   constexpr uint32_t kSupportedSampleRate = 48000;
@@ -175,6 +263,7 @@ TEST_F(DriverOutputTest, RendererOutput) {
 }
 
 TEST_F(DriverOutputTest, MixAtExpectedInterval) {
+  driver_->Start();
   // Setup our driver to advertise support for a single format.
   constexpr uint8_t kSupportedChannels = 2;
   constexpr uint32_t kSupportedSampleRate = 48000;
@@ -246,6 +335,7 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
 }
 
 TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
+  driver_->Start();
   // Setup our driver to advertise support for a single format.
   constexpr uint8_t kSupportedChannels = 2;
   constexpr uint32_t kSupportedSampleRate = 48000;

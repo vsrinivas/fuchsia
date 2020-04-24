@@ -28,6 +28,7 @@ void FakeAudioDriverV1::Start() {
   if (ring_buffer_transceiver_.channel()) {
     ring_buffer_transceiver_.ResumeProcessing();
   }
+  is_stopped_ = false;
 }
 
 void FakeAudioDriverV1::Stop() {
@@ -35,6 +36,23 @@ void FakeAudioDriverV1::Stop() {
   if (ring_buffer_transceiver_.channel()) {
     ring_buffer_transceiver_.StopProcessing();
   }
+  is_stopped_ = true;
+}
+
+fit::result<audio_cmd_t, zx_status_t> FakeAudioDriverV1::Step() {
+  zx_status_t status = stream_transceiver_.ReadMessage();
+  if (status != ZX_OK) {
+    return fit::error(status);
+  }
+  return fit::ok(last_stream_command_);
+}
+
+fit::result<audio_cmd_t, zx_status_t> FakeAudioDriverV1::StepRingBuffer() {
+  zx_status_t status = ring_buffer_transceiver_.ReadMessage();
+  if (status != ZX_OK) {
+    return fit::error(status);
+  }
+  return fit::ok(last_ring_buffer_command_);
 }
 
 fzl::VmoMapper FakeAudioDriverV1::CreateRingBuffer(size_t size) {
@@ -51,6 +69,7 @@ void FakeAudioDriverV1::OnInboundStreamError(zx_status_t status) {}
 
 void FakeAudioDriverV1::OnInboundStreamMessage(test::MessageTransceiver::Message message) {
   auto& header = message.BytesAs<audio_cmd_hdr_t>();
+  last_stream_command_ = header.cmd;
   switch (header.cmd) {
     case AUDIO_STREAM_CMD_GET_FORMATS:
       HandleCommandGetFormats(message.BytesAs<audio_stream_cmd_get_formats_req_t>());
@@ -172,6 +191,9 @@ void FakeAudioDriverV1::HandleCommandSetFormat(const audio_stream_cmd_set_format
       fit::bind_member(this, &FakeAudioDriverV1::OnInboundRingBufferMessage),
       fit::bind_member(this, &FakeAudioDriverV1::OnInboundRingBufferError));
   EXPECT_EQ(ZX_OK, status);
+  if (is_stopped_) {
+    ring_buffer_transceiver_.StopProcessing();
+  }
 
   response_message.handles_.clear();
   response_message.handles_.push_back(remote_channel.release());
@@ -191,10 +213,14 @@ void FakeAudioDriverV1::HandleCommandPlugDetect(const audio_stream_cmd_plug_dete
   auto& response = response_message.ResizeBytesAs<audio_stream_cmd_plug_detect_resp_t>();
   response.hdr.transaction_id = request.hdr.transaction_id;
   response.hdr.cmd = request.hdr.cmd;
-
-  // For now we represent a hardwired device. We should make it possible to test pluggable devices,
-  // however.
-  response.flags = AUDIO_PDNF_HARDWIRED;
+  if (hardwired_) {
+    response.flags = AUDIO_PDNF_HARDWIRED;
+  } else {
+    response.flags = AUDIO_PDNF_CAN_NOTIFY;
+    if (plugged_) {
+      response.flags |= AUDIO_PDNF_PLUGGED;
+    }
+  }
   response.plug_state_time = 0;
 
   zx_status_t status = stream_transceiver_.SendMessage(response_message);
@@ -216,6 +242,7 @@ void FakeAudioDriverV1::HandleCommandGetClockDomain(
 
 void FakeAudioDriverV1::OnInboundRingBufferMessage(test::MessageTransceiver::Message message) {
   auto& header = message.BytesAs<audio_cmd_hdr_t>();
+  last_ring_buffer_command_ = header.cmd;
   switch (header.cmd) {
     case AUDIO_RB_CMD_GET_FIFO_DEPTH:
       HandleCommandGetFifoDepth(message.BytesAs<audio_rb_cmd_get_fifo_depth_req_t>());

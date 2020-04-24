@@ -58,6 +58,7 @@ class MessageTransceiver {
       wait_.Begin(dispatcher_);
     }
   }
+  zx_status_t ReadMessage();
 
   void Close();
 

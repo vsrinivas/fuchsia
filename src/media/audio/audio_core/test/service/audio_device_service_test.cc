@@ -54,6 +54,7 @@ class AudioDeviceServiceTest : public HermeticAudioTest {
   uint64_t device_token_;
 
   std::unique_ptr<T> driver_;
+  fzl::VmoMapper ring_buffer_;
 };
 
 template <typename T>
@@ -73,6 +74,8 @@ void AudioDeviceServiceTest<T>::SetUp() {
   driver_->set_device_manufacturer(kManufacturer);
   driver_->set_device_product(kProduct);
   driver_->set_stream_unique_id(kUniqueId);
+  // Allocate a ring buffer large enough for 1 second of 48khz 2 channel 16-bit audio.
+  ring_buffer_ = driver_->CreateRingBuffer(48000 * sizeof(int16_t) * 2);
   driver_->Start();
 
   audio_device_enumerator_.events().OnDeviceAdded = [this](fuchsia::media::AudioDeviceInfo info) {

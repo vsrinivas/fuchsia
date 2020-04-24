@@ -56,11 +56,7 @@ void MessageTransceiver::OnError(zx_status_t status) {
 void MessageTransceiver::ReadChannelMessages(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                              zx_status_t status, const zx_packet_signal_t* signal) {
   while (channel_) {
-    uint32_t actual_byte_count;
-    uint32_t actual_handle_count;
-    zx_status_t status =
-        channel_.read(0, nullptr, nullptr, 0, 0, &actual_byte_count, &actual_handle_count);
-
+    zx_status_t status = ReadMessage();
     if (status == ZX_ERR_SHOULD_WAIT) {
       status = wait->Begin(dispatcher);
       if (status != ZX_OK) {
@@ -69,36 +65,39 @@ void MessageTransceiver::ReadChannelMessages(async_dispatcher_t* dispatcher, asy
       }
       break;
     }
-
-    if (status == ZX_ERR_PEER_CLOSED) {
-      // Remote end of the channel closed.
-      OnError(status);
-      break;
-    }
-
-    if (status != ZX_ERR_BUFFER_TOO_SMALL) {
-      FX_PLOGS(ERROR, status) << "Failed to read (peek) from a zx::channel";
-      OnError(status);
-      break;
-    }
-
-    Message message(actual_byte_count, actual_handle_count);
-    status = channel_.read(0, message.bytes_.data(), message.handles_.data(), message.bytes_.size(),
-                           message.handles_.size(), &actual_byte_count, &actual_handle_count);
-
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "zx::channel::read failed";
-      OnError(status);
-      break;
-    }
-
-    FX_CHECK(message.bytes_.size() == actual_byte_count);
-    FX_CHECK(message.handles_.size() == actual_handle_count);
-
-    if (incoming_message_callback_) {
-      incoming_message_callback_(std::move(message));
+      return;
     }
   }
+}
+
+zx_status_t MessageTransceiver::ReadMessage() {
+  uint32_t actual_byte_count;
+  uint32_t actual_handle_count;
+  zx_status_t status =
+      channel_.read(0, nullptr, nullptr, 0, 0, &actual_byte_count, &actual_handle_count);
+  if (status != ZX_ERR_BUFFER_TOO_SMALL) {
+    if (status != ZX_ERR_SHOULD_WAIT) {
+      OnError(status);
+    }
+    return status;
+  }
+
+  Message message(actual_byte_count, actual_handle_count);
+  status = channel_.read(0, message.bytes_.data(), message.handles_.data(), message.bytes_.size(),
+                         message.handles_.size(), &actual_byte_count, &actual_handle_count);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "zx::channel::read failed";
+    OnError(status);
+    return status;
+  }
+
+  FX_DCHECK(message.bytes_.size() == actual_byte_count);
+  FX_DCHECK(message.handles_.size() == actual_handle_count);
+  if (incoming_message_callback_) {
+    incoming_message_callback_(std::move(message));
+  }
+  return ZX_OK;
 }
 
 }  // namespace media::audio::test

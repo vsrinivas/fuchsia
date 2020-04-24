@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/result.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
@@ -26,8 +27,23 @@ class FakeAudioDriverV1 {
 
   fzl::VmoMapper CreateRingBuffer(size_t size);
 
+  // Starts an async wait that will process messages as they're received.
   void Start();
+
+  // Cease processing messages as they're received.
   void Stop();
+
+  // Processes a single message from the driver channel and returns the |audio_cmd_t| that was
+  // processed.
+  //
+  // If there are no messages to process, ZX_ERR_SHOULD_WAIT is returned as an error.
+  fit::result<audio_cmd_t, zx_status_t> Step();
+
+  // Processes a single message from the driver ring buffer channel and returns the |audio_cmd_t|
+  // that was processed.
+  //
+  // If there are no messages to process, ZX_ERR_SHOULD_WAIT is returned as an error.
+  fit::result<audio_cmd_t, zx_status_t> StepRingBuffer();
 
   struct SelectedFormat {
     uint32_t frames_per_second;
@@ -52,6 +68,7 @@ class FakeAudioDriverV1 {
     formats_ = std::move(formats);
   }
   void set_clock_domain(int32_t clock_domain) { clock_domain_ = clock_domain; }
+  void set_hardwired(bool hardwired) { hardwired_ = hardwired; }
   void set_plugged(bool plugged) { plugged_ = plugged; }
   void set_fifo_depth(uint32_t fifo_depth) { fifo_depth_ = fifo_depth; }
   void set_external_delay(zx::duration external_delay) { external_delay_ = external_delay; }
@@ -107,6 +124,7 @@ class FakeAudioDriverV1 {
 
   uint32_t fifo_depth_ = 0;
   zx::duration external_delay_{zx::nsec(0)};
+  bool hardwired_ = true;
   bool plugged_ = true;
 
   std::optional<SelectedFormat> selected_format_;
@@ -114,8 +132,12 @@ class FakeAudioDriverV1 {
   bool is_running_ = false;
 
   async_dispatcher_t* dispatcher_;
+  bool is_stopped_ = true;
   test::MessageTransceiver stream_transceiver_;
   test::MessageTransceiver ring_buffer_transceiver_;
+
+  audio_cmd_t last_stream_command_ = 0;
+  audio_cmd_t last_ring_buffer_command_ = 0;
 };
 
 class FakeAudioDriverV2 : public fuchsia::hardware::audio::StreamConfig,

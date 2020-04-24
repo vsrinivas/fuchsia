@@ -119,15 +119,8 @@ async fn plug_unplug_durability() -> Result<()> {
     let env = Environment::new()?;
 
     // Two enumerators, so we can create separate event streams for Adds and DefaultChanges
-    let enumerator = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
-    let enumerator2 = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
-
-    let mut device_adds = enumerator.take_event_stream().try_filter_map(move |e| {
-        future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_added(e)))
-    });
-    let mut default_changes = enumerator2.take_event_stream().try_filter_map(move |e| {
-        future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_default_device_changed(e)))
-    });
+    let mut enumerator_events =
+        env.connect_to_service::<AudioDeviceEnumeratorMarker>()?.take_event_stream();
 
     // Configure and add an input device that can notify audio_core when un/plugged
     let mut expected_id1_bytes: [u8; 16] = [0, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
@@ -140,10 +133,20 @@ async fn plug_unplug_durability() -> Result<()> {
 
     // Wait for device1 to be added and signaled.
     device1.add()?;
-    let device1_info = device_adds.try_next().await?.expect("");
+    let device1_info = enumerator_events
+        .try_next()
+        .await?
+        .map(AudioDeviceEnumeratorEvent::into_on_device_added)
+        .expect("Unexpected end of event stream encountered")
+        .expect("Unexpected event received");
 
     // Wait for device1 to become the new default.
-    let (old_token, new_token) = default_changes.try_next().await?.expect("");
+    let (old_token, new_token) = enumerator_events
+        .try_next()
+        .await?
+        .map(AudioDeviceEnumeratorEvent::into_on_default_device_changed)
+        .expect("Unexpected end of event stream encountered")
+        .expect("Unexpected event received");
     assert_eq!(old_token, 0);
     assert_eq!(new_token, device1_info.token_id);
 
@@ -155,10 +158,20 @@ async fn plug_unplug_durability() -> Result<()> {
 
     // Wait for device2 to be added and signaled.
     device2.add()?;
-    let device2_info = device_adds.try_next().await?.expect("");
+    let device2_info = enumerator_events
+        .try_next()
+        .await?
+        .map(AudioDeviceEnumeratorEvent::into_on_device_added)
+        .expect("Unexpected end of event stream encountered")
+        .expect("Unexpected event received");
 
     // Wait for device2 to become the new default.
-    let (old_token, new_token) = default_changes.try_next().await?.expect("");
+    let (old_token, new_token) = enumerator_events
+        .try_next()
+        .await?
+        .map(AudioDeviceEnumeratorEvent::into_on_default_device_changed)
+        .expect("Unexpected end of event stream encountered")
+        .expect("Unexpected event received");
     assert_eq!(old_token, device1_info.token_id);
     assert_eq!(new_token, device2_info.token_id);
 
@@ -166,25 +179,45 @@ async fn plug_unplug_durability() -> Result<()> {
     for _ in 0..20 {
         // After device2 unplug, wait for signal that default has moved device2 => device1.
         device2.change_plug_state(zx::Time::get(zx::ClockId::Monotonic).into_nanos(), false)?;
-        let (old_token, new_token) = default_changes.try_next().await?.expect("");
+        let (old_token, new_token) = enumerator_events
+            .try_next()
+            .await?
+            .map(AudioDeviceEnumeratorEvent::into_on_default_device_changed)
+            .expect("Unexpected end of event stream encountered")
+            .expect("Unexpected event received");
         assert_eq!(old_token, device2_info.token_id);
         assert_eq!(new_token, device1_info.token_id);
 
         // After device1 unplug, wait for signal that default has moved device1 => 0.
         device1.change_plug_state(zx::Time::get(zx::ClockId::Monotonic).into_nanos(), false)?;
-        let (old_token, new_token) = default_changes.try_next().await?.expect("");
+        let (old_token, new_token) = enumerator_events
+            .try_next()
+            .await?
+            .map(AudioDeviceEnumeratorEvent::into_on_default_device_changed)
+            .expect("Unexpected end of event stream encountered")
+            .expect("Unexpected event received");
         assert_eq!(old_token, device1_info.token_id);
         assert_eq!(new_token, 0);
 
         // After device1 plug, wait for signal that default has moved 0 => device1.
         device1.change_plug_state(zx::Time::get(zx::ClockId::Monotonic).into_nanos(), true)?;
-        let (old_token, new_token) = default_changes.try_next().await?.expect("");
+        let (old_token, new_token) = enumerator_events
+            .try_next()
+            .await?
+            .map(AudioDeviceEnumeratorEvent::into_on_default_device_changed)
+            .expect("Unexpected end of event stream encountered")
+            .expect("Unexpected event received");
         assert_eq!(old_token, 0);
         assert_eq!(new_token, device1_info.token_id);
 
         // After device2 plug, wait for signal that default has moved device1 => device2.
         device2.change_plug_state(zx::Time::get(zx::ClockId::Monotonic).into_nanos(), true)?;
-        let (old_token, new_token) = default_changes.try_next().await?.expect("");
+        let (old_token, new_token) = enumerator_events
+            .try_next()
+            .await?
+            .map(AudioDeviceEnumeratorEvent::into_on_default_device_changed)
+            .expect("Unexpected end of event stream encountered")
+            .expect("Unexpected event received");
         assert_eq!(old_token, device1_info.token_id);
         assert_eq!(new_token, device2_info.token_id);
     }

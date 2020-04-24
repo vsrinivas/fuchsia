@@ -419,9 +419,6 @@ void DriverOutput::OnDriverInfoFetched() {
                            format.bytes_per_frame() * 8 / pref_chan);
   }
 
-  // Tell AudioDeviceManager we are ready to be an active audio device.
-  ActivateSelf();
-
   // Success; now wait until configuration completes.
   state_ = State::Configuring;
   cleanup.cancel();
@@ -488,6 +485,9 @@ void DriverOutput::OnDriverStartComplete() {
   FX_DCHECK(pipeline_config_);
   SetupMixTask(*pipeline_config_, format->channels(), driver_writable_ring_buffer()->frames(),
                driver_ptscts_ref_clock_to_fractional_frames());
+
+  // Tell AudioDeviceManager we are ready to be an active audio device.
+  ActivateSelf();
 
   // Compute low_water_frames_.  low_water_frames_ is minimum the number of
   // frames ahead of the safe write position we ever want to be.  When we hit
