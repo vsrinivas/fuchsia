@@ -168,6 +168,8 @@ where
     state: State,
 
     monitor_queue: ControlHandle<StateNotifier, State>,
+
+    support_sysconfig: bool,
 }
 
 pub enum IncomingServices {
@@ -197,6 +199,8 @@ where
         state_node.set(&state);
         let (monitor_queue_fut, monitor_queue) = EventQueue::new();
         fasync::spawn_local(monitor_queue_fut);
+        let support_sysconfig =
+            std::fs::read_to_string("/config/build-info/board").ok().as_deref() == Some("astro");
         FidlServer {
             state_machine_control,
             storage_ref,
@@ -206,6 +210,7 @@ where
             channel_configs,
             state,
             monitor_queue,
+            support_sysconfig,
         }
     }
 
@@ -325,7 +330,11 @@ where
                     warn!(
                         "Empty channel passed to SetTarget, erasing all channel data in SysConfig."
                     );
-                    write_partition(SysconfigPartition::Config, &[])?;
+                    if server.borrow().support_sysconfig {
+                        write_partition(SysconfigPartition::Config, &[])?;
+                    } else {
+                        warn!("sysconfig not supported.");
+                    }
                     let target_channel = match &server.borrow().channel_configs {
                         Some(channel_configs) => channel_configs.default_channel.clone(),
                         None => None,
@@ -352,8 +361,12 @@ where
                         warn!("No channel configs found, using channel name as TUF repo name.");
                         &channel
                     };
-                    let config = OtaUpdateChannelConfig::new(&channel, tuf_repo)?;
-                    write_channel_config(&config)?;
+                    if server.support_sysconfig {
+                        let config = OtaUpdateChannelConfig::new(&channel, tuf_repo)?;
+                        write_channel_config(&config)?;
+                    } else {
+                        warn!("sysconfig not supported.");
+                    }
 
                     let storage_ref = Rc::clone(&server.storage_ref);
                     // Don't borrow server across await.
@@ -633,6 +646,8 @@ mod stub {
                 state_node,
                 self.channel_configs,
             )));
+            // Enable sysconfig in test for all devices because the underlying function is mocked.
+            fidl.borrow_mut().support_sysconfig = true;
 
             let schedule_node = ScheduleNode::new(root.create_child("schedule"));
             let protocol_state_node = ProtocolStateNode::new(root.create_child("protocol_state"));
