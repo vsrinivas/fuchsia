@@ -9,5 +9,6 @@
             as: "/root_pkg",
             rights: [ "rw*" ],
         },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
     ],
 }
