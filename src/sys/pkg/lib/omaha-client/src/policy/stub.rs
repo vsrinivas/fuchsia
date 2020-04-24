@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
+    common::{App, CheckOptions, CheckTiming, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
     policy::{CheckDecision, Policy, PolicyData, PolicyEngine, UpdateDecision},
     request_builder::RequestParams,
+    time::TimeSource,
 };
 use futures::future::BoxFuture;
 use futures::prelude::*;
@@ -18,13 +19,10 @@ impl Policy for StubPolicy {
     fn compute_next_update_time(
         policy_data: &PolicyData,
         _apps: &[App],
-        scheduling: &UpdateCheckSchedule,
+        _scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
-    ) -> UpdateCheckSchedule {
-        UpdateCheckSchedule::builder()
-            .last_time(scheduling.last_update_time)
-            .next_time(policy_data.current_time)
-            .build()
+    ) -> CheckTiming {
+        CheckTiming::builder().time(policy_data.current_time).build()
     }
 
     fn update_check_allowed(
@@ -51,22 +49,29 @@ impl Policy for StubPolicy {
 /// A stub PolicyEngine that just gathers the current time and hands it off to the StubPolicy as the
 /// PolicyData.
 #[derive(Debug)]
-pub struct StubPolicyEngine;
+pub struct StubPolicyEngine<T: TimeSource> {
+    time_source: T,
+}
+impl<T: TimeSource> StubPolicyEngine<T> {
+    pub fn new(time_source: T) -> Self {
+        StubPolicyEngine { time_source }
+    }
+}
 
-impl PolicyEngine for StubPolicyEngine {
+impl<T: TimeSource> PolicyEngine for StubPolicyEngine<T> {
     fn compute_next_update_time(
         &mut self,
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
-    ) -> BoxFuture<'_, UpdateCheckSchedule> {
-        let schedule = StubPolicy::compute_next_update_time(
-            &PolicyData::builder().use_clock().build(),
+    ) -> BoxFuture<'_, CheckTiming> {
+        let check_timing = StubPolicy::compute_next_update_time(
+            &PolicyData::builder().use_timesource(&self.time_source).build(),
             apps,
             scheduling,
             protocol_state,
         );
-        future::ready(schedule).boxed()
+        future::ready(check_timing).boxed()
     }
 
     fn update_check_allowed(
@@ -77,7 +82,7 @@ impl PolicyEngine for StubPolicyEngine {
         check_options: &CheckOptions,
     ) -> BoxFuture<'_, CheckDecision> {
         let decision = StubPolicy::update_check_allowed(
-            &PolicyData::builder().use_clock().build(),
+            &PolicyData::builder().use_timesource(&self.time_source).build(),
             apps,
             scheduling,
             protocol_state,
@@ -91,7 +96,7 @@ impl PolicyEngine for StubPolicyEngine {
         proposed_install_plan: &impl Plan,
     ) -> BoxFuture<'_, UpdateDecision> {
         let decision = StubPolicy::update_can_start(
-            &PolicyData::builder().use_clock().build(),
+            &PolicyData::builder().use_timesource(&self.time_source).build(),
             proposed_install_plan,
         );
         future::ready(decision).boxed()
@@ -101,11 +106,14 @@ impl PolicyEngine for StubPolicyEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{installer::stub::StubPlan, protocol::request::InstallSource};
+    use crate::{
+        installer::stub::StubPlan, protocol::request::InstallSource, time::MockTimeSource,
+    };
 
     #[test]
     fn test_compute_next_update_time() {
-        let policy_data = PolicyData::builder().use_clock().build();
+        let policy_data =
+            PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
         let update_check_schedule = UpdateCheckSchedule::default();
         let result = StubPolicy::compute_next_update_time(
             &policy_data,
@@ -113,16 +121,14 @@ mod tests {
             &update_check_schedule,
             &ProtocolState::default(),
         );
-        let expected = UpdateCheckSchedule::builder()
-            .last_time(update_check_schedule.last_update_time)
-            .next_time(policy_data.current_time)
-            .build();
+        let expected = CheckTiming::builder().time(policy_data.current_time).build();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_update_check_allowed_on_demand() {
-        let policy_data = PolicyData::builder().use_clock().build();
+        let policy_data =
+            PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
         let check_options = CheckOptions { source: InstallSource::OnDemand };
         let result = StubPolicy::update_check_allowed(
             &policy_data,
@@ -140,7 +146,8 @@ mod tests {
 
     #[test]
     fn test_update_check_allowed_scheduled_task() {
-        let policy_data = PolicyData::builder().use_clock().build();
+        let policy_data =
+            PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
         let check_options = CheckOptions { source: InstallSource::ScheduledTask };
         let result = StubPolicy::update_check_allowed(
             &policy_data,
@@ -158,7 +165,8 @@ mod tests {
 
     #[test]
     fn test_update_can_start() {
-        let policy_data = PolicyData::builder().use_clock().build();
+        let policy_data =
+            PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
         let result = StubPolicy::update_can_start(&policy_data, &StubPlan);
         assert_eq!(result, UpdateDecision::Ok);
     }

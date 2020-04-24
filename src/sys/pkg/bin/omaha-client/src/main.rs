@@ -7,7 +7,7 @@ use fuchsia_component::server::ServiceFs;
 use futures::{lock::Mutex, prelude::*, stream::FuturesUnordered};
 use http_request::FuchsiaHyperHttpRequest;
 use log::{error, info};
-use omaha_client::state_machine::StateMachineBuilder;
+use omaha_client::{state_machine::StateMachineBuilder, time::StandardTimeSource};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -55,10 +55,11 @@ fn main() -> Result<(), Error> {
         let stash = storage::Stash::new("omaha-client").await;
         let stash_ref = Rc::new(Mutex::new(stash));
         let (state_machine_control, state_machine) = StateMachineBuilder::new(
-            policy::FuchsiaPolicyEngine,
+            policy::FuchsiaPolicyEngineBuilder.time_source(StandardTimeSource).build(),
             http,
             installer,
             timer::FuchsiaTimer,
+            StandardTimeSource,
             metrics_reporter,
             stash_ref.clone(),
             config.clone(),

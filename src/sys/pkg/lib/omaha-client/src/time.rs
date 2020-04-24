@@ -86,8 +86,8 @@ pub use complex::system_time_conversion;
 /// implemetnations, it will panic on overflow.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ComplexTime {
-    wall: SystemTime,
-    mono: Instant,
+    pub wall: SystemTime,
+    pub mono: Instant,
 }
 impl ComplexTime {
     /// Convert the SystemTime component of the ComplexTime into i64 microseconds from the UNIX
@@ -151,11 +151,12 @@ pub enum PartialComplexTime {
 impl PartialComplexTime {
     /// Return the SystemTime component, if one exists.
     pub fn checked_to_system_time(self) -> Option<SystemTime> {
-        match self {
-            PartialComplexTime::Wall(w) => Some(w),
-            PartialComplexTime::Monotonic(_) => None,
-            PartialComplexTime::Complex(c) => Some(c.wall),
-        }
+        self.destructure().0
+    }
+
+    /// Return the Instant component, if one exists.
+    pub fn checked_to_instant(self) -> Option<Instant> {
+        self.destructure().1
     }
 
     /// Convert the SystemTime component of this PartialComplexTime into i64 microseconds from
@@ -176,10 +177,16 @@ impl PartialComplexTime {
     /// Return a new ComplexTime that's based on the time values of this PartialComplexTime,
     /// setting either unknown field from the passed-in ComplexTime.
     pub fn complete_with(&self, complex: ComplexTime) -> ComplexTime {
+        let (system, instant) = self.destructure();
+        ComplexTime::from((system.unwrap_or(complex.wall), instant.unwrap_or(complex.mono)))
+    }
+
+    /// Destructure the PartialComplexTime into it's two components, each as an Option.
+    pub fn destructure(&self) -> (Option<SystemTime>, Option<Instant>) {
         match *self {
-            PartialComplexTime::Complex(c) => c,
-            PartialComplexTime::Wall(w) => ComplexTime::from((w, complex.mono)),
-            PartialComplexTime::Monotonic(m) => ComplexTime::from((complex.wall, m)),
+            PartialComplexTime::Wall(w) => (Some(w), None),
+            PartialComplexTime::Monotonic(m) => (None, Some(m)),
+            PartialComplexTime::Complex(c) => (Some(c.wall), Some(c.mono)),
         }
     }
 }
@@ -219,7 +226,6 @@ pub trait TimeSource {
 }
 // Implementations and tests for `TimeSource`
 pub mod time_source;
-#[cfg(test)]
 pub use time_source::MockTimeSource;
 pub use time_source::StandardTimeSource;
 

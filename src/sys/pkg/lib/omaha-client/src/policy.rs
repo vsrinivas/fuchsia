@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 use crate::{
-    clock,
-    common::{format_system_time, App, CheckOptions, ProtocolState, UpdateCheckSchedule},
+    common::{App, CheckOptions, CheckTiming, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
     request_builder::RequestParams,
+    time::{ComplexTime, TimeSource},
 };
 use futures::future::BoxFuture;
-use std::time::SystemTime;
 
 #[cfg(test)]
 mod mock;
@@ -20,25 +19,16 @@ pub use stub::StubPolicy;
 pub use stub::StubPolicyEngine;
 
 /// Data about the local system that's needed to fulfill Policy questions
+#[derive(Clone, Debug)]
 pub struct PolicyData {
     /// The current time at the start of the update
-    pub current_time: SystemTime,
+    pub current_time: ComplexTime,
 }
 
 impl PolicyData {
-    /// Create and return a new builder for PolicyData.    
+    /// Create and return a new builder for PolicyData.
     pub fn builder() -> PolicyDataBuilder {
         PolicyDataBuilder::default()
-    }
-}
-
-impl std::fmt::Debug for PolicyData {
-    /// Implement Debug such that it uses the same time formatting as
-    /// crate::common::UpdateCheckSchedule uses.
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PolicyData")
-            .field("current_time", &format_system_time(self.current_time))
-            .finish()
     }
 }
 
@@ -49,17 +39,17 @@ pub struct PolicyDataBuilder;
 
 /// The PolicyDataBuilder, once it has time set.
 pub struct PolicyDataBuilderWithTime {
-    current_time: SystemTime,
+    current_time: ComplexTime,
 }
 
 impl PolicyDataBuilder {
-    /// Use |crate::clock| to set the |current_time|.
-    pub fn use_clock(self) -> PolicyDataBuilderWithTime {
-        PolicyDataBuilderWithTime { current_time: clock::now() }
+    /// Use a `TimeSource` to set the `current_time`.
+    pub fn use_timesource<T: TimeSource>(self, timesource: &T) -> PolicyDataBuilderWithTime {
+        PolicyDataBuilderWithTime { current_time: timesource.now() }
     }
 
-    /// Set the |current_time| explicitly from a given SystemTime.
-    pub fn time(self, current_time: SystemTime) -> PolicyDataBuilderWithTime {
+    /// Set the `current_time` explicitly from a given ComplexTime.
+    pub fn time(self, current_time: ComplexTime) -> PolicyDataBuilderWithTime {
         PolicyDataBuilderWithTime { current_time }
     }
 }
@@ -119,7 +109,7 @@ pub trait Policy {
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
-    ) -> UpdateCheckSchedule;
+    ) -> CheckTiming;
 
     /// Given the current State, and the current PolicyData, is an update check
     /// allowed at this time.  A CheckDecision is used to return the reasoning, as in
@@ -149,7 +139,7 @@ pub trait PolicyEngine {
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
-    ) -> BoxFuture<'_, UpdateCheckSchedule>;
+    ) -> BoxFuture<'_, CheckTiming>;
 
     /// Given the context provided by State, does the Policy allow an update check to
     /// happen at this time?  This should be consistent with the compute_next_update_time
@@ -174,19 +164,20 @@ pub trait PolicyEngine {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::time::Duration;
+    use crate::time::MockTimeSource;
 
     #[test]
     pub fn test_policy_data_builder_with_system_time() {
-        let current_time = SystemTime::UNIX_EPOCH + Duration::from_secs(200000);
+        let current_time = MockTimeSource::new_from_now().now();
         let policy_data = PolicyData::builder().time(current_time).build();
         assert_eq!(policy_data.current_time, current_time);
     }
 
     #[test]
     pub fn test_policy_data_builder_with_clock() {
-        let current_time = clock::now();
-        let policy_data = PolicyData::builder().use_clock().build();
+        let source = MockTimeSource::new_from_now();
+        let current_time = source.now();
+        let policy_data = PolicyData::builder().use_timesource(&source).build();
         assert_eq!(policy_data.current_time, current_time);
     }
 }

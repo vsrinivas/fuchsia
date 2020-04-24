@@ -9,8 +9,8 @@ use crate::{
     protocol::{self, request::InstallSource, Cohort},
     state_machine::update_check::AppResponse,
     storage::Storage,
+    time::PartialComplexTime,
 };
-use chrono::{DateTime, Utc};
 use futures::lock::Mutex;
 use itertools::Itertools;
 use log::error;
@@ -19,7 +19,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::rc::Rc;
 use std::str::FromStr;
-use std::time::SystemTime;
+use std::time::Duration;
 
 /// Omaha has historically supported multiple methods of counting devices.  Currently, the
 /// only recommended method is the Client Regulated - Date method.
@@ -368,13 +368,29 @@ pub struct CheckOptions {
 }
 
 /// This describes the data around the scheduling of update checks
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, Copy, Default, PartialEq)]
 pub struct UpdateCheckSchedule {
     /// When the last update check was attempted (start time of the check process).
-    pub last_update_time: Option<SystemTime>,
+    pub last_update_time: Option<PartialComplexTime>,
 
-    /// When the update should happen.
-    pub next_update_time: Option<SystemTime>,
+    /// When the next update should happen.
+    pub next_update_time: Option<CheckTiming>,
+}
+
+/// The fields used to describe the timing of the next update check.
+///
+/// This exists as a separate type mostly so that it can be moved around atomically, in a little bit
+/// neater fashion than it could be if it was a tuple of `(PartialComplexTime, Option<Duration>)`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CheckTiming {
+    /// The upper time bounds on when it should be performed (expressed as along those timelines
+    /// that are valid based on currently known time quality).
+    pub time: PartialComplexTime,
+
+    /// The minimum wait until the next check, regardless of the wall or monotonic time it should be
+    /// performed at.  This is handled separately as it creates a lower bound vs. the upper bound(s)
+    /// that the `time` field provides.
+    pub minimum_wait: Option<Duration>,
 }
 
 impl UpdateCheckSchedule {
@@ -383,53 +399,70 @@ impl UpdateCheckSchedule {
     }
 }
 
+impl CheckTiming {
+    pub fn builder() -> CheckTimingBuilder {
+        CheckTimingBuilder::default()
+    }
+}
+
 /// This is a builder for the UpdateCheckSchedule.
-///
-/// let schedule = UpdateCheckSchedule::builder().last_time(SystemTime::now()).build();
-///
 #[derive(Clone, Debug, Default)]
 pub struct ScheduleBuilder {
-    last_time: Option<SystemTime>,
-    next_time: Option<SystemTime>,
+    last_time: Option<PartialComplexTime>,
+    next_timing: Option<CheckTiming>,
 }
 
 impl ScheduleBuilder {
     /// Set the last_update_time for the UpdateCheckSchedule that's to be built.
-    /// This method takes both SystemTime and Option<SystemTime>.
-    pub fn last_time(mut self, last_update_time: impl Into<Option<SystemTime>>) -> Self {
+    /// This method takes both ComplexTime and Option<ComplexTime>.
+    pub fn last_time(mut self, last_update_time: impl Into<Option<PartialComplexTime>>) -> Self {
         self.last_time = last_update_time.into();
         self
     }
-    /// Set the next_update_time for the UpdateCheckSchedule that's to be built.
-    /// This method takes both SystemTime and Option<SystemTime>.
-    pub fn next_time(mut self, next_update_time: impl Into<Option<SystemTime>>) -> Self {
-        self.next_time = next_update_time.into();
+
+    /// Set the CheckTiming for the next update check to use.
+    pub fn next_timing(mut self, next_timing: impl Into<Option<CheckTiming>>) -> Self {
+        self.next_timing = next_timing.into();
         self
     }
+
     /// Build the UpdateCheckSchedule.
     pub fn build(self) -> UpdateCheckSchedule {
-        UpdateCheckSchedule { last_update_time: self.last_time, next_update_time: self.next_time }
+        UpdateCheckSchedule { last_update_time: self.last_time, next_update_time: self.next_timing }
     }
 }
 
-/// Helper struct for providing a consistent, readable `SystemTime`.
+/// This is a builder for the `CheckTiming` struct.
 ///
-/// This displays a `SystemTime` in a human-readable date+time in UTC plus the raw `[seconds].[ns]`
-/// since epoch of the SystemTime.
-///
-/// Example:
-/// ```
-/// let sys_time = SystemTime::UNIX_EPOCH + Duration::from_nanos(994610096026420000);
-///
-/// assert_eq!(
-///     format!("{}", ReadableSystemTime(sys_time)),
-///     "2001-07-08 16:34:56.026 UTC (994610096.026420000)"   
-/// );
-/// ```
-pub struct ReadableSystemTime(SystemTime);
-impl fmt::Display for ReadableSystemTime {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        DateTime::<Utc>::from(self.0).format("%Y-%m-%d %H:%M:%S%.3f %Z (%s%.9f)").fmt(f)
+/// It uses a type-state to ensure that the time of the check has been set before allowing the
+/// construction of the `CheckTiming` itself.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct CheckTimingBuilder;
+
+/// This is the internal type-state for ensuring the time has been set.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CheckTimingBuilderWithTime {
+    time: PartialComplexTime,
+    minimum_wait: Option<Duration>,
+}
+
+impl CheckTimingBuilder {
+    /// The time of the next check must be set in order to construct the `CheckTiming` type.
+    pub fn time(self, time: impl Into<PartialComplexTime>) -> CheckTimingBuilderWithTime {
+        CheckTimingBuilderWithTime { time: time.into(), minimum_wait: None }
+    }
+}
+
+impl CheckTimingBuilderWithTime {
+    /// Set the minimum wait until the next check.
+    pub fn minimum_wait(mut self, minimum_wait: impl Into<Option<Duration>>) -> Self {
+        self.minimum_wait = minimum_wait.into();
+        self
+    }
+
+    /// Build the CheckTiming.
+    pub fn build(self) -> CheckTiming {
+        CheckTiming { time: self.time, minimum_wait: self.minimum_wait }
     }
 }
 
@@ -441,7 +474,7 @@ impl fmt::Display for ReadableSystemTime {
 /// `"MyStruct { option_string_field: None }"`
 /// `"MyStruct { option_string_field: "string field value" }"`
 ///
-pub struct PrettyOptionDisplay<T>(Option<T>)
+pub struct PrettyOptionDisplay<T>(pub Option<T>)
 where
     T: fmt::Display;
 impl<T> fmt::Display for PrettyOptionDisplay<T>
@@ -464,13 +497,6 @@ where
     }
 }
 
-/// This is a utility function that provides a standardized conversion of both SystemTime and
-/// Option<SystemTime> into a human-readable date/time using ReadableSystemTime, or "None" if it
-/// is Option::None.
-pub fn format_system_time(time: impl Into<Option<SystemTime>>) -> String {
-    time.into().map_or("None".to_string(), |t| ReadableSystemTime(t).to_string())
-}
-
 /// The default Debug implementation for SystemTime will only print seconds since unix epoch, which
 /// is not terribly useful in logs, so this prints a more human-relatable format.
 ///
@@ -480,17 +506,21 @@ pub fn format_system_time(time: impl Into<Option<SystemTime>>) -> String {
 impl fmt::Debug for UpdateCheckSchedule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("UpdateCheckSchedule")
-            .field(
-                "last_update_time",
-                &PrettyOptionDisplay(self.last_update_time.map(ReadableSystemTime)),
-            )
-            .field(
-                "next_update_time",
-                &PrettyOptionDisplay(self.next_update_time.map(ReadableSystemTime)),
-            )
+            .field("last_update_time", &PrettyOptionDisplay(self.last_update_time))
+            .field("next_update_time", &PrettyOptionDisplay(self.next_update_time))
             .finish()
     }
 }
+
+impl fmt::Display for CheckTiming {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.minimum_wait {
+            None => fmt::Display::fmt(&self.time, f),
+            Some(wait) => write!(f, "{} wait: {:?}", &self.time, &wait),
+        }
+    }
+}
+
 /// These hold the data maintained request-to-request so that the requirements for
 /// backoffs, throttling, proxy use, etc. can all be properly maintained.  This is
 /// NOT the state machine's internal state.
@@ -514,10 +544,14 @@ pub struct ProtocolState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{state_machine::update_check::Action, storage::MemStorage};
+    use crate::{
+        state_machine::update_check::Action,
+        storage::MemStorage,
+        time::{MockTimeSource, TimeSource},
+    };
     use futures::executor::block_on;
     use pretty_assertions::assert_eq;
-    use std::time::Duration;
+    use std::time::SystemTime;
 
     #[test]
     fn test_version_display() {
@@ -939,24 +973,6 @@ mod tests {
     }
 
     #[test]
-    fn test_readable_system_time() {
-        let sys_time = SystemTime::UNIX_EPOCH + Duration::from_nanos(994610096026420000);
-
-        assert_eq!(
-            format!("{}", ReadableSystemTime(sys_time)),
-            "2001-07-08 16:34:56.026 UTC (994610096.026420000)"
-        );
-    }
-
-    #[test]
-    fn test_format_system_time() {
-        assert_eq!(
-            "1979-04-24 17:19:04.012 UTC (293822344.012345678)",
-            format_system_time(SystemTime::UNIX_EPOCH + Duration::from_nanos(293822344012345678))
-        );
-    }
-
-    #[test]
     fn test_pretty_option_display_with_none() {
         assert_eq!("None", format!("{:?}", PrettyOptionDisplay(Option::<String>::None)));
     }
@@ -964,19 +980,6 @@ mod tests {
     #[test]
     fn test_pretty_option_display_with_some() {
         assert_eq!("this is a test", format!("{:?}", PrettyOptionDisplay(Some("this is a test"))));
-    }
-
-    #[test]
-    fn test_format_system_time_some_system_time() {
-        assert_eq!(
-            "1979-04-24 17:19:04.000 UTC (293822344.000000000)",
-            format_system_time(Some(SystemTime::UNIX_EPOCH + Duration::from_secs(293822344)))
-        );
-    }
-
-    #[test]
-    fn test_format_system_time_none() {
-        assert_eq!("None", format_system_time(None));
     }
 
     #[test]
@@ -992,16 +995,20 @@ mod tests {
 
     #[test]
     fn test_update_check_schedule_debug_with_values() {
+        let mock_time = MockTimeSource::new_from_now();
+        let last = mock_time.now();
+        let next = last + Duration::from_secs(1000);
         assert_eq!(
-            "UpdateCheckSchedule { \
-             last_update_time: 1970-01-02 03:46:40.000 UTC (100000.000000000), \
-             next_update_time: 1970-01-03 07:33:20.000 UTC (200000.000000000) \
-             }",
+            format!(
+                "UpdateCheckSchedule {{ last_update_time: {}, next_update_time: {} }}",
+                PartialComplexTime::from(last),
+                next
+            ),
             format!(
                 "{:?}",
                 UpdateCheckSchedule::builder()
-                    .last_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
-                    .next_time(SystemTime::UNIX_EPOCH + Duration::from_secs(200000))
+                    .last_time(last)
+                    .next_timing(CheckTiming::builder().time(next).build())
                     .build()
             )
         );
@@ -1009,14 +1016,25 @@ mod tests {
 
     #[test]
     fn test_update_check_schedule_builder_all_fields() {
+        let mock_time = MockTimeSource::new_from_now();
+        let now = PartialComplexTime::from(mock_time.now());
         assert_eq!(
             UpdateCheckSchedule::builder()
-                .last_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
-                .next_time(SystemTime::UNIX_EPOCH + Duration::from_secs(200000))
+                .last_time(PartialComplexTime::from(
+                    SystemTime::UNIX_EPOCH + Duration::from_secs(100000)
+                ))
+                .next_timing(
+                    CheckTiming::builder().time(now).minimum_wait(Duration::from_secs(100)).build()
+                )
                 .build(),
             UpdateCheckSchedule {
-                last_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(100000)),
-                next_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(200000)),
+                last_update_time: Some(PartialComplexTime::from(
+                    SystemTime::UNIX_EPOCH + Duration::from_secs(100000)
+                )),
+                next_update_time: Some(CheckTiming {
+                    time: now,
+                    minimum_wait: Some(Duration::from_secs(100))
+                }),
                 ..Default::default()
             }
         );
@@ -1024,14 +1042,27 @@ mod tests {
 
     #[test]
     fn test_update_check_schedule_builder_all_fields_from_options() {
+        let next_time = PartialComplexTime::from(MockTimeSource::new_from_now().now());
         assert_eq!(
             UpdateCheckSchedule::builder()
-                .last_time(Some(SystemTime::UNIX_EPOCH + Duration::from_secs(100000)))
-                .next_time(Some(SystemTime::UNIX_EPOCH + Duration::from_secs(200000)))
+                .last_time(Some(PartialComplexTime::from(
+                    SystemTime::UNIX_EPOCH + Duration::from_secs(100000)
+                )))
+                .next_timing(Some(
+                    CheckTiming::builder()
+                        .time(next_time)
+                        .minimum_wait(Some(Duration::from_secs(100)))
+                        .build()
+                ))
                 .build(),
             UpdateCheckSchedule {
-                last_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(100000)),
-                next_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(200000)),
+                last_update_time: Some(PartialComplexTime::from(
+                    SystemTime::UNIX_EPOCH + Duration::from_secs(100000)
+                )),
+                next_update_time: Some(CheckTiming {
+                    time: next_time,
+                    minimum_wait: Some(Duration::from_secs(100))
+                }),
                 ..Default::default()
             }
         );
@@ -1041,20 +1072,33 @@ mod tests {
     fn test_update_check_schedule_builder_subset_fields() {
         assert_eq!(
             UpdateCheckSchedule::builder()
-                .last_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
+                .last_time(PartialComplexTime::from(
+                    SystemTime::UNIX_EPOCH + Duration::from_secs(100000)
+                ))
                 .build(),
             UpdateCheckSchedule {
-                last_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(100000)),
+                last_update_time: Some(PartialComplexTime::from(
+                    SystemTime::UNIX_EPOCH + Duration::from_secs(100000)
+                )),
                 ..Default::default()
             }
         );
 
+        let next_time = PartialComplexTime::from(MockTimeSource::new_from_now().now());
         assert_eq!(
             UpdateCheckSchedule::builder()
-                .next_time(SystemTime::UNIX_EPOCH + Duration::from_secs(100000))
+                .next_timing(
+                    CheckTiming::builder()
+                        .time(next_time)
+                        .minimum_wait(Duration::from_secs(5))
+                        .build()
+                )
                 .build(),
             UpdateCheckSchedule {
-                next_update_time: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(100000)),
+                next_update_time: Some(CheckTiming {
+                    time: next_time,
+                    minimum_wait: Some(Duration::from_secs(5))
+                }),
                 ..Default::default()
             }
         );

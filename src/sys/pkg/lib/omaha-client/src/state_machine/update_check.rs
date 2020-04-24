@@ -7,8 +7,8 @@
 use crate::{
     common::{ProtocolState, UpdateCheckSchedule, UserCounting},
     protocol::Cohort,
-    state_machine::time::{i64_to_time, time_to_i64},
     storage::{Storage, StorageExt},
+    time::PartialComplexTime,
 };
 use log::error;
 use std::convert::TryFrom;
@@ -34,7 +34,10 @@ pub struct Context {
 impl Context {
     /// Load and initialize update check context from persistent storage.
     pub async fn load(storage: &impl Storage) -> Self {
-        let last_update_time = storage.get_int(LAST_UPDATE_TIME).await.map(i64_to_time);
+        let last_update_time = storage
+            .get_int(LAST_UPDATE_TIME)
+            .await
+            .map(PartialComplexTime::from_micros_since_epoch);
         let server_dictated_poll_interval = storage
             .get_int(SERVER_DICTATED_POLL_INTERVAL)
             .await
@@ -51,7 +54,12 @@ impl Context {
     /// It will NOT call commit() on |storage|, caller is responsible to call commit().
     pub async fn persist<'a>(&'a self, storage: &'a mut impl Storage) {
         if let Err(e) = storage
-            .set_option_int(LAST_UPDATE_TIME, self.schedule.last_update_time.map(time_to_i64))
+            .set_option_int(
+                LAST_UPDATE_TIME,
+                self.schedule
+                    .last_update_time
+                    .and_then(PartialComplexTime::checked_to_micros_since_epoch),
+            )
             .await
         {
             error!("Unable to persist {}: {}", LAST_UPDATE_TIME, e);
@@ -133,17 +141,19 @@ mod tests {
     fn test_load_context() {
         block_on(async {
             let mut storage = MemStorage::new();
-            let last_update_time = i64_to_time(123456789);
-            storage.set_int(LAST_UPDATE_TIME, time_to_i64(last_update_time)).await.unwrap();
-            let poll_interval = Duration::from_micros(56789);
+            let last_update_time = 123456789;
+            let poll_interval = Duration::from_micros(56789u64);
+            storage.set_int(LAST_UPDATE_TIME, last_update_time).await.unwrap();
             storage
                 .set_int(SERVER_DICTATED_POLL_INTERVAL, poll_interval.as_micros() as i64)
                 .await
                 .unwrap();
 
             let context = Context::load(&storage).await;
-            assert_eq!(Some(last_update_time), context.schedule.last_update_time);
-            assert_eq!(Some(poll_interval), context.state.server_dictated_poll_interval);
+
+            let last_update_time = PartialComplexTime::from_micros_since_epoch(last_update_time);
+            assert_eq!(context.schedule.last_update_time, Some(last_update_time));
+            assert_eq!(context.state.server_dictated_poll_interval, Some(poll_interval));
         });
     }
 
@@ -161,7 +171,7 @@ mod tests {
     fn test_persist_context() {
         block_on(async {
             let mut storage = MemStorage::new();
-            let last_update_time = i64_to_time(123456789);
+            let last_update_time = PartialComplexTime::from_micros_since_epoch(123456789);
             let server_dictated_poll_interval = Some(Duration::from_micros(56789));
             let context = Context {
                 schedule: UpdateCheckSchedule::builder().last_time(last_update_time).build(),
@@ -178,7 +188,7 @@ mod tests {
     fn test_persist_context_remove_poll_interval() {
         block_on(async {
             let mut storage = MemStorage::new();
-            let last_update_time = i64_to_time(123456789);
+            let last_update_time = PartialComplexTime::from_micros_since_epoch(123456789);
             storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 987654).await.unwrap();
 
             let context = Context {

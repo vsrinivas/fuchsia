@@ -479,16 +479,16 @@ mod stub {
     use fuchsia_inspect::Inspector;
     use futures::future::BoxFuture;
     use omaha_client::{
-        clock,
-        common::{App, ProtocolState, UpdateCheckSchedule},
+        common::{App, CheckTiming, ProtocolState, UpdateCheckSchedule},
         http_request::StubHttpRequest,
         installer::{stub::StubInstaller, Plan},
         metrics::StubMetricsReporter,
         policy::{CheckDecision, PolicyEngine, UpdateDecision},
         protocol::Cohort,
         request_builder::RequestParams,
-        state_machine::{timer::InfiniteTimer, StateMachineBuilder},
+        state_machine::StateMachineBuilder,
         storage::MemStorage,
+        time::{timers::InfiniteTimer, MockTimeSource, TimeSource},
     };
     use std::time::Duration;
 
@@ -531,6 +531,7 @@ mod stub {
         state_node: Option<StateNode>,
         allow_update_check: bool,
         state_machine_control: Option<StubStateMachineController>,
+        time_source: Option<MockTimeSource>,
     }
 
     impl FidlServerBuilder {
@@ -542,6 +543,7 @@ mod stub {
                 state_node: None,
                 allow_update_check: true,
                 state_machine_control: None,
+                time_source: None,
             }
         }
     }
@@ -580,6 +582,12 @@ mod stub {
             self
         }
 
+        #[allow(dead_code)]
+        pub fn time_source(mut self, time_source: MockTimeSource) -> Self {
+            self.time_source = Some(time_source);
+            self
+        }
+
         pub async fn build(self) -> Rc<RefCell<StubFidlServer>> {
             let config = configuration::get_config("0.1.2").await;
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
@@ -588,14 +596,19 @@ mod stub {
             } else {
                 AppSet::new(self.apps)
             };
+            let time_source = self.time_source.unwrap_or(MockTimeSource::new_from_now());
             // A state machine with only stub implementations never yields from a poll.
             // Configure the state machine to schedule automatic update checks in the future and
             // block timers forever so we can control when update checks happen.
             let (state_machine_control, state_machine) = StateMachineBuilder::new(
-                MockPolicyEngine { allow_update_check: self.allow_update_check },
+                MockPolicyEngine {
+                    allow_update_check: self.allow_update_check,
+                    time_source: time_source.clone(),
+                },
                 StubHttpRequest,
                 StubInstaller::default(),
                 InfiniteTimer,
+                time_source,
                 StubMetricsReporter,
                 Rc::clone(&storage_ref),
                 config,
@@ -650,22 +663,22 @@ mod stub {
     /// A mock PolicyEngine implementation that allows update checks with an interval of a few
     /// seconds.
     #[derive(Debug)]
-    pub struct MockPolicyEngine {
+    pub struct MockPolicyEngine<T: TimeSource> {
         allow_update_check: bool,
+        time_source: T,
     }
 
-    impl PolicyEngine for MockPolicyEngine {
+    impl<T: TimeSource> PolicyEngine for MockPolicyEngine<T> {
         fn compute_next_update_time(
             &mut self,
             _apps: &[App],
-            scheduling: &UpdateCheckSchedule,
+            _scheduling: &UpdateCheckSchedule,
             _protocol_state: &ProtocolState,
-        ) -> BoxFuture<'_, UpdateCheckSchedule> {
-            let schedule = UpdateCheckSchedule::builder()
-                .last_time(scheduling.last_update_time)
-                .next_time(clock::now() + Duration::from_secs(3))
+        ) -> BoxFuture<'_, CheckTiming> {
+            let timing = CheckTiming::builder()
+                .time(self.time_source.now() + Duration::from_secs(3))
                 .build();
-            future::ready(schedule).boxed()
+            future::ready(timing).boxed()
         }
 
         fn update_check_allowed(

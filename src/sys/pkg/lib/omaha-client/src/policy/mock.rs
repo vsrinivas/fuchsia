@@ -5,7 +5,7 @@
 use crate::{
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
-    policy::{CheckDecision, PolicyEngine, UpdateDecision},
+    policy::{CheckDecision, CheckTiming, PolicyEngine, UpdateDecision},
 };
 use futures::future::BoxFuture;
 use futures::prelude::*;
@@ -13,7 +13,7 @@ use futures::prelude::*;
 /// A mock PolicyEngine that returns mocked data.
 #[derive(Debug, Default)]
 pub struct MockPolicyEngine {
-    pub check_schedule: UpdateCheckSchedule,
+    pub check_timing: Option<CheckTiming>,
     pub check_decision: CheckDecision,
     pub update_decision: UpdateDecision,
 }
@@ -24,8 +24,8 @@ impl PolicyEngine for MockPolicyEngine {
         _apps: &[App],
         _scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
-    ) -> BoxFuture<'_, UpdateCheckSchedule> {
-        future::ready(self.check_schedule.clone()).boxed()
+    ) -> BoxFuture<'_, CheckTiming> {
+        future::ready(self.check_timing.unwrap()).boxed()
     }
 
     fn update_check_allowed(

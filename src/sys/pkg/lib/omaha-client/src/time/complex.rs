@@ -64,6 +64,7 @@ pub mod complex_time_impls {
 
     #[cfg(test)]
     mod tests {
+        use super::super::super::PartialComplexTime;
         use super::*;
         use std::time::{Duration, Instant, SystemTime};
 
@@ -72,6 +73,45 @@ pub mod complex_time_impls {
             let early = ComplexTime { wall: SystemTime::now(), mono: Instant::now() };
             let later = ComplexTime { wall: early.wall + Duration::from_secs(200), ..early };
             assert_eq!(later.wall_duration_since(early).unwrap(), Duration::from_secs(200))
+        }
+
+        #[test]
+        fn test_is_after_or_eq_any() {
+            let wall = SystemTime::now();
+            let mono = Instant::now();
+            let comp = ComplexTime { wall, mono };
+
+            let dur = Duration::from_secs(60);
+            let wall_after = wall + dur;
+            let mono_after = mono + dur;
+            let comp_after = comp + dur;
+
+            let comp_wall_after_mono_not = ComplexTime::from((wall_after, mono));
+            let comp_mono_after_wall_not = ComplexTime::from((wall, mono_after));
+
+            // strictly after cases
+            assert!(comp_after.is_after_or_eq_any(comp));
+            assert!(comp_after.is_after_or_eq_any(PartialComplexTime::Wall(wall)));
+            assert!(comp_after.is_after_or_eq_any(PartialComplexTime::Monotonic(mono)));
+            assert!(comp_after.is_after_or_eq_any(PartialComplexTime::Complex(comp)));
+
+            // reversed (note these are all negated)
+            assert!(!comp.is_after_or_eq_any(comp_after));
+            assert!(!comp.is_after_or_eq_any(PartialComplexTime::Wall(wall_after)));
+            assert!(!comp.is_after_or_eq_any(PartialComplexTime::Monotonic(mono_after)));
+            assert!(!comp.is_after_or_eq_any(PartialComplexTime::Complex(comp_after)));
+
+            // strictly equal cases
+            assert!(comp_after.is_after_or_eq_any(comp_after));
+            assert!(comp_after.is_after_or_eq_any(PartialComplexTime::Wall(wall_after)));
+            assert!(comp_after.is_after_or_eq_any(PartialComplexTime::Monotonic(mono_after)));
+            assert!(comp_after.is_after_or_eq_any(PartialComplexTime::Complex(comp_after)));
+
+            // wall is after, mono is not
+            assert!(comp_wall_after_mono_not.is_after_or_eq_any(comp));
+
+            // mono is after, wall is not
+            assert!(comp_mono_after_wall_not.is_after_or_eq_any(comp));
         }
 
         #[test]
@@ -618,6 +658,21 @@ pub mod partial_complex_time_type_conversions {
             assert_eq!(wall.complete_with(other), ComplexTime::from((system_time, other.mono)));
             assert_eq!(mono.complete_with(other), ComplexTime::from((other.wall, instant)));
             assert_eq!(comp.complete_with(other), complex);
+        }
+
+        #[test]
+        fn test_destructure() {
+            let system_time = SystemTime::now();
+            let instant = Instant::now();
+            let complex = ComplexTime::from((system_time, instant));
+
+            let wall = PartialComplexTime::Wall(system_time);
+            let mono = PartialComplexTime::Monotonic(instant);
+            let comp = PartialComplexTime::Complex(ComplexTime::from(complex));
+
+            assert_eq!(wall.destructure(), (Some(system_time), None));
+            assert_eq!(mono.destructure(), (None, Some(instant)));
+            assert_eq!(comp.destructure(), (Some(system_time), Some(instant)));
         }
     }
 }

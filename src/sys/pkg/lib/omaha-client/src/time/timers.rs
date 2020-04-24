@@ -271,7 +271,7 @@ mod mock {
     }
 }
 
-pub use blocking::{BlockedTimer, BlockingTimer};
+pub use blocking::{BlockedTimer, BlockingTimer, InfiniteTimer};
 
 mod blocking {
     use super::super::*;
