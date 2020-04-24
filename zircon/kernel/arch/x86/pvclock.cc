@@ -46,15 +46,7 @@ zx_status_t pvclock_init(void) {
 }
 
 bool pvclock_is_present(void) {
-  if (x86_hypervisor != X86_HYPERVISOR_KVM) {
-    return false;
-  }
-  uint32_t a, ignored;
-  cpuid(X86_CPUID_KVM_FEATURES, &a, &ignored, &ignored, &ignored);
-  if (a & kKvmFeatureClockSource) {
-    return true;
-  }
-  return false;
+  return x86_hypervisor == X86_HYPERVISOR_KVM && x86_feature_test(X86_FEATURE_KVM_PVCLOCK);
 }
 
 bool pvclock_is_stable() {
