@@ -9,7 +9,7 @@
 #include <optional>
 #include <string>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/fxl/logging.h"
@@ -20,6 +20,11 @@ namespace feedback {
 namespace {
 
 using timekeeper::Clock;
+
+const AnnotationKeys kSupportedAnnotations = {
+    kAnnotationDeviceUptime,
+    kAnnotationDeviceUTCTime,
+};
 
 std::optional<std::string> GetUptime() {
   const std::optional<std::string> uptime = FormatDuration(zx::nsec(zx_clock_get_monotonic()));
@@ -41,25 +46,17 @@ std::optional<std::string> GetUTCTime(const Clock& clock) {
 
 }  // namespace
 
-TimeProvider::TimeProvider(const AnnotationKeys& annotations_to_get, std::unique_ptr<Clock> clock)
-    : annotations_to_get_(annotations_to_get), clock_(std::move(clock)) {
-  const auto supported_annotations = GetSupportedAnnotations();
-  for (const auto& annotation : annotations_to_get_) {
-    FX_CHECK(supported_annotations.find(annotation) != supported_annotations.end());
+TimeProvider::TimeProvider(std::unique_ptr<Clock> clock) : clock_(std::move(clock)) {}
+
+::fit::promise<Annotations> TimeProvider::GetAnnotations(const AnnotationKeys& allowlist) {
+  const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
+  if (annotations_to_get.empty()) {
+    return ::fit::make_result_promise<Annotations>(::fit::ok<Annotations>({}));
   }
-}
 
-AnnotationKeys TimeProvider::GetSupportedAnnotations() {
-  return {
-      kAnnotationDeviceUptime,
-      kAnnotationDeviceUTCTime,
-  };
-}
-
-::fit::promise<Annotations> TimeProvider::GetAnnotations() {
   Annotations annotations;
 
-  for (const auto& key : annotations_to_get_) {
+  for (const auto& key : annotations_to_get) {
     std::optional<AnnotationValue> value;
     if (key == kAnnotationDeviceUptime) {
       value = GetUptime();

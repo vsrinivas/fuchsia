@@ -37,6 +37,7 @@ using fxl::SplitResult::kSplitWantNonEmpty;
 using fxl::WhiteSpaceHandling::kTrimWhitespace;
 using sys::testing::ServiceDirectoryProvider;
 using testing::ElementsAreArray;
+using testing::IsEmpty;
 using testing::Pair;
 
 class ProductInfoProviderTest : public UnitTestFixture,
@@ -54,13 +55,13 @@ class ProductInfoProviderTest : public UnitTestFixture,
     }
   }
 
-  Annotations GetProductInfo(const AnnotationKeys& annotations_to_get = {},
+  Annotations GetProductInfo(const AnnotationKeys& allowlist = {},
                              const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
-    ProductInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt);
-    auto promise = provider.GetAnnotations();
+    ProductInfoProvider provider(dispatcher(), services(), timeout, &cobalt);
+    auto promise = provider.GetAnnotations(allowlist);
 
     Annotations annotations;
     executor_.schedule_task(
@@ -133,7 +134,7 @@ TEST_F(ProductInfoProviderTest, Check_OnlyGetRequestedAnnotations) {
       {kAnnotationHardwareProductSKU, "some-sku"},
   })));
 
-  auto product_info = GetProductInfo({
+  auto product_info = GetProductInfo(/*allowlist=*/{
       kAnnotationHardwareProductSKU,
       kAnnotationHardwareProductModel,
   });
@@ -154,7 +155,7 @@ TEST_F(ProductInfoProviderTest, Check_BadKeyNotInAnnotations) {
       {kAnnotationHardwareProductSKU, "some-sku"},
   })));
 
-  auto product_info = GetProductInfo({
+  auto product_info = GetProductInfo(/*allowlist=*/{
       kAnnotationHardwareProductSKU,
       kAnnotationHardwareProductModel,
       "bad_annotation",
@@ -174,7 +175,7 @@ TEST_F(ProductInfoProviderTest, Succeed_ProductInfoReturnsFewerAnnotations) {
       {kAnnotationHardwareProductSKU, "some-sku"},
   })));
 
-  auto product_info = GetProductInfo({
+  auto product_info = GetProductInfo(/*allowlist=*/{
       kAnnotationHardwareProductSKU,
       kAnnotationHardwareProductLanguage,
       kAnnotationHardwareProductRegulatoryDomain,
@@ -194,12 +195,32 @@ TEST_F(ProductInfoProviderTest, Succeed_ProductInfoReturnsFewerAnnotations) {
       }));
 }
 
+TEST_F(ProductInfoProviderTest, Succeed_NoRequestedKeysInAllowlist) {
+  SetUpProductProviderServer(std::make_unique<stubs::ProductInfoProvider>(CreateProductInfo({
+      {kAnnotationHardwareProductLanguage, "some-language"},
+      {kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"},
+      {kAnnotationHardwareProductManufacturer, "some-manufacturer"},
+      {kAnnotationHardwareProductModel, "some-model"},
+      {kAnnotationHardwareProductName, "some-name"},
+      {kAnnotationHardwareProductRegulatoryDomain, "some-country-code"},
+      {kAnnotationHardwareProductSKU, "some-sku"},
+  })));
+
+  auto product_info = GetProductInfo(/*allowlist=*/{
+      "not-returned-by-product-provider",
+  });
+
+  EXPECT_THAT(product_info, IsEmpty());
+}
+
 TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
   SetUpProductProviderServer(std::make_unique<stubs::ProductInfoProviderNeverReturns>());
 
-  auto board_info = GetProductInfo();
+  auto product_info = GetProductInfo(/*allowlist=*/{
+      kAnnotationHardwareProductSKU,
+  });
 
-  ASSERT_TRUE(board_info.empty());
+  ASSERT_TRUE(product_info.empty());
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAreArray({
                                           CobaltEvent(TimedOutData::kProductInfo),
                                       }));
@@ -264,7 +285,7 @@ TEST_P(ProductInfoProviderTest, Succeed_OnAnnotations) {
     keys.insert(key);
   }
 
-  auto product_info = GetProductInfo(keys);
+  auto product_info = GetProductInfo(/*allowlist=*/keys);
   EXPECT_EQ(product_info.size(), annotations.size());
   for (const auto& [key, value] : annotations) {
     EXPECT_EQ(product_info[key], value);

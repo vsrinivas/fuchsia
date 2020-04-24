@@ -202,6 +202,7 @@ executable("channel_provider_unittest") {
   sources = [ "channel_provider_unittest.cc" ]
 
   deps = [
+    "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/feedback_data/annotations:aliases",
     "//src/developer/feedback/feedback_data/annotations:channel_provider",
     "//src/developer/feedback/testing:cobalt_test_fixture",

@@ -13,6 +13,7 @@
 #include <string>
 
 #include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
@@ -39,12 +40,14 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
-  std::optional<std::string> GetCurrentChannel(const zx::duration timeout = zx::sec(1)) {
+  std::optional<std::string> GetCurrentChannel(
+      const AnnotationKeys& allowlist = {kAnnotationSystemUpdateChannelCurrent},
+      const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     ChannelProvider provider(dispatcher(), services(), timeout, &cobalt);
-    auto promise = provider.GetAnnotations();
+    auto promise = provider.GetAnnotations(allowlist);
 
     bool was_called = false;
     std::optional<std::string> channel;
@@ -92,6 +95,14 @@ TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
 
   ASSERT_TRUE(result);
   EXPECT_EQ(result.value(), "");
+}
+
+TEST_F(ChannelProviderTest, Succeed_NoRequestedKeysInAllowlist) {
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProviderReturnsEmptyChannel>());
+
+  const auto result = GetCurrentChannel({"not-returned-by-channel-provider"});
+
+  ASSERT_FALSE(result);
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNotAvailable) {

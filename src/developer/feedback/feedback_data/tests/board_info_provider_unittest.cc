@@ -34,6 +34,7 @@ using fxl::SplitResult::kSplitWantNonEmpty;
 using fxl::WhiteSpaceHandling::kTrimWhitespace;
 using sys::testing::ServiceDirectoryProvider;
 using testing::ElementsAreArray;
+using testing::IsEmpty;
 using testing::Pair;
 
 class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
@@ -49,13 +50,13 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
-  Annotations GetBoardInfo(const AnnotationKeys& annotations_to_get = {},
+  Annotations GetBoardInfo(const AnnotationKeys& allowlist = {},
                            const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
-    BoardInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt);
-    auto promise = provider.GetAnnotations();
+    BoardInfoProvider provider(dispatcher(), services(), timeout, &cobalt);
+    auto promise = provider.GetAnnotations(allowlist);
 
     Annotations annotations;
     executor_.schedule_task(
@@ -105,7 +106,7 @@ TEST_F(BoardInfoProviderTest, Succeed_AllAnnotationsRequested) {
   }));
   SetUpBoardProviderServer(std::move(board_provider));
 
-  auto board_info = GetBoardInfo({
+  auto board_info = GetBoardInfo(/*allowlist=*/{
       kAnnotationHardwareBoardName,
       kAnnotationHardwareBoardRevision,
   });
@@ -114,15 +115,16 @@ TEST_F(BoardInfoProviderTest, Succeed_AllAnnotationsRequested) {
                               Pair(kAnnotationHardwareBoardRevision, "some-revision"),
                           }));
 }
+
 TEST_F(BoardInfoProviderTest, Succeed_SingleAnnotationRequested) {
   auto board_provider = std::make_unique<stubs::BoardInfoProvider>(CreateBoardInfo({
       {kAnnotationHardwareBoardName, "some-name"},
+      {kAnnotationHardwareBoardRevision, "some-revision"},
   }));
   SetUpBoardProviderServer(std::move(board_provider));
 
-  auto board_info = GetBoardInfo({
+  auto board_info = GetBoardInfo(/*allowlist=*/{
       kAnnotationHardwareBoardName,
-      kAnnotationHardwareBoardRevision,
   });
   EXPECT_THAT(board_info, ElementsAreArray({
                               Pair(kAnnotationHardwareBoardName, "some-name"),
@@ -136,7 +138,7 @@ TEST_F(BoardInfoProviderTest, Succeed_SpuriousAnnotationRequested) {
   }));
   SetUpBoardProviderServer(std::move(board_provider));
 
-  auto board_info = GetBoardInfo({
+  auto board_info = GetBoardInfo(/*allowlist=*/{
       kAnnotationHardwareBoardName,
       kAnnotationHardwareBoardRevision,
       "bad-key",
@@ -147,13 +149,13 @@ TEST_F(BoardInfoProviderTest, Succeed_SpuriousAnnotationRequested) {
                           }));
 }
 
-TEST_F(BoardInfoProviderTest, Succeed_MissingAnnotationReturned) {
+TEST_F(BoardInfoProviderTest, Succeed_SingleAnnotationInResponse) {
   auto board_provider = std::make_unique<stubs::BoardInfoProvider>(CreateBoardInfo({
       {kAnnotationHardwareBoardName, "some-name"},
   }));
   SetUpBoardProviderServer(std::move(board_provider));
 
-  auto board_info = GetBoardInfo({
+  auto board_info = GetBoardInfo(/*allowlist=*/{
       kAnnotationHardwareBoardName,
       kAnnotationHardwareBoardRevision,
   });
@@ -162,10 +164,26 @@ TEST_F(BoardInfoProviderTest, Succeed_MissingAnnotationReturned) {
                           }));
 }
 
+TEST_F(BoardInfoProviderTest, Succeed_NoRequestedKeysInAllowlist) {
+  auto board_provider = std::make_unique<stubs::BoardInfoProvider>(CreateBoardInfo({
+      {kAnnotationHardwareBoardName, "some-name"},
+      {kAnnotationHardwareBoardRevision, "some-revision"},
+  }));
+  SetUpBoardProviderServer(std::move(board_provider));
+
+  auto board_info = GetBoardInfo(/*allowlist=*/{
+      "not-returned-by-board-provider",
+  });
+  EXPECT_THAT(board_info, IsEmpty());
+}
+
 TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
   SetUpBoardProviderServer(std::make_unique<stubs::BoardInfoProviderNeverReturns>());
 
-  auto board_info = GetBoardInfo();
+  auto board_info = GetBoardInfo(/*allowlist=*/{
+      kAnnotationHardwareBoardName,
+      kAnnotationHardwareBoardRevision,
+  });
 
   ASSERT_TRUE(board_info.empty());
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAreArray({

@@ -75,9 +75,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   }
 
   std::vector<::fit::promise<Annotations>> annotations;
-  for (auto& provider :
-       GetProviders(annotation_allowlist_, dispatcher_, services_, kTimeout, cobalt_)) {
-    annotations.push_back(provider->GetAnnotations());
+  for (auto& provider : GetProviders(dispatcher_, services_, kTimeout, cobalt_)) {
+    annotations.push_back(provider->GetAnnotations(annotation_allowlist_));
   }
 
   return ::fit::join_promise_vector(std::move(annotations))

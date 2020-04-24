@@ -23,16 +23,13 @@ namespace feedback {
 class ProductInfoProvider : public AnnotationProvider {
  public:
   // fuchsia.hwinfo.Product is expected to be in |services|.
-  ProductInfoProvider(const AnnotationKeys& annotations_to_get, async_dispatcher_t* dispatcher,
+  ProductInfoProvider(async_dispatcher_t* dispatcher,
                       std::shared_ptr<sys::ServiceDirectory> services, zx::duration timeout,
                       Cobalt* cobalt);
 
-  static AnnotationKeys GetSupportedAnnotations();
-
-  ::fit::promise<Annotations> GetAnnotations() override;
+  ::fit::promise<Annotations> GetAnnotations(const AnnotationKeys& allowlist) override;
 
  private:
-  AnnotationKeys annotations_to_get_;
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const zx::duration timeout_;

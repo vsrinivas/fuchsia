@@ -11,6 +11,7 @@
 #include <optional>
 
 #include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
@@ -22,39 +23,24 @@ namespace {
 
 using fuchsia::hwinfo::BoardInfo;
 
+const AnnotationKeys kSupportedAnnotations = {
+    kAnnotationHardwareBoardName,
+    kAnnotationHardwareBoardRevision,
+};
+
 }  // namespace
 
-BoardInfoProvider::BoardInfoProvider(const AnnotationKeys& annotations_to_get,
-                                     async_dispatcher_t* dispatcher,
+BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services,
                                      zx::duration timeout, Cobalt* cobalt)
-    : annotations_to_get_(annotations_to_get),
-      dispatcher_(dispatcher),
-      services_(services),
-      timeout_(timeout),
-      cobalt_(cobalt) {
-  const auto supported_annotations = GetSupportedAnnotations();
-  AnnotationKeys not_supported;
-  for (const auto& annotation : annotations_to_get_) {
-    if (supported_annotations.find(annotation) == supported_annotations.end()) {
-      FX_LOGS(WARNING) << "annotation " << annotation << " not supported by BoardInfoProvider";
-      not_supported.insert(annotation);
-    }
+    : dispatcher_(dispatcher), services_(services), timeout_(timeout), cobalt_(cobalt) {}
+
+::fit::promise<Annotations> BoardInfoProvider::GetAnnotations(const AnnotationKeys& allowlist) {
+  const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
+  if (annotations_to_get.empty()) {
+    return ::fit::make_result_promise<Annotations>(::fit::ok<Annotations>({}));
   }
 
-  for (auto annotation : not_supported) {
-    annotations_to_get_.erase(annotation);
-  }
-}
-
-AnnotationKeys BoardInfoProvider::GetSupportedAnnotations() {
-  return {
-      kAnnotationHardwareBoardName,
-      kAnnotationHardwareBoardRevision,
-  };
-}
-
-::fit::promise<Annotations> BoardInfoProvider::GetAnnotations() {
   auto board_info_ptr = std::make_unique<internal::BoardInfoPtr>(dispatcher_, services_);
 
   auto board_info = board_info_ptr->GetBoardInfo(
@@ -62,7 +48,7 @@ AnnotationKeys BoardInfoProvider::GetSupportedAnnotations() {
 
   return fit::ExtendArgsLifetimeBeyondPromise(std::move(board_info),
                                               /*args=*/std::move(board_info_ptr))
-      .and_then([annotations_to_get = annotations_to_get_](const Annotations& board_info) {
+      .and_then([=](const Annotations& board_info) {
         Annotations annotations;
 
         for (const auto& key : annotations_to_get) {

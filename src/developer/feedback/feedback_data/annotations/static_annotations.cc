@@ -9,6 +9,7 @@
 
 #include "src/developer/feedback/feedback_data/annotations/aliases.h"
 #include "src/developer/feedback/feedback_data/annotations/board_name_provider.h"
+#include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
@@ -16,6 +17,12 @@
 
 namespace feedback {
 namespace {
+
+const AnnotationKeys kSupportedAnnotations = {
+    kAnnotationBuildBoard,       kAnnotationBuildProduct, kAnnotationBuildLatestCommitDate,
+    kAnnotationBuildVersion,     kAnnotationBuildIsDebug, kAnnotationDeviceBoardName,
+    kAnnotationDeviceFeedbackId,
+};
 
 std::optional<std::string> ReadStringFromFilepath(const std::string& filepath) {
   std::string content;
@@ -55,7 +62,9 @@ std::optional<AnnotationValue> BuildAnnotationValue(const AnnotationKey& key,
   } else if (key == kAnnotationDeviceFeedbackId) {
     return device_id_provider->GetId();
   }
-  // There are non-static annotations in the allowlist that we just skip here.
+
+  // We should never attempt to build a non-static annotation as a static annotation.
+  FX_LOGS(FATAL) << "Attempting to get non-static annotation " << key << " as a static annotation";
   return std::nullopt;
 }
 
@@ -64,7 +73,8 @@ std::optional<AnnotationValue> BuildAnnotationValue(const AnnotationKey& key,
 Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
                                  DeviceIdProvider* device_id_provider) {
   Annotations annotations;
-  for (const auto& key : allowlist) {
+
+  for (const auto& key : RestrictAllowlist(allowlist, kSupportedAnnotations)) {
     const auto value = BuildAnnotationValue(key, device_id_provider);
     if (value.has_value()) {
       annotations[key] = value.value();

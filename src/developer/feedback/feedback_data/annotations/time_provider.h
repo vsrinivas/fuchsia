@@ -18,14 +18,11 @@ namespace feedback {
 // Get the uptime of the device and the current UTC time.
 class TimeProvider : public AnnotationProvider {
  public:
-  TimeProvider(const AnnotationKeys& annotations_to_get, std::unique_ptr<timekeeper::Clock> clock);
+  TimeProvider(std::unique_ptr<timekeeper::Clock> clock);
 
-  static AnnotationKeys GetSupportedAnnotations();
-
-  ::fit::promise<Annotations> GetAnnotations() override;
+  ::fit::promise<Annotations> GetAnnotations(const AnnotationKeys& allowlis) override;
 
  private:
-  AnnotationKeys annotations_to_get_;
   std::unique_ptr<timekeeper::Clock> clock_;
 };
 
