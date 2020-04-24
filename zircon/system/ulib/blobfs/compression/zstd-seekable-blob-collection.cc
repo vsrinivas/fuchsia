@@ -40,7 +40,6 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
   }
 
   // Map shared transfer buffer.
-  fzl::VmoMapper mapper;
   status = cbc->mapped_vmo_.Map(cbc->transfer_vmo_, 0, kCompressedTransferBufferBytes,
                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
@@ -48,6 +47,8 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
                    zx_status_get_string(status));
     return status;
   }
+
+  FS_TRACE_ERROR("\n\nCompressed space buffer %lu - %lu\n\n", reinterpret_cast<uint64_t>(cbc->mapped_vmo_.start()), reinterpret_cast<uint64_t>(cbc->mapped_vmo_.start()) + kCompressedTransferBufferBytes);
 
   // Attach shared transfer buffer to block device.
   status = cbc->vmoid_.AttachVmo(cbc->transfer_vmo_);
@@ -61,6 +62,11 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
   return ZX_OK;
 }
 
+ZSTDSeekableBlobCollection::~ZSTDSeekableBlobCollection() {
+  FS_TRACE_ERROR("\n\nUnmapping compressed space buffer\n\n");
+  mapped_vmo_.Unmap();
+}
+
 ZSTDSeekableBlobCollection::ZSTDSeekableBlobCollection(storage::VmoidRegistry* vmoid_registry,
                                                        SpaceManager* space_manager,
                                                        fs::LegacyTransactionHandler* txn_handler,
@@ -72,6 +78,7 @@ ZSTDSeekableBlobCollection::ZSTDSeekableBlobCollection(storage::VmoidRegistry* v
 
 zx_status_t ZSTDSeekableBlobCollection::Read(uint32_t node_index, uint8_t* buf,
                                              uint64_t data_byte_offset, uint64_t num_bytes) {
+  FS_TRACE_ERROR("\n\nUsing node finder ptr %lu to lookup node at index %u\n\n", reinterpret_cast<uint64_t>(node_finder_), node_index);
   Inode* node = node_finder_->GetNode(node_index);
   if (node == nullptr) {
     FS_TRACE_ERROR("[blobfs][compressed] Invalid node index: %u\n", node_index);

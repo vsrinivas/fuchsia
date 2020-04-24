@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <optional>
+
 namespace blobfs {
 
 // Unique identifiers for each |Compressor|/|Decompressor| strategy.
@@ -19,6 +21,8 @@ enum class CompressionAlgorithm {
 // Return an Inode header flagset with the flags associated with |algorithm|
 // set, and all other flags are unset.
 uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm);
+
+std::optional<CompressionAlgorithm> AlgorithmFromInodeHeaderFlags(uint16_t flags);
 
 }  // namespace blobfs
 

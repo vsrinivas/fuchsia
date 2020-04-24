@@ -14,7 +14,10 @@
 #include <lib/async/dispatcher.h>
 #include <lib/zx/pager.h>
 
+#include <optional>
+
 #include "../blob-verifier.h"
+#include "../compression/algorithm.h"
 
 namespace blobfs {
 
@@ -32,6 +35,7 @@ struct UserPagerInfo {
   // Used to verify the pages as they are read in.
   // TODO(44742): Make BlobVerifier movable, unwrap from unique_ptr.
   std::unique_ptr<BlobVerifier> verifier;
+  std::optional<CompressionAlgorithm> compression_algorithm;
 };
 
 // The size of a transfer buffer for reading from storage.
@@ -72,6 +76,12 @@ class UserPager {
   // Protected for unit test access.
   zx::pager pager_;
 
+  // Scratch buffer for pager transfers.
+  // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
+  // calling |zx_pager_supply_pages|. Map this only when an explicit address is required, e.g. for
+  // verification, and unmap it immediately after.
+  zx::vmo transfer_buffer_;
+
  private:
   // Attaches the transfer buffer to the underlying block device, so that blocks can be read into it
   // from storage.
@@ -101,12 +111,6 @@ class UserPager {
   //                |........output_range.........|
   virtual zx_status_t AlignForVerification(uint64_t* offset, uint64_t* length,
                                            UserPagerInfo* info) = 0;
-
-  // Scratch buffer for pager transfers.
-  // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
-  // calling |zx_pager_supply_pages|. Map this only when an explicit address is required, e.g. for
-  // verification, and unmap it immediately after.
-  zx::vmo transfer_buffer_;
 
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);

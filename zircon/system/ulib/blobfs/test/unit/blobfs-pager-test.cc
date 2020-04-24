@@ -49,6 +49,7 @@ class MockBlob {
     UserPagerInfo pager_info;
     pager_info.verifier = std::move(verifier);
     pager_info.identifier = identifier_;
+    pager_info.compression_algorithm = {};
 
     page_watcher_ = std::make_unique<PageWatcher>(pager, std::move(pager_info));
 

@@ -21,6 +21,7 @@
 #include <zstd/zstd_seekable.h>
 
 #include "zstd-seekable.h"
+#include "zstd-seekable-blob-collection.h"
 
 namespace blobfs {
 
@@ -41,6 +42,8 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
   if (file->status != ZX_OK) {
     return -1;
   }
+
+  FS_TRACE_ERROR("\n\nZSTDRead offset=%llu, length=%lu\n\n", file->byte_offset, num_bytes);
 
   TRACE_DURATION("blobfs", "ZSTDRead", "byte_offset", file->byte_offset, "bytes", num_bytes);
 
@@ -72,6 +75,7 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
     file->status = ZX_ERR_OUT_OF_RANGE;
     return -1;
   }
+  ZX_DEBUG_ASSERT(num_blocks64 <= kCompressedTransferBufferBytes / kBlobfsBlockSize);
   uint32_t num_blocks = static_cast<uint32_t>(num_blocks64);
 
   // Delegate block-level read to compressed block collection.
@@ -91,7 +95,7 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
     static_assert(sizeof(const void*) == sizeof(uint64_t));
     uint64_t start_ptr;
     uint64_t end_ptr;
-    if (add_overflow(reinterpret_cast<uint64_t>(file->blob->decompressed_data_start()), start,
+    if (add_overflow(reinterpret_cast<uint64_t>(file->blob->compressed_data_start()), start,
                      &start_ptr) ||
         add_overflow(start_ptr, num_bytes, &end_ptr)) {
       FS_TRACE_ERROR("[blobfs][zstd-seekable] VMO offset overflow: offset=%u length=%zu\n", start,
@@ -99,7 +103,7 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
       file->status = ZX_ERR_OUT_OF_RANGE;
       return -1;
     }
-    memcpy(buf, file->blob->decompressed_data_start() + start, num_bytes);
+    memcpy(buf, file->blob->compressed_data_start() + start, num_bytes);
   }
 
   // Advance byte offset in file.
@@ -123,6 +127,8 @@ int ZSTDSeek(void* void_ptr_zstd_seekable_file, long long byte_offset, int origi
   if (file->status != ZX_OK) {
     return -1;
   }
+
+  FS_TRACE_ERROR("\n\nZSTDSeek offset=%llu, origin=%d\n\n", byte_offset, origin);
 
   unsigned long long new_byte_offset = file->byte_offset;
   switch (origin) {

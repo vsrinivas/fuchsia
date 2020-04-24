@@ -51,8 +51,10 @@ using digest::Digest;
 using digest::MerkleTreeCreator;
 
 bool SupportsPaging(const Inode& inode) {
-  // Currently only uncompressed blobs can be paged.
-  return !inode.IsCompressed();
+  // Blobs can be paged if either:
+  // 1. The blob is uncompressed, or
+  // 2. The blob is a ZSTD Seekable blob.
+  return (!inode.IsCompressed()) || (inode.header.flags & kBlobFlagZSTDSeekableCompressed);
 }
 
 }  // namespace
@@ -98,10 +100,7 @@ uint64_t Blob::SizeData() const {
 }
 
 Blob::Blob(Blobfs* bs, const Digest& digest)
-    : CacheNode(digest),
-      blobfs_(bs),
-      flags_(kBlobStateEmpty),
-      clone_watcher_(this) {}
+    : CacheNode(digest), blobfs_(bs), flags_(kBlobStateEmpty), clone_watcher_(this) {}
 
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
     : CacheNode(Digest(inode.merkle_root_hash)),

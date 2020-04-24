@@ -52,7 +52,7 @@ class ZSTDSeekableBlob : public RandomAccessCompressedBlob {
   // RandomAccessCompressedBlob implementation.
   zx_status_t Read(uint8_t* buf, uint64_t data_byte_offset, uint64_t num_bytes) final;
 
-  const uint8_t* decompressed_data_start() const {
+  const uint8_t* compressed_data_start() const {
     return static_cast<uint8_t*>(mapped_vmo_->start());
   }
 
