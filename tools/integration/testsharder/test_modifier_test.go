@@ -63,8 +63,6 @@ func TestLoadTestModifiers(t *testing.T) {
 	}
 
 	bazOut := bazTestModifier
-	// If TotalRuns is missing, it gets set to default 1.
-	bazOut.TotalRuns = 1
 	barOut := barTestModifier
 	barOut.OS = ""
 	expected := []TestModifier{barOut, bazOut}

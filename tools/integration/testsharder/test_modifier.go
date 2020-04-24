@@ -20,7 +20,9 @@ type TestModifier struct {
 	// present, this multiplier will match tests from any operating system.
 	OS string `json:"os,omitempty"`
 
-	// TotalRuns is the number of times to run the test; treated as 1 if not present.
+	// TotalRuns is the number of times to run the test. If not present,
+	// testsharder will try to produce exactly one full shard for this test
+	// using historical test duration data.
 	TotalRuns int `json:"total_runs,omitempty"`
 }
 
@@ -38,9 +40,6 @@ func LoadTestModifiers(manifestPath string) ([]TestModifier, error) {
 	for i := range specs {
 		if specs[i].Name == "" {
 			return nil, fmt.Errorf("A test spec's target must have a non-empty name")
-		}
-		if specs[i].TotalRuns == 0 {
-			specs[i].TotalRuns = 1
 		}
 	}
 	return specs, nil

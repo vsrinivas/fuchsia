@@ -74,10 +74,13 @@ func TestMultiplyShards(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name        string
-		shards      []*Shard
-		multipliers []TestModifier
-		expected    []*Shard
+		name            string
+		shards          []*Shard
+		multipliers     []TestModifier
+		testDurations   TestDurationsMap
+		targetDuration  time.Duration
+		targetTestCount int
+		expected        []*Shard
 	}{
 		{
 			name: "empty os matches any os",
@@ -111,6 +114,54 @@ func TestMultiplyShards(t *testing.T) {
 				multShard(env3, "linux", 3, 3),
 			},
 		},
+		{
+			name: "fills up a shard of targetDuration if totalRuns is unset",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+			},
+			multipliers: []TestModifier{
+				makeTestModifier(1, "fuchsia", 0),
+			},
+			testDurations: TestDurationsMap{
+				"*": {MedianDuration: time.Second},
+			},
+			targetDuration: 3 * time.Second,
+			expected: []*Shard{
+				// The expected duration for this test is 1 second and our
+				// target duration is three seconds, so the test should be run
+				// three times.
+				multShard(env1, "fuchsia", 1, 3),
+			},
+		},
+		{
+			name: "fills up a shard of targetTestCount if totalRuns is unset",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+			},
+			multipliers: []TestModifier{
+				makeTestModifier(1, "fuchsia", 0),
+			},
+			targetTestCount: 4,
+			expected: []*Shard{
+				multShard(env1, "fuchsia", 1, 4),
+			},
+		},
+		{
+			name: "does not exceed max runs if totalRuns is unset",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+			},
+			multipliers: []TestModifier{
+				makeTestModifier(1, "fuchsia", 0),
+			},
+			testDurations: TestDurationsMap{
+				"*": {MedianDuration: time.Second},
+			},
+			targetDuration: (multipliedTestMaxRuns + 10) * time.Second,
+			expected: []*Shard{
+				multShard(env1, "fuchsia", 1, multipliedTestMaxRuns),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -121,6 +172,9 @@ func TestMultiplyShards(t *testing.T) {
 			actual := MultiplyShards(
 				tc.shards,
 				tc.multipliers,
+				tc.testDurations,
+				tc.targetDuration,
+				tc.targetTestCount,
 			)
 			assertEqual(t, expected, actual)
 		})

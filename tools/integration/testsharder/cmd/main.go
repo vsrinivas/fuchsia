@@ -100,15 +100,16 @@ func execute() error {
 	}
 	shards := testsharder.MakeShards(m.TestSpecs(), opts)
 
+	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
+
 	if multipliersPath != "" {
 		multipliers, err := testsharder.LoadTestModifiers(multipliersPath)
 		if err != nil {
 			return err
 		}
-		shards = testsharder.MultiplyShards(shards, multipliers)
+		shards = testsharder.MultiplyShards(shards, multipliers, testDurations, targetDuration, targetTestCount)
 	}
 
-	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
 	shards = testsharder.WithTargetDuration(shards, targetDuration, targetTestCount, maxShardsPerEnvironment, testDurations)
 
 	if err := testsharder.ExtractDeps(shards, m.BuildDir()); err != nil {

@@ -18,6 +18,11 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
+// The maximum number of runs that testsharder will calculate for a multiplied
+// test if totalRuns is unset.
+// TODO(olivernewman): Apply a maximum to user-specified values too.
+const multipliedTestMaxRuns = 2000
+
 func ExtractDeps(shards []*Shard, fuchsiaBuildDir string) error {
 	for _, shard := range shards {
 		if err := extractDepsFromShard(shard, fuchsiaBuildDir); err != nil {
@@ -73,7 +78,15 @@ func dedupe(l []string) []string {
 
 // MultiplyShards appends new shards to shards where each new shard contains one test
 // repeated multiple times according to the specifications in multipliers.
-func MultiplyShards(shards []*Shard, multipliers []TestModifier) []*Shard {
+func MultiplyShards(
+	shards []*Shard,
+	multipliers []TestModifier,
+	testDurations TestDurationsMap,
+	// TODO(olivernewman): Use the adjusted target duration calculated by
+	// WithTargetDuration instead of the original target duration.
+	targetDuration time.Duration,
+	targetTestCount int,
+) []*Shard {
 	for _, shard := range shards {
 		for _, multiplier := range multipliers {
 			for _, test := range shard.Tests {
@@ -83,6 +96,22 @@ func MultiplyShards(shards []*Shard, multipliers []TestModifier) []*Shard {
 				// An empty OS matches all OSes.
 				if multiplier.OS != "" && multiplier.OS != test.OS {
 					continue
+				}
+				if multiplier.TotalRuns == 0 {
+					if targetDuration > 0 {
+						expectedDuration := testDurations.Get(test).MedianDuration
+						// We want to keep the total runs to a reasonable number
+						// in case test duration data is out of date and the
+						// test takes longer than expected.
+						multiplier.TotalRuns = min(
+							int(targetDuration)/int(expectedDuration),
+							multipliedTestMaxRuns,
+						)
+					} else if targetTestCount > 0 {
+						multiplier.TotalRuns = targetTestCount
+					} else {
+						multiplier.TotalRuns = 1
+					}
 				}
 				shards = append(shards, &Shard{
 					Name:  "multiplied:" + shard.Name + "-" + normalizeTestName(test.Name),
