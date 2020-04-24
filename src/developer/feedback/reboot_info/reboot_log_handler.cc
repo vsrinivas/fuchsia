@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/boot_log_checker/reboot_log_handler.h"
+#include "src/developer/feedback/reboot_info/reboot_log_handler.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/result.h>

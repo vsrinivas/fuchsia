@@ -12,7 +12,7 @@
 
 #include <string>
 
-#include "src/developer/feedback/boot_log_checker/reboot_log_handler.h"
+#include "src/developer/feedback/reboot_info/reboot_log_handler.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {

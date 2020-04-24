@@ -8,19 +8,19 @@ import("//build/package.gni")
 ###############################################################################
 # PACKAGES
 ###############################################################################
-package("boot_log_checker") {
+package("reboot-info") {
   deps = [ ":main" ]
 
   binaries = [
     {
-      name = "boot_log_checker"
+      name = "reboot_info"
     },
   ]
 
   meta = [
     {
-      path = "meta/boot_log_checker.cmx"
-      dest = "boot_log_checker.cmx"
+      path = "meta/reboot_info.cmx"
+      dest = "reboot_info.cmx"
     },
   ]
 }
@@ -29,7 +29,7 @@ package("boot_log_checker") {
 # EXECUTABLES
 ###############################################################################
 executable("main") {
-  output_name = "boot_log_checker"
+  output_name = "reboot_info"
 
   sources = [ "main.cc" ]
 

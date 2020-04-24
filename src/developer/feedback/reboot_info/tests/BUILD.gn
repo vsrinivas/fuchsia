@@ -10,13 +10,13 @@ import("//build/test/test_package.gni")
 group("tests") {
   testonly = true
 
-  public_deps = [ ":boot_log_checker_tests" ]
+  public_deps = [ ":reboot-info-tests" ]
 }
 
 ###############################################################################
 # PACKAGES
 ###############################################################################
-test_package("boot_log_checker_tests") {
+test_package("reboot-info-tests") {
   tests = [
     {
       name = "reboot_log_handler_unittest"
@@ -35,7 +35,7 @@ executable("reboot_log_handler_unittest") {
   sources = [ "reboot_log_handler_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/boot_log_checker:src",
+    "//src/developer/feedback/reboot_info:src",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",

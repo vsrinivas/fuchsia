@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/boot_log_checker"
+        "binary": "bin/reboot_info"
     },
     "sandbox": {
         "boot": [
