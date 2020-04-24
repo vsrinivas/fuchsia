@@ -13,7 +13,7 @@ String tmpPerfResultsJson(String benchmarkBinary) {
 void runFidlBenchmark(String benchmarkBinary, [String optArgs]) {
   final resultsFile = tmpPerfResultsJson(benchmarkBinary);
   final path = (optArgs == null)
-      ? '/bin/$benchmarkBinary -p --out $resultsFile'
+      ? '/bin/$benchmarkBinary -p --quiet --out $resultsFile'
       : '/bin/$benchmarkBinary $optArgs';
   test(benchmarkBinary, () async {
     final helper = await PerfTestHelper.make();
