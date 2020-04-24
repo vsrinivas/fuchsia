@@ -6,6 +6,7 @@
 #define SRC_LIB_FXL_LOGGING_H_
 
 #if defined(__Fuchsia__)
+#include <lib/syslog/global.h>
 #include <zircon/types.h>
 #endif
 
@@ -108,15 +109,19 @@ FXL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
 //
 // C++ does not allow us to introduce two new variables into a single for loop
 // scope and we need |do_log| so that the inner for loop doesn't execute twice.
-#define FXL_LOG_FIRST_N(severity, n)                                                         \
+#define FXL_FIRST_N(n, log_statement)                                                        \
   for (bool do_log = true; do_log; do_log = false)                                           \
     for (static ::fxl::LogFirstNState internal_state; do_log && internal_state.ShouldLog(n); \
          do_log = false)                                                                     \
-  FXL_LOG(severity)
+  log_statement
+#define FXL_LOG_FIRST_N(severity, n) FXL_FIRST_N(n, FXL_LOG(severity))
+#define FXL_LOGT_FIRST_N(severity, n, tag) FXL_FIRST_N(n, FXL_LOGT(severity, tag))
 
-#define FXL_CHECK(condition)                                                                 \
-  FXL_LAZY_STREAM(                                                                           \
-      ::fxl::LogMessage(::fxl::LOG_FATAL, __FILE__, __LINE__, #condition, nullptr).stream(), \
+#define FXL_CHECK(condition) FXL_CHECKT(condition, nullptr)
+
+#define FXL_CHECKT(condition, tag)                                                       \
+  FXL_LAZY_STREAM(                                                                       \
+      ::fxl::LogMessage(::fxl::LOG_FATAL, __FILE__, __LINE__, #condition, tag).stream(), \
       !(condition))
 
 #define FXL_VLOG_IS_ON(verbose_level) ((verbose_level) <= ::fxl::GetVlogVerbosity())

@@ -45,8 +45,8 @@ static_library("fidl_codec") {
     "wire_types.cc",
   ]
 
+  public_deps = [ "//src/lib/fxl" ]
   deps = [
-    "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/fidl_base",
     "//zircon/system/public",

@@ -36,6 +36,7 @@ bool ends_with(const char* str, const char* suffix) {
 }
 
 inline zx_status_t init_helper(zx_handle_t handle, const char** tags, size_t ntags) {
+  fxl::SetLogSettings({.min_log_level = fxl::LOG_INFO}, {});
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
                                .log_service_channel = handle,
@@ -71,11 +72,6 @@ void output_compare_helper(zx::socket local, fx_log_severity_t severity, const c
   output_compare_helper_ptr(&local, severity, msg, tags, num_tags);
 }
 
-TEST(LogInit, InitWithTags) {
-  Cleanup cleanup;
-  ASSERT_EQ(ZX_OK, syslog::SetTags({"tag1", "tag2"}));
-}
-
 TEST(Logger, LogSimple) {
   Cleanup cleanup;
   zx::socket local, remote;
@@ -83,16 +79,6 @@ TEST(Logger, LogSimple) {
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
   const char* msg = "test message";
   FX_LOGS(INFO) << msg;
-  output_compare_helper(std::move(local), FX_LOG_INFO, msg, nullptr, 0);
-}
-
-TEST(Logger, WithSeverityMacro) {
-  Cleanup cleanup;
-  zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
-  const char* msg = "test message";
-  FX_LOGS_WITH_SEVERITY(FX_LOG_INFO) << msg;
   output_compare_helper(std::move(local), FX_LOG_INFO, msg, nullptr, 0);
 }
 
@@ -170,7 +156,7 @@ TEST(Logger, VLog) {
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
-  FX_LOG_SET_VERBOSITY(1);
+  fxl::SetLogSettings({.min_log_level = -1}, {});
   FX_VLOGS(2) << msg;
   outstanding_bytes = 10u;  // init to non zero value.
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
@@ -192,7 +178,7 @@ TEST(Logger, VLogWithTag) {
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
-  FX_LOG_SET_VERBOSITY(1);
+  fxl::SetLogSettings({.min_log_level = -1}, {});
   FX_VLOGST(2, tags[0]) << msg;
   outstanding_bytes = 10u;  // init to non zero value.
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
@@ -200,29 +186,6 @@ TEST(Logger, VLogWithTag) {
 
   FX_VLOGST(1, tags[0]) << msg;
   output_compare_helper(std::move(local), -1, msg, tags, 1);
-}
-
-TEST(Logger, VPLogWithTag) {
-  Cleanup cleanup;
-  zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
-  const char* msg = "with error";
-  const char* msg_suffixed = "with error: -40 (ZX_ERR_IO)";
-  const char* tags[] = {"tag"};
-  FX_VPLOGST(1, tags[0], ZX_ERR_IO) << msg;
-  size_t outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
-  EXPECT_EQ(0u, outstanding_bytes);
-
-  FX_LOG_SET_VERBOSITY(1);
-  FX_VPLOGST(2, tags[0], ZX_ERR_IO) << msg;
-  outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
-  EXPECT_EQ(0u, outstanding_bytes);
-
-  FX_VPLOGST(1, tags[0], ZX_ERR_IO) << msg;
-  output_compare_helper(std::move(local), -1, msg_suffixed, tags, 1);
 }
 
 // We invoke FX_LOGS_FIRST_N(msg, 31) 100 times and check that the message

@@ -146,8 +146,8 @@ TEST_F(TestSysmgr, ServiceStartup) {
 
   VerifyLogs(log_ptr, {"test_sysmgr_service"},
              {
-                 "test_sysmgr_service.cc\\([0-9]{1,4}\\): Entering loop.",
-                 "test_sysmgr_service.cc\\([0-9]{1,4}\\): Received ping.",
+                 "\\[test_sysmgr_service.cc\\([0-9]{1,4}\\)\\] Entering loop.",
+                 "\\[test_sysmgr_service.cc\\([0-9]{1,4}\\)\\] Received ping.",
              });
   VerifyLogs(log_ptr, {"appmgr"},
              {"\\[log_connector_impl.cc\\([0-9]{1,4}\\)\\] Successfully set up syslog"});

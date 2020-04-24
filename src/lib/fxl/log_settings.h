@@ -40,6 +40,9 @@ FXL_EXPORT void SetLogSettings(const LogSettings& settings);
 FXL_EXPORT void SetLogSettings(const LogSettings& settings,
                                const std::initializer_list<std::string>& tags);
 
+// Sets the log tags without modifying the settings. This is ignored on the host.
+FXL_EXPORT void SetLogTags(const std::initializer_list<std::string>& tags);
+
 // Gets the active log settings for the current process.
 FXL_EXPORT LogSettings GetLogSettings();
 

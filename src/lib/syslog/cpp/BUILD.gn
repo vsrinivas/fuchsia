@@ -6,13 +6,9 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("cpp") {
-  sources = [
-    "logger.cc",
-    "logger.h",
-    "logger_init.cc",
-  ]
+  sources = [ "logger.h" ]
 
-  public_deps = [ "//zircon/public/lib/syslog" ]
+  public_deps = [ "//src/lib/fxl:fxl_logging" ]
   public_configs = [ "//garnet/public:config" ]
 }
 

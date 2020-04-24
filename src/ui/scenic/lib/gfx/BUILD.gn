@@ -307,6 +307,7 @@ source_set("validate_eventpair") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.ui.views",
+    "//src/lib/fxl:fxl_logging",
     "//zircon/public/lib/zx",
     "//zircon/system/public",
   ]

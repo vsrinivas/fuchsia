@@ -30,8 +30,7 @@ class CodecRunnerApp {
         codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
   void Run() {
-    zx_status_t status = syslog::SetTags({"codec_runner"});
-    ZX_ASSERT_MSG(status == ZX_OK, "Failed to init syslog: %d", status);
+    syslog::SetTags({"codec_runner"});
 
     trace::TraceProviderWithFdio trace_provider(loop_.dispatcher(), "codec_runner");
 

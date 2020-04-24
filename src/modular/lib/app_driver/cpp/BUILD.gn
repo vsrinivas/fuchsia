@@ -30,6 +30,7 @@ source_set("module_driver") {
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
     "//src/modular/lib/lifecycle/cpp",
   ]
 }

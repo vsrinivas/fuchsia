@@ -82,6 +82,7 @@ source_set("present2_info") {
   public_deps = [
     ":id",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/lib/fxl:fxl_logging",
   ]
 }
 

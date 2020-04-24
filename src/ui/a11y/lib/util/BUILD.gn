@@ -13,5 +13,6 @@ source_set("util") {
   deps = [
     "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
   ]
 }

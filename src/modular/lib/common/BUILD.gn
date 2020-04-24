@@ -15,7 +15,10 @@ source_set("async_holder") {
     "async_holder.h",
   ]
 
-  deps = [ "//src/lib/fsl" ]
+  deps = [
+    "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
+  ]
 }
 
 source_set("teardown") {

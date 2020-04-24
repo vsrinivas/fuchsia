@@ -37,6 +37,7 @@ source_set("app_client") {
   deps = [
     "//garnet/public/lib/svc/cpp",
     "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
     "//src/modular/lib/common:async_holder",
   ]
 }

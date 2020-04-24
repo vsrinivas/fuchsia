@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_LOG_LEVEL_H_
-#define LIB_FXL_LOG_LEVEL_H_
+#ifndef SRC_LIB_FXL_LOG_LEVEL_H_
+#define SRC_LIB_FXL_LOG_LEVEL_H_
 
 namespace fxl {
 
@@ -23,6 +23,8 @@ const LogSeverity LOG_DFATAL = LOG_ERROR;
 const LogSeverity LOG_DFATAL = LOG_FATAL;
 #endif
 
+inline LogSeverity LOG_LEVEL(int level) { return level; }
+
 }  // namespace fxl
 
-#endif  // LIB_FXL_LOG_LEVEL_H_
+#endif  // SRC_LIB_FXL_LOG_LEVEL_H_

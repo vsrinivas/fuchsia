@@ -33,6 +33,7 @@ source_set("mocks") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/util",
     "//third_party/googletest:gtest",
   ]

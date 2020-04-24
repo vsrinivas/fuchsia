@@ -98,6 +98,7 @@ executable("unit_tests") {
   sources = [ "guest_console_test.cc" ]
   deps = [
     ":guest_console",
+    "//src/lib/fxl:fxl_logging",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

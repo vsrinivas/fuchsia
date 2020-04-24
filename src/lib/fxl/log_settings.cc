@@ -14,9 +14,8 @@
 #include "src/lib/fxl/logging.h"
 
 #ifdef __Fuchsia__
+#include <lib/syslog/global.h>
 #include <lib/zx/process.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 #endif
 
 namespace fxl {
@@ -26,6 +25,26 @@ namespace state {
 extern LogSettings g_log_settings;
 
 }  // namespace state
+
+#if defined(__Fuchsia__)
+namespace {
+
+void SetSyslogSettings(int fd, const std::initializer_list<std::string>& tags) {
+  const char* ctags[FX_LOG_MAX_TAGS];
+  int i = 0;
+  for (auto& tag : tags) {
+    ctags[i++] = tag.c_str();
+  }
+  fx_logger_config_t config = {.min_severity = state::g_log_settings.min_log_level,
+                               .console_fd = fd,
+                               .log_service_channel = ZX_HANDLE_INVALID,
+                               .tags = ctags,
+                               .num_tags = tags.size()};
+  fx_log_reconfigure(&config);
+}
+
+}  // namespace
+#endif  // defined(__Fuchsia__)
 
 void SetLogSettings(const LogSettings& settings) {
 #ifdef __Fuchsia__
@@ -46,7 +65,7 @@ void SetLogSettings(const LogSettings& settings, const std::initializer_list<std
 
 #ifdef __Fuchsia__
   _FX_LOG_SET_SEVERITY(state::g_log_settings.min_log_level);
-  syslog::SetTags(tags);
+  SetSyslogSettings(-1, tags);
 #endif
 
   if (state::g_log_settings.log_file != settings.log_file) {
@@ -57,7 +76,7 @@ void SetLogSettings(const LogSettings& settings, const std::initializer_list<std
                   << ")" << std::endl;
       } else {
 #ifdef __Fuchsia__
-        syslog::SetSettings({.severity = state::g_log_settings.min_log_level, .fd = fd}, tags);
+        SetSyslogSettings(fd, tags);
         state::g_log_settings.log_file = settings.log_file;
 #else
         // Redirect stderr to file.
@@ -71,6 +90,12 @@ void SetLogSettings(const LogSettings& settings, const std::initializer_list<std
       }
     }
   }
+}
+
+void SetLogTags(const std::initializer_list<std::string>& tags) {
+#ifdef __Fuchsia__
+  SetSyslogSettings(-1, tags);
+#endif
 }
 
 LogSettings GetLogSettings() { return state::g_log_settings; }

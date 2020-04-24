@@ -133,6 +133,7 @@ executable("intents_test") {
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gtest_main",
   ]
@@ -213,6 +214,7 @@ executable("story_shell_factory_test") {
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/syslog/cpp",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//src/modular/lib/testing:session_shell_impl",
     "//third_party/googletest:gtest_main",
