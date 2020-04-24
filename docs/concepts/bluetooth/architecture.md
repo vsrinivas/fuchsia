@@ -1,7 +1,6 @@
-# The Bluetooth System
+# Bluetooth architecture
 
-The Fuchsia Bluetooth system ([source layout](bluetooth_source_layout.md))
-aims to provide a dual-mode implementation of the
+The Fuchsia Bluetooth system aims to provide a dual-mode implementation of the
 Bluetooth Host Subsystem versions 4.2 and 5.0+. This includes
 
 - A framework for developing Bluetooth Low Energy applications in central,
@@ -16,7 +15,7 @@ Bluetooth Host Subsystem versions 4.2 and 5.0+. This includes
 - Services for policy and management to integrate a system with the Generic
   Access Profile.
 
-## Device Stack
+## Device stack
 
 Bluetooth controllers that are present on the system surface as a hierarchy of
 devices. On an x86 platform this hierarchy may look like the following:
@@ -83,7 +82,7 @@ bt-host devices implement the [host.fidl](/src/connectivity/bluetooth/fidl/host.
 protocol to communicate with the Bluetooth system service.
 
 
-### Host Bus
+### Host bus
 
 TODO(armansito): child devices
 

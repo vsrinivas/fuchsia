@@ -8,15 +8,15 @@ and Traditional profiles.
 Source code shortcuts:
 - Public API:
   * [shared](/sdk/fidl/fuchsia.bluetooth)
-  * [BR/EDR](/sdk/fidl/fuchsia.bluetooth.bredr)
-  * [Control](/sdk/fidl/fuchsia.bluetooth.control)
+  * [System API](/sdk/fidl/fuchsia.bluetooth.sys)
+  * [BR/EDR (Profile)](/sdk/fidl/fuchsia.bluetooth.bredr)
   * [GATT](/sdk/fidl/fuchsia.bluetooth.gatt)
   * [LE](/sdk/fidl/fuchsia.bluetooth.le)
 - [Private API](/src/connectivity/bluetooth/fidl)
 - [Tools](tools/)
-- [Host Bus Driver](core/bt-host)
+- [Host Subsystem Driver](core/bt-host)
 - [HCI Drivers](hci)
-- [HCI Transport Drivers](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/dev/bluetooth?autodive=0)
+- [HCI Transport Drivers](hci/transport)
 
 For more orientation, see
 - [System Architecture](/docs/the-book/bluetooth_architecture.md)
@@ -33,28 +33,31 @@ For a note on used (and avoided) vocabulary, see
 Examples using Fuchsia's Bluetooth Low Energy APIs can be found
 [here](examples).
 
-### Control API
+### Privileged System API
 
 Dual-mode (LE + Classic) GAP operations that are typically exposed to privileged
-clients are performed using the [control.fidl](/sdk/fidl/fuchsia.bluetooth.control/control.fidl)
-API. This API is intended for managing local adapters, device discovery & discoverability,
+clients are performed using the [fuchsia.bluetooth.sys](/sdk/fidl/fuchsia.bluetooth.sys) library.
+This API is intended for managing local adapters, device discovery & discoverability,
 pairing/bonding, and other settings.
 
-[`bt-cli`](tools/bt-cli) is a command-line front-end
-for this API:
+[`bt-cli`](tools/bt-cli) is a command-line front-end for privileged access operations:
 
-  ```
-  $ bt-cli
-  bluetooth> list-adapters
-    Adapter 0
-      id: bf004a8b-d691-4298-8c79-130b83e047a1
-      address: 00:1A:7D:DA:0A
-  bluetooth>
-  ```
+```
+$ bt-cli
+bt> list-adapters
+Adapter:
+    Identifier:     e5878e9f642d8908
+    Address:        34:13:E8:86:8C:19
+    Technology:     DualMode
+    Local Name:     siren-relic-wad-pout
+    Discoverable:   false
+    Discovering:    false
+    Local UUIDs:    None
+```
 
-We also have a Flutter [module](/docs/glossary#module)
-that acts as a Bluetooth system menu based on this API at
-[topaz/bin/bluetooth\_settings](https://fuchsia.googlesource.com/topaz/+/master/bin/bluetooth_settings/).
+**NOTE**: _fuchsia.bluetooth.sys replaces the deprecated
+[fuchsia.bluetooth.control](/sdk/fidl/fuchsia.bluetooth.control) API, which contiues to be
+supported. The bt-cli tool currently uses the deprecated API._
 
 ### Tools
 

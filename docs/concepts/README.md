@@ -49,7 +49,7 @@ also provides core drivers and Fuchsia's libc implementation.
 
  - Ethernet
  - [Wireless](/docs/concepts/networking/wireless_networking.md)
- - [Bluetooth](/docs/concepts/networking/bluetooth_architecture.md)
+ - [Bluetooth][bluetooth]
  - [Telephony][telephony]
  - Sockets
  - HTTP
@@ -98,7 +98,7 @@ also provides core drivers and Fuchsia's libc implementation.
 [FIDL]: /docs/development/languages/fidl/README.md
 [framework-components]: /docs/concepts/components/README.md
 [ledger]: /src/ledger/docs/README.md
-[bluetooth]: /garnet/bin/bluetooth/README.md
+[bluetooth]: /src/connectivity/bluetooth/README.md
 [telephony]: /src/connectivity/telephony/
 [magma]: /docs/concepts/graphics/magma/README.md
 [escher]: /docs/concepts/graphics/escher/README.md

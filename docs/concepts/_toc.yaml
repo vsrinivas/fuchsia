@@ -10,6 +10,9 @@ toc:
 - title: "Architecture"
   section:
   - include: /docs/concepts/architecture/_toc.yaml
+- title: "Bluetooth"
+  section:
+  - include: /docs/concepts/bluetooth/_toc.yaml
 - title: "Booting"
   section:
   - include: /docs/concepts/booting/_toc.yaml

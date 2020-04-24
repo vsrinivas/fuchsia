@@ -2,7 +2,5 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Wireless"
-  path: /docs/concepts/networking/wireless_networking.md
-- title: "Telephony"
-  path: https://fuchsia.googlesource.com/fuchsia/+/master/src/connectivity/telephony/
+- title: "Bluetooth architecture"
+  path: /docs/concepts/bluetooth/architecture.md
