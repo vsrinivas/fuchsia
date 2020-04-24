@@ -23,9 +23,6 @@ fit::deferred_action<fit::closure> InitializeCobalt(async_dispatcher_t* dispatch
 // Report a modular event to Cobalt.
 void ReportEvent(cobalt_registry::ModularLifetimeEventsMetricDimensionEventType event);
 
-// Report a module launch time duration to Cobalt.
-void ReportModuleLaunchTime(std::string module_url, zx::duration time);
-
 // Report a story launch time duration to Cobalt.
 void ReportStoryLaunchTime(zx::duration time);
 

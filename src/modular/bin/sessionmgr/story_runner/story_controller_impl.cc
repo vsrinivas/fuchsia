@@ -30,7 +30,6 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
@@ -221,8 +220,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         story_controller_impl_(story_controller_impl),
         module_data_(std::move(module_data)),
         view_token_(std::move(view_token)),
-        module_controller_request_(std::move(module_controller_request)),
-        start_time_(GetNowUTC()) {}
+        module_controller_request_(std::move(module_controller_request)) {}
 
  private:
   void Run() override {
@@ -323,17 +321,12 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       module_data_.Clone(&module_data);
       (*i)->OnModuleAdded(std::move(module_data));
     }
-
-    zx_time_t now = 0;
-    zx_clock_get(ZX_CLOCK_UTC, &now);
-    ReportModuleLaunchTime(module_data_.module_url(), zx::duration(now - start_time_));
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fuchsia::modular::ModuleData module_data_;
   std::optional<fuchsia::ui::views::ViewToken> view_token_;
   fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request_;
-  const zx_time_t start_time_;
 };
 
 // KillModuleCall tears down the module by the given module_data. It is enqueued

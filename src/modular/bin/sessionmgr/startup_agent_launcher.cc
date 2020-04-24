@@ -127,7 +127,6 @@ void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const st
     auto& agent_data = it->second;
     agent_data.services.Unbind();
     agent_data.controller.Unbind();
-    ReportSessionAgentEvent(url, SessionAgentEventsMetricDimensionEventType::Crash);
 
     if (is_terminating_cb_ != nullptr && is_terminating_cb_()) {
       FX_LOGS(INFO) << "Not restarting " << url << " because StartupAgentLauncher is terminating.";

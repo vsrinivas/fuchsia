@@ -37,13 +37,6 @@ void ReportEvent(cobalt_registry::ModularLifetimeEventsMetricDimensionEventType 
   }
 }
 
-void ReportModuleLaunchTime(std::string module_url, zx::duration time) {
-  if (g_cobalt_logger) {
-    g_cobalt_logger->LogElapsedTime(
-        static_cast<uint32_t>(cobalt_registry::kModuleLaunchTimeMetricId), 0, module_url, time);
-  }
-}
-
 void ReportStoryLaunchTime(zx::duration time) {
   if (g_cobalt_logger) {
     g_cobalt_logger->LogElapsedTime(
