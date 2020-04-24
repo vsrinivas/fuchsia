@@ -69,6 +69,6 @@ Design documentation:
  - [Data in Storage](data_in_storage.md)
  - [Life of a Put](life_of_a_put.md)
 
-[cloud provider]: /peridot/public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
-[component context]: /peridot/public/fidl/fuchsia.modular/component/component_context.fidl
-[Modular]: /peridot/docs/modular/overview.md
+[cloud provider]: /src/ledger/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
+[component context]: /sdk/fidl/fuchsia.modular/component/component_context.fidl
+[Modular]: /docs/concepts/modular/overview.md

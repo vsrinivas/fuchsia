@@ -138,6 +138,6 @@ You can refer to the full [fuzzing] instructions for details.
 [/bin/ledger/tests/e2e_local]: /src/ledger/bin/tests/e2e_local
 [testing abstractions]: /src/ledger/bin/testing/ledger_app_instance_factory.h
 [benchmarks]: /src/ledger/bin/tests/benchmark/README.md
-[fuzzing]: /docs/development/workflows/libfuzzer.md
+[fuzzing]: /docs/development/testing/fuzzing/libfuzzer.md
 [Ledger lib]: /src/ledger/lib
 [Cloud provider validation tests]: /src/ledger/bin/tests/cloud_provider

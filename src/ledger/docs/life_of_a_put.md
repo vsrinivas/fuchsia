@@ -68,8 +68,8 @@ TODO
 ### Cloud sync
 ### P2P sync
 
-[ledger.fidl]: /peridot/public/fidl/fuchsia.ledger/ledger.fidl
-[VMO]: /docs/concepts/objects/vm_object.md
+[ledger.fidl]: /src/ledger/fidl/fuchsia.ledger/ledger.fidl
+[VMO]: /docs/reference/kernel_objects/vm_object.md
 [dynamic chunking]: https://github.com/YADL/yadl/wiki/Rabin-Karp-for-Variable-Chunking
 [splitting implementation]: /src/ledger/bin/storage/impl/split.cc
 [LevelDB]: https://en.wikipedia.org/wiki/LevelDB

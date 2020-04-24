@@ -155,7 +155,7 @@ state tracked by the local page connection. As typically we are interested in
 retrieving the initial base state at the moment of registering the watcher,
 the watchers are registered using the `GetSnapshot()` method.
 
-[C++ watcher example], [Dart watcher example].
+[C++ watcher example].
 
 `GetSnapshot()` takes an optional `key_prefix` parameter, which allows the
 client app to register specifically for change notifications within a particular
@@ -251,6 +251,5 @@ automatically in the background, and clients do not have to manage them.
  - [Data Organization](data_organization.md)
  - [Examples of client apps](examples.md)
 
-[FIDL protocol]: /peridot/public/fidl/fuchsia.ledger/ledger.fidl
-[C++ watcher example]: /peridot/examples/todo_cpp/todo.h
-[Dart watcher example]: https://fuchsia.googlesource.com/topaz/+/master/examples/ledger/todo_list/lib/src/models/todo_list_model.dart
+[FIDL protocol]: /src/ledger/fidl/fuchsia.ledger/ledger.fidl
+[C++ watcher example]: https://fuchsia.googlesource.com/peridot/+/refs/heads/master/examples/todo_cpp/todo.h

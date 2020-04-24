@@ -169,4 +169,3 @@ For more information see also:
 [split.cc]: /src/ledger/bin/storage/impl/split.cc
 [split.h]: /src/ledger/bin/storage/impl/split.h
 [tree_node.fbs]: /src/ledger/bin/storage/impl/btree/tree_node.fbs
-[journals]: life_of_a_put.md#Journals
