@@ -62,6 +62,9 @@ const uint32 MAX_METRIC_DIMENSIONS = 10;
 /// Channels should not be longer than this.
 const uint32 MAX_CHANNEL_NAME_LENGTH = 256;
 
+/// Realm names should not be longer than this.
+const uint32 MAX_REALM_NAME_LENGTH = 256;
+
 /// Response codes for Logger operations.
 enum Status : int32 {
     OK = 0;
@@ -722,6 +725,18 @@ struct Experiment {
     uint32 arm_id;
 };
 
+/// A collection of fields describing a system's software distribution.
+table SoftwareDistributionInfo {
+    /// The channel that the device last used as an update source. This value
+    /// may be empty to indicate that the device is not currently associated
+    /// with any channel.
+    1: string:MAX_CHANNEL_NAME_LENGTH current_channel;
+    /// The realm of the device represented by the Omaha App ID. This value
+    /// may be empty to indicate that the device is not currently associated
+    /// with any realm.
+    2: string:MAX_REALM_NAME_LENGTH current_realm;
+};
+
 /// The SystemDataUpdater interface allows callers to update the state of
 /// the System Data in Cobalt. This includes the SystemProfile and experiment
 /// state. The changes are global and affect all loggers running on the device.
@@ -741,4 +756,10 @@ protocol SystemDataUpdater {
     /// `current_channel` The channel that the device last used as an update source. This value may
     /// be empty to indicate that the device is not currently associated with any channel.
     SetChannel(string:MAX_CHANNEL_NAME_LENGTH current_channel) -> (Status status);
+
+    /// Sets Cobalt's view of the system-wide distribution information replacing the
+    /// existing values.
+    ///
+    /// `info` The specifications of the current system's software distribution.
+    [Transitional] SetSoftwareDistributionInfo(SoftwareDistributionInfo info) -> (Status status);
 };
