@@ -302,7 +302,7 @@ TEST_F(AudioConsumerTests, UnsupportedCodec) {
   got_status_ = false;
 
   auto compression = fuchsia::media::Compression::New();
-  compression->type = fuchsia::media::AUDIO_ENCODING_OPUS;
+  compression->type = "not a real compression type";
 
   std::vector<zx::vmo> vmos(kNumVmos);
   for (uint32_t i = 0; i < kNumVmos; i++) {
