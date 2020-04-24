@@ -11,6 +11,17 @@ using fuchsia.io;
 const uint32 NO_DATA_STORE = 0;
 
 protocol KeySystem {
+    /// Get various static properties of the `KeySystem` implementation.
+    ///
+    /// The properties include the capabilities and requirements of the
+    /// `KeySystem`, such as whether the implementation is hardware-based or
+    /// whether it requires client-provided data stores to operate.
+    ///
+    /// - response `properties` the properties of the `KeySystem`
+    ///   implementation.
+    [Transitional]
+    GetProperties() -> (KeySystemProperties properties);
+
     /// Adds a client data store to the `KeySystem`.
     ///
     /// DRM systems generate data on behalf of clients as part of provisioning
