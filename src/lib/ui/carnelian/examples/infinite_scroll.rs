@@ -77,8 +77,8 @@ struct Args {
     #[argh(switch, short = 's')]
     use_spinel: bool,
 
-    /// contents scale (default scale is 3.0)
-    #[argh(option, default = "3.0")]
+    /// contents scale (default scale is 1.0)
+    #[argh(option, default = "1.0")]
     scale: f32,
 
     /// scrolling method (Redraw|CopyRedraw|SlidingOffset|MotionBlur)
@@ -90,7 +90,7 @@ struct Args {
     exposure: f32,
 
     /// touch sampling offset (relative to presentation time)
-    #[argh(option, default = "30")]
+    #[argh(option, default = "38")]
     touch_sampling_offset_ms: i64,
 
     /// maximum number of columns
