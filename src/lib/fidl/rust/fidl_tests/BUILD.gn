@@ -33,6 +33,7 @@ rustc_test("fidl_conformance_tests") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/tests/fidl/conformance_suite:conformance_fidl-rustc",
+    "//third_party/rust_crates:matches",
   ]
   non_rust_deps = [ ":generate_conformance_test" ]
 }

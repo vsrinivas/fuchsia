@@ -18,8 +18,13 @@ import (
 )
 
 var tmpl = template.Must(template.New("tmpls").Parse(`
-use fidl::{Error, encoding::{Context, Decodable, Decoder, Encoder}};
-use fidl_conformance as conformance;
+#![cfg(test)]
+
+use {
+	fidl::{Error, encoding::{Context, Decodable, Decoder, Encoder}},
+	fidl_conformance as conformance,
+	matches::assert_matches,
+};
 
 const V1_CONTEXT: &Context = &Context {};
 
@@ -49,8 +54,7 @@ fn test_{{ .Name }}_encode_failure() {
 	let value = &mut {{ .Value }};
 	let bytes = &mut Vec::new();
 	match Encoder::encode_with_context({{ .Context }}, bytes, &mut Vec::new(), value) {
-		Err({{ .ErrorCode }} { .. }) => (),
-		Err(err) => panic!("unexpected error: {}", err),
+		Err(err) => assert_matches!(err, {{ .ErrorCode }} { .. }),
 		Ok(_) => panic!("unexpected successful encoding"),
 	}
 }
@@ -62,8 +66,7 @@ fn test_{{ .Name }}_decode_failure() {
 	let value = &mut {{ .ValueType }}::new_empty();
 	let bytes = &mut {{ .Bytes }};
 	match Decoder::decode_with_context({{ .Context }}, bytes, &mut [], value) {
-		Err({{ .ErrorCode }} { .. }) => (),
-		Err(err) => panic!("unexpected error: {}", err),
+		Err(err) => assert_matches!(err, {{ .ErrorCode }} { .. }),
 		Ok(_) => panic!("unexpected successful decoding"),
 	}
 }
