@@ -134,7 +134,7 @@ impl EventListenerServer {
         if let Ok(component_id) = component.try_into() {
             self.diagnostics_directories_seen.add(1);
             self.log_inspect("DIAGNOSTICS_DIR_READY", &component_id);
-            self.send_event(ComponentEvent::OutDirectoryAppeared(InspectReaderData {
+            self.send_event(ComponentEvent::DiagnosticsReady(InspectReaderData {
                 component_id,
                 data_directory_proxy: directory.into_proxy().ok(),
             }))
@@ -223,7 +223,7 @@ mod tests {
 
         let event = event_stream.next().await.unwrap();
         match event {
-            ComponentEvent::OutDirectoryAppeared(InspectReaderData {
+            ComponentEvent::DiagnosticsReady(InspectReaderData {
                 component_id: ComponentIdentifier::Legacy(identifier),
                 data_directory_proxy: Some(_),
             }) => {

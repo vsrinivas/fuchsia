@@ -630,7 +630,7 @@ async fn process_event(
             remove_from_inspect_repo(&state, &data.component_id);
             archive_event(&state, "STOP", data).await
         }
-        ComponentEvent::OutDirectoryAppeared(data) => populate_inspect_repo(&state, data),
+        ComponentEvent::DiagnosticsReady(data) => populate_inspect_repo(&state, data),
     }
 }
 

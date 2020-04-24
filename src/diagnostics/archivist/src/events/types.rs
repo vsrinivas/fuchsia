@@ -194,7 +194,7 @@ pub enum ComponentEvent {
     Stop(ComponentEventData),
 
     /// We observed the creation of a new `out` directory.
-    OutDirectoryAppeared(InspectReaderData),
+    DiagnosticsReady(InspectReaderData),
 }
 
 /// Data associated with a component.
@@ -272,7 +272,7 @@ impl TryFrom<fsys::Event> for ComponentEvent {
                         data_directory_proxy: io_util::node_to_directory(node_proxy.into_proxy()?)
                             .ok(),
                     };
-                    return Ok(ComponentEvent::OutDirectoryAppeared(data));
+                    return Ok(ComponentEvent::DiagnosticsReady(data));
                 }
                 Err(format_err!("Missing diagnostics directory in CapabilityReady payload"))
             }
@@ -290,7 +290,7 @@ impl PartialEq for ComponentEvent {
             (ComponentEvent::Stop(a), ComponentEvent::Stop(b)) => {
                 return a == b;
             }
-            (ComponentEvent::OutDirectoryAppeared(a), ComponentEvent::OutDirectoryAppeared(b)) => {
+            (ComponentEvent::DiagnosticsReady(a), ComponentEvent::DiagnosticsReady(b)) => {
                 return a == b;
             }
             _ => false,

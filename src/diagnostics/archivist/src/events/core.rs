@@ -154,7 +154,7 @@ mod tests {
         // Assert the third received event was a CapabilityReady event for diagnostics.
         let event = event_stream.next().await.unwrap();
         match event {
-            ComponentEvent::OutDirectoryAppeared(InspectReaderData {
+            ComponentEvent::DiagnosticsReady(InspectReaderData {
                 component_id,
                 data_directory_proxy: Some(_),
             }) => assert_eq!(component_id, expected_component_id),
