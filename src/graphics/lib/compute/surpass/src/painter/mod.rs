@@ -6,11 +6,12 @@ use std::{
     cmp::Ordering,
     collections::{BTreeMap, VecDeque},
     fmt, mem,
-    slice::ChunksExactMut,
+    slice::{self, ChunksExactMut},
 };
 
 use crate::{
     rasterizer::{search_last_by_key, CompactSegment},
+    simd::{f32x4, f32x8, u8x8},
     PIXEL_WIDTH, TILE_SIZE,
 };
 
@@ -102,47 +103,27 @@ fn from_area(area: i32, fill_rule: FillRule) -> f32 {
 }
 
 #[inline]
-fn linear_to_srgb_approx(l: f32) -> f32 {
-    let a = 0.20101772f32;
-    let b = -0.51280147f32;
-    let c = 1.344401f32;
-    let d = -0.030656587f32;
+fn linear_to_srgb_approx_simd(l: f32x8) -> f32x8 {
+    let a = f32x8::splat(0.20101772f32);
+    let b = f32x8::splat(-0.51280147f32);
+    let c = f32x8::splat(1.344401f32);
+    let d = f32x8::splat(-0.030656587f32);
 
     let s = l.sqrt();
     let s2 = s * s;
     let s3 = s2 * s;
 
-    let m = l * 12.92;
+    let m = l * f32x8::splat(12.92);
     let n = a.mul_add(s3, b.mul_add(s2, c.mul_add(s, d)));
 
-    if l <= 0.0031308 {
-        m
-    } else {
-        n
-    }
-}
-
-#[inline]
-fn to_byte(n: f32) -> u8 {
-    n.mul_add(255.0, 0.5) as u8
-}
-
-#[inline]
-fn to_bytes(color: [f32; 4]) -> [u8; 4] {
-    let alpha_recip = color[3].recip();
-
-    [
-        to_byte(linear_to_srgb_approx(color[0] * alpha_recip)),
-        to_byte(linear_to_srgb_approx(color[1] * alpha_recip)),
-        to_byte(linear_to_srgb_approx(color[2] * alpha_recip)),
-        to_byte(color[3]),
-    ]
+    f32x8::select(l.le(f32x8::splat(0.0031308)), m, n)
 }
 
 pub struct Painter {
     areas: [i16; TILE_SIZE * TILE_SIZE],
     covers: [i8; (TILE_SIZE + 1) * TILE_SIZE],
     colors: [[f32; 4]; TILE_SIZE * TILE_SIZE],
+    srgb: [u8x8; TILE_SIZE * TILE_SIZE * 4 / 8],
     queue: VecDeque<CoverCarry>,
     next_queue: VecDeque<CoverCarry>,
 }
@@ -153,6 +134,7 @@ impl Painter {
             areas: [0; TILE_SIZE * TILE_SIZE],
             covers: [0; (TILE_SIZE + 1) * TILE_SIZE],
             colors: [[0.0, 0.0, 0.0, 1.0]; TILE_SIZE * TILE_SIZE],
+            srgb: [u8x8::splat(0); TILE_SIZE * TILE_SIZE * 4 / 8],
             queue: VecDeque::with_capacity(8),
             next_queue: VecDeque::with_capacity(8),
         }
@@ -238,13 +220,12 @@ impl Painter {
 
                 let column = &mut self.colors[col(x - 1)..col(x)];
                 for y in 0..TILE_SIZE {
-                    let mut new_color = Self::fill_at(x - 1, y, style);
-                    let inv_alpha = 1.0 - alphas[y];
+                    let mut new_color = f32x4::from_array(Self::fill_at(x - 1, y, style));
+                    let alpha = alphas[y];
+                    let inv_alpha = 1.0 - alpha;
 
-                    new_color[0] *= alphas[y];
-                    new_color[1] *= alphas[y];
-                    new_color[2] *= alphas[y];
-                    new_color[3] = alphas[y];
+                    new_color *= f32x4::splat(alpha);
+                    new_color[3] = alpha;
 
                     column[y] = [
                         over(new_color[0], column[y][0], inv_alpha),
@@ -342,6 +323,40 @@ impl Painter {
             .ok()
     }
 
+    fn compute_srgb(&mut self) {
+        let colors: &[f32x8] = unsafe {
+            slice::from_raw_parts(mem::transmute(self.colors.as_ptr()), self.colors.len() / 2)
+        };
+
+        for i in 0..self.srgb.len() / 4 {
+            let alphas = f32x8::from_array([
+                colors[i * 4][3],
+                colors[i * 4][7],
+                colors[i * 4 + 1][3],
+                colors[i * 4 + 1][7],
+                colors[i * 4 + 2][3],
+                colors[i * 4 + 2][7],
+                colors[i * 4 + 3][3],
+                colors[i * 4 + 3][7],
+            ]);
+            let alphas_recip = alphas.recip();
+
+            for j in 0..4 {
+                let mut parts: [f32x4; 2] = linear_to_srgb_approx_simd(colors[i * 4 + j]).into();
+
+                parts[0] *= f32x4::splat(alphas_recip[j * 2]);
+                parts[1] *= f32x4::splat(alphas_recip[j * 2 + 1]);
+
+                parts[0][3] = alphas[j * 2];
+                parts[1][3] = alphas[j * 2 + 1];
+
+                let srgb: f32x8 = parts.into();
+
+                self.srgb[i * 4 + j] = srgb.mul_add(f32x8::splat(255.0), f32x8::splat(0.5)).into();
+            }
+        }
+    }
+
     pub fn paint_tile_row<F>(
         &mut self,
         mut segments: &[CompactSegment],
@@ -372,11 +387,16 @@ impl Painter {
                 self.paint_tile(current_segments, &styles);
                 mem::swap(&mut self.queue, &mut self.next_queue);
 
+                self.compute_srgb();
+
                 let len = tile.len();
+                let srgb: &[[u8; 4]] = unsafe {
+                    slice::from_raw_parts(mem::transmute(self.srgb.as_ptr()), self.srgb.len() * 2)
+                };
                 for (y, slice) in tile.iter_mut().enumerate().take(len) {
                     let slice = slice.as_mut_slice();
                     for (x, color) in slice.iter_mut().enumerate() {
-                        *color = to_bytes(self.colors[entry(x, y)]);
+                        *color = srgb[entry(x, y)];
                     }
                 }
 

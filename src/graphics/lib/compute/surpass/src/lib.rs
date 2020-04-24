@@ -8,6 +8,7 @@ pub mod painter;
 mod point;
 pub mod rasterizer;
 mod segment;
+mod simd;
 mod uninitialized;
 
 pub use layer::Layer;
