@@ -37,8 +37,10 @@ func isFlagSet(name string) bool {
 
 func main() {
 	var outputFilename string
+	var enableEncodeCounts bool
 	testing.Init()
 	flag.StringVar(&outputFilename, "out_file", "", "output results in fuchsiaperf.json format (optional)")
+	flag.BoolVar(&enableEncodeCounts, "encode_counts", false, "enable computing and outputting encode counts")
 	flag.Parse()
 
 	if !isFlagSet("test.benchtime") {
@@ -46,23 +48,37 @@ func main() {
 	}
 
 	if outputFilename == "" {
-		stdout()
+		stdout(enableEncodeCounts)
 	} else {
-		outputFile(outputFilename)
+		outputFile(outputFilename, enableEncodeCounts)
 	}
 }
 
-func stdout() {
+func stdout(enableEncodeCounts bool) {
 	for _, b := range benchmark_suite.Benchmarks {
 		result := testing.Benchmark(b.BenchFunc)
 		fmt.Printf("Benchmark%s    %s\n", b.Label, result)
 	}
+	if enableEncodeCounts {
+		for _, ec := range benchmark_suite.EncodeCounts {
+			nb, nh, err := ec.Func()
+			if err != nil {
+				panic(err)
+			}
+			fmt.Printf("%s    %d bytes    %d handles\n", ec.Label, nb, nh)
+		}
+	}
 }
 
-func outputFile(outputFilename string) {
+func outputFile(outputFilename string, enableEncodeCounts bool) {
 	var results benchmarking.TestResultsFile
 	for _, b := range benchmark_suite.Benchmarks {
 		results = append(results, runFuchsiaPerfBenchmark(b, testSuite)...)
+	}
+	if enableEncodeCounts {
+		for _, ec := range benchmark_suite.EncodeCounts {
+			results = append(results, computeEncodeCounts(ec, testSuite)...)
+		}
 	}
 
 	outputFile, err := os.Create(outputFilename)
@@ -97,6 +113,27 @@ func runFuchsiaPerfBenchmark(b benchmark_suite.Benchmark, testSuite string) []*b
 			TestSuite: testSuite,
 			Unit:      benchmarking.Bytes,
 			Values:    []float64{float64(benchmarkResult.AllocedBytesPerOp())},
+		},
+	}
+}
+
+func computeEncodeCounts(ec benchmark_suite.EncodeCount, testSuite string) []*benchmarking.TestCaseResults {
+	nb, nh, err := ec.Func()
+	if err != nil {
+		panic(err)
+	}
+	return []*benchmarking.TestCaseResults{
+		{
+			Label:     "Count/" + ec.Label + "/Bytes",
+			TestSuite: testSuite,
+			Unit:      benchmarking.Count,
+			Values:    []float64{float64(nb)},
+		},
+		{
+			Label:     "Count/" + ec.Label + "/Handles",
+			TestSuite: testSuite,
+			Unit:      benchmarking.Count,
+			Values:    []float64{float64(nh)},
 		},
 	}
 }

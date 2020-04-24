@@ -27,7 +27,7 @@ void main() {
   enableLoggingOutput();
 
   runFidlBenchmark('go_fidl_microbenchmarks',
-      '--out_file ${tmpPerfResultsJson('go_fidl_microbenchmarks')}');
+      '--encode_counts --out_file ${tmpPerfResultsJson('go_fidl_microbenchmarks')}');
   runFidlBenchmark('hlcpp_fidl_microbenchmarks');
   runFidlBenchmark('lib_fidl_microbenchmarks');
   runFidlBenchmark('llcpp_fidl_microbenchmarks');

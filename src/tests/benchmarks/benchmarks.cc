@@ -82,7 +82,8 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
     constexpr const char* kLabel = "fidl_microbenchmarks.go";
     std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
     benchmarks_runner->AddCustomBenchmark(
-        kLabel, {"/bin/go_fidl_microbenchmarks", "--out_file", out_file}, out_file);
+        kLabel, {"/bin/go_fidl_microbenchmarks", "--encode_counts", "--out_file", out_file},
+        out_file);
   }
   {
     benchmarks_runner->AddLibPerfTestBenchmark("fidl_microbenchmarks.hlcpp",
