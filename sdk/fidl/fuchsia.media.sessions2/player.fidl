@@ -60,16 +60,16 @@ protocol PlayerControl {
     /// `PlayerCapabilities`, this method does nothing.
     PrevItem();
 
-    /// Sets the playback rate of the media. This will not change the playback mode.
+    /// Sets the playback rate of the media. This will not change the playback mode. If this method
+    /// is not supported as indicated by the absense of the `SET_PLAYBACK_RATE` flag in
+    /// `PlayerCapabilities`, this method does nothing.
     SetPlaybackRate(float32 playback_rate);
 
-    /// Sets repeat mode to any of the supported repeat modes. If this method is called with a
-    /// `repeat_mode` value of `OFF`, the repeat mode is changed to `OFF` if it's not already off.
-    /// If this method is called with a `repeat_mode` value of `GROUP`, and group repeat is not
-    /// supported as indicated by the absence of the `REPEAT_GROUPS` flag in `PlayerCapabilities`,
-    /// this method does nothing. If this method is called with a `repeat_mode` value of `SINGLE`,
-    /// and single repeat is not supported as indicated by the absence of the `REPEAT_SINGLE` flag
-    /// in `PlayerCapabilities`, this method does nothing.
+    /// Sets repeat mode to any of the supported repeat modes.
+    /// Whether this method takes effect depends on the `PlayerCapabilities` and `repeat_mode`:
+    ///   * [`OFF`] is always supported.
+    ///   * [`GROUP`] requires the `REPEAT_GROUPS` capability, and is otherwise ignored.
+    ///   * [`SINGLE`] requires the `REPEAT_SINGLE` capability, and is otherwise ignored.
     SetRepeatMode(RepeatMode repeat_mode);
 
     /// Sets shuffle mode. If this method is not supported as indicated by the absence of the
@@ -222,6 +222,9 @@ bits PlayerCapabilityFlags : uint32 {
 
     /// If set, the player can repeat single media items.
     REPEAT_SINGLE = 0x800;
+
+    /// If set, the player can accept playback rate changes.
+    SET_PLAYBACK_RATE = 0x1000;
 };
 
 /// Describes the capabilities of a player.
