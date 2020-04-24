@@ -37,6 +37,14 @@ group("core") {
   ]
 }
 
+group("router") {
+  testonly = true
+  public_deps = [
+    "//bundles:infratools",
+    "//src/connectivity:tests",
+  ]
+}
+
 group("terminal") {
   testonly = true
   public_deps = [
