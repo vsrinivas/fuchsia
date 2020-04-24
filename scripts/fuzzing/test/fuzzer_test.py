@@ -99,6 +99,7 @@ class TestFuzzer(unittest.TestCase):
                         '-artifact_prefix=data/',
                         '-some-lf-arg=value',
                         '-jobs=1',
+                        '-dict=pkg/data/mock-target2/dictionary',
                         'data/corpus/',
                     ])), mock_device.host.history)
 
@@ -317,6 +318,7 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
                         '-artifact_prefix=data/',
                         '-some-lf-arg=value',
                         '-jobs=1',
+                        '-dict=pkg/data/mock-target2/dictionary',
                         'data/corpus/',
                         '-handle_segv=0',
                         '-handle_bus=0',

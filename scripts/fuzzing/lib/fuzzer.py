@@ -186,7 +186,7 @@ class Fuzzer(object):
 
       The command will be like:
       run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
-        -artifact_prefix=data/ -jobs=1 data/corpus/
+        -artifact_prefix=data/ -dict=pkg/data/<tgt>/dictionary -jobs=1 data/corpus/
 
       See also: https://llvm.org/docs/LibFuzzer.html#running
 
@@ -218,6 +218,7 @@ class Fuzzer(object):
                 fuzzer_args.append('-jobs=0')
             else:
                 fuzzer_args.append('-jobs=1')
+        fuzzer_args.append('-dict=pkg/data/{}/dictionary'.format(self.tgt))
         self.device.ssh(['mkdir', '-p', self.data_path('corpus')]).check_call()
         if len(filter(lambda x: not x.startswith('-'), fuzzer_args)) == 0:
             fuzzer_args.append('data/corpus/')

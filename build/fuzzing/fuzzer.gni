@@ -140,7 +140,7 @@ template("fuzzer") {
     }
   } else {
     generated_file(dictionary_target) {
-      contents = []
+      contents = [ "# empty dictionary" ]
       outputs = [ dictionary_output ]
     }
   }
