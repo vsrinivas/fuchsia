@@ -10,15 +10,14 @@
 
 #include <fbl/array.h>
 #include <src/lib/chunked-compression/chunked-archive.h>
-#include <zxtest/zxtest.h>
 
 namespace chunked_compression {
-
-namespace {
+namespace test_utils {
 
 uint32_t ComputeChecksum(const uint8_t* header, size_t header_length) {
   constexpr size_t kOffsetAfterChecksum = kChunkArchiveHeaderCrc32Offset + sizeof(uint32_t);
-  EXPECT_LT(kOffsetAfterChecksum, header_length);
+  ZX_ASSERT(kOffsetAfterChecksum < header_length);
+  ZX_ASSERT(kChunkArchiveMinHeaderSize <= header_length);
 
   // Independently compute a checksum for the bytes before and after the CRC32 slot, using the first
   // as a seed for the second to combine them.
@@ -26,8 +25,6 @@ uint32_t ComputeChecksum(const uint8_t* header, size_t header_length) {
   uint32_t first_crc = crc32(seed, header, kChunkArchiveHeaderCrc32Offset);
   return crc32(first_crc, header + kOffsetAfterChecksum, header_length - kOffsetAfterChecksum);
 }
-
-}  // namespace
 
 fbl::Array<uint8_t> CreateHeader(std::initializer_list<SeekTableEntry> entries) {
   unsigned num_entries = static_cast<unsigned>(entries.size());
@@ -52,4 +49,5 @@ fbl::Array<uint8_t> CreateHeader(std::initializer_list<SeekTableEntry> entries) 
   return buf;
 }
 
+}  // namespace test_utils
 }  // namespace chunked_compression

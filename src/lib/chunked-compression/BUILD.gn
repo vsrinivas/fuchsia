@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/host.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
@@ -47,6 +48,20 @@ install_host_tools("chunked-compress-host-tool") {
   outputs = [ "chunked-compress" ]
 }
 
+source_set("chunked-compression-testutils") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [
+    "test-utils.cc",
+    "test-utils.h",
+  ]
+  public_deps = [
+    ":chunked-compression",
+    "//zircon/public/lib/fbl",
+  ]
+  deps = [ "//zircon/public/lib/cksum" ]
+}
+
 test("chunked-compression-unittests") {
   testonly = true
   output_name = "chunked-compression-unittests"
@@ -57,17 +72,16 @@ test("chunked-compression-unittests") {
     "header-writer-test.cc",
     "seek-table-test.cc",
     "streaming-chunked-compressor-test.cc",
-    "test-utils.cc",
-    "test-utils.h",
   ]
   deps = [
     ":chunked-compression",
+    ":chunked-compression-testutils",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/zxtest",
   ]
 }
 
-unittest_package("chunked-compression-unittest-package") {
+unittest_package("chunked-compression-unittests-package") {
   package_name = "chunked-compression-unittests"
   deps = [ ":chunked-compression-unittests" ]
 
@@ -78,7 +92,36 @@ unittest_package("chunked-compression-unittest-package") {
   ]
 }
 
+fuzzer("header-reader-fuzzer") {
+  sources = [ "header-reader-fuzztest.cc" ]
+  dictionary = "test_data/archive.dict"
+  deps = [
+    ":chunked-compression",
+    ":chunked-compression-testutils",
+    "//src/lib/fxl",
+  ]
+}
+
+fuzzer("compress-decompress-fuzzer") {
+  sources = [ "compress-decompress-fuzztest.cc" ]
+  deps = [
+    ":chunked-compression",
+    ":chunked-compression-testutils",
+  ]
+}
+
+fuzzers_package("chunked-compression-fuzzers-package") {
+  package_name = "chunked-compression-fuzzers"
+  fuzzers = [
+    ":compress-decompress-fuzzer",
+    ":header-reader-fuzzer",
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":chunked-compression-unittest-package" ]
+  deps = [
+    ":chunked-compression-fuzzers-package",
+    ":chunked-compression-unittests-package",
+  ]
 }

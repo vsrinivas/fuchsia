@@ -1,0 +1,5 @@
+# Dictionary file for the chunked-compress format.
+# Used to guide fuzzing (see fx fuzz).
+
+archive_magic="\x46\x9b\x78\xef\x0f\xd0\xb2\x03"
+frame_magic="\x28\xb5\x2f\xfd"

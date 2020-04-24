@@ -13,6 +13,11 @@
 #include "test-utils.h"
 
 namespace chunked_compression {
+namespace {
+
+using test_utils::CreateHeader;
+
+}  // namespace
 
 TEST(HeaderReader, ZeroState) {
   SeekTable header;
