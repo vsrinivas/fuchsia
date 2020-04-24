@@ -104,6 +104,9 @@ zx_library("fidl-llcpp") {
     # <lib/fidl/llcpp/async_binding.h> has #include <lib/async/dispatcher.h>
     "$zx/system/ulib/async:headers",
 
+    # <lib/fidl/llcpp/client_base.h> has #include <fbl/intrusive_wavl_tree.h>
+    "$zx/system/ulib/fbl:headers",
+
     # <lib/fidl/llcpp/sync_call.h> has #include <lib/fit/result.h>.
     "$zx/system/ulib/fit:headers",
 
@@ -116,6 +119,7 @@ zx_library("fidl-llcpp") {
   deps = [
     ":fidl",
     "$zx/system/ulib/async",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

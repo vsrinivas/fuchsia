@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_ASYNC_CPP_CLIENT_BASE_H_
 #define LIB_FIDL_ASYNC_CPP_CLIENT_BASE_H_
 
+#include <fbl/intrusive_wavl_tree.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/zx/channel.h>
@@ -20,11 +21,22 @@ namespace internal {
 
 // ResponseContext contains the state for an outstanding asynchronous transaction. It inherits from
 // an intrusive container node so that ClientBase can track it.
-// TODO(madhaviyengar): Replace list_node_t once an intrusive tree/map is added to the SDK.
-class ResponseContext : private list_node_t {
+// TODO(fxb/50664): fbl::WAVLTree must be made available in the SDK, otherwise it needs to be
+// replaced here with some tree that is available there.
+// NOTE: ResponseContext uses list_node_t in order to safely iterate over outstanding transactions
+// on ClientBase destruction while invoking OnError() which can destroy the ResponseContext.
+class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, private list_node_t {
  public:
-  ResponseContext() : list_node_t(LIST_INITIAL_CLEARED_VALUE) {}
+  ResponseContext()
+      : fbl::WAVLTreeContainable<ResponseContext*>(),
+        list_node_t(LIST_INITIAL_CLEARED_VALUE) {}
   virtual ~ResponseContext() = default;
+
+  // Neither copyable nor movable.
+  ResponseContext(const ResponseContext& other) = delete;
+  ResponseContext& operator=(const ResponseContext& other) = delete;
+  ResponseContext(ResponseContext&& other) = delete;
+  ResponseContext& operator=(ResponseContext&& other) = delete;
 
   zx_txid_t Txid() const { return txid_; }
 
@@ -36,6 +48,13 @@ class ResponseContext : private list_node_t {
 
  private:
   friend class ClientBase;
+
+  // For use with fbl::WAVLTree.
+  struct Traits {
+    static zx_txid_t GetKey(const ResponseContext& context) { return context.txid_; }
+    static bool LessThan(const zx_txid_t& key1, const zx_txid_t& key2) { return key1 < key2; }
+    static bool EqualTo(const zx_txid_t& key1, const zx_txid_t& key2) { return key1 == key2; }
+  };
 
   zx_txid_t txid_ = 0;  // Zircon txid of outstanding transaction.
 };
@@ -90,7 +109,7 @@ class ClientBase {
   // For debugging.
   size_t GetTransactionCount() {
     std::scoped_lock lock(lock_);
-    return list_length(&contexts_);
+    return contexts_.size();
   }
 
  private:
@@ -106,7 +125,9 @@ class ClientBase {
   std::mutex lock_;
   // The base node of an intrusive container of ResponseContexts corresponding to outstanding
   // asynchronous transactions.
-  list_node_t contexts_ __TA_GUARDED(lock_) = LIST_INITIAL_VALUE(contexts_);
+  fbl::WAVLTree<zx_txid_t, ResponseContext*, ResponseContext::Traits> contexts_ __TA_GUARDED(lock_);
+  // Mirror list used to safely invoke OnError() on outstanding ResponseContexts in ~ClientBase().
+  list_node_t delete_list_ __TA_GUARDED(lock_) = LIST_INITIAL_VALUE(delete_list_);
   zx_txid_t txid_base_ __TA_GUARDED(lock_) = 0;  // Value used to compute the next txid.
 };
 

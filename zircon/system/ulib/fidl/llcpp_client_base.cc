@@ -16,11 +16,12 @@ constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
 ClientBase::~ClientBase() {
   Unbind();
-  // Release any managed ResponseContexts.
-  list_node_t delete_list = LIST_INITIAL_CLEARED_VALUE;
+  // Invoke OnError() on any outstanding ResponseContexts outside of locks.
+  list_node_t delete_list;
   {
     std::scoped_lock lock(lock_);
-    list_move(&contexts_, &delete_list);
+    contexts_.clear();
+    list_move(&delete_list_, &delete_list);
   }
   list_node_t* node = nullptr;
   list_node_t* temp_node = nullptr;
@@ -60,30 +61,23 @@ void ClientBase::PrepareAsyncTxn(ResponseContext* context) {
   std::scoped_lock lock(lock_);
 
   // Generate the next txid. Verify that it doesn't overlap with any outstanding txids.
-  bool found;
   do {
-    found = false;
     do {
       context->txid_ = ++txid_base_ & kUserspaceTxidMask;  // txid must be within mask.
     } while (!context->txid_);  // txid must be non-zero.
-    list_node_t* node = nullptr;
-    list_for_every(&contexts_, node) {
-      if (static_cast<ResponseContext*>(node)->txid_ == context->txid_) {
-        found = true;
-        break;
-      }
-    }
-  } while (found);
+  } while (contexts_.find(context->txid_) != contexts_.end());
 
   // Insert the ResponseContext.
-  list_add_tail(&contexts_, static_cast<list_node_t*>(context));
+  contexts_.insert(context);
+  list_add_tail(&delete_list_, context);
 }
 
 void ClientBase::ForgetAsyncTxn(ResponseContext* context) {
-  auto* node = static_cast<list_node_t*>(context);
   std::scoped_lock lock(lock_);
-  ZX_ASSERT(list_in_list(node));
-  list_delete(node);
+
+  ZX_ASSERT(context->InContainer());
+  contexts_.erase(*context);
+  list_delete(static_cast<list_node_t*>(context));
 }
 
 zx_status_t ClientBase::Dispatch(fidl_msg_t* msg) {
@@ -101,14 +95,11 @@ zx_status_t ClientBase::Dispatch(fidl_msg_t* msg) {
   if (hdr->txid) {
     {
       std::scoped_lock lock(lock_);
-      list_node_t* node = nullptr;
-      list_for_every(&contexts_, node) {
-        auto* entry = static_cast<ResponseContext*>(node);
-        if (entry->txid_ == hdr->txid) {
-          context = entry;
-          list_delete(node);  // This is safe since we break immediately after.
-          break;
-        }
+      auto it = contexts_.find(hdr->txid);
+      if (it != contexts_.end()) {
+        context = &(*it);
+        contexts_.erase(it);
+        list_delete(static_cast<list_node_t*>(context));
       }
     }
 
