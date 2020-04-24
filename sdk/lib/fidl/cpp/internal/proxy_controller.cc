@@ -53,7 +53,11 @@ zx_status_t ProxyController::Send(const fidl_type_t* type, Message message,
   }
   status = message.Write(reader_.channel().get(), 0);
   if (status != ZX_OK) {
-    FIDL_REPORT_CHANNEL_WRITING_ERROR(message, type, status);
+    // Channel closure always races with any channel write that's been started but not yet
+    // completed, so ZX_ERR_PEER_CLOSED is expected to occur sometimes under normal operation.
+    if (status != ZX_ERR_PEER_CLOSED) {
+      FIDL_REPORT_CHANNEL_WRITING_ERROR(message, type, status);
+    }
     return status;
   }
   if (response_handler)
