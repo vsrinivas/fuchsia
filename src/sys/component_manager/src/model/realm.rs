@@ -68,23 +68,27 @@ pub enum BindReason {
     Unsupported,
 }
 
-impl ToString for BindReason {
-    fn to_string(&self) -> String {
-        match self {
-            BindReason::AccessCapability { target, path } => {
-                format!("'{}' requested access to '{}'", target, path)
+impl fmt::Display for BindReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                BindReason::AccessCapability { target, path } => {
+                    format!("'{}' requested access to '{}'", target, path)
+                }
+                BindReason::BasePkgResolver => {
+                    "the base package resolver attempted to open /pkgfs".to_string()
+                }
+                BindReason::BindChild { parent } => {
+                    format!("its parent '{}' requested to bind to it", parent)
+                }
+                BindReason::Eager => "it's eager".to_string(),
+                BindReason::Root => "it's the root".to_string(),
+                BindReason::Scheduled => "it was scheduled to run".to_string(),
+                BindReason::Unsupported => "this is a bug".to_string(),
             }
-            BindReason::BasePkgResolver => {
-                "the base package resolver attempted to open /pkgfs".to_string()
-            }
-            BindReason::BindChild { parent } => {
-                format!("its parent '{}' requested to bind to it", parent)
-            }
-            BindReason::Eager => "it's eager".to_string(),
-            BindReason::Root => "it's the root".to_string(),
-            BindReason::Scheduled => "it was scheduled to run".to_string(),
-            BindReason::Unsupported => "this is a bug".to_string(),
-        }
+        )
     }
 }
 /// A returned type corresponding to a resolved component manifest.

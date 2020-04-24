@@ -45,14 +45,14 @@ macro_rules! events {
             )*
         }
 
-        impl ToString for EventType {
-            fn to_string(&self) -> String {
-                match self {
+        impl fmt::Display for EventType {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{}", match self {
                     $(
                         EventType::$name => stringify!($string_name),
                     )*
                 }
-                .to_string()
+                .to_string())
             }
         }
 
@@ -320,6 +320,38 @@ impl HasEventType for Result<EventPayload, EventError> {
 impl HasEventType for Event {
     fn event_type(&self) -> EventType {
         self.result.event_type()
+    }
+}
+
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let output = match &self.result {
+            Ok(payload) => {
+                let payload = match payload {
+                    EventPayload::CapabilityReady { path, .. } => format!("serving {}", path),
+                    EventPayload::CapabilityRouted { source, .. } => {
+                        format!("requested {}", source.to_string())
+                    }
+                    EventPayload::Discovered { component_url } => component_url.to_string(),
+                    EventPayload::Started { bind_reason, .. } => {
+                        format!("because {}", bind_reason.to_string())
+                    }
+                    EventPayload::Destroyed
+                    | EventPayload::MarkedForDestruction
+                    | EventPayload::Resolved { .. }
+                    | EventPayload::Stopped
+                    | EventPayload::Running => "".to_string(),
+                };
+                format!("[{}] '{}' {}", self.event_type().to_string(), self.target_moniker, payload)
+            }
+            Err(error) => format!(
+                "[{} error] {} {}",
+                self.event_type().to_string(),
+                self.target_moniker,
+                error.source.to_string()
+            ),
+        };
+        write!(f, "{}", output)
     }
 }
 

@@ -11,7 +11,7 @@ use {
     async_trait::async_trait,
     cm_rust::*,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
-    std::{collections::HashSet, path::PathBuf},
+    std::{collections::HashSet, fmt, path::PathBuf},
     thiserror::Error,
 };
 
@@ -54,6 +54,21 @@ impl CapabilitySource {
     }
 }
 
+impl fmt::Display for CapabilitySource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                CapabilitySource::Component { capability, realm } => {
+                    format!("{} '{}'", capability, realm.moniker)
+                }
+                CapabilitySource::Framework { capability, .. } => capability.to_string(),
+            }
+        )
+    }
+}
+
 /// Describes a capability provided by the component manager which could either be
 /// scoped to the realm, or global. Each capability type has a corresponding
 /// `CapabilityPath` in the component manager's namespace. Note that this path may
@@ -68,6 +83,17 @@ pub enum FrameworkCapability {
 }
 
 impl FrameworkCapability {
+    /// Returns a name for the capability type.
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            FrameworkCapability::Service(_) => "service",
+            FrameworkCapability::Protocol(_) => "protocol",
+            FrameworkCapability::Directory(_) => "directory",
+            FrameworkCapability::Runner(_) => "runner",
+            FrameworkCapability::Event(_) => "event",
+        }
+    }
+
     pub fn path(&self) -> Option<&CapabilityPath> {
         match self {
             FrameworkCapability::Service(source_path) => Some(&source_path),
@@ -191,6 +217,12 @@ impl FrameworkCapability {
                 return Err(Error::InvalidScopedFrameworkCapability {});
             }
         }
+    }
+}
+
+impl fmt::Display for FrameworkCapability {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} '{}' from framework", self.type_name(), self.source_id())
     }
 }
 
@@ -590,6 +622,12 @@ impl ComponentCapability {
         target_name: &CapabilityName,
     ) -> bool {
         source_name == target_name && target_matches_moniker(target, child_moniker)
+    }
+}
+
+impl fmt::Display for ComponentCapability {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} '{}' from component", self.type_name(), self.source_id())
     }
 }
 
