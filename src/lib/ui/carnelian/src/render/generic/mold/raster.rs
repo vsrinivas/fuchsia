@@ -14,14 +14,14 @@ use crate::render::generic::{
 
 #[derive(Clone, Debug)]
 pub(crate) struct Print {
-    pub(crate) path: Rc<mold_next::Path>,
+    pub(crate) path: Rc<mold::Path>,
     pub(crate) transform: Transform2D<f32>,
 }
 
 #[derive(Debug)]
 pub struct MoldRaster {
     pub(crate) prints: SmallVec<[Print; 1]>,
-    pub(crate) layer_id: Rc<RefCell<Option<mold_next::LayerId>>>,
+    pub(crate) layer_id: Rc<RefCell<Option<mold::LayerId>>>,
     pub(crate) translation: Vector2D<f32>,
 }
 

@@ -139,7 +139,7 @@ fn copy_region_to_image(
 
 #[derive(Debug)]
 pub struct MoldContext {
-    composition: mold_next::Composition,
+    composition: mold::Composition,
     buffer_collection: BufferCollectionSynchronousProxy,
     size: Size2D<u32>,
     images: Vec<RefCell<VmoImage>>,
@@ -164,7 +164,7 @@ impl MoldContext {
             .expect("failed to set constraints on sysmem buffer");
 
         Self {
-            composition: mold_next::Composition::new(),
+            composition: mold::Composition::new(),
             buffer_collection,
             size,
             images: vec![],
@@ -174,9 +174,9 @@ impl MoldContext {
 }
 
 fn render_composition(
-    mold_composition: &mut mold_next::Composition,
+    mold_composition: &mut mold::Composition,
     composition: &MoldComposition,
-    buffer: mold_next::Buffer<'_>,
+    buffer: mold::Buffer<'_>,
     _clip: Rect<u32>,
 ) {
     duration!("gfx", "render_composition");
@@ -222,18 +222,18 @@ fn render_composition(
 
         let mold_layer =
             mold_composition.get_mut(layer_id).unwrap().enable().set_order(order as u16).set_style(
-                mold_next::Style {
+                mold::Style {
                     fill_rule: match layer.style.fill_rule {
-                        FillRule::NonZero => mold_next::FillRule::NonZero,
-                        FillRule::EvenOdd => mold_next::FillRule::EvenOdd,
+                        FillRule::NonZero => mold::FillRule::NonZero,
+                        FillRule::EvenOdd => mold::FillRule::EvenOdd,
                         // TODO(dtiselice): Implement WholeTile.
-                        FillRule::WholeTile => mold_next::FillRule::NonZero,
+                        FillRule::WholeTile => mold::FillRule::NonZero,
                     },
                     fill: match layer.style.fill {
-                        Fill::Solid(color) => mold_next::Fill::Solid(color.to_linear_brga()),
+                        Fill::Solid(color) => mold::Fill::Solid(color.to_linear_brga()),
                     },
                     blend_mode: match layer.style.blend_mode {
-                        BlendMode::Over => mold_next::BlendMode::Over,
+                        BlendMode::Over => mold::BlendMode::Over,
                     },
                 },
             );

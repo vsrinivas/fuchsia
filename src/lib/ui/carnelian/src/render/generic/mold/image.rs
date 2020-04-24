@@ -21,7 +21,7 @@ pub(crate) struct VmoImage {
     len_bytes: u64,
     mapping: Arc<Mapping>,
     stride: usize,
-    composition: mold_next::Composition,
+    composition: mold::Composition,
     old_layers: Option<u32>,
     coherency_domain: CoherencyDomain,
 }
@@ -39,7 +39,7 @@ impl VmoImage {
             len_bytes: len_bytes as u64,
             mapping: Arc::new(mapping),
             stride: width as usize,
-            composition: mold_next::Composition::new(),
+            composition: mold::Composition::new(),
             old_layers: None,
             coherency_domain: CoherencyDomain::Cpu,
         }
@@ -89,7 +89,7 @@ impl VmoImage {
             len_bytes: len_bytes as u64,
             mapping,
             stride: bytes_per_row as usize / mem::size_of::<u32>(),
-            composition: mold_next::Composition::new(),
+            composition: mold::Composition::new(),
             old_layers: None,
             coherency_domain: buffers.settings.buffer_settings.coherency_domain,
         }
@@ -108,10 +108,10 @@ impl VmoImage {
         unsafe { slice::from_raw_parts_mut(data, len) }
     }
 
-    pub fn as_buffer(&mut self) -> mold_next::Buffer<'_> {
+    pub fn as_buffer(&mut self) -> mold::Buffer<'_> {
         struct SliceFlusher;
 
-        impl mold_next::Flusher for SliceFlusher {
+        impl mold::Flusher for SliceFlusher {
             fn flush(&self, slice: &mut [[u8; 4]]) {
                 unsafe {
                     sys::zx_cache_flush(
@@ -126,7 +126,7 @@ impl VmoImage {
         let (data, len) = Arc::get_mut(&mut self.mapping).unwrap().as_ptr_len();
         let buffer = unsafe { slice::from_raw_parts_mut(data as *mut [u8; 4], len / 4) };
 
-        mold_next::Buffer {
+        mold::Buffer {
             buffer,
             width: self.width as usize,
             width_stride: Some(self.stride),

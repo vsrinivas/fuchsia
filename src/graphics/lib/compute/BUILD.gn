@@ -12,7 +12,7 @@ group("compute") {
     "common",
     "common/vk",
     "hotsort",
-    "mold-next",
+    "mold",
     "spinel",
     "spinel-rs",
     "spinel-rs-sys",
@@ -46,7 +46,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":graphics-compute-unittests",
-    "mold-next:mold-next-tests",
+    "mold:mold-tests",
     "spinel-rs:spinel-rs-tests",
     "spinel-rs-sys:spinel-rs-sys-tests",
     "surpass:surpass-tests",
