@@ -6,21 +6,28 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        color::Color, make_app_assistant, render::*, AnimationMode, App, AppAssistant, Point,
-        RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
-        ViewMode,
+        color::Color,
+        input::{self},
+        make_app_assistant,
+        render::*,
+        AnimationMode, App, AppAssistant, Point, RenderOptions, Size, ViewAssistant,
+        ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     euclid::{
         default::{Point2D, Rect, Size2D, Transform2D, Vector2D},
         Angle,
     },
-    fidl_fuchsia_hardware_input as hid, fidl_fuchsia_input_report as hid_input_report,
+    fidl_fuchsia_hardware_input as hid,
     fuchsia_trace::{self, duration},
     fuchsia_trace_provider,
     fuchsia_zircon::{self as zx, AsHandleRef, ClockId, Event, Signals, Time},
     itertools::izip,
     rand::{thread_rng, Rng},
-    std::{collections::BTreeMap, f32, fs, ops::Range},
+    std::{
+        collections::{BTreeMap, VecDeque},
+        f32, fs,
+        ops::Range,
+    },
 };
 
 const BACKGROUND_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
@@ -961,52 +968,11 @@ impl StylusDevice {
     }
 }
 
-// TODO: Remove touch device and use handle_pointer_event
-struct TouchDevice {
-    device: hid_input_report::InputDeviceSynchronousProxy,
-    x_range: hid_input_report::Range,
-    y_range: hid_input_report::Range,
-}
-
-impl TouchDevice {
-    fn create() -> Result<TouchDevice, Error> {
-        let input_devices_directory = "/dev/class/input-report";
-        let path = std::path::Path::new(input_devices_directory);
-        let entries = fs::read_dir(path)?;
-        for entry in entries {
-            let entry = entry?;
-            let (client, server) = zx::Channel::create()?;
-            fdio::service_connect(entry.path().to_str().expect("bad path"), server)?;
-            let mut device = hid_input_report::InputDeviceSynchronousProxy::new(client);
-
-            let descriptor = device.get_descriptor(zx::Time::INFINITE)?;
-            match descriptor.touch {
-                None => continue,
-                Some(touch) => match touch.input {
-                    None => continue,
-                    Some(input) => {
-                        println!("touch device: {0}", entry.path().to_str().unwrap());
-                        let contact_descriptor = &input.contacts.as_ref().unwrap()[0];
-                        let x_range = contact_descriptor.position_x.as_ref().unwrap().range;
-                        let y_range = contact_descriptor.position_y.as_ref().unwrap().range;
-                        return Ok(TouchDevice { device, x_range, y_range });
-                    }
-                },
-            }
-        }
-        Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no touch device found").into())
-    }
-
-    fn get_events(&mut self) -> Result<Vec<hid_input_report::InputReport>, Error> {
-        Ok(self.device.get_reports(zx::Time::INFINITE)?)
-    }
-}
-
 struct Ink {
     scene: Scene,
     contents: BTreeMap<u64, Contents>,
-    touch_device: Option<TouchDevice>,
-    touch_points: Vec<Point>,
+    pending_pointer_events: VecDeque<input::Event>,
+    touch_points: BTreeMap<input::touch::ContactId, Point>,
     stylus_device: Option<StylusDevice>,
     last_stylus_x: u16,
     last_stylus_y: u16,
@@ -1033,7 +999,6 @@ impl Ink {
         let pencil = 1;
         scene.select_tools(&vec![color, COLORS.len() + pencil]);
 
-        let touch_device = TouchDevice::create().ok();
         let stylus_device = StylusDevice::create().ok();
         let flower_start = Time::from_nanos(
             Time::get(ClockId::Monotonic)
@@ -1044,8 +1009,8 @@ impl Ink {
         Self {
             scene,
             contents: BTreeMap::new(),
-            touch_device,
-            touch_points: Vec::new(),
+            pending_pointer_events: VecDeque::new(),
+            touch_points: BTreeMap::new(),
             stylus_device,
             last_stylus_x: std::u16::MAX,
             last_stylus_y: std::u16::MAX,
@@ -1072,112 +1037,113 @@ impl Ink {
         let size = &context.size;
         let mut full_damage = false;
 
-        // Process touch device input.
-        if let Some(device) = self.touch_device.as_mut() {
-            let previous_touch_points_count = self.touch_points.len();
+        // Process touch events.
+        let previous_touch_points_count = self.touch_points.len();
 
-            let reports = device.get_events()?;
-            for report in &reports {
-                let touch = report.touch.as_ref();
-                let contacts = touch.unwrap().contacts.as_ref().unwrap();
+        while let Some(event) = self.pending_pointer_events.pop_front() {
+            if let input::EventType::Touch(touch_event) = event.event_type {
                 self.touch_points.clear();
-                for contact in contacts {
-                    let point = Point::new(
-                        size.width * contact.position_x.unwrap() as f32 / device.x_range.max as f32,
-                        size.height * contact.position_y.unwrap() as f32
-                            / device.y_range.max as f32,
-                    );
-                    self.touch_points.push(point);
-                }
-            }
-
-            let mut transform = Transform2D::identity();
-
-            // Pan and select color.
-            match self.touch_points.len() {
-                1 | 2 => {
-                    let mut origin = Vector2D::zero();
-                    for point in &self.touch_points {
-                        origin += point.to_vector();
-                    }
-                    origin /= self.touch_points.len() as f32;
-                    if self.touch_points.len() != previous_touch_points_count {
-                        if let Some(index) = self.scene.hit_test(origin.to_point()) {
-                            if index < COLORS.len() {
-                                self.color = index;
-                            } else {
-                                self.pencil = index - COLORS.len();
-                            }
-                            self.scene.select_tools(&vec![self.color, COLORS.len() + self.pencil]);
+                for contact in touch_event.contacts.iter() {
+                    match contact.phase {
+                        input::touch::Phase::Down(point, _) => {
+                            self.touch_points.insert(contact.contact_id, point.to_f32());
                         }
-                        self.pan_origin = origin;
+                        input::touch::Phase::Moved(point, _) => {
+                            self.touch_points.insert(contact.contact_id, point.to_f32());
+                        }
+                        _ => {}
                     }
-                    let distance = origin - self.pan_origin;
-                    transform = transform.post_translate(distance);
-                    self.pan_origin = origin;
                 }
-                _ => {}
             }
+        }
 
-            // Rotation & zoom.
-            if self.touch_points.len() == 2 {
-                let mut iter = self.touch_points.iter();
-                let point0 = iter.next().unwrap();
-                let point1 = iter.next().unwrap();
+        let mut transform = Transform2D::identity();
 
-                let origin = (point0.to_vector() + point1.to_vector()) / 2.0;
-                transform = transform.post_translate(-origin);
-
-                // Rotation.
-                let line = *point0 - *point1;
-                let angle = line.x.atan2(line.y);
-                if self.touch_points.len() != previous_touch_points_count {
-                    self.rotation_angle = angle;
-                }
-                let rotation_angle = angle - self.rotation_angle;
-                transform = transform.post_rotate(Angle::radians(rotation_angle));
-                self.rotation_angle = angle;
-
-                // Pinch to zoom.
-                let distance = (*point0 - *point1).length();
-                if distance != 0.0 {
-                    if self.touch_points.len() != previous_touch_points_count {
-                        self.scale_distance = distance;
-                    }
-                    let sxsy = distance / self.scale_distance;
-                    transform = transform.post_scale(sxsy, sxsy);
-                    self.scale_distance = distance;
-                }
-
-                transform = transform.post_translate(origin);
-            }
-
-            // Clear using 3 finger swipe across screen.
-            if self.touch_points.len() >= 3 {
+        // Pan and select color.
+        match self.touch_points.len() {
+            1 | 2 => {
                 let mut origin = Vector2D::zero();
-                for point in &self.touch_points {
+                for (_, point) in &self.touch_points {
                     origin += point.to_vector();
                 }
                 origin /= self.touch_points.len() as f32;
                 if self.touch_points.len() != previous_touch_points_count {
-                    self.clear_origin = origin;
+                    if let Some(index) = self.scene.hit_test(origin.to_point()) {
+                        if index < COLORS.len() {
+                            self.color = index;
+                        } else {
+                            self.pencil = index - COLORS.len();
+                        }
+                        self.scene.select_tools(&vec![self.color, COLORS.len() + self.pencil]);
+                    }
+                    self.pan_origin = origin;
                 }
-                const MIN_CLEAR_SWIPE_DISTANCE: f32 = 512.0;
-                let distance = (origin - self.clear_origin).length();
-                if distance >= MIN_CLEAR_SWIPE_DISTANCE {
-                    self.flower_start = Time::from_nanos(time_now.into_nanos().saturating_add(
-                        zx::Duration::from_seconds(FLOWER_DELAY_SECONDS).into_nanos(),
-                    ));
-                    self.flower = None;
-                    self.scene.clear_strokes();
-                    full_damage = true;
+                let distance = origin - self.pan_origin;
+                transform = transform.post_translate(distance);
+                self.pan_origin = origin;
+            }
+            _ => {}
+        }
+
+        // Rotation & zoom.
+        if self.touch_points.len() == 2 {
+            let mut iter = self.touch_points.iter();
+            let point0 = iter.next().unwrap().1;
+            let point1 = iter.next().unwrap().1;
+
+            let origin = (point0.to_vector() + point1.to_vector()) / 2.0;
+            transform = transform.post_translate(-origin);
+
+            // Rotation.
+            let line = *point0 - *point1;
+            let angle = line.x.atan2(line.y);
+            if self.touch_points.len() != previous_touch_points_count {
+                self.rotation_angle = angle;
+            }
+            let rotation_angle = angle - self.rotation_angle;
+            transform = transform.post_rotate(Angle::radians(rotation_angle));
+            self.rotation_angle = angle;
+
+            // Pinch to zoom.
+            let distance = (*point0 - *point1).length();
+            if distance != 0.0 {
+                if self.touch_points.len() != previous_touch_points_count {
+                    self.scale_distance = distance;
                 }
+                let sxsy = distance / self.scale_distance;
+                transform = transform.post_scale(sxsy, sxsy);
+                self.scale_distance = distance;
             }
 
-            if transform != Transform2D::identity() {
-                self.scene.transform(&transform);
+            transform = transform.post_translate(origin);
+        }
+
+        // Clear using 3 finger swipe across screen.
+        if self.touch_points.len() >= 3 {
+            let mut origin = Vector2D::zero();
+            for (_, point) in &self.touch_points {
+                origin += point.to_vector();
+            }
+            origin /= self.touch_points.len() as f32;
+            if self.touch_points.len() != previous_touch_points_count {
+                self.clear_origin = origin;
+            }
+            const MIN_CLEAR_SWIPE_DISTANCE: f32 = 512.0;
+            let distance = (origin - self.clear_origin).length();
+            if distance >= MIN_CLEAR_SWIPE_DISTANCE {
+                self.flower_start =
+                    Time::from_nanos(time_now.into_nanos().saturating_add(
+                        zx::Duration::from_seconds(FLOWER_DELAY_SECONDS).into_nanos(),
+                    ));
+                self.flower = None;
+                self.scene.clear_strokes();
                 full_damage = true;
             }
+        }
+
+        if transform != Transform2D::identity() {
+            self.scene.transform(&transform);
+            full_damage = true;
         }
 
         // Process stylus device input.
@@ -1303,6 +1269,10 @@ impl Ink {
 
         Ok(())
     }
+
+    fn handle_pointer_event(&mut self, event: &input::Event) {
+        self.pending_pointer_events.push_back(event.clone());
+    }
 }
 
 struct InkViewAssistant {
@@ -1341,6 +1311,18 @@ impl ViewAssistant for InkViewAssistant {
 
     fn initial_animation_mode(&mut self) -> AnimationMode {
         return AnimationMode::EveryFrame;
+    }
+
+    fn handle_pointer_event(
+        &mut self,
+        _context: &mut ViewAssistantContext<'_>,
+        event: &input::Event,
+        _pointer_event: &input::pointer::Event,
+    ) -> Result<(), Error> {
+        if let Some(ink) = self.ink.as_mut() {
+            ink.handle_pointer_event(event);
+        }
+        Ok(())
     }
 }
 
