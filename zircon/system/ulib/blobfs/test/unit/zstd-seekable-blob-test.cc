@@ -49,7 +49,10 @@ using blobfs::GenerateBlob;
 
 const uint32_t kNumFilesystemBlocks = 4000;
 
+constexpr unsigned kZeroToThirtyTwoAndRandomBlobSrcFunctionRandomSeed = 9572331;
+
 void ZeroToThirtyTwoAndRandomBlobSrcFunction(char* data, size_t length) {
+  srand(kZeroToThirtyTwoAndRandomBlobSrcFunctionRandomSeed);
   for (size_t i = 0; i < length; i++) {
     if ((i / 32) % 2 == 0) {
       uint8_t value = static_cast<uint8_t>(i % 32);
@@ -73,6 +76,24 @@ using std::right;
 std::string gDeviceOwner = "NONE";
 
 void SetDeviceOwner(std::string name) { gDeviceOwner = name; }
+
+
+constexpr size_t gLoggingBytesPerLine = 64;
+
+void LogBuf(std::string name, const std::vector<uint8_t>& buf) {
+  cerr << "BUF(" << name << ") :: " << buf.size();
+
+
+  for (size_t i = 0; i < buf.size(); i++) {
+    if ((i % gLoggingBytesPerLine) == 0) {
+      cerr << endl << "BUF(" << name << ") ";
+      fprintf(stderr, "%10lu", i);
+      cerr << " >> ";
+    }
+    fprintf(stderr, "%02X", buf[i]);
+  }
+  cerr << endl;
+}
 
 class LoggingBlockDevice : public block_client::BlockDevice {
  public:
@@ -285,7 +306,17 @@ TEST_F(ZSTDSeekableBlobTest, CompleteRead) {
     std::vector<uint8_t> expected(blob_info->size_data);
     ZeroToThirtyTwoAndRandomBlobSrcFunction(reinterpret_cast<char*>(expected.data()), blob_info->size_data);
     ASSERT_OK(compressed_blob_collection()->Read(node_index, buf.data(), 0, blob_info->size_data));
-    ASSERT_BYTES_EQ(expected.data(), buf.data(), blob_info->size_data);
+
+    LogBuf("EXPECTED", expected);
+    LogBuf("WAS_READ", buf);
+
+    const size_t incrementSize = kBlobfsBlockSize / 4;
+    for (size_t i = 0; i < blob_info->size_data; i += incrementSize) {
+      EXPECT_BYTES_EQ(&(expected.data()[i]), &(buf.data()[i]), std::min(i + incrementSize, blob_info->size_data) - i);
+    }
+    // Note: Data size is too large for stack allocation in |ASSERT_BYTES_EQ()|. That's why
+    // |memcmp()| is used instead.
+    // ASSERT_EQ(0, memcmp(expected.data(), buf.data(), blob_info->size_data));
   }
 
   // DisableZSTDReadLogging();
