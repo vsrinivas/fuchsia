@@ -240,9 +240,12 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   // Other stuff (e.g. which extensions are supported) will be added below.
   VulkanDeviceQueues::Caps caps(physical_device);
 
+  auto physical_device_features = vk::PhysicalDeviceFeatures2();
   auto physical_device_memory_features = vk::PhysicalDeviceProtectedMemoryFeatures();
-  auto physical_device_features =
-      vk::PhysicalDeviceFeatures2().setPNext(&physical_device_memory_features);
+  auto sampler_ycbcr_conversion_features = vk::PhysicalDeviceSamplerYcbcrConversionFeatures();
+  physical_device_features.setPNext(&physical_device_memory_features);
+  physical_device_memory_features.setPNext(&sampler_ycbcr_conversion_features);
+
   physical_device.getFeatures2(&physical_device_features);
 
   // Get the maximum supported Vulkan API version (minimum of device version and instance version).
@@ -291,7 +294,9 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   for (auto& extension : caps.extensions) {
     extension_names.push_back(extension.c_str());
   }
+
   caps.allow_ycbcr =
+      sampler_ycbcr_conversion_features.samplerYcbcrConversion &&
       caps.extensions.find(VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME) != caps.extensions.end();
 
   // Specify the required physical device features, and verify that they are all
@@ -336,7 +341,12 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   device_info.ppEnabledExtensionNames = extension_names.data();
   device_info.pEnabledFeatures = &caps.enabled_features;
   if (caps.allow_protected_memory) {
+    physical_device_memory_features.pNext = nullptr;
     device_info.pNext = &physical_device_memory_features;
+  }
+  if (caps.allow_ycbcr) {
+    sampler_ycbcr_conversion_features.pNext = const_cast<void*>(device_info.pNext);
+    device_info.pNext = &sampler_ycbcr_conversion_features;
   }
 
   // It's possible that the main queue and transfer queue are in the same
