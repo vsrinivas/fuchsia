@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow;
+use anyhow::{self, Context};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
@@ -25,7 +25,7 @@ async fn main() -> Result<(), anyhow::Error> {
     // service_fs.dir("svc").add_fidl_service(IncomingRequest::MyProtocol);
     // ```
 
-    service_fs.take_and_serve_directory_handle()?;
+    service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
 
     service_fs
         .for_each_concurrent(None, |_request: IncomingRequest| async move {
