@@ -38,6 +38,8 @@ class MockOtherTypes : ddk::OtherTypesProtocol<MockOtherTypes> {
 public:
     MockOtherTypes() : proto_{&other_types_protocol_ops_, this} {}
 
+    virtual ~MockOtherTypes() {}
+
     const other_types_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockOtherTypes& ExpectStruct(this_is_astruct_t s, this_is_astruct_t out_s) {
@@ -148,6 +150,8 @@ private:
 class MockOtherTypesAsync : ddk::OtherTypesAsyncProtocol<MockOtherTypesAsync> {
 public:
     MockOtherTypesAsync() : proto_{&other_types_async_protocol_ops_, this} {}
+
+    virtual ~MockOtherTypesAsync() {}
 
     const other_types_async_protocol_t* GetProto() const { return &proto_; }
 
@@ -260,6 +264,8 @@ class MockOtherTypesReference : ddk::OtherTypesReferenceProtocol<MockOtherTypesR
 public:
     MockOtherTypesReference() : proto_{&other_types_reference_protocol_ops_, this} {}
 
+    virtual ~MockOtherTypesReference() {}
+
     const other_types_reference_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockOtherTypesReference& ExpectStruct(this_is_astruct_t s, this_is_astruct_t out_s) {
@@ -358,6 +364,8 @@ class MockOtherTypesAsyncReference : ddk::OtherTypesAsyncReferenceProtocol<MockO
 public:
     MockOtherTypesAsyncReference() : proto_{&other_types_async_reference_protocol_ops_, this} {}
 
+    virtual ~MockOtherTypesAsyncReference() {}
+
     const other_types_async_reference_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockOtherTypesAsyncReference& ExpectStruct(this_is_astruct_t s, this_is_astruct_t out_s) {
@@ -455,6 +463,8 @@ private:
 class MockInterface : ddk::InterfaceProtocol<MockInterface> {
 public:
     MockInterface() : proto_{&interface_protocol_ops_, this} {}
+
+    virtual ~MockInterface() {}
 
     const interface_protocol_t* GetProto() const { return &proto_; }
 

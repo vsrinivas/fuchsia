@@ -36,6 +36,8 @@ class MockVector : ddk::VectorProtocol<MockVector> {
 public:
     MockVector() : proto_{&vector_protocol_ops_, this} {}
 
+    virtual ~MockVector() {}
+
     const vector_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockVector& ExpectBool(std::vector<bool> b, std::vector<bool> out_b) {
@@ -237,6 +239,8 @@ class MockVector2 : ddk::Vector2Protocol<MockVector2> {
 public:
     MockVector2() : proto_{&vector2_protocol_ops_, this} {}
 
+    virtual ~MockVector2() {}
+
     const vector2_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockVector2& ExpectBool(std::vector<bool> b, std::vector<bool> out_b) {
@@ -437,6 +441,8 @@ private:
 class MockVectorOfVectors : ddk::VectorOfVectorsProtocol<MockVectorOfVectors> {
 public:
     MockVectorOfVectors() : proto_{&vector_of_vectors_protocol_ops_, this} {}
+
+    virtual ~MockVectorOfVectors() {}
 
     const vector_of_vectors_protocol_t* GetProto() const { return &proto_; }
 

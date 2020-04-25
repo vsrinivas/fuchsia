@@ -35,6 +35,8 @@ class MockArray : ddk::ArrayProtocol<MockArray> {
 public:
     MockArray() : proto_{&array_protocol_ops_, this} {}
 
+    virtual ~MockArray() {}
+
     const array_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockArray& ExpectBool(bool b, bool out_b) {
@@ -224,6 +226,8 @@ class MockArray2 : ddk::Array2Protocol<MockArray2> {
 public:
     MockArray2() : proto_{&array2_protocol_ops_, this} {}
 
+    virtual ~MockArray2() {}
+
     const array2_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockArray2& ExpectBool(bool b, bool out_b) {
@@ -412,6 +416,8 @@ private:
 class MockArrayofArrays : ddk::ArrayofArraysProtocol<MockArrayofArrays> {
 public:
     MockArrayofArrays() : proto_{&arrayof_arrays_protocol_ops_, this} {}
+
+    virtual ~MockArrayofArrays() {}
 
     const arrayof_arrays_protocol_t* GetProto() const { return &proto_; }
 

@@ -35,6 +35,8 @@ class MockSynchronousBase : ddk::SynchronousBaseProtocol<MockSynchronousBase> {
 public:
     MockSynchronousBase() : proto_{&synchronous_base_protocol_ops_, this} {}
 
+    virtual ~MockSynchronousBase() {}
+
     const synchronous_base_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockSynchronousBase& ExpectStatus(zx_status_t out_status, zx_status_t status, zx_status_t out_status_2) {
@@ -193,6 +195,8 @@ private:
 class MockAsyncBase : ddk::AsyncBaseProtocol<MockAsyncBase> {
 public:
     MockAsyncBase() : proto_{&async_base_protocol_ops_, this} {}
+
+    virtual ~MockAsyncBase() {}
 
     const async_base_protocol_t* GetProto() const { return &proto_; }
 

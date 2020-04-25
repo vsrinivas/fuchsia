@@ -35,6 +35,8 @@ class MockActionProtocol : ddk::ActionProtocolProtocol<MockActionProtocol> {
 public:
     MockActionProtocol() : proto_{&action_protocol_protocol_ops_, this} {}
 
+    virtual ~MockActionProtocol() {}
+
     const action_protocol_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockActionProtocol& ExpectRegisterCallback(zx_status_t out_s, uint32_t id, action_notify_t cb) {

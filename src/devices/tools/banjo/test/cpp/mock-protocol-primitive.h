@@ -35,6 +35,8 @@ class MockSynchronousPrimitive : ddk::SynchronousPrimitiveProtocol<MockSynchrono
 public:
     MockSynchronousPrimitive() : proto_{&synchronous_primitive_protocol_ops_, this} {}
 
+    virtual ~MockSynchronousPrimitive() {}
+
     const synchronous_primitive_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockSynchronousPrimitive& ExpectBool(bool out_b, bool b, bool out_b_2) {
@@ -221,6 +223,8 @@ private:
 class MockAsyncPrimitive : ddk::AsyncPrimitiveProtocol<MockAsyncPrimitive> {
 public:
     MockAsyncPrimitive() : proto_{&async_primitive_protocol_ops_, this} {}
+
+    virtual ~MockAsyncPrimitive() {}
 
     const async_primitive_protocol_t* GetProto() const { return &proto_; }
 

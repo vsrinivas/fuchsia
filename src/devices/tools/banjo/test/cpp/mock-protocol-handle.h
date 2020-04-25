@@ -35,6 +35,8 @@ class MockSynchronousHandle : ddk::SynchronousHandleProtocol<MockSynchronousHand
 public:
     MockSynchronousHandle() : proto_{&synchronous_handle_protocol_ops_, this} {}
 
+    virtual ~MockSynchronousHandle() {}
+
     const synchronous_handle_protocol_t* GetProto() const { return &proto_; }
 
     virtual MockSynchronousHandle& ExpectHandle(const zx::handle& h, zx::handle out_h, zx::handle out_h2) {
@@ -319,6 +321,8 @@ private:
 class MockAsyncHandle : ddk::AsyncHandleProtocol<MockAsyncHandle> {
 public:
     MockAsyncHandle() : proto_{&async_handle_protocol_ops_, this} {}
+
+    virtual ~MockAsyncHandle() {}
 
     const async_handle_protocol_t* GetProto() const { return &proto_; }
 
