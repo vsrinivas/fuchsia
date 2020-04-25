@@ -116,7 +116,7 @@ while [ $# -gt 0 ]; do
       GET_FILES=:
       FILES=$(canonicalize "${FUCHSIA_DIR}" \
         $(fx-gn desc \
-            "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources)) &&
+            "${FUCHSIA_BUILD_DIR}" "${ARG#--target=}" sources)) &&
         RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
             $(fx rustfmt --print-sources ${ARG#--target=})) ;;
     --) break ;;

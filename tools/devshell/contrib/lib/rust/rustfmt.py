@@ -34,10 +34,20 @@ def main():
     parser.add_argument(
         "-v", "--verbose", action='store_true', help="Show verbose output")
     parser.add_argument("--out-dir", help="Path to the Fuchsia build directory")
+    parser.add_argument(
+        "-s",
+        "--print-sources",
+        action='store_true',
+        help="Only print sources; do not format")
 
     args = parser.parse_args()
 
     build_dir = os.path.abspath(args.out_dir)
+
+    if args.print_sources and not all(
+            os.path.exists(gn_target.manifest_path(build_dir))
+            for gn_target in args.gn_targets):
+        return 1
 
     cargo_tomls = []  # List of (gn_target, cargo_toml)
     for gn_target in args.gn_targets:
@@ -56,6 +66,11 @@ def main():
             main_files.append((gn_target, bins[0]['path']))
         elif 'lib' in cargo_toml:
             main_files.append((gn_target, cargo_toml['lib']['path']))
+
+    if args.print_sources:
+        if main_files:
+            print('\n'.join(main_file[1] for main_file in main_files))
+        return 0
 
     for gn_target, main_file in main_files:
         if not main_file or not os.path.exists(main_file):
