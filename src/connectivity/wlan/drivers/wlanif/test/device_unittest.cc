@@ -162,7 +162,7 @@ TEST(SmeChannel, Bound) {
   });
 
   // Wait for scan message to propagate through the system.
-  ASSERT_TRUE(timeout_after(ZX_SEC(5), [&]() { return ctx.scan_req.has_value(); }));
+  ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.scan_req.has_value(); }));
 
   // Verify scan request.
   ASSERT_TRUE(ctx.scan_req.has_value());
@@ -240,7 +240,8 @@ TEST(AssocReqHandling, MultipleAssocReq) {
       .vendor_ies = {},
   });
 
-  // Wait for assoc req message to propagate through the system.
+  // Wait for assoc req message to propagate through the system. Since there is
+  // no response expected, wait for a minimal amount of time.
   ASSERT_TRUE(timeout_after(ZX_SEC(5), [&]() { return !ctx.assoc_req.has_value(); }));
   ASSERT_EQ(ctx.assoc_confirmed, false);
 
@@ -252,7 +253,7 @@ TEST(AssocReqHandling, MultipleAssocReq) {
       .rsne = {},
       .vendor_ies = {},
   });
-  ASSERT_TRUE(timeout_after(ZX_SEC(1), [&]() { return ctx.assoc_req.has_value(); }));
+  ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.assoc_req.has_value(); }));
   ASSERT_EQ(ctx.assoc_confirmed, true);
 
   device.EthUnbind();
