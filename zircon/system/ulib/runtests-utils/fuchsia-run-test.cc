@@ -179,42 +179,12 @@ std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>&
         fprintf(stderr, "FAILURE: Cannot read data from \"%s\": %s\n", name.c_str(), strerror(ec.value()));
         return {};
       }
-    } else {
-      // ...Otherwise use the first VMO in the list to initialize the buffer.
-      const zx::vmo& vmo = vmos.front();
-
-      uint64_t vmo_size;
-      status = vmo.get_size(&vmo_size);
-      if (status != ZX_OK) {
-        fprintf(stderr, "FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n",
-                name.c_str(), kProfileSink, zx_status_get_string(status));
-        return {};
-      }
-
-      fzl::VmoMapper mapper;
-      if (vmo_size > 0) {
-        zx_status_t status = mapper.Map(vmo, 0, vmo_size, ZX_VM_PERM_READ);
-        if (status != ZX_OK) {
-          fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n",
-                  name.c_str(), kProfileSink, zx_status_get_string(status));
-          return {};
-        }
-      } else {
-        fprintf(stderr, "WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n",
-                kProfileSink, name.c_str());
-        continue;
-      }
-
-      buffer_size = vmo_size;
-      buffer = std::make_unique<uint8_t[]>(buffer_size);
-      memcpy(buffer.get(), mapper.start(), buffer_size);
-
-      vmos.pop_front();
     }
 
     while (!vmos.empty()) {
-      // Merge all the remaining VMOs into the buffer.
+      // Merge all VMOs into the buffer.
       const zx::vmo& vmo = vmos.front();
+      vmos.pop_front();
 
       uint64_t vmo_size;
       status = vmo.get_size(&vmo_size);
@@ -238,22 +208,28 @@ std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>&
         continue;
       }
 
-      if (buffer_size != vmo_size) {
-        fprintf(stderr, "FAILURE: Mismatch between content sizes for \"%s\": %lu != %lu\n",
-                name.c_str(), buffer_size, vmo_size);
+      if (likely(buffer)) {
+        if (buffer_size != vmo_size) {
+          fprintf(stderr, "FAILURE: Mismatch between content sizes for \"%s\": %lu != %lu\n",
+                  name.c_str(), buffer_size, vmo_size);
+        }
+        ZX_ASSERT(buffer_size == vmo_size);
+
+        // Ensure that profiles are structuraly compatible.
+        if (!ProfilesCompatible(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()),
+                                buffer_size)) {
+          fprintf(stderr, "WARNING: Unable to merge profile data: %s\n",
+                  "source profile file is not compatible");
+          continue;
+        }
+
+        MergeProfiles(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()), buffer_size);
+      } else {
+        // ...Otherwise use the first non-empty VMO in the list to initialize the buffer.
+        buffer_size = vmo_size;
+        buffer = std::make_unique<uint8_t[]>(buffer_size);
+        memcpy(buffer.get(), mapper.start(), buffer_size);
       }
-      ZX_ASSERT(buffer_size == vmo_size);
-
-      // Ensure that profiles are structuraly compatible.
-      if (!ProfilesCompatible(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()), buffer_size)) {
-        fprintf(stderr, "FAILURE: Unable to merge profile data: %s\n",
-                "source profile file is not compatible");
-        return {};
-      }
-
-      MergeProfiles(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()), buffer_size);
-
-      vmos.pop_front();
     }
 
     // Write the data back to the file.
