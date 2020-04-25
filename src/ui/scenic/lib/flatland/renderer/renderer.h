@@ -70,6 +70,7 @@ class Renderer {
   //
   // TODO(50251): The renderer also needs to be able to unregister buffer collections.
   virtual BufferCollectionId RegisterBufferCollection(
+      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;
 
   // This function validates if the buffer collection referenced by |collection_id| is ready to

@@ -10,6 +10,8 @@ source_set("renderer") {
     "buffer_collection.h",
     "gpu_mem.cc",
     "gpu_mem.h",
+    "null_renderer.cc",
+    "null_renderer.h",
     "renderer.h",
   ]
 
