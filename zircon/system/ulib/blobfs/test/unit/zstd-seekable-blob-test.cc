@@ -17,6 +17,9 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <iostream>
+#include <iomanip>
+#include <ios>
 #include <limits>
 #include <memory>
 
@@ -57,14 +60,95 @@ void ZeroToThirtyTwoAndRandomBlobSrcFunction(char* data, size_t length) {
   }
 }
 
+namespace {
+
+using std::cerr;
+using std::endl;
+using std::dec;
+using std::hex;
+using std::setfill;
+using std::setw;
+using std::right;
+
+std::string gDeviceOwner = "NONE";
+
+void SetDeviceOwner(std::string name) { gDeviceOwner = name; }
+
+class LoggingBlockDevice : public block_client::BlockDevice {
+ public:
+  LoggingBlockDevice() = delete;
+  explicit LoggingBlockDevice(std::unique_ptr<block_client::BlockDevice> bd) : bd_(std::move(bd)) {}
+
+  //
+  // BlockDevice implementation.
+  //
+  zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const final {
+    cerr << "BLOCK_DEVICE(" << gDeviceOwner << ") :: ReadBlock(block_num=" << block_num
+         << ", block_size=" << block_size << ")" << endl;
+    return bd_->ReadBlock(block_num, block_size, block);
+  }
+
+  zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final {
+    cerr << "BLOCK_DEVICE(" << gDeviceOwner << ") :: ReadBlock(count=" << count << ")" << endl;
+    for (size_t i = 0; i < count; i++) {
+      const block_fifo_request_t& req = requests[i];
+      cerr << "BLOCK_DEVICE(" << gDeviceOwner << ") :: ReadBlock >> {opcode=" << req.opcode
+           << ", length=" << req.length << ", vmo_offset=" << req.vmo_offset << ", dev_offset="
+           << req.dev_offset << "}" << endl;
+    }
+    return bd_->FifoTransaction(requests, count);
+  }
+
+  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const final {
+    return bd_->GetDevicePath(buffer_len, out_name, out_len);
+  }
+
+  zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final {
+    return bd_->BlockGetInfo(out_info);
+  }
+
+  zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const final {
+    return bd_->VolumeQuery(out_info);
+  }
+
+  zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
+                                        fuchsia_hardware_block_volume_VsliceRange* out_ranges,
+                                        size_t* out_ranges_count) const final {
+    return bd_->VolumeQuerySlices(slices, slices_count, out_ranges, out_ranges_count);
+  }
+
+  zx_status_t VolumeExtend(uint64_t offset, uint64_t length) final {
+    return bd_->VolumeExtend(offset, length);
+  }
+  zx_status_t VolumeShrink(uint64_t offset, uint64_t length) final {
+    return bd_->VolumeShrink(offset, length);
+  }
+
+  //
+  // storage::VmoidRegistry implementation.
+  //
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final {
+    return bd_->BlockAttachVmo(vmo, out);
+  }
+
+  zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final {
+    return bd_->BlockDetachVmo(std::move(vmoid));
+  }
+
+ private:
+  std::unique_ptr<block_client::BlockDevice> bd_;
+};
+
+}  // namespace
+
 class ZSTDSeekableBlobTest : public zxtest::Test {
  public:
   static constexpr uint64_t kUncompressedBlobSize = 697048;
 
   void SetUp() {
     MountOptions options;
-    auto device =
-        std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
+    auto device = std::make_unique<LoggingBlockDevice>(
+        std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize));
     ASSERT_OK(FormatFilesystem(device.get()));
     loop_.StartThread();
 
@@ -182,9 +266,10 @@ TEST_F(ZSTDSeekableBlobTest, CompleteRead) {
   AddCompressedBlobAndSync(&blob_info);
   uint32_t node_index = LookupInode(*blob_info);
 
-  EnableZSTDReadLogging();
+  // EnableZSTDReadLogging();
 
   // Read whole blob all at once via |BlobLoader|.
+  SetDeviceOwner("ALL");
   {
     fzl::OwnedVmoMapper data_mapper;
     fzl::OwnedVmoMapper merkle_mapper;
@@ -194,6 +279,7 @@ TEST_F(ZSTDSeekableBlobTest, CompleteRead) {
 
   // Read whole blob at once via |blob_info->size_data|-sized read from
   // |ZSTDSeekableBlobCollection|.
+  SetDeviceOwner("RAC");
   {
     std::vector<uint8_t> buf(blob_info->size_data);
     std::vector<uint8_t> expected(blob_info->size_data);
@@ -202,7 +288,7 @@ TEST_F(ZSTDSeekableBlobTest, CompleteRead) {
     ASSERT_BYTES_EQ(expected.data(), buf.data(), blob_info->size_data);
   }
 
-  DisableZSTDReadLogging();
+  // DisableZSTDReadLogging();
 }
 
 // TEST_F(ZSTDSeekableBlobTest, PartialRead) {
