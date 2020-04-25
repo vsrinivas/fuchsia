@@ -116,6 +116,7 @@ static_library("symbols") {
     "index_node.cc",
     "inheritance_path.cc",
     "inherited_from.cc",
+    "input_location.cc",
     "lazy_symbol.cc",
     "line_details.cc",
     "line_table.cc",

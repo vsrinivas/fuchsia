@@ -16,7 +16,7 @@ namespace zxdb {
 // A simple identifier component consisting only of an opaque string.
 class IdentifierComponent {
  public:
-  IdentifierComponent();
+  IdentifierComponent() {}
   explicit IdentifierComponent(std::string name) : name_(std::move(name)) {}
   IdentifierComponent(SpecialIdentifier si, std::string name = std::string())
       : special_(si), name_(std::move(name)) {

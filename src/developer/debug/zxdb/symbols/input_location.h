@@ -12,8 +12,6 @@
 
 #include "src/developer/debug/zxdb/symbols/file_line.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
-#include "src/developer/debug/zxdb/symbols/symbol.h"
-#include "src/developer/debug/zxdb/symbols/symbol_context.h"
 
 namespace zxdb {
 
@@ -32,7 +30,7 @@ struct InputLocation {
     kLine,     // File/line query.
     kName,     // Identifier-based query (names of symbols like functions).
     kAddress,  // Address in a running process.
-  };  // Symbol object from a running process.
+  };
 
   InputLocation() = default;
   explicit InputLocation(FileLine file_line) : type(Type::kLine), line(std::move(file_line)) {}
@@ -40,19 +38,10 @@ struct InputLocation {
   explicit InputLocation(uint64_t address) : type(Type::kAddress), address(address) {}
 
   // Converts the input location type to a string. This is intended to be used in error messages.
-  static const char* TypeToString(Type type) {
-    switch (type) {
-      case Type::kLine:
-        return "file/line";
-      case Type::kName:
-        return "name";
-      case Type::kAddress:
-        return "address";
-      case Type::kNone:
-      default:
-        return "<no location type>";
-    }
-  }
+  static const char* TypeToString(Type type);
+
+  bool operator==(const InputLocation& other) const;
+  bool operator!=(const InputLocation& other) const { return !operator==(other); }
 
   Type type = Type::kNone;
 

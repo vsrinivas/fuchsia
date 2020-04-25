@@ -205,7 +205,7 @@ Err RunVerbList(ConsoleContext* context, const Command& cmd) {
   } else {
     return Err(ErrType::kInput,
                "Expecting zero or one arg for the location.\n"
-               "Formats: <function>, <file>:<line#>, <line#>, or *<address>");
+               "Formats: <function>, <file>:<line#>, <line#>, or 0x<address>");
   }
 
   FormatSourceOpts opts;

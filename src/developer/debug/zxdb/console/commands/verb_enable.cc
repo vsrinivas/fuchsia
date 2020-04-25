@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
+#include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 
@@ -20,16 +21,22 @@ const char kEnableShortHelp[] = "enable: Enable a breakpoint.";
 const char kEnableHelp[] =
     R"(enable
 
-  By itself, "enable" will enable the current active breakpoint. It is the
-  opposite of "disable".
+  By default, "enable" will enable the current active breakpoint. It is the
+  opposite of "disable". It can be combined with an explicit breakpoint prefix
+  to indicate a specific breakpoint to enable.
 
-  It can be combined with an explicit breakpoint prefix to indicate a specific
-  breakpoint to enable.
-
-  It is an alias for:
+  In this way, it is an alias for:
 
     bp set enabled = true
 
+  If a location is given, the command will instead enable all breakpoints at
+  that location. Note that the comparison is performed based on input rather
+  than actual address, so "enable main" will not enable breakpoints on "$main".
+
+Location arguments
+
+)" LOCATION_ARG_HELP("enable")
+        R"(
 See also
 
   "help break": To create breakpoints.
@@ -47,17 +54,21 @@ Examples
 )";
 
 Err RunVerbEnable(ConsoleContext* context, const Command& cmd) {
-  if (Err err = ValidateNoArgBreakpointModification(cmd, "enable"); err.has_error())
+  std::vector<Breakpoint*> breakpoints;
+
+  if (Err err = ResolveBreakpointsForModification(cmd, "enable", &breakpoints); err.has_error())
     return err;
 
-  BreakpointSettings settings = cmd.breakpoint()->GetSettings();
-  settings.enabled = true;
+  for (Breakpoint* breakpoint : breakpoints) {
+    BreakpointSettings settings = breakpoint->GetSettings();
+    settings.enabled = true;
 
-  cmd.breakpoint()->SetSettings(settings);
+    breakpoint->SetSettings(settings);
 
-  OutputBuffer out("Enabled ");
-  out.Append(FormatBreakpoint(context, cmd.breakpoint(), true));
-  Console::get()->Output(out);
+    OutputBuffer out("Enabled ");
+    out.Append(FormatBreakpoint(context, breakpoint, true));
+    Console::get()->Output(out);
+  }
 
   return Err();
 }

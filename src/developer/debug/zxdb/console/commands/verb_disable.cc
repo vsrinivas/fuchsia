@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
+#include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 
@@ -18,18 +19,25 @@ namespace {
 
 const char kDisableShortHelp[] = "disable: Disable a breakpoint.";
 const char kDisableHelp[] =
-    R"(disable
+    R"(disable [ <location> ]
 
-  By itself, "disable" will disable the current active breakpoint. It is the
-  opposite of "enable".
+  By default, "disable" will disable the current active breakpoint. It is the
+  opposite of "enable". It can be combined with an explicit breakpoint prefix
+  to indicate a specific breakpoint to disable.
 
-  It can be combined with an explicit breakpoint prefix to indicate a specific
-  breakpoint to disable.
-
-  It is an alias for:
+  In this way, it is an alias for:
 
     bp set enabled = false
 
+  If a location is given, the command will instead disable all breakpoints at
+  that location. Note that the comparison is performed based on input rather
+  than actual address, so "disable main" will not disable breakpoints on
+  "$main".
+
+Location arguments
+
+)" LOCATION_ARG_HELP("disable")
+        R"(
 See also
 
   "help break": To create breakpoints.
@@ -47,17 +55,21 @@ Examples
 )";
 
 Err RunVerbDisable(ConsoleContext* context, const Command& cmd) {
-  if (Err err = ValidateNoArgBreakpointModification(cmd, "enable"); err.has_error())
+  std::vector<Breakpoint*> breakpoints;
+
+  if (Err err = ResolveBreakpointsForModification(cmd, "disable", &breakpoints); err.has_error())
     return err;
 
-  BreakpointSettings settings = cmd.breakpoint()->GetSettings();
-  settings.enabled = false;
+  for (Breakpoint* breakpoint : breakpoints) {
+    BreakpointSettings settings = breakpoint->GetSettings();
+    settings.enabled = false;
 
-  cmd.breakpoint()->SetSettings(settings);
+    breakpoint->SetSettings(settings);
 
-  OutputBuffer out("Disabled ");
-  out.Append(FormatBreakpoint(context, cmd.breakpoint(), true));
-  Console::get()->Output(out);
+    OutputBuffer out("Disabled ");
+    out.Append(FormatBreakpoint(context, breakpoint, true));
+    Console::get()->Output(out);
+  }
 
   return Err();
 }

@@ -211,6 +211,7 @@ source_set("tests") {
     "commands/verb_attach_job_unittest.cc",
     "commands/verb_attach_unittest.cc",
     "commands/verb_break_unittest.cc",
+    "commands/verb_clear_unittest.cc",
     "commands/verb_detach_unittest.cc",
     "commands/verb_disassemble_unittest.cc",
     "commands/verb_display_unittest.cc",

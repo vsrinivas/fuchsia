@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
+#include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/developer/debug/zxdb/symbols/system_symbols.h"
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
 

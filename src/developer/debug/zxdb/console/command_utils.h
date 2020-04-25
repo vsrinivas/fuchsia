@@ -82,11 +82,12 @@ std::string ExecutionScopeToString(const ConsoleContext* context, const Executio
 // explicitly given. If no globa/target/thread context is explicitly given, defaults to the global.
 ExecutionScope ExecutionScopeForCommand(const Command& cmd);
 
-const char* BreakpointEnabledToString(bool enabled);
-
-// Validates that the current command has a breakpoint associated with it and no additional
-// arguments. Used for enable/disable/clear that do one thing to a breakpoint
-Err ValidateNoArgBreakpointModification(const Command& cmd, const char* command_name);
+// Find breakpoints to modify. |cmd| is enable/disable/clear with an optional location.
+// If a location is given, returns all breakpoints at that location.
+// If no location is provided, returns current active breakpoint, which could be affected
+// by prefixing "bp <index>" before the command.
+Err ResolveBreakpointsForModification(const Command& cmd, const char* command_name,
+                                      std::vector<Breakpoint*>* output);
 
 OutputBuffer FormatThread(const ConsoleContext* context, const Thread* thread);
 

@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
+#include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace zxdb {

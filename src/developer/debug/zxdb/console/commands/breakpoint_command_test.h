@@ -27,7 +27,7 @@ class BreakpointTestRemoteAPI : public MockRemoteAPI {
   // RemoteAPI implementation.
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
-      fit::callback<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {
+      fit::callback<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) override {
     last_request = request;
     last_cb = std::move(cb);
   }

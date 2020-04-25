@@ -33,6 +33,7 @@
 #include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
+#include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
@@ -256,29 +257,64 @@ ExecutionScope ExecutionScopeForCommand(const Command& cmd) {
   return ExecutionScope();  // Everything else becomes global scope.
 }
 
-const char* BreakpointEnabledToString(bool enabled) { return enabled ? "Enabled" : "Disabled"; }
+Err ResolveBreakpointsForModification(const Command& cmd, const char* command_name,
+                                      std::vector<Breakpoint*>* output) {
+  output->clear();
 
-Err ValidateNoArgBreakpointModification(const Command& cmd, const char* command_name) {
+  if (cmd.args().size() > 1) {
+    return Err(ErrType::kInput,
+               "Expecting zero or one arg for the location.\n"
+               "Formats: <function>, <file>:<line#>, <line#>, or 0x<address>");
+  }
+
+  if (cmd.args().size() == 1) {
+    // "bp <index> clear <location>" is pointless.
+    Err err = cmd.ValidateNouns({});
+    if (err.has_error())
+      return err;
+
+    // No need to resolve the location here because pending breakpoints only have input_locations.
+    // As a result, if a user has breakpoints on both main and $main, "clear main" will only clear
+    // the first breakpoint.
+    std::vector<InputLocation> input_locations;
+    if (Err err = ParseLocalInputLocation(cmd.frame(), cmd.args()[0], &input_locations);
+        err.has_error())
+      return err;
+
+    ConsoleContext* context = &Console::get()->context();
+    std::vector<Breakpoint*> breakpoints = context->session()->system().GetBreakpoints();
+
+    for (Breakpoint* breakpoint : breakpoints) {
+      // We compare the input_locations vector directly, in hopes that the same input will
+      // resolve to the same order.
+      if (input_locations == breakpoint->GetSettings().locations) {
+        output->push_back(breakpoint);
+      }
+    }
+
+    if (output->size() == 0) {
+      auto msg = fxl::StringPrintf("\"%s\" matches zero breakpoints.", cmd.args()[0].c_str());
+      if (cmd.args()[0].size() && isdigit(cmd.args()[0][0]))
+        msg += fxl::StringPrintf(" Maybe you want to use \"bp %s %s\"?", cmd.args()[0].c_str(),
+                                 command_name);
+      return Err(msg);
+    }
+    return Err();
+  }
+
+  // When cmd.args().size() == 0, use the command's breakpoint context.
   Err err = cmd.ValidateNouns({Noun::kBreakpoint});
   if (err.has_error())
     return err;
 
-  // Expect no args. If an arg was specified, most likely they're trying to use GDB syntax of
-  // e.g. "clear 2".
-  if (cmd.args().size() > 0) {
-    return Err(
-        fxl::StringPrintf("\"%s\" takes no arguments. To specify an explicit "
-                          "breakpoint to %s,\nuse \"bp <index> %s\"",
-                          command_name, command_name, command_name));
-  }
-
   if (!cmd.breakpoint()) {
     return Err(
-        fxl::StringPrintf("There is no active breakpoint and no breakpoint was given.\n"
-                          "Use \"bp <index> %s\" to specify one.\n",
-                          command_name));
+        fxl::StringPrintf("There is no active breakpoint and no breakpoint or location was given.\n"
+                          "Use \"bp <index> %s\" or \"%s <location>\" to specify one.\n",
+                          command_name, command_name));
   }
 
+  output->push_back(cmd.breakpoint());
   return Err();
 }
 

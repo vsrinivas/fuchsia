@@ -30,7 +30,7 @@ constexpr int kOneShotSwitch = 5;
 
 const char kBreakShortHelp[] = "break / b: Create a breakpoint.";
 const char kBreakHelp[] =
-    R"(break <location>
+    R"(break [ <location> ]
 
   Alias: "b"
 
