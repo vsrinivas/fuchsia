@@ -118,7 +118,7 @@ class Debug {
 
   // Print to the debugging output.
   template <typename... Args>
-  static void Print(uint32_t flag, const char* func_name, const char* format, Args&&... args) {
+  static void Print(uint32_t flag, const char* format, const char* func_name, Args&&... args) {
     zxlogf_etc(flag, format, func_name, std::forward<Args>(args)...);
   }
 

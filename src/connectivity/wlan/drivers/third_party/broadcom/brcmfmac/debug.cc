@@ -28,15 +28,22 @@ void Debug::PrintHexDump(uint32_t flag, const void* data, size_t length) {
   if (zxlog_level_enabled_etc(flag)) {
     zxlogf_etc(flag, "%p:", data);
 
-    const char* bytes = reinterpret_cast<const char*>(data);
-    const size_t new_length = std::min<size_t>(length, kMaxHexDumpBytes);
-    for (size_t i = 0; i < new_length; i += kValuesPerLine) {
-      char buffer[3 * kValuesPerLine + 1];
+    static constexpr char kHexTable[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                                         '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+    const uint8_t* const bytes = reinterpret_cast<const uint8_t*>(data);
+    const size_t max_dump_bytes = std::min<size_t>(length, kMaxHexDumpBytes);
+    for (size_t i = 0; i < max_dump_bytes; i += kValuesPerLine) {
+      char buffer[3 * kValuesPerLine];
       char* next = buffer;
-      size_t line_width = std::min(kValuesPerLine, new_length - i);
+      size_t line_width = std::min(kValuesPerLine, max_dump_bytes - i);
       for (size_t j = 0; j < line_width; ++j) {
-        next += sprintf(next, "%02x ", static_cast<int>(bytes[i + j]) & 0xFF);
+        *next++ = kHexTable[bytes[i + j] >> 4];
+        *next++ = kHexTable[bytes[i + j] & 0xF];
+        if (j + 1 < line_width) {
+          *next++ = ' ';
+        }
       }
+      *next++ = '\0';
       zxlogf_etc(flag, "%04zx: %s", i, buffer);
     }
     if (length > kMaxHexDumpBytes) {
@@ -52,14 +59,14 @@ void Debug::PrintStringDump(uint32_t flag, const void* data, size_t length) {
   if (zxlog_level_enabled_etc(flag)) {
     zxlogf_etc(flag, "%p:", data);
 
-    const char* bytes = reinterpret_cast<const char*>(data);
-    const size_t new_length = std::min<size_t>(length, kMaxStringDumpBytes);
-    for (size_t i = 0; i < new_length; i += kValuesPerLine) {
+    const char* const bytes = reinterpret_cast<const char*>(data);
+    const size_t max_dump_bytes = std::min<size_t>(length, kMaxStringDumpBytes);
+    for (size_t i = 0; i < max_dump_bytes; i += kValuesPerLine) {
       char buffer[kValuesPerLine + 1];
-      size_t line_width = std::min(kValuesPerLine, new_length - i);
+      size_t line_width = std::min(kValuesPerLine, max_dump_bytes - i);
       std::transform(bytes + i, bytes + i + line_width, buffer,
-                     [](char c) { return std::isprint(c) ? c : '.'; });
-      buffer[kValuesPerLine] = 0;
+                     [](unsigned char c) { return std::isprint(c) ? c : '.'; });
+      buffer[line_width] = '\0';
       zxlogf_etc(flag, "%04zx: %s", i, buffer);
     }
     if (length > kMaxStringDumpBytes) {

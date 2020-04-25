@@ -22,10 +22,17 @@
 
 namespace {
 
+// Sanity test for log lines.
+TEST(DebugTest, Logging) {
+  BRCMF_INFO("foo %s", "foo");
+  BRCMF_WARN("bar %s", "bar");
+  BRCMF_ERR("baz %s", "baz");
+}
+
 // This is a simple test to verify that printing various sized buffers doesn't crash. Since
 // debugging is typically disabled by default, this gives us some indication that it hasn't
 // broken.
-TEST(DebugTest, NoCrash) {
+TEST(DebugTest, DumpNoCrash) {
   size_t buffer_size = std::max(kMaxHexDumpBytes, kMaxStringDumpBytes) + 1;
   uint8_t buffer[buffer_size];
   for (size_t i = 0; i < buffer_size; i++) {
@@ -36,18 +43,18 @@ TEST(DebugTest, NoCrash) {
   // First test all sizes from [0,100]
   size_t max_test_size = std::min<size_t>(100, buffer_size);
   for (size_t i = 0; i < max_test_size; i++) {
-    BRCMF_DBG_HEX_DUMP(true, buffer, i, "Buffer size of %d\n", i);
-    BRCMF_DBG_STRING_DUMP(true, buffer, i, "String size of %d\n", i);
+    BRCMF_DBG_HEX_DUMP(true, buffer, i, "buffer size of %d", i);
+    BRCMF_DBG_STRING_DUMP(true, buffer, i, "string size of %d", i);
   }
 
   // Test upper limits of hex dump
-  for (size_t i = kMaxHexDumpBytes - 1; i < kMaxHexDumpBytes + 2; i++) {
-    BRCMF_DBG_HEX_DUMP(true, buffer, i, "Buffer size of %d\n", i);
+  for (size_t i = kMaxHexDumpBytes - 1; i <= kMaxHexDumpBytes + 1; i++) {
+    BRCMF_DBG_HEX_DUMP(true, buffer, i, "buffer size of %d", i);
   }
 
   // Test upper limits of string dump
-  for (size_t i = kMaxStringDumpBytes - 1; i < kMaxStringDumpBytes + 2; i++) {
-    BRCMF_DBG_STRING_DUMP(true, buffer, i, "String size of %d\n", i);
+  for (size_t i = kMaxStringDumpBytes - 1; i <= kMaxStringDumpBytes + 1; i++) {
+    BRCMF_DBG_STRING_DUMP(true, buffer, i, "string size of %d", i);
   }
 };
 
