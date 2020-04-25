@@ -385,3 +385,29 @@ async fn test_unbound_messenger() {
 
     verify_payload(REPLY, &mut reply_receptor, None).await;
 }
+
+/// Ensures next_payload returns the correct values.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_next_payload() {
+    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let (unbound_messenger_1, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+
+    let (unbound_messenger_2, mut unbound_receptor_2) =
+        messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let signature_2 = unbound_messenger_2.get_signature();
+
+    unbound_messenger_1.message(ORIGINAL, Audience::Messenger(signature_2)).send().ack();
+
+    let receptor_result = unbound_receptor_2.next_payload().await;
+
+    let (payload, _) = receptor_result.unwrap();
+    assert_eq!(payload, ORIGINAL);
+
+    {
+        let mut receptor =
+            unbound_messenger_1.message(REPLY, Audience::Address(TestAddress::Foo(1))).send();
+        // Should return an error
+        let receptor_result = receptor.next_payload().await;
+        assert!(receptor_result.is_err());
+    }
+}

@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use crate::message::action_fuse::ActionFuseHandle;
-use crate::message::base::{Address, MessageEvent, Payload};
+use crate::message::base::{Address, DeliveryStatus, MessageEvent, Payload};
+use crate::message::message_client::MessageClient;
 use anyhow::{format_err, Error};
 use futures::channel::mpsc::UnboundedReceiver;
 use futures::StreamExt;
@@ -41,6 +42,24 @@ impl<P: Payload + 'static, A: Address + 'static> Receptor<P, A> {
         }
 
         return Err(format_err!("could not retrieve event"));
+    }
+
+    /// Returns the next pending payload, returning an Error if the origin
+    /// message (if any) was not deliverable or another error was encountered.
+    pub async fn next_payload(&mut self) -> Result<(P, MessageClient<P, A>), Error> {
+        while let Ok(event) = self.watch().await {
+            match event {
+                MessageEvent::Message(payload, client) => {
+                    return Ok((payload, client));
+                }
+                MessageEvent::Status(DeliveryStatus::Undeliverable) => {
+                    return Err(format_err!("origin message not delivered"));
+                }
+                _ => {}
+            }
+        }
+
+        return Err(format_err!("could not retrieve payload"));
     }
 
     // Used to consume receptor.
