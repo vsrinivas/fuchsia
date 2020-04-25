@@ -14,7 +14,6 @@ use std::path::{Component, Path, PathBuf};
 use std::str::FromStr;
 use std::{env, fmt, fs, io};
 use structopt::StructOpt;
-use tempfile::tempdir;
 use termion::{color, style};
 
 const LANG_AGNOSTIC_EXTENSION: &'static str = "tmpl";
@@ -56,18 +55,17 @@ fn main() -> Result<(), anyhow::Error> {
     // Execute the templates and render them to an in-memory representation.
     let project = template_tree.render(&mut handlebars, &template_args)?;
 
-    // Write the rendered files to a temp directory.
-    let dir = tempdir()?;
-    let tmp_out_path = dir.path().join(&args.project_name);
-    project.write(&tmp_out_path)?;
-
-    // Rename the temp directory project to the final location.
+    // Ensure the destination doesn't exist.
     let dest_project_path = args.absolute_project_path()?;
-    fs::rename(&tmp_out_path, &dest_project_path)
-        .map_err(|e| anyhow!("rename to destination {:?} failed: {:?}", &dest_project_path, e))?;
+    if dest_project_path.exists() {
+        bail!("project directory already exists: {}", dest_project_path.display());
+    }
+
+    // Write the rendered files..
+    project.write(&dest_project_path)?;
 
     if !args.silent {
-        println!("Project created at {}.", dest_project_path.to_string_lossy());
+        println!("Project created at {}.", dest_project_path.display());
 
         // Find the parent BUILD.gn file and suggest adding the test target.
         let parent_build =
@@ -78,7 +76,7 @@ fn main() -> Result<(), anyhow::Error> {
                 color::Fg(color::Yellow), color::Fg(color::Reset),
                 style::Bold, &args.project_name, style::Reset,
                 style::Bold, style::Reset,
-                parent_build.to_string_lossy()
+                parent_build.display()
             );
         }
     }
