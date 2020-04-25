@@ -32,7 +32,11 @@
 #include "blobfs.h"
 #include "compression/algorithm.h"
 #include "compression/zstd-seekable-blob-collection.h"
+#include "compression/log-zstd-read.h"
 #include "test/blob_utils.h"
+#include "transaction-manager.h"
+#include "iterator/block-iterator-provider.h"
+#include "metrics.h"
 
 namespace blobfs {
 namespace {
@@ -124,6 +128,9 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
     return sync_completion_wait(&completion, zx::duration::infinite().get());
   }
 
+  BlockIteratorProvider* block_iter_provider() { return fs_.get(); }
+  TransactionManager* txn_manager() { return fs_.get(); }
+  BlobfsMetrics* metrics() { return fs_->Metrics(); }
   SpaceManager* space_manager() { return fs_.get(); }
   virtual NodeFinder* node_finder() { return fs_->GetNodeFinder(); }
   fs::LegacyTransactionHandler* transaction_handler() { return fs_.get(); }
@@ -174,120 +181,137 @@ TEST_F(ZSTDSeekableBlobTest, CompleteRead) {
   std::unique_ptr<BlobInfo> blob_info;
   AddCompressedBlobAndSync(&blob_info);
   uint32_t node_index = LookupInode(*blob_info);
-  std::vector<uint8_t> buf(blob_info->size_data);
-  std::vector<uint8_t> expected(blob_info->size_data);
-  ZeroToThirtyTwoAndRandomBlobSrcFunction(reinterpret_cast<char*>(expected.data()), blob_info->size_data);
-  ASSERT_OK(compressed_blob_collection()->Read(node_index, buf.data(), 0, blob_info->size_data));
-  ASSERT_BYTES_EQ(expected.data(), buf.data(), blob_info->size_data);
-}
 
-TEST_F(ZSTDSeekableBlobTest, PartialRead) {
-  std::unique_ptr<BlobInfo> blob_info;
-  AddCompressedBlobAndSync(&blob_info);
-  uint32_t node_index = LookupInode(*blob_info);
-  std::vector<uint8_t> buf(blob_info->size_data);
+  EnableZSTDReadLogging();
 
-  // Load whole blob contents (because it's less error-prone). Only some will be used for
-  // verification.
-  std::vector<uint8_t> expected_buf(blob_info->size_data);
-  ZeroToThirtyTwoAndRandomBlobSrcFunction(reinterpret_cast<char*>(expected_buf.data()), blob_info->size_data);
-
-  // Use some small primes to choose "near the end, but not at the end" read of a prime number of
-  // bytes.
-  uint64_t data_byte_offset = blob_info->size_data - 29;
-  uint64_t num_bytes = 19;
-
-  CheckRead(node_index, &buf, &expected_buf, data_byte_offset, num_bytes);
-}
-
-TEST_F(ZSTDSeekableBlobTest, MultipleReads) {
-  std::unique_ptr<BlobInfo> blob_info;
-  AddCompressedBlobAndSync(&blob_info);
-  uint32_t node_index = LookupInode(*blob_info);
-  std::vector<uint8_t> buf(blob_info->size_data);
-
-  // Load whole blob contents (because it's less error-prone). Only some will be used for
-  // verification.
-  std::vector<uint8_t> expected_buf(blob_info->size_data);
-  ZeroToThirtyTwoAndRandomBlobSrcFunction(reinterpret_cast<char*>(expected_buf.data()), blob_info->size_data);
-
-  // Use some small primes to choose "near the end, but not at the end" read of a prime number of
-  // bytes.
+  // Read whole blob all at once via |BlobLoader|.
   {
-    uint64_t data_byte_offset = blob_info->size_data - 29;
-    uint64_t num_bytes = 19;
-
-    CheckRead(node_index, &buf, &expected_buf, data_byte_offset, num_bytes);
+    fzl::OwnedVmoMapper data_mapper;
+    fzl::OwnedVmoMapper merkle_mapper;
+    BlobLoader loader(txn_manager(), block_iter_provider(), node_finder(), nullptr, metrics());
+    loader.LoadBlob(node_index, &data_mapper, &merkle_mapper);
   }
+
+  // Read whole blob at once via |blob_info->size_data|-sized read from
+  // |ZSTDSeekableBlobCollection|.
   {
-    uint64_t data_byte_offset = blob_info->size_data - 89;
-    uint64_t num_bytes = 61;
-
-    CheckRead(node_index, &buf, &expected_buf, data_byte_offset, num_bytes);
+    std::vector<uint8_t> buf(blob_info->size_data);
+    std::vector<uint8_t> expected(blob_info->size_data);
+    ZeroToThirtyTwoAndRandomBlobSrcFunction(reinterpret_cast<char*>(expected.data()), blob_info->size_data);
+    ASSERT_OK(compressed_blob_collection()->Read(node_index, buf.data(), 0, blob_info->size_data));
+    ASSERT_BYTES_EQ(expected.data(), buf.data(), blob_info->size_data);
   }
-  {
-    uint64_t data_byte_offset = blob_info->size_data - 53;
-    uint64_t num_bytes = 37;
 
-    CheckRead(node_index, &buf, &expected_buf, data_byte_offset, num_bytes);
-  }
+  DisableZSTDReadLogging();
 }
 
-TEST_F(ZSTDSeekableBlobTest, LeftoverRead) {
-  std::unique_ptr<BlobInfo> blob_info;
-  AddCompressedBlobAndSync(&blob_info);
-  uint32_t node_index = LookupInode(*blob_info);
-  std::vector<uint8_t> buf(blob_info->size_data);
+// TEST_F(ZSTDSeekableBlobTest, PartialRead) {
+//   std::unique_ptr<BlobInfo> blob_info;
+//   AddCompressedBlobAndSync(&blob_info);
+//   uint32_t node_index = LookupInode(*blob_info);
+//   std::vector<uint8_t> buf(blob_info->size_data);
 
-  // Load whole blob contents (because it's less error-prone). Only some will be used for
-  // verification.
-  std::vector<uint8_t> expected_buf(blob_info->size_data);
-  ZeroToThirtyTwoAndRandomBlobSrcFunction(reinterpret_cast<char*>(expected_buf.data()), blob_info->size_data);
+//   // Load whole blob contents (because it's less error-prone). Only some will be used for
+//   // verification.
+//   std::vector<uint8_t> expected_buf(blob_info->size_data);
+//   ZeroToThirtyTwoAndRandomBlobSrcFunction(reinterpret_cast<char*>(expected_buf.data()), blob_info->size_data);
 
-  static_assert(ZSTDSeekableBlobTest::kUncompressedBlobSize % kBlobfsBlockSize != 0);
-  uint64_t data_byte_offset = fbl::round_down(blob_info->size_data, kBlobfsBlockSize);
-  uint64_t num_bytes = blob_info->size_data - data_byte_offset;
-  CheckRead(node_index, &buf, &expected_buf, data_byte_offset, num_bytes);
-}
+//   // Use some small primes to choose "near the end, but not at the end" read of a prime number of
+//   // bytes.
+//   uint64_t data_byte_offset = blob_info->size_data - 29;
+//   uint64_t num_bytes = 19;
 
-TEST_F(ZSTDSeekableBlobTest, BadOffset) {
-  std::unique_ptr<BlobInfo> blob_info;
-  AddCompressedBlobAndSync(&blob_info);
-  uint32_t node_index = LookupInode(*blob_info);
+//   CheckRead(node_index, &buf, &expected_buf, data_byte_offset, num_bytes);
+// }
 
-  // Attempt to read one byte passed the end of the blob.
-  std::vector<uint8_t> buf(1);
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY,
-            compressed_blob_collection()->Read(node_index, buf.data(), blob_info->size_data, 1));
-}
+// TEST_F(ZSTDSeekableBlobTest, MultipleReads) {
+//   std::unique_ptr<BlobInfo> blob_info;
+//   AddCompressedBlobAndSync(&blob_info);
+//   uint32_t node_index = LookupInode(*blob_info);
+//   std::vector<uint8_t> buf(blob_info->size_data);
 
-TEST_F(ZSTDSeekableBlobTest, BadSize) {
-  std::unique_ptr<BlobInfo> blob_info;
-  AddCompressedBlobAndSync(&blob_info);
-  uint32_t node_index = LookupInode(*blob_info);
+//   // Load whole blob contents (because it's less error-prone). Only some will be used for
+//   // verification.
+//   std::vector<uint8_t> expected_buf(blob_info->size_data);
+//   ZeroToThirtyTwoAndRandomBlobSrcFunction(reinterpret_cast<char*>(expected_buf.data()), blob_info->size_data);
 
-  // Attempt to read two bytes: the last byte in the blob, and one byte passed the end.
-  std::vector<uint8_t> buf(2);
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, compressed_blob_collection()->Read(
-                                          node_index, buf.data(), blob_info->size_data - 1, 2));
-}
+//   // Use some small primes to choose "near the end, but not at the end" read of a prime number of
+//   // bytes.
+//   {
+//     uint64_t data_byte_offset = blob_info->size_data - 29;
+//     uint64_t num_bytes = 19;
 
-TEST_F(ZSTDSeekableBlobNullNodeFinderTest, BadNode) {
-  std::vector<uint8_t> buf(1);
+//     CheckRead(node_index, &buf, &expected_buf, data_byte_offset, num_bytes);
+//   }
+//   {
+//     uint64_t data_byte_offset = blob_info->size_data - 89;
+//     uint64_t num_bytes = 61;
 
-  // Attempt to read a byte from a node that doesn't exist.
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, compressed_blob_collection()->Read(42, buf.data(), 0, 1));
-}
+//     CheckRead(node_index, &buf, &expected_buf, data_byte_offset, num_bytes);
+//   }
+//   {
+//     uint64_t data_byte_offset = blob_info->size_data - 53;
+//     uint64_t num_bytes = 37;
 
-TEST_F(ZSTDSeekableBlobWrongAlgorithmTest, BadFlags) {
-  std::unique_ptr<BlobInfo> blob_info;
-  AddCompressedBlobAndSync(&blob_info);
-  uint32_t node_index = LookupInode(*blob_info);
-  std::vector<uint8_t> buf(1);
+//     CheckRead(node_index, &buf, &expected_buf, data_byte_offset, num_bytes);
+//   }
+// }
 
-  // Attempt to read a byte from a blob that is not zstd-seekable.
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, compressed_blob_collection()->Read(node_index, buf.data(), 0, 1));
-}
+// TEST_F(ZSTDSeekableBlobTest, LeftoverRead) {
+//   std::unique_ptr<BlobInfo> blob_info;
+//   AddCompressedBlobAndSync(&blob_info);
+//   uint32_t node_index = LookupInode(*blob_info);
+//   std::vector<uint8_t> buf(blob_info->size_data);
+
+//   // Load whole blob contents (because it's less error-prone). Only some will be used for
+//   // verification.
+//   std::vector<uint8_t> expected_buf(blob_info->size_data);
+//   ZeroToThirtyTwoAndRandomBlobSrcFunction(reinterpret_cast<char*>(expected_buf.data()), blob_info->size_data);
+
+//   static_assert(ZSTDSeekableBlobTest::kUncompressedBlobSize % kBlobfsBlockSize != 0);
+//   uint64_t data_byte_offset = fbl::round_down(blob_info->size_data, kBlobfsBlockSize);
+//   uint64_t num_bytes = blob_info->size_data - data_byte_offset;
+//   CheckRead(node_index, &buf, &expected_buf, data_byte_offset, num_bytes);
+// }
+
+// TEST_F(ZSTDSeekableBlobTest, BadOffset) {
+//   std::unique_ptr<BlobInfo> blob_info;
+//   AddCompressedBlobAndSync(&blob_info);
+//   uint32_t node_index = LookupInode(*blob_info);
+
+//   // Attempt to read one byte passed the end of the blob.
+//   std::vector<uint8_t> buf(1);
+//   ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY,
+//             compressed_blob_collection()->Read(node_index, buf.data(), blob_info->size_data, 1));
+// }
+
+// TEST_F(ZSTDSeekableBlobTest, BadSize) {
+//   std::unique_ptr<BlobInfo> blob_info;
+//   AddCompressedBlobAndSync(&blob_info);
+//   uint32_t node_index = LookupInode(*blob_info);
+
+//   // Attempt to read two bytes: the last byte in the blob, and one byte passed the end.
+//   std::vector<uint8_t> buf(2);
+//   ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, compressed_blob_collection()->Read(
+//                                           node_index, buf.data(), blob_info->size_data - 1, 2));
+// }
+
+// TEST_F(ZSTDSeekableBlobNullNodeFinderTest, BadNode) {
+//   std::vector<uint8_t> buf(1);
+
+//   // Attempt to read a byte from a node that doesn't exist.
+//   ASSERT_EQ(ZX_ERR_INVALID_ARGS, compressed_blob_collection()->Read(42, buf.data(), 0, 1));
+// }
+
+// TEST_F(ZSTDSeekableBlobWrongAlgorithmTest, BadFlags) {
+//   std::unique_ptr<BlobInfo> blob_info;
+//   AddCompressedBlobAndSync(&blob_info);
+//   uint32_t node_index = LookupInode(*blob_info);
+//   std::vector<uint8_t> buf(1);
+
+//   // Attempt to read a byte from a blob that is not zstd-seekable.
+//   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, compressed_blob_collection()->Read(node_index, buf.data(), 0, 1));
+// }
 
 }  // namespace
 }  // namespace blobfs

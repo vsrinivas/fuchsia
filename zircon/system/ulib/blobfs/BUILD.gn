@@ -36,6 +36,7 @@ source_set("private_headers") {
     "iterator/block-iterator.h",
     "iterator/extent-iterator.h",
     "iterator/vector-extent-iterator.h",
+    "compression/log-zstd-read.h",
   ]
   if (is_fuchsia) {
     sources += [
@@ -78,6 +79,7 @@ zx_library("blobfs") {
     "compression/lz4.cc",
     "compression/zstd-plain.cc",
     "compression/zstd-seekable.cc",
+    "compression/log-zstd-read.cc",
     "inspector/blobfs_inspector.cc",
     "inspector/parser.cc",
     "iterator/allocated-extent-iterator.cc",

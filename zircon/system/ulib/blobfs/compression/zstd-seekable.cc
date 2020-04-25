@@ -16,10 +16,60 @@
 #include <zstd/zstd.h>
 #include <zstd/zstd_seekable.h>
 
+#include "log-zstd-read.h"
 #include "compressor.h"
 #include "zircon/errors.h"
 
 namespace blobfs {
+
+namespace {
+
+// Copied from |zstdseek_compress.c| in the ZSTD Seekable library; slightly modified to log reads.
+
+typedef struct {
+    const void *ptr;
+    size_t size;
+    size_t pos;
+} buffWrapper_t;
+
+static int ZSTD_seekable_read_buff(void* opaque, void* buffer, size_t n)
+{
+    buffWrapper_t* buff = (buffWrapper_t*) opaque;
+    if (buff->pos + n > buff->size) return -1;
+    memcpy(buffer, (const uint8_t*)buff->ptr + buff->pos, n);
+
+    // Modification: Log read.
+    LogZSTDRead("ALL", (uint8_t*)buffer, buff->pos, n);
+
+    buff->pos += n;
+    return 0;
+}
+
+static int ZSTD_seekable_seek_buff(void* opaque, long long offset, int origin)
+{
+    buffWrapper_t* const buff = (buffWrapper_t*) opaque;
+    unsigned long long newOffset = 0;
+    switch (origin) {
+    case SEEK_SET:
+        newOffset = offset;
+        break;
+    case SEEK_CUR:
+        newOffset = (unsigned long long)buff->pos + offset;
+        break;
+    case SEEK_END:
+        newOffset = (unsigned long long)buff->size + offset;
+        break;
+    default:
+        assert(0);  /* not possible */
+    }
+    if (newOffset > buff->size) {
+        return -1;
+    }
+    buff->pos = newOffset;
+    return 0;
+}
+
+}  // namespace
 
 constexpr int kSeekableCompressionLevel = 5;
 
@@ -134,7 +184,12 @@ zx_status_t ZSTDSeekableDecompressor::DecompressArchive(void* uncompressed_buf,
                                                         size_t compressed_size, size_t offset) {
   ZSTD_seekable* stream = ZSTD_seekable_create();
   auto cleanup = fbl::MakeAutoCall([&stream] { ZSTD_seekable_free(stream); });
-  size_t zstd_return = ZSTD_seekable_initBuff(stream, compressed_buf, compressed_size);
+
+  // Use custom file to track reads.
+  buffWrapper_t buff_wrapper = buffWrapper_t{compressed_buf, compressed_size, 0};
+  ZSTD_seekable_customFile src_file = ZSTD_seekable_customFile{&buff_wrapper, &ZSTD_seekable_read_buff, &ZSTD_seekable_seek_buff};
+  size_t zstd_return = ZSTD_seekable_initAdvanced(stream, src_file);
+
   if (ZSTD_isError(zstd_return)) {
     FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to initialize seekable dstream: %s\n",
                    ZSTD_getErrorName(zstd_return));

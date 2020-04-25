@@ -20,6 +20,7 @@
 #include <fs/trace.h>
 #include <zstd/zstd_seekable.h>
 
+#include "log-zstd-read.h"
 #include "zstd-seekable.h"
 
 namespace blobfs {
@@ -101,6 +102,9 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
     }
     memcpy(buf, file->blob->decompressed_data_start() + start, num_bytes);
   }
+
+  // Log read.
+  LogZSTDRead("RAC", static_cast<uint8_t*>(buf), file->byte_offset, num_bytes);
 
   // Advance byte offset in file.
   unsigned long long new_byte_offset;
