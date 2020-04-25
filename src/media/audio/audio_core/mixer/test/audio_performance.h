@@ -13,6 +13,8 @@ namespace media::audio::test {
 enum GainType : uint32_t { Mute, Unity, Scaled, Ramped };
 enum OutputDataRange : uint32_t { Silence, OutOfRange, Normal };
 
+// TODO(50811): Consider migrating to google/benchmark
+
 class AudioPerformance {
  public:
   // After first run ("cold"), timings measured are tightly clustered (+/-1-2%);
@@ -20,8 +22,9 @@ class AudioPerformance {
   //
   // We set these values to keep Mixer profile times, and OutputProducer profile times, each at or
   // below 180 seconds, for a Release core build running on standard VIM2 and NUC.
+  static constexpr uint32_t kNumMixerCreationRuns = 10;
   static constexpr uint32_t kNumMixerProfilerRuns = 10;
-  static constexpr uint32_t kNumOutputProfilerRuns = 1580;
+  static constexpr uint32_t kNumOutputProfilerRuns = 1500;
 
   // class is static only - prevent attempts to instantiate it
   AudioPerformance() = delete;
@@ -34,6 +37,20 @@ class AudioPerformance {
 
  private:
   static void ProfileMixers();
+
+  static void DisplayMixerCreationLegend();
+  static void DisplayMixerCreationColumnHeader();
+  static void ProfileMixerCreation();
+  static void ProfileMixerCreationType(Mixer::Resampler sampler_type);
+  static void ProfileMixerCreationTypeChan(Mixer::Resampler sampler_type, uint32_t num_input_chans,
+                                           uint32_t num_output_chans);
+  static void ProfileMixerCreationTypeChanFormat(Mixer::Resampler sampler_type,
+                                                 uint32_t num_input_chans,
+                                                 uint32_t num_output_chans,
+                                                 fuchsia::media::AudioSampleFormat sample_format);
+  static void ProfileMixerCreationTypeChanFormatRate(
+      Mixer::Resampler sampler_type, uint32_t num_input_chans, uint32_t num_output_chans,
+      fuchsia::media::AudioSampleFormat sample_format, uint32_t source_rate, uint32_t dest_rate);
 
   static void DisplayMixerColumnHeader();
   static void DisplayMixerConfigLegend();

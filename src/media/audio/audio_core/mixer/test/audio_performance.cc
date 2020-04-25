@@ -21,7 +21,7 @@ using Resampler = ::media::audio::Mixer::Resampler;
 
 // For the given resampler, measure elapsed time over a number of mix jobs.
 void AudioPerformance::Profile() {
-  printf("\n\n Performance Profiling");
+  printf("\n\n Performance Profiling\n\n");
 
   AudioPerformance::ProfileMixers();
   AudioPerformance::ProfileOutputProducers();
@@ -29,6 +29,8 @@ void AudioPerformance::Profile() {
 
 void AudioPerformance::ProfileMixers() {
   auto start_time = zx::clock::get_monotonic();
+
+  ProfileMixerCreation();
 
   DisplayMixerConfigLegend();
   DisplayMixerColumnHeader();
@@ -42,6 +44,155 @@ void AudioPerformance::ProfileMixers() {
 
   printf("   Total time to profile Mixers: %lu ms\n   --------\n\n",
          (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
+}
+
+void AudioPerformance::DisplayMixerCreationColumnHeader() {
+  printf("\nCreation config \t\t     Mean\t    First\t     Best\t    Worst\n");
+}
+
+void AudioPerformance::ProfileMixerCreation() {
+  DisplayMixerCreationLegend();
+  DisplayMixerCreationColumnHeader();
+
+  ProfileMixerCreationType(Resampler::SampleAndHold);
+  ProfileMixerCreationType(Resampler::LinearInterpolation);
+  ProfileMixerCreationType(Resampler::WindowedSinc);
+}
+
+void AudioPerformance::DisplayMixerCreationLegend() {
+  printf("\n   Elapsed time in microsec for a Mixer object to be created\n");
+  printf(
+      "\n   For mixer configuration R-fff.IO sssss:ddddd, where:\n"
+      "\t     R: Resampler type - [P]oint, [L]inear, [W]indowed Sinc\n"
+      "\t   fff: Format - un8, i16, i24, f32,\n"
+      "\t     I: Input channels (one-digit number),\n"
+      "\t     O: Output channels (one-digit number),\n"
+      "\t sssss: Source sample rate\n"
+      "\t nnnnn: Destination sample rate\n\n");
+}
+
+void AudioPerformance::ProfileMixerCreationType(Resampler sampler_type) {
+  ProfileMixerCreationTypeChan(sampler_type, 1, 1);
+  ProfileMixerCreationTypeChan(sampler_type, 1, 4);
+
+  ProfileMixerCreationTypeChan(sampler_type, 4, 1);
+  ProfileMixerCreationTypeChan(sampler_type, 4, 4);
+}
+
+// skip some of the permutations, to optimize test running time
+void AudioPerformance::ProfileMixerCreationTypeChan(Mixer::Resampler sampler_type,
+                                                    uint32_t num_input_chans,
+                                                    uint32_t num_output_chans) {
+  if (num_input_chans == 4 && num_output_chans == 4) {
+    ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
+                                       fuchsia::media::AudioSampleFormat::UNSIGNED_8);
+    ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
+                                       fuchsia::media::AudioSampleFormat::SIGNED_16);
+    ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
+                                       fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32);
+  }
+  ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
+                                     fuchsia::media::AudioSampleFormat::FLOAT);
+}
+
+// skip some of the permutations, to optimize test running time
+void AudioPerformance::ProfileMixerCreationTypeChanFormat(
+    Mixer::Resampler sampler_type, uint32_t num_input_chans, uint32_t num_output_chans,
+    fuchsia::media::AudioSampleFormat sample_format) {
+  if (num_input_chans == 4 && num_output_chans == 4 &&
+      sample_format == fuchsia::media::AudioSampleFormat::FLOAT) {
+    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                           sample_format, 8000, 8000);
+    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                           sample_format, 8000, 192000);
+
+    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                           sample_format, 16000, 48000);
+    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                           sample_format, 16000, 96000);
+
+    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                           sample_format, 48000, 16000);
+  }
+  ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                         sample_format, 48000, 48000);
+  if (num_input_chans == 1 && num_output_chans == 1 &&
+      sample_format == fuchsia::media::AudioSampleFormat::FLOAT) {
+    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                           sample_format, 48000, 96000);
+
+    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                           sample_format, 96000, 16000);
+    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                           sample_format, 96000, 48000);
+
+    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                           sample_format, 192000, 192000);
+    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
+                                           sample_format, 192000, 8000);
+  }
+}
+
+void AudioPerformance::ProfileMixerCreationTypeChanFormatRate(
+    Mixer::Resampler sampler_type, uint32_t num_input_chans, uint32_t num_output_chans,
+    fuchsia::media::AudioSampleFormat sample_format, uint32_t source_rate, uint32_t dest_rate) {
+  zx::duration first, worst, best, total_elapsed{0};
+
+  for (uint32_t i = 0; i < kNumMixerCreationRuns; ++i) {
+    auto start_time = zx::clock::get_monotonic();
+
+    auto mixer = SelectMixer(sample_format, num_input_chans, source_rate, num_output_chans,
+                             dest_rate, sampler_type);
+
+    auto elapsed = zx::clock::get_monotonic() - start_time;
+
+    if (i > 0) {
+      worst = std::max(worst, elapsed);
+      best = std::min(best, elapsed);
+    } else {
+      first = elapsed;
+      worst = elapsed;
+      best = elapsed;
+    }
+    total_elapsed += elapsed;
+  }
+
+  char sampler_ch;
+  switch (sampler_type) {
+    case Resampler::SampleAndHold:
+      sampler_ch = 'P';
+      break;
+    case Resampler::LinearInterpolation:
+      sampler_ch = 'L';
+      break;
+    case Resampler::WindowedSinc:
+      sampler_ch = 'W';
+      break;
+    case Resampler::Default:
+      FX_LOGS(ERROR) << "Test should specify the Resampler exactly";
+      return;
+  }
+
+  std::string format;
+  if (sample_format == fuchsia::media::AudioSampleFormat::UNSIGNED_8) {
+    format = "Un8";
+  } else if (sample_format == fuchsia::media::AudioSampleFormat::SIGNED_16) {
+    format = "I16";
+  } else if (sample_format == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) {
+    format = "I24";
+  } else if (sample_format == fuchsia::media::AudioSampleFormat::FLOAT) {
+    format = "F32";
+  } else {
+    ASSERT_TRUE(false) << "Unknown mix sample format for testing";
+    return;
+  }
+
+  printf("%c-%s.%u%u %6u:%6u: ", sampler_ch, format.c_str(), num_input_chans, num_output_chans,
+         source_rate, dest_rate);
+
+  auto mean = total_elapsed / kNumMixerCreationRuns;
+  printf("\t%10.3lf\t%10.3lf\t%10.3lf\t%10.3lf\n", to_frac_usecs(mean), to_frac_usecs(first),
+         to_frac_usecs(best), to_frac_usecs(worst));
 }
 
 void AudioPerformance::DisplayMixerColumnHeader() {
