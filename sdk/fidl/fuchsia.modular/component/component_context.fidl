@@ -17,6 +17,7 @@ protocol ComponentContext {
     ///
     /// Used to start an agent in the user scope if it isn't already running, and
     /// connect to it.
+    [Transitional]
     ConnectToAgent(string url,
                    request<fuchsia.sys.ServiceProvider> incoming_services,
                    request<AgentController> controller);
