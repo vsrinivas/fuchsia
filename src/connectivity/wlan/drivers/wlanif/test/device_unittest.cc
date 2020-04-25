@@ -106,27 +106,36 @@ struct SmeChannelTestContext {
   std::optional<wlanif_scan_req_t> scan_req = {};
 };
 
-wlanif_impl_protocol_ops_t proto_ops = {
-    // SME Channel will be provided to wlanif-impl-driver when it calls back into its parent.
-    .query = [](void* ctx, wlanif_query_info_t* info) {},
-    .start_scan = [](void* ctx, const wlanif_scan_req_t* req) {},
-    .join_req = [](void* ctx, const wlanif_join_req_t* req) {},
-    .auth_req = [](void* ctx, const wlanif_auth_req_t* req) {},
-    .auth_resp = [](void* ctx, const wlanif_auth_resp_t* req) {},
-    .deauth_req = [](void* ctx, const wlanif_deauth_req_t* req) {},
-    .assoc_req = [](void* ctx, const wlanif_assoc_req_t* req) {},
-    .assoc_resp = [](void* ctx, const wlanif_assoc_resp_t* req) {},
-    .disassoc_req = [](void* ctx, const wlanif_disassoc_req_t* req) {},
-    .reset_req = [](void* ctx, const wlanif_reset_req_t* req) {},
-    .start_req = [](void* ctx, const wlanif_start_req_t* req) {},
-    .stop_req = [](void* ctx, const wlanif_stop_req_t* req) {},
-    .set_keys_req = [](void* ctx, const wlanif_set_keys_req_t* req) {},
-    .del_keys_req = [](void* ctx, const wlanif_del_keys_req_t* req) {},
-    .eapol_req = [](void* ctx, const wlanif_eapol_req_t* req) {},
-};
+wlanif_impl_protocol_ops_t EmptyProtoOps() {
+  return wlanif_impl_protocol_ops_t{
+      // SME Channel will be provided to wlanif-impl-driver when it calls back into its parent.
+      .start =
+          [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel) {
+            auto [new_sme, new_mlme] = make_channel();
+            *out_sme_channel = new_sme.release();
+            return ZX_OK;
+          },
+      .query = [](void* ctx, wlanif_query_info_t* info) {},
+      .start_scan = [](void* ctx, const wlanif_scan_req_t* req) {},
+      .join_req = [](void* ctx, const wlanif_join_req_t* req) {},
+      .auth_req = [](void* ctx, const wlanif_auth_req_t* req) {},
+      .auth_resp = [](void* ctx, const wlanif_auth_resp_t* req) {},
+      .deauth_req = [](void* ctx, const wlanif_deauth_req_t* req) {},
+      .assoc_req = [](void* ctx, const wlanif_assoc_req_t* req) {},
+      .assoc_resp = [](void* ctx, const wlanif_assoc_resp_t* req) {},
+      .disassoc_req = [](void* ctx, const wlanif_disassoc_req_t* req) {},
+      .reset_req = [](void* ctx, const wlanif_reset_req_t* req) {},
+      .start_req = [](void* ctx, const wlanif_start_req_t* req) {},
+      .stop_req = [](void* ctx, const wlanif_stop_req_t* req) {},
+      .set_keys_req = [](void* ctx, const wlanif_set_keys_req_t* req) {},
+      .del_keys_req = [](void* ctx, const wlanif_del_keys_req_t* req) {},
+      .eapol_req = [](void* ctx, const wlanif_eapol_req_t* req) {},
+  };
+}
 
 TEST(SmeChannel, Bound) {
 #define SME_DEV(c) static_cast<SmeChannelTestContext*>(c)
+  wlanif_impl_protocol_ops_t proto_ops = EmptyProtoOps();
   proto_ops.start = [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
                        zx_handle_t* out_sme_channel) -> zx_status_t {
     *out_sme_channel = SME_DEV(ctx)->sme.release();
@@ -197,6 +206,7 @@ TEST(AssocReqHandling, MultipleAssocReq) {
           },
   };
 
+  wlanif_impl_protocol_ops_t proto_ops = EmptyProtoOps();
   proto_ops.start = [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
                        zx_handle_t* out_sme_channel) -> zx_status_t {
     *out_sme_channel = ASSOC_DEV(ctx)->sme.release();
@@ -257,4 +267,61 @@ TEST(AssocReqHandling, MultipleAssocReq) {
   ASSERT_EQ(ctx.assoc_confirmed, true);
 
   device.EthUnbind();
+}
+
+struct EthernetTestFixture : public ::testing::Test {
+  void TestEthernetAgainstRole(wlan_info_mac_role_t role);
+
+  wlanif_impl_protocol_ops_t proto_ops_ = EmptyProtoOps();
+  wlanif_impl_protocol_t proto_{.ops = &proto_ops_, .ctx = this};
+  // Unsafe cast, however, parent is never used as fake_ddk replaces default device manager.
+  wlanif::Device device_{reinterpret_cast<zx_device_t*>(&fake_ddk_), proto_};
+  ethernet_ifc_protocol_ops_t eth_ops_{};
+  ethernet_ifc_protocol_t eth_proto_ = {.ops = &eth_ops_, .ctx = this};
+  fake_ddk::Bind fake_ddk_;
+  wlan_info_mac_role_t role_ = WLAN_INFO_MAC_ROLE_CLIENT;
+  uint32_t ethernet_status_;
+};
+
+#define ETH_DEV(c) static_cast<EthernetTestFixture*>(c)
+static void hook_query(void* ctx, wlanif_query_info_t* info) { info->role = ETH_DEV(ctx)->role_; }
+static void hook_eth_status(void* ctx, uint32_t status) { ETH_DEV(ctx)->ethernet_status_ = status; }
+#undef ETH_DEV
+
+void EthernetTestFixture::TestEthernetAgainstRole(wlan_info_mac_role_t role) {
+  role_ = role;
+  proto_ops_.query = hook_query;
+  eth_proto_.ops->status = hook_eth_status;
+  ASSERT_EQ(device_.Bind(), ZX_OK);
+  device_.EthStart(&eth_proto_);
+
+  ethernet_status_ = ETHERNET_STATUS_ONLINE;
+  wlanif_deauth_indication_t deauth_ind{.reason_code = WLAN_DEAUTH_REASON_AP_INITIATED};
+  device_.DeauthenticateInd(&deauth_ind);
+  ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
+
+  ethernet_status_ = ETHERNET_STATUS_ONLINE;
+  wlanif_deauth_confirm_t deauth_conf{};
+  device_.DeauthenticateConf(&deauth_conf);
+  ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
+
+  ethernet_status_ = ETHERNET_STATUS_ONLINE;
+  wlanif_disassoc_indication_t disassoc_ind{.reason_code = WLAN_DEAUTH_REASON_AP_INITIATED};
+  device_.DisassociateInd(&disassoc_ind);
+  ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
+
+  ethernet_status_ = ETHERNET_STATUS_ONLINE;
+  wlanif_disassoc_confirm_t disassoc_conf{};
+  device_.DisassociateConf(&disassoc_conf);
+  ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
+
+  device_.EthUnbind();
+}
+
+TEST_F(EthernetTestFixture, ClientIfaceDisablesEthernetOnDisconnect) {
+  TestEthernetAgainstRole(WLAN_INFO_MAC_ROLE_CLIENT);
+}
+
+TEST_F(EthernetTestFixture, ApIfaceDoesNotAffectEthernetOnClientDisconnect) {
+  TestEthernetAgainstRole(WLAN_INFO_MAC_ROLE_AP);
 }

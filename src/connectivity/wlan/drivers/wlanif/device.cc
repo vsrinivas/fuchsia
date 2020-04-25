@@ -730,7 +730,9 @@ void Device::AuthenticateInd(const wlanif_auth_ind_t* ind) {
 void Device::DeauthenticateConf(const wlanif_deauth_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  SetEthernetStatusLocked(false);
+  if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
+    SetEthernetStatusLocked(false);
+  }
 
   if (!binding_.is_bound()) {
     return;
@@ -747,7 +749,9 @@ void Device::DeauthenticateConf(const wlanif_deauth_confirm_t* resp) {
 void Device::DeauthenticateInd(const wlanif_deauth_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  SetEthernetStatusLocked(false);
+  if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
+    SetEthernetStatusLocked(false);
+  }
 
   if (!binding_.is_bound()) {
     return;
@@ -803,7 +807,9 @@ void Device::AssociateInd(const wlanif_assoc_ind_t* ind) {
 void Device::DisassociateConf(const wlanif_disassoc_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  SetEthernetStatusLocked(false);
+  if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
+    SetEthernetStatusLocked(false);
+  }
 
   if (!binding_.is_bound()) {
     return;
@@ -820,7 +826,9 @@ void Device::DisassociateConf(const wlanif_disassoc_confirm_t* resp) {
 void Device::DisassociateInd(const wlanif_disassoc_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  SetEthernetStatusLocked(false);
+  if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
+    SetEthernetStatusLocked(false);
+  }
 
   if (!binding_.is_bound()) {
     return;
