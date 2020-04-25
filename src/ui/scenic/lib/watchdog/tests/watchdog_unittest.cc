@@ -15,13 +15,13 @@ using WatchdogUnittest = gtest::TestLoopFixture;
 
 class TestWatchdog {
  public:
-  TestWatchdog(uint64_t timeout_ms, async::LoopInterface* watchdog_loop,
-               async::LoopInterface* watched_thread_loop, fit::closure run_update,
-               fit::function<bool(void)> check_update)
+  TestWatchdog(uint64_t warning_interval_ms, uint64_t timeout_ms,
+               async::LoopInterface* watchdog_loop, async::LoopInterface* watched_thread_loop,
+               fit::closure run_update, fit::function<bool(void)> check_update)
       : watchdog_loop_(watchdog_loop), watched_thread_loop_(watched_thread_loop) {
-    watchdog_impl_ = std::make_unique<WatchdogImpl>(timeout_ms, watchdog_loop_->dispatcher(),
-                                                    watched_thread_loop_->dispatcher(),
-                                                    std::move(run_update), std::move(check_update));
+    watchdog_impl_ = std::make_unique<WatchdogImpl>(
+        warning_interval_ms, timeout_ms, watchdog_loop_->dispatcher(),
+        watched_thread_loop_->dispatcher(), std::move(run_update), std::move(check_update));
     watchdog_impl_->Initialize();
   }
   ~TestWatchdog() { watchdog_impl_->Finalize(); }
@@ -41,7 +41,7 @@ TEST_F(WatchdogUnittest, Basic) {
   auto watchdog_loop = test_loop().StartNewLoop();
   auto watched_thread_loop = test_loop().StartNewLoop();
   TestWatchdog watchdog(
-      kWatchdogTimeoutMs, watchdog_loop.get(), watched_thread_loop.get(),
+      kWatchdogTimeoutMs, kWatchdogTimeoutMs, watchdog_loop.get(), watched_thread_loop.get(),
       [counter_update]() { (*counter_update)++; },
       [counter_check]() {
         (*counter_check)++;
@@ -56,22 +56,6 @@ TEST_F(WatchdogUnittest, Basic) {
   EXPECT_EQ(*counter_check, 2);
 }
 
-// This tests whether the watchdog can detect the failure
-// and end the process if the check function returns false.
-TEST_F(WatchdogUnittest, FailureDeathTest) {
-  const uint64_t kWatchdogTimeoutMs = 5ul;
-  auto watchdog_loop = test_loop().StartNewLoop();
-  auto watched_thread_loop = test_loop().StartNewLoop();
-  EXPECT_DEATH(
-      {
-        TestWatchdog watchdog(
-            kWatchdogTimeoutMs, watchdog_loop.get(), watched_thread_loop.get(), []() {},
-            []() { return false; });
-        RunLoopFor(zx::msec(20));
-      },
-      "");
-}
-
 // This tests whether the watchdog can detect the failure and end the
 // process if Scenic timeouts (here we do not run the test main loop
 // to simulate the situation where Scenic is not responsive).
@@ -84,11 +68,33 @@ TEST_F(WatchdogUnittest, TimeoutTest) {
   EXPECT_DEATH(
       {
         TestWatchdog watchdog(
-            kWatchdogTimeoutMs, watchdog_loop.get(), watched_thread_loop.get(),
+            kWatchdogTimeoutMs, kWatchdogTimeoutMs, watchdog_loop.get(), watched_thread_loop.get(),
             [triggered]() { *triggered = true; }, [triggered]() { return *triggered; });
         RunLoopFor(zx::msec(20));
       },
       "");
+}
+
+// This checks whether it works correctly if we use different values for
+// |warning_interval| and |timeout| in WatchdogImpl.
+TEST_F(WatchdogUnittest, MultipleTimeoutsAllowed) {
+  const uint64_t kWatchdogWarningInterval = 5ul;
+  const uint64_t kWatchdogTimeoutMs = 15ul;
+  std::shared_ptr<int> counter_check = std::make_shared<int>(0);
+  auto watchdog_loop = test_loop().StartNewLoop();
+  auto watched_thread_loop = test_loop().StartNewLoop();
+  FXL_LOG(INFO) << "Scenic errors are expected in this test case.";
+  TestWatchdog watchdog(
+      kWatchdogWarningInterval, kWatchdogTimeoutMs, watchdog_loop.get(), watched_thread_loop.get(),
+      []() {},
+      [counter_check]() {
+        (*counter_check)++;
+        return false;
+      });
+  EXPECT_EQ(*counter_check, 0);
+  RunLoopFor(zx::msec(14));
+  // Check at 5s, 10s and the watchdog should not crash.
+  EXPECT_EQ(*counter_check, 2);
 }
 
 }  // namespace scenic_impl

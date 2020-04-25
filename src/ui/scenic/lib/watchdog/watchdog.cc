@@ -13,17 +13,21 @@
 
 namespace scenic_impl {
 
-WatchdogImpl::WatchdogImpl(uint64_t timeout_ms, async_dispatcher_t* watchdog_dispatcher,
+WatchdogImpl::WatchdogImpl(uint64_t warning_interval_ms, uint64_t timeout_ms,
+                           async_dispatcher_t* watchdog_dispatcher,
                            async_dispatcher_t* watched_thread_dispatcher,
                            fit::closure run_update_fn, fit::function<bool(void)> check_update_fn)
-    : timeout_(zx::msec(timeout_ms)),
+    : warning_interval_(zx::msec(warning_interval_ms)),
+      timeout_(zx::msec(timeout_ms)),
       watchdog_dispatcher_(watchdog_dispatcher),
       watched_thread_dispatcher_(watched_thread_dispatcher),
       run_update_fn_(std::move(run_update_fn)),
       check_update_fn_(std::move(check_update_fn)) {
+  FXL_DCHECK(timeout_ms >= warning_interval_ms);
   for (size_t i = 0; i < kPollingNum; i++) {
     post_update_tasks_.push_back(std::make_unique<PostUpdateTaskClosureMethod>(this));
   }
+  last_update_timestamp_ = async::Now(watchdog_dispatcher_);
 }
 
 WatchdogImpl::~WatchdogImpl() {
@@ -59,31 +63,37 @@ void WatchdogImpl::RunUpdate() {
 
 void WatchdogImpl::HandleTimer() {
   if (!check_update_fn_()) {
-    backtrace_request();
-
     mutex_.lock();
-    auto time_since_last_response_ms =
-        (async::Now(watchdog_dispatcher_) - last_update_timestamp_).to_msecs();
+    auto duration_since_last_response = async::Now(watchdog_dispatcher_) - last_update_timestamp_;
     mutex_.unlock();
 
-    FXL_CHECK(false) << "Fatal: The watched thread is not responsive for " << timeout_.to_msecs()
+    FXL_LOG(WARNING) << "The watched thread is not responsive for " << warning_interval_.to_msecs()
                      << " ms. "
-                     << "It has been " << time_since_last_response_ms << " ms since last response. "
+                     << "It has been " << duration_since_last_response.to_msecs()
+                     << " ms since last response. "
                      << "Please see klog for backtrace of all threads.";
-  } else {
-    PostTasks();
+
+    if (duration_since_last_response >= timeout_) {
+      backtrace_request();
+
+      FXL_CHECK(false) << "Fatal: Scenic watchdog has detected timeout for more than "
+                       << timeout_.to_msecs() << " ms in Scenic main thread.";
+    }
   }
+
+  PostTasks();
 }
 
 void WatchdogImpl::PostTasks() {
   for (size_t i = 0; i < kPollingNum; i++) {
-    zx::duration delay = timeout_ / (kPollingNum + 1) * (i + 1);
+    zx::duration delay = warning_interval_ / (kPollingNum + 1) * (i + 1);
     post_update_tasks_[i]->PostDelayed(watched_thread_dispatcher_, delay);
   }
-  handle_timer_task_.PostDelayed(watchdog_dispatcher_, timeout_);
+  handle_timer_task_.PostDelayed(watchdog_dispatcher_, warning_interval_);
 }
 
-Watchdog::Watchdog(uint64_t timeout_ms, async_dispatcher_t* watched_thread_dispatcher)
+Watchdog::Watchdog(uint64_t warning_interval_ms, uint64_t timeout_ms,
+                   async_dispatcher_t* watched_thread_dispatcher)
     : loop_(&kAsyncLoopConfigNeverAttachToThread) {
   loop_.StartThread();
 
@@ -95,9 +105,9 @@ Watchdog::Watchdog(uint64_t timeout_ms, async_dispatcher_t* watched_thread_dispa
     return result;
   };
 
-  watchdog_impl_ =
-      std::make_unique<WatchdogImpl>(timeout_ms, loop_.dispatcher(), watched_thread_dispatcher,
-                                     std::move(post_update), std::move(check_update));
+  watchdog_impl_ = std::make_unique<WatchdogImpl>(warning_interval_ms, timeout_ms,
+                                                  loop_.dispatcher(), watched_thread_dispatcher,
+                                                  std::move(post_update), std::move(check_update));
   watchdog_impl_->Initialize();
 }
 

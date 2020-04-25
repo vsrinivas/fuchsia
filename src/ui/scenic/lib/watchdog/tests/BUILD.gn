@@ -10,8 +10,6 @@ source_set("unittests") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fake-clock/fidl",
-    "//src/lib/fake-clock/lib",
     "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
     "//src/ui/scenic/lib/watchdog",

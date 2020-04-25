@@ -32,9 +32,11 @@ class Watchdog {
  public:
   // Watchdog constructor.
   // Params:
-  // - |timeout_ms|: maximum timeout allowed for a thread to be unresponsive.
+  // - |warning_interval_ms|: Period of watchdog checks.
+  // - |timeout_ms|: maximum timeout allowed for a thread to be
+  //        unresponsive.
   // - |dispatcher|: the async dispatcher the user wants Watchdog to monitor.
-  Watchdog(uint64_t timeout_ms, async_dispatcher_t* dispatcher);
+  Watchdog(uint64_t warning_interval_ms, uint64_t timeout_ms, async_dispatcher_t* dispatcher);
   ~Watchdog();
 
  private:
@@ -45,8 +47,11 @@ class Watchdog {
 class WatchdogImpl {
  public:
   // Params:
-  // - |timeout_ms|: The time between two consecutive timer tasks. If watched
-  //       thread is unresponsive during this time, process will crash.
+  // - |warning_interval_ms|: Period of consecutive watchdog timer tasks.
+  //       If watched thread is unresponsive for this time, watchdog will
+  //       print out current stack trace.
+  // - |timeout_ms|: If watched thread is unresponsive for longer
+  //       than |timeout_ms|, the process will crash.
   // - |watchdog_dispatcher|: async dispatcher of watchdog thread's async loop.
   // - |watched_thread_dispatcher|: async dispatcher of the watched thread's
   //       async loop.
@@ -56,7 +61,8 @@ class WatchdogImpl {
   //       is updated.
   //       Returns false if |run_update_fn| was not called during the
   //       past |timeout_ms| ms; Otherwise returns true.
-  WatchdogImpl(uint64_t timeout_ms, async_dispatcher_t* watchdog_dispatcher,
+  WatchdogImpl(uint64_t warning_interval_ms, uint64_t timeout_ms,
+               async_dispatcher_t* watchdog_dispatcher,
                async_dispatcher_t* watched_thread_dispatcher, fit::closure run_update_fn,
                fit::function<bool(void)> check_update_fn);
   ~WatchdogImpl();
@@ -91,6 +97,10 @@ class WatchdogImpl {
   zx::time last_update_timestamp_ = zx::time(0);
 
   // Time between two consecutive check_update_() calls.
+  zx::duration warning_interval_ = zx::duration(0);
+
+  // Max allowed time for the watched thread to block watchdog
+  // tasks.
   zx::duration timeout_ = zx::duration(0);
 
   // Number of times the watchdog polls the watched thread between two
