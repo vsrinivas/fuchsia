@@ -1,0 +1,31 @@
+# {{PROJECT_NAME}}
+
+TODO: Brief overview of the component.
+
+## Building
+
+To add this component to your build, append
+`--with-base {{PROJECT_PATH}}`
+to the `fx set` invocation.
+
+NOTE: V2 components must be included in `base`. Ephemerality is not supported yet.
+
+## Running
+
+There is no convenient way to run a V2 component directly. First launch `component_manager`
+as a V1 component and give it the URL of this component.
+
+```
+$ fx shell run fuchsia-pkg://fuchsia.com/component_manager#meta/component_manager.cmx \
+  fuchsia-pkg://fuchsia.com/{{PROJECT_NAME}}#meta/{{PROJECT_NAME}}.cm
+```
+
+## Testing
+
+Unit tests for {{PROJECT_NAME}} are available in the `{{PROJECT_NAME}}-tests`
+package.
+
+```
+$ fx test {{PROJECT_NAME}}-tests
+```
+

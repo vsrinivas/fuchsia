@@ -37,9 +37,10 @@ golden_test("my-component-v1-rust") {
   language = "rust"
   golden_files = [
     "my-component-v1-rust/BUILD.gn",
-    "my-component-v1-rust/src/main.rs",
     "my-component-v1-rust/meta/my-component-v1-rust.cmx",
     "my-component-v1-rust/meta/my-component-v1-rust_test.cmx",
+    "my-component-v1-rust/README.md",
+    "my-component-v1-rust/src/main.rs",
   ]
 }
 
@@ -49,13 +50,14 @@ golden_test("my-component-v1-cpp") {
   project_type = "component-v1"
   language = "cpp"
   golden_files = [
+    "my-component-v1-cpp/BUILD.gn",
+    "my-component-v1-cpp/main.cc",
     "my-component-v1-cpp/meta/my-component-v1-cpp.cmx",
     "my-component-v1-cpp/meta/my-component-v1-cpp_test.cmx",
     "my-component-v1-cpp/my_component_v1_cpp_unittest.cc",
     "my-component-v1-cpp/my_component_v1_cpp.cc",
     "my-component-v1-cpp/my_component_v1_cpp.h",
-    "my-component-v1-cpp/BUILD.gn",
-    "my-component-v1-cpp/main.cc",
+    "my-component-v1-cpp/README.md",
   ]
 }
 
@@ -66,12 +68,13 @@ golden_test("my-component-v2-cpp") {
   language = "cpp"
   golden_files = [
     "my-component-v2-cpp/BUILD.gn",
-    "my-component-v2-cpp/my-component-v2-cpp.cc",
-    "my-component-v2-cpp/my-component-v2-cpp.h",
-    "my-component-v2-cpp/my-component-v2-cpp_test.cc",
     "my-component-v2-cpp/main.cc",
     "my-component-v2-cpp/meta/my-component-v2-cpp.cml",
     "my-component-v2-cpp/meta/my-component-v2-cpp_unittests.cml",
+    "my-component-v2-cpp/my-component-v2-cpp.cc",
+    "my-component-v2-cpp/my-component-v2-cpp.h",
+    "my-component-v2-cpp/my-component-v2-cpp_test.cc",
+    "my-component-v2-cpp/README.md",
   ]
 }
 
@@ -82,8 +85,9 @@ golden_test("my-component-v2-rust") {
   language = "rust"
   golden_files = [
     "my-component-v2-rust/BUILD.gn",
-    "my-component-v2-rust/src/main.rs",
     "my-component-v2-rust/meta/my-component-v2-rust.cml",
     "my-component-v2-rust/meta/my-component-v2-rust_test.cml",
+    "my-component-v2-rust/README.md",
+    "my-component-v2-rust/src/main.rs",
   ]
 }
