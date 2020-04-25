@@ -27,6 +27,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	tap "go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
 	testrunner "go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/util"
 )
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
@@ -230,12 +231,7 @@ func runTest(ctx context.Context, test build.Test, t tester) (*testrunner.TestRe
 
 	endTime := time.Now()
 
-	// test.Name is available but is not necessarily a unique identifier for
-	// each test, so we use either path or package URL instead.
-	name := test.Path
-	if test.OS == "fuchsia" {
-		name = test.PackageURL
-	}
+	name := util.UniqueName(test)
 
 	// If test is a multiplier test, the name should end in a number.
 	// Re-append that to the result name.

@@ -26,6 +26,7 @@ go_library("main") {
     "//tools/net/sshutil",
     "//tools/testing/runtests",
     "//tools/testing/tap",
+    "//tools/testing/util",
   ]
 }
 

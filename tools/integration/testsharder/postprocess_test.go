@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/util"
 )
 
 func TestMultiplyShards(t *testing.T) {
@@ -198,11 +199,7 @@ func assertShardsContainTests(t *testing.T, shards []*Shard, expectedShards [][]
 	for _, shard := range shards {
 		actualTestNames := []string{}
 		for _, test := range shard.Tests {
-			name := test.Path
-			if test.OS == "fuchsia" {
-				name = test.PackageURL
-			}
-			actualTestNames = append(actualTestNames, name)
+			actualTestNames = append(actualTestNames, util.UniqueName(test))
 		}
 
 		// Check that we're expecting a shard that contains this exact set of

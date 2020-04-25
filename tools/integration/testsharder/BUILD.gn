@@ -8,7 +8,10 @@ import("//build/go/go_test.gni")
 
 go_library("testsharder_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
-  deps = [ "//tools/build" ]
+  deps = [
+    "//tools/build",
+    "//tools/testing/util",
+  ]
 }
 
 go_library("main") {
